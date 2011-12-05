@@ -1,0 +1,19 @@
+# ------------------------ FOR AICS common cluster fastest ---------------------
+#
+FC = mpiifort
+FFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
+#
+CC=mpiicc
+CFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
+#
+#
+LD = $(FC)
+LFLAGS = -parallel -lm -openmp
+#
+#
+FRONT_CC = icc
+FRONT_CFLAGS = $(CFLAGS)
+FRONT_F90 = ifort
+FRONT_FFLAGS = $(FFLAGS)
+FRONT_LD  = $(FC)
+FRONT_LFLAGS = $(LFLAGS)
