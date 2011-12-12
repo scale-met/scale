@@ -85,6 +85,8 @@ contains
        IO_L
     use mod_time, only: &
        TIME_NOWSTEP,                     &
+       TIME_DTSEC_ATMOS_DYN,             &
+       TIME_DTSEC_ATMOS_PHY_TB,          &
        NOWSEC => TIME_NOWSEC,            &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
@@ -111,10 +113,13 @@ contains
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
-       ATMOS_vars_get, &
-       ATMOS_vars_putDMP
+       ATMOS_vars_get,               &
+       ATMOS_vars_getall,            &
+       ATMOS_vars_put
     use mod_atmos_dyn, only: &
        ATMOS_DYN
+    use mod_atmos_boundary, only: &
+       ATMOS_BOUNDARY
     use mod_fileio_h, only: &
        FIO_HMID, &
        FIO_REAL8
@@ -131,25 +136,25 @@ contains
 !       ATMOS_OCEANFLUX
     implicit none
 
-    real(8) :: dens(IA,JA,KA)    ! density [kg/m**3]
-    real(8) :: momx(IA,JA,KA)    ! momentum (x) [kg/m**3 * m/s]
-    real(8) :: momy(IA,JA,KA)    ! momentum (y) [kg/m**3 * m/s]
-    real(8) :: momz(IA,JA,KA)    ! momentum (z) [kg/m**3 * m/s]
-    real(8) :: lwpt(IA,JA,KA)    ! liquid water potential temperature [K]
+    real(8) :: dens(IA,JA,KA)    ! density [kg/m3]
+    real(8) :: momx(IA,JA,KA)    ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy(IA,JA,KA)    ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz(IA,JA,KA)    ! momentum(z) [kg/m3 * m/s]
+    real(8) :: pott(IA,JA,KA)    ! potential temperature [K]
 
-    real(8) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio   [kg/kg],[1/m3]
+    real(8) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
 
     real(8) :: pres(IA,JA,KA)    ! pressure [Pa]
-    real(8) :: velx(IA,JA,KA)    ! velocity (x) [m/s]
-    real(8) :: vely(IA,JA,KA)    ! velocity (y) [m/s]
-    real(8) :: velz(IA,JA,KA)    ! velocity (z) [m/s]
+    real(8) :: velx(IA,JA,KA)    ! velocity(x) [m/s]
+    real(8) :: vely(IA,JA,KA)    ! velocity(y) [m/s]
+    real(8) :: velz(IA,JA,KA)    ! velocity(z) [m/s]
     real(8) :: temp(IA,JA,KA)    ! temperature [K]
 
-    real(8) :: dens_t(IA,JA,KA)    ! density [kg/m**3]
-    real(8) :: momx_t(IA,JA,KA)    ! momentum (x) [kg/m**3 * m/s]
-    real(8) :: momy_t(IA,JA,KA)    ! momentum (y) [kg/m**3 * m/s]
-    real(8) :: momz_t(IA,JA,KA)    ! momentum (z) [kg/m**3 * m/s]
-    real(8) :: lwpt_t(IA,JA,KA)    ! liquid water potential temperature [K]
+    real(8) :: dens_t(IA,JA,KA)    ! density [kg/m3]
+    real(8) :: momx_t(IA,JA,KA)    ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy_t(IA,JA,KA)    ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz_t(IA,JA,KA)    ! momentum(z) [kg/m3 * m/s]
+    real(8) :: pott_t(IA,JA,KA)    ! potential temperature [K]
 
     real(8) :: qtrc_t(IA,JA,KA,QA) ! tracer mixing ratio   [kg/kg],[1/m3]
 
@@ -160,21 +165,31 @@ contains
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('VARset')
-    call ATMOS_vars_get( dens, momx, momy, momz, lwpt, qtrc, &
-                         pres, velx, vely, velz, temp        )
+    call ATMOS_vars_get( dens, momx, momy, momz, pott, qtrc )
     call TIME_rapend('VARset')
 
     call TIME_rapstart('Dynamics')
-    if ( sw_dyn    .AND. do_dyn    ) call ATMOS_DYN( dens,   momx,   momy,   momz,   lwpt,   & ! prognostics
-                                                     qtrc,                                   & ! prog. tracers
-                                                     pres,   velx,   vely,   velz,   temp,   & ! prognostics
-                                                     dens_t, momx_t, momy_t, momz_t, lwpt_t, & ! tendency
-                                                     qtrc_t                                  ) ! tendency
+    if ( sw_dyn    .AND. do_dyn    ) then 
+       call ATMOS_DYN( dens,   momx,   momy,   momz,   pott,   qtrc,  & ! prognostics
+                       dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t ) ! tendency
+
+       call ATMOS_BOUNDARY( dens,   momx,   momy,   momz,   pott,  & ! prognostics
+                                    momx_t, momy_t, momz_t, pott_t ) ! tendency
+
+       dens(:,:,:) = dens(:,:,:) + TIME_DTSEC_ATMOS_DYN * dens_t(:,:,:)
+       momx(:,:,:) = momx(:,:,:) + TIME_DTSEC_ATMOS_DYN * momx_t(:,:,:)
+       momy(:,:,:) = momy(:,:,:) + TIME_DTSEC_ATMOS_DYN * momy_t(:,:,:)
+       momz(:,:,:) = momz(:,:,:) + TIME_DTSEC_ATMOS_DYN * momz_t(:,:,:)
+       pott(:,:,:) = pott(:,:,:) + TIME_DTSEC_ATMOS_DYN * pott_t(:,:,:)
+
+       qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_DYN * qtrc_t(:,:,:,:)
+    endif
     call TIME_rapend('Dynamics')
 
     call TIME_rapstart('VARset')
-    call ATMOS_vars_putDMP( dens, momx, momy, momz, lwpt, qtrc  )
-    call ATMOS_vars_get   ( dens, momx, momy, momz, lwpt, qtrc, &
+    call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
+
+    call ATMOS_vars_getall( dens, momx, momy, momz, pott, qtrc, &
                             pres, velx, vely, velz, temp        )
     call TIME_rapend('VARset')
 
@@ -201,8 +216,7 @@ contains
 !                                                        pres, velx, vely, velz, temp  ) ! diagnostics
 
 
-!    call ATMOS_vars_putPVT( pres, velx, vely, velz, temp, qtrc  )
-    if ( mod(TIME_NOWSTEP,20) == 0 ) then
+    if ( mod(TIME_NOWSTEP,10) == 0 ) then
     step = step + 1
     desc  = 'temporal history'
     write(lname,'(A,I4.4)') 'ZDEF', KMAX
@@ -219,7 +233,7 @@ contains
     call FIO_output( momz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ', '', '', '', &
                      FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC           )
 
-    call FIO_output( lwpt(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'LWPT', '', '', '', &
+    call FIO_output( pott(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT', '', '', '', &
                      FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC           )
 
     call FIO_output( pres(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'PRES', '', '', '', &

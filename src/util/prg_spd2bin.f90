@@ -885,7 +885,7 @@ contains
     character(18):: tmp
     !---------------------------------------------------------------------------
 
-    write(tmp,*) isec/60
+    write(tmp,*) max(isec/60, 1)
 
     template = trim(tmp)//'mn'
 
