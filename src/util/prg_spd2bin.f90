@@ -584,16 +584,16 @@ contains
        write(fid,'(A,E12.5)') 'UNDEF ', real( -99.9E+33, kind=4 )
 
        write(fid,'(A,I5,A)') 'XDEF ', imax, ' LEVELS'
-       write(fid,'(10(1x,F9.4))') (lon(i),i=1,imax)
+       write(fid,'(10(1x,E12.5))') (lon(i),i=1,imax)
 
        write(fid,'(A,I5,A)')    'YDEF ',jmax, ' LEVELS'
-       write(fid,'(10(1x,F9.4))') (lat(j),j=1,jmax)
+       write(fid,'(10(1x,E12.5))') (lat(j),j=1,jmax)
 
        if ( kmax == 1 ) then
           write(fid,'(A,I5,A,2I5)') 'ZDEF ', kmax, ' LINEAR', 1, 1
        else
           write(fid,'(A,I5,A)') 'ZDEF ', kmax, ' LEVELS'
-          write(fid,'(10(1x,F9.2))') (alt(k),k=1,kmax)
+          write(fid,'(10(1x,E12.5))') (alt(k),k=1,kmax)
        endif
 
        s1 = trim( sec2initplate(time_str) ) ! S.Iga060508
@@ -656,6 +656,8 @@ contains
 
     real(8) :: pi
     real(8) :: dx, lonp1(imax+1)
+
+    real(8) :: lon2(imax), lat2(jmax), alt2(kmax)
     integer :: i
     !---------------------------------------------------------------------------
     pi = 4.D0 * atan( 1.D0 )
@@ -738,6 +740,11 @@ contains
     write(axhead(61),'(A16)'  ) 'SCALE3'
     write(axhead(63),'(A16)'  ) 'SCALE3'
 
+    ! convert [m]->[km]
+    lon2(:) = lon(:) * 1.D-3
+    lat2(:) = lat(:) * 1.D-3
+    alt2(:) = alt(:) * 1.D-3
+
     fid = IO_get_available_fid()
     open( unit   = fid,           &
           file   = trim(trim(outfile_dir)//'/GTAXLOC.'//trim(gt_axisx)),&
@@ -748,9 +755,9 @@ contains
 
     if (ierr == 0) then
 
-       dx = lon(2)-lon(1)
+       dx = lon2(2)-lon2(1)
 
-       lonp1(1) = lon(1)  - dx/2
+       lonp1(1) = lon2(1) - dx/2
        if ( abs(lonp1(1)) < 1.D-10 ) lonp1(1) = 0.D0
 
        do i = 2, imax+1
@@ -760,8 +767,8 @@ contains
        write(axhead( 3),'(A16)'  ) trim(gt_axisx)
        write(axhead(29),'(A16)'  ) trim(gt_axisx)
        write(axhead(31),'(I16)'  ) imax+1
-       write(axhead(40),'(E16.7)') lonp1(1)
-       write(axhead(41),'(E16.7)') lonp1(imax+1)
+       write(axhead(40),'(E16.7)') lonp1(1)      - 0.5D0*dx
+       write(axhead(41),'(E16.7)') lonp1(imax+1) + 0.5D0*dx
        write(axhead(42),'(E16.7)')  40.E0
        write(axhead(43),'(E16.7)') 800.E0
        write(axhead(64),'(I16)'  ) imax+1
@@ -780,17 +787,20 @@ contains
           iostat = ierr           )
 
     if (ierr == 0) then
+
+       dx = lat2(2)-lat2(1)
+
        write(axhead( 3),'(A16)'  ) trim(gt_axisy)
        write(axhead(29),'(A16)'  ) trim(gt_axisy)
        write(axhead(31),'(I16)'  ) jmax
-       write(axhead(40),'(E16.7)') lat(1)
-       write(axhead(41),'(E16.7)') lat(jmax)
+       write(axhead(40),'(E16.7)') lat2(1)    - 0.5D0*dx
+       write(axhead(41),'(E16.7)') lat2(jmax) + 0.5D0*dx
        write(axhead(42),'(E16.7)')  40.E0
        write(axhead(43),'(E16.7)') 800.E0
        write(axhead(64),'(I16)'  ) jmax
 
        write(fid) axhead
-       write(fid) real( lat(1:jmax), kind=4 )
+       write(fid) real( lat2(1:jmax), kind=4 )
 
        close(fid)
     endif
@@ -803,17 +813,20 @@ contains
           iostat = ierr           )
 
     if (ierr == 0) then
+
+       dx = alt2(1)
+
        write(axhead( 3),'(A16)'  ) trim(layername)
        write(axhead(29),'(A16)'  ) trim(layername)
        write(axhead(31),'(I16)'  ) kmax
-       write(axhead(40),'(E16.7)')     0.E0
-       write(axhead(41),'(E16.7)') real(maxval(alt),kind=4)
+       write(axhead(40),'(E16.7)') alt2(1)    - dx
+       write(axhead(41),'(E16.7)') alt2(kmax) + dx
        write(axhead(42),'(E16.7)')  1000.E0
        write(axhead(43),'(E16.7)') 10000.E0
        write(axhead(64),'(I16)'  ) kmax
 
        write(fid) axhead
-       write(fid) real( alt(1:kmax), kind=4 )
+       write(fid) real( alt2(1:kmax), kind=4 )
 
        close(fid)
     endif
