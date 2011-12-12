@@ -1465,6 +1465,7 @@ int32_t fio_dump_finfo( int32_t fid,
   printf( "--- COMPLETE/SPRIT      : %s\n", str_mode[finfo[fid].header.fmode+1] );
   printf( "--- GRID TOPOLOGY       : %s\n", str_topology[finfo[fid].header.grid_topology+1] );
   printf( "--- Grid resolution [m] : %d\n", finfo[fid].header.glevel );
+  printf( "--- NUMBER OF X GRIDS   : %d\n", finfo[fid].header.rlevel );
   printf( "--- NUMBER OF H-GRIDS \n" );
   printf( "---     FOR EACH REGION : %d\n", ijall );
   printf( "--- NUMBER OF REGION    : %d\n", finfo[fid].header.num_of_rgn );

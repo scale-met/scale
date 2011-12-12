@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Dynamical core for Atmospheric process
-!!          Full explicit, no terrain + FCT limiter
+!!          Full explicit, no terrain + tracer FCT limiter
 !!
 !! @author H.Tomita and SCALE developpers
 !!
@@ -25,6 +25,7 @@ module mod_atmos_dyn
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_setup
   public :: ATMOS_DYN
   !-----------------------------------------------------------------------------
   !
@@ -39,6 +40,20 @@ module mod_atmos_dyn
   !++ Private parameters & variables
   !
 
+  integer, parameter :: I_DENS = 1
+  integer, parameter :: I_MOMX = 2
+  integer, parameter :: I_MOMY = 3
+  integer, parameter :: I_MOMZ = 4
+  integer, parameter :: I_POTT = 5
+  integer, parameter :: I_PRES = 6
+  integer, parameter :: I_VELX = 7
+  integer, parameter :: I_VELY = 8
+  integer, parameter :: I_VELZ = 9
+
+  integer, parameter :: XDIR   = 1
+  integer, parameter :: YDIR   = 2
+  integer, parameter :: ZDIR   = 3
+
   ! time settings
   integer, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
@@ -46,31 +61,64 @@ module mod_atmos_dyn
   real(8), parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
   real(8), parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
 
-  integer, parameter :: udir = 1
-  integer, parameter :: vdir = 2
-  integer, parameter :: wdir = 3
+  ! numerical filter settings
+  integer, parameter :: DF   = 4     ! order of numerical filter
+
+  real(8), save      :: ATMOS_DYN_numerical_diff = 1.D-3 ! nondimensional numerical diffusion
+  real(8), save      :: DIFF
 
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
-  !> Dynamical Process
+  !> Initialize Dynamical Process
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_DYN( dens,   momx,   momy,   momz,   lwpt,   &
-                        qtrc,                                   &
-                        pres,   velx,   vely,   velz,   temp,   &
-                        dens_t, momx_t, momy_t, momz_t, lwpt_t, &
-                        qtrc_t                                  )
+  subroutine ATMOS_DYN_setup
     use mod_stdio, only: &
+       IO_FID_CONF, &
        IO_FID_LOG,  &
        IO_L
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_grid, only: &
+       GRID_DX
+    implicit none
+
+    NAMELIST / PARAM_ATMOS_DYN / &
+       ATMOS_DYN_numerical_diff
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
+
+    DIFF = ATMOS_DYN_numerical_diff * (-1.D0)**dble( DF/2+1 )
+
+
+  end subroutine ATMOS_DYN_setup
+
+  !-----------------------------------------------------------------------------
+  !> Dynamical Process
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN( dens,   momx,   momy,   momz,   pott,   qtrc,  &
+                        dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t )
     use mod_const, only : &
        GRAV   => CONST_GRAV,  &
        Rair   => CONST_Rair,   &
-       CPair  => CONST_CPair,  &
-       RovCP  => CONST_RovCP,  &
        CPovCV => CONST_CPovCV, &
-       LH0    => CONST_LH0,    &
        Pstd   => CONST_Pstd
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN
@@ -93,42 +141,41 @@ contains
        RDZ => GRID_RDZ
     use mod_atmos_vars, only: &
        QA => A_QA
+    use mod_atmos_refstate, only: &
+       REF_dens
+    use mod_atmos_boundary, only: &
+       DAMP_alphau, &
+       DAMP_alphav, &
+       DAMP_alphaw, &
+       DAMP_alphat, &
+       velx_ref,    &
+       vely_ref,    &
+       velz_ref,    &
+       pott_ref
     implicit none
 
     ! prognostic value
-    real(8), intent(inout) :: dens(IA,JA,KA)      ! density [kg/m**3]
-    real(8), intent(inout) :: momx(IA,JA,KA)      ! momentum (x) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momy(IA,JA,KA)      ! momentum (y) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momz(IA,JA,KA)      ! momentum (z) [kg/m**3 * m/s]
-    real(8), intent(inout) :: lwpt(IA,JA,KA)      ! liquid water potential temperature [K]
-    real(8), intent(inout) :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
-    ! diagnostic value
-    real(8), intent(inout) :: pres(IA,JA,KA)      ! pressure [Pa]
-    real(8), intent(inout) :: velx(IA,JA,KA)      ! velocity (x) [m/s]
-    real(8), intent(inout) :: vely(IA,JA,KA)      ! velocity (y) [m/s]
-    real(8), intent(inout) :: velz(IA,JA,KA)      ! velocity (z) [m/s]
-    real(8), intent(inout) :: temp(IA,JA,KA)      ! Temperature [K]
+    real(8), intent(in)  :: dens(IA,JA,KA)      ! density [kg/m3]
+    real(8), intent(in)  :: momx(IA,JA,KA)      ! momentum (x) [kg/m3 * m/s]
+    real(8), intent(in)  :: momy(IA,JA,KA)      ! momentum (y) [kg/m3 * m/s]
+    real(8), intent(in)  :: momz(IA,JA,KA)      ! momentum (z) [kg/m3 * m/s]
+    real(8), intent(in)  :: pott(IA,JA,KA)      ! potential temperature [K]
+    real(8), intent(in)  :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
     ! prognostic tendency
-    real(8), intent(out)   :: dens_t(IA,JA,KA)
-    real(8), intent(out)   :: momx_t(IA,JA,KA)
-    real(8), intent(out)   :: momy_t(IA,JA,KA)
-    real(8), intent(out)   :: momz_t(IA,JA,KA)
-    real(8), intent(out)   :: lwpt_t(IA,JA,KA)
-    real(8), intent(out)   :: qtrc_t(IA,JA,KA,QA)
-
+    real(8), intent(out) :: dens_t(IA,JA,KA)
+    real(8), intent(out) :: momx_t(IA,JA,KA)
+    real(8), intent(out) :: momy_t(IA,JA,KA)
+    real(8), intent(out) :: momz_t(IA,JA,KA)
+    real(8), intent(out) :: pott_t(IA,JA,KA)
+    real(8), intent(out) :: qtrc_t(IA,JA,KA,QA)
 
     ! work
-    real(8), allocatable :: dens_w(:,:,:,:)    ! work, density
-    real(8), allocatable :: vec   (:,:,:,:)    ! vector quantity = momx + momy + momz
-    real(8), allocatable :: vec_w (:,:,:,:)    ! work
-    real(8), allocatable :: vec_t (:,:,:,:)    ! tendency
-    real(8), allocatable :: scl   (:,:,:,:)    ! scalar quantity = lwpt + qtrc
-    real(8), allocatable :: scl_w (:,:,:,:)    ! work
-    real(8), allocatable :: scl_t (:,:,:,:)    ! tendency
-    real(8), allocatable :: diag  (:,:,:,:)    ! work, diagnostics
+    real(8), allocatable :: var(:,:,:,:)       ! work
+    real(8), allocatable :: dens_diff(:,:,:)   ! anomary of density
+
     ! divergence
-    real(8), allocatable :: ddiv  (:,:,:)      ! density divergence [kg/m**3/s]
-    real(8), allocatable :: qdiv  (:,:,:)      ! divergence for any quantity
+    real(8), allocatable :: ddiv(:,:,:)        ! density divergence [kg/m3/s]
+    real(8)              :: qdiv               ! divergence for any quantity
     ! mass flux
     real(8), allocatable :: mflx_lo  (:,:,:,:) ! rho * vel(x,y,z) @ (u,v,w)-face low  order
     real(8), allocatable :: mflx_hi  (:,:,:,:) ! rho * vel(x,y,z) @ (u,v,w)-face high order
@@ -143,72 +190,82 @@ contains
     real(8) :: pjpls, pjmns, pjmax, pjmin, var_l
     real(8) :: midvel
 
-    real(8) :: fp, dfdp, dp
-    real(8) :: eps = 1.D-10
-    integer, parameter :: itmax = 20 ! max itelation cycle for pressure assumption
-
     real(8) :: dtrk
-    integer :: i, j, k, v, d, rko, it
+    integer :: i, j, k, iq, rko
     !---------------------------------------------------------------------------
 
-    allocate( dens_w(IA,JA,KA,1)         )
-    allocate( vec   (IA,JA,KA,udir:wdir) )
-    allocate( vec_w (IA,JA,KA,udir:wdir) )
-    allocate( vec_t (IA,JA,KA,udir:wdir) )
-    allocate( scl   (IA,JA,KA,1+QA)      )
-    allocate( scl_w (IA,JA,KA,1+QA)      )
-    allocate( scl_t (IA,JA,KA,1+QA)      )
-    allocate( diag  (IA,JA,KA,4)         )
+    allocate( var(IA,JA,KA,9) )
+ 
+    allocate( dens_diff(IA,JA,KA)           )
+    allocate( ddiv     (IA,JA,KA)           )
 
-    allocate( ddiv  (IA,JA,KA) )
-    allocate( qdiv  (IA,JA,KA) )
+    allocate( mflx_lo  (IA,JA,KA,XDIR:ZDIR) )
+    allocate( mflx_hi  (IA,JA,KA,XDIR:ZDIR) )
+    allocate( mflx_anti(IA,JA,KA,XDIR:ZDIR) )
+    allocate( qflx_lo  (IA,JA,KA,XDIR:ZDIR) )
+    allocate( qflx_hi  (IA,JA,KA,XDIR:ZDIR) )
+    allocate( qflx_anti(IA,JA,KA,XDIR:ZDIR) )
 
-    allocate( mflx_lo  (IA,JA,KA,udir:wdir) )
-    allocate( mflx_hi  (IA,JA,KA,udir:wdir) )
-    allocate( mflx_anti(IA,JA,KA,udir:wdir) )
-    allocate( qflx_lo  (IA,JA,KA,udir:wdir) )
-    allocate( qflx_hi  (IA,JA,KA,udir:wdir) )
-    allocate( qflx_anti(IA,JA,KA,udir:wdir) )
-
-    allocate( rjpls    (IA,JA,KA,udir:wdir) )
-    allocate( rjmns    (IA,JA,KA,udir:wdir) )
+    allocate( rjpls    (IA,JA,KA,XDIR:ZDIR) )
+    allocate( rjmns    (IA,JA,KA,XDIR:ZDIR) )
 
     ! copy to work from global vars
-    dens_w(:,:,:,1)    = dens(:,:,:)
-
-    vec  (:,:,:,udir) = momx(:,:,:)
-    vec  (:,:,:,vdir) = momy(:,:,:)
-    vec  (:,:,:,wdir) = momz(:,:,:)
-    vec_w(:,:,:,udir) = momx(:,:,:)
-    vec_w(:,:,:,vdir) = momy(:,:,:)
-    vec_w(:,:,:,wdir) = momz(:,:,:)
-
-    scl  (:,:,:,1)    = lwpt(:,:,:)
-    scl_w(:,:,:,1)    = lwpt(:,:,:)
-    do v = 1, QA
-       scl  (:,:,:,v+1) = qtrc(:,:,:,v)
-       scl_w(:,:,:,v+1) = qtrc(:,:,:,v)
-    enddo
-    diag(:,:,:,4) = pres(:,:,:) ! first guess
+    var(:,:,:,I_DENS) = dens(:,:,:)
+    var(:,:,:,I_MOMX) = momx(:,:,:)
+    var(:,:,:,I_MOMY) = momy(:,:,:)
+    var(:,:,:,I_MOMZ) = momz(:,:,:)
+    var(:,:,:,I_POTT) = pott(:,:,:)
 
     do rko = 1, RK
        dtrk = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
 
-       !--- reset tendency
-       dens_t(:,:,:)   = 0.D0
-       vec_t (:,:,:,:) = 0.D0
-       scl_t (:,:,:,:) = 0.D0
+       !--- calc pressure, velocity & communication
 
+       ! momentum -> velocity
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          var(i,j,k,I_VELX) = 2.D0 * var(i,j,k,I_MOMX) / ( var(i+1,j  ,k,I_DENS)+var(i,j,k,I_DENS) )
+          var(i,j,k,I_VELY) = 2.D0 * var(i,j,k,I_MOMY) / ( var(i  ,j+1,k,I_DENS)+var(i,j,k,I_DENS) )
+       enddo
+       enddo
+       enddo
+
+       do k = WS+1, WE-1
+       do j = JS,   JE
+       do i = IS,   IE
+          var(i,j,k,I_VELZ) = 2.D0 * var(i,j,k,I_MOMZ) / ( var(i,j,k+1,I_DENS)+var(i,j,k,I_DENS) )
+       enddo
+       enddo
+       enddo
+       var(:,:,WS,I_VELZ) = 0.D0 ! bottom boundary
+       var(:,:,WE,I_VELZ) = 0.D0 ! top    boundary
+
+       ! pressure
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          var(i,j,k,I_PRES) = Pstd * ( var(i,j,k,I_DENS) * var(i,j,k,I_POTT) * Rair / Pstd )**CPovCV
+       enddo
+       enddo
+       enddo
+
+       ! fill IHALO & JHALO
+       call COMM_vars( var(:,:,:,6:9) )
 
        !##### continuity equation #####
        do k = KS,   KE
        do j = JS,   JE
        do i = IS-1, IE
-          mflx_lo(i,j,k,udir) = 0.5D0 * ( dens_w(i+1,j,k,1)+dens_w(i,j,k,1) ) * velx(i,j,k)  &
-                              - 0.5D0 * ( dens_w(i+1,j,k,1)-dens_w(i,j,k,1) ) * abs(velx(i,j,k))
-          mflx_hi(i,j,k,udir) = ( 0.5D0 * ( dens_w(i+1,j,k,1)+dens_w(i  ,j,k,1) ) * FACT_N   &
-                                + 0.5D0 * ( dens_w(i+2,j,k,1)+dens_w(i-1,j,k,1) ) * FACT_F ) &
-                                * velx(i,j,k)
+          mflx_lo(i,j,k,XDIR) = 0.5D0                                                                &
+                              * (     var(i,j,k,I_VELX)  * ( var(i+1,j,k,I_DENS)+var(i,j,k,I_DENS) ) &
+                                - abs(var(i,j,k,I_VELX)) * ( var(i+1,j,k,I_DENS)-var(i,j,k,I_DENS) ) )
+
+          mflx_hi(i,j,k,XDIR) = 0.5D0 * var(i,j,k,I_VELX)                              &
+                              * ( FACT_N * ( var(i+1,j,k,I_DENS)+var(i  ,j,k,I_DENS) ) &
+                                + FACT_F * ( var(i+2,j,k,I_DENS)+var(i-1,j,k,I_DENS) ) )
+
+          mflx_anti(i,j,k,XDIR) = mflx_hi(i,j,k,XDIR) - mflx_lo(i,j,k,XDIR)
        enddo
        enddo
        enddo
@@ -216,11 +273,15 @@ contains
        do k = KS,   KE
        do j = JS-1, JE
        do i = IS,   IE
-          mflx_lo(i,j,k,vdir) = 0.5D0 * ( dens_w(i,j+1,k,1)+dens_w(i,j,k,1) ) * vely(i,j,k)  &
-                              - 0.5D0 * ( dens_w(i,j+1,k,1)-dens_w(i,j,k,1) ) * abs(vely(i,j,k))
-          mflx_hi(i,j,k,vdir) = ( 0.5D0 * ( dens_w(i,j+1,k,1)+dens_w(i,j  ,k,1) ) * FACT_N   &
-                                + 0.5D0 * ( dens_w(i,j+2,k,1)+dens_w(i,j-1,k,1) ) * FACT_F ) &
-                                * vely(i,j,k)
+          mflx_lo(i,j,k,YDIR) = 0.5D0                                                                &
+                              * (     var(i,j,k,I_VELY)  * ( var(i,j+1,k,I_DENS)+var(i,j,k,I_DENS) ) &
+                                - abs(var(i,j,k,I_VELY)) * ( var(i,j+1,k,I_DENS)-var(i,j,k,I_DENS) ) )
+
+          mflx_hi(i,j,k,YDIR) = 0.5D0 * var(i,j,k,I_VELY)                              &
+                              * ( FACT_N * ( var(i,j+1,k,I_DENS)+var(i,j  ,k,I_DENS) ) &
+                                + FACT_F * ( var(i,j+2,k,I_DENS)+var(i,j-1,k,I_DENS) ) )
+
+          mflx_anti(i,j,k,YDIR) = mflx_hi(i,j,k,YDIR) - mflx_lo(i,j,k,YDIR)
        enddo
        enddo
        enddo
@@ -228,322 +289,368 @@ contains
        do k = WS+2, WE-2
        do j = JS,   JE
        do i = IS,   IE
-          mflx_lo(i,j,k,wdir) = 0.5D0 * ( dens_w(i,j,k+1,1)+dens_w(i,j,k,1) ) * velz(i,j,k)  &
-                              - 0.5D0 * ( dens_w(i,j,k+1,1)-dens_w(i,j,k,1) ) * abs(velz(i,j,k))
-          mflx_hi(i,j,k,wdir) = ( 0.5D0 * ( dens_w(i,j,k+1,1)+dens_w(i,j,k  ,1) ) * FACT_N   &
-                                + 0.5D0 * ( dens_w(i,j,k+2,1)+dens_w(i,j,k-1,1) ) * FACT_F ) &
-                              * velz(i,j,k)
+          mflx_lo(i,j,k,ZDIR) = 0.5D0                                                                &
+                              * (     var(i,j,k,I_VELZ)  * ( var(i,j,k+1,I_DENS)+var(i,j,k,I_DENS) ) &
+                                - abs(var(i,j,k,I_VELZ)) * ( var(i,j,k+1,I_DENS)-var(i,j,k,I_DENS) ) )
+
+          mflx_hi(i,j,k,ZDIR) = 0.5D0 * var(i,j,k,I_VELZ)                              &
+                              * ( FACT_N * ( var(i,j,k+1,I_DENS)+var(i,j,k  ,I_DENS) ) &
+                                + FACT_F * ( var(i,j,k+2,I_DENS)+var(i,j,k-1,I_DENS) ) )
+
+          mflx_anti(i,j,k,ZDIR) = mflx_hi(i,j,k,ZDIR) - mflx_lo(i,j,k,ZDIR)
        enddo
        enddo
        enddo
 
        do j = JS, JE
        do i = IS, IE
-          mflx_lo(i,j,WS  ,wdir) = 0.D0
-          mflx_lo(i,j,WS+1,wdir) = 0.5D0 * ( dens_w(i,j,WS+2,1)+dens_w(i,j,WS+1,1) ) * velz(i,j,WS+1)
-          mflx_lo(i,j,WE-1,wdir) = 0.5D0 * ( dens_w(i,j,WE  ,1)+dens_w(i,j,WE-1,1) ) * velz(i,j,WE-1)
-          mflx_lo(i,j,WE  ,wdir) = 0.D0
+          mflx_lo(i,j,WS  ,ZDIR) = 0.D0                                          ! bottom boundary
+          mflx_lo(i,j,WS+1,ZDIR) = 0.5D0 * var(i,j,WS+1,I_VELZ)                &
+                                 * ( var(i,j,WS+2,I_DENS)+var(i,j,WS+1,I_DENS) ) ! just above the bottom boundary
+          mflx_lo(i,j,WE-1,ZDIR) = 0.5D0 * var(i,j,WE-1,I_VELZ)                &
+                                 * ( var(i,j,WE  ,I_DENS)+var(i,j,WE-1,I_DENS) ) ! just below the top boundary
+          mflx_lo(i,j,WE  ,ZDIR) = 0.D0                                          ! top boundary
 
-          mflx_hi(i,j,WS  ,wdir) = mflx_lo(i,j,WS  ,wdir) ! bottom boundary
-          mflx_hi(i,j,WS+1,wdir) = mflx_lo(i,j,WS+1,wdir) ! just above the bottom boundary
-          mflx_hi(i,j,WE-1,wdir) = mflx_lo(i,j,WE-1,wdir) ! just below the top boundary
-          mflx_hi(i,j,WE  ,wdir) = mflx_lo(i,j,WE  ,wdir) ! top boundary
+          mflx_hi(i,j,WS  ,ZDIR) = 0.D0
+          mflx_hi(i,j,WS+1,ZDIR) = mflx_lo(i,j,WS+1,ZDIR)
+          mflx_hi(i,j,WE-1,ZDIR) = mflx_lo(i,j,WE-1,ZDIR)
+          mflx_hi(i,j,WE  ,ZDIR) = 0.D0
+
+          mflx_anti(i,j,WS  ,ZDIR) = 0.D0
+          mflx_anti(i,j,WS+1,ZDIR) = 0.D0
+          mflx_anti(i,j,WE-1,ZDIR) = 0.D0
+          mflx_anti(i,j,WE  ,ZDIR) = 0.D0
        enddo
        enddo
 
-       ! -- flux-divergence
+       !--- flux-divergence
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          ddiv(i,j,k) = ( mflx_lo(i,j,k,udir)-mflx_lo(i-1,j,  k  ,udir) ) * RDX &
-                      + ( mflx_lo(i,j,k,vdir)-mflx_lo(i,  j-1,k  ,vdir) ) * RDY &
-                      + ( mflx_lo(i,j,k,wdir)-mflx_lo(i,  j,  k-1,wdir) ) * RDZ
+          ddiv(i,j,k) = ( mflx_hi(i,j,k,XDIR)-mflx_hi(i-1,j,  k  ,XDIR) ) * RDX &
+                      + ( mflx_hi(i,j,k,YDIR)-mflx_hi(i,  j-1,k  ,YDIR) ) * RDY &
+                      + ( mflx_hi(i,j,k,ZDIR)-mflx_hi(i,  j,  k-1,ZDIR) ) * RDZ
        enddo
        enddo
        enddo
 
-       mflx_anti(:,:,:,:) = mflx_hi(:,:,:,:) - mflx_lo(:,:,:,:)
-
-       rjpls(:,:,:,:) = 0.D0
-       rjmns(:,:,:,:) = 0.D0
-
+       !--- numerical filter
        do k = KS, KE
+          dens_diff(:,:,k) = var(:,:,k,I_DENS) - REF_dens(:,:,k)
+       enddo
+
+       do k = KS+2, KE-2
+       do j = JS,   JE
+       do i = IS,   IE
+          dens_t(i,j,k) = - ddiv(i,j,k)                                       &
+                          - DIFF / dtrk * ( (        dens_diff(i+2,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i+1,j  ,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i-1,j  ,k  )   &
+                                            +        dens_diff(i-2,j  ,k  ) ) &
+                                          + (        dens_diff(i  ,j+2,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j+1,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j-1,k  )   &
+                                            +        dens_diff(i  ,j-2,k  ) ) &
+                                          + (        dens_diff(i  ,j  ,k+2)   &
+                                            - 4.D0 * dens_diff(i  ,j  ,k+1)   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j  ,k-1)   &
+                                            +        dens_diff(i  ,j  ,k-2) ) )
+       enddo
+       enddo
+       enddo
+
        do j = JS, JE
        do i = IS, IE
-          var_l = dens(i,j,k) - dtrk * ddiv(i,j,k)
+          k = KS
+          dens_t(i,j,k) = - ddiv(i,j,k)                                       &
+                          - DIFF / dtrk * ( (        dens_diff(i+2,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i+1,j  ,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i-1,j  ,k  )   &
+                                            +        dens_diff(i-2,j  ,k  ) ) &
+                                          + (        dens_diff(i  ,j+2,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j+1,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j-1,k  )   &
+                                            +        dens_diff(i  ,j-2,k  ) ) &
+                                          + (        dens_diff(i  ,j  ,k+2)   &
+                                            - 3.D0 * dens_diff(i  ,j  ,k+1)   &
+                                            + 2.D0 * dens_diff(i  ,j  ,k  ) ) )
 
-          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( dens_w(i  ,j  ,k  ,1), &
-                       dens_w(i+1,j  ,k  ,1), &
-                       dens_w(i-1,j  ,k  ,1), &
-                       dens_w(i  ,j+1,k  ,1), &
-                       dens_w(i  ,j-1,k  ,1), &
-                       dens_w(i  ,j  ,k+1,1), &
-                       dens_w(i  ,j  ,k-1,1)  )
+          k = KS+1
+          dens_t(i,j,k) = - ddiv(i,j,k)                                       &
+                          - DIFF / dtrk * ( (        dens_diff(i+2,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i+1,j  ,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i-1,j  ,k  )   &
+                                            +        dens_diff(i-2,j  ,k  ) ) &
+                                          + (        dens_diff(i  ,j+2,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j+1,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j-1,k  )   &
+                                            +        dens_diff(i  ,j-2,k  ) ) &
+                                          + (        dens_diff(i  ,j  ,k+2)   &
+                                            - 4.D0 * dens_diff(i  ,j  ,k+1)   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 3.D0 * dens_diff(i  ,j  ,k-1) ) )
 
-          pjmin = min( dens_w(i  ,j  ,k  ,1), &
-                       dens_w(i+1,j  ,k  ,1), &
-                       dens_w(i-1,j  ,k  ,1), &
-                       dens_w(i  ,j+1,k  ,1), &
-                       dens_w(i  ,j-1,k  ,1), &
-                       dens_w(i  ,j  ,k+1,1), &
-                       dens_w(i  ,j  ,k-1,1)  )
+          k = KE-1
+          dens_t(i,j,k) = - ddiv(i,j,k)                                       &
+                          - DIFF / dtrk * ( (        dens_diff(i+2,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i+1,j  ,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i-1,j  ,k  )   &
+                                            +        dens_diff(i-2,j  ,k  ) ) &
+                                          + (        dens_diff(i  ,j+2,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j+1,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j-1,k  )   &
+                                            +        dens_diff(i  ,j-2,k  ) ) &
+                                          + (        dens_diff(i  ,j  ,k-2)   &
+                                            - 4.D0 * dens_diff(i  ,j  ,k-1)   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 3.D0 * dens_diff(i  ,j  ,k+1) ) )
 
-          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, mflx_anti(i-1,j  ,k  ,udir) ) - min( 0.D0, mflx_anti(i  ,j  ,k  ,udir) ) &
-                + max( 0.D0, mflx_anti(i  ,j-1,k  ,vdir) ) - min( 0.D0, mflx_anti(i  ,j  ,k  ,vdir) ) &
-                + max( 0.D0, mflx_anti(i  ,j  ,k-1,wdir) ) - min( 0.D0, mflx_anti(i  ,j  ,k  ,wdir) )
-          pjmns = max( 0.D0, mflx_anti(i  ,j  ,k  ,udir) ) - min( 0.D0, mflx_anti(i-1,j  ,k  ,udir) ) &
-                + max( 0.D0, mflx_anti(i  ,j  ,k  ,vdir) ) - min( 0.D0, mflx_anti(i  ,j-1,k  ,vdir) ) &
-                + max( 0.D0, mflx_anti(i  ,j  ,k  ,wdir) ) - min( 0.D0, mflx_anti(i  ,j  ,k-1,wdir) )
-
-          ! --- incoming fluxes at scalar grid points ---
-          if ( pjpls > 0 ) then
-             rjpls(i,j,k,udir) = (pjmax-var_l) / pjpls * abs(velx(i,j,k)+velx(i-1,j  ,k  )) * 0.5D0
-             rjpls(i,j,k,vdir) = (pjmax-var_l) / pjpls * abs(vely(i,j,k)+vely(i  ,j-1,k  )) * 0.5D0
-             rjpls(i,j,k,wdir) = (pjmax-var_l) / pjpls * abs(velz(i,j,k)+velz(i  ,j  ,k-1)) * 0.5D0
-          endif
-
-          ! --- outgoing fluxes at scalar grid points ---
-          if ( pjmns > 0 ) then
-             rjmns(i,j,k,udir) = (var_l-pjmin) / pjmns * abs(velx(i,j,k)+velx(i-1,j  ,k  )) * 0.5D0
-             rjmns(i,j,k,vdir) = (var_l-pjmin) / pjmns * abs(vely(i,j,k)+vely(i  ,j-1,k  )) * 0.5D0
-             rjmns(i,j,k,wdir) = (var_l-pjmin) / pjmns * abs(velz(i,j,k)+velz(i  ,j  ,k-1)) * 0.5D0
-          endif
-
-       enddo
-       enddo
-       enddo
-
-       ! --- [STEP 7S] limit the antidiffusive flux at velocity grid points ---
-       do k = KS-1, KE
-       do j = JS-1, JE
-       do i = IS-1, IE
-          if ( mflx_anti(i,j,k,udir) >= 0 ) then
-             mflx_anti(i,j,k,udir) = mflx_anti(i,j,k,udir) * min( rjpls(i+1,j,k,udir), rjmns(i  ,j,k,udir), 1.D0 )
-          else ! mflx_ua(i,j,k) < 0
-             mflx_anti(i,j,k,udir) = mflx_anti(i,j,k,udir) * min( rjpls(i  ,j,k,udir), rjmns(i+1,j,k,udir), 1.D0 )
-          endif
-
-          if ( mflx_anti(i,j,k,vdir) >= 0 ) then
-             mflx_anti(i,j,k,vdir) = mflx_anti(i,j,k,vdir) * min( rjpls(i,j+1,k,vdir), rjmns(i,j  ,k,vdir), 1.D0 )
-          else ! mflx_va(i,j,k) < 0
-             mflx_anti(i,j,k,vdir) = mflx_anti(i,j,k,vdir) * min( rjpls(i,j  ,k,vdir), rjmns(i,j+1,k,vdir), 1.D0 )
-          endif
-
-          if ( mflx_anti(i,j,k,wdir) >= 0 ) then
-             mflx_anti(i,j,k,wdir) = mflx_anti(i,j,k,wdir) * min( rjpls(i,j,k+1,wdir), rjmns(i,j,k  ,wdir), 1.D0 )
-          else ! mflx_wa(i,j,k) < 0
-             mflx_anti(i,j,k,wdir) = mflx_anti(i,j,k,wdir) * min( rjpls(i,j,k  ,wdir), rjmns(i,j,k+1,wdir), 1.D0 )
-          endif
-       enddo
-       enddo
-       enddo
-
-       ! -- modify flux-divergence with antidiffusive fluxes
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          ddiv(i,j,k) = ddiv(i,j,k) + ( mflx_anti(i,j,k,udir)-mflx_anti(i-1,j  ,k  ,udir) ) * RDX &
-                                    + ( mflx_anti(i,j,k,vdir)-mflx_anti(i  ,j-1,k  ,vdir) ) * RDY &
-                                    + ( mflx_anti(i,j,k,wdir)-mflx_anti(i  ,j  ,k-1,wdir) ) * RDZ
-          dens_t(i,j,k) = - ddiv(i,j,k)
-       enddo
+          k = KE
+          dens_t(i,j,k) = - ddiv(i,j,k)                                       &
+                          - DIFF / dtrk * ( (        dens_diff(i+2,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i+1,j  ,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i-1,j  ,k  )   &
+                                            +        dens_diff(i-2,j  ,k  ) ) &
+                                          + (        dens_diff(i  ,j+2,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j+1,k  )   &
+                                            + 6.D0 * dens_diff(i  ,j  ,k  )   &
+                                            - 4.D0 * dens_diff(i  ,j-1,k  )   &
+                                            +        dens_diff(i  ,j-2,k  ) ) &
+                                          + (        dens_diff(i  ,j  ,k-2)   &
+                                            - 3.D0 * dens_diff(i  ,j  ,k-1)   &
+                                            + 2.D0 * dens_diff(i  ,j  ,k  ) ) )
        enddo
        enddo
 
 
        !##### momentum equation #####
 
-       ! -- make mass fluxes ( momentum(x) * vel )
+       !--- make mass fluxes ( momentum(x) * vel )
 
        ! at (x, y, layer)
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE+1
-          midvel = 0.5D0 * ( velx(i,j,k)+velx(i-1,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i,j,k,I_VELX)+var(i-1,j,k,I_VELX) ) ! at center
 
-          qflx_lo(i,j,k,udir) = 0.5D0 * ( vec_w(i,j,k,udir)+vec_w(i-1,j,k,udir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i,j,k,udir)-vec_w(i-1,j,k,udir) ) * abs(midvel)
-          qflx_hi(i,j,k,udir) = ( 0.5D0 * ( vec_w(i  ,j,k,udir)+vec_w(i-1,j,k,udir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+1,j,k,udir)+vec_w(i-2,j,k,udir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j,k,I_MOMX)+var(i-1,j,k,I_MOMX) ) &
+                                - abs(midvel) * ( var(i,j,k,I_MOMX)-var(i-1,j,k,I_MOMX) ) )
+
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i  ,j,k,I_MOMX)+var(i-1,j,k,I_MOMX) ) &
+                                + FACT_F * ( var(i+1,j,k,I_MOMX)+var(i-2,j,k,I_MOMX) ) )
+
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
        enddo
        enddo
        enddo
+
        ! at (u, v, layer)
        do k = KS,   KE
        do j = JS-1, JE
        do i = IS,   IE
-          midvel = 0.5D0 * ( vely(i+1,j,k)+vely(i,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i+1,j,k,I_VELY)+var(i,j,k,I_VELY) ) ! at face
 
-          qflx_lo(i,j,k,vdir) = 0.5D0 * ( vec_w(i,j+1,k,udir)+vec_w(i,j,k,udir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i,j+1,k,udir)-vec_w(i,j,k,udir) ) * abs(midvel)
-          qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( vec_w(i,j+1,k,udir)+vec_w(i,j  ,k,udir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j+2,k,udir)+vec_w(i,j-1,k,udir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j+1,k,I_MOMX)+var(i,j,k,I_MOMX) ) &
+                                - abs(midvel) * ( var(i,j+1,k,I_MOMX)-var(i,j,k,I_MOMX) ) ) 
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j+1,k,I_MOMX)+var(i,j  ,k,I_MOMX) ) &
+                                + FACT_F * ( var(i,j+2,k,I_MOMX)+var(i,j-1,k,I_MOMX) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
        enddo
        enddo
        enddo
+
        ! at (u, y, interface)
        do k = WS+2, WE-2
        do j = JS,   JE
        do i = IS,   IE
-          midvel = 0.5D0 * ( velz(i+1,j,k)+velz(i,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i+1,j,k,I_VELZ)+var(i,j,k,I_VELZ) ) ! at face
 
-          qflx_lo(i,j,k,wdir) = 0.5D0 * ( vec_w(i,j,k+1,udir)+vec_w(i,j,k,udir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i,j,k+1,udir)-vec_w(i,j,k,udir) ) * abs(midvel)
-          qflx_hi(i,j,k,wdir) = ( 0.5D0 * ( vec_w(i,j,k+1,udir)+vec_w(i,j,k  ,udir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j,k+2,udir)+vec_w(i,j,k-1,udir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,ZDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j,k+1,I_MOMX)+var(i,j,k,I_MOMX) ) &
+                                - abs(midvel) * ( var(i,j,k+1,I_MOMX)-var(i,j,k,I_MOMX) ) ) 
+
+          qflx_hi(i,j,k,ZDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j,k+1,I_MOMX)+var(i,j,k  ,I_MOMX) ) &
+                                + FACT_F * ( var(i,j,k+2,I_MOMX)+var(i,j,k-1,I_MOMX) ) )
+
+          qflx_anti(i,j,k,ZDIR) = qflx_hi(i,j,k,ZDIR) - qflx_lo(i,j,k,ZDIR)
        enddo
        enddo
        enddo
 
        do j = JS, JE
        do i = IS, IE
-          qflx_lo(i,j,WS  ,wdir) = 0.D0
-          qflx_lo(i,j,WS+1,wdir) = 0.25D0 * ( vec_w(i,j,WS+2,udir)+vec_w(i,j,WS+1,udir) ) * ( velz(i+1,j,WS+2)+velz(i,j,WS+1) )
-          qflx_lo(i,j,WE-1,wdir) = 0.25D0 * ( vec_w(i,j,WE  ,udir)+vec_w(i,j,WE-1,udir) ) * ( velz(i+1,j,WE  )+velz(i,j,WE-1) )
-          qflx_lo(i,j,WE  ,wdir) = 0.D0
+          qflx_lo(i,j,WS  ,ZDIR) = 0.D0                                                     ! bottom boundary
+          qflx_lo(i,j,WS+1,ZDIR) = 0.25D0 * ( var(i,j,WS+2,I_MOMX)+var(i,j,WS+1,I_MOMX) ) &
+                                 * ( var(i+1,j,WS+2,I_VELZ)+var(i,j,WS+1,I_VELZ) )          ! just above the bottom boundary
+          qflx_lo(i,j,WE-1,ZDIR) = 0.25D0 * ( var(i,j,WE  ,I_MOMX)+var(i,j,WE-1,I_MOMX) ) &
+                                 * ( var(i+1,j,WE  ,I_VELZ)+var(i,j,WE-1,I_VELZ) )          ! just below the top boundary
+          qflx_lo(i,j,WE  ,ZDIR) = 0.D0                                                     ! top boundary
 
-          qflx_hi(i,j,WS  ,wdir) = qflx_lo(i,j,WS  ,wdir) ! bottom boundary
-          qflx_hi(i,j,WS+1,wdir) = qflx_lo(i,j,WS+1,wdir) ! just above the bottom boundary
-          qflx_hi(i,j,WE-1,wdir) = qflx_lo(i,j,WE-1,wdir) ! just below the top boundary
-          qflx_hi(i,j,WE  ,wdir) = qflx_lo(i,j,WE  ,wdir) ! top boundary
-       enddo
-       enddo
+          qflx_hi(i,j,WS  ,ZDIR) = 0.D0
+          qflx_hi(i,j,WS+1,ZDIR) = qflx_lo(i,j,WS+1,ZDIR)
+          qflx_hi(i,j,WE-1,ZDIR) = qflx_lo(i,j,WE-1,ZDIR)
+          qflx_hi(i,j,WE  ,ZDIR) = 0.D0
 
-       ! -- update flux-divergence with the monotone scheme
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          qdiv(i,j,k) = ( qflx_lo(i+1,j,k,udir)-qflx_lo(i,j,  k  ,udir) ) * RDX &
-                      + ( qflx_lo(i  ,j,k,vdir)-qflx_lo(i,j-1,k  ,vdir) ) * RDY &
-                      + ( qflx_lo(i  ,j,k,wdir)-qflx_lo(i,j,  k-1,wdir) ) * RDZ
+          qflx_anti(i,j,WS  ,ZDIR) = 0.D0
+          qflx_anti(i,j,WS+1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE-1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE  ,ZDIR) = 0.D0
        enddo
        enddo
-       enddo
-
-       qflx_anti(:,:,:,:) = qflx_hi(:,:,:,:) - qflx_lo(:,:,:,:)
-
-       rjpls(:,:,:,:) = 0.D0
-       rjmns(:,:,:,:) = 0.D0
 
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          var_l = vec(i,j,k,udir) - dtrk * ( (pres(i+1,j,k)-pres(i,j,k)) * RDX + qdiv(i,j,k) )
+          !--- update flux-divergence with the monotone scheme
+          qdiv = ( qflx_lo(i+1,j,k,XDIR)-qflx_lo(i,j,  k  ,XDIR) ) * RDX &
+               + ( qflx_lo(i  ,j,k,YDIR)-qflx_lo(i,j-1,k  ,YDIR) ) * RDY &
+               + ( qflx_lo(i  ,j,k,ZDIR)-qflx_lo(i,j,  k-1,ZDIR) ) * RDZ
 
-          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( vec_w(i  ,j  ,k  ,udir), &
-                       vec_w(i+1,j  ,k  ,udir), &
-                       vec_w(i-1,j  ,k  ,udir), &
-                       vec_w(i  ,j+1,k  ,udir), &
-                       vec_w(i  ,j-1,k  ,udir), &
-                       vec_w(i  ,j  ,k+1,udir), &
-                       vec_w(i  ,j  ,k-1,udir)  )
+          !--- first guess of tendency and updated value
+          momx_t(i,j,k) = - qdiv                                                  &
+                          - (var(i+1,j,k,I_PRES)-var(i,j,k,I_PRES) ) * RDX        &
+                          - DAMP_alphau(i,j,k) * (var(i,j,k,I_VELX)-velx_ref(i,j,k) ) &
+                          * 0.5D0 * ( var(i+1,j,k,I_DENS)+var(i,j,k,I_DENS) )
 
-          pjmin = min( vec_w(i  ,j  ,k  ,udir), &
-                       vec_w(i+1,j  ,k  ,udir), &
-                       vec_w(i-1,j  ,k  ,udir), &
-                       vec_w(i  ,j+1,k  ,udir), &
-                       vec_w(i  ,j-1,k  ,udir), &
-                       vec_w(i  ,j  ,k+1,udir), &
-                       vec_w(i  ,j  ,k-1,udir)  )
+          var_l = momx(i,j,k) + momx_t(i,j,k) * dtrk
 
-          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i+1,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) )
-          pjmns = max( 0.D0, qflx_anti(i+1,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) )
+          !--- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
+          pjmax = max( var(i  ,j  ,k  ,I_MOMX), &
+                       var(i+1,j  ,k  ,I_MOMX), &
+                       var(i-1,j  ,k  ,I_MOMX), &
+                       var(i  ,j+1,k  ,I_MOMX), &
+                       var(i  ,j-1,k  ,I_MOMX), &
+                       var(i  ,j  ,k+1,I_MOMX), &
+                       var(i  ,j  ,k-1,I_MOMX)  )
 
-          ! --- incoming fluxes at scalar grid points ---
+          pjmin = min( var(i  ,j  ,k  ,I_MOMX), &
+                       var(i+1,j  ,k  ,I_MOMX), &
+                       var(i-1,j  ,k  ,I_MOMX), &
+                       var(i  ,j+1,k  ,I_MOMX), &
+                       var(i  ,j-1,k  ,I_MOMX), &
+                       var(i  ,j  ,k+1,I_MOMX), &
+                       var(i  ,j  ,k-1,I_MOMX)  )
+
+          !--- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
+          pjpls = max( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i+1,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) )
+          pjmns = max( 0.D0, qflx_anti(i+1,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) )
+
+          !--- incoming fluxes at scalar grid points ---
           if ( pjpls > 0 ) then
-             rjpls(i,j,k,udir) = (pjmax-var_l) / pjpls * abs(velx(i,j,k))
+             rjpls(i,j,k,XDIR) = (pjmax-var_l) / pjpls * abs(var(i,j,k,I_VELX))
 
-             midvel = 0.25D0 * ( vely(i+1,j  ,k  ) &
-                               + vely(i  ,j  ,k  ) &
-                               + vely(i+1,j-1,k  ) &
-                               + vely(i  ,j-1,k  ) )
-             rjpls(i,j,k,vdir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i+1,j  ,k  ,I_VELY) &
+                               + var(i  ,j  ,k  ,I_VELY) &
+                               + var(i+1,j-1,k  ,I_VELY) &
+                               + var(i  ,j-1,k  ,I_VELY) )
+             rjpls(i,j,k,YDIR) = (pjmax-var_l) / pjpls * abs(midvel)
 
-             midvel = 0.25D0 * ( velz(i+1,j  ,k  ) &
-                               + velz(i  ,j  ,k  ) &
-                               + velz(i+1,j  ,k-1) &
-                               + velz(i  ,j  ,k-1) )
-             rjpls(i,j,k,wdir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i+1,j  ,k  ,I_VELZ) &
+                               + var(i  ,j  ,k  ,I_VELZ) &
+                               + var(i+1,j  ,k-1,I_VELZ) &
+                               + var(i  ,j  ,k-1,I_VELZ) )
+             rjpls(i,j,k,ZDIR) = (pjmax-var_l) / pjpls * abs(midvel)
+          else
+             rjpls(i,j,k,XDIR:ZDIR) = 0.D0
           endif
 
-          ! --- outgoing fluxes at scalar grid points ---
+          !--- outgoing fluxes at scalar grid points ---
           if ( pjmns > 0 ) then
-             rjmns(i,j,k,udir) = (var_l-pjmin) / pjmns * abs(velx(i,j,k))
+             rjmns(i,j,k,XDIR) = (var_l-pjmin) / pjmns * abs(var(i,j,k,I_VELX))
 
-             midvel = 0.25D0 * ( vely(i+1,j  ,k  ) &
-                               + vely(i  ,j  ,k  ) &
-                               + vely(i+1,j-1,k  ) &
-                               + vely(i  ,j-1,k  ) )
-             rjmns(i,j,k,vdir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i+1,j  ,k  ,I_VELY) &
+                               + var(i  ,j  ,k  ,I_VELY) &
+                               + var(i+1,j-1,k  ,I_VELY) &
+                               + var(i  ,j-1,k  ,I_VELY) )
+             rjmns(i,j,k,YDIR) = (var_l-pjmin) / pjmns * abs(midvel)
 
-             midvel = 0.25D0 * ( velz(i+1,j  ,k  ) &
-                               + velz(i  ,j  ,k  ) &
-                               + velz(i+1,j  ,k-1) &
-                               + velz(i  ,j  ,k-1) )
-             rjmns(i,j,k,wdir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i+1,j  ,k  ,I_VELZ) &
+                               + var(i  ,j  ,k  ,I_VELZ) &
+                               + var(i+1,j  ,k-1,I_VELZ) &
+                               + var(i  ,j  ,k-1,I_VELZ) )
+             rjmns(i,j,k,ZDIR) = (var_l-pjmin) / pjmns * abs(midvel)
+          else
+             rjmns(i,j,k,XDIR:ZDIR) = 0.D0
           endif
 
        enddo
        enddo
        enddo
 
-       ! --- [STEP 7S] limit the antidiffusive flux at velocity grid points ---
+       !--- [STEP 7S] limit the antidiffusive flux at velocity grid points ---
        do k = KS-1, KE
        do j = JS-1, JE
        do i = IS  , IE+1
-          if ( qflx_anti(i,j,k,udir) >= 0 ) then
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i  ,j,k,udir), rjmns(i-1,j,k,udir), 1.D0 )
-          else ! qflx_anti(i,j,k,udir) < 0
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i-1,j,k,udir), rjmns(i  ,j,k,udir), 1.D0 )
+          if ( qflx_anti(i,j,k,XDIR) >= 0 ) then
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i  ,j,k,XDIR), rjmns(i-1,j,k,XDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i-1,j,k,XDIR), rjmns(i  ,j,k,XDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,vdir) >= 0 ) then
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j+1,k,vdir), rjmns(i,j  ,k,vdir), 1.D0 )
-          else ! qflx_anti(i,j,k,vdir) < 0
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j  ,k,vdir), rjmns(i,j+1,k,vdir), 1.D0 )
+          if ( qflx_anti(i,j,k,YDIR) >= 0 ) then
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j+1,k,YDIR), rjmns(i,j  ,k,YDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j  ,k,YDIR), rjmns(i,j+1,k,YDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,wdir) >= 0 ) then
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k+1,wdir), rjmns(i,j,k  ,wdir), 1.D0 )
-          else ! qflx_anti(i,j,k,wdir) < 0
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k  ,wdir), rjmns(i,j,k+1,wdir), 1.D0 )
+          if ( qflx_anti(i,j,k,ZDIR) >= 0 ) then
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k+1,ZDIR), rjmns(i,j,k  ,ZDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k  ,ZDIR), rjmns(i,j,k+1,ZDIR), 1.D0 )
           endif
        enddo
        enddo
        enddo
 
-       ! -- modify flux-divergence with antidiffusive fluxes
+       !--- modify flux-divergence->tendency with antidiffusive fluxes
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          qdiv(i,j,k) = qdiv(i,j,k) + ( qflx_anti(i+1,j,k,udir)-qflx_anti(i,j  ,k  ,udir) ) * RDX &
-                                    + ( qflx_anti(i  ,j,k,vdir)-qflx_anti(i,j-1,k  ,vdir) ) * RDY &
-                                    + ( qflx_anti(i  ,j,k,wdir)-qflx_anti(i,j  ,k-1,wdir) ) * RDZ
-          vec_t(i,j,k,udir) = - qdiv(i,j,k) - ( pres(i+1,j,k)-pres(i,j,k) ) * RDX 
+          momx_t(i,j,k) = momx_t(i,j,k) - ( ( qflx_anti(i+1,j,k,XDIR)-qflx_anti(i,j  ,k  ,XDIR) ) * RDX &
+                                          + ( qflx_anti(i  ,j,k,YDIR)-qflx_anti(i,j-1,k  ,YDIR) ) * RDY &
+                                          + ( qflx_anti(i  ,j,k,ZDIR)-qflx_anti(i,j  ,k-1,ZDIR) ) * RDZ )
        enddo
        enddo
        enddo
 
-       ! -- make mass fluxes ( momentum(y) * vel )
+       !--- make mass fluxes ( momentum(y) * vel )
 
        ! at (u, v, layer)
        do k = KS,   KE
        do j = JS,   JE
        do i = IS-1, IE
-          midvel = 0.5D0 * ( velx(i,j+1,k)+velx(i,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i,j+1,k,I_VELX)+var(i,j,k,I_VELX) ) ! at center
 
-          qflx_lo(i,j,k,udir) = 0.5D0 * ( vec_w(i+1,j,k,vdir)+vec_w(i,j,k,vdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i+1,j,k,vdir)-vec_w(i,j,k,vdir) ) * abs(midvel)
-          qflx_hi(i,j,k,udir) = ( 0.5D0 * ( vec_w(i+1,j,k,vdir)+vec_w(i  ,j,k,vdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,vdir)+vec_w(i-1,j,k,vdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i+1,j,k,I_MOMY)+var(i,j,k,I_MOMY) ) &
+                                - abs(midvel) * ( var(i+1,j,k,I_MOMY)-var(i,j,k,I_MOMY) ) )
+
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i+1,j,k,I_MOMY)+var(i  ,j,k,I_MOMY) ) &
+                                + FACT_F * ( var(i+2,j,k,I_MOMY)+var(i-1,j,k,I_MOMY) ) )
+
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
        enddo
        enddo
        enddo
@@ -551,12 +658,17 @@ contains
        do k = KS, KE
        do j = JS, JE+1
        do i = IS, IE
-          midvel = 0.5D0 * ( vely(i,j,k)+vely(i,j-1,k) ) ! on face
+          midvel = 0.5D0 * ( var(i,j,k,I_VELY)+var(i,j-1,k,I_VELY) ) ! at face
 
-          qflx_lo(i,j,k,vdir) = 0.5D0 * ( vec_w(i,j,k,vdir)+vec_w(i,j-1,k,vdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i,j,k,vdir)-vec_w(i,j-1,k,vdir) ) * abs(midvel)
-          qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( vec_w(i,j  ,k,vdir)+vec_w(i,j-1,k,vdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j+1,k,vdir)+vec_w(i,j-2,k,vdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j,k,I_MOMY)+var(i,j-1,k,I_MOMY) ) &
+                                - abs(midvel) * ( var(i,j,k,I_MOMY)-var(i,j-1,k,I_MOMY) ) ) 
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j  ,k,I_MOMY)+var(i,j-1,k,I_MOMY) ) &
+                                + FACT_F * ( var(i,j+1,k,I_MOMY)+var(i,j-2,k,I_MOMY) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
        enddo
        enddo
        enddo
@@ -564,221 +676,264 @@ contains
        do k = WS+2, WE-2
        do j = JS,   JE
        do i = IS,   IE
-          midvel = 0.5D0 * ( velz(i,j+1,k)+velz(i,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i,j+1,k,I_VELZ)+var(i,j,k,I_VELZ) ) ! at face
 
-          qflx_lo(i,j,k,wdir) = 0.5D0 * ( vec_w(i,j,k+1,vdir)+vec_w(i,j,k,vdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i,j,k+1,vdir)-vec_w(i,j,k,vdir) ) * abs(midvel)
-          qflx_hi(i,j,k,wdir) = ( 0.5D0 * ( vec_w(i,j,k+1,vdir)+vec_w(i,j,k  ,vdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j,k+2,vdir)+vec_w(i,j,k-1,vdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,ZDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j,k+1,I_MOMY)+var(i,j,k,I_MOMY) ) &
+                                - abs(midvel) * ( var(i,j,k+1,I_MOMY)-var(i,j,k,I_MOMY) ) ) 
+
+          qflx_hi(i,j,k,ZDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j,k+1,I_MOMY)+var(i,j,k  ,I_MOMY) ) &
+                                + FACT_F * ( var(i,j,k+2,I_MOMY)+var(i,j,k-1,I_MOMY) ) )
+
+          qflx_anti(i,j,k,ZDIR) = qflx_hi(i,j,k,ZDIR) - qflx_lo(i,j,k,ZDIR)
        enddo
        enddo
        enddo
 
        do j = JS, JE
        do i = IS, IE
-          qflx_lo(i,j,WS  ,wdir) = 0.D0
-          qflx_lo(i,j,WS+1,wdir) = 0.25D0 * ( vec_w(i,j,WS+2,vdir)+vec_w(i,j,WS+1,vdir) ) * ( velz(i,j+1,WS+2)+velz(i,j,WS+1) )
-          qflx_lo(i,j,WE-1,wdir) = 0.25D0 * ( vec_w(i,j,WE  ,vdir)+vec_w(i,j,WE-1,vdir) ) * ( velz(i,j+1,WE  )+velz(i,j,WE-1) )
-          qflx_lo(i,j,WE  ,wdir) = 0.D0
+          qflx_lo(i,j,WS  ,ZDIR) = 0.D0                                                     ! bottom boundary
+          qflx_lo(i,j,WS+1,ZDIR) = 0.25D0 * ( var(i,j,WS+2,I_MOMY)+var(i,j,WS+1,I_MOMY) ) &
+                                 * ( var(i,j+1,WS+2,I_VELZ)+var(i,j,WS+1,I_VELZ) )          ! just above the bottom boundary
+          qflx_lo(i,j,WE-1,ZDIR) = 0.25D0 * ( var(i,j,WE  ,I_MOMY)+var(i,j,WE-1,I_MOMY) ) &
+                                 * ( var(i,j+1,WE  ,I_VELZ)+var(i,j,WE-1,I_VELZ) )          ! just below the top boundary
+          qflx_lo(i,j,WE  ,ZDIR) = 0.D0                                                     ! top boundary
 
-          qflx_hi(i,j,WS  ,wdir) = qflx_lo(i,j,WS  ,wdir) ! bottom boundary
-          qflx_hi(i,j,WS+1,wdir) = qflx_lo(i,j,WS+1,wdir) ! just above the bottom boundary
-          qflx_hi(i,j,WE-1,wdir) = qflx_lo(i,j,WE-1,wdir) ! just below the top boundary
-          qflx_hi(i,j,WE  ,wdir) = qflx_lo(i,j,WE  ,wdir) ! top boundary
-       enddo
-       enddo
+          qflx_hi(i,j,WS  ,ZDIR) = 0.D0
+          qflx_hi(i,j,WS+1,ZDIR) = qflx_lo(i,j,WS+1,ZDIR)
+          qflx_hi(i,j,WE-1,ZDIR) = qflx_lo(i,j,WE-1,ZDIR)
+          qflx_hi(i,j,WE  ,ZDIR) = 0.D0
 
-       ! -- update flux-divergence with the monotone scheme
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          qdiv(i,j,k) = ( qflx_lo(i,j  ,k,udir)-qflx_lo(i-1,j,k  ,udir) ) * RDX &
-                      + ( qflx_lo(i,j+1,k,vdir)-qflx_lo(i  ,j,k  ,vdir) ) * RDY &
-                      + ( qflx_lo(i,j  ,k,wdir)-qflx_lo(i  ,j,k-1,wdir) ) * RDZ
+          qflx_anti(i,j,WS  ,ZDIR) = 0.D0
+          qflx_anti(i,j,WS+1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE-1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE  ,ZDIR) = 0.D0
        enddo
        enddo
-       enddo
-
-       qflx_anti(:,:,:,:) = qflx_hi(:,:,:,:) - qflx_lo(:,:,:,:)
-
-       rjpls(:,:,:,:) = 0.D0
-       rjmns(:,:,:,:) = 0.D0
 
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          var_l = vec(i,j,k,vdir) - dtrk * ( (pres(i,j+1,k)-pres(i,j,k)) * RDY + qdiv(i,j,k) )
+          !--- update flux-divergence with the monotone scheme
+          qdiv = ( qflx_lo(i,j  ,k,XDIR)-qflx_lo(i-1,j,k  ,XDIR) ) * RDX &
+               + ( qflx_lo(i,j+1,k,YDIR)-qflx_lo(i  ,j,k  ,YDIR) ) * RDY &
+               + ( qflx_lo(i,j  ,k,ZDIR)-qflx_lo(i  ,j,k-1,ZDIR) ) * RDZ
 
-          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( vec_w(i  ,j  ,k  ,vdir), &
-                       vec_w(i+1,j  ,k  ,vdir), &
-                       vec_w(i-1,j  ,k  ,vdir), &
-                       vec_w(i  ,j+1,k  ,vdir), &
-                       vec_w(i  ,j-1,k  ,vdir), &
-                       vec_w(i  ,j  ,k+1,vdir), &
-                       vec_w(i  ,j  ,k-1,vdir)  )
+          !--- first guess of tendency and updated value
+          momy_t(i,j,k) = - qdiv                                                  &
+                          - (var(i,j+1,k,I_PRES)-var(i,j,k,I_PRES) ) * RDY        &
+                          - DAMP_alphav(i,j,k) * (var(i,j,k,I_VELY)-vely_ref(i,j,k) ) &
+                          * 0.5D0 * ( var(i,j+1,k,I_DENS)+var(i,j,k,I_DENS) )
 
-          pjmin = min( vec_w(i  ,j  ,k  ,vdir), &
-                       vec_w(i+1,j  ,k  ,vdir), &
-                       vec_w(i-1,j  ,k  ,vdir), &
-                       vec_w(i  ,j+1,k  ,vdir), &
-                       vec_w(i  ,j-1,k  ,vdir), &
-                       vec_w(i  ,j  ,k+1,vdir), &
-                       vec_w(i  ,j  ,k-1,vdir)  )
+          var_l = momy(i,j,k) + dtrk * momy_t(i,j,k)
 
-          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j+1,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) )
-          pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j+1,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) )
+          !--- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
+          pjmax = max( var(i  ,j  ,k  ,I_MOMY), &
+                       var(i+1,j  ,k  ,I_MOMY), &
+                       var(i-1,j  ,k  ,I_MOMY), &
+                       var(i  ,j+1,k  ,I_MOMY), &
+                       var(i  ,j-1,k  ,I_MOMY), &
+                       var(i  ,j  ,k+1,I_MOMY), &
+                       var(i  ,j  ,k-1,I_MOMY)  )
 
-          ! --- incoming fluxes at scalar grid points ---
+          pjmin = min( var(i  ,j  ,k  ,I_MOMY), &
+                       var(i+1,j  ,k  ,I_MOMY), &
+                       var(i-1,j  ,k  ,I_MOMY), &
+                       var(i  ,j+1,k  ,I_MOMY), &
+                       var(i  ,j-1,k  ,I_MOMY), &
+                       var(i  ,j  ,k+1,I_MOMY), &
+                       var(i  ,j  ,k-1,I_MOMY)  )
+
+          !--- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
+          pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j+1,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) )
+          pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j+1,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) )
+
+          !--- incoming fluxes at scalar grid points ---
           if ( pjpls > 0 ) then
-             midvel = 0.25D0 * ( velx(i  ,j+1,k  ) &
-                               + velx(i  ,j  ,k  ) &
-                               + velx(i-1,j+1,k  ) &
-                               + velx(i-1,j  ,k  ) )
-             rjpls(i,j,k,udir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j+1,k  ,I_VELX) &
+                               + var(i  ,j  ,k  ,I_VELX) &
+                               + var(i-1,j+1,k  ,I_VELX) &
+                               + var(i-1,j  ,k  ,I_VELX) )
+             rjpls(i,j,k,XDIR) = (pjmax-var_l) / pjpls * abs(midvel)
 
-             rjpls(i,j,k,vdir) = (pjmax-var_l) / pjpls * abs(vely(i,j,k))
+             rjpls(i,j,k,YDIR) = (pjmax-var_l) / pjpls * abs(var(i,j,k,I_VELY))
 
-             midvel = 0.25D0 * ( velz(i  ,j+1,k  ) &
-                               + velz(i  ,j  ,k  ) &
-                               + velz(i  ,j+1,k-1) &
-                               + velz(i  ,j  ,k-1) )
-             rjpls(i,j,k,wdir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j+1,k  ,I_VELZ) &
+                               + var(i  ,j  ,k  ,I_VELZ) &
+                               + var(i  ,j+1,k-1,I_VELZ) &
+                               + var(i  ,j  ,k-1,I_VELZ) )
+             rjpls(i,j,k,ZDIR) = (pjmax-var_l) / pjpls * abs(midvel)
+          else
+             rjpls(i,j,k,XDIR:ZDIR) = 0.D0
           endif
 
-          ! --- outgoing fluxes at scalar grid points ---
+          !--- outgoing fluxes at scalar grid points ---
           if ( pjmns > 0 ) then
-             midvel = 0.25D0 * ( velx(i  ,j+1,k  ) &
-                               + velx(i  ,j  ,k  ) &
-                               + velx(i-1,j+1,k  ) &
-                               + velx(i-1,j  ,k  ) )
-             rjmns(i,j,k,udir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j+1,k  ,I_VELX) &
+                               + var(i  ,j  ,k  ,I_VELX) &
+                               + var(i-1,j+1,k  ,I_VELX) &
+                               + var(i-1,j  ,k  ,I_VELX) )
+             rjmns(i,j,k,XDIR) = (var_l-pjmin) / pjmns * abs(midvel)
 
-             rjmns(i,j,k,vdir) = (var_l-pjmin) / pjmns * abs(vely(i,j,k))
+             rjmns(i,j,k,YDIR) = (var_l-pjmin) / pjmns * abs(var(i,j,k,I_VELY))
 
-             midvel = 0.25D0 * ( velz(i  ,j+1,k  ) &
-                               + velz(i  ,j  ,k  ) &
-                               + velz(i  ,j+1,k-1) &
-                               + velz(i  ,j  ,k-1) )
-             rjmns(i,j,k,wdir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j+1,k  ,I_VELZ) &
+                               + var(i  ,j  ,k  ,I_VELZ) &
+                               + var(i  ,j+1,k-1,I_VELZ) &
+                               + var(i  ,j  ,k-1,I_VELZ) )
+             rjmns(i,j,k,ZDIR) = (var_l-pjmin) / pjmns * abs(midvel)
+          else
+             rjmns(i,j,k,XDIR:ZDIR) = 0.D0
           endif
 
        enddo
        enddo
        enddo
 
-       ! --- [STEP 7S] limit the antidiffusive flux at velocity grid points ---
+       !--- [STEP 7S] limit the antidiffusive flux at velocity grid points ---
        do k = KS-1, KE
        do j = JS,   JE+1
        do i = IS-1, IE
-          if ( qflx_anti(i,j,k,udir) >= 0 ) then
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i+1,j,k,udir), rjmns(i  ,j,k,udir), 1.D0 )
-          else ! qflx_anti(i,j,k,udir) < 0
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i  ,j,k,udir), rjmns(i+1,j,k,udir), 1.D0 )
+          if ( qflx_anti(i,j,k,XDIR) >= 0 ) then
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i+1,j,k,XDIR), rjmns(i  ,j,k,XDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i  ,j,k,XDIR), rjmns(i+1,j,k,XDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,vdir) >= 0 ) then
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j  ,k,vdir), rjmns(i,j-1,k,vdir), 1.D0 )
-          else ! qflx_anti(i,j,k,vdir) < 0
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j-1,k,vdir), rjmns(i,j  ,k,vdir), 1.D0 )
+          if ( qflx_anti(i,j,k,YDIR) >= 0 ) then
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j  ,k,YDIR), rjmns(i,j-1,k,YDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j-1,k,YDIR), rjmns(i,j  ,k,YDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,wdir) >= 0 ) then
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k+1,wdir), rjmns(i,j,k  ,wdir), 1.D0 )
-          else ! qflx_anti(i,j,k,wdir) < 0
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k  ,wdir), rjmns(i,j,k+1,wdir), 1.D0 )
+          if ( qflx_anti(i,j,k,ZDIR) >= 0 ) then
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k+1,ZDIR), rjmns(i,j,k  ,ZDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k  ,ZDIR), rjmns(i,j,k+1,ZDIR), 1.D0 )
           endif
        enddo
        enddo
        enddo
 
-       ! -- modify flux-divergence with antidiffusive fluxes
+       !--- modify flux-divergence->tendency with antidiffusive fluxes
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          qdiv(i,j,k) = qdiv(i,j,k) + ( qflx_anti(i,j  ,k,udir)-qflx_anti(i-1,j,k  ,udir) ) * RDX &
-                                    + ( qflx_anti(i,j+1,k,vdir)-qflx_anti(i  ,j,k  ,vdir) ) * RDY &
-                                    + ( qflx_anti(i,j  ,k,wdir)-qflx_anti(i  ,j,k-1,wdir) ) * RDZ
-          vec_t(i,j,k,vdir) = - qdiv(i,j,k) - ( pres(i,j+1,k)-pres(i,j,k) ) * RDY 
+          momy_t(i,j,k) = momy_t(i,j,k) - ( ( qflx_anti(i,j  ,k,XDIR)-qflx_anti(i-1,j,k  ,XDIR) ) * RDX &
+                                          + ( qflx_anti(i,j+1,k,YDIR)-qflx_anti(i  ,j,k  ,YDIR) ) * RDY &
+                                          + ( qflx_anti(i,j  ,k,ZDIR)-qflx_anti(i  ,j,k-1,ZDIR) ) * RDZ )
        enddo
        enddo
        enddo
 
-       ! -- make mass fluxes ( momentum(z) * vel )
+       !--- make mass fluxes ( momentum(z) * vel )
 
-       k = WS ! bottom boundary
-       do j = JS,   JE
-       do i = IS-1, IE
-          midvel = velx(i,j,KS)
-
-          qflx_lo(i,j,k,udir) = 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i,j,k,wdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i+1,j,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,udir) = ( 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i  ,j,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,wdir)+vec_w(i-1,j,k,wdir) ) * FACT_F ) * midvel
-       enddo
-       enddo
-       k = WE ! top boundary
-       do j = JS,   JE
-       do i = IS-1, IE
-          midvel = velx(i,j,KE)
-
-          qflx_lo(i,j,k,udir) = 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i,j,k,wdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i+1,j,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,udir) = ( 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i  ,j,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,wdir)+vec_w(i-1,j,k,wdir) ) * FACT_F ) * midvel
-       enddo
-       enddo
        ! at (u, y, interface)
-       do k = WS+1, WE-1
+       k = WS ! bottom boundary
        do j = JS,   JE
        do i = IS-1, IE
-          midvel = 0.5D0 * ( velx(i,j,k+1)+velx(i,j,k) ) ! on face
+          midvel = var(i,j,KS,I_VELX)
 
-          qflx_lo(i,j,k,udir) = 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i,j,k,wdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i+1,j,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,udir) = ( 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i  ,j,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,wdir)+vec_w(i-1,j,k,wdir) ) * FACT_F ) * midvel
-       enddo
-       enddo
-       enddo
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i+1,j,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i+1,j,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
 
-       k = WS ! bottom boundary
-       do j = JS-1, JE
-       do i = IS,   IE
-          midvel = vely(i,j,KS)
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i+1,j,k,I_MOMZ)+var(i  ,j,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i+2,j,k,I_MOMZ)+var(i-1,j,k,I_MOMZ) ) )
 
-          qflx_lo(i,j,k,vdir) = 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i,j,k,wdir) ) * midvel     &
-                              - 0.5D0 * ( vec_w(i+1,j,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i  ,j,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,wdir)+vec_w(i-1,j,k,wdir) ) * FACT_F ) * midvel
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
        enddo
        enddo
        k = WE ! top boundary
+       do j = JS,   JE
+       do i = IS-1, IE
+          midvel = var(i,j,KE,I_VELX)
+
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i+1,j,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i+1,j,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i+1,j,k,I_MOMZ)+var(i  ,j,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i+2,j,k,I_MOMZ)+var(i-1,j,k,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
+       enddo
+       enddo
+
+       do k = WS+1, WE-1
+       do j = JS,   JE
+       do i = IS-1, IE
+          midvel = 0.5D0 * ( var(i,j,k+1,I_VELX)+var(i,j,k,I_VELX) ) ! on face
+
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i+1,j,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i+1,j,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i+1,j,k,I_MOMZ)+var(i  ,j,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i+2,j,k,I_MOMZ)+var(i-1,j,k,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
+       enddo
+       enddo
+       enddo
+
+       ! at (x, v, interface)
+       k = WS ! bottom boundary
        do j = JS-1, JE
        do i = IS,   IE
-          midvel = vely(i,j,KE)
+          midvel = var(i,j,KS,I_VELY)
 
-          qflx_lo(i,j,k,vdir) = 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i,j,k,wdir) ) * midvel       &
-                              - 0.5D0 * ( vec_w(i+1,j,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( vec_w(i+1,j,k,wdir)+vec_w(i  ,j,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i+2,j,k,wdir)+vec_w(i-1,j,k,wdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j+1,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i,j+1,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j+1,k,I_MOMZ)+var(i,j  ,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i,j+2,k,I_MOMZ)+var(i,j-1,k,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
        enddo
        enddo
-       ! at (x, v, interface)
+
+       k = WE ! top boundary
+       do j = JS-1, JE
+       do i = IS,   IE
+          midvel = var(i,j,KE,I_VELY)
+
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j+1,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i,j+1,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j+1,k,I_MOMZ)+var(i,j  ,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i,j+2,k,I_MOMZ)+var(i,j-1,k,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
+       enddo
+       enddo
+
        do k = WS+1, WE-1
        do j = JS-1, JE
        do i = IS,   IE
-          midvel = 0.5D0 * ( vely(i,j,k+1)+vely(i,j,k) ) ! on face
+          midvel = 0.5D0 * ( var(i,j,k+1,I_VELY)+var(i,j,k,I_VELY) ) ! on face
 
-          qflx_lo(i,j,k,vdir) = 0.5D0 * ( vec_w(i,j+1,k,wdir)+vec_w(i,j,k,wdir) ) * midvel &
-                              - 0.5D0 * ( vec_w(i,j+1,k,wdir)-vec_w(i,j,k,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( vec_w(i,j+1,k,wdir)+vec_w(i,j  ,k,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j+2,k,wdir)+vec_w(i,j-1,k,wdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j+1,k,I_MOMZ)+var(i,j,k,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i,j+1,k,I_MOMZ)-var(i,j,k,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j+1,k,I_MOMZ)+var(i,j  ,k,I_MOMZ) ) &
+                                + FACT_F * ( var(i,j+2,k,I_MOMZ)+var(i,j-1,k,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
        enddo
        enddo
        enddo
@@ -787,99 +942,106 @@ contains
        do k = KS+1, KE-1
        do j = JS,   JE
        do i = IS,   IE
-          midvel = 0.5D0 * ( velz(i,j,k)+velz(i,j,k-1) ) ! on face
+          midvel = 0.5D0 * ( var(i,j,k,I_VELZ)+var(i,j,k-1,I_VELZ) ) ! at center
 
-          qflx_lo(i,j,k,wdir) = 0.5D0 * ( vec_w(i,j,k,wdir)+vec_w(i,j,k-1,wdir) ) * midvel &
-                              - 0.5D0 * ( vec_w(i,j,k,wdir)-vec_w(i,j,k-1,wdir) ) * abs(midvel)
-          qflx_hi(i,j,k,wdir) = ( 0.5D0 * ( vec_w(i,j,k  ,wdir)+vec_w(i,j,k-1,wdir) ) * FACT_N &
-                                + 0.5D0 * ( vec_w(i,j,k+1,wdir)+vec_w(i,j,k-2,wdir) ) * FACT_F ) * midvel
+          qflx_lo(i,j,k,ZDIR) = 0.5D0                                                     &
+                              * (     midvel  * ( var(i,j,k,I_MOMZ)+var(i,j,k-1,I_MOMZ) ) &
+                                - abs(midvel) * ( var(i,j,k,I_MOMZ)-var(i,j,k-1,I_MOMZ) ) )
+
+          qflx_hi(i,j,k,ZDIR) = 0.5D0 * midvel                                         &
+                              * ( FACT_N * ( var(i,j,k  ,I_MOMZ)+var(i,j,k-1,I_MOMZ) ) &
+                                + FACT_F * ( var(i,j,k+1,I_MOMZ)+var(i,j,k-2,I_MOMZ) ) )
+
+          qflx_anti(i,j,k,ZDIR) = qflx_hi(i,j,k,ZDIR) - qflx_lo(i,j,k,ZDIR)
        enddo
        enddo
        enddo
-       qflx_lo(:,:,KS,wdir) = 0.D0 ! bottom cell center
-       qflx_lo(:,:,KE,wdir) = 0.D0 ! top    cell center
-       qflx_hi(:,:,KS,wdir) = 0.D0 ! bottom cell center
-       qflx_hi(:,:,KE,wdir) = 0.D0 ! top    cell center
+       qflx_lo  (:,:,KS,ZDIR) = 0.D0 ! bottom cell center
+       qflx_lo  (:,:,KE,ZDIR) = 0.D0 ! top    cell center
+       qflx_hi  (:,:,KS,ZDIR) = 0.D0 ! bottom cell center
+       qflx_hi  (:,:,KE,ZDIR) = 0.D0 ! top    cell center
+       qflx_anti(:,:,KS,ZDIR) = 0.D0 ! bottom cell center
+       qflx_anti(:,:,KE,ZDIR) = 0.D0 ! top    cell center
 
        do k = WS+1, WE-1
        do j = JS,   JE
        do i = IS,   IE
-          qdiv(i,j,k) = ( qflx_lo(i,j,k  ,udir)-qflx_lo(i-1,j  ,k,udir) ) * RDX &
-                      + ( qflx_lo(i,j,k  ,vdir)-qflx_lo(i  ,j-1,k,vdir) ) * RDY &
-                      + ( qflx_lo(i,j,k+1,wdir)-qflx_lo(i  ,j  ,k,wdir) ) * RDZ
-       enddo
-       enddo
-       enddo
+          !--- update flux-divergence with the monotone scheme
+          qdiv = ( qflx_lo(i,j,k  ,XDIR)-qflx_lo(i-1,j  ,k,XDIR) ) * RDX &
+               + ( qflx_lo(i,j,k  ,YDIR)-qflx_lo(i  ,j-1,k,YDIR) ) * RDY &
+               + ( qflx_lo(i,j,k+1,ZDIR)-qflx_lo(i  ,j  ,k,ZDIR) ) * RDZ
 
-       qflx_anti(:,:,:,:) = qflx_hi(:,:,:,:) - qflx_lo(:,:,:,:)
+          !--- first guess of tendency and updated value
+          momz_t(i,j,k) = - qdiv                                                      &
+                          - (var(i,j,k+1,I_PRES)-var(i,j,k,I_PRES) ) * RDZ            &
+                          - GRAV * 0.5D0 * ( var(i,j,k+1,I_DENS)+var(i,j,k,I_DENS) )  &
+                          - DAMP_alphaw(i,j,k) * (var(i,j,k,I_VELZ)-velz_ref(i,j,k) ) &
+                          * 0.5D0 * ( var(i,j,k+1,I_DENS)+var(i,j,k,I_DENS) )
 
-       rjpls(:,:,:,:) = 0.D0
-       rjmns(:,:,:,:) = 0.D0
-
-       do k = WS+1, WE-1
-       do j = JS, JE
-       do i = IS, IE
-          var_l = vec(i,j,k,wdir) - dtrk * ( (pres(i,j,k+1)-pres(i,j,k)) * RDZ + qdiv(i,j,k) &
-                                           + (dens_w(i,j,k+1,1)+dens_w(i,j,k,1)) * 0.5D0 * GRAV  )
+          var_l = momz(i,j,k) + dtrk * momz_t(i,j,k)
 
           ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( vec_w(i  ,j  ,k  ,wdir), &
-                       vec_w(i+1,j  ,k  ,wdir), &
-                       vec_w(i-1,j  ,k  ,wdir), &
-                       vec_w(i  ,j+1,k  ,wdir), &
-                       vec_w(i  ,j-1,k  ,wdir), &
-                       vec_w(i  ,j  ,k+1,wdir), &
-                       vec_w(i  ,j  ,k-1,wdir)  )
+          pjmax = max( var(i  ,j  ,k  ,I_MOMZ), &
+                       var(i+1,j  ,k  ,I_MOMZ), &
+                       var(i-1,j  ,k  ,I_MOMZ), &
+                       var(i  ,j+1,k  ,I_MOMZ), &
+                       var(i  ,j-1,k  ,I_MOMZ), &
+                       var(i  ,j  ,k+1,I_MOMZ), &
+                       var(i  ,j  ,k-1,I_MOMZ)  )
 
-          pjmin = min( vec_w(i  ,j  ,k  ,wdir), &
-                       vec_w(i+1,j  ,k  ,wdir), &
-                       vec_w(i-1,j  ,k  ,wdir), &
-                       vec_w(i  ,j+1,k  ,wdir), &
-                       vec_w(i  ,j-1,k  ,wdir), &
-                       vec_w(i  ,j  ,k+1,wdir), &
-                       vec_w(i  ,j  ,k-1,wdir)  )
+          pjmin = min( var(i  ,j  ,k  ,I_MOMZ), &
+                       var(i+1,j  ,k  ,I_MOMZ), &
+                       var(i-1,j  ,k  ,I_MOMZ), &
+                       var(i  ,j+1,k  ,I_MOMZ), &
+                       var(i  ,j-1,k  ,I_MOMZ), &
+                       var(i  ,j  ,k+1,I_MOMZ), &
+                       var(i  ,j  ,k-1,I_MOMZ)  )
 
           ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k+1,wdir) )
-          pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) &
-                + max( 0.D0, qflx_anti(i  ,j  ,k+1,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) )
+          pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k+1,ZDIR) )
+          pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k+1,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) )
 
           ! --- incoming fluxes at scalar grid points ---
           if ( pjpls > 0 ) then
-             midvel = 0.25D0 * ( velx(i  ,j  ,k+1) &
-                               + velx(i  ,j  ,k  ) &
-                               + velx(i-1,j  ,k+1) &
-                               + velx(i-1,j  ,k  ) )
-             rjpls(i,j,k,udir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j  ,k+1,I_VELX) &
+                               + var(i  ,j  ,k  ,I_VELX) &
+                               + var(i-1,j  ,k+1,I_VELX) &
+                               + var(i-1,j  ,k  ,I_VELX) )
+             rjpls(i,j,k,XDIR) = (pjmax-var_l) / pjpls * abs(midvel)
 
-             midvel = 0.25D0 * ( vely(i  ,j  ,k+1) &
-                               + vely(i  ,j  ,k  ) &
-                               + vely(i  ,j-1,k+1) &
-                               + vely(i  ,j-1,k  ) )
-             rjpls(i,j,k,vdir) = (pjmax-var_l) / pjpls * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j  ,k+1,I_VELY) &
+                               + var(i  ,j  ,k  ,I_VELY) &
+                               + var(i  ,j-1,k+1,I_VELY) &
+                               + var(i  ,j-1,k  ,I_VELY) )
+             rjpls(i,j,k,YDIR) = (pjmax-var_l) / pjpls * abs(midvel)
 
-             rjpls(i,j,k,wdir) = (pjmax-var_l) / pjpls * abs(velz(i,j,k))
+             rjpls(i,j,k,ZDIR) = (pjmax-var_l) / pjpls * abs(var(i,j,k,I_VELZ))
+          else
+             rjpls(i,j,k,XDIR:ZDIR) = 0.D0
           endif
 
           ! --- outgoing fluxes at scalar grid points ---
           if ( pjmns > 0 ) then
-             midvel = 0.25D0 * ( velx(i  ,j  ,k+1) &
-                               + velx(i  ,j  ,k  ) &
-                               + velx(i-1,j  ,k+1) &
-                               + velx(i-1,j  ,k  ) )
-             rjmns(i,j,k,udir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j  ,k+1,I_VELX) &
+                               + var(i  ,j  ,k  ,I_VELX) &
+                               + var(i-1,j  ,k+1,I_VELX) &
+                               + var(i-1,j  ,k  ,I_VELX) )
+             rjmns(i,j,k,XDIR) = (var_l-pjmin) / pjmns * abs(midvel)
 
-             midvel = 0.25D0 * ( vely(i  ,j  ,k+1) &
-                               + vely(i  ,j  ,k  ) &
-                               + vely(i  ,j-1,k+1) &
-                               + vely(i  ,j-1,k  ) )
-             rjmns(i,j,k,vdir) = (var_l-pjmin) / pjmns * abs(midvel)
+             midvel = 0.25D0 * ( var(i  ,j  ,k+1,I_VELY) &
+                               + var(i  ,j  ,k  ,I_VELY) &
+                               + var(i  ,j-1,k+1,I_VELY) &
+                               + var(i  ,j-1,k  ,I_VELY) )
+             rjmns(i,j,k,YDIR) = (var_l-pjmin) / pjmns * abs(midvel)
 
-             rjmns(i,j,k,wdir) = (var_l-pjmin) / pjmns * abs(velz(i,j,k))
-          endif
+             rjmns(i,j,k,ZDIR) = (var_l-pjmin) / pjmns * abs(var(i,j,k,I_VELZ))
+           else
+             rjmns(i,j,k,XDIR:ZDIR) = 0.D0
+         endif
 
        enddo
        enddo
@@ -889,310 +1051,415 @@ contains
        do k = WS+1, WE
        do j = JS-1, JE
        do i = IS-1, IE
-          if ( qflx_anti(i,j,k,udir) >= 0 ) then
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i+1,j,k,udir), rjmns(i  ,j,k,udir), 1.D0 )
-          else ! qflx_anti(i,j,k,udir) < 0
-             qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i  ,j,k,udir), rjmns(i+1,j,k,udir), 1.D0 )
+          if ( qflx_anti(i,j,k,XDIR) >= 0 ) then
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i+1,j,k,XDIR), rjmns(i  ,j,k,XDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i  ,j,k,XDIR), rjmns(i+1,j,k,XDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,vdir) >= 0 ) then
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j+1,k,vdir), rjmns(i,j  ,k,vdir), 1.D0 )
-          else ! qflx_anti(i,j,k,vdir) < 0
-             qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j  ,k,vdir), rjmns(i,j+1,k,vdir), 1.D0 )
+          if ( qflx_anti(i,j,k,YDIR) >= 0 ) then
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j+1,k,YDIR), rjmns(i,j  ,k,YDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j  ,k,YDIR), rjmns(i,j+1,k,YDIR), 1.D0 )
           endif
 
-          if ( qflx_anti(i,j,k,wdir) >= 0 ) then
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k  ,wdir), rjmns(i,j,k-1,wdir), 1.D0 )
-          else ! qflx_anti(i,j,k,wdir) < 0
-             qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k-1,wdir), rjmns(i,j,k  ,wdir), 1.D0 )
+          if ( qflx_anti(i,j,k,ZDIR) >= 0 ) then
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k  ,ZDIR), rjmns(i,j,k-1,ZDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k-1,ZDIR), rjmns(i,j,k  ,ZDIR), 1.D0 )
           endif
        enddo
        enddo
        enddo
         
-       ! -- modify flux-divergence with antidiffusive fluxes
-       do k = WS+1, WE-1
-       do j = JS, JE
-       do i = IS, IE
-          qdiv(i,j,k) = qdiv(i,j,k) + ( qflx_anti(i,j,k  ,udir)-qflx_anti(i-1,j  ,k,udir) ) * RDX &
-                                    + ( qflx_anti(i,j,k  ,vdir)-qflx_anti(i  ,j-1,k,vdir) ) * RDY &
-                                    + ( qflx_anti(i,j,k+1,wdir)-qflx_anti(i  ,j  ,k,wdir) ) * RDZ
-          vec_t(i,j,k,wdir) = - qdiv(i,j,k) - ( pres(i,j,k+1)-pres(i,j,k) ) * RDZ &
-                              - ( dens_w(i,j,k+1,1)+dens_w(i,j,k,1) ) * 0.5D0 * GRAV
-       enddo
-       enddo
-       enddo
-
-
-       !##### advection of scalar quantity #####
-       do v = 1, QA+1 ! lwpt + tracers
-
-          ! -- make mass fluxes ( scalar value * rho vel )
-
-          do k = KS,   KE
-          do j = JS,   JE
-          do i = IS-1, IE
-             qflx_lo(i,j,k,udir) = 0.5D0 * ( scl_w(i+1,j,k,v)+scl_w(i,j,k,v) ) * mflx_lo(i,j,k,udir)       &
-                                 - 0.5D0 * ( scl_w(i+1,j,k,v)-scl_w(i,j,k,v) ) * abs(mflx_lo(i,j,k,udir))
-             qflx_hi(i,j,k,udir) = ( 0.5D0 * ( scl_w(i+1,j,k,v)+scl_w(i  ,j,k,v) ) * FACT_N   &
-                                   + 0.5D0 * ( scl_w(i+2,j,k,v)+scl_w(i-1,j,k,v) ) * FACT_F ) &
-                                   * mflx_hi(i,j,k,udir)
-          enddo
-          enddo
-          enddo
-
-          do k = KS,   KE
-          do j = JS-1, JE
-          do i = IS,   IE
-             qflx_lo(i,j,k,vdir) = 0.5D0 * ( scl_w(i,j+1,k,v)+scl_w(i,j,k,v) ) * mflx_lo(i,j,k,vdir)       &
-                                 - 0.5D0 * ( scl_w(i,j+1,k,v)-scl_w(i,j,k,v) ) * abs(mflx_lo(i,j,k,vdir))
-             qflx_hi(i,j,k,vdir) = ( 0.5D0 * ( scl_w(i,j+1,k,v)+scl_w(i,j  ,k,v) ) * FACT_N   &
-                                   + 0.5D0 * ( scl_w(i,j+2,k,v)+scl_w(i,j-1,k,v) ) * FACT_F ) &
-                                   * mflx_hi(i,j,k,vdir)
-          enddo
-          enddo
-          enddo
-
-          do k = WS+2, WE-2
-          do j = JS,   JE
-          do i = IS,   IE
-             qflx_lo(i,j,k,wdir) = 0.5D0 * ( scl_w(i,j,k+1,v)+scl_w(i,j,k,v) ) * mflx_lo(i,j,k,wdir)       &
-                                 - 0.5D0 * ( scl_w(i,j,k+1,v)-scl_w(i,j,k,v) ) * abs(mflx_lo(i,j,k,wdir))
-             qflx_hi(i,j,k,wdir) = ( 0.5D0 * ( scl_w(i,j,k+1,v)+scl_w(i,j,k  ,v) ) * FACT_N   &
-                                   + 0.5D0 * ( scl_w(i,j,k+2,v)+scl_w(i,j,k-1,v) ) * FACT_F ) &
-                                   * mflx_hi(i,j,k,wdir)
-          enddo
-          enddo
-          enddo
-
-          do j = JS, JE
-          do i = IS, IE
-             qflx_lo(i,j,WS  ,wdir) = 0.D0
-             qflx_lo(i,j,WS+1,wdir) = 0.5D0 * ( scl_w(i,j,WS+2,v)+scl_w(i,j,WS+1,v) ) * mflx_lo(i,j,WS+1,wdir)
-             qflx_lo(i,j,WE-1,wdir) = 0.5D0 * ( scl_w(i,j,WE  ,v)+scl_w(i,j,WE-1,v) ) * mflx_lo(i,j,WE-1,wdir)
-             qflx_lo(i,j,WE  ,wdir) = 0.D0
-
-             qflx_hi(i,j,WS  ,wdir) = qflx_lo(i,j,WS  ,wdir) ! bottom boundary
-             qflx_hi(i,j,WS+1,wdir) = qflx_lo(i,j,WS+1,wdir) ! just above the bottom boundary
-             qflx_hi(i,j,WE-1,wdir) = qflx_lo(i,j,WE-1,wdir) ! just below the top boundary
-             qflx_hi(i,j,WE  ,wdir) = qflx_lo(i,j,WE  ,wdir) ! top boundary
-          enddo
-          enddo
-
-          ! -- update flux-divergence with the monotone scheme
-          do k = KS, KE
-          do j = JS, JE
-          do i = IS, IE
-             qdiv(i,j,k) = ( qflx_lo(i,j,k,udir)-qflx_lo(i-1,j  ,k  ,udir) ) * RDX &
-                         + ( qflx_lo(i,j,k,vdir)-qflx_lo(i  ,j-1,k  ,vdir) ) * RDY &
-                         + ( qflx_lo(i,j,k,wdir)-qflx_lo(i  ,j  ,k-1,wdir) ) * RDZ
-          enddo
-          enddo
-          enddo
-
-          qflx_anti(:,:,:,:) = qflx_hi(:,:,:,:) - qflx_lo(:,:,:,:)
-
-          rjpls(:,:,:,:) = 0.D0
-          rjmns(:,:,:,:) = 0.D0
-
-          do k = KS, KE
-          do j = JS, JE
-          do i = IS, IE
-             var_l = scl(i,j,k,v) + dtrk * ( scl_w(i,j,k,v)*ddiv(i,j,k) - qdiv(i,j,k) ) / dens_w(i,j,k,1)
-
-             ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-             pjmax = max( scl_w(i  ,j  ,k  ,v), &
-                          scl_w(i+1,j  ,k  ,v), &
-                          scl_w(i-1,j  ,k  ,v), &
-                          scl_w(i  ,j+1,k  ,v), &
-                          scl_w(i  ,j-1,k  ,v), &
-                          scl_w(i  ,j  ,k+1,v), &
-                          scl_w(i  ,j  ,k-1,v)  )
-
-             pjmin = min( scl_w(i  ,j  ,k  ,v), &
-                          scl_w(i+1,j  ,k  ,v), &
-                          scl_w(i-1,j  ,k  ,v), &
-                          scl_w(i  ,j+1,k  ,v), &
-                          scl_w(i  ,j-1,k  ,v), &
-                          scl_w(i  ,j  ,k+1,v), &
-                          scl_w(i  ,j  ,k-1,v)  )
-
-             ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-             pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) &
-                   + max( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) &
-                   + max( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) )
-             pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,udir) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,udir) ) &
-                   + max( 0.D0, qflx_anti(i  ,j  ,k  ,vdir) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,vdir) ) &
-                   + max( 0.D0, qflx_anti(i  ,j  ,k  ,wdir) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,wdir) )
-
-             ! --- incoming fluxes ---
-             if ( pjpls > 0 ) then
-                rjpls(i,j,k,udir) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,udir)+mflx_lo(i-1,j  ,k  ,udir)) * 0.5D0)
-                rjpls(i,j,k,vdir) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,vdir)+mflx_lo(i  ,j-1,k  ,vdir)) * 0.5D0)
-                rjpls(i,j,k,wdir) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,wdir)+mflx_lo(i  ,j  ,k-1,wdir)) * 0.5D0)
-             endif
-
-             ! --- outgoing fluxes at scalar grid points ---
-             if ( pjmns > 0 ) then
-                rjmns(i,j,k,udir) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,udir)+mflx_lo(i-1,j  ,k  ,udir)) * 0.5D0)
-                rjmns(i,j,k,vdir) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,vdir)+mflx_lo(i  ,j-1,k  ,vdir)) * 0.5D0)
-                rjmns(i,j,k,wdir) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,wdir)+mflx_lo(i  ,j  ,k-1,wdir)) * 0.5D0)
-             endif
-
-          enddo
-          enddo
-          enddo
-
-          ! --- [STEP 7S] limit the antidiffusive flux ---
-          do k = KS-1, KE 
-          do j = JS-1, JE 
-          do i = IS-1, IE
-             if ( qflx_anti(i,j,k,udir) >= 0 ) then
-                qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i+1,j,k,udir), rjmns(i  ,j,k,udir), 1.D0 )
-             else !if ( mflx_ua(i,j,k) < 0 ) then
-                qflx_anti(i,j,k,udir) = qflx_anti(i,j,k,udir) * min( rjpls(i  ,j,k,udir), rjmns(i+1,j,k,udir), 1.D0 )
-             endif
-
-             if ( qflx_anti(i,j,k,vdir) >= 0 ) then
-                qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j+1,k,vdir), rjmns(i,j  ,k,vdir), 1.D0 )
-             else !if ( mflx_va(i,j,k) < 0 ) then
-                qflx_anti(i,j,k,vdir) = qflx_anti(i,j,k,vdir) * min( rjpls(i,j  ,k,vdir), rjmns(i,j+1,k,vdir), 1.D0 )
-             endif
-
-             if ( qflx_anti(i,j,k,wdir) >= 0 ) then
-                qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k+1,wdir), rjmns(i,j,k  ,wdir), 1.D0 )
-             else !if ( mflx_wa(i,j,k) < 0 ) then
-                qflx_anti(i,j,k,wdir) = qflx_anti(i,j,k,wdir) * min( rjpls(i,j,k  ,wdir), rjmns(i,j,k+1,wdir), 1.D0 )
-             endif
-          enddo
-          enddo
-          enddo
-
-          ! -- advection
-          do k = KS, KE
-          do j = JS, JE
-          do i = IS, IE
-             qdiv(i,j,k) = qdiv(i,j,k) + ( qflx_anti(i,j,k,udir)-qflx_anti(i-1,j  ,k  ,udir) ) * RDX &
-                                       + ( qflx_anti(i,j,k,vdir)-qflx_anti(i  ,j-1,k  ,vdir) ) * RDY &
-                                       + ( qflx_anti(i,j,k,wdir)-qflx_anti(i  ,j  ,k-1,wdir) ) * RDZ
-             scl_t(i,j,k,v) = ( scl_w(i,j,k,v)*ddiv(i,j,k) - qdiv(i,j,k) ) / dens_w(i,j,k,1)
-          enddo
-          enddo
-          enddo
-
-       enddo ! scalar quantities loop
-
-       !##### time integrations #####
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          dens_w(i,j,k,1) = dens(i,j,k) + dtrk * dens_t(i,j,k)
-       enddo
-       enddo
-       enddo
-
-       do d = udir, wdir
-       do k = WS-1, WE+1
-       do j = JS, JE
-       do i = IS, IE
-          vec_w(i,j,k,d) = vec(i,j,k,d) + dtrk * vec_t(i,j,k,d)
-       enddo
-       enddo
-       enddo
-       enddo
-
-       do v = 1,  1+QA
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          scl_w(i,j,k,v) = scl(i,j,k,v) + dtrk * scl_t(i,j,k,v)
-       enddo
-       enddo
-       enddo
-       enddo
-
-       ! fill IHALO & JHALO
-       call COMM_vars( dens_w(:,:,:,:) )
-       call COMM_vars( vec_w (:,:,:,:) )
-       call COMM_vars( scl_w (:,:,:,:) )
-
-       ! momentum -> velocity
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          diag(i,j,k,1) = 2.D0 * vec_w(i,j,k,udir) / ( dens_w(i+1,j  ,k,1)+dens_w(i,j,k,1) )
-          diag(i,j,k,2) = 2.D0 * vec_w(i,j,k,vdir) / ( dens_w(i  ,j+1,k,1)+dens_w(i,j,k,1) )
-       enddo
-       enddo
-       enddo
-
+       !--- modify flux-divergence->tendency with antidiffusive fluxes
        do k = WS+1, WE-1
        do j = JS,   JE
        do i = IS,   IE
-          diag(i,j,k,3) = 2.D0 * vec_w(i,j,k,wdir) / ( dens_w(i,j,k+1,1)+dens_w(i,j,k,1) )
+          momz_t(i,j,k) = momz_t(i,j,k) - ( ( qflx_anti(i,j,k  ,XDIR)-qflx_anti(i-1,j  ,k,XDIR) ) * RDX &
+                                          + ( qflx_anti(i,j,k  ,YDIR)-qflx_anti(i  ,j-1,k,YDIR) ) * RDY &
+                                          + ( qflx_anti(i,j,k+1,ZDIR)-qflx_anti(i  ,j  ,k,ZDIR) ) * RDZ )
        enddo
        enddo
        enddo
-       diag(:,:,WS,3) = 0.D0 ! bottom boundary
-       diag(:,:,WE,3) = 0.D0 ! top    boundary
 
-       ! diagnose pressure, temperature
+       !##### Thermodynamic Equation #####
+
+       ! -- make mass fluxes ( scalar value * mass flux )
+
+       do k = KS,   KE
+       do j = JS,   JE
+       do i = IS-1, IE
+          qflx_lo(i,j,k,XDIR) = 0.5D0                                                                  &
+                              * (     mflx_lo(i,j,k,XDIR)  * ( var(i+1,j,k,I_POTT)+var(i,j,k,I_POTT) ) &
+                                - abs(mflx_lo(i,j,k,XDIR)) * ( var(i+1,j,k,I_POTT)-var(i,j,k,I_POTT) ) )
+
+          qflx_hi(i,j,k,XDIR) = 0.5D0 * mflx_hi(i,j,k,XDIR)                            &
+                              * ( FACT_N * ( var(i+1,j,k,I_POTT)+var(i  ,j,k,I_POTT) ) &
+                                + FACT_F * ( var(i+2,j,k,I_POTT)+var(i-1,j,k,I_POTT) ) )
+
+          qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
+       enddo
+       enddo
+       enddo
+
+       do k = KS,   KE
+       do j = JS-1, JE
+       do i = IS,   IE
+          qflx_lo(i,j,k,YDIR) = 0.5D0                                                                  &
+                              * (     mflx_lo(i,j,k,YDIR)  * ( var(i,j+1,k,I_POTT)+var(i,j,k,I_POTT) ) &
+                                - abs(mflx_lo(i,j,k,YDIR)) * ( var(i,j+1,k,I_POTT)-var(i,j,k,I_POTT) ) )
+
+          qflx_hi(i,j,k,YDIR) = 0.5D0 * mflx_hi(i,j,k,YDIR)                            &
+                              * ( FACT_N * ( var(i,j+1,k,I_POTT)+var(i,j  ,k,I_POTT) ) &
+                                + FACT_F * ( var(i,j+2,k,I_POTT)+var(i,j-1,k,I_POTT) ) )
+
+          qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
+       enddo
+       enddo
+       enddo
+
+       do k = WS+2, WE-2
+       do j = JS,   JE
+       do i = IS,   IE
+          qflx_lo(i,j,k,ZDIR) = 0.5D0                                                                  &
+                              * (     mflx_lo(i,j,k,ZDIR)  * ( var(i,j,k+1,I_POTT)+var(i,j,k,I_POTT) ) &
+                                - abs(mflx_lo(i,j,k,ZDIR)) * ( var(i,j,k+1,I_POTT)-var(i,j,k,I_POTT) ) )
+
+          qflx_hi(i,j,k,ZDIR) = 0.5D0 * mflx_hi(i,j,k,ZDIR)                              &
+                              * ( FACT_N * ( var(i,j,k+1,I_POTT)+var(i,j,k  ,I_POTT) ) &
+                                + FACT_F * ( var(i,j,k+2,I_POTT)+var(i,j,k-1,I_POTT) ) )
+
+          qflx_anti(i,j,k,ZDIR) = qflx_hi(i,j,k,ZDIR) - qflx_lo(i,j,k,ZDIR)
+       enddo
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+          qflx_lo(i,j,WS  ,ZDIR) = 0.D0                                          ! bottom boundary
+          qflx_lo(i,j,WS+1,ZDIR) = 0.5D0 * mflx_lo(i,j,WS+1,ZDIR)              &
+                                 * ( var(i,j,WS+2,I_POTT)+var(i,j,WS+1,I_POTT) ) ! just above the bottom boundary
+          qflx_lo(i,j,WE-1,ZDIR) = 0.5D0 * mflx_lo(i,j,WE-1,ZDIR)              &
+                                 * ( var(i,j,WE  ,I_POTT)+var(i,j,WE-1,I_POTT) ) ! just below the top boundary
+          qflx_lo(i,j,WE  ,ZDIR) = 0.D0                                          ! top boundary
+
+          qflx_hi(i,j,WS  ,ZDIR) = 0.D0 
+          qflx_hi(i,j,WS+1,ZDIR) = qflx_lo(i,j,WS+1,ZDIR)
+          qflx_hi(i,j,WE-1,ZDIR) = qflx_lo(i,j,WE-1,ZDIR)
+          qflx_hi(i,j,WE  ,ZDIR) = 0.D0 
+
+          qflx_anti(i,j,WS  ,ZDIR) = 0.D0
+          qflx_anti(i,j,WS+1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE-1,ZDIR) = 0.D0
+          qflx_anti(i,j,WE  ,ZDIR) = 0.D0
+       enddo
+       enddo
+
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-!          diag(i,j,k,4) = Pstd * ( dens_w(i,j,k,1) * scl_w(i,j,k,1) * Rair / Pstd )**CPovCV
-          do it = 1, itmax
-             fp   = scl_w(i,j,k,1) * ( pres(i,j,k)/Pstd )**RovCP      &
-                  + LH0 / CPair * ( scl_w(i,j,k,3) + scl_w(i,j,k,4) ) &
-                  - pres(i,j,k) / ( Rair *  dens_w(i,j,k,1) )
-             dfdp = RovCP / Pstd * scl_w(i,j,k,1) * ( pres(i,j,k)/Pstd )**(RovCP-1) &
-                  - 1.D0 / ( Rair * dens_w(i,j,k,1) )
-             dp   = fp / dfdp
+          ! -- update flux-divergence with the monotone scheme
+          qdiv = ( qflx_lo(i,j,k,XDIR)-qflx_lo(i-1,j,  k  ,XDIR) ) * RDX &
+               + ( qflx_lo(i,j,k,YDIR)-qflx_lo(i,  j-1,k  ,YDIR) ) * RDY &
+               + ( qflx_lo(i,j,k,ZDIR)-qflx_lo(i,  j,  k-1,ZDIR) ) * RDZ
 
-             diag(i,j,k,4) = diag(i,j,k,4) - dp
-             if ( dp < eps ) exit
+          !--- first guess of tendency and updated value
+          pott_t(i,j,k) = ( - qdiv + var(i,j,k,I_POTT)*ddiv(i,j,k) ) / var(i,j,k,I_DENS) &
+                          - DAMP_alphat(i,j,k) * (var(i,j,k,I_POTT)-pott_ref(i,j,k) )
+
+          var_l = pott(i,j,k) + dtrk * pott_t(i,j,k)
+
+          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
+          pjmax = max( var(i  ,j  ,k  ,I_POTT), &
+                       var(i+1,j  ,k  ,I_POTT), &
+                       var(i-1,j  ,k  ,I_POTT), &
+                       var(i  ,j+1,k  ,I_POTT), &
+                       var(i  ,j-1,k  ,I_POTT), &
+                       var(i  ,j  ,k+1,I_POTT), &
+                       var(i  ,j  ,k-1,I_POTT)  )
+
+          pjmin = min( var(i  ,j  ,k  ,I_POTT), &
+                       var(i+1,j  ,k  ,I_POTT), &
+                       var(i-1,j  ,k  ,I_POTT), &
+                       var(i  ,j+1,k  ,I_POTT), &
+                       var(i  ,j-1,k  ,I_POTT), &
+                       var(i  ,j  ,k+1,I_POTT), &
+                       var(i  ,j  ,k-1,I_POTT)  )
+
+          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
+          pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) )
+          pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) &
+                + max( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) )
+
+          ! --- incoming fluxes ---
+          if ( pjpls > 0 ) then
+             rjpls(i,j,k,XDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,XDIR)+mflx_lo(i-1,j  ,k  ,XDIR)) * 0.5D0)
+             rjpls(i,j,k,YDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,YDIR)+mflx_lo(i  ,j-1,k  ,YDIR)) * 0.5D0)
+             rjpls(i,j,k,ZDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,ZDIR)+mflx_lo(i  ,j  ,k-1,ZDIR)) * 0.5D0)
+          else
+             rjpls(i,j,k,XDIR:ZDIR) = 0.D0
+          endif
+
+          ! --- outgoing fluxes at scalar grid points ---
+          if ( pjmns > 0 ) then
+             rjmns(i,j,k,XDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,XDIR)+mflx_lo(i-1,j  ,k  ,XDIR)) * 0.5D0)
+             rjmns(i,j,k,YDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,YDIR)+mflx_lo(i  ,j-1,k  ,YDIR)) * 0.5D0)
+             rjmns(i,j,k,ZDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,ZDIR)+mflx_lo(i  ,j  ,k-1,ZDIR)) * 0.5D0)
+          else
+             rjmns(i,j,k,XDIR:ZDIR) = 0.D0
+          endif
+
+       enddo
+       enddo
+       enddo
+
+       ! --- [STEP 7S] limit the antidiffusive flux ---
+       do k = KS-1, KE 
+       do j = JS-1, JE 
+       do i = IS-1, IE
+          if ( qflx_anti(i,j,k,XDIR) >= 0 ) then
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i+1,j,k,XDIR), rjmns(i  ,j,k,XDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i  ,j,k,XDIR), rjmns(i+1,j,k,XDIR), 1.D0 )
+          endif
+
+          if ( qflx_anti(i,j,k,YDIR) >= 0 ) then
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j+1,k,YDIR), rjmns(i,j  ,k,YDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j  ,k,YDIR), rjmns(i,j+1,k,YDIR), 1.D0 )
+          endif
+
+          if ( qflx_anti(i,j,k,ZDIR) >= 0 ) then
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k+1,ZDIR), rjmns(i,j,k  ,ZDIR), 1.D0 )
+          else
+             qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k  ,ZDIR), rjmns(i,j,k+1,ZDIR), 1.D0 )
+          endif
+       enddo
+       enddo
+       enddo
+
+       !--- modify advection->tendency with antidiffusive fluxes
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          pott_t(i,j,k) = pott_t(i,j,k)                                                 &
+                        - ( ( qflx_anti(i,j,k,XDIR)-qflx_anti(i-1,j  ,k  ,XDIR) ) * RDX &
+                          + ( qflx_anti(i,j,k,YDIR)-qflx_anti(i  ,j-1,k  ,YDIR) ) * RDY &
+                          + ( qflx_anti(i,j,k,ZDIR)-qflx_anti(i  ,j  ,k-1,ZDIR) ) * RDZ &
+                          ) / var(i,j,k,I_DENS)
+       enddo
+       enddo
+       enddo
+
+       if ( rko == RK ) then ! do only at last step
+
+          !##### advection of scalar quantity #####
+
+          do iq = 1, QA
+
+             ! -- make mass fluxes ( scalar value * mass flux )
+
+             do k = KS,   KE
+             do j = JS,   JE
+             do i = IS-1, IE
+                qflx_lo(i,j,k,XDIR) = 0.5D0                                                            &
+                                    * (     mflx_lo(i,j,k,XDIR)  * ( qtrc(i+1,j,k,iq)+qtrc(i,j,k,iq) ) &
+                                      - abs(mflx_lo(i,j,k,XDIR)) * ( qtrc(i+1,j,k,iq)-qtrc(i,j,k,iq) ) )
+
+                qflx_hi(i,j,k,XDIR) = 0.5D0 * mflx_hi(i,j,k,XDIR)                      &
+                                    * ( FACT_N * ( qtrc(i+1,j,k,iq)+qtrc(i  ,j,k,iq) ) &
+                                      + FACT_F * ( qtrc(i+2,j,k,iq)+qtrc(i-1,j,k,iq) ) )
+
+                qflx_anti(i,j,k,XDIR) = qflx_hi(i,j,k,XDIR) - qflx_lo(i,j,k,XDIR)
+             enddo
+             enddo
+             enddo
+
+             do k = KS,   KE
+             do j = JS-1, JE
+             do i = IS,   IE
+                qflx_lo(i,j,k,YDIR) = 0.5D0                                                            &
+                                    * (     mflx_lo(i,j,k,YDIR)  * ( qtrc(i,j+1,k,iq)+qtrc(i,j,k,iq) ) &
+                                      - abs(mflx_lo(i,j,k,YDIR)) * ( qtrc(i,j+1,k,iq)-qtrc(i,j,k,iq) ) )
+
+                qflx_hi(i,j,k,YDIR) = 0.5D0 * mflx_hi(i,j,k,YDIR)                      &
+                                    * ( FACT_N * ( qtrc(i,j+1,k,iq)+qtrc(i,j  ,k,iq) ) &
+                                      + FACT_F * ( qtrc(i,j+2,k,iq)+qtrc(i,j-1,k,iq) ) )
+
+                qflx_anti(i,j,k,YDIR) = qflx_hi(i,j,k,YDIR) - qflx_lo(i,j,k,YDIR)
+             enddo
+             enddo
+             enddo
+
+             do k = WS+2, WE-2
+             do j = JS,   JE
+             do i = IS,   IE
+                qflx_lo(i,j,k,ZDIR) = 0.5D0                                                            &
+                                    * (     mflx_lo(i,j,k,ZDIR)  * ( qtrc(i,j,k+1,iq)+qtrc(i,j,k,iq) ) &
+                                      - abs(mflx_lo(i,j,k,ZDIR)) * ( qtrc(i,j,k+1,iq)-qtrc(i,j,k,iq) ) )
+
+                qflx_hi(i,j,k,ZDIR) = 0.5D0 * mflx_hi(i,j,k,ZDIR)                      &
+                                    * ( FACT_N * ( qtrc(i,j,k+1,iq)+qtrc(i,j,k  ,iq) ) &
+                                      + FACT_F * ( qtrc(i,j,k+2,iq)+qtrc(i,j,k-1,iq) ) )
+
+                qflx_anti(i,j,k,ZDIR) = qflx_hi(i,j,k,ZDIR) - qflx_lo(i,j,k,ZDIR)
+             enddo
+             enddo
+             enddo
+
+             do j = JS, JE
+             do i = IS, IE
+                qflx_lo(i,j,WS  ,ZDIR) = 0.D0                                    ! bottom boundary
+                qflx_lo(i,j,WS+1,ZDIR) = 0.5D0 * mflx_lo(i,j,WS+1,ZDIR)        &
+                                       * ( qtrc(i,j,WS+2,iq)+qtrc(i,j,WS+1,iq) ) ! just above the bottom boundary
+                qflx_lo(i,j,WE-1,ZDIR) = 0.5D0 * mflx_lo(i,j,WE-1,ZDIR)        &
+                                       * ( qtrc(i,j,WE  ,iq)+qtrc(i,j,WE-1,iq) ) ! just below the top boundary
+                qflx_lo(i,j,WE  ,ZDIR) = 0.D0                                    ! top boundary
+
+                qflx_hi(i,j,WS  ,ZDIR) = 0.D0 
+                qflx_hi(i,j,WS+1,ZDIR) = qflx_lo(i,j,WS+1,ZDIR)
+                qflx_hi(i,j,WE-1,ZDIR) = qflx_lo(i,j,WE-1,ZDIR)
+                qflx_hi(i,j,WE  ,ZDIR) = 0.D0 
+
+                qflx_anti(i,j,WS  ,ZDIR) = 0.D0
+                qflx_anti(i,j,WS+1,ZDIR) = 0.D0
+                qflx_anti(i,j,WE-1,ZDIR) = 0.D0
+                qflx_anti(i,j,WE  ,ZDIR) = 0.D0
+             enddo
+             enddo
+
+             do k = KS, KE
+             do j = JS, JE
+             do i = IS, IE
+                ! -- update flux-divergence with the monotone scheme
+                qdiv = ( qflx_lo(i,j,k,XDIR)-qflx_lo(i-1,j,  k  ,XDIR) ) * RDX &
+                     + ( qflx_lo(i,j,k,YDIR)-qflx_lo(i,  j-1,k  ,YDIR) ) * RDY &
+                     + ( qflx_lo(i,j,k,ZDIR)-qflx_lo(i,  j,  k-1,ZDIR) ) * RDZ
+
+                !--- first guess of tendency and updated value
+                qtrc_t(i,j,k,iq) = ( - qdiv + qtrc(i,j,k,iq)*ddiv(i,j,k) ) / var(i,j,k,I_DENS)
+
+                var_l = qtrc(i,j,k,iq) + dtrk * qtrc_t(i,j,k,iq)
+
+                ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
+                pjmax = max( qtrc(i  ,j  ,k  ,iq), &
+                             qtrc(i+1,j  ,k  ,iq), &
+                             qtrc(i-1,j  ,k  ,iq), &
+                             qtrc(i  ,j+1,k  ,iq), &
+                             qtrc(i  ,j-1,k  ,iq), &
+                             qtrc(i  ,j  ,k+1,iq), &
+                             qtrc(i  ,j  ,k-1,iq)  )
+
+                pjmin = min( qtrc(i  ,j  ,k  ,iq), &
+                             qtrc(i+1,j  ,k  ,iq), &
+                             qtrc(i-1,j  ,k  ,iq), &
+                             qtrc(i  ,j+1,k  ,iq), &
+                             qtrc(i  ,j-1,k  ,iq), &
+                             qtrc(i  ,j  ,k+1,iq), &
+                             qtrc(i  ,j  ,k-1,iq)  )
+
+                ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
+                pjpls = max( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) &
+                      + max( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) &
+                      + max( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) )
+                pjmns = max( 0.D0, qflx_anti(i  ,j  ,k  ,XDIR) ) - min( 0.D0, qflx_anti(i-1,j  ,k  ,XDIR) ) &
+                      + max( 0.D0, qflx_anti(i  ,j  ,k  ,YDIR) ) - min( 0.D0, qflx_anti(i  ,j-1,k  ,YDIR) ) &
+                      + max( 0.D0, qflx_anti(i  ,j  ,k  ,ZDIR) ) - min( 0.D0, qflx_anti(i  ,j  ,k-1,ZDIR) )
+
+                ! --- incoming fluxes ---
+                if ( pjpls > 0 ) then
+                   rjpls(i,j,k,XDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,XDIR)+mflx_lo(i-1,j  ,k  ,XDIR)) * 0.5D0)
+                   rjpls(i,j,k,YDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,YDIR)+mflx_lo(i  ,j-1,k  ,YDIR)) * 0.5D0)
+                   rjpls(i,j,k,ZDIR) = (pjmax-var_l) / pjpls * abs((mflx_lo(i,j,k,ZDIR)+mflx_lo(i  ,j  ,k-1,ZDIR)) * 0.5D0)
+                else
+                   rjpls(i,j,k,XDIR:ZDIR) = 0.D0
+                endif
+
+                ! --- outgoing fluxes at scalar grid points ---
+                if ( pjmns > 0 ) then
+                   rjmns(i,j,k,XDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,XDIR)+mflx_lo(i-1,j  ,k  ,XDIR)) * 0.5D0)
+                   rjmns(i,j,k,YDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,YDIR)+mflx_lo(i  ,j-1,k  ,YDIR)) * 0.5D0)
+                   rjmns(i,j,k,ZDIR) = (var_l-pjmin) / pjmns * abs((mflx_lo(i,j,k,ZDIR)+mflx_lo(i  ,j  ,k-1,ZDIR)) * 0.5D0)
+                else
+                   rjmns(i,j,k,XDIR:ZDIR) = 0.D0
+                endif
+
+             enddo
+             enddo
+             enddo
+
+             ! --- [STEP 7S] limit the antidiffusive flux ---
+             do k = KS-1, KE 
+             do j = JS-1, JE 
+             do i = IS-1, IE
+                if ( qflx_anti(i,j,k,XDIR) >= 0 ) then
+                   qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i+1,j,k,XDIR), rjmns(i  ,j,k,XDIR), 1.D0 )
+                else
+                   qflx_anti(i,j,k,XDIR) = qflx_anti(i,j,k,XDIR) * min( rjpls(i  ,j,k,XDIR), rjmns(i+1,j,k,XDIR), 1.D0 )
+                endif
+
+                if ( qflx_anti(i,j,k,YDIR) >= 0 ) then
+                   qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j+1,k,YDIR), rjmns(i,j  ,k,YDIR), 1.D0 )
+                else
+                   qflx_anti(i,j,k,YDIR) = qflx_anti(i,j,k,YDIR) * min( rjpls(i,j  ,k,YDIR), rjmns(i,j+1,k,YDIR), 1.D0 )
+                endif
+
+                if ( qflx_anti(i,j,k,ZDIR) >= 0 ) then
+                   qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k+1,ZDIR), rjmns(i,j,k  ,ZDIR), 1.D0 )
+                else
+                   qflx_anti(i,j,k,ZDIR) = qflx_anti(i,j,k,ZDIR) * min( rjpls(i,j,k  ,ZDIR), rjmns(i,j,k+1,ZDIR), 1.D0 )
+                endif
+             enddo
+             enddo
+             enddo
+
+             !--- modify advection->tendency with antidiffusive fluxes
+             do k = KS, KE
+             do j = JS, JE
+             do i = IS, IE
+                qtrc_t(i,j,k,iq) = qtrc_t(i,j,k,iq)                                             &
+                                - ( ( qflx_anti(i,j,k,XDIR)-qflx_anti(i-1,j  ,k  ,XDIR) ) * RDX &
+                                  + ( qflx_anti(i,j,k,YDIR)-qflx_anti(i  ,j-1,k  ,YDIR) ) * RDY &
+                                  + ( qflx_anti(i,j,k,ZDIR)-qflx_anti(i  ,j  ,k-1,ZDIR) ) * RDZ &
+                                  ) / var(i,j,k,I_DENS)
+             enddo
+             enddo
+             enddo
+
+          enddo ! scalar quantities loop
+
+       else
+
+          !##### RK time integration #####
+          do k = KS, KE
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j,k,I_DENS) = dens(i,j,k) + dtrk * dens_t(i,j,k)
+             var(i,j,k,I_POTT) = pott(i,j,k) + dtrk * pott_t(i,j,k)
           enddo
-       enddo
-       enddo
-       enddo
+          enddo
+          enddo
 
-       call COMM_vars( diag(:,:,:,:) )
+          do k = WS-1, WE+1
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j,k,I_MOMX) = momx(i,j,k) + dtrk * momx_t(i,j,k)
+             var(i,j,k,I_MOMY) = momy(i,j,k) + dtrk * momy_t(i,j,k)
+             var(i,j,k,I_MOMZ) = momz(i,j,k) + dtrk * momz_t(i,j,k)
+          enddo
+          enddo
+          enddo
 
-       velx(:,:,:) = diag(:,:,:,1)
-       vely(:,:,:) = diag(:,:,:,2)
-       velz(:,:,:) = diag(:,:,:,3)
-       pres(:,:,:) = diag(:,:,:,4)
+          ! fill IHALO & JHALO
+          call COMM_vars( var(:,:,:,1:5) )
+
+       endif
 
     enddo ! RK loop
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       dens(i,j,k) = dens(i,j,k) + TIME_DTSEC_ATMOS_DYN * dens_t(i,j,k)
-       momx(i,j,k) = momx(i,j,k) + TIME_DTSEC_ATMOS_DYN * vec_t(i,j,k,udir)
-       momy(i,j,k) = momy(i,j,k) + TIME_DTSEC_ATMOS_DYN * vec_t(i,j,k,vdir)
-       momz(i,j,k) = momz(i,j,k) + TIME_DTSEC_ATMOS_DYN * vec_t(i,j,k,wdir)
-       lwpt(i,j,k) = lwpt(i,j,k) + TIME_DTSEC_ATMOS_DYN * scl_t(i,j,k,1)
-
-       momx_t(i,j,k) = vec_t(i,j,k,udir)
-       momy_t(i,j,k) = vec_t(i,j,k,vdir)
-       momz_t(i,j,k) = vec_t(i,j,k,wdir)
-       lwpt_t(i,j,k) = scl_t(i,j,k,1)
-    enddo
-    enddo
-    enddo
-
-    do v = 1,  QA
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       qtrc(i,j,k,v) = qtrc(i,j,k,v) + TIME_DTSEC_ATMOS_DYN * scl_t(i,j,k,v+1)
-
-       qtrc_t(i,j,k,v) = scl_t(i,j,k,v+1)
-    enddo
-    enddo
-    enddo
-    enddo
 
     return
   end subroutine ATMOS_DYN

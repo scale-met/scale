@@ -217,7 +217,7 @@ program spd2bin
                               FIO_BIG_ENDIAN,  &
                               FIO_CARTESIAN,   &
                               int(GRID_DX),    &
-                              0,               &
+                              GRID_IMAX,       &
                               1,               &
                               p                )
 

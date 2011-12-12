@@ -108,12 +108,12 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
-       PI     => CONST_PI,    &
-       GRAV   => CONST_GRAV,  &
-       Rair   => CONST_Rair,  &
-       CPair  => CONST_CPair, &
-       CPovR  => CONST_CPovR, &
-       RovCP  => CONST_RovCP, &
+       PI     => CONST_PI,     &
+       GRAV   => CONST_GRAV,   &
+       Rair   => CONST_Rair,   &
+       CPair  => CONST_CPair,  &
+       CPovR  => CONST_CPovR,  &
+       RovCP  => CONST_RovCP,  &
        CVovCP => CONST_CVovCP, &
        Pstd   => CONST_Pstd
     use mod_grid, only : &
@@ -126,13 +126,13 @@ contains
        JE => GRID_JE, &
        KS => GRID_KS, &
        KE => GRID_KE, &
-       GRID_CX, &
-       GRID_CY, &
+       GRID_CX,       &
+       GRID_CY,       &
        GRID_CZ
     use mod_atmos_vars, only: &
-       QA => A_QA,                   &
+       QA => A_QA,     &
        ATMOS_vars_get, &
-       ATMOS_vars_putDMP
+       ATMOS_vars_put
     implicit none
 
     real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment
@@ -152,18 +152,15 @@ contains
        YR_BBL,    &
        ZR_BBL
 
-    real(8) :: dens(IA,JA,KA)    ! density [kg/m**3]
-    real(8) :: momx(IA,JA,KA)    ! momentum (x) [kg/m**3 * m/s]
-    real(8) :: momy(IA,JA,KA)    ! momentum (y) [kg/m**3 * m/s]
-    real(8) :: momz(IA,JA,KA)    ! momentum (z) [kg/m**3 * m/s]
-    real(8) :: lwpt(IA,JA,KA)    ! liquid water potential temperature [K]
+    real(8) :: dens(IA,JA,KA)    ! density [kg/m3]
+    real(8) :: momx(IA,JA,KA)    ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy(IA,JA,KA)    ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz(IA,JA,KA)    ! momentum(z) [kg/m3 * m/s]
+    real(8) :: pott(IA,JA,KA)    ! potential temperature [K]
 
-    real(8) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio   [kg/kg],[1/m3]
+    real(8) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
 
     real(8) :: pres(IA,JA,KA)    ! pressure [Pa]
-    real(8) :: velx(IA,JA,KA)    ! velocity (x) [m/s]
-    real(8) :: vely(IA,JA,KA)    ! velocity (y) [m/s]
-    real(8) :: velz(IA,JA,KA)    ! velocity (z) [m/s]
     real(8) :: temp(IA,JA,KA)    ! temperature [K]
 
     real(8) :: dist
@@ -190,8 +187,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKEXP_coldbubble)
 
 
-    call ATMOS_vars_get( dens, momx, momy, momz, lwpt, qtrc, &
-                         pres, velx, vely, velz, temp        )
+    call ATMOS_vars_get( dens, momx, momy, momz, pott, qtrc )
 
     momx(:,:,:)   = 0.D0
     momy(:,:,:)   = 0.D0
@@ -210,24 +206,24 @@ contains
             + ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2.D0
 
        if ( dist > 1.D0 ) then ! out of cold bubble
-          lwpt(i,j,k) = ENV_THETA
+          pott(i,j,k) = ENV_THETA
        else
-          lwpt(i,j,k) = ENV_THETA &
+          pott(i,j,k) = ENV_THETA &
                       - 15.D0 * dcos( 0.5D0*PI*sqrt(dist) )**2.D0 &
                       * ( Pstd/pres(i,j,k) )**RovCP
        endif
 
-       dens(i,j,k) = Pstd / Rair / lwpt(i,j,k) &
-                   * ( pres(i,j,k)/Pstd )**CVovCP
+       dens(i,j,k) = Pstd / Rair / pott(i,j,k) * ( pres(i,j,k)/Pstd )**CVovCP
     enddo
     enddo
     enddo
 
-    call ATMOS_vars_putDMP( dens, momx, momy, momz, lwpt, qtrc  )
+    call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
 
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END MAKING INITIAL DATA ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
 
+    return
   end subroutine MKEXP_coldbubble
 
 end program coldbubble

@@ -25,6 +25,7 @@ module mod_process
   !++ Public procedure
   !
   public :: PRC_MPIstart
+  public :: PRC_NOMPIstart
   public :: PRC_MPIstop
   public :: PRC_setup
   public :: PRC_MPItime
@@ -54,6 +55,7 @@ module mod_process
   !
   !++ Private parameters & variables
   !
+  logical, private, save :: PRC_mpi_alive = .false.
   !-----------------------------------------------------------------------------
 contains
 
@@ -78,6 +80,8 @@ contains
     call MPI_Init(ierr)
     call MPI_Comm_size(MPI_COMM_WORLD,PRC_nmax,  ierr)
     call MPI_Comm_rank(MPI_COMM_WORLD,PRC_myrank,ierr)
+
+    PRC_mpi_alive = .true.
 
     !--- Open logfile
     IO_FID_LOG = IO_get_available_fid()
@@ -114,6 +118,62 @@ contains
   end subroutine PRC_MPIstart
 
   !-----------------------------------------------------------------------------
+  !> Start MPI
+  !-----------------------------------------------------------------------------
+  subroutine PRC_NOMPIstart
+    use mod_stdio, only : &
+       IO_get_available_fid, &
+       IO_make_idstr,        &
+       IO_FILECHR,           &
+       IO_FID_CONF,          &
+       IO_FID_LOG,           &
+       IO_L
+    implicit none
+
+    character(len=IO_FILECHR) :: fname
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    PRC_nmax   = 1
+    PRC_myrank = 0
+    PRC_mpi_alive = .false.
+
+    !--- Open logfile
+    IO_FID_LOG = IO_get_available_fid()
+    call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+    open( unit   = IO_FID_LOG,  &
+          file   = trim(fname), &
+          form   = 'formatted', &
+          iostat = ierr         )
+       if ( ierr /= 0 ) then
+          write(*,*) 'xxx File open error! :', trim(fname)
+          call PRC_MPIstop
+       endif
+
+    write(IO_FID_LOG,*)
+    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+    write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
+    write(IO_FID_LOG,*) '+ Numerical model for LES-scale weather                         +'
+    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+    write(IO_FID_LOG,*)
+    write(IO_FID_LOG,*) '++++++ Start Without MPI'
+    write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
+    write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
+    write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
+    write(IO_FID_LOG,*)
+    write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
+    write(IO_FID_LOG,*) '+++ Open config file, FID =', IO_FID_CONF
+    write(IO_FID_LOG,*) '+++ Open log    file, FID =', IO_FID_LOG
+
+    if ( .not. IO_L ) then
+       write(IO_FID_LOG,*) '+++ Following log message is suppressed.'
+    endif
+
+    return
+  end subroutine PRC_NOMPIstart
+
+  !-----------------------------------------------------------------------------
   !> Stop MPI
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
@@ -129,18 +189,20 @@ contains
     !---------------------------------------------------------------------------
 
     ! Stop MPI
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Stop MPI'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Broadcast STOP signal'
-    call MPI_BCAST( request,        &
-                    IO_SYSCHR,      &
-                    MPI_CHARACTER,  & !--- type
-                    PRC_master,     & !--- source rank
-                    MPI_COMM_WORLD, &
-                    ierr            )
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    call MPI_Finalize(ierr)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPI is normaly finalized'
+    if ( PRC_mpi_alive ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ Stop MPI'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Broadcast STOP signal'
+       call MPI_BCAST( request,        &
+                       IO_SYSCHR,      &
+                       MPI_CHARACTER,  & !--- type
+                       PRC_master,     & !--- source rank
+                       MPI_COMM_WORLD, &
+                       ierr            )
+       call MPI_Barrier(MPI_COMM_WORLD,ierr)
+       call MPI_Finalize(ierr)
+       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is normaly finalized'
+    endif
 
     ! Stop program
     close(IO_FID_LOG)
@@ -217,9 +279,11 @@ contains
     divide(2) = PRC_NUM_X
     period(1) = PRC_PERIODIC_Y
     period(2) = PRC_PERIODIC_X
-    call mpi_cart_create(MPI_COMM_WORLD,2,divide,period,.false.,iptbl,ierr)
-    call mpi_cart_shift(iptbl,0,1,PRC_next(PRC_N),PRC_next(PRC_S),ierr)  ! next rank search Left/Right
-    call mpi_cart_shift(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr)  ! next rank search Up/Down
+    if ( PRC_mpi_alive ) then
+       call MPI_CART_CREATE(MPI_COMM_WORLD,2,divide,period,.false.,iptbl,ierr)
+       call MPI_CART_SHIFT(iptbl,0,1,PRC_next(PRC_N),PRC_next(PRC_S),ierr)  ! next rank search Left/Right
+       call MPI_CART_SHIFT(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr)  ! next rank search Up/Down
+    endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Node topology ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A,I5,A,I5,A,I5,A)') '***                         ', &
@@ -245,7 +309,11 @@ contains
     real(8) :: time
     !---------------------------------------------------------------------------
 
-    time = MPI_WTIME()
+    if ( PRC_mpi_alive ) then
+       time = MPI_WTIME()
+    else
+       call cpu_time(time)
+    endif
 
   end function PRC_MPItime
 

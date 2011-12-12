@@ -8,7 +8,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] integrate
+!! @li      2011-xx-xx (S.Iga) [new]
+!! @li      2011-12-11 (H.Yashiro) [mod] integrate to SCALE3
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -39,11 +40,7 @@ module mod_atmos_phy_tb
   !
 
   real(8), parameter :: Cs    = 0.18D0 ! (Sullivan et al.1994, Nakanishi and Niino)
-  real(8), parameter :: gamma = 1.D0 ! assume dx=dy=dz
-
-  logical, parameter :: stratification_effect=.true.
-
-  real(8), save      :: Pr ! Prantle num
+  real(8), parameter :: GAMMA = 1.D0   ! assume dx=dy=dz
 
   !-----------------------------------------------------------------------------
 contains
@@ -59,35 +56,22 @@ contains
   !>  6, This routine does not deal with surface flux.
   !>  7, limiter is not implemented.
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB( dens,   momx,   momy,   momz,   lwpt,   &
-                           qtrc,                                   &
-                           pres,   velx,   vely,   velz,   temp,   &
-                           dens_t, momx_t, momy_t, momz_t, lwpt_t, &
-                           qtrc_t                                  )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
-    use mod_const, only : &
-       GRAV   => CONST_GRAV,  &
-       Rair   => CONST_Rair,  &
-       CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
-    use mod_time, only: &
-       TIME_DTSEC_ATMOS_PHY_TB
-    use mod_comm, only: &
-       COMM_vars
+  subroutine ATMOS_PHY_TB( dens,   pott,   qtrc,                   &
+                           velx,   vely,   velz,                   &
+                           momx_t, momy_t, momz_t, pott_t, qtrc_t  )
     use mod_grid, only : &
-       IA  => GRID_IA, &
-       JA  => GRID_JA, &
-       KA  => GRID_KA, &
-       IS  => GRID_IS, &
-       IE  => GRID_IE, &
-       JS  => GRID_JS, &
-       JE  => GRID_JE, &
-       KS  => GRID_KS, &
-       KE  => GRID_KE, &
-       WS  => GRID_WS, &
-       WE  => GRID_WE, &
+       IA  => GRID_IA,  &
+       JA  => GRID_JA,  &
+       KA  => GRID_KA,  &
+       IS  => GRID_IS,  &
+       IE  => GRID_IE,  &
+       JS  => GRID_JS,  &
+       JE  => GRID_JE,  &
+       KS  => GRID_KS,  &
+       KE  => GRID_KE,  &
+       WS  => GRID_WS,  &
+       WE  => GRID_WE,  &
+       DX  => GRID_DX,  &
        RDX => GRID_RDX, &
        RDY => GRID_RDY, &
        RDZ => GRID_RDZ
@@ -96,30 +80,19 @@ contains
     implicit none
 
     ! prognostic value
-    real(8), intent(inout) :: dens(IA,JA,KA)      ! density [kg/m**3]
-    real(8), intent(inout) :: momx(IA,JA,KA)      ! momentum (x) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momy(IA,JA,KA)      ! momentum (y) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momz(IA,JA,KA)      ! momentum (z) [kg/m**3 * m/s]
-    real(8), intent(inout) :: lwpt(IA,JA,KA)      ! liquid water potential temperature [K]
-    real(8), intent(inout) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio   [kg/kg],[1/m3]
-    ! diagnostic value
-    real(8), intent(inout) :: pres(IA,JA,KA)      ! pressure [Pa]
-    real(8), intent(inout) :: velx(IA,JA,KA)      ! velocity (x) [m/s]
-    real(8), intent(inout) :: vely(IA,JA,KA)      ! velocity (y) [m/s]
-    real(8), intent(inout) :: velz(IA,JA,KA)      ! velocity (z) [m/s]
-    real(8), intent(inout) :: temp(IA,JA,KA)      ! Temperature [K]
-    ! prognostic tendency
-    real(8), intent(out)   :: dens_t(IA,JA,KA)
-    real(8), intent(out)   :: momx_t(IA,JA,KA)
-    real(8), intent(out)   :: momy_t(IA,JA,KA)
-    real(8), intent(out)   :: momz_t(IA,JA,KA)
-    real(8), intent(out)   :: lwpt_t(IA,JA,KA)
-    real(8), intent(out)   :: qtrc_t(IA,JA,KA,QA)
+    real(8), intent(in)  :: dens(IA,JA,KA)      ! density [kg/m3]
+    real(8), intent(in)  :: velx(IA,JA,KA)      ! velocity(x) [m/s]
+    real(8), intent(in)  :: vely(IA,JA,KA)      ! velocity(y) [m/s]
+    real(8), intent(in)  :: velz(IA,JA,KA)      ! velocity(z) [m/s]
+    real(8), intent(in)  :: pott(IA,JA,KA)      ! potential temperature [K]
+    real(8), intent(in)  :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
-    implicit none
+    ! prognostic tendency
+    real(8), intent(out) :: momx_t(IA,JA,KA)
+    real(8), intent(out) :: momy_t(IA,JA,KA)
+    real(8), intent(out) :: momz_t(IA,JA,KA)
+    real(8), intent(out) :: pott_t(IA,JA,KA)
+    real(8), intent(out) :: qtrc_t(IA,JA,KA,QA)
 
     real(8), allocatable :: Uij(:,:,:,:,:) ! velocity gradient matrix
     real(8), allocatable :: Sij(:,:,:,:,:) ! deformation rate tensor
@@ -127,36 +100,24 @@ contains
     real(8), allocatable :: nu   (:,:,:)   ! eddy-viscosity coefficient
     real(8), allocatable :: nurho(:,:,:)   ! nu * dens
 
-    real(8), allocatable :: FLXij (:,:,:,:,:)
-    real(8), allocatable :: FLXene(:,:,:,:)
-    real(8), allocatable :: FLXq  (:,:,:,:,:)
+    real(8), allocatable :: FLXij(:,:,:,:,:)
+    real(8), allocatable :: FLXt (:,:,:,:)
+    real(8), allocatable :: FLXq (:,:,:,:,:)
 
-    real(8) :: L ! mean grid interval
-    real(8) :: Ri ! Rechardson num
+    real(8) :: Ri  ! Richardson number
+    real(8) :: Pr  ! Prantle number
+    real(8) :: RPr ! 1 / Pr
 
-    q(IS:IE,JS:JE,KS:KE,1:TRC_VMAX) = ! tracer
-    qw(IS:IE,JS:JE,KS:KE) = !total water (vapor + liquid), 
-    ql(IS:IE,JS:JE,KS:KE) = !liquid water 
-    ! solid water is not considered y                                        et
-    pottl(IS:IE,JS:JE,KS:KE) = !  liquid water potential temperature
-    pott(IS:IE,JS:JE,KS:KE) = !  potential temperature
-    dqsl(IS:IE,JS:JE,KS:KE) = ! dq(sat)/dT| at T=Tl
-
-    T_ov_pott(IS:IE,JS:JE,KS:KE) = ! Exner func., i.e. (p0/p)^(R/Cp)
-    Lv = ! latent heat
-
-    integer :: i, j
+    integer :: i, j, k, ii, jj
     !---------------------------------------------------------------------------
 
-    allocate( Uij   (IA,JA,KA,3,3)  )
-    allocate( Sij   (IA,JA,KA,3,3)  )
-    allocate( nu    (IA,JA,KA)      )
-    allocate( nurho (IA,JA,KA)      )
-    allocate( FLXij (IA,JA,KA,3,3)  )
-    allocate( FLXene(IA,JA,KA,3)    )
-    allocate( FLXq  (IA,JA,KA,3,QA) )
-
-    L = GRID_DX
+    allocate( Uij  (IA,JA,KA,3,3)  )
+    allocate( Sij  (IA,JA,KA,3,3)  )
+    allocate( nu   (IA,JA,KA)      )
+    allocate( nurho(IA,JA,KA)      )
+    allocate( FLXij(IA,JA,KA,3,3)  )
+    allocate( FLXt (IA,JA,KA,3)    )
+    allocate( FLXq (IA,JA,KA,3,QA) )
 
     ! no topography is assumed. if there are topography, velz_w(bottom) is not zero.
     ! bottom boundary
@@ -164,230 +125,183 @@ contains
     !vely(:,:,WS) = vely_sfc(:,:)
     !velz(:,:,WS) = velz_sfc(:,:)
 
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE+1
+    do k = KS,   KE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
        Uij(i,j,k,1,1) = ( velx(i  ,j  ,k  )-velx(i-1,j  ,k  ) ) * RDX ! du/dx, (x, y, layer)
-
-    do k = KS, KE
-    do j = JS-1, JE
-    do i = IS, IE
        Uij(i,j,k,1,2) = ( vely(i+1,j  ,k  )-vely(i  ,j  ,k  ) ) * RDX ! dv/dx, (u, v, layer)
-
-    do k = WS, WE
-    do j = JS, JE
-    do i = IS, IE
        Uij(i,j,k,1,3) = ( velz(i+1,j  ,k  )-velz(i  ,j  ,k  ) ) * RDX ! dw/dx, (u, y, interface)
 
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS-1, IE
        Uij(i,j,k,2,1) = ( velx(i  ,j+1,k  )-velx(i  ,j  ,k  ) ) * RDY ! du/dy, (u, v, layer)
-
-    do k = KS, KE
-    do j = JS, JE+1
-    do i = IS, IE
        Uij(i,j,k,2,2) = ( vely(i  ,j+1,k  )-vely(i  ,j  ,k  ) ) * RDY ! dv/dy, (x, y, layer)
-
-    do k = WS, WE
-    do j = JS, JE
-    do i = IS, IE
        Uij(i,j,k,2,3) = ( velz(i  ,j+1,k  )-velz(i  ,j  ,k  ) ) * RDY ! dw/dy, (x, v, interface)
 
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS-1, IE
        Uij(i,j,k,3,1) = ( velx(i  ,j  ,k+1)-velx(i  ,j  ,k  ) ) * RDZ ! du/dz, (u, y, interface)
-
-    do k = KS, KE
-    do j = JS-1, JE
-    do i = IS, IE
        Uij(i,j,k,3,2) = ( vely(i  ,j  ,k+1)-vely(i  ,j  ,k  ) ) * RDZ ! dv/dz, (x, v, interface)
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
        Uij(i,j,k,3,3) = ( velz(i  ,j  ,k  )-velz(i  ,j  ,k-1) ) * RDZ ! dw/dz, (x, y, layer)
+    enddo
+    enddo
+    enddo
 
     ! ii == jj : at the center of control volume (cube)
     ! ii /= ii : on the edge   of control volume (cube)
     do ii = 1, 3
     do jj = 1, 3
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          Sij(i,j,k,(jj-1)*3+ii) = ( Uij(i,j,k,ii,jj) + Uij(i,j,k,jj,ii) ) * 0.5D0 ! 
+       do k = KS,   KE
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+          Sij(i,j,k,ii,jj) = ( Uij(i,j,k,ii,jj) + Uij(i,j,k,jj,ii) ) * 0.5D0
        enddo
        enddo
        enddo
     enddo
     enddo
-
-    ! fill IHALO & JHALO
-    call COMM_vars( Sij(:,:,:,:) )
-
 
     ! calculate stratification effect (n2 and Pr are defined at w level)
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       a = 1.D0 / ( 1.D0 + dqsl(i,j,k) * Lv / Cp )
-
-       c = (1+0.61*qw(i,j,k)-1.61*ql(i,j,k))* Lv/Cp /T_ov_pott(i,j,k) - 1.61 * pott(i,j,k)
-
-       betatheta= 1 + 0.61 * qw(i,j,k) - 1.61*ql(i,j,k) - a*c*dqsl(i,j,k)* T_ov_pott(i,j,k)
-
-       betaq= 0.61 * pott(i,j,k) + a * c
-
-       n2(i,j,k) = grav / (sum(pottl(i,j,k:kz+1))/2) * &
-                     (sum(betatheta * ( pottl(i,j,k+1)-pottl(i,j,k) )/dz + &
-                     betaq * ( qw(i,j,k+1)-qw(i,j,k)  )/dz )/4)
-    enddo
-    enddo
-    enddo
+!    do k = KS, KE
+!    do j = JS, JE
+!    do i = IS, IE
+!       a = 1.D0 / ( 1.D0 + dqsl(i,j,k) * Lv / Cp )
+!
+!       c = (1+0.61*qw(i,j,k)-1.61*ql(i,j,k))* Lv/Cp /T_ov_pott(i,j,k) - 1.61 * pott(i,j,k)
+!
+!       betatheta= 1 + 0.61 * qw(i,j,k) - 1.61*ql(i,j,k) - a*c*dqsl(i,j,k)* T_ov_pott(i,j,k)
+!
+!       betaq= 0.61 * pott(i,j,k) + a * c
+!
+!       n2(i,j,k) = grav / (sum(pottl(i,j,k:kz+1))/2) * &
+!                     (sum(betatheta * ( pottl(i,j,k+1)-pottl(i,j,k) )/dz + &
+!                     betaq * ( qw(i,j,k+1)-qw(i,j,k)  )/dz )/4)
+!    enddo
+!    enddo
+!    enddo
 
     ! calculate  Pr (Pr is defined at w level)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
-       Ri = GRAV / ( sum(pottl(i,j,k:kz+1) ) / 2 )  &
-          * ( pottv(i,j,k+1)-pottv(i,j,k) ) &
-          / (   ( velx(i,j,k+1)-velx(i,j,k) ) **2          &
-              + ( vely(i,j,k+1)-vely(i,j,k) ) **2, 1d-10 ) &
-                  * dz ))
-       Ri = min( 0.25D0, max( 0.D0, Ri ) )
-       Pr(i,j,k) = 0.33333d0 * ( 1.D0 - 4.D0*Ri ) +  4.D0*Ri
+       ! Ri = g / rho * drho/dz / dU/dz
+       Ri = GRAV * ( dens(i,j,k+1)-dens(i,j,k) ) * RDZ                &
+          * 2.D0 / ( dens(i,j,k+1)+dens(i,j,k) )                      &
+          / max( ( ( velx (i,j,k+1)-velx (i,j,k) ) * RDZ )**2.D0      &
+               + ( ( vely (i,j,k+1)-vely (i,j,k) ) * RDZ )**2.D0, eps )
+
+       Ri         = min( 0.25D0, max( 0.D0, Ri ) )
+       Pr (i,j,k) = ( 1.D0-4.D0*Ri ) / 3.D0 + 4.D0*Ri
+       RPr(i,j,k) = 1.D0 / Pr(i,j,k)
     enddo
     enddo
     enddo
 
+
+    do k = WS+1, WE-1
+    do j = JS-1, JE
+    do i = IS-1, IE
+       nu(i,j,k) = ( Cs * DX ) ** 2.D0 * ( sqrt( 2.D0 * GAMMA                            &
+                 * ( ( Sij(i  ,j  ,k  ,1,1) + Sij(i+1,j+1,k+1,1,1)                       &
+                     + Sij(i+1,j  ,k  ,1,1) + Sij(i+1,j+1,k  ,1,1)                       &
+                     + Sij(i  ,j+1,k  ,1,1) + Sij(i  ,j+1,k+1,1,1)                       &
+                     + Sij(i  ,j  ,k+1,1,1) + Sij(i+1,j  ,k+1,1,1) ) * 0.125D0 ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,1,2) + Sij(i  ,j  ,k+1,1,2) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,1,3) + Sij(i  ,j+1,k  ,1,3) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,2,1) + Sij(i  ,j  ,k+1,2,1) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,2,2) + Sij(i+1,j+1,k+1,2,2)                       &
+                     + Sij(i+1,j  ,k  ,2,2) + Sij(i+1,j+1,k  ,2,2)                       &
+                     + Sij(i  ,j+1,k  ,2,2) + Sij(i  ,j+1,k+1,2,2)                       &
+                     + Sij(i  ,j  ,k+1,2,2) + Sij(i+1,j  ,k+1,2,2) ) * 0.125D0 ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,2,3) + Sij(i+1,j  ,k  ,2,3) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,3,1) + Sij(i  ,j+1,k  ,3,1) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,3,2) + Sij(i+1,j  ,k  ,3,2) ) * 0.5D0   ) ** 2.D0 &
+                 + ( ( Sij(i  ,j  ,k  ,3,3) + Sij(i+1,j+1,k+1,3,3)                       &
+                     + Sij(i+1,j  ,k  ,3,3) + Sij(i+1,j+1,k  ,3,3)                       &
+                     + Sij(i  ,j+1,k  ,3,3) + Sij(i  ,j+1,k+1,3,3)                       &
+                     + Sij(i  ,j  ,k+1,3,3) + Sij(i+1,j  ,k+1,3,3) ) * 0.125D0 ) ** 2.D0 &
+                 ) )
+
+       nurho(i,j,k) = nu(i,j,k) + ( dens(i  ,j  ,k  ) + dens(i+1,j+1,k+1) &
+                                  + dens(i+1,j  ,k  ) + dens(i+1,j+1,k  ) &
+                                  + dens(i  ,j+1,k  ) + dens(i  ,j+1,k+1) &
+                                  + dens(i  ,j  ,k+1) + dens(i+1,j  ,k+1) ) * 0.125D0
+    enddo
+    enddo
+    enddo
+    nurho(:,:,WS) = 0.D0
+    nurho(:,:,WE) = 0.D0
 
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
-       nu(i,j,k) = ( Cs * GRID_DX ) ** 2.D0   &
-                 * ( sqrt( ( ( Sij(i,j,k,1,1) ) &
-                           * ( Sij(i,j,k,1,1) ) &
-                           + ( Sij(i,j,k,2,2) ) &
-                           * ( Sij(i,j,k,2,2) ) &
-                           + ( Sij(i,j,k,3,3) ) &
-                           * ( Sij(i,j,k,3,3) ) &
-                           ) * 2.D0             &
-                         + ( ( Sij(i-1,j-1,k  ,1,2)+Sij(i-1,j  ,k  ,1,2)+Sij(i  ,j-1,k  ,1,2)+Sij(i,j,k,1,2) ) &
-                           * ( Sij(i-1,j-1,k  ,1,2)+Sij(i-1,j  ,k  ,1,2)+Sij(i  ,j-1,k  ,1,2)+Sij(i,j,k,1,2) ) &
-                           + ( Sij(i  ,j-1,k-1,2,3)+Sij(i  ,j-1,k  ,2,3)+Sij(i  ,j  ,k-1,2,3)+Sij(i,j,k,2,3) ) &
-                           * ( Sij(i  ,j-1,k-1,2,3)+Sij(i  ,j-1,k  ,2,3)+Sij(i  ,j  ,k-1,2,3)+Sij(i,j,k,2,3) ) &
-                           + ( Sij(i-1,j  ,k-1,3,1)+Sij(i  ,j  ,k-1,3,1)+Sij(i-1,j  ,k  ,3,1)+Sij(i,j,k,3,1) ) &
-                           * ( Sij(i-1,j  ,k-1,3,1)+Sij(i  ,j  ,k-1,3,1)+Sij(i-1,j  ,k  ,3,1)+Sij(i,j,k,3,1) ) &
-                           ) * 0.25D0                                                                          &
-                         )                     &
-                   - ( N2(i,j,k) / Pr(i,j,k) ) &
-                   )
+       FLXij(i,j,k,1,1) = GAMMA * Sij(i,j,k,1,1) * ( nurho(i  ,j  ,k  ) + nurho(i-1,j-1,k-1) &
+                                                   + nurho(i-1,j  ,k  ) + nurho(i-1,j-1,k  ) &
+                                                   + nurho(i  ,j-1,k  ) + nurho(i  ,j-1,k-1) &
+                                                   + nurho(i  ,j  ,k-1) + nurho(i-1,j  ,k-1) ) * 0.25D0
+       FLXij(i,j,k,1,2) = GAMMA * Sij(i,j,k,1,2) * ( nurho(i  ,j  ,k  ) + nurho(i  ,j  ,k-1) )
+       FLXij(i,j,k,1,3) = GAMMA * Sij(i,j,k,1,3) * ( nurho(i  ,j  ,k  ) + nurho(i  ,j-1,k  ) )
+       FLXij(i,j,k,2,1) = GAMMA * Sij(i,j,k,2,1) * ( nurho(i  ,j  ,k  ) + nurho(i  ,j  ,k-1) )
+       FLXij(i,j,k,2,2) = GAMMA * Sij(i,j,k,2,2) * ( nurho(i  ,j  ,k  ) + nurho(i-1,j-1,k-1) &
+                                                   + nurho(i-1,j  ,k  ) + nurho(i-1,j-1,k  ) &
+                                                   + nurho(i  ,j-1,k  ) + nurho(i  ,j-1,k-1) &
+                                                   + nurho(i  ,j  ,k-1) + nurho(i-1,j  ,k-1) ) * 0.25D0
+       FLXij(i,j,k,2,3) = GAMMA * Sij(i,j,k,2,3) * ( nurho(i  ,j  ,k  ) + nurho(i-1,j  ,k  ) )
+       FLXij(i,j,k,3,1) = GAMMA * Sij(i,j,k,3,1) * ( nurho(i  ,j  ,k  ) + nurho(i  ,j-1,k  ) )
+       FLXij(i,j,k,3,2) = GAMMA * Sij(i,j,k,3,2) * ( nurho(i  ,j  ,k  ) + nurho(i-1,j  ,k  ) )
+       FLXij(i,j,k,3,3) = GAMMA * Sij(i,j,k,3,3) * ( nurho(i  ,j  ,k  ) + nurho(i-1,j-1,k-1) &
+                                                   + nurho(i-1,j  ,k  ) + nurho(i-1,j-1,k  ) &
+                                                   + nurho(i  ,j-1,k  ) + nurho(i  ,j-1,k-1) &
+                                                   + nurho(i  ,j  ,k-1) + nurho(i-1,j  ,k-1) ) * 0.25D0
     enddo
     enddo
     enddo
+    FLXij(:,:,WS,:,:) = 0.D0
+    FLXij(:,:,WE,:,:) = 0.D0
 
-    do k = WS, WE
-    do j = JS, JE
-    do i = IS, IE
-       nuw(i,j,k) = ( Cs * GRID_DX ) ** 2.D0   &
+    do k = WS+1, WE-1
+    do j = JS-1, JE
+    do i = IS-1, IE
+       FLXt(i,j,k,1) = RPr * ( pott(i+1,j,k)-pott(i,j,k) ) * RDX &
+                     * 0.25D0 * ( nurho(i,j,k) + nurho(i,j-1,k) + nurho(i,j,k-1) + nurho(i,j-1,k-1) )
+       FLXt(i,j,k,2) = RPr * ( pott(i,j+1,k)-pott(i,j,k) ) * RDY &
+                     * 0.25D0 * ( nurho(i,j,k) + nurho(i-1,j,k) + nurho(i,j,k-1) + nurho(i-1,j,k-1) )
+       FLXt(i,j,k,3) = RPr * ( pott(i,j,k+1)-pott(i,j,k) ) * RDZ &
+                     * 0.25D0 * ( nurho(i,j,k) + nurho(i-1,j,k) + nurho(i,j-1,k) + nurho(i-1,j-1,k) )
+
+       FLXq(i,j,k,1,:) = RPr * ( qtrc(i+1,j,k,:)-qtrc(i,j,k,:) ) * RDX &
+                       * 0.25D0 * ( nurho(i,j,k) + nurho(i,j-1,k) + nurho(i,j,k-1) + nurho(i,j-1,k-1) )
+       FLXq(i,j,k,2,:) = RPr * ( qtrc(i,j+1,k,:)-qtrc(i,j,k,:) ) * RDY &
+                       * 0.25D0 * ( nurho(i,j,k) + nurho(i-1,j,k) + nurho(i,j,k-1) + nurho(i-1,j,k-1) )
+       FLXq(i,j,k,3,:) = RPr * ( qtrc(i,j,k+1,:)-qtrc(i,j,k,:) ) * RDZ &
+                       * 0.25D0 * ( nurho(i,j,k) + nurho(i-1,j,k) + nurho(i,j-1,k) + nurho(i-1,j-1,k) )
     enddo
     enddo
     enddo
-
-    nurho(:,:,:) = nu(:,:,:) * dens(:,:,:)
-
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       FLXij(i,j,k,1,1) = 2.D0 * Sij(i,j,k,1,1) * nurho(i,j,k)
-       FLXij(i,j,k,1,2) = 2.D0 * Sij(i,j,k,1,2) * (sum(nurho(ix,iy,kz-1:kz))/2)
-       FLXij(i,j,k,1,3) = 2.D0 * Sij(i,j,k,1,3) * (sum(nurho(ix,iy-1:iy,kz))/2)
-
-       FLXij(i,j,k,2,1) = FLXij(i,j,k,1,2) 
-       FLXij(i,j,k,2,2) = 2.D0 * Sij(i,j,k,1,1) * nurho(i,j,k)
-       FLXij(i,j,k,2,3) = FLXij(i,j,k,3,2) 
-
-       FLXij(i,j,k,3,3) = 2.D0 * Sij(i,j,k,1,1) * nurho(i,j,k)
-       FLXij(i,j,k,3,2) = gamma * 2.D0 * Sij(i,j,k,3,2) * (sum(nurho(ix-1:ix,iy,kz))/2)
-       FLXij(i,j,k,3,1) = FLXij(i,j,k,1,3) 
-
-       FLXpott(i,j,k,1) = ( pottl(i+1,j  ,k  ) - pottl(i,j,k) ) * RDX / Pr * ( sum( nurho(i,iy-1:jy,kz-1:kz))/4) 
-       FLXpott(i,j,k,2) = ( pottl(i  ,j+1,k  ) - pottl(i,j,k) ) * RDY / Pr * ( sum( nurho(i-1:i,j,k-1:kz))/4) 
-       FLXpott(i,j,k,3) = ( pottl(i  ,j  ,k+1) - pottl(i,j,k) ) * RDZ / Pr * ( sum( nurho(i-1:ix,iy-1:jy,kz))/4) 
-
-       FLXq(i,j,k,1,:) = (q(ix+1,jy,kz,:)-q((i,j,k,:)) / dx / Pr *  ( sum(nurho(ix,iy-1:jy,kz-1:kz))/4)
-       FLXq(i,j,k,2,:) = (q(ix,jy+1,kz,:)-q((i,j,k,:)) / dy / Pr *  ( sum(nurho(ix-1:i,j,k-1:kz))/4)
-       FLXq(i,j,k,3,:) = (q(i,j,k+1,:)-q((i,j,k,:)) / dz / Pr *  ( sum(nurho(ix-1:ix,iy-1:jy,kz))/4)
-!              FLXdens(i,j,k,1) = (dens(ix+1,jy,kz)-dens((i,j,k)) / dx / Pr *  ( sum(nurho(ix,iy-1:jy,kz-1:kz))/4)
-!              FLXdens(i,j,k,2) = (dens(ix,jy+1,kz)-dens((i,j,k)) / dy / Pr *  ( sum(nurho(ix-1:i,j,k-1:kz))/4)
-!              FLXdens(i,j,k,3) = (dens(i,j,k+1)-dens((i,j,k)) / dz / Pr *  ( sum(nurho(ix-1:ix,iy-1:jy,kz))/4)
-
-
-
-          enddo
-       enddo
-    enddo
-
+    FLXt(:,:,WS,:)   = 0.D0
+    FLXt(:,:,WE,:)   = 0.D0
+    FLXq(:,:,WS,:,:) = 0.D0
+    FLXq(:,:,WE,:,:) = 0.D0
 
     ! tendency
     do k = KS, KE
     do j = JS, JE
-    do i = IS-1, IE
-       momx_t(i,j,k) = ( FLXij(i+1,j,k,1,1)-FLXij(i,j  ,k  ,1,1) ) * RDX &
-                     + ( FLXij(i  ,j,k,2,1)-FLXij(i,j-1,k  ,2,1) ) * RDY &
-                     + ( FLXij(i  ,j,k,3,1)-FLXij(i,j  ,k-1,3,1) ) * RDZ
-    enddo
-    enddo
-    enddo
+    do i = IS, IE
+       momx_t(i,j,k) = momx_t(i,j,k) + ( FLXij(i+1,j,k,1,1)-FLXij(i,j  ,k  ,1,1) ) * RDX &
+                                     + ( FLXij(i  ,j,k,2,1)-FLXij(i,j-1,k  ,2,1) ) * RDY &
+                                     + ( FLXij(i  ,j,k,3,1)-FLXij(i,j  ,k-1,3,1) ) * RDZ
+       momy_t(i,j,k) = momy_t(i,j,k) + ( FLXij(i,j  ,k,1,2)-FLXij(i-1,j,k  ,1,2) ) * RDX &
+                                     + ( FLXij(i,j+1,k,2,2)-FLXij(i  ,j,k  ,2,2) ) * RDY &
+                                     + ( FLXij(i,j  ,k,3,2)-FLXij(i  ,j,k-1,3,2) ) * RDZ
+       momz_t(i,j,k) = momz_t(i,j,k) + ( FLXij(i,j,k  ,1,3)-FLXij(i-1,j  ,k,1,3) ) * RDX &
+                                     + ( FLXij(i,j,k  ,2,3)-FLXij(i  ,j-1,k,2,3) ) * RDY &
+                                     + ( FLXij(i,j,k+1,3,3)-FLXij(i  ,j  ,k,3,3) ) * RDZ
 
+       pott_t(i,j,k) = pott_t(i,j,k) + ( ( FLXt(i,j,k,1)-FLXt(i-1,j  ,k  ,1) ) * RDX &
+                                       + ( FLXt(i,j,k,2)-FLXt(i  ,j-1,k  ,2) ) * RDY &
+                                       + ( FLXt(i,j,k,3)-FLXt(i  ,j  ,k-1,3) ) * RDZ &
+                                       ) / dens(i,j,k)
 
-       momx_t(i,j,k) = ( FLXij(i+1,j,k,1,1)-FLXij(i,j   ,k  ,1,1) ) * RDX &
-                     + ( FLXij(i  ,j,k,2,1)-FLXij(i,jy-1,k  ,2,1) ) * RDY &
-                     + ( FLXij(i  ,j,k,3,1)-FLXij(i,j   ,k-1,3,1) ) * RDZ
-
-             momy_t(i,j,k) =  &
-                  (FLXij(i,j,k,1,1)-FLXij(ix-1,jy,kz,1,1)) /dx + &
-                  (FLXij(ix,jy+1,kz,2,1)-FLXij(i,j,k,2,1)) /dy + &
-                  (FLXij(i,j,k,3,1)-FLXij(i,j,k-1,3,1)) /dz 
-             momz_t(i,j,k) =  &
-                  (FLXij(i,j,k,1,1)-FLXij(ix-1,jy,kz,1,1)) /dx + &
-                  (FLXij(i,j,k,2,1)-FLXij(ix,jy-1,kz,2,1)) /dy + &
-                  (FLXij(i,j,k+1,3,1)-FLXij(i,j,k,3,1)) /dz 
-!              dens_t(i,j,k) =  &
-!                   (FLXdens(i,j,k,1)-FLXdens(ix-1,jy,kz,1)) /dx + &
-!                   (FLXdens(i,j,k,2)-FLXdens(ix,jy-1,kz,2)) /dy + &
-!                   (FLXdens(i,j,k,3)-FLXdens(i,j,k-1,3)) /dz 
-             rhoq_t(i,j,k,:) =  &
-                  (FLXq(i,j,k,1,:)-FLXq(ix-1,jy,kz,1,:)) /dx + &
-                  (FLXq(i,j,k,2,:)-FLXq(ix,jy-1,kz,2,:)) /dy + &
-                  (FLXq(i,j,k,3,:)-FLXq(i,j,k-1,3,:)) /dz 
-!              rho_ene_t(i,j,k) =  &
-!                   (FLXene(i,j,k,1)-FLXene(ix-1,jy,kz,1)) /dx + &
-!                   (FLXene(i,j,k,2)-FLXene(ix,jy-1,kz,2)) /dy + &
-!                   (FLXene(i,j,k,3)-FLXene(i,j,k-1,3)) /dz 
-             rho_pott_t(i,j,k) =  &
-                  (FLXpott(i,j,k,1)-FLXpott(ix-1,jy,kz,1)) /dx + &
-                  (FLXpott(i,j,k,2)-FLXpott(ix,jy-1,kz,2)) /dy + &
-                  (FLXpott(i,j,k,3)-FLXpott(i,j,k-1,3)) /dz 
-
-    enddo
-    enddo
-    enddo
-
-
-    ! add
-    do kz = KS, KE
-    do jy = JS+2, JE-2
-    do ix = IS+2, IE-2
-             momx(i,j,k) = momx(i,j,k) + dt * momx_t(i,j,k)
-             momy(i,j,k) = momy(i,j,k) + dt * momy_t(i,j,k)
-             momz(i,j,k) = momz(i,j,k) + dt * momz_t(i,j,k)
-             pottl(i,j,k) = pottl(i,j,k) + dt * rho_pott_t(i,j,k) / dens(i,j,k) ! not accurate
-!              pottl(i,j,k) = pottl(i,j,k) + dt * rho_ene_t(i,j,k) / dens(i,j,k) / Cp / T_ov_pott(i,j,k) ! hydrostatic app. is assumed
-             rhoq(i,j,k,:) = rhoq(i,j,k,:) + dt * rhoq_t(i,j,k,:)
+       qtrc_t(i,j,k,:) = qtrc_t(i,j,k,:) + ( ( FLXq(i,j,k,1,:)-FLXq(i-1,j  ,k  ,1,:) ) * RDX &
+                                           + ( FLXq(i,j,k,2,:)-FLXq(i  ,j-1,k  ,2,:) ) * RDY &
+                                           + ( FLXq(i,j,k,3,:)-FLXq(i  ,j  ,k-1,3,:) ) * RDZ &
+                                           ) / dens(i,j,k)
     enddo
     enddo
     enddo

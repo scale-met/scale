@@ -108,7 +108,7 @@ contains
             + i
 
           sendpack_P2N(n) = var(i,j,k,v)
-          recvpack_N2P(n) = var(i,JS,k,v)
+          recvpack_N2P(n) = var(i,JS,k,v) ! for rigid condition
        enddo
        enddo
 
@@ -120,7 +120,7 @@ contains
             + i
 
           sendpack_P2S(n) = var(i,j,k,v)
-          recvpack_S2P(n) = var(i,JE,k,v)
+          recvpack_S2P(n) = var(i,JE,k,v) ! for rigid condition
        enddo
        enddo
 
@@ -174,6 +174,18 @@ contains
     do v = 1, vsize
     do k = 1, ksize
 
+       do i = IS, IS+IHALO-1
+       do j = 1, JA
+          n = (v-1)  * JA*IHALO*ksize &
+            + (k-1)  * JA*IHALO       &
+            + (i-IS) * JA             &
+            + j
+
+          sendpack_P2W(n) = var(i,j,k,v)
+          recvpack_W2P(n) = var(IS,j,k,v) ! for rigid condition
+       enddo
+       enddo
+
        do i = IE-IHALO+1, IE
        do j = 1, JA
           n = (v-1)          * JA*IHALO*ksize &
@@ -182,19 +194,7 @@ contains
             + j
 
           sendpack_P2E(n) = var(i,j,k,v)
-          recvpack_E2P(n) = var(IE,j,k,v)
-       enddo
-       enddo
-
-       do j = JE-JHALO+1, JE
-       do i = 1, IA
-          n = (v-1)          * IA*JHALO*ksize &
-            + (k-1)          * IA*JHALO       &
-            + (j-JE+JHALO-1) * IA             &
-            + i
-
-          sendpack_P2W(n) = var(i,j,k,v)
-          recvpack_W2P(n) = var(i,JE,k,v)
+          recvpack_E2P(n) = var(IE,j,k,v) ! for rigid condition
        enddo
        enddo
 
@@ -218,17 +218,6 @@ contains
     do v = 1, vsize
     do k = 1, ksize
 
-       do i = IS-IHALO, IS-1
-       do j = 1, JA
-          n = (v-1)        * JA*IHALO*ksize &
-            + (k-1)        * JA*IHALO       &
-            + (i-IS+IHALO) * JA             &
-            + j
-
-          var(i,j,k,v) = recvpack_W2P(n)
-       enddo
-       enddo
-
        do i = IE+1, IE+IHALO
        do j = 1, JA
           n = (v-1)    * JA*IHALO*ksize &
@@ -237,6 +226,17 @@ contains
             + j
 
           var(i,j,k,v) = recvpack_E2P(n)
+       enddo
+       enddo
+
+       do i = IS-IHALO, IS-1
+       do j = 1, JA
+          n = (v-1)        * JA*IHALO*ksize &
+            + (k-1)        * JA*IHALO       &
+            + (i-IS+IHALO) * JA             &
+            + j
+
+          var(i,j,k,v) = recvpack_W2P(n)
        enddo
        enddo
 
@@ -349,14 +349,14 @@ contains
        allstatval(v,2)   = minval(statval(v,2,:))
        allstatidx(:,v,1) = maxloc(statval(v,1,:))-1
        allstatidx(:,v,2) = minloc(statval(v,2,:))-1
-       if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '*** MAX = ', &
+       if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MAX =', &
                                                     allstatval(  v,1), '(', &
                                                     allstatidx(1,v,1), ',', &
                                       statidx(1,v,1,allstatidx(1,v,1)),',', &
                                       statidx(2,v,1,allstatidx(1,v,1)),',', &
                                       statidx(3,v,1,allstatidx(1,v,1)),')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '*** MIN = ', &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MIN =', &
                                                     allstatval(  v,2), '(', &
                                                     allstatidx(1,v,2), ',', &
                                       statidx(1,v,2,allstatidx(1,v,2)),',', &

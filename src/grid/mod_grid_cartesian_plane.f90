@@ -52,15 +52,15 @@ module mod_grid
   integer, public,              save :: GRID_KS, GRID_KE   ! start/end of inner domain: z, layer
   integer, public,              save :: GRID_WS, GRID_WE   ! start/end of inner domain: z, interface
 
+  real(8), public, allocatable, save :: GRID_CX(:)         ! center coordinate [m]: x, global
+  real(8), public, allocatable, save :: GRID_FX(:)         ! face   coordinate [m]: x, global
+  real(8), public, allocatable, save :: GRID_CY(:)         ! center coordinate [m]: y, global
+  real(8), public, allocatable, save :: GRID_FY(:)         ! face   coordinate [m]: y, global
+  real(8), public, allocatable, save :: GRID_CZ(:)         ! center coordinate [m]: z, global=local
+  real(8), public, allocatable, save :: GRID_FZ(:)         ! face   coordinate [m]: z, global=local
+
   integer, public,              save :: GRID_ISG, GRID_IEG ! start/end of inner domain: x, global
   integer, public,              save :: GRID_JSG, GRID_JEG ! start/end of inner domain: y, global
-
-  real(8), public, allocatable, save :: GRID_CX(:)         ! center coordinate [m]: x
-  real(8), public, allocatable, save :: GRID_FX(:)         ! face   coordinate [m]: x
-  real(8), public, allocatable, save :: GRID_CY(:)         ! center coordinate [m]: y
-  real(8), public, allocatable, save :: GRID_FY(:)         ! face   coordinate [m]: y
-  real(8), public, allocatable, save :: GRID_CZ(:)         ! center coordinate [m]: z
-  real(8), public, allocatable, save :: GRID_FZ(:)         ! face   coordinate [m]: z
 
   !-----------------------------------------------------------------------------
   !
@@ -117,6 +117,11 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_GRID)
 
+    ! prepare inverse of DX/DY/DZ
+    GRID_RDX = 1.D0 / GRID_DX
+    GRID_RDY = 1.D0 / GRID_DY
+    GRID_RDZ = 1.D0 / GRID_DZ
+
     ! domain setting for MPI (divided only i-direction)
     GRID_IA = GRID_IHALO + GRID_IMAX + GRID_IHALO
     GRID_JA = GRID_JHALO + GRID_JMAX + GRID_JHALO
@@ -128,24 +133,18 @@ contains
     GRID_JS = GRID_JHALO + 1
     GRID_JE = GRID_JHALO + GRID_JMAX
 
-    ! horizontal index (global domain)
-    GRID_ISG = GRID_IHALO + 1         + PRC_2Drank(PRC_myrank,1) * GRID_IMAX
-    GRID_IEG = GRID_IHALO + GRID_IMAX + PRC_2Drank(PRC_myrank,1) * GRID_IMAX
-    GRID_JSG = GRID_JHALO + 1         + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
-    GRID_JEG = GRID_JHALO + GRID_JMAX + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
-
     ! vertical index
     GRID_KS = GRID_KHALO + 1
     GRID_KE = GRID_KHALO + GRID_KMAX
     GRID_WS = GRID_KS - 1
     GRID_WE = GRID_KE
 
-    allocate( GRID_CX(  GRID_IA) )
-    allocate( GRID_FX(  GRID_IA) )
-    allocate( GRID_CY(  GRID_JA) )
-    allocate( GRID_FY(  GRID_JA) )
-    allocate( GRID_CZ(  GRID_KA) )
-    allocate( GRID_FZ(0:GRID_KA) )
+    allocate( GRID_CX(GRID_IA) )
+    allocate( GRID_FX(GRID_IA) )
+    allocate( GRID_CY(GRID_JA) )
+    allocate( GRID_FY(GRID_JA) )
+    allocate( GRID_CZ(GRID_KA) )
+    allocate( GRID_FZ(GRID_KA) )
 
     ! horizontal coordinate: uniform interval
     do i = 1, GRID_IA
@@ -163,14 +162,16 @@ contains
     enddo
 
     ! vertical coordinate: uniform interval
-    do k = 0, GRID_KA
-       GRID_FZ(k) = GRID_DZ * dble(k - GRID_KHALO)
-       if (k /= 0) GRID_CZ(k) = GRID_FZ(k) - 0.5D0 * GRID_DZ
+    do k = 1, GRID_KA
+       GRID_FZ(k) = GRID_DZ * dble( k - GRID_KHALO )
+       GRID_CZ(k) = GRID_FZ(k) - 0.5D0 * GRID_DZ
     enddo
 
-    GRID_RDX = 1.D0 / GRID_DX
-    GRID_RDY = 1.D0 / GRID_DY
-    GRID_RDZ = 1.D0 / GRID_DZ
+    ! horizontal index (global domain)
+    GRID_ISG = GRID_IHALO + 1         + PRC_2Drank(PRC_myrank,1) * GRID_IMAX
+    GRID_IEG = GRID_IHALO + GRID_IMAX + PRC_2Drank(PRC_myrank,1) * GRID_IMAX
+    GRID_JSG = GRID_JHALO + 1         + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
+    GRID_JEG = GRID_JHALO + GRID_JMAX + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
 
     if( IO_L ) write(IO_FID_LOG,*) '*** GRID INFORMATION ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0,A,f6.0,A,f6.0)') '*** delta X, Y, Z [m]                  :', &
@@ -202,9 +203,13 @@ contains
                                                              GRID_KMAX*GRID_DZ*1.D-3
 
 !    if( IO_L ) write(IO_FID_LOG,*) '*** value X'
-!    if( IO_L ) write(IO_FID_LOG,'(24E10.3)')  (GRID_CX(i),i=1,GRID_IA)
+!    do i = 1, GRID_IA
+!       if( IO_L ) write(IO_FID_LOG,*) GRID_CX(i)
+!    enddo
 !    if( IO_L ) write(IO_FID_LOG,*) '*** value Y'
-!    if( IO_L ) write(IO_FID_LOG,'(24E10.3)')  (GRID_CY(j),j=1,GRID_JA)
+!    do j = 1, GRID_JA
+!       if( IO_L ) write(IO_FID_LOG,*) GRID_CY(j)
+!    enddo
 !    if( IO_L ) write(IO_FID_LOG,*) '*** value Z'
 !    if( IO_L ) write(IO_FID_LOG,'(12E15.8)')  (GRID_CZ(k),k=1,GRID_KA)
 

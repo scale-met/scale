@@ -36,8 +36,9 @@ module mod_const
   real(8), public, save      :: CONST_UNDEF8 = -999.D20          !< undefined value
 
   ! physical constants
-  real(8), public, save      :: CONST_ERADIUS = 6.37122D+6 
+  real(8), public, save      :: CONST_ERADIUS = 6.37122D+6 !< earth radius
   real(8), public, save      :: CONST_GRAV    = 9.80616D0  !< gravitational constant [m/s**2]
+  real(8), public, save      :: CONST_KARMAN  = 0.4D0      !< karman constant
 
   real(8), public, save      :: CONST_Rair    = 287.04D0   !< gas constant (dry)
   real(8), public, save      :: CONST_CPair   = 1005.7D0   !< specific heat (dry,constant pressure)
@@ -47,9 +48,10 @@ module mod_const
   real(8), public, save      :: CONST_CPovCV               !< Cp / Cv
   real(8), public, save      :: CONST_CVovCP               !< Cv / Cp
 
-  real(8), public, parameter :: CONST_Pstd  = 101325.D0  !< standard pressure [Pa]
-  real(8), public, parameter :: CONST_PRE00 = 100000.0D0  ! standard pressure
-  real(8), public, parameter :: CONST_TEM00 = 273.15D0    ! 0 degree
+  real(8), public, parameter :: CONST_Pstd  = 101325.D0    !< standard pressure [Pa]
+  real(8), public, parameter :: CONST_Tstd  = 288.15D0     !< standard temperature (15 degree C) [K]
+  real(8), public, parameter :: CONST_PRE00 = 100000.D0    ! pressure reference [Pa]
+  real(8), public, parameter :: CONST_TEM00 = 273.15D0     ! temperature reference (0 degree C) [K]
 
   ! water constants
   real(8), public, parameter :: CONST_Rvap  = 461.5D0     ! gas constant (water vapor)
@@ -57,7 +59,7 @@ module mod_const
   real(8), public, save      :: CONST_EPSTvap             ! 1 / epsilon - 1
 
   real(8), public, parameter :: CONST_CPvap = 1850.D0     ! specific heat (water vapor, consant pressure)
-  real(8), public, save      :: CONST_CVvap               ! specific heat (water vapor,consant volume)
+  real(8), public, save      :: CONST_CVvap               ! specific heat (water vapor, consant volume)
   real(8), public, parameter :: CONST_CL    = 4218.D0     ! specific heat (liquid water) 
   real(8), public, parameter :: CONST_CI    = 2006.D0     ! specific heat (ice)
 

@@ -25,7 +25,9 @@ MODS =	\
 	mod_atmos.o	\
 	mod_atmos_vars.o	\
 	mod_comm.o	\
-	mod_atmos_dyn_fent_fct.o
+	mod_atmos_sub_refstate.o	\
+	mod_atmos_dyn_fent_fct.o	\
+	mod_atmos_boundary.o
 
 all: makedir makebin
 
@@ -52,8 +54,10 @@ fiof.o	: fiof.c fiof.h fio.h fio_def.h
 mod_fileio.o	: mod_fileio.f90 mod_fileio_h.o mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_time.o mod_const.o fio.o fiof.o
 mod_comm.o	: mod_comm.f90 mod_process.o mod_grid_cartesian_plane.o mod_stdio.o mod_const.o
 mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
-mod_atmos_dyn_fent_fct.o	: mod_atmos_dyn_fent_fct.f90 mod_stdio.o mod_const.o mod_time.o mod_comm.o mod_grid_cartesian_plane.o mod_atmos_vars.o
-mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_dyn_fent_fct.o mod_fileio_h.o mod_fileio.o
+mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o
+mod_atmos_boundary.o	: mod_atmos_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o
+mod_atmos_dyn_fent_fct.o	: mod_atmos_dyn_fent_fct.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_boundary.o
+mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_dyn_fent_fct.o mod_atmos_boundary.o mod_time.o mod_grid_cartesian_plane.o mod_fileio_h.o mod_fileio.o
 
 clean:
 	rm -f $(PRJ1) *.mod *.o

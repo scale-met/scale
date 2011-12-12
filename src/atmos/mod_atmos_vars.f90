@@ -16,7 +16,6 @@ module mod_atmos_vars
   !
   !++ used modules
   !
-
   use mod_stdio, only: &
      IO_SYSCHR, &
      IO_FILECHR
@@ -24,7 +23,6 @@ module mod_atmos_vars
      FIO_HSHORT, &
      FIO_HMID,   &
      FIO_REAL8
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -32,19 +30,17 @@ module mod_atmos_vars
   !
   !++ Public procedure
   !
-
   public :: ATMOS_vars_setup
   public :: ATMOS_vars_restart_read
   public :: ATMOS_vars_restart_write
-  public :: ATMOS_vars_putDMP
+  public :: ATMOS_vars_put
   public :: ATMOS_vars_get
+  public :: ATMOS_vars_getall
   public :: ATMOS_DMP2PVT
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-
   integer,                   public,              save :: A_VA      ! Number of Tracers + 5
   integer,                   public,              save :: A_QA      ! Number of Tracers
   character(len=FIO_HSHORT), public, allocatable, save :: A_NAME(:)
@@ -72,7 +68,6 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
@@ -200,13 +195,13 @@ contains
        A_NAME( 2) = 'MOMX'
        A_NAME( 3) = 'MOMY'
        A_NAME( 4) = 'MOMZ'
-       A_NAME( 5) = 'LWPT'
+       A_NAME( 5) = 'POTT'
 
        A_DESC( 1) = 'density'
        A_DESC( 2) = 'momentum (x)'
        A_DESC( 3) = 'momentum (y)'
        A_DESC( 4) = 'momentum (z)'
-       A_DESC( 5) = 'liquid water pot. temp.'
+       A_DESC( 5) = 'potential temp.'
 
        A_UNIT( 1) = 'kg/m3'
        A_UNIT( 2) = 'kg/m2/s'
@@ -402,12 +397,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Put and Communicate prognostic variables
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_putDMP( &
+  subroutine ATMOS_vars_put( &
        dens, &
        momx, &
        momy, &
        momz, &
-       lwpt, &
+       pott, &
        qtrc  )
     use mod_grid, only: &
        IA   => GRID_IA,   &
@@ -421,7 +416,7 @@ contains
     real(8), intent(in) :: momx(IA,JA,KA)
     real(8), intent(in) :: momy(IA,JA,KA)
     real(8), intent(in) :: momz(IA,JA,KA)
-    real(8), intent(in) :: lwpt(IA,JA,KA)
+    real(8), intent(in) :: pott(IA,JA,KA)
 
     real(8), intent(in) :: qtrc(IA,JA,KA,A_QA)
 
@@ -432,7 +427,7 @@ contains
     atmos_var(:,:,:,2) = momx(:,:,:)
     atmos_var(:,:,:,3) = momy(:,:,:)
     atmos_var(:,:,:,4) = momz(:,:,:)
-    atmos_var(:,:,:,5) = lwpt(:,:,:)
+    atmos_var(:,:,:,5) = pott(:,:,:)
 
     if ( A_QA > 0 ) then
        do iq = 1, A_QA
@@ -450,7 +445,7 @@ contains
     call COMM_vars( atmos_diagvar(:,:,:,:) )
 
     return
-  end subroutine ATMOS_vars_putDMP
+  end subroutine ATMOS_vars_put
 
   !-----------------------------------------------------------------------------
   !> Get prognostic variables
@@ -460,7 +455,49 @@ contains
        momx, &
        momy, &
        momz, &
-       lwpt, &
+       pott, &
+       qtrc  )
+    use mod_grid, only: &
+       IA => GRID_IA, &
+       JA => GRID_JA, &
+       KA => GRID_KA
+    implicit none
+
+    real(8), intent(out) :: dens(IA,JA,KA)
+    real(8), intent(out) :: momx(IA,JA,KA)
+    real(8), intent(out) :: momy(IA,JA,KA)
+    real(8), intent(out) :: momz(IA,JA,KA)
+    real(8), intent(out) :: pott(IA,JA,KA)
+
+    real(8), intent(out) :: qtrc(IA,JA,KA,A_QA)
+
+    integer :: iq
+    !---------------------------------------------------------------------------
+
+    dens(:,:,:) = atmos_var(:,:,:,1)
+    momx(:,:,:) = atmos_var(:,:,:,2)
+    momy(:,:,:) = atmos_var(:,:,:,3)
+    momz(:,:,:) = atmos_var(:,:,:,4)
+    pott(:,:,:) = atmos_var(:,:,:,5)
+
+    if ( A_QA > 0 ) then
+       do iq = 1, A_QA
+          qtrc(:,:,:,iq) = atmos_var(:,:,:,5+iq)
+       enddo
+    endif
+
+    return
+  end subroutine ATMOS_vars_get
+
+  !-----------------------------------------------------------------------------
+  !> Get prognostic variables
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_vars_getall( &
+       dens, &
+       momx, &
+       momy, &
+       momz, &
+       pott, &
        qtrc, &
        pres, &
        velx, &
@@ -477,7 +514,7 @@ contains
     real(8), intent(out) :: momx(IA,JA,KA)
     real(8), intent(out) :: momy(IA,JA,KA)
     real(8), intent(out) :: momz(IA,JA,KA)
-    real(8), intent(out) :: lwpt(IA,JA,KA)
+    real(8), intent(out) :: pott(IA,JA,KA)
 
     real(8), intent(out) :: qtrc(IA,JA,KA,A_QA)
 
@@ -494,7 +531,7 @@ contains
     momx(:,:,:) = atmos_var(:,:,:,2)
     momy(:,:,:) = atmos_var(:,:,:,3)
     momz(:,:,:) = atmos_var(:,:,:,4)
-    lwpt(:,:,:) = atmos_var(:,:,:,5)
+    pott(:,:,:) = atmos_var(:,:,:,5)
 
     if ( A_QA > 0 ) then
        do iq = 1, A_QA
@@ -509,7 +546,7 @@ contains
     temp(:,:,:) = atmos_diagvar(:,:,:,5)
 
     return
-  end subroutine ATMOS_vars_get
+  end subroutine ATMOS_vars_getall
 
   !-----------------------------------------------------------------------------
   !> Get prognostic variables
@@ -545,11 +582,7 @@ contains
     real(8) :: velz(IA,JA,KA)
     real(8) :: temp(IA,JA,KA)
 
-    real(8) :: fp, dfdp, dp
-    real(8) :: eps = 1.D-10
-    integer, parameter :: itmax = 20 ! max itelation cycle for pressure assumption
-
-    integer :: i, j, k, it
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
     ! momentum -> velocity
@@ -577,18 +610,6 @@ contains
     do j = JS, JE
     do i = IS, IE
        pres(i,j,k) = Pstd * ( atmos_var(i,j,k,1) * atmos_var(i,j,k,5) * Rair / Pstd )**CPovCV ! first guess
-
-       do it = 1, itmax
-          fp   = atmos_var(i,j,k,5) * ( pres(i,j,k)/Pstd )**RovCP          &
-               + LH0 / CPair * ( atmos_var(i,j,k,7) + atmos_var(i,j,k,8) ) &
-               - pres(i,j,k) / ( Rair *  atmos_var(i,j,k,1) )
-          dfdp = RovCP / Pstd * atmos_var(i,j,k,5) * ( pres(i,j,k)/Pstd )**(RovCP-1) &
-               - 1.D0 / ( Rair * atmos_var(i,j,k,1) )
-          dp   = fp / dfdp
-
-          pres(i,j,k) = pres(i,j,k) - dp
-          if ( abs(dp) < eps ) exit
-       enddo
 
        temp(i,j,k) = pres(i,j,k) / ( atmos_var(i,j,k,1) * Rair )
     enddo

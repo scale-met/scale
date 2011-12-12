@@ -50,6 +50,12 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
+    use mod_atmos_refstate, only: &
+       ATMOS_REFSTATE_setup
+    use mod_atmos_dyn, only: &
+       ATMOS_DYN_setup
+    use mod_atmos_boundary, only: &
+       ATMOS_BOUNDARY_setup
 !    use mod_atmos_phy_mp, only: &
 !       ATMOS_PHY_MP_setup
     implicit none
@@ -58,6 +64,12 @@ contains
     call ATMOS_vars_setup
 
     call ATMOS_vars_restart_read
+
+    call ATMOS_REFSTATE_setup
+
+    call ATMOS_DYN_setup
+
+    call ATMOS_BOUNDARY_setup
 
 !    call ATMOS_PHY_MP_setup
 

@@ -333,33 +333,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP( dens, momx, momy, momz, lwpt,         & ! prognostics
+  subroutine ATMOS_PHY_MP( dens, momx, momy, momz, pott,         & ! prognostics
                            qtrc                                  & ! prog. tracers
-                           dens, momx_t, momy_t, momz_t, lwpt_t, &
+                           dens, momx_t, momy_t, momz_t, pott_t, &
                            qtrc_t                                )
 
     implicit none
 
     ! prognostic value
-    real(8), intent(inout) :: dens(IA,JA,KA)      ! density [kg/m**3]
-    real(8), intent(inout) :: momx(IA,JA,KA)      ! momentum (x) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momy(IA,JA,KA)      ! momentum (y) [kg/m**3 * m/s]
-    real(8), intent(inout) :: momz(IA,JA,KA)      ! momentum (z) [kg/m**3 * m/s]
-    real(8), intent(inout) :: lwpt(IA,JA,KA)      ! liquid water potential temperature [K]
-    real(8), intent(inout) :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
-    ! diagnostic value
-    real(8), intent(inout) :: pres(IA,JA,KA)      ! pressure [Pa]
-    real(8), intent(inout) :: velx(IA,JA,KA)      ! velocity (x) [m/s]
-    real(8), intent(inout) :: vely(IA,JA,KA)      ! velocity (y) [m/s]
-    real(8), intent(inout) :: velz(IA,JA,KA)      ! velocity (z) [m/s]
-    real(8), intent(inout) :: temp(IA,JA,KA)      ! Temperature [K]
+    real(8), intent(in)  :: dens(IA,JA,KA)      ! density [kg/m3]
+    real(8), intent(in)  :: momx(IA,JA,KA)      ! momentum (x) [kg/m3 * m/s]
+    real(8), intent(in)  :: momy(IA,JA,KA)      ! momentum (y) [kg/m3 * m/s]
+    real(8), intent(in)  :: momz(IA,JA,KA)      ! momentum (z) [kg/m3 * m/s]
+    real(8), intent(in)  :: pott(IA,JA,KA)      ! potential temperature [K]
+    real(8), intent(in)  :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
     ! prognostic tendency
-    real(8), intent(out)   :: dens_t(IA,JA,KA)
-    real(8), intent(out)   :: momx_t(IA,JA,KA)
-    real(8), intent(out)   :: momy_t(IA,JA,KA)
-    real(8), intent(out)   :: momz_t(IA,JA,KA)
-    real(8), intent(out)   :: lwpt_t(IA,JA,KA)
-    real(8), intent(out)   :: qtrc_t(IA,JA,KA,QA)
+    real(8), intent(out) :: dens_t(IA,JA,KA)
+    real(8), intent(out) :: momx_t(IA,JA,KA)
+    real(8), intent(out) :: momy_t(IA,JA,KA)
+    real(8), intent(out) :: momz_t(IA,JA,KA)
+    real(8), intent(out) :: pott_t(IA,JA,KA)
+    real(8), intent(out) :: qtrc_t(IA,JA,KA,QA)
 
     ! Convert to fit NDW6
     real(8) :: zh (KA)
@@ -397,6 +391,8 @@ contains
     zh (1:KA) = GRID_FZ(0:KA-1)
     dz (1:KA) = GRID_DZ
     dzh(1:KA) = GRID_DZ
+    dt = TIME_DTSEC
+    ct = TIME_NOWSEC
 
     do j = JS, JE
     do i = IS, IE
@@ -406,7 +402,7 @@ contains
        rho_vx(ij,:) = momx(i,j,:)
        rho_vy(ij,:) = momy(i,j,:)
        rho_w (ij,:) = momz(i,j,:)
-       th    (ij,:) = temp(i,j,:) * ( Pstd / pres(i,j,:) )**RovCP
+       th    (ij,:) = pott(i,j,:)
 
     enddo
     enddo
@@ -444,8 +440,7 @@ contains
        momx_t(i,j,:) = drho_vx(ij,:)
        momy_t(i,j,:) = drho_vy(ij,:)
        momz_t(i,j,:) = drho_w (ij,:)
-       th    (ij,:) = temp(i,j,:) * ( Pstd / pres(i,j,:) )**RovCP
-
+       th    (ij,:) =  dth    (ij,:)
     enddo
     enddo
 
@@ -464,29 +459,8 @@ contains
     return
   end subroutine ATMOS_PHY_MP_setup
 
-
   !-----------------------------------------------------------------------------
   subroutine mp_ndw6_init ( ijdim )
-    use mod_atmos_cnst, only :   &
-       WLABEL,           &
-       HYDRO_MAX,        &
-       NNW_STR, NNW_END, &
-       NQW_STR, NQW_END, &
-       I_NC, I_NR, I_NI, I_NS, I_NG, &
-       I_QC, I_QR, I_QI, I_QS, I_QG, &
-       CNST_UNDEF,          &
-       LH00 => CNST_LH00,   &
-       LHS00 => CNST_LHS00, &
-       LHF00 => CNST_LHF00, &
-       LH0 => CNST_LH0,     &
-       LHS0 => CNST_LHS0,   &
-       LHF0 => CNST_LHF0,   &
-       RAIR => CNST_RAIR,   &
-       TEM00 => CNST_TEM00, &
-       PRES0 => CNST_PRES0, &
-       CNST_DWATR,          &
-       CNST_PI,             &
-       CNST_EGRAV
     implicit none
     !
     integer, intent(in) :: ijdim
