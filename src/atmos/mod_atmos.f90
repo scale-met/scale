@@ -216,7 +216,8 @@ contains
 !                                                        pres, velx, vely, velz, temp  ) ! diagnostics
 
 
-    if ( mod(TIME_NOWSTEP,10) == 0 ) then
+    if ( mod(TIME_NOWSTEP,10) == 100 ) then ! always false
+!    if ( mod(TIME_NOWSTEP,10) == 0 ) then
     step = step + 1
     desc  = 'temporal history'
     write(lname,'(A,I4.4)') 'ZDEF', KMAX
