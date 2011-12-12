@@ -3,7 +3,7 @@
 FC = mpiifort
 FFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
 #
-CC=mpiicc
+CC = mpiicc
 CFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
 #
 #
@@ -11,9 +11,11 @@ LD = $(FC)
 LFLAGS = -parallel -lm -openmp
 #
 #
-FRONT_CC = icc
-FRONT_CFLAGS = $(CFLAGS)
-FRONT_F90 = ifort
+FRONT_FC     = ifort
 FRONT_FFLAGS = $(FFLAGS)
-FRONT_LD  = $(FC)
+
+FRONT_CC     = icc
+FRONT_CFLAGS = $(CFLAGS)
+
+FRONT_LD     = $(FC)
 FRONT_LFLAGS = $(LFLAGS)
