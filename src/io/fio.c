@@ -257,8 +257,10 @@ static int32_t fio_new_finfo( void )
   finfo[fid].status.opened    = 0;
   finfo[fid].status.fp        = NULL;
   /* finfo[fid].status.eoh.__pos = 0; /* [add] 20111007 H.Yashiro */
+#ifndef NO_MPIIO
   finfo[fid].status.mpi_eoh   = 0;
   finfo[fid].status.mpi_fid   = NULL;
+#endif
 
   return(fid);
 }
