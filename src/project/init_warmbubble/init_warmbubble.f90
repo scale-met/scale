@@ -130,12 +130,12 @@ contains
        GRID_CY, &
        GRID_CZ
     use mod_atmos_vars, only: &
-       QA => A_QA,       &
-       ATMOS_vars_getid, &
-       ATMOS_vars_get,   &
+       QA => A_QA,     &
+       I_QV,           &
+       ATMOS_vars_get, &
        ATMOS_vars_put
     use mod_satadjust, only: &
-       moist_psat_water1
+       moist_psat_water
     implicit none
 
     real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment [K]
@@ -169,7 +169,7 @@ contains
     real(8) :: temp(IA,JA,KA)    ! temperature [K]
 
     real(8) :: dist
-    integer :: I_QV
+    real(8) :: psat(IA,JA)
 
     integer :: i, j, k
     integer :: ierr
@@ -192,8 +192,6 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKEXP_warmbubble)
 
-    call ATMOS_vars_getid( I_QV, 'QV' )
-
     call ATMOS_vars_get( dens, momx, momy, momz, pott, qtrc )
 
     momx(:,:,:)   = 0.D0
@@ -215,16 +213,20 @@ contains
        if ( dist > 1.D0 ) then ! out of cold bubble
           pott(i,j,k) = ENV_THETA
        else
-          pott(i,j,k) = ENV_THETA + 6.6D0
+          pott(i,j,k) = ENV_THETA &
+                      + 6.6D0 * dcos( 0.5D0*PI*sqrt(dist) )**2.D0 &
+                      * ( Pstd/pres(i,j,k) )**RovCP
        endif
 
        dens(i,j,k) = Pstd / Rair / pott(i,j,k) * ( pres(i,j,k)/Pstd )**CVovCP
-
-       call moist_psat_water1( temp(i,j,k), psat )
-
-       qtrc(:,:,:,I_QV) = ENV_RH * 1.D-2 * psat
     enddo
     enddo
+    enddo
+
+    do k = KS, KE
+       call moist_psat_water( temp(:,:,k), psat(:,:) )
+
+       qtrc(:,:,k,I_QV) = ENV_RH * 1.D-2 * psat(:,:) / max( pres(:,:,k), 1.D-10 )
     enddo
 
     call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
