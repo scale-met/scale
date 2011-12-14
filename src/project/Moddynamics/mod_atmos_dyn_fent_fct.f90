@@ -958,7 +958,7 @@ contains
 
        !--- use difference for numerical filter
        do k = KS, KE
-          rhot_diff(:,:,k) = var(:,:,k,I_RHOT) - REF_pott(:,:,k)*var(i,j,k,I_DENS)
+          rhot_diff(:,:,k) = var(:,:,k,I_RHOT) - REF_pott(:,:,k)*var(:,:,k,I_DENS)
        enddo
 
        !--- calc tendency with numerical filter

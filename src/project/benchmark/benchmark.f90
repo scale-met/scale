@@ -8,7 +8,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -40,6 +40,8 @@ program scaleles3
      TIME_rapreport
   use mod_grid, only: &
      GRID_setup
+  use mod_comm, only: &
+     COMM_setup
   use mod_fileio, only: &
      FIO_setup, &
      FIO_finalize
@@ -83,6 +85,9 @@ program scaleles3
   ! setup horisontal/veritical grid system
   call GRID_setup
 
+  ! setup mpi communication
+  call COMM_setup
+
   ! setup file I/O
   call FIO_setup
 
@@ -90,7 +95,7 @@ program scaleles3
   call ATMOS_setup
 
   ! setup ocean
-!  call OCEAN_setup
+  call OCEAN_setup
 
   ! setup history
 !  call HIST_setup
@@ -109,7 +114,7 @@ program scaleles3
 
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_step
-!    if ( TIME_DOOCEAN_step ) call OCEAN_step
+    if ( TIME_DOOCEAN_step ) call OCEAN_step
 
     ! time advance
     call TIME_advance
