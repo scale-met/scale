@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Ocean Variables
+!> module OCEAN VARIABLES
 !!
 !! @par Description
 !!          Container for oceanic variables
@@ -7,7 +7,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-12-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -112,9 +112,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
 
     if ( OCEAN_TYPE == 'FIXEDSST' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** O-A Interface    : Fixed SST'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : Fixed SST'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical core   : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : NONE'
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -179,7 +179,7 @@ contains
 
     character(len=IO_FILECHR) :: bname
 
-    integer :: iv, i, j
+    integer :: iv
     !---------------------------------------------------------------------------
 
     allocate( restart_ocean(IMAX,JMAX,1) )

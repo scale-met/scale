@@ -1,13 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module Process
+!> module PROCESS
 !!
 !! @par Description
-!!          MPI module for SCALE3
+!!          MPI/non-MPI management module
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-10-11 (R.Yoshida) [new]
+!! @li      2011-11-11 (H.Yashiro) [mod] Integrate to SCALE3
 !!
 !<
 !-------------------------------------------------------------------------------

@@ -108,13 +108,13 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
-       PI     => CONST_PI,    &
-       GRAV   => CONST_GRAV,  &
-       Rair   => CONST_Rair,  &
-       CPair  => CONST_CPair, &
-       CPovR  => CONST_CPovR, &
-       RovCP  => CONST_RovCP, &
+       GRAV   => CONST_GRAV,   &
+       Rair   => CONST_Rair,   &
+       CPair  => CONST_CPair,  &
+       CPovR  => CONST_CPovR,  &
+       RovCP  => CONST_RovCP,  &
        CVovCP => CONST_CVovCP, &
+       EPSvap => CONST_EPSvap, &
        Pstd   => CONST_Pstd
     use mod_grid, only : &
        IA => GRID_IA, &
@@ -134,8 +134,6 @@ contains
        I_QV,           &
        ATMOS_vars_get, &
        ATMOS_vars_put
-    use mod_satadjust, only: &
-       moist_psat_water
     implicit none
 
     real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment [K]
@@ -169,7 +167,8 @@ contains
     real(8) :: temp(IA,JA,KA)    ! temperature [K]
 
     real(8) :: dist
-    real(8) :: psat(IA,JA)
+    real(8) :: rh(IA,JA,KA)
+    real(8) :: psat, qsat
 
     integer :: i, j, k
     integer :: ierr
@@ -204,29 +203,29 @@ contains
     do i = IS, IE
        temp(i,j,k) = ENV_THETA - GRAV / CPair * GRID_CZ(k)
 
-       pres(i,j,k) = Pstd * ( temp(i,j,k)/ENV_THETA )**CPovR
-
        dist = ( (GRID_CX(i)-XC_BBL)/XR_BBL )**2.D0 &
             + ( (GRID_CY(j)-YC_BBL)/YR_BBL )**2.D0 &
             + ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2.D0
 
-       if ( dist > 1.D0 ) then ! out of cold bubble
-          pott(i,j,k) = ENV_THETA
+       if ( dist > 1.D0 ) then ! out of warm bubble
+          rh(i,j,k) = ENV_RH / ( 1.D0 + GRID_CZ(k) )
        else
-          pott(i,j,k) = ENV_THETA &
-                      + 6.6D0 * dcos( 0.5D0*PI*sqrt(dist) )**2.D0 &
-                      * ( Pstd/pres(i,j,k) )**RovCP
+          rh(i,j,k) = 100.D0 ! 100%, saturated
        endif
 
+       call moist_psat_water0( temp(i,j,k), psat )
+
+       pres(i,j,k) = Pstd * ( temp(i,j,k)/ENV_THETA )**CPovR - rh(i,j,k)*1.D-2 * psat
+
+       qsat = EPSvap * psat / ( pres(i,j,k) - ( 1.D0-EPSvap )*psat )
+
+
+       qtrc(i,j,k,I_QV) = rh(i,j,k)*1.D-2 * qsat
+
+       pott(i,j,k) = temp(i,j,k) *( Pstd/pres(i,j,k) )**RovCP
        dens(i,j,k) = Pstd / Rair / pott(i,j,k) * ( pres(i,j,k)/Pstd )**CVovCP
     enddo
     enddo
-    enddo
-
-    do k = KS, KE
-       call moist_psat_water( temp(:,:,k), psat(:,:) )
-
-       qtrc(:,:,k,I_QV) = ENV_RH * 1.D-2 * psat(:,:) / max( pres(:,:,k), 1.D-10 )
     enddo
 
     call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
@@ -236,5 +235,28 @@ contains
 
     return
   end subroutine MKEXP_warmbubble
+
+  subroutine moist_psat_water0( t, psat )
+    ! psat : Clasius-Clapeyron: based on CPV, CPL constant
+    use mod_const, only : &
+       Rvap  => CONST_Rvap,  &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL,    &
+       LH0   => CONST_LH00,  &
+       PSAT0 => CONST_PSAT0, &
+       T00   => CONST_TEM00
+    implicit none
+
+    real(8), intent(in)  :: t
+    real(8), intent(out) :: psat
+
+    real(8)              :: Tmin = 10.D0
+    !---------------------------------------------------------------------------
+
+    psat = PSAT0 * ( max(t,Tmin)/T00 ) ** ( ( CPvap-CL )/Rvap ) &
+         * exp ( LH0/Rvap * ( 1.0D0/T00 - 1.0D0/max(t,Tmin) ) )
+
+    return
+  end subroutine moist_psat_water0
 
 end program warmbubble

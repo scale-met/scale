@@ -7,7 +7,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] integrate
+!! @li      2011-12-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -108,7 +108,7 @@ contains
 
     real(8) :: gmr !! grav / Rair
     integer :: i, k
-    integer :: fid, ierr
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     gmr      = GRAV / Rair

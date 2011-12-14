@@ -1,14 +1,14 @@
 !-------------------------------------------------------------------------------
-!> Program SCALE-LES ver.3
+!> Program SPD2BIN
 !!
 !! @par Description
 !!          SCALE: Scalable Computing by Advanced Library and Environment
-!!          Numerical model for LES-scale weather
+!!          converter for formatted data (SPD format)
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------

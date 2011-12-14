@@ -9,7 +9,8 @@
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
-!! @li      2011-11-11 (H.Yashiro) [mod] Merged with Y.Miyamoto's
+!! @li      2011-11-11 (H.Yashiro) [mod] Merge with Y.Miyamoto's
+!! @li      2011-12-11 (H.Yashiro) [mod] Use reference state
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -1421,11 +1422,11 @@ contains
              do k = KS, KE
              do j = JS, JE
              do i = IS, IE
-                qtrc_t(i,j,k,iq) = qtrc_t(i,j,k,iq)                                             &
-                                - ( ( qflx_anti(i,j,k,XDIR)-qflx_anti(i-1,j  ,k  ,XDIR) ) * RDX &
-                                  + ( qflx_anti(i,j,k,YDIR)-qflx_anti(i  ,j-1,k  ,YDIR) ) * RDY &
-                                  + ( qflx_anti(i,j,k,ZDIR)-qflx_anti(i  ,j  ,k-1,ZDIR) ) * RDZ &
-                                  ) / var(i,j,k,I_DENS)
+                qtrc_t(i,j,k,iq) = qtrc_t(i,j,k,iq)                                              &
+                                 - ( ( qflx_anti(i,j,k,XDIR)-qflx_anti(i-1,j  ,k  ,XDIR) ) * RDX &
+                                   + ( qflx_anti(i,j,k,YDIR)-qflx_anti(i  ,j-1,k  ,YDIR) ) * RDY &
+                                   + ( qflx_anti(i,j,k,ZDIR)-qflx_anti(i  ,j  ,k-1,ZDIR) ) * RDZ &
+                                   ) / var(i,j,k,I_DENS)
              enddo
              enddo
              enddo

@@ -1,13 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module standard IO
+!> module STDIO
 !!
 !! @par Description
-!!          Common I/O module
+!!          Standard, common I/O module
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------

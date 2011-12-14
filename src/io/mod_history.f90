@@ -2,12 +2,12 @@
 !> module History
 !!
 !! @par Description
-!!          History output
+!!          History output module
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-12-xx (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -39,9 +39,9 @@ module mod_history
   !++ Private parameters & variables
   !
 
-  character(len=IO_FILECHR), private, save :: HISTORY_BASENAME      = 'history'
+  character(len=IO_FILECHR), private,      save :: HISTORY_BASENAME = 'history'
 
-  integer, private, parameter :: HIST_limit = 1000 !> number limit for history item
+  integer,                   private, parameter :: HIST_limit = 1000 !> number limit for history item
 
   integer,                   private, allocatable, save :: HIST_nmax
   character(len=FIO_HSHORT), private, allocatable, save :: HIST_item(HIST_limit)

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Option
+!> module OPTION
 !!
 !! @par Description
 !!          Read argument and convert to namelist format
@@ -7,7 +7,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------

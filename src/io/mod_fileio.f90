@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module file I/O
+!> module FILE I/O
 !!
 !! @par Description
-!!          This module is Fortran-C interface for file I/O
+!!          Fortran-C interface for file I/O
 !!
 !! @author H.Tomita and SCALE developpers
 !!

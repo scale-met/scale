@@ -170,11 +170,11 @@ contains
     integer                 :: step = 0
     !---------------------------------------------------------------------------
 
-!    if ( mod(TIME_NOWSTEP,10) == 0 ) then
-!       step = step + 1
-!       desc = 'temporal history'
-!       write(lname,'(A,I4.4)') 'ZDEF', KMAX
-!    endif
+    if ( mod(TIME_NOWSTEP,1) == 0 ) then
+       step = step + 1
+       desc = 'temporal history'
+       write(lname,'(A,I4.4)') 'ZDEF', KMAX
+    endif
 
     call TIME_rapstart('VARset')
     call ATMOS_vars_get( dens, momx, momy, momz, pott, qtrc )
@@ -183,7 +183,14 @@ contains
 
     !########## Dynamics ##########
     call TIME_rapstart('Dynamics')
-    if ( sw_dyn .AND. do_dyn ) then 
+    if ( sw_dyn .AND. do_dyn ) then
+       dens_t(:,:,:)   = 0.D0
+       momx_t(:,:,:)   = 0.D0
+       momy_t(:,:,:)   = 0.D0
+       momz_t(:,:,:)   = 0.D0
+       pott_t(:,:,:)   = 0.D0
+       qtrc_t(:,:,:,:) = 0.D0
+
        call ATMOS_DYN( dens,   momx,   momy,   momz,   pott,   qtrc,  & ! [IN]
                        dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t ) ! [OUT]
 
@@ -197,18 +204,18 @@ contains
        pott(:,:,:)   = pott(:,:,:)   + TIME_DTSEC_ATMOS_DYN * pott_t(:,:,:)
        qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_DYN * qtrc_t(:,:,:,:)
 
-!       if ( mod(TIME_NOWSTEP,10) == 0 ) then
-!          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_dyn', '', '', '', &
-!                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-!          call FIO_output( momy_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY_t_dyn', '', '', '', &
-!                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-!          call FIO_output( momz_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ_t_dyn', '', '', '', &
-!                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-!          call FIO_output( pott_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT_t_dyn', '', '', '', &
-!                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-!          call FIO_output( qtrc_t(IS:IE,JS:JE,KS:KE,1), 'history', desc, '', 'QV_t_dyn', '', '', '', &
-!                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-!       endif
+       if ( mod(TIME_NOWSTEP,1) == 0 ) then
+          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_dyn', '', '', '', &
+                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
+          call FIO_output( momy_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY_t_dyn', '', '', '', &
+                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
+          call FIO_output( momz_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ_t_dyn', '', '', '', &
+                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
+          call FIO_output( pott_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT_t_dyn', '', '', '', &
+                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
+          call FIO_output( qtrc_t(IS:IE,JS:JE,KS:KE,1), 'history', desc, '', 'QV_t_dyn', '', '', '', &
+                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
+       endif
     endif
     call TIME_rapend  ('Dynamics')
 
@@ -222,6 +229,12 @@ contains
     !########## Turbulence ##########
 !    call TIME_rapstart('Turbulence')
 !    if ( sw_phy_tb .AND. do_phy_tb ) then
+!       momx_t(:,:,:)   = 0.D0
+!       momy_t(:,:,:)   = 0.D0
+!       momz_t(:,:,:)   = 0.D0
+!       pott_t(:,:,:)   = 0.D0
+!       qtrc_t(:,:,:,:) = 0.D0
+
 !       call ATMOS_PHY_SF( dens,   pott,   qtrc,          & ! [IN]
 !                          pres,   velx,   vely,   velz,  & ! [IN]
 !                          FLXij_sfc, FLXt_sfc, FLXqv_sfc ) ! [OUT]
@@ -237,7 +250,7 @@ contains
 !       pott(:,:,:)   = pott(:,:,:)   + TIME_DTSEC_ATMOS_PHY_TB * pott_t(:,:,:)
 !       qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * qtrc_t(:,:,:,:)
 
-!       if ( mod(TIME_NOWSTEP,10) == 0 ) then
+!       if ( mod(TIME_NOWSTEP,1) == 0 ) then
 !          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_tb', '', '', '', &
 !                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
 !          call FIO_output( momy_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY_t_tb', '', '', '', &
@@ -267,7 +280,7 @@ contains
 !       pott(:,:,:)   = pott(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * pott_t(:,:,:)
 !       qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_PHY_MP * qtrc_t(:,:,:,:)
 
-!       if ( mod(TIME_NOWSTEP,10) == 0 ) then
+!       if ( mod(TIME_NOWSTEP,1) == 0 ) then
 !          call FIO_output( dens_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'DENS_t_mp', '', '', '', &
 !                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
 !          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_mp', '', '', '', &
@@ -310,38 +323,38 @@ contains
 !                            pres, velx, vely, velz, temp        ) ! [OUT]
 !    call TIME_rapend  ('VARset')
 
-!    if ( mod(TIME_NOWSTEP,10) == 0 ) then
-!       call FIO_output( dens(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'DENS', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( momx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( momy(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( momz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( pott(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( pres(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'PRES', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( velx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELX', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( vely(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELY', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( velz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELZ', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,1), 'history', desc, '', 'QV', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,2), 'history', desc, '', 'QC', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,3), 'history', desc, '', 'QR', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,4), 'history', desc, '', 'QI', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,5), 'history', desc, '', 'QS', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,6), 'history', desc, '', 'QG', '', '', '', &
-!                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-!    endif
+    if ( mod(TIME_NOWSTEP,1) == 0 ) then
+       call FIO_output( dens(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'DENS', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( momx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( momy(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( momz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( pott(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( pres(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'PRES', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( velx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELX', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( vely(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELY', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( velz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELZ', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,1), 'history', desc, '', 'QV', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,2), 'history', desc, '', 'QC', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,3), 'history', desc, '', 'QR', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,4), 'history', desc, '', 'QI', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,5), 'history', desc, '', 'QS', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,6), 'history', desc, '', 'QG', '', '', '', &
+                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
+    endif
 
     return
   end subroutine ATMOS_step

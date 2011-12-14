@@ -8,7 +8,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-03 (Y.Miyamoto) [new]
+!! @li      2011-xx-xx (Y.Miyamoto) [new]
 !! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
 !!
 !<

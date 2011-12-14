@@ -1,9 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module file I/O header
+!> module FILE I/O HEADER
 !!
 !! @par Description
-!!          SCALE: Scalable Computing by Advanced Library and Environment
-!!          Numerical model for LES-scale weather
+!!          File I/O module (Parameter Container)
 !!
 !! @author H.Tomita and SCALE developpers
 !!

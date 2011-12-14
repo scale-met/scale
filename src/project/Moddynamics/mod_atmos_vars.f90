@@ -282,6 +282,7 @@ contains
        A_QA = 0
     endif
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,*) &
     '***                 : VARNAME         , ', &
@@ -364,23 +365,24 @@ contains
        A_NWE = I_NG
     endif
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Hydrometeors Index Check'
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of Hydrometeor tracers(QWA):', A_QWA
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QWS - QWE = ', A_QWS, ' - ', A_QWE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QLS - QLE = ', A_QLS, ' - ', A_QLE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QSS - QSE = ', A_QSS, ' - ', A_QSE
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QV:', I_QV
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QC:', I_QC
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QR:', I_QR
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QI:', I_QI
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QS:', I_QS
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QG:', I_QG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** NWS -NWE = ', A_QWS, ' - ', A_QWE
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NC:', I_NC
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NR:', I_NR
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NI:', I_NI
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NS:', I_NS
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NG:', I_NG
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Total  family QWS - QWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Liquid family QLS - QLE = ', A_QLS, ' - ', A_QLE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Soild  family QSS - QSE = ', A_QSS, ' - ', A_QSE
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QV:', I_QV
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QC:', I_QC
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QR:', I_QR
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QI:', I_QI
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QS:', I_QS
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QG:', I_QG
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Number family NWS -NWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NC:', I_NC
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NR:', I_NR
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NI:', I_NI
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NS:', I_NS
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NG:', I_NG
 
     return
   end subroutine ATMOS_vars_setup
@@ -422,8 +424,9 @@ contains
        KS   => GRID_KS,   &
        KE   => GRID_KE
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_stats
+       COMM_vars,  &
+       COMM_stats, &
+       COMM_total
     use mod_fileio, only: &
        FIO_input
     implicit none
@@ -464,6 +467,9 @@ contains
 
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
+
     ! atmos_var -> atmos_diagvar
     call ATMOS_DMP2PVT
 
@@ -493,8 +499,9 @@ contains
        KS   => GRID_KS,   &
        KE   => GRID_KE
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_stats
+       COMM_vars,  &
+       COMM_stats, &
+       COMM_total
     use mod_fileio, only: &
        FIO_output
     implicit none
@@ -511,6 +518,9 @@ contains
     allocate( restart_atmos(IMAX,JMAX,KMAX) )
 
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
+
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
@@ -547,7 +557,9 @@ contains
        JA   => GRID_JA,   &
        KA   => GRID_KA
     use mod_comm, only: &
-       COMM_vars
+       COMM_vars,  &
+       COMM_stats, &
+       COMM_total
     implicit none
 
     real(8), intent(in) :: dens(IA,JA,KA)
@@ -575,6 +587,9 @@ contains
 
     ! fill IHALO & JHALO
     call COMM_vars( atmos_var(:,:,:,:) )
+
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
 
     ! atmos_var -> atmos_diagvar
     call ATMOS_DMP2PVT
