@@ -16,11 +16,11 @@ LD = $(FC)
 LFLAGS = -Kvisimpact,openmp,array_private,ilfunc,ocl,mfunc,preex -Ntl_trt
 
 # for frontend
-FRONT_CC     = gcc
+FRONT_CC     =  LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gcc
 FRONT_CFLAGS = -O3
 
-FRONT_F90    = gfortran
+FRONT_F90    = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
 FRONT_FFLAGS = -O3
 
-FRONT_LD     = gcc
+FRONT_LD     = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
 FRONT_LFLAGS = -lm
