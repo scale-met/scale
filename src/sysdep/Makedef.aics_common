@@ -11,7 +11,7 @@ LD = $(FC)
 LFLAGS = -parallel -lm -openmp
 #
 #
-FRONT_FC     = ifort
+FRONT_F90     = ifort
 FRONT_FFLAGS = $(FFLAGS)
 
 FRONT_CC     = icc

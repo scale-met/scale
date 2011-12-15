@@ -64,7 +64,7 @@ prg_$(PRJ4).o	: prg_$(PRJ4).f90
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FRONT_FC) -DNO_MPIIO $(FRONT_FFLAGS) -o $@ -c $<
+	$(FRONT_F90) -DNO_MPIIO $(FRONT_FFLAGS) -o $@ -c $<
 
 .c.o:
 	$(FRONT_CC) -DNO_MPIIO $(FRONT_CFLAGS) -o $@ -c $<

@@ -20,7 +20,7 @@ LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 # for frontend
-FRONT_FC     = ifort
+FRONT_F90     = ifort
 FRONT_FFLAGS = -O3 -ftz -m64 \
                -assume byterecl -convert big_endian \
                -fp-model precise -pc 80 \
