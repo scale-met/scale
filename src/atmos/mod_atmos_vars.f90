@@ -33,6 +33,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_setup
   public :: ATMOS_vars_restart_read
   public :: ATMOS_vars_restart_write
+  public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_put
   public :: ATMOS_vars_get
   public :: ATMOS_vars_getall
@@ -82,6 +83,8 @@ module mod_atmos_vars
   logical,                   public, save :: ATMOS_sw_phy_tb
   logical,                   public, save :: ATMOS_sw_phy_mp
   logical,                   public, save :: ATMOS_sw_phy_rd
+  logical,                   public, save :: ATMOS_sw_restart
+  logical,                   public, save :: ATMOS_sw_check
 
   real(8), public, allocatable, save :: atmos_var(:,:,:,:)      !> prognostics container (with HALO)
   real(8), public, allocatable, save :: atmos_diagvar(:,:,:,:)  !> diagnostics container (with HALO)
@@ -94,9 +97,14 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
+  logical,                   private, save :: ATMOS_RESTART_OUTPUT           = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+
+  logical,                   private, save :: ATMOS_RESTART_CHECK            = .true.
+  character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
+  real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
   !-----------------------------------------------------------------------------
 contains
@@ -135,13 +143,17 @@ contains
     character(len=IO_FILECHR) :: ATMOS_QTRC_VARUNIT = ''
 
     NAMELIST / PARAM_ATMOS_VARS / &
-       ATMOS_QTRC_NMAX,            &
-       ATMOS_QTRC_VARNAME,         &
-       ATMOS_QTRC_VARDESC,         &
-       ATMOS_QTRC_VARUNIT,         &
-       ATMOS_RESTART_IN_BASENAME,  &
-       ATMOS_RESTART_OUT_BASENAME, &
-       ATMOS_RESTART_IN_ALLOWMISSINGQ
+       ATMOS_QTRC_NMAX,                &
+       ATMOS_QTRC_VARNAME,             &
+       ATMOS_QTRC_VARDESC,             &
+       ATMOS_QTRC_VARUNIT,             &
+       ATMOS_RESTART_OUTPUT,           &
+       ATMOS_RESTART_IN_BASENAME,      &
+       ATMOS_RESTART_OUT_BASENAME,     &
+       ATMOS_RESTART_IN_ALLOWMISSINGQ, &
+       ATMOS_RESTART_CHECK,            &
+       ATMOS_RESTART_CHECK_BASENAME,   &
+       ATMOS_RESTART_CHECK_CRITERION
 
     integer :: ierr
     integer :: iv
@@ -197,6 +209,22 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Radiative transfer  : NONE'
        ATMOS_sw_phy_rd = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Output...'
+    if ( ATMOS_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output : YES'
+       ATMOS_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output : NO'
+       ATMOS_sw_restart = .false.
+    endif
+    if ( ATMOS_RESTART_CHECK ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Data check : YES'
+       ATMOS_sw_check = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Data check : NO'
+       ATMOS_sw_check = .false.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -282,6 +310,7 @@ contains
        A_QA = 0
     endif
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,*) &
     '***                 : VARNAME         , ', &
@@ -364,23 +393,24 @@ contains
        A_NWE = I_NG
     endif
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Hydrometeors Index Check'
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of Hydrometeor tracers(QWA):', A_QWA
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QWS - QWE = ', A_QWS, ' - ', A_QWE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QLS - QLE = ', A_QLS, ' - ', A_QLE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** QSS - QSE = ', A_QSS, ' - ', A_QSE
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QV:', I_QV
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QC:', I_QC
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QR:', I_QR
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QI:', I_QI
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QS:', I_QS
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_QG:', I_QG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** NWS -NWE = ', A_QWS, ' - ', A_QWE
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NC:', I_NC
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NR:', I_NR
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NI:', I_NI
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NS:', I_NS
-    if( IO_L ) write(IO_FID_LOG,*) '*** I_NG:', I_NG
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Total  family QWS - QWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Liquid family QLS - QLE = ', A_QLS, ' - ', A_QLE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Soild  family QSS - QSE = ', A_QSS, ' - ', A_QSE
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QV:', I_QV
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QC:', I_QC
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QR:', I_QR
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QI:', I_QI
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QS:', I_QS
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_QG:', I_QG
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') '*** Number family NWS -NWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NC:', I_NC
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NR:', I_NR
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NI:', I_NI
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NS:', I_NS
+    if( IO_L ) write(IO_FID_LOG,*) '***  I_NG:', I_NG
 
     return
   end subroutine ATMOS_vars_setup
@@ -422,8 +452,9 @@ contains
        KS   => GRID_KS,   &
        KE   => GRID_KE
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_stats
+       COMM_vars,  &
+       COMM_stats, &
+       COMM_total
     use mod_fileio, only: &
        FIO_input
     implicit none
@@ -464,6 +495,9 @@ contains
 
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
+
     ! atmos_var -> atmos_diagvar
     call ATMOS_DMP2PVT
 
@@ -474,7 +508,7 @@ contains
   end subroutine ATMOS_vars_restart_read
 
   !-----------------------------------------------------------------------------
-  !> Read restart of atmospheric variables
+  !> Write restart of atmospheric variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_restart_write
     use mod_stdio, only: &
@@ -493,8 +527,9 @@ contains
        KS   => GRID_KS,   &
        KE   => GRID_KE
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_stats
+       COMM_vars,  &
+       COMM_stats, &
+       COMM_total
     use mod_fileio, only: &
        FIO_output
     implicit none
@@ -511,6 +546,9 @@ contains
     allocate( restart_atmos(IMAX,JMAX,KMAX) )
 
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
+
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
@@ -531,6 +569,89 @@ contains
 
     return
   end subroutine ATMOS_vars_restart_write
+
+  !-----------------------------------------------------------------------------
+  !> Check and compare between last data and sample data
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_vars_restart_check
+    use mod_stdio, only: &
+       IO_FID_LOG,  &
+       IO_L
+    use mod_process, only: &
+       PRC_myrank
+    use mod_grid, only : &
+       IA   => GRID_IA,   &
+       JA   => GRID_JA,   &
+       KA   => GRID_KA,   &
+       IMAX => GRID_IMAX, &
+       JMAX => GRID_JMAX, &
+       KMAX => GRID_KMAX, &
+       IS   => GRID_IS,   &
+       IE   => GRID_IE,   &
+       JS   => GRID_JS,   &
+       JE   => GRID_JE,   &
+       KS   => GRID_KS,   &
+       KE   => GRID_KE
+    use mod_comm, only: &
+       COMM_total
+    use mod_fileio, only: &
+       FIO_input
+    implicit none
+
+    real(8), allocatable :: restart_atmos(:,:,:) !> restart file (no HALO)
+
+    real(8), allocatable :: atmos_var_check(:,:,:,:)
+
+    character(len=IO_FILECHR) :: bname
+    character(len=FIO_HMID)   :: desc
+    character(len=8)          :: lname
+
+    logical :: datacheck
+    integer :: i, j, k, iv
+    !---------------------------------------------------------------------------
+
+    allocate( restart_atmos(IMAX,JMAX,KMAX) )
+    allocate( atmos_var_check(IA,JA,KA,A_VA) )
+
+    bname = ATMOS_RESTART_CHECK_BASENAME
+    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+
+    do iv = 1, A_VA
+       call FIO_input( restart_atmos(:,:,:), bname, A_NAME(iv), lname, 1, KMAX, 1 )
+
+       atmos_var_check(IS:IE,JS:JE,KS:KE,iv) = restart_atmos(1:IMAX,1:JMAX,1:KMAX)
+    enddo
+
+    deallocate( restart_atmos )
+
+    ! check total mass
+    call COMM_total( atmos_var(:,:,:,1:1), A_NAME(1:1) )
+
+    write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
+    write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
+    datacheck = .true.
+
+    do iv = 1, A_VA
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs( atmos_var(i,j,k,iv)-atmos_var_check(i,j,k,iv) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference : ', atmos_var(i,j,k,iv)-atmos_var_check(i,j,k,iv)
+          write(*,*) 'xxx at (PE-id,i,j,k,varname) : ', PRC_myrank, i, j, k, A_NAME(iv)
+          datacheck = .false.
+       endif
+    enddo
+    enddo
+    enddo
+    enddo
+    if (datacheck) then
+       if( IO_L ) write(IO_FID_LOG,*) 'Data Check Clear.'
+       write(*,*) 'Data Check Clear.'
+    endif
+    call COMM_total( atmos_var_check(:,:,:,1:1), A_NAME(1:1) )
+
+    return
+  end subroutine ATMOS_vars_restart_check
 
   !-----------------------------------------------------------------------------
   !> Put and Communicate prognostic variables

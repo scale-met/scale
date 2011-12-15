@@ -52,6 +52,15 @@ program spd2bin
 
   !--- NAMELIST
   character(LEN=FIO_HLONG)  :: infile(flim)        = ''
+  integer                   :: PRC_nmax            = 1 !< total number of processors
+  integer                   :: PRC_NUM_X           = 1
+  integer                   :: PRC_NUM_Y           = 1
+  integer                   :: GRID_IMAX           = 60    ! # of computational cells: x
+  integer                   :: GRID_JMAX           = 60    ! # of computational cells: y
+  integer                   :: GRID_KMAX           = 320   ! # of computational cells: z
+  real(8)                   :: GRID_DX             = 40.D0 ! center/face length [m]: x
+  real(8)                   :: GRID_DY             = 40.D0 ! center/face length [m]: y
+  real(8)                   :: GRID_DZ             = 40.D0 ! layer/interface length [m]: z
   integer                   :: step_str            = 1
   integer                   :: step_end            = max_nstep
   character(LEN=FIO_HLONG)  :: outfile_dir         = '.'
@@ -64,23 +73,8 @@ program spd2bin
 
   logical                   :: help = .false.
 
-
-  integer              :: PRC_nmax   = 1 !< total number of processors
-  integer              :: PRC_NUM_X  = 1
-  integer              :: PRC_NUM_Y  = 1
-  integer, allocatable :: PRC_2Drank(:,:)
-
-  integer              :: GRID_IMAX = 60    ! # of computational cells: x
-  integer              :: GRID_JMAX = 60    ! # of computational cells: y
-  integer              :: GRID_KMAX = 320   ! # of computational cells: z
-  real(8)              :: GRID_DX   = 40.D0 ! center/face length [m]: x
-  real(8)              :: GRID_DY   = 40.D0 ! center/face length [m]: y
-  real(8)              :: GRID_DZ   = 40.D0 ! layer/interface length [m]: z
-  real(8), allocatable :: GRID_CX(:)        ! center coordinate [m]: x
-  real(8), allocatable :: GRID_CY(:)        ! center coordinate [m]: y
-  real(8), allocatable :: GRID_CZ(:)        ! center coordinate [m]: z
-
-  namelist /OPTION/ PRC_nmax,        &
+  namelist /OPTION/ infile,          &
+                    PRC_nmax,        &
                     PRC_NUM_X,       &
                     PRC_NUM_Y,       &
                     GRID_IMAX,       &
@@ -89,7 +83,6 @@ program spd2bin
                     GRID_DX,         &
                     GRID_DY,         &
                     GRID_DZ,         &
-                    infile,          &
                     step_str,        &
                     step_end,        &
                     outfile_dir,     &
@@ -101,11 +94,18 @@ program spd2bin
                     selectvar,       &
                     help
   !-----------------------------------------------------------------------------
-  character(LEN=FIO_HLONG) :: infname   = ""
-  character(LEN=FIO_HLONG) :: outbase   = ""
-  logical                  :: allvar = .true.
+  character(LEN=FIO_HLONG) :: infname  = ""
+  character(LEN=FIO_HLONG) :: outfname = ""
+  logical                  :: allvar   = .true.
 
-  ! ico data information
+  integer, allocatable :: PRC_2Drank(:,:)
+  real(8), allocatable :: GRID_CX(:)      ! center coordinate [m]: x
+  real(8), allocatable :: GRID_CY(:)      ! center coordinate [m]: y
+  real(8), allocatable :: GRID_CZ(:)      ! center coordinate [m]: z
+  integer              :: ISG, IEG        ! start/end of inner domain: x, global
+  integer              :: JSG, JEG        ! start/end of inner domain: y, global
+
+  ! data information
   integer, allocatable :: ifid(:)
   type(headerinfo) hinfo 
   type(datainfo)   dinfo 
@@ -121,18 +121,15 @@ program spd2bin
   integer,                   allocatable :: var_nstep(:)
   integer(8),                allocatable :: var_time_str(:)
   integer(8),                allocatable :: var_dt(:)
+
   ! header
   character(LEN=16),         allocatable :: var_gthead(:,:)
 
-
-  integer                  :: ISG, IEG   ! start/end of inner domain: x, global
-  integer                  :: JSG, JEG   ! start/end of inner domain: y, global
-
   real(4), allocatable     :: data4allrgn(:)
   real(8), allocatable     :: data8allrgn(:)
-  real(4), allocatable     :: icodata4(:,:,:)
+  real(4), allocatable     :: spddata4(:,:,:)
 
-  real(4), allocatable     :: lldata(:,:,:)
+  real(4), allocatable     :: bindata(:,:,:)
 
   character(LEN=28)        :: tmpl
   character(LEN=16)        :: gthead(64)
@@ -197,7 +194,7 @@ program spd2bin
   !#########################################################
   ! Read data information
 
-  allocate( ifid(0:PRC_nmax-1) )
+  allocate( ifid(0:PRC_nmax-1)      )
   allocate( var_nstep    (max_nvar) )
   allocate( var_name     (max_nvar) )
   allocate( var_desc     (max_nvar) )
@@ -303,21 +300,20 @@ program spd2bin
   write(*,*) '*** convert start : PSD format to binary data'
 
   !#########################################################
-  !--- start weighting summation
   do v = 1, nvar
 
      kmax = var_nlayer(v)
 
      !--- open output file
-     outbase = trim(outfile_dir)//'/'//trim(outfile_prefix)//trim(var_name(v))
+     outfname = trim(outfile_dir)//'/'//trim(outfile_prefix)//trim(var_name(v))
      ofid = IO_get_available_fid()
  
      if (.not. devide_template) then
         if (output_grads) then
 
-           write(*,*) 'Output: ', trim(outbase)//'.grd'
+           write(*,*) 'Output: ', trim(outfname)//'.grd'
            open( unit   = ofid,                  &
-                 file   = trim(outbase)//'.grd', &
+                 file   = trim(outfname)//'.grd', &
                  form   = 'unformatted',         &
                  access = 'direct',              &
                  recl   = GRID_IMAX*PRC_NUM_X*GRID_JMAX*PRC_NUM_Y*GRID_KMAX*4, &
@@ -331,9 +327,9 @@ program spd2bin
 
         elseif(output_gtool) then
 
-           write(*,*) 'Output: ', trim(outbase)//'.gt3'
+           write(*,*) 'Output: ', trim(outfname)//'.gt3'
            open( unit   = ofid,                  &
-                 file   = trim(outbase)//'.gt3', &
+                 file   = trim(outfname)//'.gt3', &
                  form   = 'unformatted',         &
                  access = 'sequential',          &
                  status = 'unknown'              )
@@ -360,8 +356,8 @@ program spd2bin
 
      do t = 1, num_of_step
 
-        allocate( lldata(GRID_IMAX*PRC_NUM_X,GRID_JMAX*PRC_NUM_Y,GRID_KMAX) )
-        lldata(:,:,:) = CONST_UNDEF4
+        allocate( bindata(GRID_IMAX*PRC_NUM_X,GRID_JMAX*PRC_NUM_Y,GRID_KMAX) )
+        bindata(:,:,:) = CONST_UNDEF4
 
         nowsec = var_time_str(v) + (t-1)*var_dt(v)
 
@@ -369,10 +365,10 @@ program spd2bin
         if (devide_template) then
            tmpl   = sec2template(nowsec)
            write(*,*)
-           write(*,*) 'Output: ', trim(outbase)//'.'//trim(tmpl)//'.grd'
+           write(*,*) 'Output: ', trim(outfname)//'.'//trim(tmpl)//'.grd'
 
            open( unit   = ofid,             &
-                 file   = trim(outbase)//'.'//trim(tmpl)//'.grd', &
+                 file   = trim(outfname)//'.'//trim(tmpl)//'.grd', &
                  form   = 'unformatted',    &
                  access = 'direct',         &
                  recl   = GRID_IMAX*GRID_JMAX*GRID_KMAX*4, &
@@ -386,10 +382,10 @@ program spd2bin
 
            allocate( data4allrgn(GRID_IMAX*GRID_JMAX*GRID_KMAX) )
            allocate( data8allrgn(GRID_IMAX*GRID_JMAX*GRID_KMAX) )
-           allocate( icodata4   (GRID_IMAX,GRID_JMAX,GRID_KMAX) )
+           allocate( spddata4   (GRID_IMAX,GRID_JMAX,GRID_KMAX) )
            data4allrgn(:)  = CONST_UNDEF4
            data8allrgn(:)  = CONST_UNDEF8
-           icodata4(:,:,:) = CONST_UNDEF4
+           spddata4(:,:,:) = CONST_UNDEF4
 
            !--- seek data ID and get information
            call fio_seek_datainfo(did,ifid(p),var_name(v),step)
@@ -413,7 +409,7 @@ program spd2bin
               endwhere
 
            endif
-           icodata4(:,:,:) = reshape( data4allrgn(:), shape(icodata4) )
+           spddata4(:,:,:) = reshape( data4allrgn(:), shape(spddata4) )
 
            ! horizontal index (global domain)
            ISG = 1         + PRC_2Drank(p,1) * GRID_IMAX
@@ -421,16 +417,16 @@ program spd2bin
            JSG = 1         + PRC_2Drank(p,2) * GRID_JMAX
            JEG = GRID_JMAX + PRC_2Drank(p,2) * GRID_JMAX
 
-           lldata(ISG:IEG,JSG:JEG,1:GRID_KMAX) = icodata4(1:GRID_IMAX,1:GRID_JMAX,1:GRID_KMAX)
+           bindata(ISG:IEG,JSG:JEG,1:GRID_KMAX) = spddata4(1:GRID_IMAX,1:GRID_JMAX,1:GRID_KMAX)
 
            deallocate( data4allrgn )
            deallocate( data8allrgn )
-           deallocate( icodata4    )
+           deallocate( spddata4    )
         enddo ! PE LOOP
 
         !--- output lat-lon data file
         if (output_grads) then
-           write(ofid,rec=irec) lldata(:,:,:)
+           write(ofid,rec=irec) bindata(:,:,:)
            irec = irec + 1
         elseif(output_gtool) then
            write(var_gthead(25,v),'(I16)') int( nowsec/3600,kind=4 )
@@ -438,7 +434,7 @@ program spd2bin
            gthead(:) = var_gthead(:,v)
 
            write(ofid) gthead(:)
-           write(ofid) lldata(:,:,:)
+           write(ofid) bindata(:,:,:)
         endif
 
         !--- close output file
@@ -447,7 +443,7 @@ program spd2bin
         endif
 
         write(*,*) ' +append step:', step
-        deallocate( lldata )
+        deallocate( bindata )
      enddo ! step LOOP
 
      !--- close output file

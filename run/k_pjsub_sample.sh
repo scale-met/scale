@@ -72,8 +72,11 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_QTRC_NMAX = 11,
- ATMOS_RESTART_IN_BASENAME = '../init_coldbubble/init_coldbubble_63072000000.000',
+ ATMOS_QTRC_NMAX              = 11,
+ ATMOS_RESTART_IN_BASENAME    = '../init_coldbubble/init_coldbubble_63072000000.000',
+ ATMOS_RESTART_OUTPUT         = .false.,
+ ATMOS_RESTART_CHECK          = .true.,
+ ATMOS_RESTART_CHECK_BASENAME = './check_out_63072000003.000',
 /
 
 &PARAM_ATMOS_DYN

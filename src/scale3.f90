@@ -49,7 +49,10 @@ program scaleles3
      ATMOS_setup, &
      ATMOS_step
   use mod_atmos_vars, only: &
-     ATMOS_vars_restart_write
+     ATMOS_vars_restart_write, &
+     ATMOS_vars_restart_check, &
+     ATMOS_sw_restart,         &
+     ATMOS_sw_check
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
@@ -123,7 +126,7 @@ program scaleles3
 !    call HIST_write
 
     ! restart output
-    if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
 
     if ( TIME_DOend ) exit
 
@@ -135,6 +138,10 @@ program scaleles3
 
 
   !########## Finalize ##########
+
+  ! check data
+  if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
+
   call TIME_rapreport
 
   call FIO_finalize

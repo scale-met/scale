@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program prg_fio_dump
+program spddump
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -29,7 +29,6 @@ program prg_fio_dump
   !
   !++ parameters & variables
   !
-
   character(LEN=FIO_HLONG) :: fname     = ""
   integer                  :: mode      = FIO_DUMP_HEADER
   integer                  :: endian    = FIO_BIG_ENDIAN
@@ -85,5 +84,5 @@ program prg_fio_dump
 
   call fio_dump_finfo(fid,endian,mode)
 
-end program prg_fio_dump
+end program spddump
 !-------------------------------------------------------------------------------
