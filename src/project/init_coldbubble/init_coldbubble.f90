@@ -32,6 +32,8 @@ program coldbubble
      TIME_rapreport
   use mod_grid, only: &
      GRID_setup
+  use mod_comm, only: &
+     COMM_setup
   use mod_fileio, only: &
      FIO_setup, &
      FIO_finalize
@@ -65,6 +67,9 @@ program coldbubble
 
   ! setup horisontal/veritical grid system
   call GRID_setup
+
+  ! setup mpi communication
+  call COMM_setup
 
   ! setup file I/O
   call FIO_setup
