@@ -1,19 +1,15 @@
 # ------ FOR K -----
-#
-FPCOLL=-U_FPCOLL_
-SIMD=-Ksimd
-
 
 FC     = mpifrtpx
-FFLAGS = -Kvisimpact,prefetch_iteration_L2=50,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong \
-         -Ntl_trt $(FPCOLL) $(SIMD) $(FJTIMER)
-#
+#FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto -Qt -V -Ksimd=2
+FFLAGS = -Kvisimpact,prefetch_iteration_L2=50,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong  -Ntl_trt  -Qt -V -Ksimd
+
 CC     = mpifccpx
-CFLAGS = -Kvisimpact,openmp,array_private,ilfunc,ocl,mfunc,preex,restp=all -Ntl_trt 
-#
-#
-LD = $(FC)
-LFLAGS = -Kvisimpact,openmp,array_private,ilfunc,ocl,mfunc,preex -Ntl_trt
+#CFLAGS = -Kfast,parallel,ocl,preex,array_private,auto -Qt -V -Ksimd=2
+CFLAGS = -Kvisimpact,openmp,array_private,ilfunc,ocl,mfunc,preex,restp=all -Ntl_trt -Qt -V -Ksimd
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
 
 # for frontend
 FRONT_CC     =  LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gcc

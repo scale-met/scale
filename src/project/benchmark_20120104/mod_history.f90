@@ -227,13 +227,12 @@ contains
 
     character(len=8) :: lname
 
-    integer :: n, nmax, reqid
+    integer :: n, reqid
     !---------------------------------------------------------------------------
 
     !--- search existing item
     itemid = -1
-    nmax = min( HIST_id_count, HIST_req_nmax )
-    do n = 1, nmax
+    do n = 1, HIST_id_count
        if ( trim(item) == trim(HIST_item(n)) ) then ! match existing item
           itemid = n
           return
@@ -294,33 +293,23 @@ contains
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_JS,   &
-       KE   => GRID_JE
+       JE   => GRID_JE
     implicit none
 
     integer, intent(in) :: itemid
     real(8), intent(in) :: var(:,:,:)
     real(8), intent(in) :: dt
 
-    integer :: ksize, kstr, kend
+    integer :: ksize
     !---------------------------------------------------------------------------
 
-    if ( HIST_kmax(itemid) == KMAX ) then ! 3D
-       ksize = KMAX
-       kstr  = KS
-       kend  = KE
-    else
-       ksize = 1
-       kstr  = 1
-       kend  = 1
-    endif
+    ksize = HIST_kmax(itemid)
 
     if ( HIST_tavg(itemid) ) then
        HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) = HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) &
-                                                 + var(kstr:kend,IS:IE,JS:JE) * dt
+                                                 + var(1:ksize,IS:IE,JS:JE) * dt
     else
-       HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) = var(kstr:kend,IS:IE,JS:JE)
+       HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) = var(1:ksize,1:IMAX,1:JMAX)
     endif
     HIST_tsumsec(itemid) = HIST_tsumsec(itemid) + dt
 
@@ -433,11 +422,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Output item list '
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of history item :', HIST_req_nmax
-    if( IO_L ) write(IO_FID_LOG,*) 'NAME           :UNIT           :Layername         :interval[sec]:avg'
+    if( IO_L ) write(IO_FID_LOG,*) 'NAME           :UNIT           :Layername         :interval[sec         :avg'
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
  
     do n = 1, HIST_id_count-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1x,f13.3,1x,L)') HIST_item(n), HIST_unit(n), HIST_ktype(n), HIST_tintsec(n), HIST_tavg(n)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,f9.3,L)') HIST_item(n), HIST_unit(n), HIST_ktype(n), HIST_tintsec(n), HIST_tavg(n)
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'

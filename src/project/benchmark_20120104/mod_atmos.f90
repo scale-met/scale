@@ -106,7 +106,7 @@ contains
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        ATMOS_vars_get,               &
-       ATMOS_vars_getdiag,           &
+       ATMOS_vars_getall,            &
        ATMOS_vars_put
     use mod_atmos_dyn, only: &
        ATMOS_DYN
@@ -135,7 +135,6 @@ contains
     real(8) :: velx(KA,IA,JA)      ! velocity(x) [m/s]
     real(8) :: vely(KA,IA,JA)      ! velocity(y) [m/s]
     real(8) :: velz(KA,IA,JA)      ! velocity(z) [m/s]
-    real(8) :: temp(KA,IA,JA)      ! temperature [K]
     real(8) :: pott(KA,IA,JA)      ! potential temperature [K]
 
     ! surface flux
@@ -159,10 +158,10 @@ contains
     endif
     call TIME_rapend  ('Dynamics')
 
-    call TIME_rapstart('VARset')
-    call ATMOS_vars_get( dens, momx, momy, momz, rhot, qtrc )
-    call ATMOS_vars_getdiag( pres, velx, vely, velz, temp )
-    call TIME_rapend  ('VARset')
+!    call TIME_rapstart('VARset')
+!    call ATMOS_vars_getall( dens, momx, momy, momz, rhot, qtrc, & ! [OUT]
+!                            pres, velx, vely, velz, pott        ) ! [OUT]
+!    call TIME_rapend  ('VARset')
 
     !########## Turbulence ##########
 
@@ -225,19 +224,16 @@ contains
 
     call TIME_rapstart('History')
     call HIST_in( dens(:,:,:), 'DENS', 'density',     'kg/m3',   '3D', TIME_DTSEC )
-    call HIST_in( momz(:,:,:), 'MOMZ', 'momentum z',  'kg/m2/s', '3D', TIME_DTSEC )
-    call HIST_in( momx(:,:,:), 'MOMX', 'momentum x',  'kg/m2/s', '3D', TIME_DTSEC )
-    call HIST_in( momy(:,:,:), 'MOMY', 'momentum y',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( momz(:,:,:), 'MOMZ', 'momentum x',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( momx(:,:,:), 'MOMX', 'momentum y',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( momy(:,:,:), 'MOMY', 'momentum z',  'kg/m2/s', '3D', TIME_DTSEC )
     call HIST_in( rhot(:,:,:), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
 
-    pott(:,:,:) = rhot(:,:,:) / dens(:,:,:)
-    call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )
-
-    call HIST_in( pres(:,:,:), 'PRES', 'pressure',    'Pa',  '3D', TIME_DTSEC )
-    call HIST_in( velz(:,:,:), 'W',    'velocity w',  'm/s', '3D', TIME_DTSEC )
-    call HIST_in( velx(:,:,:), 'U',    'velocity u',  'm/s', '3D', TIME_DTSEC )
-    call HIST_in( vely(:,:,:), 'V',    'velocity v',  'm/s', '3D', TIME_DTSEC )
-    call HIST_in( temp(:,:,:), 'T',    'temperature', 'K',   '3D', TIME_DTSEC )
+    call HIST_in( pres(:,:,:), 'PRES', 'pressure',        'Pa',  '3D', TIME_DTSEC )
+    call HIST_in( velz(:,:,:), 'U',    'velocity u',      'm/s', '3D', TIME_DTSEC )
+    call HIST_in( velx(:,:,:), 'V',    'velocity v',      'm/s', '3D', TIME_DTSEC )
+    call HIST_in( vely(:,:,:), 'W',    'velocity w',      'm/s', '3D', TIME_DTSEC )
+    call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K',   '3D', TIME_DTSEC )
     call TIME_rapend  ('History')
 
     return

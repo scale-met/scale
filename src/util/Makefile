@@ -21,7 +21,6 @@ MODS =	\
 	mod_process_nompi.o	\
 	mod_const.o	\
 	mod_time.o	\
-	mod_grid_cartesian_plane.o	\
 	fio.o	\
 	fiof.o	\
 	mod_fileio_h.o	\
@@ -51,15 +50,14 @@ $(PRJ5): prg_$(PRJ5).o
 	$(FRONT_LD) $(FRONT_LFLAGS) -o $(PRJ5) prg_$(PRJ5).o mod_stdio.o mod_const.o mod_time.o mod_process_nompi.o mod_fileio_h.o mod_option.o fiof.o fio.o
 
 
-mod_stdio.o	               : mod_stdio.f90
-mod_process_nompi.o        : mod_process_nompi.f90 mod_stdio.o
-mod_const.o	               : mod_const.f90 mod_stdio.o mod_process_nompi.o
-mod_time.o	               : mod_time.f90 mod_stdio.o mod_process_nompi.o
-mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process_nompi.o
-fio.o	                     : fio.c fio.h fio_def.h
-fiof.o	                  : fiof.c fiof.h fio.h fio_def.h
-mod_fileio_h.o	            : mod_fileio_h.f90 mod_stdio.o mod_process_nompi.o mod_grid_cartesian_plane.o mod_time.o mod_const.o fio.o fiof.o
-mod_option.o	            : mod_option.f90
+mod_stdio.o         : mod_stdio.f90
+mod_process_nompi.o : mod_process_nompi.f90 mod_stdio.o
+mod_const.o         : mod_const.f90 mod_stdio.o mod_process_nompi.o
+mod_time.o          : mod_time.f90 mod_stdio.o mod_process_nompi.o
+mod_fileio_h.o	     : mod_fileio_h.f90
+fio.o               : fio.c fio.h fio_def.h
+fiof.o              : fiof.c fiof.h fio.h fio_def.h
+mod_option.o        : mod_option.f90
 
 prg_$(PRJ1).o	: prg_$(PRJ1).f90 mod_fileio_h.o fiof.o fio.o
 prg_$(PRJ2).o	: prg_$(PRJ2).f90 mod_stdio.o mod_const.o mod_time.o mod_fileio_h.o mod_option.o fiof.o fio.o

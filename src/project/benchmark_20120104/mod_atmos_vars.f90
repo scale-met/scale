@@ -38,7 +38,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_put
   public :: ATMOS_vars_get
-  public :: ATMOS_vars_getdiag
+  public :: ATMOS_vars_getall
   public :: ATMOS_DMP2PVT
   !-----------------------------------------------------------------------------
   !
@@ -309,9 +309,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NO.',iv,": ",A_NAME(iv),", ", A_DESC(iv),"[", A_UNIT(iv),"]"
     enddo
 
-    allocate( atmos_var    (KA,IA,JA,A_VA) )
-    atmos_var(:,:,:,1)      = CONST_UNDEF8
-    atmos_var(:,:,:,2:A_VA) = 0.D0
+    allocate( atmos_var    (KA,IA,JA,A_VA) ); atmos_var(:,:,:,:)     = CONST_UNDEF8
     allocate( atmos_diagvar(KA,IA,JA,5)    ); atmos_diagvar(:,:,:,:) = CONST_UNDEF8
 
     I_QV = ATMOS_vars_getid( 'QV' )
@@ -641,9 +639,6 @@ contains
     if (datacheck) then
        if( IO_L ) write(IO_FID_LOG,*) 'Data Check Clear.'
        write(*,*) 'Data Check Clear.'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) 'Data Check Failed. See std. output.'
-       write(*,*) 'Data Check Failed.'
     endif
     call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:) )
 
@@ -681,30 +676,18 @@ contains
 
     real(8), intent(in) :: qtrc(KA,IA,JA,A_QA)
 
-    integer :: k, i, j, iq, iv
+    integer :: iq, iv
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       atmos_var(k,i,j,1) = dens(k,i,j)
-       atmos_var(k,i,j,2) = momx(k,i,j)
-       atmos_var(k,i,j,3) = momy(k,i,j)
-       atmos_var(k,i,j,4) = momz(k,i,j)
-       atmos_var(k,i,j,5) = rhot(k,i,j)
-    enddo
-    enddo
-    enddo
+    atmos_var(:,:,:,1) = dens(:,:,:)
+    atmos_var(:,:,:,2) = momx(:,:,:)
+    atmos_var(:,:,:,3) = momy(:,:,:)
+    atmos_var(:,:,:,4) = momz(:,:,:)
+    atmos_var(:,:,:,5) = rhot(:,:,:)
 
     if ( A_QA > 0 ) then
        do iq = 1, A_QA
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          atmos_var(k,i,j,5+iq) = qtrc(k,i,j,iq)
-       enddo
-       enddo
-       enddo
+          atmos_var(:,:,:,5+iq) = qtrc(:,:,:,iq)
        enddo
     endif
 
@@ -718,7 +701,19 @@ contains
     enddo
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,1:6), A_NAME(1:6) )
+!    call COMM_total( atmos_var(:,:,:,1:6), A_NAME(1:6) )
+
+    ! atmos_var -> atmos_diagvar
+!    call ATMOS_DMP2PVT
+
+    ! fill IHALO & JHALO
+!    do iv = 1, 5
+!       call COMM_vars( atmos_diagvar(:,:,:,iv), iv )
+!    enddo
+
+!    do iv = 1, 5
+!       call COMM_wait( iv )
+!    enddo
 
     return
   end subroutine ATMOS_vars_put
@@ -747,30 +742,18 @@ contains
 
     real(8), intent(out) :: qtrc(KA,IA,JA,A_QA)
 
-    integer :: k, i, j, iq
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       dens(k,i,j) = atmos_var(k,i,j,1)
-       momx(k,i,j) = atmos_var(k,i,j,2)
-       momy(k,i,j) = atmos_var(k,i,j,3)
-       momz(k,i,j) = atmos_var(k,i,j,4)
-       rhot(k,i,j) = atmos_var(k,i,j,5)
-    enddo
-    enddo
-    enddo
+    dens(:,:,:) = atmos_var(:,:,:,1)
+    momx(:,:,:) = atmos_var(:,:,:,2)
+    momy(:,:,:) = atmos_var(:,:,:,3)
+    momz(:,:,:) = atmos_var(:,:,:,4)
+    rhot(:,:,:) = atmos_var(:,:,:,5)
 
     if ( A_QA > 0 ) then
        do iq = 1, A_QA
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          qtrc(k,i,j,iq) = atmos_var(k,i,j,5+iq)
-       enddo
-       enddo
-       enddo
+          qtrc(:,:,:,iq) = atmos_var(:,:,:,5+iq)
        enddo
     endif
 
@@ -780,7 +763,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Get prognostic variables
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_getdiag( &
+  subroutine ATMOS_vars_getall( &
+       dens, &
+       momx, &
+       momy, &
+       momz, &
+       rhot, &
+       qtrc, &
        pres, &
        velx, &
        vely, &
@@ -792,44 +781,62 @@ contains
        KA => GRID_KA
     implicit none
 
+    real(8), intent(out) :: dens(KA,IA,JA)
+    real(8), intent(out) :: momx(KA,IA,JA)
+    real(8), intent(out) :: momy(KA,IA,JA)
+    real(8), intent(out) :: momz(KA,IA,JA)
+    real(8), intent(out) :: rhot(KA,IA,JA)
+
+    real(8), intent(out) :: qtrc(KA,IA,JA,A_QA)
+
     real(8), intent(out) :: pres(KA,IA,JA)
     real(8), intent(out) :: velx(KA,IA,JA)
     real(8), intent(out) :: vely(KA,IA,JA)
     real(8), intent(out) :: velz(KA,IA,JA)
     real(8), intent(out) :: temp(KA,IA,JA)
 
-    integer :: k, i, j
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    ! atmos_var -> atmos_diagvar
-    call ATMOS_DMP2PVT
+    dens(:,:,:) = atmos_var(:,:,:,1)
+    momx(:,:,:) = atmos_var(:,:,:,2)
+    momy(:,:,:) = atmos_var(:,:,:,3)
+    momz(:,:,:) = atmos_var(:,:,:,4)
+    rhot(:,:,:) = atmos_var(:,:,:,5)
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       pres(k,i,j) = atmos_diagvar(k,i,j,1)
-       velx(k,i,j) = atmos_diagvar(k,i,j,2)
-       vely(k,i,j) = atmos_diagvar(k,i,j,3)
-       velz(k,i,j) = atmos_diagvar(k,i,j,4)
-       temp(k,i,j) = atmos_diagvar(k,i,j,5)
-    enddo
-    enddo
-    enddo
+    if ( A_QA > 0 ) then
+       do iq = 1, A_QA
+          qtrc(:,:,:,iq) = atmos_var(:,:,:,5+iq)
+       enddo
+    endif
+
+    pres(:,:,:) = atmos_diagvar(:,:,:,1)
+    velx(:,:,:) = atmos_diagvar(:,:,:,2)
+    vely(:,:,:) = atmos_diagvar(:,:,:,3)
+    velz(:,:,:) = atmos_diagvar(:,:,:,4)
+    temp(:,:,:) = atmos_diagvar(:,:,:,5)
 
     return
-  end subroutine ATMOS_vars_getdiag
+  end subroutine ATMOS_vars_getall
 
   !-----------------------------------------------------------------------------
   !> Get prognostic variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DMP2PVT
+    use mod_stdio, only: &
+       IO_FID_LOG,  &
+       IO_L
     use mod_const, only : &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
        RovCP  => CONST_RovCP,  &
        CPovCV => CONST_CPovCV, &
+       LH0    => CONST_LH0,    &
        Pstd   => CONST_Pstd
     use mod_grid, only: &
+       IA   => GRID_IA,   &
+       JA   => GRID_JA,   &
+       KA   => GRID_KA,   &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
@@ -840,6 +847,12 @@ contains
        WE   => GRID_WE
     implicit none
 
+    real(8) :: pres(KA,IA,JA)
+    real(8) :: velx(KA,IA,JA)
+    real(8) :: vely(KA,IA,JA)
+    real(8) :: velz(KA,IA,JA)
+    real(8) :: temp(KA,IA,JA)
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -847,8 +860,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_diagvar(k,i,j,2) = 2.D0 * atmos_var(k,i,j,2) / ( atmos_var(k,i+1,j,  1)+atmos_var(k,i,j,1) )
-       atmos_diagvar(k,i,j,3) = 2.D0 * atmos_var(k,i,j,3) / ( atmos_var(k,i,  j+1,1)+atmos_var(k,i,j,1) )
+       velx(k,i,j) = 2.D0 * atmos_var(k,i,j,2) / ( atmos_var(k,i+1,j,  1)+atmos_var(k,i,j,1) )
+       vely(k,i,j) = 2.D0 * atmos_var(k,i,j,3) / ( atmos_var(k,i,  j+1,1)+atmos_var(k,i,j,1) )
     enddo
     enddo
     enddo
@@ -856,23 +869,29 @@ contains
     do j = JS,   JE
     do i = IS,   IE
     do k = WS+1, WE-1
-       atmos_diagvar(k,i,j,4) = 2.D0 * atmos_var(k,i,j,4) / ( atmos_var(k,i,j+1,1)+atmos_var(k,i,j,1) )
+       velz(k,i,j) = 2.D0 * atmos_var(k,i,j,4) / ( atmos_var(k,i,j+1,1)+atmos_var(k,i,j,1) )
     enddo
     enddo
     enddo
-    atmos_diagvar(WS,:,:,4) = 0.D0 ! bottom boundary
-    atmos_diagvar(WE,:,:,4) = 0.D0 ! top    boundary
+    velz(WS,:,:) = 0.D0 ! bottom boundary
+    velz(WE,:,:) = 0.D0 ! top    boundary
 
     ! pressure, temperature
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_diagvar(k,i,j,1) = Pstd * ( atmos_var(k,i,j,5) * Rdry / Pstd )**CPovCV
+       pres(k,i,j) = Pstd * ( atmos_var(k,i,j,5) * Rdry / Pstd )**CPovCV
 
-       atmos_diagvar(k,i,j,5) = atmos_diagvar(k,i,j,1) / ( atmos_var(k,i,j,1) * Rdry )
+       temp(k,i,j) = pres(k,i,j) / ( atmos_var(k,i,j,1) * Rdry )
     enddo
     enddo
     enddo
+
+    atmos_diagvar(KS:KE,IS:IE,JS:JE,1) = pres(KS:KE,IS:IE,JS:JE)
+    atmos_diagvar(KS:KE,IS:IE,JS:JE,2) = velx(KS:KE,IS:IE,JS:JE)
+    atmos_diagvar(KS:KE,IS:IE,JS:JE,3) = vely(KS:KE,IS:IE,JS:JE)
+    atmos_diagvar(WS:WE,IS:IE,JS:JE,4) = velz(WS:WE,IS:IE,JS:JE)
+    atmos_diagvar(KS:KE,IS:IE,JS:JE,5) = temp(KS:KE,IS:IE,JS:JE)
 
     return
   end subroutine ATMOS_DMP2PVT
