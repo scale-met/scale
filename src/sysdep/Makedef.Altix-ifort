@@ -1,0 +1,21 @@
+# ------------------------ FOR AICS common cluster fastest ---------------------
+#
+FC = ifort
+FFLAGS= -O0 -fno-alias -assume byterecl -lmpi -convert big_endian -g -traceback -check bounds
+#
+CC = icc
+CFLAGS= -O0
+#
+#
+LD = $(FC)
+LFLAGS =  -lmpi
+#
+#
+FRONT_F90     = ifort
+FRONT_FFLAGS = $(FFLAGS)
+
+FRONT_CC     = icc
+FRONT_CFLAGS = $(CFLAGS)
+
+FRONT_LD     = $(FC)
+FRONT_LFLAGS = $(LFLAGS)

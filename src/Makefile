@@ -17,20 +17,21 @@ MODS =	\
 	mod_process.o	\
 	mod_const.o	\
 	mod_time.o	\
-	mod_grid_cartesian_plane.o	\
 	mod_fileio.o	\
 	mod_fileio_h.o	\
 	fio.o	\
 	fiof.o	\
+	mod_grid_cartesian_plane.o	\
+	mod_comm.o	\
 	mod_atmos.o	\
 	mod_atmos_vars.o	\
-	mod_comm.o	\
 	mod_atmos_sub_refstate.o	\
+	mod_atmos_sub_boundary.o	\
 	mod_atmos_dyn_fent_fct.o	\
-	mod_atmos_boundary.o	\
 	mod_atmos_phy_sf.o	\
 	mod_ocean_vars.o	\
 	mod_atmos_phy_tb_smg.o	\
+	mod_history.o	\
 	mod_ocean.o
 
 all: makedir makebin
@@ -51,20 +52,21 @@ mod_stdio.o	: mod_stdio.f90
 mod_process.o	: mod_process.f90 mod_stdio.o
 mod_const.o	: mod_const.f90 mod_stdio.o mod_process.o
 mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o
-mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o
 mod_fileio_h.o	: mod_fileio_h.f90
 fio.o	: fio.c fio.h fio_def.h
 fiof.o	: fiof.c fiof.h fio.h fio_def.h
-mod_fileio.o	: mod_fileio.f90 mod_fileio_h.o mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_time.o mod_const.o fio.o fiof.o
-mod_comm.o	: mod_comm.f90 mod_process.o mod_grid_cartesian_plane.o mod_stdio.o mod_const.o
+mod_fileio.o	: mod_fileio.f90 mod_fileio_h.o mod_stdio.o mod_process.o mod_time.o mod_const.o fio.o fiof.o
+mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o
+mod_comm.o	: mod_comm.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_time.o mod_const.o
 mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
-mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o
-mod_atmos_boundary.o	: mod_atmos_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o
-mod_atmos_dyn_fent_fct.o	: mod_atmos_dyn_fent_fct.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_boundary.o
+mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_fileio_h.o
+mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o
+mod_atmos_dyn_fent_fct.o	: mod_atmos_dyn_fent_fct.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o
 mod_ocean_vars.o	: mod_ocean_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
 mod_atmos_phy_sf.o	: mod_atmos_phy_sf.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_ocean_vars.o
 mod_atmos_phy_tb_smg.o	: mod_atmos_phy_tb_smg.f90 mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o
-mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_dyn_fent_fct.o mod_atmos_boundary.o mod_time.o mod_grid_cartesian_plane.o mod_fileio_h.o mod_fileio.o mod_atmos_phy_sf.o mod_atmos_phy_tb_smg.o
+mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_time.o mod_grid_cartesian_plane.o mod_fileio.o
+mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_dyn_fent_fct.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_phy_sf.o mod_atmos_phy_tb_smg.o mod_history.o
 mod_ocean.o	: mod_ocean.f90 mod_stdio.o mod_ocean_vars.o mod_grid_cartesian_plane.o
 
 clean:

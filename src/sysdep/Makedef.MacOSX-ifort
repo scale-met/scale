@@ -5,15 +5,15 @@ FFLAGS = -O3 -ftz -m64 \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80 \
          -heap-arrays
-#FFLAGS = -O0 -ftz -m64 \
+#FFLAGS = -O0 -fpe3 -m64 \
 #         -assume byterecl -convert big_endian \
-#         -fp-model precise -pc 80 \
+#         -fp-stack-check -fp-model strict -pc 80 \
 #         -heap-arrays \
 #         -check all -warn all \
 #         -g -traceback
 #
 CC     = /usr/local/mpich213/bin/mpicc
-CFLAGS = -O3
+CFLAGS = -fast -O3 -m64
 #
 #
 LD     = $(FC)
@@ -35,5 +35,5 @@ FRONT_FFLAGS = -O3 -ftz -m64 \
 FRONT_CC     = gcc
 FRONT_CFLAGS = -O3
 
-FRONT_LD     = $(FRONT_FC)
+FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)

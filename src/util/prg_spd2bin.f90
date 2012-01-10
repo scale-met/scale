@@ -24,19 +24,7 @@ program spd2bin
     CONST_UNDEF8
   use mod_time, only : &
     TIME_sec2date
-  use mod_fileio_h, only : &
-    FIO_HSHORT,      &
-    FIO_HMID,        &
-    FIO_HLONG,        &
-    FIO_REAL4,       &
-    FIO_REAL8,       &
-    FIO_BIG_ENDIAN,  &
-    FIO_CARTESIAN,   &
-    FIO_SPLIT_FILE,  &
-    FIO_MPIIO_NOUSE, &
-    FIO_FREAD,       &
-    headerinfo,      &
-    datainfo
+  use mod_fileio_h
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -55,12 +43,11 @@ program spd2bin
   integer                   :: PRC_nmax            = 1 !< total number of processors
   integer                   :: PRC_NUM_X           = 1
   integer                   :: PRC_NUM_Y           = 1
-  integer                   :: GRID_IMAX           = 60    ! # of computational cells: x
-  integer                   :: GRID_JMAX           = 60    ! # of computational cells: y
-  integer                   :: GRID_KMAX           = 320   ! # of computational cells: z
-  real(8)                   :: GRID_DX             = 40.D0 ! center/face length [m]: x
-  real(8)                   :: GRID_DY             = 40.D0 ! center/face length [m]: y
-  real(8)                   :: GRID_DZ             = 40.D0 ! layer/interface length [m]: z
+  real(8)                   :: GRID_DXYZ           = 200.D0 ! center/face length [m]: x,y,z
+  integer                   :: GRID_IMAX           = 80     ! # of computational cells: x
+  integer                   :: GRID_JMAX           = 80     ! # of computational cells: y
+  integer                   :: GRID_KMAX           = 50     ! # of computational cells: z
+  character(LEN=FIO_HLONG)  :: gridfile            = ''
   integer                   :: step_str            = 1
   integer                   :: step_end            = max_nstep
   character(LEN=FIO_HLONG)  :: outfile_dir         = '.'
@@ -74,15 +61,14 @@ program spd2bin
   logical                   :: help = .false.
 
   namelist /OPTION/ infile,          &
-                    PRC_nmax,        &
-                    PRC_NUM_X,       &
-                    PRC_NUM_Y,       &
+                    GRID_DXYZ,       &
                     GRID_IMAX,       &
                     GRID_JMAX,       &
                     GRID_KMAX,       &
-                    GRID_DX,         &
-                    GRID_DY,         &
-                    GRID_DZ,         &
+                    gridfile,        &
+                    PRC_nmax,        &
+                    PRC_NUM_X,       &
+                    PRC_NUM_Y,       &
                     step_str,        &
                     step_end,        &
                     outfile_dir,     &
@@ -94,16 +80,33 @@ program spd2bin
                     selectvar,       &
                     help
   !-----------------------------------------------------------------------------
-  character(LEN=FIO_HLONG) :: infname  = ""
-  character(LEN=FIO_HLONG) :: outfname = ""
-  logical                  :: allvar   = .true.
+  character(LEN=FIO_HLONG) :: infname   = ""
+  character(LEN=FIO_HLONG) :: gridfname = ""
+  character(LEN=FIO_HLONG) :: outfname  = ""
+  logical                  :: allvar    = .true.
 
   integer, allocatable :: PRC_2Drank(:,:)
-  real(8), allocatable :: GRID_CX(:)      ! center coordinate [m]: x
-  real(8), allocatable :: GRID_CY(:)      ! center coordinate [m]: y
-  real(8), allocatable :: GRID_CZ(:)      ! center coordinate [m]: z
-  integer              :: ISG, IEG        ! start/end of inner domain: x, global
-  integer              :: JSG, JEG        ! start/end of inner domain: y, global
+
+  integer,   parameter :: GRID_KHALO = 2   ! # of halo cells: z
+  integer,   parameter :: GRID_IHALO = 2   ! # of halo cells: x
+  integer,   parameter :: GRID_JHALO = 2   ! # of halo cells: y
+  integer              :: GRID_KA          ! # of z whole cells (local, with HALO)
+  integer              :: GRID_IA          ! # of x whole cells (local, with HALO)
+  integer              :: GRID_JA          ! # of y whole cells (local, with HALO)
+  integer              :: GRID_KS, GRID_KE ! start/end of inner domain: z, layer
+  integer              :: GRID_IS, GRID_IE ! start/end of inner domain: x, local
+  integer              :: GRID_JS, GRID_JE ! start/end of inner domain: y, local
+
+  real(8), allocatable :: GRID_CXL(:)      ! center coordinate [m]: x, local
+  real(8), allocatable :: GRID_CYL(:)      ! center coordinate [m]: y, local
+  real(8), allocatable :: GRID_CZL(:)      ! center coordinate [m]: z, local
+
+  integer              :: ISG, IEG         ! start/end of inner domain: x, global
+  integer              :: JSG, JEG         ! start/end of inner domain: y, global
+
+  real(8), allocatable :: GRID_CX(:)       ! center coordinate [m]: x, global
+  real(8), allocatable :: GRID_CY(:)       ! center coordinate [m]: y, global
+  real(8), allocatable :: GRID_CZ(:)       ! center coordinate [m]: z, global
 
   ! data information
   integer, allocatable :: ifid(:)
@@ -139,7 +142,7 @@ program spd2bin
 
   logical :: addvar
   integer :: fid, did, ofid, ierr, irec
-  integer :: v, t, p, k, i, j
+  integer :: v, t, p, i, j, ii, jj
   !=============================================================================
 
   !--- read option and preprocess
@@ -170,26 +173,74 @@ program spd2bin
      PRC_2Drank(p,2) = (p-PRC_2Drank(p,1)) / PRC_NUM_X
   enddo
 
-  allocate( GRID_CX(GRID_IMAX*PRC_NUM_X) )
-  allocate( GRID_CY(GRID_JMAX*PRC_NUM_Y) )
-  allocate( GRID_CZ(GRID_KMAX          ) )
-
-  ! horizontal coordinate: uniform interval
-  do i = 1, GRID_IMAX*PRC_NUM_X
-     GRID_CX(i) = GRID_DX * ( dble(i) - 0.5D0 )
-  enddo
-
-  do j = 1, GRID_JMAX*PRC_NUM_Y
-     GRID_CY(j) = GRID_DY * ( dble(j) - 0.5D0 )
-  enddo
-
-  ! vertical coordinate: uniform interval
-  do k = 1, GRID_KMAX
-     GRID_CZ(k) = GRID_DZ * ( dble(k) - 0.5D0 )
-  enddo
-
   !--- setup
   call fio_syscheck()
+
+  !#########################################################
+  ! Read grid data
+
+  ! array size (local domain)
+  GRID_KA = GRID_KHALO + GRID_KMAX + GRID_KHALO
+  GRID_IA = GRID_IHALO + GRID_IMAX + GRID_IHALO
+  GRID_JA = GRID_JHALO + GRID_JMAX + GRID_JHALO
+
+  ! vertical index
+  GRID_KS = GRID_KHALO + 1
+  GRID_KE = GRID_KHALO + GRID_KMAX
+
+  ! horizontal index (local domain)
+  GRID_IS = GRID_IHALO + 1
+  GRID_IE = GRID_IHALO + GRID_IMAX
+  GRID_JS = GRID_JHALO + 1
+  GRID_JE = GRID_JHALO + GRID_JMAX
+
+  allocate( GRID_CZL(GRID_KA) )
+  allocate( GRID_CXL(GRID_IA) )
+  allocate( GRID_CYL(GRID_JA) )
+
+  allocate( GRID_CZ(GRID_KMAX          ) )
+  allocate( GRID_CX(GRID_IMAX*PRC_NUM_X) )
+  allocate( GRID_CY(GRID_JMAX*PRC_NUM_Y) )
+
+  do p = 0, PRC_nmax-1
+     call fio_mk_fname(gridfname,trim(gridfile),'pe',p,6)
+
+     call fio_put_commoninfo( FIO_MPIIO_NOUSE, &
+                              FIO_SPLIT_FILE,  &
+                              FIO_BIG_ENDIAN,  &
+                              FIO_NONE,        &
+                              0,               &
+                              1,               &
+                              1,               &
+                              p                )
+
+     call fio_register_file(fid,trim(gridfname))
+     call fio_fopen(fid,FIO_FREAD)
+     call fio_read_allinfo(fid)
+
+     ! horizontal index (global domain)
+     ISG = 1         + PRC_2Drank(p,1) * GRID_IMAX
+     IEG = GRID_IMAX + PRC_2Drank(p,1) * GRID_IMAX
+     JSG = 1         + PRC_2Drank(p,2) * GRID_JMAX
+     JEG = GRID_JMAX + PRC_2Drank(p,2) * GRID_JMAX
+
+     call fio_seek_datainfo(did,fid,'CZ',1)
+     call fio_read_data(fid,did,GRID_CZL(:))
+
+     GRID_CZ(1:GRID_KMAX) = GRID_CZL(GRID_KS:GRID_KE)
+
+     call fio_seek_datainfo(did,fid,'CX',1)
+     call fio_read_data(fid,did,GRID_CXL(:))
+
+     GRID_CX(ISG:IEG) = GRID_CXL(GRID_IS:GRID_IE)
+
+     call fio_seek_datainfo(did,fid,'CY',1)
+     call fio_read_data(fid,did,GRID_CYL(:))
+
+     GRID_CY(JSG:JEG) = GRID_CYL(GRID_JS:GRID_JE)
+
+     call fio_fclose(fid)
+  enddo
 
   !#########################################################
   ! Read data information
@@ -209,14 +260,14 @@ program spd2bin
   do p = 0, PRC_nmax-1
      call fio_mk_fname(infname,trim(infile(1)),'pe',p,6)
 
-     call fio_put_commoninfo( FIO_MPIIO_NOUSE, &
-                              FIO_SPLIT_FILE,  &
-                              FIO_BIG_ENDIAN,  &
-                              FIO_CARTESIAN,   &
-                              int(GRID_DX),    &
-                              GRID_IMAX,       &
-                              1,               &
-                              p                )
+     call fio_put_commoninfo( FIO_MPIIO_NOUSE,     &
+                              FIO_SPLIT_FILE,      &
+                              FIO_BIG_ENDIAN,      &
+                              FIO_CARTESIAN,       &
+                              int(GRID_DXYZ),      &
+                              GRID_IMAX*GRID_JMAX, &
+                              1,                   &
+                              p                    )
 
      call fio_register_file(ifid(p),trim(infname))
      call fio_fopen(ifid(p),FIO_FREAD)
@@ -380,22 +431,23 @@ program spd2bin
 
         do p = 0, PRC_nmax-1
 
-           allocate( data4allrgn(GRID_IMAX*GRID_JMAX*GRID_KMAX) )
-           allocate( data8allrgn(GRID_IMAX*GRID_JMAX*GRID_KMAX) )
-           allocate( spddata4   (GRID_IMAX,GRID_JMAX,GRID_KMAX) )
+           allocate( data4allrgn(GRID_KMAX*GRID_IMAX*GRID_JMAX) )
+           allocate( data8allrgn(GRID_KMAX*GRID_IMAX*GRID_JMAX) )
+           allocate( spddata4   (GRID_KMAX,GRID_IMAX,GRID_JMAX) )
            data4allrgn(:)  = CONST_UNDEF4
            data8allrgn(:)  = CONST_UNDEF8
            spddata4(:,:,:) = CONST_UNDEF4
 
            !--- seek data ID and get information
            call fio_seek_datainfo(did,ifid(p),var_name(v),step)
-           call fio_get_datainfo(ifid(p),did,dinfo)
 
            !--- verify
            if ( did == -1 ) then
               write(*,*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
               stop
            endif
+
+           call fio_get_datainfo(ifid(p),did,dinfo)
 
            !--- read from pe000xx file
            if ( dinfo%datatype == FIO_REAL4 ) then
@@ -412,12 +464,16 @@ program spd2bin
            spddata4(:,:,:) = reshape( data4allrgn(:), shape(spddata4) )
 
            ! horizontal index (global domain)
-           ISG = 1         + PRC_2Drank(p,1) * GRID_IMAX
-           IEG = GRID_IMAX + PRC_2Drank(p,1) * GRID_IMAX
-           JSG = 1         + PRC_2Drank(p,2) * GRID_JMAX
-           JEG = GRID_JMAX + PRC_2Drank(p,2) * GRID_JMAX
+           do j = 1, GRID_JMAX
+              jj = j + PRC_2Drank(p,2) * GRID_JMAX
 
-           bindata(ISG:IEG,JSG:JEG,1:GRID_KMAX) = spddata4(1:GRID_IMAX,1:GRID_JMAX,1:GRID_KMAX)
+              do i = 1, GRID_IMAX
+                 ii = i + PRC_2Drank(p,1) * GRID_IMAX
+
+                 bindata(ii,jj,:) = spddata4(:,i,j)
+
+              enddo
+           enddo
 
            deallocate( data4allrgn )
            deallocate( data8allrgn )
@@ -751,20 +807,20 @@ contains
 
     if (ierr == 0) then
 
-       dx = lon2(2)-lon2(1)
-
-       lonp1(1) = lon2(1) - dx/2
+       lonp1(1) = lon2(1) - 0.5D0 * ( lon2(2)-lon2(1) )
        if ( abs(lonp1(1)) < 1.D-10 ) lonp1(1) = 0.D0
 
-       do i = 2, imax+1
-          lonp1(i) = lonp1(i-1) + dx
+       do i = 2, imax
+          lonp1(i) = 0.5 * ( lon2(i)+lon2(i-1) )
        enddo
+
+       lonp1(imax+1) = lon2(imax) + 0.5D0 * ( lon2(imax)-lon2(imax-1) )
 
        write(axhead( 3),'(A16)'  ) trim(gt_axisx)
        write(axhead(29),'(A16)'  ) trim(gt_axisx)
        write(axhead(31),'(I16)'  ) imax+1
-       write(axhead(40),'(E16.7)') lonp1(1)      - 0.5D0*dx
-       write(axhead(41),'(E16.7)') lonp1(imax+1) + 0.5D0*dx
+       write(axhead(40),'(E16.7)') lonp1(1)
+       write(axhead(41),'(E16.7)') lonp1(imax+1)
        write(axhead(42),'(E16.7)')  40.E0
        write(axhead(43),'(E16.7)') 800.E0
        write(axhead(64),'(I16)'  ) imax+1
@@ -789,8 +845,8 @@ contains
        write(axhead( 3),'(A16)'  ) trim(gt_axisy)
        write(axhead(29),'(A16)'  ) trim(gt_axisy)
        write(axhead(31),'(I16)'  ) jmax
-       write(axhead(40),'(E16.7)') lat2(1)    - 0.5D0*dx
-       write(axhead(41),'(E16.7)') lat2(jmax) + 0.5D0*dx
+       write(axhead(40),'(E16.7)') lat2(1)    - 0.5D0*(lat2(2)   -lat2(1)     )
+       write(axhead(41),'(E16.7)') lat2(jmax) + 0.5D0*(lat2(jmax)-lat2(jmax-1))
        write(axhead(42),'(E16.7)')  40.E0
        write(axhead(43),'(E16.7)') 800.E0
        write(axhead(64),'(I16)'  ) jmax

@@ -1,4 +1,4 @@
-!-------------------------------------------------------------------------------
+   !-------------------------------------------------------------------------------
 !> module Atmosphere / Dynamics FENT + FCT
 !!
 !! @par Description
@@ -8,11 +8,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new] Imported from SCALE-LES ver.2
-!! @li      2011-11-11 (H.Yashiro)  [mod] Merged with Y.Miyamoto's
-!! @li      2011-12-11 (H.Yashiro)  [mod] Use reference state
-!! @li      2011-12-26 (Y.Miyamoto) [mod] Add numerical diffusion into mass flux calc
-!! @li      2011-01-04 (H.Yashiro)  [mod] Nonblocking communication (Y.Ohno)
+!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [mod] Merged with Y.Miyamoto's
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -87,6 +84,8 @@ contains
        IO_L
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only: &
+       CONST_UNDEF8
     use mod_grid, only : &
        IA  => GRID_IA, &
        JA  => GRID_JA, &
@@ -128,120 +127,79 @@ contains
 
     DIFF = - ATMOS_DYN_numerical_diff * (-1.D0)**dble( DF/2+1 )
 
-    allocate( CNDx1(IA) )
-    allocate( CNDx2(IA) )
-    allocate( CNDx3(IA) )
-    allocate( CNMx1(IA) )
-    allocate( CNMx2(IA) )
-    allocate( CNMx3(IA) )
+    allocate( CNDx1(IA) ); CNDx1(:) = CONST_UNDEF8
+    allocate( CNDx2(IA) ); CNDx2(:) = CONST_UNDEF8
+    allocate( CNDx3(IA) ); CNDx3(:) = CONST_UNDEF8
+    allocate( CNMx1(IA) ); CNMx1(:) = CONST_UNDEF8
+    allocate( CNMx2(IA) ); CNMx2(:) = CONST_UNDEF8
+    allocate( CNMx3(IA) ); CNMx3(:) = CONST_UNDEF8
 
-    allocate( CNDy1(JA) )
-    allocate( CNDy2(JA) )
-    allocate( CNDy3(JA) )
-    allocate( CNMy1(JA) )
-    allocate( CNMy2(JA) )
-    allocate( CNMy3(JA) )
+    allocate( CNDy1(JA) ); CNDy1(:) = CONST_UNDEF8
+    allocate( CNDy2(JA) ); CNDy2(:) = CONST_UNDEF8
+    allocate( CNDy3(JA) ); CNDy3(:) = CONST_UNDEF8
+    allocate( CNMy1(JA) ); CNMy1(:) = CONST_UNDEF8
+    allocate( CNMy2(JA) ); CNMy2(:) = CONST_UNDEF8
+    allocate( CNMy3(JA) ); CNMy3(:) = CONST_UNDEF8
 
-    allocate( CNDz1(KA) )
-    allocate( CNDz2(KA) )
-    allocate( CNDz3(KA) )
-    allocate( CNMz1(KA) )
-    allocate( CNMz2(KA) )
-    allocate( CNMz3(KA) )
-
-    ! z djrectjon
-    do k = KS-1, KE+1
-       CNDz1(k) = 1.D0 / ( (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 )
-       CNDz2(k) = 1.D0 / ( (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k-1) * (DZg(k  )+DZg(k-1)) * 0.5D0 )
-    enddo
-    CNDz1(1)  = CNDz1(KS)
-    CNDz2(1)  = CNDz2(KS)
-    CNDz1(KA) = CNDz1(KE)
-    CNDz2(KA) = CNDz2(KE)
-
-    do k = KS, KE+2
-       CNDz3(k) = 1.D0 / ( (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k-1) * (DZg(k  )+DZg(k-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k-1) * (DZg(k-1)+DZg(k-2)) * 0.5D0 )
-    enddo
-    CNDz3(1)    = CNDz3(KS)
-    CNDz3(KS-1) = CNDz3(KS)
-
-    do k = KS-2, KE+1
-       CNMz1(k) = 1.D0 / ( DZg(k+1) * (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) )
-    enddo
-    CNMz1(KA) = CNMz1(KE)
-
-    do k = KS-1, KE+1
-       CNMz2(k) = 1.D0 / ( DZg(k+1) * (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) ) &   
-                + 1.D0 / ( DZg(k  ) * (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) ) &  
-                + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k  ) ) 
-       CNMz3(k) = 1.D0 / ( DZg(k  ) * (DZg(k+1)+DZg(k  )) * 0.5D0 * DZg(k  ) ) &
-                + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k  ) ) &
-                + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1)) * 0.5D0 * DZg(k-1) )
-    enddo
-    CNMz2(1)  = CNMz2(KS)
-    CNMz3(1)  = CNMz3(KS)
-    CNMz2(KA) = CNMz2(KE)
-    CNMz3(KA) = CNMz3(KE)
+    allocate( CNDz1(KA) ); CNDz1(:) = CONST_UNDEF8
+    allocate( CNDz2(KA) ); CNDz2(:) = CONST_UNDEF8
+    allocate( CNDz3(KA) ); CNDz3(:) = CONST_UNDEF8
+    allocate( CNMz1(KA) ); CNMz1(:) = CONST_UNDEF8
+    allocate( CNMz2(KA) ); CNMz2(:) = CONST_UNDEF8
+    allocate( CNMz3(KA) ); CNMz3(:) = CONST_UNDEF8
 
     ! x direction
     do i = IS-1, IE+1
-       CNDx1(i) = 1.D0 / ( (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 )
-       CNDx2(i) = 1.D0 / ( (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i-1) * (DXg(i  )+DXg(i-1)) * 0.5D0 )
+       CNDx1(i) = 1.D0 / ( 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) )
+       CNDx2(i) = 1.D0 / ( 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) ) &
+                + 1.D0 / ( 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) ) &
+                + 1.D0 / ( 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i-1) * 0.5D0 * (DXg(i  )+DXg(i-1)) )
     enddo
-    CNDx1(1)  = CNDx1(IS)
-    CNDx2(1)  = CNDx2(IS)
-    CNDx1(IA) = CNDx1(IE)
-    CNDx2(IA) = CNDx2(IE)
+    CNDx1(1)  = CNDx1(IS-1)
+    CNDx1(IA) = CNDx1(IE+1)
+    CNDx2(1)  = CNDx2(IS-1)
+    CNDx2(IA) = CNDx2(IE+1)
 
     do i = IS, IE+2
-       CNDx3(i) = 1.D0 / ( (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i-1) * (DXg(i  )+DXg(i-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i-1) * (DXg(i-1)+DXg(i-2)) * 0.5D0 )
+       CNDx3 (i) = 1.D0 / ( 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) ) &
+                 + 1.D0 / ( 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i-1) * 0.5D0 * (DXg(i  )+DXg(i-1)) ) &
+                 + 1.D0 / ( 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i-1) * 0.5D0 * (DXg(i-1)+DXg(i-2)) )
     enddo
-    CNDx3(1)    = CNDx3(IS)
-    CNDx3(IS-1) = CNDx3(IS)
+    CNDx3(1:IS-1) = CNDx3(IS)
 
-    do i = IS-2, IE+1
-       CNMx1(i) = 1.D0 / ( DXg(i+1) * (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) )
+    do i = IS, IE
+       CNMx1 (i) = 1.D0 / ( DXg(i+1) * 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) )
+       CNMx2 (i) = 1.D0 / ( DXg(i+1) * 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) ) & 
+                 + 1.D0 / ( DXg(i  ) * 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) ) & 
+                 + 1.D0 / ( DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i  ) )
+       CNMx3 (i) = 1.D0 / ( DXg(i  ) * 0.5D0 * (DXg(i+1)+DXg(i  )) * DXg(i  ) ) & 
+                 + 1.D0 / ( DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i  ) ) & 
+                 + 1.D0 / ( DXg(i  ) * 0.5D0 * (DXg(i  )+DXg(i-1)) * DXg(i-1) )
     enddo
-    CNMx1(IA) = CNMx1(IE)
-
-    do i = IS-1, IE+1
-       CNMx2(i) = 1.D0 / ( DXg(i+1) * (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) ) & 
-                + 1.D0 / ( DXg(i  ) * (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) ) & 
-                + 1.D0 / ( DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i  ) )
-       CNMx3(i) = 1.D0 / ( DXg(i  ) * (DXg(i+1)+DXg(i  )) * 0.5D0 * DXg(i  ) ) & 
-                + 1.D0 / ( DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i  ) ) & 
-                + 1.D0 / ( DXg(i  ) * (DXg(i  )+DXg(i-1)) * 0.5D0 * DXg(i-1) )
-    enddo
-    CNMx2(1)  = CNMx2(IS)
-    CNMx3(1)  = CNMx3(IS)
-    CNMx2(IA) = CNMx2(IE)
-    CNMx3(IA) = CNMx3(IE)
+    CNMx1(1:IS-1)  = CNMx1(IS)
+    CNMx2(1:IS-1)  = CNMx2(IS)
+    CNMx3(1:IS-1)  = CNMx3(IS)
+    CNMx1(IE+1:IA) = CNMx1(IE)
+    CNMx2(IE+1:IA) = CNMx2(IE)
+    CNMx3(IE+1:IA) = CNMx3(IE)
 
     ! y direction
     do j = JS, JE
-       CNDy1(j) = 1.D0 / ( (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 )
-       CNDy2(j) = 1.D0 / ( (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j-1) * (DYg(j  )+DYg(j-1)) * 0.5D0 )
-       CNDy3(j) = 1.D0 / ( (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j-1) * (DYg(j  )+DYg(j-1)) * 0.5D0 ) &
-                + 1.D0 / ( (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j-1) * (DYg(j-1)+DYg(j-2)) * 0.5D0 )
-       CNMy1(j) = 1.D0 / ( DYg(j+1) * (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) )
-       CNMy2(j) = 1.D0 / ( DYg(j+1) * (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) ) &   
-                + 1.D0 / ( DYg(j  ) * (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) ) &  
-                + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j  ) ) 
-       CNMy3(j) = 1.D0 / ( DYg(j  ) * (DYg(j+1)+DYg(j  )) * 0.5D0 * DYg(j  ) ) &
-                + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j  ) ) &
-                + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1)) * 0.5D0 * DYg(j-1) )
-    enddo
+       CNDy1 (j) = 1.D0 / ( (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) * (DYg(j  )+DYg(j-1))/2 )
+       CNDy2 (j) = 1.D0 / ( (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) * (DYg(j  )+DYg(j-1))/2 ) &
+                 + 1.D0 / ( (DYg(j  )+DYg(j-1))/2 * DYg(j  ) * (DYg(j  )+DYg(j-1))/2 ) &
+                 + 1.D0 / ( (DYg(j  )+DYg(j-1))/2 * DYg(j-1) * (DYg(j  )+DYg(j-1))/2 )
+       CNDy3 (j) = 1.D0 / ( (DYg(j  )+DYg(j-1))/2 * DYg(j  ) * (DYg(j  )+DYg(j-1))/2 ) &
+                 + 1.D0 / ( (DYg(j  )+DYg(j-1))/2 * DYg(j-1) * (DYg(j  )+DYg(j-1))/2 ) &
+                 + 1.D0 / ( (DYg(j  )+DYg(j-1))/2 * DYg(j-1) * (DYg(j-1)+DYg(j-2))/2 )
+       CNMy1 (j) = 1.D0 / ( DYg(j+1) * (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) )
+       CNMy2 (j) = 1.D0 / ( DYg(j+1) * (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) ) &   
+                 + 1.D0 / ( DYg(j  ) * (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) ) &  
+                 + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1))/2 * DYg(j  ) ) 
+       CNMy3 (j) = 1.D0 / ( DYg(j  ) * (DYg(j+1)+DYg(j  ))/2 * DYg(j  ) ) &
+                 + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1))/2 * DYg(j  ) ) &
+                 + 1.D0 / ( DYg(j  ) * (DYg(j  )+DYg(j-1))/2 * DYg(j-1) )
+    end do
     do j = 1, JS-1
        CNDy1(j) = CNDy1(JS)
        CNDy2(j) = CNDy2(JS)
@@ -249,7 +207,7 @@ contains
        CNMy1(j) = CNMy1(JS)
        CNMy2(j) = CNMy2(JS)
        CNMy3(j) = CNMy3(JS)
-    enddo
+    end do
     do j = JE+1, JA
        CNDy1(j) = CNDy1(JE)
        CNDy2(j) = CNDy2(JE)
@@ -257,7 +215,41 @@ contains
        CNMy1(j) = CNMy1(JE)
        CNMy2(j) = CNMy2(JE)
        CNMy3(j) = CNMy3(JE)
-    enddo
+    end do
+
+    ! z djrectjon
+    do k = KS, KE
+       CNDz1 (k) = 1.D0 / ( (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) * (DZg(k  )+DZg(k-1))/2 )
+       CNDz2 (k) = 1.D0 / ( (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) * (DZg(k  )+DZg(k-1))/2 ) &
+                 + 1.D0 / ( (DZg(k  )+DZg(k-1))/2 * DZg(k  ) * (DZg(k  )+DZg(k-1))/2 ) &
+                 + 1.D0 / ( (DZg(k  )+DZg(k-1))/2 * DZg(k-1) * (DZg(k  )+DZg(k-1))/2 )
+       CNDz3 (k) = 1.D0 / ( (DZg(k  )+DZg(k-1))/2 * DZg(k  ) * (DZg(k  )+DZg(k-1))/2 ) &
+                 + 1.D0 / ( (DZg(k  )+DZg(k-1))/2 * DZg(k-1) * (DZg(k  )+DZg(k-1))/2 ) &
+                 + 1.D0 / ( (DZg(k  )+DZg(k-1))/2 * DZg(k-1) * (DZg(k-1)+DZg(k-2))/2 )
+       CNMz1 (k) = 1.D0 / ( DZg(k+1) * (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) )
+       CNMz2 (k) = 1.D0 / ( DZg(k+1) * (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) ) &   
+                 + 1.D0 / ( DZg(k  ) * (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) ) &  
+                 + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1))/2 * DZg(k  ) ) 
+       CNMz3 (k) = 1.D0 / ( DZg(k  ) * (DZg(k+1)+DZg(k  ))/2 * DZg(k  ) ) &
+                 + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1))/2 * DZg(k  ) ) &
+                 + 1.D0 / ( DZg(k  ) * (DZg(k  )+DZg(k-1))/2 * DZg(k-1) )
+    end do
+    do k = 1, KS-1
+       CNDz1(k) = CNDz1(KS)
+       CNDz2(k) = CNDz2(KS)
+       CNDz3(k) = CNDz3(KS)
+       CNMz1(k) = CNMz1(KS)
+       CNMz2(k) = CNMz2(KS)
+       CNMz3(k) = CNMz3(KS)
+    end do
+    do k = KE+1, KA
+       CNDz1(k) = CNDz1(KE)
+       CNDz2(k) = CNDz2(KE)
+       CNDz3(k) = CNDz3(KE)
+       CNMz1(k) = CNMz1(KE)
+       CNMz2(k) = CNMz2(KE)
+       CNMz3(k) = CNMz3(KE)
+    end do
 
   end subroutine ATMOS_DYN_setup
 
@@ -269,7 +261,8 @@ contains
        IO_FID_LOG,  &
        IO_L
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
+       CONST_UNDEF8, &
+       GRAV   => CONST_GRAV,  &
        Rdry   => CONST_Rdry,   &
        CPovCV => CONST_CPovCV, &
        Pstd   => CONST_Pstd
@@ -281,20 +274,20 @@ contains
        COMM_wait, &
        COMM_total
     use mod_grid, only : &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE,   &
-       DXg  => GRID_CDX,  &
-       DYg  => GRID_CDY,  &
-       DZg  => GRID_CDZ,  &
+       IA  => GRID_IA, &
+       JA  => GRID_JA, &
+       KA  => GRID_KA, &
+       IS  => GRID_IS, &
+       IE  => GRID_IE, &
+       JS  => GRID_JS, &
+       JE  => GRID_JE, &
+       KS  => GRID_KS, &
+       KE  => GRID_KE, &
+       WS  => GRID_WS, &
+       WE  => GRID_WE, &
+       DXg => GRID_CDX, &
+       DYg => GRID_CDY, &
+       DZg => GRID_CDZ, &
        RDXC => GRID_RCDX, &
        RDYC => GRID_RCDY, &
        RDZC => GRID_RCDZ, &
@@ -306,23 +299,23 @@ contains
        A_NAME,      &
        VA  => A_VA, &
        QA  => A_QA, &
-       I_DENS,      &
-       I_MOMX,      &
-       I_MOMY,      &
-       I_MOMZ,      &
+       I_DENS, &
+       I_MOMX, &
+       I_MOMY, &
+       I_MOMZ, &
        I_RHOT
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
        REF_pott => ATMOS_REFSTATE_pott
     use mod_atmos_boundary, only: &
-       refvar => atmos_refvar, &
        DAMP_alphau, &
        DAMP_alphav, &
        DAMP_alphaw, &
        DAMP_alphat, &
-       I_REF_VELX,  &
-       I_REF_VELY,  &
-       I_REF_VELZ,  &
+       refvar => atmos_refvar,    &
+       I_REF_VELX,    &
+       I_REF_VELY,    &
+       I_REF_VELZ,    &
        I_REF_POTT
     implicit none
 
@@ -348,62 +341,63 @@ contains
     real(8) :: pjpls, pjmns, pjmax, pjmin, var_l
 
     real(8) :: dtrk, rdtrk
-    integer :: i, j, k, iq, iv, rko, step
+    integer :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
 
+    var_s(:,:,:,:) = var(:,:,:,:)
 
-    do iv = 1, VA
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       var_s(k,i,j,iv) = var(k,i,j,iv)
-    enddo 
-    enddo
-    enddo
-    enddo
+    dens_diff(:,:,:)    = CONST_UNDEF8
+    pott_diff(:,:,:)    = CONST_UNDEF8
+    ray_damp(:,:,:,:)   = CONST_UNDEF8
+    num_diff(:,:,:,:,:) = CONST_UNDEF8
+    mflx_hi(:,:,:,:)    = CONST_UNDEF8
+    qflx_hi(:,:,:,:)    = CONST_UNDEF8
 
     !--- prepare rayleigh damping coefficient
     do j = JS, JE
     do i = IS, IE
-       do k = WS+1, WE-1
-          ray_damp(k,i,j,I_MOMZ) = - DAMP_alphaw(k,i,j) &
-                                 * ( var(k,i,j,I_MOMZ)  &
-                                 - refvar(k,i,j,I_REF_VELZ) * 0.5D0 * ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) ) )
-       enddo
-       do k = KS, KE
-          ray_damp(k,i,j,I_MOMX) = - DAMP_alphau(k,i,j) &
-                                 * ( var(k,i,j,I_MOMX)  &
-                                 - refvar(k,i,j,I_REF_VELX) * 0.5D0 * ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) ) )
-          ray_damp(k,i,j,I_MOMY) = - DAMP_alphav(k,i,j) &
-                                 * ( var(k,i,j,I_MOMY)  &
-                                 - refvar(k,i,j,I_REF_VELY) * 0.5D0 * ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) ) )
-          ray_damp(k,i,j,I_RHOT) = - DAMP_alphat(k,i,j) &
-                                 * ( var(k,i,j,I_RHOT)  &
-                                 - 300.D0 * var(k,i,j,I_DENS) )
-       enddo 
+    do k = KS, KE
+       ray_damp(k,i,j,I_MOMX) = - DAMP_alphau(k,i,j) &
+                              * ( var(k,i,j,I_MOMX)  &
+                              - refvar(k,i,j,I_REF_VELX) * 0.5D0 * ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) ) )
+       ray_damp(k,i,j,I_MOMY) = - DAMP_alphav(k,i,j) &
+                              * ( var(k,i,j,I_MOMY)  &
+                              - refvar(k,i,j,I_REF_VELY) * 0.5D0 * ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) ) )
+       ray_damp(k,i,j,I_RHOT) = - DAMP_alphat(k,i,j) &
+                              * ( var(k,i,j,I_RHOT)  &
+                              - 300.D0 * var(k,i,j,I_DENS) )
+    enddo 
     enddo
     enddo
 
+    do j = JS,   JE
+    do i = IS,   IE
+    do k = WS+1, WE-1
+       ray_damp(k,i,j,I_MOMZ) = - DAMP_alphaw(k,i,j) &
+                              * ( var(k,i,j,I_MOMZ)  &
+                              - refvar(k,i,j,I_REF_VELZ) * 0.5D0 * ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) ) )
+    enddo
+    enddo
+    enddo
+    ray_damp(:,:,:,:)   = 0.D0
+
     !--- prepare numerical diffusion coefficient
     ! note: the value must divide by dtrk.
-    do j  = 1, JA
-    do i  = 1, IA
-       do k = KS, KE
-          dens_diff(k,i,j) = var(k,i,j,I_DENS) - REF_dens(k)
-          pott_diff(k,i,j) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) - 300.D0
-       enddo
-       do k = 1, KS-1 
-          dens_diff(k,i,j) = dens_diff(KS,i,j)
-          pott_diff(k,i,j) = pott_diff(KS,i,j)
-       enddo
-       do k = KE+1, KA
-          dens_diff(k,i,j) = dens_diff(KE,i,j)
-          pott_diff(k,i,j) = pott_diff(KE,i,j)
-       enddo
+
+    do k = KS, KE
+       dens_diff(k,:,:) = var(k,:,:,I_DENS) - REF_dens(k)
+       pott_diff(k,:,:) = var(k,:,:,I_RHOT) / var(k,:,:,I_DENS) - 300
     enddo
-    enddo
+    do k = 1, KS-1 
+       dens_diff(k,:,:) = dens_diff(KS,:,:)
+       pott_diff(k,:,:) = pott_diff(KS,:,:)
+    end do
+    do k = KE+1, KA
+       dens_diff(k,:,:) = dens_diff(KE,:,:)
+       pott_diff(k,:,:) = pott_diff(KE,:,:)
+    end do
 
     do j = JS,   JE
     do i = IS,   IE
@@ -456,6 +450,11 @@ contains
     enddo
     enddo
     enddo
+!if( IO_L ) write(IO_FID_LOG,*) "dens_diff", dens_diff(:,10,10)
+!if( IO_L ) write(IO_FID_LOG,*) "DZg", DZg(:)
+!if( IO_L ) write(IO_FID_LOG,*) "num_diff Z", num_diff(:,10,10,I_DENS,ZDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "num_diff X", num_diff(:,10,10,I_DENS,XDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "num_diff Y", num_diff(:,10,10,I_DENS,YDIR)
 
     ! z-momentum
     do j = JS,   JE
@@ -563,6 +562,7 @@ contains
     enddo
 
 
+
     !##### Start RK #####
     do rko = 1, RK
        dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
@@ -576,43 +576,44 @@ contains
        endif
 
        ! momentum -> velocity
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA-1
+       do j = 1, JA   !JS, JE
+       do i = 1, IA   !IS, IE
+       do k = 1, KA-1 !WS-1, WE+1
           diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) / ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) )
        enddo
        enddo
        enddo
-       do j = 1, JA
-       do i = 1, IA
-          diagvar( 1:WS,i,j,I_VELZ) = 0.D0 ! bottom boundary
-          diagvar(WE:KA,i,j,I_VELZ) = 0.D0 ! top    boundary
-       enddo
-       enddo
+       diagvar( 1:WS,:,:,I_VELZ) = 0.D0 ! bottom boundary
+       diagvar(WE:KA,:,:,I_VELZ) = 0.D0 ! top    boundary
 
-       do j = 1, JA
-       do i = 1, IA-1
-       do k = 1, KA
+       do j = 1, JA   !JS, JE
+       do i = 1, IA-1 !IS, IE
+       do k = 1, KA   !KS, KE
           diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) / ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) )
        enddo
        enddo
        enddo
-       do j = 1, JA
-       do k = 1, KA
-          diagvar(k,IA,j,I_VELX) = diagvar(k,IA-1,j,I_VELX)
-       enddo
-       enddo
+       diagvar(:,IA,:,I_VELX) = diagvar(:,IA-1,:,I_VELX)
 
-       do j = 1, JA-1
-       do i = 1, IA
-       do k = 1, KA
+       do j = 1, JA-1 !JS, JE
+       do i = 1, IA   !IS, IE
+       do k = 1, KA   !KS, KE 
           diagvar(k,i,j,I_VELY) = 2.D0 * var(k,i,j,I_MOMY) / ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) )
        enddo 
        enddo
        enddo
-       do i = 1, IA
-       do k = 1, KA
-          diagvar(k,i,JA,I_VELY) = diagvar(k,i,JA-1,I_VELY)
+       diagvar(:,:,JA,I_VELY) = diagvar(:,:,JA-1,I_VELY)
+
+!if( IO_L ) write(IO_FID_LOG,*) "VELZ", diagvar(10,:,10,I_VELZ)
+!if( IO_L ) write(IO_FID_LOG,*) "VELX", diagvar(10,:,10,I_VELX)
+!if( IO_L ) write(IO_FID_LOG,*) "VELY", diagvar(10,:,10,I_VELY)
+
+       ! pressure
+       do j = 1, JA !JS, JE
+       do i = 1, IA !IS, IE
+       do k = 1, KA !WS-1, WE+1
+          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+       enddo
        enddo
        enddo
 
@@ -663,12 +664,6 @@ contains
        enddo
        enddo
 
-       if ( rko == RK .AND. QA > 0 ) then
-          call COMM_vars( mflx_hi(:,:,:,ZDIR),VA+ZDIR )
-          call COMM_vars( mflx_hi(:,:,:,XDIR),VA+XDIR )
-          call COMM_vars( mflx_hi(:,:,:,YDIR),VA+YDIR )
-       endif
-
        !##### momentum equation (z) #####
        ! at (x, y, layer)
        do j = JS,   JE
@@ -681,12 +676,8 @@ contains
        enddo
        enddo
        enddo
-       do j = JS,   JE
-       do i = IS,   IE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.D0 ! bottom cell center
-          qflx_hi(KE+1,i,j,ZDIR) = 0.D0 ! top    cell center
-       enddo
-       enddo
+       qflx_hi  (KS-1,:,:,ZDIR) = 0.D0 ! bottom cell center
+       qflx_hi  (KE+1,:,:,ZDIR) = 0.D0 ! top    cell center
        ! at (u, y, interface)
        do j = JS,   JE
        do i = IS-1, IE
@@ -706,19 +697,6 @@ contains
                               * ( FACT_N * ( var(k,i,j+1,I_MOMZ)+var(k,i,j  ,I_MOMZ) )     &
                                 + FACT_F * ( var(k,i,j+2,I_MOMZ)+var(k,i,j-1,I_MOMZ) ) )   &
                               + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-
-       if ( rko > 1 ) then
-          call COMM_wait( I_RHOT )
-       endif
-
-       ! pressure
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
        enddo
        enddo
        enddo
@@ -750,6 +728,16 @@ contains
        enddo
        enddo
 
+!if( IO_L ) write(IO_FID_LOG,*) "MOMZ_S", var_s(:,10,10,I_MOMZ)
+!if( IO_L ) write(IO_FID_LOG,*) "DENS_S", var_s(10,:,10,I_DENS)
+!if( IO_L ) write(IO_FID_LOG,*) "RDZC", RDZC(:)
+!if( IO_L ) write(IO_FID_LOG,*) "RDXC", RDXC(:)
+!if( IO_L ) write(IO_FID_LOG,*) "RDYC", RDYC(:)
+!if( IO_L ) write(IO_FID_LOG,*) "mflx_hi Z", mflx_hi(10,:,10,ZDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "mflx_hi X", mflx_hi(10,:,10,XDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "mflx_hi Y", mflx_hi(10,:,10,YDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "MOMZ", var(:,10,10,I_MOMZ)
+!if( IO_L ) write(IO_FID_LOG,*) "DENS", var(10,:,10,I_DENS)
        call COMM_vars( var(:,:,:,I_DENS),I_DENS )
        call COMM_vars( var(:,:,:,I_MOMZ),I_MOMZ )
 
@@ -815,6 +803,12 @@ contains
        enddo
        enddo
 
+!if( IO_L ) write(IO_FID_LOG,*) "qflx_hi Z", qflx_hi(10,:,10,ZDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "qflx_hi X", qflx_hi(10,:,10,XDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "qflx_hi Y", qflx_hi(10,:,10,YDIR)
+!if( IO_L ) write(IO_FID_LOG,*) "PRES", diagvar(10,:,10,I_PRES)
+!if( IO_L ) write(IO_FID_LOG,*) "DENS", var(10,:,10,I_DENS)
+!if( IO_L ) write(IO_FID_LOG,*) "MOMX", var(10,:,10,I_MOMX)
        call COMM_vars( var(:,:,:,I_MOMX),I_MOMX )
 
        !##### momentum equation (y) #####
@@ -879,9 +873,14 @@ contains
        enddo
        enddo
 
+!if( IO_L ) write(IO_FID_LOG,*) "MOMY", var(:,10,10,I_MOMY)
        call COMM_vars( var(:,:,:,I_MOMY),I_MOMY )
 
        !##### Thermodynamic Equation #####
+
+       if ( rko > 1 ) then
+          call COMM_wait( I_RHOT )
+       endif
 
        do j = 1, JA !JS, JE
        do i = 1, IA !IS, IE
@@ -950,6 +949,7 @@ contains
        enddo
        enddo
 
+!if( IO_L ) write(IO_FID_LOG,*) "RHOT", var(:,10,10,I_RHOT)
        call COMM_vars( var(:,:,:,I_RHOT),I_RHOT )
 
     enddo ! RK loop
@@ -957,8 +957,10 @@ contains
 
 
     !##### advection of scalar quantity #####
-
-    if ( QA > 0 ) then
+    qflx_lo  (:,:,:,:) = CONST_UNDEF8
+    qflx_hi  (:,:,:,:) = CONST_UNDEF8
+    qflx_anti(:,:,:,:) = CONST_UNDEF8
+    ddiv     (:,:,:)   = CONST_UNDEF8
 
     ! calc low-order mass flux and high-low difference (at last step of RK)
     do j = JS,   JE
@@ -1006,18 +1008,13 @@ contains
     enddo
     enddo
 
-    endif
-
     call COMM_wait( I_DENS )
     call COMM_wait( I_MOMZ )
     call COMM_wait( I_MOMX )
     call COMM_wait( I_MOMY )
+    ! I_RHOT is communicated by below (COMM_wait( var(:,:,:,:),iq-1 ))
 
     if ( QA > 0 ) then
-
-    call COMM_wait( VA+ZDIR )
-    call COMM_wait( VA+XDIR )
-    call COMM_wait( VA+YDIR )
 
     do iq = 6, 5+QA
 
@@ -1193,10 +1190,10 @@ contains
 
     endif
 
-    enddo ! dynamical steps
-
     ! check total mass
-!    call COMM_total( var(:,:,:,1:5), A_NAME(1:5) )
+    call COMM_total( var(:,:,:,1:5), A_NAME(1:5) )
+
+    enddo ! dynamical steps
 
     return
   end subroutine ATMOS_DYN
