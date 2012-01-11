@@ -353,6 +353,7 @@ contains
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
 
     do iv = 1, VA
     do j  = 1, JA

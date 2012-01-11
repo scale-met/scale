@@ -44,9 +44,11 @@ module mod_atmos_refstate
   !
   !++ Private parameters & variables
   !
-  real(8),                   private :: ATMOS_REFSTATE_TEMP_SFC     = 300.D0 ! surface temperature
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''
+  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_TYPE         = 'ISA'
+  real(8),                   private :: ATMOS_REFSTATE_TEMP_SFC     = 300.D0 ! surface temperature
+  real(8),                   private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.D0 ! uniform potential temperature
 
   !-----------------------------------------------------------------------------
 contains
@@ -72,6 +74,8 @@ contains
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
        ATMOS_REFSTATE_OUT_BASENAME, &
+       ATMOS_REFSTATE_TYPE,         &
+       ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_TEMP_SFC
 
     integer :: ierr
@@ -99,7 +103,16 @@ contains
        call ATMOS_REFSTATE_read
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found reference state file. Generate!'
-       
+
+       if ( trim(ATMOS_REFSTATE_TYPE) == 'ISA' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
+       elseif ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
+       else
+          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
+          call PRC_MPIstop
+       endif
+    
        call ATMOS_REFSTATE_generate
     endif
 
@@ -284,6 +297,12 @@ contains
        dens(k) = pres(k) / ( temp(k) * Rdry )
        pott(k) = temp(k) * ( Pstd/pres(k) )**RovCP
     enddo
+
+    if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** pot.temp. is overwrited by uniform value:', ATMOS_REFSTATE_POTT_UNIFORM
+       pott(:) = ATMOS_REFSTATE_POTT_UNIFORM
+    endif
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
