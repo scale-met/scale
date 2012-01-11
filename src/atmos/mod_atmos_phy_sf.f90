@@ -171,19 +171,19 @@ contains
     implicit none
 
     ! prognostic value
-    real(8), intent(in)  :: dens(IA,JA,KA)      ! density [kg/m3]
-    real(8), intent(in)  :: pott(IA,JA,KA)      ! potential temperature [K]
-    real(8), intent(in)  :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
+    real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
+    real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
+    real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
-    real(8), intent(in)  :: pres(IA,JA,KA)      ! pressure [Pa]
-    real(8), intent(in)  :: velx(IA,JA,KA)      ! velocity(x) [m/s]
-    real(8), intent(in)  :: vely(IA,JA,KA)      ! velocity(y) [m/s]
-    real(8), intent(in)  :: velz(IA,JA,KA)      ! velocity(z) [m/s]
+    real(8), intent(in)  :: pres(KA,IA,JA)      ! pressure [Pa]
+    real(8), intent(in)  :: velx(KA,IA,JA)      ! velocity(x) [m/s]
+    real(8), intent(in)  :: vely(KA,IA,JA)      ! velocity(y) [m/s]
+    real(8), intent(in)  :: velz(KA,IA,JA)      ! velocity(z) [m/s]
 
     ! surface flux
-    real(8), intent(out) :: FLXij_sfc(IA,JA,3)  ! => FLXij(1:IA,1:JA,WS,1:3,3)
-    real(8), intent(out) :: FLXt_sfc (IA,JA)    ! => FLXt (1:IA,1:JA,WS)
-    real(8), intent(out) :: FLXqv_sfc(IA,JA)    ! => FLXq (1:IA,1:JA,WS,1)
+    real(8), intent(out) :: FLXij_sfc(IA,JA,3)  ! => FLXij(WS,1:IA,1:JA,1:3,3)
+    real(8), intent(out) :: FLXt_sfc (IA,JA)    ! => FLXt (WS,1:IA,1:JA)
+    real(8), intent(out) :: FLXqv_sfc(IA,JA)    ! => FLXq (WS,1:IA,1:JA,1)
 
     ! from ocean
     real(8) :: sst(IA,JA) ! sea surface temperature
@@ -231,17 +231,17 @@ contains
     do j = JS-1, JE
     do i = IS-1, IE
        !--- absolute velocity ( at x, y, interface )
-       Uabsu = ( velx(i,j,KS)                                                             )**2.D0 &
-             + ( ( vely(i,j,KS)+vely(i+1,j,KS)+vely(i,j-1,KS)+vely(i+1,j-1,KS) ) * 0.25D0 )**2.D0 &
-             + ( ( velz(i,j,WS+1)+velz(i+1,j,WS+1)                             ) * 0.25D0 )**2.D0
+       Uabsu = ( velx(KS,i,j)                                                             )**2.D0 &
+             + ( ( vely(KS,i,j)+vely(KS,i+1,j)+vely(KS,i,j-1)+vely(KS,i+1,j-1) ) * 0.25D0 )**2.D0 &
+             + ( ( velz(WS+1,i,j)+velz(WS+1,i+1,j)                             ) * 0.25D0 )**2.D0
 
-       Uabsv = ( ( velx(i,j,KS)+velx(i,j+1,KS)+velx(i-1,j,KS)+velx(i-1,j+1,KS) ) * 0.25D0 )**2.D0 &
-             + ( vely(i,j,KS)                                                             )**2.D0 &
-             + ( ( velz(i,j,WS+1)+velz(i+1,j,WS+1)                             ) * 0.25D0 )**2.D0
+       Uabsv = ( ( velx(KS,i,j)+velx(KS,i,j+1)+velx(KS,i-1,j)+velx(KS,i-1,j+1) ) * 0.25D0 )**2.D0 &
+             + ( vely(KS,i,j)                                                             )**2.D0 &
+             + ( ( velz(WS+1,i,j)+velz(WS+1,i,j+1)                             ) * 0.25D0 )**2.D0
 
-       Uabsw = ( ( velx(i,j,KS)+velx(i-1,j,KS) )  * 0.5D0 )**2.D0 &
-             + ( ( vely(i,j,KS)+vely(i,j-1,KS) )  * 0.5D0 )**2.D0 &
-             + ( velz(i,j,WS+1)                   * 0.5D0 )**2.D0
+       Uabsw = ( ( velx(KS,i,j)+velx(KS,i-1,j) )  * 0.5D0 )**2.D0 &
+             + ( ( vely(KS,i,j)+vely(KS,i,j-1) )  * 0.5D0 )**2.D0 &
+             + ( velz(WS+1,i,j)                   * 0.5D0 )**2.D0
 
        !--- friction velocity
        Ustaru = max ( sqrt ( CM0 * Uabsu ), Ustar_min )
@@ -270,7 +270,7 @@ contains
 
        !--- Qv at sea surface
        pres_vap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/sst(i,j) ) )
-       qv_sfc   = EPSvap * pres_vap / ( pres(i,j,KS) - pres_vap )
+       qv_sfc   = EPSvap * pres_vap / ( pres(KS,i,j) - pres_vap )
 
        !--- velocity at the 10m height
        U10u = Uabsu * R10M
@@ -278,13 +278,13 @@ contains
        U10w = Uabsw * R10M
 
        !--- surface fluxes ( at x, y, 10m ) 
-       FLXij_sfc(i,j,1) = 0.5D0 * ( dens(i+1,j,KS)+dens(i,j,KS) ) * U10u * CMMu * velx(i,j,KS)   * R10M
-       FLXij_sfc(i,j,2) = 0.5D0 * ( dens(i,j+1,KS)+dens(i,j,KS) ) * U10v * CMMv * vely(i,j,KS)   * R10M
-       FLXij_sfc(i,j,3) = dens(i,j,KS) * U10w * CMMw * velz(i,j,WS+1) * R10M
+       FLXij_sfc(i,j,1) = 0.5D0 * ( dens(KS,i+1,j)+dens(KS,i,j) ) * U10u * CMMu * velx(KS,i,j)   * R10M
+       FLXij_sfc(i,j,2) = 0.5D0 * ( dens(KS,i,j+1)+dens(KS,i,j) ) * U10v * CMMv * vely(KS,i,j)   * R10M
+       FLXij_sfc(i,j,3) = dens(KS,i,j) * U10w * CMMw * velz(WS+1,i,j) * R10M
 
-       FLXt_sfc (i,j)   = dens(i,j,KS) * U10w * CMH  * ( sst(i,j) - pott(i,j,KS)*R10H )
+       FLXt_sfc (i,j)   = dens(KS,i,j) * U10w * CMH  * ( sst(i,j) - pott(KS,i,j)*R10H )
 
-       FLXqv_sfc(i,j)   = dens(i,j,KS) * U10w * CME  * ( qv_sfc - qtrc(i,j,KS,I_QV)*R10E )
+       FLXqv_sfc(i,j)   = dens(KS,i,j) * U10w * CME  * ( qv_sfc - qtrc(KS,i,j,I_QV)*R10E )
     enddo
     enddo
 

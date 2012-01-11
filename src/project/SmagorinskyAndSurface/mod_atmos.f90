@@ -7,7 +7,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-12-11 (H.Yashiro) [add] Boundary, Surface and Turbulence module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -52,12 +53,10 @@ contains
        ATMOS_vars_restart_read
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
-    use mod_atmos_dyn, only: &
-       ATMOS_DYN_setup
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
-!    use mod_atmos_phy_sf, only: &
-!       ATMOS_PHY_SF_setup
+    use mod_atmos_dyn, only: &
+       ATMOS_DYN_setup
 !    use mod_atmos_phy_mp, only: &
 !       ATMOS_PHY_MP_setup
     implicit none
@@ -69,10 +68,9 @@ contains
 
     call ATMOS_REFSTATE_setup
 
-    call ATMOS_DYN_setup
-
     call ATMOS_BOUNDARY_setup
 
+    call ATMOS_DYN_setup
 
 !    call ATMOS_PHY_MP_setup
 
@@ -87,10 +85,10 @@ contains
        IO_FID_LOG,  &
        IO_L
     use mod_time, only: &
-       TIME_NOWSTEP,                     &
+       TIME_DTSEC,                       &
        TIME_DTSEC_ATMOS_DYN,             &
        TIME_DTSEC_ATMOS_PHY_TB,          &
-       NOWSEC => TIME_NOWSEC,            &
+       TIME_DTSEC_ATMOS_PHY_MP,          &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
@@ -98,195 +96,156 @@ contains
        TIME_rapstart,                    &
        TIME_rapend
     use mod_grid, only: &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
-       KMAX => GRID_KMAX, &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE
-    use mod_fileio_h, only: &
-       FIO_HMID, &
-       FIO_REAL8
-    use mod_fileio, only: &
-       FIO_output
+       KA   => GRID_KA, &
+       IA   => GRID_IA, &
+       JA   => GRID_JA
     use mod_atmos_vars, only: &
-       QA => A_QA,                   &
+       QA        => A_QA,            &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        ATMOS_vars_get,               &
-       ATMOS_vars_getall,            &
+       ATMOS_vars_getdiag,           &
        ATMOS_vars_put
     use mod_atmos_dyn, only: &
        ATMOS_DYN
-    use mod_atmos_boundary, only: &
-       ATMOS_BOUNDARY
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB
+    use mod_history, only: &
+       HIST_in
 !    use mod_atmos_phy_mp, only: &
 !       ATMOS_PHY_MP
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
     implicit none
 
-    real(8) :: dens(IA,JA,KA)    ! density [kg/m3]
-    real(8) :: momx(IA,JA,KA)    ! momentum(x) [kg/m3 * m/s]
-    real(8) :: momy(IA,JA,KA)    ! momentum(y) [kg/m3 * m/s]
-    real(8) :: momz(IA,JA,KA)    ! momentum(z) [kg/m3 * m/s]
-    real(8) :: pott(IA,JA,KA)    ! potential temperature [K]
+    ! prognostics
+    real(8) :: dens(KA,IA,JA)      ! density     [kg/m3]
+    real(8) :: momx(KA,IA,JA)      ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy(KA,IA,JA)      ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz(KA,IA,JA)      ! momentum(z) [kg/m3 * m/s]
+    real(8) :: rhot(KA,IA,JA)      ! rho * theta [kg/m3 * K]
+    real(8) :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
-    real(8) :: qtrc(IA,JA,KA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
-
-    real(8) :: pres(IA,JA,KA)    ! pressure [Pa]
-    real(8) :: velx(IA,JA,KA)    ! velocity(x) [m/s]
-    real(8) :: vely(IA,JA,KA)    ! velocity(y) [m/s]
-    real(8) :: velz(IA,JA,KA)    ! velocity(z) [m/s]
-    real(8) :: temp(IA,JA,KA)    ! temperature [K]
+    ! diagnostics
+    real(8) :: pres(KA,IA,JA)      ! pressure    [Pa]
+    real(8) :: velx(KA,IA,JA)      ! velocity(x) [m/s]
+    real(8) :: vely(KA,IA,JA)      ! velocity(y) [m/s]
+    real(8) :: velz(KA,IA,JA)      ! velocity(z) [m/s]
+    real(8) :: temp(KA,IA,JA)      ! temperature [K]
+    real(8) :: pott(KA,IA,JA)      ! potential temperature [K]
 
     ! surface flux
-    real(8) :: FLXij_sfc(IA,JA,3)  ! => FLXij(1:IA,1:JA,WS,1:3,3)
-    real(8) :: FLXt_sfc (IA,JA)    ! => FLXt (1:IA,1:JA,WS)
-    real(8) :: FLXqv_sfc(IA,JA)    ! => FLXq (1:IA,1:JA,WS,1)
+    real(8) :: FLXij_sfc(IA,JA,3)  ! => FLXij(WS,1:IA,1:JA,1:3,3)
+    real(8) :: FLXt_sfc (IA,JA)    ! => FLXt (WS,1:IA,1:JA)
+    real(8) :: FLXqv_sfc(IA,JA)    ! => FLXq (WS,1:IA,1:JA,I_QV)
 
-    real(8) :: dens_t(IA,JA,KA)    ! density [kg/m3]
-    real(8) :: momx_t(IA,JA,KA)    ! momentum(x) [kg/m3 * m/s]
-    real(8) :: momy_t(IA,JA,KA)    ! momentum(y) [kg/m3 * m/s]
-    real(8) :: momz_t(IA,JA,KA)    ! momentum(z) [kg/m3 * m/s]
-    real(8) :: pott_t(IA,JA,KA)    ! potential temperature [K]
-
-    real(8) :: qtrc_t(IA,JA,KA,QA) ! tracer mixing ratio   [kg/kg],[1/m3]
-
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
-
-    integer :: step = 0
+    ! tendency
+    real(8) :: dens_t(KA,IA,JA)    ! density     [kg/m3]
+    real(8) :: momx_t(KA,IA,JA)    ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy_t(KA,IA,JA)    ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz_t(KA,IA,JA)    ! momentum(z) [kg/m3 * m/s]
+    real(8) :: rhot_t(KA,IA,JA)    ! rho * theta [kg/m3 * K]
+    real(8) :: qtrc_t(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
     !---------------------------------------------------------------------------
 
-    if ( mod(TIME_NOWSTEP,10) == 0 ) then
-       step = step + 1
-       desc = 'temporal history'
-       write(lname,'(A,I4.4)') 'ZDEF', KMAX
-    endif
-
-    call TIME_rapstart('VARset')
-    call ATMOS_vars_get( dens, momx, momy, momz, pott, qtrc )
-    call TIME_rapend('VARset')
-
+    !########## Dynamics ##########
     call TIME_rapstart('Dynamics')
-    if ( sw_dyn    .AND. do_dyn    ) then 
-       call ATMOS_DYN( dens,   momx,   momy,   momz,   pott,   qtrc,  & ! prognostics
-                       dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t ) ! tendency
-
-       call ATMOS_BOUNDARY( dens,   momx,   momy,   momz,   pott,  & ! prognostics
-                                    momx_t, momy_t, momz_t, pott_t ) ! tendency
-
-       dens(:,:,:) = dens(:,:,:) + TIME_DTSEC_ATMOS_DYN * dens_t(:,:,:)
-       momx(:,:,:) = momx(:,:,:) + TIME_DTSEC_ATMOS_DYN * momx_t(:,:,:)
-       momy(:,:,:) = momy(:,:,:) + TIME_DTSEC_ATMOS_DYN * momy_t(:,:,:)
-       momz(:,:,:) = momz(:,:,:) + TIME_DTSEC_ATMOS_DYN * momz_t(:,:,:)
-       pott(:,:,:) = pott(:,:,:) + TIME_DTSEC_ATMOS_DYN * pott_t(:,:,:)
-
-       qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_DYN * qtrc_t(:,:,:,:)
-
-       if ( mod(TIME_NOWSTEP,10) == 0 ) then
-          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_dyn', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-          call FIO_output( momy_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY_t_dyn', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-          call FIO_output( momz_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ_t_dyn', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-          call FIO_output( pott_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT_t_dyn', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                           )
-       endif
+    if ( sw_dyn .AND. do_dyn ) then
+       call ATMOS_DYN
     endif
-    call TIME_rapend('Dynamics')
+    call TIME_rapend  ('Dynamics')
 
     call TIME_rapstart('VARset')
-    call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
+    call ATMOS_vars_get( dens, momx, momy, momz, rhot, qtrc )
+    call ATMOS_vars_getdiag( pres, velx, vely, velz, temp )
+    call TIME_rapend  ('VARset')
 
-    call ATMOS_vars_getall( dens, momx, momy, momz, pott, qtrc, &
-                            pres, velx, vely, velz, temp        )
-    call TIME_rapend('VARset')
+    !########## Turbulence ##########
 
     call TIME_rapstart('Turbulence')
     if ( sw_phy_tb .AND. do_phy_tb ) then
-       call ATMOS_PHY_SF( dens,   pott,   qtrc,          &
-                          pres,   velx,   vely,   velz,  &
-                          FLXij_sfc, FLXt_sfc, FLXqv_sfc )
+       momx_t(:,:,:)   = 0.D0
+       momy_t(:,:,:)   = 0.D0
+       momz_t(:,:,:)   = 0.D0
+       rhot_t(:,:,:)   = 0.D0
+       qtrc_t(:,:,:,:) = 0.D0
 
-       call ATMOS_PHY_TB( dens,   pott,   qtrc,                  &
-                          velx,   vely,   velz,                  &
-                          FLXij_sfc, FLXt_sfc, FLXqv_sfc,        &
-                          momx_t, momy_t, momz_t, pott_t, qtrc_t )
+       call ATMOS_PHY_SF( dens,   rhot,   qtrc,          & ! [IN]
+                          pres,   velx,   vely,   velz,  & ! [IN]
+                          FLXij_sfc, FLXt_sfc, FLXqv_sfc ) ! [OUT]
 
-       momx(:,:,:) = momx(:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * momx_t(:,:,:)
-       momy(:,:,:) = momy(:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * momy_t(:,:,:)
-       momz(:,:,:) = momz(:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * momz_t(:,:,:)
-       pott(:,:,:) = pott(:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * pott_t(:,:,:)
+       call ATMOS_PHY_TB( dens,   rhot,   qtrc,                  & ! [IN]
+                          velx,   vely,   velz,                  & ! [IN]
+                          FLXij_sfc, FLXt_sfc, FLXqv_sfc,        & ! [IN]
+                          momx_t, momy_t, momz_t, rhot_t, qtrc_t ) ! [OUT]
 
+       momx(:,:,:)   = momx(:,:,:)   + TIME_DTSEC_ATMOS_PHY_TB * momx_t(:,:,:)
+       momy(:,:,:)   = momy(:,:,:)   + TIME_DTSEC_ATMOS_PHY_TB * momy_t(:,:,:)
+       momz(:,:,:)   = momz(:,:,:)   + TIME_DTSEC_ATMOS_PHY_TB * momz_t(:,:,:)
+       rhot(:,:,:)   = rhot(:,:,:)   + TIME_DTSEC_ATMOS_PHY_TB * rhot_t(:,:,:)
        qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_PHY_TB * qtrc_t(:,:,:,:)
 
-       if ( mod(TIME_NOWSTEP,10) == 0 ) then
-          call FIO_output( momx_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX_t_tb', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
-          call FIO_output( momy_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY_t_tb', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
-          call FIO_output( momz_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ_t_tb', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
-          call FIO_output( pott_t(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT_t_tb', '', '', '', &
-                           FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                          )
-       endif
     endif
-    call TIME_rapend('Turbulence')
+    call TIME_rapend  ('Turbulence')
+
+    !########## Microphysics ##########
+!    call TIME_rapstart('Microphysics')
+!    if ( sw_phy_mp .AND. do_phy_mp ) then
+
+!       call ATMOS_PHY_MP( dens,   momx,   momy,   momz,   rhot,   qtrc,  & ! [IN]
+!                          dens_t, momx_t, momy_t, momz_t, rhot_t, qtrc_t ) ! [OUT]
+
+!       dens(:,:,:)   = dens(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * dens_t(:,:,:)
+!       momx(:,:,:)   = momx(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * momx_t(:,:,:)
+!       momy(:,:,:)   = momy(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * momy_t(:,:,:)
+!       momz(:,:,:)   = momz(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * momz_t(:,:,:)
+!       rhot(:,:,:)   = rhot(:,:,:)   + TIME_DTSEC_ATMOS_PHY_MP * rhot_t(:,:,:)
+!       qtrc(:,:,:,:) = qtrc(:,:,:,:) + TIME_DTSEC_ATMOS_PHY_MP * qtrc_t(:,:,:,:)
+
+!    endif
+!    call TIME_rapend  ('Microphysics')
+
+
+    !########## Radiation ##########
+!    call TIME_rapstart('Radiation')
+!    if ( sw_phy_rd .AND. do_phy_rd ) then
+!       call ATMOS_PHY_RD( dens,   momx,   momy,   momz,   rhot,   qtrc,  &
+!                          rhot_t                                         )
+!    endif
+!    call TIME_rapend  ('Radiation')
+
 
     call TIME_rapstart('VARset')
-    call ATMOS_vars_put( dens, momx, momy, momz, pott, qtrc  )
+    call ATMOS_vars_put( dens, momx, momy, momz, rhot, qtrc  ) ! [IN]
+    call ATMOS_vars_getdiag( pres, velx, vely, velz, temp )
+    call TIME_rapend  ('VARset')
 
-    call ATMOS_vars_getall( dens, momx, momy, momz, pott, qtrc, &
-                            pres, velx, vely, velz, temp        )
-    call TIME_rapend('VARset')
+    call TIME_rapstart('History')
+    call HIST_in( dens(:,:,:), 'DENS', 'density',     'kg/m3',   '3D', TIME_DTSEC )
+    call HIST_in( momz(:,:,:), 'MOMZ', 'momentum z',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( momx(:,:,:), 'MOMX', 'momentum x',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( momy(:,:,:), 'MOMY', 'momentum y',  'kg/m2/s', '3D', TIME_DTSEC )
+    call HIST_in( rhot(:,:,:), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
 
-!    if ( sw_phy_mp .AND. do_phy_mp ) call ATMOS_PHY_MP( dens, momx, momy, momz, pott, & ! prognostics
-!                                                        qtrc                          & ! prog. tracers
-!                                                        pres, velx, vely, velz, temp  ) ! diagnostics
+    call HIST_in( dens_t(:,:,:), 'DENS_t_tb', 'tendency of density(tb)',     'kg/m3/s',   '3D', TIME_DTSEC )
+    call HIST_in( momz_t(:,:,:), 'MOMZ_t_tb', 'tendency of momentum z(tb)',  'kg/m2/s2',  '3D', TIME_DTSEC )
+    call HIST_in( momx_t(:,:,:), 'MOMX_t_tb', 'tendency of momentum x(tb)',  'kg/m2/s2',  '3D', TIME_DTSEC )
+    call HIST_in( momy_t(:,:,:), 'MOMY_t_tb', 'tendency of momentum y(tb)',  'kg/m2/s2',  '3D', TIME_DTSEC )
+    call HIST_in( rhot_t(:,:,:), 'RHOT_t_tb', 'tendency of rho * theta(tb)', 'kg/m3*K/s', '3D', TIME_DTSEC )
 
+    pott(:,:,:) = rhot(:,:,:) / dens(:,:,:)
+    call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )
 
-!    if ( sw_phy_rd .AND. do_phy_rd ) call ATMOS_PHY_RD( dens, momx, momy, momz, pott, & ! prognostics
-!                                                        qtrc                          & ! prog. tracers
-!                                                        pres, velx, vely, velz, temp  ) ! diagnostics
-
-
-    if ( mod(TIME_NOWSTEP,10) == 0 ) then
-       call FIO_output( dens(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'DENS', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( momx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMX', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( momy(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMY', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( momz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'MOMZ', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( pott(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'POTT', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( pres(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'PRES', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( velx(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELX', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( vely(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELY', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( velz(IS:IE,JS:JE,KS:KE), 'history', desc, '', 'VELZ', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-       call FIO_output( qtrc(IS:IE,JS:JE,KS:KE,1), 'history', desc, '', 'QV', '', '', '', &
-                        FIO_REAL8, lname, 1, KMAX, step, NOWSEC, NOWSEC                   )
-    endif
+    call HIST_in( pres(:,:,:), 'PRES', 'pressure',    'Pa',  '3D', TIME_DTSEC )
+    call HIST_in( velz(:,:,:), 'W',    'velocity w',  'm/s', '3D', TIME_DTSEC )
+    call HIST_in( velx(:,:,:), 'U',    'velocity u',  'm/s', '3D', TIME_DTSEC )
+    call HIST_in( vely(:,:,:), 'V',    'velocity v',  'm/s', '3D', TIME_DTSEC )
+    call HIST_in( temp(:,:,:), 'T',    'temperature', 'K',   '3D', TIME_DTSEC )
+    call TIME_rapend  ('History')
 
     return
   end subroutine ATMOS_step

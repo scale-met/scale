@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> Program SCALE-LES ver.3
+!> Program grid generation for SCALE-LES ver.3
 !!
 !! @par Description
 !!          SCALE: Scalable Computing by Advanced Library and Environment
@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program scaleles3
+program grid
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -43,22 +43,6 @@ program scaleles3
      FIO_finalize
   use mod_grid, only: &
      GRID_setup
-  use mod_comm, only: &
-     COMM_setup
-  use mod_atmos, only: &
-     ATMOS_setup, &
-     ATMOS_step
-  use mod_atmos_vars, only: &
-     ATMOS_vars_restart_write, &
-     ATMOS_vars_restart_check, &
-     ATMOS_sw_restart,         &
-     ATMOS_sw_check
-  use mod_ocean, only: &
-     OCEAN_setup, &
-     OCEAN_step
-  use mod_history, only: &
-     HIST_setup, &
-     HIST_write
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -88,61 +72,19 @@ program scaleles3
   ! setup file I/O
   call FIO_setup
 
-  ! setup horisontal/veritical grid system
-  call GRID_setup
-
-  ! setup mpi communication
-  call COMM_setup
-
-  ! setup atmosphere
-  call ATMOS_setup
-
-  ! setup ocean
-  call OCEAN_setup
-
-  ! setup history
-  call HIST_setup
-
   call TIME_rapend('Initialize')
-
 
   !########## main ##########
 
-  if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
-  call TIME_rapstart('Main Loop(Total)')
+  call TIME_rapstart('Main')
 
-  do
+  ! setup horisontal/veritical grid system
+  call GRID_setup
 
-    call TIME_checkstate
-
-    ! change to next state
-    if ( TIME_DOATMOS_step ) call ATMOS_step
-    if ( TIME_DOOCEAN_step ) call OCEAN_step
-
-    ! time advance
-    call TIME_advance
-
-    ! history file output
-    call HIST_write
-
-    ! restart output
-    if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-
-    if ( TIME_DOend ) exit
-
-  enddo
-
-  call TIME_rapend('Main Loop(Total)')
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
-  if( IO_L ) write(IO_FID_LOG,*)
+  call TIME_rapend('Main')
 
 
   !########## Finalize ##########
-
-  ! check data
-  if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
-
   call TIME_rapreport
 
   call FIO_finalize
@@ -151,4 +93,4 @@ program scaleles3
 
   stop
   !=============================================================================
-end program scaleles3
+end program grid

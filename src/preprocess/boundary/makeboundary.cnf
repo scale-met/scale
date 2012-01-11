@@ -1,0 +1,50 @@
+
+#####
+#
+# Scale3 benchmark configuration
+#
+#####
+
+&PARAM_PRC
+ PRC_NUM_X       = 3,
+ PRC_NUM_Y       = 2,
+ PRC_PERIODIC_X  = .true.,
+ PRC_PERIODIC_Y  = .true.,
+/
+
+&PARAM_CONST
+/
+
+&PARAM_TIME
+ TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
+ TIME_STARTMS               = 0.D0,
+/
+
+&PARAM_GRID
+ GRID_OUT_BASENAME = 'grid_500m_120x120x25',
+ GRID_DXYZ         = 500.D0,
+ GRID_KMAX         = 25,
+ GRID_IMAX         = 120,
+ GRID_JMAX         = 120,
+ GRID_BUFFER_DZ    =  4.D3,
+ GRID_BUFFER_DX    = 40.D3,
+ GRID_BUFFER_DY    =  0.D0,
+ GRID_BUFFFACT     = 1.2D0,
+/
+
+&PARAM_ATMOS_REFSTATE
+ ATMOS_REFSTATE_TEMP_SFC    =   300.D0     
+/
+
+&PARAM_ATMOS_BOUNDARY
+ ATMOS_BOUNDARY_OUT_BASENAME = 'boundaryvar',
+ ATMOS_BOUNDARY_USE_VELZ = .true.,
+ ATMOS_BOUNDARY_USE_VELX = .true.,
+ ATMOS_BOUNDARY_USE_VELY = .true.,
+ ATMOS_BOUNDARY_USE_POTT = .true.,
+ ATMOS_BOUNDARY_USE_QV   = .true.,
+ ATMOS_BOUNDARY_TAUZ = 75.D0,
+ ATMOS_BOUNDARY_TAUX = 75.D0,
+ ATMOS_BOUNDARY_TAUY = 75.D0,
+/
+

@@ -538,20 +538,21 @@ contains
 
     if ( ibuff > 0 ) then
        do i = GRID_IHALO+1, GRID_IHALO+ibuff
-          GRID_CBFXG(i) = (GRID_CXG(i)-bufftotx) / (GRID_FXG(GRID_IHALO)-bufftotx)
-          GRID_FBFXG(i) = (GRID_FXG(i)-bufftotx) / (GRID_FXG(GRID_IHALO)-bufftotx)
+          GRID_CBFXG(i) = (bufftotx-GRID_CXG(i)) / bufftotx
+          GRID_FBFXG(i) = (bufftotx-GRID_FXG(i)) / bufftotx
        enddo
 
        do i = GRID_IHALO+ibuff+imain+1, GRID_IHALO+ibuff+imain+ibuff
-          GRID_CBFXG(i) = (GRID_CXG(i)-bufftotx) / (GRID_FXG(GRID_IAG-GRID_IHALO)-bufftotx)
-          GRID_FBFXG(i) = (GRID_FXG(i)-bufftotx) / (GRID_FXG(GRID_IAG-GRID_IHALO)-bufftotx)
+          GRID_CBFXG(i) = (bufftotx-GRID_FXG(GRID_IAG-GRID_IHALO)+GRID_CXG(i)) / bufftotx
+          GRID_FBFXG(i) = (bufftotx-GRID_FXG(GRID_IAG-GRID_IHALO)+GRID_FXG(i)) / bufftotx
        enddo
     endif
 
     do i = GRID_IHALO+ibuff+imain+ibuff+1, GRID_IHALO+ibuff+imain+ibuff+GRID_IHALO
-       GRID_CBFXG(i) = (GRID_CXG(i)-bufftotx) / (GRID_FXG(GRID_IAG-GRID_IHALO)-bufftotx)
-       GRID_FBFXG(i) = (GRID_FXG(i)-bufftotx) / (GRID_FXG(GRID_IAG-GRID_IHALO)-bufftotx)
+       GRID_CBFXG(i) = 1.D0
+       GRID_FBFXG(i) = 1.D0
     enddo
+
     GRID_CBFXG(:) = max( min( GRID_CBFXG(:), 1.D0 ), 0.D0 )
     GRID_FBFXG(:) = max( min( GRID_FBFXG(:), 1.D0 ), 0.D0 )
 
@@ -623,19 +624,19 @@ contains
 
     if ( jbuff > 0 ) then
        do j = GRID_JHALO+1, GRID_JHALO+jbuff
-          GRID_CBFYG(j) = (GRID_CYG(j)-bufftoty) / (GRID_FYG(GRID_JHALO)-bufftoty)
-          GRID_FBFYG(j) = (GRID_FYG(j)-bufftoty) / (GRID_FYG(GRID_JHALO)-bufftoty)
+          GRID_CBFYG(j) = (bufftoty-GRID_CYG(j)) / bufftoty
+          GRID_FBFYG(j) = (bufftoty-GRID_FYG(j)) / bufftoty
        enddo
 
        do j = GRID_JHALO+jbuff+jmain+1, GRID_JHALO+jbuff+jmain+jbuff
-          GRID_CBFYG(j) = (GRID_CYG(j)-bufftoty) / (GRID_FYG(GRID_JAG-GRID_JHALO)-bufftoty)
-          GRID_FBFYG(j) = (GRID_FYG(j)-bufftoty) / (GRID_FYG(GRID_JAG-GRID_JHALO)-bufftoty)
+          GRID_CBFYG(j) = (bufftoty-GRID_FYG(GRID_JAG-GRID_JHALO)+GRID_CYG(j)) / bufftoty
+          GRID_FBFYG(j) = (bufftoty-GRID_FYG(GRID_JAG-GRID_JHALO)+GRID_FYG(j)) / bufftoty
        enddo
     endif
 
     do j = GRID_JHALO+jbuff+jmain+jbuff+1, GRID_JHALO+jbuff+jmain+jbuff+GRID_JHALO
-       GRID_CBFYG(j) = (GRID_CYG(j)-bufftoty) / (GRID_FYG(GRID_JAG-GRID_JHALO)-bufftoty)
-       GRID_FBFYG(j) = (GRID_FYG(j)-bufftoty) / (GRID_FYG(GRID_JAG-GRID_JHALO)-bufftoty)
+       GRID_CBFYG(j) = 1.D0
+       GRID_FBFYG(j) = 1.D0
     enddo
     GRID_CBFYG(:) = max( min( GRID_CBFYG(:), 1.D0 ), 0.D0 )
     GRID_FBFYG(:) = max( min( GRID_FBFYG(:), 1.D0 ), 0.D0 )
@@ -702,14 +703,14 @@ contains
     GRID_FBFZ(:) = 0.D0
     if ( kbuff > 0 ) then
        do k = GRID_KHALO+kmain+1, GRID_KHALO+kmain+kbuff
-          GRID_CBFZ(k) = (GRID_CZ(k)-bufftotz) / (GRID_FZ(GRID_WE)-bufftotz)
-          GRID_FBFZ(k) = (GRID_FZ(k)-bufftotz) / (GRID_FZ(GRID_WE)-bufftotz)
+          GRID_CBFZ(k) = (bufftotz-GRID_FZ(GRID_WE)+GRID_CZ(k)) / bufftotz
+          GRID_FBFZ(k) = (bufftotz-GRID_FZ(GRID_WE)+GRID_FZ(k)) / bufftotz
        enddo
     endif
 
     do k = GRID_KHALO+kmain+kbuff+1, GRID_KHALO+kmain+kbuff+GRID_KHALO
-       GRID_CBFZ(k) = (GRID_CZ(k)-bufftotz) / (GRID_FZ(GRID_WE)-bufftotz)
-       GRID_FBFZ(k) = (GRID_FZ(k)-bufftotz) / (GRID_FZ(GRID_WE)-bufftotz)
+       GRID_CBFZ(k) = 1.D0
+       GRID_FBFZ(k) = 1.D0
     enddo
     GRID_CBFZ(:) = max( min( GRID_CBFZ(:), 1.D0 ), 0.D0 )
     GRID_FBFZ(:) = max( min( GRID_FBFZ(:), 1.D0 ), 0.D0 )
