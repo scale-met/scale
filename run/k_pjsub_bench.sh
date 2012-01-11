@@ -2,7 +2,7 @@
 #
 # for K Computer
 #
-#PJM --rsc-list "node=2"
+#PJM --rsc-list "node=2x1"
 #PJM --rsc-list "elapse=01:00:00"
 #PJM --rsc-list "node-mem=12Gi"
 #PJM -s
