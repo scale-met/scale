@@ -2,7 +2,7 @@ SUBDIRS=boundary grid initial refstate
 
 all:
 	@for i in $(SUBDIRS) ; do \
-	  if [ -d $$i ]; then \
+	  if [ -f $$i/Makefile ]; then \
 	      (cd $$i ; \
 	      echo "Making $$i/" ; \
 	      $(MAKE)) ; \
@@ -11,7 +11,7 @@ all:
 
 clean:
 	@for i in $(SUBDIRS) ; do \
-	  if [ -d $$i ]; then \
+	  if [ -f $$i/Makefile ]; then \
 	      (cd $$i ; \
 	      echo "Cleaning $$i/" ; \
 	      $(MAKE) clean); \
