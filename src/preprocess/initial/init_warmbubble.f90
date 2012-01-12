@@ -160,19 +160,19 @@ contains
        YR_BBL,    &
        ZR_BBL
 
-    real(8) :: dens(IA,JA,KA)      ! density     [kg/m3]
-    real(8) :: momx(IA,JA,KA)      ! momentum(x) [kg/m3 * m/s]
-    real(8) :: momy(IA,JA,KA)      ! momentum(y) [kg/m3 * m/s]
-    real(8) :: momz(IA,JA,KA)      ! momentum(z) [kg/m3 * m/s]
-    real(8) :: rhot(IA,JA,KA)      ! rho * theta [kg/m3 * K]
-    real(8) :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
+    real(8) :: dens(KA,IA,JA)      ! density     [kg/m3]
+    real(8) :: momx(KA,IA,JA)      ! momentum(x) [kg/m3 * m/s]
+    real(8) :: momy(KA,IA,JA)      ! momentum(y) [kg/m3 * m/s]
+    real(8) :: momz(KA,IA,JA)      ! momentum(z) [kg/m3 * m/s]
+    real(8) :: rhot(KA,IA,JA)      ! rho * theta [kg/m3 * K]
+    real(8) :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
-    real(8) :: pres(IA,JA,KA)    ! pressure [Pa]
-    real(8) :: temp(IA,JA,KA)    ! temperature [K]
-    real(8) :: pott(IA,JA,KA)    ! potential temperature [K]
+    real(8) :: pres(KA,IA,JA)    ! pressure [Pa]
+    real(8) :: temp(KA,IA,JA)    ! temperature [K]
+    real(8) :: pott(KA,IA,JA)    ! potential temperature [K]
 
     real(8) :: dist
-    real(8) :: rh(IA,JA,KA)
+    real(8) :: rh(KA,IA,JA)
     real(8) :: psat, qsat
 
     integer :: i, j, k
@@ -203,33 +203,33 @@ contains
     momz(:,:,:)   = 0.D0
     qtrc(:,:,:,:) = 0.D0
 
-    do k = KS, KE
     do j = JS, JE
     do i = IS, IE
-       temp(i,j,k) = ENV_THETA - GRAV / CPdry * GRID_CZ(k)
+    do k = KS, KE
+       temp(k,i,j) = ENV_THETA - GRAV / CPdry * GRID_CZ(k)
 
        dist = ( (GRID_CX(i)-XC_BBL)/XR_BBL )**2.D0 &
             + ( (GRID_CY(j)-YC_BBL)/YR_BBL )**2.D0 &
             + ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2.D0
 
        if ( dist > 1.D0 ) then ! out of warm bubble
-          rh(i,j,k) = ENV_RH / ( 1.D0 + GRID_CZ(k) )
+          rh(k,i,j) = ENV_RH / ( 1.D0 + GRID_CZ(k) )
        else
-          rh(i,j,k) = 100.D0 ! 100%, saturated
+          rh(k,i,j) = 100.D0 ! 100%, saturated
        endif
 
-       call moist_psat_water0( temp(i,j,k), psat )
+       call moist_psat_water0( temp(k,i,j), psat )
 
-       pres(i,j,k) = Pstd * ( temp(i,j,k)/ENV_THETA )**CPovR - rh(i,j,k)*1.D-2 * psat
+       pres(k,i,j) = Pstd * ( temp(k,i,j)/ENV_THETA )**CPovR - rh(k,i,j)*1.D-2 * psat
 
-       qsat = EPSvap * psat / ( pres(i,j,k) - ( 1.D0-EPSvap )*psat )
+       qsat = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap )*psat )
 
 
-       qtrc(i,j,k,I_QV) = rh(i,j,k)*1.D-2 * qsat
+       qtrc(k,i,j,I_QV) = rh(k,i,j)*1.D-2 * qsat
 
-       pott(i,j,k) = temp(i,j,k) * ( Pstd/pres(i,j,k) )**RovCP
-       dens(i,j,k) = Pstd / Rdry / pott(i,j,k) * ( pres(i,j,k)/Pstd )**CVovCP
-       rhot(i,j,k) = dens(i,j,k) * pott(i,j,k)
+       pott(k,i,j) = temp(k,i,j) * ( Pstd/pres(k,i,j) )**RovCP
+       dens(k,i,j) = Pstd / Rdry / pott(k,i,j) * ( pres(k,i,j)/Pstd )**CVovCP
+       rhot(k,i,j) = dens(k,i,j) * pott(k,i,j)
     enddo
     enddo
     enddo
