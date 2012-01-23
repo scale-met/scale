@@ -68,17 +68,17 @@ contains
        Pstd   => CONST_Pstd,   &
        CONST_UNDEF8
     use mod_grid, only : &
+       KA   => GRID_KA,   &
        IA   => GRID_IA,   &
        JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
        KS   => GRID_KS,   &
        KE   => GRID_KE,   &
        WS   => GRID_WS,   &
        WE   => GRID_WE,   &
+       IS   => GRID_IS,   &
+       IE   => GRID_IE,   &
+       JS   => GRID_JS,   &
+       JE   => GRID_JE,   &
        DXYZ => GRID_DXYZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
@@ -89,9 +89,9 @@ contains
 
     ! prognostic value
     real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
+    real(8), intent(in)  :: velz(KA,IA,JA)      ! velocity(z) [m/s]
     real(8), intent(in)  :: velx(KA,IA,JA)      ! velocity(x) [m/s]
     real(8), intent(in)  :: vely(KA,IA,JA)      ! velocity(y) [m/s]
-    real(8), intent(in)  :: velz(KA,IA,JA)      ! velocity(z) [m/s]
     real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
     real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
@@ -101,9 +101,9 @@ contains
     real(8), intent(in)  :: FLXqv_sfc(IA,JA)    ! => FLXq (1:IA,1:JA,WS,1)
 
     ! prognostic tendency
+    real(8), intent(out) :: momz_t(KA,IA,JA)
     real(8), intent(out) :: momx_t(KA,IA,JA)
     real(8), intent(out) :: momy_t(KA,IA,JA)
-    real(8), intent(out) :: momz_t(KA,IA,JA)
     real(8), intent(out) :: pott_t(KA,IA,JA)
     real(8), intent(out) :: qtrc_t(KA,IA,JA,QA)
 

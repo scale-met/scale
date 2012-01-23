@@ -363,12 +363,12 @@ program spd2bin
         if (output_grads) then
 
            write(*,*) 'Output: ', trim(outfname)//'.grd'
-           open( unit   = ofid,                  &
+           open( unit   = ofid,                   &
                  file   = trim(outfname)//'.grd', &
-                 form   = 'unformatted',         &
-                 access = 'direct',              &
+                 form   = 'unformatted',          &
+                 access = 'direct',               &
                  recl   = GRID_IMAX*PRC_NUM_X*GRID_JMAX*PRC_NUM_Y*GRID_KMAX*4, &
-                 status = 'unknown'              )
+                 status = 'unknown'               )
            irec = 1
 
            if ( outfile_rec > 1 ) then
@@ -379,11 +379,11 @@ program spd2bin
         elseif(output_gtool) then
 
            write(*,*) 'Output: ', trim(outfname)//'.gt3'
-           open( unit   = ofid,                  &
+           open( unit   = ofid,                   &
                  file   = trim(outfname)//'.gt3', &
-                 form   = 'unformatted',         &
-                 access = 'sequential',          &
-                 status = 'unknown'              )
+                 form   = 'unformatted',          &
+                 access = 'sequential',           &
+                 status = 'unknown'               )
 
            ! [mod] H.Yashiro 20111003
            call makegtoolheader( var_gthead(:,v),     &

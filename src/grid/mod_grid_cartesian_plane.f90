@@ -37,58 +37,58 @@ module mod_grid
   integer, public, parameter :: GRID_IHALO = 2     ! # of halo cells: x
   integer, public, parameter :: GRID_JHALO = 2     ! # of halo cells: y
 
-  integer, public,      save :: GRID_KMAX = 50     ! # of computational cells: z
-  integer, public,      save :: GRID_IMAX = 90     ! # of computational cells: x
-  integer, public,      save :: GRID_JMAX = 90     ! # of computational cells: y
+  integer, public, save :: GRID_KMAX = 50     ! # of computational cells: z
+  integer, public, save :: GRID_IMAX = 90     ! # of computational cells: x
+  integer, public, save :: GRID_JMAX = 90     ! # of computational cells: y
 
-  integer, public,      save :: GRID_KA            ! # of z whole cells (local, with HALO)
-  integer, public,      save :: GRID_IA            ! # of x whole cells (local, with HALO)
-  integer, public,      save :: GRID_JA            ! # of y whole cells (local, with HALO)
+  integer, public, save :: GRID_KA            ! # of z whole cells (local, with HALO)
+  integer, public, save :: GRID_IA            ! # of x whole cells (local, with HALO)
+  integer, public, save :: GRID_JA            ! # of y whole cells (local, with HALO)
 
-  integer, public,      save :: GRID_KS, GRID_KE   ! start/end of inner domain: z, layer
-  integer, public,      save :: GRID_WS, GRID_WE   ! start/end of inner domain: z, interface
-  integer, public,      save :: GRID_IS, GRID_IE   ! start/end of inner domain: x, local
-  integer, public,      save :: GRID_JS, GRID_JE   ! start/end of inner domain: y, local
+  integer, public, save :: GRID_KS, GRID_KE   ! start/end of inner domain: z, layer
+  integer, public, save :: GRID_WS, GRID_WE   ! start/end of inner domain: z, interface
+  integer, public, save :: GRID_IS, GRID_IE   ! start/end of inner domain: x, local
+  integer, public, save :: GRID_JS, GRID_JE   ! start/end of inner domain: y, local
 
-  integer, public,      save :: GRID_ISG, GRID_IEG ! start/end of inner domain: x, global
-  integer, public,      save :: GRID_JSG, GRID_JEG ! start/end of inner domain: y, global
+  integer, public, save :: GRID_ISG, GRID_IEG ! start/end of inner domain: x, global
+  integer, public, save :: GRID_JSG, GRID_JEG ! start/end of inner domain: y, global
 
-  real(8), public,      save :: GRID_DXYZ = 200.D0 ! length at main region [m]: x,y,z
+  real(8), public, save :: GRID_DXYZ = 200.D0    ! length at main region [m]: x,y,z
 
-  real(8), public,      save :: GRID_BUFFER_DZ = 0.D0 ! thickness of buffer region [m]: z
-  real(8), public,      save :: GRID_BUFFER_DX = 0.D0 ! thickness of buffer region [m]: x
-  real(8), public,      save :: GRID_BUFFER_DY = 0.D0 ! thickness of buffer region [m]: y
+  real(8), public, save :: GRID_BUFFER_DZ = 0.D0 ! thickness of buffer region [m]: z
+  real(8), public, save :: GRID_BUFFER_DX = 0.D0 ! thickness of buffer region [m]: x
+  real(8), public, save :: GRID_BUFFER_DY = 0.D0 ! thickness of buffer region [m]: y
 
-  real(8), public, allocatable, save :: GRID_CZ(:)         ! center coordinate [m]: z, local=global
-  real(8), public, allocatable, save :: GRID_CX(:)         ! center coordinate [m]: x, local
-  real(8), public, allocatable, save :: GRID_CY(:)         ! center coordinate [m]: y, local
-  real(8), public, allocatable, save :: GRID_CDZ(:)        ! z-length of control volume [m]
-  real(8), public, allocatable, save :: GRID_CDX(:)        ! x-length of control volume [m]
-  real(8), public, allocatable, save :: GRID_CDY(:)        ! y-length of control volume [m]
-  real(8), public, allocatable, save :: GRID_RCDZ(:)       ! reciprocal of center-dz
-  real(8), public, allocatable, save :: GRID_RCDX(:)       ! reciprocal of center-dx
-  real(8), public, allocatable, save :: GRID_RCDY(:)       ! reciprocal of center-dy
+  real(8), public, allocatable, save :: GRID_CZ(:)      ! center coordinate [m]: z, local=global
+  real(8), public, allocatable, save :: GRID_CX(:)      ! center coordinate [m]: x, local
+  real(8), public, allocatable, save :: GRID_CY(:)      ! center coordinate [m]: y, local
+  real(8), public, allocatable, save :: GRID_CDZ(:)     ! z-length of control volume [m]
+  real(8), public, allocatable, save :: GRID_CDX(:)     ! x-length of control volume [m]
+  real(8), public, allocatable, save :: GRID_CDY(:)     ! y-length of control volume [m]
+  real(8), public, allocatable, save :: GRID_RCDZ(:)    ! reciprocal of center-dz
+  real(8), public, allocatable, save :: GRID_RCDX(:)    ! reciprocal of center-dx
+  real(8), public, allocatable, save :: GRID_RCDY(:)    ! reciprocal of center-dy
 
-  real(8), public, allocatable, save :: GRID_FZ(:)         ! face   coordinate [m]: z, local=global
-  real(8), public, allocatable, save :: GRID_FX(:)         ! face   coordinate [m]: x, local
-  real(8), public, allocatable, save :: GRID_FY(:)         ! face   coordinate [m]: y, local
-  real(8), public, allocatable, save :: GRID_FDZ(:)        ! z-length of grid(k)-to-grid(k-1) [m]
-  real(8), public, allocatable, save :: GRID_FDX(:)        ! x-length of grid(i)-to-grid(i-1) [m]
-  real(8), public, allocatable, save :: GRID_FDY(:)        ! y-length of grid(j)-to-grid(j-1) [m]
-  real(8), public, allocatable, save :: GRID_RFDZ(:)       ! reciprocal of face-dz
-  real(8), public, allocatable, save :: GRID_RFDX(:)       ! reciprocal of face-dx
-  real(8), public, allocatable, save :: GRID_RFDY(:)       ! reciprocal of face-dy
+  real(8), public, allocatable, save :: GRID_FZ(:)      ! face   coordinate [m]: z, local=global
+  real(8), public, allocatable, save :: GRID_FX(:)      ! face   coordinate [m]: x, local
+  real(8), public, allocatable, save :: GRID_FY(:)      ! face   coordinate [m]: y, local
+  real(8), public, allocatable, save :: GRID_FDZ(:)     ! z-length of grid(k)-to-grid(k-1) [m]
+  real(8), public, allocatable, save :: GRID_FDX(:)     ! x-length of grid(i)-to-grid(i-1) [m]
+  real(8), public, allocatable, save :: GRID_FDY(:)     ! y-length of grid(j)-to-grid(j-1) [m]
+  real(8), public, allocatable, save :: GRID_RFDZ(:)    ! reciprocal of face-dz
+  real(8), public, allocatable, save :: GRID_RFDX(:)    ! reciprocal of face-dx
+  real(8), public, allocatable, save :: GRID_RFDY(:)    ! reciprocal of face-dy
 
-  logical, public, allocatable, save :: GRID_CZ_mask(:)    ! main/buffer region mask: z
-  logical, public, allocatable, save :: GRID_CX_mask(:)    ! main/buffer region mask: x
-  logical, public, allocatable, save :: GRID_CY_mask(:)    ! main/buffer region mask: y
+  logical, public, allocatable, save :: GRID_CZ_mask(:) ! main/buffer region mask: z
+  logical, public, allocatable, save :: GRID_CX_mask(:) ! main/buffer region mask: x
+  logical, public, allocatable, save :: GRID_CY_mask(:) ! main/buffer region mask: y
 
-  real(8), public, allocatable, save :: GRID_CBFZ(:)       ! center buffer factor [0-1]: z
-  real(8), public, allocatable, save :: GRID_CBFX(:)       ! center buffer factor [0-1]: x
-  real(8), public, allocatable, save :: GRID_CBFY(:)       ! center buffer factor [0-1]: y
-  real(8), public, allocatable, save :: GRID_FBFZ(:)       ! face   buffer factor [0-1]: z
-  real(8), public, allocatable, save :: GRID_FBFX(:)       ! face   buffer factor [0-1]: x
-  real(8), public, allocatable, save :: GRID_FBFY(:)       ! face   buffer factor [0-1]: y
+  real(8), public, allocatable, save :: GRID_CBFZ(:)    ! center buffer factor [0-1]: z
+  real(8), public, allocatable, save :: GRID_CBFX(:)    ! center buffer factor [0-1]: x
+  real(8), public, allocatable, save :: GRID_CBFY(:)    ! center buffer factor [0-1]: y
+  real(8), public, allocatable, save :: GRID_FBFZ(:)    ! face   buffer factor [0-1]: z
+  real(8), public, allocatable, save :: GRID_FBFX(:)    ! face   buffer factor [0-1]: x
+  real(8), public, allocatable, save :: GRID_FBFY(:)    ! face   buffer factor [0-1]: y
 
   !-----------------------------------------------------------------------------
   !

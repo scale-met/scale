@@ -149,11 +149,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NO.',iv,": ",O_NAME(iv),", ", O_DESC(iv),"[", O_UNIT(iv),"]"
     enddo
 
-    allocate( ocean_var(IA,JA,1,O_VA) )
-
-    ! tentative: put contstant value
-    ocean_var(:,:,:,:) = OCEAN_SST
-
     return
   end subroutine OCEAN_vars_setup
 
@@ -201,7 +196,7 @@ contains
     enddo
 
     do iv = 1, O_VA
-       call COMM_wait( ocean_var(:,:,:,iv),iv )
+       call COMM_wait( iv )
     enddo
 
     call COMM_stats( ocean_var(:,:,:,:), O_NAME(:) )
@@ -283,7 +278,7 @@ contains
 
     ! fill IHALO & JHALO
     call COMM_vars( ocean_var(:,:,:,1),1 )
-    call COMM_wait( ocean_var(:,:,:,1),1 )
+    call COMM_wait( 1 )
 
     return
   end subroutine OCEAN_vars_put

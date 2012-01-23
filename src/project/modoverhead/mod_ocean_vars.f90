@@ -149,7 +149,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NO.',iv,": ",O_NAME(iv),", ", O_DESC(iv),"[", O_UNIT(iv),"]"
     enddo
 
-    allocate( ocean_var(IA,JA,1,O_VA) )
+    allocate( ocean_var(IA,JA,1,O_VA) ); ocean_var(:,:,:,:) = CONST_UNDEF8
 
     ! tentative: put contstant value
     ocean_var(:,:,:,:) = OCEAN_SST

@@ -460,8 +460,8 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_wait, &
+       COMM_vars8, &
+       COMM_wait,  &
        COMM_stats, &
        COMM_total
     use mod_fileio, only: &
@@ -490,7 +490,7 @@ contains
 
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
     enddo
 
     do iv = 1, A_VA
@@ -668,8 +668,8 @@ contains
        IA   => GRID_IA, &
        JA   => GRID_JA
     use mod_comm, only: &
-       COMM_vars, &
-       COMM_wait, &
+       COMM_vars8, &
+       COMM_wait,  &
        COMM_total
     implicit none
 
@@ -710,7 +710,7 @@ contains
 
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
     enddo
 
     do iv = 1, A_VA

@@ -153,15 +153,15 @@ contains
        EPSvap => CONST_EPSvap, &
        PSAT0  => CONST_PSAT0
     use mod_grid, only : &
+       KA  => GRID_KA,  &
        IA  => GRID_IA,  &
        JA  => GRID_JA,  &
-       KA  => GRID_KA,  &
+       KS  => GRID_KS,  &
+       WS  => GRID_WS,  &
        IS  => GRID_IS,  &
        IE  => GRID_IE,  &
        JS  => GRID_JS,  &
        JE  => GRID_JE,  &
-       KS  => GRID_KS,  &
-       WS  => GRID_WS,  &
        CDZ => GRID_CDZ
     use mod_atmos_vars, only: &
        QA => A_QA, &

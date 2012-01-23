@@ -321,7 +321,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
     '***  NW(',PRC_next(PRC_NW),',',PRC_2Drank(PRC_next(PRC_NW),1),',',PRC_2Drank(PRC_next(PRC_NW),2),')', &
       ' -  N(',PRC_next(PRC_N) ,',',PRC_2Drank(PRC_next(PRC_N),1) ,',',PRC_2Drank(PRC_next(PRC_N),2) ,')', &
-      ' - BE(',PRC_next(PRC_NE),',',PRC_2Drank(PRC_next(PRC_NE),1),',',PRC_2Drank(PRC_next(PRC_NE),2),')'
+      ' - NE(',PRC_next(PRC_NE),',',PRC_2Drank(PRC_next(PRC_NE),1),',',PRC_2Drank(PRC_next(PRC_NE),2),')'
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***                                  |'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
     '***   W(',PRC_next(PRC_W),',',PRC_2Drank(PRC_next(PRC_W),1),',',PRC_2Drank(PRC_next(PRC_W),2),')', &
