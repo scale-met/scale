@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = SonicAndDamp
+PROJ_EXE = modoverhead2
 
 all: makedir makebin
 

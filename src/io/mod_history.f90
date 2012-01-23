@@ -86,9 +86,9 @@ contains
     use mod_time, only: &
        TIME_ymdhms2sec
     use mod_grid, only : &
+       KMAX => GRID_KMAX, &
        IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KMAX => GRID_KMAX
+       JMAX => GRID_JMAX
     use mod_fileio_h, only: &
        FIO_REAL4, &
        FIO_REAL8, &
@@ -288,15 +288,15 @@ contains
       var,    &
       dt      )
     use mod_grid, only : &
+       KMAX => GRID_KMAX, &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX, &
-       KMAX => GRID_KMAX, &
+       KS   => GRID_KS,   &
+       KE   => GRID_KE,   &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_JS,   &
-       KE   => GRID_JE
+       JE   => GRID_JE
     implicit none
 
     integer, intent(in) :: itemid
@@ -361,9 +361,9 @@ contains
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use mod_grid, only : &
+       KMAX => GRID_KMAX, &
        IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KMAX => GRID_KMAX
+       JMAX => GRID_JMAX
     use mod_fileio, only: &
        FIO_output
     implicit none

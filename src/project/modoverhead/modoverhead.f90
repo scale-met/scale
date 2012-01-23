@@ -8,7 +8,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -38,22 +38,27 @@ program scaleles3
      TIME_rapstart,        &
      TIME_rapend,          &
      TIME_rapreport
-  use mod_grid, only: &
-     GRID_setup
   use mod_fileio, only: &
      FIO_setup, &
      FIO_finalize
+  use mod_grid, only: &
+     GRID_setup
+  use mod_comm, only: &
+     COMM_setup
   use mod_atmos, only: &
      ATMOS_setup, &
      ATMOS_step
   use mod_atmos_vars, only: &
-     ATMOS_vars_restart_write
-!  use mod_ocean, only: &
-!     OCEAN_setup, &
-!     OCEAN_step
-!  use mod_history, only: &
-!     HIST_setup, &
-!     HIST_write
+     ATMOS_vars_restart_write, &
+     ATMOS_vars_restart_check, &
+     ATMOS_sw_restart,         &
+     ATMOS_sw_check
+  use mod_ocean, only: &
+     OCEAN_setup, &
+     OCEAN_step
+  use mod_history, only: &
+     HIST_setup, &
+     HIST_write
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -78,24 +83,28 @@ program scaleles3
 
   ! setup time
   call TIME_setup
-
   call TIME_rapstart('Initialize')
-  ! setup horisontal/veritical grid system
-  call GRID_setup
 
   ! setup file I/O
   call FIO_setup
+
+  ! setup horisontal/veritical grid system
+  call GRID_setup
+
+  ! setup mpi communication
+  call COMM_setup
 
   ! setup atmosphere
   call ATMOS_setup
 
   ! setup ocean
-!  call OCEAN_setup
+  call OCEAN_setup
 
   ! setup history
-!  call HIST_setup
+  call HIST_setup
 
   call TIME_rapend('Initialize')
+
 
   !########## main ##########
 
@@ -109,16 +118,16 @@ program scaleles3
 
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_step
-!    if ( TIME_DOOCEAN_step ) call OCEAN_step
+    if ( TIME_DOOCEAN_step ) call OCEAN_step
 
     ! time advance
     call TIME_advance
 
     ! history file output
-!    call HIST_write
+    call HIST_write
 
     ! restart output
-    if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
 
     if ( TIME_DOend ) exit
 
@@ -130,6 +139,10 @@ program scaleles3
 
 
   !########## Finalize ##########
+
+  ! check data
+  if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
+
   call TIME_rapreport
 
   call FIO_finalize

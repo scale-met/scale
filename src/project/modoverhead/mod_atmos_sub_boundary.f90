@@ -158,23 +158,23 @@ contains
        CONST_UNDEF8, &
        PI => CONST_PI
     use mod_grid, only : &
-       KA => GRID_KA, &
        IA => GRID_IA, &
        JA => GRID_JA, &
-       KS => GRID_KS, &
-       KE => GRID_KE, &
-       WS => GRID_WS, &
-       WE => GRID_WE, &
+       KA => GRID_KA, &
        IS => GRID_IS, &
        IE => GRID_IE, &
        JS => GRID_JS, &
        JE => GRID_JE, &
-       GRID_CBFZ, &
+       KS => GRID_KS, &
+       KE => GRID_KE, &
+       WS => GRID_WS, &
+       WE => GRID_WE, &
        GRID_CBFX, &
        GRID_CBFY, &
-       GRID_FBFZ, &
+       GRID_CBFZ, &
        GRID_FBFX, &
-       GRID_FBFY
+       GRID_FBFY, &
+       GRID_FBFZ
 
     real(8) :: coef, alpha
     real(8) :: ee1, ee2
@@ -394,18 +394,18 @@ contains
     use mod_fileio, only: &
        FIO_output
     use mod_grid, only : &
-       KA   => GRID_KA,   &
        IA   => GRID_IA,   &
        JA   => GRID_JA,   &
-       KMAX => GRID_KMAX, &
+       KA   => GRID_KA,   &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
+       KMAX => GRID_KMAX, &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
-       JE   => GRID_JE
+       JE   => GRID_JE,   &
+       KS   => GRID_KS,   &
+       KE   => GRID_KE
     implicit none
 
     real(8) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)

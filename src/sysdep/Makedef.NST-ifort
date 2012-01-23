@@ -1,0 +1,39 @@
+# ------ FOR NST cluster & ifort -----
+#
+FC     = ifort
+FFLAGS = -O3 -ftz -m64 -lmpi \
+         -assume byterecl -convert big_endian \
+         -fp-model precise -pc 80 \
+         -heap-arrays -fno-alias
+#FFLAGS = -O0 -fpe0 -m64 \
+#         -assume byterecl -convert big_endian \
+#         -fp-stack-check -fp-model strict -pc 80 \
+#         -heap-arrays -fno-alias \
+#         -check all -warn all \
+#         -g -traceback
+#
+CC     = icc
+CFLAGS = -fast -O3 -m64
+#
+#
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+# for frontend
+FRONT_F90     = ifort
+FRONT_FFLAGS = -O3 -ftz -m64 \
+               -assume byterecl -convert big_endian \
+               -fp-model precise -pc 80 \
+               -heap-arrays -fno-alias
+#FRONT_FFLAGS = -O0 -ftz -m64 \
+#               -assume byterecl -convert big_endian \
+#               -fp-model precise -pc 80 \
+#               -heap-arrays \
+#               -check all -warn all \
+#               -g -traceback
+
+FRONT_CC     = gcc
+FRONT_CFLAGS = -O3
+
+FRONT_LD     = $(FRONT_F90)
+FRONT_LFLAGS = $(FRONT_FFLAGS)
