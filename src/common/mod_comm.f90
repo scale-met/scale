@@ -17,11 +17,12 @@ module mod_comm
   !
   !++ used modules
   !
-  use mpi
+!  use mpi
   !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
+  include 'mpif.h'
   !
   !++ Public procedure
   !
@@ -496,6 +497,7 @@ contains
 
     integer, intent(in) :: vid
 
+!    integer :: status(MPI_STATUS_SIZE,IREQ_CNT_MAX)
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
@@ -503,7 +505,8 @@ contains
     call TIME_rapstart('COMM_wait')
 
     !--- wait packets
-    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr) ;
+    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
+!    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), status(:,1:ireq_cnt(vid)), ierr)
 
     !--- unpacking packets from East
     do j = JS, JE

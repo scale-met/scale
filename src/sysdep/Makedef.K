@@ -1,7 +1,9 @@
 # ------ FOR K -----
 
 FC     = mpifrtpx
-#FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto -Qt -V -Ksimd=2
+#FFLAGS = -Kvisimpact,ocl,ilfunc,preex,array_private,prefetch_cache_level=all,auto,mfunc=2,noalias=s,instance=8 \
+#         -Ntl_trt -Qt -V -Ksimd -DFPCOLL \
+#         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
 FFLAGS = -Kvisimpact,prefetch_iteration_L2=50,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong  -Ntl_trt  -Qt -V -Ksimd
 
 CC     = mpifccpx
