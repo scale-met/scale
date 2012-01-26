@@ -11,7 +11,7 @@
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 4MB -d 4MB -h 256MB -t 4MB -p 4MB"
+export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
 

@@ -14,10 +14,11 @@
 !! @li      2011-12-26 (Y.Miyamoto) [mod] Add numerical diffusion into mass flux calc
 !! @li      2011-01-04 (H.Yashiro)  [mod] Nonblocking communication (Y.Ohno)
 !! @li      2011-01-25 (H.Yashiro)  [mod] Bugfix (Y.Miyamoto)
+!! @li      2011-01-25 (H.Yashiro)  [mod] Positive definite FCT (Y.Miyamoto)
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_dyn_old
+module mod_atmos_dyn
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -1213,4 +1214,4 @@ call STOP_COLLECTION("DYNAMICS")
     return
   end subroutine ATMOS_DYN
 
-end module mod_atmos_dyn_old
+end module mod_atmos_dyn

@@ -32,6 +32,8 @@ module mod_comm
   public :: COMM_wait
   public :: COMM_stats
   public :: COMM_total
+  public :: COMM_vars_r4
+  public :: COMM_wait_r4
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -60,6 +62,10 @@ module mod_comm
   real(8), private, allocatable, save :: recvpack_E2P(:,:)
   real(8), private, allocatable, save :: sendpack_P2W(:,:)
   real(8), private, allocatable, save :: sendpack_P2E(:,:)
+  real(4), private, allocatable, save :: recvpack_W2P_r4(:,:)
+  real(4), private, allocatable, save :: recvpack_E2P_r4(:,:)
+  real(4), private, allocatable, save :: sendpack_P2W_r4(:,:)
+  real(4), private, allocatable, save :: sendpack_P2E_r4(:,:)
 
   integer, private, allocatable, save :: ireq_cnt(:)
   integer, private, allocatable, save :: ireq_list(:,:)
@@ -123,6 +129,10 @@ contains
     allocate( recvpack_E2P(datasize_WE,COMM_vsize_max) )
     allocate( sendpack_P2W(datasize_WE,COMM_vsize_max) )
     allocate( sendpack_P2E(datasize_WE,COMM_vsize_max) )
+    allocate( recvpack_W2P_r4(datasize_WE,COMM_vsize_max) )
+    allocate( recvpack_E2P_r4(datasize_WE,COMM_vsize_max) )
+    allocate( sendpack_P2W_r4(datasize_WE,COMM_vsize_max) )
+    allocate( sendpack_P2E_r4(datasize_WE,COMM_vsize_max) )
 
     allocate( ireq_cnt(COMM_vsize_max) ) ;              ireq_cnt(:)   = 0
     allocate( ireq_list(IREQ_CNT_MAX,COMM_vsize_max) ); ireq_list(:,:) = 0
@@ -723,5 +733,193 @@ contains
 
     return
   end subroutine COMM_total
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_vars_r4(var, vid)
+    use mod_stdio, only : &
+       IO_FID_LOG, &
+       IO_L
+    use mod_process, only : &
+       PRC_next, &
+       PRC_W,    &
+       PRC_N,    &
+       PRC_E,    &
+       PRC_S
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
+    use mod_grid, only : &
+       IA    => GRID_IA,    &
+       JA    => GRID_JA,    &
+       KA    => GRID_KA,    &
+       IHALO => GRID_IHALO, &
+       JHALO => GRID_JHALO, &
+       IS    => GRID_IS,    &
+       IE    => GRID_IE,    &
+       JS    => GRID_JS,    &
+       JE    => GRID_JE
+    implicit none
+
+    real(4), intent(inout) :: var(:,:,:)
+    integer, intent(in)    :: vid
+
+    integer :: ireqc, tag
+    integer :: ierr
+    integer :: i, j, k, n
+    !---------------------------------------------------------------------------
+
+    tag = vid * 100
+    ireqc = 1
+
+    call TIME_rapstart('COMM_vars')
+
+    !-- From 4-Direction HALO communicate
+    ! From S
+    call MPI_IRECV( var(:,:,JS-JHALO:JS-1), datasize_NS4,          &
+                    MPI_REAL, PRC_next(PRC_S), tag+1, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+    ireqc = ireqc + 1
+
+    ! From N
+    call MPI_IRECV( var(:,:,JE+1:JE+JHALO), datasize_NS4,          &
+                    MPI_REAL, PRC_next(PRC_N), tag+2, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+    ireqc = ireqc + 1
+
+    ! From E
+    call MPI_IRECV( recvpack_E2P_r4(:,vid), datasize_WE,             &
+                    MPI_REAL, PRC_next(PRC_E), tag+3, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+    ireqc = ireqc + 1
+
+    ! From W
+    call MPI_IRECV( recvpack_W2P_r4(:,vid), datasize_WE,             &
+                    MPI_REAL, PRC_next(PRC_W), tag+4, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+    ireqc = ireqc + 1
+
+    !-- To 4-Direction HALO communicate
+    !--- packing packets to West
+    do j = JS, JE
+    do i = IS, IS+IHALO-1
+    do k = 1, KA
+        n =  (j-JS) * KA * IHALO &
+           + (i-IS) * KA         &
+           + k
+        sendpack_P2W_r4(n,vid) = var(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !--- packing packets to East
+    do j = JS, JE
+    do i = IE-IHALO+1, IE
+    do k = 1, KA
+        n =  (j-JS)         * KA * IHALO &
+           + (i-IE+IHALO-1) * KA         &
+           + k
+        sendpack_P2E_r4(n,vid) = var(k,i,j)
+        n = n + 1
+    enddo
+    enddo
+    enddo
+
+    ! To W HALO communicate
+    call MPI_ISEND( sendpack_P2W_r4(:,vid), datasize_WE,             &
+                    MPI_REAL, PRC_next(PRC_W), tag+3, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+    ireqc = ireqc + 1
+
+    ! To E HALO communicate
+    call MPI_ISEND( sendpack_P2E_r4(:,vid), datasize_WE,             &
+                    MPI_REAL, PRC_next(PRC_E), tag+4, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+    ireqc = ireqc + 1
+
+    ! To S HALO communicate
+    call MPI_ISEND( var(:,:,JE-JHALO+1:JE), datasize_NS4,          &
+                    MPI_REAL, PRC_next(PRC_N), tag+1, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+    ireqc = ireqc + 1
+
+    ! To N HALO communicate
+    call MPI_ISEND( var(:,:,JS:JS+JHALO-1), datasize_NS4,          &
+                    MPI_REAL, PRC_next(PRC_S), tag+2, &
+                    MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+    ireqc = ireqc + 1
+
+    ireq_cnt(vid) = ireqc - 1
+
+    call TIME_rapend  ('COMM_vars')
+
+    return
+  end subroutine COMM_vars_r4
+
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_wait_r4( var, vid )
+    use mod_stdio, only : &
+       IO_FID_LOG, &
+       IO_L
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
+    use mod_grid, only :    &
+       IMAX  => GRID_IMAX,  &
+       JMAX  => GRID_JMAX,  &
+       IA    => GRID_IA,    &
+       KA    => GRID_KA,    &
+       IHALO => GRID_IHALO, &
+       JHALO => GRID_JHALO, &
+       IS    => GRID_IS,    &
+       IE    => GRID_IE,    &
+       JS    => GRID_JS,    &
+       JE    => GRID_JE
+    implicit none
+
+    real(4), intent(inout) :: var(:,:,:)
+
+    integer, intent(in) :: vid
+
+!    integer :: status(MPI_STATUS_SIZE,IREQ_CNT_MAX)
+    integer :: ierr
+    integer :: i, j, k, n
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('COMM_wait')
+
+    !--- wait packets
+    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
+!    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), status(:,1:ireq_cnt(vid)), ierr)
+
+    !--- unpacking packets from East
+    do j = JS, JE
+    do i = IE+1, IE+IHALO
+    do k = 1, KA
+        n =  (j-JS)   * KA * IHALO &
+           + (i-IE-1) * KA         &
+           + k
+        var(k,i,j) = recvpack_E2P_r4(n,vid)
+    enddo
+    enddo
+    enddo
+
+    !--- unpacking packets from West
+    do j = JS, JE
+    do i = IS-IHALO, IS-1
+    do k = 1, KA
+        n =  (j-JS)       * KA * IHALO &
+           + (i-IS+IHALO) * KA         &
+           + k
+        var(k,i,j) = recvpack_W2P_r4(n,vid)
+    enddo
+    enddo
+    enddo
+
+
+    call TIME_rapend  ('COMM_wait')
+
+    return
+  end subroutine COMM_wait_r4
 
 end module mod_comm

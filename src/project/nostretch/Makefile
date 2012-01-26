@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = modoverhead2
+PROJ_EXE = nostretch
 
 all: makedir makebin
 
