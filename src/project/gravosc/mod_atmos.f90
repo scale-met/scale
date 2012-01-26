@@ -59,6 +59,8 @@ contains
        ATMOS_DYN_setup
 !    use mod_atmos_phy_mp, only: &
 !       ATMOS_PHY_MP_setup
+    use mod_atmos_forcing, only: &
+       ATMOS_FORCING_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -73,6 +75,8 @@ contains
     call ATMOS_DYN_setup
 
 !    call ATMOS_PHY_MP_setup
+
+    call ATMOS_FORCING_setup
 
     return
   end subroutine ATMOS_setup
@@ -96,29 +100,10 @@ contains
        TIME_rapstart,                    &
        TIME_rapend
     use mod_grid, only: &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       RFDZ => GRID_RFDZ
+       KA   => GRID_KA, &
+       IA   => GRID_IA, &
+       JA   => GRID_JA
     use mod_atmos_vars, only: &
-       var => atmos_var, &
-       VA        => A_VA,            &
        QA        => A_QA,            &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_tb => ATMOS_sw_phy_tb, &
@@ -127,12 +112,6 @@ contains
        ATMOS_vars_get,               &
        ATMOS_vars_getdiag,           &
        ATMOS_vars_put
-    use mod_atmos_refstate, only: &
-       REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott
-    use mod_atmos_boundary, only: &
-       DAMP_var   => ATMOS_BOUNDARY_var,  &
-       DAMP_alpha => ATMOS_BOUNDARY_alpha
     use mod_atmos_dyn, only: &
        ATMOS_DYN
     use mod_atmos_phy_sf, only: &
@@ -145,6 +124,8 @@ contains
 !       ATMOS_PHY_MP
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
+    use mod_atmos_forcing, only: &
+       ATMOS_FORCING
     implicit none
 
     ! prognostics
@@ -175,35 +156,13 @@ contains
     real(8) :: momz_t(KA,IA,JA)    ! momentum(z) [kg/m3 * m/s]
     real(8) :: rhot_t(KA,IA,JA)    ! rho * theta [kg/m3 * K]
     real(8) :: qtrc_t(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
-
-    ! working for atmos_dyn
-    real(8) :: var_s    (KA,IA,JA,VA)  ! prognostic variables (previous step)
-    real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
-    real(8) :: dens_diff(KA,IA,JA)     ! anomary of density
-    real(8) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
-    real(8) :: ray_damp (KA,IA,JA,5)
-    real(8) :: num_diff (KA,IA,JA,5,3)
-    real(8) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
-    real(8) :: mflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
-    real(8) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-    real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: ddiv     (KA,IA,JA)     ! density divergence
-    real(8) :: rjpls    (KA,IA,JA,3)   ! plus  in (x,y,z)-direction
-    real(8) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
     call TIME_rapstart('Dynamics')
     if ( sw_dyn .AND. do_dyn ) then
-       call ATMOS_DYN( &
-               var, var_s, diagvar, &
-               CDZ, CDX, CDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
-               ray_damp, DAMP_var, DAMP_alpha, &
-               num_diff, dens_diff, pott_diff, REF_dens, REF_pott, &
-               mflx_hi, mflx_lo, qflx_hi, qflx_lo, qflx_anti, ddiv, rjpls, rjmns, &
-               KA, IA, JA, VA, QA, &
-               KS, KE, WS, WE, IS, IE, JS, JE )
+       call ATMOS_DYN
+       call ATMOS_FORCING
     endif
     call TIME_rapend  ('Dynamics')
 

@@ -20,7 +20,7 @@ mod_atmos_phy_tb_smg.o	: mod_atmos_phy_tb_smg.f90 mod_const.o mod_grid_cartesian
 mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_time.o mod_grid_cartesian_plane.o mod_fileio.o
 mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_dyn_fent_pdfct.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_phy_sf.o mod_atmos_phy_tb_smg.o mod_history.o
 mod_ocean.o	: mod_ocean.f90 mod_stdio.o mod_ocean_vars.o mod_grid_cartesian_plane.o
-benchmark.o	: benchmark.f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_fileio.o mod_grid_cartesian_plane.o mod_comm.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_history.o
+real4dyn.o	: real4dyn.f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_fileio.o mod_grid_cartesian_plane.o mod_comm.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_history.o
 
 MODS =	\
 	mod_stdio.o	\
@@ -57,12 +57,12 @@ MODSRC =	\
 	../../io/fio.c	\
 	../../io/fiof.c	\
 	../../grid/mod_grid_cartesian_plane.f90	\
-	../../common/mod_comm.f90	\
+	../real4dyn/mod_comm.f90	\
 	../../atmos/mod_atmos.f90	\
 	../../atmos/mod_atmos_vars.f90	\
 	../../atmos/mod_atmos_sub_refstate.f90	\
 	../../atmos/mod_atmos_sub_boundary.f90	\
-	../benchmark/mod_atmos_dyn_fent_pdfct.f90	\
+	../real4dyn/mod_atmos_dyn_fent_pdfct.f90	\
 	../../atmos/mod_atmos_phy_sf.f90	\
 	../../ocean/mod_ocean_vars.f90	\
 	../../atmos/mod_atmos_phy_tb_smg.f90	\

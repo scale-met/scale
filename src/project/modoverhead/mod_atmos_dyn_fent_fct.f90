@@ -358,8 +358,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
 
-    call START_COLLECTION("prologue")
-
     do iv = 1, VA
     do j  = 1, JA
     do i  = 1, IA
@@ -564,8 +562,6 @@ contains
     enddo
     enddo
 
-    call STOP_COLLECTION("prologue")
-    call START_COLLECTION("RK")
 
     !##### Start RK #####
     do rko = 1, RK
@@ -958,8 +954,7 @@ contains
 
     enddo ! RK loop
 
-    call STOP_COLLECTION("RK")
-    call START_COLLECTION("FCT")
+
 
     !##### advection of scalar quantity #####
 
@@ -1198,12 +1193,10 @@ contains
 
     endif
 
-    call STOP_COLLECTION("FCT")
+    enddo ! dynamical steps
 
     ! check total mass
-    call COMM_total( var(:,:,:,1:5), A_NAME(1:5) )
-
-    enddo ! dynamical steps
+!    call COMM_total( var(:,:,:,1:5), A_NAME(1:5) )
 
     return
   end subroutine ATMOS_DYN

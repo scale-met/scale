@@ -604,6 +604,8 @@ contains
     integer(8),         intent(in) :: dt
     logical,            intent(in) :: devide_template
  
+    real(8) :: lon2(imax), lat2(jmax), alt2(kmax)
+
     real(8) :: pi
 
     character(LEN=32)  :: outfile
@@ -612,6 +614,10 @@ contains
     integer            :: i, j, k
     !---------------------------------------------------------------------------
     pi = 4.D0 * atan( 1.D0 )
+
+    lon2(:) = lon(:) * 1.D-3 ! [m->km]
+    lat2(:) = lat(:) * 1.D-3 ! [m->km]
+    alt2(:) = alt(:) * 1.D-3 ! [m->km]
 
     outfile = trim(outfile_prefix)//trim(var_name(v))
 
@@ -636,16 +642,16 @@ contains
        write(fid,'(A,E12.5)') 'UNDEF ', real( -99.9E+33, kind=4 )
 
        write(fid,'(A,I5,A)') 'XDEF ', imax, ' LEVELS'
-       write(fid,'(10(1x,E12.5))') (lon(i),i=1,imax)
+       write(fid,'(10(1x,E12.5))') (lon2(i),i=1,imax)
 
        write(fid,'(A,I5,A)')    'YDEF ',jmax, ' LEVELS'
-       write(fid,'(10(1x,E12.5))') (lat(j),j=1,jmax)
+       write(fid,'(10(1x,E12.5))') (lat2(j),j=1,jmax)
 
        if ( kmax == 1 ) then
           write(fid,'(A,I5,A,2I5)') 'ZDEF ', kmax, ' LINEAR', 1, 1
        else
           write(fid,'(A,I5,A)') 'ZDEF ', kmax, ' LEVELS'
-          write(fid,'(10(1x,E12.5))') (alt(k),k=1,kmax)
+          write(fid,'(10(1x,E12.5))') (alt2(k),k=1,kmax)
        endif
 
        s1 = trim( sec2initplate(time_str) ) ! S.Iga060508
