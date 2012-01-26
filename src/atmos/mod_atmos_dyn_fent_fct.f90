@@ -17,7 +17,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_dyn_old
+module mod_atmos_dyn
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -65,12 +65,12 @@ module mod_atmos_dyn_old
   real(8), save      :: DIFF4 ! for 4th order numerical filter
   real(8), save      :: DIFF2 ! for 2nd order numerical filter
 
+  real(8), allocatable, save :: CNDZ(:,:)
+  real(8), allocatable, save :: CNMZ(:,:)
   real(8), allocatable, save :: CNDX(:,:)
   real(8), allocatable, save :: CNMX(:,:)
   real(8), allocatable, save :: CNDY(:,:)
   real(8), allocatable, save :: CNMY(:,:)
-  real(8), allocatable, save :: CNDZ(:,:)
-  real(8), allocatable, save :: CNMZ(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -139,10 +139,10 @@ contains
                  + 1.D0 / ( (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 )
     enddo
-    CNDZ(1,1)  = CNDZ(1,KS)
-    CNDZ(2,1)  = CNDZ(2,KS)
-    CNDZ(1,KA) = CNDZ(1,KE)
-    CNDZ(2,KA) = CNDZ(2,KE)
+    CNDZ(1,1)  = CNDZ(1,KS-1)
+    CNDZ(2,1)  = CNDZ(2,KS-1)
+    CNDZ(1,KA) = CNDZ(1,KE+1)
+    CNDZ(2,KA) = CNDZ(2,KE+1)
 
     do k = KS, KE+2
        CNDZ(3,k) = 1.D0 / ( (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
@@ -155,7 +155,7 @@ contains
     do k = KS-2, KE+1
        CNMZ(1,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) )
     enddo
-    CNMZ(1,KA) = CNMZ(1,KE)
+    CNMZ(1,KA) = CNMZ(1,KE+1)
 
     do k = KS-1, KE+1
        CNMZ(2,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &   
@@ -165,10 +165,10 @@ contains
                  + 1.D0 / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) ) &
                  + 1.D0 / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k-1) )
     enddo
-    CNMZ(2,1)  = CNMZ(2,KS)
-    CNMZ(3,1)  = CNMZ(3,KS)
-    CNMZ(2,KA) = CNMZ(2,KE)
-    CNMZ(3,KA) = CNMZ(3,KE)
+    CNMZ(2,1)  = CNMZ(2,KS-1)
+    CNMZ(3,1)  = CNMZ(3,KS-1)
+    CNMZ(2,KA) = CNMZ(2,KE+1)
+    CNMZ(3,KA) = CNMZ(3,KE+1)
 
     ! x direction
     do i = IS-1, IE+1
@@ -177,10 +177,10 @@ contains
                  + 1.D0 / ( (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5D0 )
     enddo
-    CNDX(1,1)  = CNDX(1,IS)
-    CNDX(2,1)  = CNDX(2,IS)
-    CNDX(1,IA) = CNDX(1,IE)
-    CNDX(2,IA) = CNDX(2,IE)
+    CNDX(1,1)  = CNDX(1,IS-1)
+    CNDX(2,1)  = CNDX(2,IS-1)
+    CNDX(1,IA) = CNDX(1,IE+1)
+    CNDX(2,IA) = CNDX(2,IE+1)
 
     do i = IS, IE+2
        CNDX(3,i) = 1.D0 / ( (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
@@ -193,7 +193,7 @@ contains
     do i = IS-2, IE+1
        CNMX(1,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) )
     enddo
-    CNMX(1,IA) = CNMX(1,IE)
+    CNMX(1,IA) = CNMX(1,IE+1)
 
     do i = IS-1, IE+1
        CNMX(2,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) & 
@@ -203,21 +203,37 @@ contains
                  + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) ) & 
                  + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i-1) )
     enddo
-    CNMX(2,1)  = CNMX(2,IS)
-    CNMX(3,1)  = CNMX(3,IS)
-    CNMX(2,IA) = CNMX(2,IE)
-    CNMX(3,IA) = CNMX(3,IE)
+    CNMX(2,1)  = CNMX(2,IS-1)
+    CNMX(3,1)  = CNMX(3,IS-1)
+    CNMX(2,IA) = CNMX(2,IE+1)
+    CNMX(3,IA) = CNMX(3,IE+1)
 
     ! y direction
-    do j = JS, JE
+    do j = JS-1, JE+1
        CNDY(1,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 )
        CNDY(2,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5D0 )
+    enddo
+    CNDY(1,1)  = CNDY(1,JS-1)
+    CNDY(2,1)  = CNDY(2,JS-1)
+    CNDY(1,JA) = CNDY(1,JE+1)
+    CNDY(2,JA) = CNDY(2,JE+1)
+
+    do j = JS, JE+2
        CNDY(3,j) = 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
                  + 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5D0 )
+    enddo
+    CNDY(3,1)    = CNDY(3,JS)
+    CNDY(3,JS-1) = CNDY(3,JS)
+
+    do j = JS-2, JE+1
        CNMY(1,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) )
+    enddo
+    CNMY(1,JA) = CNMY(1,JE+1)
+
+    do j = JS-1, JE+1
        CNMY(2,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &   
                  + 1.D0 / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &  
                  + 1.D0 / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) ) 
@@ -225,22 +241,10 @@ contains
                  + 1.D0 / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) ) &
                  + 1.D0 / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j-1) )
     enddo
-    do j = 1, JS-1
-       CNDY(1,j) = CNDY(1,JS)
-       CNDY(2,j) = CNDY(2,JS)
-       CNDY(3,j) = CNDY(3,JS)
-       CNMY(1,j) = CNMY(1,JS)
-       CNMY(2,j) = CNMY(2,JS)
-       CNMY(3,j) = CNMY(3,JS)
-    enddo
-    do j = JE+1, JA
-       CNDY(1,j) = CNDY(1,JE)
-       CNDY(2,j) = CNDY(2,JE)
-       CNDY(3,j) = CNDY(3,JE)
-       CNMY(1,j) = CNMY(1,JE)
-       CNMY(2,j) = CNMY(2,JE)
-       CNMY(3,j) = CNMY(3,JE)
-    enddo
+    CNMY(2,1)  = CNMY(2,JS-1)
+    CNMY(3,1)  = CNMY(3,JS-1)
+    CNMY(2,JA) = CNMY(2,JE+1)
+    CNMY(3,JA) = CNMY(3,JE+1)
 
   end subroutine ATMOS_DYN_setup
 
@@ -305,8 +309,8 @@ contains
     implicit none
 
     ! work
-    real(8) :: var_s  (KA,IA,JA,VA)    ! prognostic variables (previous step)
-    real(8) :: diagvar(KA,IA,JA,5)     ! diagnostic variables (work)
+    real(8) :: var_s    (KA,IA,JA,VA)  ! prognostic variables (previous step)
+    real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
 
     ! rayleigh damping, numerical diffusion
     real(8) :: dens_diff(KA,IA,JA)     ! anomary of density
@@ -332,8 +336,31 @@ contains
 #ifdef _FPCOLL_
 call START_COLLECTION("DYNAMICS")
 #endif
+    do j = 1, JA
+    do k = 1, KA
+       rjmns(k,IS-1,j,XDIR) = 0.D0
+       rjmns(k,IE+1,j,XDIR) = 0.D0
+    enddo
+    enddo
+    do i = 1, IA
+    do k = 1, KA
+       rjmns(k,i,JS-1,YDIR) = 0.D0
+       rjmns(k,i,JE+1,YDIR) = 0.D0
+    enddo
+    enddo
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
+
+!    diagvar  (:,:,:,:)   = -9.999D30
+!    dens_diff(:,:,:)     = -9.999D30
+!    pott_diff(:,:,:)     = -9.999D30
+!    ray_damp (:,:,:,:)   = -9.999D30
+!    num_diff (:,:,:,:,:) = -9.999D30
+!    mflx_hi  (:,:,:,:)   = -9.999D30
+!    qflx_hi  (:,:,:,:)   = -9.999D30
+!    qflx_lo  (:,:,:,:)   = -9.999D30
+!    qflx_anti(:,:,:,:)   = -9.999D30
+!    rjmns    (:,:,:,:)   = -9.999D30
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
 
@@ -355,18 +382,19 @@ call START_COLLECTION("SET")
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE-1
-          ray_damp(k,i,j,4) = - DAMP_alpha(k,i,j,1) &
-                              * ( var(k,i,j,I_MOMZ) &
-                                - DAMP_var(k,i,j,I_BND_VELZ) * 0.5D0 * ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) ) )
+          ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+                                   * ( var(k,i,j,I_MOMZ)          &
+                                     - DAMP_var(k,i,j,I_BND_VELZ) &
+                                     * 0.5D0 * ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) ) )
        enddo
        do k = KS, KE
-          ray_damp(k,i,j,2) = - DAMP_alpha(k,i,j,2) &
+          ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
                               * ( var(k,i,j,I_MOMX) &
                                 - DAMP_var(k,i,j,I_BND_VELX) * 0.5D0 * ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) ) )
-          ray_damp(k,i,j,3) = - DAMP_alpha(k,i,j,3) &
+          ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
                               * ( var(k,i,j,I_MOMY) &
                                 - DAMP_var(k,i,j,I_BND_VELY) * 0.5D0 * ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) ) )
-          ray_damp(k,i,j,5) = - DAMP_alpha(k,i,j,4) &
+          ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
                               * ( var(k,i,j,I_RHOT) &
                                 - DAMP_var(k,i,j,I_BND_POTT) * var(k,i,j,I_DENS) )
        enddo 
@@ -594,11 +622,19 @@ call START_COLLECTION("RK3")
        ! momentum -> velocity
        do j = JS,   JE+1
        do i = IS,   IE+1
-       do k = KS-1, KE+1
+       do k = KS+1, KE-2
           diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) &
                                 / ( FACT_N * ( var(k+1,i,j,I_DENS)+var(k  ,i,j,I_DENS) ) &
                                   + FACT_F * ( var(k+2,i,j,I_DENS)+var(k-1,i,j,I_DENS) ) )
        enddo
+       enddo
+       enddo
+       do j = JS,   JE+1
+       do i = IS,   IE+1
+          diagvar(KS-1,i,j,I_VELZ) = 0.D0
+          diagvar(KS  ,i,j,I_VELZ) = 2.D0 * var(KS  ,i,j,I_MOMZ) / ( var(KS+1,i,j,I_DENS)+var(KS,i,j,I_DENS) )
+          diagvar(KE-1,i,j,I_VELZ) = 2.D0 * var(KE-1,i,j,I_MOMZ) / ( var(KE,i,j,I_DENS)+var(KE-1,i,j,I_DENS) )
+          diagvar(KE  ,i,j,I_VELZ) = 0.D0
        enddo
        enddo
 
@@ -753,7 +789,7 @@ call START_COLLECTION("RK3")
                                          + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RDYC(j) ) & ! flux divergence
                                        - ( diagvar(k+1,i,j,I_PRES)-diagvar(k,i,j,I_PRES) ) * RDZF(k)     & ! pressure gradient force
                                        - ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) ) * 0.5D0 * GRAV        & ! gravity force
-                                       + ray_damp(k,i,j,4)                                               ) ! additional damping force
+                                       + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping force
        enddo
        enddo
        enddo
@@ -829,7 +865,7 @@ call START_COLLECTION("RK3")
                                          + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RDXF(i)   &
                                          + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RDYC(j) ) & ! flux divergence
                                        - ( diagvar(k,i+1,j,I_PRES)-diagvar(k,i,j,I_PRES) ) * RDXF(i)     & ! pressure gradient force
-                                       + ray_damp(k,i,j,2)                                               ) ! additional damping force
+                                       + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping force
        enddo
        enddo
        enddo
@@ -893,7 +929,7 @@ call START_COLLECTION("RK3")
                                          + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RDXC(i)   &
                                          + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RDYF(j) ) & ! flux divergence
                                        - ( diagvar(k,i,j+1,I_PRES)-diagvar(k,i,j,I_PRES) ) * RDYF(j)     & ! pressure gradient force
-                                       + ray_damp(k,i,j,3)                                               ) ! additional damping force
+                                       + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping force
        enddo
        enddo
        enddo
@@ -917,7 +953,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
                               * ( FACT_N * ( diagvar(k+1,i,j,I_POTT)+diagvar(k  ,i,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k+2,i,j,I_POTT)+diagvar(k-1,i,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,5,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
        enddo
        enddo
        enddo
@@ -926,10 +962,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
                                  * ( diagvar(KS+1,i,j,I_POTT)+diagvar(KS,i,j,I_POTT) ) &
-                                 + num_diff(KS  ,i,j,5,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
                                  * ( diagvar(KE,i,j,I_POTT)+diagvar(KE-1,i,j,I_POTT) ) &
-                                 + num_diff(KE-1,i,j,5,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
        enddo
        enddo
@@ -940,7 +976,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i+1,j,I_POTT)+diagvar(k,i  ,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i+2,j,I_POTT)+diagvar(k,i-1,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,5,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
        enddo
        enddo
        enddo
@@ -951,7 +987,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i,j+1,I_POTT)+diagvar(k,i,j  ,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i,j+2,I_POTT)+diagvar(k,i,j-1,I_POTT) ) ) &
-                              + num_diff(k,i,j,5,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
        enddo
        enddo
        enddo
@@ -1213,4 +1249,4 @@ call STOP_COLLECTION("DYNAMICS")
     return
   end subroutine ATMOS_DYN
 
-end module mod_atmos_dyn_old
+end module mod_atmos_dyn
