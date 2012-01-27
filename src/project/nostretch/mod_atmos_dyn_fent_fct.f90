@@ -279,14 +279,6 @@ call START_COLLECTION("SET")
           dens_diff(k,i,j) = var(k,i,j,I_DENS)                     - REF_dens(k)
           pott_diff(k,i,j) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) - REF_pott(k)
        enddo
-       do k = 1, KS-1 
-          dens_diff(k,i,j) = dens_diff(KS,i,j)
-          pott_diff(k,i,j) = pott_diff(KS,i,j)
-       enddo
-       do k = KE+1, KA
-          dens_diff(k,i,j) = dens_diff(KE,i,j)
-          pott_diff(k,i,j) = pott_diff(KE,i,j)
-       enddo
     enddo
     enddo
 
@@ -394,8 +386,8 @@ call START_COLLECTION("RK3")
                               * ( FACT_N * ( var(k,i+1,j,I_DENS)+var(k,i  ,j,I_DENS) ) &
                                 + FACT_F * ( var(k,i+2,j,I_DENS)+var(k,i-1,j,I_DENS) ) ) &
                               + DIFF4 * rdtrk * RDXC3(i) &
-                              * ( 3.D0   * ( -dens_diff(k,i+1,j)+dens_diff(k,i  ,j) ) &
-                                - 1.D0   * ( -dens_diff(k,i+2,j)+dens_diff(k,i-1,j) ) )
+                              * ( 3.D0   * ( -var_s(k,i+1,j,I_DENS)+var_s(k,i  ,j,I_DENS) ) &
+                                - 1.D0   * ( -var_s(k,i+2,j,I_DENS)+var_s(k,i-1,j,I_DENS) ) )
        enddo
        enddo
        enddo
@@ -407,8 +399,8 @@ call START_COLLECTION("RK3")
                               * ( FACT_N * ( var(k,i,j+1,I_DENS)+var(k,i,j  ,I_DENS) ) &
                                 + FACT_F * ( var(k,i,j+2,I_DENS)+var(k,i,j-1,I_DENS) ) ) &
                               + DIFF4 * rdtrk * RDYC3(j) &
-                              * ( 3.D0   * ( -dens_diff(k,i,j+1)+dens_diff(k,i,j  ) ) &
-                                - 1.D0   * ( -dens_diff(k,i,j+2)+dens_diff(k,i,j-1) ) )
+                              * ( 3.D0   * ( -var_s(k,i,j+1,I_DENS)+var_s(k,i,j  ,I_DENS) ) &
+                                - 1.D0   * ( -var_s(k,i,j+2,I_DENS)+var_s(k,i,j-1,I_DENS) ) )
        enddo
        enddo
        enddo

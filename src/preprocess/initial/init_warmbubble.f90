@@ -40,6 +40,8 @@ program warmbubble
   use mod_atmos_vars, only: &
      ATMOS_vars_setup, &
      ATMOS_vars_restart_write
+  use mod_atmos_refstate, only: &
+     ATMOS_REFSTATE_setup
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -77,6 +79,8 @@ program warmbubble
   ! setup atmosphere
   call ATMOS_vars_setup
 
+  ! setup reference state
+  call ATMOS_REFSTATE_setup
 
   !########## main ##########
 
@@ -113,6 +117,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
+       PI     => CONST_PI,     &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
@@ -139,6 +144,8 @@ contains
        I_QV,           &
        ATMOS_vars_get, &
        ATMOS_vars_put
+    use mod_atmos_refstate, only: &
+       REF_pott => ATMOS_REFSTATE_pott
     implicit none
 
     real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment [K]
@@ -172,7 +179,6 @@ contains
     real(8) :: pott(KA,IA,JA)    ! potential temperature [K]
 
     real(8) :: dist
-    real(8) :: rh(KA,IA,JA)
     real(8) :: psat, qsat
 
     integer :: i, j, k
@@ -208,26 +214,26 @@ contains
     do k = KS, KE
        temp(k,i,j) = ENV_THETA - GRAV / CPdry * GRID_CZ(k)
 
+       call moist_psat_water0( temp(k,i,j), psat )
+
+       pres(k,i,j) = Pstd * ( temp(k,i,j)/ENV_THETA )**CPovR - ENV_RH*1.D-2 * psat
+
+       qsat = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap )*psat )
+
+       qtrc(k,i,j,I_QV) = ENV_RH*1.D-2 * qsat
+
        dist = ( (GRID_CX(i)-XC_BBL)/XR_BBL )**2.D0 &
             + ( (GRID_CY(j)-YC_BBL)/YR_BBL )**2.D0 &
             + ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2.D0
 
-       if ( dist > 1.D0 ) then ! out of warm bubble
-          rh(k,i,j) = ENV_RH / ( 1.D0 + GRID_CZ(k) )
+       if ( dist > 1.D0 ) then ! out of cold bubble
+          pott(k,i,j) = REF_pott(k)
        else
-          rh(k,i,j) = 100.D0 ! 100%, saturated
+          pott(k,i,j) = REF_pott(k) &
+                      + 5.D0 * dcos( 0.5D0*PI*sqrt(dist) )**2 &
+                      * ( Pstd/pres(k,i,j) )**RovCP
        endif
 
-       call moist_psat_water0( temp(k,i,j), psat )
-
-       pres(k,i,j) = Pstd * ( temp(k,i,j)/ENV_THETA )**CPovR - rh(k,i,j)*1.D-2 * psat
-
-       qsat = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap )*psat )
-
-
-       qtrc(k,i,j,I_QV) = rh(k,i,j)*1.D-2 * qsat
-
-       pott(k,i,j) = temp(k,i,j) * ( Pstd/pres(k,i,j) )**RovCP
        dens(k,i,j) = Pstd / Rdry / pott(k,i,j) * ( pres(k,i,j)/Pstd )**CVovCP
        rhot(k,i,j) = dens(k,i,j) * pott(k,i,j)
     enddo

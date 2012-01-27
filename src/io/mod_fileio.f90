@@ -199,6 +199,9 @@ contains
        IO_L
     use mod_process, only: &
        PRC_MPIstop
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     implicit none
 
     real(8),          intent(out) :: var(:,:,:)
@@ -214,6 +217,8 @@ contains
 
     integer :: did, fid
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('FILE I')
 
     !--- search/register file
     call FIO_getfid( fid, basename, FIO_FREAD, "", "" )
@@ -274,6 +279,8 @@ contains
        call fio_read_data(fid,did,var(:,:,:))
 
     endif
+
+    call TIME_rapend  ('FILE I')
 
     return
   end subroutine FIO_input
@@ -403,6 +410,9 @@ contains
        PRC_MPIstop
     use mod_const, only : &
        CONST_UNDEF4
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     implicit none
 
     real(8),          intent(in) :: var(:,:,:)
@@ -423,6 +433,8 @@ contains
 
     integer :: did, fid
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('FILE O')
 
     !--- search/register file
     call FIO_getfid( fid, basename, FIO_FWRITE, pkg_desc, pkg_note )
@@ -468,6 +480,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
        call PRC_MPIstop
     endif
+
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine FIO_output
