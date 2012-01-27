@@ -99,9 +99,8 @@ contains
        KA   => GRID_KA, &
        IA   => GRID_IA, &
        JA   => GRID_JA
-    use mod_comm, only: &
-       COMM_total
     use mod_atmos_vars, only: &
+       ATMOS_vars_get,               &
        QA        => A_QA,            &
        A_NAME,                       &
        A_DESC,                       &
@@ -168,7 +167,7 @@ contains
 
     call TIME_rapstart('VARset')
     call ATMOS_vars_get( dens, momx, momy, momz, rhot, qtrc )
-    call ATMOS_vars_getdiag( pres, velx, vely, velz, temp )
+!    call ATMOS_vars_getdiag( pres, velx, vely, velz, temp )
     call TIME_rapend  ('VARset')
 
     !########## Turbulence ##########
@@ -183,7 +182,7 @@ contains
 
 !       call ATMOS_PHY_SF( dens,   rhot,   qtrc,          & ! [IN]
 !                          pres,   velx,   vely,   velz,  & ! [IN]
-!                         FLXij_sfc, FLXt_sfc, FLXqv_sfc ) ! [OUT]
+!                          FLXij_sfc, FLXt_sfc, FLXqv_sfc ) ! [OUT]
 
 !       call ATMOS_PHY_TB( dens,   rhot,   qtrc,                  & ! [IN]
 !                          velx,   vely,   velz,                  & ! [IN]
@@ -231,7 +230,6 @@ contains
              call HIST_in( qtrc_t(:,:,:,iq), trim(A_NAME(5+iq))//'_t_mp', &
                            A_DESC(5+iq), A_UNIT(5+iq), '3D', TIME_DTSEC   )
           enddo
-          call COMM_total( atmos_var(:,:,:,6:5+QA), A_NAME(6:5+QA) )
        endif
        call TIME_rapend  ('History')
 
@@ -264,12 +262,6 @@ contains
           call HIST_in( qtrc(:,:,:,iq), A_NAME(5+iq), A_DESC(5+iq), A_UNIT(5+iq), '3D', TIME_DTSEC )
        enddo
     endif
-
-    call HIST_in( qtrc(:,:,:,2), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
-    call HIST_in( qtrc(:,:,:,3), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
-    call HIST_in( qtrc(:,:,:,4), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
-    call HIST_in( qtrc(:,:,:,5), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
-    call HIST_in( qtrc(:,:,:,6), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
 
     pott(:,:,:) = rhot(:,:,:) / dens(:,:,:)
     call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )

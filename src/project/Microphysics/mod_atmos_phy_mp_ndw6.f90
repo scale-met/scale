@@ -421,10 +421,15 @@ contains
     integer :: i, j, ij, iq
     !---------------------------------------------------------------------------
 
+    dz (:) = GRID_CDZ(:)
+    dzh(1) = GRID_FDZ(1)
+    dzh(2:KA) = GRID_FDZ(1:KA-1)
+
     z  (:) = GRID_CZ(:)
     zh (KS:KE+1) = GRID_FZ(WS:WE)
-    dz (:) = GRID_CDZ(:)
-    dzh(2:KA) = GRID_FDZ(1:KA-1)
+    zh (KS-1)    = zh(KS)  -dz(KS-1)
+    zh (KS-2)    = zh(KS-1)-dz(KS-2)
+
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWSEC
 

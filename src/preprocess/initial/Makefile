@@ -24,7 +24,8 @@ MODS =	\
 	fio.o	\
 	fiof.o	\
 	mod_comm.o	\
-	mod_atmos_vars.o
+	mod_atmos_vars.o \
+	mod_atmos_sub_refstate.o
 
 all: makedir makebin
 
@@ -40,8 +41,8 @@ $(PRJ1): $(PRJ1).o
 $(PRJ2): $(PRJ2).o
 	$(LD) $(LFLAGS) -o $(PRJ2) $(PRJ2).o ${MODS}
 
-$(PRJ1).o: $(PRJ1).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o
-$(PRJ2).o: $(PRJ2).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o
+$(PRJ1).o: $(PRJ1).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ2).o: $(PRJ2).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 
 mod_stdio.o	: mod_stdio.f90
 mod_process.o	: mod_process.f90 mod_stdio.o
@@ -54,6 +55,7 @@ mod_fileio.o	: mod_fileio.f90 mod_fileio_h.o mod_stdio.o mod_process.o mod_time.
 mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o
 mod_comm.o	: mod_comm.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_time.o mod_const.o
 mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
+mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_fileio_h.o
 
 clean:
 	rm -f $(PRJS) *.mod *.o
