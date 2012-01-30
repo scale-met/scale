@@ -4,7 +4,7 @@ export HMDIR=~/GCMresults/sol/latest/output
 export BIN=~/Dropbox/Inbox/scale3/bin/MacOSX-ifort
 export EXE=init_coldbubble
 
-export OUTDIR=${HMDIR}/data/init_coldbubble
+export OUTDIR=${HMDIR}/data/init_coldbubble_hires
 
 # Run Command
 export MPIRUN="/usr/local/mpich213/bin/mpiexec -np 1 -f /Users/yashiro/libs/mpilib/machines_local"
@@ -37,7 +37,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_GRID
- GRID_OUT_BASENAME = 'grid_40m_70x100x220',
+ GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 40.D0,
  GRID_KMAX         = 220,
  GRID_IMAX         = 70,
@@ -45,7 +45,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_BUFFER_DZ    = 4.0D3,
  GRID_BUFFER_DX    = 0.0D0,
  GRID_BUFFER_DY    = 0.0D0,
- GRID_BUFFFACT     = 1.0D0,
+ GRID_BUFFFACT     = 1.1D0,
 /
 
 &PARAM_ATMOS
@@ -65,9 +65,9 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  ZC_BBL =  2.0D3,
  XC_BBL =  1.4D3,
  YC_BBL =  2.0D3,
- ZR_BBL =  1.0D3,
- XR_BBL =  1.0D3,
- YR_BBL =  1.0D3,
+ ZR_BBL =  1.0D2,
+ XR_BBL =  1.0D2,
+ YR_BBL =  1.0D2,
 /
 
 End_of_SYSIN

@@ -16,9 +16,9 @@ export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export HMDIR=/work/user0171/scale3
 
 export BIN=/work/user0171/scale3/bin/K
-export EXE=benchmark
+export EXE=scale3
 
-export OUTDIR=${HMDIR}/output/scale3_fpcoll_1x1
+export OUTDIR=${HMDIR}/output/scale3_detail_1x1
 
 mkdir -p $OUTDIR
 cd $OUTDIR
@@ -52,12 +52,14 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  TIME_DT_ATMOS_DYN          = 0.06D0,
  TIME_DT_ATMOS_DYN_UNIT     = 'SEC',
  TIME_NSTEP_ATMOS_DYN       = 10,
+ TIME_DT_ATMOS_PHY_MP       = 0.6D0,
+ TIME_DT_ATMOS_PHY_MP_UNIT  = 'SEC',
  TIME_DT_ATMOS_RESTART      = 6.D0,
  TIME_DT_ATMOS_RESTART_UNIT = 'SEC',
 /
 
 &PARAM_GRID
- GRID_OUT_BASENAME = 'grid_40m_70x100x220',
+ GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 40.D0,
  GRID_KMAX         = 220,
  GRID_IMAX         = 70,
@@ -65,7 +67,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_BUFFER_DZ    = 4.0D3,
  GRID_BUFFER_DX    = 0.0D0,
  GRID_BUFFER_DY    = 0.0D0,
- GRID_BUFFFACT     = 1.0D0,
+ GRID_BUFFFACT     = 1.1D0,
 /
 
 &PARAM_ATMOS
@@ -77,7 +79,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_coldbubble/init_coldbubble_63072000000.000',
+ ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000',
  ATMOS_RESTART_OUTPUT         = .false.,
  ATMOS_RESTART_OUT_BASENAME   = 'check_coldbubble',
  ATMOS_RESTART_CHECK          = .false.,
@@ -85,12 +87,16 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_OUT_BASENAME = 'refstate',
- ATMOS_REFSTATE_TEMP_SFC    =   300.D0     
+ ATMOS_REFSTATE_TYPE         = 'UNIFORM',
+ ATMOS_REFSTATE_POTT_UNIFORM = 300.D0
 /
 
 &PARAM_ATMOS_BOUNDARY
- ATMOS_BOUNDARY_TAUZ = 75.D0,
+ ATMOS_BOUNDARY_OUT_BASENAME = '',
+ ATMOS_BOUNDARY_VALUE_VELX   = 0.D0,
+ ATMOS_BOUNDARY_TAUZ = 10.D0,
+ ATMOS_BOUNDARY_TAUX =  0.D0,
+ ATMOS_BOUNDARY_TAUY =  0.D0,
 /
 
 &PARAM_ATMOS_DYN
@@ -118,6 +124,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #&HISTITEM item='MOMY' /
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
+#&HISTITEM item='QV'   /
+
 #&HISTITEM item='PRES' /
 #&HISTITEM item='U'    /
 #&HISTITEM item='V'    /
@@ -130,7 +138,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-fpcoll -Srange -Ihwm -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
+fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
 fpcoll -C -d pa1 -Usection=range,local_event_number=0,29,29,29,30,5,9,6    mpiexec $LPG $BIN/$EXE $EXE.cnf >  $OUTDIR/LOG 2>&1
 fpcoll -C -d pa2 -Usection=range,local_event_number=30,30,30,8,29,30,31,0  mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
 fpcoll -C -d pa3 -Usection=range,local_event_number=31,10,11,30,31,0,30,30 mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1

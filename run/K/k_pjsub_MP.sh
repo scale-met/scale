@@ -11,17 +11,14 @@
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 4MB -d 4MB -h 256MB -t 4MB -p 4MB"
+export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
 
 export BIN=/work/user0171/scale3/bin/K
-export EXE=benchmark
+export EXE=Microphysics
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
-
-# Run Command
-export RUN="fpcoll -Ibalance,call,cpu,hwm, -l20 -i20 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf"
+export OUTDIR=${HMDIR}/output/Microphysics_1x1
 
 mkdir -p $OUTDIR
 cd $OUTDIR
@@ -48,13 +45,15 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_TIME
  TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 6.D0,
+ TIME_DURATION              = 180.D0,
  TIME_DURATION_UNIT         = 'SEC',
  TIME_DT                    = 0.6D0,
  TIME_DT_UNIT               = 'SEC',
  TIME_DT_ATMOS_DYN          = 0.06D0,
  TIME_DT_ATMOS_DYN_UNIT     = 'SEC',
  TIME_NSTEP_ATMOS_DYN       = 10,
+ TIME_DT_ATMOS_PHY_MP       = 0.6D0,
+ TIME_DT_ATMOS_PHY_MP_UNIT  = 'SEC',
  TIME_DT_ATMOS_RESTART      = 6.D0,
  TIME_DT_ATMOS_RESTART_UNIT = 'SEC',
 /
@@ -80,15 +79,14 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_coldbubble/init_coldbubble_63072000000.000',
+ ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_warmbubble/init_warmbubble_63072000000.000',
  ATMOS_RESTART_OUTPUT         = .false.,
- ATMOS_RESTART_OUT_BASENAME   = 'check_coldbubble',
+ ATMOS_RESTART_OUT_BASENAME   = 'check_warmbubble',
  ATMOS_RESTART_CHECK          = .false.,
- ATMOS_RESTART_CHECK_BASENAME = '${HMDIR}/data/coldbubble/check_coldbubble_63072000006.000',
+ ATMOS_RESTART_CHECK_BASENAME = '${HMDIR}/data/warmbubble/check_warmbubble_63072000006.000',
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_OUT_BASENAME = 'refstate',
  ATMOS_REFSTATE_TEMP_SFC    =   300.D0     
 /
 
@@ -133,7 +131,14 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-$RUN > $OUTDIR/LOG 2>&1
+fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
+fpcoll -C -d pa1 -Usection=range,local_event_number=0,29,29,29,30,5,9,6    mpiexec $LPG $BIN/$EXE $EXE.cnf >  $OUTDIR/LOG 2>&1
+fpcoll -C -d pa2 -Usection=range,local_event_number=30,30,30,8,29,30,31,0  mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
+fpcoll -C -d pa3 -Usection=range,local_event_number=31,10,11,30,31,0,30,30 mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
+fpcoll -C -d pa4 -Usection=range,local_event_number=0,12,48,48,2,32,48,48  mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
+fpcoll -C -d pa5 -Usection=range,local_event_number=7,7,7,32,0,13,13,22    mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
+fpcoll -C -d pa6 -Usection=range,local_event_number=0,13,13,13,13,35,35,33 mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
+fpcoll -C -d pa7 -Usection=range,local_event_number=35,35,26,0,32,7,7,31   mpiexec $LPG $BIN/$EXE $EXE.cnf >> $OUTDIR/LOG 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit

@@ -14,23 +14,23 @@ export OMP_NUM_THREADS=$PARALLEL
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
-
 export BIN=/work/user0171/scale3/bin/K
-export EXE=scale3
+export EXE=cacheblock
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
+export OUTDIR=${HMDIR}/output/cacheblock_ij_1x1
 
 mkdir -p $OUTDIR
 cd $OUTDIR
 
+echo "job ${RUNNAME} started at " `date`
+
+for i in 2 3 4 5 6 7 8
+do
+for j in 7 15 23 31 39
+do
+
 ########################################################################
 cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
-
-#####
-#
-# Scale3 benchmark configuration
-#
-#####
 
 &PARAM_PRC
  PRC_NUM_X       = 1,
@@ -38,10 +38,6 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
-
-&PARAM_CONST
-/
-
 &PARAM_TIME
  TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
@@ -52,12 +48,9 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  TIME_DT_ATMOS_DYN          = 0.06D0,
  TIME_DT_ATMOS_DYN_UNIT     = 'SEC',
  TIME_NSTEP_ATMOS_DYN       = 10,
- TIME_DT_ATMOS_PHY_MP       = 0.6D0,
- TIME_DT_ATMOS_PHY_MP_UNIT  = 'SEC',
  TIME_DT_ATMOS_RESTART      = 6.D0,
  TIME_DT_ATMOS_RESTART_UNIT = 'SEC',
 /
-
 &PARAM_GRID
  GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 40.D0,
@@ -67,78 +60,47 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_BUFFER_DZ    = 4.0D3,
  GRID_BUFFER_DX    = 0.0D0,
  GRID_BUFFER_DY    = 0.0D0,
- GRID_BUFFFACT     = 1.1D0,
+ GRID_BUFFFACT     = 1.0D0,
 /
-
 &PARAM_ATMOS
  ATMOS_TYPE_DYN    = 'fent_fct',
  ATMOS_TYPE_PHY_TB = 'smagorinsky',
  ATMOS_TYPE_PHY_MP = 'NDW6',
  ATMOS_TYPE_PHY_RD = 'mstrnX',
 /
-
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000',
+ ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_warmbubble/init_warmbubble_63072000000.000',
  ATMOS_RESTART_OUTPUT         = .false.,
- ATMOS_RESTART_OUT_BASENAME   = 'check_coldbubble',
- ATMOS_RESTART_CHECK          = .true.,
- ATMOS_RESTART_CHECK_BASENAME = '${HMDIR}/data/coldbubble/check_coldbubble_63072000006.000',
+ ATMOS_RESTART_CHECK          = .false.,
 /
-
-&PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE         = 'UNIFORM',
- ATMOS_REFSTATE_POTT_UNIFORM = 300.D0
-/
-
-&PARAM_ATMOS_BOUNDARY
- ATMOS_BOUNDARY_OUT_BASENAME = '',
- ATMOS_BOUNDARY_VALUE_VELX   = 0.D0,
- ATMOS_BOUNDARY_TAUZ = 10.D0,
- ATMOS_BOUNDARY_TAUX =  0.D0,
- ATMOS_BOUNDARY_TAUY =  0.D0,
-/
+&PARAM_ATMOS_REFSTATE ATMOS_REFSTATE_TEMP_SFC = 300.D0, /
+&PARAM_OCEAN OCEAN_TYPE = 'FIXEDSST', /
+&PARAM_OCEAN_VARS OCEAN_SST = 293.15D0, /
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_NUMERICAL_DIFF = 1.D-3,
-/
-
-&PARAM_OCEAN
- OCEAN_TYPE = 'FIXEDSST',
-/
-
-&PARAM_OCEAN_VARS
- OCEAN_SST = 293.15D0,
+ KBLOCK = 220,
+ IBLOCK = ${i},
+ JBLOCK = ${j},
 /
 
 &PARAM_HISTORY
  HISTORY_OUT_BASENAME      = 'history',
  HISTORY_DEFAULT_TINTERVAL = 0.6D0,
- HISTORY_DEFAULT_TUNIT     = 'MSEC',
+ HISTORY_DEFAULT_TUNIT     = 'SEC',
  HISTORY_DEFAULT_AVERAGE   = .false.,
  HISTORY_DATATYPE          = 'REAL4',
 /
 
-#&HISTITEM item='DENS' /
-#&HISTITEM item='MOMX' /
-#&HISTITEM item='MOMY' /
-#&HISTITEM item='MOMZ' /
-#&HISTITEM item='RHOT' /
-#&HISTITEM item='QV'   /
-
-#&HISTITEM item='PRES' /
-#&HISTITEM item='U'    /
-#&HISTITEM item='V'    /
-#&HISTITEM item='W'    /
-#&HISTITEM item='T'    /
-#&HISTITEM item='PT'   /
-
 End_of_SYSIN
 ########################################################################
 
-# run
-echo "job ${RUNNAME} started at " `date`
-fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
-echo "job ${RUNNAME} end     at " `date`
+fpcoll -Ihwm,cpu -l0 -o Basic_Profile_i${i}xj${j}.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
+
+done
+done
+
+echo "job ${RUNNAME} finished at " `date`
 
 exit

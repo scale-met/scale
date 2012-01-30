@@ -11,17 +11,17 @@
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 4MB -d 4MB -h 256MB -t 4MB -p 4MB"
+export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
 
 export BIN=/work/user0171/scale3/bin/K
-export EXE=init_coldbubble
+export EXE=init_warmbubble
 
-export OUTDIR=${HMDIR}/output/init_coldbubble
+export OUTDIR=${HMDIR}/output/init_warmbubble
 
 # Run Command
-export RUN="fpcoll -Ibalance,call,cpu,hwm, -l20 -i20 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE init_coldbubble.cnf"
+export RUN="fpcoll -Ibalance,call,cpu,hwm, -l20 -i20 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE init_warmbubble.cnf"
 
 mkdir -p $OUTDIR
 cd $OUTDIR
@@ -31,7 +31,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_coldbubble configulation
+# Scale3 init_warmbubble configulation
 #
 #####
 
@@ -72,16 +72,20 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX            = 11,
  ATMOS_RESTART_OUTPUT       = .true.,
- ATMOS_RESTART_OUT_BASENAME = 'init_coldbubble',
+ ATMOS_RESTART_OUT_BASENAME = 'init_warmbubble',
 /
 
-&PARAM_MKEXP_COLDBUBBLE
+&PARAM_ATMOS_REFSTATE
+ ATMOS_REFSTATE_TEMP_SFC    =   300.D0     
+/
+
+&PARAM_MKEXP_WARMBUBBLE
  ZC_BBL =  2.0D3,
  XC_BBL =  1.4D3,
  YC_BBL =  2.0D3,
- ZR_BBL =  1.0D3,
- XR_BBL =  1.0D3,
- YR_BBL =  1.0D3,
+ ZR_BBL =  1.0D2,
+ XR_BBL =  1.0D2,
+ YR_BBL =  1.0D2,
 /
 
 End_of_SYSIN

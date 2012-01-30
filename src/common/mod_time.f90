@@ -49,9 +49,11 @@ module mod_time
   real(8), public, save :: TIME_DTSEC_OCEAN
 
   real(8), public, save :: TIME_NOWSEC
+  integer, public, save :: TIME_NOWSTEP
+
   integer, public, save :: TIME_NOWDATE(6)
   real(8), public, save :: TIME_NOWMS
-  integer, public, save :: TIME_NOWSTEP
+  real(8), public, save :: TIME_NOWSECL
 
   logical, public, save :: TIME_DOATMOS_step
   logical, public, save :: TIME_DOATMOS_DYN
@@ -71,13 +73,13 @@ module mod_time
   !
   !++ Private parameters & variables
   !
-  real(8), private,      save :: TIME_STARTSEC
-  integer, private,      save :: TIME_STARTDATE(6) = (/ 0000, 01, 01, 00, 00, 00 /)
-  real(8), private,      save :: TIME_STARTMS      = 0.D0
+  integer, private,      save :: TIME_STARTDATE(6) = (/ 0000, 01, 01, 00, 00, 00 /) ! Input
+  real(8), private,      save :: TIME_STARTMS      = 0.D0                           ! Input
+  real(8), private,      save :: TIME_STARTSECL
 
-  real(8), private,      save :: TIME_ENDSEC
   integer, private,      save :: TIME_ENDDATE(6)
   real(8), private,      save :: TIME_ENDMS
+  real(8), private,      save :: TIME_ENDSECL
 
   integer, private,      save :: TIME_NSTEP
 
@@ -158,6 +160,7 @@ contains
        TIME_DT_OCEAN_UNIT
 
     real(8) :: TIME_DURATIONSEC
+    real(8) :: temp
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -178,23 +181,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TIME)
 
     !--- calculate time
-    call TIME_date2sec( TIME_STARTSEC, TIME_STARTDATE(:), TIME_STARTMS )
+    call TIME_date2sec( TIME_STARTSECL, TIME_STARTDATE(:) )
 
     call TIME_ymdhms2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
 
-    TIME_ENDSEC = TIME_STARTSEC + TIME_DURATIONSEC
+    temp  = dble( int( TIME_STARTMS+TIME_DURATIONSEC,kind=8 ) )
+    TIME_ENDMS   = TIME_STARTMS   + TIME_DURATIONSEC - temp
+    TIME_ENDSECL = TIME_STARTSECL + temp
 
-    call TIME_sec2date( TIME_ENDDATE(:), TIME_ENDMS, TIME_ENDSEC )
+    call TIME_sec2date( TIME_ENDDATE(:), TIME_ENDSECL )
 
     call TIME_ymdhms2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
 
     TIME_NSTEP = int( TIME_DURATIONSEC / TIME_DTSEC )
 
-    TIME_NOWSEC     = TIME_STARTSEC
+    TIME_NOWSECL    = TIME_STARTSECL
     TIME_NOWDATE(:) = TIME_STARTDATE(:)
     TIME_NOWMS      = TIME_STARTMS
 
-    TIME_NOWSTEP    = 0
+    TIME_NOWSEC     = TIME_STARTSECL + TIME_STARTMS
+    TIME_NOWSTEP    = 1
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
                TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ', &
@@ -204,7 +210,7 @@ contains
                TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ', &
                TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
                TIME_ENDMS
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)') '*** delta t (sec.) :', TIME_DTSEC
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
     if ( TIME_DTSEC <= 0.D0 ) then
@@ -250,6 +256,7 @@ contains
        IO_FID_LOG, &
        IO_L
     implicit none
+    !---------------------------------------------------------------------------
 
     TIME_DOATMOS_step   = .false.
     TIME_DOATMOS_DYN    = .false.
@@ -290,7 +297,7 @@ contains
        TIME_RES_OCEAN    = TIME_RES_OCEAN - TIME_DTSEC_OCEAN
     endif
 
-    call TIME_sec2date( TIME_NOWDATE(:), TIME_NOWMS, TIME_NOWSEC )
+    call TIME_sec2date( TIME_NOWDATE(:), TIME_NOWSEC )
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6)') '*** TIME: ', &
                TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
@@ -308,12 +315,23 @@ contains
        IO_L
     implicit none
 
+    real(8) :: temp
+    !---------------------------------------------------------------------------
+
     TIME_DOend = .false.
 
-    TIME_NOWSEC  = TIME_NOWSEC + TIME_DTSEC
+    temp  = dble( int( TIME_NOWMS+TIME_DTSEC,kind=8 ) )
+    TIME_NOWMS   = TIME_NOWMS + TIME_DTSEC - temp
+    TIME_NOWMS   = nint( TIME_NOWMS * 1.D5 ) * 1.D-5
+    TIME_NOWSECL = TIME_NOWSECL + temp
+
+    TIME_NOWSEC  = TIME_NOWSECL + TIME_NOWMS
     TIME_NOWSTEP = TIME_NOWSTEP + 1
 
-    if( TIME_NOWSEC - TIME_ENDSEC > -eps ) TIME_DOend = .true.
+    if (       TIME_NOWSECL - TIME_ENDSECL > -eps &
+         .AND. TIME_NOWMS   - TIME_ENDMS   > -eps ) then
+      TIME_DOend = .true.
+    endif
 
     TIME_DOATMOS_restart = .false.
 
@@ -334,14 +352,12 @@ contains
   !@todo fit to gregorian calendar
   !-----------------------------------------------------------------------------
   subroutine TIME_date2sec( &
-     second,   &
-     datetime, &
-     microsec  )
+     second,  &
+     datetime )
     implicit none
 
     real(8), intent(out) :: second
     integer, intent( in) :: datetime(6)
-    real(8), intent( in) :: microsec
 
     integer :: m
     !---------------------------------------------------------------------------
@@ -357,7 +373,6 @@ contains
     second = second + datetime(4) * TIME_SEC * TIME_MIN
     second = second + datetime(5) * TIME_SEC
     second = second + datetime(6)
-    second = second + microsec
 
     return
   end subroutine TIME_date2sec
@@ -369,27 +384,21 @@ contains
   !-----------------------------------------------------------------------------
   subroutine TIME_sec2date( &
      datetime, &
-     microsec, &
      second    )
     implicit none
 
     integer, intent(out) :: datetime(6)
-    real(8), intent(out) :: microsec
     real(8), intent( in) :: second
 
     real(8) :: temp
-    real(8) :: nsec, nmin, nhour, nday
+    real(8) :: nmin, nhour, nday
 
     integer :: m
     !---------------------------------------------------------------------------
 
-    temp  = dble( int( second,kind=8 ) )
-    microsec = second - temp
-    nsec  = temp
-
-    temp  = mod( nsec, TIME_SEC )
+    temp  = mod( second, TIME_SEC )
     datetime(6) = temp
-    nmin  = ( nsec-temp ) / TIME_SEC
+    nmin  = ( second-temp ) / TIME_SEC
 
     temp  = mod( nmin, TIME_MIN )
     datetime(5) = temp
