@@ -1,17 +1,19 @@
 #!/usr/bin/perl
 # Auto Experiments Shell for scale3
-# Ver.0.2
-# 2012/01/27 --- Ryuji Yoshida.
+# Ver.0.3
+# 2012/01/28 --- Ryuji Yoshida.
 #--------10--------20--------30--------40--------50--------60--------70--------80--------90#
 #
 # Variables Setting
-@expNUM = ( 1,2,3,4 );				# experiments number names (e.g. 1,2,3,4,5)
+@expNUM = ( 1,2,3,4 );                        # experiments number names (e.g. 1,2,3,4,5)
 @expPES = ( "1x96", "2x96", "8x96", "32x96", "64x96", "128x96" );
 @expGRS = ( "70x100x220" );
 $homedir = "/work/user0173/scale/scaling/sc1";
 $datadir_head = "/work/user0173/scale/scaling/sc1/data";
+$bindir = "\${HMDIR}/bin/K";
 #
 # Parameters
+$user = "user0173";
 $num_threads = "8";
 $lpgparam = "-s 32MB -d 32MB -h 32MB -t 32MB -p 32MB";
 $stopper_head = "end_";
@@ -51,9 +53,14 @@ foreach $grs(@expGRS){
    close(WRT);
 
    print "|---> ".$init_shell."\n";
-   system "pjsub ".$init_shell." ";
-   &breaf_stop();
-   sleep 5;   # wait for file handling
+   #system "pjsub ".$init_shell." ";  [del]
+   $info = `pjsub $init_shell`;
+   $r = $info =~ /(.+)(Job .+)/;
+   @tmp = split(/ /, $2);
+   $pid = $tmp[1];
+   print " PJM Process ID: ".$pid."\n";
+   &breaf_stop($pid);
+   sleep 5;   #5 wait for file handling
    system "mv ".$homedir."/".$init_shell."* ".$datadir;
 
    foreach $exp(@expNUM){
@@ -73,9 +80,14 @@ foreach $grs(@expGRS){
       close(WRT);
 
       print "|---> ".$run_shell."\n";
-      system "pjsub ".$run_shell." ";
-      &breaf_stop();
-      sleep 5;   # wait for file handling
+      #system "pjsub ".$run_shell." ";
+      $info = `pjsub $run_shell`;
+      $r = $info =~ /(.+)(Job .+)/;
+      @tmp = split(/ /, $2);
+      $pid = $tmp[1];
+      print " PJM Process ID: ".$pid."\n";
+      &breaf_stop($pid);
+      sleep 5;   #5 wait for file handling
       system "mv ".$homedir."/".$run_shell."* ".$outdir;
       }  # loop-end: detail profiler mode
 
@@ -115,7 +127,7 @@ export FPC=\"fpcoll $fpcoll \"
 export LPG=\"lpgparm $lpgparam \"
 #
 export HMDIR=$homedir
-export BIN=\${HMDIR}/bin/K
+export BIN=$bindir
 export EXE=init_coldbubble
 export OUTDIR=$datadir
 #
@@ -221,7 +233,7 @@ export FPC=\"fpcoll $fpcoll \"
 export LPG=\"lpgparm $lpgparam \"
 #
 export HMDIR=$homedir
-export BIN=\${HMDIR}/bin/K
+export BIN=$bindir
 export EXE=scale3
 export OUTDIR=$outdir
 #
@@ -416,18 +428,24 @@ sub fpcoll_analysis(){
 } #----------------------------------------------------------------------------------------
 #
 # Subroutine "breaf_stop" -------------------------------------------------------------------
-sub breaf_stop(){
+sub breaf_stop($){
+   my $pjmid = $_[0];
    my $ii = 0;
    my $counter = 0;
    my $targ = $homedir."/".$stopper_head."*";
    my $targ2 = $homedir."/".$stopper;
    my $homedir2 = $homedir."/";
    my $sign = "stop";
+   my $sign1 = "NG";
+   my $sign2 = "NG";
 
+   # Step to Next, when exist "signal file"
+   #                    or process id is deleted from pjstat
    while($sign eq "stop"){
       print "\r|-".$counter;
       $counter++;
-      sleep 30;
+      sleep 30;  # default=30 sec
+      # Signal File Check
       my $temp = `ls -x $targ `;
       $temp =~ s/\n/ /g;
       $temp =~ s/$homedir2/ /g;
@@ -435,13 +453,34 @@ sub breaf_stop(){
       my $ni = @tmp;
       for( $ii=0; $ii<=$ni; $ii++ ){
          if($tmp[$ii] =~ /$stopper/){
-            print "->next\n";
-            system "rm -r $targ2";
-            $sign = "go";
+            $sign1 = "OK";
          }
       }
+      # Status Check
+      $info = `pjstat`;
+      @tmp = split(/\n/, $info);
+      my $ln = @tmp;
+      $sign2 = "OK";
+      for($ii=0; $ii<=$ln; $ii++){
+          if($tmp[$ii] =~ /$user/){
+              if($tmp[$ii] =~ /$pjmid/){
+                  $sign2 = "NG";
+              }
+          }
+      }
+      if($sign1 eq "OK" || $sign2 eq "OK"){
+         $sign = "go";
+         if($sign1 eq "OK"){
+            print "-quit by signal-";
+         }elsif($sign2 eq "OK"){
+            print "-quit by pjstat-";
+         }
+      }
+
    }
+   print "->next\n";
    print "|\n";
+   system "rm -r $targ2";
 
    return;
 } #----------------------------------------------------------------------------------------
