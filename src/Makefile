@@ -27,7 +27,7 @@ MODS =	\
 	mod_atmos_vars.o	\
 	mod_atmos_sub_refstate.o	\
 	mod_atmos_sub_boundary.o	\
-	mod_atmos_dyn_fent_fct.o	\
+	mod_atmos_dyn_fent_pdfct.o	\
 	mod_atmos_phy_sf.o	\
 	mod_ocean_vars.o	\
 	mod_atmos_phy_tb_smg.o	\
@@ -61,12 +61,12 @@ mod_comm.o	: mod_comm.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o m
 mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
 mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_fileio_h.o
 mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o
-mod_atmos_dyn_fent_fct.o	: mod_atmos_dyn_fent_fct.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o
+mod_atmos_dyn_fent_pdfct.o	: mod_atmos_dyn_fent_pdfct.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o
 mod_ocean_vars.o	: mod_ocean_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_time.o
 mod_atmos_phy_sf.o	: mod_atmos_phy_sf.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_ocean_vars.o
 mod_atmos_phy_tb_smg.o	: mod_atmos_phy_tb_smg.f90 mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o
 mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_time.o mod_grid_cartesian_plane.o mod_fileio.o
-mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_dyn_fent_fct.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_phy_sf.o mod_atmos_phy_tb_smg.o mod_history.o
+mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_dyn_fent_pdfct.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_phy_sf.o mod_atmos_phy_tb_smg.o mod_history.o
 mod_ocean.o	: mod_ocean.f90 mod_stdio.o mod_ocean_vars.o mod_grid_cartesian_plane.o
 
 clean:

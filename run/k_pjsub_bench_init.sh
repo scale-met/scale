@@ -2,7 +2,7 @@
 #
 # for K Computer
 #
-#PJM --rsc-list "node=2x1"
+#PJM --rsc-list "node=1x1"
 #PJM --rsc-list "elapse=01:00:00"
 #PJM --rsc-list "node-mem=12Gi"
 #PJM -s
@@ -11,7 +11,7 @@
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 4MB -d 4MB -h 256MB -t 4MB -p 4MB"
+export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
 
@@ -19,9 +19,6 @@ export BIN=/work/user0171/scale3/bin/K
 export EXE=init_coldbubble
 
 export OUTDIR=${HMDIR}/output/init_coldbubble
-
-# Run Command
-export RUN="fpcoll -Ibalance,call,cpu,hwm, -l20 -i20 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE init_coldbubble.cnf"
 
 mkdir -p $OUTDIR
 cd $OUTDIR
@@ -36,7 +33,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 2,
+ PRC_NUM_X       = 1,
  PRC_NUM_Y       = 1,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
@@ -51,15 +48,15 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_GRID
- GRID_OUT_BASENAME = 'grid_500m_70x100x220',
+ GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 40.D0,
  GRID_KMAX         = 220,
  GRID_IMAX         = 70,
  GRID_JMAX         = 100,
- GRID_BUFFER_DZ    =  4.D3,
- GRID_BUFFER_DX    =  0.D0,
- GRID_BUFFER_DY    =  0.D0,
- GRID_BUFFFACT     = 1.0D0,
+ GRID_BUFFER_DZ    = 4.0D3,
+ GRID_BUFFER_DX    = 0.0D0,
+ GRID_BUFFER_DY    = 0.0D0,
+ GRID_BUFFFACT     = 1.1D0,
 /
 
 &PARAM_ATMOS
@@ -71,17 +68,17 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX            = 11,
- ATMOS_RESTART_OUT_BASENAME = 'init_coldbubble',
  ATMOS_RESTART_OUTPUT       = .true.,
+ ATMOS_RESTART_OUT_BASENAME = 'init_coldbubble',
 /
 
 &PARAM_MKEXP_COLDBUBBLE
- XC_BBL =   1.4D3,
- YC_BBL =   2.0D3,
- ZC_BBL =   4.0D3,
- XR_BBL =   5.0D2,
- YR_BBL =   5.0D2,
- ZR_BBL =   5.0D2,
+ ZC_BBL =  2.0D3,
+ XC_BBL =  1.4D3,
+ YC_BBL =  2.0D3,
+ ZR_BBL =  1.0D3,
+ XR_BBL =  1.0D3,
+ YR_BBL =  1.0D3,
 /
 
 End_of_SYSIN
@@ -89,7 +86,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-$RUN > $OUTDIR/LOG 2>&1
+fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf > $OUTDIR/LOG 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit

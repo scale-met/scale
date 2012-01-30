@@ -368,11 +368,11 @@ contains
 
        ! [fix] H.Yashiro 20111011 : specify int kind=8
        midtime = dble( int( (dinfo%time_start+dinfo%time_end)*0.5D0+1.D0,kind=8 ) ) * 1.D-3
-       call TIME_sec2date( data_date(:,i), microsec, midtime )
+       call TIME_sec2date( data_date(:,i), midtime )
 
        if ( opt_periodic_year ) then
           data_date(1,i) = cdate(1)
-          call TIME_date2sec( midtime, data_date(:,i), microsec )
+          call TIME_date2sec( midtime, data_date(:,i) )
        endif
 
        if (       ( .not. startflag ) &

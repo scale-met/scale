@@ -45,7 +45,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_BUFFER_DZ    = 4.0D3,
  GRID_BUFFER_DX    = 0.0D0,
  GRID_BUFFER_DY    = 0.0D0,
- GRID_BUFFFACT     = 1.0D0,
+ GRID_BUFFFACT     = 1.1D0,
 /
 
 &PARAM_ATMOS
