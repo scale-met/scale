@@ -138,7 +138,6 @@ program spd2bin
   character(LEN=16)        :: gthead(64)
   integer(8)               :: nowsec
   integer                  :: kmax, num_of_step, step, date_str(6)
-  real(8)                  :: msec_str
 
   logical :: addvar
   integer :: fid, did, ofid, ierr, irec
@@ -339,11 +338,10 @@ program spd2bin
   write(*,*) '########## Variable List ########## '
   write(*,*) 'ID |NAME            |STEPS|Layername       |START FROM                 |DT [sec]'
   do v = 1, nvar
-     call TIME_sec2date( date_str(:), msec_str, real(var_time_str(v),kind=8) )
+     call TIME_sec2date( date_str(:), real(var_time_str(v),kind=8) )
      write(tmpl,'(I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') &
                date_str(1),'/',date_str(2),'/',date_str(3),' ', &
-               date_str(4),':',date_str(5),':',date_str(6),' +', &
-               msec_str
+               date_str(4),':',date_str(5),':',date_str(6)
      write(*,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A27,A1,I8)') &
               v,'|',var_name(v),'|',var_nstep(v),'|',var_layername(v),'|', tmpl,'|', var_dt(v)
   enddo
@@ -904,7 +902,6 @@ contains
     character(LEN=20) :: template
 
     integer :: d(6)
-    real(8) :: msec
 
     character(LEN=3) :: nmonth(12)
     data nmonth / 'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC' /
@@ -914,7 +911,7 @@ contains
     ! Prefer not to use calendar_dd2ym subroutine
     ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
     ! New I/O stores timestamp, which is generated via calendar_yh2ss
-    call TIME_sec2date( d(:), msec, real(datesec,kind=8) )
+    call TIME_sec2date( d(:), real(datesec,kind=8) )
 
     write(template,'(I2.2,A1,I2.2,A1,I2.2,A3,I4.4)') &
                               d(4), ':', d(5), 'Z', d(3), nmonth(d(2)), d(1)
@@ -932,14 +929,13 @@ contains
     character(LEN=20) :: template
 
     integer :: d(6)
-    real(8) :: msec
     !---------------------------------------------------------------------------
 
     ! [Comment] H.Yashiro 20110903
     ! Prefer not to use calendar_dd2ym subroutine
     ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
     ! New I/O stores timestamp, which is generated via calendar_yh2ss
-    call TIME_sec2date( d(:), msec, real(datesec,kind=8) )
+    call TIME_sec2date( d(:), real(datesec,kind=8) )
 
     write(template,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1)') &
                           d(1), '-', d(2), '-', d(3), '-', d(4), 'h', d(5), 'm'
@@ -972,14 +968,13 @@ contains
     character(LEN=16) :: template
 
     integer :: d(6), i
-    real(8) :: msec
     !---------------------------------------------------------------------------
 
     ! [Comment] H.Yashiro 20110903
     ! Prefer not to use calendar_dd2ym subroutine
     ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
     ! New I/O stores timestamp, which is generated via calendar_yh2ss
-    call TIME_sec2date( d(:), msec, real(datesec,kind=8) )
+    call TIME_sec2date( d(:), real(datesec,kind=8) )
 
     write (template,'(i4.4,i2.2,i2.2,1x,i2.2,i2.2,i2.2,1x)') (d(i),i=1,6)
 

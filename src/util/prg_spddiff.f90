@@ -108,7 +108,6 @@ program prg_spddiff
   character(LEN=28)    :: tmpl
   integer(8)           :: nowsec
   integer              :: kmax, num_of_step, step, date_str(6)
-  real(8)              :: msec_str
 
   real(4), allocatable     :: data1_r4(:)
   real(4), allocatable     :: data2_r4(:)
@@ -239,11 +238,10 @@ program prg_spddiff
   write(*,*) '########## Variable List (file1)', trim(infile(1)), ' ########## '
   write(*,*) 'ID |NAME            |STEPS|Layername       |START FROM                 |DT [sec]'
   do v = 1, nvar1
-     call TIME_sec2date( date_str(:), msec_str, real(var1_time_str(v),kind=8) )
+     call TIME_sec2date( date_str(:), real(var1_time_str(v),kind=8) )
      write(tmpl,'(I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') &
                date_str(1),'/',date_str(2),'/',date_str(3),' ', &
-               date_str(4),':',date_str(5),':',date_str(6),' +', &
-               msec_str
+               date_str(4),':',date_str(5),':',date_str(6)
      write(*,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A27,A1,I8)') &
               v,'|',var1_name(v),'|',var1_nstep(v),'|',var1_layername(v),'|', tmpl,'|', var1_dt(v)
   enddo
@@ -342,11 +340,10 @@ program prg_spddiff
   write(*,*) '########## Variable List (file2)', trim(infile(2)), ' ########## '
   write(*,*) 'ID |NAME            |STEPS|Layername       |START FROM                 |DT [sec]'
   do v = 1, nvar2
-     call TIME_sec2date( date_str(:), msec_str, real(var2_time_str(v),kind=8) )
+     call TIME_sec2date( date_str(:), real(var2_time_str(v),kind=8) )
      write(tmpl,'(I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') &
                date_str(1),'/',date_str(2),'/',date_str(3),' ', &
-               date_str(4),':',date_str(5),':',date_str(6),' +', &
-               msec_str
+               date_str(4),':',date_str(5),':',date_str(6)
      write(*,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A27,A1,I8)') &
               v,'|',var2_name(v),'|',var2_nstep(v),'|',var2_layername(v),'|', tmpl,'|', var2_dt(v)
   enddo
