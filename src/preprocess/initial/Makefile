@@ -45,7 +45,7 @@ $(PRJ2): $(PRJ2).o
 $(PRJ3): $(PRJ3).o
 	$(LD) $(LFLAGS) -o $(PRJ3) $(PRJ3).o ${MODS}
 
-$(PRJ1).o: $(PRJ1).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o
+$(PRJ1).o: $(PRJ1).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 $(PRJ2).o: $(PRJ2).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 $(PRJ3).o: $(PRJ3).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 

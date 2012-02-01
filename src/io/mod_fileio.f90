@@ -322,7 +322,6 @@ contains
     logical,          intent(   in) :: opt_periodic_year
 
     real(8) :: midtime  !--- [sec]
-    real(8) :: microsec !--- [sec]
     logical :: startflag
     integer :: did, fid
     integer :: i
