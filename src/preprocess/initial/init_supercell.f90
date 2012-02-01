@@ -166,12 +166,13 @@ contains
     integer, parameter :: EXP_klim = 100
     integer            :: EXP_kmax
 
-    real(8) :: EXP_z    (EXP_klim) ! height [m]
-    real(8) :: EXP_pres (EXP_klim) ! pressure [hPa]
+    real(8) :: EXP_z    (EXP_klim) ! height      [m]
+    real(8) :: EXP_rho  (EXP_klim) ! density     [kg/m3]
+    real(8) :: EXP_pres (EXP_klim) ! pressure    [Pa]
     real(8) :: EXP_theta(EXP_klim) ! potential temperature [K]
     real(8) :: EXP_qv   (EXP_klim) ! water vapor [g/kg]
-    real(8) :: EXP_u    (EXP_klim) ! velocity u [m/s]
-    real(8) :: EXP_v    (EXP_klim) ! velocity v [m/s]
+    real(8) :: EXP_u    (EXP_klim) ! velocity u  [m/s]
+    real(8) :: EXP_v    (EXP_klim) ! velocity v  [m/s]
 
     real(8) :: dens(KA,IA,JA)      ! density     [kg/m3]
     real(8) :: momx(KA,IA,JA)      ! momentum(x) [kg/m3 * m/s]
@@ -183,15 +184,16 @@ contains
     real(8) :: pott(KA,IA,JA)      ! potential temperature [K]
 
     real(8) :: pres (KA)
+    real(8) :: rho  (KA)
+    real(8) :: theta(KA)
     real(8) :: velx (KA)
     real(8) :: vely (KA)
-    real(8) :: theta(KA)
     real(8) :: qv   (KA)
 
     real(8) :: dist
     real(8) :: gmr, fact1, fact2
 
-    integer :: i, j, k, kref
+    integer :: i, j, k, kref, ite
     integer :: fid, ierr
     !---------------------------------------------------------------------------
 
@@ -246,22 +248,28 @@ contains
     gmr      = GRAV / Rdry
 
     EXP_z(1)    = 0.D0
-    EXP_pres(1) = EXP_pres(1) * 1.D+2
     EXP_u(1)    = EXP_u(2)
     EXP_v(1)    = EXP_v(2)
+    EXP_qv(:)   = EXP_qv(:) * 1.D-3
+
+    EXP_pres(1) = EXP_pres(1) * 1.D+2
+    EXP_rho(1)  = Pstd / Rdry / EXP_theta(1) * ( EXP_pres(1)/Pstd )**CVovCP
 
     do kref = 2, EXP_kmax
-	    EXP_pres(kref) = EXP_pres(kref-1) &
-                      * exp( -gmr / EXP_theta(kref-1) * ( EXP_z(kref)-EXP_z(kref-1) ) )
-    enddo
+       EXP_rho(kref) = EXP_rho(kref-1) ! first guess
 
-    EXP_qv(:) = EXP_qv(:) * 1.D-3
+       do ite = 1, 10
+	       EXP_pres(kref) = EXP_pres(kref-1) &
+                         - 0.5D0 * ( EXP_rho(kref)+EXP_rho(kref-1) ) * GRAV * ( EXP_z(kref)-EXP_z(kref-1) )
+          EXP_rho (kref) = Pstd / Rdry / EXP_theta(kref) * ( EXP_pres(kref)/Pstd )**CVovCP
+       enddo
+    enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding profiles'
     do k = 1, EXP_klim
-       if( IO_L ) write(IO_FID_LOG,'(1x,i3,6(1x,F10.3))') &
-       k, EXP_z(k), EXP_pres(k), EXP_theta(k), EXP_qv(k), EXP_u(k), EXP_v(k)
+       if( IO_L ) write(IO_FID_LOG,'(1x,i3,7(1x,F10.3))') &
+       k, EXP_z(k), EXP_rho(k), EXP_pres(k), EXP_theta(k), EXP_qv(k), EXP_u(k), EXP_v(k)
     enddo
 
     !--- make reference state
@@ -276,8 +284,13 @@ contains
              theta(k) = EXP_theta(kref-1) * fact1 &
                       + EXP_theta(kref)   * fact2
 
-             pres(k) = EXP_pres(kref-1) &
-                     * exp( -gmr / EXP_theta(kref-1) * ( GRID_CZ(k)-EXP_z(kref-1) ) )
+             rho(k) = EXP_rho(kref-1) ! first guess
+
+             do ite = 1, 10
+	             pres(k) = EXP_pres(kref-1) &
+                        - 0.5D0 * ( rho(k)+EXP_rho(kref-1) ) * GRAV * ( GRID_CZ(k)-EXP_z(kref-1) )
+                rho (k) = Pstd / Rdry / theta(k) * ( pres(k)/Pstd )**CVovCP
+             enddo
 
              velx(k) = EXP_u(kref)   * fact1 &
                      + EXP_u(kref+1) * fact2
@@ -309,11 +322,12 @@ contains
 
        if ( dist > 1.D0 ) then ! out of cold bubble
           pott(k,i,j) = theta(k)
+          dens(k,i,j) = rho(k)
        else
           pott(k,i,j) = theta(k) + 5.D0 * dcos( 0.5D0*PI*sqrt(dist) )**2 &
                       * ( Pstd/pres(k) )**RovCP
+          dens(k,i,j) = Pstd / Rdry / pott(k,i,j) * ( pres(k)/Pstd )**CVovCP
        endif
-       dens(k,i,j)   = Pstd / Rdry / pott(k,i,j) * ( pres(k)/Pstd )**CVovCP
 
        rhot(k,i,j)   = dens(k,i,j) * pott(k,i,j)
        momx(k,i,j)   = dens(k,i,j) * velx(k)
