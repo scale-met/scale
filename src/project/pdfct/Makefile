@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = modalgo
+PROJ_EXE = pdfct
 
 all: makedir makebin
 
