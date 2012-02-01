@@ -15,7 +15,7 @@ export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 
 export HMDIR=/work/user0171/scale3
 export BIN=/work/user0171/scale3/bin/K
-export EXE=fullfct
+export EXE=pdfct
 
 export OUTDIR=${HMDIR}/output/${EXE}_1x1
 
