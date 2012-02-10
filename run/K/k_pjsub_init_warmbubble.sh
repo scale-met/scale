@@ -16,9 +16,9 @@ export fu08bf=1
 
 export HMDIR=/work/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=init_coldbubble
+export EXE=init_warmbubble
 
-export OUTDIR=${HMDIR}/output/init_coldbubble
+export OUTDIR=${HMDIR}/output/init_warmbubble
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -28,7 +28,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_coldbubble configulation
+# Scale3 init_warmbubble configulation
 #
 #####
 
@@ -75,10 +75,14 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
  ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_coldbubble",
+ ATMOS_RESTART_OUT_BASENAME   = "init_warmbubble",
 /
 
-&PARAM_MKEXP_COLDBUBBLE
+&PARAM_ATMOS_REFSTATE
+ ATMOS_REFSTATE_TEMP_SFC = 300.D0     
+/
+
+&PARAM_MKEXP_WARMBUBBLE
  ZC_BBL =  6.0D2,
  XC_BBL =  6.0D2,
  YC_BBL =  6.0D2,

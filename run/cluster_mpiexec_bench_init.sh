@@ -1,21 +1,20 @@
 #! /bin/bash -x
 #
-# for K Computer
+# for AICS.common
 #
-#PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
-#PJM --rsc-list "node-mem=10Gi"
-#PJM -s
-#
-. /work/system/Env_base
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
-export fu08bf=1
+#$ -pe  mpi 1
+#$ -q   large
+#$ -cwd
 
-export HMDIR=/work/user0171/scale3
-export BIN=${HMDIR}/bin/K
+export RLIMIT_MEMLOCK=65536
+ulimit -l 65536
+. /opt/intel/ics/2011.05.23/ictvars.sh
+
+export I_MPI_HYDRA_BOOTSTRAP=rsh
+export I_MPI_HYDRA_BOOTSTRAP_EXEC=/usr/bin/rsh
+
+export HMDIR=/home/yashiro/scale3
+export BIN=${HMDIR}/bin/${SCALE_SYS}
 export EXE=init_coldbubble
 
 export OUTDIR=${HMDIR}/output/init_coldbubble
@@ -92,7 +91,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf
+mpiexec.hydra -hostfile $TMPDIR/machines -n 1 -perhost 1 $BIN/$EXE ${EXE}.cnf
 echo "job ${RUNNAME} end     at " `date`
 
 exit

@@ -1,21 +1,9 @@
 #! /bin/bash -x
 #
-# for K Computer
+# for Local machine (MacOSX 8core+ifort+MPICH2)
 #
-#PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
-#PJM --rsc-list "node-mem=10Gi"
-#PJM -s
-#
-. /work/system/Env_base
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=$PARALLEL
-export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
-export fu08bf=1
-
-export HMDIR=/work/user0171/scale3
-export BIN=${HMDIR}/bin/K
+export HMDIR=~/GCMresults/sol/latest
+export BIN=~/Dropbox/Inbox/scale3/bin/${SCALE_SYS}
 export EXE=init_coldbubble
 
 export OUTDIR=${HMDIR}/output/init_coldbubble
@@ -33,8 +21,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X       = 3,
+ PRC_NUM_Y       = 2,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -56,12 +44,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_20m_336x63x63",
- GRID_DXYZ         = 20.D0,
- GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
- GRID_BUFFER_DZ    = 6.0D3,
+ GRID_OUT_BASENAME = "grid_1000m_19x126x126",
+ GRID_DXYZ         = 1000.D0,
+ GRID_KMAX         = 19,
+ GRID_IMAX         = 126,
+ GRID_JMAX         = 126,
+ GRID_BUFFER_DZ    = 5.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
 
@@ -79,12 +67,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_MKEXP_COLDBUBBLE
- ZC_BBL =  6.0D2,
- XC_BBL =  6.0D2,
- YC_BBL =  6.0D2,
- ZR_BBL =  2.0D2,
- XR_BBL =  2.0D2,
- YR_BBL =  2.0D2,
+ ZC_BBL =    6.D3,
+ XC_BBL =  126.D3,
+ YC_BBL =  126.D3,
+ ZR_BBL =    4.D3,
+ XR_BBL =   20.D3,
+ YR_BBL =   20.D3,
 /
 
 End_of_SYSIN
@@ -92,7 +80,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf
+/usr/local/mpich213/bin/mpiexec -np 6 -f /Users/yashiro/libs/mpilib/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit

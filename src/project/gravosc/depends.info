@@ -64,7 +64,7 @@ MODSRC =	\
 	../../atmos/mod_atmos_vars.f90	\
 	../../atmos/mod_atmos_sub_refstate.f90	\
 	../../atmos/mod_atmos_sub_boundary.f90	\
-	../gravosc/mod_atmos_dyn_fent_pdfct.f90	\
+	../../atmos/mod_atmos_dyn_fent_pdfct.f90	\
 	../gravosc/mod_atmos_sub_forcing.f90	\
 	../../atmos/mod_atmos_phy_sf.f90	\
 	../../ocean/mod_ocean_vars.f90	\
