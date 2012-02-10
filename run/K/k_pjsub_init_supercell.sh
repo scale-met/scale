@@ -2,8 +2,8 @@
 #
 # for K Computer
 #
-#PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
+#PJM --rsc-list "node=4x4"
+#PJM --rsc-list "elapse=00:30:00"
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
@@ -16,9 +16,9 @@ export fu08bf=1
 
 export HMDIR=/work/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=init_coldbubble
+export EXE=init_supercell
 
-export OUTDIR=${HMDIR}/output/init_coldbubble
+export OUTDIR=${HMDIR}/output/init_supercell
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -28,13 +28,13 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_coldbubble configulation
+# Scale3 init_supercell configulation
 #
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X       = 4,
+ PRC_NUM_Y       = 4,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -56,12 +56,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_20m_336x63x63",
- GRID_DXYZ         = 20.D0,
- GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
- GRID_BUFFER_DZ    = 6.0D3,
+ GRID_OUT_BASENAME = "grid_400m_46x168x168",
+ GRID_DXYZ         = 400.D0,
+ GRID_KMAX         = 46,
+ GRID_IMAX         = 168,
+ GRID_JMAX         = 168,
+ GRID_BUFFER_DZ    = 5.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
 
@@ -73,18 +73,19 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_coldbubble",
+ ATMOS_QTRC_NMAX            = 11,
+ ATMOS_RESTART_OUTPUT       = .true.,
+ ATMOS_RESTART_OUT_BASENAME = 'init_supercell',
 /
 
-&PARAM_MKEXP_COLDBUBBLE
- ZC_BBL =  6.0D2,
- XC_BBL =  6.0D2,
- YC_BBL =  6.0D2,
- ZR_BBL =  2.0D2,
- XR_BBL =  2.0D2,
- YR_BBL =  2.0D2,
+&PARAM_MKEXP_SUPERCELL
+ ENV_IN_SOUNDING_file = '${HMDIR}/data/supercell/input_sounding.txt',
+ ZC_BBL =  1.5D3,
+ XC_BBL = 67.2D3,
+ YC_BBL = 67.2D3,
+ ZR_BBL =  1.0D3,
+ XR_BBL =  8.0D3,
+ YR_BBL =  8.0D3,
 /
 
 End_of_SYSIN

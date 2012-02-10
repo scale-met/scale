@@ -101,14 +101,14 @@ foreach $dir (@dirs) {
         };
       };
 
-      # special treatment for f77 file (isccp)
-      if ( $modname eq "mod_rd_mstrnx_ar5" or $modname eq "mod_rd_mstrnx_ar5_chaser" ) {
-        $usedmods = $usedmods.'sub_icarus&sub_scops&';
-      };
-
-      # special treatment for c file (fio)
+      # special treatment for c file (fileio)
       if ( $modname eq "mod_fileio" ) {
         $usedmods = $usedmods.'fio&fiof&';
+      };
+
+      # special treatment for c file (rdma)
+      if ( $modname eq "mod_comm" and $filename eq "mod_comm_rdma.f90") {
+        $usedmods = $usedmods.'rdma&';
       };
 
       if ( $file =~ /\.f$/ ) {
@@ -242,6 +242,10 @@ sub printdep{
       }
       if ( $targetfile eq "fiof.c" ) {
         $outline  = $outline." fiof.h fio.h fio_def.h";
+        $outhfile = '1';
+      }
+      if ( $targetfile eq "rdma.c" ) {
+        $outline  = $outline." rdma.h";
         $outhfile = '1';
       }
 

@@ -3,7 +3,7 @@
 # for K Computer
 #
 #PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
+#PJM --rsc-list "elapse=00:30:00"
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
@@ -16,9 +16,9 @@ export fu08bf=1
 
 export HMDIR=/work/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=scale3
+export EXE=MPtune
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
+export OUTDIR=${HMDIR}/output/MPtune_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -74,16 +74,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000",
- ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "check_coldbubble",
- ATMOS_RESTART_CHECK          = .false.,
- ATMOS_RESTART_CHECK_BASENAME = "${HMDIR}/data/coldbubble/check_coldbubble_63072000003.000",
+ ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/output/init_warmbubble/init_warmbubble_63072000000.000",
+ ATMOS_RESTART_OUTPUT         = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE         = "UNIFORM",
- ATMOS_REFSTATE_POTT_UNIFORM = 300.D0
+ ATMOS_REFSTATE_TEMP_SFC = 300.D0     
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -108,36 +104,43 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  HISTORY_DATATYPE          = "REAL4",
 /
 
-#&HISTITEM item='DENS' /
+&HISTITEM item='DENS' /
 #&HISTITEM item='MOMX' /
 #&HISTITEM item='MOMY' /
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
 #&HISTITEM item='PRES' /
 #&HISTITEM item='T'    /
-#&HISTITEM item='U'    /
-#&HISTITEM item='V'    /
-#&HISTITEM item='W'    /
-#&HISTITEM item='PT'   /
+&HISTITEM item='U'    /
+&HISTITEM item='V'    /
+&HISTITEM item='W'    /
+&HISTITEM item='PT'   /
 
-#&HISTITEM item='QV'   /
-#&HISTITEM item='QC'   /
-#&HISTITEM item='QR'   /
-#&HISTITEM item='QI'   /
-#&HISTITEM item='QS'   /
-#&HISTITEM item='QG'   /
-#&HISTITEM item='NC'   /
-#&HISTITEM item='NR'   /
-#&HISTITEM item='NI'   /
-#&HISTITEM item='NS'   /
-#&HISTITEM item='NG'   /
+&HISTITEM item='QV'   /
+&HISTITEM item='QC'   /
+&HISTITEM item='QR'   /
+&HISTITEM item='QI'   /
+&HISTITEM item='QS'   /
+&HISTITEM item='QG'   /
+&HISTITEM item='NC'   /
+&HISTITEM item='NR'   /
+&HISTITEM item='NI'   /
+&HISTITEM item='NS'   /
+&HISTITEM item='NG'   /
 
 End_of_SYSIN
 ########################################################################
 
 # run
 echo "job ${RUNNAME} started at " `date`
-fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000 mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -Ihwm,cpu -l0 -o Basic_Profile.txt -m 200000                        mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa1 -Usection=range,local_event_number=0,29,29,29,30,5,9,6    mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa2 -Usection=range,local_event_number=30,30,30,8,29,30,31,0  mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa3 -Usection=range,local_event_number=31,10,11,30,31,0,30,30 mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa4 -Usection=range,local_event_number=0,12,48,48,2,32,48,48  mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa5 -Usection=range,local_event_number=7,7,7,32,0,13,13,22    mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa6 -Usection=range,local_event_number=0,13,13,13,13,35,35,33 mpiexec $LPG $BIN/$EXE $EXE.cnf
+fpcoll -C -d pa7 -Usection=range,local_event_number=35,35,26,0,32,7,7,31   mpiexec $LPG $BIN/$EXE $EXE.cnf
 echo "job ${RUNNAME} end     at " `date`
 
 exit

@@ -331,7 +331,7 @@ contains
     real(8) :: pjmns
 
     real(8) :: dtrk, rdtrk
-    integer :: i, j, k, iq, iv, rko, step
+    integer :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
@@ -679,12 +679,6 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       if ( rko == RK .AND. QA > 0 ) then
-          call COMM_vars( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-          call COMM_vars( mflx_hi(:,:,:,XDIR), VA+XDIR )
-          call COMM_vars( mflx_hi(:,:,:,YDIR), VA+YDIR )
-       endif
-
        !##### momentum equation (z) #####
        ! at (x, y, layer)
        do j = JS,   JE
@@ -729,6 +723,14 @@ call START_COLLECTION("RK3")
        do i = IS-2, IE+2
        do k = KS-2, KE+2
           diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+       enddo
+       enddo
+       enddo
+
+       do j = JS-2, JE+2
+       do i = IS-2, IE+2
+       do k = KS-2, KE+2
+          diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
        enddo
        enddo
        enddo
@@ -893,14 +895,6 @@ call START_COLLECTION("RK3")
 
        !##### Thermodynamic Equation #####
 
-       do j = JS-2, JE+2
-       do i = IS-2, IE+2
-       do k = KS-2, KE+2
-          diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
-       enddo
-       enddo
-       enddo
-
        ! at (x, y, interface)
        do j = JS,   JE
        do i = IS,   IE
@@ -975,13 +969,6 @@ call START_COLLECTION("RK3")
 
     enddo ! RK loop
 
-!    call COMM_vars( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-!    call COMM_vars( mflx_hi(:,:,:,XDIR), VA+XDIR )
-!    call COMM_vars( mflx_hi(:,:,:,YDIR), VA+YDIR )
-!    call COMM_wait( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-!    call COMM_wait( mflx_hi(:,:,:,XDIR), VA+XDIR )
-!    call COMM_wait( mflx_hi(:,:,:,YDIR), VA+YDIR )
-
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
 call START_COLLECTION("FCT")
@@ -995,10 +982,6 @@ call START_COLLECTION("FCT")
     call COMM_wait( var(:,:,:,I_MOMY), I_MOMY )
 
     if ( QA > 0 ) then
-
-    call COMM_wait( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-    call COMM_wait( mflx_hi(:,:,:,XDIR), VA+XDIR )
-    call COMM_wait( mflx_hi(:,:,:,YDIR), VA+YDIR )
 
     do iq = 6, 5+QA
 

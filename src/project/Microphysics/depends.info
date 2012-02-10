@@ -72,12 +72,12 @@ MODSRC =	\
 	../../atmos/mod_atmos_vars.f90	\
 	../../atmos/mod_atmos_sub_refstate.f90	\
 	../../atmos/mod_atmos_sub_boundary.f90	\
-	../Microphysics/mod_atmos_dyn_fent_pdfct.f90	\
-	../Microphysics/mod_atmos_phy_mp_ndw6.f90	\
-	../Microphysics/mod_atmos_sub_mpcnst.f90	\
-	../Microphysics/mod_atmos_sub_prectransport.f90	\
-	../Microphysics/mod_atmos_sub_thermodyn.f90	\
-	../Microphysics/mod_atmos_sub_satadjust.f90	\
+	../../atmos/mod_atmos_dyn_fent_pdfct.f90	\
+	../../atmos/mod_atmos_phy_mp_ndw6.f90	\
+	../../atmos/mod_atmos_sub_mpcnst.f90	\
+	../../atmos/mod_atmos_sub_prectransport.f90	\
+	../../atmos/mod_atmos_sub_thermodyn.f90	\
+	../../atmos/mod_atmos_sub_satadjust.f90	\
 	../../atmos/mod_atmos_phy_sf.f90	\
 	../../ocean/mod_ocean_vars.f90	\
 	../../atmos/mod_atmos_phy_tb_smg.f90	\

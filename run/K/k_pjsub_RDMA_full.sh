@@ -2,8 +2,8 @@
 #
 # for K Computer
 #
-#PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
+#PJM --rsc-list "node=4x4"
+#PJM --rsc-list "elapse=01:00:00"
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
@@ -16,9 +16,9 @@ export fu08bf=1
 
 export HMDIR=/work/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=scale3
+export EXE=RDMA_full
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
+export OUTDIR=${HMDIR}/output/RDMA_full_4x4
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -28,13 +28,13 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 benchmark configuration
+# Scale3 init_supercell configulation
 #
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X       = 4,
+ PRC_NUM_Y       = 4,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -42,26 +42,26 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_TIME
  TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 3.0D0,
- TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 0.6D0,
- TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.03D0,
- TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_NSTEP_ATMOS_DYN       = 20,
- TIME_DT_ATMOS_PHY_MP       = 0.6D0,
- TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_RESTART      = 3.0D0,
- TIME_DT_ATMOS_RESTART_UNIT = "SEC",
+ TIME_DURATION              = 70.D0,
+ TIME_DURATION_UNIT         = 'SEC',
+ TIME_DT                    = 0.7D0,
+ TIME_DT_UNIT               = 'SEC',
+ TIME_DT_ATMOS_DYN          = 0.7D0,
+ TIME_DT_ATMOS_DYN_UNIT     = 'SEC',
+ TIME_NSTEP_ATMOS_DYN       = 1,
+ TIME_DT_ATMOS_PHY_MP       = 0.7D0,
+ TIME_DT_ATMOS_PHY_MP_UNIT  = 'SEC',
+ TIME_DT_ATMOS_RESTART      = 700.D0,
+ TIME_DT_ATMOS_RESTART_UNIT = 'SEC',
 /
 
 &PARAM_GRID
- GRID_OUT_BASENAME = '',
- GRID_DXYZ         = 20.D0,
- GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
- GRID_BUFFER_DZ    = 6.0D3,
+ GRID_OUT_BASENAME = "",
+ GRID_DXYZ         = 400.D0,
+ GRID_KMAX         = 46,
+ GRID_IMAX         = 168,
+ GRID_JMAX         = 168,
+ GRID_BUFFER_DZ    = 5.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
 
@@ -74,16 +74,13 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000",
+ ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/output/init_supercell/init_supercell_63072000000.000",
  ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "check_coldbubble",
- ATMOS_RESTART_CHECK          = .false.,
- ATMOS_RESTART_CHECK_BASENAME = "${HMDIR}/data/coldbubble/check_coldbubble_63072000003.000",
+ ATMOS_RESTART_OUT_BASENAME   = "restart",
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE         = "UNIFORM",
- ATMOS_REFSTATE_POTT_UNIFORM = 300.D0
+ ATMOS_REFSTATE_TEMP_SFC    =   300.D0     
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -102,7 +99,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_HISTORY
  HISTORY_OUT_BASENAME      = "history",
- HISTORY_DEFAULT_TINTERVAL = 0.6D0,
+ HISTORY_DEFAULT_TINTERVAL = 7.0D0,
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_AVERAGE   = .false.,
  HISTORY_DATATYPE          = "REAL4",
@@ -113,11 +110,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #&HISTITEM item='MOMY' /
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
+
 #&HISTITEM item='PRES' /
-#&HISTITEM item='T'    /
 #&HISTITEM item='U'    /
 #&HISTITEM item='V'    /
 #&HISTITEM item='W'    /
+#&HISTITEM item='T'    /
 #&HISTITEM item='PT'   /
 
 #&HISTITEM item='QV'   /
@@ -126,11 +124,6 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #&HISTITEM item='QI'   /
 #&HISTITEM item='QS'   /
 #&HISTITEM item='QG'   /
-#&HISTITEM item='NC'   /
-#&HISTITEM item='NR'   /
-#&HISTITEM item='NI'   /
-#&HISTITEM item='NS'   /
-#&HISTITEM item='NG'   /
 
 End_of_SYSIN
 ########################################################################
