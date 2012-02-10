@@ -1,13 +1,13 @@
 # ------ FOR MacOSX & ifort & MPICH2 -----
 #
 FC     = /usr/local/mpich213/bin/mpif90
-FFLAGS = -O3 -ftz -m64 \
+FFLAGS = -fpp -O3 -ftz -m64 \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80 \
          -heap-arrays
-#FFLAGS = -O0 -fpe3 -m64 \
+#FFLAGS = -fpp -fpe0 -O0 -m64 \
 #         -assume byterecl -convert big_endian \
-#         -fp-stack-check -fp-model strict -pc 80 \
+#         -fp-model strict -pc 80 \
 #         -heap-arrays \
 #         -check all -warn all \
 #         -g -traceback

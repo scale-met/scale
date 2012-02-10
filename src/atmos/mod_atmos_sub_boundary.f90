@@ -490,11 +490,11 @@ contains
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       if ( CZ_mask(k) ) then
+       if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = 300.D0
-       else
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF8
+       else                   ! Buffer Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = 0.D0
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = 0.D0
           ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_REFSTATE_pott(k)
@@ -505,9 +505,9 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
        do k = KS, KE
-          if ( CZ_mask(k) .AND. CX_mask(i) ) then
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = 0.D0
-          else
+          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
+             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF8
+          else                                    ! Buffer Area
              ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = GRID_FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
                                                   * ( 1.D0 - GRID_CBFZ(k) )
           endif

@@ -38,10 +38,10 @@ module mod_stdio
   integer, public, parameter :: IO_FILECHR  = 128
 
   !> Config file ID
-  integer, public, save      :: IO_FID_CONF = 10
+  integer, public, save      :: IO_FID_CONF = 7
 
   !> Log file ID
-  integer, public, save      :: IO_FID_LOG  = 11
+  integer, public, save      :: IO_FID_LOG  = 8
 
   !> output log or not?
   logical, public, save      :: IO_L        = .true.

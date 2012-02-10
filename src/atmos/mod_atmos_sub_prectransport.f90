@@ -165,6 +165,11 @@ contains
     !
     integer :: k, nq, ij
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("precip_transport_nwater")
+#endif
+
     rdt      = 1.d0/dt
     rdz(:)   = 1.d0/dz(:)
     rdzh(:)  = 1.d0/dzh(:)
@@ -530,6 +535,11 @@ contains
             - fprec_rhokin_v(:,kmin,nq)*rdt
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("precip_transport_nwater")
+#endif
+
     return
     !
   end subroutine precip_transport_nwater
@@ -578,6 +588,11 @@ contains
     !
     integer :: k
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("cnvvar_rhokin")
+#endif
+
     GRD_afac=1.d0
     GRD_bfac=1.d0
     GRD_cfac=1.d0
@@ -627,6 +642,11 @@ contains
     if(present(rhogkin_v)) then
        rhogkin_v = rhogkin_v0
     end if
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("cnvvar_rhokin")
+#endif
+
     !
     return
   end subroutine cnvvar_rhokin
@@ -670,6 +690,11 @@ contains
     real(8) :: zzmax, zzmin
     !
     real(8) :: rhofh(1:ijdim,1:kdim)
+
+#ifdef _FPCOLL_
+call START_COLLECTION("vadv1d_getflux")
+#endif
+
     !
     !--- vetical velocity at the half level
     do k = kmin+1, kmax
@@ -789,6 +814,11 @@ contains
     !
     frhof(:,:) = frhof(:,:) + rhofh_cell(:,:) * zdis(:,:)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("vadv1d_getflux")
+#endif
+
     return
   end subroutine vadv1d_getflux
   !
@@ -813,6 +843,11 @@ contains
     integer, intent(in) :: kcell(1:ijdim,1:kdim)
     real(8), intent(out) :: fh(1:ijdim,1:kdim)
     integer :: ij, k
+
+#ifdef _FPCOLL_
+call START_COLLECTION("sl0_upwind_new")
+#endif
+
     !
     fh(:,:) = 0.d0
     !<--- including the condition of [fh(:,kmax+1) = 0.d0] 
@@ -832,6 +867,11 @@ contains
        end where
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("sl0_upwind_new")
+#endif
+
     return
   end subroutine sl0_upwind_new
   !

@@ -70,7 +70,7 @@ mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_atmos_vars.o mod_atmos_sub_refstate.
 mod_ocean.o	: mod_ocean.f90 mod_stdio.o mod_ocean_vars.o mod_grid_cartesian_plane.o
 
 clean:
-	rm -f $(PRJ1) *.mod *.o
+	rm -f $(PRJ1) *.mod *.o *.lst
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c

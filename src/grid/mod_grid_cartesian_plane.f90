@@ -670,7 +670,7 @@ contains
     ! vartical coordinate (local=global domaim)
     GRID_FZ(GRID_KHALO) = 0.D0
     do k = GRID_KHALO-1, 0, -1
-       GRID_FZ(k) = GRID_FZ(k+1) - buffz(kbuff)
+       GRID_FZ(k) = GRID_FZ(k+1) - GRID_DXYZ
     enddo
 
     do k = 1, GRID_KHALO
