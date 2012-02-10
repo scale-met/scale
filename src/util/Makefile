@@ -79,4 +79,4 @@ prg_$(PRJ5).o	: prg_$(PRJ5).f90 mod_stdio.o mod_const.o mod_time.o mod_fileio_h.
 .PHONY: clean
 
 clean:
-	rm -f $(PRJS) *.mod *.o *~
+	rm -f $(PRJS) *.mod *.o *.lst

@@ -364,25 +364,26 @@ contains
        WE   => GRID_WE,   &
        GRID_CZ,           &
        GRID_FZ,           &
-       GRID_DZ
+       GRID_CDZ,          &
+       GRID_FDZ
     use mod_atmos_vars, only: &
        QA => A_QA
     implicit none
 
     ! prognostic value
-    real(8), intent(in)  :: dens(IA,JA,KA)      ! density [kg/m3]
-    real(8), intent(in)  :: momx(IA,JA,KA)      ! momentum (x) [kg/m3 * m/s]
-    real(8), intent(in)  :: momy(IA,JA,KA)      ! momentum (y) [kg/m3 * m/s]
-    real(8), intent(in)  :: momz(IA,JA,KA)      ! momentum (z) [kg/m3 * m/s]
-    real(8), intent(in)  :: pott(IA,JA,KA)      ! potential temperature [K]
-    real(8), intent(in)  :: qtrc(IA,JA,KA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
+    real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
+    real(8), intent(in)  :: momx(KA,IA,JA)      ! momentum (x) [kg/m3 * m/s]
+    real(8), intent(in)  :: momy(KA,IA,JA)      ! momentum (y) [kg/m3 * m/s]
+    real(8), intent(in)  :: momz(KA,IA,JA)      ! momentum (z) [kg/m3 * m/s]
+    real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
+    real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
     ! prognostic tendency
-    real(8), intent(out) :: dens_t(IA,JA,KA)
-    real(8), intent(out) :: momx_t(IA,JA,KA)
-    real(8), intent(out) :: momy_t(IA,JA,KA)
-    real(8), intent(out) :: momz_t(IA,JA,KA)
-    real(8), intent(out) :: pott_t(IA,JA,KA)
-    real(8), intent(out) :: qtrc_t(IA,JA,KA,QA)
+    real(8), intent(out) :: dens_t(KA,IA,JA)
+    real(8), intent(out) :: momx_t(KA,IA,JA)
+    real(8), intent(out) :: momy_t(KA,IA,JA)
+    real(8), intent(out) :: momz_t(KA,IA,JA)
+    real(8), intent(out) :: pott_t(KA,IA,JA)
+    real(8), intent(out) :: qtrc_t(KA,IA,JA,QA)
 
     ! Convert to fit NDW6
     real(8) :: z  (KA)
@@ -420,10 +421,15 @@ contains
     integer :: i, j, ij, iq
     !---------------------------------------------------------------------------
 
+    dz (:) = GRID_CDZ(:)
+    dzh(1) = GRID_FDZ(1)
+    dzh(2:KA) = GRID_FDZ(1:KA-1)
+
     z  (:) = GRID_CZ(:)
     zh (KS:KE+1) = GRID_FZ(WS:WE)
-    dz (:) = GRID_DZ
-    dzh(:) = GRID_DZ
+    zh (KS-1)    = zh(KS)  -dz(KS-1)
+    zh (KS-2)    = zh(KS-1)-dz(KS-2)
+
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWSEC
 
@@ -431,11 +437,11 @@ contains
     do i = IS, IE
        ij = (j-IS)*IMAX+i-IS+1
 
-       rho   (ij,:) = dens(i,j,:)
-       rho_vx(ij,:) = momx(i,j,:)
-       rho_vy(ij,:) = momy(i,j,:)
-       rho_w (ij,:) = momz(i,j,:)
-       th    (ij,:) = pott(i,j,:)
+       rho   (ij,:) = dens(:,i,j)
+       rho_vx(ij,:) = momx(:,i,j)
+       rho_vy(ij,:) = momy(:,i,j)
+       rho_w (ij,:) = momz(:,i,j)
+       th    (ij,:) = pott(:,i,j)
 
     enddo
     enddo
@@ -446,7 +452,7 @@ contains
        do i = IS, IE
           ij = (j-IS)*IMAX+i-IS+1
 
-          rho_q (ij,:,iq) = qtrc(i,j,:,iq) * dens(i,j,:)
+          rho_q (ij,:,iq) = qtrc(:,i,j,iq) * dens(:,i,j)
        enddo
        enddo
        enddo
@@ -469,11 +475,11 @@ contains
     do i = IS, IE
        ij = (j-IS)*IMAX+i-IS+1
 
-       dens_t(i,j,:) = drho   (ij,:)
-       momx_t(i,j,:) = drho_vx(ij,:)
-       momy_t(i,j,:) = drho_vy(ij,:)
-       momz_t(i,j,:) = drho_w (ij,:)
-       pott_t(i,j,:) = dth    (ij,:)
+       dens_t(:,i,j) = drho   (ij,:)
+       momx_t(:,i,j) = drho_vx(ij,:)
+       momy_t(:,i,j) = drho_vy(ij,:)
+       momz_t(:,i,j) = drho_w (ij,:)
+       pott_t(:,i,j) = dth    (ij,:)
     enddo
     enddo
 
@@ -483,7 +489,7 @@ contains
        do i = IS, IE
           ij = (j-IS)*IMAX+i-IS+1
 
-          qtrc_t(i,j,:,iq) = drho_q (ij,:,iq) / dens(i,j,:)
+          qtrc_t(:,i,j,iq) = drho_q (ij,:,iq) / dens(:,i,j)
        enddo
        enddo
        enddo

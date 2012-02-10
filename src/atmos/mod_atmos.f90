@@ -101,6 +101,9 @@ contains
        JA   => GRID_JA
     use mod_atmos_vars, only: &
        QA        => A_QA,            &
+       A_NAME,                       &
+       A_DESC,                       &
+       A_UNIT,                       &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
@@ -150,6 +153,8 @@ contains
     real(8) :: momz_t(KA,IA,JA)    ! momentum(z) [kg/m3 * m/s]
     real(8) :: rhot_t(KA,IA,JA)    ! rho * theta [kg/m3 * K]
     real(8) :: qtrc_t(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg],[1/m3]
+
+    integer :: iq
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
@@ -229,6 +234,11 @@ contains
     call HIST_in( momx(:,:,:), 'MOMX', 'momentum x',  'kg/m2/s', '3D', TIME_DTSEC )
     call HIST_in( momy(:,:,:), 'MOMY', 'momentum y',  'kg/m2/s', '3D', TIME_DTSEC )
     call HIST_in( rhot(:,:,:), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
+    if ( QA > 0 ) then
+       do iq = 1, QA
+          call HIST_in( qtrc(:,:,:,iq), A_NAME(5+iq), A_DESC(5+iq), A_UNIT(5+iq), '3D', TIME_DTSEC )
+       enddo
+    endif
 
     pott(:,:,:) = rhot(:,:,:) / dens(:,:,:)
     call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )

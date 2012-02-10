@@ -47,7 +47,7 @@ mod_fileio.o	: mod_fileio.f90 mod_fileio_h.o mod_stdio.o mod_process.o mod_time.
 mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o
 
 clean:
-	rm -f $(PRJS) *.mod *.o
+	rm -f $(PRJS) *.mod *.o *.lst
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c

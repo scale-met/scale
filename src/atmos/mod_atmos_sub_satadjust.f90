@@ -85,11 +85,21 @@ contains
     real(8), intent(in) :: tem(:,:)
     real(8), intent(out) :: psat(:,:)
     real(8) :: TEM_MIN = 10.d0
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_psat_water")
+#endif
+
     
     psat(:,:) = CNST_PSAT0 &
          * ( max(tem(:,:), TEM_MIN) / CNST_TEM00 ) ** ( ( CNST_CPV - CNST_CL ) / CNST_RVAP ) &
          * exp ( CNST_LH00 / CNST_RVAP &
          * ( 1.0d0 / CNST_TEM00 - 1.0d0 / max(tem(:,:), TEM_MIN) ) )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_psat_water")
+#endif
+
     return
   end subroutine moist_psat_water
   !-----------------------------------------------------------------------------
@@ -111,10 +121,20 @@ contains
     !
     real(8) :: TEM_MIN = 10.d0
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_psat_ice")
+#endif
+
     psat(:,:) = CNST_PSAT0 &
          * ( max(tem(:,:), TEM_MIN) / CNST_TEM00 ) ** ( ( CNST_CPV - CNST_CI ) / CNST_RVAP ) &
          * exp ( CNST_LHS00 / CNST_RVAP &
          * ( 1.0d0 / CNST_TEM00 - 1.0d0 / max(tem(:,:), TEM_MIN) ) )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_psat_ice")
+#endif
+
     return
   end subroutine moist_psat_ice
   !-----------------------------------------------------------------------------
@@ -139,10 +159,20 @@ contains
     
     real(8) :: psat(size(tem,1),size(tem,2))
     
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_psat_ice1")
+#endif
+
     call moist_psat_water ( tem, psat )
     
     qsat(:,:) = &
          CNST_EPSV * psat(:,:) / ( pre(:,:) - ( 1.D0 - CNST_EPSV ) * psat(:,:) )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_psat_ice1")
+#endif
+
     return
   end subroutine moist_qsat_water
   !-----------------------------------------------------------------------------
@@ -157,10 +187,20 @@ contains
     
     real(8) :: psat(size(tem,1),size(tem,2))
     
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_qsat_ice")
+#endif
+
     call moist_psat_ice ( tem, psat )
     
     qsat(:,:) = &
          CNST_EPSV * psat(:,:) / ( pre(:,:) - ( 1.D0 - CNST_EPSV ) * psat(:,:) )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_qsat_ice")
+#endif
+
     return
   end subroutine moist_qsat_ice
   !-----------------------------------------------------------------------------
@@ -171,8 +211,18 @@ contains
     real(8), intent(out) :: qsat(:)
     real(8) :: qsat1(size(qsat),1)
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_qsat_ice1")
+#endif
+
     call moist_qsat_ice ( spread(tem,2,1), spread(pre,2,1), qsat1 )
     qsat(:) = qsat1(:,1)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_qsat_ice1")
+#endif
+
     return
   end subroutine moist_qsat_ice1
   !-----------------------------------------------------------------------------
@@ -182,8 +232,18 @@ contains
     real(8), intent(out) :: psat(:)
     real(8) :: psat1(size(psat),1)
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_psat_water1")
+#endif
+
     call moist_psat_water ( spread(tem,2,1), psat1 )
     psat(:) = psat1(:,1)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_psat_water1")
+#endif
+
     return
   end subroutine moist_psat_water1
   !-----------------------------------------------------------------------------
@@ -194,8 +254,18 @@ contains
     real(8), intent(out) :: qsat(:)
     real(8) :: qsat1(size(qsat),1)
     
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_qsat_water1")
+#endif
+
     call moist_qsat_water ( spread(tem,2,1), spread(pre,2,1), qsat1 )
     qsat(:) = qsat1(:,1)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_qsat_water1")
+#endif
+
     return
   end subroutine moist_qsat_water1
   !
@@ -219,6 +289,11 @@ contains
     real(8) :: rhi(size(rh,1),size(rh,2)) 
     real(8) :: delta(size(rh,1),size(rh,2)) 
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_relative_humidity")
+#endif
+
     call moist_psat_water( &
          tem(:,:),         &
          psat(:,:)         &
@@ -233,6 +308,11 @@ contains
     delta(:,:) = (sign(0.5D0,tem(:,:)-CNST_TMELT)+0.5D0)
     rh(:,:) = delta(:,:)*rhw(:,:) + (1.0D0-delta(:,:))*rhi(:,:)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_relative_humidity")
+#endif
+
     return
   end subroutine moist_relative_humidity
   !
@@ -283,6 +363,11 @@ contains
     integer :: nq
     integer :: ij, k
     !    
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_dewtem")
+#endif
+
     prev(:,:) = pre(:,:) * qv(:,:) &
          / ( CNST_EPSV * qd(:,:) + qv(:,:) )
     !
@@ -320,6 +405,11 @@ contains
        end do
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_dewtem")
+#endif
+
     return
   end subroutine moist_dewtem
   !-----------------------------------------------------------------------------
@@ -343,11 +433,21 @@ contains
     real(8) :: psat(size(tem,1),size(tem,2)) ! saturation vapor pressure
     real(8) :: lhv(size(tem,1),size(tem,2))  ! latent heat for condensation
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_dqsw_dtem_rho")
+#endif
+
     call moist_psat_water(tem, psat)
     lhv(:,:)      = CNST_LH0 + (CNST_CPV - CNST_CL )*(tem(:,:)-CNST_TEM00)
     dqsdtem(:,:) = psat(:,:)/(rho(:,:)*CNST_RVAP*tem(:,:)*tem(:,:))&
          * (lhv(:,:)/(CNST_RVAP*tem(:,:))-1.d0)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_dqsw_dtem_rho")
+#endif
+
     return
   end subroutine moist_dqsw_dtem_rho
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice
@@ -370,11 +470,21 @@ contains
     real(8) :: psat(size(tem,1),size(tem,2)) ! saturation vapor pressure
     real(8) :: lhv(size(tem,1),size(tem,2))  ! latent heat for condensation
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_dqsi_dtem_rho")
+#endif
+
     call moist_psat_ice(tem, psat)
     lhv(:,:)      = CNST_LHS0 + (CNST_CPV - CNST_CI )*(tem(:,:)-CNST_TEM00)
     dqsdtem(:,:) = psat(:,:)/(rho(:,:)*CNST_RVAP*tem(:,:)*tem(:,:))&
          * (lhv(:,:)/(CNST_RVAP*tem(:,:))-1.d0)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_dqsi_dtem_rho")
+#endif
+
     return
   end subroutine moist_dqsi_dtem_rho
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
@@ -403,6 +513,11 @@ contains
     real(8) :: den1(size(tem,1),size(tem,2)) ! denominator
     real(8) :: den2(size(tem,1),size(tem,2)) ! denominator
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_dqsw_dtem_dpre")
+#endif
+
     call moist_psat_water(tem, psat)
     !
     lhv(:,:)      = CNST_LH0 + (CNST_CPV - CNST_CL )*(tem(:,:)-CNST_TEM00)
@@ -411,6 +526,11 @@ contains
     dqsdpre(:,:)  = - CNST_EPSV*                  psat(:,:)/den1(:,:)
     dqsdtem(:,:)  =   CNST_EPSV*pre(:,:)*lhv(:,:)*psat(:,:)/den2(:,:)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_dqsw_dtem_dpre")
+#endif
+
     return
   end subroutine moist_dqsw_dtem_dpre
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
@@ -439,6 +559,11 @@ contains
     real(8) :: den1(size(tem,1),size(tem,2)) ! denominator
     real(8) :: den2(size(tem,1),size(tem,2)) ! denominator
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_dqsi_dtem_dpre")
+#endif
+
     call moist_psat_ice(tem, psat)
     !
     lhv(:,:)      = CNST_LHS0 + (CNST_CPV - CNST_CI )*(tem(:,:)-CNST_TEM00)
@@ -447,6 +572,11 @@ contains
     dqsdpre(:,:)  = - CNST_EPSV*                  psat(:,:)/den1(:,:)
     dqsdtem(:,:)  =   CNST_EPSV*pre(:,:)*lhv(:,:)*psat(:,:)/den2(:,:)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_dqsi_dtem_dpre")
+#endif
+
     return
   end subroutine moist_dqsi_dtem_dpre
   !

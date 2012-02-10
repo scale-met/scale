@@ -49,7 +49,7 @@ mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_proces
 mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_fileio_h.o
 
 clean:
-	rm -f $(PRJS) *.mod *.o
+	rm -f $(PRJS) *.mod *.o *.lst
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c

@@ -87,8 +87,18 @@ contains
     real(8), intent(in)  :: qd(:,:)
     real(8), intent(in)  :: qv(:,:)
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_rho")
+#endif
+
     rho(:,:) = pre(:,:) / tem(:,:) &
          / ( qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_rho")
+#endif
+
     return
   end subroutine thrmdyn_rho
   !-----------------------------------------------------------------------------
@@ -114,11 +124,21 @@ contains
     !
     real(8) :: cv(size(tem,1),size(tem,2))
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_ein")
+#endif
+
     call thrmdyn_cv( &
          cv,         & !--- out
          q,          & !--- in
          qd )          !--- in
     ein(:,:) = cv(:,:) * tem(:,:)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_ein")
+#endif
+
     return
   end subroutine thrmdyn_ein
   !-----------------------------------------------------------------------------
@@ -134,7 +154,17 @@ contains
     real(8), intent(in)  :: pre(:,:)
     real(8), intent(in)  :: rho(:,:)
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_eth")
+#endif
+
     eth(:,:) = ein(:,:) + pre(:,:) / rho(:,:)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_eth")
+#endif
+
     return
   end subroutine thrmdyn_eth
   !-----------------------------------------------------------------------------
@@ -155,11 +185,21 @@ contains
     !
     real(8)  :: cv(size(tem,1),size(tem,2))
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_tem")
+#endif
+
     call thrmdyn_cv( &
          cv,         & !--- out
          q,          & !--- in
          qd )          !--- in
     tem(:,:) = ein(:,:) / cv(:,:)
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_tem")
+#endif
+
     return
   end subroutine thrmdyn_tem
   ! xxxxx [Add] T.Seiki
@@ -181,6 +221,11 @@ contains
     real(8), intent(in)  :: qv(:,:)
     !
     real(8) :: rpres0, wkappa
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_tempre2")
+#endif
+
     !
     ! pre = rho*tem*(qd*rair+qv*rvap)
     ! tem = th*(pre/pre0)**kappa
@@ -192,6 +237,11 @@ contains
          * (rho(:,:)*(qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP)*rpres0 )**CNST_KAPPA )**wkappa
     pre(:,:) = rho(:,:)*tem(:,:)*(qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP)
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_tempre2")
+#endif
+
     return
   end subroutine thrmdyn_tempre2
   !-----------------------------------------------------------------------------
@@ -209,8 +259,18 @@ contains
     real(8), intent(in)  :: qd(:,:)
     real(8), intent(in)  :: q(:,:,:)
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_pre")
+#endif
+
     pre(:,:) = rho(:,:) * tem(:,:) &
          * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_pre")
+#endif
+
     return
   end subroutine thrmdyn_pre
   !-----------------------------------------------------------------------------
@@ -227,9 +287,19 @@ contains
     !
     real(8) :: p0k
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_th")
+#endif
+
     p0k=CNST_PRE00**CNST_KAPPA
     !
     th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_th")
+#endif
+
     return
   end subroutine thrmdyn_th
   !-----------------------------------------------------------------------------
@@ -255,6 +325,11 @@ contains
     !
     real(8) :: p0k
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_tempreth")
+#endif
+
     p0k=CNST_PRE00**CNST_KAPPA
     !
     call thrmdyn_cv( &
@@ -266,6 +341,11 @@ contains
     pre(:,:) = rho(:,:) * tem(:,:) &
          * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
     th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_tempreth")
+#endif
+
     return
   end subroutine thrmdyn_tempreth
   !-----------------------------------------------------------------------------
@@ -288,6 +368,11 @@ contains
     !
     real(8) :: cv(size(tem,1),size(tem,2))
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_tempre")
+#endif
+
     call thrmdyn_cv( &
          cv,         & !--- out
          q,          & !--- in
@@ -296,6 +381,11 @@ contains
     tem(:,:) = ein(:,:) / cv(:,:)
     pre(:,:) = rho(:,:) * tem(:,:) &
          * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_tempre")
+#endif
+
     return
   end subroutine thrmdyn_tempre
   !-----------------------------------------------------------------------------
@@ -312,11 +402,21 @@ contains
     !
     integer :: nq
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_cv")
+#endif
+
     cva(:,:) = qd(:,:) * CNST_CV
     do nq = NQW_STR,NQW_END
        cva(:,:) = cva(:,:) + q(:,:,nq) * CVW(nq)
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_cv")
+#endif
+
     return
   end subroutine thrmdyn_cv
   !-----------------------------------------------------------------------------
@@ -332,11 +432,21 @@ contains
     !
     integer :: nq
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_cp")
+#endif
+
     cpa(:,:) = qd(:,:) * CNST_CP
     do nq = NQW_STR,NQW_END
        cpa(:,:) = cpa(:,:) + q(:,:,nq) * CPW(nq)
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_cp")
+#endif
+
     return
   end subroutine thrmdyn_cp
   !-----------------------------------------------------------------------------
@@ -350,10 +460,20 @@ contains
     !
     integer :: nq
     !
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_qd")
+#endif
+
     qd(:,:) = 1.0D0
     do nq = NQW_STR,NQW_END
        qd(:,:) = qd(:,:) - q(:,:,nq)
     end do
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_qd")
+#endif
+
     return
   end subroutine thrmdyn_qd
   !-----------------------------------------------------------------------------
@@ -380,6 +500,11 @@ contains
     real(8), parameter :: PREMIN = 1.d-10
     !
     integer :: nq
+
+#ifdef _FPCOLL_
+call START_COLLECTION("thrmdyn_ent")
+#endif
+
     !
     ! entropy
     ! ent = qd * sd + qv * sv + qc * sc + qr * sr ...
@@ -407,6 +532,11 @@ contains
        end if
     end do
     !
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("thrmdyn_ent")
+#endif
+
     return
   end subroutine thrmdyn_ent
   !

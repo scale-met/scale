@@ -110,7 +110,7 @@ module mod_atmos_vars
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
-  logical,                   private, save :: ATMOS_RESTART_CHECK            = .true.
+  logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
   real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
