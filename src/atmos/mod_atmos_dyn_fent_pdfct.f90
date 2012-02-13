@@ -266,6 +266,7 @@ contains
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
        COMM_vars, &
+       COMM_vars8, &
        COMM_wait, &
        COMM_total
     use mod_grid, only : &
@@ -311,7 +312,7 @@ contains
 
     ! work
     real(8) :: var_s    (KA,IA,JA,5)   ! prognostic variables (previous step)
-    real(8) :: var_temp
+    real(8) :: var_lo   (KA,IA,JA,QA)  ! prognostic variables (previous step)
     real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
 
     ! rayleigh damping, numerical diffusion
@@ -356,13 +357,42 @@ call START_COLLECTION("DYNAMICS")
 call START_COLLECTION("SET")
 #endif
 
+    !OCL XFILL
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
        var_s(k,i,j,1) = var(k,i,j,1)
+    enddo 
+    enddo
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
        var_s(k,i,j,2) = var(k,i,j,2)
+    enddo 
+    enddo
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
        var_s(k,i,j,3) = var(k,i,j,3)
+    enddo 
+    enddo
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
        var_s(k,i,j,4) = var(k,i,j,4)
+    enddo 
+    enddo
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
        var_s(k,i,j,5) = var(k,i,j,5)
     enddo 
     enddo
@@ -394,14 +424,17 @@ call START_COLLECTION("SET")
     !--- prepare numerical diffusion coefficient
     do j  = 1, JA
     do i  = 1, IA
+       !OCL XFILL
        do k = KS, KE
           dens_diff(k,i,j) = var(k,i,j,I_DENS)                     - REF_dens(k)
           pott_diff(k,i,j) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) - REF_pott(k)
        enddo
+       !OCL XFILL
        do k = 1, KS-1 
           dens_diff(k,i,j) = dens_diff(KS,i,j)
           pott_diff(k,i,j) = pott_diff(KS,i,j)
        enddo
+       !OCL XFILL
        do k = KE+1, KA
           dens_diff(k,i,j) = dens_diff(KE,i,j)
           pott_diff(k,i,j) = pott_diff(KE,i,j)
@@ -602,43 +635,54 @@ call START_COLLECTION("RK3")
        dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
        rdtrk = 1.D0 / dtrk
 
-       if ( rko > 1 ) then
-          call COMM_wait( var(:,:,:,I_DENS), I_DENS )
-          call COMM_wait( var(:,:,:,I_MOMZ), I_MOMZ )
-          call COMM_wait( var(:,:,:,I_MOMX), I_MOMX )
-          call COMM_wait( var(:,:,:,I_MOMY), I_MOMY )
-       endif
+!       if ( rko > 1 ) then
+!          call COMM_wait( var(:,:,:,I_DENS), I_DENS )
+!          call COMM_wait( var(:,:,:,I_MOMZ), I_MOMZ )
+!          call COMM_wait( var(:,:,:,I_MOMX), I_MOMX )
+!          call COMM_wait( var(:,:,:,I_MOMY), I_MOMY )
+!       endif
 
        ! momentum -> velocity
-       do j = JS-2, JE+2
-       do i = IS-2, IE+2
-       do k = KS,   KE-1
+       do j = JS, JE+1
+       do i = IS, IE+1
+       do k = KS, KE-1
           diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) &
                                 / ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) )
        enddo
        enddo
        enddo
-       do j = JS-2, JE+2
-       do i = IS-2, IE+2
+       !OCL XFILL
+       do j = JS, JE+1
+       do i = IS, IE+1
           diagvar(KS-1,i,j,I_VELZ) = 0.D0
           diagvar(KE  ,i,j,I_VELZ) = 0.D0
        enddo
        enddo
 
-       do j = JS-2, JE+2
-       do i = IS-2, IE+1
-       do k = KS-2, KE+2
+       do j = JS,   JE+1
+       do i = IS-1, IE+1
+       do k = KS,   KE
           diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) &
                                 / ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) )
        enddo
        enddo
        enddo
 
-       do j = JS-2, JE+1
-       do i = IS-2, IE+2
-       do k = KS-2, KE+2
+       do j = JS-1, JE+1
+       do i = IS,   IE+1
+       do k = KS,   KE
           diagvar(k,i,j,I_VELY) = 2.D0 * var(k,i,j,I_MOMY) &
                                 / ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) )
+       enddo
+       enddo
+       enddo
+
+       ! pressure
+       do j = JS-2, JE+2
+       do i = IS-2, IE+2
+       do k = KS,   KE
+          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
        enddo
        enddo
        enddo
@@ -654,6 +698,7 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        enddo
+       !OCL XFILL
        do j = JS,   JE
        do i = IS,   IE
           mflx_hi(KS-1,i,j,ZDIR) = 0.D0 ! bottom boundary
@@ -694,7 +739,7 @@ call START_COLLECTION("RK3")
        ! at (u, y, interface)
        do j = JS,   JE
        do i = IS-1, IE
-       do k = KS-1, KE
+       do k = KS,   KE-1
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var(k,i+1,j,I_MOMZ)+var(k,i  ,j,I_MOMZ) )     &
                                 + FACT_F * ( var(k,i+2,j,I_MOMZ)+var(k,i-1,j,I_MOMZ) ) )   &
@@ -705,7 +750,7 @@ call START_COLLECTION("RK3")
        ! at (x, v, interface)
        do j = JS-1, JE
        do i = IS,   IE
-       do k = KS-1, KE
+       do k = KS,   KE-1
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var(k,i,j+1,I_MOMZ)+var(k,i,j  ,I_MOMZ) )     &
                                 + FACT_F * ( var(k,i,j+2,I_MOMZ)+var(k,i,j-1,I_MOMZ) ) )   &
@@ -714,27 +759,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       if ( rko > 1 ) then
-          call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
-       endif
-
-       ! pressure
-       do j = JS-2, JE+2
-       do i = IS-2, IE+2
-       do k = KS-2, KE+2
-          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
-       enddo
-       enddo
-       enddo
-
-       do j = JS-2, JE+2
-       do i = IS-2, IE+2
-       do k = KS-2, KE+2
-          diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
-       enddo
-       enddo
-       enddo
-
+!       if ( rko > 1 ) then
+!          call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
+!       endif
 
        !--- update momentum(z)
        do j = JS,   JE
@@ -763,8 +790,8 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,I_DENS), I_DENS )
-       call COMM_vars( var(:,:,:,I_MOMZ), I_MOMZ )
+!       call COMM_vars( var(:,:,:,I_DENS), I_DENS )
+!       call COMM_vars( var(:,:,:,I_MOMZ), I_MOMZ )
 
        !##### momentum equation (x) #####
        ! at (u, y, interface)
@@ -827,7 +854,7 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,I_MOMX), I_MOMX )
+!       call COMM_vars( var(:,:,:,I_MOMX), I_MOMX )
 
        !##### momentum equation (y) #####
        ! at (x, v, interface)
@@ -891,7 +918,7 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,I_MOMY), I_MOMY )
+!       call COMM_vars( var(:,:,:,I_MOMY), I_MOMY )
 
        !##### Thermodynamic Equation #####
 
@@ -954,18 +981,18 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,I_RHOT), I_RHOT )
+!       call COMM_vars( var(:,:,:,I_RHOT), I_RHOT )
 
-!       call COMM_vars( var(:,:,:,1), 1 )
-!       call COMM_vars( var(:,:,:,2), 2 )
-!       call COMM_vars( var(:,:,:,3), 3 )
-!       call COMM_vars( var(:,:,:,4), 4 )
-!       call COMM_vars( var(:,:,:,5), 5 )
-!       call COMM_wait( var(:,:,:,1), 1 )
-!       call COMM_wait( var(:,:,:,2), 2 )
-!       call COMM_wait( var(:,:,:,3), 3 )
-!       call COMM_wait( var(:,:,:,4), 4 )
-!       call COMM_wait( var(:,:,:,5), 5 )
+       call COMM_vars8( var(:,:,:,1), 1 )
+       call COMM_vars8( var(:,:,:,2), 2 )
+       call COMM_vars8( var(:,:,:,3), 3 )
+       call COMM_vars8( var(:,:,:,4), 4 )
+       call COMM_vars8( var(:,:,:,5), 5 )
+       call COMM_wait( var(:,:,:,1), 1 )
+       call COMM_wait( var(:,:,:,2), 2 )
+       call COMM_wait( var(:,:,:,3), 3 )
+       call COMM_wait( var(:,:,:,4), 4 )
+       call COMM_wait( var(:,:,:,5), 5 )
 
     enddo ! RK loop
 
@@ -976,26 +1003,15 @@ call START_COLLECTION("FCT")
 
     !##### advection of scalar quantity #####
 
-    call COMM_wait( var(:,:,:,I_DENS), I_DENS )
-    call COMM_wait( var(:,:,:,I_MOMZ), I_MOMZ )
-    call COMM_wait( var(:,:,:,I_MOMX), I_MOMX )
-    call COMM_wait( var(:,:,:,I_MOMY), I_MOMY )
+!    call COMM_wait( var(:,:,:,I_DENS), I_DENS )
+!    call COMM_wait( var(:,:,:,I_MOMZ), I_MOMZ )
+!    call COMM_wait( var(:,:,:,I_MOMX), I_MOMX )
+!    call COMM_wait( var(:,:,:,I_MOMY), I_MOMY )
 
     if ( QA > 0 ) then
-
     do iq = 6, 5+QA
 
-       call COMM_wait( var(:,:,:,iq-1), iq-1 )
-
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          rjmns(k,i,j,XDIR) = 0.D0
-          rjmns(k,i,j,YDIR) = 0.D0
-          rjmns(k,i,j,ZDIR) = 0.D0
-       enddo
-       enddo
-       enddo
+!       call COMM_wait( var(:,:,:,iq-1), iq-1 )
 
        do j = JS,   JE
        do i = IS,   IE
@@ -1060,32 +1076,45 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
+       !--- update value with flux-divergence from the monotone scheme
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          var_temp = var(k,i,j,iq)
-          !--- update value with flux-divergence from the monotone scheme
-          var(k,i,j,iq) = ( var(k,i,j,iq) * var_s(k,i,j,I_DENS)                                          &
-                          + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i,  j,  ZDIR) ) * RDZC(k)     &
-                                       + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j,  XDIR) ) * RDXC(i)     &
-                                       + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i,  j-1,YDIR) ) * RDYC(j) ) ) &
-                          ) / var(k,i,j,I_DENS)
+          var_lo(k,i,j,iq-5) = ( var(k,i,j,iq) * var_s(k,i,j,I_DENS)                                          &
+                               + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i,  j,  ZDIR) ) * RDZC(k)     &
+                                            + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j,  XDIR) ) * RDXC(i)     &
+                                            + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i,  j-1,YDIR) ) * RDYC(j) ) ) &
+                               ) / var(k,i,j,I_DENS)
+       enddo
+       enddo
+       enddo
 
-          ! --- STEP C: compute the outgoing fluxes in each cell ---
+       ! --- STEP C: compute the outgoing fluxes in each cell ---
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
           pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
                 + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
                 + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
           if ( pjmns > 0 ) then
-             rjmns(k,i,j,ZDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
-             rjmns(k,i,j,XDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
-             rjmns(k,i,j,YDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
           endif
        enddo
        enddo
        enddo
 
+       call COMM_vars( rjmns(:,:,:,ZDIR), ZDIR )
+       call COMM_vars( rjmns(:,:,:,XDIR), XDIR )
+       call COMM_vars( rjmns(:,:,:,YDIR), YDIR )
+       call COMM_wait( rjmns(:,:,:,ZDIR), ZDIR )
+       call COMM_wait( rjmns(:,:,:,XDIR), XDIR )
+       call COMM_wait( rjmns(:,:,:,YDIR), YDIR )
+
        ! --- [STEP 7S] limit the antidiffusive flux ---
+       !OCL KSIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE
@@ -1101,6 +1130,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
+       !OCL KSIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE
@@ -1116,6 +1146,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
+       !OCL KSIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE
@@ -1136,7 +1167,7 @@ call START_COLLECTION("FCT")
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          var(k,i,j,iq) = var(k,i,j,iq) &
+          var(k,i,j,iq) = var_lo(k,i,j,iq-5) &
                         + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR)-qflx_anti(k-1,i,  j,  ZDIR) ) * RDZC(k)   &
                                      + ( qflx_anti(k,i,j,XDIR)-qflx_anti(k  ,i-1,j,  XDIR) ) * RDXC(i)   &
                                      + ( qflx_anti(k,i,j,YDIR)-qflx_anti(k  ,i,  j-1,YDIR) ) * RDYC(j) ) &
@@ -1146,15 +1177,15 @@ call START_COLLECTION("FCT")
        enddo
 
        call COMM_vars( var(:,:,:,iq), iq )
-!       call COMM_wait( var(:,:,:,iq), iq )
+       call COMM_wait( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
-
-    call COMM_wait( var(:,:,:,iq-1), iq-1 )
-
-    else
-
-    call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
+!
+!    call COMM_wait( var(:,:,:,iq-1), iq-1 )
+!
+!    else
+!
+!    call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
 
     endif
 
@@ -1169,7 +1200,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! check total mass
-!    call COMM_total( var(:,:,:,:), A_NAME(:) )
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN
