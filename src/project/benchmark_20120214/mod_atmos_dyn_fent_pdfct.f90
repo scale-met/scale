@@ -1875,7 +1875,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! check total mass
-    call COMM_total( var(:,:,:,:), A_NAME(:) )
+!    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN
