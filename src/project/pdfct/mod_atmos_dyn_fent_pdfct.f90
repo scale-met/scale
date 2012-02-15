@@ -1114,7 +1114,7 @@ call START_COLLECTION("FCT")
        call COMM_wait( rjmns(:,:,:,YDIR), YDIR )
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
-       !OCL KSIMD
+       !OCL SIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE
@@ -1130,7 +1130,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL KSIMD
+       !OCL SIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE
@@ -1146,7 +1146,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL KSIMD
+       !OCL SIMD
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS-1, KE

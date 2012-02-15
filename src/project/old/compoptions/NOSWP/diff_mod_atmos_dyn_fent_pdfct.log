@@ -1,0 +1,136 @@
+2c2
+<  Fujitsu Fortran Version 1.2.0  Thu Feb  9 21:21:46 2012
+---
+>  Fujitsu Fortran Version 1.2.0  Thu Feb  9 21:19:22 2012
+9c9
+<    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Knoprefetch -Knoswp -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+---
+>    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Knoprefetch -Knoprefetch -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+22c22
+<                           -Knostriping -Knoswp -Knotemparraystack -Kunroll
+---
+>                           -Knostriping -Kswp -Knotemparraystack -Kunroll
+176a177
+>                               <<<    SOFTWARE PIPELINING
+193a195
+>                               <<<    SOFTWARE PIPELINING
+207a210
+>                               <<<    SOFTWARE PIPELINING
+218a222
+>                               <<<    SOFTWARE PIPELINING
+238a243
+>                               <<<    SOFTWARE PIPELINING
+255a261
+>                               <<<    SOFTWARE PIPELINING
+269a276
+>                               <<<    SOFTWARE PIPELINING
+280a288
+>                               <<<    SOFTWARE PIPELINING
+300a309
+>                               <<<    SOFTWARE PIPELINING
+317a327
+>                               <<<    SOFTWARE PIPELINING
+331a342
+>                               <<<    SOFTWARE PIPELINING
+342a354
+>                               <<<    SOFTWARE PIPELINING
+474a487
+>                               <<<    SOFTWARE PIPELINING
+495a509
+>                               <<<    SOFTWARE PIPELINING
+505a520
+>                               <<<    SOFTWARE PIPELINING
+530a546
+>                               <<<    SOFTWARE PIPELINING
+563a580
+>                               <<<    SOFTWARE PIPELINING
+590a608
+>                               <<<    SOFTWARE PIPELINING
+617a636
+>                               <<<    SOFTWARE PIPELINING
+645a665
+>                               <<<    SOFTWARE PIPELINING
+674a695
+>                               <<<    SOFTWARE PIPELINING
+699a721
+>                               <<<    SOFTWARE PIPELINING
+718a741
+>                               <<<    SOFTWARE PIPELINING
+739a763
+>                               <<<    SOFTWARE PIPELINING
+764a789
+>                               <<<    SOFTWARE PIPELINING
+783a809
+>                               <<<    SOFTWARE PIPELINING
+804a831
+>                               <<<    SOFTWARE PIPELINING
+829a857
+>                               <<<    SOFTWARE PIPELINING
+848a877
+>                               <<<    SOFTWARE PIPELINING
+886a916
+>                               <<<    SOFTWARE PIPELINING
+917a948
+>                               <<<    SOFTWARE PIPELINING
+934a966
+>                               <<<    SOFTWARE PIPELINING
+954a987
+>                               <<<    SOFTWARE PIPELINING
+985a1019
+>                               <<<    SOFTWARE PIPELINING
+1002a1037
+>                               <<<    SOFTWARE PIPELINING
+1027a1063
+>                               <<<    SOFTWARE PIPELINING
+1046a1083
+>                               <<<    SOFTWARE PIPELINING
+1065a1103
+>                               <<<    SOFTWARE PIPELINING
+1089a1128
+>                               <<<    SOFTWARE PIPELINING
+1105a1145
+>                               <<<    SOFTWARE PIPELINING
+1123a1164
+>                               <<<    SOFTWARE PIPELINING
+1146a1188
+>                               <<<    SOFTWARE PIPELINING
+1170a1213
+>                               <<<    SOFTWARE PIPELINING
+1187a1231
+>                               <<<    SOFTWARE PIPELINING
+1209a1254
+>                               <<<    SOFTWARE PIPELINING
+1228a1274
+>                               <<<    SOFTWARE PIPELINING
+1248a1295
+>                               <<<    SOFTWARE PIPELINING
+1273a1321
+>                               <<<    SOFTWARE PIPELINING
+1291a1340
+>                               <<<    SOFTWARE PIPELINING
+1313a1363
+>                               <<<    SOFTWARE PIPELINING
+1332a1383
+>                               <<<    SOFTWARE PIPELINING
+1352a1404
+>                               <<<    SOFTWARE PIPELINING
+1378a1431
+>                               <<<    SOFTWARE PIPELINING
+1395a1449
+>                               <<<    SOFTWARE PIPELINING
+1417a1472
+>                               <<<    SOFTWARE PIPELINING
+1436a1492
+>                               <<<    SOFTWARE PIPELINING
+1456a1513
+>                               <<<    SOFTWARE PIPELINING
+1538a1596
+>                               <<<    SOFTWARE PIPELINING
+1559a1618
+>                               <<<    SOFTWARE PIPELINING
+1588a1648
+>                               <<<    SOFTWARE PIPELINING
+1610a1671
+>                               <<<    SOFTWARE PIPELINING
+1722a1784
+>                               <<<    SOFTWARE PIPELINING

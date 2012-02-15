@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = real4dyn
+PROJ_EXE = numdiff16
 
 all: makedir makebin
 

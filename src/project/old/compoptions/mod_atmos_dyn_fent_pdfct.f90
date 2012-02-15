@@ -14,6 +14,7 @@
 !! @li      2011-12-26 (Y.Miyamoto) [mod] Add numerical diffusion into mass flux calc
 !! @li      2011-01-04 (H.Yashiro)  [mod] Nonblocking communication (Y.Ohno)
 !! @li      2011-01-25 (H.Yashiro)  [mod] Bugfix (Y.Miyamoto)
+!! @li      2011-01-25 (H.Yashiro)  [mod] Positive definite FCT (Y.Miyamoto)
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -309,7 +310,8 @@ contains
     implicit none
 
     ! work
-    real(8) :: var_s    (KA,IA,JA,VA)  ! prognostic variables (previous step)
+    real(8) :: var_s    (KA,IA,JA,5)   ! prognostic variables (previous step)
+    real(8) :: var_temp
     real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
 
     ! rayleigh damping, numerical diffusion
@@ -325,9 +327,8 @@ contains
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
     real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: rjpls    (KA,IA,JA,3) ! plus  in (x,y,z)-direction
-    real(8) :: rjmns    (KA,IA,JA,3) ! minus in (x,y,z)-direction
-    real(8) :: pjpls, pjmns, pjmax, pjmin
+    real(8) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
+    real(8) :: pjmns
 
     real(8) :: dtrk, rdtrk
     integer :: i, j, k, iq, rko, step
@@ -559,7 +560,7 @@ call START_COLLECTION("SET")
     ! y-momentum
     do j = JS,   JE
     do i = IS,   IE
-    do k = KS,   KE-1
+    do k = KS, KE-1
        num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
                                    * ( CNDZ(1,k+1) * var(k+2,i,j,I_MOMY) &
                                      - CNDZ(2,k+1) * var(k+1,i,j,I_MOMY) &
@@ -677,12 +678,6 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        enddo
-
-       if ( rko == RK .AND. QA > 0 ) then
-          call COMM_vars( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-          call COMM_vars( mflx_hi(:,:,:,XDIR), VA+XDIR )
-          call COMM_vars( mflx_hi(:,:,:,YDIR), VA+YDIR )
-       endif
 
        !##### momentum equation (z) #####
        ! at (x, y, layer)
@@ -974,13 +969,6 @@ call START_COLLECTION("RK3")
 
     enddo ! RK loop
 
-!    call COMM_vars( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-!    call COMM_vars( mflx_hi(:,:,:,XDIR), VA+XDIR )
-!    call COMM_vars( mflx_hi(:,:,:,YDIR), VA+YDIR )
-!    call COMM_wait( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-!    call COMM_wait( mflx_hi(:,:,:,XDIR), VA+XDIR )
-!    call COMM_wait( mflx_hi(:,:,:,YDIR), VA+YDIR )
-
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
 call START_COLLECTION("FCT")
@@ -995,10 +983,6 @@ call START_COLLECTION("FCT")
 
     if ( QA > 0 ) then
 
-    call COMM_wait( mflx_hi(:,:,:,ZDIR), VA+ZDIR )
-    call COMM_wait( mflx_hi(:,:,:,XDIR), VA+XDIR )
-    call COMM_wait( mflx_hi(:,:,:,YDIR), VA+YDIR )
-
     do iq = 6, 5+QA
 
        call COMM_wait( var(:,:,:,iq-1), iq-1 )
@@ -1006,9 +990,6 @@ call START_COLLECTION("FCT")
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
-          rjpls(k,i,j,XDIR) = 0.D0
-          rjpls(k,i,j,YDIR) = 0.D0
-          rjpls(k,i,j,ZDIR) = 0.D0
           rjmns(k,i,j,XDIR) = 0.D0
           rjmns(k,i,j,YDIR) = 0.D0
           rjmns(k,i,j,ZDIR) = 0.D0
@@ -1082,84 +1063,70 @@ call START_COLLECTION("FCT")
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          var_s(k,i,j,iq) = var(k,i,j,iq)
+          var_temp = var(k,i,j,iq)
           !--- update value with flux-divergence from the monotone scheme
-          var(k,i,j,iq) = ( var_s(k,i,j,iq) * var_s(k,i,j,I_DENS)                                        &
+          var(k,i,j,iq) = ( var(k,i,j,iq) * var_s(k,i,j,I_DENS)                                          &
                           + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i,  j,  ZDIR) ) * RDZC(k)     &
                                        + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j,  XDIR) ) * RDXC(i)     &
                                        + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i,  j-1,YDIR) ) * RDYC(j) ) ) &
                           ) / var(k,i,j,I_DENS)
 
-          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( var_s(k  ,i  ,j  ,iq), &
-                       var_s(k+1,i  ,j  ,iq), &
-                       var_s(k-1,i  ,j  ,iq), &
-                       var_s(k  ,i+1,j  ,iq), &
-                       var_s(k  ,i-1,j  ,iq), &
-                       var_s(k  ,i  ,j+1,iq), &
-                       var_s(k  ,i  ,j-1,iq)  )
+          ! --- STEP C: compute the outgoing fluxes in each cell ---
+          pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
+                + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
+                + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
-          pjmin = min( var_s(k  ,i  ,j  ,iq), &
-                       var_s(k+1,i  ,j  ,iq), &
-                       var_s(k-1,i  ,j  ,iq), &
-                       var_s(k  ,i+1,j  ,iq), &
-                       var_s(k  ,i-1,j  ,iq), &
-                       var_s(k  ,i  ,j+1,iq), &
-                       var_s(k  ,i  ,j-1,iq)  )
-
-          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) )
-          pjmns = max( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) )
-          ! --- incoming fluxes ---
-          if ( pjpls > 0 ) then
-             rjpls(k,i,j,ZDIR) = (pjmax-var_s(k,i,j,iq)) / pjpls * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
-             rjpls(k,i,j,XDIR) = (pjmax-var_s(k,i,j,iq)) / pjpls * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
-             rjpls(k,i,j,YDIR) = (pjmax-var_s(k,i,j,iq)) / pjpls * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
-          endif
-          ! --- outgoing fluxes at scalar grid points ---
           if ( pjmns > 0 ) then
-             rjmns(k,i,j,ZDIR) = (var_s(k,i,j,iq)-pjmin) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
-             rjmns(k,i,j,XDIR) = (var_s(k,i,j,iq)-pjmin) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
-             rjmns(k,i,j,YDIR) = (var_s(k,i,j,iq)-pjmin) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+             rjmns(k,i,j,ZDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+             rjmns(k,i,j,XDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+             rjmns(k,i,j,YDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
           endif
        enddo
        enddo
        enddo
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
-       do j = JS-1, JE 
+       do j = JS-1, JE
        do i = IS-1, IE
-       do k = KS-1, KE 
+       do k = KS-1, KE
           if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
-             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * min( rjpls(k+1,i,j,ZDIR), rjmns(k  ,i,j,ZDIR), 1.D0 )
+             if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
+             endif
           else
-             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * min( rjpls(k  ,i,j,ZDIR), rjmns(k+1,i,j,ZDIR), 1.D0 )
+             if ( rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k+1,i,j,ZDIR)
+             endif
           endif
        enddo
        enddo
        enddo
-       do j = JS-1, JE 
+       do j = JS-1, JE
        do i = IS-1, IE
-       do k = KS-1, KE 
+       do k = KS-1, KE
           if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
-             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * min( rjpls(k,i+1,j,XDIR), rjmns(k,i  ,j,XDIR), 1.D0 )
+             if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
+             endif
           else
-             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * min( rjpls(k,i  ,j,XDIR), rjmns(k,i+1,j,XDIR), 1.D0 )
+             if ( rjmns(k,i+1,j,XDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i+1,j,XDIR)
+             endif
           endif
        enddo
        enddo
        enddo
-       do j = JS-1, JE 
+       do j = JS-1, JE
        do i = IS-1, IE
-       do k = KS-1, KE 
+       do k = KS-1, KE
           if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
-             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * min( rjpls(k,i,j+1,YDIR), rjmns(k,i,j  ,YDIR), 1.D0 )
+             if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
+             endif
           else
-             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * min( rjpls(k,i,j  ,YDIR), rjmns(k,i,j+1,YDIR), 1.D0 )
+             if ( rjmns(k,i,j+1,YDIR) < 1.D0 ) then
+                qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j+1,YDIR)
+             endif
           endif
        enddo
        enddo

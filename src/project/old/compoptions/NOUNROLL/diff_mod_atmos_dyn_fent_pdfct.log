@@ -1,0 +1,812 @@
+2c2
+<  Fujitsu Fortran Version 1.2.0  Thu Feb  9 21:27:52 2012
+---
+>  Fujitsu Fortran Version 1.2.0  Thu Feb  9 21:19:22 2012
+9c9
+<    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Knoprefetch -Knounroll -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+---
+>    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Knoprefetch -Knoprefetch -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+22c22
+<                           -Knostriping -Kswp -Knotemparraystack -Knounroll
+---
+>                           -Knostriping -Kswp -Knotemparraystack -Kunroll
+179,181c179,181
+<         137     1  pp    v          do k = KS-1, KE+1
+<         138     1   p    v             CNDZ(1,k) = 1.D0 / ( (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 )
+<         139     1   p    v             CNDZ(2,k) = 1.D0 / ( (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
+---
+>         137     1  pp   2v          do k = KS-1, KE+1
+>         138     1   p   2v             CNDZ(1,k) = 1.D0 / ( (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 )
+>         139     1   p   2v             CNDZ(2,k) = 1.D0 / ( (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
+184c184
+<         142     1   p    v          enddo
+---
+>         142     1   p   2v          enddo
+197,198c197,198
+<         148     1  pp    v          do k = KS, KE+2
+<         149     1   p    v             CNDZ(3,k) = 1.D0 / ( (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
+---
+>         148     1  pp   2v          do k = KS, KE+2
+>         149     1   p   2v             CNDZ(3,k) = 1.D0 / ( (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 ) &
+201c201
+<         152     1   p    v          enddo
+---
+>         152     1   p   2v          enddo
+212,214c212,214
+<         156     1  pp    v          do k = KS-2, KE+1
+<         157     1   p    v             CNMZ(1,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) )
+<         158     1   p    v          enddo
+---
+>         156     1  pp   4v          do k = KS-2, KE+1
+>         157     1   p   4v             CNMZ(1,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) )
+>         158     1   p   4v          enddo
+224,225c224,225
+<         161     1  pp    v          do k = KS-1, KE+1
+<         162     1   p    v             CNMZ(2,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+---
+>         161     1  pp   2v          do k = KS-1, KE+1
+>         162     1   p   2v             CNMZ(2,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+228c228
+<         165     1   p    v             CNMZ(3,k) = 1.D0 / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+---
+>         165     1   p   2v             CNMZ(3,k) = 1.D0 / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+231c231
+<         168     1   p    v          enddo
+---
+>         168     1   p   2v          enddo
+245,247c245,247
+<         175     1  pp    v          do i = IS-1, IE+1
+<         176     1   p    v             CNDX(1,i) = 1.D0 / ( (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 )
+<         177     1   p    v             CNDX(2,i) = 1.D0 / ( (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
+---
+>         175     1  pp   2v          do i = IS-1, IE+1
+>         176     1   p   2v             CNDX(1,i) = 1.D0 / ( (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 )
+>         177     1   p   2v             CNDX(2,i) = 1.D0 / ( (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
+250c250
+<         180     1   p    v          enddo
+---
+>         180     1   p   2v          enddo
+263,264c263,264
+<         186     1  pp    v          do i = IS, IE+2
+<         187     1   p    v             CNDX(3,i) = 1.D0 / ( (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
+---
+>         186     1  pp   2v          do i = IS, IE+2
+>         187     1   p   2v             CNDX(3,i) = 1.D0 / ( (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 ) &
+267c267
+<         190     1   p    v          enddo
+---
+>         190     1   p   2v          enddo
+278,280c278,280
+<         194     1  pp    v          do i = IS-2, IE+1
+<         195     1   p    v             CNMX(1,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) )
+<         196     1   p    v          enddo
+---
+>         194     1  pp   4v          do i = IS-2, IE+1
+>         195     1   p   4v             CNMX(1,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) )
+>         196     1   p   4v          enddo
+290,291c290,291
+<         199     1  pp    v          do i = IS-1, IE+1
+<         200     1   p    v             CNMX(2,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+---
+>         199     1  pp   2v          do i = IS-1, IE+1
+>         200     1   p   2v             CNMX(2,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+294c294
+<         203     1   p    v             CNMX(3,i) = 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+---
+>         203     1   p   2v             CNMX(3,i) = 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+297c297
+<         206     1   p    v          enddo
+---
+>         206     1   p   2v          enddo
+311,313c311,313
+<         213     1  pp    v          do j = JS-1, JE+1
+<         214     1   p    v             CNDY(1,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 )
+<         215     1   p    v             CNDY(2,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
+---
+>         213     1  pp   2v          do j = JS-1, JE+1
+>         214     1   p   2v             CNDY(1,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 )
+>         215     1   p   2v             CNDY(2,j) = 1.D0 / ( (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
+316c316
+<         218     1   p    v          enddo
+---
+>         218     1   p   2v          enddo
+329,330c329,330
+<         224     1  pp    v          do j = JS, JE+2
+<         225     1   p    v             CNDY(3,j) = 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
+---
+>         224     1  pp   2v          do j = JS, JE+2
+>         225     1   p   2v             CNDY(3,j) = 1.D0 / ( (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 ) &
+333c333
+<         228     1   p    v          enddo
+---
+>         228     1   p   2v          enddo
+344,346c344,346
+<         232     1  pp    v          do j = JS-2, JE+1
+<         233     1   p    v             CNMY(1,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) )
+<         234     1   p    v          enddo
+---
+>         232     1  pp   4v          do j = JS-2, JE+1
+>         233     1   p   4v             CNMY(1,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) )
+>         234     1   p   4v          enddo
+356,357c356,357
+<         237     1  pp    v          do j = JS-1, JE+1
+<         238     1   p    v             CNMY(2,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+---
+>         237     1  pp   2v          do j = JS-1, JE+1
+>         238     1   p   2v             CNMY(2,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+360c360
+<         241     1   p    v             CNMY(3,j) = 1.D0 / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+---
+>         241     1   p   2v             CNMY(3,j) = 1.D0 / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+363c363
+<         244     1   p    v          enddo
+---
+>         244     1   p   2v          enddo
+489,495c489,495
+<         361     4   p    v          do k  = 1, KA
+<         362     4   p    v             var_s(k,i,j,1) = var(k,i,j,1)
+<         363     4   p    v             var_s(k,i,j,2) = var(k,i,j,2)
+<         364     4   p    v             var_s(k,i,j,3) = var(k,i,j,3)
+<         365     4   p    v             var_s(k,i,j,4) = var(k,i,j,4)
+<         366     4   p    v             var_s(k,i,j,5) = var(k,i,j,5)
+<         367     4   p    v          enddo
+---
+>         361     4   p   6v          do k  = 1, KA
+>         362     4   p   6v             var_s(k,i,j,1) = var(k,i,j,1)
+>         363     4   p   6v             var_s(k,i,j,2) = var(k,i,j,2)
+>         364     4   p   6v             var_s(k,i,j,3) = var(k,i,j,3)
+>         365     4   p   6v             var_s(k,i,j,4) = var(k,i,j,4)
+>         366     4   p   6v             var_s(k,i,j,5) = var(k,i,j,5)
+>         367     4   p   6v          enddo
+511,512c511,512
+<         374     4   p    v             do k = KS, KE-1
+<         375     4   p    v                ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+---
+>         374     4   p   6v             do k = KS, KE-1
+>         375     4   p   6v                ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+516c516
+<         379     4   p    v             enddo
+---
+>         379     4   p   6v             enddo
+522,523c522,523
+<         380     4   p    v             do k = KS, KE
+<         381     4   p    v                ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
+---
+>         380     4   p   4v             do k = KS, KE
+>         381     4   p   4v                ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
+526c526
+<         384     4   p    v                ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
+---
+>         384     4   p   4v                ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
+529c529
+<         387     4   p    v                ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
+---
+>         387     4   p   4v                ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
+532c532
+<         390     4   p    v             enddo
+---
+>         390     4   p   4v             enddo
+548,551c548,551
+<         397     4   p    v             do k = KS, KE
+<         398     4   p    v                dens_diff(k,i,j) = var(k,i,j,I_DENS)                     - REF_dens(k)
+<         399     4   p    v                pott_diff(k,i,j) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) - REF_pott(k)
+<         400     4   p    v             enddo
+---
+>         397     4   p   4v             do k = KS, KE
+>         398     4   p   4v                dens_diff(k,i,j) = var(k,i,j,I_DENS)                     - REF_dens(k)
+>         399     4   p   4v                pott_diff(k,i,j) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) - REF_pott(k)
+>         400     4   p   4v             enddo
+556,559c556,559
+<         401     4   p    v             do k = 1, KS-1
+<         402     4   p    v                dens_diff(k,i,j) = dens_diff(KS,i,j)
+<         403     4   p    v                pott_diff(k,i,j) = pott_diff(KS,i,j)
+<         404     4   p    v             enddo
+---
+>         401     4   p   8v             do k = 1, KS-1
+>         402     4   p   8v                dens_diff(k,i,j) = dens_diff(KS,i,j)
+>         403     4   p   8v                pott_diff(k,i,j) = pott_diff(KS,i,j)
+>         404     4   p   8v             enddo
+564,567c564,567
+<         405     4   p    v             do k = KE+1, KA
+<         406     4   p    v                dens_diff(k,i,j) = dens_diff(KE,i,j)
+<         407     4   p    v                pott_diff(k,i,j) = pott_diff(KE,i,j)
+<         408     4   p    v             enddo
+---
+>         405     4   p   8v             do k = KE+1, KA
+>         406     4   p   8v                dens_diff(k,i,j) = dens_diff(KE,i,j)
+>         407     4   p   8v                pott_diff(k,i,j) = pott_diff(KE,i,j)
+>         408     4   p   8v             enddo
+582,583c582,583
+<         414     4   p    v          do k = KS+1, KE-2
+<         415     4   p    v             num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4                  &
+---
+>         414     4   p   2v          do k = KS+1, KE-2
+>         415     4   p   2v             num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4                  &
+589c589
+<         421     4   p    v             num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4                    &
+---
+>         421     4   p   2v             num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4                    &
+596c596
+<         428     4   p    v          enddo
+---
+>         428     4   p   2v          enddo
+638,639c638,639
+<         452     4   p    v          do k = KS,   KE
+<         453     4   p    v             num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4                  &
+---
+>         452     4   p   4v          do k = KS,   KE
+>         453     4   p   4v             num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4                  &
+645c645
+<         459     4   p    v             num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4                    &
+---
+>         459     4   p   4v             num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4                    &
+652c652
+<         466     4   p    v          enddo
+---
+>         466     4   p   4v          enddo
+667,668c667,668
+<         472     4   p    v          do k = KS,   KE
+<         473     4   p    v             num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4                  &
+---
+>         472     4   p   4v          do k = KS,   KE
+>         473     4   p   4v             num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4                  &
+674c674
+<         479     4   p    v             num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4                    &
+---
+>         479     4   p   4v             num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4                    &
+681c681
+<         486     4   p    v          enddo
+---
+>         486     4   p   4v          enddo
+697,698c697,698
+<         493     4   p    v          do k = KS,   KE
+<         494     4   p    v             num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5D0*(CDZ(k+1)+CDZ(k)) )**4 &
+---
+>         493     4   p   2v          do k = KS,   KE
+>         494     4   p   2v             num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5D0*(CDZ(k+1)+CDZ(k)) )**4 &
+703c703
+<         499     4   p    v          enddo
+---
+>         499     4   p   2v          enddo
+723,724c723,724
+<         504     4   p    v          do k = KS-1, KE
+<         505     4   p    v             num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
+---
+>         504     4   p   6v          do k = KS-1, KE
+>         505     4   p   6v             num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
+729c729
+<         510     4   p    v          enddo
+---
+>         510     4   p   6v          enddo
+743,744c743,744
+<         515     4   p    v          do k = KS-1, KE
+<         516     4   p    v             num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
+---
+>         515     4   p   6v          do k = KS-1, KE
+>         516     4   p   6v             num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
+749c749
+<         521     4   p    v          enddo
+---
+>         521     4   p   6v          enddo
+765,766c765,766
+<         528     4   p    v          do k = KS,   KE-1
+<         529     4   p    v             num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
+---
+>         528     4   p   2v          do k = KS,   KE-1
+>         529     4   p   2v             num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
+771c771
+<         534     4   p    v          enddo
+---
+>         534     4   p   2v          enddo
+791,792c791,792
+<         539     4   p    v          do k = KS,   KE
+<         540     4   p    v             num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5D0*(CDX(i+1)+CDX(i)) )**4 &
+---
+>         539     4   p   6v          do k = KS,   KE
+>         540     4   p   6v             num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5D0*(CDX(i+1)+CDX(i)) )**4 &
+797c797
+<         545     4   p    v          enddo
+---
+>         545     4   p   6v          enddo
+811,812c811,812
+<         550     4   p    v          do k = KS,   KE
+<         551     4   p    v             num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4                   &
+---
+>         550     4   p   6v          do k = KS,   KE
+>         551     4   p   6v             num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4                   &
+817c817
+<         556     4   p    v          enddo
+---
+>         556     4   p   6v          enddo
+833,834c833,834
+<         563     4   p    v          do k = KS, KE-1
+<         564     4   p    v             num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
+---
+>         563     4   p   2v          do k = KS, KE-1
+>         564     4   p   2v             num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
+839c839
+<         569     4   p    v          enddo
+---
+>         569     4   p   2v          enddo
+859,860c859,860
+<         574     4   p    v          do k = KS,   KE
+<         575     4   p    v             num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
+---
+>         574     4   p   6v          do k = KS,   KE
+>         575     4   p   6v             num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
+865c865
+<         580     4   p    v          enddo
+---
+>         580     4   p   6v          enddo
+879,880c879,880
+<         585     4   p    v          do k = KS, KE
+<         586     4   p    v             num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5D0*(CDY(j+1)+CDY(j)) )**4 &
+---
+>         585     4   p   6v          do k = KS, KE
+>         586     4   p   6v             num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5D0*(CDY(j+1)+CDY(j)) )**4 &
+885c885
+<         591     4   p    v          enddo
+---
+>         591     4   p   6v          enddo
+918,919c918,919
+<         615     5   p    v             do k = KS,   KE-1
+<         616     5   p    v                diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) &
+---
+>         615     5   p   6v             do k = KS,   KE-1
+>         616     5   p   6v                diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) &
+921c921
+<         618     5   p    v             enddo
+---
+>         618     5   p   6v             enddo
+933,936c933,936
+<         622     4   p    v             do i = IS-2, IE+2
+<         623     4   p    v                diagvar(KS-1,i,j,I_VELZ) = 0.D0
+<         624     4   p    v                diagvar(KE  ,i,j,I_VELZ) = 0.D0
+<         625     4   p    v             enddo
+---
+>         622     4   p   8v             do i = IS-2, IE+2
+>         623     4   p   8v                diagvar(KS-1,i,j,I_VELZ) = 0.D0
+>         624     4   p   8v                diagvar(KE  ,i,j,I_VELZ) = 0.D0
+>         625     4   p   8v             enddo
+950,951c950,951
+<         630     5   p    v             do k = KS-2, KE+2
+<         631     5   p    v                diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) &
+---
+>         630     5   p   6v             do k = KS-2, KE+2
+>         631     5   p   6v                diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) &
+953c953
+<         633     5   p    v             enddo
+---
+>         633     5   p   6v             enddo
+968,969c968,969
+<         639     5   p    v             do k = KS-2, KE+2
+<         640     5   p    v                diagvar(k,i,j,I_VELY) = 2.D0 * var(k,i,j,I_MOMY) &
+---
+>         639     5   p   6v             do k = KS-2, KE+2
+>         640     5   p   6v                diagvar(k,i,j,I_VELY) = 2.D0 * var(k,i,j,I_MOMY) &
+971c971
+<         642     5   p    v             enddo
+---
+>         642     5   p   6v             enddo
+989,990c989,990
+<         651     5   p    v             do k = KS,   KE-1
+<         652     5   p    v                mflx_hi(k,i,j,ZDIR) = var(k,i,j,I_MOMZ) &
+---
+>         651     5   p   8v             do k = KS,   KE-1
+>         652     5   p   8v                mflx_hi(k,i,j,ZDIR) = var(k,i,j,I_MOMZ) &
+992c992
+<         654     5   p    v             enddo
+---
+>         654     5   p   8v             enddo
+1004,1007c1004,1007
+<         658     4   p    v             do i = IS,   IE
+<         659     4   p    v                mflx_hi(KS-1,i,j,ZDIR) = 0.D0 ! bottom boundary
+<         660     4   p    v                mflx_hi(KE  ,i,j,ZDIR) = 0.D0 ! top    boundary
+<         661     4   p    v             enddo
+---
+>         658     4   p   8v             do i = IS,   IE
+>         659     4   p   8v                mflx_hi(KS-1,i,j,ZDIR) = 0.D0 ! bottom boundary
+>         660     4   p   8v                mflx_hi(KE  ,i,j,ZDIR) = 0.D0 ! top    boundary
+>         661     4   p   8v             enddo
+1021,1022c1021,1022
+<         666     5   p    v             do k = KS,   KE
+<         667     5   p    v                mflx_hi(k,i,j,XDIR) = var(k,i,j,I_MOMX) &
+---
+>         666     5   p   8v             do k = KS,   KE
+>         667     5   p   8v                mflx_hi(k,i,j,XDIR) = var(k,i,j,I_MOMX) &
+1024c1024
+<         669     5   p    v             enddo
+---
+>         669     5   p   8v             enddo
+1039,1040c1039,1040
+<         675     5   p    v             do k = KS,   KE
+<         676     5   p    v                mflx_hi(k,i,j,YDIR) = var(k,i,j,I_MOMY) &
+---
+>         675     5   p   8v             do k = KS,   KE
+>         676     5   p   8v                mflx_hi(k,i,j,YDIR) = var(k,i,j,I_MOMY) &
+1042c1042
+<         678     5   p    v             enddo
+---
+>         678     5   p   8v             enddo
+1065,1066c1065,1066
+<         692     5   p    v             do k = KS,   KE
+<         693     5   p    v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELZ)+diagvar(k-1,i,j,I_VELZ) ) &
+---
+>         692     5   p   4v             do k = KS,   KE
+>         693     5   p   4v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELZ)+diagvar(k-1,i,j,I_VELZ) ) &
+1070c1070
+<         697     5   p    v             enddo
+---
+>         697     5   p   4v             enddo
+1085,1086c1085,1086
+<         703     5   p    v             do k = KS-1, KE
+<         704     5   p    v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
+---
+>         703     5   p   4v             do k = KS-1, KE
+>         704     5   p   4v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
+1090c1090
+<         708     5   p    v             enddo
+---
+>         708     5   p   4v             enddo
+1105,1106c1105,1106
+<         714     5   p    v             do k = KS-1, KE
+<         715     5   p    v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
+---
+>         714     5   p   4v             do k = KS-1, KE
+>         715     5   p   4v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
+1110c1110
+<         719     5   p    v             enddo
+---
+>         719     5   p   4v             enddo
+1130,1132c1130,1132
+<         730     5   p    v             do k = KS-2, KE+2
+<         731     5   p    v                diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+<         732     5   p    v             enddo
+---
+>         730     5   p   2v             do k = KS-2, KE+2
+>         731     5   p   2v                diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+>         732     5   p   2v             enddo
+1147,1149c1147,1149
+<         738     5   p    v             do k = KS-2, KE+2
+<         739     5   p    v                diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS)
+<         740     5   p    v             enddo
+---
+>         738     5   p   6v             do k = KS-2, KE+2
+>         739     5   p   6v                diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS)
+>         740     5   p   6v             enddo
+1166,1167c1166,1167
+<         748     5   p    v             do k = KS,   KE-1
+<         749     5   p    v                var(k,i,j,I_MOMZ) = var_s(k,i,j,I_MOMZ) &
+---
+>         748     5   p   4v             do k = KS,   KE-1
+>         749     5   p   4v                var(k,i,j,I_MOMZ) = var_s(k,i,j,I_MOMZ) &
+1174c1174
+<         756     5   p    v             enddo
+---
+>         756     5   p   4v             enddo
+1190,1191c1190,1191
+<         763     5   p    v             do k = KS, KE
+<         764     5   p    v                var(k,i,j,I_DENS) = var_s(k,i,j,I_DENS) &
+---
+>         763     5   p   4v             do k = KS, KE
+>         764     5   p   4v                var(k,i,j,I_DENS) = var_s(k,i,j,I_DENS) &
+1195c1195
+<         768     5   p    v             enddo
+---
+>         768     5   p   4v             enddo
+1215,1216c1215,1216
+<         779     5   p    v             do k = KS+1, KE-2
+<         780     5   p    v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
+---
+>         779     5   p   4v             do k = KS+1, KE-2
+>         780     5   p   4v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
+1220c1220
+<         784     5   p    v             enddo
+---
+>         784     5   p   4v             enddo
+1233,1235c1233,1235
+<         788     4   p    v             do i = IS, IE
+<         789     4   p    v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+<         790     4   p    v                qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i+1,j,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
+---
+>         788     4   p   2v             do i = IS, IE
+>         789     4   p   2v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+>         790     4   p   2v                qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i+1,j,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
+1238c1238
+<         793     4   p    v                qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i+1,j,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
+---
+>         793     4   p   2v                qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i+1,j,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
+1241,1242c1241,1242
+<         796     4   p    v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+<         797     4   p    v             enddo
+---
+>         796     4   p   2v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+>         797     4   p   2v             enddo
+1256,1257c1256,1257
+<         802     5   p    v             do k = KS,   KE
+<         803     5   p    v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELX)+diagvar(k,i-1,j,I_VELX) ) &
+---
+>         802     5   p   4v             do k = KS,   KE
+>         803     5   p   4v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELX)+diagvar(k,i-1,j,I_VELX) ) &
+1261c1261
+<         807     5   p    v             enddo
+---
+>         807     5   p   4v             enddo
+1276,1277c1276,1277
+<         813     5   p    v             do k = KS,   KE
+<         814     5   p    v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
+---
+>         813     5   p   4v             do k = KS,   KE
+>         814     5   p   4v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
+1281c1281
+<         818     5   p    v             enddo
+---
+>         818     5   p   4v             enddo
+1297,1298c1297,1298
+<         825     5   p    v             do k = KS, KE
+<         826     5   p    v                var(k,i,j,I_MOMX) = var_s(k,i,j,I_MOMX) &
+---
+>         825     5   p   4v             do k = KS, KE
+>         826     5   p   4v                var(k,i,j,I_MOMX) = var_s(k,i,j,I_MOMX) &
+1304c1304
+<         832     5   p    v             enddo
+---
+>         832     5   p   4v             enddo
+1323,1324c1323,1324
+<         842     5   p    v             do k = KS+1, KE-2
+<         843     5   p    v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
+---
+>         842     5   p   4v             do k = KS+1, KE-2
+>         843     5   p   4v                qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
+1328c1328
+<         847     5   p    v             enddo
+---
+>         847     5   p   4v             enddo
+1342,1344c1342,1344
+<         852     4   p    v             do i = IS, IE
+<         853     4   p    v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+<         854     4   p    v                qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i,j+1,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
+---
+>         852     4   p   2v             do i = IS, IE
+>         853     4   p   2v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+>         854     4   p   2v                qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i,j+1,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
+1347c1347
+<         857     4   p    v                qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i,j+1,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
+---
+>         857     4   p   2v                qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i,j+1,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
+1350,1351c1350,1351
+<         860     4   p    v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+<         861     4   p    v             enddo
+---
+>         860     4   p   2v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+>         861     4   p   2v             enddo
+1365,1366c1365,1366
+<         866     5   p    v             do k = KS,   KE
+<         867     5   p    v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELX)+diagvar(k,i,j,I_VELX) ) &
+---
+>         866     5   p   4v             do k = KS,   KE
+>         867     5   p   4v                qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELX)+diagvar(k,i,j,I_VELX) ) &
+1370c1370
+<         871     5   p    v             enddo
+---
+>         871     5   p   4v             enddo
+1385,1386c1385,1386
+<         877     5   p    v             do k = KS, KE
+<         878     5   p    v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELY)+diagvar(k,i,j-1,I_VELY) ) &
+---
+>         877     5   p   4v             do k = KS, KE
+>         878     5   p   4v                qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELY)+diagvar(k,i,j-1,I_VELY) ) &
+1390c1390
+<         882     5   p    v             enddo
+---
+>         882     5   p   4v             enddo
+1406,1407c1406,1407
+<         889     5   p    v             do k = KS, KE
+<         890     5   p    v                var(k,i,j,I_MOMY) = var_s(k,i,j,I_MOMY) &
+---
+>         889     5   p   4v             do k = KS, KE
+>         890     5   p   4v                var(k,i,j,I_MOMY) = var_s(k,i,j,I_MOMY) &
+1413c1413
+<         896     5   p    v             enddo
+---
+>         896     5   p   4v             enddo
+1433,1434c1433,1434
+<         907     5   p    v             do k = KS+1, KE-2
+<         908     5   p    v                qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
+---
+>         907     5   p   6v             do k = KS+1, KE-2
+>         908     5   p   6v                qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
+1438c1438
+<         912     5   p    v             enddo
+---
+>         912     5   p   6v             enddo
+1451,1453c1451,1453
+<         916     4   p    v             do i = IS, IE
+<         917     4   p    v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
+<         918     4   p    v                qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
+---
+>         916     4   p   2v             do i = IS, IE
+>         917     4   p   2v                qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
+>         918     4   p   2v                qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
+1456c1456
+<         921     4   p    v                qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
+---
+>         921     4   p   2v                qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
+1459,1460c1459,1460
+<         924     4   p    v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
+<         925     4   p    v             enddo
+---
+>         924     4   p   2v                qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
+>         925     4   p   2v             enddo
+1474,1475c1474,1475
+<         930     5   p    v             do k = KS,   KE
+<         931     5   p    v                qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
+---
+>         930     5   p   6v             do k = KS,   KE
+>         931     5   p   6v                qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
+1479c1479
+<         935     5   p    v             enddo
+---
+>         935     5   p   6v             enddo
+1494,1495c1494,1495
+<         941     5   p    v             do k = KS,   KE
+<         942     5   p    v                qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
+---
+>         941     5   p   6v             do k = KS,   KE
+>         942     5   p   6v                qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
+1499c1499
+<         946     5   p    v             enddo
+---
+>         946     5   p   6v             enddo
+1515,1516c1515,1516
+<         953     5   p    v             do k = KS, KE
+<         954     5   p    v                var(k,i,j,I_RHOT) = var_s(k,i,j,I_RHOT) &
+---
+>         953     5   p   4v             do k = KS, KE
+>         954     5   p   4v                var(k,i,j,I_RHOT) = var_s(k,i,j,I_RHOT) &
+1521c1521
+<         959     5   p    v             enddo
+---
+>         959     5   p   4v             enddo
+1579,1583c1579,1583
+<        1009     6   p    v             do k  = 1, KA
+<        1010     6   p    v                rjmns(k,i,j,XDIR) = 0.D0
+<        1011     6   p    v                rjmns(k,i,j,YDIR) = 0.D0
+<        1012     6   p    v                rjmns(k,i,j,ZDIR) = 0.D0
+<        1013     6   p    v             enddo
+---
+>        1009     6   p   8v             do k  = 1, KA
+>        1010     6   p   8v                rjmns(k,i,j,XDIR) = 0.D0
+>        1011     6   p   8v                rjmns(k,i,j,YDIR) = 0.D0
+>        1012     6   p   8v                rjmns(k,i,j,ZDIR) = 0.D0
+>        1013     6   p   8v             enddo
+1598,1599c1598,1599
+<        1019     6   p    v             do k = KS+1, KE-2
+<        1020     6   p    v                qflx_lo(k,i,j,ZDIR) = 0.5D0 * (     mflx_hi(k,i,j,ZDIR)  * ( var(k+1,i,j,iq)+var(k,i,j,iq) ) &
+---
+>        1019     6   p   4v             do k = KS+1, KE-2
+>        1020     6   p   4v                qflx_lo(k,i,j,ZDIR) = 0.5D0 * (     mflx_hi(k,i,j,ZDIR)  * ( var(k+1,i,j,iq)+var(k,i,j,iq) ) &
+1602c1602
+<        1023     6   p    v                qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                    &
+---
+>        1023     6   p   4v                qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                    &
+1606,1607c1606,1607
+<        1027     6   p    v                qflx_anti(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) - qflx_lo(k,i,j,ZDIR)
+<        1028     6   p    v             enddo
+---
+>        1027     6   p   4v                qflx_anti(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) - qflx_lo(k,i,j,ZDIR)
+>        1028     6   p   4v             enddo
+1650,1651c1650,1651
+<        1053     6   p    v             do k = KS,   KE
+<        1054     6   p    v                qflx_lo(k,i,j,XDIR) = 0.5D0 * (     mflx_hi(k,i,j,XDIR)  * ( var(k,i+1,j,iq)+var(k,i,j,iq) ) &
+---
+>        1053     6   p   4v             do k = KS,   KE
+>        1054     6   p   4v                qflx_lo(k,i,j,XDIR) = 0.5D0 * (     mflx_hi(k,i,j,XDIR)  * ( var(k,i+1,j,iq)+var(k,i,j,iq) ) &
+1654c1654
+<        1057     6   p    v                qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                    &
+---
+>        1057     6   p   4v                qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                    &
+1658,1659c1658,1659
+<        1061     6   p    v                qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
+<        1062     6   p    v             enddo
+---
+>        1061     6   p   4v                qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
+>        1062     6   p   4v             enddo
+1673,1674c1673,1674
+<        1067     6   p    v             do k = KS,   KE
+<        1068     6   p    v                qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( var(k,i,j+1,iq)+var(k,i,j,iq) ) &
+---
+>        1067     6   p   4v             do k = KS,   KE
+>        1068     6   p   4v                qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( var(k,i,j+1,iq)+var(k,i,j,iq) ) &
+1677c1677
+<        1071     6   p    v                qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                    &
+---
+>        1071     6   p   4v                qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                    &
+1681,1682c1681,1682
+<        1075     6   p    v                qflx_anti(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) - qflx_lo(k,i,j,YDIR)
+<        1076     6   p    v             enddo
+---
+>        1075     6   p   4v                qflx_anti(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) - qflx_lo(k,i,j,YDIR)
+>        1076     6   p   4v             enddo
+1692,1693c1692,1693
+<        1082     6   p    s             do k = KS, KE
+<        1083     6   p    v                var_temp = var(k,i,j,iq)
+---
+>        1082     6   p   2s             do k = KS, KE
+>        1083     6   p   2v                var_temp = var(k,i,j,iq)
+1695c1695
+<        1085     6   p    v                var(k,i,j,iq) = ( var(k,i,j,iq) * var_s(k,i,j,I_DENS)                                          &
+---
+>        1085     6   p   2v                var(k,i,j,iq) = ( var(k,i,j,iq) * var_s(k,i,j,I_DENS)                                          &
+1702c1702
+<        1092     6   p    v                pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
+---
+>        1092     6   p   2v                pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
+1706,1711c1706,1711
+<        1096     7   p    s                if ( pjmns > 0 ) then
+<        1097     7   p    s                   rjmns(k,i,j,ZDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+<        1098     7   p    s                   rjmns(k,i,j,XDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+<        1099     7   p    s                   rjmns(k,i,j,YDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+<        1100     7   p    v                endif
+<        1101     6   p    v             enddo
+---
+>        1096     7   p   2s                if ( pjmns > 0 ) then
+>        1097     7   p   2s                   rjmns(k,i,j,ZDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+>        1098     7   p   2s                   rjmns(k,i,j,XDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+>        1099     7   p   2s                   rjmns(k,i,j,YDIR) = var_temp / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+>        1100     7   p   2v                endif
+>        1101     6   p   2v             enddo
+1722,1726c1722,1726
+<        1108     6   p    s             do k = KS-1, KE
+<        1109     7   p    m                if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
+<        1110     8   p    s                   if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
+<        1111     8   p    s                      qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
+<        1112     8   p    s                   endif
+---
+>        1108     6   p   6s             do k = KS-1, KE
+>        1109     7   p   6m                if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
+>        1110     8   p   6s                   if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
+>        1111     8   p   6s                      qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
+>        1112     8   p   6s                   endif
+1741,1745c1741,1745
+<        1123     6   p    s             do k = KS-1, KE
+<        1124     7   p    m                if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
+<        1125     8   p    s                   if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
+<        1126     8   p    s                      qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
+<        1127     8   p    s                   endif
+---
+>        1123     6   p   6s             do k = KS-1, KE
+>        1124     7   p   6m                if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
+>        1125     8   p   6s                   if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
+>        1126     8   p   6s                      qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
+>        1127     8   p   6s                   endif
+1760,1764c1760,1764
+<        1138     6   p    s             do k = KS-1, KE
+<        1139     7   p    m                if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
+<        1140     8   p    s                   if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
+<        1141     8   p    s                      qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
+<        1142     8   p    s                   endif
+---
+>        1138     6   p   6s             do k = KS-1, KE
+>        1139     7   p   6m                if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
+>        1140     8   p   6s                   if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
+>        1141     8   p   6s                      qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
+>        1142     8   p   6s                   endif
+1786,1787c1786,1787
+<        1155     6   p    v             do k = KS, KE
+<        1156     6   p    v                var(k,i,j,iq) = var(k,i,j,iq) &
+---
+>        1155     6   p   4v             do k = KS, KE
+>        1156     6   p   4v                var(k,i,j,iq) = var(k,i,j,iq) &
+1792c1792
+<        1161     6   p    v             enddo
+---
+>        1161     6   p   4v             enddo
+2029c2029
+<    Stack(byte): 5040
+---
+>    Stack(byte): 5072
+2036c2036
+<    Total stack(byte): 5040
+---
+>    Total stack(byte): 5072

@@ -1,0 +1,183 @@
+2c2
+<  Fujitsu Fortran Version 1.2.0  Wed Feb  1 19:32:47 2012
+---
+>  Fujitsu Fortran Version 1.2.0  Wed Feb  1 19:35:17 2012
+9c9
+<    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Kprefetch_stride,prefetch_strong_L2,prefetch_iteration_L2=50 -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+---
+>    Command line options : -Kident_mpi=1.2.0 -f2004 -Kvisimpact,prefetch_cache_level=all,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress,parallel_strong -Ntl_trt -Qt -V -v03s -Ksimd -Cpp -D_FPCOLL_ -Kprefetch_nostrong_L2,prefetch_iteration_L2=50 -o mod_atmos_dyn_fent_pdfct.o -c -I/opt/FJSVtclang/GM-1.2.0-02/include/mpi/fujitsu -I/opt/FJSVtclang/GM-1.2.0-02/lib64
+20c20
+<                           -Kprefetch_stride -Kprefetch_cache_level=all
+---
+>                           -Kprefetch_nostride -Kprefetch_cache_level=all
+22c22
+<                           -Kprefetch_nostrong -Kprefetch_strong_L2 -Ksimd=1
+---
+>                           -Kprefetch_nostrong -Kprefetch_nostrong_L2 -Ksimd=1
+179,180d178
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNDZ: 48
+199,200d196
+<                               <<<    PREFETCH       : 40
+<                               <<<      CNDZ: 40
+216,217d211
+<                               <<<    PREFETCH       : 32
+<                               <<<      CNMZ: 32
+230,231d223
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNMZ: 48
+253,254d244
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNDX: 48
+273,274d262
+<                               <<<    PREFETCH       : 40
+<                               <<<      CNDX: 40
+290,291d277
+<                               <<<    PREFETCH       : 32
+<                               <<<      CNMX: 32
+304,305d289
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNMX: 48
+327,328d310
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNDY: 48
+347,348d328
+<                               <<<    PREFETCH       : 40
+<                               <<<      CNDY: 40
+364,365d343
+<                               <<<    PREFETCH       : 32
+<                               <<<      CNMY: 32
+378,379d355
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNMY: 48
+508,512d483
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 40
+<                               <<<      var: 20, var_s: 20
+<                               <<< Loop-information  End >>>
+572,576d542
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 24
+<                               <<<      dens_diff: 12, pott_diff: 12
+<                               <<< Loop-information  End >>>
+611,615d576
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 120
+<                               <<<      CNDZ: 120
+<                               <<< Loop-information  End >>>
+621,622d581
+<                               <<<    PREFETCH       : 48
+<                               <<<      CNDZ: 48
+645,648d603
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 96
+<                               <<<      pott_diff: 24, var: 24, num_diff: 24
+<                               <<<      dens_diff: 24
+655,657d609
+<                               <<<    PREFETCH       : 128
+<                               <<<      pott_diff: 32, var: 32, num_diff: 32
+<                               <<<      dens_diff: 32
+683,684c635,636
+<                               <<<    PREFETCH       : 16
+<                               <<<      CDX: 4, CNDX: 12
+---
+>                               <<<    PREFETCH       : 4
+>                               <<<      CDX: 4
+745,749d696
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 144
+<                               <<<      CNMZ: 144
+<                               <<< Loop-information  End >>>
+755,756d701
+<                               <<<    PREFETCH       : 72
+<                               <<<      CNMZ: 72
+820,824d764
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 96
+<                               <<<      CNDZ: 96
+<                               <<< Loop-information  End >>>
+830,831d769
+<                               <<<    PREFETCH       : 72
+<                               <<<      CNDZ: 72
+895,899d832
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 96
+<                               <<<      CNDZ: 96
+<                               <<< Loop-information  End >>>
+905,906d837
+<                               <<<    PREFETCH       : 72
+<                               <<<      CNDZ: 72
+1002,1004d932
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 68
+<                               <<<      diagvar: 68
+1010,1012d937
+<                               <<<    SOFTWARE PIPELINING
+<                               <<<    PREFETCH       : 128
+<                               <<<      diagvar: 128
+1079,1081d1003
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 68
+<                               <<<      mflx_hi: 68
+1087,1089d1008
+<                               <<<    SOFTWARE PIPELINING
+<                               <<<    PREFETCH       : 128
+<                               <<<      mflx_hi: 128
+1306,1309d1224
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 140
+<                               <<<      num_diff: 20, var: 40, diagvar: 40
+<                               <<<      qflx_hi: 40
+1316,1318d1230
+<                               <<<    PREFETCH       : 224
+<                               <<<      diagvar: 64, var: 64, num_diff: 32
+<                               <<<      qflx_hi: 64
+1427,1430d1338
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 140
+<                               <<<      num_diff: 20, var: 40, diagvar: 40
+<                               <<<      qflx_hi: 40
+1437,1439d1344
+<                               <<<    PREFETCH       : 224
+<                               <<<      diagvar: 64, var: 64, num_diff: 32
+<                               <<<      qflx_hi: 64
+1565,1568d1469
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 120
+<                               <<<      num_diff: 20, mflx_hi: 20, diagvar: 40
+<                               <<<      qflx_hi: 40
+1575,1577d1475
+<                               <<<    PREFETCH       : 192
+<                               <<<      mflx_hi: 32, diagvar: 64, num_diff: 32
+<                               <<<      qflx_hi: 64
+1707,1711d1604
+<                               <<< Loop-information Start >>>
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 12
+<                               <<<      rjmns: 12
+<                               <<< Loop-information  End >>>
+1751,1754d1643
+<                               <<<  [OPTIMIZATION]
+<                               <<<    PREFETCH       : 36
+<                               <<<      qflx_anti: 8, var: 8, mflx_hi: 4
+<                               <<<      qflx_hi: 8, qflx_lo: 8
+1760,1762c1649
+<                               <<<    PREFETCH       : 72
+<                               <<<      qflx_anti: 16, var: 16, mflx_hi: 8
+<                               <<<      qflx_hi: 16, qflx_lo: 16
+---
+>                               <<<    SOFTWARE PIPELINING
+2205c2092
+<    Prefetch num: 3930
+---
+>    Prefetch num: 206
+2212c2099
+<    Total prefetch num: 3930
+---
+>    Total prefetch num: 206

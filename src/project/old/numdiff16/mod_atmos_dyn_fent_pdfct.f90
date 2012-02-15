@@ -54,6 +54,22 @@ module mod_atmos_dyn
   integer, parameter :: XDIR   = 2
   integer, parameter :: YDIR   = 3
 
+  integer, parameter :: I_DENSZ =  1
+  integer, parameter :: I_DENSX =  2
+  integer, parameter :: I_DENSY =  3
+  integer, parameter :: I_MOMZZ =  4
+  integer, parameter :: I_MOMZX =  5
+  integer, parameter :: I_MOMZY =  6
+  integer, parameter :: I_MOMXZ =  7
+  integer, parameter :: I_MOMXX =  8
+  integer, parameter :: I_MOMXY =  9
+  integer, parameter :: I_MOMYZ = 10
+  integer, parameter :: I_MOMYX = 11
+  integer, parameter :: I_MOMYY = 12
+  integer, parameter :: I_RHOTZ = 13
+  integer, parameter :: I_RHOTX = 14
+  integer, parameter :: I_RHOTY = 15
+
   ! time settings
   integer, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
@@ -328,7 +344,7 @@ contains
     real(8) :: dens_diff(KA,IA,JA)     ! anomary of density
     real(8) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
     real(8) :: ray_damp (KA,IA,JA,5)
-    real(8) :: num_diff (KA,IA,JA,5,3)
+    real(8) :: num_diff (KA,IA,JA,16)
 
     ! mass flux
     real(8) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
@@ -422,13 +438,13 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS+1, KE-2
-       num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4                  &
+       num_diff(k,i,j,I_DENSZ) = DIFF4 * CDZ(k)**4                  &
                                    * ( CNDZ(1,k+1) * dens_diff(k+2,i,j) &
                                      - CNDZ(2,k+1) * dens_diff(k+1,i,j) &
                                      + CNDZ(3,k+1) * dens_diff(k  ,i,j) &
                                      - CNDZ(1,k  ) * dens_diff(k-1,i,j) )
 
-       num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4                    &
+       num_diff(k,i,j,I_RHOTZ) = DIFF4 * CDZ(k)**4                    &
                                    * ( CNDZ(1,k+1) * pott_diff(k+2,i,j)   &
                                      - CNDZ(2,k+1) * pott_diff(k+1,i,j)   &
                                      + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
@@ -441,17 +457,17 @@ call START_COLLECTION("SET")
 
     do j = JJS,   JJE
     do i = IIS,   IIE
-       num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS)                                 &
+       num_diff(KS  ,i,j,I_DENSZ) = DIFF2 * CDZ(KS)                                 &
                                       * 4.0D0 * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) ) 
 
-       num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS)                                   & 
+       num_diff(KS  ,i,j,I_RHOTZ) = DIFF2 * CDZ(KS)                                   & 
                                       * 4.0D0 * ( pott_diff(KS+1,i,j)-pott_diff(KS,i,j) ) &
                                       * 0.5D0 * ( var(KS+1,i,j,I_DENS)+var(KS,i,j,I_DENS) )
 
-       num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KE-1)                               &
+       num_diff(KE-1,i,j,I_DENSZ) = DIFF2 * CDZ(KE-1)                               &
                                       * 4.0D0 * ( dens_diff(KE,i,j)-dens_diff(KE-1,i,j) )
 
-       num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KE-1)                                 &
+       num_diff(KE-1,i,j,I_RHOTZ) = DIFF2 * CDZ(KE-1)                                 &
                                       * 4.0D0 * ( pott_diff(KE,i,j)-pott_diff(KE-1,i,j) ) &
                                       * 0.5D0 * ( var(KE,i,j,I_DENS)+var(KE-1,i,j,I_DENS) )
     enddo
@@ -460,13 +476,13 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS,   KE
-       num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4                  &
+       num_diff(k,i,j,I_DENSX) = DIFF4 * CDX(i)**4                  &
                                    * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
                                      - CNDX(2,i+1) * dens_diff(k,i+1,j) &
                                      + CNDX(3,i+1) * dens_diff(k,i  ,j) &
                                      - CNDX(1,i  ) * dens_diff(k,i-1,j) )
 
-       num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4                    &
+       num_diff(k,i,j,I_RHOTX) = DIFF4 * CDX(i)**4                    &
                                    * ( CNDX(1,i+1) * pott_diff(k,i+2,j)   &
                                      - CNDX(2,i+1) * pott_diff(k,i+1,j)   &
                                      + CNDX(3,i+1) * pott_diff(k,i  ,j)   &
@@ -480,13 +496,13 @@ call START_COLLECTION("SET")
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS,   KE
-       num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4                  &
+       num_diff(k,i,j,I_DENSY) = DIFF4 * CDY(j)**4                  &
                                    * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
                                      - CNDY(2,j+1) * dens_diff(k,i,j+1) &
                                      + CNDY(3,j+1) * dens_diff(k,i,j  ) &
                                      - CNDY(1,j  ) * dens_diff(k,i,j-1) )
 
-       num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4                    &
+       num_diff(k,i,j,I_RHOTY) = DIFF4 * CDY(j)**4                    &
                                    * ( CNDY(1,j+1) * pott_diff(k,i,j+2)   &
                                      - CNDY(2,j+1) * pott_diff(k,i,j+1)   &
                                      + CNDY(3,j+1) * pott_diff(k,i,j  )   &
@@ -501,7 +517,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS,   KE
-       num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5D0*(CDZ(k+1)+CDZ(k)) )**4 &
+       num_diff(k,i,j,I_MOMZZ) = DIFF4 * ( 0.5D0*(CDZ(k+1)+CDZ(k)) )**4 &
                                    * ( CNMZ(1,k  ) * var(k+1,i,j,I_MOMZ) &
                                      - CNMZ(2,k  ) * var(k  ,i,j,I_MOMZ) &
                                      + CNMZ(3,k  ) * var(k-1,i,j,I_MOMZ) &
@@ -512,7 +528,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS-1, KE
-       num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
+       num_diff(k,i,j,I_MOMZX) = DIFF4 * CDX(i)**4 &
                                    * ( CNDX(1,i+1) * var(k,i+2,j,I_MOMZ) &
                                      - CNDX(2,i+1) * var(k,i+1,j,I_MOMZ) &
                                      + CNDX(3,i+1) * var(k,i  ,j,I_MOMZ) &
@@ -523,7 +539,7 @@ call START_COLLECTION("SET")
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS-1, KE
-       num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
+       num_diff(k,i,j,I_MOMZY) = DIFF4 * CDY(j)**4 &
                                    * ( CNDY(1,j+1) * var(k,i,j+2,I_MOMZ) &
                                      - CNDY(2,j+1) * var(k,i,j+1,I_MOMZ) &
                                      + CNDY(3,j+1) * var(k,i,j  ,I_MOMZ) &
@@ -536,7 +552,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS,   KE-1
-       num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
+       num_diff(k,i,j,I_MOMXZ) = DIFF4 * CDZ(k)**4 &
                                    * ( CNDZ(1,k+1) * var(k+2,i,j,I_MOMX) &
                                      - CNDZ(2,k+1) * var(k+1,i,j,I_MOMX) &
                                      + CNDZ(3,k+1) * var(k  ,i,j,I_MOMX) &
@@ -547,7 +563,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS,   IIE+1
     do k = KS,   KE
-       num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5D0*(CDX(i+1)+CDX(i)) )**4 &
+       num_diff(k,i,j,I_MOMXX) = DIFF4 * ( 0.5D0*(CDX(i+1)+CDX(i)) )**4 &
                                    * ( CNMX(1,i  ) * var(k,i+1,j,I_MOMX) &
                                      - CNMX(2,i  ) * var(k,i  ,j,I_MOMX) &
                                      + CNMX(3,i  ) * var(k,i-1,j,I_MOMX) &
@@ -558,7 +574,7 @@ call START_COLLECTION("SET")
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS,   KE
-       num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4                   &
+       num_diff(k,i,j,I_MOMXY) = DIFF4 * CDY(j)**4                   &
                                    * ( CNDY(1,j+1) * var(k,i,j+2,I_MOMX) &
                                      - CNDY(2,j+1) * var(k,i,j+1,I_MOMX) &
                                      + CNDY(3,j+1) * var(k,i,j  ,I_MOMX) &
@@ -571,7 +587,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS, KE-1
-       num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
+       num_diff(k,i,j,I_MOMYZ) = DIFF4 * CDZ(k)**4 &
                                    * ( CNDZ(1,k+1) * var(k+2,i,j,I_MOMY) &
                                      - CNDZ(2,k+1) * var(k+1,i,j,I_MOMY) &
                                      + CNDZ(3,k+1) * var(k  ,i,j,I_MOMY) &
@@ -582,7 +598,7 @@ call START_COLLECTION("SET")
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS,   KE
-       num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
+       num_diff(k,i,j,I_MOMYX) = DIFF4 * CDX(i)**4 &
                                    * ( CNDX(1,i+1) * var(k,i+2,j,I_MOMY) &
                                      - CNDX(2,i+1) * var(k,i+1,j,I_MOMY) &
                                      + CNDX(3,i+1) * var(k,i  ,j,I_MOMY) &
@@ -593,7 +609,7 @@ call START_COLLECTION("SET")
     do j = JJS, JJE+1
     do i = IIS, IIE
     do k = KS, KE
-       num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5D0*(CDY(j+1)+CDY(j)) )**4 &
+       num_diff(k,i,j,I_MOMYY) = DIFF4 * ( 0.5D0*(CDY(j+1)+CDY(j)) )**4 &
                                    * ( CNMY(1,j  ) * var(k,i,j+1,I_MOMY) &
                                      - CNMY(2,j  ) * var(k,i,j  ,I_MOMY) &
                                      + CNMY(3,j  ) * var(k,i,j-1,I_MOMY) &
@@ -673,7 +689,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE-1
           mflx_hi(k,i,j,ZDIR) = var(k,i,j,I_MOMZ) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSZ) * rdtrk
        enddo
        enddo
        enddo
@@ -689,7 +705,7 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS,   KE
           mflx_hi(k,i,j,XDIR) = var(k,i,j,I_MOMX) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSX) * rdtrk
        enddo
        enddo
        enddo
@@ -698,7 +714,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           mflx_hi(k,i,j,YDIR) = var(k,i,j,I_MOMY) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSY) * rdtrk
        enddo
        enddo
        enddo
@@ -723,7 +739,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELZ)+diagvar(k-1,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var(k  ,i,j,I_MOMZ)+var(k-1,i,j,I_MOMZ) )     &
                                 + FACT_F * ( var(k+1,i,j,I_MOMZ)+var(k-2,i,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZZ) * rdtrk
        enddo
        enddo
        enddo
@@ -734,7 +750,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var(k,i+1,j,I_MOMZ)+var(k,i  ,j,I_MOMZ) )     &
                                 + FACT_F * ( var(k,i+2,j,I_MOMZ)+var(k,i-1,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZX) * rdtrk
        enddo
        enddo
        enddo
@@ -745,7 +761,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var(k,i,j+1,I_MOMZ)+var(k,i,j  ,I_MOMZ) )     &
                                 + FACT_F * ( var(k,i,j+2,I_MOMZ)+var(k,i,j-1,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZY) * rdtrk
        enddo
        enddo
        enddo
@@ -773,7 +789,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var(k+1,i,j,I_MOMX)+var(k  ,i,j,I_MOMX) )     &
                                 + FACT_F * ( var(k+2,i,j,I_MOMX)+var(k-1,i,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXZ) * rdtrk
        enddo
        enddo
        enddo
@@ -782,10 +798,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i+1,j,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var(KS+1,i,j,I_MOMX)+var(KS,i,j,I_MOMX) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i+1,j,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var(KE,i,j,I_MOMX)+var(KE-1,i,j,I_MOMX) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -796,7 +812,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELX)+diagvar(k,i-1,j,I_VELX) ) &
                               * ( FACT_N * ( var(k,i  ,j,I_MOMX)+var(k,i-1,j,I_MOMX) )     &
                                 + FACT_F * ( var(k,i+1,j,I_MOMX)+var(k,i-2,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXX) * rdtrk
        enddo
        enddo
        enddo
@@ -807,7 +823,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var(k,i,j+1,I_MOMX)+var(k,i,j  ,I_MOMX) )     &
                                 + FACT_F * ( var(k,i,j+2,I_MOMX)+var(k,i,j-1,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXY) * rdtrk
        enddo
        enddo
        enddo
@@ -834,7 +850,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var(k+1,i,j,I_MOMY)+var(k  ,i,j,I_MOMY) )     &
                                 + FACT_F * ( var(k+2,i,j,I_MOMY)+var(k-1,i,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYZ) * rdtrk
        enddo
        enddo
        enddo
@@ -843,10 +859,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i,j+1,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var(KS+1,i,j,I_MOMY)+var(KS,i,j,I_MOMY) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i,j+1,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var(KE,i,j,I_MOMY)+var(KE-1,i,j,I_MOMY) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -858,7 +874,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var(k,i+1,j,I_MOMY)+var(k,i  ,j,I_MOMY) )     &
                                 + FACT_F * ( var(k,i+2,j,I_MOMY)+var(k,i-1,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYX) * rdtrk
        enddo
        enddo
        enddo
@@ -870,7 +886,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELY)+diagvar(k,i,j-1,I_VELY) ) &
                               * ( FACT_N * ( var(k,i,j  ,I_MOMY)+var(k,i,j-1,I_MOMY) )     &
                                 + FACT_F * ( var(k,i,j+1,I_MOMY)+var(k,i,j-2,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYY) * rdtrk
        enddo
        enddo
        enddo
@@ -898,7 +914,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
                               * ( FACT_N * ( diagvar(k+1,i,j,I_POTT)+diagvar(k  ,i,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k+2,i,j,I_POTT)+diagvar(k-1,i,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTZ) * rdtrk
        enddo
        enddo
        enddo
@@ -907,10 +923,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
                                  * ( diagvar(KS+1,i,j,I_POTT)+diagvar(KS,i,j,I_POTT) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
                                  * ( diagvar(KE,i,j,I_POTT)+diagvar(KE-1,i,j,I_POTT) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
        enddo
        enddo
@@ -921,7 +937,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i+1,j,I_POTT)+diagvar(k,i  ,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i+2,j,I_POTT)+diagvar(k,i-1,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTX) * rdtrk
        enddo
        enddo
        enddo
@@ -932,7 +948,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i,j+1,I_POTT)+diagvar(k,i,j  ,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i,j+2,I_POTT)+diagvar(k,i,j-1,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTY) * rdtrk
        enddo
        enddo
        enddo
@@ -1025,7 +1041,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE-1
           mflx_hi(k,i,j,ZDIR) = var_RK1(k,i,j,I_MOMZ) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1041,7 +1057,7 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS,   KE
           mflx_hi(k,i,j,XDIR) = var_RK1(k,i,j,I_MOMX) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSX) * rdtrk
        enddo
        enddo
        enddo
@@ -1050,7 +1066,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           mflx_hi(k,i,j,YDIR) = var_RK1(k,i,j,I_MOMY) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSY) * rdtrk
        enddo
        enddo
        enddo
@@ -1075,7 +1091,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELZ)+diagvar(k-1,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK1(k  ,i,j,I_MOMZ)+var_RK1(k-1,i,j,I_MOMZ) )     &
                                 + FACT_F * ( var_RK1(k+1,i,j,I_MOMZ)+var_RK1(k-2,i,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1086,7 +1102,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK1(k,i+1,j,I_MOMZ)+var_RK1(k,i  ,j,I_MOMZ) )     &
                                 + FACT_F * ( var_RK1(k,i+2,j,I_MOMZ)+var_RK1(k,i-1,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZX) * rdtrk
        enddo
        enddo
        enddo
@@ -1097,7 +1113,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var_RK1(k,i,j+1,I_MOMZ)+var_RK1(k,i,j  ,I_MOMZ) )     &
                                 + FACT_F * ( var_RK1(k,i,j+2,I_MOMZ)+var_RK1(k,i,j-1,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZY) * rdtrk
        enddo
        enddo
        enddo
@@ -1125,7 +1141,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK1(k+1,i,j,I_MOMX)+var_RK1(k  ,i,j,I_MOMX) )     &
                                 + FACT_F * ( var_RK1(k+2,i,j,I_MOMX)+var_RK1(k-1,i,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1134,10 +1150,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i+1,j,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var_RK1(KS+1,i,j,I_MOMX)+var_RK1(KS,i,j,I_MOMX) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i+1,j,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var_RK1(KE,i,j,I_MOMX)+var_RK1(KE-1,i,j,I_MOMX) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -1148,7 +1164,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELX)+diagvar(k,i-1,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK1(k,i  ,j,I_MOMX)+var_RK1(k,i-1,j,I_MOMX) )     &
                                 + FACT_F * ( var_RK1(k,i+1,j,I_MOMX)+var_RK1(k,i-2,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXX) * rdtrk
        enddo
        enddo
        enddo
@@ -1159,7 +1175,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var_RK1(k,i,j+1,I_MOMX)+var_RK1(k,i,j  ,I_MOMX) )     &
                                 + FACT_F * ( var_RK1(k,i,j+2,I_MOMX)+var_RK1(k,i,j-1,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXY) * rdtrk
        enddo
        enddo
        enddo
@@ -1186,7 +1202,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK1(k+1,i,j,I_MOMY)+var_RK1(k  ,i,j,I_MOMY) )     &
                                 + FACT_F * ( var_RK1(k+2,i,j,I_MOMY)+var_RK1(k-1,i,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1195,10 +1211,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i,j+1,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var_RK1(KS+1,i,j,I_MOMY)+var_RK1(KS,i,j,I_MOMY) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i,j+1,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var_RK1(KE,i,j,I_MOMY)+var_RK1(KE-1,i,j,I_MOMY) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -1210,7 +1226,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK1(k,i+1,j,I_MOMY)+var_RK1(k,i  ,j,I_MOMY) )     &
                                 + FACT_F * ( var_RK1(k,i+2,j,I_MOMY)+var_RK1(k,i-1,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYX) * rdtrk
        enddo
        enddo
        enddo
@@ -1222,7 +1238,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELY)+diagvar(k,i,j-1,I_VELY) ) &
                               * ( FACT_N * ( var_RK1(k,i,j  ,I_MOMY)+var_RK1(k,i,j-1,I_MOMY) )     &
                                 + FACT_F * ( var_RK1(k,i,j+1,I_MOMY)+var_RK1(k,i,j-2,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYY) * rdtrk
        enddo
        enddo
        enddo
@@ -1250,7 +1266,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
                               * ( FACT_N * ( diagvar(k+1,i,j,I_POTT)+diagvar(k  ,i,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k+2,i,j,I_POTT)+diagvar(k-1,i,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1259,10 +1275,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
                                  * ( diagvar(KS+1,i,j,I_POTT)+diagvar(KS,i,j,I_POTT) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
                                  * ( diagvar(KE,i,j,I_POTT)+diagvar(KE-1,i,j,I_POTT) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
        enddo
        enddo
@@ -1273,7 +1289,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i+1,j,I_POTT)+diagvar(k,i  ,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i+2,j,I_POTT)+diagvar(k,i-1,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTX) * rdtrk
        enddo
        enddo
        enddo
@@ -1284,7 +1300,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i,j+1,I_POTT)+diagvar(k,i,j  ,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i,j+2,I_POTT)+diagvar(k,i,j-1,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTY) * rdtrk
        enddo
        enddo
        enddo
@@ -1377,7 +1393,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE-1
           mflx_hi(k,i,j,ZDIR) = var_RK2(k,i,j,I_MOMZ) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1393,7 +1409,7 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS,   KE
           mflx_hi(k,i,j,XDIR) = var_RK2(k,i,j,I_MOMX) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSX) * rdtrk
        enddo
        enddo
        enddo
@@ -1402,7 +1418,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           mflx_hi(k,i,j,YDIR) = var_RK2(k,i,j,I_MOMY) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENSY) * rdtrk
        enddo
        enddo
        enddo
@@ -1427,7 +1443,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELZ)+diagvar(k-1,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK2(k  ,i,j,I_MOMZ)+var_RK2(k-1,i,j,I_MOMZ) )     &
                                 + FACT_F * ( var_RK2(k+1,i,j,I_MOMZ)+var_RK2(k-2,i,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1438,7 +1454,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK2(k,i+1,j,I_MOMZ)+var_RK2(k,i  ,j,I_MOMZ) )     &
                                 + FACT_F * ( var_RK2(k,i+2,j,I_MOMZ)+var_RK2(k,i-1,j,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZX) * rdtrk
        enddo
        enddo
        enddo
@@ -1449,7 +1465,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k+1,i,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var_RK2(k,i,j+1,I_MOMZ)+var_RK2(k,i,j  ,I_MOMZ) )     &
                                 + FACT_F * ( var_RK2(k,i,j+2,I_MOMZ)+var_RK2(k,i,j-1,I_MOMZ) ) )   &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZY) * rdtrk
        enddo
        enddo
        enddo
@@ -1477,7 +1493,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK2(k+1,i,j,I_MOMX)+var_RK2(k  ,i,j,I_MOMX) )     &
                                 + FACT_F * ( var_RK2(k+2,i,j,I_MOMX)+var_RK2(k-1,i,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1486,10 +1502,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i+1,j,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var_RK2(KS+1,i,j,I_MOMX)+var_RK2(KS,i,j,I_MOMX) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i+1,j,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var_RK2(KE,i,j,I_MOMX)+var_RK2(KE-1,i,j,I_MOMX) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMXZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -1500,7 +1516,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELX)+diagvar(k,i-1,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK2(k,i  ,j,I_MOMX)+var_RK2(k,i-1,j,I_MOMX) )     &
                                 + FACT_F * ( var_RK2(k,i+1,j,I_MOMX)+var_RK2(k,i-2,j,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXX) * rdtrk
        enddo
        enddo
        enddo
@@ -1511,7 +1527,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i+1,j,I_VELY)+diagvar(k,i,j,I_VELY) ) &
                               * ( FACT_N * ( var_RK2(k,i,j+1,I_MOMX)+var_RK2(k,i,j  ,I_MOMX) )     &
                                 + FACT_F * ( var_RK2(k,i,j+2,I_MOMX)+var_RK2(k,i,j-1,I_MOMX) ) )   &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMXY) * rdtrk
        enddo
        enddo
        enddo
@@ -1538,7 +1554,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELZ)+diagvar(k,i,j,I_VELZ) ) &
                               * ( FACT_N * ( var_RK2(k+1,i,j,I_MOMY)+var_RK2(k  ,i,j,I_MOMY) )     &
                                 + FACT_F * ( var_RK2(k+2,i,j,I_MOMY)+var_RK2(k-1,i,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1547,10 +1563,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( diagvar(KS  ,i,j+1,I_VELZ)+diagvar(KS  ,i,j,I_VELZ) ) & ! just above the bottom boundary
                                  * ( var_RK2(KS+1,i,j,I_MOMY)+var_RK2(KS,i,j,I_MOMY) )                      &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( diagvar(KE-1,i,j+1,I_VELZ)+diagvar(KE-1,i,j,I_VELZ) ) & ! just below the top boundary
                                  * ( var_RK2(KE,i,j,I_MOMY)+var_RK2(KE-1,i,j,I_MOMY) )                      &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMYZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
        enddo
        enddo
@@ -1562,7 +1578,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( diagvar(k,i,j+1,I_VELX)+diagvar(k,i,j,I_VELX) ) &
                               * ( FACT_N * ( var_RK2(k,i+1,j,I_MOMY)+var_RK2(k,i  ,j,I_MOMY) )     &
                                 + FACT_F * ( var_RK2(k,i+2,j,I_MOMY)+var_RK2(k,i-1,j,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYX) * rdtrk
        enddo
        enddo
        enddo
@@ -1574,7 +1590,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( diagvar(k,i,j,I_VELY)+diagvar(k,i,j-1,I_VELY) ) &
                               * ( FACT_N * ( var_RK2(k,i,j  ,I_MOMY)+var_RK2(k,i,j-1,I_MOMY) )     &
                                 + FACT_F * ( var_RK2(k,i,j+1,I_MOMY)+var_RK2(k,i,j-2,I_MOMY) ) )   &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMYY) * rdtrk
        enddo
        enddo
        enddo
@@ -1602,7 +1618,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                                      &
                               * ( FACT_N * ( diagvar(k+1,i,j,I_POTT)+diagvar(k  ,i,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k+2,i,j,I_POTT)+diagvar(k-1,i,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTZ) * rdtrk
        enddo
        enddo
        enddo
@@ -1611,10 +1627,10 @@ call START_COLLECTION("RK3")
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                  ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR)                      & ! just above the bottom boundary
                                  * ( diagvar(KS+1,i,j,I_POTT)+diagvar(KS,i,j,I_POTT) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR)                      & ! just below the top boundary
                                  * ( diagvar(KE,i,j,I_POTT)+diagvar(KE-1,i,j,I_POTT) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_RHOTZ) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                  ! top boundary
        enddo
        enddo
@@ -1625,7 +1641,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i+1,j,I_POTT)+diagvar(k,i  ,j,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i+2,j,I_POTT)+diagvar(k,i-1,j,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTX) * rdtrk
        enddo
        enddo
        enddo
@@ -1636,7 +1652,7 @@ call START_COLLECTION("RK3")
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                                      &
                               * ( FACT_N * ( diagvar(k,i,j+1,I_POTT)+diagvar(k,i,j  ,I_POTT) )   &
                                 + FACT_F * ( diagvar(k,i,j+2,I_POTT)+diagvar(k,i,j-1,I_POTT) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOTY) * rdtrk
        enddo
        enddo
        enddo
@@ -1875,7 +1891,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! check total mass
-    call COMM_total( var(:,:,:,:), A_NAME(:) )
+!    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN
