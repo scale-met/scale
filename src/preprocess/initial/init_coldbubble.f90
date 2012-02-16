@@ -9,6 +9,7 @@
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-LES ver.2
+!! @li      2012-02-16 (Y.Miyamoto) [mod] added hydrostatic balance calculation
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -117,6 +118,7 @@ contains
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
+       CVdry  => CONST_CVdry,  &
        CPovR  => CONST_CPovR,  &
        RovCP  => CONST_RovCP,  &
        CVovCP => CONST_CVovCP, &
@@ -140,16 +142,20 @@ contains
        ATMOS_vars_put
     implicit none
 
-    real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment
+    real(8) :: ENV_THETA = 300.D0 ! Potential Temperature of environment [K]
+    real(8) :: ENV_QTRC  = 1.D0   ! tracer of environment
+    real(8) :: EXT_TBBL  = 5.D0   ! extremum of temperature in bubble [K]
     real(8) :: ZC_BBL = 3.D3      ! center location [m]: z
-    real(8) :: XC_BBL = 18.D3     ! center location [m]: x
-    real(8) :: YC_BBL = 18.D3     ! center location [m]: y
+    real(8) :: XC_BBL = 15.D3     ! center location [m]: x
+    real(8) :: YC_BBL = 15.D3     ! center location [m]: y
     real(8) :: ZR_BBL = 2.D3      ! bubble radius   [m]: z
-    real(8) :: XR_BBL = 4.D3      ! bubble radius   [m]: x
-    real(8) :: YR_BBL = 4.D3      ! bubble radius   [m]: y
+    real(8) :: XR_BBL = 1.D3      ! bubble radius   [m]: x
+    real(8) :: YR_BBL = 1.D3      ! bubble radius   [m]: y
 
-    NAMELIST / PARAM_MKEXP_coldbubble / &
+    NAMELIST / PARAM_MKEXP_COLDBUBBLE / &
        ENV_THETA, &
+       ENV_QTRC,  &
+       EXT_TBBL,  &
        ZC_BBL,    &
        XC_BBL,    &
        YC_BBL,    &
@@ -168,9 +174,10 @@ contains
     real(8) :: temp(KA,IA,JA)    ! temperature [K]
     real(8) :: pott(KA,IA,JA)    ! potential temperature [K]
 
-    real(8) :: dist
+    real(8) :: dist, RovP
+    real(8) :: DENS_Z0, dhyd, dgrd, dz, tt, pp, dd, d1, d2
 
-    integer :: k, i, j
+    integer :: k, i, j, n
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -194,32 +201,63 @@ contains
 
     call ATMOS_vars_get( dens, momx, momy, momz, rhot, qtrc )
 
+    pott(:,:,:)   = ENV_THETA
     momx(:,:,:)   = 0.D0
     momy(:,:,:)   = 0.D0
     momz(:,:,:)   = 0.D0
-    qtrc(:,:,:,:) = 0.D0
+    qtrc(:,:,:,:) = ENV_QTRC
+
+    RovP = Rdry / (Pstd)**CPovR
+    tt = ENV_THETA - GRAV / CPdry * GRID_CZ(KS)
+    pp = Pstd * ( tt/ENV_THETA )**CPovR
+    DENS_Z0 = Pstd / Rdry / ENV_THETA * ( pp/Pstd )**CVovCP
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = ENV_THETA - GRAV / CPdry * GRID_CZ(k)
 
-       pres(k,i,j) = Pstd * ( temp(k,i,j)/ENV_THETA )**CPovR
-
-       dist = ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2 &
-            + ( (GRID_CX(i)-XC_BBL)/XR_BBL )**2 &
-            + ( (GRID_CY(j)-YC_BBL)/YR_BBL )**2
-
-       if ( dist > 1.D0 ) then ! out of cold bubble
-          pott(k,i,j) = ENV_THETA
+       if ( k == KS ) then
+          dens(k,i,j) = DENS_Z0
        else
+          dz = GRID_CZ(k) - GRID_CZ(k-1)
+          dhyd = 0.D0
+          d1 = 0.D0
+          d2 = dens(k-1,i,j)
+          n = 0
+          do while ( dabs(d2-d1) > 1.D-10 )
+             d1 = d2
+             dhyd = - ( Pstd**( -RovCP )*Rdry*pott(k  ,i,j)*d1            )**( CPdry/CVdry ) / dz - 0.5D0*GRAV*d1 &
+                    + ( Pstd**( -RovCP )*Rdry*pott(k-1,i,j)*dens(k-1,i,j) )**( CPdry/CVdry ) / dz - 0.5D0*GRAV*dens(k-1,i,j)
+             dgrd = - ( Pstd**( -RovCP )*Rdry*pott(k,i,j) )**( CPdry/CVdry ) *CPdry/CVdry/dz * d1**( Rdry/CVdry ) - 0.5D0*GRAV
+             d2 = d1 - dhyd / dgrd
+          end do
+          dens(k,i,j) = d2
+          if ( n < 100 ) write(IO_FID_LOG,*) 'iteration converged',n,dhyd,d2,d1
+       end if
+
+       pres(k,i,j) = ( dens(k,i,j) * Rdry * pott(k,i,j) )**( CPdry/CVdry ) * ( Pstd )**( -Rdry/CVdry )
+       temp(k,i,j) = pres(k,i,j) / dens(k,i,j) * Rdry
+
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       dist = ( (GRID_CZ(k)-ZC_BBL)/ZR_BBL )**2.D0 &
+            + ( (GRID_CX(i)-XC_BBL)/XR_BBL )**2.D0 &
+            + ( (GRID_CY(j)-YC_BBL)/YR_BBL )**2.D0
+
+       if ( dist <= 1.D0 ) then
           pott(k,i,j) = ENV_THETA &
-                      - 15.D0 * dcos( 0.5D0*PI*sqrt(dist) )**2 &
+                      - EXT_TBBL * dcos( 0.5D0*PI*sqrt(dist) )**2.D0 &
                       * ( Pstd/pres(k,i,j) )**RovCP
        endif
 
-       dens(k,i,j) = Pstd / Rdry / pott(k,i,j) * ( pres(k,i,j)/Pstd )**CVovCP
        rhot(k,i,j) = dens(k,i,j) * pott(k,i,j)
+
     enddo
     enddo
     enddo
