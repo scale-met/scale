@@ -1098,9 +1098,9 @@ call START_COLLECTION("FCT")
                 + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
           if ( pjmns > 0 ) then
-             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
-             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
-             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDZC(k)
+             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDXC(i)
+             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDYC(j)
           endif
        enddo
        enddo
