@@ -11,8 +11,13 @@ VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 PRJ1 = init_coldbubble
 PRJ2 = init_warmbubble
 PRJ3 = init_supercell
+PRJ4 = init_turbdyn
+PRJ5 = init_lambwave
+PRJ6 = init_advection
+PRJ7 = init_diffusion
+PRJ8 = init_cwc
 
-PRJS = $(PRJ1) $(PRJ2) $(PRJ3)
+PRJS = $(PRJ1) $(PRJ2) $(PRJ3) $(PRJ4) $(PRJ5) $(PRJ6) $(PRJ7) $(PRJ8)
 
 MODS =	\
 	mod_stdio.o	\
@@ -25,8 +30,9 @@ MODS =	\
 	fio.o	\
 	fiof.o	\
 	mod_comm.o	\
-	mod_atmos_vars.o \
+	mod_atmos_vars.o	\
 	mod_atmos_sub_refstate.o
+
 
 all: makedir makebin
 
@@ -45,9 +51,31 @@ $(PRJ2): $(PRJ2).o
 $(PRJ3): $(PRJ3).o
 	$(LD) $(LFLAGS) -o $(PRJ3) $(PRJ3).o ${MODS}
 
+$(PRJ4): $(PRJ4).o
+	$(LD) $(LFLAGS) -o $(PRJ4) $(PRJ4).o ${MODS}
+
+$(PRJ5): $(PRJ5).o
+	$(LD) $(LFLAGS) -o $(PRJ5) $(PRJ5).o ${MODS}
+
+$(PRJ6): $(PRJ6).o
+	$(LD) $(LFLAGS) -o $(PRJ6) $(PRJ6).o ${MODS}
+
+$(PRJ7): $(PRJ7).o
+	$(LD) $(LFLAGS) -o $(PRJ7) $(PRJ7).o ${MODS}
+
+$(PRJ8): $(PRJ8).o
+	$(LD) $(LFLAGS) -o $(PRJ8) $(PRJ8).o ${MODS}
+
 $(PRJ1).o: $(PRJ1).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 $(PRJ2).o: $(PRJ2).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
 $(PRJ3).o: $(PRJ3).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ4).o: $(PRJ4).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ5).o: $(PRJ5).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ6).o: $(PRJ6).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ7).o: $(PRJ7).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+$(PRJ8).o: $(PRJ8).f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_comm.o mod_fileio.o mod_atmos_vars.o mod_atmos_sub_refstate.o
+
+
 
 mod_stdio.o	: mod_stdio.f90
 mod_process.o	: mod_process.f90 mod_stdio.o
