@@ -340,50 +340,35 @@ contains
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP( dens,   momx,   momy,   momz,   pott,   qtrc,  &
-                           dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t )
-
+  subroutine ATMOS_PHY_MP
     use mod_process, only: &
        PRC_myrank
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWSEC
     use mod_grid, only : &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
        KA   => GRID_KA,   &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX, &
+       KS   => GRID_KS,   &
+       KE   => GRID_KE,   &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
        JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE,   &
        GRID_CZ,           &
        GRID_FZ,           &
        GRID_CDZ,          &
        GRID_FDZ
     use mod_atmos_vars, only: &
-       QA => A_QA
+       var => atmos_var, &
+       QA  => A_QA, &
+       I_DENS,      &
+       I_MOMX,      &
+       I_MOMY,      &
+       I_MOMZ,      &
+       I_RHOT
     implicit none
-
-    ! prognostic value
-    real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
-    real(8), intent(in)  :: momx(KA,IA,JA)      ! momentum (x) [kg/m3 * m/s]
-    real(8), intent(in)  :: momy(KA,IA,JA)      ! momentum (y) [kg/m3 * m/s]
-    real(8), intent(in)  :: momz(KA,IA,JA)      ! momentum (z) [kg/m3 * m/s]
-    real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
-    real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
-    ! prognostic tendency
-    real(8), intent(out) :: dens_t(KA,IA,JA)
-    real(8), intent(out) :: momx_t(KA,IA,JA)
-    real(8), intent(out) :: momy_t(KA,IA,JA)
-    real(8), intent(out) :: momz_t(KA,IA,JA)
-    real(8), intent(out) :: pott_t(KA,IA,JA)
-    real(8), intent(out) :: qtrc_t(KA,IA,JA,QA)
 
     ! Convert to fit NDW6
     real(8) :: z  (KA)
@@ -418,7 +403,7 @@ contains
     real(8) :: frhoge_rad    (IMAX*JMAX,KA)
     real(8) :: qke           (IMAX*JMAX,KA)
 
-    integer :: i, j, ij, iq
+    integer :: k, i, j, ij, iq
     !---------------------------------------------------------------------------
 
     dz (:) = GRID_CDZ(:)
@@ -426,7 +411,7 @@ contains
     dzh(2:KA) = GRID_FDZ(1:KA-1)
 
     z  (:) = GRID_CZ(:)
-    zh (KS:KE+1) = GRID_FZ(WS:WE)
+    zh (KS:KE+1) = GRID_FZ(KS-1:KE)
     zh (KS-1)    = zh(KS)  -dz(KS-1)
     zh (KS-2)    = zh(KS-1)-dz(KS-2)
 
@@ -437,12 +422,27 @@ contains
     do i = IS, IE
        ij = (j-IS)*IMAX+i-IS+1
 
-       rho   (ij,:) = dens(:,i,j)
-       rho_vx(ij,:) = momx(:,i,j)
-       rho_vy(ij,:) = momy(:,i,j)
-       rho_w (ij,:) = momz(:,i,j)
-       th    (ij,:) = pott(:,i,j)
-
+       do k = KS, KE
+          rho   (ij,k) = var(k,i,j,I_DENS)
+          rho_w (ij,k) = var(k,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(k,i,j,I_MOMX)
+          rho_vy(ij,k) = var(k,i,j,I_MOMY)
+          th    (ij,k) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS)
+       enddo
+       do k = 1, KS-1
+          rho   (ij,k) = var(KS,i,j,I_DENS)
+          rho_w (ij,k) = var(KS,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(KS,i,j,I_MOMX)
+          rho_vy(ij,k) = var(KS,i,j,I_MOMY)
+          th    (ij,k) = var(KS,i,j,I_RHOT) / var(KS,i,j,I_DENS)
+       enddo
+       do k = KE+1, KA
+          rho   (ij,k) = var(KE,i,j,I_DENS)
+          rho_w (ij,k) = var(KE,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(KE,i,j,I_MOMX)
+          rho_vy(ij,k) = var(KE,i,j,I_MOMY)
+          th    (ij,k) = var(KE,i,j,I_RHOT) / var(KE,i,j,I_DENS)
+       enddo
     enddo
     enddo
 
@@ -452,7 +452,15 @@ contains
        do i = IS, IE
           ij = (j-IS)*IMAX+i-IS+1
 
-          rho_q (ij,:,iq) = qtrc(:,i,j,iq) * dens(:,i,j)
+          do k = KS, KE
+             rho_q (ij,k,iq) = var(k,i,j,5+iq) * var(k,i,j,I_DENS)
+          enddo
+          do k = 1, KS-1
+             rho_q (ij,k,iq) = var(KS,i,j,5+iq) * var(KS,i,j,I_DENS)
+          enddo
+          do k = KE+1, KA
+             rho_q (ij,k,iq) = var(KE,i,j,5+iq) * var(KE,i,j,I_DENS)
+          enddo
        enddo
        enddo
        enddo
@@ -475,11 +483,13 @@ contains
     do i = IS, IE
        ij = (j-IS)*IMAX+i-IS+1
 
-       dens_t(:,i,j) = drho   (ij,:)
-       momx_t(:,i,j) = drho_vx(ij,:)
-       momy_t(:,i,j) = drho_vy(ij,:)
-       momz_t(:,i,j) = drho_w (ij,:)
-       pott_t(:,i,j) = dth    (ij,:)
+       do k = KS, KE
+          var(k,i,j,I_DENS) = rho   (ij,k) + drho   (ij,k)
+          var(k,i,j,I_MOMZ) = rho_w (ij,k) + drho_w (ij,k)
+          var(k,i,j,I_MOMX) = rho_vx(ij,k) + drho_vy(ij,k)
+          var(k,i,j,I_MOMY) = rho_vy(ij,k) + drho_vx(ij,k)
+          var(k,i,j,I_RHOT) = ( th(ij,k) + dth(ij,k) * dt ) * var(k,i,j,I_DENS)
+       enddo
     enddo
     enddo
 
@@ -489,7 +499,9 @@ contains
        do i = IS, IE
           ij = (j-IS)*IMAX+i-IS+1
 
-          qtrc_t(:,i,j,iq) = drho_q (ij,:,iq) / dens(:,i,j)
+          do k = KS, KE
+             var(k,i,j,5+iq) = ( rho_q(ij,k,iq) + drho_q(ij,k,iq) * dt ) / var(k,i,j,I_DENS)
+          enddo
        enddo
        enddo
        enddo

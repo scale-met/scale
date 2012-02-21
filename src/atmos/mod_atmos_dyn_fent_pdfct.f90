@@ -123,8 +123,8 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
 
-    DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**dble( 4/2+1 )
-    DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**dble( 2/2+1 )
+    DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 4/2+1 )
+    DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 2/2+1 )
 
     allocate( CNDX(3,IA) )
     allocate( CNMX(3,IA) )

@@ -163,8 +163,6 @@ contains
        JA => GRID_JA, &
        KS => GRID_KS, &
        KE => GRID_KE, &
-       WS => GRID_WS, &
-       WE => GRID_WE, &
        IS => GRID_IS, &
        IE => GRID_IE, &
        JS => GRID_JS, &
@@ -205,7 +203,7 @@ contains
        endif
     enddo
 
-    do k = WS, WE
+    do k = KS-1, KE
        ee2 = GRID_FBFZ(k)
 
        if    ( ee2 > 0.0D0 .AND. ee2 <= 0.5D0 ) then
@@ -292,7 +290,7 @@ contains
           endif
        enddo
 
-       do k = WS, WE
+       do k = KS-1, KE
           if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF8 ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.D0
          endif
@@ -469,8 +467,6 @@ contains
        JA => GRID_JA, &
        KS => GRID_KS, &
        KE => GRID_KE, &
-       WS => GRID_WS, &
-       WE => GRID_WE, &
        IS => GRID_IS, &
        IE => GRID_IE, &
        JS => GRID_JS, &
@@ -492,28 +488,31 @@ contains
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF8
+!          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF8
+!          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF8
        else                   ! Buffer Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = 0.D0
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = 0.D0
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_REFSTATE_pott(k)
+!          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = 0.D0
+!          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_REFSTATE_pott(k)
        endif
     enddo
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-       do k = KS, KE
-          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF8
-          else                                    ! Buffer Area
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = GRID_FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
-                                                  * ( 1.D0 - GRID_CBFZ(k) )
-          endif
-       enddo
-    enddo
-    enddo
+!    do j = JS-1, JE+1
+!    do i = IS-1, IE+1
+!       do k = KS, KE
+!          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
+!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF8
+!          else                                    ! Buffer Area
+!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = GRID_FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
+!                                                  * ( 1.D0 - GRID_CBFZ(k) )
+!          endif
+!       enddo
+!    enddo
+!    enddo
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
 
     ! fill IHALO & JHALO
     do iv = I_BND_VELZ, I_BND_QV

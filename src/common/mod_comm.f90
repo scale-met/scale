@@ -419,7 +419,7 @@ contains
     enddo
 
     ! To NW HALO communicate
-    tagc = 20
+    tagc = 0
     do j = JE-JHALO+1, JE
         call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
                         MPI_DOUBLE_PRECISION, PRC_next(PRC_NW), tag+tagc, &
@@ -429,7 +429,7 @@ contains
     enddo
 
     ! To NE HALO communicate
-    tagc = 30
+    tagc = 10
     do j = JE-JHALO+1, JE
         call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
                         MPI_DOUBLE_PRECISION, PRC_next(PRC_NE), tag+tagc, &
@@ -439,7 +439,7 @@ contains
     enddo
 
     ! To SW HALO communicate
-    tagc = 0
+    tagc = 20
     do j = JS, JS+JHALO-1
         call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
                         MPI_DOUBLE_PRECISION, PRC_next(PRC_SW), tag+tagc, &
@@ -449,7 +449,7 @@ contains
     enddo
 
     ! To SE HALO communicate
-    tagc = 10
+    tagc = 30
     do j = JS, JS+JHALO-1
         call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
                         MPI_DOUBLE_PRECISION, PRC_next(PRC_SE), tag+tagc, &
