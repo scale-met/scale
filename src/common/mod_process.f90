@@ -18,6 +18,9 @@ module mod_process
   !++ used modules
   !
   use mpi
+  use mod_stdio, only : &
+     IO_FID_LOG, &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,27 +33,28 @@ module mod_process
   public :: PRC_MPIstop
   public :: PRC_setup
   public :: PRC_MPItime
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer, public,              save :: PRC_master = 0  !< master node
+  integer, public,         parameter :: PRC_master = 0   !< master node
 
-  integer, public,              save :: PRC_myrank = 0  !< my node ID
-  integer, public,              save :: PRC_nmax   = 1  !< total number of processors
-  integer, public,              save :: PRC_NUM_X  = 1
-  integer, public,              save :: PRC_NUM_Y  = 1
-  integer, public, allocatable, save :: PRC_2Drank(:,:)
+  integer, public,              save :: PRC_myrank = 0   !< my node ID
+  integer, public,              save :: PRC_nmax   = 1   !< total number of processors
+  integer, public,              save :: PRC_NUM_X  = 1   !< x length of 2D processor topology
+  integer, public,              save :: PRC_NUM_Y  = 1   !< y length of 2D processor topology
+  integer, public, allocatable, save :: PRC_2Drank(:,:)  !< node index in 2D topology
 
-  integer, public,              save :: PRC_next(8) = -1
-  integer, public,         parameter :: PRC_W = 1
-  integer, public,         parameter :: PRC_N = 2
-  integer, public,         parameter :: PRC_E = 3
-  integer, public,         parameter :: PRC_S = 4
-  integer, public,         parameter :: PRC_NW = 5
-  integer, public,         parameter :: PRC_NE = 6
-  integer, public,         parameter :: PRC_SW = 7
-  integer, public,         parameter :: PRC_SE = 8
+  integer, public,              save :: PRC_next(8) = -1 !< node ID of 8 neighbour process
+  integer, public,         parameter :: PRC_W  = 1       !< [node direction] west
+  integer, public,         parameter :: PRC_N  = 2       !< [node direction] north
+  integer, public,         parameter :: PRC_E  = 3       !< [node direction] east
+  integer, public,         parameter :: PRC_S  = 4       !< [node direction] south
+  integer, public,         parameter :: PRC_NW = 5       !< [node direction] northwest
+  integer, public,         parameter :: PRC_NE = 6       !< [node direction] northeast
+  integer, public,         parameter :: PRC_SW = 7       !< [node direction] southwest
+  integer, public,         parameter :: PRC_SE = 8       !< [node direction] southeast
 
   !-----------------------------------------------------------------------------
   !
@@ -60,7 +64,8 @@ module mod_process
   !
   !++ Private parameters & variables
   !
-  logical, private, save :: PRC_mpi_alive = .false.
+  logical, private, save :: PRC_mpi_alive = .false. !< whether MPI is alive or not?
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -72,12 +77,10 @@ contains
        IO_get_available_fid, &
        IO_make_idstr,        &
        IO_FILECHR,           &
-       IO_FID_CONF,          &
-       IO_FID_LOG,           &
-       IO_L
+       IO_FID_CONF
     implicit none
 
-    character(len=IO_FILECHR) :: fname
+    character(len=IO_FILECHR) :: fname !< name of logfile for each process
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -123,16 +126,14 @@ contains
   end subroutine PRC_MPIstart
 
   !-----------------------------------------------------------------------------
-  !> Start MPI
+  !> Dummy subroutine of MPIstart
   !-----------------------------------------------------------------------------
   subroutine PRC_NOMPIstart
     use mod_stdio, only : &
        IO_get_available_fid, &
        IO_make_idstr,        &
        IO_FILECHR,           &
-       IO_FID_CONF,          &
-       IO_FID_LOG,           &
-       IO_L
+       IO_FID_CONF
     implicit none
 
     character(len=IO_FILECHR) :: fname
@@ -183,9 +184,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
     use mod_stdio, only : &
-       IO_SYSCHR,  &
-       IO_FID_LOG, &
-       IO_L
+       IO_SYSCHR
     implicit none
 
     character(len=IO_SYSCHR) :: request = 'STOP'
@@ -218,19 +217,17 @@ contains
 
 
   !-----------------------------------------------------------------------------
-  !> Setup Precessor numbers
+  !> Setup Processor topology
   !-----------------------------------------------------------------------------
   subroutine PRC_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     implicit none
 
-    logical :: PRC_PERIODIC_X = .true.
-    logical :: PRC_PERIODIC_Y = .true.
+    logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
+    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)? 
 
-    NAMELIST / PARAM_PRC / &
+    namelist / PARAM_PRC / &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
@@ -338,6 +335,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> get MPI time
+  !> @return time
   !-----------------------------------------------------------------------------
   function PRC_MPItime() result(time)
     implicit none

@@ -106,8 +106,7 @@ program prg_spddiff
   integer(8),                allocatable :: var1_dt(:), var2_dt(:)
 
   character(LEN=28)    :: tmpl
-  integer(8)           :: nowsec
-  integer              :: kmax, num_of_step, step, date_str(6)
+  integer              :: date_str(6)
 
   real(4), allocatable     :: data1_r4(:)
   real(4), allocatable     :: data2_r4(:)
@@ -119,8 +118,8 @@ program prg_spddiff
   real(8), allocatable     :: data2_r8_3d(:,:,:)
 
   logical :: addvar, filematch, headercheck, datacheck
-  integer :: did, did1, did2, ierr, irec
-  integer :: v, t, p, k, i, j, v1, v2
+  integer :: did, did1, did2
+  integer :: v, p, k, i, j, v1, v2
   !=============================================================================
 
   !--- read option and preprocess

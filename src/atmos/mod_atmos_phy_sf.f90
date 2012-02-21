@@ -157,7 +157,6 @@ contains
        IA  => GRID_IA,  &
        JA  => GRID_JA,  &
        KS  => GRID_KS,  &
-       WS  => GRID_WS,  &
        IS  => GRID_IS,  &
        IE  => GRID_IE,  &
        JS  => GRID_JS,  &
@@ -167,7 +166,8 @@ contains
        QA => A_QA, &
        I_QV
     use mod_ocean_vars, only: &
-       OCEAN_vars_get
+       ocean_var, &
+       I_SST
     implicit none
 
     ! prognostic value
@@ -184,9 +184,6 @@ contains
     real(8), intent(out) :: FLXij_sfc(IA,JA,3)  ! => FLXij(WS,1:IA,1:JA,1:3,3)
     real(8), intent(out) :: FLXt_sfc (IA,JA)    ! => FLXt (WS,1:IA,1:JA)
     real(8), intent(out) :: FLXqv_sfc(IA,JA)    ! => FLXq (WS,1:IA,1:JA,1)
-
-    ! from ocean
-    real(8) :: sst(IA,JA) ! sea surface temperature
 
     real(8) :: R10M   ! scaling factor for 10m value (momentum,heat,tracer)
     real(8) :: R10H
@@ -222,8 +219,6 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    call OCEAN_vars_get( sst )
-
     R10M = 10.D0 / CDZ(KS) ! scale with height
     R10H =  1.D0           ! assume homogeneous
     R10E =  1.D0           ! assume homogeneous
@@ -233,15 +228,15 @@ contains
        !--- absolute velocity ( at x, y, interface )
        Uabsu = ( velx(KS,i,j)                                                             )**2.D0 &
              + ( ( vely(KS,i,j)+vely(KS,i+1,j)+vely(KS,i,j-1)+vely(KS,i+1,j-1) ) * 0.25D0 )**2.D0 &
-             + ( ( velz(WS+1,i,j)+velz(WS+1,i+1,j)                             ) * 0.25D0 )**2.D0
+             + ( ( velz(KS,i,j)+velz(KS,i+1,j)                                 ) * 0.25D0 )**2.D0
 
        Uabsv = ( ( velx(KS,i,j)+velx(KS,i,j+1)+velx(KS,i-1,j)+velx(KS,i-1,j+1) ) * 0.25D0 )**2.D0 &
              + ( vely(KS,i,j)                                                             )**2.D0 &
-             + ( ( velz(WS+1,i,j)+velz(WS+1,i,j+1)                             ) * 0.25D0 )**2.D0
+             + ( ( velz(KS,i,j)+velz(KS,i,j+1)                                 ) * 0.25D0 )**2.D0
 
        Uabsw = ( ( velx(KS,i,j)+velx(KS,i-1,j) )  * 0.5D0 )**2.D0 &
              + ( ( vely(KS,i,j)+vely(KS,i,j-1) )  * 0.5D0 )**2.D0 &
-             + ( velz(WS+1,i,j)                   * 0.5D0 )**2.D0
+             + ( velz(KS,i,j)                     * 0.5D0 )**2.D0
 
        !--- friction velocity
        Ustaru = max ( sqrt ( CM0 * Uabsu ), Ustar_min )
@@ -269,7 +264,7 @@ contains
        CME   = max( min( CMX / log( CDZ(KS)/Z0E  ), CE_max ), CE_min ) * min( max( Uabsw, U_minE ), U_maxE )
 
        !--- Qv at sea surface
-       pres_vap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/sst(i,j) ) )
+       pres_vap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/ocean_var(i,j,1,I_SST) ) )
        qv_sfc   = EPSvap * pres_vap / ( pres(KS,i,j) - pres_vap )
 
        !--- velocity at the 10m height
@@ -280,9 +275,9 @@ contains
        !--- surface fluxes ( at x, y, 10m ) 
        FLXij_sfc(i,j,1) = 0.5D0 * ( dens(KS,i+1,j)+dens(KS,i,j) ) * U10u * CMMu * velx(KS,i,j)   * R10M
        FLXij_sfc(i,j,2) = 0.5D0 * ( dens(KS,i,j+1)+dens(KS,i,j) ) * U10v * CMMv * vely(KS,i,j)   * R10M
-       FLXij_sfc(i,j,3) = dens(KS,i,j) * U10w * CMMw * velz(WS+1,i,j) * R10M
+       FLXij_sfc(i,j,3) = dens(KS,i,j) * U10w * CMMw * velz(KS,i,j) * R10M
 
-       FLXt_sfc (i,j)   = dens(KS,i,j) * U10w * CMH  * ( sst(i,j) - pott(KS,i,j)*R10H )
+       FLXt_sfc (i,j)   = dens(KS,i,j) * U10w * CMH  * ( ocean_var(i,j,1,I_SST) - pott(KS,i,j)*R10H )
 
        FLXqv_sfc(i,j)   = dens(KS,i,j) * U10w * CME  * ( qv_sfc - qtrc(KS,i,j,I_QV)*R10E )
     enddo

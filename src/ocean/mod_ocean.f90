@@ -64,22 +64,10 @@ contains
   !> advance ocean state
   !-----------------------------------------------------------------------------
   subroutine OCEAN_step
-    use mod_grid, only: &
-       IA   => GRID_IA, &
-       JA   => GRID_JA
-    use mod_ocean_vars, only: &
-       OCEAN_vars_get, &
-       OCEAN_vars_put
     implicit none
-
-    real(8) :: sst(IA,JA,1)    ! Sea Surface Temperatue [K]
     !---------------------------------------------------------------------------
 
-!    call OCEAN_vars_get( sst )
-
     ! Do nothing yet
-
-!    call OCEAN_vars_put( sst )
 
     return
   end subroutine OCEAN_step

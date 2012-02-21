@@ -17,7 +17,9 @@ module mod_grid
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FILECHR
+     IO_FILECHR, &
+     IO_FID_LOG, &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -29,6 +31,7 @@ module mod_grid
   public :: GRID_read
   public :: GRID_write
   public :: GRID_generate
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -46,7 +49,6 @@ module mod_grid
   integer, public, save :: GRID_JA            ! # of y whole cells (local, with HALO)
 
   integer, public, save :: GRID_KS, GRID_KE   ! start/end of inner domain: z, layer
-  integer, public, save :: GRID_WS, GRID_WE   ! start/end of inner domain: z, interface
   integer, public, save :: GRID_IS, GRID_IE   ! start/end of inner domain: x, local
   integer, public, save :: GRID_JS, GRID_JE   ! start/end of inner domain: y, local
 
@@ -110,9 +112,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine GRID_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop, &
        PRC_myrank,  &
@@ -123,7 +123,7 @@ contains
        FIO_setgridinfo
     implicit none
 
-    NAMELIST / PARAM_GRID / &
+    namelist / PARAM_GRID / &
        GRID_IN_BASENAME,  &
        GRID_OUT_BASENAME, &
        GRID_DXYZ,         &
@@ -161,8 +161,6 @@ contains
     ! vertical index
     GRID_KS = GRID_KHALO + 1
     GRID_KE = GRID_KHALO + GRID_KMAX
-    GRID_WS = GRID_KS - 1
-    GRID_WE = GRID_KE
 
     ! horizontal index (local domain)
     GRID_IS = GRID_IHALO + 1
@@ -438,8 +436,8 @@ contains
     real(8), allocatable :: GRID_FBFYG(:)    ! face   buffer factor [0-1]: y, global
     real(8), allocatable :: GRID_CBFXG(:)    ! center buffer factor [0-1]: x, global
     real(8), allocatable :: GRID_CBFYG(:)    ! center buffer factor [0-1]: y, global
-    real(8), allocatable :: GRID_CXG_mask(:)
-    real(8), allocatable :: GRID_CYG_mask(:)
+    logical, allocatable :: GRID_CXG_mask(:)
+    logical, allocatable :: GRID_CYG_mask(:)
 
     real(8), allocatable :: buffz(:), buffx(:), buffy(:)
     real(8)              :: bufftotz, bufftotx, bufftoty
@@ -703,8 +701,8 @@ contains
     GRID_FBFZ(:) = 0.D0
     if ( kbuff > 0 ) then
        do k = GRID_KHALO+kmain+1, GRID_KHALO+kmain+kbuff
-          GRID_CBFZ(k) = (bufftotz-GRID_FZ(GRID_WE)+GRID_CZ(k)) / bufftotz
-          GRID_FBFZ(k) = (bufftotz-GRID_FZ(GRID_WE)+GRID_FZ(k)) / bufftotz
+          GRID_CBFZ(k) = (bufftotz-GRID_FZ(GRID_KE)+GRID_CZ(k)) / bufftotz
+          GRID_FBFZ(k) = (bufftotz-GRID_FZ(GRID_KE)+GRID_FZ(k)) / bufftotz
        enddo
     endif
 
@@ -789,11 +787,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Domain size [km] (global) :'
     if( IO_L ) write(IO_FID_LOG,'(1x,7(A,f8.3))') '  Z:',                     &
                   GRID_FZ(0)            *1.D-3, ' -HALO-                   ', &
-                  GRID_FZ(GRID_WS)      *1.D-3, ' | ',                        &
+                  GRID_FZ(GRID_KS-1)    *1.D-3, ' | ',                        &
                   GRID_CZ(GRID_KS)      *1.D-3, ' - ',                        &
                   GRID_CZ(GRID_KE)      *1.D-3, ' | ',                        &
                   GRID_FZ(GRID_KE-kbuff)*1.D-3, ' -buffer- ',                 &
-                  GRID_FZ(GRID_WE)      *1.D-3, ' -HALO- ',                   &
+                  GRID_FZ(GRID_KE)      *1.D-3, ' -HALO- ',                   &
                   GRID_FZ(GRID_KA)      *1.D-3
     if( IO_L ) write(IO_FID_LOG,'(1x,8(A,f8.3))') '  X:',                  &
                   GRID_FXG(0)                        *1.D-3, ' -HALO- ',   &

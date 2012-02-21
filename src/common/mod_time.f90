@@ -16,7 +16,9 @@ module mod_time
   !
   !++ used modules
   !
-  use mod_stdio, only: &
+  use mod_stdio, only : &
+     IO_FID_LOG, &
+     IO_L,       &
      IO_SYSCHR
   !-----------------------------------------------------------------------------
   implicit none
@@ -34,47 +36,49 @@ module mod_time
   public :: TIME_rapstart
   public :: TIME_rapend
   public :: TIME_rapreport
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: TIME_DTSEC
+  real(8), public, save :: TIME_DTSEC               !< time interval of model       [sec]
 
-  real(8), public, save :: TIME_DTSEC_ATMOS_DYN
-  integer, public, save :: TIME_NSTEP_ATMOS_DYN = 1
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_TB
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_MP
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_RD
-  real(8), public, save :: TIME_DTSEC_ATMOS_RESTART
-  real(8), public, save :: TIME_DTSEC_OCEAN
+  real(8), public, save :: TIME_DTSEC_ATMOS_DYN     !< time interval of dynamics     [sec]
+  integer, public, save :: TIME_NSTEP_ATMOS_DYN = 1 !< small step of dynamics
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_TB  !< time interval of turbulence   [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_MP  !< time interval of microphysics [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_RD  !< time interval of radiation    [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_RESTART !< time interval of restart      [sec]
+  real(8), public, save :: TIME_DTSEC_OCEAN         !< time interval of ocean        [sec]
 
-  real(8), public, save :: TIME_NOWSEC
-  integer, public, save :: TIME_NOWSTEP
+  real(8), public, save :: TIME_NOWSEC              !< current time [sec]
+  integer, public, save :: TIME_NOWSTEP             !< current step [number]
 
-  integer, public, save :: TIME_NOWDATE(6)
-  real(8), public, save :: TIME_NOWMS
-  real(8), public, save :: TIME_NOWSECL
+  integer, public, save :: TIME_NOWDATE(6)          !< current time [YYYY MM DD HH MM SS]
+  real(8), public, save :: TIME_NOWMS               !< subsecond part of current time [millisec]
+  real(8), public, save :: TIME_NOWSECL             !< current time [sec]
 
-  logical, public, save :: TIME_DOATMOS_step
-  logical, public, save :: TIME_DOATMOS_DYN
-  logical, public, save :: TIME_DOATMOS_PHY_TB
-  logical, public, save :: TIME_DOATMOS_PHY_MP
-  logical, public, save :: TIME_DOATMOS_PHY_RD
-  logical, public, save :: TIME_DOATMOS_restart
-  logical, public, save :: TIME_DOOCEAN_step
-  logical, public, save :: TIME_DOend
+  logical, public, save :: TIME_DOATMOS_step        !< execute atmospheric component in this step?
+  logical, public, save :: TIME_DOATMOS_DYN         !< execute dynamics?
+  logical, public, save :: TIME_DOATMOS_PHY_TB      !< execute physics(turbulence)?
+  logical, public, save :: TIME_DOATMOS_PHY_MP      !< execute physics(microphysics)?
+  logical, public, save :: TIME_DOATMOS_PHY_RD      !< execute physics(radiation)?
+  logical, public, save :: TIME_DOATMOS_restart     !< execute restart output?
+  logical, public, save :: TIME_DOOCEAN_step        !< execute ocean component in this step?
+  logical, public, save :: TIME_DOend               !< finish program in this step?
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  public :: TIME_rapid
+  private :: TIME_rapid
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  integer, private,      save :: TIME_STARTDATE(6) = (/ 0000, 01, 01, 00, 00, 00 /) ! Input
-  real(8), private,      save :: TIME_STARTMS      = 0.D0                           ! Input
+  integer, private,      save :: TIME_STARTDATE(6) = (/ 0000, 01, 01, 00, 00, 00 /)
+  real(8), private,      save :: TIME_STARTMS      = 0.D0                           !< [millisec]
   real(8), private,      save :: TIME_STARTSECL
 
   integer, private,      save :: TIME_ENDDATE(6)
@@ -114,9 +118,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine TIME_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -182,6 +184,7 @@ contains
 
     !--- calculate time
     call TIME_date2sec( TIME_STARTSECL, TIME_STARTDATE(:) )
+    TIME_STARTMS = TIME_STARTMS * 1.D-3
 
     call TIME_ymdhms2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
 
@@ -252,9 +255,6 @@ contains
   !> Check state of this time
   !-----------------------------------------------------------------------------
   subroutine TIME_checkstate
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L
     implicit none
     !---------------------------------------------------------------------------
 
@@ -310,9 +310,6 @@ contains
   !> Advance the time & eval. timing to restart&stop
   !-----------------------------------------------------------------------------
   subroutine TIME_advance
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L
     implicit none
 
     real(8) :: temp
@@ -348,7 +345,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> convert date to second
-  !
   !@todo fit to gregorian calendar
   !-----------------------------------------------------------------------------
   subroutine TIME_date2sec( &
@@ -426,7 +422,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> convert several units to second
-  !
   !@todo fit to gregorian calendar
   !-----------------------------------------------------------------------------
   subroutine TIME_ymdhms2sec( &
@@ -520,9 +515,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine TIME_rapreport
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     implicit none
 
     integer :: id

@@ -26,25 +26,16 @@ module mod_stdio
   public :: IO_setup
   public :: IO_get_available_fid
   public :: IO_make_idstr
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-
-  !> Character length of system control
-  integer, public, parameter :: IO_SYSCHR   = 32
-
-  !> Character length of file name
-  integer, public, parameter :: IO_FILECHR  = 128
-
-  !> Config file ID
-  integer, public, save      :: IO_FID_CONF = 7
-
-  !> Log file ID
-  integer, public, save      :: IO_FID_LOG  = 8
-
-  !> output log or not?
-  logical, public, save      :: IO_L        = .true.
+  integer, public, parameter :: IO_SYSCHR   = 32     !< Character length of system control
+  integer, public, parameter :: IO_FILECHR  = 128    !< Character length of file name
+  integer, public,      save :: IO_FID_CONF = 7      !< Config file ID
+  integer, public,      save :: IO_FID_LOG  = 8      !< Log file ID
+  logical, public,      save :: IO_L        = .true. !< output log or not?
 
   !-----------------------------------------------------------------------------
   !
@@ -54,18 +45,10 @@ module mod_stdio
   !
   !++ Private parameters & variables
   !
-
-  !> minimum available fid
-  integer, private, parameter      :: IO_MINFID = 7
-
-  !> maximum available fid
-  integer, private, parameter      :: IO_MAXFID = 99  
-
-  !> maximum digit for region/preccess specific filename
-  integer, private, save           :: IO_MAXDIGIT = 6
-
-  !> offset number of region file
-  integer, private, parameter      :: IO_RGNOFFSET = 0
+  integer, private, parameter :: IO_MINFID    = 7  !< minimum available fid
+  integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
+  integer, private,      save :: IO_MAXDIGIT  = 6  !< maximum digit for process specific filename
+  integer, private, parameter :: IO_RGNOFFSET = 0  !< offset number of process file
 
   !-----------------------------------------------------------------------------
 contains
@@ -73,7 +56,7 @@ contains
   !-----------------------------------------------------------------------------
   !> initialize file ID
   !-----------------------------------------------------------------------------
-  subroutine IO_setup()
+  subroutine IO_setup
     implicit none
 
     logical :: IO_OUTPUT_LOGMSG     !< output log or not?
@@ -82,7 +65,7 @@ contains
        IO_MAXDIGIT,      &
        IO_OUTPUT_LOGMSG
 
-    character(len=IO_FILECHR) :: param_fname
+    character(len=IO_FILECHR) :: fname !< name of config file for each process
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -92,16 +75,16 @@ contains
        write(*,*) ' xxx Program needs config file! STOP.'
        stop
     else
-       call get_command_argument(1,param_fname)
+       call get_command_argument(1,fname)
     endif
 
     !--- Open config file till end
     IO_FID_CONF = IO_get_available_fid()
-    open( IO_FID_CONF,                &
-          file   = trim(param_fname), &
-          form   = 'formatted',       &
-          status = 'old',             &
-          iostat = ierr               )
+    open( IO_FID_CONF,          &
+          file   = trim(fname), &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
     !--- copy default value
     IO_OUTPUT_LOGMSG = IO_L
@@ -121,7 +104,7 @@ contains
   end subroutine IO_setup
 
   !-----------------------------------------------------------------------------
-  !> search & get available file id
+  !> search & get available file ID
   !> @return fid
   !-----------------------------------------------------------------------------
   function IO_get_available_fid() result(fid)
@@ -139,7 +122,7 @@ contains
   end function IO_get_available_fid
 
   !-----------------------------------------------------------------------------
-  !> generate region/process specific filename
+  !> generate process specific filename
   !-----------------------------------------------------------------------------
   subroutine IO_make_idstr( &
       outstr, &

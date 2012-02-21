@@ -835,9 +835,7 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE,   &
        KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE
+       KE   => GRID_KE
     implicit none
 
     integer :: k, i, j
@@ -853,15 +851,15 @@ contains
     enddo
     enddo
 
-    do j = JS,   JE
-    do i = IS,   IE
-    do k = WS+1, WE-1
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
        atmos_diagvar(k,i,j,4) = 2.D0 * atmos_var(k,i,j,4) / ( atmos_var(k,i,j+1,1)+atmos_var(k,i,j,1) )
     enddo
     enddo
     enddo
-    atmos_diagvar(WS,:,:,4) = 0.D0 ! bottom boundary
-    atmos_diagvar(WE,:,:,4) = 0.D0 ! top    boundary
+    atmos_diagvar(KS-1,:,:,4) = 0.D0 ! bottom boundary
+    atmos_diagvar(KE  ,:,:,4) = 0.D0 ! top    boundary
 
     ! pressure, temperature
     do j = JS, JE

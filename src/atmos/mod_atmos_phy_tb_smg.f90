@@ -73,8 +73,6 @@ contains
        JA   => GRID_JA,   &
        KS   => GRID_KS,   &
        KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE,   &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
@@ -96,9 +94,9 @@ contains
     real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
 
     ! surface flux
-    real(8), intent(in)  :: FLXij_sfc(IA,JA,3)  ! => FLXij(1:IA,1:JA,WS,1:3,3)
-    real(8), intent(in)  :: FLXt_sfc (IA,JA)    ! => FLXt (1:IA,1:JA,WS)
-    real(8), intent(in)  :: FLXqv_sfc(IA,JA)    ! => FLXq (1:IA,1:JA,WS,1)
+    real(8), intent(in)  :: FLXij_sfc(IA,JA,3)  ! => FLXij(1:IA,1:JA,KS-1,1:3,3)
+    real(8), intent(in)  :: FLXt_sfc (IA,JA)    ! => FLXt (1:IA,1:JA,KS-1)
+    real(8), intent(in)  :: FLXqv_sfc(IA,JA)    ! => FLXq (1:IA,1:JA,KS-1,1)
 
     ! prognostic tendency
     real(8), intent(out) :: momz_t(KA,IA,JA)
@@ -155,13 +153,13 @@ contains
     enddo
     do j = JS-2, JE+2
     do i = IS-2, IE+1
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        Uij(k,i,j,1,3) = ( velz(k,i+1,j)-velz(k,i,j) ) * RCDX(i) ! dw/dx, (u, y, interface)
     enddo
     enddo
     enddo
-    Uij(WS,:,:,1,3) = 0.D0
-    Uij(WE,:,:,1,3) = 0.D0
+    Uij(KS-1,:,:,1,3) = 0.D0
+    Uij(KE,:,:,1,3) = 0.D0
     do j = JS-2, JE+1
     do i = IS-2, IE+2
     do k = KS,   KE
@@ -171,25 +169,25 @@ contains
     enddo
     do j = JS-2, JE+1
     do i = IS-2, IE+2
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        Uij(k,i,j,2,3) = ( velz(k,i,j+1)-velz(k,i,j) ) * RCDY(j) ! dw/dy, (x, v, interface)
     enddo
     enddo
     enddo
-    Uij(WS,:,:,2,3) = 0.D0
-    Uij(WE,:,:,2,3) = 0.D0
+    Uij(KS-1,:,:,2,3) = 0.D0
+    Uij(KE,:,:,2,3) = 0.D0
     do j = JS-2, JE+2
     do i = IS-2, IE+2
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        Uij(k,i,j,3,1) = ( velx(k+1,i,j)-velx(k,i,j) ) * RCDZ(k) ! du/dz, (u, y, interface)
        Uij(k,i,j,3,2) = ( vely(k+1,i,j)-vely(k,i,j) ) * RCDZ(k) ! dv/dz, (x, v, interface)
     enddo
     enddo
     enddo
-    Uij(WS,:,:,3,1) = 0.D0
-    Uij(WS,:,:,3,1) = 0.D0
-    Uij(WE,:,:,3,2) = 0.D0
-    Uij(WE,:,:,3,2) = 0.D0
+    Uij(KS-1,:,:,3,1) = 0.D0
+    Uij(KS-1,:,:,3,1) = 0.D0
+    Uij(KE,:,:,3,2) = 0.D0
+    Uij(KE,:,:,3,2) = 0.D0
 
     do j = JS-2, JE+2
     do i = IS-2, IE+2
@@ -211,7 +209,7 @@ contains
     enddo
     do j = JS-2, JE+2
     do i = IS-2, IE+1
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        Sij(k,i,j,1,3) = 0.125D0 * ( Uij(k,i,j,1,3)+Uij(k,i,j,3,1) )               &
                       * ( dens(k,i,j)+dens(k,i+1,j)+dens(k+1,i,j)+dens(k+1,i+1,j) )
        Sij(k,i,j,3,1) = Sij(k,i,j,1,3)
@@ -220,7 +218,7 @@ contains
     enddo
     do j = JS-2, JE+1
     do i = IS-2, IE+2
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        Sij(k,i,j,2,3) = 0.125D0 * ( Uij(k,i,j,2,3)+Uij(k,i,j,3,2) )               &
                       * ( dens(k,i,j)+dens(k,i,j+1)+dens(k+1,i,j)+dens(k+1,i,j+1) )
        Sij(k,i,j,3,2) = Sij(k,i,j,2,3)
@@ -250,7 +248,7 @@ contains
     ! calculate  Pr (Pr is defined at w level)
     do j = JS-1, JE
     do i = IS-1, IE
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        ! Ri = g / rho * drho/dz / dU/dz
        Ri = GRAV * ( dens(k+1,i,j)-dens(k,i,j) ) * RCDZ(k) * 2.D0 / ( dens(k+1,i,j)+dens(k,i,j) )                   &
           / max( ( ( velx(k+1,i,j)+velx(k+1,i-1,j)-velx(k,i,j)-velx(k,i-1,j) ) * 0.5D0 * RCDZ(k) )**2.D0            &
@@ -262,12 +260,12 @@ contains
     enddo
     enddo
     enddo
-    RPr(WS,:,:) = 0.D0
-    RPr(WE,:,:) = 0.D0
+    RPr(KS-1,:,:) = 0.D0
+    RPr(KE,:,:) = 0.D0
 
     do j = JS-2, JE+1
     do i = IS-2, IE+1
-    do k = WS+1, WE-1
+    do k = KS, KE-1
        nurho(k,i,j) = ( Cs * DXYZ ) ** 2.D0 * ( sqrt( 2.D0 * GAMMA                          &
                     * ( ( Sij(k  ,i  ,j  ,1,1) + Sij(k+1,i+1,j+1,1,1)                       &
                         + Sij(k  ,i+1,j  ,1,1) + Sij(k  ,i+1,j+1,1,1)                       &
@@ -291,8 +289,8 @@ contains
     enddo
     enddo
     enddo
-    nurho(WS,:,:) = 0.D0
-    nurho(WE,:,:) = 0.D0
+    nurho(KS-1,:,:) = 0.D0
+    nurho(KE,:,:) = 0.D0
 
     do k = KS,   KE
     do j = JS-1, JE
@@ -327,7 +325,7 @@ contains
     enddo
     FLXij(KE+1,:,:,3,3) = FLXij(KE,:,:,3,3)
 
-    do k = WS+1, WE-1
+    do k = KS, KE-1
     do j = JS-1, JE
     do i = IS-1, IE
        FLXt(k,i,j,1) = RPr(k,i,j) * ( pott(k,i,j)-pott(k,i+1,j) ) * RCDX(i)                         &
@@ -346,17 +344,17 @@ contains
     enddo
     enddo
     enddo
-    FLXt(WS,:,:,:)   = 0.D0
-    FLXt(WE,:,:,:)   = 0.D0
-    FLXq(WS,:,:,:,:) = 0.D0
-    FLXq(WE,:,:,:,:) = 0.D0
+    FLXt(KS-1,:,:,:)   = 0.D0
+    FLXt(KE,:,:,:)   = 0.D0
+    FLXq(KS-1,:,:,:,:) = 0.D0
+    FLXq(KE,:,:,:,:) = 0.D0
 
     ! Merge Surface Flux
-    FLXij(WS,:,:,1,3) = FLXij_sfc(:,:,1)
-    FLXij(WS,:,:,2,3) = FLXij_sfc(:,:,2)
-    FLXij(WS,:,:,3,3) = FLXij_sfc(:,:,3)
-    FLXt (WS,:,:,3)   = FLXt_sfc (:,:)
-    FLXq (WS,:,:,3,1) = FLXqv_sfc(:,:)
+    FLXij(KS-1,:,:,1,3) = FLXij_sfc(:,:,1)
+    FLXij(KS-1,:,:,2,3) = FLXij_sfc(:,:,2)
+    FLXij(KS-1,:,:,3,3) = FLXij_sfc(:,:,3)
+    FLXt (KS-1,:,:,3)   = FLXt_sfc (:,:)
+    FLXq (KS-1,:,:,3,1) = FLXqv_sfc(:,:)
 
     ! tendency
     do k = KS, KE
