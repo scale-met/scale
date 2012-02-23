@@ -1,0 +1,30 @@
+# ------------------------ FOR Westmere Cluster ---------------------
+#
+FC = mpiifort
+#FFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
+FFLAGS= -fast -xSSE4.2 -ftz -m64 \
+        -fp-model precise -pc 80 \
+        -heap-arrays -fno-alias \
+        -parallel -par-report2 -par-threshold0 -vec-report1 \
+        -assume byterecl \
+        -fpp2 -D_PAPI_ \
+        -static
+#        -assume byterecl -convert big_endian
+#
+CC = mpiicc
+CFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
+#
+#
+LD = $(FC)
+LFLAGS = -parallel -lm -openmp \
+         -L/home/ryoshida/public/papi/lib -lpapi -lpfm
+#
+#
+FRONT_F90     = ifort
+FRONT_FFLAGS = $(FFLAGS)
+
+FRONT_CC     = icc
+FRONT_CFLAGS = $(CFLAGS)
+
+FRONT_LD     = $(FC)
+FRONT_LFLAGS = $(LFLAGS)
