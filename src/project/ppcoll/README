@@ -1,0 +1,73 @@
+Compiled library files
+-------------------------------------------------------------------------------------
+libpapi.bin.cent6.2.tar.gz
+libpapi.bin.suse11.tar.gz
+
+If you want to run on the local server, extract libpapi.***.tar.gz
+file suited to your environment. Edit Makedef.papi, and set a location
+of extracted library files.
+
+
+
+These libraries will work only on the newer operation kernel,
+but will not work on the RHEL 5.x series (included AICS cluster).
+In this case, please compile PAPI by yourself to suite your environment.
+
+
+14 	*****************************************************************************
+15 	HOW TO INSTALL PAPI ONTO YOUR SYSTEM
+16 	*****************************************************************************
+17 	
+18 	On some of the systems that PAPI supports, you can install PAPI right
+19 	out of the box without any additional setup. Others require drivers or
+20 	patches to be installed first.
+21 	
+22 	The general installation steps are below, but first find your particular
+23 	Operating System's section for any additional steps that may be necessary.
+24 	NOTE: the configure and make files are located in the papi/src directory.
+25 	
+26 	General Installation
+27 	
+28 	1. % ./configure
+29 	% make
+30 	
+31 	2. Check for errors.
+32 	
+33 	a) Run a simple test case: (This will run ctests/zero)
+34 	
+35 	% make test
+36 	
+37 	If you get good counts, you can optionally run all the test programs
+38 	with the included test harness. This will run the tests in quiet mode,
+39 	which will print PASSED, FAILED, or SKIPPED. Tests are SKIPPED if the
+40 	functionality being tested is not supported by that platform.
+41 	
+42 	% make fulltest (This will run ./run_tests.sh)
+43 	
+44 	To run the tests in verbose mode:
+45 	
+46 	% ./run_tests.sh -v
+47 	
+48 	3. Create a PAPI binary distribution or install PAPI directly.
+49 	
+50 	a) To install PAPI libraries and header files from the build tree:
+51 	
+52 	% make install
+53 	
+54 	b) To install PAPI manual pages from the build tree:
+55 	
+56 	% make install-man
+57 	
+58 	c) To install PAPI test programs from the build tree:
+59 	
+60 	% make install-tests
+61 	
+62 	d) To install all of the above in one step from the build tree:
+63 	
+64 	% make install-all
+65 	
+66 	e) To create a binary kit, papi-<arch>.tgz:
+67 	
+68 	% make dist
+
+
