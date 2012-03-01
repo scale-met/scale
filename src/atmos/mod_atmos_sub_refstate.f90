@@ -203,7 +203,8 @@ contains
        GRAV   => CONST_GRAV,  &
        Rdry   => CONST_Rdry,  &
        RovCP  => CONST_RovCP, &
-       Pstd   => CONST_Pstd
+       Pstd   => CONST_Pstd,  &
+       P00    => CONST_PRE00
     use mod_grid, only : &
        KA   => GRID_KA, &
        KS   => GRID_KS, &
@@ -295,7 +296,7 @@ contains
        enddo
 
        dens(k) = pres(k) / ( temp(k) * Rdry )
-       pott(k) = temp(k) * ( Pstd/pres(k) )**RovCP
+       pott(k) = temp(k) * ( P00/pres(k) )**RovCP
     enddo
 
     if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then

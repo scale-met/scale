@@ -55,6 +55,9 @@ module mod_grid
   integer, public, save :: GRID_ISG, GRID_IEG ! start/end of inner domain: x, global
   integer, public, save :: GRID_JSG, GRID_JEG ! start/end of inner domain: y, global
 
+  integer, public, save :: GRID_IJA           ! # of x*y
+  integer, public, save :: GRID_IJS, GRID_IJE ! start/end of inner domain
+
   real(8), public, save :: GRID_DXYZ = 200.D0    ! length at main region [m]: x,y,z
 
   real(8), public, save :: GRID_BUFFER_DZ = 0.D0 ! thickness of buffer region [m]: z
@@ -173,6 +176,10 @@ contains
     GRID_IEG = GRID_IHALO + GRID_IMAX + PRC_2Drank(PRC_myrank,1) * GRID_IMAX
     GRID_JSG = GRID_JHALO + 1         + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
     GRID_JEG = GRID_JHALO + GRID_JMAX + PRC_2Drank(PRC_myrank,2) * GRID_JMAX
+
+    GRID_IJA = GRID_IMAX * GRID_JMAX
+    GRID_IJS = 1
+    GRID_IJE = GRID_IJA
 
     if( IO_L ) write(IO_FID_LOG,*) '*** GRID INFORMATION ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0)')         '*** delta Z, X, Y [m]                  :', &

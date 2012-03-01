@@ -7,28 +7,55 @@ module mod_precip_transport
   !-----------------------------------------------------------------------------
   !
   !++ Description: 
-  !       This module contains subroutines w.r.t. precipitation transport
+  !       precipitation transport
+  !
   !       
-  ! 
   !++ Current Corresponding Author : H.Tomita
   ! 
-  !++ History: 
+  !++ History: NDW6
   !      Version   Date       Comment 
   !      -----------------------------------------------------------------------
   !      0.01     2011/10/24   T.Seiki, Imported from NICAM
-  !      -----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
   !
-  public :: precip_transport_nwater
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
   !-----------------------------------------------------------------------------
+  implicit none
   private
-  character(len=7), parameter ::  PRCIP_TRN_ECORRECT = "KIN2KIN"
-  real(8), parameter :: ADM_VMISS = 1.d0
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+
+  public :: precip_transport_nwater
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
+
+  character(len=7), parameter :: PRCIP_TRN_ECORRECT = "KIN2KIN"
+
+  real(8),          parameter :: ADM_VMISS = 1.D0
+
   !-----------------------------------------------------------------------------
 contains
+
+  !-----------------------------------------------------------------------------
+  !> precipitation transport
   !-----------------------------------------------------------------------------
   subroutine precip_transport_nwater ( &
        ijdim,                 & !--- IN :
@@ -59,9 +86,7 @@ contains
        gsgam2h,               & !--- IN :
        rgs,                   & !--- IN :
        rgsh,                  & !--- IN :
-       dt                     & !--- IN :
-       )
-    !
+       dt                     ) !--- IN :
     use mod_atmos_cnst, only : &
          nqmax => TRC_VMAX, &
          NQW_STR, NQW_END,  &
@@ -77,9 +102,8 @@ contains
     use mod_thrmdyn, only : &
          thrmdyn_qd,        &
          thrmdyn_tempre
-    !
     implicit none
-    !
+
     integer, intent(in)    :: ijdim
     integer, intent(in)    :: kdim
     integer, intent(in)    :: kmin
@@ -118,14 +142,9 @@ contains
     real(8), intent(in) :: dt
     !
     real(8) :: rdt
-    !
     real(8) :: rdz(kdim)
     real(8) :: rdzh(kdim)
-    real(8) :: GRD_afac(kdim)
-    real(8) :: GRD_bfac(kdim)
-    real(8) :: GRD_cfac(kdim)
-    real(8) :: GRD_dfac(kdim)
-    !
+
     ! local
     real(8) :: fprec(1:ijdim,1:kdim,1:nqmax)
     real(8) :: drho_prec(1:ijdim,1:kdim,1:nqmax)
@@ -154,57 +173,42 @@ contains
     real(8) :: rhogkin(1:ijdim,1:kdim)
     real(8) :: rhogkin_h(1:ijdim,1:kdim)
     real(8) :: rhogkin_v(1:ijdim,1:kdim)
-    real(8) :: rhog_h(1:ijdim,1:kdim)
+
     real(8) :: kin_h0(1:ijdim,1:kdim),kin_h(1:ijdim,1:kdim)
     real(8) :: kin_v0(1:ijdim,1:kdim),kin_v(1:ijdim,1:kdim)
     real(8) :: vx_t(1:ijdim,1:kdim),vy_t(1:ijdim,1:kdim),w_t(1:ijdim,1:kdim)
     !
     real(8) :: wq(1:ijdim,1:kdim), ein(1:ijdim,1:kdim)
-    real(8) :: tmp(1:ijdim,1:kdim)
-    real(8) :: tmp2(1:ijdim,1:kdim)
-    !
-    integer :: k, nq, ij
-    !
+
+    integer :: ij, k, nq
+    !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
 call START_COLLECTION("precip_transport_nwater")
 #endif
 
-    rdt      = 1.d0/dt
-    rdz(:)   = 1.d0/dz(:)
-    rdzh(:)  = 1.d0/dzh(:)
-    GRD_afac(:) = 1.d0
-    GRD_bfac(:) = 1.d0
-    GRD_cfac(:) = 1.d0
-    GRD_dfac(:) = 1.d0
-    !
+    rdt      = 1.D0 / dt
+    rdz(:)   = 1.D0 / dz(:)
+    rdzh(:)  = 1.D0 / dzh(:)
+
     call cnvvar_rhokin(&
-         ijdim,        & !--- IN : number of horizontal grid
-         kdim, kmin, kmax,   & !--- IN : number of vertical grid
-         rhog,         &  !--- IN : rho     ( gam2 X G^{1/2}  )
-         rhogvx,       &  !--- IN : rho*Vx  ( gam2 X G^{1/2}  )
-         rhogvy,       &  !--- IN : rho*Vy  ( gam2 X G^{1/2}  )
-         rhogw,        &  !--- IN : rho*w   ( gam2 X G^{1/2}  )
-         gsgam2,       &  !--- IN : G^{1/2} at the cell center
-         gsgam2h,      &  !--- IN : G^{1/2} at the cell wall
-         rhogkin,      &  !--- OUT : 1/2 rho*v^2  ( gam2 X G^{1/2}  )
-         rhogkin_h,    &
-         rhogkin_v     &
-         )
-    rhogkin=0.d0
-    !
+      ijdim, kdim, kmin, kmax,       &
+      rhogkin, rhogkin_h, rhogkin_v, &
+      rhog, rhogvx, rhogvy, rhogw    )
+
     do nq = 1, nqmax
-       !
-       if(.not.precipitating_flag(nq)) then
-          fprec(:,:,nq) = 0.0D0
-          fprec_rhoe(:,:,nq) = 0.0D0
-          fprec_rhophi(:,:,nq) = 0.0D0
-          fprec_rhokin_h(:,:,nq) = 0.0D0
-          fprec_rhokin_v(:,:,nq) = 0.0D0
+
+       if( .NOT. precipitating_flag(nq) ) then
+          fprec         (:,:,nq) = 0.D0
+          fprec_rhoe    (:,:,nq) = 0.D0
+          fprec_rhophi  (:,:,nq) = 0.D0
+          fprec_rhokin_h(:,:,nq) = 0.D0
+          fprec_rhokin_v(:,:,nq) = 0.D0
           cycle
-       end if
+       endif
+
        !----- mass
-       call vadv1d_getflux(             &
+       call vadv1d_getflux( &
             ijdim,                  & !--- in
             kdim,                   &
             kmin,                   &
@@ -215,11 +219,17 @@ call START_COLLECTION("precip_transport_nwater")
             WPREC(:,:,nq),          & !--- in
             fprec(:,:,nq),          & !--- out
             dt )                      !--- in
+
        ! hereafter nq should be active tracers.
        if( nq >= NQW_STR .and. nq <= NQW_END )then
+
           !--- internal energy
-          rhoeq_prec(:,:) = rhog(:,:) &
-               * q(:,:,nq) * CVW(nq) * tem(:,:) * rgs(:,:)
+          do k  = kmin, kmax
+          do ij = 1,    ijdim
+             rhoeq_prec(ij,k) = rhog(ij,k) * q(ij,k,nq) * CVW(nq) * tem(ij,k) * rgs(ij,k)
+          enddo
+          enddo
+
           call vadv1d_getflux( &
                ijdim,          & !--- in
                kdim,           &
@@ -231,11 +241,14 @@ call START_COLLECTION("precip_transport_nwater")
                WPREC(:,:,nq),     & !--- in
                fprec_rhoe(:,:,nq),& !--- out
                dt )
+
           !--- potential energy
-          do k=1, kdim
-             rhophiq_prec(:,k) = rhog(:,k) &
-                  * q(:,k,nq) * CNST_EGRAV * z(k) * rgs(:,k)
-          end do
+          do k  = kmin, kmax
+          do ij = 1,    ijdim
+             rhophiq_prec(ij,k) = rhog(ij,k) * q(ij,k,nq) * CNST_EGRAV * z(k) * rgs(ij,k)
+          enddo
+          enddo
+
           call vadv1d_getflux(    &
                ijdim,             & !--- in
                kdim,              &
@@ -247,8 +260,14 @@ call START_COLLECTION("precip_transport_nwater")
                WPREC(:,:,nq),     & !--- in
                fprec_rhophi(:,:,nq), & !--- out
                dt )
+
           !--- horizontal kinetic energy
-          rhokin_h_prec(:,:) = q(:,:,nq) * rhogkin_h(:,:) * rgs(:,:)
+          do k  = kmin, kmax
+          do ij = 1,    ijdim
+             rhokin_h_prec(ij,k) = q(ij,k,nq) * rhogkin_h(ij,k) * rgs(ij,k)
+          enddo
+          enddo
+
           call vadv1d_getflux(       &
                ijdim,                & !--- in
                kdim,                 &
@@ -260,92 +279,92 @@ call START_COLLECTION("precip_transport_nwater")
                WPREC(:,:,nq),        & !--- in
                fprec_rhokin_h(:,:,nq), & !--- out
                dt )
+
           !--- vertical kinetic energy
-          rhokin_v_prec(:,:) = 0.0D0
-          do k = kmin+1,kmax
-             rhokin_v_prec(:,k) = 0.5D0* (q(:,k,nq)+q(:,k-1,nq)) * rhogkin_v(:,k) * rgsh(:,k)
-          end do
-          wq(:,:) = 0.0D0
-          do k = kmin+1,kmax-1
-             wq(:,k) = 0.5D0*(WPREC(:,k,nq)+WPREC(:,k-1,nq))
-          end do
-          !<--- half -> full
-          fprec_rhokin_v(:,:,nq) = 0.0D0
-          call vadv1d_getflux(               &
-               ijdim,                        & !--- in
-               kdim-1,                       &
-               kmin,                         &
-               kmax-1,                       &
-               dzh(kmin:kmax+1),             &
-               z(kmin-1:kmax),               &
-               rhokin_v_prec(:,kmin:kmax+1), & !--- in
-               wq(:,kmin:kmax+1),            & !--- in
-               fprec_rhokin_v(:,kmin-1:kmax,nq),& !--- out
+          do k = kmin, kmax-1
+             rhokin_v_prec(:,k) = 0.5D0 * ( q(:,k+1,nq) + q(:,k,nq) ) * rhogkin_v(:,k) * rgsh(:,k)
+             wq           (:,k) = 0.5D0 * ( WPREC(:,k+1,nq) + WPREC(:,k,nq) )
+          enddo
+          rhokin_v_prec(:,kmin-1) = 0.D0
+          rhokin_v_prec(:,kmax  ) = 0.D0
+          wq           (:,kmin-1) = 0.D0
+          wq           (:,kmax  ) = 0.D0
+
+          call vadv1d_getflux(         &
+               ijdim,                  & !--- in
+               kdim,                   &
+               kmin,                   &
+               kmax,                   &
+               dzh(:),                  &
+               z(:),                   &
+               rhokin_v_prec(:,:),     & !--- in
+               wq(:,:),                & !--- in
+               fprec_rhokin_v(:,:,nq), & !--- out
                dt )
-       end if
-    end do
-    !
+
+          fprec_rhokin_v(:,kmin-1,nq) = 0.D0
+          fprec_rhokin_v(:,kmax  ,nq) = 0.D0
+       endif
+    enddo
+
+
     !--- tendency of density and energy
-    do nq=1, nqmax
+    do nq = 1,    nqmax
+       do k  = kmin, kmax
+       do ij = 1,    ijdim
+          drho_prec(ij,k,nq) = - ( fprec(ij,k+1,nq)-fprec(ij,k,nq) ) * rdz(k)
+       enddo
+       enddo
+
        drho_prec(:,kmin-1,nq) = 0.d0
        drho_prec(:,kmax+1,nq) = 0.d0
-    end do
-    drhoe_prec(:,kmin-1) = 0.d0
-    drhoe_prec(:,kmax+1) = 0.d0
-    drhophi_prec(:,kmin-1) = 0.d0
-    drhophi_prec(:,kmax+1) = 0.d0
-    !
-    do nq=1, nqmax
-       do k = kmin, kmax
-          drho_prec(:,k,nq) &
-               = - ( fprec(:,k+1,nq) - fprec(:,k,nq) ) * rdz(k)
-       end do
-    end do
-    do k= kmin, kmax
-       drhoe_prec(:,k) = 0.0D0
-       drhophi_prec(:,k) = 0.0D0
-       drhokin_h_prec(:,k) = 0.0D0
-       do nq=NQW_STR,NQW_END
-          drhoe_prec(:,k) = drhoe_prec(:,k)&
-               - ( fprec_rhoe(:,k+1,nq) - fprec_rhoe(:,k,nq) )*rdz(k)
-          drhophi_prec(:,k) = drhophi_prec(:,k)&
-               - ( fprec_rhophi(:,k+1,nq) - fprec_rhophi(:,k,nq) )*rdz(k)
-          drhokin_h_prec(:,k) = drhokin_h_prec(:,k)&
-               - ( fprec_rhokin_h(:,k+1,nq) - fprec_rhokin_h(:,k,nq) )*rdz(k)
-       end do
-    end do
-    !
-    drhokin_h_prec(:,kmax+1) = 0.0D0
-    drhokin_h_prec(:,kmin-1) = 0.0D0
-    !
-    drhokin_v_prec(:,kmin)=0.0D0
-    drhokin_v_prec(:,kmin-1)=0.0D0
-    drhokin_v_prec(:,kmax+1)=0.0D0
-    do k = kmin+1, kmax
-       drhokin_v_prec(:,k) = 0.0D0
-       do nq=NQW_STR,NQW_END
-          drhokin_v_prec(:,k) = drhokin_v_prec(:,k)&
-               - ( fprec_rhokin_v(:,k,nq) - fprec_rhokin_v(:,k-1,nq) )*rdzh(k)
-       end do
-    end do
-    !
+    enddo
+
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       drhoe_prec    (ij,k) = 0.D0
+       drhophi_prec  (ij,k) = 0.D0
+       drhokin_h_prec(ij,k) = 0.D0
+
+       ! sum flux
+       do nq = NQW_STR, NQW_END
+          drhoe_prec    (ij,k) = drhoe_prec    (ij,k) - ( fprec_rhoe    (ij,k+1,nq)-fprec_rhoe    (ij,k,nq) ) * rdz(k)
+          drhophi_prec  (ij,k) = drhophi_prec  (ij,k) - ( fprec_rhophi  (ij,k+1,nq)-fprec_rhophi  (ij,k,nq) ) * rdz(k)
+          drhokin_h_prec(ij,k) = drhokin_h_prec(ij,k) - ( fprec_rhokin_h(ij,k+1,nq)-fprec_rhokin_h(ij,k,nq) ) * rdz(k)
+       enddo
+
+    enddo
+    enddo
+    drhoe_prec    (:,kmin-1) = 0.D0
+    drhoe_prec    (:,kmax+1) = 0.D0
+    drhophi_prec  (:,kmin-1) = 0.D0
+    drhophi_prec  (:,kmax+1) = 0.D0
+    drhokin_h_prec(:,kmax+1) = 0.D0
+    drhokin_h_prec(:,kmin-1) = 0.D0
+
+    do k  = kmin, kmax-1
+    do ij = 1,    ijdim
+       drhokin_v_prec(ij,k) = 0.D0
+
+       do nq = NQW_STR, NQW_END
+          drhokin_v_prec(ij,k) = drhokin_v_prec(ij,k) - ( fprec_rhokin_v(ij,k+1,nq)-fprec_rhokin_v(ij,k,nq) ) * rdzh(k)
+       enddo
+    enddo
+    enddo
+    drhokin_v_prec(:,kmin-1) = 0.D0
+    drhokin_v_prec(:,kmax  ) = 0.D0
+
     !--- momentum transport: new values due to rain
     !<------ use old values of rho and qr for consistency
-    do nq=NQW_STR,NQW_END
-       if(.not.precipitating_flag(nq)) then
-          cycle
-       end if
-       do k = 1,kdim 
-          rhouq(:,k)              &
-               = ( rhogvx(:,k)    &
-               +   rhogvy(:,k)  ) &
-               *   q(:,k,nq)*rgs(:,k)
-          rhovq(:,k)             &
-               = ( rhogvx(:,k)   &
-               +   rhogvy(:,k) ) &
-               *   q(:,k,nq)*rgs(:,k)
-       end do
-       !
+    do nq = NQW_STR, NQW_END
+
+       if( .NOT. precipitating_flag(nq) ) cycle
+
+       do k = 1, kdim 
+          rhouq(:,k) = ( rhogvx(:,k) + rhogvy(:,k) ) * q(:,k,nq) * rgs(:,k)
+          rhovq(:,k) = ( rhogvx(:,k) + rhogvy(:,k) ) * q(:,k,nq) * rgs(:,k)
+       enddo
+
        call vadv1d_getflux(       &
             ijdim,            & !--- in
             kdim,             &
@@ -359,7 +378,7 @@ call START_COLLECTION("precip_transport_nwater")
             dt                & !--- in
             )
        call vadv1d_getflux(  &
-            ijdim,               & !--- in
+            ijdim,            & !--- in
             kdim,             &
             kmin,             &
             kmax,             &
@@ -368,289 +387,231 @@ call START_COLLECTION("precip_transport_nwater")
             rhovq(:,:),       & !--- in
             WPREC(:,:,nq),    & !--- in
             fprec_rhov(:,:),  & !--- out
-            dt                   & !--- in
+            dt                & !--- in
             )
-       !
+
        !--- update rhogvx, rhogvy
        do k = kmin, kmax
-          rhogvx(:,k) = rhogvx(:,k) - ( fprec_rhou(:,k+1) - fprec_rhou(:,k) ) * rdz(k)
-          rhogvy(:,k) = rhogvy(:,k) - ( fprec_rhov(:,k+1) - fprec_rhov(:,k) ) * rdz(k)
-       end do
-       !=====================
+          rhogvx(:,k) = rhogvx(:,k) - ( fprec_rhou(:,k+1)-fprec_rhou(:,k) ) * rdz(k)
+          rhogvy(:,k) = rhogvy(:,k) - ( fprec_rhov(:,k+1)-fprec_rhov(:,k) ) * rdz(k)
+       enddo
+
+
        rhowq(:,:) = 0.0D0
        do k = kmin+1,kmax
           rhowq(:,k) &
                = rhogw(:,k)* 0.5D0* (q(:,k,nq)+q(:,k-1,nq)) *rgsh(:,k)
-       end do
+       enddo
+
        wq(:,:) = 0.0D0
        do k = kmin+1,kmax-1
           wq(:,k) = 0.5D0*(WPREC(:,k,nq)+WPREC(:,k-1,nq))
        end do
-       call vadv1d_getflux(            &
-            ijdim,                     &
-            kdim-1,                    &
-            kmin,                      &
-            kmax-1,                    &
-            dzh(kmin:kmax+1),          &
-            z(kmin-1:kmax),            &
-            rhowq(:,kmin:kmax+1),      &
-            wq(:,kmin:kmax+1),         &
-            fprec_rhow(:,kmin-1:kmax), &
+
+       call vadv1d_getflux(   &
+            ijdim,            & !--- in
+            kdim,             &
+            kmin,             &
+            kmax,             &
+            dzh(:),           &
+            z(:),             &
+            rhowq(:,:),       &
+            wq(:,:),          &
+            fprec_rhow(:,:),  &
             dt )
-       !
+
        !--- update rhogw
-       do k = kmin+1, kmax
-          rhogw(:,k) = rhogw(:,k) - ( fprec_rhow(:,k) - fprec_rhow(:,k-1) ) &
-               * rdzh(k)
-       end do
-    end do
-    !
+       do k = kmin, kmax-1
+          rhogw(:,k) = rhogw(:,k) - ( fprec_rhow(:,k+1)-fprec_rhow(:,k) ) * rdzh(k)
+       enddo
+    enddo
+
     ! new values due to rain:
     ! Change in internal energy comes from precipitation of rain and dissipation
     ! of kinetic energy due to drag force. 
     ! See Ooyama(2001) (3.13)
-    !
-    !--- update rhogqr
-    do nq=1, nqmax
-       rhogq(:,:,nq) = rhogq(:,:,nq) + drho_prec(:,:,nq)
-    end do
-    !
+
     !--- update rhog, rho
-    do nq=NQW_STR,NQW_END
+    do nq = NQW_STR,NQW_END
        rhog(:,:) = rhog(:,:) + drho_prec(:,:,nq)
-    end do
+    enddo
     rho(:,:) = rhog(:,:)/gsgam2(:,:)
+
+    !--- update rhogqr
+    do nq = 1, nqmax
+       rhogq(:,:,nq) = rhogq(:,:,nq) + drho_prec(:,:,nq)
+
+       q(:,:,nq) = rhogq(:,:,nq) / rhog(:,:)
+    enddo
+
+
     !--- update rhoge, rhogkin
     rhoge(:,:) = rhoge(:,:) + drhoe_prec(:,:) + drhophi_prec(:,:)
-    do nq=NQW_STR,NQW_END
-       do k=1, kdim
-       rhoge(:,k) = rhoge(:,k) &
-            - CNST_EGRAV * z(k) * ( drho_prec(:,k,nq) )
-       end do
-    end do
-    !
-    rhogkin_h(:,:) = rhogkin_h(:,:)+  drhokin_h_prec(:,:)
-    rhogkin_v(:,:) = rhogkin_v(:,:)+  drhokin_v_prec(:,:)
-    !
-    !--- update q
-    do nq = 1, nqmax
-       q(:,:,nq) = rhogq(:,:,nq) / rhog(:,:)
-    end do
+    do nq = NQW_STR,NQW_END
+    do k = 1, kdim
+       rhoge(:,k) = rhoge(:,k) - CNST_EGRAV * z(k) * ( drho_prec(:,k,nq) )
+    enddo
+    enddo
+
+    rhogkin_h(:,:) = rhogkin_h(:,:) + drhokin_h_prec(:,:)
+    rhogkin_v(:,:) = rhogkin_v(:,:) + drhokin_v_prec(:,:)
+
     !--- update qd
-    call thrmdyn_qd( &
-         qd,         & !--- out
-         q           & !--- in
-         )
-    if(trim(PRCIP_TRN_ECORRECT)=='KIN2EIN') then
-       tmp2(:,kmin-1) = 0.0D0
-       tmp2(:,kmax+1) = 0.0D0
-       do k = kmin, kmax
-          tmp2(:,k) = rhogkin_h(:,k)&
-               + (GRD_dfac(k  )*rhogkin_v(:,k+1)&
-               +  GRD_cfac(k  )*rhogkin_v(:,k  ) )*0.5D0
-       end do
-       !
-       call cnvvar_rhokin(&
-            ijdim,        &  !--- IN : number of horizontal grid
-            kdim, kmin, kmax,   & !--- IN : number of vertical grid
-            rhog,         &  !--- IN : rho     ( gam2 X G^{1/2}  )
-            rhogvx,       &  !--- IN : rho*Vx  ( gam2 X G^{1/2}  )
-            rhogvy,       &  !--- IN : rho*Vy  ( gam2 X G^{1/2}  )
-            rhogw,        &  !--- IN : rho*w   ( gam2 X G^{1/2}  )
-            gsgam2,       &  !--- IN : G^{1/2} at the cell center
-            gsgam2h,      &  !--- IN : G^{1/2} at the cell wall
-            tmp           &  !--- OUT : 1/2 rho*v^2  ( gam2 X G^{1/2}  )
-            )
-       rhoge(:,:) = rhoge(:,:) + ( tmp2(:,:) - tmp(:,:) )
-       !
-    else if(trim(PRCIP_TRN_ECORRECT)=='KIN2KIN') then
-       !
-       !--- fix kinetic energy
-       !
-       ! Modify C.Kodama 09.07.14 =>
-       kin_h0(:,kmin:kmax) = rhogkin_h(:,kmin:kmax)/rhog(:,kmin:kmax)
-       vx_t(:,kmin:kmax) = rhogvx(:,kmin:kmax)/rhog(:,kmin:kmax)
-       vy_t(:,kmin:kmax) = rhogvy(:,kmin:kmax)/rhog(:,kmin:kmax)
-       kin_h(:,kmin:kmax) = ((vx_t(:,kmin:kmax)**2)+(vy_t(:,kmin:kmax)**2))*0.5D0
-       where(kin_h(:,kmin:kmax)>1.0D-20)
-          vx_t(:,kmin:kmax) = vx_t(:,kmin:kmax) *  sqrt(abs(kin_h0(:,kmin:kmax)/kin_h(:,kmin:kmax)))
-          vy_t(:,kmin:kmax) = vy_t(:,kmin:kmax) *  sqrt(abs(kin_h0(:,kmin:kmax)/kin_h(:,kmin:kmax)))
-       end where
-       rhogvx(:,kmin:kmax) = rhog(:,kmin:kmax) * vx_t(:,kmin:kmax)
-       rhogvy(:,kmin:kmax) = rhog(:,kmin:kmax) * vy_t(:,kmin:kmax)
-       !
-       rhog_h(:,kmin:kmax+1) = 1.0D0
-       do k =kmin,kmax+1
-          rhog_h(:,k) = 0.5D0 *            &
-               ( GRD_afac(k) * rhog(:,k  )/gsgam2(:,k  ) &
-               + GRD_bfac(k) * rhog(:,k-1)/gsgam2(:,k-1) &
-               ) * gsgam2h(:,k)
-       end do
-       kin_v0(:,kmin:kmax+1) = rhogkin_v(:,kmin:kmax+1)/rhog_h(:,kmin:kmax+1)
-       w_t(:,kmin:kmax+1) = rhogw(:,kmin:kmax+1)/rhog_h(:,kmin:kmax+1)
-       kin_v(:,kmin:kmax+1) = (w_t(:,kmin:kmax+1)**2) * 0.5D0
-       where(kin_v(:,kmin:kmax+1)>1.0D-20)
-          w_t(:,kmin:kmax+1) = w_t(:,kmin:kmax+1) *  sqrt(abs(kin_v0(:,kmin:kmax+1)/kin_v(:,kmin:kmax+1)))
-       end where
-       rhogw(:,kmin:kmax+1) = rhog_h(:,kmin:kmax+1) * w_t(:,kmin:kmax+1)
-       !<= Modify C.Kodama 09.07.14
-    else
-       write(*,*) 'Error in precip_transport'
-    end if
-    !
+    call thrmdyn_qd( qd, q )
+
+    !--- fix kinetic energy
+!    if ( trim(PRCIP_TRN_ECORRECT) == 'KIN2KIN') then
+!       do k  = kmin, kmax
+!       do ij = 1,    ijdim
+!
+!          vx_t  (ij,k) = rhogvx(ij,k) / rhog(ij,k)
+!          vy_t  (ij,k) = rhogvy(ij,k) / rhog(ij,k)
+!
+!          kin_h (ij,k) = 0.5D0 * ( vx_t(ij,k)**2 + vy_t(ij,k)**2 )
+!          kin_h0(ij,k) = rhogkin_h(ij,k) / rhog(ij,k)
+!
+!          if ( kin_h(ij,k) > 1.D-20 ) then
+!             vx_t(ij,k) = vx_t(ij,k) * sqrt( abs(kin_h0(ij,k)/kin_h(ij,k)) )
+!             vy_t(ij,k) = vy_t(ij,k) * sqrt( abs(kin_h0(ij,k)/kin_h(ij,k)) )
+!          endif
+!
+!          rhogvx(ij,k) = rhog(ij,k) * vx_t(ij,k)
+!          rhogvy(ij,k) = rhog(ij,k) * vy_t(ij,k)
+!       enddo
+!       enddo
+!
+!       do k = kmin , kmax+1
+!       do ij = 1,    ijdim
+!          w_t   (ij,k) = 2.D0 * rhogw(ij,k) / ( rhog(ij,k+1)+rhog(ij,k) )
+!
+!          kin_v (ij,k) = 0.5D0 * w_t(ij,k)**2
+!          kin_v0(ij,k) = rhogkin_v(ij,k) / ( rhog(ij,k+1)+rhog(ij,k) )
+!
+!          if ( kin_v(ij,k) > 1.D-20 ) then
+!             w_t(ij,k) = w_t(ij,k) * sqrt( abs(kin_v0(ij,k)/kin_v(ij,k)) )
+!          endif
+!
+!          rhogw(ij,k+1) = 0.5D0 * ( rhog(ij,k+1)+rhog(ij,k) ) * w_t(ij,k+1)
+!
+!       enddo
+!       enddo
+!    endif
+
     !--- update temerature & pressure
     ein(:,:) =  rhoge(:,:) / rhog(:,:)
-    call thrmdyn_tempre( &
-         tem,                  &  !--- OUT : temperature              
-         pre,                  &  !--- OUT : pressure
-         ein,                  &  !--- IN  : internal energy
-         rho,                  &  !--- IN  : density
-         qd,                   &  !--- IN  : dry concentration 
-         q )                      !--- IN  : water concentration 
-    !
-    precip(:,:) = 0.0D0
+    call thrmdyn_tempre( tem, pre, ein, rho, qd, q )
+
+    precip        (:,:) = 0.D0
+    precip_rhoe   (:)   = 0.D0
+    precip_rhophi (:)   = 0.D0
+    precip_rhokin (:)   = 0.D0
+    precip_lh_heat(:)   = 0.D0
+
     do nq=NQL_STR,NQL_END
        precip(:,1) = precip(:,1) -fprec(:,kmin,nq)*rdt
-    end do
-    do nq=NQS_STR,NQS_END
+    enddo
+
+    do nq = NQS_STR,NQS_END
        precip(:,2) = precip(:,2) -fprec(:,kmin,nq)*rdt
-    end do
-    !
-    precip_rhoe(:) = 0.0D0
-    do nq=NQW_STR,NQW_END
-       precip_rhoe(:) = precip_rhoe(:) - fprec_rhoe(:,kmin,nq)*rdt
-    end do
-    precip_lh_heat(:) = 0.0D0
+    enddo
+
     do nq=NQS_STR,NQS_END
-       precip_lh_heat(:) = precip_lh_heat(:) + fprec(:,kmin,nq)*LHF*rdt
+       precip_lh_heat(:) = precip_lh_heat(:) + fprec(:,kmin,nq) * LHF * rdt
     end do
-    precip_rhophi(:) = 0.0D0
-    do nq=NQW_STR,NQW_END
-       precip_rhophi(:) = precip_rhophi(:) - fprec_rhophi(:,kmin,nq)*rdt
-    end do
-    precip_rhokin(:) = 0.0D0
-    do nq=NQW_STR,NQW_END
-       precip_rhokin(:) = precip_rhokin(:) &
-            - fprec_rhokin_h(:,kmin,nq)*rdt &
-            - fprec_rhokin_v(:,kmin,nq)*rdt
-    end do
-    !
+
+    do nq = NQW_STR, NQW_END
+       precip_rhoe  (:) = precip_rhoe  (:) - fprec_rhoe    (:,kmin,nq) * rdt
+       precip_rhophi(:) = precip_rhophi(:) - fprec_rhophi  (:,kmin,nq) * rdt
+       precip_rhokin(:) = precip_rhokin(:) - fprec_rhokin_h(:,kmin,nq) * rdt &
+                                           - fprec_rhokin_v(:,kmin,nq) * rdt
+    enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("precip_transport_nwater")
 #endif
 
     return
-    !
   end subroutine precip_transport_nwater
-  !
-  subroutine cnvvar_rhokin(&
-       ijdim,              & !--- IN : number of horizontal grid
-       kdim, kmin, kmax,   & !--- IN : number of vertical grid
-       rhog,               &  !--- IN : rho     ( gam2 X G^{1/2}  )
-       rhogvx,             &  !--- IN : rho*Vx  ( gam2 X G^{1/2}  )
-       rhogvy,             &  !--- IN : rho*Vy  ( gam2 X G^{1/2}  )
-       rhogw,              &  !--- IN : rho*w   ( gam2 X G^{1/2}  )
-       gsqrtgam2,          &  !--- IN : G^{1/2} at the cell center
-       gsqrtgam2h,         &  !--- IN : G^{1/2} at the cell wall
-       rhogkin,            &  !--- OUT : 1/2 rho*v^2  ( gam2 X G^{1/2}  )
-       rhogkin_h,          &
-       rhogkin_v           &
-       )
-    !------ 
-    !------ Calculation of kinetic energy.
-    !------ 
-    !
-    !
+
+  !-----------------------------------------------------------------------------
+  !> calculate kinetic energy
+  !-----------------------------------------------------------------------------
+  subroutine cnvvar_rhokin( &
+      ijdim, kdim, kmin, kmax,       &
+      rhogkin, rhogkin_h, rhogkin_v, &
+      rhog, rhogvx, rhogvy, rhogw    )
     implicit none
-    integer, intent(in) :: ijdim
-    integer, intent(in) :: kdim
-    integer, intent(in) :: kmin
-    integer, intent(in) :: kmax
-    real(8), intent(in) :: rhog(1:ijdim,1:kdim)
-    real(8), intent(in) :: rhogvx(1:ijdim,1:kdim)
-    real(8), intent(in) :: rhogvy(1:ijdim,1:kdim)
-    real(8), intent(in) :: rhogw(1:ijdim,1:kdim)
-    real(8), intent(in) :: gsqrtgam2(1:ijdim,1:kdim)
-    real(8), intent(in) :: gsqrtgam2h(1:ijdim,1:kdim)
-    real(8), intent(out) :: rhogkin(1:ijdim,1:kdim)
-    !
-    real(8) :: rhog_h(1:ijdim,1:kdim)
-    real(8), intent(out), optional :: rhogkin_h(1:ijdim,1:kdim)
-    real(8), intent(out), optional :: rhogkin_v(1:ijdim,1:kdim)
-    real(8) :: rhogkin_h0(1:ijdim,1:kdim)
-    real(8) :: rhogkin_v0(1:ijdim,1:kdim)
-    !
-    real(8) :: GRD_afac(kdim)
-    real(8) :: GRD_bfac(kdim)
-    real(8) :: GRD_cfac(kdim)
-    real(8) :: GRD_dfac(kdim)
-    !
-    integer :: k
-    !
+
+    integer, intent(in)  :: ijdim
+    integer, intent(in)  :: kdim
+    integer, intent(in)  :: kmin
+    integer, intent(in)  :: kmax
+
+    real(8), intent(out) :: rhogkin  (ijdim,kdim)
+    real(8), intent(out) :: rhogkin_h(ijdim,kdim)
+    real(8), intent(out) :: rhogkin_v(ijdim,kdim)
+
+    real(8), intent(in)  :: rhog     (ijdim,kdim)
+    real(8), intent(in)  :: rhogvx   (ijdim,kdim)
+    real(8), intent(in)  :: rhogvy   (ijdim,kdim)
+    real(8), intent(in)  :: rhogw    (ijdim,kdim)
+
+    real(8) :: rhog_h
+
+    integer :: ij, k
+    !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
 call START_COLLECTION("cnvvar_rhokin")
 #endif
 
-    GRD_afac=1.d0
-    GRD_bfac=1.d0
-    GRD_cfac=1.d0
-    GRD_dfac=1.d0
-    !
-    !--- rhogkin = gamma^2 * g_sqrt * rho * kin
-    !
     !--- horizontal kinetic energy
-    rhogkin_h0(:,kmin-1) = ADM_VMISS
-    rhogkin_h0(:,kmax+1) = ADM_VMISS
-    do k = kmin, kmax
-       rhogkin_h0(:,k)  &
-            =((rhogvx(:,k)/rhog(:,k))**2 &
-            + (rhogvy(:,k)/rhog(:,k))**2 )&
-            * rhog(:,k)*0.5D0
-    end do
-    !
-    !--- rhog at the half level
-    do k =kmin,kmax+1
-       rhog_h(:,k) = 0.5D0 *            &
-            ( GRD_afac(k) * rhog(:,k  )/gsqrtgam2(:,k  ) &
-            + GRD_bfac(k) * rhog(:,k-1)/gsqrtgam2(:,k-1) &
-            ) * gsqrtgam2h(:,k)
-    end do
-    !
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       rhogkin_h(ij,k) = 0.5D0 * rhog(ij,k) * ( ( rhogvx(ij,k)/rhog(ij,k))**2 &
+                                              + ( rhogvy(ij,k)/rhog(ij,k))**2 )
+    enddo
+    enddo
+
+    do ij = 1,    ijdim
+       rhogkin_h(ij,kmin-1) = ADM_VMISS
+       rhogkin_h(ij,kmax+1) = ADM_VMISS
+    enddo
+
     !--- vertical kinetic energy
-    rhogkin_v0(:,kmin-1) = ADM_VMISS
-    rhogkin_v0(:,kmin) = 0.0D0
-    rhogkin_v0(:,kmax+1) = 0.0D0
-    do k = kmin+1, kmax
-       rhogkin_v0(:,k) &
-            =((rhogw(:,k)/rhog_h(:,k))**2) &
-            * rhog_h(:,k)*0.5D0
-    end do
-    !
-    rhogkin(:,kmin-1) = ADM_VMISS
-    rhogkin(:,kmax+1) = ADM_VMISS
-    do k = kmin, kmax
-       rhogkin(:,k) = rhogkin_h0(:,k)&
-            + (GRD_dfac(k  )*rhogkin_v0(:,k+1)&
-            +  GRD_cfac(k  )*rhogkin_v0(:,k  ) )*0.5D0
-    end do
-    !
-    if(present(rhogkin_h)) then
-       rhogkin_h = rhogkin_h0
-    end if
-    if(present(rhogkin_v)) then
-       rhogkin_v = rhogkin_v0
-    end if
+    do k  = kmin, kmax-1
+    do ij = 1,    ijdim
+       rhog_h = 0.5D0 * ( rhog(ij,k+1) + rhog(ij,k) )
+
+       rhogkin_v(ij,k) = 0.5D0 * rhog_h * ( ( rhogw(ij,k)/rhog_h )**2 )
+    enddo
+    enddo
+
+    do ij = 1,    ijdim
+       rhogkin_v(ij,kmin-1) = 0.D0
+       rhogkin_v(ij,kmax)   = 0.D0
+    enddo
+
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       rhogkin(ij,k) = rhogkin_h(ij,k)                              &
+                     + 0.5D0 * (rhogkin_v(ij,k+1) + rhogkin_v(ij,k) )
+    enddo
+    enddo
+
+    do ij = 1,    ijdim
+       rhogkin(ij,kmin-1) = ADM_VMISS
+       rhogkin(ij,kmax+1) = ADM_VMISS
+    enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("cnvvar_rhokin")
 #endif
 
-    !
     return
   end subroutine cnvvar_rhokin
-  !
+
+
   subroutine vadv1d_getflux( &
        ijdim,            & !--- IN : number of horizontal grids
        kdim,             & !--- IN
@@ -810,7 +771,23 @@ call START_COLLECTION("vadv1d_getflux")
     !  frhof(:,kmax+1) = 0.d0
     !
     !--- integration in the non-integer cell ( depending on the scheme below )
-    call sl0_upwind_new ( ijdim, kdim, kmin, kmax, rhof, kcell, rhofh_cell)
+    rhofh_cell(:,:) = 0.d0
+    !<--- including the condition of [fh(:,kmax+1) = 0.d0] 
+    !<--- at the top boundary
+    do k = kmin, kmax
+       do ij = 1, ijdim
+          rhofh_cell(ij,k) = rhof(ij,kcell(ij,k))
+       end do
+    end do
+    !
+    do k = kmin, kmax
+       where ( kcell(:,k) == 0 )
+          rhofh_cell(:,k) =  rhof(:,kmin)
+       end where
+       where ( kcell(:,k) == kmax+1 )
+          rhofh_cell(:,k) =  rhof(:,kmax)
+       end where
+    end do
     !
     frhof(:,:) = frhof(:,:) + rhofh_cell(:,:) * zdis(:,:)
     !
@@ -821,59 +798,5 @@ call STOP_COLLECTION("vadv1d_getflux")
 
     return
   end subroutine vadv1d_getflux
-  !
-  subroutine sl0_upwind_new(&
-       ijdim,           & !--- IN : number of horizontal grids
-       kdim,            & !--- IN
-       kmin,            & !--- IN
-       kmax,            & !--- IN
-       f,               & !--- IN : f
-       kcell,           & !--- IN : target cell number
-       fh               & !--- OUT : flux at the cell wall
-       )
-    !------
-    !
-    !------ constant in a box
-    implicit none
-    integer, intent(in) :: ijdim
-    integer, intent(in) :: kdim
-    integer, intent(in) :: kmin
-    integer, intent(in) :: kmax
-    real(8), intent(in) :: f(1:ijdim,1:kdim)
-    integer, intent(in) :: kcell(1:ijdim,1:kdim)
-    real(8), intent(out) :: fh(1:ijdim,1:kdim)
-    integer :: ij, k
 
-#ifdef _FPCOLL_
-call START_COLLECTION("sl0_upwind_new")
-#endif
-
-    !
-    fh(:,:) = 0.d0
-    !<--- including the condition of [fh(:,kmax+1) = 0.d0] 
-    !<--- at the top boundary
-    do k = kmin, kmax
-       do ij = 1, ijdim
-          fh(ij,k) = f(ij,kcell(ij,k))
-       end do
-    end do
-    !
-    do k = kmin, kmax
-       where ( kcell(:,k) == 0 )
-          fh(:,k) =  f(:,kmin)
-       end where
-       where ( kcell(:,k) == kmax+1 )
-          fh(:,k) =  f(:,kmax)
-       end where
-    end do
-    !
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("sl0_upwind_new")
-#endif
-
-    return
-  end subroutine sl0_upwind_new
-  !
 end module mod_precip_transport
-!-------------------------------------------------------------------------------

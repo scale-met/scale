@@ -460,7 +460,7 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE
     use mod_comm, only: &
-       COMM_vars, &
+       COMM_vars8, &
        COMM_wait, &
        COMM_stats, &
        COMM_total
@@ -490,11 +490,8 @@ contains
 
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
-    enddo
-
-    do iv = 1, A_VA
-       call COMM_wait( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
+       call COMM_wait ( atmos_var(:,:,:,iv), iv )
     enddo
 
     ! fill KHALO
@@ -532,7 +529,6 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE
     use mod_comm, only: &
-       COMM_vars,  &
        COMM_stats, &
        COMM_total
     use mod_fileio, only: &
@@ -668,7 +664,7 @@ contains
        IA   => GRID_IA, &
        JA   => GRID_JA
     use mod_comm, only: &
-       COMM_vars, &
+       COMM_vars8, &
        COMM_wait, &
        COMM_total
     implicit none
@@ -710,11 +706,8 @@ contains
 
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
-    enddo
-
-    do iv = 1, A_VA
-       call COMM_wait( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
+       call COMM_wait ( atmos_var(:,:,:,iv), iv )
     enddo
 
     ! check total mass
@@ -825,10 +818,8 @@ contains
   subroutine ATMOS_DMP2PVT
     use mod_const, only : &
        Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
-       RovCP  => CONST_RovCP,  &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       P00    => CONST_PRE00
     use mod_grid, only: &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
@@ -841,32 +832,13 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! momentum -> velocity
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_diagvar(k,i,j,2) = 2.D0 * atmos_var(k,i,j,2) / ( atmos_var(k,i+1,j,  1)+atmos_var(k,i,j,1) )
-       atmos_diagvar(k,i,j,3) = 2.D0 * atmos_var(k,i,j,3) / ( atmos_var(k,i,  j+1,1)+atmos_var(k,i,j,1) )
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE-1
-       atmos_diagvar(k,i,j,4) = 2.D0 * atmos_var(k,i,j,4) / ( atmos_var(k,i,j+1,1)+atmos_var(k,i,j,1) )
-    enddo
-    enddo
-    enddo
-    atmos_diagvar(KS-1,:,:,4) = 0.D0 ! bottom boundary
-    atmos_diagvar(KE  ,:,:,4) = 0.D0 ! top    boundary
-
-    ! pressure, temperature
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       atmos_diagvar(k,i,j,1) = Pstd * ( atmos_var(k,i,j,5) * Rdry / Pstd )**CPovCV
-
+       atmos_diagvar(k,i,j,1) = P00 * ( atmos_var(k,i,j,5) * Rdry / P00 )**CPovCV
+       atmos_diagvar(k,i,j,2) = 0.5D0 * ( atmos_var(k,i,j,2)+atmos_var(k,i-1,j,2) ) / atmos_var(k,i,j,1)
+       atmos_diagvar(k,i,j,3) = 0.5D0 * ( atmos_var(k,i,j,3)+atmos_var(k,i,j-1,3) ) / atmos_var(k,i,j,1)
+       atmos_diagvar(k,i,j,4) = 0.5D0 * ( atmos_var(k,i,j,4)+atmos_var(k-1,i,j,4) ) / atmos_var(k,i,j,1)
        atmos_diagvar(k,i,j,5) = atmos_diagvar(k,i,j,1) / ( atmos_var(k,i,j,1) * Rdry )
     enddo
     enddo

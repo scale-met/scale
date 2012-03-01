@@ -61,6 +61,9 @@ module mod_atmos_phy_mp
   !
   !++ Used modules
   !
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -307,9 +310,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_grid, only: &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX
@@ -348,6 +348,8 @@ contains
        TIME_NOWSEC
     use mod_grid, only : &
        KA   => GRID_KA,   &
+       IA   => GRID_IA,   &
+       JA   => GRID_JA,   &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX, &
        KS   => GRID_KS,   &
@@ -360,8 +362,14 @@ contains
        GRID_FZ,           &
        GRID_CDZ,          &
        GRID_FDZ
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait, &
+       COMM_total
     use mod_atmos_vars, only: &
        var => atmos_var, &
+       A_NAME,      &
+       VA  => A_VA, &
        QA  => A_QA, &
        I_DENS,      &
        I_MOMX,      &
@@ -403,24 +411,27 @@ contains
     real(8) :: frhoge_rad    (IMAX*JMAX,KA)
     real(8) :: qke           (IMAX*JMAX,KA)
 
-    integer :: k, i, j, ij, iq
+    integer :: k, i, j, ij, iq, iv
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step -> Microphysics'
 
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)
     dzh(2:KA) = GRID_FDZ(1:KA-1)
 
-    z  (:) = GRID_CZ(:)
-    zh (KS:KE+1) = GRID_FZ(KS-1:KE)
-    zh (KS-1)    = zh(KS)  -dz(KS-1)
-    zh (KS-2)    = zh(KS-1)-dz(KS-2)
+    z (:) = GRID_CZ(:)
+    zh(KS:KE+1) = GRID_FZ(KS-1:KE)
+    zh(KS-1)    = zh(KS)   - dz(KS-1)
+    zh(1)       = zh(KS-1) - dz(1)
+    zh(KA)      = zh(KE+1) + dz(KE+1)
 
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWSEC
 
     do j = JS, JE
     do i = IS, IE
-       ij = (j-IS)*IMAX+i-IS+1
+       ij = (j-JS)*IMAX+i-IS+1
 
        do k = KS, KE
           rho   (ij,k) = var(k,i,j,I_DENS)
@@ -450,7 +461,7 @@ contains
        do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
-          ij = (j-IS)*IMAX+i-IS+1
+          ij = (j-JS)*IMAX+i-IS+1
 
           do k = KS, KE
              rho_q (ij,k,iq) = var(k,i,j,5+iq) * var(k,i,j,I_DENS)
@@ -481,13 +492,13 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       ij = (j-IS)*IMAX+i-IS+1
+       ij = (j-JS)*IMAX+i-IS+1
 
        do k = KS, KE
-          var(k,i,j,I_DENS) = rho   (ij,k) + drho   (ij,k)
-          var(k,i,j,I_MOMZ) = rho_w (ij,k) + drho_w (ij,k)
-          var(k,i,j,I_MOMX) = rho_vx(ij,k) + drho_vy(ij,k)
-          var(k,i,j,I_MOMY) = rho_vy(ij,k) + drho_vx(ij,k)
+          var(k,i,j,I_DENS) = rho   (ij,k) + drho   (ij,k) * dt
+          var(k,i,j,I_MOMZ) = rho_w (ij,k) + drho_w (ij,k) * dt
+          var(k,i,j,I_MOMX) = rho_vx(ij,k) + drho_vy(ij,k) * dt
+          var(k,i,j,I_MOMY) = rho_vy(ij,k) + drho_vx(ij,k) * dt
           var(k,i,j,I_RHOT) = ( th(ij,k) + dth(ij,k) * dt ) * var(k,i,j,I_DENS)
        enddo
     enddo
@@ -497,15 +508,33 @@ contains
        do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
-          ij = (j-IS)*IMAX+i-IS+1
+          ij = (j-JS)*IMAX+i-IS+1
 
           do k = KS, KE
              var(k,i,j,5+iq) = ( rho_q(ij,k,iq) + drho_q(ij,k,iq) * dt ) / var(k,i,j,I_DENS)
+             var(k,i,j,5+iq) = max( var(k,i,j,5+iq), 0.D0 )
           enddo
        enddo
        enddo
        enddo
     endif
+
+    do iv = 1, VA
+       ! fill IHALO & JHALO
+       call COMM_vars8( var(:,:,:,iv), iv )
+       call COMM_wait ( var(:,:,:,iv), iv )
+
+       ! fill KHALO
+       do j  = 1, JA
+       do i  = 1, IA
+          var(   1:KS-1,i,j,iv) = var(KS,i,j,iv)
+          var(KE+1:KA,  i,j,iv) = var(KE,i,j,iv)
+       enddo
+       enddo
+    enddo
+
+    ! check total mass
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_PHY_MP
@@ -2757,6 +2786,12 @@ contains
           write(IO_FID_LOG,*) "V_NS: max",maxval(vt_ns(:,:))," min:",minval(vt_ns(:,:))
           write(IO_FID_LOG,*) "V_NG: max",maxval(vt_ng(:,:))," min:",minval(vt_ng(:,:))
           !
+          write(IO_FID_LOG,*) "Precip rain   : max",maxval(precip(:,1))," min:",minval(precip(:,1))
+          write(IO_FID_LOG,*) "Precip snow   : max",maxval(precip(:,2))," min:",minval(precip(:,2))
+          write(IO_FID_LOG,*) "Precip rho*e  : max",maxval(precip_rhoe(:))," min:",minval(precip_rhoe(:))
+          write(IO_FID_LOG,*) "Precip rho*lh : max",maxval(precip_lh_heat(:))," min:",minval(precip_lh_heat(:))
+          write(IO_FID_LOG,*) "Precip rho*phi: max",maxval(precip_rhophi(:))," min:",minval(precip_rhophi(:))
+          write(IO_FID_LOG,*) "Precip rho*kin: max",maxval(precip_rhokin(:))," min:",minval(precip_rhokin(:))
        end if
        !
        if( opt_debug_tem )then
@@ -6285,6 +6320,7 @@ contains
     real(8)   :: drhogq(ijdim,kdim)
     !
     real(8)   :: r_xmin
+    real(8), parameter :: QMIN = 1.D-32
     !
     integer   :: ij,k,nq
     !
@@ -6301,7 +6337,14 @@ contains
     rhogq(:,:,I_QI) = max(rhogq(:,:,I_QI),0.d0)
     rhogq(:,:,I_QS) = max(rhogq(:,:,I_QS),0.d0)
     rhogq(:,:,I_QG) = max(rhogq(:,:,I_QG),0.d0)
-    !
+    do nq = I_QV, I_QG
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       if( rhogq(ij,k,nq) < QMIN ) rhogq(ij,k,nq) = 0.D0
+    enddo
+    enddo
+    enddo
+
     ! avoid unrealistical value of number concentration 
     ! due to numerical diffusion in advection
     r_xmin = 1.d0/xmin_filter    
@@ -6350,6 +6393,14 @@ contains
          cva,          & !--- out
          q,            & !--- in
          qd )            !--- in
+!    do k  = 1, kdim
+!    do ij = 1, ijdim
+!      write(IO_FID_LOG,*) ij,k,rho(ij,k),th(ij,k),qd(ij,k),q(ij,k,I_QV:I_QG)
+!       tem(ij,k) = ( th(ij,k) &
+!                   * ( rho(ij,k) * ( qd(ij,k)*CNST_RAIR + q(ij,k,I_QV)*CNST_RVAP ) / CNST_PRE00 )**CNST_KAPPA &
+!                   ) **(1.D0/(1.D0-CNST_KAPPA))
+!    enddo
+!    enddo
     call thrmdyn_tempre2(   &
          tem,               &  !--- OUT  : temperature       
          pre,               &  !--- OUT  : pressure

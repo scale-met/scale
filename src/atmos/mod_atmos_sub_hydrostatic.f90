@@ -60,7 +60,8 @@ contains
        RovCV  => CONST_RovCV,  &
        CVovCP => CONST_CVovCP, &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       Pstd   => CONST_Pstd,   &
+       P00    => CONST_PRE00
     use mod_grid, only : &
        KA  => GRID_KA, &
        KS  => GRID_KS, &
@@ -76,7 +77,7 @@ contains
     real(8), intent(in)  :: pott_sfc !< surface potential temperature [K]
 
     real(8) :: dens_sfc
-    real(8) :: RovP, dens_s, dhyd, dgrd
+    real(8) :: dens_s, dhyd, dgrd
 
     real(8), parameter :: criteria = 1.D-10
     integer, parameter :: itelim = 100
@@ -84,10 +85,8 @@ contains
     integer :: k, ite
     !---------------------------------------------------------------------------
 
-    RovP  = Rdry / Pstd**RovCP
-
     ! make density at surface
-    dens_sfc = Pstd / Rdry / pott(KS) * ( pres_sfc/Pstd )**CVovCP
+    dens_sfc = P00 / Rdry / pott(KS) * ( pres_sfc/P00 )**CVovCP
 
     ! make density at lowermost cell center
     k = KS
@@ -100,12 +99,12 @@ contains
 
        dens_s = dens(k)
 
-       dhyd = - ( RovP*pott(k) *dens_s   )**CPovCV / CZ(k) &
-              + ( RovP*pott_sfc*dens_sfc )**CPovCV / CZ(k) &
-              - 0.5D0 * GRAV * ( dens_s + dens_sfc )
+       dhyd = + ( P00 * ( dens_sfc * Rdry * pott_sfc / P00 )**CPovCV &
+                - P00 * ( dens_s   * Rdry * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
+              - GRAV * 0.5D0 * ( dens_sfc + dens_s )                             ! rho*g
 
-       dgrd = - ( RovP*pott(k)           )**CPovCV / CZ(k) &
-              * CPovCV * dens_s**RovCV                     &
+       dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / CZ(k) &
+              * CPovCV * dens_s**RovCV                         &
               - 0.5D0 * GRAV
 
        dens(k) = dens_s - dhyd/dgrd
@@ -126,12 +125,12 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = - ( RovP*pott(k  )*dens_s    )**CPovCV / FDZ(k-1) &
-                 + ( RovP*pott(k-1)*dens(k-1) )**CPovCV / FDZ(k-1) &
-                 - 0.5D0 * GRAV * ( dens_s + dens(k-1) )
+          dhyd = + ( P00 * ( dens(k-1) * Rdry * pott(k-1) / P00 )**CPovCV &
+                   - P00 * ( dens_s    * Rdry * pott(k)   / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
+                 - GRAV * 0.5D0 * ( dens(k-1) + dens_s )                                 ! rho*g
 
-          dgrd = - ( RovP*pott(k)             )**CPovCV / FDZ(k-1) &
-                 * CPovCV * dens_s**RovCV &
+          dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / FDZ(k-1) &
+                 * CPovCV * dens_s**RovCV                         &
                  - 0.5D0 * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -143,7 +142,7 @@ contains
     enddo
 
     do k = KS, KE
-       pres(k) = ( dens(k) * Rdry * pott(k) )**CPovCV * Pstd**(-RovCV)
+       pres(k) = P00 * ( dens(k) * Rdry * pott(k) / P00 )**CPovCV
     enddo
 
     return
