@@ -52,6 +52,7 @@ module mod_const
   real(8), public, save      :: CONST_RovCV                !< R / Cv         (dry)
   real(8), public, save      :: CONST_CPovCV               !< Cp / Cv        (dry)
   real(8), public, save      :: CONST_CVovCP               !< Cv / Cp        (dry)
+  real(8), public, save      :: CONST_LASPdry              !< g / Cp, Dry adiabatic lapse rate
 
   real(8), public, parameter :: CONST_Pstd  = 101325.D0    !< standard pressure [Pa]
   real(8), public, parameter :: CONST_PRE00 = 100000.D0    !< pressure reference [Pa]
@@ -136,6 +137,8 @@ contains
     CONST_CPovR   = CONST_CPdry / CONST_Rdry
     CONST_CPovCV  = CONST_CPdry / CONST_CVdry
     CONST_CVovCP  = CONST_CVdry / CONST_CPdry
+
+    CONST_LASPdry = CONST_GRAV / CONST_CPdry
 
     CONST_EPSvap  = CONST_Rdry / CONST_Rvap
     CONST_EPSTvap = 1.D0 / CONST_EPSvap - 1.D0

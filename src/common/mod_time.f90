@@ -529,8 +529,8 @@ contains
            write(*,*) '*** Computational Time Report'
        endif
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I5)') &
-                                '*** ID=',id,':',TIME_rapname(id), &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
+                                '*** ID=',id,' : ',TIME_rapname(id), &
                                 ' T=',TIME_rapttot(id),' N=',TIME_rapnstr(id)
     enddo
 

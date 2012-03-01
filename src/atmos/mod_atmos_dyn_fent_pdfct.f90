@@ -260,7 +260,7 @@ contains
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       P00    => CONST_PRE00
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
@@ -395,6 +395,18 @@ call START_COLLECTION("SET")
     do k  = 1, KA
        var_s(k,i,j,5) = var(k,i,j,5)
     enddo 
+    enddo
+    enddo
+
+    !OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+       rjmns(KS-1,i,j,ZDIR) = 0.D0
+       rjmns(KS-1,i,j,XDIR) = 0.D0
+       rjmns(KS-1,i,j,YDIR) = 0.D0
+       rjmns(KE+1,i,j,ZDIR) = 0.D0
+       rjmns(KE+1,i,j,XDIR) = 0.D0
+       rjmns(KE+1,i,j,YDIR) = 0.D0
     enddo
     enddo
 
@@ -681,7 +693,7 @@ call START_COLLECTION("RK3")
        do j = JS-2, JE+2
        do i = IS-2, IE+2
        do k = KS,   KE
-          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_PRES) = P00 * ( var(k,i,j,I_RHOT) * Rdry / P00 )**CPovCV
           diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
        enddo
        enddo
@@ -1097,26 +1109,34 @@ call START_COLLECTION("FCT")
                 + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
                 + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
+
           if ( pjmns > 0 ) then
-             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDZC(k)
-             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDXC(i)
-             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDYC(j)
+             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+!             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDZC(k)
+!             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDXC(i)
+!             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RDYC(j)
+          else
+             rjmns(k,i,j,ZDIR) = 0.D0
+             rjmns(k,i,j,XDIR) = 0.D0
+             rjmns(k,i,j,YDIR) = 0.D0
           endif
        enddo
        enddo
        enddo
 
-       call COMM_vars( rjmns(:,:,:,ZDIR), ZDIR )
-       call COMM_vars( rjmns(:,:,:,XDIR), XDIR )
-       call COMM_vars( rjmns(:,:,:,YDIR), YDIR )
-       call COMM_wait( rjmns(:,:,:,ZDIR), ZDIR )
-       call COMM_wait( rjmns(:,:,:,XDIR), XDIR )
-       call COMM_wait( rjmns(:,:,:,YDIR), YDIR )
+       call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR+VA )
+       call COMM_vars8( rjmns(:,:,:,XDIR), XDIR+VA )
+       call COMM_vars8( rjmns(:,:,:,YDIR), YDIR+VA )
+       call COMM_wait ( rjmns(:,:,:,ZDIR), ZDIR+VA )
+       call COMM_wait ( rjmns(:,:,:,XDIR), XDIR+VA )
+       call COMM_wait ( rjmns(:,:,:,YDIR), YDIR+VA )
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
        !OCL SIMD
-       do j = JS-1, JE
-       do i = IS-1, IE
+       do j = JS,   JE
+       do i = IS,   IE
        do k = KS-1, KE
           if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
              if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
@@ -1131,9 +1151,9 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        !OCL SIMD
-       do j = JS-1, JE
+       do j = JS,   JE
        do i = IS-1, IE
-       do k = KS-1, KE
+       do k = KS,   KE
           if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
              if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
                 qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
@@ -1148,8 +1168,8 @@ call START_COLLECTION("FCT")
        enddo
        !OCL SIMD
        do j = JS-1, JE
-       do i = IS-1, IE
-       do k = KS-1, KE
+       do i = IS,   IE
+       do k = KS,   KE
           if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
              if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
                 qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)

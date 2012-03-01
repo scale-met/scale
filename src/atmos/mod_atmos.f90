@@ -17,6 +17,9 @@ module mod_atmos
   !
   !++ used modules
   !
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,9 +48,6 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
@@ -81,14 +81,8 @@ contains
   !> advance atmospheric state
   !-----------------------------------------------------------------------------
   subroutine ATMOS_step
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_time, only: &
        TIME_DTSEC,                       &
-       TIME_DTSEC_ATMOS_DYN,             &
-       TIME_DTSEC_ATMOS_PHY_TB,          &
-       TIME_DTSEC_ATMOS_PHY_MP,          &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
@@ -96,18 +90,23 @@ contains
        TIME_rapstart,                    &
        TIME_rapend
     use mod_grid, only: &
-       KA   => GRID_KA, &
-       IA   => GRID_IA, &
-       JA   => GRID_JA
+       KA => GRID_KA, &
+       IA => GRID_IA, &
+       JA => GRID_JA
     use mod_atmos_vars, only: &
-       var => atmos_var, &
-       A_NAME,      &
-       QA  => A_QA, &
-       I_DENS,      &
-       I_MOMX,      &
-       I_MOMY,      &
-       I_MOMZ,      &
-       I_RHOT,      &
+       var => atmos_var,             &
+       A_NAME,                       &
+       QA  => A_QA,                  &
+       I_DENS,                       &
+       I_MOMX,                       &
+       I_MOMY,                       &
+       I_MOMZ,                       &
+       I_RHOT,                       &
+       I_QC,                         &
+       I_QR,                         &
+       I_QI,                         &
+       I_QS,                         &
+       I_QG,                         &
        A_NAME,                       &
        A_DESC,                       &
        A_UNIT,                       &
@@ -122,12 +121,12 @@ contains
 !       ATMOS_PHY_SF
 !    use mod_atmos_phy_tb, only: &
 !       ATMOS_PHY_TB
-    use mod_history, only: &
-       HIST_in
 !    use mod_atmos_phy_mp, only: &
 !       ATMOS_PHY_MP
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
+    use mod_history, only: &
+       HIST_in
     implicit none
 
     ! diagnostics
@@ -136,6 +135,7 @@ contains
     real(8) :: vely(KA,IA,JA)      ! velocity(y) [m/s]
     real(8) :: velz(KA,IA,JA)      ! velocity(z) [m/s]
     real(8) :: temp(KA,IA,JA)      ! temperature [K]
+    real(8) :: qtot(KA,IA,JA)      ! Hydrometeor mixing ratio [kg/kg]
     real(8) :: pott(KA,IA,JA)      ! potential temperature [K]
 
     integer :: iq
@@ -150,19 +150,19 @@ contains
 
     !########## Turbulence ##########
 
-!    call TIME_rapstart('Turbulence')
+    call TIME_rapstart('Turbulence')
 !    if ( sw_phy_tb .AND. do_phy_tb ) then
 !       call ATMOS_PHY_SF
 !       call ATMOS_PHY_TB
 !    endif
-!    call TIME_rapend  ('Turbulence')
+    call TIME_rapend  ('Turbulence')
 
     !########## Microphysics ##########
-!    call TIME_rapstart('Microphysics')
+    call TIME_rapstart('Microphysics')
 !    if ( sw_phy_mp .AND. do_phy_mp ) then
 !       call ATMOS_PHY_MP
 !    endif
-!    call TIME_rapend  ('Microphysics')
+    call TIME_rapend  ('Microphysics')
 
     !########## Radiation ##########
 !    call TIME_rapstart('Radiation')
@@ -180,20 +180,28 @@ contains
     call HIST_in( var(:,:,:,I_MOMX), 'MOMX', 'momentum x',  'kg/m2/s', '3D', TIME_DTSEC )
     call HIST_in( var(:,:,:,I_MOMY), 'MOMY', 'momentum y',  'kg/m2/s', '3D', TIME_DTSEC )
     call HIST_in( var(:,:,:,I_RHOT), 'RHOT', 'rho * theta', 'kg/m3*K', '3D', TIME_DTSEC )
+
     if ( QA > 0 ) then
        do iq = 1, QA
-          call HIST_in( var(:,:,:,iq), A_NAME(5+iq), A_DESC(5+iq), A_UNIT(5+iq), '3D', TIME_DTSEC )
+          call HIST_in( var(:,:,:,5+iq), A_NAME(5+iq), A_DESC(5+iq), A_UNIT(5+iq), '3D', TIME_DTSEC )
        enddo
-    endif
 
-    pott(:,:,:) = var(:,:,:,I_RHOT) / var(:,:,:,I_DENS)
-    call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )
+       qtot(:,:,:) = var(:,:,:,5+I_QC) &
+                   + var(:,:,:,5+I_QR) &
+                   + var(:,:,:,5+I_QI) &
+                   + var(:,:,:,5+I_QS) &
+                   + var(:,:,:,5+I_QG)
+       call HIST_in( qtot(:,:,:), 'QTOT', 'Hydrometeor mixing ratio', 'kg/kg', '3D', TIME_DTSEC )
+    endif
 
     call HIST_in( pres(:,:,:), 'PRES', 'pressure',    'Pa',  '3D', TIME_DTSEC )
     call HIST_in( velz(:,:,:), 'W',    'velocity w',  'm/s', '3D', TIME_DTSEC )
     call HIST_in( velx(:,:,:), 'U',    'velocity u',  'm/s', '3D', TIME_DTSEC )
     call HIST_in( vely(:,:,:), 'V',    'velocity v',  'm/s', '3D', TIME_DTSEC )
     call HIST_in( temp(:,:,:), 'T',    'temperature', 'K',   '3D', TIME_DTSEC )
+
+    pott(:,:,:) = var(:,:,:,I_RHOT) / var(:,:,:,I_DENS)
+    call HIST_in( pott(:,:,:), 'PT',   'potential temp.', 'K', '3D', TIME_DTSEC )
 
     call TIME_rapend  ('History')
 

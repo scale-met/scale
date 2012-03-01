@@ -10,7 +10,7 @@ FFLAGS = -fpp3 -O3 -xSSE4.2 -ftz -m64         \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias
 #
-#FFLAGS = -fpp3 -O0 -fpe0 -m64                 \
+#FFLAGS = -fpp3 -O0 -m64                 \
 #         -lmpi                                \
 #         -assume byterecl -convert big_endian \
 #         -fp-model precise -pc 80             \
@@ -18,7 +18,7 @@ FFLAGS = -fpp3 -O3 -xSSE4.2 -ftz -m64         \
 #         -check all -warn all -g -traceback
 #
 CC     = icc
-CFLAGS = -O3 -xSSE4.2 -m64
+CFLAGS = -O3 -xSSE4.2 -ftz -m64
 #
 LD     = $(FC)
 LFLAGS = $(FFLAGS)

@@ -259,7 +259,7 @@ contains
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       P00    => CONST_PRE00
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
@@ -727,7 +727,7 @@ call START_COLLECTION("RK3")
        do j = JS-2, JE+2
        do i = IS-2, IE+2
        do k = KS-2, KE+2
-          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_PRES) = P00 * ( var(k,i,j,I_RHOT) * Rdry / P00 )**CPovCV
        enddo
        enddo
        enddo

@@ -47,7 +47,7 @@ $(PROJ_EXE): $(PROJ_EXE).o
 .PHONY: depends freeze clean copylocal mktar
 
 clean:
-	rm -f $(PROJ_EXE) depends.info *.mod *.o *~
+	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
 
 freeze: clean depends copylocal mktar
 
