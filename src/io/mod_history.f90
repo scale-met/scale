@@ -365,14 +365,25 @@ contains
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX
     use mod_fileio, only: &
+#ifdef CONFIG_HDF5
+       FIO_output, &
+       FIO_getfid
+#else
        FIO_output
+#endif
     implicit none
+
+#ifdef CONFIG_HDF5
+    integer :: fid
+!    character(LEN=64) :: gname
+#endif
 
     real(8) :: var(KMAX,IMAX,JMAX)
 
     logical, save :: firsttime = .true.
 
     integer :: n, ksize
+
     !---------------------------------------------------------------------------
 
     if( HIST_id_count == 1 ) return
@@ -382,8 +393,13 @@ contains
        call HIST_outputlist
     endif
 
-    do n = 1, HIST_id_count-1
+#ifdef CONFIG_HDF5
+    call FIO_getfid(fid, trim(HISTORY_OUT_BASENAME), 1, 'SCALE3 HISTORY OUTPUT', '')
+    call fio_new_group(fid, NOWSEC, 6)
+#endif
 
+    do n = 1, HIST_id_count-1
+       
        if ( HIST_tsumsec(n) - HIST_tintsec(n) > -eps ) then
           ksize = HIST_kmax(n)
 
@@ -416,6 +432,11 @@ contains
        endif
 
     enddo
+
+#ifdef CONFIG_HDF5
+!    call fio_get_group(fid, gid)
+    call fio_close_group(fid)
+#endif
 
     return
   end subroutine HIST_write

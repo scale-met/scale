@@ -1,0 +1,25 @@
+# ------------------------ FOR AICS common cluster fastest ---------------------
+#
+FC = mpiifort
+FFLAGS= -fpp -traceback -g -DCONFIG_HDF5
+#FFLAGS= -fpp -traceback -g
+
+#
+CC = mpiicc
+CFLAGS= -I/home/shimada/usr/hdf5/include/ -L/home/shimada/usr/hdf5/lib/ -lhdf5_hl -lhdf5 -DCONFIG_HDF5 -DCONFIG_HDF5_INPUT
+#CFLAGS= -I/home/shimada/usr/hdf5/include/ -L/home/shimada/usr/hdf5/lib/ -lhdf5_hl -lhdf5 -DCONFIG_HDF5
+#CFLAGS= -I/home/shimada/usr/hdf5/include/ -L/home/shimada/usr/hdf5/lib/ -lhdf5_hl -lhdf5
+#
+#
+LD = $(FC)
+LFLAGS = -parallel -lm -openmp $(CFLAGS)
+#
+#
+FRONT_F90     = ifort
+FRONT_FFLAGS = $(FFLAGS)
+
+FRONT_CC     = icc
+FRONT_CFLAGS = $(CFLAGS)
+
+FRONT_LD     = $(FC)
+FRONT_LFLAGS = $(LFLAGS)
