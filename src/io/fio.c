@@ -10,6 +10,7 @@
  *                                    remove \0 in return string      *
  *    1.20      11-10-07  H.Yashiro : sepalate MPI/nonMPI fpos        *
  *                                    thanks to kameyama-san@riken    *
+ *    1.30      12-03-02  A.Shimada : Apply HDF5 format               *
  *                                                                    *
  **********************************************************************
  *functions
@@ -42,6 +43,8 @@
  *int32_t        fio_read_data       : read data array
  *<function suite for fortran program>
  *int32_t        fio_register_file            : register new file
+ *void           fio_new_group                : create new group
+ *void           fio_close_group              : close a group
  *int32_t        fio_put_write_pkginfo        : put & write package information (quick put)
  *int32_t        fio_valid_pkginfo            : validate package information with common
  *int32_t        fio_valid_datainfo           : validate data size
@@ -51,7 +54,16 @@
  *int32_t        fio_dump_finfolist           : dump package summary of all finfo
  *int32_t        fio_dump_finfo               : dump package detail of finfo
  **********************************************************************/
+#ifdef CONFIG_HDF5
+#include "hdf5.h"
+#endif
 #include "fio.h"
+
+double ch_elapsed_time = 0;
+double cm_elapsed_time = 0;
+double io_elapsed_time = 0;
+double sdp_elapsed_time = 0;
+unsigned long zero = 0;
 
 /* file ID counter */
 int32_t num_of_file = 0;
@@ -191,6 +203,10 @@ int32_t fio_syscheck( void )
   common.grid_topology = -1;
   common.glevel        = -1;
   common.rlevel        = -1;
+#ifdef CONFIG_HDF5
+  common.rlevel_i      = -1;
+  common.rlevel_j      = -1;
+#endif
   common.num_of_rgn    =  0;
   common.rgnid         = NULL;
 
@@ -204,6 +220,10 @@ int32_t fio_put_commoninfo( int32_t use_mpiio,
                             int32_t grid_topology,
                             int32_t glevel,
                             int32_t rlevel,
+#ifdef CONFIG_HDF5
+                            int32_t rlevel_i,
+                            int32_t rlevel_j,
+#endif
                             int32_t num_of_rgn,
                             int32_t rgnid[]        )
 {
@@ -215,6 +235,10 @@ int32_t fio_put_commoninfo( int32_t use_mpiio,
   common.grid_topology = grid_topology;
   common.glevel        = glevel;
   common.rlevel        = rlevel;
+#ifdef CONFIG_HDF5
+  common.rlevel_i      = rlevel_i;
+  common.rlevel_j      = rlevel_j;
+#endif
   common.num_of_rgn    = num_of_rgn;
   common.rgnid         = (int32_t *)malloc(num_of_rgn*sizeof(int32_t));
   for( i=0; i<common.num_of_rgn; i++ ) {
@@ -258,6 +282,10 @@ static int32_t fio_new_finfo( void )
   finfo[fid].status.rwmode    = -1;
   finfo[fid].status.opened    = 0;
   finfo[fid].status.fp        = NULL;
+#ifdef CONFIG_HDF5
+  finfo[fid].status.file      = -1;
+  finfo[fid].tmp_gid          = -1;
+#endif
   /* finfo[fid].status.eoh.__pos = 0; /* [add] 20111007 H.Yashiro */
 #ifndef NO_MPIIO
   finfo[fid].status.mpi_eoh   = 0;
@@ -266,6 +294,56 @@ static int32_t fio_new_finfo( void )
 
   return(fid);
 }
+
+#ifdef CONFIG_HDF5
+/** create new group and return gid ***********************************/
+void fio_new_group(int32_t fid, int i, int y)
+{
+	hid_t gid;
+	char gname[FIO_HLONG];
+
+	printf("[DEBUG] %s\n", __func__);
+
+	switch(y) {
+	case 4 :
+		sprintf(gname,"%s%04d","step",i);
+		break;
+	case 5 :
+		sprintf(gname,"%s%05d","step",i);
+		break;
+	case 6 :
+		sprintf(gname,"%s%06d","step",i);
+		break;
+	default :
+		break;
+	}
+	
+	gid = H5Gcreate(finfo[fid].status.file, gname, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	finfo[fid].tmp_gid = (int32_t)gid;
+/*	if(gid > 0) {
+		finfo[fid].tmp_gid = (int32_t)gid;
+		return (int32_t)gid;
+	} else {
+		return finfo[fid].tmp_gid;
+	}
+*/
+}
+
+/** get gid **********************************************************/
+int32_t fio_get_group(int32_t fid)
+{
+	printf("[DEBUG] %s\n", __func__);
+	return (int32_t)(finfo[fid].tmp_gid);
+}
+
+/** close group ******************************************************/
+void fio_close_group(int32_t fid)
+{
+	printf("[DEBUG] %s\n", __func__);
+	H5Gclose((hid_t)(finfo[fid].tmp_gid));
+	finfo[fid].tmp_gid = -1;
+}
+#endif
 
 /** add new file structure ********************************************/
 static int32_t fio_new_datainfo( int32_t fid )
@@ -395,6 +473,9 @@ int32_t fio_seek_datainfo( int32_t fid,
 /** open file IO stream ***********************************************/
 int32_t fio_fopen( int32_t fid, int32_t mode )
 {
+#ifdef CONFIG_HDF5
+	hid_t file;
+#endif
   if (finfo[fid].status.opened) {
     fprintf(stderr," FIle ( %s ) has been already opened!\n",finfo[fid].header.fname);
     fprintf(stderr," open process will be skipped!\n");
@@ -416,15 +497,35 @@ int32_t fio_fopen( int32_t fid, int32_t mode )
     */
   } else {
     if ( mode==FIO_FWRITE ) {
+#ifdef CONFIG_HDF5
+      file = H5Fopen(finfo[fid].header.fname, H5F_ACC_RDWR, H5P_DEFAULT);
+      if(file < 0) {
+	      file = H5Fcreate(finfo[fid].header.fname, 
+			       H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	      if(file < 0)
+		      exit(1);
+      }
+      finfo[fid].status.file = (int32_t)file;
+#else
       if ( (finfo[fid].status.fp=fopen(finfo[fid].header.fname,"wb"))==NULL ) {
         fprintf(stderr,"Can not open file : %s!\n",finfo[fid].header.fname);
         exit(1);
       }
+#endif
     } else if( mode==FIO_FREAD ) { /* [mod] H.Yashiro 20110907 avoid overwrite action */
+#ifdef CONFIG_HDF5_INPUT
+	    file = H5Fopen(finfo[fid].header.fname, H5F_ACC_RDWR, H5P_DEFAULT);
+	    if(file < 0) {
+		    fprintf(stderr,"Can not open file : %s!\n",finfo[fid].header.fname);
+		    exit(1);
+	    }
+	    finfo[fid].status.file = (int32_t)file;
+#else
       if ( (finfo[fid].status.fp=fopen(finfo[fid].header.fname,"rb"))==NULL ) {
         fprintf(stderr,"Can not open file : %s!\n",finfo[fid].header.fname);
         exit(1);
       }
+#endif
     } else if( mode==FIO_FAPPEND ) { /* [add] H.Yashiro 20110907 overwrite mode */
       if ( (finfo[fid].status.fp=fopen(finfo[fid].header.fname,"r+b"))==NULL ) {
         fprintf(stderr,"Can not open file : %s!\n",finfo[fid].header.fname);
@@ -445,7 +546,13 @@ int32_t fio_fclose( int32_t fid )
     finfo[fid].status.opened=0;
     */
   } else {
+#ifdef CONFIG_HDF5
+    H5Fclose(finfo[fid].status.file);
+    if(finfo[fid].status.fp != NULL)
+	    fclose(finfo[fid].status.fp);
+#else
     fclose(finfo[fid].status.fp);
+#endif
     finfo[fid].status.opened = 0;
   }
   return(SUCCESS_CODE);
@@ -609,6 +716,10 @@ int32_t fio_read_pkginfo( int32_t fid )
   int32_t i;
   int32_t temp32;
   int32_t *array32;
+#ifdef CONFIG_HDF5_INPUT
+  hid_t attr;
+  hid_t type;
+#endif
 
   if (!finfo[fid].status.opened) {
     fprintf(stderr,"%s is not open!\n",finfo[fid].header.fname);
@@ -697,6 +808,96 @@ int32_t fio_read_pkginfo( int32_t fid )
     MPI_Bcast(&(finfo[fid].status.EOH),sizeof(MPI_Offset), MPI_BYTE, 0, MPI_COMM_WORLD);
     */
   } else {
+#ifdef CONFIG_HDF5_INPUT
+    /* description */
+	attr = H5Aopen(finfo[fid].status.file, "description", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, finfo[fid].header.description);
+	H5Aclose(attr);
+    /* note */
+	attr = H5Aopen(finfo[fid].status.file, "note", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, finfo[fid].header.note);
+	H5Aclose(attr);
+    /* file mode */
+	attr = H5Aopen(finfo[fid].status.file, "fmode", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.fmode = temp32;
+	H5Aclose(attr);
+    /* endian type */
+	attr = H5Aopen(finfo[fid].status.file, "endiantype", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.endiantype = temp32;
+	H5Aclose(attr);
+    /* grid topology */
+	attr = H5Aopen(finfo[fid].status.file, "grid_topology", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.grid_topology = temp32;
+	printf("grid_topology = %d\n", temp32);
+	H5Aclose(attr);
+    /* glevel */
+	attr = H5Aopen(finfo[fid].status.file, "glevel", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.glevel = temp32;
+	H5Aclose(attr);
+    /* rlevel */
+	attr = H5Aopen(finfo[fid].status.file, "rlevel", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.rlevel = temp32;
+	H5Aclose(attr);
+    /* number of region & region id */
+	attr = H5Aopen(finfo[fid].status.file, "num_of_rgn", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.num_of_rgn = temp32;
+	H5Aclose(attr);
+
+	array32=(int32_t *)malloc(sizeof(int32_t)*temp32);	
+	H5Aopen(finfo[fid].status.file, "rgnid", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, array32);
+	if(system_ednchg) {
+		fio_ednchg(array32,sizeof(int32_t),temp32);
+	}
+	finfo[fid].header.rgnid = (int32_t *)realloc(finfo[fid].header.rgnid,
+						     finfo[fid].header.num_of_rgn*sizeof(int32_t));
+	for( i=0; i<finfo[fid].header.num_of_rgn; i++ ) {
+		finfo[fid].header.rgnid[i] = array32[i];
+	}
+	free(array32);
+    /* number of data */
+	attr = H5Aopen(finfo[fid].status.file, "num_of_data", H5P_DEFAULT);
+	type = H5Aget_type(attr);
+	H5Aread(attr, type, &temp32);
+	if(system_ednchg) {
+		fio_ednchg(&temp32, sizeof(int32_t),1);
+	}
+	finfo[fid].header.num_of_data = temp32;
+	H5Aclose(attr);
+#else
     fseek(finfo[fid].status.fp,0L,SEEK_SET);
     /* description */
     fread(finfo[fid].header.description,sizeof(char),FIO_HMID,finfo[fid].status.fp);
@@ -744,6 +945,7 @@ int32_t fio_read_pkginfo( int32_t fid )
     /* remember endpoint of pkginfo */
     /* finfo[fid].status.EOH = ftell(finfo[fid].status.fp);     [del] 20111007 H.Yashiro */
     fgetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh)); /* [add] 20111007 H.Yashiro */
+#endif
   }
   return(SUCCESS_CODE);
 }
@@ -809,6 +1011,10 @@ int32_t fio_read_datainfo( int32_t fid )
   int32_t pos;
   int32_t temp32;
   int64_t temp64;
+#ifdef CONFIG_HDF5_INPUT
+  hid_t gid, dset, attr, type;
+  char dname[FIO_HSHORT];
+#endif
 
   if (!finfo[fid].status.opened) {
     fprintf(stderr,"%s is not open!\n",finfo[fid].header.fname);
@@ -919,6 +1125,83 @@ int32_t fio_read_datainfo( int32_t fid )
     }
     */
   } else {
+#ifdef CONFIG_HDF5_INPUT
+	  gid = H5Gopen(finfo[fid].status.file, "restart", H5P_DEFAULT);
+	  for(did = 0; did < finfo[fid].header.num_of_data; did++) {
+		  sprintf(dname, "DATA%2d", did+1);
+		  dset = H5Dopen(gid, dname, H5P_DEFAULT);
+		  /* varname */
+		  attr = H5Aopen(dset, "varname", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, finfo[fid].dinfo[did].varname);
+		  H5Aclose(attr);
+		  /* description */
+		  attr = H5Aopen(dset, "description", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, finfo[fid].dinfo[did].description);
+		  H5Aclose(attr);
+		  /* unit */
+		  attr = H5Aopen(dset, "unit", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, finfo[fid].dinfo[did].unit);
+		  H5Aclose(attr);
+		  /* layername */
+		  attr = H5Aopen(dset, "layername", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, finfo[fid].dinfo[did].layername);
+		  H5Aclose(attr);
+		  /* note */
+		  attr = H5Aopen(dset, "note", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, finfo[fid].dinfo[did].note);
+		  H5Aclose(attr);
+		  /* datasize */
+		  attr = H5Aopen(dset, "datasize", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp64);
+		  if(system_ednchg){ fio_ednchg(&temp64,sizeof(int64_t),1 ); }
+		  finfo[fid].dinfo[did].datasize = temp64;
+		  H5Aclose(attr);
+		  /* datatype */
+		  attr = H5Aopen(dset, "datatype", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp32);
+		  if(system_ednchg){ fio_ednchg(&temp32,sizeof(int32_t),1 ); }
+		  finfo[fid].dinfo[did].datatype = temp32;
+		  H5Aclose(attr);
+		  /* num_of_layer */
+		  attr = H5Aopen(dset, "num_of_layer", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp32);
+		  if(system_ednchg){ fio_ednchg(&temp32,sizeof(int32_t),1 ); }
+		  finfo[fid].dinfo[did].num_of_layer = temp32;
+		  H5Aclose(attr);
+		  /* step */
+		  attr = H5Aopen(dset, "step", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp32);
+		  if(system_ednchg){ fio_ednchg(&temp32,sizeof(int32_t),1 ); }
+		  finfo[fid].dinfo[did].step = temp32;
+		  H5Aclose(attr);
+		  /* time_start */
+		  attr = H5Aopen(dset, "time_start", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp64);
+		  if(system_ednchg){ fio_ednchg(&temp64,sizeof(int64_t),1 ); }
+		  finfo[fid].dinfo[did].time_start = temp64;
+		  H5Aclose(attr);
+		  /* time_end */
+		  attr = H5Aopen(dset, "time_end", H5P_DEFAULT);
+		  type = H5Aget_type(attr);
+		  H5Aread(attr, type, &temp64);
+		  if(system_ednchg){ fio_ednchg(&temp64,sizeof(int64_t),1 ); }
+		  finfo[fid].dinfo[did].time_start = temp64;
+		  H5Aclose(attr);
+
+		  H5Dclose(dset);
+	  }
+	  H5Gclose(gid);
+#else
     /* read all data information from file */
     fsetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh)); /* [add] 20111007 H.Yashiro */
     pos = 0;                                                 /* [mod] 20111007 H.Yashiro */
@@ -962,6 +1245,7 @@ int32_t fio_read_datainfo( int32_t fid )
       /* skip data array */
       pos = finfo[fid].dinfo[did].datasize; /* [mod] 20111007 H.Yashiro */
     }
+#endif
   }
 
   return(SUCCESS_CODE);
@@ -1039,6 +1323,13 @@ int32_t fio_read_data( int32_t fid,
   int64_t i;
   int64_t pos;
   int64_t ijklall;
+#ifdef CONFIG_HDF5_INPUT
+  hid_t gid, dset, type;
+  char dname[FIO_HSHORT];
+  char *_data;
+  int x, y, z;
+  int e_size;
+#endif
 
   ijklall = finfo[fid].dinfo[did].datasize
           / precision[finfo[fid].dinfo[did].datatype];
@@ -1046,20 +1337,40 @@ int32_t fio_read_data( int32_t fid,
   if(common.use_mpiio) {
 
   } else {
-
-    fsetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh)); /* [add] 20111007 H.Yashiro */
-    pos = 0;                                                 /* [mod] 20111007 H.Yashiro */
-    for( i=0; i<did; i++ ) {
-      pos += dinfosize + finfo[fid].dinfo[i].datasize;
-    }
-    pos += dinfosize;
-
-    fseek(finfo[fid].status.fp,pos,SEEK_CUR);
-
-    fread(data,finfo[fid].dinfo[did].datasize,1,finfo[fid].status.fp);
-    if(system_ednchg){
-      fio_ednchg(data,precision[finfo[fid].dinfo[did].datatype],ijklall);
-    }
+#ifdef CONFIG_HDF5_INPUT
+	  e_size = precision[finfo[fid].dinfo[did].datatype];
+	  _data = (char *)malloc(finfo[fid].dinfo[did].datasize);
+	  gid = H5Gopen(finfo[fid].status.file, "restart", H5P_DEFAULT);
+	  sprintf(dname, "DATA%2d", did+1);
+	  dset = H5Dopen(gid, dname, H5P_DEFAULT);
+	  type = H5Dget_type(dset);
+	  H5Dread(dset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, _data);
+	  if(system_ednchg) {
+		  fio_ednchg(_data, precision[finfo[fid].dinfo[did].datatype], ijklall);
+	  }
+	  for(y = 0; y <  common.rlevel_j; y++) {
+		  for (x = 0; x < common.rlevel_i; x++) {
+			  for(z = 0; z < finfo[fid].dinfo[did].num_of_layer; z++) {
+				  memcpy((char *)data+(y*common.rlevel_i*finfo[fid].dinfo[did].num_of_layer+x*finfo[fid].dinfo[did].num_of_layer+z)*e_size,
+					 _data+(z*common.rlevel_i*common.rlevel_j+x*common.rlevel_j+y)*e_size, e_size);
+			  }
+		  }
+	  }
+#else
+	  fsetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh)); /* [add] 20111007 H.Yashiro */
+	  pos = 0;                                                 /* [mod] 20111007 H.Yashiro */
+	  for( i=0; i<did; i++ ) {
+		  pos += dinfosize + finfo[fid].dinfo[i].datasize;
+	  }
+	  pos += dinfosize;
+	  
+	  fseek(finfo[fid].status.fp,pos,SEEK_CUR);
+	  
+	  fread(data,finfo[fid].dinfo[did].datasize,1,finfo[fid].status.fp);
+	  if(system_ednchg){
+		  fio_ednchg(data,precision[finfo[fid].dinfo[did].datatype],ijklall);
+	  }
+#endif
   }
   return(SUCCESS_CODE);
 }
@@ -1239,7 +1550,9 @@ int32_t fio_put_write_pkginfo( int32_t fid,
     finfo[fid].header.rgnid[i] = common.rgnid[i];
   }
 
+#ifndef CONFIG_HDF5
   fio_write_pkginfo( fid );
+#endif
 
   return(SUCCESS_CODE);
 }
@@ -1309,20 +1622,345 @@ int32_t fio_valid_datainfo( int32_t fid )
   return(SUCCESS_CODE);
 }
 
+inline double get_dtime(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return ((double)(tv.tv_sec) + (double)(tv.tv_usec) * 0.001 * 0.001);
+}
+
+#ifdef CONFIG_HDF5
+static void fio_write_dinfo_attribute(int32_t fid, int32_t did, hid_t dset) {
+	hid_t attr, attr_space;
+	hid_t itype32, itype64;
+	hsize_t dim;
+	int64_t datasize;
+	int32_t datatype;
+	int32_t num_of_layer;
+	int32_t step;
+	int64_t time_start;
+	int64_t time_end;
+	int32_t tmp32;
+	int64_t tmp64;
+
+	if(common.endiantype == FIO_LITTLE_ENDIAN) {
+		itype32 = H5T_STD_I32LE;
+		itype64 = H5T_STD_I64LE;
+	} else {
+		itype32 = H5T_STD_I32BE;
+		itype64 = H5T_STD_I64BE;
+	}
+
+	/* write varname */
+	dim = FIO_HSHORT;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(dset, "varname", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].dinfo[did].varname);
+	H5Aclose(attr);
+
+	/* write description */
+	dim = FIO_HMID;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(dset, "description", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].dinfo[did].description);
+	H5Aclose(attr);
+
+	/* write unit */
+	dim = FIO_HSHORT;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(dset, "unit", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].dinfo[did].unit);
+	H5Aclose(attr);
+
+	/* write layername */
+	dim = FIO_HSHORT;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(dset, "layername", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].dinfo[did].layername);
+	H5Aclose(attr);
+
+	/* write note */
+	dim = FIO_HLONG;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(dset, "note", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].dinfo[did].note);
+	H5Aclose(attr);
+	
+	/* write datasize */
+	datasize = finfo[fid].dinfo[did].datasize;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "datasize", itype64, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&datasize,sizeof(int64_t),1);}
+	H5Awrite(attr, itype64, &datasize);
+	H5Aclose(attr);
+
+	/* write datatype */
+	datatype = finfo[fid].dinfo[did].datatype;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "datatype", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&datatype,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &datatype);
+	H5Aclose(attr);
+
+	/* write num_of_layer */
+	num_of_layer = finfo[fid].dinfo[did].num_of_layer;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "num_of_layer", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&num_of_layer,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &num_of_layer);
+	H5Aclose(attr);
+
+	/* write step */
+	step = finfo[fid].dinfo[did].step;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "step", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&step,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &step);
+	H5Aclose(attr);
+
+	/* write time_start */
+	time_start = finfo[fid].dinfo[did].time_start;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "time_start", itype64, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&time_start,sizeof(int64_t),1);}
+	H5Awrite(attr, itype64, &time_start);
+	H5Aclose(attr);
+
+	/* write time_end */
+	time_end = finfo[fid].dinfo[did].time_end;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(dset, "time_end", itype64, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&time_end,sizeof(int64_t),1);}
+	H5Awrite(attr, itype64, &time_end);
+	H5Aclose(attr);
+}
+
+static void fio_write_header_attribute(int32_t fid) {
+	hid_t file;
+	hid_t attr, attr_space;
+	hid_t itype32;
+	hsize_t dim;
+	int32_t tmp32;
+
+	file = finfo[fid].status.file;
+
+	if(common.endiantype == FIO_LITTLE_ENDIAN) {
+		itype32 = H5T_STD_I32LE;
+	} else {
+		itype32 = H5T_STD_I32BE;
+	}
+
+	attr = H5Aopen(file, "num_of_data", H5P_DEFAULT);
+	if( attr >= 0) {
+		tmp32 = finfo[fid].header.num_of_data;
+		attr_space = H5Screate(H5S_SCALAR);
+		if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+		H5Awrite(attr, itype32, &tmp32);
+		H5Aclose(attr);
+		return;
+	}
+
+	/* write fname */
+	dim = FIO_HLONG;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(file, "fname", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].header.fname);
+	H5Aclose(attr);
+
+	/* write description */
+	dim = FIO_HMID;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(file, "description", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].header.description);
+	H5Aclose(attr);
+
+	/* write note */
+	dim = FIO_HLONG;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(file, "note", H5T_C_S1, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_C_S1, finfo[fid].header.note);
+	H5Aclose(attr);
+
+	/* write num_of_data */
+	tmp32 = finfo[fid].header.num_of_data;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "num_of_data", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write fmode */
+	tmp32 = finfo[fid].header.fmode;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "fmode", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write endiantype */
+	tmp32 = finfo[fid].header.endiantype;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "endiantype", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write grid_topology */
+	tmp32 = finfo[fid].header.grid_topology;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "grid_topology", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write glevel */
+	tmp32 = finfo[fid].header.glevel;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "glevel", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write rlevel */
+	tmp32 = finfo[fid].header.rlevel;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "rlevel", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write num_of_rgn */
+	tmp32 = finfo[fid].header.num_of_rgn;
+	attr_space = H5Screate(H5S_SCALAR);
+	attr = H5Acreate(file, "num_of_rgn", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, &tmp32);
+	H5Aclose(attr);
+
+	/* write rgnid */
+	dim = finfo[fid].header.num_of_rgn;
+	attr_space = H5Screate_simple(1, &dim, NULL);
+	attr = H5Acreate(file, "rgnid", itype32, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+	if(system_ednchg) {fio_ednchg(&tmp32,sizeof(int32_t),1);}
+	H5Awrite(attr, itype32, finfo[fid].header.rgnid);
+	H5Aclose(attr);
+}
+#endif
+
 /** put & write data information and write data ***********************/
 int32_t fio_put_write_datainfo_data( int32_t fid,
                                      datainfo_t ditem,
                                      void *data        )
 {
   int32_t did;
+#ifdef CONFIG_HDF5
+  hid_t gid;
+  hid_t space, dcpl, dset;
+  int rank = 3; /* dimension */
+  hid_t type;
+  int64_t ijklall;
+  void *_data_jik;
+  char dname[FIO_HSHORT];
+  hsize_t dims[3];
+  hsize_t chunk[3];
+  char *_data_kij;
+  int e_size;
+  int x, y, z;
+#endif
+
 
   did = fio_new_datainfo( fid );
 
   fio_put_datainfo( fid, did, ditem );
 
+#ifdef CONFIG_HDF5
+  dims[0] = finfo[fid].dinfo[did].num_of_layer;
+  dims[1] = common.rlevel_i;
+  dims[2] = common.rlevel_j;
+  chunk[0] = finfo[fid].dinfo[did].num_of_layer;
+  chunk[1] = common.rlevel_i;
+  chunk[2] = common.rlevel_j;
+
+  _data_kij = malloc(finfo[fid].dinfo[did].datasize);
+  e_size = precision[finfo[fid].dinfo[did].datatype];
+
+  if(system_ednchg) {
+	  ijklall = finfo[fid].dinfo[did].datasize
+		  / precision[finfo[fid].dinfo[did].datatype];
+	  _data_jik = malloc(finfo[fid].dinfo[did].datasize);
+	  memcpy( _data_jik, data, finfo[fid].dinfo[did].datasize);
+	  fio_ednchg(_data_jik,precision[finfo[fid].dinfo[did].datatype],ijklall);
+  } else {
+	  _data_jik = data;
+  }
+
+  if(common.endiantype == FIO_LITTLE_ENDIAN) {
+	  if(finfo[fid].dinfo[did].datatype == FIO_REAL4)
+		  type = H5T_IEEE_F32LE;
+	  else if(finfo[fid].dinfo[did].datatype == FIO_REAL8)
+		  type = H5T_IEEE_F64LE;
+  } else if(common.endiantype == FIO_BIG_ENDIAN) {
+	  if(finfo[fid].dinfo[did].datatype == FIO_REAL4)
+		  type = H5T_IEEE_F32BE;
+	  else if(finfo[fid].dinfo[did].datatype == FIO_REAL8)
+		  type = H5T_IEEE_F64BE;
+  }
+
+  /* change index */
+  for(z = 0; z <  finfo[fid].dinfo[did].num_of_layer; z++) {
+	  for (x = 0; x < common.rlevel_i; x++) {
+		  for(y = 0; y < common.rlevel_j; y++) {
+			  memcpy((_data_kij+((z*common.rlevel_i*common.rlevel_j+x*common.rlevel_j+y)*e_size)),
+				 (((char *)_data_jik)+((y*common.rlevel_i*finfo[fid].dinfo[did].num_of_layer+x*finfo[fid].dinfo[did].num_of_layer+z)*e_size)), e_size);
+		  }
+	  }
+  }
+
+  /* create dataspace */
+  space = H5Screate_simple(rank, dims, NULL);
+
+  /* set property and create dataset */
+  dcpl = H5Pcreate(H5P_DATASET_CREATE);
+#if 0
+  H5Pset_deflate(dcpl, 9);
+#endif
+  H5Pset_szip(dcpl, H5_SZIP_NN_OPTION_MASK, 8);
+  H5Pset_chunk(dcpl, rank, chunk);
+  if(finfo[fid].tmp_gid == -1) { /* This is restart file. */
+	  gid = H5Gopen1(finfo[fid].status.file, "restart");
+	  if(gid < 0) {
+		  gid = H5Gcreate(finfo[fid].status.file, "restart", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	  }
+  } else {
+	  gid = finfo[fid].tmp_gid;
+  }
+  sprintf(dname, "DATA%2d", finfo[fid].header.num_of_data);
+  dset = H5Dcreate((hid_t)gid, dname,
+		   type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+
+  /* write header attribute*/
+  fio_write_header_attribute(fid);
+
+  /* create and write datainfo attribute*/
+  fio_write_dinfo_attribute(fid, did, dset);
+
+  /* write the data to dataset */
+  H5Dwrite(dset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, _data_kij);
+
+  /* close property, dataset, dataspace */
+  H5Pclose(dcpl);
+  H5Dclose(dset);
+  H5Sclose(space);
+  if(finfo[fid].tmp_gid == -1) {
+	  H5Gclose(gid);
+  }
+  free(_data_jik);
+  free(_data_kij);
+#else
+
   fio_write_pkginfo( fid ); /* update num_of_data */
   fio_write_datainfo( fid, did );
   fio_write_data( fid, did, data );
+#endif
 
   return(did);
 }

@@ -26,6 +26,9 @@ module mod_fileio
   !
   public :: FIO_setup
   public :: FIO_setgridinfo
+#ifdef CONFIG_HDF5
+  public :: FIO_getfid
+#endif
   public :: FIO_input
   public :: FIO_seek
   public :: FIO_output
@@ -44,6 +47,9 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
+#ifdef CONFIG_HDF5
+  character(len=10), private,      save :: GROUP_OUT_BASENAME = 'time_step'
+#endif
   integer,                  private, parameter :: FIO_nfile_max = 64 ! number limit of file step
   character(LEN=FIO_HLONG), private,      save :: FIO_fname_list(FIO_nfile_max)
   integer,                  private,      save :: FIO_fid_list  (FIO_nfile_max)
@@ -82,6 +88,10 @@ contains
                              FIO_CARTESIAN,       &
                              0,                   & !--- will update after setgridinfo
                              1,                   & !--- will update after setgridinfo
+#ifdef CONFIG_HDF5
+                             1,                   & !--- will update after setgridinfo
+                             1,                   & !--- will update after setgridinfo
+#endif
                              1,                   &
                              PRC_myrank           )
 
@@ -115,6 +125,10 @@ contains
                              FIO_CARTESIAN,   &
                              int(resolution), &
                              imax*jmax,       &
+#ifdef CONFIG_HDF5
+                             imax,            &
+                             jmax,            &
+#endif
                              1,               &
                              PRC_myrank       )
 
@@ -617,6 +631,9 @@ contains
     use mod_process, only: &
        PRC_myrank, &
        PRC_MPIstop
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     implicit none
 
     real(8),          intent(out) :: var(:)
@@ -632,6 +649,8 @@ contains
 
     integer :: did, fid
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('FILE I')
 
     !--- search/register file
     call FIO_getfid_1D( fid, basename, FIO_FREAD, '', '', single )
@@ -670,6 +689,8 @@ contains
 
     endif
 
+    call TIME_rapend  ('FILE I')
+
     return
   end subroutine FIO_input_1D
 
@@ -698,6 +719,9 @@ contains
        PRC_MPIstop
     use mod_const, only : &
        CONST_UNDEF4
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     implicit none
 
     real(8),          intent(in) :: var(:)
@@ -719,7 +743,13 @@ contains
     real(8) :: var8(k_start:k_end)
 
     integer :: did, fid
+#ifdef CONFIG_HDF5
+    integer :: gid
+#endif
+
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('FILE O')
 
     !--- search/register file
     call FIO_getfid_1D( fid, basename, FIO_FWRITE, pkg_desc, pkg_note, single )

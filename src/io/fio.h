@@ -8,6 +8,7 @@
  *    1.00      11-08-25  H.Yashiro : Complete format specification   *
  *    1.20      11-10-07  H.Yashiro : sepalate MPI/nonMPI fpos        *
  *                                    thanks to kameyama-san@riken    *
+ *    1.30      12-03-02  A.Shimada : Apply HDF5 format               *
  *                                                                    *
  **********************************************************************/
 #ifndef __FIO_H__
@@ -38,6 +39,10 @@ typedef struct{
   int32_t grid_topology;
   int32_t glevel;
   int32_t rlevel;
+#ifdef CONFIG_HDF5
+  int32_t rlevel_i;
+  int32_t rlevel_j;
+#endif
   int32_t num_of_rgn;
   int32_t *rgnid;
 } commoninfo_t;
@@ -54,6 +59,10 @@ typedef struct{
   int32_t grid_topology;
   int32_t glevel;
   int32_t rlevel;
+#ifdef CONFIG_HDF5
+  int32_t rlevel_i;
+  int32_t rlevel_j;
+#endif
   int32_t num_of_rgn;
   int32_t *rgnid;
 } headerinfo_t;
@@ -78,6 +87,9 @@ typedef struct{
   int32_t rwmode;
   int32_t opened;
   FILE *fp;
+#ifdef CONFIG_HDF5
+  int32_t file;
+#endif
   fpos_t eoh;
 #ifndef NO_MPIIO
   MPI_Offset mpi_eoh;
@@ -90,6 +102,9 @@ typedef struct{
   headerinfo_t header;
   datainfo_t *dinfo;
   statusinfo_t status;
+#ifdef CONFIG_HDF5
+  int32_t tmp_gid;
+#endif
 } fileinfo_t;
 
 extern commoninfo_t common;
@@ -130,6 +145,10 @@ extern int32_t fio_put_commoninfo( int32_t use_mpiio,
                                    int32_t grid_topology,
                                    int32_t glevel,
                                    int32_t rlevel,
+#ifdef CONFIG_HDF5
+                                   int32_t rlevel_i,
+                                   int32_t rlevel_j,
+#endif
                                    int32_t num_of_rgn,
                                    int32_t rgnid[]        );
 
@@ -138,6 +157,17 @@ static int32_t fio_new_finfo( void );                     /*<internal>*/
 
 /** add new file structure ********************************************/
 static int32_t fio_new_datainfo( int32_t fid );           /*<internal>*/
+
+#ifdef CONFIG_HDF5
+/** create new group and return gid ***********************************/
+extern void fio_new_group(int32_t fid, int i, int y);
+
+/** get gid **********************************************************/
+extern int32_t fio_get_group(int32_t fid);
+
+/** close group ******************************************************/
+extern void fio_close_group(int32_t fid);
+#endif
 
 /** put package information (full) ************************************/
 extern int32_t fio_put_pkginfo( int32_t fid,

@@ -6,6 +6,7 @@
  *    0.80      11-07-27  H.Tomita  : [NEW]                           *
  *    0.90      11-08-19  H.Yashiro : Incorporate into NICAM          *
  *    1.00      11-08-25  H.Yashiro : Complete format specification   *
+ *    1.30      12-03-02  A.Shimada : Apply HDF5 format               *
  *                                                                    *
  **********************************************************************/
 #include "fiof.h"
@@ -62,6 +63,10 @@ void fio_put_commoninfo_( int32_t *use_mpiio,
                           int32_t *grid_topology,
                           int32_t *glevel,
                           int32_t *rlevel,
+#ifdef CONFIG_HDF5
+                          int32_t *rlevel_i,
+                          int32_t *rlevel_j,
+#endif
                           int32_t *num_of_rgn,
                           int32_t *rgnid          )
 {
@@ -73,9 +78,38 @@ void fio_put_commoninfo_( int32_t *use_mpiio,
                              *grid_topology,
                              *glevel,
                              *rlevel,
+#ifdef CONFIG_HDF5
+                             *rlevel_i,
+                             *rlevel_j,
+#endif
                              *num_of_rgn,
                              rgnid           );
 }
+
+#ifdef CONFIG_HDF5
+/** add new group *****************************************************/
+void fio_new_group_(int32_t *fid, 
+		    int32_t *i,
+		    int32_t *y)
+{
+	fio_new_group(*fid, *i, *y);
+}
+
+/** add new group *****************************************************/
+void fio_get_group_(int32_t *fid, 
+		       int32_t *gid)
+{
+
+	*gid = fio_get_group(*fid);
+
+}
+
+/** close group *******************************************************/
+void fio_close_group_(int32_t *fid)
+{
+	fio_close_group(*fid);
+}
+#endif
 
 /** put package information (full) ************************************/
 void fio_put_pkginfo_( int32_t *fid,
