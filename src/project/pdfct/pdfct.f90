@@ -114,6 +114,7 @@ program scaleles3
 
   do
 
+    ! report current time
     call TIME_checkstate
 
     ! change to next state
@@ -140,8 +141,12 @@ program scaleles3
 
   !########## Finalize ##########
 
+  call TIME_rapstart('Checkdiff')
+
   ! check data
   if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
+
+  call TIME_rapend('Checkdiff')
 
   call TIME_rapreport
 

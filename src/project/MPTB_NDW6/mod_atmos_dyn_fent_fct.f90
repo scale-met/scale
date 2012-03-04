@@ -14,7 +14,6 @@
 !! @li      2011-12-26 (Y.Miyamoto) [mod] Add numerical diffusion into mass flux calc
 !! @li      2011-01-04 (H.Yashiro)  [mod] Nonblocking communication (Y.Ohno)
 !! @li      2011-01-25 (H.Yashiro)  [mod] Bugfix (Y.Miyamoto)
-!! @li      2011-01-25 (H.Yashiro)  [mod] Positive definite FCT (Y.Miyamoto)
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -47,34 +46,34 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: I_VELZ = 1
-  integer, private, parameter :: I_VELX = 2
-  integer, private, parameter :: I_VELY = 3
-  integer, private, parameter :: I_PRES = 4
-  integer, private, parameter :: I_POTT = 5
+  integer, parameter :: I_PRES = 1
+  integer, parameter :: I_VELX = 2
+  integer, parameter :: I_VELY = 3
+  integer, parameter :: I_VELZ = 4
+  integer, parameter :: I_POTT = 5
 
-  integer, private, parameter :: ZDIR   = 1
-  integer, private, parameter :: XDIR   = 2
-  integer, private, parameter :: YDIR   = 3
+  integer, parameter :: ZDIR   = 1
+  integer, parameter :: XDIR   = 2
+  integer, parameter :: YDIR   = 3
 
   ! time settings
-  integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
+  integer, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! advection settings
-  real(8), private, parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
-  real(8), private, parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
+  real(8), parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
+  real(8), parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
 
   ! numerical filter settings
-  real(8), private, save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
-  real(8), private, save      :: DIFF4 ! for 4th order numerical filter
-  real(8), private, save      :: DIFF2 ! for 2nd order numerical filter
+  real(8), save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
+  real(8), save      :: DIFF4 ! for 4th order numerical filter
+  real(8), save      :: DIFF2 ! for 2nd order numerical filter
 
-  real(8), private, allocatable, save :: CNDZ(:,:)
-  real(8), private, allocatable, save :: CNMZ(:,:)
-  real(8), private, allocatable, save :: CNDX(:,:)
-  real(8), private, allocatable, save :: CNMX(:,:)
-  real(8), private, allocatable, save :: CNDY(:,:)
-  real(8), private, allocatable, save :: CNMY(:,:)
+  real(8), allocatable, save :: CNDZ(:,:)
+  real(8), allocatable, save :: CNMZ(:,:)
+  real(8), allocatable, save :: CNDX(:,:)
+  real(8), allocatable, save :: CNMX(:,:)
+  real(8), allocatable, save :: CNDY(:,:)
+  real(8), allocatable, save :: CNMY(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -326,8 +325,9 @@ contains
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
     real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
-    real(8) :: pjmns
+    real(8) :: rjpls    (KA,IA,JA,3) ! plus  in (x,y,z)-direction
+    real(8) :: rjmns    (KA,IA,JA,3) ! minus in (x,y,z)-direction
+    real(8) :: pjpls, pjmns, pjmax, pjmin, tmp
 
     real(8) :: dtrk, rdtrk
     integer :: i, j, k, iq, rko, step
@@ -340,6 +340,12 @@ call START_COLLECTION("DYNAMICS")
     !OCL XFILL
     do j = 1, JA
     do i = 1, IA
+       rjpls(KS-1,i,j,ZDIR) = 0.D0
+       rjpls(KS-1,i,j,XDIR) = 0.D0
+       rjpls(KS-1,i,j,YDIR) = 0.D0
+       rjpls(KE+1,i,j,ZDIR) = 0.D0
+       rjpls(KE+1,i,j,XDIR) = 0.D0
+       rjpls(KE+1,i,j,YDIR) = 0.D0
        rjmns(KS-1,i,j,ZDIR) = 0.D0
        rjmns(KS-1,i,j,XDIR) = 0.D0
        rjmns(KS-1,i,j,YDIR) = 0.D0
@@ -602,7 +608,7 @@ call START_COLLECTION("SET")
     ! y-momentum
     do j = JS,   JE
     do i = IS,   IE
-    do k = KS, KE-1
+    do k = KS,   KE-1
        num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
                                    * ( CNDZ(1,k+1) * var(k+2,i,j,I_MOMY) &
                                      - CNDZ(2,k+1) * var(k+1,i,j,I_MOMY) &
@@ -1071,22 +1077,57 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
-       ! --- STEP C: compute the outgoing fluxes in each cell ---
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
+          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
+          pjmax = max( var(k  ,i  ,j  ,iq), &
+                       var(k+1,i  ,j  ,iq), &
+                       var(k-1,i  ,j  ,iq), &
+                       var(k  ,i+1,j  ,iq), &
+                       var(k  ,i-1,j  ,iq), &
+                       var(k  ,i  ,j+1,iq), &
+                       var(k  ,i  ,j-1,iq)  )
 
+          pjmin = min( var(k  ,i  ,j  ,iq), &
+                       var(k+1,i  ,j  ,iq), &
+                       var(k-1,i  ,j  ,iq), &
+                       var(k  ,i+1,j  ,iq), &
+                       var(k  ,i-1,j  ,iq), &
+                       var(k  ,i  ,j+1,iq), &
+                       var(k  ,i  ,j-1,iq)  )
 
+          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
+          pjpls = max( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) &
+                + max( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) )
+          pjmns = max( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) &
+                + max( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) &
+                + max( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) )
+
+          ! --- incoming fluxes ---
+          if ( pjpls > 0 ) then
+             rjpls(k,i,j,ZDIR) = (pjmax-var_lo(k,i,j,iq-5)) / pjpls * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+             rjpls(k,i,j,XDIR) = (pjmax-var_lo(k,i,j,iq-5)) / pjpls * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+             rjpls(k,i,j,YDIR) = (pjmax-var_lo(k,i,j,iq-5)) / pjpls * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+!             tmp = ( pjmax - var_lo(k,i,j,iq-5) ) / pjpls * rdtrk
+!             rjpls(k,i,j,ZDIR) = tmp * CDZ(k)
+!             rjpls(k,i,j,XDIR) = tmp * CDX(i)
+!             rjpls(k,i,j,YDIR) = tmp * CDY(j)
+          else
+             rjpls(k,i,j,ZDIR) = 0.D0
+             rjpls(k,i,j,XDIR) = 0.D0
+             rjpls(k,i,j,YDIR) = 0.D0
+          endif
+          ! --- outgoing fluxes at scalar grid points ---
           if ( pjmns > 0 ) then
-             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
-             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
-             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
-!             rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RCDZ(k)
-!             rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RCDX(i)
-!             rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns / dtrk / RCDY(j)
+             rjmns(k,i,j,ZDIR) = (var_lo(k,i,j,iq-5)-pjmin) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
+             rjmns(k,i,j,XDIR) = (var_lo(k,i,j,iq-5)-pjmin) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
+             rjmns(k,i,j,YDIR) = (var_lo(k,i,j,iq-5)-pjmin) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+!             tmp = ( var_lo(k,i,j,iq-5) - pjmin ) / pjmns * rdtrk
+!             rjmns(k,i,j,ZDIR) = tmp * CDZ(k)
+!             rjmns(k,i,j,XDIR) = tmp * CDX(i)
+!             rjmns(k,i,j,YDIR) = tmp * CDY(j)
           else
              rjmns(k,i,j,ZDIR) = 0.D0
              rjmns(k,i,j,XDIR) = 0.D0
@@ -1095,6 +1136,13 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
+
+       call COMM_vars8( rjpls(:,:,:,ZDIR), ZDIR+VA )
+       call COMM_vars8( rjpls(:,:,:,XDIR), XDIR+VA )
+       call COMM_vars8( rjpls(:,:,:,YDIR), YDIR+VA )
+       call COMM_wait ( rjpls(:,:,:,ZDIR), ZDIR+VA )
+       call COMM_wait ( rjpls(:,:,:,XDIR), XDIR+VA )
+       call COMM_wait ( rjpls(:,:,:,YDIR), YDIR+VA )
 
        call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR+VA )
        call COMM_vars8( rjmns(:,:,:,XDIR), XDIR+VA )
@@ -1109,13 +1157,9 @@ call START_COLLECTION("FCT")
        do i = IS,   IE
        do k = KS-1, KE
           if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
-             if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
-             endif
+             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * min( rjpls(k+1,i,j,ZDIR), rjmns(k  ,i,j,ZDIR), 1.D0 )
           else
-             if ( rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * rjmns(k+1,i,j,ZDIR)
-             endif
+             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * min( rjpls(k  ,i,j,ZDIR), rjmns(k+1,i,j,ZDIR), 1.D0 )
           endif
        enddo
        enddo
@@ -1125,13 +1169,9 @@ call START_COLLECTION("FCT")
        do i = IS-1, IE
        do k = KS,   KE
           if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
-             if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
-             endif
+             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * min( rjpls(k,i+1,j,XDIR), rjmns(k,i  ,j,XDIR), 1.D0 )
           else
-             if ( rjmns(k,i+1,j,XDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * rjmns(k,i+1,j,XDIR)
-             endif
+             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * min( rjpls(k,i  ,j,XDIR), rjmns(k,i+1,j,XDIR), 1.D0 )
           endif
        enddo
        enddo
@@ -1141,13 +1181,9 @@ call START_COLLECTION("FCT")
        do i = IS,   IE
        do k = KS,   KE
           if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
-             if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
-             endif
+             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * min( rjpls(k,i,j+1,YDIR), rjmns(k,i,j  ,YDIR), 1.D0 )
           else
-             if ( rjmns(k,i,j+1,YDIR) < 1.D0 ) then
-                qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * rjmns(k,i,j+1,YDIR)
-             endif
+             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * min( rjpls(k,i,j  ,YDIR), rjmns(k,i,j+1,YDIR), 1.D0 )
           endif
        enddo
        enddo
@@ -1170,13 +1206,6 @@ call START_COLLECTION("FCT")
        call COMM_wait( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
-!
-!    call COMM_wait( var(:,:,:,iq-1), iq-1 )
-!
-!    else
-!
-!    call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
-
     endif
 
 #ifdef _FPCOLL_
@@ -1190,7 +1219,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! check total mass
-!    call COMM_total( var(:,:,:,:), A_NAME(:) )
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN

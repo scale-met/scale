@@ -57,10 +57,8 @@ contains
        ATMOS_BOUNDARY_setup
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
-!    use mod_atmos_phy_mp, only: &
-!       ATMOS_PHY_MP_setup
+    use mod_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -74,9 +72,7 @@ contains
 
     call ATMOS_DYN_setup
 
-    call ATMOS_PHY_SF_setup
-
-!    call ATMOS_PHY_MP_setup
+    call ATMOS_PHY_MP_setup
 
     return
   end subroutine ATMOS_setup
@@ -121,12 +117,12 @@ contains
        ATMOS_vars_getdiag
     use mod_atmos_dyn, only: &
        ATMOS_DYN
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
-    use mod_atmos_phy_tb, only: &
-       ATMOS_PHY_TB
-!    use mod_atmos_phy_mp, only: &
-!       ATMOS_PHY_MP
+!    use mod_atmos_phy_sf, only: &
+!       ATMOS_PHY_SF
+!    use mod_atmos_phy_tb, only: &
+!       ATMOS_PHY_TB
+    use mod_atmos_phy_mp, only: &
+       ATMOS_PHY_MP
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
     use mod_history, only: &
@@ -142,10 +138,6 @@ contains
     real(8) :: qtot(KA,IA,JA)      ! Hydrometeor mixing ratio [kg/kg]
     real(8) :: pott(KA,IA,JA)      ! potential temperature [K]
 
-    real(8) :: FLXij_sfc(IA,JA,3)
-    real(8) :: FLXt_sfc (IA,JA)
-    real(8) :: FLXqv_sfc(IA,JA)
-
     integer :: iq
     !---------------------------------------------------------------------------
 
@@ -159,17 +151,17 @@ contains
     !########## Turbulence ##########
 
     call TIME_rapstart('Turbulence')
-    if ( sw_phy_tb .AND. do_phy_tb ) then
-       call ATMOS_PHY_SF( FLXij_sfc, FLXt_sfc, FLXqv_sfc )
-       call ATMOS_PHY_TB( FLXij_sfc, FLXt_sfc, FLXqv_sfc )
-    endif
+!    if ( sw_phy_tb .AND. do_phy_tb ) then
+!       call ATMOS_PHY_SF
+!       call ATMOS_PHY_TB
+!    endif
     call TIME_rapend  ('Turbulence')
 
     !########## Microphysics ##########
     call TIME_rapstart('Microphysics')
-!    if ( sw_phy_mp .AND. do_phy_mp ) then
-!       call ATMOS_PHY_MP
-!    endif
+    if ( sw_phy_mp .AND. do_phy_mp ) then
+       call ATMOS_PHY_MP
+    endif
     call TIME_rapend  ('Microphysics')
 
     !########## Radiation ##########
