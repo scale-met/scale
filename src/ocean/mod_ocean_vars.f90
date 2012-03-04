@@ -198,9 +198,6 @@ contains
     ! fill IHALO & JHALO
     do iv = 1, O_VA
        call COMM_vars( ocean_var(:,:,:,iv),iv )
-    enddo
-
-    do iv = 1, O_VA
        call COMM_wait( ocean_var(:,:,:,iv),iv )
     enddo
 
