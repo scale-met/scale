@@ -23,9 +23,6 @@ module mod_atmos_dyn
   !
   !++ used modules
   !
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -47,34 +44,51 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: I_VELZ = 1
-  integer, private, parameter :: I_VELX = 2
-  integer, private, parameter :: I_VELY = 3
-  integer, private, parameter :: I_PRES = 4
-  integer, private, parameter :: I_POTT = 5
+  integer, parameter :: KA =  24
+  integer, parameter :: IA = 104
+  integer, parameter :: JA = 104
+  integer, parameter :: KS =   3
+  integer, parameter :: KE =  22
+  integer, parameter :: IS =   3
+  integer, parameter :: IE = 102
+  integer, parameter :: JS =   3
+  integer, parameter :: JE = 102
+  integer, parameter :: VA = 16
+  integer, parameter :: QA = 11
+  integer, parameter :: I_DENS = 1
+  integer, parameter :: I_MOMX = 2
+  integer, parameter :: I_MOMY = 3
+  integer, parameter :: I_MOMZ = 4
+  integer, parameter :: I_RHOT = 5
 
-  integer, private, parameter :: ZDIR   = 1
-  integer, private, parameter :: XDIR   = 2
-  integer, private, parameter :: YDIR   = 3
+  integer, parameter :: I_PRES = 1
+  integer, parameter :: I_VELX = 2
+  integer, parameter :: I_VELY = 3
+  integer, parameter :: I_VELZ = 4
+  integer, parameter :: I_POTT = 5
+
+  integer, parameter :: ZDIR   = 1
+  integer, parameter :: XDIR   = 2
+  integer, parameter :: YDIR   = 3
 
   ! time settings
-  integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
+  integer, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! advection settings
-  real(8), private, parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
-  real(8), private, parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
+  real(8), parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
+  real(8), parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
 
   ! numerical filter settings
-  real(8), private, save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
-  real(8), private, save      :: DIFF4 ! for 4th order numerical filter
-  real(8), private, save      :: DIFF2 ! for 2nd order numerical filter
+  real(8), save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
+  real(8), save      :: DIFF4 ! for 4th order numerical filter
+  real(8), save      :: DIFF2 ! for 2nd order numerical filter
 
-  real(8), private, allocatable, save :: CNDZ(:,:)
-  real(8), private, allocatable, save :: CNMZ(:,:)
-  real(8), private, allocatable, save :: CNDX(:,:)
-  real(8), private, allocatable, save :: CNMX(:,:)
-  real(8), private, allocatable, save :: CNDY(:,:)
-  real(8), private, allocatable, save :: CNMY(:,:)
+  real(8), allocatable, save :: CNDZ(:,:)
+  real(8), allocatable, save :: CNMZ(:,:)
+  real(8), allocatable, save :: CNDX(:,:)
+  real(8), allocatable, save :: CNMX(:,:)
+  real(8), allocatable, save :: CNDY(:,:)
+  real(8), allocatable, save :: CNMY(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -84,29 +98,22 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_setup
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG,  &
+       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_grid, only : &
-       KA  => GRID_KA, &
-       IA  => GRID_IA, &
-       JA  => GRID_JA, &
-       KS  => GRID_KS, &
-       KE  => GRID_KE, &
-       IS  => GRID_IS, &
-       IE  => GRID_IE, &
-       JS  => GRID_JS, &
-       JE  => GRID_JE, &
-       CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
-       CDY => GRID_CDY
+       CDY => GRID_CDY, &
+       CDZ => GRID_CDZ
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_numerical_diff
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -254,6 +261,9 @@ contains
   !> Dynamical Process
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN
+    use mod_stdio, only: &
+       IO_FID_LOG,  &
+       IO_L
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
@@ -268,15 +278,6 @@ contains
        COMM_wait, &
        COMM_total
     use mod_grid, only : &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
        CDY  => GRID_CDY,  &
@@ -288,14 +289,7 @@ contains
        RFDY => GRID_RFDY
     use mod_atmos_vars, only: &
        var => atmos_var, &
-       A_NAME,      &
-       VA  => A_VA, &
-       QA  => A_QA, &
-       I_DENS,      &
-       I_MOMZ,      &
-       I_MOMX,      &
-       I_MOMY,      &
-       I_RHOT
+       A_NAME
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
        REF_pott => ATMOS_REFSTATE_pott
@@ -336,18 +330,6 @@ contains
 #ifdef _FPCOLL_
 call START_COLLECTION("DYNAMICS")
 #endif
-
-    !OCL XFILL
-    do j = 1, JA
-    do i = 1, IA
-       rjmns(KS-1,i,j,ZDIR) = 0.D0
-       rjmns(KS-1,i,j,XDIR) = 0.D0
-       rjmns(KS-1,i,j,YDIR) = 0.D0
-       rjmns(KE+1,i,j,ZDIR) = 0.D0
-       rjmns(KE+1,i,j,XDIR) = 0.D0
-       rjmns(KE+1,i,j,YDIR) = 0.D0
-    enddo
-    enddo
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
 
@@ -405,6 +387,18 @@ call START_COLLECTION("SET")
     do k  = 1, KA
        var_s(k,i,j,5) = var(k,i,j,5)
     enddo 
+    enddo
+    enddo
+
+    !OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+       rjmns(KS-1,i,j,ZDIR) = 0.D0
+       rjmns(KS-1,i,j,XDIR) = 0.D0
+       rjmns(KS-1,i,j,YDIR) = 0.D0
+       rjmns(KE+1,i,j,ZDIR) = 0.D0
+       rjmns(KE+1,i,j,XDIR) = 0.D0
+       rjmns(KE+1,i,j,YDIR) = 0.D0
     enddo
     enddo
 
@@ -1166,10 +1160,17 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
-       call COMM_vars8( var(:,:,:,iq), iq )
-       call COMM_wait ( var(:,:,:,iq), iq )
+       call COMM_vars( var(:,:,:,iq), iq )
+       call COMM_wait( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
+!
+!    call COMM_wait( var(:,:,:,iq-1), iq-1 )
+!
+!    else
+!
+!    call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
+
     endif
 
 #ifdef _FPCOLL_

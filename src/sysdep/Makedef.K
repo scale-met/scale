@@ -3,8 +3,11 @@
 FC     = mpifrtpx
 # new setting 20120214
 FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-         -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
-         -v03s -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_
+         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_
+
+FFLAGS_DYN = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
+             -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
+             -Ntl_trt -Qt -V -Cpp -Ksimd=2 -D_FPCOLL_
 
 # old setting 20120104
 #FFLAGS = -Kvisimpact,ocl,ilfunc,preex,array_private,prefetch_cache_level=all,auto,mfunc=2,noalias=s,instance=8,prefetch_iteration_L2=50 \
@@ -12,8 +15,7 @@ FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=
 #         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
 
 CC     = mpifccpx
-#CFLAGS = -Kfast,parallel,ocl,preex,array_private,auto -Qt -V -Ksimd=2
-CFLAGS = -Kfast,openmp,array_private,ilfunc,ocl,mfunc,preex,restp=all -Ntl_trt -Qt -V -Ksimd
+CFLAGS = -Kvisimpact,openmp,array_private,ilfunc,ocl,mfunc,preex,restp=all -Ntl_trt -Qt -V -Ksimd
 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)

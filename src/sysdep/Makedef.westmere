@@ -2,7 +2,7 @@
 #
 FC = mpiifort
 #FFLAGS= -fast -parallel -par-report2 -par-threshold0 -vec-report1
-FFLAGS= -fast -xSSE4.2 -ftz -m64 \
+FFLAGS= -fpp3 -fast -xSSE4.2 -ftz -m64 \
         -fp-model precise -pc 80 \
         -heap-arrays -fno-alias \
         -parallel -par-report2 -par-threshold0 -vec-report1 \
