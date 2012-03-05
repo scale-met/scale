@@ -30,6 +30,8 @@ makebin: $(PROJ_EXE)
 $(PROJ_EXE): $(PROJ_EXE).o
 	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS)
 
+mod_atmos_dyn_fent_pdfct.o	: mod_atmos_dyn_fent_pdfct.f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_time.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o
+	$(FC)  $(FFLAGS_DYN) -o mod_atmos_dyn_fent_pdfct.o -c mod_atmos_dyn_fent_pdfct.f90
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:

@@ -3,11 +3,11 @@
 # for K Computer
 #
 #PJM --rsc-list "node=1x1"
-#PJM --rsc-list "elapse=00:10:00"
+#PJM --rsc-list "elapse=00:50:00"
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-03
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
@@ -16,9 +16,9 @@ export fu08bf=10
 
 export HMDIR=/work/scratch/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=scale3
+export EXE=expindex_v03
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
+export OUTDIR=${HMDIR}/output/expindex_v03_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -59,8 +59,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 20.D0,
  GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
+ GRID_IMAX         = 64,
+ GRID_JMAX         = 64,
  GRID_BUFFER_DZ    = 6.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
@@ -74,7 +74,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000",
+ ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/output/init_coldbubble/init_coldbubble_63072000000.000",
  ATMOS_RESTART_OUTPUT         = .false.,
  ATMOS_RESTART_OUT_BASENAME   = "check_coldbubble",
  ATMOS_RESTART_CHECK          = .false.,
