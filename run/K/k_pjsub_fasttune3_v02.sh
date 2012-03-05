@@ -7,18 +7,18 @@
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-02
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export fu08bf=10
 
-export HMDIR=/work/user0171/scale3
+export HMDIR=/work/scratch/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=fasttune3
+export EXE=fasttune3_v02
 
-export OUTDIR=${HMDIR}/output/fasttune3_1x1
+export OUTDIR=${HMDIR}/output/fasttune3_v02_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -59,8 +59,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_OUT_BASENAME = '',
  GRID_DXYZ         = 20.D0,
  GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
+ GRID_IMAX         = 64,
+ GRID_JMAX         = 64,
  GRID_BUFFER_DZ    = 6.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
@@ -74,7 +74,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000",
+ ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/output/init_coldbubble/init_coldbubble_63072000000.000",
  ATMOS_RESTART_OUTPUT         = .false.,
  ATMOS_RESTART_OUT_BASENAME   = "check_coldbubble",
  ATMOS_RESTART_CHECK          = .false.,
@@ -94,8 +94,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_NUMERICAL_DIFF = 1.D-3,
- IBLOCK = 9,
- JBLOCK = 7,
+ IBLOCK = 8,
+ JBLOCK = 8,
 /
 
 &PARAM_OCEAN

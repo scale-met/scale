@@ -363,6 +363,18 @@ contains
 call START_COLLECTION("DYNAMICS")
 #endif
 
+    !OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+       rjmns(KS-1,i,j,ZDIR) = 0.D0
+       rjmns(KS-1,i,j,XDIR) = 0.D0
+       rjmns(KS-1,i,j,YDIR) = 0.D0
+       rjmns(KE+1,i,j,ZDIR) = 0.D0
+       rjmns(KE+1,i,j,XDIR) = 0.D0
+       rjmns(KE+1,i,j,YDIR) = 0.D0
+    enddo
+    enddo
+
     do step = 1, TIME_NSTEP_ATMOS_DYN
 
 !    diagvar  (:,:,:,:)   = -9.999D30
@@ -387,7 +399,6 @@ call START_COLLECTION("SET")
     IIE = IIS+IBLOCK-1
 
     !--- prepare rayleigh damping coefficient
-    !OCL PARALLEL
     do j = JJS, JJE
     do i = IIS, IIE
        do k = KS, KE-1
@@ -411,7 +422,6 @@ call START_COLLECTION("SET")
     enddo
 
     !--- prepare numerical diffusion coefficient
-    !OCL PARALLEL
     do j  = JJS-2, JJE+2
     do i  = IIS-2, IIE+2
        do k = KS, KE
@@ -432,7 +442,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
 
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS+1, KE-2
@@ -453,7 +462,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
 
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS,   IIE
        num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS)                                 &
@@ -472,7 +480,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
 
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS,   KE
@@ -528,7 +535,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
     enddo
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS-1, KE
@@ -540,7 +546,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
     enddo
-    !OCL PARALLEL
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS-1, KE
@@ -554,7 +559,6 @@ call START_COLLECTION("SET")
     enddo
 
     ! x-momentum
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS,   KE-1
@@ -566,7 +570,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
     enddo
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS,   IIE+1
     do k = KS,   KE
@@ -593,7 +596,6 @@ call START_COLLECTION("SET")
     enddo
 
     ! y-momentum
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS,   IIE
     do k = KS, KE-1
@@ -605,7 +607,6 @@ call START_COLLECTION("SET")
     enddo
     enddo
     enddo
-    !OCL PARALLEL
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS,   KE
@@ -669,7 +670,6 @@ call START_COLLECTION("RK3")
        enddo
 
        do j = JJS,   JJE+1
-       !OCL SERIAL
        do i = IIS-1, IIE+1
        do k = KS, KE
           diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) &
@@ -693,11 +693,6 @@ call START_COLLECTION("RK3")
        do k = KS, KE
           diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
        enddo
-       enddo
-       enddo
-
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
        do k = KS, KE
           diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
        enddo
@@ -708,7 +703,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, interface)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS, KE-1
+       do k = KS,   KE-1
           mflx_hi(k,i,j,ZDIR) = var(k,i,j,I_MOMZ) &
                               + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
        enddo
@@ -1005,11 +1000,11 @@ call START_COLLECTION("RK3")
     call COMM_vars8( var_RK1(:,:,:,3), 3 )
     call COMM_vars8( var_RK1(:,:,:,4), 4 )
     call COMM_vars8( var_RK1(:,:,:,5), 5 )
-    call COMM_wait( var_RK1(:,:,:,1), 1 )
-    call COMM_wait( var_RK1(:,:,:,2), 2 )
-    call COMM_wait( var_RK1(:,:,:,3), 3 )
-    call COMM_wait( var_RK1(:,:,:,4), 4 )
-    call COMM_wait( var_RK1(:,:,:,5), 5 )
+    call COMM_wait ( var_RK1(:,:,:,1), 1 )
+    call COMM_wait ( var_RK1(:,:,:,2), 2 )
+    call COMM_wait ( var_RK1(:,:,:,3), 3 )
+    call COMM_wait ( var_RK1(:,:,:,4), 4 )
+    call COMM_wait ( var_RK1(:,:,:,5), 5 )
 
     !##### RK2 #####
     rko = 2
@@ -1061,6 +1056,8 @@ call START_COLLECTION("RK3")
        do i = IIS-2, IIE+2
        do k = KS, KE
           diagvar(k,i,j,I_PRES) = Pstd * ( var_RK1(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+       enddo
+       do k = KS, KE
           diagvar(k,i,j,I_POTT) = var_RK1(k,i,j,I_RHOT) / var_RK1(k,i,j,I_DENS) 
        enddo
        enddo
@@ -1367,11 +1364,11 @@ call START_COLLECTION("RK3")
     call COMM_vars8( var_RK2(:,:,:,3), 3 )
     call COMM_vars8( var_RK2(:,:,:,4), 4 )
     call COMM_vars8( var_RK2(:,:,:,5), 5 )
-    call COMM_wait( var_RK2(:,:,:,1), 1 )
-    call COMM_wait( var_RK2(:,:,:,2), 2 )
-    call COMM_wait( var_RK2(:,:,:,3), 3 )
-    call COMM_wait( var_RK2(:,:,:,4), 4 )
-    call COMM_wait( var_RK2(:,:,:,5), 5 )
+    call COMM_wait ( var_RK2(:,:,:,1), 1 )
+    call COMM_wait ( var_RK2(:,:,:,2), 2 )
+    call COMM_wait ( var_RK2(:,:,:,3), 3 )
+    call COMM_wait ( var_RK2(:,:,:,4), 4 )
+    call COMM_wait ( var_RK2(:,:,:,5), 5 )
 
     !##### RK3 #####
     rko = 3
@@ -1423,6 +1420,8 @@ call START_COLLECTION("RK3")
        do i = IIS-2, IIE+2
        do k = KS, KE
           diagvar(k,i,j,I_PRES) = Pstd * ( var_RK2(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+       enddo
+       do k = KS, KE
           diagvar(k,i,j,I_POTT) = var_RK2(k,i,j,I_RHOT) / var_RK2(k,i,j,I_DENS) 
        enddo
        enddo
@@ -1695,6 +1694,7 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, layer)
+       !OCL SERIAL
        do j = JJS-1, JJE
        !OCL PARALLEL
        do i = IIS,   IIE
@@ -1728,11 +1728,11 @@ call START_COLLECTION("RK3")
     call COMM_vars8( var(:,:,:,3), 3 )
     call COMM_vars8( var(:,:,:,4), 4 )
     call COMM_vars8( var(:,:,:,5), 5 )
-    call COMM_wait( var(:,:,:,1), 1 )
-    call COMM_wait( var(:,:,:,2), 2 )
-    call COMM_wait( var(:,:,:,3), 3 )
-    call COMM_wait( var(:,:,:,4), 4 )
-    call COMM_wait( var(:,:,:,5), 5 )
+    call COMM_wait ( var(:,:,:,1), 1 )
+    call COMM_wait ( var(:,:,:,2), 2 )
+    call COMM_wait ( var(:,:,:,3), 3 )
+    call COMM_wait ( var(:,:,:,4), 4 )
+    call COMM_wait ( var(:,:,:,5), 5 )
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
@@ -1840,6 +1840,10 @@ call START_COLLECTION("FCT")
              rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
              rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
              rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+          else
+             rjmns(k,i,j,ZDIR) = 0.D0
+             rjmns(k,i,j,XDIR) = 0.D0
+             rjmns(k,i,j,YDIR) = 0.D0
           endif
        enddo
        enddo
@@ -1848,12 +1852,12 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_vars( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_vars( rjmns(:,:,:,YDIR), YDIR )
-    call COMM_wait( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_wait( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_wait( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_vars8( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_vars8( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_wait ( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_wait ( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_wait ( rjmns(:,:,:,YDIR), YDIR )
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1861,7 +1865,7 @@ call START_COLLECTION("FCT")
     IIE = IIS+IBLOCK-1
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
-       !OCL SIMD
+       !OCL norecurrence
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1877,7 +1881,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL SIMD
+       !OCL norecurrence
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1893,7 +1897,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL SIMD
+       !OCL norecurrence
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1926,8 +1930,8 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars( var(:,:,:,iq), iq )
-    call COMM_wait( var(:,:,:,iq), iq )
+    call COMM_vars8( var(:,:,:,iq), iq )
+    call COMM_wait ( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
     endif
@@ -1943,7 +1947,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! check total mass
-!    call COMM_total( var(:,:,:,:), A_NAME(:) )
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN
