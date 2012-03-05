@@ -1955,7 +1955,7 @@ call STOP_COLLECTION("DYNAMICS")
     enddo
 
     ! check total mass
-    call COMM_total( var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN

@@ -7,18 +7,18 @@
 #PJM --rsc-list "node-mem=10Gi"
 #PJM -s
 #
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-02
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=$PARALLEL
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export fu08bf=10
 
-export HMDIR=/work/user0171/scale3
+export HMDIR=/work/scratch/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=fasttune2
+export EXE=fasttune2_v02
 
-export OUTDIR=${HMDIR}/output/fasttune2_1x1
+export OUTDIR=${HMDIR}/output/fasttune2_v02_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
