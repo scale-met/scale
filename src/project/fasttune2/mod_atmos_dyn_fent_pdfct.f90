@@ -58,20 +58,20 @@ module mod_atmos_dyn
   integer, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! advection settings
-  real(4), parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
-  real(4), parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
+  real(8), parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
+  real(8), parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
 
   ! numerical filter settings
-  real(4), save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
-  real(4), save      :: DIFF4 ! for 4th order numerical filter
-  real(4), save      :: DIFF2 ! for 2nd order numerical filter
+  real(8), save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
+  real(8), save      :: DIFF4 ! for 4th order numerical filter
+  real(8), save      :: DIFF2 ! for 2nd order numerical filter
 
-  real(4), allocatable, save :: CNDZ(:,:)
-  real(4), allocatable, save :: CNMZ(:,:)
-  real(4), allocatable, save :: CNDX(:,:)
-  real(4), allocatable, save :: CNMX(:,:)
-  real(4), allocatable, save :: CNDY(:,:)
-  real(4), allocatable, save :: CNMY(:,:)
+  real(8), allocatable, save :: CNDZ(:,:)
+  real(8), allocatable, save :: CNMZ(:,:)
+  real(8), allocatable, save :: CNDX(:,:)
+  real(8), allocatable, save :: CNMX(:,:)
+  real(8), allocatable, save :: CNDY(:,:)
+  real(8), allocatable, save :: CNMY(:,:)
 
   integer, private, save :: IBLOCK, JBLOCK
 
@@ -272,9 +272,9 @@ contains
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
-       COMM_vars_r4, &
-       COMM_vars8_r4, &
-       COMM_wait_r4, &
+       COMM_vars, &
+       COMM_vars8, &
+       COMM_wait, &
        COMM_total
     use mod_grid, only : &
        IA   => GRID_IA,   &
@@ -296,7 +296,7 @@ contains
        RDYF => GRID_RFDY, &
        RDZF => GRID_RFDZ
     use mod_atmos_vars, only: &
-       atmos_var, &
+       var => atmos_var, &
        A_NAME,      &
        VA  => A_VA, &
        QA  => A_QA, &
@@ -306,104 +306,62 @@ contains
        I_MOMZ,      &
        I_RHOT
     use mod_atmos_refstate, only: &
-       ATMOS_REFSTATE_dens, &
-       ATMOS_REFSTATE_pott
+       REF_dens => ATMOS_REFSTATE_dens, &
+       REF_pott => ATMOS_REFSTATE_pott
     use mod_atmos_boundary, only: &
-       ATMOS_BOUNDARY_var,   &
-       ATMOS_BOUNDARY_alpha, &
+       DAMP_var   => ATMOS_BOUNDARY_var,   &
+       DAMP_alpha => ATMOS_BOUNDARY_alpha, &
        I_BND_VELZ,  &
        I_BND_VELX,  &
        I_BND_VELY,  &
        I_BND_POTT
     implicit none
 
-    real(4) :: var       (KA,IA,JA,VA)
-    real(4) :: REF_dens  (KA)
-    real(4) :: REF_pott  (KA)
-    real(4) :: DAMP_var  (KA,IA,JA,5)
-    real(4) :: DAMP_alpha(KA,IA,JA,5)
     ! work
-    real(4) :: var_RK1  (KA,IA,JA,5)   ! prognostic variables (+1/3 step)
-    real(4) :: var_RK2  (KA,IA,JA,5)   ! prognostic variables (+2/3 step)
-    real(4) :: var_lo   (KA,IA,JA,QA)  ! prognostic variables (monotone)
-    real(4) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
+    real(8) :: var_RK1  (KA,IA,JA,5)   ! prognostic variables (+1/3 step)
+    real(8) :: var_RK2  (KA,IA,JA,5)   ! prognostic variables (+2/3 step)
+    real(8) :: var_lo   (KA,IA,JA,QA)  ! prognostic variables (monotone)
+    real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
 
     ! rayleigh damping, numerical diffusion
-    real(4) :: dens_s   (KA,IA,JA)     ! saved density
-    real(4) :: dens_diff(KA,IA,JA)     ! anomary of density
-    real(4) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
-    real(4) :: ray_damp (KA,IA,JA,5)
-    real(4) :: num_diff (KA,IA,JA,5,3)
+    real(8) :: dens_s   (KA,IA,JA)     ! saved density
+    real(8) :: dens_diff(KA,IA,JA)     ! anomary of density
+    real(8) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
+    real(8) :: ray_damp (KA,IA,JA,5)
+    real(8) :: num_diff (KA,IA,JA,5,3)
 
     ! mass flux
-    real(4) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
-    real(4) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+    real(8) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
+    real(8) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
 
     ! For FCT
-    real(4) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(4) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(4) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
-    real(4) :: pjmns
+    real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
+    real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
+    real(8) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
+    real(8) :: pjmns
 
     integer :: IIS, IIE
     integer :: JJS, JJE
 
-    real(4) :: dtrk, rdtrk
-    integer :: i, j, k, iq, rko, step, iv
+    real(8) :: dtrk, rdtrk
+    integer :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
-
-#ifdef _FPCOLL_
-call START_COLLECTION("CAST")
-#endif
-
-    !OCL XFILL
-    do iv = 1, VA
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       var(k,i,j,iv) = real(atmos_var(k,i,j,iv), kind=4)
-    enddo
-    enddo
-    enddo
-    enddo
-    !OCL XFILL
-    do k = 1, KA
-       REF_dens(k) = real(ATMOS_REFSTATE_dens(k), kind=4)
-    enddo
-    !OCL XFILL
-    do k = 1, KA
-       REF_pott(k) = real(ATMOS_REFSTATE_pott(k), kind=4)
-    enddo
-    !OCL XFILL
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       DAMP_var  (k,i,j,2) = real(ATMOS_BOUNDARY_var  (k,i,j,2), kind=4)
-       DAMP_var  (k,i,j,3) = real(ATMOS_BOUNDARY_var  (k,i,j,3), kind=4)
-       DAMP_var  (k,i,j,4) = real(ATMOS_BOUNDARY_var  (k,i,j,4), kind=4)
-       DAMP_var  (k,i,j,5) = real(ATMOS_BOUNDARY_var  (k,i,j,5), kind=4)
-    enddo
-    enddo
-    enddo
-    !OCL XFILL
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       DAMP_alpha(k,i,j,2) = real(ATMOS_BOUNDARY_alpha(k,i,j,2), kind=4)
-       DAMP_alpha(k,i,j,3) = real(ATMOS_BOUNDARY_alpha(k,i,j,3), kind=4)
-       DAMP_alpha(k,i,j,4) = real(ATMOS_BOUNDARY_alpha(k,i,j,4), kind=4)
-       DAMP_alpha(k,i,j,5) = real(ATMOS_BOUNDARY_alpha(k,i,j,5), kind=4)
-    enddo
-    enddo
-    enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("CAST")
-#endif
 
 #ifdef _FPCOLL_
 call START_COLLECTION("DYNAMICS")
 #endif
+
+    !OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+       rjmns(KS-1,i,j,ZDIR) = 0.D0
+       rjmns(KS-1,i,j,XDIR) = 0.D0
+       rjmns(KS-1,i,j,YDIR) = 0.D0
+       rjmns(KE+1,i,j,ZDIR) = 0.D0
+       rjmns(KE+1,i,j,XDIR) = 0.D0
+       rjmns(KE+1,i,j,YDIR) = 0.D0
+    enddo
+    enddo
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
 
@@ -454,7 +412,6 @@ call START_COLLECTION("SET")
     !--- prepare numerical diffusion coefficient
     do j  = JJS-2, JJE+2
     do i  = IIS-2, IIE+2
-       !OCL XFILL
        do k = KS, KE
           dens_s(k,i,j)    = var(k,i,j,I_DENS)
           dens_diff(k,i,j) = var(k,i,j,I_DENS)                     - REF_dens(k)
@@ -1007,16 +964,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8_r4( var_RK1(:,:,:,1), 1 )
-    call COMM_vars8_r4( var_RK1(:,:,:,2), 2 )
-    call COMM_vars8_r4( var_RK1(:,:,:,3), 3 )
-    call COMM_vars8_r4( var_RK1(:,:,:,4), 4 )
-    call COMM_vars8_r4( var_RK1(:,:,:,5), 5 )
-    call COMM_wait_r4( var_RK1(:,:,:,1), 1 )
-    call COMM_wait_r4( var_RK1(:,:,:,2), 2 )
-    call COMM_wait_r4( var_RK1(:,:,:,3), 3 )
-    call COMM_wait_r4( var_RK1(:,:,:,4), 4 )
-    call COMM_wait_r4( var_RK1(:,:,:,5), 5 )
+    call COMM_vars8( var_RK1(:,:,:,1), 1 )
+    call COMM_vars8( var_RK1(:,:,:,2), 2 )
+    call COMM_vars8( var_RK1(:,:,:,3), 3 )
+    call COMM_vars8( var_RK1(:,:,:,4), 4 )
+    call COMM_vars8( var_RK1(:,:,:,5), 5 )
+    call COMM_wait ( var_RK1(:,:,:,1), 1 )
+    call COMM_wait ( var_RK1(:,:,:,2), 2 )
+    call COMM_wait ( var_RK1(:,:,:,3), 3 )
+    call COMM_wait ( var_RK1(:,:,:,4), 4 )
+    call COMM_wait ( var_RK1(:,:,:,5), 5 )
 
     !##### RK2 #####
     rko = 2
@@ -1359,16 +1316,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8_r4( var_RK2(:,:,:,1), 1 )
-    call COMM_vars8_r4( var_RK2(:,:,:,2), 2 )
-    call COMM_vars8_r4( var_RK2(:,:,:,3), 3 )
-    call COMM_vars8_r4( var_RK2(:,:,:,4), 4 )
-    call COMM_vars8_r4( var_RK2(:,:,:,5), 5 )
-    call COMM_wait_r4( var_RK2(:,:,:,1), 1 )
-    call COMM_wait_r4( var_RK2(:,:,:,2), 2 )
-    call COMM_wait_r4( var_RK2(:,:,:,3), 3 )
-    call COMM_wait_r4( var_RK2(:,:,:,4), 4 )
-    call COMM_wait_r4( var_RK2(:,:,:,5), 5 )
+    call COMM_vars8( var_RK2(:,:,:,1), 1 )
+    call COMM_vars8( var_RK2(:,:,:,2), 2 )
+    call COMM_vars8( var_RK2(:,:,:,3), 3 )
+    call COMM_vars8( var_RK2(:,:,:,4), 4 )
+    call COMM_vars8( var_RK2(:,:,:,5), 5 )
+    call COMM_wait ( var_RK2(:,:,:,1), 1 )
+    call COMM_wait ( var_RK2(:,:,:,2), 2 )
+    call COMM_wait ( var_RK2(:,:,:,3), 3 )
+    call COMM_wait ( var_RK2(:,:,:,4), 4 )
+    call COMM_wait ( var_RK2(:,:,:,5), 5 )
 
     !##### RK3 #####
     rko = 3
@@ -1711,16 +1668,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8_r4( var(:,:,:,1), 1 )
-    call COMM_vars8_r4( var(:,:,:,2), 2 )
-    call COMM_vars8_r4( var(:,:,:,3), 3 )
-    call COMM_vars8_r4( var(:,:,:,4), 4 )
-    call COMM_vars8_r4( var(:,:,:,5), 5 )
-    call COMM_wait_r4( var(:,:,:,1), 1 )
-    call COMM_wait_r4( var(:,:,:,2), 2 )
-    call COMM_wait_r4( var(:,:,:,3), 3 )
-    call COMM_wait_r4( var(:,:,:,4), 4 )
-    call COMM_wait_r4( var(:,:,:,5), 5 )
+    call COMM_vars8( var(:,:,:,1), 1 )
+    call COMM_vars8( var(:,:,:,2), 2 )
+    call COMM_vars8( var(:,:,:,3), 3 )
+    call COMM_vars8( var(:,:,:,4), 4 )
+    call COMM_vars8( var(:,:,:,5), 5 )
+    call COMM_wait ( var(:,:,:,1), 1 )
+    call COMM_wait ( var(:,:,:,2), 2 )
+    call COMM_wait ( var(:,:,:,3), 3 )
+    call COMM_wait ( var(:,:,:,4), 4 )
+    call COMM_wait ( var(:,:,:,5), 5 )
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
@@ -1814,7 +1771,7 @@ call START_COLLECTION("FCT")
        enddo
 
        ! --- STEP C: compute the outgoing fluxes in each cell ---
-       !OCL KSIMD
+       !OCL SIMD
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1826,6 +1783,10 @@ call START_COLLECTION("FCT")
              rjmns(k,i,j,ZDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * 0.5D0)
              rjmns(k,i,j,XDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * 0.5D0)
              rjmns(k,i,j,YDIR) = var_lo(k,i,j,iq-5) / pjmns * abs((mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * 0.5D0)
+          else
+             rjmns(k,i,j,ZDIR) = 0.D0
+             rjmns(k,i,j,XDIR) = 0.D0
+             rjmns(k,i,j,YDIR) = 0.D0
           endif
        enddo
        enddo
@@ -1834,12 +1795,12 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars_r4( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_vars_r4( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_vars_r4( rjmns(:,:,:,YDIR), YDIR )
-    call COMM_wait_r4( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_wait_r4( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_wait_r4( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_vars8( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_vars8( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_wait ( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_wait ( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_wait ( rjmns(:,:,:,YDIR), YDIR )
 
     do JJS = JS, JE, JBLOCK
     JJE = min(JE, JJS+JBLOCK-1)
@@ -1847,7 +1808,7 @@ call START_COLLECTION("FCT")
     IIE = min(IE, IIS+IBLOCK-1)
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
-       !OCL KSIMD
+       !OCL SIMD
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1863,7 +1824,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL KSIMD
+       !OCL SIMD
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1879,7 +1840,7 @@ call START_COLLECTION("FCT")
        enddo
        enddo
        enddo
-       !OCL KSIMD
+       !OCL SIMD
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS-1, KE
@@ -1912,8 +1873,8 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars_r4( var(:,:,:,iq), iq )
-    call COMM_wait_r4( var(:,:,:,iq), iq )
+    call COMM_vars8( var(:,:,:,iq), iq )
+    call COMM_wait ( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
     endif
@@ -1928,19 +1889,8 @@ call STOP_COLLECTION("FCT")
 call STOP_COLLECTION("DYNAMICS")
 #endif
 
-    !OCL XFILL
-    do iv = 1, VA
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       atmos_var(k,i,j,iv) = real(var(k,i,j,iv), kind=8)
-    enddo
-    enddo
-    enddo
-    enddo
-
     ! check total mass
-!    call COMM_total( var(:,:,:,:), A_NAME(:) )
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_DYN

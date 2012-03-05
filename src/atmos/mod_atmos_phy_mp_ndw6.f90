@@ -414,7 +414,7 @@ contains
     integer :: k, i, j, ij, iq, iv
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step -> Microphysics'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)

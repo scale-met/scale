@@ -44,7 +44,8 @@ module mod_comm
   !
   !++ Private parameters & variables
   !
-  integer, private, save :: COMM_vsize_max = 20
+  integer, private, save :: COMM_vsize_max  = 20
+  logical, private, save :: COMM_dototalval = .false.
 
   integer, private, save :: datasize_NS4
   integer, private, save :: datasize_NS8
@@ -89,6 +90,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_COMM / &
+       COMM_dototalval, &
        COMM_vsize_max
 
     integer :: ierr
@@ -643,7 +645,7 @@ contains
   end subroutine COMM_stats
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_total( var, varname )
+  subroutine COMM_total( var, varname, force_report )
     use mod_stdio, only : &
        IO_FID_LOG, &
        IO_L
@@ -666,8 +668,9 @@ contains
        DXYZ => GRID_DXYZ
     implicit none
 
-    real(8),          intent(inout) :: var(:,:,:,:)
-    character(len=*), intent(in)    :: varname(:)
+    real(8),           intent(inout) :: var(:,:,:,:)
+    character(len=*),  intent(in)    :: varname(:)
+    logical, optional, intent(in)    :: force_report
 
     logical, allocatable :: halomask(:,:,:)
 
@@ -675,10 +678,18 @@ contains
     real(8), allocatable :: allstatval(:)
     integer              :: vsize
 
+    logical :: doreport
     integer :: ierr
-
     integer :: v, p
     !---------------------------------------------------------------------------
+
+    if ( present(force_report) ) then
+       doreport = force_report
+    else
+       doreport = COMM_dototalval
+    endif
+
+    if ( doreport ) then
 
     vsize = size(var(:,:,:,:),4)
 
@@ -713,6 +724,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']',' SUM =', &
                                       allstatval(v) * DXYZ * DXYZ * DXYZ, '[kg * xxx]'
     enddo
+
+    endif
 
     return
   end subroutine COMM_total

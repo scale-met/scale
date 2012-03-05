@@ -106,7 +106,7 @@ contains
        ATMOS_DYN_numerical_diff
 
     integer :: ierr
-    integer :: i, j, k
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1166,17 +1166,10 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,iq), iq )
-       call COMM_wait( var(:,:,:,iq), iq )
+       call COMM_vars8( var(:,:,:,iq), iq )
+       call COMM_wait ( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
-!
-!    call COMM_wait( var(:,:,:,iq-1), iq-1 )
-!
-!    else
-!
-!    call COMM_wait( var(:,:,:,I_RHOT), I_RHOT )
-
     endif
 
 #ifdef _FPCOLL_

@@ -507,7 +507,7 @@ contains
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -547,7 +547,7 @@ contains
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
@@ -615,7 +615,7 @@ contains
     enddo
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
@@ -641,7 +641,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'Data Check Failed. See std. output.'
        write(*,*) 'Data Check Failed.'
     endif
-    call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:), force_report=.true. )
 
     return
   end subroutine ATMOS_vars_restart_check
@@ -709,9 +709,6 @@ contains
        call COMM_vars8( atmos_var(:,:,:,iv), iv )
        call COMM_wait ( atmos_var(:,:,:,iv), iv )
     enddo
-
-    ! check total mass
-    call COMM_total( atmos_var(:,:,:,1:6), A_NAME(1:6) )
 
     return
   end subroutine ATMOS_vars_put

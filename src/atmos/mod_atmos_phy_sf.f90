@@ -18,6 +18,9 @@ module mod_atmos_phy_sf
   !
   !++ used modules
   !
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -39,6 +42,12 @@ module mod_atmos_phy_sf
   !
   !++ Private parameters & variables
   !
+  integer, private, parameter :: I_VELZ = 1
+  integer, private, parameter :: I_VELX = 2
+  integer, private, parameter :: I_VELY = 3
+  integer, private, parameter :: I_PRES = 4
+  integer, private, parameter :: I_POTT = 5
+
   real(8), private, save :: CM0   = 1.0D-3  ! bulk coef. for U*
   real(8), private, save :: visck = 1.5D-5  ! kinematic viscosity 
 
@@ -73,6 +82,10 @@ module mod_atmos_phy_sf
   real(8), private, save :: U_maxM  = 1000.0D0  ! maximum U_abs for u,v,w
   real(8), private, save :: U_maxH  = 1000.0D0  !                   T
   real(8), private, save :: U_maxE  = 1000.0D0  !                   q
+
+  real(8), private, save :: R10M                ! scaling factor for 10m value (momentum)
+  real(8), private, save :: R10H =  1.D0        ! scaling factor for 10m value (heat)
+  real(8), private, save :: R10E =  1.D0        ! scaling factor for 10m value (tracer)
   !-----------------------------------------------------------------------------
 contains
 
@@ -81,11 +94,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_grid, only : &
+       KS  => GRID_KS,  &
+       CDZ => GRID_CDZ
     implicit none
 
     real(8) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -135,19 +149,22 @@ contains
     CH_min = ATMOS_PHY_SF_CH_min
     CE_min = ATMOS_PHY_SF_CE_min
 
+    R10M = 10.D0 / CDZ(KS) ! scale with height
+
     return
   end subroutine ATMOS_PHY_SF_setup
 
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF( dens,   pott,   qtrc,          &
-                           pres,   velx,   vely,   velz,  &
-                           FLXij_sfc, FLXt_sfc, FLXqv_sfc )
+  subroutine ATMOS_PHY_SF( FLXij_sfc, FLXt_sfc, FLXqv_sfc )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
+       Rdry   => CONST_Rdry,   &
+       CPovCV => CONST_CPovCV, &
        Rvap   => CONST_Rvap,   &
+       P00    => CONST_PRE00,  &
        T00    => CONST_TEM00,  &
        LH0    => CONST_LH0,    &
        EPSvap => CONST_EPSvap, &
@@ -163,31 +180,27 @@ contains
        JE  => GRID_JE,  &
        CDZ => GRID_CDZ
     use mod_atmos_vars, only: &
-       QA => A_QA, &
+       var => atmos_var, &
+       A_NAME,      &
+       VA  => A_VA, &
+       QA  => A_QA, &
+       I_DENS,      &
+       I_MOMX,      &
+       I_MOMY,      &
+       I_MOMZ,      &
+       I_RHOT,      &
        I_QV
     use mod_ocean_vars, only: &
        ocean_var, &
        I_SST
     implicit none
 
-    ! prognostic value
-    real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
-    real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
-    real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio [kg/kg],[1/m3]
-
-    real(8), intent(in)  :: pres(KA,IA,JA)      ! pressure [Pa]
-    real(8), intent(in)  :: velx(KA,IA,JA)      ! velocity(x) [m/s]
-    real(8), intent(in)  :: vely(KA,IA,JA)      ! velocity(y) [m/s]
-    real(8), intent(in)  :: velz(KA,IA,JA)      ! velocity(z) [m/s]
-
     ! surface flux
     real(8), intent(out) :: FLXij_sfc(IA,JA,3)  ! => FLXij(WS,1:IA,1:JA,1:3,3)
     real(8), intent(out) :: FLXt_sfc (IA,JA)    ! => FLXt (WS,1:IA,1:JA)
     real(8), intent(out) :: FLXqv_sfc(IA,JA)    ! => FLXq (WS,1:IA,1:JA,1)
-
-    real(8) :: R10M   ! scaling factor for 10m value (momentum,heat,tracer)
-    real(8) :: R10H
-    real(8) :: R10E
+    ! work
+    real(8) :: diagvar(IA,JA,5)   ! diagnostic variables (work)
 
     real(8) :: Uabsu  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(8) :: Uabsv
@@ -219,24 +232,62 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    R10M = 10.D0 / CDZ(KS) ! scale with height
-    R10H =  1.D0           ! assume homogeneous
-    R10E =  1.D0           ! assume homogeneous
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
+
+    ! momentum -> velocity
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
+       diagvar(i,j,I_VELZ) = 2.D0 * var(KS,i,j,I_MOMZ) &
+                           / ( var(KS+1,i,j,I_DENS)+var(KS,i,j,I_DENS) )
+    enddo
+    enddo
+
+    do j = JS-2, JE+2
+    do i = IS-2, IE+1
+       diagvar(i,j,I_VELX) = 2.D0 * var(KS,i,j,I_MOMX) &
+                           / ( var(KS,i+1,j,I_DENS)+var(KS,i,j,I_DENS) )
+    enddo
+    enddo
+
+    do j = JS-2, JE+1
+    do i = IS-2, IE+2
+       diagvar(i,j,I_VELY) = 2.D0 * var(KS,i,j,I_MOMY) &
+                           / ( var(KS,i,j+1,I_DENS)+var(KS,i,j,I_DENS) )
+    enddo
+    enddo
+
+    ! pressure, pot. temp
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
+       diagvar(i,j,I_PRES) = P00 * ( var(KS,i,j,I_RHOT) * Rdry / P00 )**CPovCV
+       diagvar(i,j,I_POTT) = var(KS,i,j,I_RHOT) / var(KS,i,j,I_DENS) 
+    enddo
+    enddo
 
     do j = JS-1, JE
     do i = IS-1, IE
        !--- absolute velocity ( at x, y, interface )
-       Uabsu = ( velx(KS,i,j)                                                             )**2.D0 &
-             + ( ( vely(KS,i,j)+vely(KS,i+1,j)+vely(KS,i,j-1)+vely(KS,i+1,j-1) ) * 0.25D0 )**2.D0 &
-             + ( ( velz(KS,i,j)+velz(KS,i+1,j)                                 ) * 0.25D0 )**2.D0
+       Uabsu = (   diagvar(i  ,j  ,I_VELX)            )**2 &
+             + ( ( diagvar(i  ,j  ,I_VELY) &
+                 + diagvar(i+1,j  ,I_VELY) &
+                 + diagvar(i  ,j-1,I_VELY) &
+                 + diagvar(i+1,j-1,I_VELY) ) * 0.25D0 )**2 &
+             + ( ( diagvar(i  ,j  ,I_VELZ) &
+                 + diagvar(i+1,j  ,I_VELZ) ) * 0.25D0 )**2
 
-       Uabsv = ( ( velx(KS,i,j)+velx(KS,i,j+1)+velx(KS,i-1,j)+velx(KS,i-1,j+1) ) * 0.25D0 )**2.D0 &
-             + ( vely(KS,i,j)                                                             )**2.D0 &
-             + ( ( velz(KS,i,j)+velz(KS,i,j+1)                                 ) * 0.25D0 )**2.D0
+       Uabsv = ( ( diagvar(i  ,j  ,I_VELX) &
+                 + diagvar(i  ,j+1,I_VELX) &
+                 + diagvar(i-1,j  ,I_VELX) &
+                 + diagvar(i-1,j+1,I_VELX) ) * 0.25D0 )**2 &
+             + (   diagvar(i  ,j  ,I_VELY)            )**2 &
+             + ( ( diagvar(i  ,j  ,I_VELZ) &
+                 + diagvar(i  ,j+1,I_VELZ) ) * 0.25D0 )**2
 
-       Uabsw = ( ( velx(KS,i,j)+velx(KS,i-1,j) )  * 0.5D0 )**2.D0 &
-             + ( ( vely(KS,i,j)+vely(KS,i,j-1) )  * 0.5D0 )**2.D0 &
-             + ( velz(KS,i,j)                     * 0.5D0 )**2.D0
+       Uabsw = ( ( diagvar(i  ,j  ,I_VELX) &
+                 + diagvar(i-1,j  ,I_VELX) )  * 0.5D0 )**2 &
+             + ( ( diagvar(i  ,j  ,I_VELY) &
+                 + diagvar(i  ,j-1,I_VELY) )  * 0.5D0 )**2 &
+             + (   diagvar(i  ,j  ,I_VELZ)    * 0.5D0 )**2
 
        !--- friction velocity
        Ustaru = max ( sqrt ( CM0 * Uabsu ), Ustar_min )
@@ -265,7 +316,7 @@ contains
 
        !--- Qv at sea surface
        pres_vap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/ocean_var(i,j,1,I_SST) ) )
-       qv_sfc   = EPSvap * pres_vap / ( pres(KS,i,j) - pres_vap )
+       qv_sfc   = EPSvap * pres_vap / ( diagvar(i,j,I_PRES) - pres_vap )
 
        !--- velocity at the 10m height
        U10u = Uabsu * R10M
@@ -273,13 +324,13 @@ contains
        U10w = Uabsw * R10M
 
        !--- surface fluxes ( at x, y, 10m ) 
-       FLXij_sfc(i,j,1) = 0.5D0 * ( dens(KS,i+1,j)+dens(KS,i,j) ) * U10u * CMMu * velx(KS,i,j)   * R10M
-       FLXij_sfc(i,j,2) = 0.5D0 * ( dens(KS,i,j+1)+dens(KS,i,j) ) * U10v * CMMv * vely(KS,i,j)   * R10M
-       FLXij_sfc(i,j,3) = dens(KS,i,j) * U10w * CMMw * velz(KS,i,j) * R10M
+       FLXij_sfc(i,j,1) = 0.5D0 * ( var(KS,i+1,j,I_DENS)+var(KS,i,j,I_DENS) ) * U10u * CMMu * diagvar(i,j,I_VELX) * R10M
+       FLXij_sfc(i,j,2) = 0.5D0 * ( var(KS,i,j+1,I_DENS)+var(KS,i,j,I_DENS) ) * U10v * CMMv * diagvar(i,j,I_VELY) * R10M
+       FLXij_sfc(i,j,3) = var(KS,i,j,I_DENS) * U10w * CMMw * diagvar(i,j,I_VELZ) * R10M
 
-       FLXt_sfc (i,j)   = dens(KS,i,j) * U10w * CMH  * ( ocean_var(i,j,1,I_SST) - pott(KS,i,j)*R10H )
+       FLXt_sfc (i,j)   = var(KS,i,j,I_DENS) * U10w * CMH  * ( ocean_var(i,j,1,I_SST) - diagvar(i,j,I_POTT)*R10H )
 
-       FLXqv_sfc(i,j)   = dens(KS,i,j) * U10w * CME  * ( qv_sfc - qtrc(KS,i,j,I_QV)*R10E )
+       FLXqv_sfc(i,j)   = var(KS,i,j,I_DENS) * U10w * CME  * ( qv_sfc - var(KS,i,j,5+I_QV)*R10E )
     enddo
     enddo
 

@@ -1202,8 +1202,8 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
-       call COMM_vars( var(:,:,:,iq), iq )
-       call COMM_wait( var(:,:,:,iq), iq )
+       call COMM_vars8( var(:,:,:,iq), iq )
+       call COMM_wait ( var(:,:,:,iq), iq )
 
     enddo ! scalar quantities loop
     endif
