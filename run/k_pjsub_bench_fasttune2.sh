@@ -16,9 +16,9 @@ export fu08bf=10
 
 export HMDIR=/work/scratch/user0171/scale3
 export BIN=${HMDIR}/bin/K
-export EXE=scale3
+export EXE=fasttune2
 
-export OUTDIR=${HMDIR}/output/scale3_1x1
+export OUTDIR=${HMDIR}/output/fasttune2_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -94,6 +94,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_NUMERICAL_DIFF = 1.D-3,
+ IBLOCK = 9,
+ JBLOCK = 7,
 /
 
 &PARAM_OCEAN

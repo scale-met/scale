@@ -14,7 +14,7 @@ export OMP_NUM_THREADS=$PARALLEL
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export fu08bf=1
 
-export HMDIR=/work/user0171/scale3
+export HMDIR=/work/scratch/user0171/scale3
 export BIN=${HMDIR}/bin/K
 export EXE=MPtune
 
