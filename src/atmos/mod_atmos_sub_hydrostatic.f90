@@ -40,6 +40,7 @@ module mod_atmos_hydrostatic
   !
   !++ Private parameters & variables
   !
+  logical, parameter :: use_rapserate = .false.
   !-----------------------------------------------------------------------------
 contains
 
@@ -53,15 +54,15 @@ contains
       pres_sfc, &
       pott_sfc  )
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
-       Rdry   => CONST_Rdry,   &
-       RovCP  => CONST_RovCP,  &
-       CPovR  => CONST_CPovR,  &
-       RovCV  => CONST_RovCV,  &
-       CVovCP => CONST_CVovCP, &
-       CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd,   &
-       P00    => CONST_PRE00
+       GRAV    => CONST_GRAV,    &
+       Rdry    => CONST_Rdry,    &
+       RovCP   => CONST_RovCP,   &
+       CPovR   => CONST_CPovR,   &
+       RovCV   => CONST_RovCV,   &
+       CVovCP  => CONST_CVovCP,  &
+       CPovCV  => CONST_CPovCV,  &
+       LASPdry => CONST_LASPdry, &
+       P00     => CONST_PRE00
     use mod_grid, only : &
        KA  => GRID_KA, &
        KS  => GRID_KS, &
@@ -78,6 +79,7 @@ contains
 
     real(8) :: dens_sfc
     real(8) :: dens_s, dhyd, dgrd
+    real(8) :: temp
 
     real(8), parameter :: criteria = 1.D-10
     integer, parameter :: itelim = 100
@@ -91,27 +93,33 @@ contains
     ! make density at lowermost cell center
     k = KS
 
-    dens_s  = 0.D0
-    dens(k) = dens_sfc ! first guess
-
-    do ite = 1, itelim
-       if ( abs(dens(k)-dens_s) <= criteria ) exit
-
-       dens_s = dens(k)
-
-       dhyd = + ( P00 * ( dens_sfc * Rdry * pott_sfc / P00 )**CPovCV &
-                - P00 * ( dens_s   * Rdry * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
-              - GRAV * 0.5D0 * ( dens_sfc + dens_s )                             ! rho*g
-
-       dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / CZ(k) &
-              * CPovCV * dens_s**RovCV                         &
-              - 0.5D0 * GRAV
-
+    if ( use_rapserate ) then
+       temp    = pott_sfc - LASPdry * CZ(k) ! use dry lapse rate
+       pres(k) = P00 * ( temp/pott(k) )**CPovR
        dens(k) = dens_s - dhyd/dgrd
-    enddo
+    else ! use itelation
+       dens_s  = 0.D0
+       dens(k) = dens_sfc ! first guess
 
-    if ( ite > itelim ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd
+       do ite = 1, itelim
+          if ( abs(dens(k)-dens_s) <= criteria ) exit
+
+          dens_s = dens(k)
+
+          dhyd = + ( P00 * ( dens_sfc * Rdry * pott_sfc / P00 )**CPovCV &
+                   - P00 * ( dens_s   * Rdry * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
+                 - GRAV * 0.5D0 * ( dens_sfc + dens_s )                             ! rho*g
+
+          dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / CZ(k) &
+                 * CPovCV * dens_s**RovCV                         &
+                 - 0.5D0 * GRAV
+
+          dens(k) = dens_s - dhyd/dgrd
+       enddo
+
+       if ( ite > itelim ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd
+       endif
     endif
 
     ! make density

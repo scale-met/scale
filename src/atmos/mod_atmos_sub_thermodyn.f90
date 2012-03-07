@@ -225,7 +225,7 @@ call STOP_COLLECTION("thrmdyn_tem")
     !
     real(8) :: rpres0, wkappa
 
-    call TIME_rapstart('thrmdyn_tempre2')
+    call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
 call START_COLLECTION("thrmdyn_tempre2")
 #endif
@@ -245,7 +245,7 @@ call START_COLLECTION("thrmdyn_tempre2")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("thrmdyn_tempre2")
 #endif
-    call TIME_rapend  ('thrmdyn_tempre2')
+    call TIME_rapend  ('thrmdyn')
 
     return
   end subroutine thrmdyn_tempre2
@@ -374,7 +374,7 @@ call STOP_COLLECTION("thrmdyn_tempreth")
     real(8) :: cv(size(tem,1),size(tem,2))
     !
 
-    call TIME_rapstart('thrmdyn_tempre')
+    call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
 call START_COLLECTION("thrmdyn_tempre")
 #endif
@@ -391,7 +391,7 @@ call START_COLLECTION("thrmdyn_tempre")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("thrmdyn_tempre")
 #endif
-    call TIME_rapend  ('thrmdyn_tempre')
+    call TIME_rapend  ('thrmdyn')
 
     return
   end subroutine thrmdyn_tempre
@@ -410,7 +410,7 @@ call STOP_COLLECTION("thrmdyn_tempre")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn_cv')
+    call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
 call START_COLLECTION("thrmdyn_cv")
 #endif
@@ -424,7 +424,7 @@ call START_COLLECTION("thrmdyn_cv")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("thrmdyn_cv")
 #endif
-    call TIME_rapend  ('thrmdyn_cv')
+    call TIME_rapend  ('thrmdyn')
 
     return
   end subroutine thrmdyn_cv
@@ -442,7 +442,7 @@ call STOP_COLLECTION("thrmdyn_cv")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn_cp')
+    call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
 call START_COLLECTION("thrmdyn_cp")
 #endif
@@ -456,7 +456,7 @@ call START_COLLECTION("thrmdyn_cp")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("thrmdyn_cp")
 #endif
-    call TIME_rapend  ('thrmdyn_cp')
+    call TIME_rapend  ('thrmdyn')
 
     return
   end subroutine thrmdyn_cp
@@ -472,7 +472,7 @@ call STOP_COLLECTION("thrmdyn_cp")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn_qd')
+    call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
 call START_COLLECTION("thrmdyn_qd")
 #endif
@@ -485,7 +485,7 @@ call START_COLLECTION("thrmdyn_qd")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("thrmdyn_qd")
 #endif
-    call TIME_rapend  ('thrmdyn_qd')
+    call TIME_rapend  ('thrmdyn')
 
     return
   end subroutine thrmdyn_qd

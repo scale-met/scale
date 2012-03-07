@@ -8,7 +8,7 @@ module mod_atmos_cnst
   real(8), parameter :: CNST_RVAP  = 461.50D0    ! gas const. of vapor
   real(8), parameter :: CNST_EPSV  = CNST_RAIR / CNST_RVAP
   real(8), parameter :: CNST_EPSVT = 1.0D0/CNST_EPSV - 1.0D0
-  real(8), parameter :: CNST_CP    = 1004.6D0    ! Specific heat of air   (consant pressure)
+  real(8), parameter :: CNST_CP    = 1003.5D0    ! Specific heat of air   (consant pressure)
   real(8), parameter :: CNST_CPV   = 1850.0D0    ! specific heat of vapor (consant pressure)
   real(8), parameter :: CNST_CV    = CNST_CP  - CNST_RAIR ! specific heat of air   (consant volume)
   real(8), parameter :: CNST_CVV   = CNST_CPV - CNST_RVAP ! specific heat of vapor (consant volume)

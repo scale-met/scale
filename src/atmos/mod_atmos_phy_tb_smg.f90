@@ -443,22 +443,22 @@ contains
     do i = IS, IE
     do k = KS, KE
        var(k,i,j,I_MOMZ) = var(k,i,j,I_MOMZ) &
-                         + dt * - ( ( FLXij(k,  i,j,3,1)-FLXij(k,i-1,j  ,3,1) ) * RCDX(i) &
-                                  + ( FLXij(k,  i,j,3,2)-FLXij(k,i  ,j-1,3,2) ) * RCDY(j) &
-                                  + ( FLXij(k+1,i,j,3,3)-FLXij(k,i  ,j  ,3,3) ) * RFDZ(k) )
+                         + dt * ( - ( ( FLXij(k,  i,j,3,1)-FLXij(k,i-1,j  ,3,1) ) * RCDX(i) &
+                                    + ( FLXij(k,  i,j,3,2)-FLXij(k,i  ,j-1,3,2) ) * RCDY(j) &
+                                    + ( FLXij(k+1,i,j,3,3)-FLXij(k,i  ,j  ,3,3) ) * RFDZ(k) ) )
        var(k,i,j,I_MOMX) = var(k,i,j,I_MOMX) &
-                         + dt * - ( ( FLXij(k,i+1,j,1,1)-FLXij(k  ,i,j  ,1,1) ) * RFDX(i) &
-                                  + ( FLXij(k,i,  j,1,2)-FLXij(k  ,i,j-1,1,2) ) * RCDY(j) &
-                                  + ( FLXij(k,i,  j,1,3)-FLXij(k-1,i,j  ,1,3) ) * RCDZ(k) )
+                         + dt * ( - ( ( FLXij(k,i+1,j,1,1)-FLXij(k  ,i,j  ,1,1) ) * RFDX(i) &
+                                    + ( FLXij(k,i,  j,1,2)-FLXij(k  ,i,j-1,1,2) ) * RCDY(j) &
+                                    + ( FLXij(k,i,  j,1,3)-FLXij(k-1,i,j  ,1,3) ) * RCDZ(k) ) )
        var(k,i,j,I_MOMY) = var(k,i,j,I_MOMY) &
-                         + dt * - ( ( FLXij(k,i,j,  2,1)-FLXij(k  ,i-1,j,2,1) ) * RCDX(i) &
-                                  + ( FLXij(k,i,j+1,2,2)-FLXij(k  ,i  ,j,2,2) ) * RFDY(j) &
-                                  + ( FLXij(k,i,j,  2,3)-FLXij(k-1,i  ,j,2,3) ) * RCDZ(k) )
+                         + dt * ( - ( ( FLXij(k,i,j,  2,1)-FLXij(k  ,i-1,j,2,1) ) * RCDX(i) &
+                                    + ( FLXij(k,i,j+1,2,2)-FLXij(k  ,i  ,j,2,2) ) * RFDY(j) &
+                                    + ( FLXij(k,i,j,  2,3)-FLXij(k-1,i  ,j,2,3) ) * RCDZ(k) ) )
 
        var(k,i,j,I_RHOT) = var(k,i,j,I_RHOT) &
-                         + dt * - ( ( FLXt(k,i,j,1)-FLXt(k  ,i-1,j  ,1) ) * RCDX(i) &
-                                  + ( FLXt(k,i,j,2)-FLXt(k  ,i  ,j-1,2) ) * RCDY(j) &
-                                  + ( FLXt(k,i,j,3)-FLXt(k-1,i  ,j  ,3) ) * RCDZ(k) )
+                         + dt * ( - ( ( FLXt(k,i,j,1)-FLXt(k  ,i-1,j  ,1) ) * RCDX(i) &
+                                    + ( FLXt(k,i,j,2)-FLXt(k  ,i  ,j-1,2) ) * RCDY(j) &
+                                    + ( FLXt(k,i,j,3)-FLXt(k-1,i  ,j  ,3) ) * RCDZ(k) ) )
     enddo
     enddo
     enddo
