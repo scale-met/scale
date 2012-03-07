@@ -1227,6 +1227,9 @@ contains
     use mod_stdio, only: &
        IO_FID_LOG,   &
        IO_L
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     use mod_atmos_cnst, only :&
          CNST_CV,       &
          CNST_CVV,      &
@@ -1662,10 +1665,11 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     ! 
     !----------------------------------------------------------------------------
-    !
+    call TIME_rapstart('MP1 Nucleation')
+
     sl_PLCccn(:,:)=0.d0
     sl_PNCccn(:,:)=0.d0
-    !
+
     ml_PNCccn(:,:)=0.d0
     ml_PNIccn(:,:)=0.d0
     ml_PLIcol(:,:)=0.d0
@@ -1832,11 +1836,13 @@ contains
 !!$    call history_in( 'sl_pncccn', sl_PNCccn(:,:) ) ! 
 !!$    call history_in( 'ml_pncccn', ml_PNCccn(:,:) ) !
 !!$    call history_in( 'ml_pniccn', ml_PNIccn(:,:) ) !
+    call TIME_rapend  ('MP1 Nucleation')
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     ! 
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP2 Phase change')
     !
     sl_PLCdep(:,:) = 0.d0
     sl_PNCdep(:,:) = 0.d0
@@ -2124,11 +2130,13 @@ contains
 !!$    call history_in( 'ml_PLRcnd', ml_PLRcnd(:,:) ) ! [Add] 10/08/03 T.Mitsui
 !!$    call history_in( 'sl_plrdep', sl_PLRdep(:,:) ) ! [kg/m2/sec]
 !!$    call history_in( 'sl_pnrdep', sl_PNRdep(:,:) ) ! [  /m2/sec]       
+    call TIME_rapend  ('MP2 Phase change')
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
     ! 
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP3 Collection')
     sl_PLCaut(:,:)=0.d0
     sl_PNCaut(:,:)=0.d0
     sl_PLCacc(:,:)=0.d0
@@ -2601,11 +2609,13 @@ contains
 !!$    call history_in( 'sl_pncacc', sl_PNCacc(:,:) )
     !
     !
+    call TIME_rapend  ('MP3 Collection')
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     ! 
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP4 Saturation adjustment')
     !
     lc(:,:)        = rhogq(:,:,I_QC)*rgsgam2(:,:)   ! lwc pre adjustment
     !
@@ -2650,11 +2660,13 @@ contains
           end do
        end do
     end if
+    call TIME_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     ! 
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP5 Sedimentation')
     !
     precip(:,:)       =  0.d0
     precip_rhoe(:)    =  0.d0
@@ -2814,6 +2826,8 @@ contains
     precip_lh_heat(:) = precip_lh_heat(:)* r_ntmax
     precip_rhophi(:)  = precip_rhophi(:) * r_ntmax
     precip_rhokin(:)  = precip_rhokin(:) * r_ntmax
+
+    call TIME_rapend  ('MP5 Sedimentation')
     !----------------------------------------------------------------------------
     !
     ! 6.Filter for rounding error(negative value) and artificial number

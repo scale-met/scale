@@ -22,6 +22,9 @@ module mod_satadjust
   !
   !++ Used modules
   !
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -86,6 +89,7 @@ contains
     real(8), intent(out) :: psat(:,:)
     real(8) :: TEM_MIN = 10.d0
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_psat_water")
 #endif
@@ -99,6 +103,7 @@ call START_COLLECTION("moist_psat_water")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_psat_water")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_psat_water
@@ -122,6 +127,7 @@ call STOP_COLLECTION("moist_psat_water")
     real(8) :: TEM_MIN = 10.d0
     !
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_psat_ice")
 #endif
@@ -134,6 +140,7 @@ call START_COLLECTION("moist_psat_ice")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_psat_ice")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_psat_ice
@@ -143,8 +150,14 @@ call STOP_COLLECTION("moist_psat_ice")
     real(8), intent(in) :: tem(:)
     real(8), intent(out) :: psat(:)
     real(8) :: psat1(size(psat),1)
+#ifdef _FPCOLL_
+call START_COLLECTION("moist_psat_ice1")
+#endif
     call moist_psat_ice ( spread(tem,2,1), psat1 )
     psat(:) = psat1(:,1)
+#ifdef _FPCOLL_
+call STOP_COLLECTION("moist_psat_ice1")
+#endif
   end subroutine moist_psat_ice1
   ! psat : based on CCSR/NIES AGCM
   ! qsat is more accurate than that of CCSR/NIES AGCM
@@ -160,8 +173,9 @@ call STOP_COLLECTION("moist_psat_ice")
     real(8) :: psat(size(tem,1),size(tem,2))
     
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("moist_psat_ice1")
+call START_COLLECTION("moist_qsat_water")
 #endif
 
     call moist_psat_water ( tem, psat )
@@ -170,8 +184,9 @@ call START_COLLECTION("moist_psat_ice1")
          CNST_EPSV * psat(:,:) / ( pre(:,:) - ( 1.D0 - CNST_EPSV ) * psat(:,:) )
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("moist_psat_ice1")
+call STOP_COLLECTION("moist_qsat_water")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_qsat_water
@@ -188,6 +203,7 @@ call STOP_COLLECTION("moist_psat_ice1")
     real(8) :: psat(size(tem,1),size(tem,2))
     
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_qsat_ice")
 #endif
@@ -200,6 +216,7 @@ call START_COLLECTION("moist_qsat_ice")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_qsat_ice")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_qsat_ice
@@ -434,6 +451,7 @@ call STOP_COLLECTION("moist_dewtem")
     real(8) :: lhv(size(tem,1),size(tem,2))  ! latent heat for condensation
     !
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsw_dtem_rho")
 #endif
@@ -447,6 +465,7 @@ call START_COLLECTION("moist_dqsw_dtem_rho")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsw_dtem_rho")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsw_dtem_rho
@@ -471,6 +490,7 @@ call STOP_COLLECTION("moist_dqsw_dtem_rho")
     real(8) :: lhv(size(tem,1),size(tem,2))  ! latent heat for condensation
     !
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsi_dtem_rho")
 #endif
@@ -484,6 +504,7 @@ call START_COLLECTION("moist_dqsi_dtem_rho")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsi_dtem_rho")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsi_dtem_rho
@@ -514,6 +535,7 @@ call STOP_COLLECTION("moist_dqsi_dtem_rho")
     real(8) :: den2(size(tem,1),size(tem,2)) ! denominator
     !
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsw_dtem_dpre")
 #endif
@@ -530,6 +552,7 @@ call START_COLLECTION("moist_dqsw_dtem_dpre")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsw_dtem_dpre")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsw_dtem_dpre
@@ -560,6 +583,7 @@ call STOP_COLLECTION("moist_dqsw_dtem_dpre")
     real(8) :: den2(size(tem,1),size(tem,2)) ! denominator
     !
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsi_dtem_dpre")
 #endif
@@ -576,8 +600,9 @@ call START_COLLECTION("moist_dqsi_dtem_dpre")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsi_dtem_dpre")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsi_dtem_dpre
-  !
+
 end module mod_satadjust

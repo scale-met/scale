@@ -45,7 +45,7 @@ module mod_const
   real(8), public, save      :: CONST_KARMAN  = 0.4D0      !< karman constant
 
   real(8), public, save      :: CONST_Rdry    = 287.04D0   !< gas constant   (dry)
-  real(8), public, save      :: CONST_CPdry   = 1005.7D0   !< specific heat  (dry,constant pressure)
+  real(8), public, save      :: CONST_CPdry   = 1003.5D0   !< specific heat  (dry,constant pressure)
   real(8), public, save      :: CONST_CVdry                !< specific heat  (dry,constant volume)
   real(8), public, save      :: CONST_RovCP                !< R / Cp = kappa (dry)
   real(8), public, save      :: CONST_CPovR                !< 1 / kappa      (dry)
