@@ -1356,6 +1356,7 @@ int32_t fio_read_data( int32_t fid,
 			  }
 		  }
 	  }
+	  free(_data);
 #else
 	  fsetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh)); /* [add] 20111007 H.Yashiro */
 	  pos = 0;                                                 /* [mod] 20111007 H.Yashiro */
@@ -1953,7 +1954,8 @@ int32_t fio_put_write_datainfo_data( int32_t fid,
   if(finfo[fid].tmp_gid == -1) {
 	  H5Gclose(gid);
   }
-  free(_data_jik);
+  if(system_ednchg)
+	  free(_data_jik);
   free(_data_kij);
 #else
 
