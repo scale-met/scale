@@ -132,8 +132,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
 
     ! momentum -> velocity
-    do j = JS-2, JE+2
-    do i = IS-2, IE+2
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE-1
        diagvar(k,i,j,I_VELZ) = 2.D0 * var(k,i,j,I_MOMZ) &
                              / ( var(k+1,i,j,I_DENS)+var(k,i,j,I_DENS) )
@@ -141,25 +141,25 @@ contains
     enddo
     enddo
     !OCL XFILL
-    do j = JS-2, JE+1
-    do i = IS-2, IE+1
+    do j = JS, JE
+    do i = IS, IE
        diagvar(KS-1,i,j,I_VELZ) = 0.D0
        diagvar(KE  ,i,j,I_VELZ) = 0.D0
     enddo
     enddo
 
-    do j = JS-2, JE+2
-    do i = IS-2, IE+1
-    do k = KS,   KE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        diagvar(k,i,j,I_VELX) = 2.D0 * var(k,i,j,I_MOMX) &
                              / ( var(k,i+1,j,I_DENS)+var(k,i,j,I_DENS) )
     enddo
     enddo
     enddo
 
-    do j = JS-2, JE+1
-    do i = IS-2, IE+2
-    do k = KS,   KE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        diagvar(k,i,j,I_VELY) = 2.D0 * var(k,i,j,I_MOMY) &
                              / ( var(k,i,j+1,I_DENS)+var(k,i,j,I_DENS) )
     enddo
@@ -167,13 +167,22 @@ contains
     enddo
 
     ! potential temperature
-    do j = JS-2, JE+2
-    do i = IS-2, IE+2
-    do k = KS,   KE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
     enddo
     enddo
     enddo
+
+    call COMM_vars8( diagvar(:,:,:,I_VELZ), I_VELZ )
+    call COMM_vars8( diagvar(:,:,:,I_VELX), I_VELX )
+    call COMM_vars8( diagvar(:,:,:,I_VELY), I_VELY )
+    call COMM_vars8( diagvar(:,:,:,I_POTT), I_POTT )
+    call COMM_wait ( diagvar(:,:,:,I_VELZ), I_VELZ )
+    call COMM_wait ( diagvar(:,:,:,I_VELX), I_VELX )
+    call COMM_wait ( diagvar(:,:,:,I_VELY), I_VELY )
+    call COMM_wait ( diagvar(:,:,:,I_POTT), I_POTT )
 
     ! ii == jj : at the center of control volume (cube)
     do j = JS-2, JE+2
