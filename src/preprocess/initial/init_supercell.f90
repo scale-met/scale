@@ -263,6 +263,7 @@ contains
        EXP_qv(k) = EXP_qv(k) * 1.D-3
     enddo
 
+    ! kref=2: lowermost layer
     do kref = 2, EXP_kmax
        rdz = 1.D0 / ( EXP_z(kref)-EXP_z(kref-1) )
 
@@ -341,8 +342,7 @@ contains
 
        if ( dist <= 1.D0 ) then
           var(k,i,j,I_RHOT) = dens(k) &
-                            * ( pott(k) &
-                              + EXT_TBBL * cos( 0.5D0*PI*sqrt(dist) )**2 * ( P00/pres(k) )**RovCP )
+                            * ( pott(k) + EXT_TBBL * cos( 0.5D0*PI*sqrt(dist) )**2 )
        else
           var(k,i,j,I_RHOT) = dens(k) * pott(k)
        endif

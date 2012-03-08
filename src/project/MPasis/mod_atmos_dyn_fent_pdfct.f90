@@ -45,6 +45,29 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: KMAX = 336
+  integer, parameter :: IMAX =  64
+  integer, parameter :: JMAX =  64
+  integer, parameter :: KA   = 340
+  integer, parameter :: IA   =  68
+  integer, parameter :: JA   =  68
+  integer, parameter :: KS   =   3
+  integer, parameter :: KE   = 338
+  integer, parameter :: IS   =   3
+  integer, parameter :: IE   =  66
+  integer, parameter :: JS   =   3
+  integer, parameter :: JE   =  66
+  integer, parameter :: VA   = 16
+  integer, parameter :: QA   = 11
+  integer, parameter :: I_DENS = 1
+  integer, parameter :: I_MOMX = 2
+  integer, parameter :: I_MOMY = 3
+  integer, parameter :: I_MOMZ = 4
+  integer, parameter :: I_RHOT = 5
+
+  integer, parameter :: IBLOCK = 8
+  integer, parameter :: JBLOCK = 8
+
   integer, parameter :: I_PRES = 1
   integer, parameter :: I_VELX = 2
   integer, parameter :: I_VELY = 3
@@ -74,7 +97,7 @@ module mod_atmos_dyn
   real(8), allocatable, save :: CNDY(:,:)
   real(8), allocatable, save :: CNMY(:,:)
 
-  integer, private, save :: IBLOCK, JBLOCK
+!  integer, private, save :: IBLOCK, JBLOCK
 
   !-----------------------------------------------------------------------------
 contains
@@ -90,33 +113,22 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_grid, only : &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       IA   => GRID_IA, &
-       JA   => GRID_JA, &
-       KA   => GRID_KA, &
-       IS   => GRID_IS, &
-       IE   => GRID_IE, &
-       JS   => GRID_JS, &
-       JE   => GRID_JE, &
-       KS   => GRID_KS, &
-       KE   => GRID_KE, &
        CDX  => GRID_CDX, &
        CDY  => GRID_CDY, &
        CDZ  => GRID_CDZ
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_DYN_numerical_diff, &
-       IBLOCK, &
-       JBLOCK
+       ATMOS_DYN_numerical_diff
+!       IBLOCK, &
+!       JBLOCK
 
     integer :: ierr
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    IBLOCK = IMAX
-    JBLOCK = JMAX
+!    IBLOCK = IMAX
+!    JBLOCK = JMAX
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
@@ -134,16 +146,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
 
     !-- Block size must be divisible
-    if    ( mod(IMAX,IBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
-       call PRC_MPIstop
-    elseif( mod(JMAX,JBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
-       call PRC_MPIstop
-    endif
+!    if    ( mod(IMAX,IBLOCK) > 0 ) then
+!       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
+!       call PRC_MPIstop
+!    elseif( mod(JMAX,JBLOCK) > 0 ) then
+!       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
+!       call PRC_MPIstop
+!    endif
 
-    DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 4/2+1 )
-    DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 2/2+1 )
+    DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**dble( 4/2+1 )
+    DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**dble( 2/2+1 )
 
     allocate( CNDX(3,IA) )
     allocate( CNMX(3,IA) )
@@ -289,15 +301,6 @@ contains
        COMM_wait, &
        COMM_total
     use mod_grid, only : &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
        CDX  => GRID_CDX,  &
        CDY  => GRID_CDY,  &
        CDZ  => GRID_CDZ,  &
@@ -309,14 +312,7 @@ contains
        RDZF => GRID_RFDZ
     use mod_atmos_vars, only: &
        var => atmos_var, &
-       A_NAME,      &
-       VA  => A_VA, &
-       QA  => A_QA, &
-       I_DENS,      &
-       I_MOMX,      &
-       I_MOMY,      &
-       I_MOMZ,      &
-       I_RHOT
+       A_NAME
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
        REF_pott => ATMOS_REFSTATE_pott

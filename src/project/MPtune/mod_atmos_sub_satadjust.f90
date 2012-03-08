@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_satadjust
+module mod_satadjust
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -32,6 +32,9 @@ module mod_atmos_satadjust
      EPSvap => CONST_EPSvap, &
      PSAT0  => CONST_PSAT0,  &
      TEM00  => CONST_TEM00
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   use mod_grid, only: &
      KA => GRID_KA, &
      IA => GRID_IA, &
@@ -41,7 +44,10 @@ module mod_atmos_satadjust
      IS => GRID_IS, &
      IE => GRID_IE, &
      JS => GRID_JS, &
-     JE => GRID_JE
+     JE => GRID_JE, &
+     IJA => GRID_IJA, &
+     IJS => GRID_IJS, &
+     IJE => GRID_IJE
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -82,14 +88,15 @@ contains
   subroutine moist_psat_water ( temp, psat )
     implicit none
 
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(out) :: psat(KA,IA,JA)
+    real(8), intent(in)  :: temp(IJA,KA)
+    real(8), intent(out) :: psat(IJA,KA)
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_psat_water")
 #endif
@@ -98,23 +105,21 @@ call START_COLLECTION("moist_psat_water")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+       TEM = max( temp(ij,k), TEM_MIN )
 
-       psat(k,i,j) = PSAT0                                   &
-                   * ( TEM * RTEM00 )**CPovRvap              &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+       psat(ij,k) = PSAT0                                 &
+                  * ( TEM * RTEM00 )**CPovRvap            &
+                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
     enddo
     enddo
-    enddo
-    
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_psat_water")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_psat_water
@@ -123,14 +128,15 @@ call STOP_COLLECTION("moist_psat_water")
   subroutine moist_psat_ice ( temp, psat )
     implicit none
 
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(out) :: psat(KA,IA,JA)
+    real(8), intent(in)  :: temp(IJA,KA)
+    real(8), intent(out) :: psat(IJA,KA)
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_psat_ice")
 #endif
@@ -139,22 +145,21 @@ call START_COLLECTION("moist_psat_ice")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+       TEM = max( temp(ij,k), TEM_MIN )
 
-       psat(k,i,j) = PSAT0                                   &
+       psat(ij,k) = PSAT0                                   &
                    * ( TEM * RTEM00 )**CPovRvap              &
                    * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_psat_ice")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_psat_ice
@@ -163,42 +168,42 @@ call STOP_COLLECTION("moist_psat_ice")
   subroutine moist_qsat_water ( temp, pres, qsat )
     implicit none
 
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
-    real(8), intent(out) :: qsat(KA,IA,JA)
+    real(8), intent(in)  :: temp(IJA,KA)
+    real(8), intent(in)  :: pres(IJA,KA)
+    real(8), intent(out) :: qsat(IJA,KA)
     
     real(8) :: psat
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("moist_psat_ice1")
+call START_COLLECTION("moist_qsat_water")
 #endif
 
     RTEM00   = 1.D0 / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(ij,k) = EPSvap * psat / ( pres(ij,k) - ( 1.D0-EPSvap ) * psat )
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("moist_psat_ice1")
+call STOP_COLLECTION("moist_qsat_water")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_qsat_water
@@ -207,16 +212,17 @@ call STOP_COLLECTION("moist_psat_ice1")
   subroutine moist_qsat_ice ( temp, pres, qsat )
     implicit none
 
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
-    real(8), intent(out) :: qsat(KA,IA,JA)
+    real(8), intent(in)  :: temp(IJA,KA)
+    real(8), intent(in)  :: pres(IJA,KA)
+    real(8), intent(out) :: qsat(IJA,KA)
     
     real(8) :: psat
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_qsat_ice")
 #endif
@@ -225,24 +231,24 @@ call START_COLLECTION("moist_qsat_ice")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(ij,k) = EPSvap * psat / ( pres(ij,k) - ( 1.D0-EPSvap ) * psat )
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_qsat_ice")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_qsat_ice
@@ -253,18 +259,19 @@ call STOP_COLLECTION("moist_qsat_ice")
   subroutine moist_dqsw_dtem_rho( temp, dens, dqsdtem )
     implicit none
 
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
+    real(8), intent(in)  :: temp   (IJA,KA)
+    real(8), intent(in)  :: dens   (IJA,KA)
+    real(8), intent(out) :: dqsdtem(IJA,KA)
 
     real(8) :: psat ! saturation vapor pressure
     real(8) :: lhv  ! latent heat for condensation
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsw_dtem_rho")
 #endif
@@ -273,27 +280,27 @@ call START_COLLECTION("moist_dqsw_dtem_rho")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       lhv  = LH0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+       lhv  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
 
-       dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                      * ( lhv / ( Rvap * temp(k,i,j) ) - 1.D0 )
+       dqsdtem(ij,k) = psat / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
+                      * ( lhv / ( Rvap * temp(ij,k) ) - 1.D0 )
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsw_dtem_rho")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsw_dtem_rho
@@ -304,18 +311,19 @@ call STOP_COLLECTION("moist_dqsw_dtem_rho")
   subroutine moist_dqsi_dtem_rho( temp, dens, dqsdtem )
     implicit none
 
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
+    real(8), intent(in)  :: temp   (IJA,KA)
+    real(8), intent(in)  :: dens   (IJA,KA)
+    real(8), intent(out) :: dqsdtem(IJA,KA)
 
     real(8) :: psat ! saturation vapor pressure
     real(8) :: lhv  ! latent heat for condensation
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsi_dtem_rho")
 #endif
@@ -324,27 +332,27 @@ call START_COLLECTION("moist_dqsi_dtem_rho")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       lhv  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+       lhv  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
 
-       dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                      * ( lhv / ( Rvap * temp(k,i,j) ) - 1.D0 )
+       dqsdtem(ij,k) = psat / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
+                      * ( lhv / ( Rvap * temp(ij,k) ) - 1.D0 )
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsi_dtem_rho")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsi_dtem_rho
@@ -355,10 +363,10 @@ call STOP_COLLECTION("moist_dqsi_dtem_rho")
   subroutine moist_dqsw_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
     implicit none
 
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
+    real(8), intent(in)  :: temp   (IJA,KA)
+    real(8), intent(in)  :: pres   (IJA,KA)
+    real(8), intent(out) :: dqsdtem(IJA,KA)
+    real(8), intent(out) :: dqsdpre(IJA,KA)
 
     real(8) :: psat ! saturation vapor pressure
     real(8) :: lhv  ! latent heat for condensation
@@ -366,9 +374,10 @@ call STOP_COLLECTION("moist_dqsi_dtem_rho")
     real(8) :: den1, den2 ! denominator
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsw_dtem_dpre")
 #endif
@@ -377,31 +386,31 @@ call START_COLLECTION("moist_dqsw_dtem_dpre")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       lhv  = LH0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+       lhv  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
 
-       den1 = ( pres(k,i,j) - (1.D0-EPSvap) * psat ) &
-            * ( pres(k,i,j) - (1.D0-EPSvap) * psat )
-       den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
+       den1 = ( pres(ij,k) - (1.D0-EPSvap) * psat ) &
+            * ( pres(ij,k) - (1.D0-EPSvap) * psat )
+       den2 = den1 * Rvap * temp(ij,k) * temp(ij,k)
 
-       dqsdpre(k,i,j) = - EPSvap * psat / den1
-       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
+       dqsdpre(ij,k) = - EPSvap * psat / den1
+       dqsdtem(ij,k) =   EPSvap * psat / den2 * lhv * pres(ij,k)
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsw_dtem_dpre")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsw_dtem_dpre
@@ -412,10 +421,10 @@ call STOP_COLLECTION("moist_dqsw_dtem_dpre")
   subroutine moist_dqsi_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
     implicit none
 
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
+    real(8), intent(in)  :: temp   (IJA,KA)
+    real(8), intent(in)  :: pres   (IJA,KA)
+    real(8), intent(out) :: dqsdtem(IJA,KA)
+    real(8), intent(out) :: dqsdpre(IJA,KA)
 
     real(8) :: psat ! saturation vapor pressure
     real(8) :: lhv  ! latent heat for condensation
@@ -423,9 +432,10 @@ call STOP_COLLECTION("moist_dqsw_dtem_dpre")
     real(8) :: den1, den2 ! denominator
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
-    integer :: i, j, k
+    integer :: ij, k
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('satadjust')
 #ifdef _FPCOLL_
 call START_COLLECTION("moist_dqsi_dtem_dpre")
 #endif
@@ -434,34 +444,34 @@ call START_COLLECTION("moist_dqsi_dtem_dpre")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEM = max( temp(k,i,j), TEM_MIN )
+    do k  = KS,  KE
+    do ij = IJS, IJE
+
+       TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
             * ( TEM * RTEM00 )**CPovRvap              &
             * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
 
-       lhv  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+       lhv  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
 
-       den1 = ( pres(k,i,j) - (1.D0-EPSvap) * psat ) &
-            * ( pres(k,i,j) - (1.D0-EPSvap) * psat )
-       den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
+       den1 = ( pres(ij,k) - (1.D0-EPSvap) * psat ) &
+            * ( pres(ij,k) - (1.D0-EPSvap) * psat )
+       den2 = den1 * Rvap * temp(ij,k) * temp(ij,k)
 
-       dqsdpre(k,i,j) = - EPSvap * psat / den1
-       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
+       dqsdpre(ij,k) = - EPSvap * psat / den1
+       dqsdtem(ij,k) =   EPSvap * psat / den2 * lhv * pres(ij,k)
 
-    enddo
     enddo
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("moist_dqsi_dtem_dpre")
 #endif
+    call TIME_rapend  ('satadjust')
 
     return
   end subroutine moist_dqsi_dtem_dpre
 
-end module mod_atmos_satadjust
+end module mod_satadjust
 !-------------------------------------------------------------------------------

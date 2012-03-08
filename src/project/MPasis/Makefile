@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = MPtune
+PROJ_EXE = MPasis
 
 all: makedir makebin
 
@@ -50,7 +50,7 @@ mod_atmos_dyn_fent_pdfct.o	: mod_atmos_dyn_fent_pdfct.f90 mod_stdio.o mod_proces
 .PHONY: depends freeze clean copylocal mktar
 
 clean:
-	rm -f $(PROJ_EXE) depends.info *.mod *.o *~
+	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
 
 freeze: clean depends copylocal mktar
 

@@ -61,6 +61,9 @@ module mod_atmos_phy_mp
   !
   !++ Used modules
   !
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -299,7 +302,14 @@ module mod_atmos_phy_mp
   logical, save, private :: opt_debug_inc=.true.
   logical, save, private :: opt_debug_act=.true.
   logical, save, private :: opt_debug_ree=.true.
-  logical, save, private :: opt_debug_bcs=.true.  
+  logical, save, private :: opt_debug_bcs=.true.
+
+  integer, private, save :: MP_NSTEP_SEDIMENTATION
+  real(8), private, save :: MP_RNSTEP_SEDIMENTATION
+  real(8), private, save :: MP_DTSEC_SEDIMENTATION
+
+  logical, private, allocatable, save :: preciptation_flag(:)
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -307,12 +317,18 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
+    use mod_time, only: &
+       TIME_DTSEC_ATMOS_PHY_MP
     use mod_grid, only: &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX
+    use mod_atmos_vars, only: &
+       var => atmos_var, &
+       QA  => A_QA,      &
+       QWS => A_QWS,     &
+       QWE => A_QWE,     &
+       NWS => A_NWS,     &
+       NWE => A_NWE
     implicit none
     !---------------------------------------------------------------------------
 
@@ -334,56 +350,58 @@ contains
 
     call mp_ndw6_init( IMAX*JMAX )
 
+    MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
+    MP_RNSTEP_SEDIMENTATION = 1.D0 / real(ntmax_sedimentation,kind=8)
+    MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
+
+    allocate( preciptation_flag(QA) )
+    preciptation_flag(:)       = .false.
+    preciptation_flag(QWS:QWE) = .true.
+    preciptation_flag(NWS:NWE) = .true.
+
     return
   end subroutine ATMOS_PHY_MP_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP( dens,   momx,   momy,   momz,   pott,   qtrc,  &
-                           dens_t, momx_t, momy_t, momz_t, pott_t, qtrc_t )
-
+  subroutine ATMOS_PHY_MP
     use mod_process, only: &
        PRC_myrank
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWSEC
     use mod_grid, only : &
+       KA   => GRID_KA,   &
        IA   => GRID_IA,   &
        JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
        IMAX => GRID_IMAX, &
        JMAX => GRID_JMAX, &
+       KS   => GRID_KS,   &
+       KE   => GRID_KE,   &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
        JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE,   &
        GRID_CZ,           &
        GRID_FZ,           &
        GRID_CDZ,          &
        GRID_FDZ
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait, &
+       COMM_total
     use mod_atmos_vars, only: &
-       QA => A_QA
+       var => atmos_var, &
+       A_NAME,      &
+       VA  => A_VA, &
+       QA  => A_QA, &
+       I_DENS,      &
+       I_MOMX,      &
+       I_MOMY,      &
+       I_MOMZ,      &
+       I_RHOT
     implicit none
-
-    ! prognostic value
-    real(8), intent(in)  :: dens(KA,IA,JA)      ! density [kg/m3]
-    real(8), intent(in)  :: momx(KA,IA,JA)      ! momentum (x) [kg/m3 * m/s]
-    real(8), intent(in)  :: momy(KA,IA,JA)      ! momentum (y) [kg/m3 * m/s]
-    real(8), intent(in)  :: momz(KA,IA,JA)      ! momentum (z) [kg/m3 * m/s]
-    real(8), intent(in)  :: pott(KA,IA,JA)      ! potential temperature [K]
-    real(8), intent(in)  :: qtrc(KA,IA,JA,QA)   ! tracer mixing ratio   [kg/kg],[1/m3]
-    ! prognostic tendency
-    real(8), intent(out) :: dens_t(KA,IA,JA)
-    real(8), intent(out) :: momx_t(KA,IA,JA)
-    real(8), intent(out) :: momy_t(KA,IA,JA)
-    real(8), intent(out) :: momz_t(KA,IA,JA)
-    real(8), intent(out) :: pott_t(KA,IA,JA)
-    real(8), intent(out) :: qtrc_t(KA,IA,JA,QA)
 
     ! Convert to fit NDW6
     real(8) :: z  (KA)
@@ -408,41 +426,55 @@ contains
     real(8) :: dth    (IMAX*JMAX,KA)
 
     real(8) :: precip        (IMAX*JMAX,2)
-    real(8) :: precip_rhoe   (IMAX*JMAX)
-    real(8) :: precip_lh_heat(IMAX*JMAX)
-    real(8) :: precip_rhophi (IMAX*JMAX)
-    real(8) :: precip_rhokin (IMAX*JMAX)
 
     real(8) :: frhoge_af     (IMAX*JMAX,KA)
     real(8) :: frhogqv_af    (IMAX*JMAX,KA)
     real(8) :: frhoge_rad    (IMAX*JMAX,KA)
     real(8) :: qke           (IMAX*JMAX,KA)
 
-    integer :: i, j, ij, iq
+    integer :: k, i, j, ij, iq, iv
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)
     dzh(2:KA) = GRID_FDZ(1:KA-1)
 
-    z  (:) = GRID_CZ(:)
-    zh (KS:KE+1) = GRID_FZ(WS:WE)
-    zh (KS-1)    = zh(KS)  -dz(KS-1)
-    zh (KS-2)    = zh(KS-1)-dz(KS-2)
+    z (:) = GRID_CZ(:)
+    zh(KS:KE+1) = GRID_FZ(KS-1:KE)
+    zh(KS-1)    = zh(KS)   - dz(KS-1)
+    zh(1)       = zh(KS-1) - dz(1)
+    zh(KA)      = zh(KE+1) + dz(KE+1)
 
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWSEC
 
     do j = JS, JE
     do i = IS, IE
-       ij = (j-IS)*IMAX+i-IS+1
+       ij = (j-JS)*IMAX+i-IS+1
 
-       rho   (ij,:) = dens(:,i,j)
-       rho_vx(ij,:) = momx(:,i,j)
-       rho_vy(ij,:) = momy(:,i,j)
-       rho_w (ij,:) = momz(:,i,j)
-       th    (ij,:) = pott(:,i,j)
-
+       do k = KS, KE
+          rho   (ij,k) = var(k,i,j,I_DENS)
+          rho_w (ij,k) = var(k,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(k,i,j,I_MOMX)
+          rho_vy(ij,k) = var(k,i,j,I_MOMY)
+          th    (ij,k) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS)
+       enddo
+       do k = 1, KS-1
+          rho   (ij,k) = var(KS,i,j,I_DENS)
+          rho_w (ij,k) = var(KS,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(KS,i,j,I_MOMX)
+          rho_vy(ij,k) = var(KS,i,j,I_MOMY)
+          th    (ij,k) = var(KS,i,j,I_RHOT) / var(KS,i,j,I_DENS)
+       enddo
+       do k = KE+1, KA
+          rho   (ij,k) = var(KE,i,j,I_DENS)
+          rho_w (ij,k) = var(KE,i,j,I_MOMZ)
+          rho_vx(ij,k) = var(KE,i,j,I_MOMX)
+          rho_vy(ij,k) = var(KE,i,j,I_MOMY)
+          th    (ij,k) = var(KE,i,j,I_RHOT) / var(KE,i,j,I_DENS)
+       enddo
     enddo
     enddo
 
@@ -450,9 +482,17 @@ contains
        do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
-          ij = (j-IS)*IMAX+i-IS+1
+          ij = (j-JS)*IMAX+i-IS+1
 
-          rho_q (ij,:,iq) = qtrc(:,i,j,iq) * dens(:,i,j)
+          do k = KS, KE
+             rho_q (ij,k,iq) = var(k,i,j,5+iq) * var(k,i,j,I_DENS)
+          enddo
+          do k = 1, KS-1
+             rho_q (ij,k,iq) = var(KS,i,j,5+iq) * var(KS,i,j,I_DENS)
+          enddo
+          do k = KE+1, KA
+             rho_q (ij,k,iq) = var(KE,i,j,5+iq) * var(KE,i,j,I_DENS)
+          enddo
        enddo
        enddo
        enddo
@@ -463,23 +503,25 @@ contains
     frhoge_rad(:,:) = 0.D0
     qke       (:,:) = 0.D0
 
-    call mp_ndw6( IMAX*JMAX, KA, KS, KE, PRC_myrank,                                 & ! indices
-                  z, zh, dz, dzh,                                                    & ! vertical coordinate
-                  dt, ct,                                                            & ! time step
-                  rho_vx, rho_vy, rho_w, rho_q, rho, th,                             & ! primary variables
-                  drho_vx, drho_vy, drho_w, drho_q, drho, dth,                       & ! departure from input value 
-                  precip, precip_rhoe, precip_lh_heat, precip_rhophi, precip_rhokin, & ! variables related with precipitation
-                  frhoge_af, frhogqv_af, frhoge_rad, qke                             ) ! additional input
+    call mp_ndw6( IMAX*JMAX, KA, KS, KE, PRC_myrank,           & ! indices
+                  z, zh, dz, dzh,                              & ! vertical coordinate
+                  dt, ct,                                      & ! time step
+                  rho_vx, rho_vy, rho_w, rho_q, rho, th,       & ! primary variables
+                  drho_vx, drho_vy, drho_w, drho_q, drho, dth, & ! departure from input value 
+                  precip,                                      & ! precipitation
+                  frhoge_af, frhogqv_af, frhoge_rad, qke       ) ! additional input
 
     do j = JS, JE
     do i = IS, IE
-       ij = (j-IS)*IMAX+i-IS+1
+       ij = (j-JS)*IMAX+i-IS+1
 
-       dens_t(:,i,j) = drho   (ij,:)
-       momx_t(:,i,j) = drho_vx(ij,:)
-       momy_t(:,i,j) = drho_vy(ij,:)
-       momz_t(:,i,j) = drho_w (ij,:)
-       pott_t(:,i,j) = dth    (ij,:)
+       do k = KS, KE
+          var(k,i,j,I_DENS) = rho   (ij,k) + drho   (ij,k) * dt
+          var(k,i,j,I_MOMZ) = rho_w (ij,k) + drho_w (ij,k) * dt
+          var(k,i,j,I_MOMX) = rho_vx(ij,k) + drho_vy(ij,k) * dt
+          var(k,i,j,I_MOMY) = rho_vy(ij,k) + drho_vx(ij,k) * dt
+          var(k,i,j,I_RHOT) = ( th(ij,k) + dth(ij,k) * dt ) * var(k,i,j,I_DENS)
+       enddo
     enddo
     enddo
 
@@ -487,13 +529,33 @@ contains
        do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
-          ij = (j-IS)*IMAX+i-IS+1
+          ij = (j-JS)*IMAX+i-IS+1
 
-          qtrc_t(:,i,j,iq) = drho_q (ij,:,iq) / dens(:,i,j)
+          do k = KS, KE
+             var(k,i,j,5+iq) = ( rho_q(ij,k,iq) + drho_q(ij,k,iq) * dt ) / var(k,i,j,I_DENS)
+             var(k,i,j,5+iq) = max( var(k,i,j,5+iq), 0.D0 )
+          enddo
        enddo
        enddo
        enddo
     endif
+
+    do iv = 1, VA
+       ! fill IHALO & JHALO
+       call COMM_vars8( var(:,:,:,iv), iv )
+       call COMM_wait ( var(:,:,:,iv), iv )
+
+       ! fill KHALO
+       do j  = 1, JA
+       do i  = 1, IA
+          var(   1:KS-1,i,j,iv) = var(KS,i,j,iv)
+          var(KE+1:KA,  i,j,iv) = var(KE,i,j,iv)
+       enddo
+       enddo
+    enddo
+
+    ! check total mass
+    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_PHY_MP
@@ -530,7 +592,7 @@ contains
     logical :: flag_vent0(HYDRO_MAX), flag_vent1(HYDRO_MAX)
     integer :: ierr
     integer :: iw, ia, ib
-    integer :: n, m, nq, ifid
+    integer :: n
     !
     namelist /nm_mp_ndw6_init/       &
          opt_debug,                  &
@@ -1078,72 +1140,68 @@ contains
     !
     deallocate(w1,w2,w3,w4,w5,w6,w7,w8)
     !
-    write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(NQW_STR:NQW_END) ! [Add] 11/08/30 T.Mitsui
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(:)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(NQW_STR:NQW_END)    
-    write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(NQW_STR:NQW_END) 
-    write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(NQW_STR:NQW_END) 
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(:)    
+    write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(:) 
+    write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(:) 
     !    
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(:)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(:)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(:)
     
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(NQW_STR:NQW_END,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(:,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(:,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(:,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(:,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(:,i_lrg)
     
-    write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(NQW_STR:NQW_END)
-    !
+    write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(:)
+    write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(:)
+
     do ia=NQW_STR,NQW_END
-       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            delta_ab0(ia,NQW_STR:NQW_END)
-    end do
+       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",delta_ab0(ia,:)
+    enddo
     do ia=NQW_STR,NQW_END
-       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            delta_ab1(ia,NQW_STR:NQW_END)
-    end do
+       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",delta_ab1(ia,:)
+    enddo
     do ia=NQW_STR,NQW_END
-       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            theta_ab0(ia,NQW_STR:NQW_END)
-    end do
+       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",theta_ab0(ia,:)
+    enddo
     do ia=NQW_STR,NQW_END
-       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            theta_ab1(ia,NQW_STR:NQW_END)
-    end do
-    !
+       write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",theta_ab1(ia,:)
+    enddo
+
     allocate(nc_uplim(ijdim,1))
     nc_uplim(:,:) = 150.d6
-    !
+
     return
   end subroutine mp_ndw6_init
   !-----------------------------------------------------------------------------
@@ -1174,10 +1232,6 @@ contains
        dth0,           & !--- IN
        ! variables related with precipitation
        precip,         & !--- OUT
-       precip_rhoe,    & !--- OUT 
-       precip_lh_heat, & !--- OUT 
-       precip_rhophi,  & !--- OUT 
-       precip_rhokin,  & !--- OUT 
        ! additional input 
        frhoge_af,      & !--- IN  : energy tendency by additional forcing
        frhogqv_af,     & !--- IN  : energy tendency by affitional forcing
@@ -1186,6 +1240,9 @@ contains
     use mod_stdio, only: &
        IO_FID_LOG,   &
        IO_L
+    use mod_time, only: &
+       TIME_rapstart, &
+       TIME_rapend
     use mod_atmos_cnst, only :&
          CNST_CV,       &
          CNST_CVV,      &
@@ -1249,10 +1306,6 @@ contains
     real(8), intent(out)   :: drhogq0(ijdim,kdim,nqmax)
     !
     real(8), intent(out)   :: precip(ijdim,2)
-    real(8), intent(out)   :: precip_rhoe(ijdim)   
-    real(8), intent(out)   :: precip_lh_heat(ijdim)
-    real(8), intent(out)   :: precip_rhophi(ijdim) 
-    real(8), intent(out)   :: precip_rhokin(ijdim) 
     !
     real(8), intent(in)    :: frhoge_af(ijdim,kdim)  ! energy tendency by radiation 
     real(8), intent(in)    :: frhogqv_af(ijdim,kdim) ! vapor  tendency by radiation 
@@ -1312,11 +1365,7 @@ contains
     real(8) :: dg_xa(ijdim,kdim) ! 
     real(8) :: vt_xa(ijdim,kdim,HYDRO_MAX,i_sml:i_lrg) ! 
     !
-    real(8) :: vt_lc(ijdim,kdim), vt_nc(ijdim,kdim)
-    real(8) :: vt_lr(ijdim,kdim), vt_nr(ijdim,kdim)
-    real(8) :: vt_li(ijdim,kdim), vt_ni(ijdim,kdim)
-    real(8) :: vt_ls(ijdim,kdim), vt_ns(ijdim,kdim)
-    real(8) :: vt_lg(ijdim,kdim), vt_ng(ijdim,kdim)
+    real(8) :: vt(ijdim,kdim,nqmax)
     ! Work for qc,qr,qi,qs,qg,nc,nr,ni,ns,ng
     real(8) :: wlr, wnr, wxr         !
     ! weigthed diameter for interpolating Vt between 2-branches
@@ -1386,7 +1435,7 @@ contains
     real(8) :: dep_dqi, dep_dni
     real(8) :: dep_dqs, dep_dns
     real(8) :: dep_dqg, dep_dng
-    real(8) :: evap_max
+
     ! production rate of warm collection process
     ! auto-conversion
     real(8) :: PLCaut(ijdim,kdim), PNCaut(ijdim,kdim)
@@ -1431,7 +1480,7 @@ contains
     real(8) :: clp_dqi, clp_dni, clm_dqi, clm_dni
     real(8) :: clp_dqs, clp_dns, clm_dqs, clm_dns
     real(8) :: clp_dqg, clp_dng, clm_dqg, clm_dng
-    real(8) :: fac1, fac2, fac3, fac4, fac5, fac6, fac7, fac8, fac9, fac10
+    real(8) :: fac1, fac3, fac4, fac6, fac7, fac9, fac10
     ! production rate of partial conversion(ice, snow => graupel)
     real(8) :: PLIcon(ijdim,kdim), PNIcon(ijdim,kdim)
     real(8) :: PLScon(ijdim,kdim), PNScon(ijdim,kdim)
@@ -1456,20 +1505,8 @@ contains
     real(8) :: PNIspl(ijdim,kdim)
     real(8) :: spl_dqi, spl_dni
     real(8) :: spl_dqg, spl_dqs
-    ! production rate of saturation adjustment
-    real(8) :: dlc(ijdim,kdim)
-    ! production rate of sedimentation
-    real(8) :: precip_cloud(ijdim)
-    real(8) :: precip_rain(ijdim)
-    real(8) :: precip_ice(ijdim)
-    real(8) :: precip_snow(ijdim)
-    real(8) :: precip_graupel(ijdim)
     ! work for time splitting
     real(8) :: wprecip(1:ijdim,2)
-    real(8) :: wprecip_rhoe(1:ijdim)   
-    real(8) :: wprecip_lh_heat(1:ijdim)
-    real(8) :: wprecip_rhophi(1:ijdim) 
-    real(8) :: wprecip_rhokin(1:ijdim) 
     !
     real(8) :: rgsgam2(ijdim,kdim)
     real(8) :: rrhog(ijdim,kdim)
@@ -1522,10 +1559,6 @@ contains
     real(8) :: cflc(ijdim), cflr(ijdim), cfli(ijdim), cfls(ijdim), cflg(ijdim)
     real(8) :: max_cflc, max_cflr, max_cfli, max_cfls, max_cflg
     !--------------------------------------------------
-    ! variables for precip_transport_nwater
-    real(8) :: V_TERM(ijdim,kdim,1:nqmax) ! 
-    logical :: preciptation_flag(1:nqmax) ! 
-    !--------------------------------------------------
     logical :: flag_history_in            ! 
     !
     real(8), parameter :: eps=1.d-30
@@ -1536,7 +1569,7 @@ contains
     real(8) :: wdt, r_wdt
     real(8) :: r_ntmax
     integer :: ntdiv
-    integer :: ij, k, nq, nn
+    integer :: ij, k, n
     !
     gsgam2 = 1.d0
     gsgam2h= 1.d0
@@ -1591,19 +1624,9 @@ contains
        rho_fac_s(ij,kmax+1:kdim)=rho_fac_s(ij,kmax)
        rho_fac_g(ij,kmax+1:kdim)=rho_fac_g(ij,kmax)
     end do
-    !
-    if( opt_debug_tem )then
-       do k=kmin, kmax
-          do ij=1, ijdim
-             if(  (tem(ij,k) < tem_min) .or. &
-                  (rho(ij,k) < rho_min) .or. &
-                  (pre(ij,k) < 1.d0   )      )then
-                write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 1st. low tem,rho,pre:", &
-                     tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-             end if
-          end do
-       end do
-    end if
+
+    if( opt_debug_tem ) call debug_tem( 1, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
     !============================================================================
     !
     !--  Each process is integrated sequentially.
@@ -1621,10 +1644,11 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     ! 
     !----------------------------------------------------------------------------
-    !
+    call TIME_rapstart('MP1 Nucleation')
+
     sl_PLCccn(:,:)=0.d0
     sl_PNCccn(:,:)=0.d0
-    !
+
     ml_PNCccn(:,:)=0.d0
     ml_PNIccn(:,:)=0.d0
     ml_PLIcol(:,:)=0.d0
@@ -1733,36 +1757,7 @@ contains
        rhogq(:,k,I_NC) = min( rhogq(:,k,I_NC), nc_uplim(:,1) )
        q(:,k,I_NC)     = rhogq(:,k,I_NC)*rrhog(:,k)
     end do
-    !
-    if( opt_debug )then
-       write(IO_FID_LOG,*) "*** Nucleation/mod_mp_ndw6"
-       write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-       write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-       write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-       write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-       write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-       write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-       !
-       write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-       write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-       write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-       write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-       write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-       !
-       write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-       write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-       write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-       !
-       write(IO_FID_LOG,*) "PLCccn: max",maxval(wdt*gsgam2(:,:)*PLCccn(:,:)),&
-            " min:",minval(wdt*gsgam2(:,:)*PLCccn(:,:))
-       write(IO_FID_LOG,*) "PNCccn: max",maxval(wdt*gsgam2(:,:)*PNCccn(:,:)),&
-            " min:",minval(wdt*gsgam2(:,:)*PNCccn(:,:))
-       write(IO_FID_LOG,*) "PLIccn: max",maxval(wdt*gsgam2(:,:)*PLIccn(:,:)),&
-            " min:",minval(wdt*gsgam2(:,:)*PLIccn(:,:))
-       write(IO_FID_LOG,*) "PNIccn: max",maxval(wdt*gsgam2(:,:)*PNIccn(:,:)),&
-            " min:",minval(wdt*gsgam2(:,:)*PNIccn(:,:))
-    end if
-    !
+
     do k=kmin,kmax
        do ij=1,ijdim
           ml_PNCccn(ij,k)     = ml_PNCccn(ij,k)     + PNCccn(ij,k)*wdt
@@ -1771,38 +1766,27 @@ contains
           sl_PNCccn(ij,1) = sl_PNCccn(ij,1) + PNCccn(ij,k)*Dz(k)*gsgam2(ij,k)
        end do
     end do
-    !
-    !
-    if( opt_debug_tem )then
-       do k=kmin, kmax
-          do ij=1, ijdim
-             if(  (tem(ij,k) < tem_min) .or. &
-                  (rho(ij,k) < rho_min) .or. &
-                  (pre(ij,k) < 1.d0   )      )then
-                write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 2nd. low tem,rho,pre:", &
-                     tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-             end if
-          end do
-       end do
-    end if
+
     ml_PNCccn(:,:) = ml_PNCccn(:,:)/wdt
     ml_PNIccn(:,:) = ml_PNIccn(:,:)/wdt
-!!$    call history_in( 'sl_plcccn', sl_PLCccn(:,:) ) ! 
-!!$    call history_in( 'sl_pncccn', sl_PNCccn(:,:) ) ! 
-!!$    call history_in( 'ml_pncccn', ml_PNCccn(:,:) ) !
-!!$    call history_in( 'ml_pniccn', ml_PNIccn(:,:) ) !
+
+    if( opt_debug )     call debugreport_nucleation
+    if( opt_debug_tem ) call debug_tem( 2, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
+    call TIME_rapend  ('MP1 Nucleation')
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     ! 
     !----------------------------------------------------------------------------
-    !
+    call TIME_rapstart('MP2 Phase change')
+
     sl_PLCdep(:,:) = 0.d0
     sl_PNCdep(:,:) = 0.d0
     sl_PLRdep(:,:) = 0.d0 
     sl_PNRdep(:,:) = 0.d0
     ml_dTpc(:,:) = -tem(:,:)
-    !
+
     ! parameter setting
     wdt=dt/real(ntmax_phase_change,kind=8)
     r_wdt=1.d0/wdt
@@ -1971,86 +1955,11 @@ contains
              ml_PLRcnd(ij,k)= ml_PLRcnd(ij,k)+ PLRdep(ij,k)*wdt
           end do
        end do
-       !
-       if( opt_debug )then
-          write(IO_FID_LOG,*) "*** Phase Change/mod_mp_ndw6"
-          write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,kmin:kmax,I_QV))," min:",minval(rhogq(:,kmin:kmax,I_QV))
-          write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,kmin:kmax,I_QC))," min:",minval(rhogq(:,kmin:kmax,I_QC))
-          write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,kmin:kmax,I_QR))," min:",minval(rhogq(:,kmin:kmax,I_QR))
-          write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,kmin:kmax,I_QI))," min:",minval(rhogq(:,kmin:kmax,I_QI))
-          write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,kmin:kmax,I_QS))," min:",minval(rhogq(:,kmin:kmax,I_QS))
-          write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,kmin:kmax,I_QG))," min:",minval(rhogq(:,kmin:kmax,I_QG))
-          !
-          write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,kmin:kmax,I_NC))," min:",minval(rhogq(:,kmin:kmax,I_NC))
-          write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,kmin:kmax,I_NR))," min:",minval(rhogq(:,kmin:kmax,I_NR))
-          write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,kmin:kmax,I_NI))," min:",minval(rhogq(:,kmin:kmax,I_NI))
-          write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,kmin:kmax,I_NS))," min:",minval(rhogq(:,kmin:kmax,I_NS))
-          write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,kmin:kmax,I_NG))," min:",minval(rhogq(:,kmin:kmax,I_NG))
-          !
-          write(IO_FID_LOG,*) "tem : max",maxval(tem(:,kmin:kmax))       ," min:",minval(tem(:,kmin:kmax))
-          write(IO_FID_LOG,*) "pre : max",maxval(pre(:,kmin:kmax))       ," min:",minval(pre(:,kmin:kmax)) ! 09/08/18 T.Mitsui
-          write(IO_FID_LOG,*) "rho : max",maxval(rho(:,kmin:kmax))       ," min:",minval(rho(:,kmin:kmax)) ! 09/08/18 T.Mitsui
-          !
-          write(IO_FID_LOG,*) "PLChom: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLChom(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLChom(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNChom: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNChom(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNChom(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLChet: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLChet(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLChet(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNChet: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNChet(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNChet(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLRhet: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLRhet(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLRhet(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNRhet: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNRhet(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNRhet(:,kmin:kmax))
-          !
-          write(IO_FID_LOG,*) "PLImlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLImlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLImlt(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNImlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNImlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNImlt(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLSmlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLSmlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLSmlt(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNSmlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNSmlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNSmlt(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLGmlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLGmlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLGmlt(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNGmlt: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNGmlt(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNGmlt(:,kmin:kmax))
-          !
-          write(IO_FID_LOG,*) "PLIdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLIdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLIdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLSdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLSdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLSdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLGdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLGdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLGdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PLRdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PLRdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PLRdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNRdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNRdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNRdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNIdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNIdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNIdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNSdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNSdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNSdep(:,kmin:kmax))
-          write(IO_FID_LOG,*) "PNGdep: max",maxval(wdt*gsgam2(:,kmin:kmax)*PNGdep(:,kmin:kmax)),&
-               " min:",minval(wdt*gsgam2(:,kmin:kmax)*PNGdep(:,kmin:kmax))
-          !
-       end if
-       !
-       if( opt_debug_tem )then
-          do k=kmin, kmax
-             do ij=1, ijdim
-                if(  (tem(ij,k) < tem_min) .or. &
-                     (rho(ij,k) < rho_min) .or. &
-                     (pre(ij,k) < 1.d0   )      )then
-                   write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 3rd. low tem,rho,pre:", &
-                        tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-                end if
-             end do
-          end do
-       end if
-       !
+
+       if( opt_debug )     call debugreport_phasechange
+       if( opt_debug_tem ) call debug_tem( 3, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
     end do
-    !
+
     ml_dTpc(:,:) = ( tem(:,:) + ml_dTpc(:,:) )
     !
     sl_PLCdep(:,1) = sl_PLCdep(:,1)*r_dt
@@ -2070,24 +1979,14 @@ contains
     ml_PLGdep(:,:)= ml_PLGdep(:,:)*r_dt
     ml_PLCcnd(:,:)= ml_PLCcnd(:,:)*r_dt
     ml_PLRcnd(:,:)= ml_PLRcnd(:,:)*r_dt
-    !
-!!$    call history_in( 'ml_PNIfrz', ml_PNIfrz(:,:) ) ! [1/sec] 
-!!$    call history_in( 'ml_dTfrz' , ml_dTfrz(:,:)  ) ! [K/sec] 
-!!$    call history_in( 'ml_dTmlt' , ml_dTmlt(:,:)  ) ! [K/sec] 
-!!$    call history_in( 'ml_dTdep' , ml_dTdep(:,:)  ) ! [K/sec] 
-!!$    call history_in( 'ml_PLIdep', ml_PLIdep(:,:) ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'ml_PLSdep', ml_PLSdep(:,:) ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'ml_PLGdep', ml_PLGdep(:,:) ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'ml_dTcnd' , ml_dTcnd(:,:)  ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'ml_PLCcnd', ml_PLCcnd(:,:) ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'ml_PLRcnd', ml_PLRcnd(:,:) ) ! [Add] 10/08/03 T.Mitsui
-!!$    call history_in( 'sl_plrdep', sl_PLRdep(:,:) ) ! [kg/m2/sec]
-!!$    call history_in( 'sl_pnrdep', sl_PNRdep(:,:) ) ! [  /m2/sec]       
+
+    call TIME_rapend  ('MP2 Phase change')
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
     ! 
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP3 Collection')
     sl_PLCaut(:,:)=0.d0
     sl_PNCaut(:,:)=0.d0
     sl_PLCacc(:,:)=0.d0
@@ -2420,123 +2319,10 @@ contains
        tem(:,:) = rhoge(:,:) / ( rhog(:,:) * cva(:,:) )
        ! [Add] 09/08/18 T.Mitsui
        pre(:,:) = rho(:,:)*( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )*tem(:,:)
-       !
-       if ( opt_debug )then
-          write(IO_FID_LOG,*) "*** Collection process /mod_mp_ndw6"
-          write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-          write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-          write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-          write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-          write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-          write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-          !
-          write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-          write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-          write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-          write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-          write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-          !
-          write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-          write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-          write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-          !
-          write(IO_FID_LOG,*) "PLCaut: max",maxval(wdt*gsgam2(:,:)*PLCaut(:,:))," min:",minval(wdt*gsgam2(:,:)*PLCaut(:,:))
-          write(IO_FID_LOG,*) "PLCacc: max",maxval(wdt*gsgam2(:,:)*PLCacc(:,:))," min:",minval(wdt*gsgam2(:,:)*PLCacc(:,:))
-          write(IO_FID_LOG,*) "PNCaut: max",maxval(wdt*gsgam2(:,:)*PNCaut(:,:))," min:",minval(wdt*gsgam2(:,:)*PNCaut(:,:))
-          write(IO_FID_LOG,*) "PNCacc: max",maxval(wdt*gsgam2(:,:)*PNCacc(:,:))," min:",minval(wdt*gsgam2(:,:)*PNCacc(:,:))
-          write(IO_FID_LOG,*) "PNRaut: max",maxval(wdt*gsgam2(:,:)*PNRaut(:,:))," min:",minval(wdt*gsgam2(:,:)*PNRaut(:,:))
-          write(IO_FID_LOG,*) "PNRslc: max",maxval(wdt*gsgam2(:,:)*PNRslc(:,:))," min:",minval(wdt*gsgam2(:,:)*PNRslc(:,:))
-          write(IO_FID_LOG,*) "PNRbrk: max",maxval(wdt*gsgam2(:,:)*PNRbrk(:,:))," min:",minval(wdt*gsgam2(:,:)*PNRbrk(:,:))
-          ! cloud mass
-          write(IO_FID_LOG,*) "PLGacLC2LG: max",  maxval(wdt*gsgam2(:,:)*PLGacLC2LG(:,:))," min:",  &
-               minval(wdt*gsgam2(:,:)*PLGacLC2LG(:,:))
-          write(IO_FID_LOG,*) "PLSacLC2LS: max",maxval(wdt*gsgam2(:,:)*PLSacLC2LS(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLSacLC2LS(:,:))
-          write(IO_FID_LOG,*) "PLIacLC2LI: max",  maxval(wdt*gsgam2(:,:)*PLIacLC2LI(:,:))," min:",  &
-               minval(wdt*gsgam2(:,:)*PLIacLC2LI(:,:))
-          ! cloud num
-          write(IO_FID_LOG,*) "PNGacNC2NG: max",  maxval(wdt*gsgam2(:,:)*PNGacNC2NG(:,:))," min:",  &
-               minval(wdt*gsgam2(:,:)*PNGacNC2NG(:,:))
-          write(IO_FID_LOG,*) "PNIacNC2NI: max",  maxval(wdt*gsgam2(:,:)*PNIacNC2NI(:,:))," min:",  &
-               minval(wdt*gsgam2(:,:)*PNIacNC2NI(:,:))
-          ! rain mass
-          write(IO_FID_LOG,*) "PLRacLG2LG_R: max",maxval(wdt*gsgam2(:,:)*PLRacLG2LG(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLRacLG2LG(:,:))
-          write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*gsgam2(:,:)*PLRacLS2LG_S(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLRacLS2LG_S(:,:))
-          write(IO_FID_LOG,*) "PLRacLI2LG_R: max",maxval(wdt*gsgam2(:,:)*PLRacLI2LG_R(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLRacLI2LG_R(:,:))
-          ! rain num
-          write(IO_FID_LOG,*) "PNRacNI2NG_R: max",maxval(wdt*gsgam2(:,:)*PNRacNI2NG_R(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNI2NG_R(:,:))
-          write(IO_FID_LOG,*) "PNRacNS2NG_R: max",maxval(wdt*gsgam2(:,:)*PNRacNS2NG_R(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNS2NG_R(:,:))
-          write(IO_FID_LOG,*) "PNRacNG2NG  : max",maxval(wdt*gsgam2(:,:)*PNRacNG2NG  (:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNG2NG  (:,:))
-          ! ice mass
-          write(IO_FID_LOG,*) "PLRacLI2LG_I: max",maxval(wdt*gsgam2(:,:)*PLRacLI2LG_I(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLRacLI2LG_I(:,:))
-          write(IO_FID_LOG,*) "PLIacLI2LS:   max",maxval(wdt*gsgam2(:,:)*PLIacLI2LS(:,:)),  " min:",&
-               minval(wdt*gsgam2(:,:)*PLIacLI2LS(:,:))
-          write(IO_FID_LOG,*) "PLIacLS2LS_I: max",maxval(wdt*gsgam2(:,:)*PLIacLS2LS(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLIacLS2LS(:,:))
-          ! ice num
-          write(IO_FID_LOG,*) "PNRacNI2NG_I: max",maxval(wdt*gsgam2(:,:)*PNRacNI2NG_I(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNI2NG_I(:,:))
-          write(IO_FID_LOG,*) "PNIacNI2NS:   max",maxval(wdt*gsgam2(:,:)*PNIacNI2NS(:,:)),  " min:",&
-               minval(wdt*gsgam2(:,:)*PNIacNI2NS(:,:))
-          write(IO_FID_LOG,*) "PNIacNS2NS_I: max",maxval(wdt*gsgam2(:,:)*PNIacNS2NS(:,:)),  " min:",&
-               minval(wdt*gsgam2(:,:)*PNIacNS2NS(:,:))
-          ! snow mass
-          write(IO_FID_LOG,*) "PNIacNS2NS_S: max",maxval(wdt*gsgam2(:,:)*PNIacNS2NS(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNIacNS2NS(:,:))
-          write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*gsgam2(:,:)*PLRacLS2LG_S(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PLRacLS2LG_S(:,:))
-          write(IO_FID_LOG,*) "PLGacLS2LG:   max",maxval(wdt*gsgam2(:,:)*PLGacLS2LG(:,:)),  " min:",&
-               minval(wdt*gsgam2(:,:)*PLGacLS2LG(:,:))
-          ! snow num
-          write(IO_FID_LOG,*) "PNRacNS2NG_S: max",maxval(wdt*gsgam2(:,:)*PNRacNS2NG_S(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNS2NG_S(:,:))
-          write(IO_FID_LOG,*) "PNGacNS2NG:   max",maxval(wdt*gsgam2(:,:)*PNGacNS2NG(:,:)),  " min:",&
-               minval(wdt*gsgam2(:,:)*PNGacNS2NG(:,:))
-          ! grauepl num 
-          write(IO_FID_LOG,*) "PNRacNG2NG_G: max",maxval(wdt*gsgam2(:,:)*PNRacNG2NG(:,:))," min:",&
-               minval(wdt*gsgam2(:,:)*PNRacNG2NG(:,:))
-          !
-          write(IO_FID_LOG,*) "PLIcon: max",maxval(wdt*gsgam2(:,:)*PLIcon(:,:))," min:",minval(wdt*gsgam2(:,:)*PLIcon(:,:))
-          write(IO_FID_LOG,*) "PLScon: max",maxval(wdt*gsgam2(:,:)*PLScon(:,:))," min:",minval(wdt*gsgam2(:,:)*PLScon(:,:))
-          write(IO_FID_LOG,*) "PNIcon: max",maxval(wdt*gsgam2(:,:)*PNIcon(:,:))," min:",minval(wdt*gsgam2(:,:)*PNIcon(:,:))
-          write(IO_FID_LOG,*) "PNScon: max",maxval(wdt*gsgam2(:,:)*PNScon(:,:))," min:",minval(wdt*gsgam2(:,:)*PNScon(:,:))
-          
-          write(IO_FID_LOG,*) "PLIacm: max",maxval(wdt*gsgam2(:,:)*PLIacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLIacm(:,:))
-          write(IO_FID_LOG,*) "PLIarm: max",maxval(wdt*gsgam2(:,:)*PLIarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLIarm(:,:))
-          write(IO_FID_LOG,*) "PLSacm: max",maxval(wdt*gsgam2(:,:)*PLSacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLSacm(:,:))
-          write(IO_FID_LOG,*) "PLSarm: max",maxval(wdt*gsgam2(:,:)*PLSarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLSarm(:,:))
-          write(IO_FID_LOG,*) "PLGacm: max",maxval(wdt*gsgam2(:,:)*PLGacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLGacm(:,:))
-          write(IO_FID_LOG,*) "PLGarm: max",maxval(wdt*gsgam2(:,:)*PLGarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PLGarm(:,:))
-          
-          write(IO_FID_LOG,*) "PNIacm: max",maxval(wdt*gsgam2(:,:)*PNIacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNIacm(:,:))    
-          write(IO_FID_LOG,*) "PNIarm: max",maxval(wdt*gsgam2(:,:)*PNIarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNIarm(:,:))    
-          write(IO_FID_LOG,*) "PNSacm: max",maxval(wdt*gsgam2(:,:)*PNSacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNSacm(:,:))    
-          write(IO_FID_LOG,*) "PNSarm: max",maxval(wdt*gsgam2(:,:)*PNSarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNSarm(:,:))    
-          write(IO_FID_LOG,*) "PNGacm: max",maxval(wdt*gsgam2(:,:)*PNGacm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNGacm(:,:))    
-          write(IO_FID_LOG,*) "PNGarm: max",maxval(wdt*gsgam2(:,:)*PNGarm(:,:))," min:",minval(wdt*gsgam2(:,:)*PNGarm(:,:))    
-          !
-       end if
-       !
-       if( opt_debug_tem )then
-          do k=kmin, kmax
-             do ij=1, ijdim
-                if(  (tem(ij,k) < tem_min) .or. &
-                     (rho(ij,k) < rho_min) .or. &
-                     (pre(ij,k) < 1.d0   )      )then
-                   write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 4th. low tem,rho,pre:", &
-                        tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-                end if
-             end do
-          end do
-       end if
-       !
+
+       call debugreport_collection
+       call debug_tem( 4, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
        do k=kmin,kmax
           do ij=1,ijdim
              sl_PLCaut(ij,1) = sl_PLCaut(ij,1) + PLCaut(ij,k)*Dz(k)*gsgam2(ij,k)
@@ -2550,260 +2336,410 @@ contains
     ml_PNIspl(:,:) = ml_PNIspl(:,:)*r_dt
     ml_PNIcol(:,:) = ml_PNIcol(:,:)*r_dt
     ml_PLIcol(:,:) = ml_PLIcol(:,:)*r_dt
-!!$    call history_in( 'ml_PNIspl', ml_PNIspl(:,:) ) 
-!!$    call history_in( 'ml_pnicol', ml_PNIcol(:,:) ) 
-!!$    call history_in( 'ml_plicol', ml_PLIcol(:,:) )
-!!$    call history_in( 'ml_dTacr' , ml_dTacr(:,:)  )
-!!$    call history_in( 'sl_plcaut', sl_PLCaut(:,:) )
-!!$    call history_in( 'sl_pncaut', sl_PNCaut(:,:) )
-!!$    call history_in( 'sl_plcacc', sl_PLCacc(:,:) )
-!!$    call history_in( 'sl_pncacc', sl_PNCacc(:,:) )
-    !
-    !
+
+    call TIME_rapend  ('MP3 Collection')
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     ! 
     !----------------------------------------------------------------------------
-    !
+    call TIME_rapstart('MP4 Saturation adjustment')
+
     lc(:,:)        = rhogq(:,:,I_QC)*rgsgam2(:,:)   ! lwc pre adjustment
-    !
     PNCdep(:,:)  = 0.d0
     ml_dTpc(:,:) = ml_dTpc(:,:)*r_dt
-!!$    call history_in( 'ml_dTpc'  , ml_dTpc(:,:)   ) ! [K/sec] 
-!!$    call history_in( 'sl_plcdep', sl_PLCdep(:,:) )
-!!$    call history_in( 'sl_pncdep', sl_PNCdep(:,:) )
-    !
-    if( opt_debug )then
-       write(IO_FID_LOG,*) "*** saturation adjustment /mod_mp_ndw6"
-       write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-       write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-       write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-       write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-       write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-       write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-       !
-       write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-       write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-       write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-       write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-       write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-       !
-       write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-       write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-       write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-       write(IO_FID_LOG,*) "PLCdep: max",maxval(dt*gsgam2(:,:)*PLCdep(:,:))," min:",minval(dt*gsgam2(:,:)*PLCdep(:,:))
-       write(IO_FID_LOG,*) "PNCdep: max",maxval(dt*gsgam2(:,:)*PNCdep(:,:))," min:",minval(dt*gsgam2(:,:)*PNCdep(:,:))
-       !
-    end if
-    !
-    if( opt_debug_tem )then
-       do k=kmin, kmax
-          do ij=1, ijdim
-             if(  (tem(ij,k) < tem_min) .or. &
-                  (rho(ij,k) < rho_min) .or. &
-                  (pre(ij,k) < 1.d0   )      )then
-                write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 5th. low tem,rho,pre:", &
-                     tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-             end if
-          end do
-       end do
-    end if
+
+    call debugreport_saturation
+    call debug_tem( 5, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
+    call TIME_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     ! 
     !----------------------------------------------------------------------------
-    !
-    precip(:,:)       =  0.d0
-    precip_rhoe(:)    =  0.d0
-    precip_lh_heat(:) =  0.d0
-    precip_rhophi(:)  =  0.d0
-    precip_rhokin(:)  =  0.d0
-    wdt=dt/real(ntmax_sedimentation,kind=8)
-    do ntdiv=1,ntmax_sedimentation 
-       if(  ntdiv     == ntmax_sedimentation )then 
-          flag_history_in =.true.
-       else
-          flag_history_in =.false.
-       end if
-       call mp_ndw6_terminal_velocity( &
-            ijdim, kmin, kmax, kdim , &
-            rho  , tem  , pre, & ! in 
-            q(:,:,I_QC),q(:,:,I_QR), &
-            q(:,:,I_QI),q(:,:,I_QS),q(:,:,I_QG), &
-            q(:,:,I_NC),q(:,:,I_NR), &
-            q(:,:,I_NI),q(:,:,I_NS),q(:,:,I_NG), &
-            vt_lc, vt_lr, vt_li, vt_ls, vt_lg, & ! out
-            vt_nc, vt_nr, vt_ni, vt_ns, vt_ng, & ! out
-            flag_history_in ) ! in 
-       !
-       preciptation_flag(:) = .false.
-       V_TERM(:,:,:) = 0.d0
-       do nq=NQW_STR, NQW_END
-          preciptation_flag(nq) = .true.
-       end do
-       V_TERM(:,:,I_QC) = vt_lc(:,:)
-       V_TERM(:,:,I_QR) = vt_lr(:,:)
-       V_TERM(:,:,I_QI) = vt_li(:,:)
-       V_TERM(:,:,I_QS) = vt_ls(:,:)
-       V_TERM(:,:,I_QG) = vt_lg(:,:)
-       do nq=NNW_STR, NNW_END
-          preciptation_flag(nq) = .true.
-       end do
-       V_TERM(:,:,I_NC) = vt_nc(:,:)
-       V_TERM(:,:,I_NR) = vt_nr(:,:)
-       V_TERM(:,:,I_NI) = vt_ni(:,:)
-       V_TERM(:,:,I_NS) = vt_ns(:,:)
-       V_TERM(:,:,I_NG) = vt_ng(:,:)
-       !
-       call precip_transport_nwater ( &
-            ijdim,                 & !--- IN :
-            kdim, kmin, kmax,      & !--- IN :
-            rhog,                  & !--- INOUT :
-            rhogvx,                & !--- INOUT :
-            rhogvy,                & !--- INOUT :
-            rhogw,                 & !--- INOUT :
-            rhoge,                 & !--- INOUT :
-            rhogq,                 & !--- INOUT :
-            rho,                   & !--- INOUT :
-            tem,                   & !--- INOUT :
-            pre,                   & !--- INOUT :
-            q,                     & !--- INOUT :
-            qd,                    & !--- OUT :
-            z,                     & !--- IN : height
-            zh,                    & !--- IN : height
-            dz,                    & !--- IN : height interval
-            dzh,                   & !--- IN : height interval
-            V_TERM,                & !--- IN :    new  ! V_TERM(ijdim,kdim,nqmax)   
-            preciptation_flag,     & !--- IN :    new  ! preciptation_flag(1:nqmax) 
-            wprecip,               & !--- OUT :     ! precip(ijdim,2) *** basically exist 
-            wprecip_rhoe,          & !--- OUT :   new, intent(out) !  precip_rhoe(1:ijdim)
-            wprecip_lh_heat,       & !--- OUT :   new, intetn(out) ::  precip_lh_heat(1:ijdim)
-            wprecip_rhophi,        & !--- OUT :   new, intent(out) ::  precip_rhophi(1:ijdim)
-            wprecip_rhokin,        & !--- OUT :   new, intent(out) ::  precip_rhokin(1:ijdim)
-            gsgam2,                & !--- IN :
-            gsgam2h,               & !--- IN :    
-            rgs,                   & !--- IN :
-            rgsh,                  & !--- IN :    new, gam2h/gsgam2h 
-            wdt                    & !--- IN :
-            )
-       !
-       precip(:,:)       = precip(:,:)       + wprecip(:,:)
-       precip_rhoe(:)    = precip_rhoe(:)    + wprecip_rhoe(:)
-       precip_lh_heat(:) = precip_lh_heat(:) + wprecip_lh_heat(:)
-       precip_rhophi(:)  = precip_rhophi(:)  + wprecip_rhophi(:)
-       precip_rhokin(:)  = precip_rhokin(:)  + wprecip_rhokin(:)
-       !
-       !
-       if( opt_debug )then
-          !
-          write(IO_FID_LOG,*) "*** sedimentation /mod_mp_ndw6"
-          write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-          write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-          write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-          write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-          write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-          write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-          !
-          write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-          write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-          write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-          write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-          write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-          !
-          write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-          write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-          write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-          ! [Add] 09/08/18 T.Mitsui for debug
-          do k=kmin, kmax
-             cflc(:) = -vt_lc(:,k)*wdt/(Dz(k)*gsgam2(:,k))
-             cflr(:) = -vt_lr(:,k)*wdt/(Dz(k)*gsgam2(:,k))
-             cfli(:) = -vt_li(:,k)*wdt/(Dz(k)*gsgam2(:,k))
-             cfls(:) = -vt_ls(:,k)*wdt/(Dz(k)*gsgam2(:,k))
-             cflg(:) = -vt_lg(:,k)*wdt/(Dz(k)*gsgam2(:,k))
-             max_cflc = maxval(cflc)
-             max_cflr = maxval(cflr)
-             max_cfli = maxval(cfli)
-             max_cfls = maxval(cfls)
-             max_cflg = maxval(cflg)
-             if(       max_cflc >= 1.d0 .or. max_cflr >= 1.d0 &
-                  .or. max_cfli >= 1.d0 .or. max_cfls >= 1.d0 .or. max_cflg >= 1.d0 )then
-                write(IO_FID_LOG,'(a,5f16.6,i5,f10.3)') "CFLmax(qc,qr,qi,qs,qg), k, dz =",&
-                     max_cflc, max_cflr, max_cfli, max_cfls, max_cflg, k, Dz(k)
-             end if
-          end do
-          !
-          write(IO_FID_LOG,*) "V_QC: max",maxval(vt_lc(:,:))," min:",minval(vt_lc(:,:))
-          write(IO_FID_LOG,*) "V_QR: max",maxval(vt_lr(:,:))," min:",minval(vt_lr(:,:))
-          write(IO_FID_LOG,*) "V_QI: max",maxval(vt_li(:,:))," min:",minval(vt_li(:,:))
-          write(IO_FID_LOG,*) "V_QS: max",maxval(vt_ls(:,:))," min:",minval(vt_ls(:,:))
-          write(IO_FID_LOG,*) "V_QG: max",maxval(vt_lg(:,:))," min:",minval(vt_lg(:,:))
-          write(IO_FID_LOG,*) "V_NC: max",maxval(vt_nc(:,:))," min:",minval(vt_nc(:,:))
-          write(IO_FID_LOG,*) "V_NR: max",maxval(vt_nr(:,:))," min:",minval(vt_nr(:,:))
-          write(IO_FID_LOG,*) "V_NI: max",maxval(vt_ni(:,:))," min:",minval(vt_ni(:,:))
-          write(IO_FID_LOG,*) "V_NS: max",maxval(vt_ns(:,:))," min:",minval(vt_ns(:,:))
-          write(IO_FID_LOG,*) "V_NG: max",maxval(vt_ng(:,:))," min:",minval(vt_ng(:,:))
-          !
-       end if
-       !
-       if( opt_debug_tem )then
-          do k=kmin, kmax
-             do ij=1, ijdim
-                if(  (tem(ij,k) < tem_min) .or. &
-                     (rho(ij,k) < rho_min) .or. &
-                     (pre(ij,k) < 1.d0   )      )then
-                   write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 6th. low tem,rho,pre:", &
-                        tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-                end if
-             end do
-          end do
-       end if
-    end do
-    !
-    r_ntmax           =  1.d0/real(ntmax_sedimentation,kind=8)
-    precip(:,:)       = precip(:,:)      * r_ntmax
-    precip_rhoe(:)    = precip_rhoe(:)   * r_ntmax
-    precip_lh_heat(:) = precip_lh_heat(:)* r_ntmax
-    precip_rhophi(:)  = precip_rhophi(:) * r_ntmax
-    precip_rhokin(:)  = precip_rhokin(:) * r_ntmax
+    call TIME_rapstart('MP5 Sedimentation')
+
+    do n  = 1, 2
+    do ij = 1, ijdim
+       precip(ij,n) = 0.D0
+    enddo
+    enddo
+
+    do ntdiv = 1, ntmax_sedimentation 
+
+       call mp_ndw6_terminal_velocity( ijdim,      &
+                                       kmin,       &
+                                       kmax,       &
+                                       kdim,       &
+                                       nqmax,      &
+                                       rho(:,:),   &
+                                       tem(:,:),   &
+                                       pre(:,:),   &
+                                       q  (:,:,:), &
+                                       vt (:,:,:)  )
+
+       call precip_transport_nwater ( ijdim,                 & !--- IN :
+                                      kdim,                  &
+                                      kmin,                  &
+                                      kmax,                  & !--- IN :
+                                      rhog  (:,:),           & !--- INOUT :
+                                      rhogvx(:,:),           & !--- INOUT :
+                                      rhogvy(:,:),           & !--- INOUT :
+                                      rhogw (:,:),           & !--- INOUT :
+                                      rhoge (:,:),           & !--- INOUT :
+                                      rhogq (:,:,:),         & !--- INOUT :
+                                      rho,                   & !--- INOUT :
+                                      tem,                   & !--- INOUT :
+                                      pre,                   & !--- INOUT :
+                                      q,                     & !--- INOUT :
+                                      qd,                    & !--- OUT :
+                                      z,                     & !--- IN : height
+                                      zh,                    & !--- IN : height
+                                      dz,                    & !--- IN : height interval
+                                      dzh,                   & !--- IN : height interval
+                                      vt,                    & !--- IN :    new  ! V_TERM(ijdim,kdim,nqmax)   
+                                      preciptation_flag,     & !--- IN :    new  ! preciptation_flag(1:nqmax) 
+                                      wprecip,               & !--- OUT :     ! precip(ijdim,2) *** basically exist 
+                                      gsgam2,                & !--- IN :
+                                      gsgam2h,               & !--- IN :    
+                                      rgs,                   & !--- IN :
+                                      rgsh,                  & !--- IN :    new, gam2h/gsgam2h 
+                                      MP_DTSEC_SEDIMENTATION ) !--- IN :
+
+       do n  = 1, 2
+       do ij = 1, ijdim
+          precip(ij,n) = precip(ij,n) + wprecip(ij,n) * MP_RNSTEP_SEDIMENTATION
+       enddo
+       enddo
+
+       call debugreport_sedimentation
+       call debug_tem( 6, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
+    enddo
+
+    call TIME_rapend  ('MP5 Sedimentation')
+
     !----------------------------------------------------------------------------
-    !
     ! 6.Filter for rounding error(negative value) and artificial number
     !   ( We assume artificial filter as evaporation of the smallest particles )
     !----------------------------------------------------------------------------
-    ! 
-    call negative_filter ( &
-         ijdim, kmin, kmax, kdim, nqmax, &
-         rgsgam2,       &
+
+    call negative_filter ( ijdim, kmin, kmax, kdim, nqmax, rgsgam2, &
          th,            &   ! in
-         rhog, rhogq,   &   ! inout
-         rrhog,  rhoge, &   ! out
+         rhog, rhogq, rrhog,  rhoge, &   ! out
          q, pre, rho, tem ) ! out      
-    !
-    dth0(:,:)      = th(:,:) - th0(:,:)
-    drhog0(:,:)    = rhog(:,:) - rhog0(:,:)
-    drhogvx0(:,:)   = rhogvx(:,:) - rhogvx0(:,:)
-    drhogvy0(:,:)   = rhogvy(:,:) - rhogvy0(:,:)
-    drhogw0(:,:)    = rhogw(:,:) - rhogw0(:,:)
-    drhogq0(:,:,:) = rhogq(:,:,:) - rhogq0(:,:,:)
-    !
-    if( opt_debug_tem )then
-       do k=kmin, kmax
-          do ij=1, ijdim
-             if(  (tem(ij,k) < tem_min) .or. &
-                  (rho(ij,k) < rho_min) .or. &
-                  (pre(ij,k) < 1.d0   )      )then
-                write(IO_FID_LOG,'(a,4f16.5,3i6)') "*** 7th. low tem,rho,pre:", &
-                     tem(ij,k),rho(ij,k),pre(ij,k),q(ij,k,I_QV), ij,k,l_region
-             end if
-          end do
-       end do
-    end if
-    !
+
+    dth0    (:,:)   = th    (:,:)   - th0    (:,:)
+    drhog0  (:,:)   = rhog  (:,:)   - rhog0  (:,:)
+    drhogvx0(:,:)   = rhogvx(:,:)   - rhogvx0(:,:)
+    drhogvy0(:,:)   = rhogvy(:,:)   - rhogvy0(:,:)
+    drhogw0 (:,:)   = rhogw (:,:)   - rhogw0 (:,:)
+    drhogq0 (:,:,:) = rhogq (:,:,:) - rhogq0 (:,:,:)
+
+    call debug_tem( 7, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+
     return
+    !---------------------------------------------------------------------------
+  contains
+    !---------------------------------------------------------------------------
+    subroutine debugreport_nucleation
+      implicit none
+
+      write(IO_FID_LOG,*) "*** Nucleation/mod_mp_ndw6"
+
+      write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
+      write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
+      write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
+      write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
+      write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
+      write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
+      write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
+      write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
+      write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
+      write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
+      write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
+      write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
+      write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "PLCccn: max",maxval(wdt*1.D0*PLCccn(:,:))," min:",minval(wdt*1.D0*PLCccn(:,:))
+      write(IO_FID_LOG,*) "PNCccn: max",maxval(wdt*1.D0*PNCccn(:,:))," min:",minval(wdt*1.D0*PNCccn(:,:))
+      write(IO_FID_LOG,*) "PLIccn: max",maxval(wdt*1.D0*PLIccn(:,:))," min:",minval(wdt*1.D0*PLIccn(:,:))
+      write(IO_FID_LOG,*) "PNIccn: max",maxval(wdt*1.D0*PNIccn(:,:))," min:",minval(wdt*1.D0*PNIccn(:,:))
+
+      return
+    end subroutine debugreport_nucleation
+
+    !---------------------------------------------------------------------------
+    subroutine debugreport_phasechange
+      implicit none
+
+      write(IO_FID_LOG,*) "*** Phase Change/mod_mp_ndw6"
+
+      write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
+      write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
+      write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
+      write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
+      write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
+      write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
+
+      write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
+      write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
+      write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
+      write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
+      write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
+
+      write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
+      write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
+
+      write(IO_FID_LOG,*) "PLChom: max",maxval(wdt*1.D0*PLChom(:,:))," min:",minval(wdt*1.D0*PLChom(:,:))
+      write(IO_FID_LOG,*) "PNChom: max",maxval(wdt*1.D0*PNChom(:,:))," min:",minval(wdt*1.D0*PNChom(:,:))
+      write(IO_FID_LOG,*) "PLChet: max",maxval(wdt*1.D0*PLChet(:,:))," min:",minval(wdt*1.D0*PLChet(:,:))
+      write(IO_FID_LOG,*) "PNChet: max",maxval(wdt*1.D0*PNChet(:,:))," min:",minval(wdt*1.D0*PNChet(:,:))
+      write(IO_FID_LOG,*) "PLRhet: max",maxval(wdt*1.D0*PLRhet(:,:))," min:",minval(wdt*1.D0*PLRhet(:,:))
+      write(IO_FID_LOG,*) "PNRhet: max",maxval(wdt*1.D0*PNRhet(:,:))," min:",minval(wdt*1.D0*PNRhet(:,:))
+
+      write(IO_FID_LOG,*) "PLImlt: max",maxval(wdt*1.D0*PLImlt(:,:))," min:",minval(wdt*1.D0*PLImlt(:,:))
+      write(IO_FID_LOG,*) "PNImlt: max",maxval(wdt*1.D0*PNImlt(:,:))," min:",minval(wdt*1.D0*PNImlt(:,:))
+      write(IO_FID_LOG,*) "PLSmlt: max",maxval(wdt*1.D0*PLSmlt(:,:))," min:",minval(wdt*1.D0*PLSmlt(:,:))
+      write(IO_FID_LOG,*) "PNSmlt: max",maxval(wdt*1.D0*PNSmlt(:,:))," min:",minval(wdt*1.D0*PNSmlt(:,:))
+      write(IO_FID_LOG,*) "PLGmlt: max",maxval(wdt*1.D0*PLGmlt(:,:))," min:",minval(wdt*1.D0*PLGmlt(:,:))
+      write(IO_FID_LOG,*) "PNGmlt: max",maxval(wdt*1.D0*PNGmlt(:,:))," min:",minval(wdt*1.D0*PNGmlt(:,:))
+
+      write(IO_FID_LOG,*) "PLIdep: max",maxval(wdt*1.D0*PLIdep(:,:))," min:",minval(wdt*1.D0*PLIdep(:,:))
+      write(IO_FID_LOG,*) "PLSdep: max",maxval(wdt*1.D0*PLSdep(:,:))," min:",minval(wdt*1.D0*PLSdep(:,:))
+      write(IO_FID_LOG,*) "PLGdep: max",maxval(wdt*1.D0*PLGdep(:,:))," min:",minval(wdt*1.D0*PLGdep(:,:))
+      write(IO_FID_LOG,*) "PLRdep: max",maxval(wdt*1.D0*PLRdep(:,:))," min:",minval(wdt*1.D0*PLRdep(:,:))
+      write(IO_FID_LOG,*) "PNRdep: max",maxval(wdt*1.D0*PNRdep(:,:))," min:",minval(wdt*1.D0*PNRdep(:,:))
+      write(IO_FID_LOG,*) "PNIdep: max",maxval(wdt*1.D0*PNIdep(:,:))," min:",minval(wdt*1.D0*PNIdep(:,:))
+      write(IO_FID_LOG,*) "PNSdep: max",maxval(wdt*1.D0*PNSdep(:,:))," min:",minval(wdt*1.D0*PNSdep(:,:))
+      write(IO_FID_LOG,*) "PNGdep: max",maxval(wdt*1.D0*PNGdep(:,:))," min:",minval(wdt*1.D0*PNGdep(:,:))
+
+      return
+    end subroutine debugreport_phasechange
+
+    !---------------------------------------------------------------------------
+    subroutine debugreport_collection
+      implicit none
+
+      write(IO_FID_LOG,*) "*** Collection process /mod_mp_ndw6"
+
+      write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
+      write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
+      write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
+      write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
+      write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
+      write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
+      write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
+      write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
+      write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
+      write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
+      write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
+
+      write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
+      write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
+
+      write(IO_FID_LOG,*) "PLCaut: max",maxval(wdt*1.D0*PLCaut(:,:))," min:",minval(wdt*1.D0*PLCaut(:,:))
+      write(IO_FID_LOG,*) "PLCacc: max",maxval(wdt*1.D0*PLCacc(:,:))," min:",minval(wdt*1.D0*PLCacc(:,:))
+      write(IO_FID_LOG,*) "PNCaut: max",maxval(wdt*1.D0*PNCaut(:,:))," min:",minval(wdt*1.D0*PNCaut(:,:))
+      write(IO_FID_LOG,*) "PNCacc: max",maxval(wdt*1.D0*PNCacc(:,:))," min:",minval(wdt*1.D0*PNCacc(:,:))
+      write(IO_FID_LOG,*) "PNRaut: max",maxval(wdt*1.D0*PNRaut(:,:))," min:",minval(wdt*1.D0*PNRaut(:,:))
+      write(IO_FID_LOG,*) "PNRslc: max",maxval(wdt*1.D0*PNRslc(:,:))," min:",minval(wdt*1.D0*PNRslc(:,:))
+      write(IO_FID_LOG,*) "PNRbrk: max",maxval(wdt*1.D0*PNRbrk(:,:))," min:",minval(wdt*1.D0*PNRbrk(:,:))
+      ! cloud mass
+      write(IO_FID_LOG,*) "PLGacLC2LG: max",maxval(wdt*1.D0*PLGacLC2LG(:,:))," min:",minval(wdt*1.D0*PLGacLC2LG(:,:))
+      write(IO_FID_LOG,*) "PLSacLC2LS: max",maxval(wdt*1.D0*PLSacLC2LS(:,:))," min:",minval(wdt*1.D0*PLSacLC2LS(:,:))
+      write(IO_FID_LOG,*) "PLIacLC2LI: max",maxval(wdt*1.D0*PLIacLC2LI(:,:))," min:",minval(wdt*1.D0*PLIacLC2LI(:,:))
+      ! cloud num
+      write(IO_FID_LOG,*) "PNGacNC2NG: max",maxval(wdt*1.D0*PNGacNC2NG(:,:))," min:",minval(wdt*1.D0*PNGacNC2NG(:,:))
+      write(IO_FID_LOG,*) "PNIacNC2NI: max",maxval(wdt*1.D0*PNIacNC2NI(:,:))," min:",minval(wdt*1.D0*PNIacNC2NI(:,:))
+      ! rain mass
+      write(IO_FID_LOG,*) "PLRacLG2LG_R: max",maxval(wdt*1.D0*PLRacLG2LG(:,:))," min:",minval(wdt*1.D0*PLRacLG2LG(:,:))
+      write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*1.D0*PLRacLS2LG_S(:,:))," min:",minval(wdt*1.D0*PLRacLS2LG_S(:,:))
+      write(IO_FID_LOG,*) "PLRacLI2LG_R: max",maxval(wdt*1.D0*PLRacLI2LG_R(:,:))," min:",minval(wdt*1.D0*PLRacLI2LG_R(:,:))
+      ! rain num
+      write(IO_FID_LOG,*) "PNRacNI2NG_R: max",maxval(wdt*1.D0*PNRacNI2NG_R(:,:))," min:",minval(wdt*1.D0*PNRacNI2NG_R(:,:))
+      write(IO_FID_LOG,*) "PNRacNS2NG_R: max",maxval(wdt*1.D0*PNRacNS2NG_R(:,:))," min:",minval(wdt*1.D0*PNRacNS2NG_R(:,:))
+      write(IO_FID_LOG,*) "PNRacNG2NG  : max",maxval(wdt*1.D0*PNRacNG2NG  (:,:))," min:",minval(wdt*1.D0*PNRacNG2NG  (:,:))
+      ! ice mass
+      write(IO_FID_LOG,*) "PLRacLI2LG_I: max",maxval(wdt*1.D0*PLRacLI2LG_I(:,:))," min:",minval(wdt*1.D0*PLRacLI2LG_I(:,:))
+      write(IO_FID_LOG,*) "PLIacLI2LS:   max",maxval(wdt*1.D0*PLIacLI2LS(:,:))," min:",minval(wdt*1.D0*PLIacLI2LS(:,:))
+      write(IO_FID_LOG,*) "PLIacLS2LS_I: max",maxval(wdt*1.D0*PLIacLS2LS(:,:))," min:",minval(wdt*1.D0*PLIacLS2LS(:,:))
+      ! ice num
+      write(IO_FID_LOG,*) "PNRacNI2NG_I: max",maxval(wdt*1.D0*PNRacNI2NG_I(:,:))," min:",minval(wdt*1.D0*PNRacNI2NG_I(:,:))
+      write(IO_FID_LOG,*) "PNIacNI2NS:   max",maxval(wdt*1.D0*PNIacNI2NS(:,:))," min:",minval(wdt*1.D0*PNIacNI2NS(:,:))
+      write(IO_FID_LOG,*) "PNIacNS2NS_I: max",maxval(wdt*1.D0*PNIacNS2NS(:,:))," min:",minval(wdt*1.D0*PNIacNS2NS(:,:))
+      ! snow mass
+      write(IO_FID_LOG,*) "PNIacNS2NS_S: max",maxval(wdt*1.D0*PNIacNS2NS(:,:))," min:",minval(wdt*1.D0*PNIacNS2NS(:,:))
+      write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*1.D0*PLRacLS2LG_S(:,:))," min:",minval(wdt*1.D0*PLRacLS2LG_S(:,:))
+      write(IO_FID_LOG,*) "PLGacLS2LG:   max",maxval(wdt*1.D0*PLGacLS2LG(:,:)),  " min:",minval(wdt*1.D0*PLGacLS2LG(:,:))
+      ! snow num
+      write(IO_FID_LOG,*) "PNRacNS2NG_S: max",maxval(wdt*1.D0*PNRacNS2NG_S(:,:))," min:",minval(wdt*1.D0*PNRacNS2NG_S(:,:))
+      write(IO_FID_LOG,*) "PNGacNS2NG:   max",maxval(wdt*1.D0*PNGacNS2NG(:,:))," min:",minval(wdt*1.D0*PNGacNS2NG(:,:))
+      ! grauepl num 
+      write(IO_FID_LOG,*) "PNRacNG2NG_G: max",maxval(wdt*1.D0*PNRacNG2NG(:,:))," min:",minval(wdt*1.D0*PNRacNG2NG(:,:))
+
+      write(IO_FID_LOG,*) "PLIcon: max",maxval(wdt*1.D0*PLIcon(:,:))," min:",minval(wdt*1.D0*PLIcon(:,:))
+      write(IO_FID_LOG,*) "PLScon: max",maxval(wdt*1.D0*PLScon(:,:))," min:",minval(wdt*1.D0*PLScon(:,:))
+      write(IO_FID_LOG,*) "PNIcon: max",maxval(wdt*1.D0*PNIcon(:,:))," min:",minval(wdt*1.D0*PNIcon(:,:))
+      write(IO_FID_LOG,*) "PNScon: max",maxval(wdt*1.D0*PNScon(:,:))," min:",minval(wdt*1.D0*PNScon(:,:))
+       
+      write(IO_FID_LOG,*) "PLIacm: max",maxval(wdt*1.D0*PLIacm(:,:))," min:",minval(wdt*1.D0*PLIacm(:,:))
+      write(IO_FID_LOG,*) "PLIarm: max",maxval(wdt*1.D0*PLIarm(:,:))," min:",minval(wdt*1.D0*PLIarm(:,:))
+      write(IO_FID_LOG,*) "PLSacm: max",maxval(wdt*1.D0*PLSacm(:,:))," min:",minval(wdt*1.D0*PLSacm(:,:))
+      write(IO_FID_LOG,*) "PLSarm: max",maxval(wdt*1.D0*PLSarm(:,:))," min:",minval(wdt*1.D0*PLSarm(:,:))
+      write(IO_FID_LOG,*) "PLGacm: max",maxval(wdt*1.D0*PLGacm(:,:))," min:",minval(wdt*1.D0*PLGacm(:,:))
+      write(IO_FID_LOG,*) "PLGarm: max",maxval(wdt*1.D0*PLGarm(:,:))," min:",minval(wdt*1.D0*PLGarm(:,:))
+       
+      write(IO_FID_LOG,*) "PNIacm: max",maxval(wdt*1.D0*PNIacm(:,:))," min:",minval(wdt*1.D0*PNIacm(:,:))    
+      write(IO_FID_LOG,*) "PNIarm: max",maxval(wdt*1.D0*PNIarm(:,:))," min:",minval(wdt*1.D0*PNIarm(:,:))    
+      write(IO_FID_LOG,*) "PNSacm: max",maxval(wdt*1.D0*PNSacm(:,:))," min:",minval(wdt*1.D0*PNSacm(:,:))    
+      write(IO_FID_LOG,*) "PNSarm: max",maxval(wdt*1.D0*PNSarm(:,:))," min:",minval(wdt*1.D0*PNSarm(:,:))    
+      write(IO_FID_LOG,*) "PNGacm: max",maxval(wdt*1.D0*PNGacm(:,:))," min:",minval(wdt*1.D0*PNGacm(:,:))    
+      write(IO_FID_LOG,*) "PNGarm: max",maxval(wdt*1.D0*PNGarm(:,:))," min:",minval(wdt*1.D0*PNGarm(:,:))    
+
+      return
+    end subroutine debugreport_collection
+
+    !---------------------------------------------------------------------------
+    subroutine debugreport_saturation
+      implicit none
+
+      write(IO_FID_LOG,*) "*** saturation adjustment /mod_mp_ndw6"
+
+      write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
+      write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
+      write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
+      write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
+      write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
+      write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
+      write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
+      write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
+      write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
+      write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
+      write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
+      write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
+      write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
+
+      write(IO_FID_LOG,*) "PLCdep: max",maxval(dt*1.D0*PLCdep(:,:))," min:",minval(dt*1.D0*PLCdep(:,:))
+      write(IO_FID_LOG,*) "PNCdep: max",maxval(dt*1.D0*PNCdep(:,:))," min:",minval(dt*1.D0*PNCdep(:,:))
+
+      return
+    end subroutine debugreport_saturation
+
+    !---------------------------------------------------------------------------
+    subroutine debugreport_sedimentation
+      implicit none
+      !-------------------------------------------------------------------------
+
+      write(IO_FID_LOG,*) "*** sedimentation /mod_mp_ndw6"
+
+      write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
+      write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
+      write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
+      write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
+      write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
+      write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
+      write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
+      write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
+      write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
+      write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
+      write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
+      write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
+      write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
+      write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
+
+      ! [Add] 09/08/18 T.Mitsui for debug
+      do k=kmin, kmax
+         cflc(:) = -vt(:,k,I_QC) * MP_DTSEC_SEDIMENTATION / dz(k)
+         cflr(:) = -vt(:,k,I_QR) * MP_DTSEC_SEDIMENTATION / dz(k)
+         cfli(:) = -vt(:,k,I_QI) * MP_DTSEC_SEDIMENTATION / dz(k)
+         cfls(:) = -vt(:,k,I_QS) * MP_DTSEC_SEDIMENTATION / dz(k)
+         cflg(:) = -vt(:,k,I_QG) * MP_DTSEC_SEDIMENTATION / dz(k)
+         max_cflc = maxval(cflc)
+         max_cflr = maxval(cflr)
+         max_cfli = maxval(cfli)
+         max_cfls = maxval(cfls)
+         max_cflg = maxval(cflg)
+         if (      max_cflc >= 1.d0 .or. max_cflr >= 1.d0 &
+              .OR. max_cfli >= 1.d0 .or. max_cfls >= 1.d0 .or. max_cflg >= 1.d0 )then
+            write(IO_FID_LOG,'(a,5f16.6,i5,f10.3)') "CFLmax(qc,qr,qi,qs,qg), k, dz =",&
+                  max_cflc, max_cflr, max_cfli, max_cfls, max_cflg, k, dz(k)
+         endif
+      enddo
+
+      write(IO_FID_LOG,*) "V_QC: max",maxval(vt(:,:,I_QC))," min:",minval(vt(:,:,I_QC))
+      write(IO_FID_LOG,*) "V_QR: max",maxval(vt(:,:,I_QR))," min:",minval(vt(:,:,I_QR))
+      write(IO_FID_LOG,*) "V_QI: max",maxval(vt(:,:,I_QI))," min:",minval(vt(:,:,I_QI))
+      write(IO_FID_LOG,*) "V_QS: max",maxval(vt(:,:,I_QS))," min:",minval(vt(:,:,I_QS))
+      write(IO_FID_LOG,*) "V_QG: max",maxval(vt(:,:,I_QG))," min:",minval(vt(:,:,I_QG))
+      write(IO_FID_LOG,*) "V_NC: max",maxval(vt(:,:,I_NC))," min:",minval(vt(:,:,I_NC))
+      write(IO_FID_LOG,*) "V_NR: max",maxval(vt(:,:,I_NR))," min:",minval(vt(:,:,I_NR))
+      write(IO_FID_LOG,*) "V_NI: max",maxval(vt(:,:,I_NI))," min:",minval(vt(:,:,I_NI))
+      write(IO_FID_LOG,*) "V_NS: max",maxval(vt(:,:,I_NS))," min:",minval(vt(:,:,I_NS))
+      write(IO_FID_LOG,*) "V_NG: max",maxval(vt(:,:,I_NG))," min:",minval(vt(:,:,I_NG))
+
+      write(IO_FID_LOG,*) "Precip rain: max",maxval(precip(:,1))," min:",minval(precip(:,1))
+      write(IO_FID_LOG,*) "Precip snow: max",maxval(precip(:,2))," min:",minval(precip(:,2))
+
+      return
+    end subroutine debugreport_sedimentation
+
   end subroutine mp_ndw6
-  ! 
+
+  !-----------------------------------------------------------------------------
+  subroutine debug_tem( &
+      point,    &
+      tem,      &
+      rho,      &
+      pre,      &
+      qv        )
+    use mod_process, only: &
+       PRC_myrank
+    use mod_grid, only: &
+       KA  => GRID_KA,  &
+       KS  => GRID_KS,  &
+       KE  => GRID_KE,  &
+       IJA => GRID_IJA, &
+       IJS => GRID_IJS, &
+       IJE => GRID_IJE
+    implicit none
+
+    integer, intent(in) :: point
+    real(8), intent(in) :: tem(IJA,KA)
+    real(8), intent(in) :: rho(IJA,KA)
+    real(8), intent(in) :: pre(IJA,KA)
+    real(8), intent(in) :: qv (IJA,KA)
+
+    integer :: k ,ij
+    !---------------------------------------------------------------------------
+
+    do k  = KS,  KE
+    do ij = IJS, IJE
+       if (      tem(ij,k) < tem_min &
+            .OR. rho(ij,k) < rho_min &
+            .OR. pre(ij,k) < 1.d0    ) then
+
+          write(IO_FID_LOG,'(A,I3,A,4(F16.5),3(I6))') &
+          "*** point: ", point, &
+          " low tem,rho,pre:", tem(ij,k), rho(ij,k), pre(ij,k), qv(ij,k), ij, k, PRC_myrank
+       endif
+    enddo
+    enddo
+
+    return
+  end subroutine debug_tem
+
+
+
+
+
+
+
+  !-----------------------------------------------------------------------------
   subroutine mp_ndw6_diag_volume( &
        ijdim, kdim, kmin, kmax,&
        rho, &
@@ -3250,7 +3186,7 @@ contains
     real(8) :: xi_nuc(ijdim,1)    ! xi use the value @ cloud base
     real(8) :: alpha_nuc(ijdim,1) ! alpha_nuc 
     real(8) :: eta_nuc(ijdim,1)   ! xi use the value @ cloud base
-    real(8) :: Dw, Ka, Q1, Q2
+    real(8) :: Dw, Q1, Q2
     !
     real(8) :: sigma_w(ijdim,kdim)
     real(8) :: weff(ijdim,kdim)
@@ -5150,57 +5086,40 @@ contains
   end function betafunc_3d
   !-------------------------------------------------------------------------------
   subroutine mp_ndw6_terminal_velocity( &
-       ijdim, kmin, kmax, kdim , &
-       rho  , tem  , pre, & ! in
-       qc   , qr   , qi   , qs   , qg   , & ! in
-       qnc  , qnr  , qni  , qns  , qng  , & ! in
-       vt_qc, vt_qr, vt_qi, vt_qs, vt_qg, & ! out
-       vt_nc, vt_nr, vt_ni, vt_ns, vt_ng, & ! out
-       flag_output_vt_in                  ) ! in
-    !
-    use mod_atmos_cnst, only: &
-         I_QC, I_QR, I_QI, I_QS, I_QG, &
-         I_NC, I_NR, I_NI, I_NS, I_NG, &
-         CNST_UNDEF, &
-         rhow => CNST_DWATR, & 
-         pi => CNST_PI
-!!$    use mod_history, only: &
-!!$         history_in
-    !
+       ijdim, kmin, kmax, kdim, nqmax, &
+       rho, tem, pre, q,        &
+       vt,                      &
+       flag_output_vt_in        )
+    use mod_const, only: &
+       pi   => CONST_PI,   &
+       rhow => CONST_DWATR
+    use mod_atmos_vars, only: &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG, &
+       I_NC, &
+       I_NR, &
+       I_NI, &
+       I_NS, &
+       I_NG
     implicit none
-    !
+
     integer, intent(in)  :: ijdim
     integer, intent(in)  :: kmin
     integer, intent(in)  :: kmax
     integer, intent(in)  :: kdim
-    real(8), intent(in)  :: rho(ijdim,kdim)   ! density
-    real(8), intent(in)  :: tem(ijdim,kdim)   ! temperature
-    ! 10/08/03 [Mod] add argument "pre", T.Mitsui
-    real(8), intent(in)  :: pre(ijdim,kdim)   ! pressure
-    !
-    real(8), intent(in)  :: qc(ijdim,kdim)    ! mixing ratio of cloud mass
-    real(8), intent(in)  :: qr(ijdim,kdim)    !                 rain mass
-    real(8), intent(in)  :: qi(ijdim,kdim)    !                 ice mass
-    real(8), intent(in)  :: qs(ijdim,kdim)    !                 snow mass
-    real(8), intent(in)  :: qg(ijdim,kdim)    !                 graupel mass
-    real(8), intent(in)  :: qnc(ijdim,kdim)   ! mixing ratio of cloud number (N/rho)
-    real(8), intent(in)  :: qnr(ijdim,kdim)   !                 rain number 
-    real(8), intent(in)  :: qni(ijdim,kdim)   !                 ice number 
-    real(8), intent(in)  :: qns(ijdim,kdim)   !                 snow number 
-    real(8), intent(in)  :: qng(ijdim,kdim)   !                 graupel number 
-    real(8), intent(out) :: vt_qc(ijdim,kdim) ! terminal velocity of cloud mass
-    real(8), intent(out) :: vt_qr(ijdim,kdim) !                      rain
-    real(8), intent(out) :: vt_qi(ijdim,kdim) !                      ice
-    real(8), intent(out) :: vt_qs(ijdim,kdim) !                      snow
-    real(8), intent(out) :: vt_qg(ijdim,kdim) !                      graupel
-    real(8), intent(out) :: vt_nc(ijdim,kdim) ! terminal velocity of cloud number
-    real(8), intent(out) :: vt_nr(ijdim,kdim) !                      rain
-    real(8), intent(out) :: vt_ni(ijdim,kdim) !                      ice
-    real(8), intent(out) :: vt_ns(ijdim,kdim) !                      snow
-    real(8), intent(out) :: vt_ng(ijdim,kdim) !                      graupel    
-    !
+    integer, intent(in)  :: nqmax
+
+    real(8), intent(in)  :: rho(ijdim,kdim)       ! density
+    real(8), intent(in)  :: tem(ijdim,kdim)       ! temperature
+    real(8), intent(in)  :: pre(ijdim,kdim)       ! pressure
+    real(8), intent(in)  :: q  (ijdim,kdim,nqmax) ! mixing ratio of cloud mass
+    real(8), intent(out) :: vt (ijdim,kdim,nqmax) ! terminal velocity of cloud mass
+
     logical, intent(in), optional :: flag_output_vt_in
-    !
+
     ! mass( =rho*q ), and number
     real(8) :: lc(ijdim,kdim), nc(ijdim,kdim)
     real(8) :: lr(ijdim,kdim), nr(ijdim,kdim)
@@ -5259,26 +5178,31 @@ contains
     real(8) :: mfluxg(ijdim,kdim), nfluxg(ijdim,kdim) !
     !
     logical :: flag_output_vt
-    !
-    integer :: ij,k
-    !
+
+    integer :: ij, k, nq
+    !----------------------------------------------------------------------------
+
     if( present(flag_output_vt_in) )then
        flag_output_vt = flag_output_vt_in
     else
-       flag_output_vt=.true.  
+       flag_output_vt = .true.  
     end if
-    !
-    !----------------------------------------------------------------------------
-    lc(:,:) = rho(:,:)*qc(:,:)
-    lr(:,:) = rho(:,:)*qr(:,:)
-    li(:,:) = rho(:,:)*qi(:,:)
-    ls(:,:) = rho(:,:)*qs(:,:)
-    lg(:,:) = rho(:,:)*qg(:,:)
-    nc(:,:) = rho(:,:)*qnc(:,:)
-    nr(:,:) = rho(:,:)*qnr(:,:)
-    ni(:,:) = rho(:,:)*qni(:,:)
-    ns(:,:) = rho(:,:)*qns(:,:)
-    ng(:,:) = rho(:,:)*qng(:,:)
+
+    do k  = 1, kdim
+    do ij = 1, ijdim
+       lc(ij,k) = rho(ij,k) * q(ij,k,I_QC)
+       lr(ij,k) = rho(ij,k) * q(ij,k,I_QR)
+       li(ij,k) = rho(ij,k) * q(ij,k,I_QI)
+       ls(ij,k) = rho(ij,k) * q(ij,k,I_QS)
+       lg(ij,k) = rho(ij,k) * q(ij,k,I_QG)
+       nc(ij,k) = rho(ij,k) * q(ij,k,I_NC)
+       nr(ij,k) = rho(ij,k) * q(ij,k,I_NR)
+       ni(ij,k) = rho(ij,k) * q(ij,k,I_NI)
+       ns(ij,k) = rho(ij,k) * q(ij,k,I_NS)
+       ng(ij,k) = rho(ij,k) * q(ij,k,I_NG)
+    enddo
+    enddo
+
     do k=1, kdim
        do ij=1, ijdim
           ! fix DSD
@@ -5306,6 +5230,7 @@ contains
     ! parameter setting
     do k=kmin, kmax
        do ij=1, ijdim
+
           ! Improved Rogers formula by T.Mitsui
           ! weigthed diameter
           d_ave_nr      = (1.d0+mud_r(ij,k))/lambdar(ij,k) ! D^(0)+mu weighted mean diameter
@@ -5322,9 +5247,9 @@ contains
           vt_nrl        = coef_vtr_ar1-coef_vtr_br1*(1.d0+coef_vtr_cr1/lambdar(ij,k))**(-1-mud_r(ij,k)) ! Nr
           vt_lrl        = coef_vtr_ar1-coef_vtr_br1*(1.d0+coef_vtr_cr1/lambdar(ij,k))**(-4-mud_r(ij,k)) ! Lr
           ! interpolated terminal velocity
-          vt_nr(ij,k)   = - rho_fac_r(ij,k)*( wtn(I_QR)*vt_nrl + (1.d0-wtn(I_QR))*vt_nrs )
-          vt_qr(ij,k)   = - rho_fac_r(ij,k)*( wtl(I_QR)*vt_lrl + (1.d0-wtl(I_QR))*vt_lrs )
-          !
+          vt(ij,k,I_QR) = -rho_fac_r(ij,k) * ( wtl(I_QR)*vt_lrl + (1.d0-wtl(I_QR))*vt_lrs )
+          vt(ij,k,I_NR) = -rho_fac_r(ij,k) * ( wtn(I_QR)*vt_nrl + (1.d0-wtn(I_QR))*vt_nrs )
+
           ! filter is used to avoid unrealistic terminal velocity( when ni,ns,ng are too small )
           ! SB06 Table.1
           xc(ij,k)      = max(xc_min, min(xc_max, lc(ij,k)/( nc(ij,k) + nc_min ) ))
@@ -5343,111 +5268,101 @@ contains
           wtl(I_QI)     = min( max( 0.5d0*( log(d_ave_li/d0_li)  + 1.d0 ), 0.d0 ), 1.d0 )
           wtl(I_QS)     = min( max( 0.5d0*( log(d_ave_ls/d0_ls)  + 1.d0 ), 0.d0 ), 1.d0 )
           wtl(I_QG)     = min( max( 0.5d0*( log(d_ave_lg/d0_lg)  + 1.d0 ), 0.d0 ), 1.d0 )
+
           vt_nis        = coef_vt0(I_QI,i_sml)*xi(ij,k)**beta_vn(I_QI,i_sml)
           vt_lis        = coef_vt1(I_QI,i_sml)*xi(ij,k)**beta_v (I_QI,i_sml)
           vt_nil        = coef_vt0(I_QI,i_lrg)*xi(ij,k)**beta_vn(I_QI,i_lrg)
           vt_lil        = coef_vt1(I_QI,i_lrg)*xi(ij,k)**beta_v (I_QI,i_lrg)
-          !
+
           vt_nss        = coef_vt0(I_QS,i_sml)*xs(ij,k)**beta_vn(I_QS,i_sml)
           vt_lss        = coef_vt1(I_QS,i_sml)*xs(ij,k)**beta_v (I_QS,i_sml)
           vt_nsl        = coef_vt0(I_QS,i_lrg)*xs(ij,k)**beta_vn(I_QS,i_lrg)
           vt_lsl        = coef_vt1(I_QS,i_lrg)*xs(ij,k)**beta_v (I_QS,i_lrg)
-          !
+
           vt_ngs        = coef_vt0(I_QG,i_sml)*xg(ij,k)**beta_vn(I_QG,i_sml)
           vt_lgs        = coef_vt1(I_QG,i_sml)*xg(ij,k)**beta_v (I_QG,i_sml)
           vt_ngl        = coef_vt0(I_QG,i_lrg)*xg(ij,k)**beta_vn(I_QG,i_lrg)
           vt_lgl        = coef_vt1(I_QG,i_lrg)*xg(ij,k)**beta_v (I_QG,i_lrg)
-          !
+
+          vt(ij,k,I_QC) = -rho_fac_c(ij,k) * coef_vt1(I_QC,i_sml) * (xc(ij,k)**beta_v(I_QC,i_sml))
+          vt(ij,k,I_NC) = -rho_fac_c(ij,k) * coef_vt0(I_QC,i_sml) * (xc(ij,k)**beta_v(I_QC,i_sml))
           ! SB06(78) these are defined as negative value
-          vt_ni(ij,k)   = - rho_fac_i(ij,k)*( wtn(I_QI)*vt_nil + (1.d0-wtn(I_QI))*vt_nis )
-          vt_qi(ij,k)   = - rho_fac_i(ij,k)*( wtl(I_QI)*vt_lil + (1.d0-wtl(I_QI))*vt_lis )
-          vt_ns(ij,k)   = - rho_fac_s(ij,k)*( wtn(I_QS)*vt_nsl + (1.d0-wtn(I_QS))*vt_nss )
-          vt_qs(ij,k)   = - rho_fac_s(ij,k)*( wtl(I_QS)*vt_lsl + (1.d0-wtl(I_QS))*vt_lss )
-          vt_ng(ij,k)   = - rho_fac_g(ij,k)*( wtn(I_QG)*vt_ngl + (1.d0-wtn(I_QG))*vt_ngs )
-          vt_qg(ij,k)   = - rho_fac_g(ij,k)*( wtl(I_QG)*vt_lgl + (1.d0-wtl(I_QG))*vt_lgs )
-          !
-          vt_qc(ij,k)   = -coef_vt1(I_QC,i_sml)* (xc(ij,k)**beta_v(I_QC,i_sml)) * rho_fac_c(ij,k)
-          vt_nc(ij,k)   = -coef_vt0(I_QC,i_sml)* (xc(ij,k)**beta_v(I_QC,i_sml)) * rho_fac_c(ij,k)
+          vt(ij,k,I_QI) = -rho_fac_i(ij,k) * ( wtl(I_QI)*vt_lil + (1.d0-wtl(I_QI))*vt_lis )
+          vt(ij,k,I_NI) = -rho_fac_i(ij,k) * ( wtn(I_QI)*vt_nil + (1.d0-wtn(I_QI))*vt_nis )
+          vt(ij,k,I_QS) = -rho_fac_s(ij,k) * ( wtl(I_QS)*vt_lsl + (1.d0-wtl(I_QS))*vt_lss )
+          vt(ij,k,I_NS) = -rho_fac_s(ij,k) * ( wtn(I_QS)*vt_nsl + (1.d0-wtn(I_QS))*vt_nss )
+          vt(ij,k,I_QG) = -rho_fac_g(ij,k) * ( wtl(I_QG)*vt_lgl + (1.d0-wtl(I_QG))*vt_lgs )
+          vt(ij,k,I_NG) = -rho_fac_g(ij,k) * ( wtn(I_QG)*vt_ngl + (1.d0-wtn(I_QG))*vt_ngs )
        end do
     end do
-    do ij=1, ijdim
-       vt_qc(ij,kmax+1:kdim)=vt_qc(ij,kmax)
-       vt_qr(ij,kmax+1:kdim)=vt_qr(ij,kmax)
-       vt_qi(ij,kmax+1:kdim)=vt_qi(ij,kmax)
-       vt_qs(ij,kmax+1:kdim)=vt_qs(ij,kmax)
-       vt_qg(ij,kmax+1:kdim)=vt_qg(ij,kmax)
-       vt_nc(ij,kmax+1:kdim)=vt_nc(ij,kmax)
-       vt_nr(ij,kmax+1:kdim)=vt_nr(ij,kmax)
-       vt_ni(ij,kmax+1:kdim)=vt_ni(ij,kmax)
-       vt_ns(ij,kmax+1:kdim)=vt_ns(ij,kmax)
-       vt_ng(ij,kmax+1:kdim)=vt_ng(ij,kmax)
-       vt_qc(ij,1:kmin-1)   =vt_qc(ij,kmin)
-       vt_qr(ij,1:kmin-1)   =vt_qr(ij,kmin)
-       vt_qi(ij,1:kmin-1)   =vt_qi(ij,kmin)
-       vt_qs(ij,1:kmin-1)   =vt_qs(ij,kmin)
-       vt_qg(ij,1:kmin-1)   =vt_qg(ij,kmin)
-       vt_nc(ij,1:kmin-1)   =vt_nc(ij,kmin)
-       vt_nr(ij,1:kmin-1)   =vt_nr(ij,kmin)
-       vt_ni(ij,1:kmin-1)   =vt_ni(ij,kmin)
-       vt_ns(ij,1:kmin-1)   =vt_ns(ij,kmin)
-       vt_ng(ij,1:kmin-1)   =vt_ng(ij,kmin)
-    end do
+
+    do nq = 1, nqmax
+    do ij = 1, ijdim
+       do k  = 1, kmin-1
+          vt(ij,k,nq) = vt(ij,kmin,nq)
+       enddo
+       do k  = kmax+1, kdim
+          vt(ij,k,nq) = vt(ij,kmax,nq)
+       enddo
+    enddo
+    enddo
+
     !
     ! output
     !
-    if( flag_output_vt )then
-       !
-       wvt_qc(:,:) = vt_qc(:,:)         ! terminal velocity[m/s]
-       mfluxc(:,:) = vt_qc(:,:)*lc(:,:) ! mass flux[kg/m2/s]
-       wvt_qr(:,:) = vt_qr(:,:)
-       mfluxr(:,:) = vt_qr(:,:)*lr(:,:)
-       wvt_qi(:,:) = vt_qi(:,:)
-       mfluxi(:,:) = vt_qi(:,:)*li(:,:)
-       wvt_qs(:,:) = vt_qs(:,:)
-       mfluxs(:,:) = vt_qs(:,:)*ls(:,:)
-       wvt_qg(:,:) = vt_qg(:,:)
-       mfluxg(:,:) = vt_qg(:,:)*lg(:,:)
-       !
-       wvt_nc(:,:) = vt_nc(:,:)         ! terminal velocity[m/s]
-       nfluxc(:,:) = vt_nc(:,:)*lc(:,:) ! number flux[m2/s]
-       wvt_nr(:,:) = vt_nr(:,:)
-       nfluxr(:,:) = vt_nr(:,:)*lr(:,:) ! number flux[m2/s]
-       wvt_ni(:,:) = vt_ni(:,:)
-       nfluxi(:,:) = vt_ni(:,:)*li(:,:) ! number flux[m2/s]
-       wvt_ns(:,:) = vt_ns(:,:)
-       nfluxs(:,:) = vt_ns(:,:)*ls(:,:) ! number flux[m2/s]
-       wvt_ng(:,:) = vt_ng(:,:)
-       nfluxg(:,:) = vt_ng(:,:)*lg(:,:) ! number flux[m2/s]
-       !
-       do k=1, kdim
-          do ij=1, ijdim
-             ! masking small cloud
-             if( lc(ij,k) < xc_min )then
-                wvt_qc(ij,k) = CNST_UNDEF
-                wvt_nc(ij,k) = CNST_UNDEF
-             end if
-             ! masking small rain
-             if( lr(ij,k) < xr_min )then
-                wvt_qr(ij,k) = CNST_UNDEF
-                wvt_nr(ij,k) = CNST_UNDEF
-             end if
-             ! masking small ice
-             if( li(ij,k) < xi_min )then
-                wvt_qi(ij,k) = CNST_UNDEF
-                wvt_ni(ij,k) = CNST_UNDEF
-             end if
-             ! masking small snow
-             if( ls(ij,k) < xs_min )then
-                wvt_qs(ij,k) = CNST_UNDEF
-                wvt_ns(ij,k) = CNST_UNDEF
-             end if
-             ! masking small graupel
-             if( lg(ij,k) < xg_min )then
-                wvt_qg(ij,k) = CNST_UNDEF
-                wvt_ng(ij,k) = CNST_UNDEF
-             end if
-          end do
-       end do
+!    if( flag_output_vt )then
+!       !
+!       wvt_qc(:,:) = vt_qc(:,:)         ! terminal velocity[m/s]
+!       mfluxc(:,:) = vt_qc(:,:)*lc(:,:) ! mass flux[kg/m2/s]
+!       wvt_qr(:,:) = vt_qr(:,:)
+!       mfluxr(:,:) = vt_qr(:,:)*lr(:,:)
+!       wvt_qi(:,:) = vt_qi(:,:)
+!       mfluxi(:,:) = vt_qi(:,:)*li(:,:)
+!       wvt_qs(:,:) = vt_qs(:,:)
+!       mfluxs(:,:) = vt_qs(:,:)*ls(:,:)
+!       wvt_qg(:,:) = vt_qg(:,:)
+!       mfluxg(:,:) = vt_qg(:,:)*lg(:,:)
+!       !
+!       wvt_nc(:,:) = vt_nc(:,:)         ! terminal velocity[m/s]
+!       nfluxc(:,:) = vt_nc(:,:)*lc(:,:) ! number flux[m2/s]
+!       wvt_nr(:,:) = vt_nr(:,:)
+!       nfluxr(:,:) = vt_nr(:,:)*lr(:,:) ! number flux[m2/s]
+!       wvt_ni(:,:) = vt_ni(:,:)
+!       nfluxi(:,:) = vt_ni(:,:)*li(:,:) ! number flux[m2/s]
+!       wvt_ns(:,:) = vt_ns(:,:)
+!       nfluxs(:,:) = vt_ns(:,:)*ls(:,:) ! number flux[m2/s]
+!       wvt_ng(:,:) = vt_ng(:,:)
+!       nfluxg(:,:) = vt_ng(:,:)*lg(:,:) ! number flux[m2/s]
+!       !
+!       do k=1, kdim
+!          do ij=1, ijdim
+!             ! masking small cloud
+!             if( lc(ij,k) < xc_min )then
+!                wvt_qc(ij,k) = CNST_UNDEF
+!                wvt_nc(ij,k) = CNST_UNDEF
+!             end if
+!             ! masking small rain
+!             if( lr(ij,k) < xr_min )then
+!                wvt_qr(ij,k) = CNST_UNDEF
+!                wvt_nr(ij,k) = CNST_UNDEF
+!             end if
+!             ! masking small ice
+!             if( li(ij,k) < xi_min )then
+!                wvt_qi(ij,k) = CNST_UNDEF
+!                wvt_ni(ij,k) = CNST_UNDEF
+!             end if
+!             ! masking small snow
+!             if( ls(ij,k) < xs_min )then
+!                wvt_qs(ij,k) = CNST_UNDEF
+!                wvt_ns(ij,k) = CNST_UNDEF
+!             end if
+!             ! masking small graupel
+!             if( lg(ij,k) < xg_min )then
+!                wvt_qg(ij,k) = CNST_UNDEF
+!                wvt_ng(ij,k) = CNST_UNDEF
+!             end if
+!          end do
+!       end do
        !
 !!$       ! terminal velocity weighted by mass
 !!$       call history_in( 'ml_vt_qc', wvt_qc )
@@ -5473,11 +5388,11 @@ contains
 !!$       call history_in( 'ml_nfluxi', mfluxi )
 !!$       call history_in( 'ml_nfluxs', mfluxs )
 !!$       call history_in( 'ml_nfluxg', mfluxg )
-    end if
-    !
+!    end if
+
     return
   end subroutine mp_ndw6_terminal_velocity
-  !
+
   subroutine update_by_phase_change(   &
        ntdiv    , ntmax,         & ! in [Add] 10/08/03
        ijdim, kdim, kmin, kmax,  & ! in
@@ -6273,6 +6188,7 @@ contains
     real(8)   :: drhogq(ijdim,kdim)
     !
     real(8)   :: r_xmin
+    real(8), parameter :: QMIN = 1.D-32
     !
     integer   :: ij,k,nq
     !
@@ -6289,7 +6205,14 @@ contains
     rhogq(:,:,I_QI) = max(rhogq(:,:,I_QI),0.d0)
     rhogq(:,:,I_QS) = max(rhogq(:,:,I_QS),0.d0)
     rhogq(:,:,I_QG) = max(rhogq(:,:,I_QG),0.d0)
-    !
+    do nq = I_QV, I_QG
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       if( rhogq(ij,k,nq) < QMIN ) rhogq(ij,k,nq) = 0.D0
+    enddo
+    enddo
+    enddo
+
     ! avoid unrealistical value of number concentration 
     ! due to numerical diffusion in advection
     r_xmin = 1.d0/xmin_filter    
@@ -6338,6 +6261,14 @@ contains
          cva,          & !--- out
          q,            & !--- in
          qd )            !--- in
+!    do k  = 1, kdim
+!    do ij = 1, ijdim
+!      write(IO_FID_LOG,*) ij,k,rho(ij,k),th(ij,k),qd(ij,k),q(ij,k,I_QV:I_QG)
+!       tem(ij,k) = ( th(ij,k) &
+!                   * ( rho(ij,k) * ( qd(ij,k)*CNST_RAIR + q(ij,k,I_QV)*CNST_RVAP ) / CNST_PRE00 )**CNST_KAPPA &
+!                   ) **(1.D0/(1.D0-CNST_KAPPA))
+!    enddo
+!    enddo
     call thrmdyn_tempre2(   &
          tem,               &  !--- OUT  : temperature       
          pre,               &  !--- OUT  : pressure
