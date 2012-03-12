@@ -788,6 +788,8 @@ contains
 
     endif
 
+    call TIME_rapend  ('FILE O')
+
     return
   end subroutine FIO_output_1D
 

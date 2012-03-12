@@ -24,6 +24,9 @@ module mod_precip_transport
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -183,6 +186,7 @@ contains
     integer :: ij, k, nq
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('precip_transport_nwater')
 #ifdef _FPCOLL_
 call START_COLLECTION("precip_transport_nwater")
 #endif
@@ -529,6 +533,7 @@ call START_COLLECTION("precip_transport_nwater")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("precip_transport_nwater")
 #endif
+    call TIME_rapend  ('precip_transport_nwater')
 
     return
   end subroutine precip_transport_nwater

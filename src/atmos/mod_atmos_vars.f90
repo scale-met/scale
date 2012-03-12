@@ -397,7 +397,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '   I_QI:', I_QI
     if( IO_L ) write(IO_FID_LOG,*) '   I_QS:', I_QS
     if( IO_L ) write(IO_FID_LOG,*) '   I_QG:', I_QG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Number family NWS -NWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Number family NWS -NWE = ', A_NWS, ' - ', A_NWE
     if( IO_L ) write(IO_FID_LOG,*) '   I_NC:', I_NC
     if( IO_L ) write(IO_FID_LOG,*) '   I_NR:', I_NR
     if( IO_L ) write(IO_FID_LOG,*) '   I_NI:', I_NI

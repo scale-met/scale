@@ -459,8 +459,8 @@ contains
 
     if ( QA >= 1 ) then
        do iq = 1, QA
-       do j = JS, JE
-       do i = IS, IE
+       do j  = JS, JE
+       do i  = IS, IE
           ij = (j-JS)*IMAX+i-IS+1
 
           do k = KS, KE
@@ -1227,6 +1227,9 @@ contains
     use mod_stdio, only: &
        IO_FID_LOG,   &
        IO_L
+    use mod_const, only : &
+       RovCP => CONST_RovCP, &
+       PRE00 => CONST_PRE00
     use mod_time, only: &
        TIME_rapstart, &
        TIME_rapend
@@ -1582,6 +1585,8 @@ contains
     integer :: ntdiv
     integer :: ij, k, nq, nn
     !
+    call TIME_rapstart('MP0 Setup')
+
     gsgam2 = 1.d0
     gsgam2h= 1.d0
     gam2   = 1.d0
@@ -1648,6 +1653,7 @@ contains
           end do
        end do
     end if
+    call TIME_rapend('MP0 Setup')
     !============================================================================
     !
     !--  Each process is integrated sequentially.
@@ -2833,7 +2839,10 @@ contains
     ! 6.Filter for rounding error(negative value) and artificial number
     !   ( We assume artificial filter as evaporation of the smallest particles )
     !----------------------------------------------------------------------------
-    ! 
+    call TIME_rapstart('MP6 Filter')
+
+    th(:,:) = tem(:,:) * ( PRE00 / pre(:,:) )**RovCP
+
     call negative_filter ( &
          ijdim, kmin, kmax, kdim, nqmax, &
          rgsgam2,       &
@@ -2841,7 +2850,9 @@ contains
          rhog, rhogq,   &   ! inout
          rrhog,  rhoge, &   ! out
          q, pre, rho, tem ) ! out      
-    !
+
+    th(:,:) = tem(:,:) * ( PRE00 / pre(:,:) )**RovCP
+
     dth0(:,:)      = th(:,:) - th0(:,:)
     drhog0(:,:)    = rhog(:,:) - rhog0(:,:)
     drhogvx0(:,:)   = rhogvx(:,:) - rhogvx0(:,:)
@@ -2861,6 +2872,7 @@ contains
           end do
        end do
     end if
+    call TIME_rapend  ('MP6 Filter')
     !
     return
   end subroutine mp_ndw6

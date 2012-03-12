@@ -267,7 +267,7 @@ contains
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       PRE00   => CONST_PRE00
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
@@ -672,7 +672,7 @@ call START_COLLECTION("RK3")
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
-          diagvar(k,i,j,I_PRES) = Pstd * ( var(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_PRES) = PRE00 * ( var(k,i,j,I_RHOT) * Rdry / PRE00 )**CPovCV
           diagvar(k,i,j,I_POTT) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS) 
        enddo
        enddo
@@ -1024,7 +1024,7 @@ call START_COLLECTION("RK3")
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
-          diagvar(k,i,j,I_PRES) = Pstd * ( var_RK1(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_PRES) = PRE00 * ( var_RK1(k,i,j,I_RHOT) * Rdry / PRE00 )**CPovCV
           diagvar(k,i,j,I_POTT) = var_RK1(k,i,j,I_RHOT) / var_RK1(k,i,j,I_DENS) 
        enddo
        enddo
@@ -1376,7 +1376,7 @@ call START_COLLECTION("RK3")
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
-          diagvar(k,i,j,I_PRES) = Pstd * ( var_RK2(k,i,j,I_RHOT) * Rdry / Pstd )**CPovCV
+          diagvar(k,i,j,I_PRES) = PRE00 * ( var_RK2(k,i,j,I_RHOT) * Rdry / PRE00 )**CPovCV
           diagvar(k,i,j,I_POTT) = var_RK2(k,i,j,I_RHOT) / var_RK2(k,i,j,I_DENS) 
        enddo
        enddo
