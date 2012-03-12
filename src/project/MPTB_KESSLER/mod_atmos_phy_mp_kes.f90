@@ -128,7 +128,7 @@ contains
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
        JE   => GRID_JE,   &
-       CDZ  => GRID_CDZ
+       RCDZ => GRID_RCDZ
     use mod_atmos_vars, only: &
        var => atmos_var, &
        A_NAME,           &
@@ -205,22 +205,12 @@ contains
     do j = JS,   JE
     do i = IS,   IE
     do k = KS,   KE
-       if ( qr > 0.D0 ) then
-          if ( k >= KS .AND. k < KE ) then
-             vel1 = TVf1 * ( rho_prof(k+1) * var(k+1,i,j,5+I_QR) )**TVf2 * rho_fact(k+1)
-             vel2 = TVf1 * ( rho_prof(k  ) * var(k  ,i,j,5+I_QR) )**TVf2 * rho_fact(k  )
+       vel1 = TVf1 * ( rho_prof(k+1) * var(k+1,i,j,5+I_QR) )**TVf2 * rho_fact(k+1)
+       vel2 = TVf1 * ( rho_prof(k  ) * var(k  ,i,j,5+I_QR) )**TVf2 * rho_fact(k  )
+       if( k == KE ) vel1 = 0.D0
 
-             dq_prcp(k) = ( var(k+1,i,j,I_DENS) * var(k+1,i,j,5+I_QR) * vel1 &
-                          - var(k  ,i,j,I_DENS) * var(k  ,i,j,5+I_QR) * vel2 ) / CDZ(k)
-          elseif( k == KE ) then
-             vel2 = TVf1 * ( rho_prof(k  ) * var(k  ,i,j,5+I_QR) )**TVf2 * rho_fact(k  )
-
-             dq_prcp(k) = ( 0.D0                                             &
-                          - var(k  ,i,j,I_DENS) * var(k  ,i,j,5+I_QR) * vel2 ) / CDZ(k)
-          endif
-       else
-          dq_prcp(k) = 0.D0
-       endif
+       dq_prcp(k) = ( var(k+1,i,j,I_DENS) * var(k+1,i,j,5+I_QR) * vel1 &
+                    - var(k  ,i,j,I_DENS) * var(k  ,i,j,5+I_QR) * vel2 ) * RCDZ(k)
     enddo
     enddo
     enddo

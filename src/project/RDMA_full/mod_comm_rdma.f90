@@ -9,7 +9,6 @@
 !! @par History
 !! @li      2011-10-11 (R.Yoshida) [new]
 !! @li      2011-11-11 (H.Yashiro) [mod] Integrate to SCALE3
-!! @li      2012-02-10 (Y.Ohno)    [add] RDMA communication
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -41,7 +40,7 @@ module mod_comm
   public :: COMM_total
   public :: COMM_set_rdma_variable
   public :: COMM_rdma_vars
-  public :: COMM_rdma_wait
+  public :: COMM_rdma_vars8
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -54,7 +53,8 @@ module mod_comm
   !
   !++ Private parameters & variables
   !
-  integer, private, save :: COMM_vsize_max = 20
+  integer, private, save :: COMM_vsize_max  = 20
+  logical, private, save :: COMM_dototalval = .false.
 
   integer, private, save :: datasize_NS4
   integer, private, save :: datasize_NS8
@@ -103,6 +103,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_COMM / &
+       COMM_dototalval, &
        COMM_vsize_max
 
     integer :: ierr
@@ -141,6 +142,7 @@ contains
     allocate( ireq_cnt(COMM_vsize_max) ) ;              ireq_cnt(:)   = 0
     allocate( ireq_list(IREQ_CNT_MAX,COMM_vsize_max) ); ireq_list(:,:) = 0
 
+#ifdef _USE_RDMA
     call rdma_setup(COMM_vsize_max,  &
                     IA,              &
                     JA,              &
@@ -155,6 +157,7 @@ contains
                     PRC_NEXT(PRC_N), &
                     PRC_NEXT(PRC_E), &
                     PRC_NEXT(PRC_S)  )
+#endif
 
     return
   end subroutine COMM_setup
@@ -541,32 +544,46 @@ contains
   end subroutine COMM_wait
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_set_rdma_variable( var, vid, tag )
+  subroutine COMM_set_rdma_variable( var, vid )
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(8), intent(in) :: var(:,:,:)
     integer, intent(in) :: vid
-    integer, intent(in) :: tag
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** set RDMA ID:', vid-1, ', TAG:', tag
+    if( IO_L ) write(IO_FID_LOG,*) '*** set RDMA ID:', vid-1
 
-    call set_rdma_variable(var, vid-1, tag);
+#ifdef _USE_RDMA
+    call set_rdma_variable(var, vid-1);
+#else
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    call PRC_MPIstop
+#endif
 
     return
   end subroutine
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_rdma_vars( vid )
+  subroutine COMM_rdma_vars( vid, num )
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     integer, intent(in)    :: vid
+    integer, intent(in)    :: num
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('COMM_rdma_vars')
 
     !--- put data
-    call rdma_put(vid-1)
+#ifdef _USE_RDMA
+    call rdma_put(vid-1, num)
+#else
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    call PRC_MPIstop
+#endif
 
     call TIME_rapend  ('COMM_rdma_vars')
 
@@ -574,27 +591,32 @@ contains
   end subroutine COMM_rdma_vars
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_rdma_wait( vid )
+  subroutine COMM_rdma_vars8( vid, num )
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     integer, intent(in)    :: vid
+    integer, intent(in)    :: num
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM_rdma_wait')
+    call TIME_rapstart('COMM_rdma_vars')
 
-    !--- wait data
-    call rdma_wait(vid-1) ;
+    !--- put data
+#ifdef _USE_RDMA
+    call rdma_put8(vid-1, num)
+#else
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    call PRC_MPIstop
+#endif
 
-    call TIME_rapend  ('COMM_rdma_wait')
+    call TIME_rapend  ('COMM_rdma_vars')
 
     return
-  end subroutine COMM_rdma_wait
+  end subroutine COMM_rdma_vars8
 
   !-----------------------------------------------------------------------------
   subroutine COMM_stats( var, varname )
-    use mod_stdio, only : &
-       IO_FID_LOG, &
-       IO_L
     use mod_process, only : &
        PRC_nmax,   &
        PRC_myrank
@@ -702,7 +724,7 @@ contains
   end subroutine COMM_stats
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_total( var, varname )
+  subroutine COMM_total( var, varname, force_report )
     use mod_stdio, only : &
        IO_FID_LOG, &
        IO_L
@@ -725,8 +747,9 @@ contains
        DXYZ => GRID_DXYZ
     implicit none
 
-    real(8),          intent(inout) :: var(:,:,:,:)
-    character(len=*), intent(in)    :: varname(:)
+    real(8),           intent(inout) :: var(:,:,:,:)
+    character(len=*),  intent(in)    :: varname(:)
+    logical, optional, intent(in)    :: force_report
 
     logical, allocatable :: halomask(:,:,:)
 
@@ -734,10 +757,18 @@ contains
     real(8), allocatable :: allstatval(:)
     integer              :: vsize
 
+    logical :: doreport
     integer :: ierr
-
     integer :: v, p
     !---------------------------------------------------------------------------
+
+    if ( present(force_report) ) then
+       doreport = force_report
+    else
+       doreport = COMM_dototalval
+    endif
+
+    if ( doreport ) then
 
     vsize = size(var(:,:,:,:),4)
 
@@ -772,6 +803,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']',' SUM =', &
                                       allstatval(v) * DXYZ * DXYZ * DXYZ, '[kg * xxx]'
     enddo
+
+    endif
 
     return
   end subroutine COMM_total

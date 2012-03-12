@@ -33,13 +33,15 @@ extern void rdma_setup_(
 
 extern void set_rdma_variable_(
 		const var_t		*var,
-		const int32_t		*vid,
-       const int32_t		*tag );
+		const int32_t		*vid );
 
 extern void rdma_put_(
-		const int32_t	*vid );
+		const int32_t	*vid,
+		const int32_t *num );
 
-extern void rdma_wait_(
-		const int32_t	*vid );
+extern void rdma_put8_(
+		const int32_t	*vid,
+		const int32_t *num );
+
 
 #endif /* RDMA_H_ */

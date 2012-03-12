@@ -64,6 +64,9 @@ module mod_atmos_phy_mp
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -83,7 +86,7 @@ module mod_atmos_phy_mp
   !
   private :: mp_ndw6_init
   private :: mp_ndw6
-  private :: mp_ndw6_terminal_velocity     
+  private :: terminal_velocity     
   private :: mp_ndw6_diag_volume           
   private :: mp_ndw6_effective_radius      
   !-----------------------------------------------------------------------------
@@ -308,7 +311,17 @@ module mod_atmos_phy_mp
   real(8), private, save :: MP_RNSTEP_SEDIMENTATION
   real(8), private, save :: MP_DTSEC_SEDIMENTATION
 
-  logical, private, allocatable, save :: preciptation_flag(:)
+  !
+  ! metrics of vertical coordinate
+  ! not used in SCALE-LES
+  !
+  real(8), private, allocatable, save :: gsgam2 (:,:)
+  real(8), private, allocatable, save :: gsgam2h(:,:)
+  real(8), private, allocatable, save :: gam2   (:,:)
+  real(8), private, allocatable, save :: gam2h  (:,:)
+  real(8), private, allocatable, save :: rgsgam2(:,:)
+  real(8), private, allocatable, save :: rgs    (:,:)
+  real(8), private, allocatable, save :: rgsh   (:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -321,14 +334,9 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     use mod_grid, only: &
        IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX
-    use mod_atmos_vars, only: &
-       var => atmos_var, &
-       QA  => A_QA,      &
-       QWS => A_QWS,     &
-       QWE => A_QWE,     &
-       NWS => A_NWS,     &
-       NWE => A_NWE
+       JMAX => GRID_JMAX, &
+       IJA  => GRID_IJA,  &
+       KA   => GRID_KA
     implicit none
     !---------------------------------------------------------------------------
 
@@ -354,10 +362,20 @@ contains
     MP_RNSTEP_SEDIMENTATION = 1.D0 / real(ntmax_sedimentation,kind=8)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
-    allocate( preciptation_flag(QA) )
-    preciptation_flag(:)       = .false.
-    preciptation_flag(QWS:QWE) = .true.
-    preciptation_flag(NWS:NWE) = .true.
+    allocate( gsgam2 (IJA,KA) )
+    allocate( gsgam2h(IJA,KA) )
+    allocate( gam2   (IJA,KA) )
+    allocate( gam2h  (IJA,KA) )
+    allocate( rgsgam2(IJA,KA) )
+    allocate( rgs    (IJA,KA) )
+    allocate( rgsh   (IJA,KA) )
+    gsgam2 (:,:) = 1.D0
+    gsgam2h(:,:) = 1.D0
+    gam2   (:,:) = 1.D0
+    gam2h  (:,:) = 1.D0
+    rgsgam2(:,:) = 1.D0
+    rgs    (:,:) = 1.D0
+    rgsh   (:,:) = 1.D0
 
     return
   end subroutine ATMOS_PHY_MP_setup
@@ -1237,12 +1255,9 @@ contains
        frhogqv_af,     & !--- IN  : energy tendency by affitional forcing
        frhoge_rad,     & !--- IN  : energy tendency by radiation 
        qke             ) !--- IN  : 2*TKE 
-    use mod_stdio, only: &
-       IO_FID_LOG,   &
-       IO_L
-    use mod_time, only: &
-       TIME_rapstart, &
-       TIME_rapend
+    use mod_const, only : &
+       RovCP => CONST_RovCP, &
+       PRE00 => CONST_PRE00
     use mod_atmos_cnst, only :&
          CNST_CV,       &
          CNST_CVV,      &
@@ -1272,8 +1287,8 @@ contains
          I_QI, I_QS, I_QG,  &
          I_NC, I_NR,        &
          I_NI, I_NS, I_NG
-    use mod_precip_transport, only :   &
-         precip_transport_nwater
+    use mod_precipitation, only : &
+         precipitation
     use mod_thrmdyn, only :          &
          thrmdyn_cv,                 &
          thrmdyn_qd,                 &
@@ -1318,13 +1333,6 @@ contains
     real(8), intent(in)    :: dzh(kdim)
     real(8), intent(in)    :: dt
     real(8), intent(in)    :: ct 
-    !
-    ! metrics of vertical coordinate
-    !
-    real(8) :: gsgam2(ijdim,kdim)
-    real(8) :: gsgam2h(ijdim,kdim)
-    real(8) :: gam2(ijdim,kdim)
-    real(8) :: gam2h(ijdim,kdim)
     !
     ! primary variables
     !
@@ -1507,11 +1515,8 @@ contains
     real(8) :: spl_dqg, spl_dqs
     ! work for time splitting
     real(8) :: wprecip(1:ijdim,2)
-    !
-    real(8) :: rgsgam2(ijdim,kdim)
+
     real(8) :: rrhog(ijdim,kdim)
-    real(8) :: rgs(ijdim,kdim)
-    real(8) :: rgsh(ijdim,kdim) 
     !-----------------------------------------------
     ! work for explicit supersaturation modeling
     !-----------------------------------------------
@@ -1558,7 +1563,6 @@ contains
     ! [Add] 09/08/18 T.Mitsui for debug
     real(8) :: cflc(ijdim), cflr(ijdim), cfli(ijdim), cfls(ijdim), cflg(ijdim)
     real(8) :: max_cflc, max_cflr, max_cfli, max_cfls, max_cflg
-    !--------------------------------------------------
     logical :: flag_history_in            ! 
     !
     real(8), parameter :: eps=1.d-30
@@ -1569,26 +1573,20 @@ contains
     real(8) :: wdt, r_wdt
     real(8) :: r_ntmax
     integer :: ntdiv
-    integer :: ij, k, n
-    !
-    gsgam2 = 1.d0
-    gsgam2h= 1.d0
-    gam2   = 1.d0
-    gam2h  = 1.d0
+    integer :: ij, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('MP0 Setup')
+
     r_dt = 1.d0/dt
-    !
-    ! parameter setting (vertical metrics, which is not used in SCALE-LES)
-    !
-    rgsgam2(:,:) = 1.d0/gsgam2(:,:)
-    rgs(:,:)     = gam2(:,:)*rgsgam2(:,:)
-    rgsh(:,:)    = gam2h(:,:)/gsgam2h(:,:)
-    !
+
     rhog(:,:)    = rhog0(:,:)
     rhogvx(:,:)  = rhogvx0(:,:)
     rhogvy(:,:)  = rhogvy0(:,:)
     rhogw(:,:)   = rhogw0(:,:)
     rhogq(:,:,:) = rhogq0(:,:,:)
     th(:,:)      = th0(:,:)
+
     !
     ! negative filter, and diagnosis of physical parameters
     !
@@ -1599,34 +1597,35 @@ contains
          rhog, rhogq,   &   ! inout
          rrhog,  rhoge, &   ! out
          q, pre, rho, tem ) ! out      
-    !
+
     w(:,:) = rhogw(:,:)*rrhog(:,:)
-    !
-    do k=kmin, kmax
-       do ij=1, ijdim
-          rho_fac         = rho_0/max(rho(ij,k),rho_min)
-          rho_fac_c(ij,k) = rho_fac**gamma_v(I_QC)
-          rho_fac_r(ij,k) = rho_fac**gamma_v(I_QR) 
-          rho_fac_i(ij,k) = (pre(ij,k)/pre0_vt)**a_pre0_vt * (tem(ij,k)/tem0_vt)**a_tem0_vt
-          rho_fac_s(ij,k) = rho_fac_i(ij,k)
-          rho_fac_g(ij,k) = rho_fac_i(ij,k)
-       end do
-    end do
+
+    do k  = kmin, kmax
+    do ij = 1,    ijdim
+       rho_fac         = rho_0 / max(rho(ij,k),rho_min)
+       rho_fac_c(ij,k) = rho_fac**gamma_v(I_QC)
+       rho_fac_r(ij,k) = rho_fac**gamma_v(I_QR) 
+       rho_fac_i(ij,k) = (pre(ij,k)/pre0_vt)**a_pre0_vt * (tem(ij,k)/tem0_vt)**a_tem0_vt
+       rho_fac_s(ij,k) = rho_fac_i(ij,k)
+       rho_fac_g(ij,k) = rho_fac_i(ij,k)
+    enddo
+    enddo
+
     do ij=1, ijdim
-       rho_fac_c(ij,1:kmin-1)=1.d0
-       rho_fac_r(ij,1:kmin-1)=1.d0
-       rho_fac_i(ij,1:kmin-1)=1.d0
-       rho_fac_s(ij,1:kmin-1)=1.d0
-       rho_fac_g(ij,1:kmin-1)=1.d0
-       rho_fac_c(ij,kmax+1:kdim)=rho_fac_c(ij,kmax)
-       rho_fac_r(ij,kmax+1:kdim)=rho_fac_r(ij,kmax)
-       rho_fac_i(ij,kmax+1:kdim)=rho_fac_i(ij,kmax)
-       rho_fac_s(ij,kmax+1:kdim)=rho_fac_s(ij,kmax)
-       rho_fac_g(ij,kmax+1:kdim)=rho_fac_g(ij,kmax)
+       rho_fac_c(ij,1:kmin-1)    = 1.D0
+       rho_fac_r(ij,1:kmin-1)    = 1.D0
+       rho_fac_i(ij,1:kmin-1)    = 1.D0
+       rho_fac_s(ij,1:kmin-1)    = 1.D0
+       rho_fac_g(ij,1:kmin-1)    = 1.D0
+       rho_fac_c(ij,kmax+1:kdim) = rho_fac_c(ij,kmax)
+       rho_fac_r(ij,kmax+1:kdim) = rho_fac_r(ij,kmax)
+       rho_fac_i(ij,kmax+1:kdim) = rho_fac_i(ij,kmax)
+       rho_fac_s(ij,kmax+1:kdim) = rho_fac_s(ij,kmax)
+       rho_fac_g(ij,kmax+1:kdim) = rho_fac_g(ij,kmax)
     end do
 
     if( opt_debug_tem ) call debug_tem( 1, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
-
+    call TIME_rapend('MP0 Setup')
     !============================================================================
     !
     !--  Each process is integrated sequentially.
@@ -2345,12 +2344,11 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MP4 Saturation adjustment')
 
-    lc(:,:)        = rhogq(:,:,I_QC)*rgsgam2(:,:)   ! lwc pre adjustment
-    PNCdep(:,:)  = 0.d0
-    ml_dTpc(:,:) = ml_dTpc(:,:)*r_dt
-
-    call debugreport_saturation
-    call debug_tem( 5, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+!    lc(:,:)        = rhogq(:,:,I_QC)*rgsgam2(:,:)   ! lwc pre adjustment
+!    PNCdep(:,:)  = 0.d0
+!    ml_dTpc(:,:) = ml_dTpc(:,:)*r_dt
+    if( opt_debug )     call debugreport_saturation
+    if( opt_debug_tem ) call debug_tem( 5, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
 
     call TIME_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
@@ -2360,57 +2358,39 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MP5 Sedimentation')
 
-    do n  = 1, 2
     do ij = 1, ijdim
-       precip(ij,n) = 0.D0
-    enddo
+       precip(ij,1) = 0.D0
+       precip(ij,2) = 0.D0
     enddo
 
     do ntdiv = 1, ntmax_sedimentation 
 
-       call mp_ndw6_terminal_velocity( ijdim,      &
-                                       kmin,       &
-                                       kmax,       &
-                                       kdim,       &
-                                       nqmax,      &
-                                       rho(:,:),   &
-                                       tem(:,:),   &
-                                       pre(:,:),   &
-                                       q  (:,:,:), &
-                                       vt (:,:,:)  )
+       call terminal_velocity( ijdim,      & !--- IN
+                               kmin,       & !--- IN
+                               kmax,       & !--- IN
+                               kdim,       & !--- IN
+                               nqmax,      & !--- IN
+                               rho(:,:),   & !--- IN
+                               tem(:,:),   & !--- IN
+                               pre(:,:),   & !--- IN
+                               q  (:,:,:), & !--- IN
+                               vt (:,:,:)  ) !--- OUT
 
-       call precip_transport_nwater ( ijdim,                 & !--- IN :
-                                      kdim,                  &
-                                      kmin,                  &
-                                      kmax,                  & !--- IN :
-                                      rhog  (:,:),           & !--- INOUT :
-                                      rhogvx(:,:),           & !--- INOUT :
-                                      rhogvy(:,:),           & !--- INOUT :
-                                      rhogw (:,:),           & !--- INOUT :
-                                      rhoge (:,:),           & !--- INOUT :
-                                      rhogq (:,:,:),         & !--- INOUT :
-                                      rho,                   & !--- INOUT :
-                                      tem,                   & !--- INOUT :
-                                      pre,                   & !--- INOUT :
-                                      q,                     & !--- INOUT :
-                                      qd,                    & !--- OUT :
-                                      z,                     & !--- IN : height
-                                      zh,                    & !--- IN : height
-                                      dz,                    & !--- IN : height interval
-                                      dzh,                   & !--- IN : height interval
-                                      vt,                    & !--- IN :    new  ! V_TERM(ijdim,kdim,nqmax)   
-                                      preciptation_flag,     & !--- IN :    new  ! preciptation_flag(1:nqmax) 
-                                      wprecip,               & !--- OUT :     ! precip(ijdim,2) *** basically exist 
-                                      gsgam2,                & !--- IN :
-                                      gsgam2h,               & !--- IN :    
-                                      rgs,                   & !--- IN :
-                                      rgsh,                  & !--- IN :    new, gam2h/gsgam2h 
-                                      MP_DTSEC_SEDIMENTATION ) !--- IN :
+       call precipitation( rhog   (:,:),          & !--- INOUT
+                           rhogvx (:,:),          & !--- INOUT
+                           rhogvy (:,:),          & !--- INOUT
+                           rhogw  (:,:),          & !--- INOUT
+                           rhoge  (:,:),          & !--- INOUT
+                           rhogq  (:,:,:),        & !--- INOUT
+                           tem    (:,:),          & !--- IN
+                           q      (:,:,:),        & !--- IN
+                           vt     (:,:,:),        & !--- IN
+                           wprecip(:,:),          & !--- OUT
+                           MP_DTSEC_SEDIMENTATION ) !--- IN
 
-       do n  = 1, 2
        do ij = 1, ijdim
-          precip(ij,n) = precip(ij,n) + wprecip(ij,n) * MP_RNSTEP_SEDIMENTATION
-       enddo
+         precip(ij,1) = precip(ij,1) + wprecip(ij,1) * MP_RNSTEP_SEDIMENTATION
+         precip(ij,2) = precip(ij,2) + wprecip(ij,2) * MP_RNSTEP_SEDIMENTATION
        enddo
 
        call debugreport_sedimentation
@@ -2419,16 +2399,20 @@ contains
     enddo
 
     call TIME_rapend  ('MP5 Sedimentation')
-
     !----------------------------------------------------------------------------
     ! 6.Filter for rounding error(negative value) and artificial number
     !   ( We assume artificial filter as evaporation of the smallest particles )
     !----------------------------------------------------------------------------
+    call TIME_rapstart('MP6 Filter')
+
+    th(:,:) = tem(:,:) * ( PRE00 / pre(:,:) )**RovCP
 
     call negative_filter ( ijdim, kmin, kmax, kdim, nqmax, rgsgam2, &
          th,            &   ! in
          rhog, rhogq, rrhog,  rhoge, &   ! out
          q, pre, rho, tem ) ! out      
+
+    th(:,:) = tem(:,:) * ( PRE00 / pre(:,:) )**RovCP
 
     dth0    (:,:)   = th    (:,:)   - th0    (:,:)
     drhog0  (:,:)   = rhog  (:,:)   - rhog0  (:,:)
@@ -2438,6 +2422,7 @@ contains
     drhogq0 (:,:,:) = rhogq (:,:,:) - rhogq0 (:,:,:)
 
     call debug_tem( 7, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
+    call TIME_rapend  ('MP6 Filter')
 
     return
     !---------------------------------------------------------------------------
@@ -5085,7 +5070,7 @@ contains
     return
   end function betafunc_3d
   !-------------------------------------------------------------------------------
-  subroutine mp_ndw6_terminal_velocity( &
+  subroutine terminal_velocity( &
        ijdim, kmin, kmax, kdim, nqmax, &
        rho, tem, pre, q,        &
        vt,                      &
@@ -5391,7 +5376,7 @@ contains
 !    end if
 
     return
-  end subroutine mp_ndw6_terminal_velocity
+  end subroutine terminal_velocity
 
   subroutine update_by_phase_change(   &
        ntdiv    , ntmax,         & ! in [Add] 10/08/03
