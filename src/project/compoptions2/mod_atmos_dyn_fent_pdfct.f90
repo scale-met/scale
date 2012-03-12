@@ -98,9 +98,6 @@ module mod_atmos_dyn
   real(8), allocatable, save :: CNMY(:,:)
 
 !  integer, private, save :: IBLOCK, JBLOCK
-  real(8), save :: var_RK1(KA,IA,JA,5)   ! prognostic variables (+1/3 step)
-  real(8), save :: var_RK2(KA,IA,JA,5)   ! prognostic variables (+2/3 step)
-  real(8), save :: rjmns  (KA,IA,JA,3)   ! minus in (x,y,z)-direction
 
   !-----------------------------------------------------------------------------
 contains
@@ -115,14 +112,10 @@ contains
        IO_L
     use mod_process, only: &
        PRC_MPIstop
-    use mod_comm, only: &
-       COMM_set_rdma_variable
     use mod_grid, only : &
        CDX  => GRID_CDX, &
        CDY  => GRID_CDY, &
        CDZ  => GRID_CDZ
-    use mod_atmos_vars, only: &
-       var => atmos_var
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -131,7 +124,7 @@ contains
 !       JBLOCK
 
     integer :: ierr
-    integer :: i, j, k, iv
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
 !    IBLOCK = IMAX
@@ -285,27 +278,6 @@ contains
     CNMY(2,JA) = CNMY(2,JE+1)
     CNMY(3,JA) = CNMY(3,JE+1)
 
-    do iv = 1, VA
-       call COMM_set_rdma_variable( var(:,:,:,iv), iv )
-    enddo
-
-    call COMM_set_rdma_variable( var_RK1(:,:,:,I_DENS), VA+I_DENS)
-    call COMM_set_rdma_variable( var_RK1(:,:,:,I_MOMX), VA+I_MOMX)
-    call COMM_set_rdma_variable( var_RK1(:,:,:,I_MOMY), VA+I_MOMY)
-    call COMM_set_rdma_variable( var_RK1(:,:,:,I_MOMZ), VA+I_MOMZ)
-    call COMM_set_rdma_variable( var_RK1(:,:,:,I_RHOT), VA+I_RHOT)
-
-    call COMM_set_rdma_variable( var_RK2(:,:,:,I_DENS), VA+5+I_DENS)
-    call COMM_set_rdma_variable( var_RK2(:,:,:,I_MOMX), VA+5+I_MOMX)
-    call COMM_set_rdma_variable( var_RK2(:,:,:,I_MOMY), VA+5+I_MOMY)
-    call COMM_set_rdma_variable( var_RK2(:,:,:,I_MOMZ), VA+5+I_MOMZ)
-    call COMM_set_rdma_variable( var_RK2(:,:,:,I_RHOT), VA+5+I_RHOT)
-
-    call COMM_set_rdma_variable( rjmns(:,:,:,1), VA+10+1)
-    call COMM_set_rdma_variable( rjmns(:,:,:,2), VA+10+2)
-    call COMM_set_rdma_variable( rjmns(:,:,:,3), VA+10+3)
-
-
   end subroutine ATMOS_DYN_setup
 
   !-----------------------------------------------------------------------------
@@ -324,7 +296,9 @@ contains
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
-       COMM_rdma_vars8, &
+       COMM_vars, &
+       COMM_vars8, &
+       COMM_wait, &
        COMM_total
     use mod_grid, only : &
        CDX  => GRID_CDX,  &
@@ -352,6 +326,8 @@ contains
     implicit none
 
     ! work
+    real(8) :: var_RK1  (KA,IA,JA,5)   ! prognostic variables (+1/3 step)
+    real(8) :: var_RK2  (KA,IA,JA,5)   ! prognostic variables (+2/3 step)
     real(8) :: var_lo   (KA,IA,JA,QA)  ! prognostic variables (monotone)
     real(8) :: diagvar  (KA,IA,JA,5)   ! diagnostic variables (work)
 
@@ -369,6 +345,7 @@ contains
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
     real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
+    real(8) :: rjmns    (KA,IA,JA,3)   ! minus in (x,y,z)-direction
     real(8) :: pjmns
 
     integer :: IIS, IIE
@@ -1014,7 +991,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+I_DENS, 5 )
+    call COMM_vars8( var_RK1(:,:,:,1), 1 )
+    call COMM_vars8( var_RK1(:,:,:,2), 2 )
+    call COMM_vars8( var_RK1(:,:,:,3), 3 )
+    call COMM_vars8( var_RK1(:,:,:,4), 4 )
+    call COMM_vars8( var_RK1(:,:,:,5), 5 )
+    call COMM_wait ( var_RK1(:,:,:,1), 1 )
+    call COMM_wait ( var_RK1(:,:,:,2), 2 )
+    call COMM_wait ( var_RK1(:,:,:,3), 3 )
+    call COMM_wait ( var_RK1(:,:,:,4), 4 )
+    call COMM_wait ( var_RK1(:,:,:,5), 5 )
 
     !##### RK2 #####
     rko = 2
@@ -1369,7 +1355,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+5+I_DENS, 5 )
+    call COMM_vars8( var_RK2(:,:,:,1), 1 )
+    call COMM_vars8( var_RK2(:,:,:,2), 2 )
+    call COMM_vars8( var_RK2(:,:,:,3), 3 )
+    call COMM_vars8( var_RK2(:,:,:,4), 4 )
+    call COMM_vars8( var_RK2(:,:,:,5), 5 )
+    call COMM_wait ( var_RK2(:,:,:,1), 1 )
+    call COMM_wait ( var_RK2(:,:,:,2), 2 )
+    call COMM_wait ( var_RK2(:,:,:,3), 3 )
+    call COMM_wait ( var_RK2(:,:,:,4), 4 )
+    call COMM_wait ( var_RK2(:,:,:,5), 5 )
 
     !##### RK3 #####
     rko = 3
@@ -1724,7 +1719,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_rdma_vars8( I_DENS, 5 )
+    call COMM_vars8( var(:,:,:,1), 1 )
+    call COMM_vars8( var(:,:,:,2), 2 )
+    call COMM_vars8( var(:,:,:,3), 3 )
+    call COMM_vars8( var(:,:,:,4), 4 )
+    call COMM_vars8( var(:,:,:,5), 5 )
+    call COMM_wait ( var(:,:,:,1), 1 )
+    call COMM_wait ( var(:,:,:,2), 2 )
+    call COMM_wait ( var(:,:,:,3), 3 )
+    call COMM_wait ( var(:,:,:,4), 4 )
+    call COMM_wait ( var(:,:,:,5), 5 )
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
@@ -1844,7 +1848,12 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+11, 3 )
+    call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_vars8( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_vars8( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_wait ( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_wait ( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_wait ( rjmns(:,:,:,YDIR), YDIR )
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1917,10 +1926,10 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
+    call COMM_vars8( var(:,:,:,iq), iq )
+    call COMM_wait ( var(:,:,:,iq), iq )
+
     enddo ! scalar quantities loop
-
-    call COMM_rdma_vars8( 6, 11 )
-
     endif
 
 #ifdef _FPCOLL_
