@@ -33,8 +33,6 @@ module mod_ocean_vars
   public :: OCEAN_vars_setup
   public :: OCEAN_vars_restart_read
   public :: OCEAN_vars_restart_write
-  public :: OCEAN_vars_put
-  public :: OCEAN_vars_get
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -43,6 +41,8 @@ module mod_ocean_vars
   character(len=FIO_HSHORT), public, allocatable, save :: O_NAME(:)
   character(len=FIO_HMID),   public, allocatable, save :: O_DESC(:)
   character(len=FIO_HSHORT), public, allocatable, save :: O_UNIT(:)
+
+  integer, public, parameter :: I_SST = 1
 
   character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE    = 'NONE'
 
@@ -195,14 +195,11 @@ contains
 
     deallocate( restart_ocean )
 
-    !fill IHALO & JHALO
-!    do iv = 1, O_VA
-!       call COMM_vars( ocean_var(:,:,:,iv),iv )
-!    enddo
-!
-!    do iv = 1, O_VA
-!       call COMM_wait( ocean_var(:,:,:,iv),iv )
-!    enddo
+    ! fill IHALO & JHALO
+    do iv = 1, O_VA
+       call COMM_vars( ocean_var(:,:,:,iv),iv )
+       call COMM_wait( ocean_var(:,:,:,iv),iv )
+    enddo
 
     call COMM_stats( ocean_var(:,:,:,:), O_NAME(:) )
 
@@ -262,48 +259,5 @@ contains
 
     return
   end subroutine OCEAN_vars_restart_write
-
-  !-----------------------------------------------------------------------------
-  !> Put and Communicate prognostic variables
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_vars_put( &
-       sst )
-    use mod_grid, only: &
-       IA   => GRID_IA, &
-       JA   => GRID_JA
-    use mod_comm, only: &
-       COMM_vars, &
-       COMM_wait
-    implicit none
-
-    real(8), intent(in) :: sst(IA,JA,1)
-    !---------------------------------------------------------------------------
-
-    ocean_var(:,:,:,1) = sst(:,:,:)
-
-    ! fill IHALO & JHALO
-    call COMM_vars( ocean_var(:,:,:,1),1 )
-    call COMM_wait( ocean_var(:,:,:,1),1 )
-
-    return
-  end subroutine OCEAN_vars_put
-
-  !-----------------------------------------------------------------------------
-  !> Get prognostic variables
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_vars_get( &
-       sst )
-    use mod_grid, only: &
-       IA => GRID_IA, &
-       JA => GRID_JA
-    implicit none
-
-    real(8), intent(out) :: sst(IA,JA,1)
-    !---------------------------------------------------------------------------
-
-    sst(:,:,:) = ocean_var(:,:,:,1)
-
-    return
-  end subroutine OCEAN_vars_get
 
 end module mod_ocean_vars

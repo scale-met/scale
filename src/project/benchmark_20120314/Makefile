@@ -17,7 +17,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
 
-PROJ_EXE = RDMA_comm
+PROJ_EXE = benchmark_20120314
 
 all: makedir makebin
 
@@ -47,7 +47,7 @@ $(PROJ_EXE): $(PROJ_EXE).o
 .PHONY: depends freeze clean copylocal mktar
 
 clean:
-	rm -f $(PROJ_EXE) depends.info *.mod *.o *~
+	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
 
 freeze: clean depends copylocal mktar
 

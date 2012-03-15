@@ -105,8 +105,8 @@ call START_COLLECTION("moist_psat_water")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
        TEM = max( temp(ij,k), TEM_MIN )
 
        psat(ij,k) = PSAT0                                 &
@@ -145,8 +145,8 @@ call START_COLLECTION("moist_psat_ice")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
        TEM = max( temp(ij,k), TEM_MIN )
 
        psat(ij,k) = PSAT0                                   &
@@ -187,8 +187,8 @@ call START_COLLECTION("moist_qsat_water")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
        TEM = max( temp(ij,k), TEM_MIN )
 
        psat = PSAT0                                   &
@@ -231,8 +231,8 @@ call START_COLLECTION("moist_qsat_ice")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
 
        TEM = max( temp(ij,k), TEM_MIN )
 
@@ -263,8 +263,8 @@ call STOP_COLLECTION("moist_qsat_ice")
     real(8), intent(in)  :: dens   (IJA,KA)
     real(8), intent(out) :: dqsdtem(IJA,KA)
 
-    real(8) :: psat ! saturation vapor pressure
-    real(8) :: lhv  ! latent heat for condensation
+    real(8) :: psat(IJA) ! saturation vapor pressure
+    real(8) :: lhv (IJA) ! latent heat for condensation
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
@@ -280,21 +280,23 @@ call START_COLLECTION("moist_dqsw_dtem_rho")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
 
-       TEM = max( temp(ij,k), TEM_MIN )
+       do ij = 1, IJA
+          TEM = max( temp(ij,k), TEM_MIN )
 
-       psat = PSAT0                                   &
-            * ( TEM * RTEM00 )**CPovRvap              &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+          psat(ij) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+       enddo
 
-       lhv  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
+       do ij = 1, IJA
+          lhv(ij)  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
 
-       dqsdtem(ij,k) = psat / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
-                      * ( lhv / ( Rvap * temp(ij,k) ) - 1.D0 )
+          dqsdtem(ij,k) = psat(ij) / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
+                      * ( lhv(ij) / ( Rvap * temp(ij,k) ) - 1.D0 )
+       enddo
 
-    enddo
     enddo
 
 #ifdef _FPCOLL_
@@ -315,8 +317,8 @@ call STOP_COLLECTION("moist_dqsw_dtem_rho")
     real(8), intent(in)  :: dens   (IJA,KA)
     real(8), intent(out) :: dqsdtem(IJA,KA)
 
-    real(8) :: psat ! saturation vapor pressure
-    real(8) :: lhv  ! latent heat for condensation
+    real(8) :: psat(IJA) ! saturation vapor pressure
+    real(8) :: lhv (IJA) ! latent heat for condensation
 
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
@@ -332,21 +334,23 @@ call START_COLLECTION("moist_dqsi_dtem_rho")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
 
-       TEM = max( temp(ij,k), TEM_MIN )
+       do ij = 1, IJA
+          TEM = max( temp(ij,k), TEM_MIN )
 
-       psat = PSAT0                                   &
-            * ( TEM * RTEM00 )**CPovRvap              &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+          psat(ij) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+       enddo
 
-       lhv  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
+       do ij = 1, IJA
+          lhv(ij)  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
 
-       dqsdtem(ij,k) = psat / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
-                      * ( lhv / ( Rvap * temp(ij,k) ) - 1.D0 )
+          dqsdtem(ij,k) = psat(ij) / ( dens(ij,k) * Rvap * temp(ij,k) * temp(ij,k) ) &
+                      * ( lhv(ij) / ( Rvap * temp(ij,k) ) - 1.D0 )
+       enddo
 
-    enddo
     enddo
 
 #ifdef _FPCOLL_
@@ -368,10 +372,10 @@ call STOP_COLLECTION("moist_dqsi_dtem_rho")
     real(8), intent(out) :: dqsdtem(IJA,KA)
     real(8), intent(out) :: dqsdpre(IJA,KA)
 
-    real(8) :: psat ! saturation vapor pressure
-    real(8) :: lhv  ! latent heat for condensation
+    real(8) :: psat(IJA) ! saturation vapor pressure
+    real(8) :: lhv (IJA) ! latent heat for condensation
 
-    real(8) :: den1, den2 ! denominator
+    real(8) :: den1(IJA), den2(IJA) ! denominator
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: ij, k
@@ -386,25 +390,28 @@ call START_COLLECTION("moist_dqsw_dtem_dpre")
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
 
-       TEM = max( temp(ij,k), TEM_MIN )
+       do ij = 1, IJA
+          TEM = max( temp(ij,k), TEM_MIN )
 
-       psat = PSAT0                                   &
-            * ( TEM * RTEM00 )**CPovRvap              &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+          psat(ij) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+       enddo
 
-       lhv  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
+       do ij = 1, IJA
+          den1(ij) = ( pres(ij,k) - (1.D0-EPSvap) * psat(ij) ) &
+                   * ( pres(ij,k) - (1.D0-EPSvap) * psat(ij) )
+          den2(ij) = den1(ij) * Rvap * temp(ij,k) * temp(ij,k)
+          lhv(ij)  = LH0 + ( CPvap-CL ) * ( temp(ij,k)-TEM00 )
+       enddo
 
-       den1 = ( pres(ij,k) - (1.D0-EPSvap) * psat ) &
-            * ( pres(ij,k) - (1.D0-EPSvap) * psat )
-       den2 = den1 * Rvap * temp(ij,k) * temp(ij,k)
+       do ij = 1, IJA
+          dqsdpre(ij,k) = - EPSvap * psat(ij) / den1(ij)
+          dqsdtem(ij,k) =   EPSvap * psat(ij) / den2(ij) * lhv(ij) * pres(ij,k)
+       enddo
 
-       dqsdpre(ij,k) = - EPSvap * psat / den1
-       dqsdtem(ij,k) =   EPSvap * psat / den2 * lhv * pres(ij,k)
-
-    enddo
     enddo
 
 #ifdef _FPCOLL_
@@ -426,10 +433,10 @@ call STOP_COLLECTION("moist_dqsw_dtem_dpre")
     real(8), intent(out) :: dqsdtem(IJA,KA)
     real(8), intent(out) :: dqsdpre(IJA,KA)
 
-    real(8) :: psat ! saturation vapor pressure
-    real(8) :: lhv  ! latent heat for condensation
+    real(8) :: psat(IJA) ! saturation vapor pressure
+    real(8) :: lhv (IJA) ! latent heat for condensation
 
-    real(8) :: den1, den2 ! denominator
+    real(8) :: den1(IJA), den2(IJA) ! denominator
     real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: ij, k
@@ -444,25 +451,28 @@ call START_COLLECTION("moist_dqsi_dtem_dpre")
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
 
-       TEM = max( temp(ij,k), TEM_MIN )
+       do ij = 1, IJA
+          TEM = max( temp(ij,k), TEM_MIN )
 
-       psat = PSAT0                                   &
-            * ( TEM * RTEM00 )**CPovRvap              &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+          psat(ij) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+       enddo
 
-       lhv  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
+       do ij = 1, IJA
+          den1(ij) = ( pres(ij,k) - (1.D0-EPSvap) * psat(ij) ) &
+                   * ( pres(ij,k) - (1.D0-EPSvap) * psat(ij) )
+          den2(ij) = den1(ij) * Rvap * temp(ij,k) * temp(ij,k)
+          lhv(ij)  = LHS0 + ( CPvap-CI ) * ( temp(ij,k)-TEM00 )
+       enddo
 
-       den1 = ( pres(ij,k) - (1.D0-EPSvap) * psat ) &
-            * ( pres(ij,k) - (1.D0-EPSvap) * psat )
-       den2 = den1 * Rvap * temp(ij,k) * temp(ij,k)
+       do ij = 1, IJA
+          dqsdpre(ij,k) = - EPSvap * psat(ij) / den1(ij)
+          dqsdtem(ij,k) =   EPSvap * psat(ij) / den2(ij) * lhv(ij) * pres(ij,k)
+       enddo
 
-       dqsdpre(ij,k) = - EPSvap * psat / den1
-       dqsdtem(ij,k) =   EPSvap * psat / den2 * lhv * pres(ij,k)
-
-    enddo
     enddo
 
 #ifdef _FPCOLL_

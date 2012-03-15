@@ -91,8 +91,8 @@ contains
 call START_COLLECTION("thrmdyn_qd")
 #endif
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
 
        qdry(ij,k) = 1.D0
 
@@ -127,8 +127,8 @@ call STOP_COLLECTION("thrmdyn_qd")
 call START_COLLECTION("thrmdyn_cp")
 #endif
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
 
        cptot(ij,k) = qdry(ij,k) * CPdry
 
@@ -163,8 +163,8 @@ call STOP_COLLECTION("thrmdyn_cp")
 call START_COLLECTION("thrmdyn_cv")
 #endif
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
 
        cvtot(ij,k) = qdry(ij,k) * CVdry
 
@@ -206,8 +206,8 @@ call STOP_COLLECTION("thrmdyn_cv")
 call START_COLLECTION("thrmdyn_tempre")
 #endif
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
 
        cv = qdry(ij,k) * CVdry
        do iqw = QWS, QWE
@@ -256,8 +256,8 @@ call START_COLLECTION("thrmdyn_tempre2")
     RPRE00   = 1.D0 / PRE00
     WKAPPA   = 1.D0 / ( 1.D0 - RovCP )
 
-    do k  = KS,  KE
-    do ij = IJS, IJE
+    do k  = 1, KA
+    do ij = 1, IJA
        rhoRmoist = dens(ij,k) * ( qdry(ij,k)*Rdry + q(ij,k,I_QV)*Rvap )
 
        temp(ij,k) = ( pott(ij,k) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA

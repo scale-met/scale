@@ -18,7 +18,7 @@ module mod_precipitation
   !++ Used modules
   !
   use mod_stdio, only: &
-     IO_FID_LOG,  &
+     IO_FID_LOG, &
      IO_L
   use mod_time, only: &
      TIME_rapstart, &
@@ -55,9 +55,18 @@ contains
        flux_rain, &
        flux_snow, &
        velw,      &
+       rhoq,      &
+       rhoe,      &
+       temp,      &
        dt         )
     use mod_const, only : &
-       GRAV => CONST_GRAV
+       GRAV  => CONST_GRAV,  &
+       Rdry  => CONST_Rdry,  &
+       CPdry => CONST_CPdry, &
+       CVdry => CONST_CVdry, &
+       RovCP => CONST_RovCP, &
+       Rvap  => CONST_Rvap,  &
+       PRE00 => CONST_PRE00
     use mod_grid, only: &
        KA   => GRID_KA,   &
        IA   => GRID_IA,   &
@@ -70,13 +79,17 @@ contains
        JE   => GRID_JE,   &
        CZ   => GRID_CZ,   &
        RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ, &
-       IJA  => GRID_IJA,  &
-       IJS  => GRID_IJS,  &
-       IJE  => GRID_IJE
+       RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
+       var => atmos_var, &
        QA  => A_QA,  &
        CVw => A_CVw, &
+       I_DENS, &
+       I_MOMZ, &
+       I_MOMX, &
+       I_MOMY, &
+       I_RHOT, &
+       I_QV, &
        I_QC, &
        I_QR, &
        I_QI, &
@@ -88,14 +101,18 @@ contains
        thrmdyn_tempre
     implicit none
 
-    real(8), intent(out)   :: flux_rain(IA,JA)
-    real(8), intent(out)   :: flux_snow(IA,JA)
-    real(8), intent(in)    :: tem      (KA,IA,JA)
-    real(8), intent(in)    :: velw     (KA,IA,JA,QA)
+    real(8), intent(out)   :: flux_rain(KA,IA,JA)
+    real(8), intent(out)   :: flux_snow(KA,IA,JA)
+    real(8), intent(in)    :: velw     (KA,IA,JA,QA) ! terminal velocity of cloud mass
+    real(8), intent(in)    :: rhoq     (KA,IA,JA,QA) ! rho * q
+    real(8), intent(in)    :: rhoe     (KA,IA,JA)
+    real(8), intent(in)    :: temp     (KA,IA,JA)
     real(8), intent(in)    :: dt
 
-    real(8) :: qflx(KA,IA,JA,QA)
-    real(8) :: eflx(KA,IA,JA)
+    real(8) :: qflx    (KA,QA)
+    real(8) :: eflx    (KA)
+    real(8) :: rhoe_new(KA)
+    real(8) :: qdry(KA), CVmoist(KA), Rmoist(KA), pres(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -105,128 +122,122 @@ contains
 call START_COLLECTION("precipitation")
 #endif
 
-    do iq = I_QC, I_NG
-    do j  = JS, JE
-    do i  = IS, IE
-       qflx(KE,i,j,iq) = 0.D0
-    enddo
-    enddo
-    enddo
-    do j = JS, JE
-    do i = IS, IE
-       eflx(KE,i,j) = 0.D0
-    enddo
-    enddo
-
-    ! tracer transport by falldown
+    ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
-    do iq = I_QC, I_NG
+    !OCL NORECURRENCE,PARALLEL
     do j  = JS, JE
     do i  = IS, IE
-    do k  = KS-1, KE-1
-       qflx(k,i,j,iq) = velw(k+1,i,j,iq) * var(k+1,i,j,I_DENS) * var(k+1,i,j,5+iq)
-    enddo
-    enddo
-    enddo
-    enddo
 
-    do iq = I_QC, I_QG
+       !OCL XFILL
+       do iq = I_QC, I_NG
+          qflx(KE,iq) = 0.D0
+       enddo
+       eflx(KE) = 0.D0
 
-       !--- internal energy
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS-1, KE-1
-          eflx(k,i,j) = velw(k+1,i,j,iq) * rhogq(k+1,i,j,iq) * CVw(iq) * tem(k+1,i,j)
-       enddo
-       enddo
-       enddo
-
-       do k  = KS,  KE
-       do ij = IJS, IJE
-          rhoge(k,i,j) = rhoge(k,i,j) - dt * ( ( eflx(k,i,j)-eflx(ij,k-1) ) ) * RCDZ(k)
-       enddo
-       enddo
-
-       !--- potential energy
+       !--- tracer
+       do iq = I_QC, I_NG
        do k  = KS-1, KE-1
-       do ij = IJS,  IJE
-          eflx(k,i,j) = velw(k+1,i,j,iq) * rhogq(k+1,i,j,iq) * GRAV * CZ(k+1)
+          qflx(k,iq) = velw(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
        enddo
+       enddo ! tracer loop
+
+       !--- lowermost flux is saved for land process
+       do k  = KS-1, KE
+          flux_rain(k,i,j) = - ( qflx(k,I_QC) &
+                               + qflx(k,I_QR) )
+          flux_snow(k,i,j) = - ( qflx(k,I_QI) &
+                               + qflx(k,I_QS) &
+                               + qflx(k,I_QG) )
+       enddo 
+
+       !OCL XFILL
+       do k = KS, KE
+          rhoe_new(k) = 0.D0
+       enddo
+
+       do iq = I_QC, I_QG
+
+          !--- internal energy
+          do k  = KS-1, KE-1
+             eflx(k) = qflx(k,iq) * temp(k+1,i,j) * CVw(iq)
+          enddo
+          do k  = KS,   KE
+             rhoe_new(k) = rhoe(k,i,j) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
+          enddo
+
+          !--- potential energy
+          do k  = KS-1, KE-1
+             eflx(k) = qflx(k,iq) * GRAV * CZ(k+1)
+          enddo
+          do k  = KS,   KE
+             rhoe_new(k) = rhoe_new(k) - dt * ( ( eflx(k)   -eflx(k-1)    ) &
+                                              - ( qflx(k,iq)-qflx(k-1,iq) ) * GRAV * CZ(k) ) * RCDZ(k)
+          enddo
+
+          !--- momentum z (half level)
+          do k  = KS-1, KE-2
+             eflx(k) = 0.5D0 * ( velw(k+1,i,j,iq)   + velw(k,i,j,iq)   ) * var(k,i,j,I_MOMZ) &
+                     * 0.5D0 * ( var (k+1,i,j,5+iq) + var (k,i,j,5+iq) )
+          enddo
+          do k  = KS,  KE-1
+             var(k,i,j,I_MOMZ) = var(k,i,j,I_MOMZ) - dt * ( eflx(k+1)-eflx(k) ) * RFDZ(k)
+          enddo
+
+          !--- momentum x
+          do k  = KS-1, KE-1
+             eflx(k) = velw(k+1,i,j,iq) * var(k+1,i,j,I_MOMX) * var(k+1,i,j,5+iq)
+          enddo
+          do k  = KS,  KE
+             var(k,i,j,I_MOMX) = var(k,i,j,I_MOMX) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
+          enddo
+
+          !--- momentum y
+          do k  = KS-1, KE-1
+             eflx(k) = velw(k+1,i,j,iq) * var(k+1,i,j,I_MOMY) * var(k+1,i,j,5+iq)
+          enddo
+          do k  = KS,  KE
+             var(k,i,j,I_MOMY) = var(k,i,j,I_MOMY) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
+          enddo
+
+          !--- update total density
+          do k  = KS,  KE
+             var(k,i,j,I_DENS) = var(k,i,j,I_DENS) - dt * ( qflx(k,iq)-qflx(k-1,iq) ) * RCDZ(k)
+          enddo
+
+       enddo ! QC-QG loop
+
+       !--- update tracer
+       do iq = I_QC, I_NG
+       do k  = KS, KE
+          var(k,i,j,5+iq) = var(k,i,j,5+iq) - dt * ( qflx(k,iq)-qflx(k-1,iq) ) * RCDZ(k) / var(k,i,j,I_DENS)
+       enddo 
+       enddo ! QC-QG,NC-NG loop
+
+       do k  = KS,  KE
+          qdry(k) = 1.D0
+          do iq = I_QV, I_QG
+             qdry(k) = qdry(k) - var(k,i,j,5+iq)
+          enddo
        enddo
 
        do k  = KS,  KE
-       do ij = IJS, IJE
-          rhoge(k,i,j) = rhoge(k,i,j) - dt * ( ( eflx(k,i,j)   -eflx(ij,k-1)    )                 &
-                                           - ( qflx(k,i,j,iq)-qflx(ij,k-1,iq) ) * GRAV * CZ(k) ) * RCDZ(k)
-       enddo
-       enddo
-
-       !--- momentum z (half level)
-       do k  = KS-1, KE-2
-       do ij = IJS,  IJE
-          eflx(k,i,j) = 0.5D0 * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) * var(k,i,j,I_MOMZ) &
-                     * 0.5D0 * ( q(k+1,i,j,iq)    + q(k,i,j,iq)    )
-       enddo
-       enddo
-
-       do k  = KS,  KE-1
-       do ij = IJS, IJE
-          var(k,i,j,I_MOMZ) = var(k,i,j,I_MOMZ) - dt * ( eflx(k+1,i,j)-eflx(k,i,j) ) * RFDZ(k)
-       enddo
-       enddo
-
-       !--- momentum x
-       do k  = KS-1, KE-1
-       do ij = IJS,  IJE
-          eflx(k,i,j) = velw(k+1,i,j,iq) * var(k+1,i,j,I_MOMX) * q(k+1,i,j,iq)
-       enddo
+          CVmoist(k) = qdry(k) * CVdry
+          do iq = I_QV, I_QG
+             CVmoist(k) = CVmoist(k) + var(k,i,j,5+iq) * CVw(iq)
+          enddo
        enddo
 
        do k  = KS,  KE
-       do ij = IJS, IJE
-          var(k,i,j,I_MOMX) = var(k,i,j,I_MOMX) - dt * ( eflx(k,i,j)-eflx(ij,k-1) ) * RCDZ(k)
-       enddo
-       enddo
-
-       !--- momentum y
-       do k  = KS-1, KE-1
-       do ij = IJS,  IJE
-          eflx(k,i,j) = velw(k+1,i,j,iq) * var(k+1,i,j,I_MOMY) * q(k+1,i,j,iq)
-       enddo
+          Rmoist(k) = qdry(k)*Rdry + var(k,i,j,5+I_QV)*Rvap
+          pres  (k) = rhoe_new(k) * Rmoist(k) / CVmoist(k)
        enddo
 
        do k  = KS,  KE
-       do ij = IJS, IJE
-          var(k,i,j,I_MOMY) = var(k,i,j,I_MOMY) - dt * ( eflx(k,i,j)-eflx(ij,k-1) ) * RCDZ(k)
-       enddo
+          var(k,i,j,I_RHOT) = rhoe_new(k) / CVmoist(k) * ( PRE00 / pres(k) )**RovCP
        enddo
 
-       !--- update total density
-       do k  = KS,  KE
-       do ij = IJS, IJE
-          rhog(k,i,j) = rhog(k,i,j) - dt * ( qflx(k,i,j,iq)-qflx(ij,k-1,iq) ) * RCDZ(k)
-       enddo
-       enddo
-
-    enddo
-
-    !--- update tracer
-    do iq = I_QC, I_NG
-    do k  = KS,  KE
-    do ij = IJS, IJE
-       rhogq(k,i,j,iq) = rhogq(k,i,j,iq) - dt * ( qflx(k,i,j,iq)-qflx(ij,k-1,iq) ) * RCDZ(k)
-    enddo
-    enddo
-    enddo
-
-    !--- lowermost flux is saved for land process
-    do ij = IJS, IJE
-       precip(ij,1) = - ( qflx(ij,KS-1,I_QC) &
-                        + qflx(ij,KS-1,I_QR) )
-       precip(ij,2) = - ( qflx(ij,KS-1,I_QI) &
-                        + qflx(ij,KS-1,I_QS) &
-                        + qflx(ij,KS-1,I_QG) )
-    enddo
+    enddo ! I loop
+    enddo ! J loop
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("precipitation")

@@ -3,7 +3,8 @@
 FC     = mpifrtpx
 # new setting 20120214
 FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_
+         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
+         -Kprefetch_cache_level=all,prefetch_iteration_L2=50
 
 FFLAGS_DYN = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
              -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
