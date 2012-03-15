@@ -4,9 +4,9 @@
 #
 export HMDIR=~/GCMresults/sol/latest
 export BIN=~/Dropbox/Inbox/scale3/bin/${SCALE_SYS}
-export EXE=init_warmbubble
+export EXE=init_turbdyn
 
-export OUTDIR=${HMDIR}/output/init_warmbubble
+export OUTDIR=${HMDIR}/output/init_KH
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -16,12 +16,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_warmbubble configulation
+# Scale3 init_coldbubble configulation
 #
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 2,
+ PRC_NUM_X       = 3,
  PRC_NUM_Y       = 2,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
@@ -50,7 +50,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_IMAX         = 100,
  GRID_JMAX         = 100,
  GRID_BUFFER_DZ    = 5.0D3,
- GRID_BUFFFACT     = 1.1D0,
+ GRID_BUFFFACT     = 1.0D0,
 /
 
 &PARAM_ATMOS
@@ -63,21 +63,16 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
  ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_warmbubble",
+ ATMOS_RESTART_OUT_BASENAME   = "init_KH",
 /
 
-&PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TEMP_SFC = 300.D0     
-/
-
-&PARAM_MKEXP_WARMBUBBLE
- EXT_TBBL =   3.D0,
- ZC_BBL   =   3.D3,
- XC_BBL   = 100.D3,
- YC_BBL   = 100.D3,
- ZR_BBL   =   3.D3,
- XR_BBL   =   6.D3,
- YR_BBL   =   6.D3,
+&PARAM_MKEXP_TURBDYN
+ ENV_THETA  = 300.D0,
+ ENV_DTHETA =   3.D0,
+ ENV_XVEL1  =   0.D0,
+ ENV_XVEL2  =  20.D0,
+ LEV_XVEL1  =  1.9D3,
+ LEV_XVEL2  =  2.1D3,
 /
 
 End_of_SYSIN
@@ -85,7 +80,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-/usr/local/mpich213/bin/mpiexec -np 4 -f /Users/yashiro/libs/mpilib/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
+/usr/local/mpich213/bin/mpiexec -np 6 -f /Users/yashiro/libs/mpilib/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit
