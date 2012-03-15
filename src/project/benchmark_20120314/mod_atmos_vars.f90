@@ -397,7 +397,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '   I_QI:', I_QI
     if( IO_L ) write(IO_FID_LOG,*) '   I_QS:', I_QS
     if( IO_L ) write(IO_FID_LOG,*) '   I_QG:', I_QG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Number family NWS -NWE = ', A_QWS, ' - ', A_QWE
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Number family NWS -NWE = ', A_NWS, ' - ', A_NWE
     if( IO_L ) write(IO_FID_LOG,*) '   I_NC:', I_NC
     if( IO_L ) write(IO_FID_LOG,*) '   I_NR:', I_NR
     if( IO_L ) write(IO_FID_LOG,*) '   I_NI:', I_NI
@@ -460,8 +460,7 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE
     use mod_comm, only: &
-       COMM_set_rdma_variable, &
-       COMM_vars, &
+       COMM_vars8, &
        COMM_wait, &
        COMM_stats, &
        COMM_total
@@ -474,7 +473,7 @@ contains
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
 
-    integer :: iv, i, j, iq
+    integer :: iv, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -489,21 +488,10 @@ contains
        atmos_var(KS:KE,IS:IE,JS:JE,iv) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
-    ! register DMA communication list
-    call COMM_set_rdma_variable( atmos_var(:,:,:,1), 1, 1 )
-    call COMM_set_rdma_variable( atmos_var(:,:,:,2), 2, 2 )
-    call COMM_set_rdma_variable( atmos_var(:,:,:,3), 3, 3 )
-    call COMM_set_rdma_variable( atmos_var(:,:,:,4), 4, 4 )
-    call COMM_set_rdma_variable( atmos_var(:,:,:,5), 5, 5 )
-
-    do iq = 1, A_QA
-       call COMM_set_rdma_variable( atmos_var(:,:,:,5+iq), 5+iq, iq )
-    enddo
-
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
-       call COMM_wait( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
+       call COMM_wait ( atmos_var(:,:,:,iv), iv )
     enddo
 
     ! fill KHALO
@@ -519,7 +507,7 @@ contains
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -541,7 +529,6 @@ contains
        JS   => GRID_JS,   &
        JE   => GRID_JE
     use mod_comm, only: &
-       COMM_vars,  &
        COMM_stats, &
        COMM_total
     use mod_fileio, only: &
@@ -560,7 +547,7 @@ contains
     call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
@@ -628,7 +615,7 @@ contains
     enddo
 
     ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
@@ -654,7 +641,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'Data Check Failed. See std. output.'
        write(*,*) 'Data Check Failed.'
     endif
-    call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:) )
+    call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:), force_report=.true. )
 
     return
   end subroutine ATMOS_vars_restart_check
@@ -677,7 +664,7 @@ contains
        IA   => GRID_IA, &
        JA   => GRID_JA
     use mod_comm, only: &
-       COMM_vars, &
+       COMM_vars8, &
        COMM_wait, &
        COMM_total
     implicit none
@@ -719,15 +706,9 @@ contains
 
     ! fill IHALO & JHALO
     do iv = 1, A_VA
-       call COMM_vars( atmos_var(:,:,:,iv), iv )
+       call COMM_vars8( atmos_var(:,:,:,iv), iv )
+       call COMM_wait ( atmos_var(:,:,:,iv), iv )
     enddo
-
-    do iv = 1, A_VA
-       call COMM_wait( atmos_var(:,:,:,iv), iv )
-    enddo
-
-    ! check total mass
-    call COMM_total( atmos_var(:,:,:,1:6), A_NAME(1:6) )
 
     return
   end subroutine ATMOS_vars_put
@@ -834,50 +815,27 @@ contains
   subroutine ATMOS_DMP2PVT
     use mod_const, only : &
        Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
-       RovCP  => CONST_RovCP,  &
        CPovCV => CONST_CPovCV, &
-       Pstd   => CONST_Pstd
+       P00    => CONST_PRE00
     use mod_grid, only: &
        IS   => GRID_IS,   &
        IE   => GRID_IE,   &
        JS   => GRID_JS,   &
        JE   => GRID_JE,   &
        KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       WS   => GRID_WS,   &
-       WE   => GRID_WE
+       KE   => GRID_KE
     implicit none
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! momentum -> velocity
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_diagvar(k,i,j,2) = 2.D0 * atmos_var(k,i,j,2) / ( atmos_var(k,i+1,j,  1)+atmos_var(k,i,j,1) )
-       atmos_diagvar(k,i,j,3) = 2.D0 * atmos_var(k,i,j,3) / ( atmos_var(k,i,  j+1,1)+atmos_var(k,i,j,1) )
-    enddo
-    enddo
-    enddo
-
-    do j = JS,   JE
-    do i = IS,   IE
-    do k = WS+1, WE-1
-       atmos_diagvar(k,i,j,4) = 2.D0 * atmos_var(k,i,j,4) / ( atmos_var(k,i,j+1,1)+atmos_var(k,i,j,1) )
-    enddo
-    enddo
-    enddo
-    atmos_diagvar(WS,:,:,4) = 0.D0 ! bottom boundary
-    atmos_diagvar(WE,:,:,4) = 0.D0 ! top    boundary
-
-    ! pressure, temperature
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       atmos_diagvar(k,i,j,1) = Pstd * ( atmos_var(k,i,j,5) * Rdry / Pstd )**CPovCV
-
+       atmos_diagvar(k,i,j,1) = P00 * ( atmos_var(k,i,j,5) * Rdry / P00 )**CPovCV
+       atmos_diagvar(k,i,j,2) = 0.5D0 * ( atmos_var(k,i,j,2)+atmos_var(k,i-1,j,2) ) / atmos_var(k,i,j,1)
+       atmos_diagvar(k,i,j,3) = 0.5D0 * ( atmos_var(k,i,j,3)+atmos_var(k,i,j-1,3) ) / atmos_var(k,i,j,1)
+       atmos_diagvar(k,i,j,4) = 0.5D0 * ( atmos_var(k,i,j,4)+atmos_var(k-1,i,j,4) ) / atmos_var(k,i,j,1)
        atmos_diagvar(k,i,j,5) = atmos_diagvar(k,i,j,1) / ( atmos_var(k,i,j,1) * Rdry )
     enddo
     enddo
