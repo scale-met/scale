@@ -1,9 +1,9 @@
 #! /bin/bash -x
 #
-# for Local machine (MacOSX 8core+ifort+MPICH2)
+# for Local machine (MacOSX 2core+gfortran+MPICH2)
 #
-export HMDIR=~/GCMresults/sol/latest
-export BIN=~/Dropbox/Inbox/scale3/bin/${SCALE_SYS}
+export HMDIR=~/Desktop/scale3
+export BIN=~/Dropbox/Inbox/scale3/bin/MacOSX-gfortran
 export EXE=init_warmbubble
 
 export OUTDIR=${HMDIR}/output/init_warmbubble
@@ -21,8 +21,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 2,
- PRC_NUM_Y       = 2,
+ PRC_NUM_X       = 1,
+ PRC_NUM_Y       = 1,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -44,12 +44,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_1000m_20x100x100",
- GRID_DXYZ         = 1000.D0,
- GRID_KMAX         = 20,
- GRID_IMAX         = 100,
- GRID_JMAX         = 100,
- GRID_BUFFER_DZ    = 5.0D3,
+ GRID_OUT_BASENAME = "grid_20m_336x63x63",
+ GRID_DXYZ         = 20.D0,
+ GRID_KMAX         = 336,
+ GRID_IMAX         = 63,
+ GRID_JMAX         = 63,
+ GRID_BUFFER_DZ    = 6.0D3,
  GRID_BUFFFACT     = 1.1D0,
 /
 
@@ -71,13 +71,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_MKEXP_WARMBUBBLE
- EXT_TBBL =   3.D0,
- ZC_BBL   =   3.D3,
- XC_BBL   = 100.D3,
- YC_BBL   = 100.D3,
- ZR_BBL   =   3.D3,
- XR_BBL   =   6.D3,
- YR_BBL   =   6.D3,
+ ZC_BBL =  6.0D2,
+ XC_BBL =  6.0D2,
+ YC_BBL =  6.0D2,
+ ZR_BBL =  2.0D2,
+ XR_BBL =  2.0D2,
+ YR_BBL =  2.0D2,
 /
 
 End_of_SYSIN
@@ -85,7 +84,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-/usr/local/mpich213/bin/mpiexec -np 4 -f /Users/yashiro/libs/mpilib/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
+/opt/local/bin/mpiexec -np 1 -f /Users/yashiro/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit

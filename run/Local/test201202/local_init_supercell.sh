@@ -4,9 +4,9 @@
 #
 export HMDIR=~/GCMresults/sol/latest
 export BIN=~/Dropbox/Inbox/scale3/bin/${SCALE_SYS}
-export EXE=init_warmbubble
+export EXE=init_supercell
 
-export OUTDIR=${HMDIR}/output/init_warmbubble
+export OUTDIR=${HMDIR}/output/init_supercell
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -16,7 +16,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_warmbubble configulation
+# Scale3 init_supercell configulation
 #
 #####
 
@@ -44,13 +44,15 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_1000m_20x100x100",
- GRID_DXYZ         = 1000.D0,
- GRID_KMAX         = 20,
+ GRID_OUT_BASENAME = 'grid_400m_50x100x100',
+ GRID_DXYZ         = 400.D0,
+ GRID_KMAX         = 50,
  GRID_IMAX         = 100,
  GRID_JMAX         = 100,
- GRID_BUFFER_DZ    = 5.0D3,
- GRID_BUFFFACT     = 1.1D0,
+ GRID_BUFFER_DZ    = 4.0D3,
+ GRID_BUFFER_DX    = 0.0D0,
+ GRID_BUFFER_DY    = 0.0D0,
+ GRID_BUFFFACT     = 1.0D0,
 /
 
 &PARAM_ATMOS
@@ -61,23 +63,19 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_warmbubble",
+ ATMOS_QTRC_NMAX            = 11,
+ ATMOS_RESTART_OUTPUT       = .true.,
+ ATMOS_RESTART_OUT_BASENAME = 'init_supercell',
 /
 
-&PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TEMP_SFC = 300.D0     
-/
-
-&PARAM_MKEXP_WARMBUBBLE
- EXT_TBBL =   3.D0,
- ZC_BBL   =   3.D3,
- XC_BBL   = 100.D3,
- YC_BBL   = 100.D3,
- ZR_BBL   =   3.D3,
- XR_BBL   =   6.D3,
- YR_BBL   =   6.D3,
+&PARAM_MKEXP_SUPERCELL
+ ENV_IN_SOUNDING_file = '~/Dropbox/Inbox/scale3/data/supercell/input_sounding.txt',
+ ZC_BBL =  1.5D3,
+ XC_BBL = 40.0D3,
+ YC_BBL = 40.0D3,
+ ZR_BBL =  1.0D3,
+ XR_BBL =  4.0D3,
+ YR_BBL =  4.0D3,
 /
 
 End_of_SYSIN
