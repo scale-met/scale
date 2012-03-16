@@ -602,13 +602,13 @@ contains
     ireqc = ireqc + 1
 
     ! From E
-    call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,             &
+    call MPI_IRECV( recvpack_E2P_r4(:,vid), datasize_WE,             &
                     MPI_REAL            , PRC_next(PRC_E), tag+3, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
     ireqc = ireqc + 1
 
     ! From W
-    call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,             &
+    call MPI_IRECV( recvpack_W2P_r4(:,vid), datasize_WE,             &
                     MPI_REAL            , PRC_next(PRC_W), tag+4, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
     ireqc = ireqc + 1
@@ -621,7 +621,7 @@ contains
         n =  (j-JS) * KA * IHALO &
            + (i-IS) * KA         &
            + k
-        sendpack_P2W(n,vid) = var(k,i,j)
+        sendpack_P2W_r4(n,vid) = var(k,i,j)
     enddo
     enddo
     enddo
@@ -633,20 +633,20 @@ contains
         n =  (j-JS)         * KA * IHALO &
            + (i-IE+IHALO-1) * KA         &
            + k
-        sendpack_P2E(n,vid) = var(k,i,j)
+        sendpack_P2E_r4(n,vid) = var(k,i,j)
         n = n + 1
     enddo
     enddo
     enddo
 
     ! To W HALO communicate
-    call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,             &
+    call MPI_ISEND( sendpack_P2W_r4(:,vid), datasize_WE,             &
                     MPI_REAL            , PRC_next(PRC_W), tag+3, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
     ireqc = ireqc + 1
 
     ! To E HALO communicate
-    call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,             &
+    call MPI_ISEND( sendpack_P2E_r4(:,vid), datasize_WE,             &
                     MPI_REAL            , PRC_next(PRC_E), tag+4, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
     ireqc = ireqc + 1
@@ -763,12 +763,12 @@ contains
         tagc  = tagc  + 1
     enddo
     ! From E
-    call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,              &
+    call MPI_IRECV( recvpack_E2P_r4(:,vid), datasize_WE,              &
                     MPI_REAL            , PRC_next(PRC_E), tag+60, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
     ireqc = ireqc + 1
     ! From W
-    call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,              &
+    call MPI_IRECV( recvpack_W2P_r4(:,vid), datasize_WE,              &
                     MPI_REAL            , PRC_next(PRC_W), tag+70, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
     ireqc = ireqc + 1
@@ -781,7 +781,7 @@ contains
         n =  (j-JS) * KA * IHALO &
            + (i-IS) * KA         &
            + k
-        sendpack_P2W(n,vid) = var(k,i,j)
+        sendpack_P2W_r4(n,vid) = var(k,i,j)
     enddo
     enddo
     enddo
@@ -793,20 +793,20 @@ contains
         n =  (j-JS)         * KA * IHALO &
            + (i-IE+IHALO-1) * KA         &
            + k
-        sendpack_P2E(n,vid) = var(k,i,j)
+        sendpack_P2E_r4(n,vid) = var(k,i,j)
         n = n + 1
     enddo
     enddo
     enddo
 
     ! To W HALO communicate
-    call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,              &
+    call MPI_ISEND( sendpack_P2W_r4(:,vid), datasize_WE,              &
                     MPI_REAL            , PRC_next(PRC_W), tag+60, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
     ireqc = ireqc + 1
 
     ! To E HALO communicate
-    call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,              &
+    call MPI_ISEND( sendpack_P2E_r4(:,vid), datasize_WE,              &
                     MPI_REAL            , PRC_next(PRC_E), tag+70, &
                     MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
     ireqc = ireqc + 1
@@ -893,7 +893,7 @@ contains
        JE    => GRID_JE
     implicit none
 
-    real(8), intent(inout) :: var(:,:,:)
+    real(4), intent(inout) :: var(:,:,:)
 
     integer, intent(in) :: vid
 
@@ -913,7 +913,7 @@ contains
         n =  (j-JS)   * KA * IHALO &
            + (i-IE-1) * KA         &
            + k
-        var(k,i,j) = recvpack_E2P(n,vid)
+        var(k,i,j) = recvpack_E2P_r4(n,vid)
     enddo
     enddo
     enddo
@@ -925,7 +925,7 @@ contains
         n =  (j-JS)       * KA * IHALO &
            + (i-IS+IHALO) * KA         &
            + k
-        var(k,i,j) = recvpack_W2P(n,vid)
+        var(k,i,j) = recvpack_W2P_r4(n,vid)
     enddo
     enddo
     enddo
