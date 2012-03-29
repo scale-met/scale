@@ -16,6 +16,12 @@ module mod_fileio
   !
   !++ Used modules
   !
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   use mod_fileio_h
   !-----------------------------------------------------------------------------
   implicit none
@@ -26,9 +32,7 @@ module mod_fileio
   !
   public :: FIO_setup
   public :: FIO_setgridinfo
-#ifdef CONFIG_HDF5
   public :: FIO_getfid
-#endif
   public :: FIO_input
   public :: FIO_seek
   public :: FIO_output
@@ -48,14 +52,14 @@ module mod_fileio
   !++ Private parameters & variables
   !
 #ifdef CONFIG_HDF5
-  character(len=10), private,      save :: GROUP_OUT_BASENAME = 'time_step'
+  character(len=IO_FILECHR), private,      save :: GROUP_OUT_BASENAME = 'time_step'
 #endif
-  integer,                  private, parameter :: FIO_nfile_max = 64 ! number limit of file step
-  character(LEN=FIO_HLONG), private,      save :: FIO_fname_list(FIO_nfile_max)
-  integer,                  private,      save :: FIO_fid_list  (FIO_nfile_max)
-  integer,                  private,      save :: FIO_fid_count = 1
+  integer,                   private, parameter :: FIO_nfile_max = 64 ! number limit of file step
+  integer,                   private, parameter :: FIO_nstep_max = 2500 ! number limit of time step
 
-  integer,                  private, parameter :: FIO_nstep_max = 2500 ! number limit of time step
+  character(LEN=FIO_HLONG),  private,      save :: FIO_fname_list(FIO_nfile_max)
+  integer,                   private,      save :: FIO_fid_list  (FIO_nfile_max)
+  integer,                   private,      save :: FIO_fid_count = 1
 
   type(headerinfo), private :: hinfo 
   type(datainfo),   private :: dinfo 
@@ -67,9 +71,6 @@ module mod_fileio
 contains
   !-----------------------------------------------------------------------------
   subroutine FIO_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_myrank
     implicit none
@@ -79,6 +80,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FILEIO]/Categ[IO]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum limit for file registration    : ', FIO_nfile_max
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum limit for timestep in one file : ', FIO_nstep_max
+
+    ! only for register
+    call TIME_rapstart('FILE I')
+    call TIME_rapend  ('FILE I')
+    call TIME_rapstart('FILE O')
+    call TIME_rapend  ('FILE O')
 
     call fio_syscheck
 
@@ -142,9 +149,6 @@ contains
       rwtype,   &
       pkg_desc, &
       pkg_note  )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_myrank
     implicit none
@@ -185,7 +189,7 @@ contains
 
        endif
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** [FIO] File registration : ',trim(rwname(rwtype)),' -',n
+       if( IO_L ) write(IO_FID_LOG,'(1x,3(A),i3)') '*** [FIO] File registration : ',trim(rwname(rwtype)),' -',n
        if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(fname)
 
        FIO_fname_list(FIO_fid_count) = trim(basename)
@@ -208,14 +212,8 @@ contains
       k_end,         &
       step,          &
       allow_missingq ) !--- optional
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
-    use mod_time, only: &
-       TIME_rapstart, &
-       TIME_rapend
     implicit none
 
     real(8),          intent(out) :: var(:,:,:)
@@ -313,9 +311,6 @@ contains
       ctime,            &
       cdate,            &
       opt_periodic_year )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only :&
@@ -416,16 +411,10 @@ contains
       step,      &
       t_start,   &
       t_end      )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
        CONST_UNDEF4
-    use mod_time, only: &
-       TIME_rapstart, &
-       TIME_rapend
     implicit none
 
     real(8),          intent(in) :: var(:,:,:)
@@ -501,9 +490,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FIO_finalize
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_myrank
     implicit none
@@ -516,7 +502,7 @@ contains
     do n = 1, FIO_fid_count-1
        call fio_fclose(FIO_fid_list(n))
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** [FIO] File Close : NO.', n
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3)') '*** [FIO] File Close : NO.', n
        call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',PRC_myrank,6)
        if( IO_L ) write(IO_FID_LOG,*) '*** closed filename: ', trim(fname)
     enddo
@@ -532,9 +518,6 @@ contains
       pkg_desc, &
       pkg_note, &
       single    )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_master, &
        PRC_myrank
@@ -625,15 +608,9 @@ contains
       k_end,     &
       step,      &
       single     )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_myrank, &
        PRC_MPIstop
-    use mod_time, only: &
-       TIME_rapstart, &
-       TIME_rapend
     implicit none
 
     real(8),          intent(out) :: var(:)
@@ -712,16 +689,10 @@ contains
       t_start,   &
       t_end,     &
       single     )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
        CONST_UNDEF4
-    use mod_time, only: &
-       TIME_rapstart, &
-       TIME_rapend
     implicit none
 
     real(8),          intent(in) :: var(:)

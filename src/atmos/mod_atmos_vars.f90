@@ -7,7 +7,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-11-11 (H.Yashiro)  [new]
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -23,8 +24,7 @@ module mod_atmos_vars
      IO_FILECHR
   use mod_fileio_h, only: &
      FIO_HSHORT, &
-     FIO_HMID,   &
-     FIO_REAL8
+     FIO_HMID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,51 +36,55 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_read
   public :: ATMOS_vars_restart_write
   public :: ATMOS_vars_restart_check
-  public :: ATMOS_vars_put
-  public :: ATMOS_vars_get
-  public :: ATMOS_vars_getdiag
-  public :: ATMOS_DMP2PVT
+  public :: ATMOS_vars_history
+  public :: ATMOS_vars_monitor
+  public :: ATMOS_vars_total
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer,                   public,              save :: A_VA      ! Number of Tracers + 5
-  integer,                   public,              save :: A_QA      ! Number of Tracers
-  character(len=FIO_HSHORT), public, allocatable, save :: A_NAME(:)
-  character(len=FIO_HMID),   public, allocatable, save :: A_DESC(:)
-  character(len=FIO_HSHORT), public, allocatable, save :: A_UNIT(:)
+  real(8), public, save :: DENS(KA,IA,JA)    ! Density    [kg/m3]
+  real(8), public, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
+  real(8), public, save :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
+  real(8), public, save :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
+  real(8), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+  real(8), public, save :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
-  integer, public, parameter :: I_DENS = 1
-  integer, public, parameter :: I_MOMX = 2
-  integer, public, parameter :: I_MOMY = 3
-  integer, public, parameter :: I_MOMZ = 4
-  integer, public, parameter :: I_RHOT = 5
+  ! diagnostic variables, defined at the cell center
+  real(8), public, save :: PRES(KA,IA,JA)    ! pressure [Pa]
+  real(8), public, save :: TEMP(KA,IA,JA)    ! temperature [K]
+  real(8), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
+  real(8), public, save :: VELX(KA,IA,JA)    ! velocity u [m/s]
+  real(8), public, save :: VELY(KA,IA,JA)    ! velocity v [m/s]
+  real(8), public, save :: POTT(KA,IA,JA)    ! potential temperature [K]
 
-  integer, public, parameter :: A_QWA_MAX = 6
-  real(8), public,      save :: A_CPw(A_QWA_MAX) = 0.D0 ! CP for each hydrometeors
-  real(8), public,      save :: A_CVw(A_QWA_MAX) = 0.D0 ! CV for each hydrometeors
+  character(len=FIO_HSHORT), public, save :: AP_NAME(5)
+  character(len=FIO_HMID),   public, save :: AP_DESC(5)
+  character(len=FIO_HSHORT), public, save :: AP_UNIT(5)
 
-  integer, public,      save :: A_QWA =  0 ! Total number of all hydrometeors
-  integer, public,      save :: A_QWS = -1 ! Start index for all hydrometeors
-  integer, public,      save :: A_QWE = -1 ! End   index for all hydrometeors
-  integer, public,      save :: A_QLS = -1 ! Start index for liquids
-  integer, public,      save :: A_QLE = -1 ! End   index for liquids
-  integer, public,      save :: A_QSS = -1 ! Start index for solids
-  integer, public,      save :: A_QSE = -1 ! End   index for solids
-  integer, public,      save :: A_NWS = -1 ! Start index for number of liquids, solids
-  integer, public,      save :: A_NWE = -1 ! End   index for number of liquids, solids
-
-  integer, public,      save :: I_QV  = -1
-  integer, public,      save :: I_QC  = -1
-  integer, public,      save :: I_QR  = -1
-  integer, public,      save :: I_QI  = -1
-  integer, public,      save :: I_QS  = -1
-  integer, public,      save :: I_QG  = -1
-  integer, public,      save :: I_NC  = -1
-  integer, public,      save :: I_NR  = -1
-  integer, public,      save :: I_NI  = -1
-  integer, public,      save :: I_NS  = -1
-  integer, public,      save :: I_NG  = -1
+  data AP_NAME / 'DENS', &
+                 'MOMZ', &
+                 'MOMY', &
+                 'MOMX', &
+                 'RHOT'  /
+  data AP_DESC / 'density',    &
+                 'momentum z', &
+                 'momentum x', &
+                 'momentum y', &
+                 'rho * theta' /
+  data AP_UNIT / 'kg/m3',   &
+                 'kg/m2/s', &
+                 'kg/m2/s', &
+                 'kg/m2/s', &
+                 'kg/m3*K'  /
 
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_DYN    = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
@@ -93,9 +97,6 @@ module mod_atmos_vars
   logical,                   public, save :: ATMOS_sw_phy_rd
   logical,                   public, save :: ATMOS_sw_restart
   logical,                   public, save :: ATMOS_sw_check
-
-  real(8), public, allocatable, save :: atmos_var(:,:,:,:)     !> prognostics container (with HALO)
-  real(8), public, allocatable, save :: atmos_diagvar(:,:,:,:) !> diagnostics container (with HALO)
 
   !-----------------------------------------------------------------------------
   !
@@ -114,6 +115,20 @@ module mod_atmos_vars
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
   real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
+  integer, private, save      :: ATMOS_HIST_sw(20)
+  integer, private, parameter :: I_PRES =  1
+  integer, private, parameter :: I_VELZ =  2
+  integer, private, parameter :: I_VELX =  3
+  integer, private, parameter :: I_VELY =  4
+  integer, private, parameter :: I_POTT =  5
+  integer, private, parameter :: I_TEMP =  6
+  integer, private, parameter :: I_RH   =  7
+  integer, private, parameter :: I_QTOT =  8
+  integer, private, parameter :: I_VOR  =  9
+  integer, private, parameter :: I_DIV  = 10
+  integer, private, parameter :: I_ENGP = 11
+  integer, private, parameter :: I_ENGK = 12
+  integer, private, parameter :: I_ENGI = 13
   !-----------------------------------------------------------------------------
 contains
 
@@ -131,10 +146,8 @@ contains
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
        CONST_UNDEF8
-    use mod_grid, only: &
-       KA => GRID_KA, &
-       IA => GRID_IA, &
-       JA => GRID_JA
+    use mod_history, only: &
+       HIST_reg
     implicit none
 
     NAMELIST / PARAM_ATMOS / &
@@ -143,26 +156,17 @@ contains
        ATMOS_TYPE_PHY_MP, &
        ATMOS_TYPE_PHY_RD
 
-    integer                   :: ATMOS_QTRC_NMAX    = 0
-    character(len=FIO_HSHORT) :: ATMOS_QTRC_VARNAME = ''
-    character(len=IO_FILECHR) :: ATMOS_QTRC_VARDESC = ''
-    character(len=IO_FILECHR) :: ATMOS_QTRC_VARUNIT = ''
-
     NAMELIST / PARAM_ATMOS_VARS / &
-       ATMOS_QTRC_NMAX,                &
-       ATMOS_QTRC_VARNAME,             &
-       ATMOS_QTRC_VARDESC,             &
-       ATMOS_QTRC_VARUNIT,             &
-       ATMOS_RESTART_OUTPUT,           &
        ATMOS_RESTART_IN_BASENAME,      &
-       ATMOS_RESTART_OUT_BASENAME,     &
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
+       ATMOS_RESTART_OUTPUT,           &
+       ATMOS_RESTART_OUT_BASENAME,     &
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION
 
     integer :: ierr
-    integer :: iv
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -188,6 +192,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : Full-explicit No-terrain'
        if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : FCT limitter'
        ATMOS_sw_dyn = .true.
+    elseif( ATMOS_TYPE_DYN == 'fent_pdfct' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : Full-explicit No-terrain'
+       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : Positive-Difinite FCT limitter'
+       ATMOS_sw_dyn = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : NONE'
        if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : NONE'
@@ -204,6 +212,9 @@ contains
     endif
     if ( ATMOS_TYPE_PHY_MP == 'NDW6' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : NDW6'
+       ATMOS_sw_phy_mp = .true.
+    elseif( ATMOS_TYPE_PHY_MP == 'kessler' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : Kessler'
        ATMOS_sw_phy_mp = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : NONE'
@@ -232,177 +243,24 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
 
-    if ( ATMOS_QTRC_NMAX >= 1 ) then 
-
-       A_VA = 5 + ATMOS_QTRC_NMAX
-       allocate( A_NAME(A_VA) )
-       allocate( A_DESC(A_VA) )
-       allocate( A_UNIT(A_VA) )
-
-       A_NAME( 1) = 'DENS'
-       A_NAME( 2) = 'MOMX'
-       A_NAME( 3) = 'MOMY'
-       A_NAME( 4) = 'MOMZ'
-       A_NAME( 5) = 'RHOT'
-
-       A_DESC( 1) = 'density'
-       A_DESC( 2) = 'momentum x'
-       A_DESC( 3) = 'momentum y'
-       A_DESC( 4) = 'momentum z'
-       A_DESC( 5) = 'rho * theta'
-
-       A_UNIT( 1) = 'kg/m3'
-       A_UNIT( 2) = 'kg/m2/s'
-       A_UNIT( 3) = 'kg/m2/s'
-       A_UNIT( 4) = 'kg/m2/s'
-       A_UNIT( 5) = 'kg/m3*K'
-
-       A_QA = ATMOS_QTRC_NMAX
-       A_NAME(6:5+A_QA) = ATMOS_QTRC_VARNAME(1:ATMOS_QTRC_NMAX)
-       A_DESC(6:5+A_QA) = ATMOS_QTRC_VARDESC(1:ATMOS_QTRC_NMAX)
-       A_UNIT(6:5+A_QA) = ATMOS_QTRC_VARUNIT(1:ATMOS_QTRC_NMAX)
-
-       if ( ATMOS_TYPE_PHY_MP == 'NDW6' ) then
-          if ( ATMOS_QTRC_NMAX < 11 ) then
-             write(*,*) 'xxx The number of tracers is not enough!', ATMOS_QTRC_NMAX
-             call PRC_MPIstop
-          endif
-
-          A_NAME( 6) = 'QV'
-          A_NAME( 7) = 'QC'
-          A_NAME( 8) = 'QR'
-          A_NAME( 9) = 'QI'
-          A_NAME(10) = 'QS'
-          A_NAME(11) = 'QG'
-          A_NAME(12) = 'NC'
-          A_NAME(13) = 'NR'
-          A_NAME(14) = 'NI'
-          A_NAME(15) = 'NS'
-          A_NAME(16) = 'NG'
-
-          A_DESC( 6) = 'Water Vapor mixing ratio'
-          A_DESC( 7) = 'Cloud Water mixing ratio'
-          A_DESC( 8) = 'Rain Water mixing ratio'
-          A_DESC( 9) = 'Cloud Ice mixing ratio'
-          A_DESC(10) = 'Snow mixing ratio'
-          A_DESC(11) = 'Graupel mixing ratio'
-          A_DESC(12) = 'Cloud Water Number Density'
-          A_DESC(13) = 'Rain Water Number Density'
-          A_DESC(14) = 'Cloud Ice Number Density'
-          A_DESC(15) = 'Snow Number Density'
-          A_DESC(16) = 'Graupel Number Density'
-
-          A_UNIT( 6:11) = 'kg/kg'
-          A_UNIT(12:16) = '1/m3'
-       endif
-    else
-       write(*,*) 'xxx The number of tracers is not enough!', ATMOS_QTRC_NMAX
-       A_QA = 0
-    endif
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,*) &
-    '***                 : VARNAME         , ', &
-    'DESCRIPTION                                                     [UNIT            ]'
-    do iv = 1, A_VA
-       if( IO_L ) write(IO_FID_LOG,*) '*** NO.',iv,": ",A_NAME(iv),", ", A_DESC(iv),"[", A_UNIT(iv),"]"
+    if( IO_L ) write(IO_FID_LOG,*) '***       | VARNAME|DESCRIPTION', &
+    '                                                     [UNIT            ]'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
+    '*** NO.',1,'|',trim(AP_NAME(1)),'|', AP_DESC(1),'[', AP_UNIT(1),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
+    '*** NO.',2,'|',trim(AP_NAME(2)),'|', AP_DESC(2),'[', AP_UNIT(2),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
+    '*** NO.',3,'|',trim(AP_NAME(3)),'|', AP_DESC(3),'[', AP_UNIT(3),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
+    '*** NO.',4,'|',trim(AP_NAME(4)),'|', AP_DESC(4),'[', AP_UNIT(4),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
+    '*** NO.',5,'|',trim(AP_NAME(5)),'|', AP_DESC(5),'[', AP_UNIT(5),']'
+    do iq = 1, QA
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))')  &
+       '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
     enddo
-
-    allocate( atmos_var    (KA,IA,JA,A_VA) )
-    atmos_var(:,:,:,1)      = CONST_UNDEF8
-    atmos_var(:,:,:,2:A_VA) = 0.D0
-    allocate( atmos_diagvar(KA,IA,JA,5)    ); atmos_diagvar(:,:,:,:) = CONST_UNDEF8
-
-    I_QV = ATMOS_vars_getid( 'QV' )
-    A_QWA = A_QWA + 1
-    A_QWS = I_QV
-    A_QWE = I_QV
-    A_CPw(A_QWA) = CPvap
-    A_CVw(A_QWA) = CVvap
-
-    I_QC = ATMOS_vars_getid( 'QC' )
-    if ( I_QC > 0 ) then
-       A_QWA = A_QWA + 1
-       A_QWE = I_QC
-       A_QLS = I_QC
-       A_QLE = I_QC
-       A_CPw(A_QWA) = CL
-       A_CVw(A_QWA) = CL
-    endif
-    I_QR = ATMOS_vars_getid( 'QR' )
-    if ( I_QR > 0 ) then
-       A_QWA = A_QWA + 1
-       A_QWE = I_QR
-       A_QLE = I_QR
-       A_CPw(A_QWA) = CL
-       A_CVw(A_QWA) = CL
-    endif
-
-    I_QI = ATMOS_vars_getid( 'QI' )
-    if ( I_QI > 0 ) then
-       A_QWA = A_QWA + 1
-       A_QWE = I_QI
-       A_QSS = I_QI
-       A_QSE = I_QI
-       A_CPw(A_QWA) = CI
-       A_CVw(A_QWA) = CI
-    endif
-    I_QS = ATMOS_vars_getid( 'QS' )
-    if ( I_QS > 0 ) then
-       A_QWA = A_QWA + 1
-       A_QWE = I_QS
-       A_QSE = I_QS
-       A_CPw(A_QWA) = CI
-       A_CVw(A_QWA) = CI
-    endif
-    I_QG = ATMOS_vars_getid( 'QG' )
-    if ( I_QG > 0 ) then
-       A_QWA = A_QWA + 1
-       A_QWE = I_QG
-       A_QSE = I_QG
-       A_CPw(A_QWA) = CI
-       A_CVw(A_QWA) = CI
-    endif
-
-    I_NC = ATMOS_vars_getid( 'NC' )
-    A_NWS = I_NC
-    A_NWE = I_NC
-    I_NR = ATMOS_vars_getid( 'NR' )
-    if ( I_NR > 0 ) then
-       A_NWE = I_NR
-    endif
-    I_NI = ATMOS_vars_getid( 'NI' )
-    if ( I_NI > 0 ) then
-       A_NWE = I_NI
-    endif
-    I_NS = ATMOS_vars_getid( 'NS' )
-    if ( I_NS > 0 ) then
-       A_NWE = I_NS
-    endif
-    I_NG = ATMOS_vars_getid( 'NG' )
-    if ( I_NG > 0 ) then
-       A_NWE = I_NG
-    endif
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Hydrometeors Index Check'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Number of Hydrometeor tracers(QWA):', A_QWA
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Total  family QWS - QWE = ', A_QWS, ' - ', A_QWE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Liquid family QLS - QLE = ', A_QLS, ' - ', A_QLE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Soild  family QSS - QSE = ', A_QSS, ' - ', A_QSE
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QV:', I_QV
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QC:', I_QC
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QR:', I_QR
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QI:', I_QI
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QS:', I_QS
-    if( IO_L ) write(IO_FID_LOG,*) '   I_QG:', I_QG
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,I3)') 'Number family NWS -NWE = ', A_NWS, ' - ', A_NWE
-    if( IO_L ) write(IO_FID_LOG,*) '   I_NC:', I_NC
-    if( IO_L ) write(IO_FID_LOG,*) '   I_NR:', I_NR
-    if( IO_L ) write(IO_FID_LOG,*) '   I_NI:', I_NI
-    if( IO_L ) write(IO_FID_LOG,*) '   I_NS:', I_NS
-    if( IO_L ) write(IO_FID_LOG,*) '   I_NG:', I_NG
 
     if( IO_L ) write(IO_FID_LOG,*) 'Output...'
     if ( ATMOS_RESTART_OUTPUT ) then
@@ -420,50 +278,32 @@ contains
        ATMOS_sw_check = .false.
     endif
 
+    ATMOS_HIST_sw(:) = -1
+    call HIST_reg( ATMOS_HIST_sw(I_PRES), 'PRES', 'pressure',        'Pa',  '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELZ), 'W',    'velocity w',      'm/s', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELX), 'U',    'velocity u',      'm/s', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELY), 'V',    'velocity v',      'm/s', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_POTT), 'PT',   'potential temp.', 'K',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_TEMP), 'T',    'temperature',     'K',   '3D' )
+
+    call HIST_reg( ATMOS_HIST_sw(I_RH),   'RH',   'relative humidity',     '%',     '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VOR),  'VOR',  'vertical vorticity',    '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_DIV),  'DIV',  'horizontal divergence', '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  '3D' )
+
     return
   end subroutine ATMOS_vars_setup
-
-  !-----------------------------------------------------------------------------
-  !> search & get available tracer id by name
-  !> @return fid
-  !-----------------------------------------------------------------------------
-  function ATMOS_vars_getid( name ) result(iv)
-    implicit none
-
-    character(len=*), intent(in) :: name !< tracer name
-    integer                      :: iv   !< tracer ID
-    !---------------------------------------------------------------------------
-
-    do iv = 1, A_VA-5
-       if( trim(A_NAME(iv+5)) == trim(name) ) return
-    enddo
-
-    iv = -1
-
-  end function ATMOS_vars_getid
 
   !-----------------------------------------------------------------------------
   !> Read restart of atmospheric variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_restart_read
-    use mod_grid, only : &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait, &
-       COMM_stats, &
-       COMM_total
+       COMM_wait
     use mod_fileio, only: &
        FIO_input
     implicit none
@@ -473,7 +313,7 @@ contains
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
 
-    integer :: iv, i, j
+    integer :: i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -482,32 +322,66 @@ contains
     bname = ATMOS_RESTART_IN_BASENAME
     write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-    do iv = 1, A_VA
-       call FIO_input( restart_atmos(:,:,:), bname, A_NAME(iv), lname, 1, KMAX, 1 )
+    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
+    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMZ', lname, 1, KMAX, 1 )
+    MOMZ(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMX', lname, 1, KMAX, 1 )
+    MOMX(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMY', lname, 1, KMAX, 1 )
+    MOMY(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FIO_input( restart_atmos(:,:,:), bname, 'RHOT', lname, 1, KMAX, 1 )
+    RHOT(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
-       atmos_var(KS:KE,IS:IE,JS:JE,iv) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    do iq = 1, QA
+       call FIO_input( restart_atmos(:,:,:), bname, AQ_NAME(iq), lname, 1, KMAX, 1 )
+       QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
     ! fill IHALO & JHALO
-    do iv = 1, A_VA
-       call COMM_vars8( atmos_var(:,:,:,iv), iv )
-       call COMM_wait ( atmos_var(:,:,:,iv), iv )
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_vars8( MOMZ(:,:,:), 2 )
+    call COMM_vars8( MOMX(:,:,:), 3 )
+    call COMM_vars8( MOMY(:,:,:), 4 )
+    call COMM_vars8( RHOT(:,:,:), 5 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+    call COMM_wait ( MOMZ(:,:,:), 2 )
+    call COMM_wait ( MOMX(:,:,:), 3 )
+    call COMM_wait ( MOMY(:,:,:), 4 )
+    call COMM_wait ( RHOT(:,:,:), 5 )
+
+    do iq = 1, QA
+       call COMM_vars8( QTRC(:,:,:,iq), iq )
+    enddo
+    do iq = 1, QA
+       call COMM_wait ( QTRC(:,:,:,iq), iq )
     enddo
 
     ! fill KHALO
-    do iv = 1, A_VA
     do j  = 1, JA
     do i  = 1, IA
-       atmos_var(   1:KS-1,i,j,iv) = atmos_var(KS,i,j,iv)
-       atmos_var(KE+1:KA,  i,j,iv) = atmos_var(KE,i,j,iv)
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+    enddo
+    enddo
+    do iq = 1, QA
+    do j  = 1, JA
+    do i  = 1, IA
+       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
     enddo
     enddo
     enddo
 
-    call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
-
-    ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
+    call ATMOS_vars_total
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -518,19 +392,8 @@ contains
   subroutine ATMOS_vars_restart_write
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_grid, only : &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE
-    use mod_comm, only: &
-       COMM_stats, &
-       COMM_total
+    use mod_fileio_h, only: &
+       FIO_REAL8
     use mod_fileio, only: &
        FIO_output
     implicit none
@@ -541,13 +404,8 @@ contains
     character(len=FIO_HMID)   :: desc
     character(len=8)          :: lname
 
-    integer :: iv
+    integer :: iq
     !---------------------------------------------------------------------------
-
-    call COMM_stats( atmos_var(:,:,:,:), A_NAME(:) )
-
-    ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
@@ -556,13 +414,40 @@ contains
     desc  = 'SCALE3 PROGNOSTIC VARS.'
     write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-    do iv = 1, A_VA
-       restart_atmos(1:KMAX,1:IMAX,1:JMAX) = atmos_var(KS:KE,IS:IE,JS:JE,iv)
+    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = DENS(KS:KE,IS:IE,JS:JE)
+    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
+                     'DENS', AP_DESC(1), '', AP_UNIT(1),          &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+
+    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMZ(KS:KE,IS:IE,JS:JE)
+    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
+                     'MOMZ', AP_DESC(2), '', AP_UNIT(2),          &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+
+    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMX(KS:KE,IS:IE,JS:JE)
+    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
+                     'MOMX', AP_DESC(2), '', AP_UNIT(2),          &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+
+    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMY(KS:KE,IS:IE,JS:JE)
+    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
+                     'MOMY', AP_DESC(2), '', AP_UNIT(2),          &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+
+    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = RHOT(KS:KE,IS:IE,JS:JE)
+    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
+                     'RHOT', AP_DESC(2), '', AP_UNIT(2),          &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+
+    do iq = 1, QA
+       restart_atmos(1:KMAX,1:IMAX,1:JMAX) = QTRC(KS:KE,IS:IE,JS:JE,iq)
 
        call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                        A_NAME(iv), A_DESC(iv), '', A_UNIT(iv),      &
+                        AQ_NAME(iq), AQ_DESC(iq), '', AQ_UNIT(iq),   &
                         FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
     enddo
+
+    call ATMOS_vars_total
 
     return
   end subroutine ATMOS_vars_restart_write
@@ -573,67 +458,119 @@ contains
   subroutine ATMOS_vars_restart_check
     use mod_process, only: &
        PRC_myrank
-    use mod_grid, only : &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE
-    use mod_comm, only: &
-       COMM_total
     use mod_fileio, only: &
        FIO_input
     implicit none
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(8) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
+    real(8) :: MOMZ_check(KA,IA,JA)    ! momentum z [kg/s/m2]
+    real(8) :: MOMX_check(KA,IA,JA)    ! momentum x [kg/s/m2]
+    real(8) :: MOMY_check(KA,IA,JA)    ! momentum y [kg/s/m2]
+    real(8) :: RHOT_check(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+    real(8) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
-    real(8), allocatable :: atmos_var_check(:,:,:,:)
+    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
 
     logical :: datacheck
-    integer :: k, i, j, iv
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    allocate( atmos_var_check(KA,IA,JA,A_VA) )
-
-    bname = ATMOS_RESTART_CHECK_BASENAME
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
-
-    do iv = 1, A_VA
-       call FIO_input( restart_atmos(:,:,:), bname, A_NAME(iv), lname, 1, KMAX, 1 )
-
-       atmos_var_check(KS:KE,IS:IE,JS:JE,iv) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    enddo
-
-    ! check total mass
-    call COMM_total( atmos_var(:,:,:,:), A_NAME(:), force_report=.true. )
 
     write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
     datacheck = .true.
 
-    do iv = 1, A_VA
+    bname = ATMOS_RESTART_CHECK_BASENAME
+    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+
+    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
+    DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
-       if ( abs( atmos_var(k,i,j,iv)-atmos_var_check(k,i,j,iv) ) > ATMOS_RESTART_CHECK_CRITERION ) then
-          write(*,*) 'xxx there is the difference : ', atmos_var(k,i,j,iv)-atmos_var_check(k,i,j,iv)
-          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, A_NAME(iv)
+       if ( abs( DENS(k,i,j)-DENS_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference  : ', DENS(k,i,j)-DENS_check(k,i,j)
+          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'DENS'
           datacheck = .false.
        endif
     enddo
     enddo
     enddo
+
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMZ', lname, 1, KMAX, 1 )
+    MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs( MOMZ(k,i,j)-MOMZ_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference  : ', MOMZ(k,i,j)-MOMZ_check(k,i,j)
+          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMZ'
+          datacheck = .false.
+       endif
     enddo
+    enddo
+    enddo
+
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMX', lname, 1, KMAX, 1 )
+    MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs( MOMX(k,i,j)-MOMX_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference  : ', MOMX(k,i,j)-MOMX_check(k,i,j)
+          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMX'
+          datacheck = .false.
+       endif
+    enddo
+    enddo
+    enddo
+
+    call FIO_input( restart_atmos(:,:,:), bname, 'MOMY', lname, 1, KMAX, 1 )
+    MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs( MOMY(k,i,j)-MOMY_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference  : ', MOMY(k,i,j)-MOMY_check(k,i,j)
+          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'MOMY'
+          datacheck = .false.
+       endif
+    enddo
+    enddo
+    enddo
+
+    call FIO_input( restart_atmos(:,:,:), bname, 'RHOT', lname, 1, KMAX, 1 )
+    RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs( RHOT(k,i,j)-RHOT_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+          write(*,*) 'xxx there is the difference  : ', RHOT(k,i,j)-RHOT_check(k,i,j)
+          write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, 'RHOT'
+          datacheck = .false.
+       endif
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+       call FIO_input( restart_atmos(:,:,:), bname, AQ_NAME(iq), lname, 1, KMAX, 1 )
+       QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          if ( abs( QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq) ) > ATMOS_RESTART_CHECK_CRITERION ) then
+             write(*,*) 'xxx there is the difference  : ', QTRC(k,i,j,iq)-QTRC_check(k,i,j,iq)
+             write(*,*) 'xxx at (PE-id,k,i,j,varname) : ', PRC_myrank, k, i, j, AQ_NAME(iq)
+             datacheck = .false.
+          endif
+       enddo
+       enddo
+       enddo
+    enddo
+
     if (datacheck) then
        if( IO_L ) write(IO_FID_LOG,*) 'Data Check Clear.'
        write(*,*) 'Data Check Clear.'
@@ -641,207 +578,369 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'Data Check Failed. See std. output.'
        write(*,*) 'Data Check Failed.'
     endif
-    call COMM_total( atmos_var_check(:,:,:,:), A_NAME(:), force_report=.true. )
 
     return
   end subroutine ATMOS_vars_restart_check
 
   !-----------------------------------------------------------------------------
-  !> Put and Communicate prognostic variables
+  !> History output set for prognostic variables
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_put( &
-       dens, &
-       momx, &
-       momy, &
-       momz, &
-       rhot, &
-       qtrc  )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
-    use mod_grid, only: &
-       KA   => GRID_KA, &
-       IA   => GRID_IA, &
-       JA   => GRID_JA
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait, &
-       COMM_total
+  subroutine ATMOS_vars_history
+    use mod_const, only : &
+       GRAV   => CONST_GRAV,   &
+       Rdry   => CONST_Rdry,   &
+       CVdry  => CONST_CVdry,  &
+       CPovCV => CONST_CPovCV, &
+       P00    => CONST_PRE00
+    use mod_time, only: &
+       TIME_DTSEC
+    use mod_grid, only : &
+       CZ   => GRID_CZ,   &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY
+    use mod_history, only: &
+       HIST_put, &
+       HIST_in
+    use mod_atmos_thermodyn, only: &
+       CVw => AQ_CV
     implicit none
 
-    real(8), intent(in) :: dens(KA,IA,JA)
-    real(8), intent(in) :: momx(KA,IA,JA)
-    real(8), intent(in) :: momy(KA,IA,JA)
-    real(8), intent(in) :: momz(KA,IA,JA)
-    real(8), intent(in) :: rhot(KA,IA,JA)
+    real(8) :: PRES(KA,IA,JA)
+    real(8) :: VELZ(KA,IA,JA)
+    real(8) :: VELX(KA,IA,JA)
+    real(8) :: VELY(KA,IA,JA)
+    real(8) :: POTT(KA,IA,JA)
+    real(8) :: TEMP(KA,IA,JA)
+    real(8) :: QDRY(KA,IA,JA)
+    real(8) :: QTOT(KA,IA,JA)
 
-    real(8), intent(in) :: qtrc(KA,IA,JA,A_QA)
-
-    integer :: k, i, j, iq, iv
-    !---------------------------------------------------------------------------
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       atmos_var(k,i,j,1) = dens(k,i,j)
-       atmos_var(k,i,j,2) = momx(k,i,j)
-       atmos_var(k,i,j,3) = momy(k,i,j)
-       atmos_var(k,i,j,4) = momz(k,i,j)
-       atmos_var(k,i,j,5) = rhot(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    if ( A_QA > 0 ) then
-       do iq = 1, A_QA
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          atmos_var(k,i,j,5+iq) = qtrc(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
-
-    ! fill IHALO & JHALO
-    do iv = 1, A_VA
-       call COMM_vars8( atmos_var(:,:,:,iv), iv )
-       call COMM_wait ( atmos_var(:,:,:,iv), iv )
-    enddo
-
-    return
-  end subroutine ATMOS_vars_put
-
-  !-----------------------------------------------------------------------------
-  !> Get prognostic variables
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_get( &
-       dens, &
-       momx, &
-       momy, &
-       momz, &
-       rhot, &
-       qtrc  )
-    use mod_grid, only: &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KA => GRID_KA
-    implicit none
-
-    real(8), intent(out) :: dens(KA,IA,JA)
-    real(8), intent(out) :: momx(KA,IA,JA)
-    real(8), intent(out) :: momy(KA,IA,JA)
-    real(8), intent(out) :: momz(KA,IA,JA)
-    real(8), intent(out) :: rhot(KA,IA,JA)
-
-    real(8), intent(out) :: qtrc(KA,IA,JA,A_QA)
+    real(8) :: VELXH(KA,IA,JA)
+    real(8) :: VELYH(KA,IA,JA)
+    real(8) :: VOR (KA,IA,JA)
+    real(8) :: ENGP(KA,IA,JA)
+    real(8) :: ENGK(KA,IA,JA)
+    real(8) :: ENGI(KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       dens(k,i,j) = atmos_var(k,i,j,1)
-       momx(k,i,j) = atmos_var(k,i,j,2)
-       momy(k,i,j) = atmos_var(k,i,j,3)
-       momz(k,i,j) = atmos_var(k,i,j,4)
-       rhot(k,i,j) = atmos_var(k,i,j,5)
-    enddo
-    enddo
+    call HIST_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), '3D', TIME_DTSEC )
+    call HIST_in( MOMZ(:,:,:), 'MOMZ', AP_DESC(2), AP_UNIT(2), '3D', TIME_DTSEC )
+    call HIST_in( MOMX(:,:,:), 'MOMX', AP_DESC(3), AP_UNIT(3), '3D', TIME_DTSEC )
+    call HIST_in( MOMY(:,:,:), 'MOMY', AP_DESC(4), AP_UNIT(4), '3D', TIME_DTSEC )
+    call HIST_in( RHOT(:,:,:), 'RHOT', AP_DESC(5), AP_UNIT(5), '3D', TIME_DTSEC )
+
+    do iq = 1, QA
+       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D', TIME_DTSEC )
     enddo
 
-    if ( A_QA > 0 ) then
-       do iq = 1, A_QA
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          qtrc(k,i,j,iq) = atmos_var(k,i,j,5+iq)
+    if (      ATMOS_HIST_sw(I_PRES) > 0 &
+         .OR. ATMOS_HIST_sw(I_TEMP) > 0 &
+         .OR. ATMOS_HIST_sw(I_ENGI) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_PRES), PRES(:,:,:), TIME_DTSEC )
+    endif
+
+    if (      ATMOS_HIST_sw(I_VELZ) > 0 &
+         .OR. ATMOS_HIST_sw(I_ENGK) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          VELZ(k,i,j) = 0.5D0 * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_VELZ), VELZ(:,:,:), TIME_DTSEC )
+    endif
+
+    if (      ATMOS_HIST_sw(I_VELX) > 0 &
+         .OR. ATMOS_HIST_sw(I_ENGK) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          VELX(k,i,j) = 0.5D0 * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_VELX), VELX(:,:,:), TIME_DTSEC )
+    endif
+
+    if (      ATMOS_HIST_sw(I_VELY) > 0 &
+         .OR. ATMOS_HIST_sw(I_ENGK) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          VELY(k,i,j) = 0.5D0 * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_VELY), VELY(:,:,:), TIME_DTSEC )
+    endif
+
+    if ( ATMOS_HIST_sw(I_POTT) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_POTT), POTT(:,:,:), TIME_DTSEC )
+    endif
+
+    if (      ATMOS_HIST_sw(I_TEMP) > 0 &
+         .OR. ATMOS_HIST_sw(I_ENGI) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rdry )
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_TEMP), TEMP(:,:,:), TIME_DTSEC )
+    endif
+
+    if ( ATMOS_HIST_sw(I_QTOT) > 0 ) then
+       if ( iq >= 2 ) then
+          do j  = JS, JE
+          do i  = IS, IE
+          do k  = KS, KE
+             QTOT(k,i,j) = 0.D0
+          enddo
+          enddo
+          enddo
+
+          do iq = QQS+1, QQE
+          do j  = JS, JE
+          do i  = IS, IE
+          do k  = KS, KE
+             QTOT(k,i,j) = QTOT(k,i,j) + QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+          enddo
+       endif
+
+       call HIST_put( ATMOS_HIST_sw(I_QTOT), QTOT(:,:,:), TIME_DTSEC )
+    endif
+
+
+    if ( ATMOS_HIST_sw(I_VOR) > 0 ) then
+       ! at u, v, layer
+       do j = JS-1, JE
+       do i = IS-1, IE
+       do k = KS, KE
+          VELXH(k,i,j) = 2.D0 * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
+                              / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+       enddo
+       enddo
+       enddo
+
+       ! at u, v, layer
+       do j = JS-1, JE
+       do i = IS-1, IE
+       do k = KS, KE
+          VELYH(k,i,j) = 2.D0 * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
+                              / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+       enddo
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          VOR(k,i,j) = 0.5D0 * ( ( VELYH(k,i,j  )-VELYH(k,i-1,j  ) ) * RCDX(i) &
+                               + ( VELYH(k,i,j-1)-VELYH(k,i-1,j-1) ) * RCDX(i) &
+                               - ( VELXH(k,i  ,j)-VELXH(k,i  ,j-1) ) * RCDY(j) &
+                               - ( VELXH(k,i-1,j)-VELXH(k,i-1,j-1) ) * RCDY(j) )
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_VOR), VOR(:,:,:), TIME_DTSEC )
+    endif
+
+    if ( ATMOS_HIST_sw(I_ENGP) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_ENGP), ENGP(:,:,:), TIME_DTSEC )
+    endif
+
+    if ( ATMOS_HIST_sw(I_ENGK) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ENGK(k,i,j) = 0.5D0 * DENS(k,i,j)    &
+                              * VELZ(k,i,j)**2 &
+                              * VELX(k,i,j)**2 &
+                              * VELY(k,i,j)**2
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_ENGK), ENGK(:,:,:), TIME_DTSEC )
+    endif
+
+    if ( ATMOS_HIST_sw(I_ENGI) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QDRY(k,i,j) = 1.D0
+       enddo
+       enddo
+       enddo
+
+       do iq = QQS, QQE
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
        enddo
        enddo
        enddo
        enddo
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       enddo
+       enddo
+       enddo
+
+       do iq = QQS, QQE
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       call HIST_put( ATMOS_HIST_sw(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
     endif
 
     return
-  end subroutine ATMOS_vars_get
+  end subroutine ATMOS_vars_history
 
   !-----------------------------------------------------------------------------
-  !> Get prognostic variables
+  !> Budget monitor of atmosphere
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_getdiag( &
-       pres, &
-       velx, &
-       vely, &
-       velz, &
-       temp  )
-    use mod_grid, only: &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KA => GRID_KA
+  subroutine ATMOS_vars_monitor
+    use mod_monitor, only: &
+       MONITOR_in
     implicit none
 
-    real(8), intent(out) :: pres(KA,IA,JA)
-    real(8), intent(out) :: velx(KA,IA,JA)
-    real(8), intent(out) :: vely(KA,IA,JA)
-    real(8), intent(out) :: velz(KA,IA,JA)
-    real(8), intent(out) :: temp(KA,IA,JA)
-
-    integer :: k, i, j
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    ! atmos_var -> atmos_diagvar
-    call ATMOS_DMP2PVT
+    call MONITOR_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), '3D' )
+    call MONITOR_in( MOMZ(:,:,:), 'MOMZ', AP_DESC(2), AP_UNIT(2), '3D' )
+    call MONITOR_in( MOMX(:,:,:), 'MOMX', AP_DESC(3), AP_UNIT(3), '3D' )
+    call MONITOR_in( MOMY(:,:,:), 'MOMY', AP_DESC(4), AP_UNIT(4), '3D' )
+    call MONITOR_in( RHOT(:,:,:), 'RHOT', AP_DESC(5), AP_UNIT(5), '3D' )
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       pres(k,i,j) = atmos_diagvar(k,i,j,1)
-       velx(k,i,j) = atmos_diagvar(k,i,j,2)
-       vely(k,i,j) = atmos_diagvar(k,i,j,3)
-       velz(k,i,j) = atmos_diagvar(k,i,j,4)
-       temp(k,i,j) = atmos_diagvar(k,i,j,5)
-    enddo
-    enddo
+    do iq = 1, QA
+       call MONITOR_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D' )
     enddo
 
     return
-  end subroutine ATMOS_vars_getdiag
+  end subroutine ATMOS_vars_monitor
 
   !-----------------------------------------------------------------------------
-  !> Get prognostic variables
+  !> Budget monitor of atmosphere
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_DMP2PVT
+  subroutine ATMOS_vars_total
     use mod_const, only : &
+       GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
+       CVdry  => CONST_CVdry,  &
        CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
-    use mod_grid, only: &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE
+    use mod_grid, only : &
+       CZ   => GRID_CZ
+    use mod_comm, only: &
+       COMM_total
+    use mod_atmos_thermodyn, only: &
+       CVw => AQ_CV
     implicit none
 
-    integer :: k, i, j
+    real(8) :: VELZ(KA,IA,JA)
+    real(8) :: VELX(KA,IA,JA)
+    real(8) :: VELY(KA,IA,JA)
+    real(8) :: PRES(KA,IA,JA)
+    real(8) :: TEMP(KA,IA,JA)
+    real(8) :: QDRY(KA,IA,JA)
+    real(8) :: ENGP(KA,IA,JA)
+    real(8) :: ENGK(KA,IA,JA)
+    real(8) :: ENGI(KA,IA,JA)
+    real(8) :: ENGT(KA,IA,JA)
+
+    integer :: i, j, k, iq
     !---------------------------------------------------------------------------
+
+    call COMM_total( DENS(:,:,:), AP_NAME(1) )
+    call COMM_total( MOMZ(:,:,:), AP_NAME(2) )
+    call COMM_total( MOMX(:,:,:), AP_NAME(3) )
+    call COMM_total( MOMY(:,:,:), AP_NAME(4) )
+    call COMM_total( RHOT(:,:,:), AP_NAME(5) )
+    do iq = 1, QA
+       call COMM_total( QTRC(:,:,:,iq), AQ_NAME(iq) )
+    enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_diagvar(k,i,j,1) = P00 * ( atmos_var(k,i,j,5) * Rdry / P00 )**CPovCV
-       atmos_diagvar(k,i,j,2) = 0.5D0 * ( atmos_var(k,i,j,2)+atmos_var(k,i-1,j,2) ) / atmos_var(k,i,j,1)
-       atmos_diagvar(k,i,j,3) = 0.5D0 * ( atmos_var(k,i,j,3)+atmos_var(k,i,j-1,3) ) / atmos_var(k,i,j,1)
-       atmos_diagvar(k,i,j,4) = 0.5D0 * ( atmos_var(k,i,j,4)+atmos_var(k-1,i,j,4) ) / atmos_var(k,i,j,1)
-       atmos_diagvar(k,i,j,5) = atmos_diagvar(k,i,j,1) / ( atmos_var(k,i,j,1) * Rdry )
+       VELZ(k,i,j) = 0.5D0 * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       VELX(k,i,j) = 0.5D0 * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       VELY(k,i,j) = 0.5D0 * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
+       TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rdry )
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+       ENGK(k,i,j) = 0.5D0 * DENS(k,i,j)    &
+                           * VELZ(k,i,j)**2 &
+                           * VELX(k,i,j)**2 &
+                           * VELY(k,i,j)**2
+       QDRY(k,i,j) = 1.D0
+       do iq = QQS, QQE
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+       enddo
+       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       do iq = QQS, QQE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+       enddo
+       ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
     enddo
     enddo
     enddo
 
+    call COMM_total( ENGT(:,:,:), 'ENGT    ' )
+    call COMM_total( ENGP(:,:,:), 'ENGP    ' )
+    call COMM_total( ENGK(:,:,:), 'ENGK    ' )
+    call COMM_total( ENGI(:,:,:), 'ENGI    ' )
+
     return
-  end subroutine ATMOS_DMP2PVT
+  end subroutine ATMOS_vars_total
 
 end module mod_atmos_vars

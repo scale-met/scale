@@ -7,7 +7,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-11 (H.Yashiro) [new]
+!! @li      2011-12-11 (H.Yashiro)  [new]
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -17,6 +18,8 @@ module mod_atmos_refstate
   !++ used modules
   !
   use mod_stdio, only: &
+     IO_FID_LOG, &
+     IO_L,       &
      IO_FILECHR
   !-----------------------------------------------------------------------------
   implicit none
@@ -29,12 +32,19 @@ module mod_atmos_refstate
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
   public :: ATMOS_REFSTATE_generate
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, allocatable, save :: ATMOS_REFSTATE_dens(:) ! refernce density [kg/m3]
-  real(8), public, allocatable, save :: ATMOS_REFSTATE_pott(:) ! refernce potential temperature [K]
+  real(8), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
+  real(8), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -58,17 +68,9 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
-       CONST_UNDEF8
-    use mod_grid, only : &
-       IA   => GRID_IA, &
-       JA   => GRID_JA, &
-       KA   => GRID_KA
     implicit none
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
@@ -95,9 +97,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_REFSTATE)
-
-    allocate( ATMOS_REFSTATE_dens(KA) )
-    allocate( ATMOS_REFSTATE_pott(KA) )
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
        call ATMOS_REFSTATE_read
@@ -127,11 +126,6 @@ contains
   !> Read Reference state
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_read
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
-    use mod_grid, only: &
-       KA => GRID_KA
     use mod_fileio, only: &
        FIO_input_1D
     implicit none
@@ -154,14 +148,9 @@ contains
   !> Write Reference state
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_write
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_myrank, &
        PRC_master
-    use mod_grid, only: &
-       KA => GRID_KA
     use mod_fileio_h, only: &
        FIO_HMID, &
        FIO_REAL8
@@ -196,9 +185,6 @@ contains
   !> Generate Reference state (International Standard Atmosphere)
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_generate
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_const, only : &
        GRAV   => CONST_GRAV,  &
        Rdry   => CONST_Rdry,  &
@@ -206,9 +192,6 @@ contains
        Pstd   => CONST_Pstd,  &
        P00    => CONST_PRE00
     use mod_grid, only : &
-       KA   => GRID_KA, &
-       KS   => GRID_KS, &
-       KE   => GRID_KE, &
        CZ   => GRID_CZ
     implicit none
 

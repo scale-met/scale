@@ -35,17 +35,17 @@ module mod_const
   real(8), public, save      :: CONST_PI    = 3.14159265358979D0 !< pi
   real(8), public, save      :: CONST_EPS   = 1.D-34             !< small number
 
-  integer, public, save      :: CONST_UNDEF2 = -32768            !< undefined value (INT2)
-  real(4), public, save      :: CONST_UNDEF4 = -999.E20          !< undefined value (REAL4)
-  real(8), public, save      :: CONST_UNDEF8 = -999.D20          !< undefined value (REAL8)
+  integer, public, parameter :: CONST_UNDEF2 = -32768            !< undefined value (INT2)
+  real(4), public, parameter :: CONST_UNDEF4 = -9.9999E30        !< undefined value (REAL4)
+  real(8), public, parameter :: CONST_UNDEF8 = -9.9999D30        !< undefined value (REAL8)
 
   ! physical constants
-  real(8), public, save      :: CONST_ERADIUS = 6.37122D+6 !< earth radius           [m]
+  real(8), public, parameter :: CONST_ERADIUS = 6.37122D+6 !< earth radius           [m]
   real(8), public, save      :: CONST_GRAV    = 9.80616D0  !< gravitational constant [m/s2]
-  real(8), public, save      :: CONST_KARMAN  = 0.4D0      !< karman constant
+  real(8), public, parameter :: CONST_KARMAN  = 0.4D0      !< karman constant
 
-  real(8), public, save      :: CONST_Rdry    = 287.04D0   !< gas constant   (dry)
-  real(8), public, save      :: CONST_CPdry   = 1003.5D0   !< specific heat  (dry,constant pressure)
+  real(8), public, parameter :: CONST_Rdry    = 287.04D0   !< gas constant   (dry)
+  real(8), public, parameter :: CONST_CPdry   = 1003.5D0   !< specific heat  (dry,constant pressure)
   real(8), public, save      :: CONST_CVdry                !< specific heat  (dry,constant volume)
   real(8), public, save      :: CONST_RovCP                !< R / Cp = kappa (dry)
   real(8), public, save      :: CONST_CPovR                !< 1 / kappa      (dry)
@@ -104,10 +104,7 @@ contains
     implicit none
 
     namelist / PARAM_CONST / &
-       CONST_UNDEF8, &
-       CONST_GRAV,   &
-       CONST_Rdry,   &
-       CONST_CPdry
+       CONST_GRAV
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -131,18 +128,15 @@ contains
     CONST_EPS   = epsilon(0.D0)
 
     CONST_CVdry   = CONST_CPdry - CONST_Rdry
-
     CONST_RovCP   = CONST_Rdry  / CONST_CPdry
     CONST_RovCV   = CONST_Rdry  / CONST_CVdry
     CONST_CPovR   = CONST_CPdry / CONST_Rdry
     CONST_CPovCV  = CONST_CPdry / CONST_CVdry
     CONST_CVovCP  = CONST_CVdry / CONST_CPdry
-
     CONST_LASPdry = CONST_GRAV / CONST_CPdry
 
     CONST_EPSvap  = CONST_Rdry / CONST_Rvap
     CONST_EPSTvap = 1.D0 / CONST_EPSvap - 1.D0
-
     CONST_CVvap   = CONST_CPvap - CONST_Rvap
 
     CONST_LH00    = CONST_LH0  - ( CONST_CPvap - CONST_CL ) * CONST_TEM00
@@ -150,16 +144,34 @@ contains
     CONST_LHF0    = CONST_LHS0 - CONST_LH0
     CONST_LHF00   = CONST_LHF0 - ( CONST_CL  - CONST_CI ) * CONST_TEM00
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** PI          :', CONST_PI
-    if( IO_L ) write(IO_FID_LOG,*) '*** EPS(REAL8)  :', CONST_EPS
-    if( IO_L ) write(IO_FID_LOG,*) '*** UNDEF(REAL8):', CONST_UNDEF8
-    if( IO_L ) write(IO_FID_LOG,*) '*** UNDEF(REAL4):', CONST_UNDEF4
-    if( IO_L ) write(IO_FID_LOG,*) '*** UNDEF(INT2) :', CONST_UNDEF2
-    if( IO_L ) write(IO_FID_LOG,*) '*** GRAV        :', CONST_GRAV
-    if( IO_L ) write(IO_FID_LOG,*) '*** R(dry)      :', CONST_Rdry
-    if( IO_L ) write(IO_FID_LOG,*) '*** CP(dry)     :', CONST_CPdry
-    if( IO_L ) write(IO_FID_LOG,*) '*** CV(dry)     :', CONST_CVdry
-    if( IO_L ) write(IO_FID_LOG,*) '*** Std. Pres.  :', CONST_Pstd
+    if( IO_L ) write(IO_FID_LOG,*) '*** PI                                   : PI      = ', CONST_PI
+    if( IO_L ) write(IO_FID_LOG,*) '*** Small num(REAL8)                     : EPS     = ', CONST_EPS
+    if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(INT2)                  : UNDEF2  = ', CONST_UNDEF2
+    if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL4)                 : UNDEF4  = ', CONST_UNDEF4
+    if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL8)                 : UNDEF8  = ', CONST_UNDEF8
+    if( IO_L ) write(IO_FID_LOG,*) '*** earth radius [m]                     : ERADIUS = ', CONST_ERADIUS
+    if( IO_L ) write(IO_FID_LOG,*) '*** gravitational constant [m/s2]        : GRAV    = ', CONST_GRAV
+    if( IO_L ) write(IO_FID_LOG,*) '*** karman constant                      : KARMAN  = ', CONST_KARMAN
+    if( IO_L ) write(IO_FID_LOG,*) '*** gas constant   (dry)                 : Rdry    = ', CONST_Rdry
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat  (dry,pressure)        : CPdry   = ', CONST_CPdry
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat  (dry,volume)          : Cvdry   = ', CONST_CVdry
+    if( IO_L ) write(IO_FID_LOG,*) '*** R / Cp = kappa (dry)                 : RovCP   = ', CONST_RovCP
+    if( IO_L ) write(IO_FID_LOG,*) '*** 1 / kappa      (dry)                 : CPovR   = ', CONST_CPovR
+    if( IO_L ) write(IO_FID_LOG,*) '*** R / Cv         (dry)                 : RovCV   = ', CONST_RovCV
+    if( IO_L ) write(IO_FID_LOG,*) '*** Cp / Cv        (dry)                 : CPovCV  = ', CONST_CPovCV
+    if( IO_L ) write(IO_FID_LOG,*) '*** Cv / Cp        (dry)                 : CVovCP  = ', CONST_CVovCP
+    if( IO_L ) write(IO_FID_LOG,*) '*** dry adiabatic lapse rate             : LASPdry = ', CONST_LASPdry
+    if( IO_L ) write(IO_FID_LOG,*) '*** standard pressure  [Pa]              : Pstd    = ', CONST_Pstd
+    if( IO_L ) write(IO_FID_LOG,*) '*** pressure reference [Pa]              : PRE00   = ', CONST_PRE00
+    if( IO_L ) write(IO_FID_LOG,*) '*** standard temperature (15C) [K]       : Tstd    = ', CONST_Tstd
+    if( IO_L ) write(IO_FID_LOG,*) '*** temperature reference (0C) [K]       : TEM00   = ', CONST_TEM00
+    if( IO_L ) write(IO_FID_LOG,*) '*** gas constant (water vapor)           : Rvap    = ', CONST_Rvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** Rdry / Rvap = epsilon                : EPSvap  = ', CONST_EPSvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** 1 / epsilon - 1                      : EPSTvap = ', CONST_EPSTvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (water vapor,pressure) : CPvap   = ', CONST_CPvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (water vapor,volume)   : CVvap   = ', CONST_CVvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (liquid water)         : CL      = ', CONST_CL
+    if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (ice)                  : CI      = ', CONST_CI
 
     return
   end subroutine CONST_setup

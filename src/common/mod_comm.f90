@@ -7,8 +7,14 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-10-11 (R.Yoshida) [new]
-!! @li      2011-11-11 (H.Yashiro) [mod] Integrate to SCALE3
+!! @li      2011-10-11 (R.Yoshida)  [new]
+!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE3
+!! @li      2012-01-10 (Y.Ohno)     [mod] Nonblocking communication (MPI)
+!! @li      2012-01-23 (Y.Ohno)     [mod] Self unpacking (MPI)
+!! @li      2012-03-12 (H.Yashiro)  [mod] REAL4(MPI)
+!! @li      2012-03-12 (Y.Ohno)     [mod] RDMA communication
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2012-03-27 (H.Yashiro)  [mod] Area/volume weighted total value report
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -17,7 +23,7 @@ module mod_comm
   !
   !++ used modules
   !
-!  use mpi
+  use mpi
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -28,7 +34,6 @@ module mod_comm
   implicit none
   private
   !-----------------------------------------------------------------------------
-  include 'mpif.h'
   !
   !++ Public procedure
   !
@@ -36,14 +41,21 @@ module mod_comm
   public :: COMM_vars
   public :: COMM_vars8
   public :: COMM_wait
-  public :: COMM_stats
-  public :: COMM_total
   public :: COMM_vars_r4
   public :: COMM_vars8_r4
   public :: COMM_wait_r4
   public :: COMM_set_rdma_variable
   public :: COMM_rdma_vars
   public :: COMM_rdma_vars8
+  public :: COMM_stats
+  public :: COMM_total
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include "inc_index.h"
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -56,8 +68,9 @@ module mod_comm
   !
   !++ Private parameters & variables
   !
-  integer, private, save :: COMM_vsize_max  = 20
-  logical, private, save :: COMM_dototalval = .false.
+  integer, private, save :: COMM_vsize_max  = 30
+  logical, private, save :: COMM_total_doreport  = .false.
+  logical, private, save :: COMM_total_globalsum = .false.
 
   integer, private, save :: datasize_NS4
   integer, private, save :: datasize_NS8
@@ -95,23 +108,12 @@ contains
        PRC_N,       &
        PRC_E,       &
        PRC_S
-    use mod_grid, only :    &
-       IMAX  => GRID_IMAX,  &
-       JMAX  => GRID_JMAX,  &
-       IA    => GRID_IA,    &
-       JA    => GRID_JA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
     implicit none
 
     NAMELIST / PARAM_COMM / &
-       COMM_dototalval, &
-       COMM_vsize_max
+       COMM_vsize_max,      &
+       COMM_total_doreport, &
+       COMM_total_globalsum
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -131,15 +133,23 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_COMM)
 
-    IREQ_CNT_NS = 2 * JHALO !--- sendxJAHLO recvxJHALO
-    IREQ_CNT_WE = 2         !--- sendx1 recvx1
-    IREQ_CNT_4C = 2 * JHALO !--- sendxJHALO recvxJHALO
+    ! only for register
+    call TIME_rapstart('COMM vars MPI')
+    call TIME_rapend  ('COMM vars MPI')
+    call TIME_rapstart('COMM wait MPI')
+    call TIME_rapend  ('COMM wait MPI')
+    call TIME_rapstart('COMM Bcast MPI')
+    call TIME_rapend  ('COMM Bcast MPI')
+
+    IREQ_CNT_NS  = 2 * JHALO !--- sendxJHALO recvxJHALO
+    IREQ_CNT_WE  = 2         !--- sendx1 recvx1
+    IREQ_CNT_4C  = 2 * JHALO !--- sendxJHALO recvxJHALO
     IREQ_CNT_MAX = 2 * IREQ_CNT_NS + 2 * IREQ_CNT_WE + 4 * IREQ_CNT_4C
 
-    datasize_NS4 = IA * KA * JHALO
-    datasize_NS8 = (IE-IS+1) * KA
-    datasize_WE  = (JE-JS+1) * KA * IHALO
-    datasize_4C  = IHALO * KA
+    datasize_NS4 = IA   * KA * JHALO
+    datasize_NS8 = IMAX * KA
+    datasize_WE  = JMAX * KA * IHALO
+    datasize_4C  =        KA * IHALO
 
     allocate( recvpack_W2P(datasize_WE,COMM_vsize_max) )
     allocate( recvpack_E2P(datasize_WE,COMM_vsize_max) )
@@ -182,16 +192,6 @@ contains
        PRC_N,    &
        PRC_E,    &
        PRC_S
-    use mod_grid, only : &
-       IA    => GRID_IA,    &
-       JA    => GRID_JA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
     implicit none
 
     real(8), intent(inout) :: var(:,:,:)
@@ -205,7 +205,7 @@ contains
     tag = vid * 100
     ireqc = 1
 
-    call TIME_rapstart('COMM_vars')
+    call TIME_rapstart('COMM vars MPI')
 
     !-- From 4-Direction HALO communicate
     ! From S
@@ -284,7 +284,7 @@ contains
 
     ireq_cnt(vid) = ireqc - 1
 
-    call TIME_rapend  ('COMM_vars')
+    call TIME_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars
@@ -301,30 +301,21 @@ contains
        PRC_NE,   &
        PRC_SW,   &
        PRC_SE
-    use mod_grid, only : &
-       IA    => GRID_IA,    &
-       JA    => GRID_JA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
     implicit none
 
     real(8), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag, tagc
+
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
 
-    tag = vid * 100
+    tag   = vid * 100
     ireqc = 1
 
-    call TIME_rapstart('COMM_vars')
+    call TIME_rapstart('COMM vars MPI')
 
     !-- From 8-Direction HALO communicate
     ! From SE
@@ -492,35 +483,23 @@ contains
 
     ireq_cnt(vid) = ireqc - 1
 
-    call TIME_rapend  ('COMM_vars')
+    call TIME_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars8
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_wait( var, vid )
-    use mod_grid, only :    &
-       IMAX  => GRID_IMAX,  &
-       JMAX  => GRID_JMAX,  &
-       IA    => GRID_IA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
+  subroutine COMM_wait(var, vid)
     implicit none
 
     real(8), intent(inout) :: var(:,:,:)
-
-    integer, intent(in) :: vid
+    integer, intent(in)    :: vid
 
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM_wait')
+    call TIME_rapstart('COMM wait MPI')
 
     !--- wait packets
     call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
@@ -550,7 +529,7 @@ contains
     enddo
 
 
-    call TIME_rapend  ('COMM_wait')
+    call TIME_rapend  ('COMM wait MPI')
 
     return
   end subroutine COMM_wait
@@ -563,22 +542,13 @@ contains
        PRC_N,    &
        PRC_E,    &
        PRC_S
-    use mod_grid, only : &
-       IA    => GRID_IA,    &
-       JA    => GRID_JA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
     implicit none
 
     real(4), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag
+
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
@@ -586,7 +556,7 @@ contains
     tag = vid * 100
     ireqc = 1
 
-    call TIME_rapstart('COMM_vars_r4')
+    call TIME_rapstart('COMM vars(real4) MPI')
 
     !-- From 4-Direction HALO communicate
     ! From S
@@ -665,7 +635,7 @@ contains
 
     ireq_cnt(vid) = ireqc - 1
 
-    call TIME_rapend  ('COMM_vars_r4')
+    call TIME_rapend  ('COMM vars(real4) MPI')
 
     return
   end subroutine COMM_vars_r4
@@ -682,30 +652,21 @@ contains
        PRC_NE,   &
        PRC_SW,   &
        PRC_SE
-    use mod_grid, only : &
-       IA    => GRID_IA,    &
-       JA    => GRID_JA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
     implicit none
 
     real(4), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag, tagc
+
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
 
-    tag = vid * 100
+    tag   = vid * 100
     ireqc = 1
 
-    call TIME_rapstart('COMM_vars_r4')
+    call TIME_rapstart('COMM vars(real4) MPI')
 
     !-- From 8-Direction HALO communicate
     ! From SE
@@ -873,35 +834,23 @@ contains
 
     ireq_cnt(vid) = ireqc - 1
 
-    call TIME_rapend  ('COMM_vars_r4')
+    call TIME_rapend  ('COMM vars(real4) MPI')
 
     return
   end subroutine COMM_vars8_r4
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_wait_r4( var, vid )
-    use mod_grid, only :    &
-       IMAX  => GRID_IMAX,  &
-       JMAX  => GRID_JMAX,  &
-       IA    => GRID_IA,    &
-       KA    => GRID_KA,    &
-       IHALO => GRID_IHALO, &
-       JHALO => GRID_JHALO, &
-       IS    => GRID_IS,    &
-       IE    => GRID_IE,    &
-       JS    => GRID_JS,    &
-       JE    => GRID_JE
+  subroutine COMM_wait_r4(var, vid)
     implicit none
 
-    real(8), intent(inout) :: var(:,:,:)
-
-    integer, intent(in) :: vid
+    real(4), intent(inout) :: var(:,:,:)
+    integer, intent(in)    :: vid
 
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM_wait_r4')
+    call TIME_rapstart('COMM wait(real4) MPI')
 
     !--- wait packets
     call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
@@ -909,10 +858,11 @@ contains
     !--- unpacking packets from East
     do j = JS, JE
     do i = IE+1, IE+IHALO
-    do k = 1, KA
+    do k = 1,  KA
         n =  (j-JS)   * KA * IHALO &
            + (i-IE-1) * KA         &
            + k
+
         var(k,i,j) = recvpack_E2P(n,vid)
     enddo
     enddo
@@ -921,23 +871,23 @@ contains
     !--- unpacking packets from West
     do j = JS, JE
     do i = IS-IHALO, IS-1
-    do k = 1, KA
+    do k = 1,  KA
         n =  (j-JS)       * KA * IHALO &
            + (i-IS+IHALO) * KA         &
            + k
+
         var(k,i,j) = recvpack_W2P(n,vid)
     enddo
     enddo
     enddo
 
-
-    call TIME_rapend  ('COMM_wait_r4')
+    call TIME_rapend  ('COMM wait(real4) MPI')
 
     return
   end subroutine COMM_wait_r4
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_set_rdma_variable( var, vid )
+  subroutine COMM_set_rdma_variable(var, vid)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -951,7 +901,7 @@ contains
 #ifdef _USE_RDMA
     call set_rdma_variable(var, vid-1);
 #else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid
     call PRC_MPIstop
 #endif
 
@@ -959,73 +909,63 @@ contains
   end subroutine
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_rdma_vars( vid, num )
+  subroutine COMM_rdma_vars(vid, num)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
-    integer, intent(in)    :: vid
-    integer, intent(in)    :: num
+    integer, intent(in) :: vid
+    integer, intent(in) :: num
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM_rdma_vars')
+    call TIME_rapstart('COMM RDMA')
 
     !--- put data
 #ifdef _USE_RDMA
     call rdma_put(vid-1, num)
 #else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid, num
     call PRC_MPIstop
 #endif
 
-    call TIME_rapend  ('COMM_rdma_vars')
+    call TIME_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_rdma_vars8( vid, num )
+  subroutine COMM_rdma_vars8(vid, num)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
-    integer, intent(in)    :: vid
-    integer, intent(in)    :: num
+    integer, intent(in) :: vid
+    integer, intent(in) :: num
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM_rdma_vars')
+    call TIME_rapstart('COMM RDMA')
 
     !--- put data
 #ifdef _USE_RDMA
     call rdma_put8(vid-1, num)
 #else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.'
+    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid, num
     call PRC_MPIstop
 #endif
 
-    call TIME_rapend  ('COMM_rdma_vars')
+    call TIME_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars8
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_stats( var, varname )
+  subroutine COMM_stats(var, varname)
     use mod_process, only : &
        PRC_nmax,   &
        PRC_myrank
     use mod_const, only : &
        CONST_UNDEF8, &
        CONST_UNDEF2
-    use mod_grid, only : &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KA => GRID_KA, &
-       IS => GRID_IS, &
-       IE => GRID_IE, &
-       JS => GRID_JS, &
-       JE => GRID_JE, &
-       KS => GRID_KS, &
-       KE => GRID_KE
     implicit none
 
     real(8),          intent(inout) :: var(:,:,:,:)
@@ -1033,14 +973,13 @@ contains
 
     logical :: halomask(KA,IA,JA)
 
-    real(8), allocatable :: statval(:,:,:)
-    integer, allocatable :: statidx(:,:,:,:)
+    real(8), allocatable :: statval   (:,:,:)
+    integer, allocatable :: statidx   (:,:,:,:)
     real(8), allocatable :: allstatval(:,:)
     integer, allocatable :: allstatidx(:,:,:)
     integer              :: vsize
 
     integer :: ierr
-
     integer :: v, p
     !---------------------------------------------------------------------------
 
@@ -1117,86 +1056,81 @@ contains
   end subroutine COMM_stats
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_total( var, varname, force_report )
-    use mod_stdio, only : &
-       IO_FID_LOG, &
-       IO_L
+  subroutine COMM_total( var, varname )
     use mod_process, only : &
        PRC_nmax,   &
        PRC_myrank
     use mod_const, only : &
-       CONST_UNDEF8, &
-       CONST_UNDEF2
-    use mod_grid, only : &
-       IA   => GRID_IA,  &
-       JA   => GRID_JA,  &
-       KA   => GRID_KA,  &
-       IS   => GRID_IS,  &
-       IE   => GRID_IE,  &
-       JS   => GRID_JS,  &
-       JE   => GRID_JE,  &
-       KS   => GRID_KS,  &
-       KE   => GRID_KE,  &
-       DXYZ => GRID_DXYZ
+       CONST_UNDEF8
+    use mod_geometrics, only: &
+       area    => GEOMETRICS_area,    &
+       vol     => GEOMETRICS_vol,     &
+       totarea => GEOMETRICS_totarea, &
+       totvol  => GEOMETRICS_totvol
     implicit none
 
-    real(8),           intent(inout) :: var(:,:,:,:)
-    character(len=*),  intent(in)    :: varname(:)
-    logical, optional, intent(in)    :: force_report
+    real(8),           intent(inout) :: var(:,:,:)
+    character(len=*),  intent(in)    :: varname
 
-    logical, allocatable :: halomask(:,:,:)
+    real(8) :: statval(0:PRC_nmax-1)
+    real(8) :: allstatval
+    real(8) :: ksize
 
-    real(8), allocatable :: statval(:,:)
-    real(8), allocatable :: allstatval(:)
-    integer              :: vsize
-
-    logical :: doreport
     integer :: ierr
-    integer :: v, p
+    integer :: k, i, j, p
     !---------------------------------------------------------------------------
 
-    if ( present(force_report) ) then
-       doreport = force_report
-    else
-       doreport = COMM_dototalval
-    endif
+    if ( COMM_total_doreport ) then
 
-    if ( doreport ) then
+       statval(:) = CONST_UNDEF8
+       ksize = size(var(:,:,:),1)
 
-    vsize = size(var(:,:,:,:),4)
+       statval(PRC_myrank) = 0.D0
+       if ( ksize == KA ) then ! 3D
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             statval(PRC_myrank) = statval(PRC_myrank) + var(k,i,j) * vol(k,i,j)
+          enddo
+          enddo
+          enddo
+          statval(PRC_myrank) = statval(PRC_myrank) / totvol
+       elseif( ksize == 1 ) then ! 2D
+          do j = JS, JE
+          do i = IS, IE
+             statval(PRC_myrank) = statval(PRC_myrank) + var(1,i,j) * area(1,i,j)
+          enddo
+          enddo
+          statval(PRC_myrank) = statval(PRC_myrank) / totarea
+       endif
 
-    allocate( halomask(KA,IA,JA) )
+       if ( COMM_total_globalsum ) then
+          call TIME_rapstart('COMM Bcast MPI')
+          ! MPI broadcast
+          do p = 0, PRC_nmax-1
+             call MPI_Bcast( statval(p),           &
+                             1,                    &
+                             MPI_DOUBLE_PRECISION, &
+                             p,                    &
+                             MPI_COMM_WORLD,       &
+                             ierr                  )
+          enddo
 
-    halomask(:,:,:) = .false.
-    halomask(KS:KE,IS:IE,JS:JE) = .true.
+          allstatval = 0.D0
+          do p = 0, PRC_nmax-1
+             allstatval = allstatval + statval(p)
+          enddo
+          allstatval = allstatval / PRC_nmax
 
-    allocate( statval   (vsize,0:PRC_nmax-1) ); statval   (:,:) = CONST_UNDEF8
-    allocate( allstatval(vsize             ) ); allstatval(:)   = CONST_UNDEF8
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
+                     '[', varname, '] SUM(global) =', allstatval
 
-    do v = 1, vsize
-       statval(v,PRC_myrank) = sum(var(:,:,:,v),mask=halomask)
-
-       ! statistics on each node
-!       if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-!       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,I5)') '  SUM = ', statval(v,PRC_myrank), ' at RANK:', PRC_myrank 
-    enddo
-
-    ! MPI broadcast
-    do p = 0, PRC_nmax-1
-       call MPI_Bcast( statval(1,p),         &
-                       vsize,                &
-                       MPI_DOUBLE_PRECISION, &
-                       p,                    &
-                       MPI_COMM_WORLD,       &
-                       ierr                  )
-    enddo
-
-    do v = 1, vsize
-       allstatval(v) = sum(statval(v,:))
-       if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']',' SUM =', &
-                                      allstatval(v) * DXYZ * DXYZ * DXYZ, '[kg * xxx]'
-    enddo
-
+          call TIME_rapend  ('COMM Bcast MPI')
+       else
+          ! statistics on each node
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
+                     '[', varname, '] SUM(local)  =', statval(PRC_myrank)
+       endif
     endif
 
     return
