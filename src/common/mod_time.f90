@@ -41,31 +41,31 @@ module mod_time
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: TIME_DTSEC               !< time interval of model       [sec]
+  real(8), public, save :: TIME_DTSEC                !< time interval of model       [sec]
 
-  real(8), public, save :: TIME_DTSEC_ATMOS_DYN     !< time interval of dynamics     [sec]
-  integer, public, save :: TIME_NSTEP_ATMOS_DYN = 1 !< small step of dynamics
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_TB  !< time interval of turbulence   [sec]
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_MP  !< time interval of microphysics [sec]
-  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_RD  !< time interval of radiation    [sec]
-  real(8), public, save :: TIME_DTSEC_ATMOS_RESTART !< time interval of restart      [sec]
-  real(8), public, save :: TIME_DTSEC_OCEAN         !< time interval of ocean        [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
+  integer, public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence   [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
+  real(8), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of restart      [sec]
+  real(8), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
 
-  real(8), public, save :: TIME_NOWSEC              !< current time [sec]
-  integer, public, save :: TIME_NOWSTEP             !< current step [number]
+  real(8), public, save :: TIME_NOWSEC               !< current time [sec]
+  integer, public, save :: TIME_NOWSTEP              !< current step [number]
 
-  integer, public, save :: TIME_NOWDATE(6)          !< current time [YYYY MM DD HH MM SS]
-  real(8), public, save :: TIME_NOWMS               !< subsecond part of current time [millisec]
-  real(8), public, save :: TIME_NOWSECL             !< current time [sec]
+  integer, public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
+  real(8), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
+  real(8), public, save :: TIME_NOWSECL              !< current time [sec]
 
-  logical, public, save :: TIME_DOATMOS_step        !< execute atmospheric component in this step?
-  logical, public, save :: TIME_DOATMOS_DYN         !< execute dynamics?
-  logical, public, save :: TIME_DOATMOS_PHY_TB      !< execute physics(turbulence)?
-  logical, public, save :: TIME_DOATMOS_PHY_MP      !< execute physics(microphysics)?
-  logical, public, save :: TIME_DOATMOS_PHY_RD      !< execute physics(radiation)?
-  logical, public, save :: TIME_DOATMOS_restart     !< execute restart output?
-  logical, public, save :: TIME_DOOCEAN_step        !< execute ocean component in this step?
-  logical, public, save :: TIME_DOend               !< finish program in this step?
+  logical, public, save :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
+  logical, public, save :: TIME_DOATMOS_DYN          !< execute dynamics?
+  logical, public, save :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
+  logical, public, save :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
+  logical, public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
+  logical, public, save :: TIME_DOATMOS_restart      !< execute restart output?
+  logical, public, save :: TIME_DOOCEAN_step         !< execute ocean component in this step?
+  logical, public, save :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
   !
@@ -77,7 +77,7 @@ module mod_time
   !
   !++ Private parameters & variables
   !
-  integer, private,      save :: TIME_STARTDATE(6) = (/ 0000, 01, 01, 00, 00, 00 /)
+  integer, private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
   real(8), private,      save :: TIME_STARTMS      = 0.D0                           !< [millisec]
   real(8), private,      save :: TIME_STARTSECL
 
@@ -94,11 +94,11 @@ module mod_time
   real(8), private,      save :: TIME_RES_ATMOS_RESTART = 0.D0
   real(8), private,      save :: TIME_RES_OCEAN         = 0.D0
 
-  real(8), private, parameter :: TIME_DOY  = 365.D0
+  real(8), private, parameter :: TIME_DOY     = 365.D0
   real(8), private, parameter :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
-  real(8), private, parameter :: TIME_HOUR =  24.D0
-  real(8), private, parameter :: TIME_MIN  =  60.D0
-  real(8), private, parameter :: TIME_SEC  =  60.D0
+  real(8), private, parameter :: TIME_HOUR    =  24.D0
+  real(8), private, parameter :: TIME_MIN     =  60.D0
+  real(8), private, parameter :: TIME_SEC     =  60.D0
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
@@ -123,22 +123,22 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(8)                  :: TIME_DURATION              = 1.D0
+    real(8)                  :: TIME_DURATION              = 60.0D0
     character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "MIN"
-    real(8)                  :: TIME_DT                    = 300.D0
-    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "MSEC"
-    real(8)                  :: TIME_DT_ATMOS_DYN          = 0.D0
+    real(8)                  :: TIME_DT                    =  0.6D0
+    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
+    real(8)                  :: TIME_DT_ATMOS_DYN          =  0.03D0
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(8)                  :: TIME_DT_ATMOS_PHY_TB       = 1.D0
+    real(8)                  :: TIME_DT_ATMOS_PHY_TB       =  0.6D0
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC"
-    real(8)                  :: TIME_DT_ATMOS_PHY_MP       = 5.D0
+    real(8)                  :: TIME_DT_ATMOS_PHY_MP       =  0.6D0
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC"
-    real(8)                  :: TIME_DT_ATMOS_PHY_RD       = 1.D0
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "MIN"
-    real(8)                  :: TIME_DT_ATMOS_RESTART      = 1.D0
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "MIN"
-    real(8)                  :: TIME_DT_OCEAN              = 1.D0
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "HOUR"
+    real(8)                  :: TIME_DT_ATMOS_PHY_RD       =  0.6D0
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC"
+    real(8)                  :: TIME_DT_ATMOS_RESTART      = 60.0D0
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "SEC"
+    real(8)                  :: TIME_DT_OCEAN              = 60.0D0
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "MIN"
 
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
@@ -240,9 +240,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)                  :', TIME_DTSEC_ATMOS_DYN
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)                  :', TIME_NSTEP_ATMOS_DYN
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics,Turbulence               :', TIME_DTSEC_ATMOS_PHY_TB
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics,Cloud Microphysics       :', TIME_DTSEC_ATMOS_PHY_MP
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics,Radiation                :', TIME_DTSEC_ATMOS_PHY_RD
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence              :', TIME_DTSEC_ATMOS_PHY_TB
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics      :', TIME_DTSEC_ATMOS_PHY_MP
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation               :', TIME_DTSEC_ATMOS_PHY_RD
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for ocean process (sec.)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** SST update                       :', TIME_DTSEC_OCEAN
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
@@ -526,7 +526,7 @@ contains
     do id = 1, TIME_rapnmax
 
        if ( TIME_rapnstr(id) /= TIME_rapnend(id) ) then
-           write(*,*) '*** Computational Time Report'
+           write(*,*) '*** Mismatch Report',id,TIME_rapname(id),TIME_rapnstr(id),TIME_rapnend(id)
        endif
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &

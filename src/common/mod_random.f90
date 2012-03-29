@@ -1,28 +1,24 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN
+!> module random
 !!
 !! @par Description
-!!          Ocean module
+!!          random number generation module
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-11 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] FIXEDSST
+!! @li      2012-03-28 (H.Yashiro)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_ocean
+module mod_random
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FID_LOG,  &
+     IO_FID_LOG, &
      IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,12 +26,16 @@ module mod_ocean
   !
   !++ Public procedure
   !
-  public :: OCEAN_setup
-  public :: OCEAN_step
+  public :: RANDOM_setup
+  public :: RANDOM_reset
+  public :: RANDOM_get
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  integer, private, allocatable, save :: RANDOM_seedvar(:)
+  integer, private,              save :: RANDOM_count
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -48,44 +48,60 @@ module mod_ocean
 contains
 
   !-----------------------------------------------------------------------------
-  !> Setup ocean
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_setup
-    use mod_ocean_vars, only: &
-       OCEAN_vars_setup, &
-       OCEAN_vars_restart_read
-    use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST_setup
+  subroutine RANDOM_setup
     implicit none
+
+    integer :: nseeds
     !---------------------------------------------------------------------------
 
-    call OCEAN_vars_setup
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RANDOM]/Categ[COMMON]'
 
-    call OCEAN_vars_restart_read
+    call random_seed
+    call random_seed(size=nseeds)
 
-    call OCEAN_FIXEDSST_setup
+    allocate( RANDOM_seedvar(nseeds))
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Array size for random seed:', nseeds
+
+    RANDOM_count = 0
+
+    call RANDOM_reset
 
     return
-  end subroutine OCEAN_setup
+  end subroutine RANDOM_setup
 
   !-----------------------------------------------------------------------------
-  !> advance ocean state
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_step
-    use mod_ocean_vars, only: &
-       sw_sf => OCEAN_sw_sf
-    use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST
+  subroutine RANDOM_reset
+    use mod_process, only: &
+       PRC_myrank
     implicit none
+
+    integer :: time1
+    real(8) :: time2
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Ocean')
-    if ( sw_sf ) then
-       call OCEAN_FIXEDSST
-    endif
-    call TIME_rapend  ('Ocean')
+    call time(time1)
+    call cpu_time(time2)
+    RANDOM_count = RANDOM_count + 1
+
+    RANDOM_seedvar(:) = time1 + int(time2*1.D6) + PRC_myrank
+
+    call random_seed(put=RANDOM_seedvar)
 
     return
-  end subroutine OCEAN_step
+  end subroutine RANDOM_reset
 
-end module mod_ocean
+  !-----------------------------------------------------------------------------
+  subroutine RANDOM_get( var )
+    implicit none
+
+    real(8), intent(out) :: var(:,:,:)
+    !---------------------------------------------------------------------------
+
+    call random_number(var)
+
+    return
+  end subroutine RANDOM_get
+
+end module mod_random

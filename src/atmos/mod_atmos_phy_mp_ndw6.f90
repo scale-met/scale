@@ -76,6 +76,14 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -313,9 +321,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
-    use mod_grid, only: &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX
     implicit none
     !---------------------------------------------------------------------------
 
@@ -350,35 +355,21 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWSEC
     use mod_grid, only : &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       GRID_CZ,           &
-       GRID_FZ,           &
-       GRID_CDZ,          &
+       GRID_CZ,  &
+       GRID_FZ,  &
+       GRID_CDZ, &
        GRID_FDZ
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait, &
+       COMM_wait,  &
        COMM_total
     use mod_atmos_vars, only: &
-       var => atmos_var, &
-       A_NAME,      &
-       VA  => A_VA, &
-       QA  => A_QA, &
-       I_DENS,      &
-       I_MOMX,      &
-       I_MOMY,      &
-       I_MOMZ,      &
-       I_RHOT
+       DENS, &
+       MOMX, &
+       MOMY, &
+       MOMZ, &
+       RHOT, &
+       QTRC
     implicit none
 
     ! Convert to fit NDW6
@@ -442,25 +433,25 @@ call START_COLLECTION("MICROPHYSICS")
        ij = (j-JS)*IMAX+i-IS+1
 
        do k = KS, KE
-          rho   (ij,k) = var(k,i,j,I_DENS)
-          rho_w (ij,k) = var(k,i,j,I_MOMZ)
-          rho_vx(ij,k) = var(k,i,j,I_MOMX)
-          rho_vy(ij,k) = var(k,i,j,I_MOMY)
-          th    (ij,k) = var(k,i,j,I_RHOT) / var(k,i,j,I_DENS)
+          rho   (ij,k) = DENS(k,i,j)
+          rho_w (ij,k) = MOMZ(k,i,j)
+          rho_vx(ij,k) = MOMX(k,i,j)
+          rho_vy(ij,k) = MOMY(k,i,j)
+          th    (ij,k) = RHOT(k,i,j) / DENS(k,i,j)
        enddo
        do k = 1, KS-1
-          rho   (ij,k) = var(KS,i,j,I_DENS)
-          rho_w (ij,k) = var(KS,i,j,I_MOMZ)
-          rho_vx(ij,k) = var(KS,i,j,I_MOMX)
-          rho_vy(ij,k) = var(KS,i,j,I_MOMY)
-          th    (ij,k) = var(KS,i,j,I_RHOT) / var(KS,i,j,I_DENS)
+          rho   (ij,k) = DENS(KS,i,j)
+          rho_w (ij,k) = MOMZ(KS,i,j)
+          rho_vx(ij,k) = MOMX(KS,i,j)
+          rho_vy(ij,k) = MOMY(KS,i,j)
+          th    (ij,k) = RHOT(KS,i,j) / DENS(KS,i,j)
        enddo
        do k = KE+1, KA
-          rho   (ij,k) = var(KE,i,j,I_DENS)
-          rho_w (ij,k) = var(KE,i,j,I_MOMZ)
-          rho_vx(ij,k) = var(KE,i,j,I_MOMX)
-          rho_vy(ij,k) = var(KE,i,j,I_MOMY)
-          th    (ij,k) = var(KE,i,j,I_RHOT) / var(KE,i,j,I_DENS)
+          rho   (ij,k) = DENS(KE,i,j)
+          rho_w (ij,k) = MOMZ(KE,i,j)
+          rho_vx(ij,k) = MOMX(KE,i,j)
+          rho_vy(ij,k) = MOMY(KE,i,j)
+          th    (ij,k) = RHOT(KE,i,j) / DENS(KE,i,j)
        enddo
     enddo
     enddo
@@ -472,13 +463,13 @@ call START_COLLECTION("MICROPHYSICS")
           ij = (j-JS)*IMAX+i-IS+1
 
           do k = KS, KE
-             rho_q (ij,k,iq) = var(k,i,j,5+iq) * var(k,i,j,I_DENS)
+             rho_q (ij,k,iq) = QTRC(k,i,j,iq) * DENS(k,i,j)
           enddo
           do k = 1, KS-1
-             rho_q (ij,k,iq) = var(KS,i,j,5+iq) * var(KS,i,j,I_DENS)
+             rho_q (ij,k,iq) = QTRC(KS,i,j,iq) * DENS(KS,i,j)
           enddo
           do k = KE+1, KA
-             rho_q (ij,k,iq) = var(KE,i,j,5+iq) * var(KE,i,j,I_DENS)
+             rho_q (ij,k,iq) = QTRC(KE,i,j,iq) * DENS(KE,i,j)
           enddo
        enddo
        enddo
@@ -505,11 +496,11 @@ call START_COLLECTION("MICROPHYSICS")
        ij = (j-JS)*IMAX+i-IS+1
 
        do k = KS, KE
-          var(k,i,j,I_DENS) = rho   (ij,k) + drho   (ij,k) * dt
-          var(k,i,j,I_MOMZ) = rho_w (ij,k) + drho_w (ij,k) * dt
-          var(k,i,j,I_MOMX) = rho_vx(ij,k) + drho_vy(ij,k) * dt
-          var(k,i,j,I_MOMY) = rho_vy(ij,k) + drho_vx(ij,k) * dt
-          var(k,i,j,I_RHOT) = ( th(ij,k) + dth(ij,k) * dt ) * var(k,i,j,I_DENS)
+          DENS(k,i,j) = rho   (ij,k) + drho   (ij,k) * dt
+          MOMZ(k,i,j) = rho_w (ij,k) + drho_w (ij,k) * dt
+          MOMX(k,i,j) = rho_vx(ij,k) + drho_vy(ij,k) * dt
+          MOMY(k,i,j) = rho_vy(ij,k) + drho_vx(ij,k) * dt
+          RHOT(k,i,j) = ( th(ij,k) + dth(ij,k) * dt ) * DENS(k,i,j)
        enddo
     enddo
     enddo
@@ -521,8 +512,8 @@ call START_COLLECTION("MICROPHYSICS")
           ij = (j-JS)*IMAX+i-IS+1
 
           do k = KS, KE
-             var(k,i,j,5+iq) = ( rho_q(ij,k,iq) + drho_q(ij,k,iq) * dt ) / var(k,i,j,I_DENS)
-             var(k,i,j,5+iq) = max( var(k,i,j,5+iq), 0.D0 )
+             QTRC(k,i,j,iq) = ( rho_q(ij,k,iq) + drho_q(ij,k,iq) * dt ) / DENS(k,i,j)
+             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.D0 )
           enddo
        enddo
        enddo
@@ -530,26 +521,27 @@ call START_COLLECTION("MICROPHYSICS")
     endif
     call TIME_rapend  ('MPX ijkconvert')
 
-    do iv = 1, VA
-       ! fill IHALO & JHALO
-       call COMM_vars8( var(:,:,:,iv), iv )
-       call COMM_wait ( var(:,:,:,iv), iv )
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_vars8( MOMZ(:,:,:), 2 )
+    call COMM_vars8( MOMX(:,:,:), 3 )
+    call COMM_vars8( MOMY(:,:,:), 4 )
+    call COMM_vars8( RHOT(:,:,:), 5 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+    call COMM_wait ( MOMZ(:,:,:), 2 )
+    call COMM_wait ( MOMX(:,:,:), 3 )
+    call COMM_wait ( MOMY(:,:,:), 4 )
+    call COMM_wait ( RHOT(:,:,:), 5 )
 
-       ! fill KHALO
-       do j  = 1, JA
-       do i  = 1, IA
-          var(   1:KS-1,i,j,iv) = var(KS,i,j,iv)
-          var(KE+1:KA,  i,j,iv) = var(KE,i,j,iv)
-       enddo
-       enddo
+    do iq = 1, QA
+       call COMM_vars8( QTRC(:,:,:,iq), iq )
+    enddo
+    do iq = 1, QA
+       call COMM_wait ( QTRC(:,:,:,iq), iq )
     enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("MICROPHYSICS")
 #endif
-
-    ! check total mass
-    call COMM_total( var(:,:,:,:), A_NAME(:) )
 
     return
   end subroutine ATMOS_PHY_MP
@@ -557,23 +549,12 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-----------------------------------------------------------------------------
   subroutine mp_ndw6_init ( ijdim )
     use mod_stdio, only: &
-       IO_FID_CONF,  &
-       IO_FID_LOG,   &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
        CNST_PI    => CONST_PI, &
        CNST_UNDEF => CONST_UNDEF8
-    use mod_atmos_vars, only: &
-       NQW_STR => A_QWS, &
-       NQW_END => A_QWE, &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG
     implicit none
     !
     integer, intent(in) :: ijdim
@@ -1134,67 +1115,67 @@ call STOP_COLLECTION("MICROPHYSICS")
     !
     deallocate(w1,w2,w3,w4,w5,w6,w7,w8)
     !
-    write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(NQW_STR:NQW_END) ! [Add] 11/08/30 T.Mitsui
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(QQS:QQE) ! [Add] 11/08/30 T.Mitsui
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(QQS:QQE)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(NQW_STR:NQW_END)    
-    write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(NQW_STR:NQW_END) 
-    write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(NQW_STR:NQW_END) 
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(QQS:QQE)    
+    write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(QQS:QQE) 
+    write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(QQS:QQE) 
     !    
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(QQS:QQE)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(QQS:QQE)
     !
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(QQS:QQE)
     
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(NQW_STR:NQW_END,i_lrg)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(NQW_STR:NQW_END,i_sml)
-    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(NQW_STR:NQW_END,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(QQS:QQE,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(QQS:QQE,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(QQS:QQE,i_lrg)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(QQS:QQE,i_sml)
+    write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(QQS:QQE,i_lrg)
     
-    write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(NQW_STR:NQW_END)
-    write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(NQW_STR:NQW_END)
+    write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(QQS:QQE)
+    write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(QQS:QQE)
     !
-    do ia=NQW_STR,NQW_END
+    do ia=QQS,QQE
        write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            delta_ab0(ia,NQW_STR:NQW_END)
+            delta_ab0(ia,QQS:QQE)
     end do
-    do ia=NQW_STR,NQW_END
+    do ia=QQS,QQE
        write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            delta_ab1(ia,NQW_STR:NQW_END)
+            delta_ab1(ia,QQS:QQE)
     end do
-    do ia=NQW_STR,NQW_END
+    do ia=QQS,QQE
        write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            theta_ab0(ia,NQW_STR:NQW_END)
+            theta_ab0(ia,QQS:QQE)
     end do
-    do ia=NQW_STR,NQW_END
+    do ia=QQS,QQE
        write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",&
-            theta_ab1(ia,NQW_STR:NQW_END)
+            theta_ab1(ia,QQS:QQE)
     end do
     !
     allocate(nc_uplim(ijdim,1))
@@ -1271,12 +1252,7 @@ call STOP_COLLECTION("MICROPHYSICS")
          LHV,LHF,           & 
          CVW,               &
          nqmax => TRC_VMAX, &
-         NNW_STR, NNW_END,  &
-         NQW_STR, NQW_END,  &
-         I_QV, I_QC, I_QR,  &
-         I_QI, I_QS, I_QG,  &
-         I_NC, I_NR,        &
-         I_NI, I_NS, I_NG
+         NNW_STR, NNW_END
     use mod_precip_transport, only :   &
          precip_transport_nwater
     use mod_thrmdyn, only :          &
@@ -2747,7 +2723,7 @@ call START_COLLECTION("MP5")
        !
        preciptation_flag(:) = .false.
        V_TERM(:,:,:) = 0.d0
-       do nq=NQW_STR, NQW_END
+       do nq=QQS, QQE
           preciptation_flag(nq) = .true.
        end do
        V_TERM(:,:,I_QC) = vt_lc(:,:)
@@ -5656,9 +5632,6 @@ call STOP_COLLECTION("MP6")
          LHV,LHF,           & 
          CVW,               &
          NNW_STR, NNW_END,  &
-         NQW_STR, NQW_END,  &
-         I_QV, I_QC, I_QR, I_QI, I_QS, I_QG,  &
-         I_NC, I_NR, I_NI, I_NS, I_NG, &
          CNST_LH00, &
          CNST_LHS00,&
          CNST_LHF00,&

@@ -1,18 +1,18 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN
+!> module Atmosphere / Physics Radiation
 !!
 !! @par Description
-!!          Ocean module
+!!          Atmospheric radiation transfer process
+!!          mstrnX
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-11 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] FIXEDSST
+!! @li      2012-03-26 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_ocean
+module mod_atmos_phy_rd
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -20,9 +20,6 @@ module mod_ocean
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,8 +27,16 @@ module mod_ocean
   !
   !++ Public procedure
   !
-  public :: OCEAN_setup
-  public :: OCEAN_step
+  public :: ATMOS_PHY_RD_setup
+  public :: ATMOS_PHY_RD
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -48,44 +53,19 @@ module mod_ocean
 contains
 
   !-----------------------------------------------------------------------------
-  !> Setup ocean
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_setup
-    use mod_ocean_vars, only: &
-       OCEAN_vars_setup, &
-       OCEAN_vars_restart_read
-    use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST_setup
+  subroutine ATMOS_PHY_RD_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    call OCEAN_vars_setup
-
-    call OCEAN_vars_restart_read
-
-    call OCEAN_FIXEDSST_setup
-
     return
-  end subroutine OCEAN_setup
+  end subroutine ATMOS_PHY_RD_setup
 
   !-----------------------------------------------------------------------------
-  !> advance ocean state
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_step
-    use mod_ocean_vars, only: &
-       sw_sf => OCEAN_sw_sf
-    use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST
+  subroutine ATMOS_PHY_RD
     implicit none
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Ocean')
-    if ( sw_sf ) then
-       call OCEAN_FIXEDSST
-    endif
-    call TIME_rapend  ('Ocean')
-
     return
-  end subroutine OCEAN_step
+  end subroutine ATMOS_PHY_RD
 
-end module mod_ocean
+end module mod_atmos_phy_rd

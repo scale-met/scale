@@ -43,8 +43,15 @@ program scaleles3
      FIO_finalize
   use mod_grid, only: &
      GRID_setup
+  use mod_geometrics, only: &
+     GEOMETRICS_setup
   use mod_comm, only: &
      COMM_setup
+  use mod_history, only: &
+     HIST_setup, &
+     HIST_write
+  use mod_monitor, only: &
+     MONITOR_setup
   use mod_atmos, only: &
      ATMOS_setup, &
      ATMOS_step
@@ -56,9 +63,6 @@ program scaleles3
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
-  use mod_history, only: &
-     HIST_setup, &
-     HIST_write
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -91,17 +95,23 @@ program scaleles3
   ! setup horisontal/veritical grid system
   call GRID_setup
 
+  ! setup geometrics
+  call GEOMETRICS_setup
+
   ! setup mpi communication
   call COMM_setup
+
+  ! setup history
+  call HIST_setup
+
+  ! setup monitor
+  call MONITOR_setup
 
   ! setup atmosphere
   call ATMOS_setup
 
   ! setup ocean
   call OCEAN_setup
-
-  ! setup history
-  call HIST_setup
 
   call TIME_rapend('Initialize')
 

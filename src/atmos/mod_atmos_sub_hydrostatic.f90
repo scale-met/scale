@@ -7,7 +7,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2012-2-20 (H.Yashiro) [new] Extract from the tool of Y.Miyamoto
+!! @li      2012-02-20 (H.Yashiro)  [new] Extract from the tool of Y.Miyamoto
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -27,6 +28,12 @@ module mod_atmos_hydrostatic
   !++ Public procedure
   !
   public :: hydro_buildrho
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -64,9 +71,6 @@ contains
        LASPdry => CONST_LASPdry, &
        P00     => CONST_PRE00
     use mod_grid, only : &
-       KA  => GRID_KA, &
-       KS  => GRID_KS, &
-       KE  => GRID_KE, &
        CZ  => GRID_CZ, &
        FDZ => GRID_FDZ
     implicit none

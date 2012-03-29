@@ -106,7 +106,7 @@ contains
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
     write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-    write(IO_FID_LOG,*) '+ Numerical model for LES-scale weather                         +'
+    write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
     write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '++++++ Start MPI'
@@ -115,8 +115,8 @@ contains
     write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-    write(IO_FID_LOG,*) '+++ Open config file, FID =', IO_FID_CONF
-    write(IO_FID_LOG,*) '+++ Open log    file, FID =', IO_FID_LOG
+    write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
+    write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
 
     if ( .not. IO_L ) then
        write(IO_FID_LOG,*) '+++ Following log message is suppressed.'
@@ -160,7 +160,7 @@ contains
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
     write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-    write(IO_FID_LOG,*) '+ Numerical model for LES-scale weather                         +'
+    write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
     write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '++++++ Start Without MPI'
@@ -169,8 +169,8 @@ contains
     write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
     write(IO_FID_LOG,*)
     write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-    write(IO_FID_LOG,*) '+++ Open config file, FID =', IO_FID_CONF
-    write(IO_FID_LOG,*) '+++ Open log    file, FID =', IO_FID_LOG
+    write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
+    write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
 
     if ( .not. IO_L ) then
        write(IO_FID_LOG,*) '+++ Following log message is suppressed.'

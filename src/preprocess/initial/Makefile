@@ -6,7 +6,7 @@
 
 include ../../sysdep/Makedef.$(SCALE_SYS)
 
-VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
+VPATH = ../../include:../../common:../../io:../../grid:../../atmos:../../ocean
 
 PRJ1 = init_coldbubble
 PRJ2 = init_warmbubble
@@ -97,7 +97,7 @@ clean:
 .SUFFIXES: .o .f90 .c
 
 .f90.o:
-	$(FC) $(FFLAGS) -o $@ -c $<
+	$(FC) $(FFLAGS) -I../../include -o $@ -c $<
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
 

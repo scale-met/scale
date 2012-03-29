@@ -11,6 +11,7 @@
 !! @par History
 !! @li      2011-12-07 (Y.Miyamoto) [new]
 !! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -20,6 +21,8 @@ module mod_atmos_boundary
   !++ used modules
   !
   use mod_stdio, only: &
+     IO_FID_LOG, &
+     IO_L,       &
      IO_FILECHR
   use mod_fileio_h, only: &
      FIO_HSHORT, &
@@ -37,6 +40,13 @@ module mod_atmos_boundary
   public :: ATMOS_BOUNDARY_write
   public :: ATMOS_BOUNDARY_generate
   public :: ATMOS_BOUNDARY_setalpha
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -47,8 +57,8 @@ module mod_atmos_boundary
   integer, public, parameter :: I_BND_POTT = 4 ! reference potential temperature [K]
   integer, public, parameter :: I_BND_QV   = 5 ! reference water vapor [kg/kg]
 
-  real(8), public, allocatable, save :: ATMOS_BOUNDARY_var  (:,:,:,:) !> reference container (with HALO)
-  real(8), public, allocatable, save :: ATMOS_BOUNDARY_alpha(:,:,:,:) ! damping coefficient [0-1]
+  real(8), public, save :: ATMOS_BOUNDARY_var  (KA,IA,JA,5) !> reference container (with HALO)
+  real(8), public, save :: ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ! damping coefficient [0-1]
 
   !-----------------------------------------------------------------------------
   !
@@ -81,17 +91,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
        CONST_UNDEF8
-    use mod_grid, only : &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KA => GRID_KA
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
@@ -126,7 +130,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
     !--- set reference field for boundary
-    allocate( ATMOS_BOUNDARY_var(KA,IA,JA,5) ); ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF8
 
     if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_read
@@ -148,31 +152,16 @@ contains
   !> Calc dumping coefficient alpha
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_setalpha
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
-    use mod_process, only: &
-       PRC_MPIstop
     use mod_const, only: &
        CONST_UNDEF8, &
        PI => CONST_PI
     use mod_grid, only : &
-       KA => GRID_KA, &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KS => GRID_KS, &
-       KE => GRID_KE, &
-       IS => GRID_IS, &
-       IE => GRID_IE, &
-       JS => GRID_JS, &
-       JE => GRID_JE, &
-       GRID_CBFZ, &
-       GRID_CBFX, &
-       GRID_CBFY, &
-       GRID_FBFZ, &
-       GRID_FBFX, &
-       GRID_FBFY
+       CBFZ => GRID_CBFZ, &
+       CBFX => GRID_CBFX, &
+       CBFY => GRID_CBFY, &
+       FBFZ => GRID_FBFZ, &
+       FBFX => GRID_FBFX, &
+       FBFY => GRID_FBFY
 
     real(8) :: coef, alpha
     real(8) :: ee1, ee2
@@ -181,12 +170,12 @@ contains
     !---------------------------------------------------------------------------
 
     !--- set damping coefficient
-    allocate( ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ); ATMOS_BOUNDARY_alpha(:,:,:,:) = 0.D0
+    ATMOS_BOUNDARY_alpha(:,:,:,:) = 0.D0
 
     coef = 1.D0 / ATMOS_BOUNDARY_tauz
 
     do k = KS, KE
-       ee1 = GRID_CBFZ(k)
+       ee1 = CBFZ(k)
 
        if    ( ee1 > 0.0D0 .AND. ee1 <= 0.5D0 ) then
           alpha = coef * 0.5D0 * ( 1.D0 - dcos( ee1*PI ) )
@@ -204,7 +193,7 @@ contains
     enddo
 
     do k = KS-1, KE
-       ee2 = GRID_FBFZ(k)
+       ee2 = FBFZ(k)
 
        if    ( ee2 > 0.0D0 .AND. ee2 <= 0.5D0 ) then
           alpha = coef * 0.5D0 * ( 1.D0 - dcos( ee2*PI ) )
@@ -218,8 +207,8 @@ contains
     coef = 1.D0 / ATMOS_BOUNDARY_taux
 
     do i = IS, IE
-       ee1 = GRID_CBFX(i)
-       ee2 = GRID_FBFX(i)
+       ee1 = CBFX(i)
+       ee2 = FBFX(i)
 
        if ( ee1 > 0.0D0 .AND. ee1 <= 0.5D0 ) then
           alpha = coef * 0.5D0 * ( 1.D0 - dcos( ee1*PI ) )
@@ -247,8 +236,8 @@ contains
     coef = 1.D0 / ATMOS_BOUNDARY_tauy
 
     do j = JS, JE
-       ee1 = GRID_CBFY(j)
-       ee2 = GRID_FBFY(j)
+       ee1 = CBFY(j)
+       ee2 = FBFY(j)
 
        if ( ee1 > 0.0D0 .AND. ee1 <= 0.5D0 ) then
           alpha = coef * 0.5D0 * ( 1.D0 - dcos( ee1*PI ) )
@@ -307,19 +296,6 @@ contains
   subroutine ATMOS_BOUNDARY_read
     use mod_fileio, only: &
        FIO_input
-    use mod_grid, only : &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KA   => GRID_KA,   &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KMAX => GRID_KMAX, &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE,   &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
@@ -365,7 +341,6 @@ contains
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
     enddo
-
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
     enddo
@@ -391,19 +366,6 @@ contains
        NOWSEC => TIME_NOWSEC
     use mod_fileio, only: &
        FIO_output
-    use mod_grid, only : &
-       KA   => GRID_KA,   &
-       IA   => GRID_IA,   &
-       JA   => GRID_JA,   &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE
     implicit none
 
     real(8) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -462,19 +424,8 @@ contains
     use mod_const, only: &
        CONST_UNDEF8
     use mod_grid, only : &
-       KA => GRID_KA, &
-       IA => GRID_IA, &
-       JA => GRID_JA, &
-       KS => GRID_KS, &
-       KE => GRID_KE, &
-       IS => GRID_IS, &
-       IE => GRID_IE, &
-       JS => GRID_JS, &
-       JE => GRID_JE, &
        CZ_mask => GRID_CZ_mask, &
-       CX_mask => GRID_CX_mask, &
-       GRID_CBFZ, &
-       GRID_FBFX
+       CX_mask => GRID_CX_mask
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
@@ -506,8 +457,8 @@ contains
 !          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
 !             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF8
 !          else                                    ! Buffer Area
-!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = GRID_FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
-!                                                  * ( 1.D0 - GRID_CBFZ(k) )
+!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
+!                                                  * ( 1.D0 - CBFZ(k) )
 !          endif
 !       enddo
 !    enddo

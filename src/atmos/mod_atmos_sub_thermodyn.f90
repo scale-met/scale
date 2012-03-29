@@ -1,53 +1,40 @@
 !-------------------------------------------------------------------------------
-!
-!+  Thermodynamics variables module
-!
+!> module Thermodynamics
+!!
+!! @par Description
+!!          Thermodynamics module
+!!
+!! @author H.Tomita and SCALE developpers
+!!
+!! @par History
+!! @li      2011-10-24 (T.Seiki)    [new] Import from NICAM
+!! @li      2012-02-10 (H.Yashiro)  [mod] Reconstruction
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!!
+!<
 !-------------------------------------------------------------------------------
-module mod_thrmdyn
+module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
   !
-  !++ Description: 
-  !       This module contains subroutines in which the thermodyanics variables
-  !       are calculated.
-  !       
-  ! 
-  !++ Current Corresponding Author : H.Tomita
-  ! 
-  !++ History: 
-  !      Version   Date       Comment 
-  !      -----------------------------------------------------------------------
-  !      0.00      2011/10/24 T.Seiki:  Import from NICAM
-  !      -----------------------------------------------------------------------
+  !++ used modules
   !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Used modules
-  !
+  use mod_stdio, only: &
+     IO_FID_LOG, &
+     IO_L
+  use mod_const, only : &
+     Rdry  => CONST_Rdry,  &
+     CPdry => CONST_CPdry, &
+     CVdry => CONST_CVdry, &
+     RovCP => CONST_RovCP, &
+     PRE00 => CONST_PRE00, &
+     Rvap  => CONST_Rvap,  &
+     CPvap => CONST_CPvap, &
+     CVvap => CONST_CVvap, &
+     CL    => CONST_CL,    &
+     CI    => CONST_CI
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use mod_atmos_cnst,  only :&
-       CNST_RAIR,      &
-       CNST_RVAP,      &
-       CNST_CV,        &
-       CNST_CP,        &
-       CNST_CPV,       &
-       CNST_CL,        &
-       CNST_CI,        &
-       CNST_PRE00,     &
-       CNST_KAPPA,     &
-       CNST_EPSV,      &
-       CNST_TEM00,     &
-       CNST_PSAT0,     &
-       CNST_LHF0,      &
-       CNST_LH0,       & 
-       CNST_LHF00,     &
-       CNST_LH00,      &
-       NQW_STR,NQW_END,   &
-       I_QV,              &
-       I_QC, I_QR,        &
-       I_QI, I_QS, I_QG,  &
-       CVW, CPW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,503 +42,265 @@ module mod_thrmdyn
   !
   !++ Public procedure
   !
-  public :: thrmdyn_rho
-  public :: thrmdyn_ein
-  public :: thrmdyn_eth
-  public :: thrmdyn_tem
-  public :: thrmdyn_pre
-  public :: thrmdyn_th
-  public :: thrmdyn_tempreth
-  public :: thrmdyn_tempre
-  public :: thrmdyn_tempre2
-  public :: thrmdyn_cv
-  public :: thrmdyn_cp
-  public :: thrmdyn_qd
-  public :: thrmdyn_ent
+  public :: ATMOS_THRRMODYN_setup
+  public :: ATMOS_THRRMODYN_qd
+  public :: ATMOS_THRRMODYN_cv
+  public :: ATMOS_THRRMODYN_cp
+  public :: ATMOS_THRRMODYN_tempre
+  public :: ATMOS_THRRMODYN_tempre2
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  real(8), public,      save :: AQ_CP(QQA) ! CP for each hydrometeors
+  real(8), public,      save :: AQ_CV(QQA) ! CV for each hydrometeors
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  subroutine thrmdyn_rho( &
-       rho,               & !--- OUT : density     
-       pre,               & !--- IN  : pressure    
-       tem,               & !--- IN  : temperature 
-       qd,                & !--- IN  : dry concentration 
-       qv )                 !--- IN  : water concentration 
-    !------ 
-    !------ Density calculation in all regions
-    !------    1. calculation region of rho
-    !------                   : (:,:,:)
-    !------ 
+  subroutine ATMOS_THRRMODYN_setup
     implicit none
-    !
-    real(8), intent(out) :: rho(:,:)
-    real(8), intent(in)  :: pre(:,:)
-    real(8), intent(in)  :: tem(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: qv(:,:)
-    !
+    !---------------------------------------------------------------------------
 
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_rho")
-#endif
+    AQ_CP(I_QV) = CPvap
+    AQ_CV(I_QV) = CVvap
 
-    rho(:,:) = pre(:,:) / tem(:,:) &
-         / ( qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP )
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_rho")
-#endif
+    if ( I_QC > 0 ) then
+       AQ_CP(I_QC) = CL
+       AQ_CV(I_QC) = CL
+    endif
+    if ( I_QR > 0 ) then
+       AQ_CP(I_QR) = CL
+       AQ_CV(I_QR) = CL
+    endif
+    if ( I_QI > 0 ) then
+       AQ_CP(I_QI) = CI
+       AQ_CV(I_QI) = CI
+    endif
+    if ( I_QS > 0 ) then
+       AQ_CP(I_QS) = CI
+       AQ_CV(I_QS) = CI
+    endif
+    if ( I_QG > 0 ) then
+       AQ_CP(I_QG) = CI
+       AQ_CV(I_QG) = CI
+    endif
 
     return
-  end subroutine thrmdyn_rho
+  end subroutine ATMOS_THRRMODYN_setup
+
   !-----------------------------------------------------------------------------
-  subroutine thrmdyn_ein( &
-       ein,               &  !--- OUT : internal energy
-       tem,               &  !--- IN  : temperature
-       qd,                &  !--- IN  : dry concentration 
-       q )                   !--- IN  : water concentration 
-    !------ 
-    !------ Internal energy calculation in all regions
-    !------    1. calculation region of ein
-    !------                   : (:,:)
-    !------ 
-    !------ CAUTION : ein = CV*T*qd + CVV*T*qv + CPL*T*qc
-    !------           ein_moist = CV*T*qd + (CVV*T+LH00)*qv + CPL*T*qc
-    !              
+  subroutine ATMOS_THRRMODYN_qd( qdry, q )
     implicit none
-    !
-    real(8), intent(out) :: ein(:,:)
-    real(8), intent(in)  :: tem(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: q(:,:,:)
-    !
-    real(8) :: cv(size(tem,1),size(tem,2))
-    !
 
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_ein")
-#endif
+    real(8), intent(out) :: qdry(IJA,KA)    ! dry mass concentration
+    real(8), intent(in)  :: q   (IJA,KA,QA) ! mass concentration
 
-    call thrmdyn_cv( &
-         cv,         & !--- out
-         q,          & !--- in
-         qd )          !--- in
-    ein(:,:) = cv(:,:) * tem(:,:)
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_ein")
-#endif
-
-    return
-  end subroutine thrmdyn_ein
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_eth( &
-       eth,               &  !--- OUT : enthalpy
-       ein,               &  !--- IN  : internal energy
-       pre,               &  !--- IN  : pressure
-       rho )                 !--- IN  : density
-    implicit none
-    !
-    real(8), intent(out) :: eth(:,:)
-    real(8), intent(in)  :: ein(:,:)
-    real(8), intent(in)  :: pre(:,:)
-    real(8), intent(in)  :: rho(:,:)
-    !
-
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_eth")
-#endif
-
-    eth(:,:) = ein(:,:) + pre(:,:) / rho(:,:)
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_eth")
-#endif
-
-    return
-  end subroutine thrmdyn_eth
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_tem( &
-       tem,               &  !--- OUT  : temperature       
-       ein,               &  !--- IN : internal energy
-       qd,                &  !--- IN  : dry concentration 
-       q )                   !--- IN  : water concentration 
-    !
-    !------ CAUTION : ein = CV*T*qd + CVV*T*qv + CPL*T*qc
-    !------           ein_moist = CV*T*qd + (CVV*T+LH00)*qv + CPL*T*qc
-    implicit none
-    !
-    real(8), intent(out) :: tem(:,:)
-    real(8), intent(in)  :: ein(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: q(:,:,:)
-    !
-    real(8)  :: cv(size(tem,1),size(tem,2))
-    !
-
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tem")
-#endif
-
-    call thrmdyn_cv( &
-         cv,         & !--- out
-         q,          & !--- in
-         qd )          !--- in
-    tem(:,:) = ein(:,:) / cv(:,:)
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tem")
-#endif
-
-    return
-  end subroutine thrmdyn_tem
-  ! xxxxx [Add] T.Seiki
-  subroutine thrmdyn_tempre2( &
-       tem,               &  !--- OUT  : temperature       
-       pre,               &  !--- OUT  : pressure
-       rho,               &  !--- IN  : 
-       th,                &  !--- IN  : 
-       qd,                &  !--- IN  : dry concentration 
-       qv )                  !--- IN  : vapor concentration 
-    !
-    implicit none
-    !
-    real(8), intent(out) :: tem(:,:)
-    real(8), intent(out) :: pre(:,:)
-    real(8), intent(in)  :: rho(:,:)
-    real(8), intent(in)  :: th(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: qv(:,:)
-    !
-    real(8) :: rpres0, wkappa
+    integer :: ij, k, iqw
+    !-----------------------------------------------------------------------------
 
     call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempre2")
+call START_COLLECTION("ATMOS_THRRMODYN_qd")
 #endif
 
-    !
-    ! pre = rho*tem*(qd*rair+qv*rvap)
-    ! tem = th*(pre/pre0)**kappa
-    !
-    rpres0   = 1.d0/CNST_PRE00
-    wkappa   = 1.d0/(1.d0-CNST_KAPPA)
-    !
-    tem(:,:) = ( th(:,:) &
-         * (rho(:,:)*(qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP)*rpres0 )**CNST_KAPPA )**wkappa
-    pre(:,:) = rho(:,:)*tem(:,:)*(qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP)
-    !
+    do k  = 1, KA
+    do ij = 1, IJA
+
+       qdry(ij,k) = 1.D0
+
+       do iqw = QQS, QQE
+          qdry(ij,k) = qdry(ij,k) - q(ij,k,iqw)
+       enddo
+
+    enddo
+    enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempre2")
+call STOP_COLLECTION("ATMOS_THRRMODYN_qd")
 #endif
     call TIME_rapend  ('thrmdyn')
 
     return
-  end subroutine thrmdyn_tempre2
+  end subroutine ATMOS_THRRMODYN_qd
+
   !-----------------------------------------------------------------------------
-  subroutine thrmdyn_pre( &
-       pre,               &  !--- OUT : pressure
-       tem,               &  !--- IN  : temperature       
-       rho,               &  !--- IN  : density
-       qd,                &  !--- IN  : dry concentration 
-       q )                   !--- IN  : water concentration 
+  subroutine ATMOS_THRRMODYN_cp( cptot, q, qdry )
     implicit none
-    !
-    real(8), intent(out) :: pre(:,:)
-    real(8), intent(in)  :: tem(:,:)
-    real(8), intent(in)  :: rho(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: q(:,:,:)
-    !
 
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_pre")
-#endif
+    real(8), intent(out) :: cptot(IJA,KA)    ! total specific heat
+    real(8), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
+    real(8), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
 
-    pre(:,:) = rho(:,:) * tem(:,:) &
-         * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_pre")
-#endif
-
-    return
-  end subroutine thrmdyn_pre
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_th( &
-       th,               &  !--- OUT : potential temperature
-       tem,              &  !--- IN  : temperature       
-       pre )                !--- IN  : pressure
-    !
-    implicit none
-    !
-    real(8), intent(out) :: th(:,:)
-    real(8), intent(in)  :: tem(:,:)
-    real(8), intent(in)  :: pre(:,:)
-    !
-    real(8) :: p0k
-    !
-
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_th")
-#endif
-
-    p0k=CNST_PRE00**CNST_KAPPA
-    !
-    th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_th")
-#endif
-
-    return
-  end subroutine thrmdyn_th
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_tempreth( &
-       tem,                    &  !--- OUT : temperature              
-       pre,                    &  !--- OUT : pressure
-       th,                     &  !--- OUT : potential temperature
-       ein,                    &  !--- IN  : internal energy
-       rho,                    &  !--- IN  : density
-       qd,                     &  !--- IN  : dry concentration 
-       q )                        !--- IN  : water concentration 
-    implicit none
-    !
-    real(8), intent(out) :: tem(:,:)
-    real(8), intent(out) :: pre(:,:)
-    real(8), intent(out) :: th(:,:)
-    real(8), intent(in)  :: ein(:,:)
-    real(8), intent(in)  :: rho(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: q(:,:,:)
-    !
-    real(8) :: cv(size(tem,1),size(tem,2))
-    !
-    real(8) :: p0k
-    !
-
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempreth")
-#endif
-
-    p0k=CNST_PRE00**CNST_KAPPA
-    !
-    call thrmdyn_cv( &
-         cv,         & !--- out
-         q,          & !--- in
-         qd )          !--- in
-    !
-    tem(:,:) = ein(:,:) / cv(:,:)
-    pre(:,:) = rho(:,:) * tem(:,:) &
-         * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
-    th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempreth")
-#endif
-
-    return
-  end subroutine thrmdyn_tempreth
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_tempre( &
-       tem,                  &  !--- OUT : temperature              
-       pre,                  &  !--- OUT : pressure
-       ein,                  &  !--- IN  : internal energy
-       rho,                  &  !--- IN  : density
-       qd,                   &  !--- IN  : dry concentration 
-       q )                      !--- IN  : water concentration 
-    !
-    implicit none
-    !
-    real(8), intent(out) :: tem(:,:)
-    real(8), intent(out) :: pre(:,:)
-    real(8), intent(in)  :: ein(:,:)
-    real(8), intent(in)  :: rho(:,:)
-    real(8), intent(in)  :: qd(:,:)
-    real(8), intent(in)  :: q(:,:,:)
-    !
-    real(8) :: cv(size(tem,1),size(tem,2))
-    !
+    integer :: ij, k, iqw
+    !---------------------------------------------------------------------------
 
     call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempre")
+call START_COLLECTION("ATMOS_THRRMODYN_cp")
 #endif
 
-    call thrmdyn_cv( &
-         cv,         & !--- out
-         q,          & !--- in
-         qd )          !--- in
-    !
-    tem(:,:) = ein(:,:) / cv(:,:)
-    pre(:,:) = rho(:,:) * tem(:,:) &
-         * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
+    do k  = 1, KA
+    do ij = 1, IJA
+
+       cptot(ij,k) = qdry(ij,k) * CPdry
+
+       do iqw = QQS, QQE
+          cptot(ij,k) = cptot(ij,k) + q(ij,k,iqw) * AQ_CP(iqw)
+       enddo
+
+    enddo
+    enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempre")
+call STOP_COLLECTION("ATMOS_THRRMODYN_cp")
 #endif
     call TIME_rapend  ('thrmdyn')
 
     return
-  end subroutine thrmdyn_tempre
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_cv( &
-       cva,              & !--- OUT : specific heat
-       q,                & !--- IN  : mass concentration
-       qd)                 !--- IN  : dry mass concentration
+  end subroutine ATMOS_THRRMODYN_cp
 
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THRRMODYN_cv( cvtot, q, qdry )
     implicit none
-    !
-    real(8), intent(out) :: cva(:,:)
-    real(8), intent(in) :: q(:,:,:)
-    real(8), intent(in) :: qd(:,:)
-    !
-    integer :: nq
-    !
+
+    real(8), intent(out) :: cvtot(IJA,KA)    ! total specific heat
+    real(8), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
+    real(8), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
+
+    integer :: ij, k, iqw
+    !---------------------------------------------------------------------------
 
     call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_cv")
+call START_COLLECTION("ATMOS_THRRMODYN_cv")
 #endif
 
-    cva(:,:) = qd(:,:) * CNST_CV
-    do nq = NQW_STR,NQW_END
-       cva(:,:) = cva(:,:) + q(:,:,nq) * CVW(nq)
-    end do
-    !
+    do k  = 1, KA
+    do ij = 1, IJA
+
+       cvtot(ij,k) = qdry(ij,k) * CVdry
+
+       do iqw = QQS, QQE
+          cvtot(ij,k) = cvtot(ij,k) + q(ij,k,iqw) * AQ_CV(iqw)
+       enddo
+
+    enddo
+    enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_cv")
+call STOP_COLLECTION("ATMOS_THRRMODYN_cv")
 #endif
     call TIME_rapend  ('thrmdyn')
 
     return
-  end subroutine thrmdyn_cv
+  end subroutine ATMOS_THRRMODYN_cv
+
   !-----------------------------------------------------------------------------
-  subroutine thrmdyn_cp( &
-       cpa,              & !--- OUT : specific heat
-       q,                & !--- IN  : mass concentration
-       qd )                !--- IN  : dry mass concentration
+  subroutine ATMOS_THRRMODYN_tempre( &
+      temp, pres,         &
+      Ein,  dens, qdry, q )
     implicit none
-    !
-    real(8), intent(out) :: cpa(:,:)
-    real(8), intent(in) :: q(:,:,:)
-    real(8), intent(in) :: qd(:,:)
-    !
-    integer :: nq
-    !
+
+    real(8), intent(out) :: temp(IJA,KA)    ! temperature
+    real(8), intent(out) :: pres(IJA,KA)    ! pressure
+    real(8), intent(in)  :: Ein (IJA,KA)    ! internal energy
+    real(8), intent(in)  :: dens(IJA,KA)    ! density
+    real(8), intent(in)  :: qdry(IJA,KA)    ! dry concentration
+    real(8), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+
+    real(8) :: cv, Rmoist
+
+    integer :: ij, k, iqw
+    !---------------------------------------------------------------------------
 
     call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_cp")
+call START_COLLECTION("ATMOS_THRRMODYN_tempre")
 #endif
 
-    cpa(:,:) = qd(:,:) * CNST_CP
-    do nq = NQW_STR,NQW_END
-       cpa(:,:) = cpa(:,:) + q(:,:,nq) * CPW(nq)
-    end do
-    !
+    do k  = 1, KA
+    do ij = 1, IJA
+
+       cv = qdry(ij,k) * CVdry
+       do iqw = QQS, QQE
+          cv = cv + q(ij,k,iqw) * AQ_CV(iqw)
+       enddo
+       Rmoist = qdry(ij,k)*Rdry + q(ij,k,I_QV)*Rvap
+
+       temp(ij,k) = Ein(ij,k) / cv
+
+       pres(ij,k) = dens(ij,k) * Rmoist * temp(ij,k)
+
+    enddo
+    enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_cp")
+call STOP_COLLECTION("ATMOS_THRRMODYN_tempre")
 #endif
     call TIME_rapend  ('thrmdyn')
 
     return
-  end subroutine thrmdyn_cp
+  end subroutine ATMOS_THRRMODYN_tempre
+
   !-----------------------------------------------------------------------------
-  subroutine thrmdyn_qd( &
-       qd,               & !--- OUT  : dry mass concentration
-       q )                 !--- IN  : mass concentration
+  subroutine ATMOS_THRRMODYN_tempre2( &
+      temp, pres,         &
+      dens, pott, qdry, q )
     implicit none
-    !
-    real(8), intent(out) :: qd(:,:)
-    real(8), intent(in) :: q(:,:,:)
-    !
-    integer :: nq
-    !
+
+    real(8), intent(out) :: temp(IJA,KA)    ! temperature
+    real(8), intent(out) :: pres(IJA,KA)    ! pressure
+    real(8), intent(in)  :: dens(IJA,KA)    ! density
+    real(8), intent(in)  :: pott(IJA,KA)    ! potential temperature
+    real(8), intent(in)  :: qdry(IJA,KA)    ! dry concentration
+    real(8), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+
+    real(8) :: RPRE00, WKAPPA, rhoRmoist
+
+    integer :: ij, k
+    !---------------------------------------------------------------------------
 
     call TIME_rapstart('thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_qd")
+call START_COLLECTION("ATMOS_THRRMODYN_tempre2")
 #endif
 
-    qd(:,:) = 1.0D0
-    do nq = NQW_STR,NQW_END
-       qd(:,:) = qd(:,:) - q(:,:,nq)
-    end do
+    RPRE00   = 1.D0 / PRE00
+    WKAPPA   = 1.D0 / ( 1.D0 - RovCP )
+
+    do k  = 1, KA
+    do ij = 1, IJA
+       rhoRmoist = dens(ij,k) * ( qdry(ij,k)*Rdry + q(ij,k,I_QV)*Rvap )
+
+       temp(ij,k) = ( pott(ij,k) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA
+       pres(ij,k) = rhoRmoist * temp(ij,k)
+    enddo
+    enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_qd")
+call STOP_COLLECTION("ATMOS_THRRMODYN_tempre2")
 #endif
     call TIME_rapend  ('thrmdyn')
 
     return
-  end subroutine thrmdyn_qd
-  !-----------------------------------------------------------------------------
-  subroutine thrmdyn_ent( &
-       ent,               & !--- OUT :
-       tem,               & !--- IN
-       pre,               & !--- IN
-       q,                 & !--- IN
-       qd                 & !--- IN
-       )
-    !
-    implicit none
-    !
-    real(8), intent(out):: ent(:,:)
-    real(8), intent(in) :: tem(:,:)
-    real(8), intent(in) :: pre(:,:)
-    real(8), intent(in) :: q(:,:,:)
-    real(8), intent(in) :: qd(:,:)
-    !
-    real(8) :: pred(size(tem,1),size(tem,2))
-    real(8) :: prev(size(tem,1),size(tem,2))
-    real(8) :: cpa(size(tem,1),size(tem,2))
-    !
-    real(8), parameter :: PREMIN = 1.d-10
-    !
-    integer :: nq
+  end subroutine ATMOS_THRRMODYN_tempre2
 
-#ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_ent")
-#endif
+end module mod_atmos_thermodyn
 
-    !
-    ! entropy
-    ! ent = qd * sd + qv * sv + qc * sc + qr * sr ...
-    pred(:,:) = pre(:,:) * CNST_EPSV * qd(:,:) &
-         / ( CNST_EPSV * qd(:,:) + q(:,:,I_QV) )
-    prev(:,:) = pre(:,:) * q(:,:,I_QV) &
-         / ( CNST_EPSV * qd(:,:) + q(:,:,I_QV) )
-    pred(:,:) = max( pred(:,:), PREMIN )
-    prev(:,:) = max( prev(:,:), PREMIN )
-    !
-    !  T.Mitsui, strict definition of entropy is given by 
-    ! (8),(11),(13) Satoh (2003), Mon.Wea.Rev.
-    !
-    ent(:,:) = qd(:,:) * CNST_CP   * log ( tem(:,:)  / CNST_TEM00 )   &
-         -     qd(:,:) * CNST_RAIR * log ( pred(:,:) / CNST_PRE00 )   &
-         + q(:,:,I_QV) * CNST_CPV  * log ( tem(:,:)  / CNST_TEM00 )   &
-         - q(:,:,I_QV) * CNST_RVAP * log ( prev(:,:) / CNST_PSAT0 )   &
-         + q(:,:,I_QV) * CNST_LH0 / CNST_TEM00 
-    do nq = NQW_STR, NQW_END
-       if      ( (nq==I_QC) .or. (nq==I_QR) )then
-          ent(:,:) = ent(:,:) + q(:,:,nq) * CNST_CL * log( tem(:,:) / CNST_TEM00 )
-       else if ( (nq==I_QI) .or. (nq==I_QS) .or. (nq==I_QG)  ) then
-          ent(:,:) = ent(:,:) + q(:,:,nq) * CNST_CI * log( tem(:,:) / CNST_TEM00 ) &
-               - q(:,:,nq) * CNST_LHF0 / CNST_TEM00
-       end if
-    end do
-    !
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_ent")
-#endif
-
-    return
-  end subroutine thrmdyn_ent
-  !
-end module mod_thrmdyn
-!-------------------------------------------------------------------------------

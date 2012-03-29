@@ -7,7 +7,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-11-11 (H.Yashiro)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -47,7 +47,6 @@ module mod_stdio
   !
   integer, private, parameter :: IO_MINFID    = 7  !< minimum available fid
   integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
-  integer, private,      save :: IO_MAXDIGIT  = 6  !< maximum digit for process specific filename
   integer, private, parameter :: IO_RGNOFFSET = 0  !< offset number of process file
 
   !-----------------------------------------------------------------------------
@@ -62,7 +61,6 @@ contains
     logical :: IO_OUTPUT_LOGMSG     !< output log or not?
 
     namelist / PARAM_IO / &
-       IO_MAXDIGIT,      &
        IO_OUTPUT_LOGMSG
 
     character(len=IO_FILECHR) :: fname !< name of config file for each process

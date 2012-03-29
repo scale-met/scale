@@ -7,7 +7,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-xx (H.Yashiro) [new]
+!! @li      2011-12-05 (H.Yashiro)  [new]
+!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -17,6 +18,8 @@ module mod_history
   !++ Used modules
   !
   use mod_stdio, only: &
+     IO_FID_LOG, &
+     IO_L,       &
      IO_FILECHR
   use mod_fileio_h, only: &
      FIO_HSHORT, &
@@ -34,6 +37,13 @@ module mod_history
   public :: HIST_in
   public :: HIST_write
   public :: HIST_outputlist
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include "inc_index.h"
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -78,17 +88,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine HIST_setup
     use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG,  &
-       IO_L
+       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
        TIME_ymdhms2sec
-    use mod_grid, only : &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX
     use mod_fileio_h, only: &
        FIO_REAL4, &
        FIO_REAL8, &
@@ -210,13 +214,8 @@ contains
       desc,   &
       unit,   &
       ktype   )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_grid, only : &
-       KMAX => GRID_KMAX
     implicit none
 
     integer,          intent(out) :: itemid
@@ -287,16 +286,6 @@ contains
       itemid, &
       var,    &
       dt      )
-    use mod_grid, only : &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX, &
-       KS   => GRID_KS,   &
-       KE   => GRID_KE,   &
-       IS   => GRID_IS,   &
-       IE   => GRID_IE,   &
-       JS   => GRID_JS,   &
-       JE   => GRID_JE
     implicit none
 
     integer, intent(in) :: itemid
@@ -360,10 +349,6 @@ contains
   subroutine HIST_write
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_grid, only : &
-       KMAX => GRID_KMAX, &
-       IMAX => GRID_IMAX, &
-       JMAX => GRID_JMAX
     use mod_fileio, only: &
 #ifdef CONFIG_HDF5
        FIO_output, &
@@ -443,9 +428,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HIST_outputlist
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     implicit none
 
     integer :: n

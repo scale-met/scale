@@ -4,6 +4,7 @@
 ##### for computation
 
 FC     = /usr/local/mpich213/bin/mpif90
+#FC     = /usr/local/mpich214/bin/mpif90
 FFLAGS = -fpp3 -O3 -ftz -m64                  \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
