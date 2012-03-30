@@ -190,10 +190,10 @@ int32_t fio_syscheck( void )
 
   if ( *((char*)&i) ) {
     system_endiantype = FIO_LITTLE_ENDIAN;
-    printf("This system is Little endian.\n");
+/*    printf("This system is Little endian.\n"); */
   } else {
     system_endiantype = FIO_BIG_ENDIAN;
-    printf("This system is Big endian.\n");
+/*    printf("This system is Big endian.\n"); */
   }
 
   /* intitialize */

@@ -84,12 +84,10 @@ contains
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_time, only: &
-       TIME_DTSEC, &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait,  &
-       COMM_total
+       COMM_wait
     use mod_grid, only : &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
@@ -120,6 +118,7 @@ contains
     real(8) :: VELX(KA,IA,JA)
     real(8) :: VELY(KA,IA,JA)
     real(8) :: POTT(KA,IA,JA)
+    real(8) :: RHOT_T(KA,IA,JA)
 
     ! deformation rate tensor
     real(8) :: Sij_zz(KA,IA,JA)
@@ -681,10 +680,10 @@ contains
 
     call ATMOS_vars_total
 
-    call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'J/m3', '3D', TIME_DTSEC )
-    call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s', '3D', TIME_DTSEC )
-    call HIST_in( Pr  (:,:,:), 'Pr',   'Prantle number',           'NIL',  '3D', TIME_DTSEC )
-    call HIST_in( Ri  (:,:,:), 'Ri',   'Richardson number',        'NIL',  '3D', TIME_DTSEC )
+    call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'J/m3', '3D', dttb )
+    call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s', '3D', dttb )
+    call HIST_in( Pr  (:,:,:), 'Pr',   'Prantle number',           'NIL',  '3D', dttb )
+    call HIST_in( Ri  (:,:,:), 'Ri',   'Richardson number',        'NIL',  '3D', dttb )
 
     return
   end subroutine ATMOS_PHY_TB

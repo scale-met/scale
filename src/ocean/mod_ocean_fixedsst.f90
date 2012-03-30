@@ -93,7 +93,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN_FIXEDSST)
 
     if ( OCEAN_RESTART_IN_BASENAME == '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** ocean restart file is not specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
        if( IO_L ) write(IO_FID_LOG,*) '*** default initial SST is used.'
        OCEAN_FIXEDSST_RESET = .true.
     endif
@@ -119,15 +119,19 @@ contains
   subroutine OCEAN_FIXEDSST
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN
+    use mod_history, only: &
+       HIST_in
     use mod_ocean_vars, only: &
+       OP_DESC, &
+       OP_UNIT, &
        SST
     implicit none
 
-    integer :: i,j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean SST step:', &
-               SST(1,i,j), '->', SST(1,i,j) + OCEAN_FIXEDSST_RATE * dt
+               SST(1,IS,JS), '->', SST(1,IS,JS) + OCEAN_FIXEDSST_RATE * dt
 
     do j = 1, JA
     do i = 1, IA
@@ -135,6 +139,7 @@ contains
     enddo
     enddo
 
+    call HIST_in( SST(:,:,:), 'SST', OP_DESC(1), OP_UNIT(1), '2D', dt )
 
     return
   end subroutine OCEAN_FIXEDSST

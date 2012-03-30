@@ -95,7 +95,7 @@ module mod_atmos_dyn
   real(8), private, save :: MOMY_RK2(KA,IA,JA)   !
   real(8), private, save :: RHOT_RK2(KA,IA,JA)   !
 
-  real(8), private, save :: rjmns   (KA,IA,JA,3) ! minus in (x,y,z)-direction
+  real(8), private, save :: rjmns   (KA,IA,JA,3) ! correction factor for outgoing in (x,y,z)-direction
 
   real(8), private, save :: CNDZ(3,KA)
   real(8), private, save :: CNMZ(3,KA)
@@ -1825,7 +1825,6 @@ call START_COLLECTION("FCT")
        enddo
 
        ! --- STEP C: compute the outgoing fluxes in each cell ---
-       !OCL SIMD
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1834,7 +1833,7 @@ call START_COLLECTION("FCT")
                 + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
                 + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
-          if ( pjmns > 0 ) then
+          if ( pjmns > 0.D0 ) then
              tmp = QTRC(k,i,j,iq) / pjmns * rdtrk
              rjmns(k,i,j,ZDIR) = tmp * CDZ(k)
              rjmns(k,i,j,XDIR) = tmp * CDX(i)
