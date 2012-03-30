@@ -35,6 +35,7 @@ module mod_monitor
   public :: MONIT_put
   public :: MONIT_in
   public :: MONIT_write
+  public :: MONIT_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -56,7 +57,7 @@ module mod_monitor
   !
   !++ Private parameters & variables
   !
-  integer,                   private,      save :: MONIT_FID
+  integer,                   private,      save :: MONIT_FID = -1
 
   character(len=IO_FILECHR), private,      save :: MONITOR_OUT_BASENAME = 'monitor'
 
@@ -300,11 +301,11 @@ contains
        call MONIT_writeheader
     endif
 
-    if( IO_L ) write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
+    write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
     do n = 1, MONIT_id_count-1
-       if( IO_L ) write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
+       write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
     enddo
-    if( IO_L ) write(MONIT_FID,*)
+    write(MONIT_FID,*)
 
     return
   end subroutine MONIT_write
@@ -320,7 +321,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=IO_FILECHR) :: fname !< name of logfile for each process
+    character(len=IO_FILECHR) :: fname !< name of monitor file for each process
 
     integer :: ierr
     integer :: n
@@ -346,19 +347,41 @@ contains
           file   = trim(fname),  &
           form   = 'formatted',  &
           iostat = ierr          )
-       if ( ierr /= 0 ) then
-          write(*,*) 'xxx File open error! :', trim(fname)
-          call PRC_MPIstop
-       endif
+    if ( ierr /= 0 ) then
+       write(*,*) 'xxx File open error! :', trim(fname)
+       call PRC_MPIstop
+    endif
 
-    if( IO_L ) write(MONIT_FID,'(A)',advance='no') '                   '
+    write(MONIT_FID,'(A)',advance='no') '                   '
     do n = 1, MONIT_id_count-1
-       if( IO_L ) write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
+       write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
     enddo
-    if( IO_L ) write(MONIT_FID,*)
+    write(MONIT_FID,*)
 
     return
   end subroutine MONIT_writeheader
+
+  !-----------------------------------------------------------------------------
+  subroutine MONIT_finalize
+    use mod_stdio, only : &
+       IO_make_idstr
+    use mod_process, only : &
+       PRC_myrank
+    implicit none
+
+    character(len=IO_FILECHR) :: fname !< name of monitor file for each process
+    !---------------------------------------------------------------------------
+
+    if ( MONIT_FID > 0 ) then
+       close(MONIT_FID)
+
+       call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+       if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] File Close'
+       if( IO_L ) write(IO_FID_LOG,*) '*** closed filename: ', fname
+    endif
+
+    return
+  end subroutine MONIT_finalize
 
 end module mod_monitor
 !-------------------------------------------------------------------------------

@@ -33,6 +33,7 @@ module mod_process
   public :: PRC_MPIstop
   public :: PRC_setup
   public :: PRC_MPItime
+  public :: PRC_MPItimestat
 
   !-----------------------------------------------------------------------------
   !
@@ -74,10 +75,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstart
     use mod_stdio, only : &
+       IO_FID_CONF,          &
+       IO_FILECHR,           &
        IO_get_available_fid, &
        IO_make_idstr,        &
-       IO_FILECHR,           &
-       IO_FID_CONF
+       IO_LOG_SUPPRESS,      &
+       IO_LOG_ALLNODE
     implicit none
 
     character(len=IO_FILECHR) :: fname !< name of logfile for each process
@@ -91,35 +94,46 @@ contains
 
     PRC_mpi_alive = .true.
 
-    !--- Open logfile
-    IO_FID_LOG = IO_get_available_fid()
-    call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
-    open( unit   = IO_FID_LOG,  &
-          file   = trim(fname), &
-          form   = 'formatted', &
-          iostat = ierr         )
+    if ( .not. IO_LOG_SUPPRESS ) then
+       if ( PRC_myrank == PRC_master ) then ! master node
+          IO_L = .true.
+       else
+          IO_L = IO_LOG_ALLNODE
+       endif
+    endif
+
+    if ( IO_L ) then
+
+       !--- Open logfile
+       IO_FID_LOG = IO_get_available_fid()
+       call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+       open( unit   = IO_FID_LOG,  &
+             file   = trim(fname), &
+             form   = 'formatted', &
+             iostat = ierr         )
        if ( ierr /= 0 ) then
           write(*,*) 'xxx File open error! :', trim(fname)
           call PRC_MPIstop
        endif
 
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-    write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-    write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
-    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '++++++ Start MPI'
-    write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
-    write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
-    write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-    write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
-    write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
-
-    if ( .not. IO_L ) then
-       write(IO_FID_LOG,*) '+++ Following log message is suppressed.'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
+       write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '++++++ Start MPI'
+       write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
+       write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
+       write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
+       write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
+       write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
+    else
+       if ( PRC_myrank == PRC_master ) then ! master node
+          write(*,*) '*** Log report is suppressed.'
+       endif
     endif
 
     return
@@ -130,10 +144,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine PRC_NOMPIstart
     use mod_stdio, only : &
+       IO_FID_CONF,          &
+       IO_FILECHR,           &
        IO_get_available_fid, &
        IO_make_idstr,        &
-       IO_FILECHR,           &
-       IO_FID_CONF
+       IO_LOG_SUPPRESS,      &
+       IO_LOG_ALLNODE
     implicit none
 
     character(len=IO_FILECHR) :: fname
@@ -145,35 +161,40 @@ contains
     PRC_myrank = 0
     PRC_mpi_alive = .false.
 
-    !--- Open logfile
-    IO_FID_LOG = IO_get_available_fid()
-    call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
-    open( unit   = IO_FID_LOG,  &
-          file   = trim(fname), &
-          form   = 'formatted', &
-          iostat = ierr         )
+    if ( .not. IO_LOG_SUPPRESS ) then
+       if ( PRC_myrank == PRC_master ) then ! master node
+          IO_L = .true.
+       else
+          IO_L = IO_LOG_ALLNODE
+       endif
+    endif
+
+    if ( IO_L ) then
+
+       !--- Open logfile
+       IO_FID_LOG = IO_get_available_fid()
+       call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+       open( unit   = IO_FID_LOG,  &
+             file   = trim(fname), &
+             form   = 'formatted', &
+             iostat = ierr         )
        if ( ierr /= 0 ) then
           write(*,*) 'xxx File open error! :', trim(fname)
           call PRC_MPIstop
        endif
 
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-    write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-    write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
-    write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '++++++ Start Without MPI'
-    write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
-    write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
-    write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
-    write(IO_FID_LOG,*)
-    write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-    write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
-    write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
+       write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
+       write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
+       write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
 
-    if ( .not. IO_L ) then
-       write(IO_FID_LOG,*) '+++ Following log message is suppressed.'
     endif
 
     return
@@ -184,6 +205,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
     use mod_stdio, only : &
+       IO_FID_CONF, &
        IO_SYSCHR
     implicit none
 
@@ -208,8 +230,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** MPI is normaly finalized'
     endif
 
+    ! Close logfile, configfile
+    if ( IO_L ) then
+       close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
+
     ! Stop program
-    close(IO_FID_LOG)
     stop
 
     return
@@ -350,5 +377,64 @@ contains
     endif
 
   end function PRC_MPItime
+
+  !-----------------------------------------------------------------------------
+  subroutine PRC_MPItimestat( &
+      avgvar, &
+      maxvar, &
+      minvar, &
+      maxidx, &
+      minidx, &
+      var     )
+    implicit none
+
+    real(8), intent(out) :: avgvar(:)
+    real(8), intent(out) :: maxvar(:)
+    real(8), intent(out) :: minvar(:)
+    integer, intent(out) :: maxidx(:)
+    integer, intent(out) :: minidx(:)
+    real(8), intent(in)  :: var(:)
+
+    real(8), allocatable :: statval(:,:)
+    integer              :: vsize
+
+    real(8) :: totalvar
+    integer :: ierr
+    integer :: v, p
+    !---------------------------------------------------------------------------
+
+    vsize = size(var(:))
+
+    allocate( statval(vsize,0:PRC_nmax-1) ); statval(:,:) = 0.D0
+
+    do v = 1, vsize
+       statval(v,PRC_myrank) = var(v)
+    enddo
+
+    ! MPI broadcast
+    do p = 0, PRC_nmax-1
+       call MPI_Bcast( statval(1,p),         &
+                       vsize,                &
+                       MPI_DOUBLE_PRECISION, &
+                       p,                    &
+                       MPI_COMM_WORLD,       &
+                       ierr                  )
+    enddo
+
+    do v = 1, vsize
+       totalvar = 0.D0
+       do p = 0, PRC_nmax-1
+          totalvar = totalvar + statval(v,p)
+       enddo
+       avgvar(v) = totalvar / PRC_nmax
+
+       maxvar(v)   = maxval(statval(v,:))
+       minvar(v)   = minval(statval(v,:))
+       maxidx(v:v) = maxloc(statval(v,:))
+       minidx(v:v) = minloc(statval(v,:))
+    enddo
+
+    return
+  end subroutine PRC_MPItimestat
 
 end module mod_process

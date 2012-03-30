@@ -36,6 +36,7 @@ program scaleles3
      TIME_DOATMOS_step,    &
      TIME_DOOCEAN_step,    &
      TIME_DOATMOS_restart, &
+     TIME_DOOCEAN_restart, &
      TIME_DOend,           &
      TIME_rapstart,        &
      TIME_rapend,          &
@@ -54,7 +55,8 @@ program scaleles3
      HIST_write
   use mod_monitor, only: &
      MONIT_setup, &
-     MONIT_write
+     MONIT_write, &
+     MONIT_finalize
   use mod_atmos, only: &
      ATMOS_setup, &
      ATMOS_step
@@ -66,6 +68,9 @@ program scaleles3
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
+  use mod_ocean_vars, only: &
+     OCEAN_vars_restart_write, &
+     OCEAN_sw_restart
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -143,6 +148,7 @@ program scaleles3
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
 
     if ( TIME_DOend ) exit
 
@@ -165,6 +171,7 @@ program scaleles3
   call TIME_rapreport
 
   call FIO_finalize
+  call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop
 

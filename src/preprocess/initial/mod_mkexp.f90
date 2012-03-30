@@ -420,7 +420,7 @@ contains
 
           pott_k(k) = ENV_THETA + ENV_DTHETA * fact
           velx_k(k) = ENV_XVEL1 + ( ENV_XVEL2-ENV_XVEL1 ) * fact
-          qv_k  (k) = 1.D-3 * fact
+          qv_k  (k) = 1.D-3 * ( 1.D0 - fact )
        endif
     enddo
 

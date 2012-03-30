@@ -44,9 +44,11 @@ module mod_comm
   public :: COMM_vars_r4
   public :: COMM_vars8_r4
   public :: COMM_wait_r4
+#ifdef _USE_RDMA
   public :: COMM_set_rdma_variable
   public :: COMM_rdma_vars
   public :: COMM_rdma_vars8
+#endif
   public :: COMM_stats
   public :: COMM_total
 
@@ -887,10 +889,9 @@ contains
     return
   end subroutine COMM_wait_r4
 
+#ifdef _USE_RDMA
   !-----------------------------------------------------------------------------
   subroutine COMM_set_rdma_variable(var, vid)
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(8), intent(in) :: var(:,:,:)
@@ -899,20 +900,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** set RDMA ID:', vid-1
 
-#ifdef _USE_RDMA
     call set_rdma_variable(var, vid-1);
-#else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid
-    call PRC_MPIstop
-#endif
 
     return
   end subroutine
+#endif
 
+#ifdef _USE_RDMA
   !-----------------------------------------------------------------------------
   subroutine COMM_rdma_vars(vid, num)
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     integer, intent(in) :: vid
@@ -922,22 +918,17 @@ contains
     call TIME_rapstart('COMM RDMA')
 
     !--- put data
-#ifdef _USE_RDMA
     call rdma_put(vid-1, num)
-#else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid, num
-    call PRC_MPIstop
-#endif
 
     call TIME_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars
+#endif
 
+#ifdef _USE_RDMA
   !-----------------------------------------------------------------------------
   subroutine COMM_rdma_vars8(vid, num)
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     integer, intent(in) :: vid
@@ -947,17 +938,13 @@ contains
     call TIME_rapstart('COMM RDMA')
 
     !--- put data
-#ifdef _USE_RDMA
     call rdma_put8(vid-1, num)
-#else
-    if( IO_L ) write(IO_FID_LOG,*) 'xxx RDMA communication cannot use! stop.', vid, num
-    call PRC_MPIstop
-#endif
 
     call TIME_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars8
+#endif
 
   !-----------------------------------------------------------------------------
   subroutine COMM_stats(var, varname)
@@ -1015,7 +1002,7 @@ contains
 !                                             statidx(1,v,2,PRC_myrank),',', &
 !                                             statidx(2,v,2,PRC_myrank),',', &
 !                                             statidx(3,v,2,PRC_myrank),')'
-   enddo
+    enddo
 
     ! MPI broadcast
     do p = 0, PRC_nmax-1
@@ -1070,7 +1057,7 @@ contains
        totvol  => GEOMETRICS_totvol
     implicit none
 
-    real(8),           intent(inout) :: var(:,:,:)
+    real(8),           intent(inout) :: var(KA,IA,JA)
     character(len=*),  intent(in)    :: varname
 
     real(8) :: statval(0:PRC_nmax-1)

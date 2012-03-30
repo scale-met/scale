@@ -59,6 +59,7 @@ module mod_ocean_vars
   character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE    = 'NONE'
 
   logical,                   public, save :: OCEAN_sw_sf
+  logical,                   public, save :: OCEAN_sw_restart
 
   !-----------------------------------------------------------------------------
   !
@@ -68,6 +69,7 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
+  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.
   character(len=IO_FILECHR), public,  save :: OCEAN_RESTART_IN_BASENAME  = ''
   character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'
 
@@ -89,6 +91,7 @@ contains
 
     NAMELIST / PARAM_OCEAN_VARS / &
        OCEAN_RESTART_IN_BASENAME, &
+       OCEAN_RESTART_OUTPUT,      &
        OCEAN_RESTART_OUT_BASENAME
 
     integer :: ierr
@@ -140,6 +143,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
     '*** NO.',1,'|',trim(OP_NAME(1)),'|', OP_DESC(1),'[', OP_UNIT(1),']'
 
+    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
+    if ( OCEAN_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Restart output : YES'
+       OCEAN_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Restart output : NO'
+       OCEAN_sw_restart = .false.
+    endif
+    if( IO_L ) write(IO_FID_LOG,*)
+
     return
   end subroutine OCEAN_vars_setup
 
@@ -160,10 +173,10 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
 
+    if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
        bname = OCEAN_RESTART_IN_BASENAME
 
        call FIO_input( restart_ocean(:,:,:), bname, 'SST', 'ZSFC', 1, 1, 1 )
@@ -173,6 +186,8 @@ contains
        ! fill IHALO & JHALO
        call COMM_vars8( SST(:,:,:), 1 )
        call COMM_wait ( SST(:,:,:), 1 )
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
     endif
 
     return

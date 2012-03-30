@@ -31,11 +31,14 @@ module mod_stdio
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: IO_SYSCHR   = 32     !< Character length of system control
-  integer, public, parameter :: IO_FILECHR  = 128    !< Character length of file name
-  integer, public,      save :: IO_FID_CONF = 7      !< Config file ID
-  integer, public,      save :: IO_FID_LOG  = 8      !< Log file ID
-  logical, public,      save :: IO_L        = .true. !< output log or not?
+  integer, public, parameter :: IO_SYSCHR   = 32      !< Character length of system control
+  integer, public, parameter :: IO_FILECHR  = 128     !< Character length of file name
+  integer, public,      save :: IO_FID_CONF = 7       !< Config file ID
+  integer, public,      save :: IO_FID_LOG  = 8       !< Log file ID
+
+  logical, public,      save :: IO_L            = .false. !< output log or not?
+  logical, public,      save :: IO_LOG_SUPPRESS = .false. !< suppress log output?
+  logical, public,      save :: IO_LOG_ALLNODE  = .false. !< output log for each node?
 
   !-----------------------------------------------------------------------------
   !
@@ -58,10 +61,9 @@ contains
   subroutine IO_setup
     implicit none
 
-    logical :: IO_OUTPUT_LOGMSG     !< output log or not?
-
     namelist / PARAM_IO / &
-       IO_OUTPUT_LOGMSG
+       IO_LOG_SUPPRESS, &
+       IO_LOG_ALLNODE
 
     character(len=IO_FILECHR) :: fname !< name of config file for each process
 
@@ -84,9 +86,6 @@ contains
           status = 'old',       &
           iostat = ierr         )
 
-    !--- copy default value
-    IO_OUTPUT_LOGMSG = IO_L
-
     !--- read PARAM
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
@@ -95,8 +94,6 @@ contains
        write(*,*) ' xxx Not appropriate names in namelist PARAM_IO . Check!'
        stop
     endif
-
-    IO_L = IO_OUTPUT_LOGMSG
 
     return
   end subroutine IO_setup

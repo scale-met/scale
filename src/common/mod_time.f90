@@ -50,6 +50,7 @@ module mod_time
   real(8), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
   real(8), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of restart      [sec]
   real(8), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
+  real(8), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of restart      [sec]
 
   real(8), public, save :: TIME_NOWSEC               !< current time [sec]
   integer, public, save :: TIME_NOWSTEP              !< current step [number]
@@ -65,6 +66,7 @@ module mod_time
   logical, public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
   logical, public, save :: TIME_DOATMOS_restart      !< execute restart output?
   logical, public, save :: TIME_DOOCEAN_step         !< execute ocean component in this step?
+  logical, public, save :: TIME_DOOCEAN_restart      !< execute restart output?
   logical, public, save :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -93,6 +95,7 @@ module mod_time
   real(8), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.D0
   real(8), private,      save :: TIME_RES_ATMOS_RESTART = 0.D0
   real(8), private,      save :: TIME_RES_OCEAN         = 0.D0
+  real(8), private,      save :: TIME_RES_OCEAN_RESTART = 0.D0
 
   real(8), private, parameter :: TIME_DOY     = 365.D0
   real(8), private, parameter :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
@@ -139,6 +142,8 @@ contains
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "SEC"
     real(8)                  :: TIME_DT_OCEAN              = 60.0D0
     character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "MIN"
+    real(8)                  :: TIME_DT_OCEAN_RESTART      = 60.0D0
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "SEC"
 
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
@@ -159,7 +164,9 @@ contains
        TIME_DT_ATMOS_RESTART,      &
        TIME_DT_ATMOS_RESTART_UNIT, &
        TIME_DT_OCEAN,              &
-       TIME_DT_OCEAN_UNIT
+       TIME_DT_OCEAN_UNIT,         &
+       TIME_DT_OCEAN_RESTART,      &
+       TIME_DT_OCEAN_RESTART_UNIT
 
     real(8) :: TIME_DURATIONSEC
     real(8) :: temp
@@ -228,6 +235,7 @@ contains
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
     call TIME_ymdhms2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
+    call TIME_ymdhms2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
 
     TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -235,6 +243,7 @@ contains
     TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+    TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
@@ -247,6 +256,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** SST update                       :', TIME_DTSEC_OCEAN
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Prognostic Variables, Atmosphere :', TIME_DTSEC_ATMOS_RESTART
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables                  :', TIME_DTSEC_OCEAN_RESTART
 
     return
   end subroutine TIME_setup
@@ -333,12 +343,20 @@ contains
     TIME_DOATMOS_restart = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + TIME_DTSEC
+    TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + TIME_DTSEC
 
     if ( TIME_RES_ATMOS_RESTART - TIME_DTSEC_ATMOS_RESTART > -eps ) then
        TIME_DOATMOS_restart   = .true.
        TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART - TIME_DTSEC_ATMOS_RESTART
     elseif( TIME_DOend ) then
        TIME_DOATMOS_restart   = .true.
+    endif
+
+    if ( TIME_RES_OCEAN_RESTART - TIME_DTSEC_OCEAN_RESTART > -eps ) then
+       TIME_DOOCEAN_restart   = .true.
+       TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART - TIME_DTSEC_OCEAN_RESTART
+    elseif( TIME_DOend ) then
+       TIME_DOOCEAN_restart   = .true.
     endif
 
   end subroutine TIME_advance
@@ -515,26 +533,75 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine TIME_rapreport
+    use mod_stdio, only : &
+       IO_LOG_SUPPRESS, &
+       IO_LOG_ALLNODE
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank, &
+       PRC_MPItimestat
     implicit none
+
+    real(8) :: avgvar(TIME_rapnlimit)
+    real(8) :: maxvar(TIME_rapnlimit)
+    real(8) :: minvar(TIME_rapnlimit)
+    integer :: maxidx(TIME_rapnlimit)
+    integer :: minidx(TIME_rapnlimit)
 
     integer :: id
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Computational Time Report'
-
     do id = 1, TIME_rapnmax
-
        if ( TIME_rapnstr(id) /= TIME_rapnend(id) ) then
            write(*,*) '*** Mismatch Report',id,TIME_rapname(id),TIME_rapnstr(id),TIME_rapnend(id)
        endif
-
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
-                                '*** ID=',id,' : ',TIME_rapname(id), &
-                                ' T=',TIME_rapttot(id),' N=',TIME_rapnstr(id)
     enddo
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Computational Time Report'
+
+    if ( IO_LOG_ALLNODE ) then ! report for each node
+
+       do id = 1, TIME_rapnmax
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
+                     '*** ID=',id,' : ',TIME_rapname(id),' T=',TIME_rapttot(id),' N=',TIME_rapnstr(id)
+       enddo
+
+    else
+
+       call PRC_MPItimestat( avgvar(1:TIME_rapnmax), &
+                             maxvar(1:TIME_rapnmax), &
+                             minvar(1:TIME_rapnmax), &
+                             maxidx(1:TIME_rapnmax), &
+                             minidx(1:TIME_rapnmax), &
+                             TIME_rapttot(1:TIME_rapnmax) )
+
+       do id = 1, TIME_rapnmax
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+                     '*** ID=',id,' : ',TIME_rapname(id), &
+                     ' T(avg)=',avgvar(id), &
+                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                     ', T(min)=',minvar(id),'[',minidx(id),']', &
+                     ' N=',TIME_rapnstr(id)
+       enddo
+
+       if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
+          if ( PRC_myrank == PRC_master ) then ! master node
+             write(*,*) '*** Computational Time Report'
+             do id = 1, TIME_rapnmax
+                write(*,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+                     '*** ID=',id,' : ',TIME_rapname(id), &
+                     ' T(avg)=',avgvar(id), &
+                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                     ', T(min)=',minvar(id),'[',minidx(id),']', &
+                     ' N=',TIME_rapnstr(id)
+             enddo
+          endif
+       endif
+    endif
 
     return
   end subroutine TIME_rapreport
 
 end module mod_time
+
