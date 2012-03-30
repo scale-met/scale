@@ -30,10 +30,11 @@ module mod_monitor
   !
   !++ Public procedures
   !
-  public :: MONITOR_setup
-  public :: MONITOR_reg
-  public :: MONITOR_put
-  public :: MONITOR_in
+  public :: MONIT_setup
+  public :: MONIT_reg
+  public :: MONIT_put
+  public :: MONIT_in
+  public :: MONIT_write
 
   !-----------------------------------------------------------------------------
   !
@@ -49,41 +50,35 @@ module mod_monitor
   !
   !++ Private procedures
   !
+  private :: MONIT_writeheader
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
+  integer,                   private,      save :: MONIT_FID
 
   character(len=IO_FILECHR), private,      save :: MONITOR_OUT_BASENAME = 'monitor'
-  integer,                   private,      save :: MONITOR_DTYPE
 
-  integer,                   private, parameter :: MONITOR_req_limit = 1000 !> number limit for monitor item request
-  character(len=FIO_HSHORT), private,      save :: MONITOR_req_item   (MONITOR_req_limit)
-  real(8),                   private,      save :: MONITOR_req_tintsec(MONITOR_req_limit)
-  logical,                   private,      save :: MONITOR_req_tavg   (MONITOR_req_limit)
+  integer,                   private, parameter :: MONIT_req_limit = 1000 !> number limit for monitor item request
+  character(len=FIO_HSHORT), private,      save :: MONIT_req_item   (MONIT_req_limit)
 
-  integer,                   private,              save :: MONITOR_req_nmax = 0 !> number of requested item
-  character(len=FIO_HSHORT), private, allocatable, save :: MONITOR_item   (:)
-  character(len=FIO_HMID),   private, allocatable, save :: MONITOR_desc   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: MONITOR_unit   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: MONITOR_ktype  (:)
-  integer,                   private, allocatable, save :: MONITOR_kmax   (:)
-  real(8),                   private, allocatable, save :: MONITOR_tintsec(:)
-  logical,                   private, allocatable, save :: MONITOR_tavg   (:)
+  integer,                   private,              save :: MONIT_req_nmax = 0 !> number of requested item
+  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_item   (:)
+  character(len=FIO_HMID),   private, allocatable, save :: MONIT_desc   (:)
+  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_unit   (:)
+  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_ktype  (:)
+  integer,                   private, allocatable, save :: MONIT_kmax   (:)
+  real(8),                   private, allocatable, save :: MONIT_var    (:)
 
-  real(8),                   private, allocatable, save :: MONITOR_varsum (:,:,:,:)
-  integer,                   private, allocatable, save :: MONITOR_step   (:)
-  real(8),                   private, allocatable, save :: MONITOR_tstrsec(:)
-  real(8),                   private, allocatable, save :: MONITOR_tsumsec(:)
-
-  integer,                   private,              save :: MONITOR_id_count = 1 !> number of registered item
+  integer,                   private,              save :: MONIT_id_count = 1 !> number of registered item
 
   real(8), private, parameter :: eps = 1.D-10 !> epsilon for timesec
 
   !-----------------------------------------------------------------------------  
 contains
   !-----------------------------------------------------------------------------
-  subroutine MONITOR_setup
+  subroutine MONIT_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -119,44 +114,44 @@ contains
 
     ! listup monitor request
     rewind(IO_FID_CONF)
-    do n = 1, MONITOR_req_limit
+    do n = 1, MONIT_req_limit
        read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
        if( ierr /= 0 ) exit
     enddo
-    MONITOR_req_nmax = n - 1
+    MONIT_req_nmax = n - 1
 
-    if    ( MONITOR_req_nmax > MONITOR_req_limit ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONITOR_req_limit
-    elseif( MONITOR_req_nmax == 0 ) then
+    if    ( MONIT_req_nmax > MONIT_req_limit ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONIT_req_limit
+    elseif( MONIT_req_nmax == 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** No monitor file specified.'
        return
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item             : ', MONITOR_req_nmax
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item: ', MONIT_req_nmax
     endif
 
-    allocate( MONITOR_item   (MONITOR_req_nmax) )
-    allocate( MONITOR_desc   (MONITOR_req_nmax) )
-    allocate( MONITOR_unit   (MONITOR_req_nmax) )
-    allocate( MONITOR_ktype  (MONITOR_req_nmax) )
-    allocate( MONITOR_kmax   (MONITOR_req_nmax) )
-    allocate( MONITOR_step   (MONITOR_req_nmax) )
+    allocate( MONIT_item   (MONIT_req_nmax) )
+    allocate( MONIT_desc   (MONIT_req_nmax) )
+    allocate( MONIT_unit   (MONIT_req_nmax) )
+    allocate( MONIT_ktype  (MONIT_req_nmax) )
+    allocate( MONIT_kmax   (MONIT_req_nmax) )
+    allocate( MONIT_var    (MONIT_req_nmax) )
 
     rewind(IO_FID_CONF)
-    do n = 1, MONITOR_req_nmax
+    do n = 1, MONIT_req_nmax
        ! set default
        ITEM  = 'unknown'
 
        read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
        if( ierr /= 0 ) exit
 
-       MONITOR_req_item(n) = ITEM
+       MONIT_req_item(n) = ITEM
     enddo
 
     return
-  end subroutine MONITOR_setup
+  end subroutine MONIT_setup
 
   !-----------------------------------------------------------------------------
-  subroutine MONITOR_reg( &
+  subroutine MONIT_reg( &
       itemid, &
       item,   &
       desc,   &
@@ -177,50 +172,50 @@ contains
 
     !--- search existing item
     itemid = -1
-    nmax = min( MONITOR_id_count, MONITOR_req_nmax )
+    nmax = min( MONIT_id_count, MONIT_req_nmax )
     do n = 1, nmax
-       if ( trim(item) == trim(MONITOR_item(n)) ) then ! match existing item
+       if ( trim(item) == trim(MONIT_item(n)) ) then ! match existing item
           itemid = n
           return
        endif
     enddo
 
     if ( itemid < 0 ) then ! request-register matching check
-       do n = 1, MONITOR_req_nmax
-          if ( trim(item) == MONITOR_req_item(n) ) then
-             itemid = MONITOR_id_count
+       do n = 1, MONIT_req_nmax
+          if ( trim(item) == MONIT_req_item(n) ) then
+             itemid = MONIT_id_count
              reqid  = n
-             MONITOR_id_count = MONITOR_id_count + 1
+             MONIT_id_count = MONIT_id_count + 1
 
              ! new file registration
-             MONITOR_item(itemid) = trim(item)
-             MONITOR_desc(itemid) = trim(desc)
-             MONITOR_unit(itemid) = trim(unit)
+             MONIT_item(itemid) = trim(item)
+             MONIT_desc(itemid) = trim(desc)
+             MONIT_unit(itemid) = trim(unit)
              if    ( trim(ktype) == '2D' ) then
-                MONITOR_ktype(itemid) = 'ZSFC'
-                MONITOR_kmax (itemid) = 1
+                MONIT_ktype(itemid) = 'ZSFC'
+                MONIT_kmax (itemid) = 1
              elseif( trim(ktype) == '3D' ) then
                 write(lname,'(A,I4.4)') 'ZDEF', KMAX
-                MONITOR_ktype(itemid) = lname
-                MONITOR_kmax (itemid) = KMAX
+                MONIT_ktype(itemid) = lname
+                MONIT_kmax (itemid) = KMAX
              endif
-             MONITOR_step        (itemid) = 1
+             MONIT_var(itemid) = 0.D0
 
              if( IO_L ) write(IO_FID_LOG,*) '*** [MONIT] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(MONITOR_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Description    : ', trim(MONITOR_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Unit           : ', trim(MONITOR_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Vert. type     : ', trim(MONITOR_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] # of layer     : ', MONITOR_kmax(itemid)
+             if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(MONIT_item (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Description    : ', trim(MONIT_desc (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Unit           : ', trim(MONIT_unit (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Vert. type     : ', trim(MONIT_ktype(itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] # of layer     : ', MONIT_kmax(itemid)
           endif
        enddo
     endif
 
     return
-  end subroutine MONITOR_reg
+  end subroutine MONIT_reg
 
   !-----------------------------------------------------------------------------
-  subroutine MONITOR_put( &
+  subroutine MONIT_put( &
       itemid, &
       var     )
     use mod_geometrics, only: &
@@ -237,7 +232,7 @@ contains
     !---------------------------------------------------------------------------
 
     total = 0.D0
-    if ( MONITOR_kmax(itemid) == KMAX ) then ! 3D
+    if ( MONIT_kmax(itemid) == KMAX ) then ! 3D
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -253,16 +248,13 @@ contains
        enddo
     endif
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,i4,A,f13.3,A,A,A)') &
-               ']',trim(MONITOR_item(itemid)),', step=',MONITOR_step(itemid),':',total,'[',trim(MONITOR_unit(itemid)),']'
-
-    MONITOR_step(itemid) = MONITOR_step(itemid) + 1
+    MONIT_var(itemid) = total ! overwrite by last put
 
     return
-  end subroutine MONITOR_put
+  end subroutine MONIT_put
 
   !-----------------------------------------------------------------------------
-  subroutine MONITOR_in( &
+  subroutine MONIT_in( &
       var,   &
       item,  &
       desc,  &
@@ -279,14 +271,94 @@ contains
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONITOR_reg( itemid, item, desc, unit, ktype )
+    call MONIT_reg( itemid, item, desc, unit, ktype )
     
     if ( itemid > 0 ) then
-       call MONITOR_put( itemid, var(:,:,:) )
+       call MONIT_put( itemid, var(:,:,:) )
     endif
 
     return
-  end subroutine MONITOR_in
+  end subroutine MONIT_in
+
+  !-----------------------------------------------------------------------------
+  subroutine MONIT_write( memo )
+    use mod_time, only: &
+       NOWSTEP => TIME_NOWSTEP
+    implicit none
+
+    character(len=4), intent(in) :: memo
+
+    logical, save :: firsttime = .true.
+
+    integer :: n
+    !---------------------------------------------------------------------------
+
+    if( MONIT_id_count == 1 ) return
+
+    if (firsttime) then
+       firsttime = .false.
+       call MONIT_writeheader
+    endif
+
+    if( IO_L ) write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
+    do n = 1, MONIT_id_count-1
+       if( IO_L ) write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
+    enddo
+    if( IO_L ) write(MONIT_FID,*)
+
+    return
+  end subroutine MONIT_write
+
+  !-----------------------------------------------------------------------------
+  subroutine MONIT_writeheader
+    use mod_stdio, only : &
+       IO_get_available_fid, &
+       IO_make_idstr,        &
+       IO_FILECHR
+    use mod_process, only : &
+       PRC_myrank, &
+       PRC_MPIstop
+    implicit none
+
+    character(len=IO_FILECHR) :: fname !< name of logfile for each process
+
+    integer :: ierr
+    integer :: n
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] Output item list '
+    if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONIT_req_nmax
+    if( IO_L ) write(IO_FID_LOG,*) 'NAME           :description                                     ', &
+                                   '               :UNIT           :Layername'
+    if( IO_L ) write(IO_FID_LOG,*) '=====================================================', &
+                                   '====================================================='
+    do n = 1, MONIT_id_count-1
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') MONIT_item(n), MONIT_desc(n), MONIT_unit(n), MONIT_ktype(n)
+    enddo
+    if( IO_L ) write(IO_FID_LOG,*) '=====================================================', &
+                                   '====================================================='
+
+    !--- Open logfile
+    MONIT_FID = IO_get_available_fid()
+    call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+    open( unit   = MONIT_FID,  &
+          file   = trim(fname),  &
+          form   = 'formatted',  &
+          iostat = ierr          )
+       if ( ierr /= 0 ) then
+          write(*,*) 'xxx File open error! :', trim(fname)
+          call PRC_MPIstop
+       endif
+
+    if( IO_L ) write(MONIT_FID,'(A)',advance='no') '                   '
+    do n = 1, MONIT_id_count-1
+       if( IO_L ) write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
+    enddo
+    if( IO_L ) write(MONIT_FID,*)
+
+    return
+  end subroutine MONIT_writeheader
 
 end module mod_monitor
 !-------------------------------------------------------------------------------

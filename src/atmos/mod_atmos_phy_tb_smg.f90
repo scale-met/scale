@@ -100,7 +100,6 @@ contains
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
-       ATMOS_vars_monitor, &
        ATMOS_vars_total,   &
        DENS, &
        MOMZ, &
@@ -126,8 +125,8 @@ contains
     real(8) :: Sij_zz(KA,IA,JA)
     real(8) :: Sij_yy(KA,IA,JA)
     real(8) :: Sij_xx(KA,IA,JA)
-    real(8) :: Sij_zy(KA,IA,JA)
     real(8) :: Sij_zx(KA,IA,JA)
+    real(8) :: Sij_zy(KA,IA,JA)
     real(8) :: Sij_xy(KA,IA,JA)
 
     real(8) :: nu(KA,IA,JA)       ! eddy viscosity
@@ -148,6 +147,27 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+!    VELZ(:,:,:) = -9.999D30
+!    VELX(:,:,:) = -9.999D30
+!    VELY(:,:,:) = -9.999D30
+!    POTT(:,:,:) = -9.999D30
+!
+!    Sij_zz(:,:,:) = -9.999D30
+!    Sij_yy(:,:,:) = -9.999D30
+!    Sij_xx(:,:,:) = -9.999D30
+!    Sij_zx(:,:,:) = -9.999D30
+!    Sij_zy(:,:,:) = -9.999D30
+!    Sij_xy(:,:,:) = -9.999D30
+!
+!    nu  (:,:,:) = -9.999D30
+!    nuc (:,:,:) = -9.999D30
+!    tke (:,:,:) = -9.999D30
+!    Pr  (:,:,:) = -9.999D30
+!    Ri  (:,:,:) = -9.999D30
+!    buoy(:,:,:) = -9.999D30
+!
+!    qflx_sgs(:,:,:,:) = -9.999D30
+
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
 
     do JJS = JS, JE, JBLOCK
@@ -156,22 +176,22 @@ contains
     IIE = IIS+IBLOCK-1
 
        ! momentum -> velocity
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE-1
           VELZ(k,i,j) = 2.D0 * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
        enddo
        enddo
        enddo
        !OCL XFILL
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
           VELZ(KS-1,i,j) = 0.D0
           VELZ(KE  ,i,j) = 0.D0
        enddo
        enddo
 
-       do j = JJS,   JJE+1
+       do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
           VELX(k,i,j) = 2.D0 * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
@@ -180,7 +200,7 @@ contains
        enddo
 
        do j = JJS-1, JJE+1
-       do i = IIS,   IIE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
           VELY(k,i,j) = 2.D0 * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
        enddo
@@ -221,8 +241,8 @@ contains
        enddo
        enddo
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE
+       do j = JJS,   JJE+1
+       do i = IIS-1, IIE
        do k = KS, KE-1
           Sij_zx(k,i,j) = 0.5D0 * ( ( VELX(k+1,i,j)-VELX(k,i,j) ) * RCDZ(k) & ! du/dz, (u, y, interface)
                                   + ( VELZ(k,i+1,j)-VELZ(k,i,j) ) * RCDX(i) ) ! dw/dx, (u, y, interface)
@@ -230,8 +250,8 @@ contains
        enddo
        enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE
+       do i = IIS,   IIE+1
        do k = KS, KE-1
           Sij_zy(k,i,j) = 0.5D0 * ( ( VELY(k+1,i,j)-VELY(k,i,j) ) * RCDZ(k) & ! dv/dz, (x, v, interface)
                                   + ( VELZ(k,i,j+1)-VELZ(k,i,j) ) * RCDY(j) ) ! dw/dy, (x, v, interface)
@@ -239,8 +259,8 @@ contains
        enddo
        enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JJS-1, JJE
+       do i = IIS-1, IIE
        do k = KS, KE
           Sij_xy(k,i,j) = 0.5D0 * ( ( VELY(k,i+1,j)-VELY(k,i,j) ) * RCDX(i) & ! dv/dx, (u, v, layer)
                                   + ( VELX(k,i,j+1)-VELX(k,i,j) ) * RCDY(j) ) ! du/dy, (u, v, layer)
@@ -270,6 +290,9 @@ contains
           do k = KS, KE-1
              Ri(k,i,j) = min( 0.25D0, max( 0.D0, Ri(k,i,j) ) )
           enddo
+
+          Ri(KS-1,i,j) = Ri(KS  ,i,j)
+          Ri(KE  ,i,j) = Ri(KE-1,i,j)
 
           do k = KS, KE-1
              Pr(k,i,j) = ( 1.D0-4.D0*Ri(k,i,j) ) / 3.D0 + 4.D0*Ri(k,i,j)
@@ -500,7 +523,7 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs(k,i,j,ZDIR) = 0.125D0  * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+          qflx_sgs(k,i,j,ZDIR) = 0.125D0 * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * ( - ( nu(k,i,j) + nu(k,i-1,j) + nu(k,i,j-1) + nu(k,i-1,j-1) ) &
                                    / ( Pr(k,i,j) )                                             &
                                    * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k)                   )
@@ -518,7 +541,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_sgs(k,i,j,XDIR) = 0.125D0  * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+          qflx_sgs(k,i,j,XDIR) = 0.5D0 * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                                * ( - ( nu(k,i,j) + nu(k,i,j-1) + nu(k-1,i,j) + nu(k-1,i,j-1) ) &
                                    / ( Pr(k,i,j) + Pr(k,i+1,j) + Pr(k-1,i,j) + Pr(k-1,i+1,j) ) &
                                    * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i)                   )
@@ -529,7 +552,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_sgs(k,i,j,YDIR) = 0.125D0  * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+          qflx_sgs(k,i,j,YDIR) = 0.5D0 * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * ( - ( nu(k,i,j) + nu(k,i-1,j) + nu(k-1,i,j) + nu(k-1,i-1,j) ) &
                                    / ( Pr(k,i,j) + Pr(k,i,j+1) + Pr(k-1,i,j) + Pr(k-1,i,j+1) ) &
                                      * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)                 )
@@ -591,7 +614,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS,   KE
-          qflx_sgs(k,i,j,XDIR) = 0.125D0 * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+          qflx_sgs(k,i,j,XDIR) = 0.5D0 * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                                * ( - ( nu(k,i,j) + nu(k,i,j-1) + nu(k-1,i,j) + nu(k-1,i,j-1) ) &
                                    / ( Pr(k,i,j) + Pr(k,i+1,j) + Pr(k-1,i,j) + Pr(k-1,i+1,j) ) &
                                    * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)             )
@@ -602,7 +625,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS,   KE
-          qflx_sgs(k,i,j,YDIR) = 0.125D0 * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+          qflx_sgs(k,i,j,YDIR) = 0.5D0 * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * ( - ( nu(k,i,j) + nu(k,i-1,j) + nu(k-1,i,j) + nu(k-1,i-1,j) ) &
                                    / ( Pr(k,i,j) + Pr(k,i,j+1) + Pr(k-1,i,j) + Pr(k-1,i,j+1) ) &
                                    * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)             )
@@ -626,7 +649,7 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          if ( QTRC(k,i,j,iq) < 0.D0 ) then
+          if ( QTRC(k,i,j,iq) < 1.D-10 ) then
              QTRC(k,i,j,iq) = 0.D0
           endif
        enddo
@@ -657,8 +680,6 @@ contains
     enddo
 
     call ATMOS_vars_total
-
-    call ATMOS_vars_monitor
 
     call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'J/m3', '3D', TIME_DTSEC )
     call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s', '3D', TIME_DTSEC )

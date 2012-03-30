@@ -8,7 +8,9 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-11-11 (H.Yashiro)  [new]
+!! @li      2012-01-10 (H.Yashiro)  [mod] Change setup order, HISTORY module
+!! @li      2012-03-23 (H.Yashiro)  [mod] GEOMETRICS, MONITOR module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -51,7 +53,8 @@ program scaleles3
      HIST_setup, &
      HIST_write
   use mod_monitor, only: &
-     MONITOR_setup
+     MONIT_setup, &
+     MONIT_write
   use mod_atmos, only: &
      ATMOS_setup, &
      ATMOS_step
@@ -105,7 +108,7 @@ program scaleles3
   call HIST_setup
 
   ! setup monitor
-  call MONITOR_setup
+  call MONIT_setup
 
   ! setup atmosphere
   call ATMOS_setup
@@ -134,8 +137,9 @@ program scaleles3
     ! time advance
     call TIME_advance
 
-    ! history file output
+    ! history&monitor file output
     call HIST_write
+    call MONIT_write('MAIN')
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
