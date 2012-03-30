@@ -112,8 +112,7 @@ contains
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
-       ATMOS_vars_history, &
-       ATMOS_vars_monitor
+       ATMOS_vars_history
     use mod_atmos_dyn, only: &
        ATMOS_DYN
     use mod_atmos_phy_sf, only: &
@@ -157,15 +156,10 @@ contains
     endif
     call TIME_rapend  ('Radiation')
 
-    !########## History ##########
+    !########## History&Monitor ##########
     call TIME_rapstart('History')
        call ATMOS_vars_history
     call TIME_rapend  ('History')
-
-    !########## Monitor ##########
-    call TIME_rapstart('Monitor')
-       call ATMOS_vars_monitor
-    call TIME_rapend  ('Monitor')
 
     return
   end subroutine ATMOS_step

@@ -60,6 +60,8 @@ module mod_comm
   !
   !++ Public parameters & variables
   !
+  logical, public, save :: COMM_total_doreport  = .false.
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -69,7 +71,6 @@ module mod_comm
   !++ Private parameters & variables
   !
   integer, private, save :: COMM_vsize_max  = 30
-  logical, private, save :: COMM_total_doreport  = .false.
   logical, private, save :: COMM_total_globalsum = .false.
 
   integer, private, save :: datasize_NS4

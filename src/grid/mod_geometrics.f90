@@ -125,9 +125,11 @@ contains
     implicit none
 
     real(8) :: sfc(1,IMAX,JMAX)
+    real(8) :: var(KMAX,IMAX,JMAX)
 
     character(len=IO_FILECHR) :: bname
     character(len=FIO_HMID)   :: desc
+    character(len=8)          :: lname
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -135,11 +137,27 @@ contains
 
     bname = trim(GEOMETRICS_OUT_BASENAME)
     desc  = 'SCALE3 GEOMETRICS'
+    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+
+    sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lon(1,IS:IE,JS:JE)
+    call FIO_output( sfc(:,:,:), bname, desc, '',               &
+                     'LON', 'Longitude', '', 'degree',          &
+                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+
+    sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lat(1,IS:IE,JS:JE)
+    call FIO_output( sfc(:,:,:), bname, desc, '',               &
+                     'LAT', 'Latitude', '', 'degree',           &
+                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
 
     sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_area(1,IS:IE,JS:JE)
     call FIO_output( sfc(:,:,:), bname, desc, '',               &
                      'AREA', 'Control Area', '', 'm2',          &
                      FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+
+    var(1:KMAX,1:IMAX,1:JMAX) = GEOMETRICS_vol(KS:KE,IS:IE,JS:JE)
+    call FIO_output( var(:,:,:), bname, desc, '',                 &
+                     'VOL', 'Control Volume', '', 'm3',           &
+                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
 
     return
   end subroutine GEOMETRICS_write

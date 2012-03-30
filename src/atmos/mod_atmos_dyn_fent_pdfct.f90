@@ -332,7 +332,6 @@ contains
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
     use mod_atmos_vars, only: &
-       ATMOS_vars_monitor, &
        ATMOS_vars_total,   &
        DENS, &
        MOMZ, &
@@ -415,7 +414,7 @@ call START_COLLECTION("DYNAMICS")
     enddo
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
-
+!
 !    DENS_RK1(:,:,:) = -9.999D30
 !    MOMZ_RK1(:,:,:) = -9.999D30
 !    MOMZ_RK1(1:KS-1,:,:) = 0.D0
@@ -1940,8 +1939,6 @@ call START_COLLECTION("FCT")
        call COMM_wait ( QTRC(:,:,:,iq), iq )
     enddo
 
-    call ATMOS_vars_total
-
 #ifdef _FPCOLL_
 call STOP_COLLECTION("FCT")
 #endif
@@ -1951,7 +1948,8 @@ call STOP_COLLECTION("FCT")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("DYNAMICS")
 #endif
-    call ATMOS_vars_monitor
+
+    call ATMOS_vars_total
 
     return
   end subroutine ATMOS_DYN

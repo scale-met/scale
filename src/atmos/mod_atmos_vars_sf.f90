@@ -81,7 +81,6 @@ contains
        ATMOS_SF_RESTART_OUT_BASENAME
 
     integer :: ierr
-    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -113,19 +112,19 @@ contains
        FIO_input
     implicit none
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
-    character(len=8)          :: lname
+!    character(len=IO_FILECHR) :: bname
+!    character(len=8)          :: lname
 
-    integer :: i, j, iq
+!    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
-    bname = ATMOS_SF_RESTART_IN_BASENAME
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+!    bname = ATMOS_SF_RESTART_IN_BASENAME
+!    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
 !    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
 !    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
@@ -149,21 +148,19 @@ contains
        FIO_output
     implicit none
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
-
-    integer :: iq
+!    character(len=IO_FILECHR) :: bname
+!    character(len=FIO_HMID)   :: desc
+!    character(len=8)          :: lname
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
-    write(bname,'(A,A,F15.3)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', NOWSEC
-    desc  = 'SCALE3 PROGNOSTIC VARS.'
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+!    write(bname,'(A,A,F15.3)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', NOWSEC
+!    desc  = 'SCALE3 PROGNOSTIC VARS.'
+!    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
     return
   end subroutine ATMOS_vars_sf_restart_write

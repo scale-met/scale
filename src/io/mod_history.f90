@@ -267,13 +267,13 @@ contains
              HIST_tsumsec     (itemid) = 0.D0
 
              if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) '  Name           : ', trim(HIST_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '  Description    : ', trim(HIST_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '  Unit           : ', trim(HIST_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '  Vert. type     : ', trim(HIST_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '  # of layer     : ', HIST_kmax(itemid)
-             if( IO_L ) write(IO_FID_LOG,*) '  Interval [sec] : ', HIST_tintsec(itemid)
-             if( IO_L ) write(IO_FID_LOG,*) '  Average?       : ', HIST_tavg   (itemid)
+             if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(HIST_item (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Description    : ', trim(HIST_desc (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Unit           : ', trim(HIST_unit (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] Vert. type     : ', trim(HIST_ktype(itemid))
+             if( IO_L ) write(IO_FID_LOG,*) '] # of layer     : ', HIST_kmax(itemid)
+             if( IO_L ) write(IO_FID_LOG,*) '] Interval [sec] : ', HIST_tintsec(itemid)
+             if( IO_L ) write(IO_FID_LOG,*) '] Average?       : ', HIST_tavg   (itemid)
           endif
        enddo
     endif
