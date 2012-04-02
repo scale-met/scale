@@ -361,9 +361,9 @@ contains
        GRID_FDZ
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait,  &
-       COMM_total
+       COMM_wait
     use mod_atmos_vars, only: &
+       ATMOS_vars_total,   &
        DENS, &
        MOMX, &
        MOMY, &
@@ -542,6 +542,8 @@ call START_COLLECTION("MICROPHYSICS")
 #ifdef _FPCOLL_
 call STOP_COLLECTION("MICROPHYSICS")
 #endif
+
+    call ATMOS_vars_total
 
     return
   end subroutine ATMOS_PHY_MP

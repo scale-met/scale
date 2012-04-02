@@ -118,7 +118,6 @@ contains
     real(8) :: VELX(KA,IA,JA)
     real(8) :: VELY(KA,IA,JA)
     real(8) :: POTT(KA,IA,JA)
-    real(8) :: RHOT_T(KA,IA,JA)
 
     ! deformation rate tensor
     real(8) :: Sij_zz(KA,IA,JA)
