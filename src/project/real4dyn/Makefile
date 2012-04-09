@@ -15,17 +15,26 @@
 ################################################################################
 include ../../sysdep/Makedef.$(SCALE_SYS)
 
-VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
+VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
-PROJ_EXE = benchmark
+#default index & tracer set
+index   = 336x63x63
+tracer  = ndw6
+postfix = 
 
-all: makedir makebin
+PROJ_EXE = real4dyn
+
+all: makedir makeinclude makebin
 
 makedir:
 	mkdir -p ../../../bin/$(SCALE_SYS)
 
+makeinclude:
+	cp ../../include/inc_tracer_$(tracer).f90 ../../include/inc_tracer.h
+	cp ../../include/inc_index_$(index).f90   ../../include/inc_index.h
+
 makebin: $(PROJ_EXE)
-	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)
+	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)/$(PROJ_EXE)_$(index)_$(tracer)_$(postfix)
 
 $(PROJ_EXE): $(PROJ_EXE).o
 	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS)
@@ -33,10 +42,7 @@ $(PROJ_EXE): $(PROJ_EXE).o
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FC)  $(FFLAGS) -o $@ -c $<
-
-.f.o:
-	$(F77) $(FFLAGS) -o $@ -c $<
+	$(FC)  $(FFLAGS) -I../../include -o $@ -c $<
 
 .c.o:
 	$(CC)  $(CFLAGS) -o $@ -c $<
@@ -47,7 +53,7 @@ $(PROJ_EXE): $(PROJ_EXE).o
 .PHONY: depends freeze clean copylocal mktar
 
 clean:
-	rm -f $(PROJ_EXE) depends.info *.mod *.o *~
+	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
 
 freeze: clean depends copylocal mktar
 
