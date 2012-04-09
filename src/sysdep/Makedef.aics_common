@@ -4,10 +4,11 @@
 ##### for computation
 
 FC      = mpiifort
-FFLAGS = -fpp3 -O3 -xSSE4.2 -ftz -m64         \
+FFLAGS = -fpp -O3 -xSSE4.2 -ftz -m64         \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias
+FFLAGS_DYN = $(FFLAGS)
 #
 #FFLAGS = -fpp3 -O0 -fpe0 -m64                 \
 #         -assume byterecl -convert big_endian \
