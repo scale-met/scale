@@ -511,10 +511,10 @@ contains
     do j = JS, JE
     do i = IE+1, IE+IHALO
     do k = 1, KA
-        n =  (j-JS)   * KA * IHALO &
-           + (i-IE-1) * KA         &
-           + k
-        var(k,i,j) = recvpack_E2P(n,vid)
+       n = (j-JS)   * KA * IHALO &
+         + (i-IE-1) * KA         &
+         + k
+       var(k,i,j) = recvpack_E2P(n,vid)
     enddo
     enddo
     enddo
@@ -523,10 +523,10 @@ contains
     do j = JS, JE
     do i = IS-IHALO, IS-1
     do k = 1, KA
-        n =  (j-JS)       * KA * IHALO &
-           + (i-IS+IHALO) * KA         &
-           + k
-        var(k,i,j) = recvpack_W2P(n,vid)
+       n = (j-JS)       * KA * IHALO &
+         + (i-IS+IHALO) * KA         &
+         + k
+       var(k,i,j) = recvpack_W2P(n,vid)
     enddo
     enddo
     enddo

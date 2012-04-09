@@ -238,10 +238,7 @@ contains
 
     ! Stop program
     stop
-
-    return
   end subroutine PRC_MPIstop
-
 
   !-----------------------------------------------------------------------------
   !> Setup Processor topology
@@ -405,7 +402,8 @@ contains
 
     vsize = size(var(:))
 
-    allocate( statval(vsize,0:PRC_nmax-1) ); statval(:,:) = 0.D0
+    allocate( statval(vsize,0:PRC_nmax-1) )
+    statval(:,:) = 0.D0
 
     do v = 1, vsize
        statval(v,PRC_myrank) = var(v)

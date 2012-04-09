@@ -41,6 +41,7 @@ module mod_const
 
   ! physical constants
   real(8), public, parameter :: CONST_ERADIUS = 6.37122D+6 !< earth radius           [m]
+  real(8), public, parameter :: CONST_EOHM    = 7.292D-5   !< Angular velocity of the Earth [1/s]
   real(8), public, save      :: CONST_GRAV    = 9.80616D0  !< gravitational constant [m/s2]
   real(8), public, parameter :: CONST_KARMAN  = 0.4D0      !< karman constant
 
@@ -149,7 +150,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(INT2)                  : UNDEF2  = ', CONST_UNDEF2
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL4)                 : UNDEF4  = ', CONST_UNDEF4
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL8)                 : UNDEF8  = ', CONST_UNDEF8
-    if( IO_L ) write(IO_FID_LOG,*) '*** earth radius [m]                     : ERADIUS = ', CONST_ERADIUS
+    if( IO_L ) write(IO_FID_LOG,*) '*** radius of the Earth [m]              : ERADIUS = ', CONST_ERADIUS
+    if( IO_L ) write(IO_FID_LOG,*) '*** angular velocity of the Earth [1/s]  : EOHM    = ', CONST_EOHM
     if( IO_L ) write(IO_FID_LOG,*) '*** gravitational constant [m/s2]        : GRAV    = ', CONST_GRAV
     if( IO_L ) write(IO_FID_LOG,*) '*** karman constant                      : KARMAN  = ', CONST_KARMAN
     if( IO_L ) write(IO_FID_LOG,*) '*** gas constant   (dry)                 : Rdry    = ', CONST_Rdry

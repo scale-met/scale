@@ -27,23 +27,23 @@ module mod_random
   !++ Public procedure
   !
   public :: RANDOM_setup
-  public :: RANDOM_reset
   public :: RANDOM_get
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer, private, allocatable, save :: RANDOM_seedvar(:)
-  integer, private,              save :: RANDOM_count
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: RANDOM_reset
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
+  integer, private, allocatable, save :: RANDOM_seedvar(:)
+  integer, private,              save :: RANDOM_count
   !-----------------------------------------------------------------------------
 contains
 
@@ -66,8 +66,6 @@ contains
 
     RANDOM_count = 0
 
-    call RANDOM_reset
-
     return
   end subroutine RANDOM_setup
 
@@ -77,11 +75,13 @@ contains
        PRC_myrank
     implicit none
 
+    integer :: time
+
     integer :: time1
     real(8) :: time2
     !---------------------------------------------------------------------------
 
-    call time(time1)
+    time1 = time()
     call cpu_time(time2)
     RANDOM_count = RANDOM_count + 1
 
@@ -99,6 +99,7 @@ contains
     real(8), intent(out) :: var(:,:,:)
     !---------------------------------------------------------------------------
 
+    call RANDOM_reset
     call random_number(var)
 
     return
