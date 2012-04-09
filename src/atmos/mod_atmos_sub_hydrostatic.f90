@@ -27,7 +27,7 @@ module mod_atmos_hydrostatic
   !
   !++ Public procedure
   !
-  public :: hydro_buildrho
+  public :: ATMOS_hydro_buildrho
 
   !-----------------------------------------------------------------------------
   !
@@ -47,19 +47,23 @@ module mod_atmos_hydrostatic
   !
   !++ Private parameters & variables
   !
-  logical, parameter :: use_rapserate = .false.
+  logical, parameter :: use_rapserate = .true.
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
   !> Buildup density from surface
   !-----------------------------------------------------------------------------
-  subroutine hydro_buildrho( &
+  subroutine ATMOS_hydro_buildrho( &
       dens,     &
+      temp,     &
       pres,     &
       pott,     &
+      qv,       &
+      temp_sfc, &
       pres_sfc, &
-      pott_sfc  )
+      pott_sfc, &
+      qv_sfc    )
     use mod_const, only : &
        GRAV    => CONST_GRAV,    &
        Rdry    => CONST_Rdry,    &
@@ -69,95 +73,174 @@ contains
        CVovCP  => CONST_CVovCP,  &
        CPovCV  => CONST_CPovCV,  &
        LASPdry => CONST_LASPdry, &
+       EPSTvap => CONST_EPSTvap, &
        P00     => CONST_PRE00
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use mod_grid, only : &
        CZ  => GRID_CZ, &
        FDZ => GRID_FDZ
     implicit none
 
-    real(8), intent(out) :: dens(KA) !< density [kg/m3]
-    real(8), intent(out) :: pres(KA) !< pressure [Pa]
-    real(8), intent(in)  :: pott(KA) !< potential temperature [K]
-    real(8), intent(in)  :: pres_sfc !< surface pressure [Pa]
-    real(8), intent(in)  :: pott_sfc !< surface potential temperature [K]
+    real(8), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
+    real(8), intent(out) :: temp(KA,IA,JA) !< temperature [K]
+    real(8), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
+    real(8), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
+    real(8), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
+    real(8), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
+    real(8), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
+    real(8), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
+    real(8), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
 
-    real(8) :: dens_sfc
+    real(8) :: Rmoist_sfc(1,IA,JA)
+    real(8) :: dens_sfc  (1,IA,JA)
+
+    real(8) :: Rmoist(KA,IA,JA)
+
     real(8) :: dens_s, dhyd, dgrd
-    real(8) :: temp
 
-    real(8), parameter :: criteria = 1.D-10
+    real(8), parameter :: criteria = 1.D-15
     integer, parameter :: itelim = 100
 
-    integer :: k, ite
+    integer :: k, i, j, ite
     !---------------------------------------------------------------------------
 
     ! make density at surface
-    dens_sfc = P00 / Rdry / pott(KS) * ( pres_sfc/P00 )**CVovCP
+    do j = JS, JE
+    do i = IS, IE
+       Rmoist_sfc(1,i,j) = Rdry * ( 1.D0 + EPSTvap * qv_sfc(1,i,j) )
+
+       dens_sfc(1,i,j) = P00 / Rmoist(1,i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP
+       temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rmoist_sfc(1,i,j) )
+    enddo
+    enddo
+!    if( IO_L ) write(IO_FID_LOG,*) &
+!    'SFC', dens_sfc(1,IS,JS), temp_sfc(1,IS,JS), pres_sfc(1,IS,JS), pott_sfc(1,IS,JS), qv_sfc(1,IS,JS)
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Rmoist(k,i,j) = Rdry * ( 1.D0 + EPSTvap * qv(k,i,j) )
+    enddo
+    enddo
+    enddo
 
     ! make density at lowermost cell center
     k = KS
 
     if ( use_rapserate ) then
-       temp    = pott_sfc - LASPdry * CZ(k) ! use dry lapse rate
-       pres(k) = P00 * ( temp/pott(k) )**CPovR
-       dens(k) = dens_s - dhyd/dgrd
-    else ! use itelation
-       dens_s  = 0.D0
-       dens(k) = dens_sfc ! first guess
 
-       do ite = 1, itelim
-          if ( abs(dens(k)-dens_s) <= criteria ) exit
-
-          dens_s = dens(k)
-
-          dhyd = + ( P00 * ( dens_sfc * Rdry * pott_sfc / P00 )**CPovCV &
-                   - P00 * ( dens_s   * Rdry * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
-                 - GRAV * 0.5D0 * ( dens_sfc + dens_s )                             ! rho*g
-
-          dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / CZ(k) &
-                 * CPovCV * dens_s**RovCV                         &
-                 - 0.5D0 * GRAV
-
-          dens(k) = dens_s - dhyd/dgrd
+       do j = JS, JE
+       do i = IS, IE
+          temp(k,i,j) = pott_sfc(1,i,j) - LASPdry * CZ(k) ! use dry lapse rate
+          pres(k,i,j) = P00 * ( temp(k,i,j)/pott(k,i,j) )**CPovR
+          dens(k,i,j) = P00 / Rmoist(k,i,j) / pott(k,i,j) * ( pres(k,i,j)/P00 )**CVovCP
+       enddo
        enddo
 
-       if ( ite > itelim ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd
-       endif
+    else ! use itelation
+
+       do j = JS, JE
+       do i = IS, IE
+          dens_s      = 0.D0
+          dens(k,i,j) = dens_sfc(1,i,j) ! first guess
+
+          do ite = 1, itelim
+             if( abs(dens(k,i,j)-dens_s) <= criteria ) exit
+
+             dens_s = dens(k,i,j)
+
+             dhyd = + ( P00 * ( dens_sfc(1,i,j) * Rmoist_sfc(1,i,j) * pott_sfc(1,i,j) / P00 )**CPovCV &
+                      - P00 * ( dens_s          * Rmoist    (k,i,j) * pott    (k,i,j) / P00 )**CPovCV ) / CZ(k) & ! dp/dz
+                    - GRAV * 0.5D0 * ( dens_sfc(1,i,j) + dens_s )                                                 ! rho*g
+
+             dgrd = - P00 * ( Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV / CZ(k) &
+                    * CPovCV * dens_s**RovCV                                      &
+                    - 0.5D0 * GRAV
+
+             dens(k,i,j) = dens_s - dhyd/dgrd
+
+!             if ( i == IS .AND. j == JS ) then
+!                if( IO_L ) write(IO_FID_LOG,*) k, ite, dens(k,i,j)-dens_s, dens(k,i,j), dens_s, dhyd/dgrd, dhyd, dgrd
+!             endif
+
+          enddo
+
+          if ( ite > itelim ) then
+             if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k,i,j), dens_s, dhyd, dgrd
+          endif
+       enddo
+       enddo
+
+!       if( IO_L ) write(IO_FID_LOG,*) k, dens(k,IS,JS), pott(k,IS,JS), qv(k,IS,JS), CZ(k)
     endif
 
     ! make density
-    do k = KS+1, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS+1, KE
 
-       dens_s  = 0.D0
-       dens(k) = dens(k-1)
+          dens_s      = 0.D0
+          dens(k,i,j) = dens(k-1,i,j)
 
-       do ite = 1, itelim
-          if ( abs(dens(k)-dens_s) <= criteria ) exit
+          do ite = 1, itelim
+             if( abs(dens(k,i,j)-dens_s) <= criteria ) exit
 
-          dens_s = dens(k)
+             dens_s = dens(k,i,j)
 
-          dhyd = + ( P00 * ( dens(k-1) * Rdry * pott(k-1) / P00 )**CPovCV &
-                   - P00 * ( dens_s    * Rdry * pott(k)   / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
-                 - GRAV * 0.5D0 * ( dens(k-1) + dens_s )                                 ! rho*g
+             dhyd = + ( P00 * ( dens(k-1,i,j) * Rmoist(k-1,i,j) * pott(k-1,i,j) / P00 )**CPovCV &
+                      - P00 * ( dens_s        * Rmoist(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
+                    - GRAV * 0.5D0 * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
 
-          dgrd = - P00 * ( Rdry * pott(k) / P00 )**CPovCV / FDZ(k-1) &
-                 * CPovCV * dens_s**RovCV                         &
-                 - 0.5D0 * GRAV
+             dgrd = - P00 * ( Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV / FDZ(k-1) &
+                    * CPovCV * dens_s**RovCV                                         &
+                    - 0.5D0 * GRAV
 
-          dens(k) = dens_s - dhyd/dgrd
+             dens(k,i,j) = dens_s - dhyd/dgrd
+
+!             if ( i == IS .AND. j == JS ) then
+!                if( IO_L ) write(IO_FID_LOG,*) k, ite, dens(k,i,j)-dens_s, dens(k,i,j), dens_s, dhyd/dgrd, dhyd, dgrd
+!             endif
+
+          enddo
+
+!          if ( i == IS .AND. j == JS ) then
+!             if( IO_L ) write(IO_FID_LOG,*) k, dens(k,IS,JS), pott(k,IS,JS), qv(k,IS,JS), FDZ(k-1)
+!          endif
+
+          if ( ite > itelim ) then
+             if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k,i,j), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
+          endif
        enddo
-
-       if ( ite > itelim ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd
-       endif
+    enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
-       pres(k) = P00 * ( dens(k) * Rdry * pott(k) / P00 )**CPovCV
+       pres(k,i,j) = P00 * ( dens(k,i,j) * Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rmoist(k,i,j) )
     enddo
+    enddo
+    enddo
+
+    ! fill KHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       dens(   1:KS-1,i,j) = dens(KS,i,j)
+       dens(KE+1:KA,  i,j) = dens(KE,i,j)
+    enddo
+    enddo
+    ! fill IHALO & JHALO
+    call COMM_vars8( dens(:,:,:), 1 )
+    call COMM_wait ( dens(:,:,:), 1 )
+
+!    do k = KS+1, KE
+!       if( IO_L ) write(IO_FID_LOG,*) k, dens(k,IS,JS), temp(k,IS,JS), pres(k,IS,JS), pott(k,IS,JS), qv(k,IS,JS)
+!    enddo
 
     return
-  end subroutine hydro_buildrho
+  end subroutine ATMOS_hydro_buildrho
 
 end module mod_atmos_hydrostatic
