@@ -20,6 +20,7 @@ module mod_atmos_refstate
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
+     IO_SYSCHR,  &
      IO_FILECHR
   !-----------------------------------------------------------------------------
   implicit none
@@ -56,7 +57,7 @@ module mod_atmos_refstate
   !
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''
-  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_TYPE         = 'ISA'
+  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE         = 'ISA'
   real(8),                   private :: ATMOS_REFSTATE_TEMP_SFC     = 300.D0 ! surface temperature
   real(8),                   private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.D0 ! uniform potential temperature
 
@@ -281,6 +282,11 @@ contains
        dens(k) = pres(k) / ( temp(k) * Rdry )
        pott(k) = temp(k) * ( P00/pres(k) )**RovCP
     enddo
+
+    dens(   1:KS-1) = dens(KS)
+    pott(   1:KS-1) = pott(KS)
+    dens(KE+1:KA  ) = dens(KE)
+    pott(KE+1:KA  ) = pott(KE)
 
     if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
        if( IO_L ) write(IO_FID_LOG,*)

@@ -746,7 +746,7 @@ contains
                   GRID_FZ(0)       *1.D-3, ' -HALO-                   ', &
                   GRID_FZ(KS-1)    *1.D-3, ' | ',                        &
                   GRID_CZ(KS)      *1.D-3, ' - ',                        &
-                  GRID_CZ(KE)      *1.D-3, ' | ',                        &
+                  GRID_CZ(KE-kbuff)*1.D-3, ' | ',                        &
                   GRID_FZ(KE-kbuff)*1.D-3, ' -buffer- ',                 &
                   GRID_FZ(KE)      *1.D-3, ' -HALO- ',                   &
                   GRID_FZ(KA)      *1.D-3

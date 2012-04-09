@@ -286,7 +286,7 @@ static int32_t fio_new_finfo( void )
   finfo[fid].status.file      = -1;
   finfo[fid].tmp_gid          = -1;
 #endif
-  /* finfo[fid].status.eoh.__pos = 0; /* [add] 20111007 H.Yashiro */
+  /* finfo[fid].status.eoh.__pos = 0; [add] 20111007 H.Yashiro */
 #ifndef NO_MPIIO
   finfo[fid].status.mpi_eoh   = 0;
   finfo[fid].status.mpi_fid   = NULL;
@@ -1517,7 +1517,6 @@ int32_t get_header_num_of_data( int32_t fid, int32_t num_of_data )
 /** register new file *************************************************/
 int32_t fio_register_file( char *fname )
 {
-  int32_t ierr;
   int32_t fid;
 
   /* request new file space */
@@ -1986,8 +1985,6 @@ int32_t fio_put_write_datainfo( int32_t fid,
 /** read pkginfo and datainfo *****************************************/
 int32_t fio_read_allinfo( int32_t fid )
 {
-  int32_t i;
-
   fio_read_pkginfo( fid );
   fio_valid_pkginfo( fid );
 
@@ -2029,7 +2026,6 @@ int32_t fio_read_allinfo_novalid( int32_t fid )
 headerinfo_t fio_read_allinfo_get_pkginfo( int32_t fid )
 {
   headerinfo_t hinfo;
-  int32_t i;
 
   fio_read_pkginfo( fid );
   fio_valid_pkginfo( fid );
@@ -2052,7 +2048,6 @@ headerinfo_t fio_read_allinfo_get_pkginfo( int32_t fid )
 /** dump package summary of all finfo *********************************/
 int32_t fio_dump_finfolist( void )
 {
-  int32_t i;
   int32_t fid;
   char* str_mode[3]     = { "XXXX","SPRT","INTG" };
   char* str_rw[4]       = { "X","R","W","A" };

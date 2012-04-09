@@ -170,7 +170,7 @@ contains
                                       IMAX*JMAX*KMAX*HIST_req_nmax*FIO_preclist(HISTORY_DTYPE)/1024/1024
     endif
 
-    allocate( HIST_item   (HIST_req_nmax) )
+    allocate( HIST_item   (HIST_req_nmax) ); HIST_item(:) = ''
     allocate( HIST_desc   (HIST_req_nmax) )
     allocate( HIST_unit   (HIST_req_nmax) )
     allocate( HIST_ktype  (HIST_req_nmax) )

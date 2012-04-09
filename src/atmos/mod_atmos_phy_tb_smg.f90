@@ -52,6 +52,8 @@ module mod_atmos_phy_tb
   !
   !++ Private parameters & variables
   !
+  real(8), private,      save :: TB_length(KA,IA,JA) ! mixing length
+
   real(8), private, parameter :: Cs        = 0.18D0 ! (Sullivan et al.1994, Nakanishi and Niino)
   real(8), private, parameter :: DUDZ2_min = 1.D-6  ! minimum limit of (dU/dz)**2
   real(8), private, parameter :: FACTC     = 2.D0 / 3.D0
@@ -64,8 +66,22 @@ module mod_atmos_phy_tb
 contains
 
   subroutine ATMOS_PHY_TB_setup
+    use mod_grid, only : &
+       CDZ => GRID_CDZ, &
+       CDX => GRID_CDX, &
+       CDY => GRID_CDY
     implicit none
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    do j = JS, JE+1
+    do i = IS, IE+1
+    do k = KS, KE
+       TB_length(k,i,j) = ( CDZ(k) * CDX(i) * CDY(j) )**(1.D0/3.D0)
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_TB_setup
@@ -98,7 +114,8 @@ contains
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
+       ATMOS_vars_fillhalo, &
+       ATMOS_vars_total,    &
        DENS, &
        MOMZ, &
        MOMX, &
@@ -112,6 +129,13 @@ contains
        SFLX_POTT, &
        SFLX_QV
     implicit none
+
+    ! tendency
+    real(8) :: MOMZ_t(KA,IA,JA)
+    real(8) :: MOMX_t(KA,IA,JA)
+    real(8) :: MOMY_t(KA,IA,JA)
+    real(8) :: RHOT_t(KA,IA,JA)
+    real(8) :: QTRC_t(KA,IA,JA,QA)
 
     ! diagnostic variables
     real(8) :: VELZ(KA,IA,JA)
@@ -296,8 +320,8 @@ contains
              Pr(k,i,j) = ( 1.D0-4.D0*Ri(k,i,j) ) / 3.D0 + 4.D0*Ri(k,i,j)
           enddo
 
-          Pr(KS-1,i,j) = Pr(KS  ,i,j)
-          Pr(KE  ,i,j) = Pr(KE-1,i,j)
+          Pr( 1:KS-1,i,j) = Pr(KS  ,i,j)
+          Pr(KE:KA  ,i,j) = Pr(KE-1,i,j)
 
           ! buoyancy
           do k = KS, KE-1
@@ -335,15 +359,15 @@ contains
           enddo
 
           do k = KS, KE-1
-             nu(k,i,j) = ( Cs * DXYZ )**2 * sqrt( temp(k) )
+             nu(k,i,j) = ( Cs * TB_length(k,i,j) )**2 * sqrt( temp(k) )
           enddo
        enddo
        enddo
        !OCL XFILL
        do j = JJS, JJE
        do i = IIS, IIE
-          nu(KS-1,i,j) = 0.D0
-          nu(KE  ,i,j) = 0.D0
+          nu( 1:KS-1,i,j) = 0.D0
+          nu(KE:KA  ,i,j) = 0.D0
        enddo
        enddo
 
@@ -370,7 +394,7 @@ contains
                                  + nu(k-1,i  ,j  ) + nu(k-1,i-1,j  ) &
                                  + nu(k  ,i-1,j  ) + nu(k  ,i-1,j-1) &
                                  + nu(k  ,i  ,j-1) + nu(k-1,i  ,j-1) )
-          tke(k,i,j) = nuc(k,i,j)*nuc(k,i,j) / ( (Cs*DXYZ)*(Cs*DXYZ) )
+          tke(k,i,j) = nuc(k,i,j)*nuc(k,i,j) / ( Cs * TB_length(k,i,j) )**2
        enddo
        enddo
        enddo
@@ -391,7 +415,7 @@ contains
        do i = IIS-1, IIE
        do k = KS, KE-1
           qflx_sgs(k,i,j,XDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-                               * ( - ( nu(k,i,j)+nu(k,i,j-1) ) * Sij_zx(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k,i,j-1) ) * Sij_zx(k,i,j) )
        enddo
        enddo
        enddo
@@ -400,20 +424,24 @@ contains
        do i = IIS,   IIE
        do k = KS, KE-1
           qflx_sgs(k,i,j,YDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-                               * ( - ( nu(k,i,j)+nu(k,i-1,j) ) * Sij_zy(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k,i-1,j) ) * Sij_zy(k,i,j) )
        enddo
        enddo
        enddo
 
-       !--- update momentum(z)
+       !--- tendency momentum(z)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          MOMZ(k,i,j) = MOMZ(k,i,j) &
-                      + dttb * ( - ( ( qflx_sgs(k+1,i,j,ZDIR)-qflx_sgs(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                                   + ( qflx_sgs(k  ,i,j,XDIR)-qflx_sgs(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                                   + ( qflx_sgs(k  ,i,j,YDIR)-qflx_sgs(k,i  ,j-1,YDIR) ) * RCDY(j) ) )
+          MOMZ_t(k,i,j) = - ( ( qflx_sgs(k+1,i,j,ZDIR)-qflx_sgs(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                            + ( qflx_sgs(k  ,i,j,XDIR)-qflx_sgs(k,i-1,j  ,XDIR) ) * RCDX(i) &
+                            + ( qflx_sgs(k  ,i,j,YDIR)-qflx_sgs(k,i  ,j-1,YDIR) ) * RCDY(j) )
        enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          MOMZ_t(KE,i,j) = 0.D0
        enddo
        enddo
 
@@ -423,7 +451,7 @@ contains
        do i = IIS, IIE
        do k = KS, KE-1
           qflx_sgs(k,i,j,ZDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-                               * ( - ( nu(k,i,j)+nu(k,i,j-1) ) * Sij_zx(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k,i,j-1) ) * Sij_zx(k,i,j) )
        enddo
        enddo
        enddo
@@ -448,19 +476,18 @@ contains
        do i = IIS,   IIE
        do k = KS, KE
           qflx_sgs(k,i,j,YDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
-                               * ( - ( nu(k,i,j)+nu(k-1,i,j) ) * Sij_xy(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k-1,i,j) ) * Sij_xy(k,i,j) )
        enddo
        enddo
        enddo
 
-       !--- update momentum(x)
+       !--- tendency momentum(x)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          MOMX(k,i,j) = MOMX(k,i,j) &
-                      + dttb * ( - ( ( qflx_sgs(k,i  ,j,ZDIR)-qflx_sgs(k-1,i,j,  ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_sgs(k,i+1,j,XDIR)-qflx_sgs(k  ,i,j,  XDIR) ) * RFDX(i) &
-                                   + ( qflx_sgs(k,i  ,j,YDIR)-qflx_sgs(k  ,i,j-1,YDIR) ) * RCDY(j) ) )
+          MOMX_t(k,i,j) = - ( ( qflx_sgs(k,i  ,j,ZDIR)-qflx_sgs(k-1,i,j,  ZDIR) ) * RCDZ(k) &
+                            + ( qflx_sgs(k,i+1,j,XDIR)-qflx_sgs(k  ,i,j,  XDIR) ) * RFDX(i) &
+                            + ( qflx_sgs(k,i  ,j,YDIR)-qflx_sgs(k  ,i,j-1,YDIR) ) * RCDY(j) )
        enddo
        enddo
        enddo
@@ -471,7 +498,7 @@ contains
        do i = IIS, IIE
        do k = KS, KE-1
           qflx_sgs(k,i,j,ZDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-                               * ( - ( nu(k,i,j)+nu(k,i-1,j) ) * Sij_zy(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k,i-1,j) ) * Sij_zy(k,i,j) )
        enddo
        enddo
        enddo
@@ -487,7 +514,7 @@ contains
        do i = IIS-1, IIE
        do k = KS, KE
           qflx_sgs(k,i,j,XDIR) = 0.25D0 * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
-                               * ( - ( nu(k,i,j)+nu(k-1,i,j) ) * Sij_xy(k,i,j) )
+                               * ( -( nu(k,i,j)+nu(k-1,i,j) ) * Sij_xy(k,i,j) )
        enddo
        enddo
        enddo
@@ -503,14 +530,13 @@ contains
        enddo
        enddo
 
-       !--- update momentum(y)
+       !--- tendency momentum(y)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          MOMY(k,i,j) = MOMY(k,i,j) &
-                      + dttb * ( - ( ( qflx_sgs(k,i,j  ,ZDIR)-qflx_sgs(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_sgs(k,i,j  ,XDIR)-qflx_sgs(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                                   + ( qflx_sgs(k,i,j+1,YDIR)-qflx_sgs(k  ,i  ,j,YDIR) ) * RFDY(j) ) )
+          MOMY_t(k,i,j) = - ( ( qflx_sgs(k,i,j  ,ZDIR)-qflx_sgs(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                            + ( qflx_sgs(k,i,j  ,XDIR)-qflx_sgs(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                            + ( qflx_sgs(k,i,j+1,YDIR)-qflx_sgs(k  ,i  ,j,YDIR) ) * RFDY(j) )
        enddo
        enddo
        enddo
@@ -553,19 +579,37 @@ contains
           qflx_sgs(k,i,j,YDIR) = 0.5D0 * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * ( - ( nu(k,i,j) + nu(k,i-1,j) + nu(k-1,i,j) + nu(k-1,i-1,j) ) &
                                    / ( Pr(k,i,j) + Pr(k,i,j+1) + Pr(k-1,i,j) + Pr(k-1,i,j+1) ) &
-                                     * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)                 )
+                                   * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)                 )
        enddo
        enddo
        enddo
 
-       !--- update rho*theta
+       !--- tendency rho*theta
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          RHOT(k,i,j) = RHOT(k,i,j) &
-                      + dttb * ( - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                   + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) ) )
+          RHOT_t(k,i,j) = - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                            + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                            + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) )
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          MOMZ(k,i,j) = MOMZ(k,i,j) + dttb * MOMZ_t(k,i,j)
+          MOMX(k,i,j) = MOMX(k,i,j) + dttb * MOMX_t(k,i,j)
+          MOMY(k,i,j) = MOMY(k,i,j) + dttb * MOMY_t(k,i,j)
+          RHOT(k,i,j) = RHOT(k,i,j) + dttb * RHOT_t(k,i,j)
        enddo
        enddo
        enddo
@@ -631,15 +675,31 @@ contains
        enddo
        enddo
 
-       !--- update tracers
+       !--- tendency tracers
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-                         + dttb * ( - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                      + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                      + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                                  ) / DENS(k,i,j)
+          QTRC_t(k,i,j,iq) = - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                               + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                               + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
+                             / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) + dttb * QTRC_t(k,i,j,iq)
        enddo
        enddo
        enddo
@@ -659,25 +719,17 @@ contains
 
     enddo ! scalar quantities loop
 
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_vars8( MOMZ(:,:,:), 2 )
-    call COMM_vars8( MOMX(:,:,:), 3 )
-    call COMM_vars8( MOMY(:,:,:), 4 )
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
-
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
-    enddo
+    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
+
+    call HIST_in( MOMZ_t(:,:,:), 'MOMZ_t_tb', 'tendency of MOMZ in tb', 'kg/m2/s2',  '3D', dttb )
+    call HIST_in( MOMX_t(:,:,:), 'MOMX_t_tb', 'tendency of MOMX in tb', 'kg/m2/s2',  '3D', dttb )
+    call HIST_in( MOMY_t(:,:,:), 'MOMY_t_tb', 'tendency of MOMY in tb', 'kg/m2/s2',  '3D', dttb )
+    call HIST_in( RHOT_t(:,:,:), 'RHOT_t_tb', 'tendency of RHOT in tb', 'K*kg/m3/s', '3D', dttb )
+    do iq = 1, QA
+       call HIST_in( QTRC_t(:,:,:,iq), AQ_NAME(iq)//'_t_tb', AQ_DESC(iq), AQ_UNIT(iq)//'/s', '3D', dttb )
+    enddo
 
     call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'J/m3', '3D', dttb )
     call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s', '3D', dttb )
