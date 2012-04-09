@@ -33,6 +33,7 @@ module mod_atmos_vars
   !++ Public procedure
   !
   public :: ATMOS_vars_setup
+  public :: ATMOS_vars_fillhalo
   public :: ATMOS_vars_restart_read
   public :: ATMOS_vars_restart_write
   public :: ATMOS_vars_restart_check
@@ -312,6 +313,65 @@ contains
   end subroutine ATMOS_vars_setup
 
   !-----------------------------------------------------------------------------
+  !> fill HALO region of atmospheric variables
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_vars_fillhalo
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+
+    integer :: i, j, iq
+    !---------------------------------------------------------------------------
+
+    ! fill KHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+    enddo
+    enddo
+    do iq = 1, QA
+    do j  = JS, JE
+    do i  = IS, IE
+       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
+    enddo
+    enddo
+    enddo
+
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_vars8( MOMZ(:,:,:), 2 )
+    call COMM_vars8( MOMX(:,:,:), 3 )
+    call COMM_vars8( MOMY(:,:,:), 4 )
+    call COMM_vars8( RHOT(:,:,:), 5 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+    call COMM_wait ( MOMZ(:,:,:), 2 )
+    call COMM_wait ( MOMX(:,:,:), 3 )
+    call COMM_wait ( MOMY(:,:,:), 4 )
+    call COMM_wait ( RHOT(:,:,:), 5 )
+
+    do iq = 1, QA
+       call COMM_vars8( QTRC(:,:,:,iq), iq )
+    enddo
+    do iq = 1, QA
+       call COMM_wait ( QTRC(:,:,:,iq), iq )
+    enddo
+
+    return
+  end subroutine ATMOS_vars_fillhalo
+
+
+  !-----------------------------------------------------------------------------
   !> Read restart of atmospheric variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_restart_read
@@ -327,7 +387,7 @@ contains
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
 
-    integer :: i, j, iq
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -352,48 +412,7 @@ contains
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
-    ! fill IHALO & JHALO
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_vars8( MOMZ(:,:,:), 2 )
-    call COMM_vars8( MOMX(:,:,:), 3 )
-    call COMM_vars8( MOMY(:,:,:), 4 )
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
-
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
-    enddo
-
-    ! fill KHALO
-    do j  = 1, JA
-    do i  = 1, IA
-       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
-       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-    enddo
-    enddo
-    do iq = 1, QA
-    do j  = 1, JA
-    do i  = 1, IA
-       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
-       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
-    enddo
-    enddo
-    enddo
+    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
 
