@@ -6,7 +6,7 @@
 
 include ./sysdep/Makedef.$(SCALE_SYS)
 
-VPATH = include:common:io:grid:atmos:ocean:preprocess/initial
+VPATH = include:common:io:grid:atmos:ocean:preprocess:preprocess/initial
 
 #default index & tracer set
 index   = 336x63x63
