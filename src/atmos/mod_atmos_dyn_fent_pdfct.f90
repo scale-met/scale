@@ -83,6 +83,10 @@ module mod_atmos_dyn
   real(8), private, save      :: DIFF4 ! for 4th order numerical filter
   real(8), private, save      :: DIFF2 ! for 2nd order numerical filter
 
+  ! coriolis force
+  logical, private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  real(8), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
+
   ! work
   real(8), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
   real(8), private, save :: MOMZ_RK1(KA,IA,JA)   !
@@ -115,14 +119,22 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only: &
+       PI   => CONST_PI,  &
+       EOHM => CONST_EOHM
     use mod_grid, only : &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY
+    use mod_geometrics, only : &
+       lat => GEOMETRICS_lat
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_DYN_numerical_diff
+       ATMOS_DYN_numerical_diff, &
+       ATMOS_DYN_enable_coriolis
+
+    real(8) :: d2r
 
     integer :: ierr
     integer :: k, i, j
@@ -154,6 +166,22 @@ contains
 
     DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 4/2+1 )
     DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 2/2+1 )
+
+    d2r   = PI / 180.D0
+
+    if ( ATMOS_DYN_enable_coriolis ) then
+       do j = 1, JA
+       do i = 1, IA
+          CORIOLI(1,i,j) = 2.D0 * EOHM * sin( lat(1,i,j) * d2r )
+       enddo
+       enddo
+    else
+       do j = 1, JA
+       do i = 1, IA
+          CORIOLI(1,i,j) = 0.D0
+       enddo
+       enddo
+    endif
 
     !OCL XFILL
     do j = 1, JA
@@ -319,8 +347,7 @@ contains
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait,  &
-       COMM_total
+       COMM_wait
     use mod_grid, only : &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
@@ -332,6 +359,7 @@ contains
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
     use mod_atmos_vars, only: &
+       ATMOS_vars_fillhalo,   &
        ATMOS_vars_total,   &
        DENS, &
        MOMZ, &
@@ -721,7 +749,7 @@ call START_COLLECTION("SET")
              enddo
           enddo
           do k = KS, KE
-             Rtot(k,i,j) = Rdry!*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+             Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
           enddo
        enddo
        enddo
@@ -930,6 +958,8 @@ call START_COLLECTION("RK3")
                                        + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
                                        + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                      - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
+                                     + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
+                                     * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
                                      + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
@@ -989,10 +1019,12 @@ call START_COLLECTION("RK3")
        do i = IIS, IIE
        do k = KS, KE
           MOMY_RK1(k,i,j) = MOMY(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k)   &
-                                       + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i)   &
+                          + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
                                      - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
+                                     - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
+                                     * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
                                      + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
@@ -1267,6 +1299,8 @@ call START_COLLECTION("RK3")
                                        + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
                                        + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                      - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
+                                     + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
+                                     * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
                                      + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
@@ -1286,14 +1320,14 @@ call START_COLLECTION("RK3")
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                           ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMY_RK1(KS+1,i,j)+MOMY_RK1(KS,i,j) )                      &
+                                 * ( MOMY_RK1(KS+1,i,j)+MOMY_RK1(KS,i,j) )      &
                                  + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMY_RK1(KE,i,j)+MOMY_RK1(KE-1,i,j) )                      &
+                                 * ( MOMY_RK1(KE,i,j)+MOMY_RK1(KE-1,i,j) )      &
                                  + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                           ! top boundary
        enddo
        enddo
 
@@ -1302,8 +1336,8 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS,   KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK1(k,i+1,j)+MOMY_RK1(k,i  ,j) )     &
-                                + FACT_F * ( MOMY_RK1(k,i+2,j)+MOMY_RK1(k,i-1,j) ) )   &
+                              * ( FACT_N * ( MOMY_RK1(k,i+1,j)+MOMY_RK1(k,i  ,j) ) &
+                                + FACT_F * ( MOMY_RK1(k,i+2,j)+MOMY_RK1(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
        enddo
        enddo
@@ -1314,8 +1348,8 @@ call START_COLLECTION("RK3")
        do i = IIS, IIE
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
-                              * ( FACT_N * ( MOMY_RK1(k,i,j  )+MOMY_RK1(k,i,j-1) )     &
-                                + FACT_F * ( MOMY_RK1(k,i,j+1)+MOMY_RK1(k,i,j-2) ) )   &
+                              * ( FACT_N * ( MOMY_RK1(k,i,j  )+MOMY_RK1(k,i,j-1) ) &
+                                + FACT_F * ( MOMY_RK1(k,i,j+1)+MOMY_RK1(k,i,j-2) ) ) &
                               + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
        enddo
        enddo
@@ -1326,11 +1360,13 @@ call START_COLLECTION("RK3")
        do i = IIS, IIE
        do k = KS, KE
           MOMY_RK2(k,i,j) = MOMY(k,i,j) &
-                                + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k)   &
-                                             + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i)   &
-                                             + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
-                                           - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)     & ! pressure gradient force
-                                           + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
+                          + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                                       + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
+                                     - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
+                                     - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
+                                     * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
+                                     + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
        enddo
@@ -1342,7 +1378,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS+1, KE-2
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR) &
-                              * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) )   &
+                              * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
        enddo
@@ -1365,7 +1401,7 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS,   KE
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
-                              * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) )   &
+                              * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
        enddo
@@ -1376,7 +1412,7 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
-                              * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) )   &
+                              * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
        enddo
@@ -1491,9 +1527,9 @@ call START_COLLECTION("RK3")
        do i = IIS, IIE
        do k = KS, KE
           DENS(k,i,j) = DENS(k,i,j) &
-                            + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k)   &
-                                         + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i)   &
-                                         + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
+                      + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                                   + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                                   + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
        enddo
        enddo
        enddo
@@ -1504,8 +1540,8 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k  ,i,j)+MOMZ_RK2(k-1,i,j) )     &
-                                + FACT_F * ( MOMZ_RK2(k+1,i,j)+MOMZ_RK2(k-2,i,j) ) )   &
+                              * ( FACT_N * ( MOMZ_RK2(k  ,i,j)+MOMZ_RK2(k-1,i,j) ) &
+                                + FACT_F * ( MOMZ_RK2(k+1,i,j)+MOMZ_RK2(k-2,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
        enddo
        enddo
@@ -1515,8 +1551,8 @@ call START_COLLECTION("RK3")
        do i = IIS-1, IIE
        do k = KS, KE-1
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k,i+1,j)+MOMZ_RK2(k,i  ,j) )     &
-                                + FACT_F * ( MOMZ_RK2(k,i+2,j)+MOMZ_RK2(k,i-1,j) ) )   &
+                              * ( FACT_N * ( MOMZ_RK2(k,i+1,j)+MOMZ_RK2(k,i  ,j) ) &
+                                + FACT_F * ( MOMZ_RK2(k,i+2,j)+MOMZ_RK2(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
        enddo
        enddo
@@ -1526,8 +1562,8 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS, KE-1
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k,i,j+1)+MOMZ_RK2(k,i,j  ) )     &
-                                + FACT_F * ( MOMZ_RK2(k,i,j+2)+MOMZ_RK2(k,i,j-1) ) )   &
+                              * ( FACT_N * ( MOMZ_RK2(k,i,j+1)+MOMZ_RK2(k,i,j  ) ) &
+                                + FACT_F * ( MOMZ_RK2(k,i,j+2)+MOMZ_RK2(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
        enddo
        enddo
@@ -1538,8 +1574,8 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE-1
           MOMZ(k,i,j) = MOMZ(k,i,j) &
-                      + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k)   &
-                                   + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i)   &
+                      + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                                   + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
                                    + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                  - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
                                  - ( DENS_RK2(k+1,i,j)+DENS_RK2(k,i,j) ) * 0.5D0 * GRAV            & ! gravity force
@@ -1554,22 +1590,22 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS+1, KE-2
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k+1,i,j)+MOMX_RK2(k  ,i,j) )     &
-                                + FACT_F * ( MOMX_RK2(k+2,i,j)+MOMX_RK2(k-1,i,j) ) )   &
+                              * ( FACT_N * ( MOMX_RK2(k+1,i,j)+MOMX_RK2(k  ,i,j) ) &
+                                + FACT_F * ( MOMX_RK2(k+2,i,j)+MOMX_RK2(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                           ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMX_RK2(KS+1,i,j)+MOMX_RK2(KS,i,j) )                      &
+                                 * ( MOMX_RK2(KS+1,i,j)+MOMX_RK2(KS,i,j) )      &
                                  + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMX_RK2(KE,i,j)+MOMX_RK2(KE-1,i,j) )                      &
+                                 * ( MOMX_RK2(KE,i,j)+MOMX_RK2(KE-1,i,j) )      &
                                  + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                           ! top boundary
        enddo
        enddo
        ! at (x, y, layer)
@@ -1577,8 +1613,8 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE+1
        do k = KS,   KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k,i  ,j)+MOMX_RK2(k,i-1,j) )     &
-                                + FACT_F * ( MOMX_RK2(k,i+1,j)+MOMX_RK2(k,i-2,j) ) )   &
+                              * ( FACT_N * ( MOMX_RK2(k,i  ,j)+MOMX_RK2(k,i-1,j) ) &
+                                + FACT_F * ( MOMX_RK2(k,i+1,j)+MOMX_RK2(k,i-2,j) ) ) &
                               + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
        enddo
        enddo
@@ -1588,8 +1624,8 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS,   KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k,i,j+1)+MOMX_RK2(k,i,j  ) )     &
-                                + FACT_F * ( MOMX_RK2(k,i,j+2)+MOMX_RK2(k,i,j-1) ) )   &
+                              * ( FACT_N * ( MOMX_RK2(k,i,j+1)+MOMX_RK2(k,i,j  ) ) &
+                                + FACT_F * ( MOMX_RK2(k,i,j+2)+MOMX_RK2(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
        enddo
        enddo
@@ -1600,11 +1636,13 @@ call START_COLLECTION("RK3")
        do i = IIS, IIE
        do k = KS, KE
           MOMX(k,i,j) = MOMX(k,i,j) &
-                            + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k)   &
-                                         + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i)   &
-                                         + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                       - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)     & ! pressure gradient force
-                                       + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
+                      + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k) &
+                                   + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
+                                   + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
+                                 - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
+                                 + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
+                                 * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
+                                 + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
        enddo
@@ -1615,22 +1653,22 @@ call START_COLLECTION("RK3")
        do i = IIS,   IIE
        do k = KS+1, KE-2
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK2(k+1,i,j)+MOMY_RK2(k  ,i,j) )     &
-                                + FACT_F * ( MOMY_RK2(k+2,i,j)+MOMY_RK2(k-1,i,j) ) )   &
+                              * ( FACT_N * ( MOMY_RK2(k+1,i,j)+MOMY_RK2(k  ,i,j) ) &
+                                + FACT_F * ( MOMY_RK2(k+2,i,j)+MOMY_RK2(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                                               ! bottom boundary
+          qflx_hi(KS-1,i,j,ZDIR) = 0.D0                                           ! bottom boundary
           qflx_hi(KS  ,i,j,ZDIR) = 0.25D0 * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMY_RK2(KS+1,i,j)+MOMY_RK2(KS,i,j) )                      &
+                                 * ( MOMY_RK2(KS+1,i,j)+MOMY_RK2(KS,i,j) )      &
                                  + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
           qflx_hi(KE-1,i,j,ZDIR) = 0.25D0 * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMY_RK2(KE,i,j)+MOMY_RK2(KE-1,i,j) )                      &
+                                 * ( MOMY_RK2(KE,i,j)+MOMY_RK2(KE-1,i,j) )      &
                                  + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                                               ! top boundary
+          qflx_hi(KE  ,i,j,ZDIR) = 0.D0                                           ! top boundary
        enddo
        enddo
 
@@ -1667,6 +1705,8 @@ call START_COLLECTION("RK3")
                                    + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
                                    + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
                                  - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
+                                 - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
+                                 * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
                                  + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
@@ -1767,7 +1807,7 @@ call START_COLLECTION("FCT")
           qflx_lo(k,i,j,ZDIR) = 0.5D0 * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                         - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR)                      &
+          qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                 + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
 
@@ -1801,7 +1841,7 @@ call START_COLLECTION("FCT")
           qflx_lo(k,i,j,XDIR) = 0.5D0 * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
                                         - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR)                      &
+          qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                 + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
 
@@ -1815,7 +1855,7 @@ call START_COLLECTION("FCT")
           qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
                                         - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR)                      &
+          qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                 + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
 
@@ -1931,12 +1971,7 @@ call START_COLLECTION("FCT")
 
     enddo ! scalar quantities loop
 
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
-    enddo
+    call ATMOS_vars_fillhalo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("FCT")
