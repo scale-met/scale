@@ -13,7 +13,7 @@
 # %> make -B       (ignore the timestamp)
 #
 ################################################################################
-include Makedef.K_RDMA
+include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
@@ -22,7 +22,7 @@ index   = 436x16x16
 tracer  = ndw6
 postfix = 
 
-PROJ_EXE = RDMA_full
+PROJ_EXE = kessler
 
 all: makedir makeinclude makebin
 

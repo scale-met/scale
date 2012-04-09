@@ -14,7 +14,7 @@
 !! @li      2011-12-26 (Y.Miyamoto) [mod] Add numerical diffusion into mass flux calc
 !! @li      2012-01-04 (H.Yashiro)  [mod] Nonblocking communication (Y.Ohno)
 !! @li      2012-01-25 (H.Yashiro)  [fix] Bugfix (Y.Miyamoto)
-!! @li      2011-01-25 (H.Yashiro)  [mod] sprit as "full" FCT (Y.Miyamoto)
+!! @li      2012-01-25 (H.Yashiro)  [mod] Positive definite FCT (Y.Miyamoto)
 !! @li      2012-02-14 (H.Yashiro)  [mod] Cache tiling
 !! @li      2012-03-14 (H.Yashiro)  [mod] Bugfix (Y.Miyamoto)
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
@@ -75,39 +75,38 @@ module mod_atmos_dyn
   integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! advection settings
-  real(8), private, parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
-  real(8), private, parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
+  real(4), private, parameter :: FACT_N =   7.D0 / 6.D0 !  7/6: fourth, 1: second
+  real(4), private, parameter :: FACT_F = - 1.D0 / 6.D0 ! -1/6: fourth, 0: second
 
   ! numerical filter settings
-  real(8), private, save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
-  real(8), private, save      :: DIFF4 ! for 4th order numerical filter
-  real(8), private, save      :: DIFF2 ! for 2nd order numerical filter
+  real(4), private, save      :: ATMOS_DYN_numerical_diff = 1.D-2 ! nondimensional numerical diffusion
+  real(4), private, save      :: DIFF4 ! for 4th order numerical filter
+  real(4), private, save      :: DIFF2 ! for 2nd order numerical filter
 
   ! coriolis force
   logical, private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(8), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
+  real(4), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
 
   ! work
-  real(8), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
-  real(8), private, save :: MOMZ_RK1(KA,IA,JA)   !
-  real(8), private, save :: MOMX_RK1(KA,IA,JA)   !
-  real(8), private, save :: MOMY_RK1(KA,IA,JA)   !
-  real(8), private, save :: RHOT_RK1(KA,IA,JA)   !
-  real(8), private, save :: DENS_RK2(KA,IA,JA)   ! prognostic variables (+2/3 step)
-  real(8), private, save :: MOMZ_RK2(KA,IA,JA)   !
-  real(8), private, save :: MOMX_RK2(KA,IA,JA)   !
-  real(8), private, save :: MOMY_RK2(KA,IA,JA)   !
-  real(8), private, save :: RHOT_RK2(KA,IA,JA)   !
+  real(4), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
+  real(4), private, save :: MOMZ_RK1(KA,IA,JA)   !
+  real(4), private, save :: MOMX_RK1(KA,IA,JA)   !
+  real(4), private, save :: MOMY_RK1(KA,IA,JA)   !
+  real(4), private, save :: RHOT_RK1(KA,IA,JA)   !
+  real(4), private, save :: DENS_RK2(KA,IA,JA)   ! prognostic variables (+2/3 step)
+  real(4), private, save :: MOMZ_RK2(KA,IA,JA)   !
+  real(4), private, save :: MOMX_RK2(KA,IA,JA)   !
+  real(4), private, save :: MOMY_RK2(KA,IA,JA)   !
+  real(4), private, save :: RHOT_RK2(KA,IA,JA)   !
 
-  real(8), private, save :: rjpls   (KA,IA,JA,3) ! correction factor for incoming flux in (x,y,z)-direction
-  real(8), private, save :: rjmns   (KA,IA,JA,3) ! correction factor for outgoing in (x,y,z)-direction
+  real(4), private, save :: rjmns   (KA,IA,JA,3) ! correction factor for outgoing in (x,y,z)-direction
 
-  real(8), private, save :: CNDZ(3,KA)
-  real(8), private, save :: CNMZ(3,KA)
-  real(8), private, save :: CNDX(3,IA)
-  real(8), private, save :: CNMX(3,IA)
-  real(8), private, save :: CNDY(3,JA)
-  real(8), private, save :: CNMY(3,JA)
+  real(4), private, save :: CNDZ(3,KA)
+  real(4), private, save :: CNMZ(3,KA)
+  real(4), private, save :: CNDX(3,IA)
+  real(4), private, save :: CNMX(3,IA)
+  real(4), private, save :: CNDY(3,JA)
+  real(4), private, save :: CNMY(3,JA)
 
   !-----------------------------------------------------------------------------
 contains
@@ -135,7 +134,7 @@ contains
        ATMOS_DYN_numerical_diff, &
        ATMOS_DYN_enable_coriolis
 
-    real(8) :: d2r
+    real(4) :: d2r
 
     integer :: ierr
     integer :: k, i, j
@@ -187,12 +186,6 @@ contains
     !OCL XFILL
     do j = 1, JA
     do i = 1, IA
-       rjpls(KS-1,i,j,ZDIR) = 0.D0
-       rjpls(KS-1,i,j,XDIR) = 0.D0
-       rjpls(KS-1,i,j,YDIR) = 0.D0
-       rjpls(KE+1,i,j,ZDIR) = 0.D0
-       rjpls(KE+1,i,j,XDIR) = 0.D0
-       rjpls(KE+1,i,j,YDIR) = 0.D0
        rjmns(KS-1,i,j,ZDIR) = 0.D0
        rjmns(KS-1,i,j,XDIR) = 0.D0
        rjmns(KS-1,i,j,YDIR) = 0.D0
@@ -353,8 +346,8 @@ contains
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
+       COMM_vars8_r4, &
+       COMM_wait_r4
     use mod_grid, only : &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
@@ -368,60 +361,124 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo,   &
        ATMOS_vars_total,   &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
+       DENS_r8 => DENS, &
+       MOMZ_r8 => MOMZ, &
+       MOMX_r8 => MOMX, &
+       MOMY_r8 => MOMY, &
+       RHOT_r8 => RHOT, &
+       QTRC_r8 => QTRC
     use mod_atmos_refstate, only: &
-       REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott
+       ATMOS_REFSTATE_dens, &
+       ATMOS_REFSTATE_pott
     use mod_atmos_boundary, only: &
-       DAMP_var   => ATMOS_BOUNDARY_var,   &
-       DAMP_alpha => ATMOS_BOUNDARY_alpha, &
+       ATMOS_BOUNDARY_var,   &
+       ATMOS_BOUNDARY_alpha, &
        I_BND_VELZ,  &
        I_BND_VELX,  &
        I_BND_VELY,  &
        I_BND_POTT
     implicit none
 
+    real(4) :: DENS(KA,IA,JA)    ! Density    [kg/m3]
+    real(4) :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
+    real(4) :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
+    real(4) :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
+    real(4) :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+    real(4) :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
+
+    real(4) :: REF_dens  (KA)
+    real(4) :: REF_pott  (KA)
+    real(4) :: DAMP_var  (KA,IA,JA,5)
+    real(4) :: DAMP_alpha(KA,IA,JA,5)
+
     ! diagnostic variables
-    real(8) :: PRES  (KA,IA,JA) ! pressure [Pa]
-    real(8) :: VELZ  (KA,IA,JA) ! velocity w [m/s]
-    real(8) :: VELX  (KA,IA,JA) ! velocity u [m/s]
-    real(8) :: VELY  (KA,IA,JA) ! velocity v [m/s]
-    real(8) :: POTT  (KA,IA,JA) ! potential temperature [K]
-    real(8) :: dens_s(KA,IA,JA) ! saved density
-    real(8) :: QDRY  (KA,IA,JA) ! dry air mixing ratio [kg/kg]
-    real(8) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
+    real(4) :: PRES  (KA,IA,JA) ! pressure [Pa]
+    real(4) :: VELZ  (KA,IA,JA) ! velocity w [m/s]
+    real(4) :: VELX  (KA,IA,JA) ! velocity u [m/s]
+    real(4) :: VELY  (KA,IA,JA) ! velocity v [m/s]
+    real(4) :: POTT  (KA,IA,JA) ! potential temperature [K]
+    real(4) :: dens_s(KA,IA,JA) ! saved density
+    real(4) :: QDRY  (KA,IA,JA) ! dry air mixing ratio [kg/kg]
+    real(4) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
 
     ! rayleigh damping, numerical diffusion
-    real(8) :: dens_diff(KA,IA,JA)     ! anomary of density
-    real(8) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
-    real(8) :: ray_damp (KA,IA,JA,5)
-    real(8) :: num_diff (KA,IA,JA,5,3)
+    real(4) :: dens_diff(KA,IA,JA)     ! anomary of density
+    real(4) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
+    real(4) :: ray_damp (KA,IA,JA,5)
+    real(4) :: num_diff (KA,IA,JA,5,3)
 
     ! mass flux
-    real(8) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
-    real(8) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+    real(4) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
+    real(4) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
 
     ! For FCT
-    real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: QTRC_lo  (KA,IA,JA,QA)  ! QTRC updated by low order flux
-    real(8) :: pjmax, pjmin, pjpls, pjmns, tmp
+    real(4) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
+    real(4) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
+    real(4) :: pjmns, tmp
 
     integer :: IIS, IIE
     integer :: JJS, JJE
 
-    real(8) :: dtrk, rdtrk
+    real(4) :: dtrk, rdtrk
     integer :: i, j, k, iq, iw, rko, step
     !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
 call START_COLLECTION("DYNAMICS")
 #endif
+
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       DENS(k,i,j) = real(DENS_r8(k,i,j), kind=4)
+       MOMZ(k,i,j) = real(MOMZ_r8(k,i,j), kind=4)
+       MOMX(k,i,j) = real(MOMX_r8(k,i,j), kind=4)
+       MOMY(k,i,j) = real(MOMY_r8(k,i,j), kind=4)
+       RHOT(k,i,j) = real(RHOT_r8(k,i,j), kind=4)
+    enddo
+    enddo
+    enddo
+    !OCL XFILL
+    do iq = 1, QA
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       QTRC(k,i,j,iq) = real(QTRC_r8(k,i,j,iq), kind=4)
+    enddo
+    enddo
+    enddo
+    enddo
+    !OCL XFILL
+    do k = 1, KA
+       REF_dens(k) = real(ATMOS_REFSTATE_dens(k), kind=4)
+    enddo
+    !OCL XFILL
+    do k = 1, KA
+       REF_pott(k) = real(ATMOS_REFSTATE_pott(k), kind=4)
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       DAMP_var  (k,i,j,2) = real(ATMOS_BOUNDARY_var  (k,i,j,2), kind=4)
+       DAMP_var  (k,i,j,3) = real(ATMOS_BOUNDARY_var  (k,i,j,3), kind=4)
+       DAMP_var  (k,i,j,4) = real(ATMOS_BOUNDARY_var  (k,i,j,4), kind=4)
+       DAMP_var  (k,i,j,5) = real(ATMOS_BOUNDARY_var  (k,i,j,5), kind=4)
+    enddo
+    enddo
+    enddo
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       DAMP_alpha(k,i,j,2) = real(ATMOS_BOUNDARY_alpha(k,i,j,2), kind=4)
+       DAMP_alpha(k,i,j,3) = real(ATMOS_BOUNDARY_alpha(k,i,j,3), kind=4)
+       DAMP_alpha(k,i,j,4) = real(ATMOS_BOUNDARY_alpha(k,i,j,4), kind=4)
+       DAMP_alpha(k,i,j,5) = real(ATMOS_BOUNDARY_alpha(k,i,j,5), kind=4)
+    enddo
+    enddo
+    enddo
 
     !OCL XFILL
     do j = JS, JE+1
@@ -1092,16 +1149,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8( DENS_RK1(:,:,:), 1 )
-    call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
-    call COMM_vars8( MOMX_RK1(:,:,:), 3 )
-    call COMM_vars8( MOMY_RK1(:,:,:), 4 )
-    call COMM_vars8( RHOT_RK1(:,:,:), 5 )
-    call COMM_wait ( DENS_RK1(:,:,:), 1 )
-    call COMM_wait ( MOMZ_RK1(:,:,:), 2 )
-    call COMM_wait ( MOMX_RK1(:,:,:), 3 )
-    call COMM_wait ( MOMY_RK1(:,:,:), 4 )
-    call COMM_wait ( RHOT_RK1(:,:,:), 5 )
+    call COMM_vars8_r4( DENS_RK1(:,:,:), 1 )
+    call COMM_vars8_r4( MOMZ_RK1(:,:,:), 2 )
+    call COMM_vars8_r4( MOMX_RK1(:,:,:), 3 )
+    call COMM_vars8_r4( MOMY_RK1(:,:,:), 4 )
+    call COMM_vars8_r4( RHOT_RK1(:,:,:), 5 )
+    call COMM_wait_r4 ( DENS_RK1(:,:,:), 1 )
+    call COMM_wait_r4 ( MOMZ_RK1(:,:,:), 2 )
+    call COMM_wait_r4 ( MOMX_RK1(:,:,:), 3 )
+    call COMM_wait_r4 ( MOMY_RK1(:,:,:), 4 )
+    call COMM_wait_r4 ( RHOT_RK1(:,:,:), 5 )
 
     !##### RK2 #####
     rko = 2
@@ -1433,16 +1490,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8( DENS_RK2(:,:,:), 1 )
-    call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
-    call COMM_vars8( MOMX_RK2(:,:,:), 3 )
-    call COMM_vars8( MOMY_RK2(:,:,:), 4 )
-    call COMM_vars8( RHOT_RK2(:,:,:), 5 )
-    call COMM_wait ( DENS_RK2(:,:,:), 1 )
-    call COMM_wait ( MOMZ_RK2(:,:,:), 2 )
-    call COMM_wait ( MOMX_RK2(:,:,:), 3 )
-    call COMM_wait ( MOMY_RK2(:,:,:), 4 )
-    call COMM_wait ( RHOT_RK2(:,:,:), 5 )
+    call COMM_vars8_r4( DENS_RK2(:,:,:), 1 )
+    call COMM_vars8_r4( MOMZ_RK2(:,:,:), 2 )
+    call COMM_vars8_r4( MOMX_RK2(:,:,:), 3 )
+    call COMM_vars8_r4( MOMY_RK2(:,:,:), 4 )
+    call COMM_vars8_r4( RHOT_RK2(:,:,:), 5 )
+    call COMM_wait_r4 ( DENS_RK2(:,:,:), 1 )
+    call COMM_wait_r4 ( MOMZ_RK2(:,:,:), 2 )
+    call COMM_wait_r4 ( MOMX_RK2(:,:,:), 3 )
+    call COMM_wait_r4 ( MOMY_RK2(:,:,:), 4 )
+    call COMM_wait_r4 ( RHOT_RK2(:,:,:), 5 )
 
     !##### RK3 #####
     rko = 3
@@ -1774,16 +1831,16 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_vars8( MOMZ(:,:,:), 2 )
-    call COMM_vars8( MOMX(:,:,:), 3 )
-    call COMM_vars8( MOMY(:,:,:), 4 )
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
+    call COMM_vars8_r4( DENS(:,:,:), 1 )
+    call COMM_vars8_r4( MOMZ(:,:,:), 2 )
+    call COMM_vars8_r4( MOMX(:,:,:), 3 )
+    call COMM_vars8_r4( MOMY(:,:,:), 4 )
+    call COMM_vars8_r4( RHOT(:,:,:), 5 )
+    call COMM_wait_r4 ( DENS(:,:,:), 1 )
+    call COMM_wait_r4 ( MOMZ(:,:,:), 2 )
+    call COMM_wait_r4 ( MOMX(:,:,:), 3 )
+    call COMM_wait_r4 ( MOMY(:,:,:), 4 )
+    call COMM_wait_r4 ( RHOT(:,:,:), 5 )
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("RK3")
@@ -1862,76 +1919,17 @@ call START_COLLECTION("FCT")
        enddo
        enddo
 
-       !--- update value with flux-divergence from the monotone scheme
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS-1, KE+1
-          QTRC_lo(k,i,j,iq) = ( QTRC(k,i,j,iq) * dens_s(k,i,j) &
-                              + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i,  j,  ZDIR) ) * RCDZ(k)     &
-                                           + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j,  XDIR) ) * RCDX(i)     &
-                                           + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) &
-                              ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
+       ! --- STEP C: compute the outgoing fluxes in each cell ---
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          ! --- STEP A: establish allowed extreme max/min in each cell using low order fluxes ---
-          pjmax = max( QTRC_lo(k  ,i  ,j  ,iq), &
-                       QTRC_lo(k+1,i  ,j  ,iq), &
-                       QTRC_lo(k-1,i  ,j  ,iq), &
-                       QTRC_lo(k  ,i+1,j  ,iq), &
-                       QTRC_lo(k  ,i-1,j  ,iq), &
-                       QTRC_lo(k  ,i  ,j+1,iq), &
-                       QTRC_lo(k  ,i  ,j-1,iq), &
-                       QTRC   (k  ,i  ,j  ,iq), &
-                       QTRC   (k+1,i  ,j  ,iq), &
-                       QTRC   (k-1,i  ,j  ,iq), &
-                       QTRC   (k  ,i+1,j  ,iq), &
-                       QTRC   (k  ,i-1,j  ,iq), &
-                       QTRC   (k  ,i  ,j+1,iq), &
-                       QTRC   (k  ,i  ,j-1,iq)  )
 
-          pjmin = min( QTRC_lo(k  ,i  ,j  ,iq), &
-                       QTRC_lo(k+1,i  ,j  ,iq), &
-                       QTRC_lo(k-1,i  ,j  ,iq), &
-                       QTRC_lo(k  ,i+1,j  ,iq), &
-                       QTRC_lo(k  ,i-1,j  ,iq), &
-                       QTRC_lo(k  ,i  ,j+1,iq), &
-                       QTRC_lo(k  ,i  ,j-1,iq), &
-                       QTRC   (k  ,i  ,j  ,iq), &
-                       QTRC   (k+1,i  ,j  ,iq), &
-                       QTRC   (k-1,i  ,j  ,iq), &
-                       QTRC   (k  ,i+1,j  ,iq), &
-                       QTRC   (k  ,i-1,j  ,iq), &
-                       QTRC   (k  ,i  ,j+1,iq), &
-                       QTRC   (k  ,i  ,j-1,iq)  )
+          pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
+                + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
+                + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
 
-          ! --- STEP C: compute the total incoming and outgoing antidiffusive fluxes in each cell ---
-          pjpls = max( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) )
-          pjmns = max( 0.D0, qflx_anti(k  ,i  ,j  ,ZDIR) ) - min( 0.D0, qflx_anti(k-1,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j  ,XDIR) ) - min( 0.D0, qflx_anti(k  ,i-1,j  ,XDIR) ) &
-                + max( 0.D0, qflx_anti(k  ,i  ,j  ,YDIR) ) - min( 0.D0, qflx_anti(k  ,i  ,j-1,YDIR) )
-
-          ! --- incoming fluxes ---
-          if ( pjpls > 0.D0 ) then
-             tmp = ( pjmax - QTRC_lo(k,i,j,iq) ) / pjpls * rdtrk
-             rjpls(k,i,j,ZDIR) = tmp * CDZ(k)
-             rjpls(k,i,j,XDIR) = tmp * CDX(i)
-             rjpls(k,i,j,YDIR) = tmp * CDY(j)
-          else
-             rjpls(k,i,j,ZDIR) = 0.D0
-             rjpls(k,i,j,XDIR) = 0.D0
-             rjpls(k,i,j,YDIR) = 0.D0
-          endif
-
-          ! --- outgoing fluxes ---
           if ( pjmns > 0.D0 ) then
-             tmp = ( QTRC_lo(k,i,j,iq) - pjmin ) / pjmns * rdtrk
+             tmp = QTRC(k,i,j,iq) / pjmns * rdtrk
              rjmns(k,i,j,ZDIR) = tmp * CDZ(k)
              rjmns(k,i,j,XDIR) = tmp * CDX(i)
              rjmns(k,i,j,YDIR) = tmp * CDY(j)
@@ -1948,18 +1946,12 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars8( rjpls(:,:,:,ZDIR), 1 )
-    call COMM_vars8( rjpls(:,:,:,XDIR), 2 )
-    call COMM_vars8( rjpls(:,:,:,YDIR), 3 )
-    call COMM_vars8( rjmns(:,:,:,ZDIR), 4 )
-    call COMM_vars8( rjmns(:,:,:,XDIR), 5 )
-    call COMM_vars8( rjmns(:,:,:,YDIR), 6 )
-    call COMM_wait ( rjpls(:,:,:,ZDIR), 1 )
-    call COMM_wait ( rjpls(:,:,:,XDIR), 2 )
-    call COMM_wait ( rjpls(:,:,:,YDIR), 3 )
-    call COMM_wait ( rjmns(:,:,:,ZDIR), 4 )
-    call COMM_wait ( rjmns(:,:,:,XDIR), 5 )
-    call COMM_wait ( rjmns(:,:,:,YDIR), 6 )
+    call COMM_vars8_r4( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_vars8_r4( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_vars8_r4( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_wait_r4 ( rjmns(:,:,:,ZDIR), ZDIR )
+    call COMM_wait_r4 ( rjmns(:,:,:,XDIR), XDIR )
+    call COMM_wait_r4 ( rjmns(:,:,:,YDIR), YDIR )
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1972,9 +1964,13 @@ call START_COLLECTION("FCT")
        do i = IIS, IIE
        do k = KS-1, KE
           if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
-             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * max( min( rjpls(k+1,i,j,ZDIR), rjmns(k  ,i,j,ZDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k  ,i,j,ZDIR) >= 0.D0 .AND. rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
+             endif
           else
-             qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) * max( min( rjpls(k  ,i,j,ZDIR), rjmns(k+1,i,j,ZDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k+1,i,j,ZDIR) >= 0.D0 .AND. rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k+1,i,j,ZDIR)
+             endif
           endif
        enddo
        enddo
@@ -1984,9 +1980,13 @@ call START_COLLECTION("FCT")
        do i = IIS-1, IIE
        do k = KS, KE
           if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
-             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * max( min( rjpls(k,i+1,j,XDIR), rjmns(k,i  ,j,XDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k,i  ,j,XDIR) >= 0.D0 .AND. rjmns(k,i  ,j,XDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
+             endif
           else
-             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) * max( min( rjpls(k,i  ,j,XDIR), rjmns(k,i+1,j,XDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k,i+1,j,XDIR) >= 0.D0 .AND. rjmns(k,i+1,j,XDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i+1,j,XDIR)
+             endif
           endif
        enddo
        enddo
@@ -1996,9 +1996,13 @@ call START_COLLECTION("FCT")
        do i = IIS,   IIE
        do k = KS, KE
           if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
-             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * max( min( rjpls(k,i,j+1,YDIR), rjmns(k,i,j  ,YDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k,i,j  ,YDIR) >= 0.D0 .AND. rjmns(k,i,j  ,YDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
+             endif
           else
-             qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) * max( min( rjpls(k,i,j  ,YDIR), rjmns(k,i,j+1,YDIR), 1.D0 ), 0.D0 )
+             if ( rjmns(k,i,j+1,YDIR) >= 0.D0 .AND. rjmns(k,i,j+1,YDIR) < 1.D0 ) then
+                qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j+1,YDIR)
+             endif
           endif
        enddo
        enddo
@@ -2008,11 +2012,11 @@ call START_COLLECTION("FCT")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-                         + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR)-qflx_anti(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                      + ( qflx_anti(k,i,j,XDIR)-qflx_anti(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                      + ( qflx_anti(k,i,j,YDIR)-qflx_anti(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                                  ) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * dens_s(k,i,j) &
+                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                                        + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) &
+                           ) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -2034,10 +2038,32 @@ call STOP_COLLECTION("FCT")
 call STOP_COLLECTION("DYNAMICS")
 #endif
 
+    !OCL XFILL
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       DENS_r8(k,i,j) = real(DENS(k,i,j), kind=8)
+       MOMZ_r8(k,i,j) = real(MOMZ(k,i,j), kind=8)
+       MOMX_r8(k,i,j) = real(MOMX(k,i,j), kind=8)
+       MOMY_r8(k,i,j) = real(MOMY(k,i,j), kind=8)
+       RHOT_r8(k,i,j) = real(RHOT(k,i,j), kind=8)
+    enddo
+    enddo
+    enddo
+    !OCL XFILL
+    do iq = 1, QA
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       QTRC_r8(k,i,j,iq) = real(QTRC(k,i,j,iq), kind=8)
+    enddo
+    enddo
+    enddo
+    enddo
+
     call ATMOS_vars_total
 
     return
   end subroutine ATMOS_DYN
 
 end module mod_atmos_dyn
-
