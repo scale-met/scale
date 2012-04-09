@@ -8,7 +8,9 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-11-11 (H.Yashiro)  [new]
+!! @li      2012-01-10 (H.Yashiro)  [mod] Change setup order, HISTORY module
+!! @li      2012-03-23 (H.Yashiro)  [mod] GEOMETRICS, MONITOR module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -34,6 +36,7 @@ program scaleles3
      TIME_DOATMOS_step,    &
      TIME_DOOCEAN_step,    &
      TIME_DOATMOS_restart, &
+     TIME_DOOCEAN_restart, &
      TIME_DOend,           &
      TIME_rapstart,        &
      TIME_rapend,          &
@@ -43,8 +46,17 @@ program scaleles3
      FIO_finalize
   use mod_grid, only: &
      GRID_setup
+  use mod_geometrics, only: &
+     GEOMETRICS_setup
   use mod_comm, only: &
      COMM_setup
+  use mod_history, only: &
+     HIST_setup, &
+     HIST_write
+  use mod_monitor, only: &
+     MONIT_setup, &
+     MONIT_write, &
+     MONIT_finalize
   use mod_atmos, only: &
      ATMOS_setup, &
      ATMOS_step
@@ -56,9 +68,9 @@ program scaleles3
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
-  use mod_history, only: &
-     HIST_setup, &
-     HIST_write
+  use mod_ocean_vars, only: &
+     OCEAN_vars_restart_write, &
+     OCEAN_sw_restart
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -91,17 +103,23 @@ program scaleles3
   ! setup horisontal/veritical grid system
   call GRID_setup
 
+  ! setup geometrics
+  call GEOMETRICS_setup
+
   ! setup mpi communication
   call COMM_setup
+
+  ! setup history
+  call HIST_setup
+
+  ! setup monitor
+  call MONIT_setup
 
   ! setup atmosphere
   call ATMOS_setup
 
   ! setup ocean
   call OCEAN_setup
-
-  ! setup history
-  call HIST_setup
 
   call TIME_rapend('Initialize')
 
@@ -124,11 +142,13 @@ program scaleles3
     ! time advance
     call TIME_advance
 
-    ! history file output
+    ! history&monitor file output
     call HIST_write
+    call MONIT_write('MAIN')
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
 
     if ( TIME_DOend ) exit
 
@@ -151,6 +171,7 @@ program scaleles3
   call TIME_rapreport
 
   call FIO_finalize
+  call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop
 
