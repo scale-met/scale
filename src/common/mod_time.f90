@@ -320,7 +320,12 @@ contains
   !> Advance the time & eval. timing to restart&stop
   !-----------------------------------------------------------------------------
   subroutine TIME_advance
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     implicit none
+
+    logical :: exists
 
     real(8) :: temp
     !---------------------------------------------------------------------------
@@ -340,7 +345,15 @@ contains
       TIME_DOend = .true.
     endif
 
+    ! QUIT file control
+    if ( PRC_myrank == PRC_master ) then ! master node
+       inquire(file='QUIT', exist=exists)
+
+       if( exists ) TIME_DOend = .true.
+    endif
+
     TIME_DOATMOS_restart = .false.
+    TIME_DOOCEAN_restart = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + TIME_DTSEC
     TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + TIME_DTSEC
