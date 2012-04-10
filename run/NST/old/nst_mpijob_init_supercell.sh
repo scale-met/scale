@@ -4,9 +4,9 @@
 #
 #BSUB -q cl
 #BSUB -n 64
-#BSUB -J scale3
-#BSUB -o scale3_log
-#BSUB -e scale3_error
+#BSUB -J supercell
+#BSUB -o supercell_log
+#BSUB -e supercell_error
 #BSUB -R "span[ptile=8]"
 
 export OMP_NUM_THREADS=1
@@ -15,7 +15,7 @@ export HMDIR=/home/yashiro/scale3
 export BIN=${HMDIR}/bin/NST-ifort
 export EXE=init_supercell
 
-export OUTDIR=${HMDIR}/output/init_supercell3
+export OUTDIR=${HMDIR}/output/init_supercell
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -53,14 +53,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = 'grid_400m_50x50x50',
+ GRID_OUT_BASENAME = "grid_400m_50x50x50",
  GRID_DXYZ         = 400.D0,
  GRID_KMAX         = 50,
  GRID_IMAX         = 50,
  GRID_JMAX         = 50,
  GRID_BUFFER_DZ    = 8.0D3,
- GRID_BUFFER_DX    = 0.0D0,
- GRID_BUFFER_DY    = 0.0D0,
  GRID_BUFFFACT     = 1.0D0,
 /
 
@@ -74,11 +72,11 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX            = 11,
  ATMOS_RESTART_OUTPUT       = .true.,
- ATMOS_RESTART_OUT_BASENAME = 'init_supercell',
+ ATMOS_RESTART_OUT_BASENAME = "init_supercell",
 /
 
 &PARAM_MKEXP_SUPERCELL
- ENV_IN_SOUNDING_file = '${HMDIR}/data/supercell/input_sounding.txt',
+ ENV_IN_SOUNDING_file = "${HMDIR}/data/supercell/input_sounding.txt",
  EXT_TBBL = 3.D0
  ZC_BBL =  1.5D3,
  XC_BBL = 80.0D3,

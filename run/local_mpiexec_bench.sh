@@ -1,20 +1,9 @@
 #! /bin/bash -x
 #
-# for AICS.common
+# for Local machine (MacOSX 8core+ifort+MPICH2)
 #
-#$ -pe  mpi 1
-#$ -q   small
-#$ -cwd
-
-export RLIMIT_MEMLOCK=65536
-ulimit -l 65536
-. /opt/intel/ics/2011.05.23/ictvars.sh
-
-export I_MPI_HYDRA_BOOTSTRAP=rsh
-export I_MPI_HYDRA_BOOTSTRAP_EXEC=/usr/bin/rsh
-
-export HMDIR=/home/yashiro/scale3
-export BIN=${HMDIR}/bin/${SCALE_SYS}
+export HMDIR=~/GCMresults/sol/latest
+export BIN=~/Dropbox/Inbox/scale3/bin/${SCALE_SYS}
 export EXE=scale3_336x63x63_ndw6_
 
 export OUTDIR=${HMDIR}/output/${postfix}/scale3_1x1
@@ -175,7 +164,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-mpiexec.hydra -hostfile $TMPDIR/machines -n 1 -perhost 1 $BIN/$EXE ${EXE}.cnf
+/usr/local/mpich213/bin/mpiexec -np 1 -f /Users/yashiro/libs/mpilib/machines_local $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
 echo "job ${RUNNAME} end     at " `date`
 
 exit
