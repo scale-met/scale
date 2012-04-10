@@ -167,7 +167,7 @@ contains
     DIFF4 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 4/2+1 )
     DIFF2 = - ATMOS_DYN_numerical_diff * (-1.D0)**( 2/2+1 )
 
-    d2r   = PI / 180.D0
+    d2r = PI / 180.D0
 
     if ( ATMOS_DYN_enable_coriolis ) then
        do j = 1, JA
@@ -515,16 +515,6 @@ call START_COLLECTION("SET")
              dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
              pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
           enddo
-          !OCL XFILL
-          do k = 1, KS-1 
-             dens_diff(k,i,j) = dens_diff(KS,i,j)
-             pott_diff(k,i,j) = pott_diff(KS,i,j)
-          enddo
-          !OCL XFILL
-          do k = KE+1, KA
-             dens_diff(k,i,j) = dens_diff(KE,i,j)
-             pott_diff(k,i,j) = pott_diff(KE,i,j)
-          enddo
        enddo
        enddo
 
@@ -576,7 +566,7 @@ call START_COLLECTION("SET")
        ! z-momentum
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5D0*(CDZ(k+1)+CDZ(k)) )**4 &
                                       * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
                                         - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
@@ -586,9 +576,22 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+!       do j = JJS,   JJE
+!       do i = IIS,   IIE
+!          num_diff(KS  ,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KS) &
+!                                         * 4.0D0 * ( MOMZ(KS  ,i,j)-MOMZ(KS-1,i,j) ) 
+!          num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KS+1) &
+!                                         * 4.0D0 * ( MOMZ(KS+1,i,j)-MOMZ(KS  ,i,j) ) 
+!          num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KE-1) &
+!                                         * 4.0D0 * ( MOMZ(KE-1,i,j)-MOMZ(KE-2,i,j) )
+!          num_diff(KE  ,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KE) &
+!                                         * 4.0D0 * ( MOMZ(KE  ,i,j)-MOMZ(KE-1,i,j) ) 
+!       enddo
+!       enddo
+
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS-1, KE
+       do k = KS, KE-1
           num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
                                       * ( CNDX(1,i+1) * MOMZ(k,i+2,j) &
                                         - CNDX(2,i+1) * MOMZ(k,i+1,j) &
@@ -600,7 +603,7 @@ call START_COLLECTION("SET")
 
        do j = JJS-1, JJE
        do i = IIS,   IIE
-       do k = KS-1, KE
+       do k = KS, KE-1
           num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
                                       * ( CNDY(1,j+1) * MOMZ(k,i,j+2) &
                                         - CNDY(2,j+1) * MOMZ(k,i,j+1) &
