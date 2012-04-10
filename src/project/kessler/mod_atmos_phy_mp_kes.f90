@@ -155,23 +155,58 @@ contains
     real(8) :: pt_prev
     real(8) :: efact
 
-    integer :: k, i, j, ite
+    real(8) :: diffq(KA)
+
+    integer :: k, i, j, iq, ite
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
+    do j = 1, JA
+    do i = 1, IA
+       ! total hydrometeor (before correction)
+       do k = 1, KA
+          diffq(k) = QTRC(k,i,j,I_QV) &
+                   + QTRC(k,i,j,I_QC) &
+                   + QTRC(k,i,j,I_QR)
+       enddo
+
+       ! remove negative value of hydrometeor (mass, number)
+       do iq = I_QV, I_QR
+       do k  = 1, KA
+          if ( QTRC(k,i,j,iq) < 0.D0 ) then
+             QTRC(k,i,j,iq) = 0.D0
+          endif
+       enddo
+       enddo
+
+       ! apply correction of hydrometeor to total density
+       do k  = 1, KA
+          DENS(k,i,j) = DENS(k,i,j)        &
+                      * ( 1.D0             &
+                        + QTRC(k,i,j,I_QV) &
+                        + QTRC(k,i,j,I_QC) &
+                        + QTRC(k,i,j,I_QR) &
+                        - diffq(k)         ) ! after-before
+       enddo
+    enddo
+    enddo
+
     ! averaged profile of density [g/cc]
     do k = KS, KE
        rho_prof(k) = 0.D0
+    enddo
 
-       do j = JS, JE
-       do i = IS, IE
-          rho_prof(k) = rho_prof(k) + DENS(k,i,j)
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rho_prof(k) = rho_prof(k) + DENS(k,i,j)
+    enddo
+    enddo
+    enddo
 
+    do k = KS, KE
        rho_prof(k) = rho_prof(k) / real(IMAX*JMAX,kind=8) * 1.D-3
-
        rho_fact(k) = sqrt( rho_prof(KS)/rho_prof(k) )
     enddo
 
@@ -181,12 +216,12 @@ contains
        do k = KS, KE
           pott(k) = RHOT(k,i,j) / DENS(k,i,j)
 
-          Rmoist (k) = Rdry  +  Rvap * QTRC(k,i,j,I_QV)
-          CPmoist(k) = CPdry + CPvap * QTRC(k,i,j,I_QV)
-          CVmoist(k) = CVdry + CVvap * QTRC(k,i,j,I_QV)
+          Rmoist (k) = Rdry  * (1.D0-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
+          CPmoist(k) = CPdry * (1.D0-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
+          CVmoist(k) = CVdry * (1.D0-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
 
-          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rdry / P00 )**CPovCV
-          temp(k) = pres(k) / ( DENS(k,i,j) * Rdry )
+          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+          temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
           qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
 
           LEovSE(k) = ( LH0 * pott(k) ) / ( CPdry * temp(k) ) ! use prior value of temp & pt
@@ -199,17 +234,21 @@ contains
              do ite = 1, itelim
                 pt_prev = pott(k)
 
-                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rdry / P00 )**CPovCV
-                temp(k) = pres(k) / ( DENS(k,i,j) * Rdry )
+                Rmoist (k) = Rdry  * (1.D0-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
+                CPmoist(k) = CPdry * (1.D0-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
+                CVmoist(k) = CVdry * (1.D0-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
+
+                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+                temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
                 qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
 
-                efact = LEovSE(k) * CVdry / CVmoist(k) &
+                efact = LEovSE(k) * CVdry/CVmoist(k) &
                       - pott(k) * Rvap/CVmoist(k) * ( 1.D0 - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
 
                 dq_cond1(k) = ( QTRC(k,i,j,I_QV)-qvs(k) ) &
                             / ( 1.D0 + qvs(k) * LH0 / CPdry * tt1 * ( T00-tt2 ) / (temp(k)-tt2) )
 
-                pott(k)      = pott(k)      + dq_cond1(k) * efact
+                pott(k)          = pott(k)          + dq_cond1(k) * efact
                 QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) - dq_cond1(k)
                 QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + dq_cond1(k)
 
@@ -235,8 +274,10 @@ contains
        ! Evaporation
        do k = KS, KE
           if ( QTRC(k,i,j,I_QR) > 0.D0 ) then
-             pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rdry / P00 )**CPovCV
-             temp(k) = pres(k) / ( DENS(k,i,j) * Rdry )
+             Rmoist(k) = Rdry * (1.D0-QTRC(k,i,j,I_QV)) + Rvap * QTRC(k,i,j,I_QV)
+
+             pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+             temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
              qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
 
              if ( qvs(k) > QTRC(k,i,j,I_QV) ) then ! unsaturatd
@@ -288,11 +329,11 @@ contains
 
        ! Update POTT, QV, QC, QR
        do k = KS, KE
-          Rmoist (k) = Rdry  +  Rvap * QTRC(k,i,j,I_QV)
-          CPmoist(k) = CPdry + CPvap * QTRC(k,i,j,I_QV)
-          CVmoist(k) = CVdry + CVvap * QTRC(k,i,j,I_QV)
+          Rmoist (k) = Rdry  * (1.D0-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
+          CPmoist(k) = CPdry * (1.D0-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
+          CVmoist(k) = CVdry * (1.D0-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
 
-          efact = LEovSE(k) * CVdry / CVmoist(k) &
+          efact = LEovSE(k) * CVdry/CVmoist(k) &
                 - pott(k) * Rvap/CVmoist(k) * ( 1.D0 - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
 
           pott(k)          = pott(k)          + (                       -dq_evap(k) )*dt * efact
@@ -320,8 +361,12 @@ contains
 
        ! Saturation adjustment (again)
        do k = KS, KE
-          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rdry / P00 )**CPovCV
-          temp(k) = pres(k) / ( DENS(k,i,j) * Rdry )
+                Rmoist (k) = Rdry  * (1.D0-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
+                CPmoist(k) = CPdry * (1.D0-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
+                CVmoist(k) = CVdry * (1.D0-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
+
+          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+          temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
           qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
 
           if ( QTRC(k,i,j,I_QV) > qvs(k) ) then ! supersaturatd
@@ -329,11 +374,11 @@ contains
              do ite = 1, itelim
                 pt_prev = pott(k)
 
-                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rdry / P00 )**CPovCV
-                temp(k) = pres(k) / ( DENS(k,i,j) * Rdry )
+                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+                temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
                 qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
 
-                efact = LEovSE(k) * CVdry / CVmoist(k)                                     &
+                efact = LEovSE(k) * CVdry/CVmoist(k)                                               &
                       - pott(k) * Rvap/CVmoist(k) * ( 1.D0 - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
 
                 dq_cond2(k) = ( QTRC(k,i,j,I_QV)-qvs(k) ) &

@@ -14,6 +14,8 @@ program check_diff
   integer :: ios_a, ios_b
   real :: dat_a, dat_b
 
+  integer :: iargc
+
   ! initialize
   ios_a=0
   ios_b=0
