@@ -3,7 +3,7 @@
 # for AICS.common
 #
 #$ -pe  mpi 1
-#$ -q   large
+#$ -q   small
 #$ -cwd
 
 export RLIMIT_MEMLOCK=65536
@@ -15,7 +15,7 @@ export I_MPI_HYDRA_BOOTSTRAP_EXEC=/usr/bin/rsh
 
 export HMDIR=/home/yashiro/scale3
 export BIN=${HMDIR}/bin/${SCALE_SYS}
-export EXE=init_coldbubble
+export EXE=scale3_init_336x63x63_ndw6_
 
 export OUTDIR=${HMDIR}/output/init_coldbubble
 
@@ -27,7 +27,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 init_coldbubble configulation
+# Scale3 mkinit configulation
 #
 #####
 
@@ -38,52 +38,38 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  PRC_PERIODIC_Y  = .true.,
 /
 
-&PARAM_TIME
- TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
- TIME_STARTMS               = 0.D0,
-/
-
-
-
-
-
-
-
-
-
-
-
-
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_20m_336x63x63",
- GRID_DXYZ         = 20.D0,
- GRID_KMAX         = 336,
- GRID_IMAX         = 63,
- GRID_JMAX         = 63,
- GRID_BUFFER_DZ    = 6.0D3,
- GRID_BUFFFACT     = 1.1D0,
+ GRID_OUT_BASENAME = "grid_020m_336x63x63",
 /
 
-&PARAM_ATMOS
- ATMOS_TYPE_DYN    = "fent_fct",
- ATMOS_TYPE_PHY_TB = "smagorinsky",
- ATMOS_TYPE_PHY_MP = "NDW6",
- ATMOS_TYPE_PHY_RD = "mstrnX",
+&PARAM_GEOMETRICS
+ GEOMETRICS_startlonlat  = 120.D0, 30.D0,
+ GEOMETRICS_rotation     = 10.D0,
+ GEOMETRICS_OUT_BASENAME = "",
+/
+
+&PARAM_COMM
+ COMM_total_doreport  = .true.,
+ COMM_total_globalsum = .true.,
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_QTRC_NMAX              = 11,
  ATMOS_RESTART_OUTPUT         = .true.,
  ATMOS_RESTART_OUT_BASENAME   = "init_coldbubble",
 /
 
-&PARAM_MKEXP_COLDBUBBLE
- ZC_BBL =  6.0D2,
- XC_BBL =  6.0D2,
- YC_BBL =  6.0D2,
- ZR_BBL =  2.0D2,
- XR_BBL =  2.0D2,
- YR_BBL =  2.0D2,
+&PARAM_MKINIT
+ MKINIT_initname = "COLDBUBBLE",
+/
+
+&PARAM_MKINIT_COLDBUBBLE
+ BBL_THETA = -5.D0,
+ BBL_CZ = 6.D2,
+ BBL_CX = 6.D2,
+ BBL_CY = 6.D2,
+ BBL_RZ = 2.D2,
+ BBL_RX = 2.D2,
+ BBL_RY = 2.D2,
 /
 
 End_of_SYSIN

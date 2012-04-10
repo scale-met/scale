@@ -4,18 +4,18 @@
 #
 #BSUB -q cl
 #BSUB -n 64
-#BSUB -J scale3
-#BSUB -o scale3_log
-#BSUB -e scale3_error
+#BSUB -J supercell
+#BSUB -o supercell_log
+#BSUB -e supercell_error
 #BSUB -R "span[ptile=8]"
 
 export OMP_NUM_THREADS=1
 
 export HMDIR=/home/yashiro/scale3
 export BIN=${HMDIR}/bin/NST-ifort
-export EXE=Microphysics
+export EXE=MPTB_KESSLER
 
-export OUTDIR=${HMDIR}/output/supercell3
+export OUTDIR=${HMDIR}/output/supercell
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
@@ -41,12 +41,12 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = 7200.D0,
  TIME_DURATION_UNIT         = 'SEC',
- TIME_DT                    = 0.6D0,
+ TIME_DT                    = 1.0D0,
  TIME_DT_UNIT               = 'SEC',
- TIME_DT_ATMOS_DYN          = 0.6D0,
+ TIME_DT_ATMOS_DYN          = 0.5D0,
  TIME_DT_ATMOS_DYN_UNIT     = 'SEC',
- TIME_NSTEP_ATMOS_DYN       = 1,
- TIME_DT_ATMOS_PHY_MP       = 0.6D0,
+ TIME_NSTEP_ATMOS_DYN       = 2,
+ TIME_DT_ATMOS_PHY_MP       = 1.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = 'SEC',
  TIME_DT_ATMOS_RESTART      = 900.D0,
  TIME_DT_ATMOS_RESTART_UNIT = 'SEC',
@@ -58,9 +58,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  GRID_KMAX         = 50,
  GRID_IMAX         = 50,
  GRID_JMAX         = 50,
- GRID_BUFFER_DZ    = 8.0D3,
- GRID_BUFFER_DX    = 0.0D0,
- GRID_BUFFER_DY    = 0.0D0,
+ GRID_BUFFER_DZ    = 4.0D3,
  GRID_BUFFFACT     = 1.0D0,
 /
 
@@ -73,7 +71,7 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_VARS
  ATMOS_QTRC_NMAX              = 11,
- ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_supercell3/init_supercell_63072000000.000',
+ ATMOS_RESTART_IN_BASENAME    = '${HMDIR}/output/init_supercell/init_supercell_63072000000.000',
  ATMOS_RESTART_OUTPUT         = .true.,
  ATMOS_RESTART_OUT_BASENAME   = 'init_supercell',
 /
@@ -139,7 +137,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-mpijob $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
+mpijob $BIN/$EXE ${EXE}.cnf
 echo "job ${RUNNAME} end     at " `date`
 
 exit

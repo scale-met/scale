@@ -1,39 +1,31 @@
 #! /bin/bash -x
 #
-# for OAKLEAF-FX
+# for 3 team (NST) cluster
 #
-#PJM -L "rscgrp=short"
-#PJM -L "node=1x1"
-#PJM -L "elapse=00:10:00"
-#PJM -j
+#BSUB -q as
+#BSUB -n 1
+#BSUB -J scale3
+#BSUB -o scale3_log
+#BSUB -e scale3_error
+export OMP_NUM_THREADS=1
 
-export PARALLEL=8
-export OMP_NUM_THREADS=$PARALLEL
-export fu08bf=10
-
-export HMDIR=/home/c18001/scale3
-export BIN=${HMDIR}/bin/FX10
+export HMDIR=/home/yashiro/scale3
+export BIN=${HMDIR}/bin/NST-ifort
 export EXE=scale3_336x63x63_ndw6_
 
-export OUTDIR=${HMDIR}/output/coldbubble_20m
+export OUTDIR=${HMDIR}/output/${postfix}/scale3_1x1
 
 mkdir -p ${OUTDIR}
 cd ${OUTDIR}
-rm -rf ./prof
 
 ########################################################################
 cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 #####
 #
-# Scale3 benchmark configuration
+# Scale3 benchmark configulation
 #
 #####
-
-&PARAM_IO
- IO_LOG_SUPPRESS = .false.,
- IO_LOG_ALLNODE  = .false.,
-/
 
 &PARAM_PRC
  PRC_NUM_X       = 1,
@@ -42,13 +34,10 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  PRC_PERIODIC_Y  = .true.,
 /
 
-&PARAM_CONST
-/
-
 &PARAM_TIME
  TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 30.D0,
+ TIME_DURATION              = 3.0D0,
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 0.6D0,
  TIME_DT_UNIT               = "SEC",
@@ -61,10 +50,13 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 0.6D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_RESTART      = 15.D0,
+ TIME_DT_ATMOS_RESTART      = 3.0D0,
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
- TIME_DT_OCEAN              = 15.D0,
- TIME_DT_OCEAN_UNIT         = "MIN",
+ TIME_DT_OCEAN              = 3.D0,
+ TIME_DT_OCEAN_UNIT         = "SEC",
+ TIME_DT_OCEAN_RESTART      = 3.D0,
+ TIME_DT_OCEAN_RESTART_UNIT = "SEC",
+/
 /
 
 &PARAM_GRID
@@ -79,26 +71,23 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 /
 
 &PARAM_COMM
- COMM_vsize_max       = 40,
  COMM_total_doreport  = .true.,
  COMM_total_globalsum = .true.,
 /
 
 &PARAM_ATMOS
  ATMOS_TYPE_DYN    = "fent_pdfct",
- ATMOS_TYPE_PHY_TB = "smagorinsky",
- ATMOS_TYPE_PHY_MP = "NDW6",
- ATMOS_TYPE_PHY_RD = "mstrnX",
+ ATMOS_TYPE_PHY_TB = "NONE",
+ ATMOS_TYPE_PHY_MP = "NONE",
+ ATMOS_TYPE_PHY_RD = "NONE",
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_RESTART_IN_BASENAME      = "${HMDIR}/output/init_coldbubble_20m/init_coldbubble_63072000000.000",
- ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.,
- ATMOS_RESTART_OUTPUT           = .true.,
- ATMOS_RESTART_OUT_BASENAME     = "init_coldbubble",
- ATMOS_RESTART_CHECK            = .false.,
- ATMOS_RESTART_CHECK_BASENAME   = "restart_check",
- ATMOS_RESTART_CHECK_CRITERION  =  1.D-6
+ ATMOS_RESTART_IN_BASENAME    = "${HMDIR}/data/init_coldbubble/init_coldbubble_63072000000.000",
+ ATMOS_RESTART_OUTPUT         = .false.,
+ ATMOS_RESTART_OUT_BASENAME   = "check_coldbubble",
+ ATMOS_RESTART_CHECK          = .true.,
+ ATMOS_RESTART_CHECK_BASENAME = "${HMDIR}/data/coldbubble/check_coldbubble_63072000003.000",
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -111,16 +100,24 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 &PARAM_ATMOS_BOUNDARY
  ATMOS_BOUNDARY_OUT_BASENAME = "boundary",
- ATMOS_BOUNDARY_VALUE_VELX   =  0.D0,
- ATMOS_BOUNDARY_TAUZ         = 10.D0,
+! ATMOS_BOUNDARY_VALUE_VELZ   =   0.D0,
+ ATMOS_BOUNDARY_TAUZ         =  10.D0,
 /
 
 &PARAM_ATMOS_DYN
- ATMOS_DYN_NUMERICAL_DIFF = 1.D-2,
+ ATMOS_DYN_NUMERICAL_DIFF = 1.D-3,
 /
 
 &PARAM_OCEAN
  OCEAN_TYPE = "FIXEDSST",
+/
+
+&PARAM_OCEAN_VARS
+ OCEAN_RESTART_OUTPUT       = .false.,
+/
+
+&PARAM_OCEAN_FIXEDSST
+ OCEAN_FIXEDSST_STARTSST = 300.D0,
 /
 
 &PARAM_HISTORY
@@ -137,19 +134,19 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
 
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item='PT'   /
+#&HISTITEM item='U'    /
+#&HISTITEM item='V'    /
+#&HISTITEM item='W'    /
+#&HISTITEM item='PT'   /
 #&HISTITEM item='PRES' /
 #&HISTITEM item='T'    /
 
-&HISTITEM item='VOR'  /
-&HISTITEM item='ENGP' /
-&HISTITEM item='ENGK' /
-&HISTITEM item='ENGI' /
+#&HISTITEM item='VOR'  /
+#&HISTITEM item='ENGP' /
+#&HISTITEM item='ENGK' /
+#&HISTITEM item='ENGI' /
 
-&HISTITEM item='QV'   /
+#&HISTITEM item='QV'   /
 #&HISTITEM item='QTOT' /
 #&HISTITEM item='QC'   /
 #&HISTITEM item='QR'   /
@@ -162,17 +159,19 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #&HISTITEM item='NS'   /
 #&HISTITEM item='NG'   /
 
-&HISTITEM item='TKE'  /
-&HISTITEM item='NU'   /
+#&HISTITEM item='TKE'  /
+#&HISTITEM item='NU'   /
 #&HISTITEM item='Pr'   /
 #&HISTITEM item='Ri'   /
+
+#&HISTITEM item='SST'   /
 
 End_of_SYSIN
 ########################################################################
 
 # run
 echo "job ${RUNNAME} started at " `date`
-fipp -C -Ihwm -d prof mpiexec $BIN/$EXE $EXE.cnf
+mpijob $BIN/$EXE ${EXE}.cnf
 echo "job ${RUNNAME} end     at " `date`
 
 exit
