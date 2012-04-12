@@ -705,7 +705,7 @@ contains
     real(8) :: ENV_L3_THETA   = 305.D0 ! THETA in the layer3 (high THETA) [K]
     real(8) :: ENV_L1_U       =   0.D0 ! velocity u in the layer1 (low  THETA) [K]
     real(8) :: ENV_L3_U       =  20.D0 ! velocity u in the layer3 (high THETA) [K]
-    real(8) :: ENV_L1_RH      =  30.D0 ! Relative Humidity in the layer1 (low  THETA) [%]
+    real(8) :: ENV_L1_RH      =  50.D0 ! Relative Humidity in the layer1 (low  THETA) [%]
     real(8) :: ENV_L3_RH      =   0.D0 ! Relative Humidity in the layer3 (high THETA) [%]
 
     NAMELIST / PARAM_MKINIT_KHWAVE / &
