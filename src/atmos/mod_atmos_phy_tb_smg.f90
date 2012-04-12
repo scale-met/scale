@@ -75,6 +75,10 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
+
     do j = JS, JE+1
     do i = IS, IE+1
     do k = KS, KE
