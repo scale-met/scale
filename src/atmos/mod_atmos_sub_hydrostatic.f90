@@ -111,7 +111,7 @@ contains
     do i = IS, IE
        Rmoist_sfc(1,i,j) = Rdry * ( 1.D0 + EPSTvap * qv_sfc(1,i,j) )
 
-       dens_sfc(1,i,j) = P00 / Rmoist(1,i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP
+       dens_sfc(1,i,j) = P00 / Rmoist_sfc(1,i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP
        temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rmoist_sfc(1,i,j) )
     enddo
     enddo
