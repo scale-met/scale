@@ -209,7 +209,7 @@ contains
        enddo
        enddo
        enddo
-       !OCL XFILL
+!OCL XFILL
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           VELZ(KS-1,i,j) = 0.D0
@@ -367,7 +367,7 @@ contains
           enddo
        enddo
        enddo
-       !OCL XFILL
+!OCL XFILL
        do j = JJS, JJE
        do i = IIS, IIE
           nu( 1:KS-1,i,j) = 0.D0

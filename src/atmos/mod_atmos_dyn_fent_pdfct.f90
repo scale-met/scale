@@ -189,7 +189,7 @@ contains
        enddo
     endif
 
-    !OCL XFILL
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        rjmns(KS-1,i,j,ZDIR) = 0.D0
@@ -341,6 +341,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   !-----------------------------------------------------------------------------
+!OCL NORECURRENCE
   subroutine ATMOS_DYN
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
@@ -393,6 +394,7 @@ contains
     real(8) :: VELY  (KA,IA,JA) ! velocity v [m/s]
     real(8) :: POTT  (KA,IA,JA) ! potential temperature [K]
     real(8) :: dens_s(KA,IA,JA) ! saved density
+    real(8) :: QTOT  (KA,IA,JA) ! total water          [kg/kg]
     real(8) :: QDRY  (KA,IA,JA) ! dry air mixing ratio [kg/kg]
     real(8) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
 
@@ -412,7 +414,7 @@ contains
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
     real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: pjmns, tmp
+    real(8) :: pjmns(KA,IA,JA), tmp
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -425,7 +427,7 @@ contains
 call START_COLLECTION("DYNAMICS")
 #endif
 
-    !OCL XFILL
+!OCL XFILL
     do j = JS, JE+1
     do i = IS, IE+1
        VELZ(KS-1,i,j) = 0.D0
@@ -433,7 +435,7 @@ call START_COLLECTION("DYNAMICS")
     enddo
     enddo
 
-    !OCL XFILL
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        MOMZ_RK1( 1:KS-1,i,j) = 0.D0
@@ -443,7 +445,7 @@ call START_COLLECTION("DYNAMICS")
     enddo
     enddo
 
-    !OCL XFILL
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        mflx_hi(KS-1,i,j,ZDIR) = 0.D0 ! bottom boundary
@@ -551,7 +553,7 @@ call START_COLLECTION("SET")
 
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4 &
                                       * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
                                         - CNDX(2,i+1) * dens_diff(k,i+1,j) &
@@ -561,9 +563,11 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4 &
                                       * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
                                         - CNDY(2,j+1) * dens_diff(k,i,j+1) &
@@ -611,7 +615,9 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
        do k = KS, KE-1
           num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
@@ -626,7 +632,7 @@ call START_COLLECTION("SET")
        ! x-momentum
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
                                       * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
                                         - CNDZ(2,k+1) * MOMX(k+1,i,j) &
@@ -638,7 +644,7 @@ call START_COLLECTION("SET")
 
        do j = JJS,   JJE
        do i = IIS,   IIE+1
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5D0*(CDX(i+1)+CDX(i)) )**4 &
                                       * ( CNMX(1,i  ) * MOMX(k,i+1,j) &
                                         - CNMX(2,i  ) * MOMX(k,i  ,j) &
@@ -648,9 +654,11 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4 &
                                       * ( CNDY(1,j+1) * MOMX(k,i,j+2) &
                                         - CNDY(2,j+1) * MOMX(k,i,j+1) &
@@ -675,7 +683,7 @@ call START_COLLECTION("SET")
 
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
                                       * ( CNDX(1,i+1) * MOMY(k,i+2,j) &
                                         - CNDX(2,i+1) * MOMY(k,i+1,j) &
@@ -685,7 +693,9 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+     !OCL SERIAL
        do j = JJS, JJE+1
+     !OCL PARALLEL
        do i = IIS, IIE
        do k = KS, KE
           num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5D0*(CDY(j+1)+CDY(j)) )**4 &
@@ -725,7 +735,7 @@ call START_COLLECTION("SET")
 
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4 &
                                       * ( CNDX(1,i+1) * pott_diff(k,i+2,j)   &
                                         - CNDX(2,i+1) * pott_diff(k,i+1,j)   &
@@ -737,9 +747,11 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4 &
                                       * ( CNDY(1,j+1) * pott_diff(k,i,j+2)   &
                                         - CNDY(2,j+1) * pott_diff(k,i,j+1)   &
@@ -752,18 +764,36 @@ call START_COLLECTION("SET")
        enddo
 
        ! Gas constant
+       do j  = JJS-2, JJE+2
+       do i  = IIS-2, IIE+2
+       do k  = KS, KE
+          QTOT(k,i,j) = QTRC(k,i,j,I_QV)
+       enddo
+       enddo
+       enddo
+     !OCL SERIAL
+       do iw = QQS+1, QQE
+     !OCL PARALLEL
+       do j  = JJS-2, JJE+2
+       do i  = IIS-2, IIE+2
+       do k  = KS, KE
+          QTOT(k,i,j) = QTOT(k,i,j) + QTRC(k,i,j,iw)
+       enddo
+       enddo
+       enddo
+       enddo
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-          do k = KS, KE
-             QDRY(k,i,j) = 1.D0
-
-             do iw = QQS, QQE
-                QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
-             enddo
-          enddo
-          do k = KS, KE
-             Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-          enddo
+       do k = KS, KE
+          QDRY(k,i,j) = 1.D0 - QTOT(k,i,j)
+       enddo
+       enddo
+       enddo
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       enddo
        enddo
        enddo
 
@@ -804,7 +834,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       do j = JJS-1, JJE+1
+     !OCL SERIAL
+       do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE+1
        do k = KS, KE
           VELY(k,i,j) = 2.D0 * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
@@ -815,12 +847,16 @@ call START_COLLECTION("RK3")
        ! pressure, pott. temp.
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-          do k = KS, KE
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
-          enddo
-          do k = KS, KE
+       do k = KS, KE
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
+       enddo
+       enddo
+       enddo
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
              POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
-          enddo
+       enddo
        enddo
        enddo
 
@@ -828,7 +864,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, interface)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           mflx_hi(k,i,j,ZDIR) = MOMZ(k,i,j) &
                               + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
        enddo
@@ -837,16 +873,18 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,XDIR) = MOMX(k,i,j) &
                               + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
        enddo
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,YDIR) = MOMY(k,i,j) &
                               + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
        enddo
@@ -869,7 +907,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
                               * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
@@ -889,7 +927,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, interface)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
        do k = KS, KE-1
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
@@ -903,7 +943,7 @@ call START_COLLECTION("RK3")
        !--- update momentum(z)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           MOMZ_RK1(k,i,j) = MOMZ(k,i,j) &
                           + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
                                        + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
@@ -942,7 +982,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE+1
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
                               * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
                                 + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
@@ -951,9 +991,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (u, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
                               * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
                                 + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
@@ -1006,7 +1048,7 @@ call START_COLLECTION("RK3")
        ! at (u, v, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
                               * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
                                 + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
@@ -1016,7 +1058,9 @@ call START_COLLECTION("RK3")
        enddo
 
        ! at (x, y, layer)
+     !OCL SERIAL
        do j = JJS, JJE+1
+     !OCL PARALLEL
        do i = IIS, IIE
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
@@ -1071,7 +1115,7 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
@@ -1080,9 +1124,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
@@ -1165,7 +1211,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       do j = JJS-1, JJE+1
+     !OCL SERIAL
+       do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE+1
        do k = KS, KE
           VELY(k,i,j) = 2.D0 * MOMY_RK1(k,i,j) / ( DENS_RK1(k,i,j+1)+DENS_RK1(k,i,j) )
@@ -1189,7 +1237,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, interface)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           mflx_hi(k,i,j,ZDIR) = MOMZ_RK1(k,i,j) &
                               + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
        enddo
@@ -1198,16 +1246,18 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,XDIR) = MOMX_RK1(k,i,j) &
                               + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
        enddo
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,YDIR) = MOMY_RK1(k,i,j) &
                               + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
        enddo
@@ -1230,7 +1280,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
                               * ( FACT_N * ( MOMZ_RK1(k  ,i,j)+MOMZ_RK1(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ_RK1(k+1,i,j)+MOMZ_RK1(k-2,i,j) ) ) &
@@ -1250,7 +1300,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, interface)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
        do k = KS, KE-1
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
@@ -1264,7 +1316,7 @@ call START_COLLECTION("RK3")
        !--- update momentum(z)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           MOMZ_RK2(k,i,j) = MOMZ(k,i,j) &
                           + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k)   &
                                        + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i)   &
@@ -1303,7 +1355,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE+1
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
                               * ( FACT_N * ( MOMX_RK1(k,i  ,j)+MOMX_RK1(k,i-1,j) ) &
                                 + FACT_F * ( MOMX_RK1(k,i+1,j)+MOMX_RK1(k,i-2,j) ) ) &
@@ -1312,9 +1364,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (u, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
                               * ( FACT_N * ( MOMX_RK1(k,i,j+1)+MOMX_RK1(k,i,j  ) ) &
                                 + FACT_F * ( MOMX_RK1(k,i,j+2)+MOMX_RK1(k,i,j-1) ) ) &
@@ -1367,7 +1421,7 @@ call START_COLLECTION("RK3")
        ! at (u, v, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
                               * ( FACT_N * ( MOMY_RK1(k,i+1,j)+MOMY_RK1(k,i  ,j) ) &
                                 + FACT_F * ( MOMY_RK1(k,i+2,j)+MOMY_RK1(k,i-1,j) ) ) &
@@ -1377,7 +1431,9 @@ call START_COLLECTION("RK3")
        enddo
 
        ! at (x, y, layer)
+     !OCL SERIAL
        do j = JJS, JJE+1
+     !OCL PARALLEL
        do i = IIS, IIE
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
@@ -1432,7 +1488,7 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
@@ -1441,9 +1497,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
@@ -1526,7 +1584,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
 
-       do j = JJS-1, JJE+1
+     !OCL SERIAL
+       do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE+1
        do k = KS, KE
           VELY(k,i,j) = 2.D0 * MOMY_RK2(k,i,j) / ( DENS_RK2(k,i,j+1)+DENS_RK2(k,i,j) )
@@ -1550,7 +1610,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, interface)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           mflx_hi(k,i,j,ZDIR) = MOMZ_RK2(k,i,j) &
                               + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
        enddo
@@ -1559,16 +1619,18 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,XDIR) = MOMX_RK2(k,i,j) &
                               + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
        enddo
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           mflx_hi(k,i,j,YDIR) = MOMY_RK2(k,i,j) &
                               + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
        enddo
@@ -1591,7 +1653,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,ZDIR) = 0.25D0 * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
                               * ( FACT_N * ( MOMZ_RK2(k  ,i,j)+MOMZ_RK2(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ_RK2(k+1,i,j)+MOMZ_RK2(k-2,i,j) ) ) &
@@ -1611,7 +1673,9 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, interface)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
        do k = KS, KE-1
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
@@ -1625,7 +1689,7 @@ call START_COLLECTION("RK3")
        !--- update momentum(z)
        do j = JJS,   JJE
        do i = IIS,   IIE
-       do k = KS,   KE-1
+       do k = KS, KE-1
           MOMZ(k,i,j) = MOMZ(k,i,j) &
                       + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
                                    + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
@@ -1664,7 +1728,7 @@ call START_COLLECTION("RK3")
        ! at (x, y, layer)
        do j = JJS,   JJE
        do i = IIS,   IIE+1
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
                               * ( FACT_N * ( MOMX_RK2(k,i  ,j)+MOMX_RK2(k,i-1,j) ) &
                                 + FACT_F * ( MOMX_RK2(k,i+1,j)+MOMX_RK2(k,i-2,j) ) ) &
@@ -1673,9 +1737,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (u, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
                               * ( FACT_N * ( MOMX_RK2(k,i,j+1)+MOMX_RK2(k,i,j  ) ) &
                                 + FACT_F * ( MOMX_RK2(k,i,j+2)+MOMX_RK2(k,i,j-1) ) ) &
@@ -1728,7 +1794,7 @@ call START_COLLECTION("RK3")
        ! at (u, v, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.25D0 * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
                               * ( FACT_N * ( MOMY_RK2(k,i+1,j)+MOMY_RK2(k,i  ,j) ) &
                                 + FACT_F * ( MOMY_RK2(k,i+2,j)+MOMY_RK2(k,i-1,j) ) ) &
@@ -1738,7 +1804,9 @@ call START_COLLECTION("RK3")
        enddo
 
        ! at (x, y, layer)
+     !OCL SERIAL
        do j = JJS, JJE+1
+     !OCL PARALLEL
        do i = IIS, IIE
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.25D0 * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
@@ -1793,7 +1861,7 @@ call START_COLLECTION("RK3")
        ! at (u, y, layer)
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
@@ -1802,9 +1870,11 @@ call START_COLLECTION("RK3")
        enddo
        enddo
        ! at (x, v, layer)
+     !OCL SERIAL
        do j = JJS-1, JJE
+     !OCL PARALLEL
        do i = IIS,   IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
@@ -1879,11 +1949,21 @@ call START_COLLECTION("FCT")
        do k = KS+1, KE-2
           qflx_lo(k,i,j,ZDIR) = 0.5D0 * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                         - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
-
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-2
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                 + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
-
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-2
           qflx_anti(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) - qflx_lo(k,i,j,ZDIR)
        enddo
        enddo
@@ -1896,12 +1976,18 @@ call START_COLLECTION("FCT")
           qflx_lo(KE-1,i,j,ZDIR) = 0.5D0 * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
                                            - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
           qflx_lo(KE  ,i,j,ZDIR) = 0.D0                                                                          ! top boundary
-
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           qflx_hi(KS-1,i,j,ZDIR) = 0.D0 
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0 
-
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           qflx_anti(KS-1,i,j,ZDIR) = 0.D0
           qflx_anti(KS  ,i,j,ZDIR) = qflx_hi(KS  ,i,j,ZDIR) - qflx_lo(KS  ,i,j,ZDIR)
           qflx_anti(KE-1,i,j,ZDIR) = qflx_hi(KE-1,i,j,ZDIR) - qflx_lo(KE-1,i,j,ZDIR)
@@ -1910,44 +1996,72 @@ call START_COLLECTION("FCT")
        enddo
        do j = JJS,   JJE
        do i = IIS-1, IIE
-       do k = KS,   KE
+       do k = KS, KE
           qflx_lo(k,i,j,XDIR) = 0.5D0 * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
                                         - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
-
+       enddo
+       enddo
+       enddo
+       do j = JJS,   JJE
+       do i = IIS-1, IIE
+       do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                 + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
-
+       enddo
+       enddo
+       enddo
+       do j = JJS,   JJE
+       do i = IIS-1, IIE
+       do k = KS, KE
           qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
+       enddo
+       enddo
+       enddo
+
+       do j = JJS-1, JJE
+       do i = IIS,   IIE
+       do k = KS, KE
+          qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
+                                        - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
        enddo
        enddo
        enddo
        do j = JJS-1, JJE
        do i = IIS,   IIE
-       do k = KS,   KE
-          qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                        - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
-
+       do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                 + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
-
+       enddo
+       enddo
+       enddo
+       do j = JJS-1, JJE
+       do i = IIS,   IIE
+       do k = KS, KE
           qflx_anti(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) - qflx_lo(k,i,j,YDIR)
        enddo
        enddo
        enddo
 
        ! --- STEP C: compute the outgoing fluxes in each cell ---
+!OCL SIMD
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
+          pjmns(k,i,j) = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
+                       + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
+                       + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
+       enddo
+       enddo
+       enddo
 
-          pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
-
-          if ( pjmns > 0.D0 ) then
-             tmp = QTRC(k,i,j,iq) / pjmns * rdtrk * dens_s(k,i,j) * VELlimiter
+!OCL SIMD
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          if ( pjmns(k,i,j) > 0.D0 ) then
+             tmp = QTRC(k,i,j,iq) / pjmns(k,i,j) * rdtrk * dens_s(k,i,j) * VELlimiter
              rjmns(k,i,j,ZDIR) = tmp * CDZ(k)
              rjmns(k,i,j,XDIR) = tmp * CDX(i)
              rjmns(k,i,j,YDIR) = tmp * CDY(j)
@@ -1956,7 +2070,6 @@ call START_COLLECTION("FCT")
              rjmns(k,i,j,XDIR) = 0.D0
              rjmns(k,i,j,YDIR) = 0.D0
           endif
-
        enddo
        enddo
        enddo
@@ -1977,48 +2090,49 @@ call START_COLLECTION("FCT")
     IIE = IIS+IBLOCK-1
 
        ! --- [STEP 7S] limit the antidiffusive flux ---
-       !OCL norecurrence
+!OCL SIMD
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS-1, KE
           if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
-             if ( rjmns(k  ,i,j,ZDIR) >= 0.D0 .AND. rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
+             if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
              endif
           else
-             if ( rjmns(k+1,i,j,ZDIR) >= 0.D0 .AND. rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
+             if ( rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k+1,i,j,ZDIR)
              endif
           endif
        enddo
        enddo
        enddo
-       !OCL norecurrence
+!OCL SIMD
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
           if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
-             if ( rjmns(k,i  ,j,XDIR) >= 0.D0 .AND. rjmns(k,i  ,j,XDIR) < 1.D0 ) then
+             if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
              endif
           else
-             if ( rjmns(k,i+1,j,XDIR) >= 0.D0 .AND. rjmns(k,i+1,j,XDIR) < 1.D0 ) then
+             if ( rjmns(k,i+1,j,XDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i+1,j,XDIR)
              endif
           endif
        enddo
        enddo
        enddo
-       !OCL norecurrence
+
+!OCL SIMD
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
           if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
-             if ( rjmns(k,i,j  ,YDIR) >= 0.D0 .AND. rjmns(k,i,j  ,YDIR) < 1.D0 ) then
+             if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
              endif
           else
-             if ( rjmns(k,i,j+1,YDIR) >= 0.D0 .AND. rjmns(k,i,j+1,YDIR) < 1.D0 ) then
+             if ( rjmns(k,i,j+1,YDIR) < 1.D0 ) then
                 qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j+1,YDIR)
              endif
           endif
