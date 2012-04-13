@@ -8,6 +8,8 @@ program binary_to_text
   integer :: ios
   real :: dat
 
+  integer :: iargc
+
   ! initialize
   ios=0
 

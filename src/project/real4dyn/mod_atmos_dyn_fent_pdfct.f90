@@ -2026,7 +2026,37 @@ call START_COLLECTION("FCT")
 
     enddo ! scalar quantities loop
 
-    call ATMOS_vars_fillhalo
+    ! fill KHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+    enddo
+    enddo
+    do iq = 1, QA
+    do j  = JS, JE
+    do i  = IS, IE
+       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
+    enddo
+    enddo
+    enddo
+
+    ! fill IHALO & JHALO
+    do iq = 1, QA
+       call COMM_vars8_r4( QTRC(:,:,:,iq), iq )
+    enddo
+    do iq = 1, QA
+       call COMM_wait_r4 ( QTRC(:,:,:,iq), iq )
+    enddo
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION("FCT")
@@ -2060,6 +2090,8 @@ call STOP_COLLECTION("DYNAMICS")
     enddo
     enddo
     enddo
+
+    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
 

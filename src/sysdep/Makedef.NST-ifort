@@ -4,41 +4,43 @@
 ##### for computation
 
 FC     = ifort
-FFLAGS = -fpp3 -O3 -xSSE4.2 -ftz -m64         \
-         -lmpi                                \
+FFLAGS = -fpp3 -O3 -ftz -m64                  \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
-         -heap-arrays -fno-alias
-#
-#FFLAGS = -fpp3 -O0 -m64                 \
-#         -lmpi                                \
+         -heap-arrays -fno-alias              \
+         -xSSE4.2 -lmpi
+
+#FFLAGS = -fpp3 -O0 -m64                       \
 #         -assume byterecl -convert big_endian \
 #         -fp-model precise -pc 80             \
 #         -heap-arrays -fno-alias              \
-#         -check all -warn all -g -traceback
-#
+#         -check all -warn all -g -traceback   \
+#         -lmpi
+
+FFLAGS_DYN = $(FFLAGS)
+
 CC     = icc
-CFLAGS = -O3 -xSSE4.2 -ftz -m64
-#
+CFLAGS = -O3 -ftz -m64 -xSSE4.2
+
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 # for frontend
 
 FRONT_F90     = ifort
-FRONT_FFLAGS  = -O3 -xSSE4.2 -ftz -m64             \
+FRONT_FFLAGS  = -O3 -ftz -m64                        \
                 -assume byterecl -convert big_endian \
                 -fp-model precise -pc 80             \
                 -heap-arrays -fno-alias
-#
-#FRONT_FFLAGS = -O0 -fpe0 -m64                       \
+
+#FRONT_FFLAGS = -O0 -ftz -m64                        \
 #               -assume byterecl -convert big_endian \
 #               -fp-model precise -pc 80             \
 #               -heap-arrays -fno-alias              \
 #               -check all -warn all -g -traceback
-#
+
 FRONT_CC     = icc
-FRONT_CFLAGS = -O3 -xSSE4.2 -m64
-#
+FRONT_CFLAGS = -O3 -ftz -m64 -xSSE4.2
+
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)

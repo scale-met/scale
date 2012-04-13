@@ -283,7 +283,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMZ(k,i,j) = ENV_W + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_W &
+       MOMZ(k,i,j) = ( ENV_W + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_W ) &
                    * 0.5D0 * ( DENS(k,i,j) + DENS(k+1,i,j) )
     enddo
     enddo
@@ -293,7 +293,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U &
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U ) &
                    * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
@@ -303,7 +303,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V &
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V ) &
                    * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
@@ -345,6 +345,8 @@ contains
     real(8) :: SFC_PRES             ! surface pressure [Pa]
     ! Environment state
     real(8) :: ENV_THETA            ! potential temperature of environment [K]
+    real(8) :: ENV_U        =  0.D0 ! velocity u of environment [m/s]
+    real(8) :: ENV_V        =  0.D0 ! velocity v of environment [m/s]
     ! Bubble
     real(8) :: BBL_NC       =  1.D0 ! extremum of NC in bubble [kg/kg]
     real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
@@ -358,6 +360,8 @@ contains
        SFC_THETA, &
        SFC_PRES,  &
        ENV_THETA, &
+       ENV_U,     &
+       ENV_V,     &
        BBL_NC,    &
        BBL_CZ,    &
        BBL_CX,    &
@@ -412,11 +416,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-
        MOMZ(k,i,j) = 0.D0
-       MOMX(k,i,j) = 0.D0
-       MOMY(k,i,j) = 0.D0
-       RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+       MOMX(k,i,j) = ENV_U * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j) = ENV_V * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
 
        do iq = 1, QA
           QTRC(k,i,j,iq) = 0.D0
@@ -640,7 +643,13 @@ contains
        qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
 
        do k = KS, KE
-          qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+          if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
+             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+          elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+          else                                ! Layer 3
+             qv(k,i,j) = 0.D0
+          endif
        enddo
     enddo
     enddo
@@ -696,7 +705,7 @@ contains
     real(8) :: ENV_L3_THETA   = 305.D0 ! THETA in the layer3 (high THETA) [K]
     real(8) :: ENV_L1_U       =   0.D0 ! velocity u in the layer1 (low  THETA) [K]
     real(8) :: ENV_L3_U       =  20.D0 ! velocity u in the layer3 (high THETA) [K]
-    real(8) :: ENV_L1_RH      =  30.D0 ! Relative Humidity in the layer1 (low  THETA) [%]
+    real(8) :: ENV_L1_RH      =  50.D0 ! Relative Humidity in the layer1 (low  THETA) [%]
     real(8) :: ENV_L3_RH      =   0.D0 ! Relative Humidity in the layer3 (high THETA) [%]
 
     NAMELIST / PARAM_MKINIT_KHWAVE / &
@@ -925,7 +934,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U &
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U ) &
                    * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
@@ -935,7 +944,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V &
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V ) &
                    * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo

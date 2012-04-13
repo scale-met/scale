@@ -8,6 +8,7 @@
 #BSUB -o scale3_log
 #BSUB -e scale3_error
 
+
 export OMP_NUM_THREADS=1
 
 export HMDIR=/home/yashiro/scale3
@@ -29,8 +30,8 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 16,
- PRC_NUM_Y       = 6,
+ PRC_NUM_X       = 24,
+ PRC_NUM_Y       = 4,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -52,13 +53,13 @@ cat << End_of_SYSIN > ${OUTDIR}/${EXE}.cnf
 
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_40m_220x25x25",
- GRID_DXYZ         = 40.D0,
- GRID_KMAX         = 220,
+ GRID_OUT_BASENAME = "grid_20m_200x25x25",
+ GRID_DXYZ         = 20.D0,
+ GRID_KMAX         = 200,
  GRID_IMAX         = 25,
  GRID_JMAX         = 25,
- GRID_BUFFER_DZ    = 4.0D3,
- GRID_BUFFFACT     = 1.1D0,
+ GRID_BUFFER_DZ    = 0.0D3,
+ GRID_BUFFFACT     = 1.0D0,
 /
 
 &PARAM_ATMOS
@@ -82,7 +83,7 @@ End_of_SYSIN
 
 # run
 echo "job ${RUNNAME} started at " `date`
-mpijob $BIN/$EXE ${EXE}.cnf > STDOUT 2>&1
+mpijob $BIN/$EXE ${EXE}.cnf
 echo "job ${RUNNAME} end     at " `date`
 
 exit
