@@ -312,11 +312,11 @@ contains
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGT), 'ENGT', 'total     energy', 'J', '3D' )
 
     ! RDMA setting
-    call COMM_set_rdma_variable( DENS(:,:,:), VA+1)
-    call COMM_set_rdma_variable( MOMZ(:,:,:), VA+2)
-    call COMM_set_rdma_variable( MOMY(:,:,:), VA+3)
-    call COMM_set_rdma_variable( MOMX(:,:,:), VA+4)
-    call COMM_set_rdma_variable( RHOT(:,:,:), VA+5)
+    call COMM_set_rdma_variable( DENS(:,:,:), 1)
+    call COMM_set_rdma_variable( MOMZ(:,:,:), 2)
+    call COMM_set_rdma_variable( MOMY(:,:,:), 3)
+    call COMM_set_rdma_variable( MOMX(:,:,:), 4)
+    call COMM_set_rdma_variable( RHOT(:,:,:), 5)
 
     do iq = 1, QA
        call COMM_set_rdma_variable( QTRC(:,:,:,iq), 5+iq )
@@ -361,7 +361,7 @@ contains
     enddo
 
     ! fill IHALO & JHALO
-    call COMM_rdma_vars8( 1, VA )
+    call COMM_rdma_vars8( 1, 5+QA )
 
     return
   end subroutine ATMOS_vars_fillhalo

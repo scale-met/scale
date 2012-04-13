@@ -334,21 +334,21 @@ contains
     CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
 
     ! RDMA setting
-    call COMM_set_rdma_variable( DENS_RK1(:,:,:), VA+ 1)
-    call COMM_set_rdma_variable( MOMZ_RK1(:,:,:), VA+ 2)
-    call COMM_set_rdma_variable( MOMY_RK1(:,:,:), VA+ 3)
-    call COMM_set_rdma_variable( MOMX_RK1(:,:,:), VA+ 4)
-    call COMM_set_rdma_variable( RHOT_RK1(:,:,:), VA+ 5)
+    call COMM_set_rdma_variable( DENS_RK1(:,:,:), 5+QA+ 1)
+    call COMM_set_rdma_variable( MOMZ_RK1(:,:,:), 5+QA+ 2)
+    call COMM_set_rdma_variable( MOMY_RK1(:,:,:), 5+QA+ 3)
+    call COMM_set_rdma_variable( MOMX_RK1(:,:,:), 5+QA+ 4)
+    call COMM_set_rdma_variable( RHOT_RK1(:,:,:), 5+QA+ 5)
 
-    call COMM_set_rdma_variable( DENS_RK2(:,:,:), VA+ 6)
-    call COMM_set_rdma_variable( MOMZ_RK2(:,:,:), VA+ 7)
-    call COMM_set_rdma_variable( MOMY_RK2(:,:,:), VA+ 8)
-    call COMM_set_rdma_variable( MOMX_RK2(:,:,:), VA+ 9)
-    call COMM_set_rdma_variable( RHOT_RK2(:,:,:), VA+10)
+    call COMM_set_rdma_variable( DENS_RK2(:,:,:), 5+QA+ 6)
+    call COMM_set_rdma_variable( MOMZ_RK2(:,:,:), 5+QA+ 7)
+    call COMM_set_rdma_variable( MOMY_RK2(:,:,:), 5+QA+ 8)
+    call COMM_set_rdma_variable( MOMX_RK2(:,:,:), 5+QA+ 9)
+    call COMM_set_rdma_variable( RHOT_RK2(:,:,:), 5+QA+10)
 
-    call COMM_set_rdma_variable( rjmns (:,:,:,1), VA+11)
-    call COMM_set_rdma_variable( rjmns (:,:,:,2), VA+12)
-    call COMM_set_rdma_variable( rjmns (:,:,:,3), VA+13)
+    call COMM_set_rdma_variable( rjmns (:,:,:,1), 5+QA+11)
+    call COMM_set_rdma_variable( rjmns (:,:,:,2), 5+QA+12)
+    call COMM_set_rdma_variable( rjmns (:,:,:,3), 5+QA+13)
 
   end subroutine ATMOS_DYN_setup
 
@@ -1116,7 +1116,7 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+1, 5 )
+    call COMM_rdma_vars8( 5+QA+1, 5 )
 
     !##### RK2 #####
     rko = 2
@@ -1448,7 +1448,7 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+6, 5 )
+    call COMM_rdma_vars8( 5+QA+6, 5 )
 
     !##### RK3 #####
     rko = 3
@@ -1886,7 +1886,7 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_rdma_vars8( VA+11, 3 )
+    call COMM_rdma_vars8( 5+QA+11, 3 )
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1

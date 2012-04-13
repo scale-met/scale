@@ -321,21 +321,41 @@ contains
        call MPI_CART_COORDS(iptbl,PRC_next(PRC_E),2,coords_E,ierr)
        call MPI_CART_COORDS(iptbl,PRC_next(PRC_S),2,coords_S,ierr)
        ! next rank search NorthWest
-       next_coords(1) = coords_N(1)
-       next_coords(2) = coords_W(2)
-       call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NW), ierr)
+       if (      PRC_next(PRC_N) == -1 &
+            .OR. PRC_next(PRC_W) == -1 ) then
+          PRC_next(PRC_NW) = -1
+       else
+          next_coords(1) = coords_N(1)
+          next_coords(2) = coords_W(2)
+          call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NW), ierr)
+       endif
        ! next rank search NorthEast
-       next_coords(1) = coords_N(1)
-       next_coords(2) = coords_E(2)
-       call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NE), ierr)
+       if (      PRC_next(PRC_N) == -1 &
+            .OR. PRC_next(PRC_E) == -1 ) then
+          PRC_next(PRC_NE) = -1
+       else
+          next_coords(1) = coords_N(1)
+          next_coords(2) = coords_E(2)
+          call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NE), ierr)
+       endif
        ! next rank search SouthWest
-       next_coords(1) = coords_S(1)
-       next_coords(2) = coords_W(2)
-       call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SW), ierr)
+       if (      PRC_next(PRC_S) == -1 &
+            .OR. PRC_next(PRC_W) == -1 ) then
+          PRC_next(PRC_SW) = -1
+       else
+          next_coords(1) = coords_S(1)
+          next_coords(2) = coords_W(2)
+          call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SW), ierr)
+       endif
        ! next rank search SouthEast
-       next_coords(1) = coords_S(1)
-       next_coords(2) = coords_E(2)
-       call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SE), ierr)
+       if (      PRC_next(PRC_S) == -1 &
+            .OR. PRC_next(PRC_E) == -1 ) then
+          PRC_next(PRC_SE) = -1
+       else
+          next_coords(1) = coords_S(1)
+          next_coords(2) = coords_E(2)
+          call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SE), ierr)
+       endif
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Node topology ***'
