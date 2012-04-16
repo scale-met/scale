@@ -5,8 +5,8 @@
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X=1,
+ PRC_NUM_Y=1,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
@@ -48,22 +48,21 @@
 
 &PARAM_COMM
  COMM_total_doreport  = .true.,
- COMM_total_globalsum = .true.,
+ COMM_total_globalsum = .false.,
 /
 
 &PARAM_ATMOS
  ATMOS_TYPE_DYN    = "fent_pdfct",
- ATMOS_TYPE_PHY_TB = "NONE",
+ ATMOS_TYPE_PHY_TB = "smagorinsky",
  ATMOS_TYPE_PHY_MP = "NONE",
  ATMOS_TYPE_PHY_RD = "NONE",
 /
 
 &PARAM_ATMOS_VARS
- ATMOS_RESTART_IN_BASENAME    = "./init_coldbubble_63072000000.000",
+ ATMOS_RESTART_IN_BASENAME    = "./init3_coldbubble_63072000000.000",
  ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_coldbubble",
+ ATMOS_RESTART_OUT_BASENAME   = "init3_coldbubble",
  ATMOS_RESTART_CHECK          = .false.,
- ATMOS_RESTART_CHECK_BASENAME = "./check_coldbubble_63072000003.000",
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -104,16 +103,16 @@
  HISTORY_DATATYPE          = "REAL4",
 /
 
-#&HISTITEM item='DENS' /
+&HISTITEM item='DENS' /
 #&HISTITEM item='MOMX' /
 #&HISTITEM item='MOMY' /
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
 
-#&HISTITEM item='U'    /
-#&HISTITEM item='V'    /
-#&HISTITEM item='W'    /
-#&HISTITEM item='PT'   /
+&HISTITEM item='U'    /
+&HISTITEM item='V'    /
+&HISTITEM item='W'    /
+&HISTITEM item='PT'   /
 #&HISTITEM item='PRES' /
 #&HISTITEM item='T'    /
 
@@ -122,7 +121,7 @@
 #&HISTITEM item='ENGK' /
 #&HISTITEM item='ENGI' /
 
-#&HISTITEM item='QV'   /
+&HISTITEM item='QV'   /
 #&HISTITEM item='QTOT' /
 #&HISTITEM item='QC'   /
 #&HISTITEM item='QR'   /

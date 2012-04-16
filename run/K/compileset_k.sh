@@ -14,7 +14,7 @@ echo "SYTEM:" ${SCALE_SYS}                >> ${LOGFILE}
 echo "DIRECTORY:" ${SCALEDIR}             >> ${LOGFILE}
 
 ### 5m performance
-index=1256x28x28
+index=1256x32x32
 
 echo "+++++" ${index}_${tracer}_${postfix}                  >> ${LOGFILE}
 echo "compile start at " `date`                             >> ${LOGFILE}
