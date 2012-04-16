@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_saturation
+module mod_mp_saturation
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -45,15 +45,15 @@ module mod_atmos_saturation
   !
   !++ Public procedure
   !
-  public :: ATMOS_SATURATION_psat_water
-  public :: ATMOS_SATURATION_psat_ice
-  public :: ATMOS_SATURATION_qsat_water
-  public :: ATMOS_SATURATION_qsat_ice
+  public :: MP_SATURATION_psat_water
+  public :: MP_SATURATION_psat_ice
+  public :: MP_SATURATION_qsat_water
+  public :: MP_SATURATION_qsat_ice
 
-  public :: ATMOS_SATURATION_dqsw_dtem_rho  
-  public :: ATMOS_SATURATION_dqsi_dtem_rho  
-  public :: ATMOS_SATURATION_dqsw_dtem_dpre 
-  public :: ATMOS_SATURATION_dqsi_dtem_dpre 
+  public :: MP_SATURATION_dqsw_dtem_rho  
+  public :: MP_SATURATION_dqsi_dtem_rho  
+  public :: MP_SATURATION_dqsw_dtem_dpre 
+  public :: MP_SATURATION_dqsi_dtem_dpre 
 
   !-----------------------------------------------------------------------------
   !
@@ -82,7 +82,7 @@ contains
   !-----------------------------------------------------------------------------
   ! psat : Clasius-Clapeyron: based on CPV, CPL constant
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_psat_water ( temp, psat )
+  subroutine MP_SATURATION_psat_water ( temp, psat )
     implicit none
 
     real(8), intent(in)  :: temp(IJA,KA)
@@ -119,10 +119,10 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_psat_water
+  end subroutine MP_SATURATION_psat_water
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_psat_ice ( temp, psat )
+  subroutine MP_SATURATION_psat_ice ( temp, psat )
     implicit none
 
     real(8), intent(in)  :: temp(IJA,KA)
@@ -159,10 +159,10 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_psat_ice
+  end subroutine MP_SATURATION_psat_ice
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_qsat_water( temp, pres, qsat )
+  subroutine MP_SATURATION_qsat_water( temp, pres, qsat )
     implicit none
 
     real(8), intent(in)  :: temp(IJA,KA)
@@ -203,10 +203,10 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_qsat_water
+  end subroutine MP_SATURATION_qsat_water
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_qsat_ice ( temp, pres, qsat )
+  subroutine MP_SATURATION_qsat_ice ( temp, pres, qsat )
     implicit none
 
     real(8), intent(in)  :: temp(IJA,KA)
@@ -248,12 +248,12 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_qsat_ice
+  end subroutine MP_SATURATION_qsat_ice
 
   !-----------------------------------------------------------------------------
   ! (d qsw/d T)_{rho}: partial difference of qsat_water
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_dqsw_dtem_rho( temp, dens, dqsdtem )
+  subroutine MP_SATURATION_dqsw_dtem_rho( temp, dens, dqsdtem )
     implicit none
 
     real(8), intent(in)  :: temp   (IJA,KA)
@@ -302,12 +302,12 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_dqsw_dtem_rho
+  end subroutine MP_SATURATION_dqsw_dtem_rho
 
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_dqsi_dtem_rho( temp, dens, dqsdtem )
+  subroutine MP_SATURATION_dqsi_dtem_rho( temp, dens, dqsdtem )
     implicit none
 
     real(8), intent(in)  :: temp   (IJA,KA)
@@ -356,12 +356,12 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_dqsi_dtem_rho
+  end subroutine MP_SATURATION_dqsi_dtem_rho
 
   !-----------------------------------------------------------------------------
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_dqsw_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
+  subroutine MP_SATURATION_dqsw_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
     implicit none
 
     real(8), intent(in)  :: temp   (IJA,KA)
@@ -417,12 +417,12 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_dqsw_dtem_dpre
+  end subroutine MP_SATURATION_dqsw_dtem_dpre
 
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_SATURATION_dqsi_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
+  subroutine MP_SATURATION_dqsi_dtem_dpre( temp, pres, dqsdtem, dqsdpre )
     implicit none
 
     real(8), intent(in)  :: temp   (IJA,KA)
@@ -478,7 +478,7 @@ call STOP_COLLECTION("satadjust")
     call TIME_rapend  ('satadjust')
 
     return
-  end subroutine ATMOS_SATURATION_dqsi_dtem_dpre
+  end subroutine MP_SATURATION_dqsi_dtem_dpre
 
-end module mod_atmos_saturation
+end module mod_mp_saturation
 !-------------------------------------------------------------------------------

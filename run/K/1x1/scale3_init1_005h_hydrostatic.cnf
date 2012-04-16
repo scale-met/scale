@@ -5,14 +5,14 @@
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X=1,
+ PRC_NUM_Y=1,
  PRC_PERIODIC_X  = .true.,
  PRC_PERIODIC_Y  = .true.,
 /
 
 &PARAM_GRID
- GRID_OUT_BASENAME = "grid_005m_1256x28x28",
+ GRID_OUT_BASENAME = "grid_005m_1256x32x32",
 /
 
 &PARAM_GEOMETRICS
@@ -28,19 +28,17 @@
 
 &PARAM_ATMOS_VARS
  ATMOS_RESTART_OUTPUT         = .true.,
- ATMOS_RESTART_OUT_BASENAME   = "init_coldbubble",
+ ATMOS_RESTART_OUT_BASENAME   = "init1_hydrostatic",
 /
 
 &PARAM_MKINIT
- MKINIT_initname = "COLDBUBBLE",
+ MKINIT_initname = "PLANESTATE",
 /
 
-&PARAM_MKINIT_COLDBUBBLE
- BBL_THETA = -5.D0,
- BBL_CZ = 4.D1,
- BBL_CX = 4.D1,
- BBL_CY = 4.D1,
- BBL_RZ = 1.D1,
- BBL_RX = 1.D1,
- BBL_RY = 1.D1,
+&PARAM_MKINIT_PLANESTATE
+ SFC_RH       = 50.D0,
+ ENV_RH       = 50.D0,
+ ENV_U        = 10.D0,
+ ENV_V        = 10.D0,
+ RANDOM_THETA = 0.1D0,
 /

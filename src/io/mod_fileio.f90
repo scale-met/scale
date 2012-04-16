@@ -17,6 +17,7 @@ module mod_fileio
   !++ Used modules
   !
   use mod_stdio, only: &
+     IO_FILECHR,  &
      IO_FID_LOG,  &
      IO_L
   use mod_time, only: &

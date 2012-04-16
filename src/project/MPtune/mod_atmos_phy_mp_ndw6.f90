@@ -65,32 +65,32 @@ module mod_atmos_phy_mp
      IO_FID_LOG,  &
      IO_L
   use mod_const, only : &
-     GRAV   => CONST_GRAV, &
-     PI     => CONST_PI, &
-     UNDEF8 => CONST_UNDEF8, &
-     Rdry   => CONST_Rdry,   &
-     CPdry  => CONST_CPdry,  &
-     CVdry  => CONST_CVdry,  &
-     RovCP  => CONST_RovCP,  &
-     CPovCV => CONST_CPovCV, &
-     P00    => CONST_PRE00,  &
-     T00    => CONST_TEM00,  &
-     Rvap   => CONST_Rvap,   &
-     CPvap  => CONST_CPvap,  &
-     CVvap  => CONST_CVvap,  &
-     CL     => CONST_CL,     &
-     CI     => CONST_CI,     &
-     EPSvap => CONST_EPSvap, &
+     GRAV   => CONST_GRAV,    &
+     PI     => CONST_PI,      &
+     UNDEF8 => CONST_UNDEF8,  &
+     Rdry   => CONST_Rdry,    &
+     CPdry  => CONST_CPdry,   &
+     CVdry  => CONST_CVdry,   &
+     RovCP  => CONST_RovCP,   &
+     CPovCV => CONST_CPovCV,  &
+     P00    => CONST_PRE00,   &
+     T00    => CONST_TEM00,   &
+     Rvap   => CONST_Rvap,    &
+     CPvap  => CONST_CPvap,   &
+     CVvap  => CONST_CVvap,   &
+     CL     => CONST_CL,      &
+     CI     => CONST_CI,      &
+     EPSvap => CONST_EPSvap,  &
      LHV    => CONST_LH00,    &
      LHF    => CONST_LHF00,   &
      LHS    => CONST_LHS00,   &
      LHV0    => CONST_LH0,    &
      LHF0    => CONST_LHF0,   &
      LHS0    => CONST_LHS0,   &
-     LHV00    => CONST_LH00,    &
-     LHF00    => CONST_LHF00,    &
-     PSAT0  => CONST_PSAT0,  &
-     EMELT  => CONST_EMELT,  &
+     LHV00    => CONST_LH00,  &
+     LHF00    => CONST_LHF00, &
+     PSAT0  => CONST_PSAT0,   &
+     EMELT  => CONST_EMELT,   &
      DWATR  => CONST_DWATR
   use mod_time, only: &
      TIME_rapstart, &
@@ -145,99 +145,99 @@ module mod_atmos_phy_mp
 
   ! for all processes
   ! SB06, Table 1.
-  real(8), parameter :: xc_min = 4.20d-15   ! [kg] : min mass, D_min=2um
-  real(8), parameter :: xr_min = 2.60d-10   ! [kg] : min mass, D_min=79um
-  real(8), parameter :: xi_min = 3.382d-13  ! [kg] : min mass, D_min=10um
-  real(8), parameter :: xs_min = 1.847d-12  ! [kg] : min mass, D_min=20um
-  real(8), parameter :: xg_min = 1.230d-10  ! [kg] : min mass, D_min=100um 
+  real(8), private, parameter :: xc_min = 4.20d-15   ! [kg] : min mass, D_min=2um
+  real(8), private, parameter :: xr_min = 2.60d-10   ! [kg] : min mass, D_min=79um
+  real(8), private, parameter :: xi_min = 3.382d-13  ! [kg] : min mass, D_min=10um
+  real(8), private, parameter :: xs_min = 1.847d-12  ! [kg] : min mass, D_min=20um
+  real(8), private, parameter :: xg_min = 1.230d-10  ! [kg] : min mass, D_min=100um 
   ! refer to Seifert(2002) (Dr. Thesis, Table.5.1)
-  real(8), parameter :: xc_max = 2.6d-10    ! [kg] : max, D_max=79um
-  real(8), parameter :: xr_max = 5.00d-6    ! [kg] : max, D_max=2mm
-  real(8), parameter :: xi_max = 1.377d-6   ! [kg] : max, D_max=5mm
-  real(8), parameter :: xs_max = 7.519d-6   ! [kg] : max, D_max=1cm
-  real(8), parameter :: xg_max = 4.900d-5   ! [kg] : max, D_max=1cm
+  real(8), private, parameter :: xc_max = 2.6d-10    ! [kg] : max, D_max=79um
+  real(8), private, parameter :: xr_max = 5.00d-6    ! [kg] : max, D_max=2mm
+  real(8), private, parameter :: xi_max = 1.377d-6   ! [kg] : max, D_max=5mm
+  real(8), private, parameter :: xs_max = 7.519d-6   ! [kg] : max, D_max=1cm
+  real(8), private, parameter :: xg_max = 4.900d-5   ! [kg] : max, D_max=1cm
   ! filter similar to Ikawa et al.(1991) sec.3.5
-  real(8), parameter :: xmin_filter= xc_min
+  real(8), private, parameter :: xmin_filter= xc_min
   ! filter of effective radius(1 micron)
-  real(8), parameter :: rmin_re= 1.d-6
+  real(8), private, parameter :: rmin_re= 1.d-6
   !
   ! SB06(95),(96)
-  real(8), parameter :: n0r_min= 2.5e5    ! [m-4]: min intercept parameter of rain
-  real(8), parameter :: n0r_max= 2.0d7    ! [m-4]: max 
-  real(8), parameter :: lambdar_min= 1.d3 ! [m-1]: min slope parameter of rain
-  real(8), parameter :: lambdar_max= 1.d4 ! [m-1]: max 
+  real(8), private, parameter :: n0r_min= 2.5e5    ! [m-4]: min intercept parameter of rain
+  real(8), private, parameter :: n0r_max= 2.0d7    ! [m-4]: max 
+  real(8), private, parameter :: lambdar_min= 1.d3 ! [m-1]: min slope parameter of rain
+  real(8), private, parameter :: lambdar_max= 1.d4 ! [m-1]: max 
   ! empirical value from Meyers etal.(1991), 1[/liter] = 1.d3[/m3]
-  real(8), parameter :: nc_min = 1.d4     ! [m-3] empirical T.Mitsui
-  real(8), parameter :: nr_min = 1.d0     ! [m-3] 1/1000 [/liter]
-  real(8), parameter :: ni_min = 1.d0     ! [m-3]
-  real(8), parameter :: ns_min = 1.d-4    ! [m-3] 
-  real(8), parameter :: ng_min = 1.d-4    ! [m-3] 
+  real(8), private, parameter :: nc_min = 1.d4     ! [m-3] empirical T.Mitsui
+  real(8), private, parameter :: nr_min = 1.d0     ! [m-3] 1/1000 [/liter]
+  real(8), private, parameter :: ni_min = 1.d0     ! [m-3]
+  real(8), private, parameter :: ns_min = 1.d-4    ! [m-3] 
+  real(8), private, parameter :: ng_min = 1.d-4    ! [m-3] 
   ! empirical filter 
-  real(8), parameter :: lc_min = xc_min*nc_min
-  real(8), parameter :: lr_min = xr_min*nr_min
-  real(8), parameter :: li_min = xi_min*ni_min
-  real(8), parameter :: ls_min = xs_min*ns_min
-  real(8), parameter :: lg_min = xg_min*ng_min
+  real(8), private, parameter :: lc_min = xc_min*nc_min
+  real(8), private, parameter :: lr_min = xr_min*nr_min
+  real(8), private, parameter :: li_min = xi_min*ni_min
+  real(8), private, parameter :: ls_min = xs_min*ns_min
+  real(8), private, parameter :: lg_min = xg_min*ng_min
   ! 
-  real(8), parameter :: x_sep   = 2.6d-10 ! boundary mass between cloud and rain
+  real(8), private, parameter :: x_sep   = 2.6d-10 ! boundary mass between cloud and rain
   !
-  real(8), parameter :: tem_min=100.D0 
-  real(8), parameter :: rho_min=1.d-5     ! 3.e-3 is lower limit recognized in many experiments.
-  real(8), parameter :: rhoi   = 916.7d0 
+  real(8), private, parameter :: tem_min=100.D0 
+  real(8), private, parameter :: rho_min=1.d-5     ! 3.e-3 is lower limit recognized in many experiments.
+  real(8), private, parameter :: rhoi   = 916.7d0 
   ! for Seifert(2008)
   ! work parameter for gamma function, imported from MISC_gammafunc 
-  real(8), parameter :: gfac_coef(6)=(/&
+  real(8), private, parameter :: gfac_coef(6)=(/&
        +76.18009172947146D0, -86.50532032941677D0, +24.01409824083091D0,&
        -1.231739572450155D0, +0.1208650973866179D-2, -0.5395239384953D-5 /)
-  real(8), parameter :: gfac_ser0=1.000000000190015D0
+  real(8), private, parameter :: gfac_ser0=1.000000000190015D0
   !
-  integer, save, private :: ntmax_phase_change = 1
-  integer, save, private :: ntmax_collection   = 1
-  integer, save, private :: ntmax_sedimentation= 1 ! 10/08/03 [Add] T.Mitsui
+  integer, private, save :: ntmax_phase_change = 1
+  integer, private, save :: ntmax_collection   = 1
+  integer, private, save :: ntmax_sedimentation= 1 ! 10/08/03 [Add] T.Mitsui
   !
   !--- standard density
-  real(8), parameter :: rho_0 = 1.28D0
+  real(8), private, parameter :: rho_0 = 1.28D0
   !--- max number of Nc( activatable aerosol number concentration )
   real(8), allocatable, private, save :: nc_uplim(:,:)
   !
   !--- thermal conductivity of air
-  real(8), parameter :: Ka0  = 2.428D-2 
+  real(8), private, parameter :: Ka0  = 2.428D-2 
   !<--- J/m/s/K : 0C/1atm
-  real(8), parameter :: dKa_dT = 7.47D-5
+  real(8), private, parameter :: dKa_dT = 7.47D-5
   !<--- J/m/s/K/K : dependency of temperature
   !====== Ka = Ka0 + temc*dKa_dT
   !
   !--- Dynamic viscosity 
-  real(8), parameter :: mua0 = 1.718D-5
+  real(8), private, parameter :: mua0 = 1.718D-5
   !<--- Kg/m/s : 0C/1atm
-  real(8), parameter :: dmua_dT = 5.28D-8
+  real(8), private, parameter :: dmua_dT = 5.28D-8
   !<--- Kg/m/s/K : dependency of temperature
   !======  mua = mua0 + temc*dmua_dT
   !
-  real(8), save, private :: xc_ccn = 1.d-12 ! [kg]
-  real(8), save, private :: xi_ccn = 1.d-12 ! [kg] ! [move] 11/08/30 T.Mitsui
+  real(8), private, save :: xc_ccn = 1.d-12 ! [kg]
+  real(8), private, save :: xi_ccn = 1.d-12 ! [kg] ! [move] 11/08/30 T.Mitsui
   !
   ! capacity of diffusional growth
   ! ( dependent of their geometries )
-  real(8), save, private :: cap(HYDRO_MAX) 
+  real(8), private, save :: cap(HYDRO_MAX) 
   !
   ! constants for Diameter-Mass relation
   ! D = a * x^b
-  real(8), save, private :: a_m(HYDRO_MAX) 
-  real(8), save, private :: b_m(HYDRO_MAX) 
+  real(8), private, save :: a_m(HYDRO_MAX) 
+  real(8), private, save :: b_m(HYDRO_MAX) 
   ! constants for Terminal velocity-Mass relation
   ! vt = alpha * x^beta * f
-  real(8), save, private :: alpha_v(HYDRO_MAX,2) 
-  real(8), save, private :: beta_v(HYDRO_MAX,2) 
-  real(8), save, private :: alpha_vn(HYDRO_MAX,2)   !
-  real(8), save, private :: beta_vn(HYDRO_MAX,2)    !
-  real(8), save, private :: gamma_v(HYDRO_MAX) 
+  real(8), private, save :: alpha_v(HYDRO_MAX,2) 
+  real(8), private, save :: beta_v(HYDRO_MAX,2) 
+  real(8), private, save :: alpha_vn(HYDRO_MAX,2)   !
+  real(8), private, save :: beta_vn(HYDRO_MAX,2)    !
+  real(8), private, save :: gamma_v(HYDRO_MAX) 
   !  Aerodynamical factor for correction of terminal velocity.(Heymsfield and Iaquinta, 2000)
   !  vt(tem,pre) = vt0 * (pre/pre0)**a_pre0 * (tem/tem0)**a_tem0
-  real(8), parameter :: pre0_vt   = 300.d2  ! 300hPa
-  real(8), parameter :: tem0_vt   = 233.d0  ! -40degC
-  real(8), parameter :: a_pre0_vt = -0.178d0
-  real(8), parameter :: a_tem0_vt = -0.394d0
+  real(8), private, parameter :: pre0_vt   = 300.d2  ! 300hPa
+  real(8), private, parameter :: tem0_vt   = 233.d0  ! -40degC
+  real(8), private, parameter :: a_pre0_vt = -0.178d0
+  real(8), private, parameter :: a_tem0_vt = -0.394d0
   ! Parameters to determine Droplet Size Distribution 
   ! as a General Gamma Distribution
   ! f(x) = A x^nu exp(-lambda x^mu )
@@ -245,112 +245,112 @@ module mod_atmos_phy_mp
   !     mu=1/3, nu=-2/3
   ! for Gamma Distribution ( popular for cloud )
   !     mu=1
-  real(8), save, private :: nu(HYDRO_MAX) 
-  real(8), save, private :: mu(HYDRO_MAX) 
+  real(8), private, save :: nu(HYDRO_MAX) 
+  real(8), private, save :: mu(HYDRO_MAX) 
   ! Mitchell(1996), JAS, vol.53, No.12, pp.1710-1723
   !  area = a_area*D^b_area
   !  area = ax_area*x^bx_area
   ! Auer and Veal(1970), JAS, vol.27, pp.919-pp.926
   ! height = a_h*x^b_h( based on h=a_ar*D^b_ar,  ar:aspect ratio)
-  real(8), save, private :: a_area(HYDRO_MAX)       !
-  real(8), save, private :: b_area(HYDRO_MAX)       !
-  real(8), save, private :: ax_area(HYDRO_MAX)      ! 
-  real(8), save, private :: bx_area(HYDRO_MAX)      ! 
+  real(8), private, save :: a_area(HYDRO_MAX)       !
+  real(8), private, save :: b_area(HYDRO_MAX)       !
+  real(8), private, save :: ax_area(HYDRO_MAX)      ! 
+  real(8), private, save :: bx_area(HYDRO_MAX)      ! 
   ! parameters for radius of equivalent area
   ! r_ea = a_rea*x**b_rea
-  real(8), save, private :: a_rea(HYDRO_MAX)        ! 
-  real(8), save, private :: b_rea(HYDRO_MAX)        ! 
-  real(8), save, private :: a_rea2(HYDRO_MAX)       ! 
-  real(8), save, private :: b_rea2(HYDRO_MAX)       ! 
-  real(8), save, private :: a_rea3(HYDRO_MAX)       ! 
-  real(8), save, private :: b_rea3(HYDRO_MAX)       ! 
+  real(8), private, save :: a_rea(HYDRO_MAX)        ! 
+  real(8), private, save :: b_rea(HYDRO_MAX)        ! 
+  real(8), private, save :: a_rea2(HYDRO_MAX)       ! 
+  real(8), private, save :: b_rea2(HYDRO_MAX)       ! 
+  real(8), private, save :: a_rea3(HYDRO_MAX)       ! 
+  real(8), private, save :: b_rea3(HYDRO_MAX)       ! 
   !
-  real(8), save, private :: a_d2vt(HYDRO_MAX)       ! 
-  real(8), save, private :: b_d2vt(HYDRO_MAX)       ! 
+  real(8), private, save :: a_d2vt(HYDRO_MAX)       ! 
+  real(8), private, save :: b_d2vt(HYDRO_MAX)       ! 
   ! coefficient of x^2 moment of DSD
   ! Z = integral x*x*f(x) dx
   !   = coef_m2*N*(L/N)^2
-  real(8), save, private :: coef_m2(HYDRO_MAX) 
+  real(8), private, save :: coef_m2(HYDRO_MAX) 
   ! radar reflectivity coefficient defined by diameter
-  real(8), save, private :: coef_d6(HYDRO_MAX)      !
+  real(8), private, save :: coef_d6(HYDRO_MAX)      !
   ! volume coefficient defined by diameter
-  real(8), save, private :: coef_d3(HYDRO_MAX)      !
+  real(8), private, save :: coef_d3(HYDRO_MAX)      !
   ! coefficient of weighted mean diameter
-  real(8), save, private :: coef_d(HYDRO_MAX) 
+  real(8), private, save :: coef_d(HYDRO_MAX) 
   ! coefficient of weighted mean d*d*v 
-  real(8), save, private :: coef_d2v(HYDRO_MAX)     !
+  real(8), private, save :: coef_d2v(HYDRO_MAX)     !
   ! coefficient of moment of d*d*v 
-  real(8), save, private :: coef_md2v(HYDRO_MAX)    !
+  real(8), private, save :: coef_md2v(HYDRO_MAX)    !
   !
   ! for effective radius(spherical particle)
-  real(8), save, private :: coef_r2(HYDRO_MAX) 
-  real(8), save, private :: coef_r3(HYDRO_MAX) 
-  real(8), save, private :: coef_re(HYDRO_MAX) 
+  real(8), private, save :: coef_r2(HYDRO_MAX) 
+  real(8), private, save :: coef_r3(HYDRO_MAX) 
+  real(8), private, save :: coef_re(HYDRO_MAX) 
   ! for effective radius(hexagonal plate)
-  real(8), save, private :: coef_rea2(HYDRO_MAX)    ! 
-  real(8), save, private :: coef_rea3(HYDRO_MAX)    ! 
-  logical, save, private :: opt_M96_ice=.true.               !
-  logical, save, private :: opt_M96_column_ice=.false.       !
+  real(8), private, save :: coef_rea2(HYDRO_MAX)    ! 
+  real(8), private, save :: coef_rea3(HYDRO_MAX)    ! 
+  logical, private, save :: opt_M96_ice=.true.               !
+  logical, private, save :: opt_M96_column_ice=.false.       !
   !
   ! coefficeint of weighted mean terminal velocity
   ! vt0 is number weighted and
   ! vt1 is mass   weighted.
-  real(8), save, private :: coef_vt0(HYDRO_MAX,2) 
-  real(8), save, private :: coef_vt1(HYDRO_MAX,2) 
-  real(8), save, private :: coef_deplc 
-  real(8), save, private :: coef_dave_N(HYDRO_MAX) ! 
-  real(8), save, private :: coef_dave_L(HYDRO_MAX) ! 
+  real(8), private, save :: coef_vt0(HYDRO_MAX,2) 
+  real(8), private, save :: coef_vt1(HYDRO_MAX,2) 
+  real(8), private, save :: coef_deplc 
+  real(8), private, save :: coef_dave_N(HYDRO_MAX) ! 
+  real(8), private, save :: coef_dave_L(HYDRO_MAX) ! 
   ! diameter of terminal velocity branch
   !
   real(8), private, save :: d0_ni=261.76d-6   ! 
   real(8), private, save :: d0_li=398.54d-6   !
-  real(8), parameter     :: d0_ns=270.03d-6   !
-  real(8), parameter     :: d0_ls=397.47d-6   !
-  real(8), parameter     :: d0_ng=269.08d-6   !
-  real(8), parameter     :: d0_lg=376.36d-6   !
+  real(8), private, parameter     :: d0_ns=270.03d-6   !
+  real(8), private, parameter     :: d0_ls=397.47d-6   !
+  real(8), private, parameter     :: d0_ng=269.08d-6   !
+  real(8), private, parameter     :: d0_lg=376.36d-6   !
   !
-  real(8), parameter :: coef_vtr_ar1=9.65d0    ! coef. for large branch
+  real(8), private, parameter :: coef_vtr_ar1=9.65d0    ! coef. for large branch
   ! original parameter of Rogers etal.(1993)
-  real(8), parameter :: coef_vtr_br1=10.43d0    ! ...
-  real(8), parameter :: coef_vtr_cr1=600.D0    ! ... 
-  real(8), parameter :: coef_vtr_ar2=4.d3      ! coef. for small branch
-  real(8), parameter :: coef_vtr_br2=12.d3     ! ...
-  real(8), parameter :: d_vtr_branch=0.745d-3  ! 0.745 mm (diameter dividing 2-branches)
+  real(8), private, parameter :: coef_vtr_br1=10.43d0    ! ...
+  real(8), private, parameter :: coef_vtr_cr1=600.D0    ! ... 
+  real(8), private, parameter :: coef_vtr_ar2=4.d3      ! coef. for small branch
+  real(8), private, parameter :: coef_vtr_br2=12.d3     ! ...
+  real(8), private, parameter :: d_vtr_branch=0.745d-3  ! 0.745 mm (diameter dividing 2-branches)
   ! equilibrium diameter of rain break-up
-  real(8), parameter, private :: dr_eq   = 1.10d-3 ! eqilibrium diameter, Seifert 2008(36)
+  real(8), private, parameter :: dr_eq   = 1.10d-3 ! eqilibrium diameter, Seifert 2008(36)
   ! coefficient of General Gamma.
   !  f(x)  = A x^nu exp(-lambda x^mu )
   ! lambda = coef_lambda * (L/N)^{-mu}  
   !     A  = coef_A*N*lambda^slope_A
-  real(8), save, private :: coef_A(HYDRO_MAX) 
-  real(8), save, private :: coef_lambda(HYDRO_MAX) 
-  real(8), save, private :: slope_A(HYDRO_MAX)   
+  real(8), private, save :: coef_A(HYDRO_MAX) 
+  real(8), private, save :: coef_lambda(HYDRO_MAX) 
+  real(8), private, save :: slope_A(HYDRO_MAX)   
   ! coefficeint of weighted ventilation effect.
   ! large, and small branch is by PK97(13-60),(13-61),(13-88),(13-89) 
-  real(8), save, private :: ah_vent  (HYDRO_MAX,2) ! 
-  real(8), save, private :: bh_vent  (HYDRO_MAX,2) ! 
-  real(8), save, private :: ah_vent0 (HYDRO_MAX,2) ! 
-  real(8), save, private :: bh_vent0 (HYDRO_MAX,2) ! 
-  real(8), save, private :: ah_vent1 (HYDRO_MAX,2) ! 
-  real(8), save, private :: bh_vent1 (HYDRO_MAX,2) ! 
+  real(8), private, save :: ah_vent  (HYDRO_MAX,2) ! 
+  real(8), private, save :: bh_vent  (HYDRO_MAX,2) ! 
+  real(8), private, save :: ah_vent0 (HYDRO_MAX,2) ! 
+  real(8), private, save :: bh_vent0 (HYDRO_MAX,2) ! 
+  real(8), private, save :: ah_vent1 (HYDRO_MAX,2) ! 
+  real(8), private, save :: bh_vent1 (HYDRO_MAX,2) ! 
   ! coefficient of collision growth 
-  real(8), save, private :: delta_b0 (HYDRO_MAX) 
-  real(8), save, private :: delta_b1 (HYDRO_MAX) 
-  real(8), save, private :: delta_ab0(HYDRO_MAX,HYDRO_MAX) 
-  real(8), save, private :: delta_ab1(HYDRO_MAX,HYDRO_MAX) 
+  real(8), private, save :: delta_b0 (HYDRO_MAX) 
+  real(8), private, save :: delta_b1 (HYDRO_MAX) 
+  real(8), private, save :: delta_ab0(HYDRO_MAX,HYDRO_MAX) 
+  real(8), private, save :: delta_ab1(HYDRO_MAX,HYDRO_MAX) 
   !
-  real(8), save, private :: theta_b0 (HYDRO_MAX) 
-  real(8), save, private :: theta_b1 (HYDRO_MAX) 
-  real(8), save, private :: theta_ab0(HYDRO_MAX,HYDRO_MAX) 
-  real(8), save, private :: theta_ab1(HYDRO_MAX,HYDRO_MAX) 
+  real(8), private, save :: theta_b0 (HYDRO_MAX) 
+  real(8), private, save :: theta_b1 (HYDRO_MAX) 
+  real(8), private, save :: theta_ab0(HYDRO_MAX,HYDRO_MAX) 
+  real(8), private, save :: theta_ab1(HYDRO_MAX,HYDRO_MAX) 
   !
-  logical, save, private :: opt_debug=.false.
+  logical, private, save :: opt_debug=.false.
   !
-  logical, save, private :: opt_debug_tem=.false.
-  logical, save, private :: opt_debug_inc=.true.
-  logical, save, private :: opt_debug_act=.true.
-  logical, save, private :: opt_debug_ree=.true.
-  logical, save, private :: opt_debug_bcs=.true.
+  logical, private, save :: opt_debug_tem=.false.
+  logical, private, save :: opt_debug_inc=.true.
+  logical, private, save :: opt_debug_act=.true.
+  logical, private, save :: opt_debug_ree=.true.
+  logical, private, save :: opt_debug_bcs=.true.
 
   integer, private, save :: MP_NSTEP_SEDIMENTATION
   real(8), private, save :: MP_RNSTEP_SEDIMENTATION
@@ -424,21 +424,10 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait, &
-       COMM_total
     use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
+       ATMOS_vars_fillhalo, &
+       ATMOS_vars_total
     implicit none
-
-    integer :: i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
@@ -453,47 +442,7 @@ contains
     call MP_negativefilter
     call TIME_rapend  ('MP6 Filter')
 
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_vars8( MOMZ(:,:,:), 2 )
-    call COMM_vars8( MOMX(:,:,:), 3 )
-    call COMM_vars8( MOMY(:,:,:), 4 )
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
-
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
-    enddo
-
-    ! fill KHALO
-    do j  = 1, JA
-    do i  = 1, IA
-       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
-       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-    enddo
-    enddo
-    do iq = 1, QA
-    do j  = 1, JA
-    do i  = 1, IA
-       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
-       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
-    enddo
-    enddo
-    enddo
+    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
 
@@ -1142,10 +1091,10 @@ contains
        thrmdyn_tempre  => ATMOS_THRRMODYN_tempre, &
        thrmdyn_tempre2 => ATMOS_THRRMODYN_tempre2, &
        CVw => AQ_CV
-    use mod_atmos_saturation, only : &
-       moist_psat_water    => ATMOS_SATURATION_psat_water,   &
-       moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
-       moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
+    use mod_mp_saturation, only : &
+       moist_psat_water    => MP_SATURATION_psat_water,   &
+       moist_psat_ice      => MP_SATURATION_psat_ice,     &
+       moist_dqsw_dtem_rho => MP_SATURATION_dqsw_dtem_rho
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -1366,30 +1315,20 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     ! 
     !----------------------------------------------------------------------------
-    if( IO_L ) write(IO_FID_LOG,*) 'MPX'
     call TIME_rapstart('MPX ijkconvert')
 
     do j = JS, JE
     do i = IS, IE
        ij = (j-JS)*IMAX+i-IS+1
 
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           rhog  (ij,k) = DENS(k,i,j)
        enddo
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           rhogw (ij,k) = MOMZ(k,i,j)
        enddo
-       !OCL XFILL
-       do k = KS, KE
-          rhogvx(ij,k) = MOMX(k,i,j)
-       enddo
-       !OCL XFILL
-       do k = KS, KE
-          rhogvy(ij,k) = MOMY(k,i,j)
-       enddo
-
        do k = KS, KE
           th    (ij,k) = RHOT(k,i,j) / DENS(k,i,j)
        enddo
@@ -1399,14 +1338,10 @@ contains
     do ij = 1, IJA
        rhog  (ij,1:KS-1) = rhog  (ij,KS)
        rhogw (ij,1:KS-1) = rhogw (ij,KS)
-       rhogvx(ij,1:KS-1) = rhogvx(ij,KS)
-       rhogvy(ij,1:KS-1) = rhogvy(ij,KS)
        th    (ij,1:KS-1) = th    (ij,KS)
 
        rhog  (ij,KE+1:KA) = rhog  (ij,KE)
        rhogw (ij,KE+1:KA) = rhogw (ij,KE)
-       rhogvx(ij,KE+1:KA) = rhogvx(ij,KE)
-       rhogvy(ij,KE+1:KA) = rhogvy(ij,KE)
        th    (ij,KE+1:KA) = th    (ij,KE)
     enddo
 
@@ -1415,7 +1350,7 @@ contains
        do i = IS, IE
           ij = (j-JS)*IMAX+i-IS+1
 
-          !OCL XFILL
+!OCL XFILL
           do k = KS, KE
              q(ij,k,iq) = QTRC(k,i,j,iq)
           enddo
@@ -1438,11 +1373,11 @@ contains
     enddo
     enddo
 
-    do k  = 1, KA
+    do k  = 2, KA
     do ij = 1, IJA
        rho  (ij,k) = rhog(ij,k)
        rrhog(ij,k) = 1.D0 / rhog(ij,k)
-       w    (ij,k) = rhogw(ij,k) * rrhog(ij,k)
+       w    (ij,k) = ( rhogw(ij,k) + rhogw(ij,k-1) ) * rrhog(ij,k)
     enddo
     enddo
 
@@ -1460,7 +1395,6 @@ contains
 
     call TIME_rapend  ('MPX ijkconvert')
 
-    if( IO_L ) write(IO_FID_LOG,*) 'MP1'
     call TIME_rapstart('MP1 Nucleation')
 
     do k  = KS, KE
@@ -1473,7 +1407,7 @@ contains
        rho_fac_g(ij,k) = rho_fac_i(ij,k)
     enddo
     enddo
-    !OCL XFILL
+!OCL XFILL
     do ij=1, IJA
        rho_fac_c(ij,1:KS-1)    = 1.D0
        rho_fac_r(ij,1:KS-1)    = 1.D0
@@ -1496,7 +1430,7 @@ contains
     enddo
     enddo
 
-    !OCL XFILL
+!OCL XFILL
     do k  = 1, KA
     do ij = 1, IJA
        qke       (ij,k) = 0.D0 ! 2*TKE 
@@ -1570,7 +1504,7 @@ contains
     enddo
     enddo
 
-    if( opt_debug )     call debugreport_nucleation
+!    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem( 2, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
 
     call TIME_rapend  ('MP1 Nucleation')
@@ -1579,7 +1513,6 @@ contains
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     ! 
     !----------------------------------------------------------------------------
-    if( IO_L ) write(IO_FID_LOG,*) 'MP2'
     call TIME_rapstart('MP2 Phase change')
 
     ! parameter setting
@@ -1723,7 +1656,7 @@ contains
             sl_PLCdep,      &      ! out
             sl_PLRdep, sl_PNRdep ) ! out
 
-       if( opt_debug )     call debugreport_phasechange
+!       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem( 3, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
 
     call TIME_rapend  ('MP2 Phase change')
@@ -2062,7 +1995,7 @@ contains
     enddo
     enddo
 
-    if( opt_debug )     call debugreport_collection
+!    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem( 4, tem(:,:), rho(:,:), pre(:,:), q(:,:,I_QV) )
 
     call TIME_rapend  ('MP3 Collection')
@@ -2079,57 +2012,39 @@ contains
     do i = IS, IE
        ij = (j-JS)*IMAX+i-IS+1
 
-       !OCL XFILL
-       do k = KS, KE
-          DENS(k,i,j) = rhog(ij,k)
-       enddo
-       !OCL XFILL
-       do k = KS, KE
-          MOMZ(k,i,j) = rhogw(ij,k)
-       enddo
-       !OCL XFILL
-       do k = KS, KE
-          MOMX(k,i,j) = rhogvx(ij,k)
-       enddo
-       !OCL XFILL
-       do k = KS, KE
-          MOMY(k,i,j) = rhogvy(ij,k)
-       enddo
-
        do k = KS, KE
           RHOT(k,i,j) = th(ij,k) * rhog(ij,k)
        enddo
-
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           rhoe(k,i,j) = rhoge(ij,k)
        enddo
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           temp(k,i,j) = tem(ij,k)
        enddo
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           pres(k,i,j) = pre(ij,k)
        enddo
     enddo
     enddo
 
-    !OCL SERIAL
+!OCL SERIAL
     do iq = 1, QA
-       !OCL PARALLEL
+!OCL PARALLEL
        do j  = JS, JE
        do i  = IS, IE
           ij = (j-JS)*IMAX+i-IS+1
 
-          !OCL XFILL
+!OCL XFILL
           do k = KS, KE
              rhoq(k,i,j,iq) = rhogq(ij,k,iq)
           enddo
        enddo
        enddo
 
-       !OCL PARALLEL
+!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2156,7 +2071,7 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MP5 Sedimentation')
 
-    !OCL XFILL
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2190,215 +2105,13 @@ contains
        enddo
        enddo
 
-       if( opt_debug ) call debugreport_sedimentation
+!       if( opt_debug ) call debugreport_sedimentation
 
     enddo
 
     call TIME_rapend  ('MP5 Sedimentation')
 
     return
-    !---------------------------------------------------------------------------
-  contains
-    !---------------------------------------------------------------------------
-    subroutine debugreport_nucleation
-      implicit none
-
-      if( IO_L ) write(IO_FID_LOG,*) "*** Nucleation/mod_mp_ndw6"
-
-      if( IO_L ) write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-      if( IO_L ) write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-      if( IO_L ) write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-      if( IO_L ) write(IO_FID_LOG,*) "PLCccn: max",maxval(dt*PLCccn(:,:))," min:",minval(dt*PLCccn(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNCccn: max",maxval(dt*PNCccn(:,:))," min:",minval(dt*PNCccn(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIccn: max",maxval(dt*PLIccn(:,:))," min:",minval(dt*PLIccn(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIccn: max",maxval(dt*PNIccn(:,:))," min:",minval(dt*PNIccn(:,:))
-
-      return
-    end subroutine debugreport_nucleation
-
-    !---------------------------------------------------------------------------
-    subroutine debugreport_phasechange
-      implicit none
-
-      if( IO_L ) write(IO_FID_LOG,*) "*** Phase Change/mod_mp_ndw6"
-
-      if( IO_L ) write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-
-      if( IO_L ) write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-
-      if( IO_L ) write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-      if( IO_L ) write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-
-      if( IO_L ) write(IO_FID_LOG,*) "PLChom: max",maxval(wdt*1.D0*PLChom(:,:))," min:",minval(wdt*1.D0*PLChom(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNChom: max",maxval(wdt*1.D0*PNChom(:,:))," min:",minval(wdt*1.D0*PNChom(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLChet: max",maxval(wdt*1.D0*PLChet(:,:))," min:",minval(wdt*1.D0*PLChet(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNChet: max",maxval(wdt*1.D0*PNChet(:,:))," min:",minval(wdt*1.D0*PNChet(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLRhet: max",maxval(wdt*1.D0*PLRhet(:,:))," min:",minval(wdt*1.D0*PLRhet(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRhet: max",maxval(wdt*1.D0*PNRhet(:,:))," min:",minval(wdt*1.D0*PNRhet(:,:))
-
-      if( IO_L ) write(IO_FID_LOG,*) "PLImlt: max",maxval(wdt*1.D0*PLImlt(:,:))," min:",minval(wdt*1.D0*PLImlt(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNImlt: max",maxval(wdt*1.D0*PNImlt(:,:))," min:",minval(wdt*1.D0*PNImlt(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLSmlt: max",maxval(wdt*1.D0*PLSmlt(:,:))," min:",minval(wdt*1.D0*PLSmlt(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNSmlt: max",maxval(wdt*1.D0*PNSmlt(:,:))," min:",minval(wdt*1.D0*PNSmlt(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLGmlt: max",maxval(wdt*1.D0*PLGmlt(:,:))," min:",minval(wdt*1.D0*PLGmlt(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNGmlt: max",maxval(wdt*1.D0*PNGmlt(:,:))," min:",minval(wdt*1.D0*PNGmlt(:,:))
-
-      if( IO_L ) write(IO_FID_LOG,*) "PLCdep: max",maxval(wdt*1.D0*PLCdep(:,:))," min:",minval(wdt*1.D0*PLCdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLRdep: max",maxval(wdt*1.D0*PLRdep(:,:))," min:",minval(wdt*1.D0*PLRdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIdep: max",maxval(wdt*1.D0*PLIdep(:,:))," min:",minval(wdt*1.D0*PLIdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLSdep: max",maxval(wdt*1.D0*PLSdep(:,:))," min:",minval(wdt*1.D0*PLSdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLGdep: max",maxval(wdt*1.D0*PLGdep(:,:))," min:",minval(wdt*1.D0*PLGdep(:,:))
-
-      if( IO_L ) write(IO_FID_LOG,*) "PNCdep: max",maxval(wdt*1.D0*PNCdep(:,:))," min:",minval(wdt*1.D0*PNCdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRdep: max",maxval(wdt*1.D0*PNRdep(:,:))," min:",minval(wdt*1.D0*PNRdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIdep: max",maxval(wdt*1.D0*PNIdep(:,:))," min:",minval(wdt*1.D0*PNIdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNSdep: max",maxval(wdt*1.D0*PNSdep(:,:))," min:",minval(wdt*1.D0*PNSdep(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNGdep: max",maxval(wdt*1.D0*PNGdep(:,:))," min:",minval(wdt*1.D0*PNGdep(:,:))
-
-      return
-    end subroutine debugreport_phasechange
-
-    !---------------------------------------------------------------------------
-    subroutine debugreport_collection
-      implicit none
-
-      if( IO_L ) write(IO_FID_LOG,*) "*** Collection process /mod_mp_ndw6"
-
-      if( IO_L ) write(IO_FID_LOG,*) "I_QV: max",maxval(rhogq(:,:,I_QV))," min:",minval(rhogq(:,:,I_QV))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QC: max",maxval(rhogq(:,:,I_QC))," min:",minval(rhogq(:,:,I_QC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QR: max",maxval(rhogq(:,:,I_QR))," min:",minval(rhogq(:,:,I_QR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QI: max",maxval(rhogq(:,:,I_QI))," min:",minval(rhogq(:,:,I_QI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QS: max",maxval(rhogq(:,:,I_QS))," min:",minval(rhogq(:,:,I_QS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_QG: max",maxval(rhogq(:,:,I_QG))," min:",minval(rhogq(:,:,I_QG))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NC: max",maxval(rhogq(:,:,I_NC))," min:",minval(rhogq(:,:,I_NC))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NR: max",maxval(rhogq(:,:,I_NR))," min:",minval(rhogq(:,:,I_NR))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NI: max",maxval(rhogq(:,:,I_NI))," min:",minval(rhogq(:,:,I_NI))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NS: max",maxval(rhogq(:,:,I_NS))," min:",minval(rhogq(:,:,I_NS))
-      if( IO_L ) write(IO_FID_LOG,*) "I_NG: max",maxval(rhogq(:,:,I_NG))," min:",minval(rhogq(:,:,I_NG))
-
-      if( IO_L ) write(IO_FID_LOG,*) "tem : max",maxval(tem(:,:))       ," min:",minval(tem(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "pre : max",maxval(pre(:,:))       ," min:",minval(pre(:,:)) ! 09/08/18 T.Mitsui
-      if( IO_L ) write(IO_FID_LOG,*) "rho : max",maxval(rho(:,:))       ," min:",minval(rho(:,:)) ! 09/08/18 T.Mitsui
-
-      if( IO_L ) write(IO_FID_LOG,*) "PLCaut: max",maxval(wdt*1.D0*PLCaut(:,:))," min:",minval(wdt*1.D0*PLCaut(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLCacc: max",maxval(wdt*1.D0*PLCacc(:,:))," min:",minval(wdt*1.D0*PLCacc(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNCaut: max",maxval(wdt*1.D0*PNCaut(:,:))," min:",minval(wdt*1.D0*PNCaut(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNCacc: max",maxval(wdt*1.D0*PNCacc(:,:))," min:",minval(wdt*1.D0*PNCacc(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRaut: max",maxval(wdt*1.D0*PNRaut(:,:))," min:",minval(wdt*1.D0*PNRaut(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRslc: max",maxval(wdt*1.D0*PNRslc(:,:))," min:",minval(wdt*1.D0*PNRslc(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRbrk: max",maxval(wdt*1.D0*PNRbrk(:,:))," min:",minval(wdt*1.D0*PNRbrk(:,:))
-      ! cloud mass
-      if( IO_L ) write(IO_FID_LOG,*) "PLGacLC2LG: max",maxval(wdt*1.D0*PLGacLC2LG(:,:))," min:",minval(wdt*1.D0*PLGacLC2LG(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLSacLC2LS: max",maxval(wdt*1.D0*PLSacLC2LS(:,:))," min:",minval(wdt*1.D0*PLSacLC2LS(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIacLC2LI: max",maxval(wdt*1.D0*PLIacLC2LI(:,:))," min:",minval(wdt*1.D0*PLIacLC2LI(:,:))
-      ! cloud num
-      if( IO_L ) write(IO_FID_LOG,*) "PNGacNC2NG: max",maxval(wdt*1.D0*PNGacNC2NG(:,:))," min:",minval(wdt*1.D0*PNGacNC2NG(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIacNC2NI: max",maxval(wdt*1.D0*PNIacNC2NI(:,:))," min:",minval(wdt*1.D0*PNIacNC2NI(:,:))
-      ! rain mass
-      if( IO_L ) write(IO_FID_LOG,*) "PLRacLG2LG_R: max",maxval(wdt*1.D0*PLRacLG2LG(:,:))," min:",minval(wdt*1.D0*PLRacLG2LG(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*1.D0*PLRacLS2LG_S(:,:))," min:",minval(wdt*1.D0*PLRacLS2LG_S(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLRacLI2LG_R: max",maxval(wdt*1.D0*PLRacLI2LG_R(:,:))," min:",minval(wdt*1.D0*PLRacLI2LG_R(:,:))
-      ! rain num
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNI2NG_R: max",maxval(wdt*1.D0*PNRacNI2NG_R(:,:))," min:",minval(wdt*1.D0*PNRacNI2NG_R(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNS2NG_R: max",maxval(wdt*1.D0*PNRacNS2NG_R(:,:))," min:",minval(wdt*1.D0*PNRacNS2NG_R(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNG2NG  : max",maxval(wdt*1.D0*PNRacNG2NG  (:,:))," min:",minval(wdt*1.D0*PNRacNG2NG  (:,:))
-      ! ice mass
-      if( IO_L ) write(IO_FID_LOG,*) "PLRacLI2LG_I: max",maxval(wdt*1.D0*PLRacLI2LG_I(:,:))," min:",minval(wdt*1.D0*PLRacLI2LG_I(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIacLI2LS:   max",maxval(wdt*1.D0*PLIacLI2LS(:,:))," min:",minval(wdt*1.D0*PLIacLI2LS(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIacLS2LS_I: max",maxval(wdt*1.D0*PLIacLS2LS(:,:))," min:",minval(wdt*1.D0*PLIacLS2LS(:,:))
-      ! ice num
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNI2NG_I: max",maxval(wdt*1.D0*PNRacNI2NG_I(:,:))," min:",minval(wdt*1.D0*PNRacNI2NG_I(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIacNI2NS:   max",maxval(wdt*1.D0*PNIacNI2NS(:,:))," min:",minval(wdt*1.D0*PNIacNI2NS(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIacNS2NS_I: max",maxval(wdt*1.D0*PNIacNS2NS(:,:))," min:",minval(wdt*1.D0*PNIacNS2NS(:,:))
-      ! snow mass
-      if( IO_L ) write(IO_FID_LOG,*) "PNIacNS2NS_S: max",maxval(wdt*1.D0*PNIacNS2NS(:,:))," min:",minval(wdt*1.D0*PNIacNS2NS(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLRacLS2LG_S: max",maxval(wdt*1.D0*PLRacLS2LG_S(:,:))," min:",minval(wdt*1.D0*PLRacLS2LG_S(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLGacLS2LG:   max",maxval(wdt*1.D0*PLGacLS2LG(:,:)),  " min:",minval(wdt*1.D0*PLGacLS2LG(:,:))
-      ! snow num
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNS2NG_S: max",maxval(wdt*1.D0*PNRacNS2NG_S(:,:))," min:",minval(wdt*1.D0*PNRacNS2NG_S(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNGacNS2NG:   max",maxval(wdt*1.D0*PNGacNS2NG(:,:))," min:",minval(wdt*1.D0*PNGacNS2NG(:,:))
-      ! grauepl num 
-      if( IO_L ) write(IO_FID_LOG,*) "PNRacNG2NG_G: max",maxval(wdt*1.D0*PNRacNG2NG(:,:))," min:",minval(wdt*1.D0*PNRacNG2NG(:,:))
-
-      if( IO_L ) write(IO_FID_LOG,*) "PLIcon: max",maxval(wdt*1.D0*PLIcon(:,:))," min:",minval(wdt*1.D0*PLIcon(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLScon: max",maxval(wdt*1.D0*PLScon(:,:))," min:",minval(wdt*1.D0*PLScon(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNIcon: max",maxval(wdt*1.D0*PNIcon(:,:))," min:",minval(wdt*1.D0*PNIcon(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PNScon: max",maxval(wdt*1.D0*PNScon(:,:))," min:",minval(wdt*1.D0*PNScon(:,:))
-       
-      if( IO_L ) write(IO_FID_LOG,*) "PLIacm: max",maxval(wdt*1.D0*PLIacm(:,:))," min:",minval(wdt*1.D0*PLIacm(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLIarm: max",maxval(wdt*1.D0*PLIarm(:,:))," min:",minval(wdt*1.D0*PLIarm(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLSacm: max",maxval(wdt*1.D0*PLSacm(:,:))," min:",minval(wdt*1.D0*PLSacm(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLSarm: max",maxval(wdt*1.D0*PLSarm(:,:))," min:",minval(wdt*1.D0*PLSarm(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLGacm: max",maxval(wdt*1.D0*PLGacm(:,:))," min:",minval(wdt*1.D0*PLGacm(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) "PLGarm: max",maxval(wdt*1.D0*PLGarm(:,:))," min:",minval(wdt*1.D0*PLGarm(:,:))
-       
-      if( IO_L ) write(IO_FID_LOG,*) "PNIacm: max",maxval(wdt*1.D0*PNIacm(:,:))," min:",minval(wdt*1.D0*PNIacm(:,:))    
-      if( IO_L ) write(IO_FID_LOG,*) "PNIarm: max",maxval(wdt*1.D0*PNIarm(:,:))," min:",minval(wdt*1.D0*PNIarm(:,:))    
-      if( IO_L ) write(IO_FID_LOG,*) "PNSacm: max",maxval(wdt*1.D0*PNSacm(:,:))," min:",minval(wdt*1.D0*PNSacm(:,:))    
-      if( IO_L ) write(IO_FID_LOG,*) "PNSarm: max",maxval(wdt*1.D0*PNSarm(:,:))," min:",minval(wdt*1.D0*PNSarm(:,:))    
-      if( IO_L ) write(IO_FID_LOG,*) "PNGacm: max",maxval(wdt*1.D0*PNGacm(:,:))," min:",minval(wdt*1.D0*PNGacm(:,:))    
-      if( IO_L ) write(IO_FID_LOG,*) "PNGarm: max",maxval(wdt*1.D0*PNGarm(:,:))," min:",minval(wdt*1.D0*PNGarm(:,:))    
-
-      return
-    end subroutine debugreport_collection
-
-    !---------------------------------------------------------------------------
-    subroutine debugreport_sedimentation
-      implicit none
-      !-------------------------------------------------------------------------
-
-      if( IO_L ) write(IO_FID_LOG,*) "*** sedimentation /mod_mp_ndw6"
-
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_QC] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_QC)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_QC))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_QR] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_QR)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_QR))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_QI] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_QI)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_QI))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_QS] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_QS)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_QS))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_QG] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_QG)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_QG))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_NC] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_NC)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_NC))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_NR] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_NR)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_NR))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_NI] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_NI)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_NI))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_NS] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_NS)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_NS))
-      if( IO_L ) write(IO_FID_LOG,*) "[Vt_NG] max:", maxval(velw(KS:KE,IS:IE,JS:JE,I_NG)), &
-                                            " min:", minval(velw(KS:KE,IS:IE,JS:JE,I_NG))
-
-      if( IO_L ) write(IO_FID_LOG,*) "[Precip rain] max:", maxval(flux_rain(KS-1,IS:IE,JS:JE)), &
-                                                  " min:", minval(flux_rain(KS-1,IS:IE,JS:JE))
-      if( IO_L ) write(IO_FID_LOG,*) "[Precip snow] max:", maxval(flux_rain(KS-1,IS:IE,JS:JE)), &
-                                                  " min:", minval(flux_rain(KS-1,IS:IE,JS:JE))
-
-      return
-    end subroutine debugreport_sedimentation
-
   end subroutine mp_ndw6
 
   !-----------------------------------------------------------------------------
@@ -2723,14 +2436,14 @@ contains
     use mod_const, only : &
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
-    use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water, &
-       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,   &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
+    use mod_mp_saturation, only : &
+       moist_psat_water     => MP_SATURATION_psat_water, &
+       moist_psat_ice       => MP_SATURATION_psat_ice,   &
+       moist_qsat_water     => MP_SATURATION_qsat_water, &
+       moist_qsat_ice       => MP_SATURATION_qsat_ice,   &
+       moist_dqsw_dtem_rho  => MP_SATURATION_dqsw_dtem_rho, &
+       moist_dqsi_dtem_rho  => MP_SATURATION_dqsi_dtem_rho, &
+       moist_dqsw_dtem_dpre => MP_SATURATION_dqsw_dtem_dpre
     implicit none
 
     integer, intent(in)  :: IJA
@@ -3211,9 +2924,9 @@ contains
        flag_history_in                 ) ! in [Add] 11/08/30
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice
+    use mod_mp_saturation, only : &
+       moist_psat_water     => MP_SATURATION_psat_water, &
+       moist_psat_ice       => MP_SATURATION_psat_ice
     implicit none
 
     integer, intent(in) :: IJA
@@ -4023,9 +3736,9 @@ contains
        xc, xr, xi, xs, xg,   & ! in
        vt_xave,              &
        dc_xave, dr_xave, di_xave, ds_xave, dg_xave ) ! in 
-    use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice
+    use mod_mp_saturation, only : &
+       moist_psat_water     => MP_SATURATION_psat_water, &
+       moist_psat_ice       => MP_SATURATION_psat_ice
     implicit none
 
     integer, intent(in)  :: IJA
@@ -4719,7 +4432,7 @@ contains
 
     mud_r = 3.D0 * nu(I_QR) + 2.D0
 
-    !OCL NORECURRENCE
+!OCL NORECURRENCE
     do j = JS, JE
     do i = IS, IE
 
@@ -4907,13 +4620,13 @@ contains
        thrmdyn_qd      => ATMOS_THRRMODYN_qd, &
        thrmdyn_cv      => ATMOS_THRRMODYN_cv, &
        thrmdyn_cp      => ATMOS_THRRMODYN_cp
-    use mod_atmos_saturation, only : &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water,     &
-       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,       &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho,  &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre, &
-       moist_dqsi_dtem_dpre => ATMOS_SATURATION_dqsi_dtem_dpre
+    use mod_mp_saturation, only : &
+       moist_qsat_water     => MP_SATURATION_qsat_water,     &
+       moist_qsat_ice       => MP_SATURATION_qsat_ice,       &
+       moist_dqsw_dtem_rho  => MP_SATURATION_dqsw_dtem_rho,  &
+       moist_dqsi_dtem_rho  => MP_SATURATION_dqsi_dtem_rho,  &
+       moist_dqsw_dtem_dpre => MP_SATURATION_dqsw_dtem_dpre, &
+       moist_dqsi_dtem_dpre => MP_SATURATION_dqsi_dtem_dpre
     implicit none
 
     integer, intent(in)    :: ntdiv                   ! [Add] 10/08/03
@@ -5392,7 +5105,7 @@ contains
        PNSdep(:,:) = PNSdep_alt(:,:)
        PNGdep(:,:) = PNGdep_alt(:,:)
        !
-    !OCL NORECURRENCE
+!OCL NORECURRENCE
        do k=KS, KE
           do ij=1, IJA
              !
@@ -5606,7 +5319,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! total hydrometeor (before correction)
-    !OCL NORECURRENCE
+!OCL NORECURRENCE
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -5621,8 +5334,9 @@ contains
     enddo
 
     ! remove negative value of hydrometeor (mass, number)
-    !OCL SIMD
+!OCL SERIAL, SIMD
     do iq = 1, QA
+!OCL PARALLEL
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5636,7 +5350,7 @@ contains
 
     ! apply correction of hydrometeor to total density
     ! [note] mass conservation is broken here to fill rounding error.
-    !OCL NORECURRENCE
+!OCL NORECURRENCE
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5657,7 +5371,7 @@ contains
     ! due to numerical diffusion in advection
     r_xmin = 1.D0 / xmin_filter    
 
-    !OCL SIMD
+!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5667,7 +5381,7 @@ contains
     enddo
     enddo
     enddo
-    !OCL SIMD
+!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5677,7 +5391,7 @@ contains
     enddo
     enddo
     enddo
-    !OCL SIMD
+!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5687,7 +5401,7 @@ contains
     enddo
     enddo
     enddo
-    !OCL SIMD
+!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -5697,7 +5411,7 @@ contains
     enddo
     enddo
     enddo
-    !OCL SIMD
+!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
