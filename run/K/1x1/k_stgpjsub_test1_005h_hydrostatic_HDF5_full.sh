@@ -30,6 +30,6 @@ mkdir -p ${outdir}
          mpiexec ${LPG} ./scale3_init_1256x32x32_ndw6_ ./scale3_init1_005h_hydrostatic.cnf
 ${fprof} mpiexec ${LPG} ./HDF5_full_1256x32x32_ndw6_   ./scale3_test1_005h_hydrostatic.cnf
 
-mv k_stgpjsub_test1_005h_hydrostatic_HDF5.sh.* ${outdir}
+mv k_stgpjsub_test1_005h_hydrostatic_HDF5_full.sh.* ${outdir}
 cp scale3_init1_005h_hydrostatic.cnf      ${outdir}
 cp scale3_test1_005h_hydrostatic.cnf      ${outdir}
