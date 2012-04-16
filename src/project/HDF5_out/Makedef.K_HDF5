@@ -3,11 +3,11 @@
 FC     = mpifrtpx
 # new setting 20120413
 FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp -D_FPCOLL_ -D_USE_RDMA \
+         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp -D_FPCOLL_ -DCONFIG_HDF5 \
          -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
 
 FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=2 -Cpp -D_FPCOLL_ -D_USE_RDMA \
+             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=2 -Cpp -D_FPCOLL_ -DCONFIG_HDF5 \
              -Knoprefetch -Ksimd=2 -Kdynamic_iteration
 
 # old setting 20120214
@@ -25,10 +25,12 @@ FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_com
 #         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
 
 CC     = mpifccpx
-CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd -D_USE_RDMA
+CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd -DCONFIG_HDF5 \
+         -I/data1/user0114/hdf5/include
 
 LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LFLAGS = $(FFLAGS) \
+         -L/data1/user0114/hdf5/lib -Wl,-rpath,/data1/user0114/hdf5/lib -lhdf5_hl -lhdf5 -lsz
 
 
 # for frontend
