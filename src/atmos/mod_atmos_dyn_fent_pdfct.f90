@@ -87,8 +87,6 @@ module mod_atmos_dyn
   logical, private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
   real(8), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
 
-  real(8), private, parameter :: VELlimiter = 0.333D0 ! Tracer advection velocity limiter = 113.2[m]/340[m]
-
   ! work
   real(8), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
   real(8), private, save :: MOMZ_RK1(KA,IA,JA)   !
@@ -101,7 +99,7 @@ module mod_atmos_dyn
   real(8), private, save :: MOMY_RK2(KA,IA,JA)   !
   real(8), private, save :: RHOT_RK2(KA,IA,JA)   !
 
-  real(8), private, save :: rjmns   (KA,IA,JA,3) ! correction factor for outgoing in (x,y,z)-direction
+  real(8), private, save :: rjmns   (KA,IA,JA)   ! correction factor for outgoing in (x,y,z)-direction
 
   real(8), private, save :: CNDZ(3,KA)
   real(8), private, save :: CNMZ(3,KA)
@@ -188,12 +186,8 @@ contains
 !OCL XFILL
     do j = 1, JA
     do i = 1, IA
-       rjmns(KS-1,i,j,ZDIR) = 0.D0
-       rjmns(KS-1,i,j,XDIR) = 0.D0
-       rjmns(KS-1,i,j,YDIR) = 0.D0
-       rjmns(KE+1,i,j,ZDIR) = 0.D0
-       rjmns(KE+1,i,j,XDIR) = 0.D0
-       rjmns(KE+1,i,j,YDIR) = 0.D0
+       rjmns(KS-1,i,j) = 0.D0
+       rjmns(KE+1,i,j) = 0.D0
     enddo
     enddo
 
@@ -362,7 +356,6 @@ contains
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
     use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo,   &
        ATMOS_vars_total,   &
        DENS, &
        MOMZ, &
@@ -404,12 +397,12 @@ contains
 
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: qflx_anti(KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
-    real(8) :: pjmns, tmp
+    real(8) :: pjmns(KA,IA,JA)
 
     integer :: IIS, IIE
     integer :: JJS, JJE
 
+    real(8), parameter :: eps = 1.D-5
     real(8) :: dtrk, rdtrk
     integer :: i, j, k, iq, iw, rko, step
     !---------------------------------------------------------------------------
@@ -1816,8 +1809,6 @@ call START_COLLECTION("FCT")
           qflx_hi(k,i,j,ZDIR) = 0.5D0 * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                 + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
-
-          qflx_anti(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) - qflx_lo(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -1834,11 +1825,6 @@ call START_COLLECTION("FCT")
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
           qflx_hi(KE  ,i,j,ZDIR) = 0.D0 
-
-          qflx_anti(KS-1,i,j,ZDIR) = 0.D0
-          qflx_anti(KS  ,i,j,ZDIR) = qflx_hi(KS  ,i,j,ZDIR) - qflx_lo(KS  ,i,j,ZDIR)
-          qflx_anti(KE-1,i,j,ZDIR) = qflx_hi(KE-1,i,j,ZDIR) - qflx_lo(KE-1,i,j,ZDIR)
-          qflx_anti(KE  ,i,j,ZDIR) = 0.D0
        enddo
        enddo
        do j = JJS,   JJE
@@ -1850,8 +1836,6 @@ call START_COLLECTION("FCT")
           qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                 + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
-
-          qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
        enddo
        enddo
        enddo
@@ -1864,32 +1848,30 @@ call START_COLLECTION("FCT")
           qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                 + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
-
-          qflx_anti(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) - qflx_lo(k,i,j,YDIR)
        enddo
        enddo
        enddo
 
-       ! --- STEP C: compute the outgoing fluxes in each cell ---
+       !--- calc maximum outgoing mass ---
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
+          pjmns(k,i,j) = eps &
+                       + dtrk * ( ( max(0.D0,qflx_hi(k,i,j,ZDIR)) - min(0.D0,qflx_hi(k-1,i  ,j  ,ZDIR)) ) * RCDZ(k) &
+                                + ( max(0.D0,qflx_hi(k,i,j,XDIR)) - min(0.D0,qflx_hi(k  ,i-1,j  ,XDIR)) ) * RCDX(i) &
+                                + ( max(0.D0,qflx_hi(k,i,j,YDIR)) - min(0.D0,qflx_hi(k  ,i  ,j-1,YDIR)) ) * RCDY(j) )
+       enddo
+       enddo
+       enddo
 
-          pjmns = max( 0.D0, qflx_hi(k,i,j,ZDIR) ) - min( 0.D0, qflx_hi(k-1,i  ,j  ,ZDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,XDIR) ) - min( 0.D0, qflx_hi(k  ,i-1,j  ,XDIR) ) &
-                + max( 0.D0, qflx_hi(k,i,j,YDIR) ) - min( 0.D0, qflx_hi(k  ,i  ,j-1,YDIR) )
-
-          if ( pjmns > 0.D0 ) then
-             tmp = QTRC(k,i,j,iq) / pjmns * rdtrk * dens_s(k,i,j) * VELlimiter
-             rjmns(k,i,j,ZDIR) = tmp * CDZ(k)
-             rjmns(k,i,j,XDIR) = tmp * CDX(i)
-             rjmns(k,i,j,YDIR) = tmp * CDY(j)
-          else
-             rjmns(k,i,j,ZDIR) = 0.D0
-             rjmns(k,i,j,XDIR) = 0.D0
-             rjmns(k,i,j,YDIR) = 0.D0
+       !--- calc point mass / outgoing mass ratio ---
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          rjmns(k,i,j) = dens_s(k,i,j) * QTRC(k,i,j,iq) / pjmns(k,i,j)
+          if ( rjmns(k,i,j) > 1.D0 ) then
+             rjmns(k,i,j) = 1.D0
           endif
-
        enddo
        enddo
        enddo
@@ -1897,30 +1879,24 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
-    call COMM_vars8( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_vars8( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_vars8( rjmns(:,:,:,YDIR), YDIR )
-    call COMM_wait ( rjmns(:,:,:,ZDIR), ZDIR )
-    call COMM_wait ( rjmns(:,:,:,XDIR), XDIR )
-    call COMM_wait ( rjmns(:,:,:,YDIR), YDIR )
+    call COMM_vars8( rjmns(:,:,:), 1 )
+    call COMM_wait ( rjmns(:,:,:), 1 )
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       ! --- [STEP 7S] limit the antidiffusive flux ---
+       ! --- limit the incoming flux ---
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS-1, KE
-          if ( qflx_anti(k,i,j,ZDIR) >= 0 ) then
-             if ( rjmns(k  ,i,j,ZDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k  ,i,j,ZDIR)
-             endif
+          if ( qflx_hi(k,i,j,ZDIR) >= 0 ) then
+             qflx_hi(k,i,j,ZDIR) = qflx_lo(k,i,j,ZDIR) * ( 1.D0 - rjmns(k  ,i,j) ) &
+                                 + qflx_hi(k,i,j,ZDIR) * (        rjmns(k  ,i,j) )
           else
-             if ( rjmns(k+1,i,j,ZDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) * rjmns(k+1,i,j,ZDIR)
-             endif
+             qflx_hi(k,i,j,ZDIR) = qflx_lo(k,i,j,ZDIR) * ( 1.D0 - rjmns(k+1,i,j) ) &
+                                 + qflx_hi(k,i,j,ZDIR) * (        rjmns(k+1,i,j) )
           endif
        enddo
        enddo
@@ -1928,14 +1904,12 @@ call START_COLLECTION("FCT")
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          if ( qflx_anti(k,i,j,XDIR) >= 0 ) then
-             if ( rjmns(k,i  ,j,XDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i  ,j,XDIR)
-             endif
+          if ( qflx_hi(k,i,j,XDIR) >= 0 ) then
+             qflx_hi(k,i,j,XDIR) = qflx_lo(k,i,j,XDIR) * ( 1.D0 - rjmns(k,i  ,j) ) &
+                                 + qflx_hi(k,i,j,XDIR) * (        rjmns(k,i  ,j) )
           else
-             if ( rjmns(k,i+1,j,XDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) * rjmns(k,i+1,j,XDIR)
-             endif
+             qflx_hi(k,i,j,XDIR) = qflx_lo(k,i,j,XDIR) * ( 1.D0 - rjmns(k,i+1,j) ) &
+                                 + qflx_hi(k,i,j,XDIR) * (        rjmns(k,i+1,j) )
           endif
        enddo
        enddo
@@ -1943,20 +1917,18 @@ call START_COLLECTION("FCT")
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          if ( qflx_anti(k,i,j,YDIR) >= 0 ) then
-             if ( rjmns(k,i,j  ,YDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j  ,YDIR)
-             endif
+          if ( qflx_hi(k,i,j,YDIR) >= 0 ) then
+             qflx_hi(k,i,j,YDIR) = qflx_lo(k,i,j,YDIR) * ( 1.D0 - rjmns(k,i,j  ) ) &
+                                 + qflx_hi(k,i,j,YDIR) * (        rjmns(k,i,j  ) )
           else
-             if ( rjmns(k,i,j+1,YDIR) < 1.D0 ) then
-                qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) * rjmns(k,i,j+1,YDIR)
-             endif
+             qflx_hi(k,i,j,YDIR) = qflx_lo(k,i,j,YDIR) * ( 1.D0 - rjmns(k,i,j+1) ) &
+                                 + qflx_hi(k,i,j,YDIR) * (        rjmns(k,i,j+1) )
           endif
        enddo
        enddo
        enddo
 
-       !--- modify value with antidiffusive fluxes
+       !--- tracer update
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
