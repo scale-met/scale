@@ -11,7 +11,7 @@
 #PJM --stgin  "rank=* /data1/user0117/scale3/run/K/1x1/scale3_init1_005h_hydrostatic.cnf %r:./"
 #PJM --stgin  "rank=* /data1/user0117/scale3/run/K/1x1/scale3_test1_005h_hydrostatic.cnf %r:./"
 #PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/scale3_init_1256x32x32_ndw6_          %r:./"
-#PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/RDMA_full_1256x32x32_ndw6_               %r:./"
+#PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/RDMA_full_1256x32x32_ndw6_            %r:./"
 #PJM --stgout "rank=* %r:./* /data1/user0117/scale3/output/RDMA_full_test1_005h_hydrostatic_1x1/"
 #PJM -s
 #
@@ -21,7 +21,6 @@ export PARALLEL=8
 export OMP_NUM_THREADS=${PARALLEL}
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export fprof=""
-export fu08bf=1
 
 outdir=/data1/user0117/scale3/output/RDMA_full_test1_005h_hydrostatic_1x1
 mkdir -p ${outdir}
@@ -29,7 +28,3 @@ mkdir -p ${outdir}
 # run
          mpiexec ${LPG} ./scale3_init_1256x32x32_ndw6_ ./scale3_init1_005h_hydrostatic.cnf
 ${fprof} mpiexec ${LPG} ./RDMA_full_1256x32x32_ndw6_   ./scale3_test1_005h_hydrostatic.cnf
-
-mv k_stgpjsub_test1_005h_hydrostatic_RDMA.sh.* ${outdir}
-cp scale3_init1_005h_hydrostatic.cnf      ${outdir}
-cp scale3_test1_005h_hydrostatic.cnf      ${outdir}

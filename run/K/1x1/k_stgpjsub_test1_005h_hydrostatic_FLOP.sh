@@ -11,9 +11,9 @@
 #PJM --stgin  "rank=* /data1/user0117/scale3/run/K/1x1/scale3_init1_005h_hydrostatic.cnf %r:./"
 #PJM --stgin  "rank=* /data1/user0117/scale3/run/K/1x1/scale3_test1_005h_hydrostatic.cnf %r:./"
 #PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/scale3_init_1256x32x32_ndw6_          %r:./"
-#PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/FLOP_1256x32x32_ndw6_               %r:./"
-#PJM --stgout "rank=* %r:./*  /data1/user0117/scale3/output/FLOP_test1_005h_hydrostatic_1x1/"
-#PJM --stgout "rank=* %r:./pa /data1/user0117/scale3/output/FLOP_test1_005h_hydrostatic_1x1/"
+#PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/FLOP_1256x32x32_ndw6_                 %r:./"
+#PJM --stgout "rank=* %r:./*    /data1/user0117/scale3/output/FLOP_test1_005h_hydrostatic_1x1/"
+#PJM --stgout "rank=* %r:./pa/* /data1/user0117/scale3/output/FLOP_test1_005h_hydrostatic_1x1/pa/"
 #PJM -s
 #
 . /work/system/Env_base
@@ -22,7 +22,6 @@ export PARALLEL=8
 export OMP_NUM_THREADS=${PARALLEL}
 export LPG="lpgparm -s 32MB -d 32MB -h 32MB -t 32MB -p 32MB"
 export fprof="fpcoll -C -d pa -Usection=range,local_event_number=10,7,7,11,0,0,0,0"
-export fu08bf=1
 
 outdir=/data1/user0117/scale3/output/FLOP_test1_005h_hydrostatic_1x1
 mkdir -p ${outdir}
@@ -30,7 +29,3 @@ mkdir -p ${outdir}
 # run
          mpiexec ${LPG} ./scale3_init_1256x32x32_ndw6_ ./scale3_init1_005h_hydrostatic.cnf
 ${fprof} mpiexec ${LPG} ./FLOP_1256x32x32_ndw6_   ./scale3_test1_005h_hydrostatic.cnf
-
-mv k_stgpjsub_test1_005h_hydrostatic_FLOP.sh.* ${outdir}
-cp scale3_init1_005h_hydrostatic.cnf      ${outdir}
-cp scale3_test1_005h_hydrostatic.cnf      ${outdir}
