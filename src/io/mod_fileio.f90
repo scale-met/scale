@@ -79,6 +79,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FILEIO]/Categ[IO]'
+#ifdef CONFIG_HDF5
+    if( IO_L ) write(IO_FID_LOG,*) '+++ HDF5 format / SZIP compression'
+#endif
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum limit for file registration    : ', FIO_nfile_max
     if( IO_L ) write(IO_FID_LOG,*) '*** Maximum limit for timestep in one file : ', FIO_nstep_max
 
