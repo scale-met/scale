@@ -209,7 +209,7 @@ contains
        enddo
        enddo
        enddo
-       !OCL XFILL
+!OCL XFILL
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           VELZ(KS-1,i,j) = 0.D0
@@ -367,7 +367,7 @@ contains
           enddo
        enddo
        enddo
-       !OCL XFILL
+!OCL XFILL
        do j = JJS, JJE
        do i = IIS, IIE
           nu( 1:KS-1,i,j) = 0.D0
@@ -735,10 +735,10 @@ contains
        call HIST_in( QTRC_t(:,:,:,iq), AQ_NAME(iq)//'_t_tb', AQ_DESC(iq), AQ_UNIT(iq)//'/s', '3D', dttb )
     enddo
 
-    call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'J/m3', '3D', dttb )
-    call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s', '3D', dttb )
-    call HIST_in( Pr  (:,:,:), 'Pr',   'Prantle number',           'NIL',  '3D', dttb )
-    call HIST_in( Ri  (:,:,:), 'Ri',   'Richardson number',        'NIL',  '3D', dttb )
+    call HIST_in( tke (:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', '3D', dttb )
+    call HIST_in( nuc (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  '3D', dttb )
+    call HIST_in( Pr  (:,:,:), 'Pr',   'Prantle number',           'NIL',   '3D', dttb )
+    call HIST_in( Ri  (:,:,:), 'Ri',   'Richardson number',        'NIL',   '3D', dttb )
 
     return
   end subroutine ATMOS_PHY_TB

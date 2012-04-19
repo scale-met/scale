@@ -15,10 +15,10 @@
 ################################################################################
 include ../../sysdep/Makedef.$(SCALE_SYS)
 
-VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean
+VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
 #default index & tracer set
-index   = 336x63x63
+index   = 436x16x16
 tracer  = ndw6
 postfix = 
 
@@ -27,7 +27,7 @@ PROJ_EXE = fullfct
 all: makedir makeinclude makebin
 
 makedir:
-	mkdir -p ../bin/$(SCALE_SYS)
+	mkdir -p ../../../bin/$(SCALE_SYS)
 
 makeinclude:
 	cp ../../include/inc_tracer_$(tracer).f90 ../../include/inc_tracer.h

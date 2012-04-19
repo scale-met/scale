@@ -365,7 +365,7 @@ program spd2bin
                  file   = trim(outfname)//'.grd', &
                  form   = 'unformatted',          &
                  access = 'direct',               &
-                 recl   = GRID_IMAX*PRC_NUM_X*GRID_JMAX*PRC_NUM_Y*GRID_KMAX*4, &
+                 recl   = GRID_IMAX*PRC_NUM_X*GRID_JMAX*PRC_NUM_Y*kmax*4, &
                  status = 'unknown'               )
            irec = 1
 
@@ -392,7 +392,7 @@ program spd2bin
                                  var_layername(v),    &
                                  GRID_IMAX*PRC_NUM_X, &
                                  GRID_JMAX*PRC_NUM_Y, &
-                                 GRID_KMAX,           &
+                                 kmax,                &
                                  GRID_CX,             &
                                  GRID_CY,             &
                                  GRID_CZ,             &
@@ -405,7 +405,7 @@ program spd2bin
 
      do t = 1, num_of_step
 
-        allocate( bindata(GRID_IMAX*PRC_NUM_X,GRID_JMAX*PRC_NUM_Y,GRID_KMAX) )
+        allocate( bindata(GRID_IMAX*PRC_NUM_X,GRID_JMAX*PRC_NUM_Y,kmax) )
         bindata(:,:,:) = CONST_UNDEF4
 
         nowsec = var_time_str(v) + (t-1)*var_dt(v)
@@ -420,7 +420,7 @@ program spd2bin
                  file   = trim(outfname)//'.'//trim(tmpl)//'.grd', &
                  form   = 'unformatted',    &
                  access = 'direct',         &
-                 recl   = GRID_IMAX*GRID_JMAX*GRID_KMAX*4, &
+                 recl   = GRID_IMAX*GRID_JMAX*kmax*4, &
                  status = 'unknown'         )
            irec = 1 
         endif
@@ -429,9 +429,9 @@ program spd2bin
 
         do p = 0, PRC_nmax-1
 
-           allocate( data4allrgn(GRID_KMAX*GRID_IMAX*GRID_JMAX) )
-           allocate( data8allrgn(GRID_KMAX*GRID_IMAX*GRID_JMAX) )
-           allocate( spddata4   (GRID_KMAX,GRID_IMAX,GRID_JMAX) )
+           allocate( data4allrgn(kmax*GRID_IMAX*GRID_JMAX) )
+           allocate( data8allrgn(kmax*GRID_IMAX*GRID_JMAX) )
+           allocate( spddata4   (kmax,GRID_IMAX,GRID_JMAX) )
            data4allrgn(:)  = CONST_UNDEF4
            data8allrgn(:)  = CONST_UNDEF8
            spddata4(:,:,:) = CONST_UNDEF4
@@ -511,7 +511,7 @@ program spd2bin
                            var_name(v),         &
                            GRID_IMAX*PRC_NUM_X, &
                            GRID_JMAX*PRC_NUM_Y, &
-                           GRID_KMAX,           &
+                           kmax,                &
                            GRID_CX,             &
                            GRID_CY,             &
                            GRID_CZ,             &

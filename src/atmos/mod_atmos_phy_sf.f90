@@ -191,16 +191,21 @@ contains
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
        Rdry   => CONST_Rdry,   &
+       CPdry  => CONST_CPdry,  &
        Rvap   => CONST_Rvap,   &
-       RovCP  => CONST_RovCP, &
+       RovCP  => CONST_RovCP,  &
        CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00,  &
        T00    => CONST_TEM00,  &
        LH0    => CONST_LH0,    &
        EPSvap => CONST_EPSvap, &
        PSAT0  => CONST_PSAT0
+    use mod_time, only: &
+       dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_grid, only : &
        CDZ => GRID_CDZ
+    use mod_history, only: &
+       HIST_in
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -217,6 +222,10 @@ contains
        SFLX_POTT, &
        SFLX_QV
     implicit none
+
+    ! monitor
+    real(8) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
+    real(8) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
 
     ! work
     real(8) :: VELZ(IA,JA)
@@ -327,7 +336,7 @@ contains
        pres      = P00 * ( ( R10H1 * RHOT(K10_1,i,j) + R10H2 * RHOT(K10_2,i,j) ) * Rtot / P00 )**CPovCV
        temp      = ( R10H1 * RHOT(K10_1,i,j) / DENS(K10_1,i,j) + R10H2 * RHOT(K10_2,i,j) / DENS(K10_2,i,j) ) &
                  * ( P00 / pres )**RovCP
-       qvap      = R10E1 * QTRC(K10_1,i,j,1) + R10E2 * QTRC(K10_2,i,j,1)
+       qvap      = R10E1 * QTRC(K10_1,i,j,I_QV) + R10E2 * QTRC(K10_2,i,j,I_QV)
        pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
        qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
 
@@ -345,6 +354,16 @@ contains
 
     enddo
     enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
+    enddo
+    enddo
+
+    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dttb )
+    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dttb )
 
     return
   end subroutine ATMOS_PHY_SF

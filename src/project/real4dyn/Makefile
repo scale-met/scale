@@ -18,7 +18,7 @@ include ../../sysdep/Makedef.$(SCALE_SYS)
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
 #default index & tracer set
-index   = 336x63x63
+index   = 436x16x16
 tracer  = ndw6
 postfix = 
 

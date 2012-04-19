@@ -75,6 +75,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call ATMOS_THRRMODYN_setup
+
     call ATMOS_vars_setup
 
     call ATMOS_vars_restart_read
@@ -82,8 +84,6 @@ contains
     call ATMOS_REFSTATE_setup
 
     call ATMOS_BOUNDARY_setup
-
-    call ATMOS_THRRMODYN_setup
 
     call ATMOS_DYN_setup
 

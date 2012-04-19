@@ -57,15 +57,17 @@ program scaleinit
   use mod_atmos_thermodyn, only: &
      ATMOS_THRRMODYN_setup
   use mod_mkinit, only: &
-     MKINIT_TYPE,    &
-     I_PLANESTATE,   &
-     I_TRACERBUBBLE, &
-     I_COLDBUBBLE,   &
-     I_WARMBUBBLE,   &
-     I_KHWAVE,       &
-     I_TURBULENCE,   &
-     I_SUPERCELL,    &
-     I_SQUALLINE,    &
+     MKINIT_TYPE,     &
+     I_PLANESTATE,    &
+     I_TRACERBUBBLE,  &
+     I_COLDBUBBLE,    &
+     I_WARMBUBBLE,    &
+     I_KHWAVE,        &
+     I_TURBULENCE,    &
+     I_SUPERCELL,     &
+     I_SQUALLINE,     &
+     I_DYCOMS2_RF01,  &
+     I_DYCOMS2_RF02,  &
      MKINIT_setup,        &
      MKINIT_planestate,   &
      MKINIT_tracerbubble, &
@@ -74,7 +76,9 @@ program scaleinit
      MKINIT_khwave,       &
      MKINIT_turbulence,   &
      MKINIT_supercell,    &
-     MKINIT_squalline
+     MKINIT_squalline,    &
+     MKINIT_DYCOMS2_RF01, &
+     MKINIT_DYCOMS2_RF02
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -155,6 +159,10 @@ program scaleinit
      call MKINIT_supercell
   case(I_SQUALLINE)
      call MKINIT_squalline
+  case(I_DYCOMS2_RF01)
+     call MKINIT_DYCOMS2_RF01
+  case(I_DYCOMS2_RF02)
+     call MKINIT_DYCOMS2_RF02
   case default
      write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
      call PRC_MPIstop
