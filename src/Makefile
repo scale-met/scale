@@ -9,7 +9,7 @@ include ./sysdep/Makedef.$(SCALE_SYS)
 VPATH = include:common:io:grid:atmos:ocean:preprocess
 
 #default index & tracer set
-index   = 436x16x16
+index   = 1256x32x32
 tracer  = ndw6
 postfix = 
 
@@ -55,12 +55,8 @@ makedir:
 	mkdir -p ../bin/$(SCALE_SYS)
 
 makeinclude:
-	@if [ ! -f include/inc_tracer.h ]; then \
-		cp include/inc_tracer_$(tracer).f90 include/inc_tracer.h; \
-	fi
-	@if [ ! -f include/inc_index.h ]; then \
-		cp include/inc_index_$(index).f90 include/inc_index.h; \
-	fi
+	cp include/inc_tracer_$(tracer).f90 include/inc_tracer.h
+	cp include/inc_index_$(index).f90   include/inc_index.h
 
 makebin: $(PRJS)
 	install $(PRJ1) ../bin/$(SCALE_SYS)/$(PRJ1)_$(index)_$(tracer)_$(postfix)

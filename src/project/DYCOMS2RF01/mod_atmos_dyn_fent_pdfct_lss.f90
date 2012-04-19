@@ -87,6 +87,9 @@ module mod_atmos_dyn
   logical, private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
   real(8), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
 
+  ! large scale sinking current (option)
+  real(8), private, save      :: ATMOS_DYN_LSsink_D = 0.D0           ! Divergence parameter [1/s]
+
   ! work
   real(8), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
   real(8), private, save :: MOMZ_RK1(KA,IA,JA)   !
@@ -131,8 +134,9 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_DYN_numerical_diff, &
-       ATMOS_DYN_enable_coriolis
+       ATMOS_DYN_numerical_diff,  &
+       ATMOS_DYN_enable_coriolis, &
+       ATMOS_DYN_LSsink_D
 
     real(8) :: d2r
 
@@ -331,7 +335,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   !-----------------------------------------------------------------------------
-!OCL NORECURRENCE
   subroutine ATMOS_DYN
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
@@ -340,12 +343,15 @@ contains
        CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
     use mod_time, only: &
+       TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
     use mod_grid, only : &
+       CZ   => GRID_CZ,   &
+       FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
        CDY  => GRID_CDY,  &
@@ -355,6 +361,8 @@ contains
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+    use mod_history, only: &
+       HIST_in
     use mod_atmos_vars, only: &
        ATMOS_vars_total,   &
        DENS, &
@@ -394,6 +402,11 @@ contains
     ! mass flux
     real(8) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(8) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+
+    ! large scale sinking
+    real(8) :: mflx_sink               ! sinking term
+    real(8) :: qflx_sink(KA,IA,JA)     ! sinking term
+    real(8) :: sink     (KA,IA,JA)     ! sinking term
 
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
@@ -753,6 +766,44 @@ call START_COLLECTION("SET")
        enddo
        enddo
 
+       ! large scale sinking
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+       do k = KS, KE
+          sink(k,i,j) = 0.D0
+       enddo
+       enddo
+       enddo
+
+       do iw = QQS, QQE
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS+1, KE-2
+             qflx_sink(k,i,j) = 0.5D0 * ( FACT_N * ( DENS(k+1,i,j)*QTRC(k+1,i,j,iw)+DENS(k  ,i,j)*QTRC(k  ,i,j,iw) ) &
+                                        + FACT_F * ( DENS(k+2,i,j)*QTRC(k+2,i,j,iw)+DENS(k-1,i,j)*QTRC(k-1,i,j,iw) ) )
+          enddo
+          enddo
+          enddo
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+             qflx_sink(KS-1,i,j) = 0.0D0
+             qflx_sink(KS  ,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)-QTRC(KS,i,j,iw) )
+             qflx_sink(KE-1,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)-QTRC(KE-1,i,j,iw) )
+             qflx_sink(KE  ,i,j) = 0.0D0
+          enddo
+          enddo
+
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS, KE
+                sink(k,i,j) = sink(k,i,j) &
+                            + ATMOS_DYN_LSsink_D * CZ(k) &
+                            * ( qflx_sink(k,i,j)-qflx_sink(k-1,i,j) ) * RCDZ(k)
+          enddo
+          enddo
+          enddo
+       enddo
+
     enddo
     enddo ! end tile
 
@@ -896,6 +947,7 @@ call START_COLLECTION("RK3")
                                        + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                      - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
                                      - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5D0 * GRAV                    & ! gravity force
+                                     + ( sink(k+1,i,j)+sink(k,i,j) ) * 0.5D0 * VELZ(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
        enddo
        enddo
@@ -959,6 +1011,7 @@ call START_COLLECTION("RK3")
                                      - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
                                      + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
+                                     + ( sink(k,i+1,j)+sink(k,i,j) ) * 0.5D0 * VELX(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
@@ -1024,6 +1077,7 @@ call START_COLLECTION("RK3")
                                      - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
                                      - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
+                                     + ( sink(k,i,j+1)+sink(k,i,j) ) * 0.5D0 * VELY(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
@@ -1085,6 +1139,7 @@ call START_COLLECTION("RK3")
                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
                                        + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
+                                     - sink(k,i,j) * POTT(k,i,j)                                       & ! large scale sink
                                      + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
        enddo
        enddo
@@ -1237,6 +1292,7 @@ call START_COLLECTION("RK3")
                                        + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                      - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
                                      - ( DENS_RK1(k+1,i,j)+DENS_RK1(k,i,j) ) * 0.5D0 * GRAV            & ! gravity force
+                                     + ( sink(k+1,i,j)+sink(k,i,j) ) * 0.5D0 * VELZ(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
        enddo
        enddo
@@ -1300,6 +1356,7 @@ call START_COLLECTION("RK3")
                                      - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
                                      + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
+                                     + ( sink(k,i+1,j)+sink(k,i,j) ) * 0.5D0 * VELX(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
@@ -1365,6 +1422,7 @@ call START_COLLECTION("RK3")
                                      - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
                                      - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
+                                     + ( sink(k,i,j+1)+sink(k,i,j) ) * 0.5D0 * VELY(k,i,j)             & ! large scale sink
                                      + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
@@ -1426,6 +1484,7 @@ call START_COLLECTION("RK3")
                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
                                        + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
+                                     + sink(k,i,j) * POTT(k,i,j)                                       & ! large scale sink
                                      + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
        enddo
        enddo
@@ -1578,6 +1637,7 @@ call START_COLLECTION("RK3")
                                    + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
                                  - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
                                  - ( DENS_RK2(k+1,i,j)+DENS_RK2(k,i,j) ) * 0.5D0 * GRAV            & ! gravity force
+                                 + ( sink(k+1,i,j)+sink(k,i,j) ) * 0.5D0 * VELZ(k,i,j)             & ! large scale sink
                                  + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
        enddo
        enddo
@@ -1641,6 +1701,7 @@ call START_COLLECTION("RK3")
                                  - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
                                  + 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )             &
                                  * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
+                                 + ( sink(k,i+1,j)+sink(k,i,j) ) * 0.5D0 * VELX(k,i,j)             & ! large scale sink
                                  + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
        enddo
        enddo
@@ -1706,6 +1767,7 @@ call START_COLLECTION("RK3")
                                  - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
                                  - 0.125D0 * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )             &
                                  * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
+                                 + ( sink(k,i,j+1)+sink(k,i,j) ) * 0.5D0 * VELY(k,i,j)             & ! large scale sink
                                  + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
        enddo
        enddo
@@ -1767,6 +1829,7 @@ call START_COLLECTION("RK3")
                       + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
                                    + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
                                    + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
+                                 + sink(k,i,j) * POTT(k,i,j)                                       & ! large scale sink
                                  + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
        enddo
        enddo
@@ -1794,6 +1857,168 @@ call START_COLLECTION("FCT")
     !##### advection of scalar quantity #####
 
     do iq = 1, QA
+
+    if (       iq >= QQS &
+         .AND. iq <= QQE ) then ! mass tracer
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-2
+          mflx_sink = 0.5D0 * ATMOS_DYN_LSsink_D * FZ(k)         &
+                    * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
+                      + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+
+          qflx_lo(k,i,j,ZDIR) = 0.5D0 * (    (mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
+                                        - abs(mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+
+          qflx_hi(k,i,j,ZDIR) = 0.5D0 * (mflx_hi(k,i,j,ZDIR)+mflx_sink) &
+                              * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
+                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          mflx_sink = 0.5D0 * ATMOS_DYN_LSsink_D * FZ(KS  ) * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+
+          qflx_lo(KS-1,i,j,ZDIR) = 0.D0 ! bottom boundary
+          qflx_lo(KS  ,i,j,ZDIR) = 0.5D0 * (    (mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) & ! just above the bottom boundary
+                                           - abs(mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+          qflx_hi(KS-1,i,j,ZDIR) = 0.D0 
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * (mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
+
+          mflx_sink = 0.5D0 * ATMOS_DYN_LSsink_D * FZ(KE-1) * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+
+          qflx_lo(KE-1,i,j,ZDIR) = 0.5D0 * (    (mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
+                                           - abs(mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+          qflx_lo(KE  ,i,j,ZDIR) = 0.D0 ! top boundary
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * (mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
+          qflx_hi(KE  ,i,j,ZDIR) = 0.D0 
+       enddo
+       enddo
+       do j = JJS,   JJE
+       do i = IIS-1, IIE
+       do k = KS, KE
+          qflx_lo(k,i,j,XDIR) = 0.5D0 * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
+                                        - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+
+          qflx_hi(k,i,j,XDIR) = 0.5D0 * mflx_hi(k,i,j,XDIR) &
+                              * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
+                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
+       enddo
+       enddo
+       enddo
+       do j = JJS-1, JJE
+       do i = IIS,   IIE
+       do k = KS, KE
+          qflx_lo(k,i,j,YDIR) = 0.5D0 * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
+                                        - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+
+          qflx_hi(k,i,j,YDIR) = 0.5D0 * mflx_hi(k,i,j,YDIR) &
+                              * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
+                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
+       enddo
+       enddo
+       enddo
+
+       !--- calc maximum outgoing mass ---
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          pjmns(k,i,j) = eps &
+                       + dtrk * ( ( max(0.D0,qflx_hi(k,i,j,ZDIR)) - min(0.D0,qflx_hi(k-1,i  ,j  ,ZDIR)) ) * RCDZ(k) &
+                                + ( max(0.D0,qflx_hi(k,i,j,XDIR)) - min(0.D0,qflx_hi(k  ,i-1,j  ,XDIR)) ) * RCDX(i) &
+                                + ( max(0.D0,qflx_hi(k,i,j,YDIR)) - min(0.D0,qflx_hi(k  ,i  ,j-1,YDIR)) ) * RCDY(j) )
+       enddo
+       enddo
+       enddo
+
+       !--- calc point mass / outgoing mass ratio ---
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          rjmns(k,i,j) = dens_s(k,i,j) * QTRC(k,i,j,iq) * ( 1.D0 - dtrk*ATMOS_DYN_LSsink_D ) / pjmns(k,i,j)
+          if ( rjmns(k,i,j) > 1.D0 ) then
+             rjmns(k,i,j) = 1.D0
+          endif
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+
+    call COMM_vars8( rjmns(:,:,:), 1 )
+    call COMM_wait ( rjmns(:,:,:), 1 )
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       ! --- limit the incoming flux ---
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS-1, KE
+          if ( qflx_hi(k,i,j,ZDIR) >= 0 ) then
+             qflx_hi(k,i,j,ZDIR) = qflx_lo(k,i,j,ZDIR) * ( 1.D0 - rjmns(k  ,i,j) ) &
+                                 + qflx_hi(k,i,j,ZDIR) * (        rjmns(k  ,i,j) )
+          else
+             qflx_hi(k,i,j,ZDIR) = qflx_lo(k,i,j,ZDIR) * ( 1.D0 - rjmns(k+1,i,j) ) &
+                                 + qflx_hi(k,i,j,ZDIR) * (        rjmns(k+1,i,j) )
+          endif
+       enddo
+       enddo
+       enddo
+       do j = JJS,   JJE
+       do i = IIS-1, IIE
+       do k = KS, KE
+          if ( qflx_hi(k,i,j,XDIR) >= 0 ) then
+             qflx_hi(k,i,j,XDIR) = qflx_lo(k,i,j,XDIR) * ( 1.D0 - rjmns(k,i  ,j) ) &
+                                 + qflx_hi(k,i,j,XDIR) * (        rjmns(k,i  ,j) )
+          else
+             qflx_hi(k,i,j,XDIR) = qflx_lo(k,i,j,XDIR) * ( 1.D0 - rjmns(k,i+1,j) ) &
+                                 + qflx_hi(k,i,j,XDIR) * (        rjmns(k,i+1,j) )
+          endif
+       enddo
+       enddo
+       enddo
+       do j = JJS-1, JJE
+       do i = IIS,   IIE
+       do k = KS, KE
+          if ( qflx_hi(k,i,j,YDIR) >= 0 ) then
+             qflx_hi(k,i,j,YDIR) = qflx_lo(k,i,j,YDIR) * ( 1.D0 - rjmns(k,i,j  ) ) &
+                                 + qflx_hi(k,i,j,YDIR) * (        rjmns(k,i,j  ) )
+          else
+             qflx_hi(k,i,j,YDIR) = qflx_lo(k,i,j,YDIR) * ( 1.D0 - rjmns(k,i,j+1) ) &
+                                 + qflx_hi(k,i,j,YDIR) * (        rjmns(k,i,j+1) )
+          endif
+       enddo
+       enddo
+       enddo
+
+       !--- tracer update
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * dens_s(k,i,j) * ( 1.D0 - dtrk*ATMOS_DYN_LSsink_D ) & ! additional sinking
+                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                                        + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) &
+                           ) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+
+    else ! number tracer
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1935,7 +2160,8 @@ call START_COLLECTION("FCT")
           QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * dens_s(k,i,j) &
                            + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
                                         + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) &
+                                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
+                                    + sink(k,i,j) * QTRC(k,i,j,iq)                                    ) & ! large scale sink
                            ) / DENS(k,i,j)
        enddo
        enddo
@@ -1943,6 +2169,8 @@ call START_COLLECTION("FCT")
 
     enddo
     enddo
+
+    endif
 
     enddo ! scalar quantities loop
 
@@ -1989,6 +2217,9 @@ call STOP_COLLECTION("DYNAMICS")
     enddo
 
     call ATMOS_vars_total
+
+    call HIST_in( QDRY  (:,:,:), 'QDRY',   'Dry Air mixng ratio',       'kg/kg',   '3D', TIME_DTSEC )
+    call HIST_in( sink(:,:,:), 'sink', 'tendency large scale sink', 'kg/m3/s', '3D', TIME_DTSEC )
 
     return
   end subroutine ATMOS_DYN

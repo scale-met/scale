@@ -70,8 +70,8 @@ contains
        ATMOS_PHY_TB_setup
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
-!    use mod_atmos_phy_rd, only: &
-!       ATMOS_PHY_RD_setup
+    use mod_atmos_phy_rd, only: &
+       ATMOS_PHY_RD_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ contains
 
     call ATMOS_PHY_MP_setup
 
-!    call ATMOS_PHY_RD_setup
+    call ATMOS_PHY_RD_setup
 
     return
   end subroutine ATMOS_setup
@@ -121,8 +121,10 @@ contains
        ATMOS_PHY_TB
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP
-!    use mod_atmos_phy_rd, only: &
-!       ATMOS_PHY_RD
+    use mod_atmos_phy_rd, only: &
+       ATMOS_PHY_RD
+    use mod_atmos_sub_diag, only: &
+       ATMOS_DIAG_history
     implicit none
     !---------------------------------------------------------------------------
 
@@ -152,13 +154,14 @@ contains
     !########## Radiation ##########
     call TIME_rapstart('Radiation')
     if ( sw_phy_rd .AND. do_phy_rd ) then
-!       call ATMOS_PHY_RD
+       call ATMOS_PHY_RD
     endif
     call TIME_rapend  ('Radiation')
 
     !########## History&Monitor ##########
     call TIME_rapstart('History')
        call ATMOS_vars_history
+       call ATMOS_DIAG_history
     call TIME_rapend  ('History')
 
     return

@@ -22,7 +22,7 @@ index   = 436x16x16
 tracer  = ndw6
 postfix = 
 
-PROJ_EXE = real4dyn
+PROJ_EXE = DYCOMS2RF01
 
 all: makedir makeinclude makebin
 

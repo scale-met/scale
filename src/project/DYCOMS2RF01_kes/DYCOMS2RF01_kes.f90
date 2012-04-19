@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> Program make tool for initial states for SCALE-LES ver.3
+!> Program SCALE-LES ver.3
 !!
 !! @par Description
 !!          SCALE: Scalable Computing by Advanced Library and Environment
@@ -8,11 +8,13 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
+!! @li      2011-11-11 (H.Yashiro)  [new]
+!! @li      2012-01-10 (H.Yashiro)  [mod] Change setup order, HISTORY module
+!! @li      2012-03-23 (H.Yashiro)  [mod] GEOMETRICS, MONITOR module
 !!
 !<
 !-------------------------------------------------------------------------------
-program scaleinit
+program scaleles3
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -27,12 +29,17 @@ program scaleinit
      PRC_MPIstop
   use mod_const, only: &
      CONST_setup
-  use mod_random, only: &
-     RANDOM_setup
   use mod_time, only: &
-     TIME_setup,    &
-     TIME_rapstart, &
-     TIME_rapend,   &
+     TIME_setup,           &
+     TIME_checkstate,      &
+     TIME_advance,         &
+     TIME_DOATMOS_step,    &
+     TIME_DOOCEAN_step,    &
+     TIME_DOATMOS_restart, &
+     TIME_DOOCEAN_restart, &
+     TIME_DOend,           &
+     TIME_rapstart,        &
+     TIME_rapend,          &
      TIME_rapreport
   use mod_fileio, only: &
      FIO_setup, &
@@ -50,35 +57,20 @@ program scaleinit
      MONIT_setup, &
      MONIT_write, &
      MONIT_finalize
+  use mod_atmos, only: &
+     ATMOS_setup, &
+     ATMOS_step
   use mod_atmos_vars, only: &
-     ATMOS_vars_setup, &
-     ATMOS_vars_fillhalo, &
-     ATMOS_vars_restart_write
-  use mod_atmos_thermodyn, only: &
-     ATMOS_THRRMODYN_setup
-  use mod_mkinit, only: &
-     MKINIT_TYPE,     &
-     I_PLANESTATE,    &
-     I_TRACERBUBBLE,  &
-     I_COLDBUBBLE,    &
-     I_WARMBUBBLE,    &
-     I_KHWAVE,        &
-     I_TURBULENCE,    &
-     I_SUPERCELL,     &
-     I_SQUALLINE,     &
-     I_DYCOMS2_RF01,  &
-     I_DYCOMS2_RF02,  &
-     MKINIT_setup,        &
-     MKINIT_planestate,   &
-     MKINIT_tracerbubble, &
-     MKINIT_coldbubble,   &
-     MKINIT_warmbubble,   &
-     MKINIT_khwave,       &
-     MKINIT_turbulence,   &
-     MKINIT_supercell,    &
-     MKINIT_squalline,    &
-     MKINIT_DYCOMS2_RF01, &
-     MKINIT_DYCOMS2_RF02
+     ATMOS_vars_restart_write, &
+     ATMOS_vars_restart_check, &
+     ATMOS_sw_restart,         &
+     ATMOS_sw_check
+  use mod_ocean, only: &
+     OCEAN_setup, &
+     OCEAN_step
+  use mod_ocean_vars, only: &
+     OCEAN_vars_restart_write, &
+     OCEAN_sw_restart
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -100,9 +92,6 @@ program scaleinit
 
   ! setup constants
   call CONST_setup
-
-  ! setup random number
-  call RANDOM_setup
 
   ! setup time
   call TIME_setup
@@ -126,57 +115,58 @@ program scaleinit
   ! setup monitor
   call MONIT_setup
 
+  ! setup atmosphere
+  call ATMOS_setup
+
+  ! setup ocean
+  call OCEAN_setup
+
   call TIME_rapend('Initialize')
 
 
   !########## main ##########
 
   if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
-  call TIME_rapstart('Main')
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
+  call TIME_rapstart('Main Loop(Total)')
 
-  ! setup restart
-  call ATMOS_THRRMODYN_setup
-  call ATMOS_vars_setup
+  do
 
-  ! setup mkinit
-  call MKINIT_setup
+    ! report current time
+    call TIME_checkstate
 
-  select case(MKINIT_TYPE)
-  case(I_PLANESTATE)
-     call MKINIT_planestate
-  case(I_TRACERBUBBLE)
-     call MKINIT_tracerbubble
-  case(I_COLDBUBBLE)
-     call MKINIT_coldbubble
-  case(I_WARMBUBBLE)
-     call MKINIT_warmbubble
-  case(I_KHWAVE)
-     call MKINIT_khwave
-  case(I_TURBULENCE)
-     call MKINIT_turbulence
-  case(I_SUPERCELL)
-     call MKINIT_supercell
-  case(I_SQUALLINE)
-     call MKINIT_squalline
-  case(I_DYCOMS2_RF01)
-     call MKINIT_DYCOMS2_RF01
-  case(I_DYCOMS2_RF02)
-     call MKINIT_DYCOMS2_RF02
-  case default
-     write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
-     call PRC_MPIstop
-  endselect
+    ! change to next state
+    if ( TIME_DOATMOS_step ) call ATMOS_step
+    if ( TIME_DOOCEAN_step ) call OCEAN_step
 
-  call ATMOS_vars_fillhalo
-  ! output restart
-  call ATMOS_vars_restart_write
+    ! time advance
+    call TIME_advance
 
-  call TIME_rapend('Main')
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL DATA ++++++'
+    ! history&monitor file output
+    call HIST_write
+    call MONIT_write('MAIN')
+
+    ! restart output
+    if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+
+    if ( TIME_DOend ) exit
+
+  enddo
+
+  call TIME_rapend('Main Loop(Total)')
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 
+
   !########## Finalize ##########
+
+  call TIME_rapstart('Checkdiff')
+
+  ! check data
+  if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
+
+  call TIME_rapend('Checkdiff')
 
   call TIME_rapreport
 
@@ -187,4 +177,4 @@ program scaleinit
 
   stop
   !=============================================================================
-end program scaleinit
+end program scaleles3

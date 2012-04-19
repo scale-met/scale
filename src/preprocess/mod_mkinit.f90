@@ -36,8 +36,12 @@ module mod_mkinit
   use mod_process, only: &
      PRC_MPIstop
   use mod_const, only : &
-     PI   => CONST_PI,  &
-     Pstd => CONST_Pstd
+     PI    => CONST_PI,    &
+     Pstd  => CONST_Pstd,  &
+     CPdry => CONST_CPdry, &
+     RovCP => CONST_RovCP, &
+     LH0   => CONST_LH0,   &
+     P00   => CONST_PRE00
   use mod_random, only: &
      RANDOM_get
   use mod_grid, only : &
@@ -52,7 +56,7 @@ module mod_mkinit
      RHOT, &
      QTRC
   use mod_atmos_hydrostatic, only: &
-     hydro_buildrho => ATMOS_HYDRO_buildrho
+     hydro_buildrho      => ATMOS_HYDRO_buildrho
   use mod_atmos_saturation, only: &
      saturation_qsat_sfc   => ATMOS_SATURATION_qsat_sfc, &
      saturation_qsat_water => ATMOS_SATURATION_qsat_water
@@ -72,6 +76,8 @@ module mod_mkinit
   public :: MKINIT_turbulence
   public :: MKINIT_supercell
   public :: MKINIT_squalline
+  public :: MKINIT_DYCOMS2_RF01
+  public :: MKINIT_DYCOMS2_RF02
 
   !-----------------------------------------------------------------------------
   !
@@ -85,14 +91,16 @@ module mod_mkinit
   !++ Public parameters & variables
   !
   integer, public, save      :: MKINIT_TYPE
-  integer, public, parameter :: I_PLANESTATE   =  1
-  integer, public, parameter :: I_TRACERBUBBLE =  2
-  integer, public, parameter :: I_COLDBUBBLE   =  3
-  integer, public, parameter :: I_WARMBUBBLE   =  4
-  integer, public, parameter :: I_KHWAVE       =  5
-  integer, public, parameter :: I_TURBULENCE   =  6
-  integer, public, parameter :: I_SUPERCELL    =  7
-  integer, public, parameter :: I_SQUALLINE    =  8
+  integer, public, parameter :: I_PLANESTATE    =  1
+  integer, public, parameter :: I_TRACERBUBBLE  =  2
+  integer, public, parameter :: I_COLDBUBBLE    =  3
+  integer, public, parameter :: I_WARMBUBBLE    =  4
+  integer, public, parameter :: I_KHWAVE        =  5
+  integer, public, parameter :: I_TURBULENCE    =  6
+  integer, public, parameter :: I_SUPERCELL     =  7
+  integer, public, parameter :: I_SQUALLINE     =  8
+  integer, public, parameter :: I_DYCOMS2_RF01  =  9
+  integer, public, parameter :: I_DYCOMS2_RF02  = 10
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -125,10 +133,6 @@ contains
   !> Initialize Reference state
   !-----------------------------------------------------------------------------
   subroutine MKINIT_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
@@ -172,6 +176,10 @@ contains
        MKINIT_TYPE = I_SUPERCELL
     case('SQUALLINE')
        MKINIT_TYPE = I_SQUALLINE
+    case('DYCOMS2_RF01')
+       MKINIT_TYPE = I_DYCOMS2_RF01
+    case('DYCOMS2_RF02')
+       MKINIT_TYPE = I_DYCOMS2_RF02
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -754,7 +762,7 @@ contains
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
              pott(k,i,j) = ENV_L1_THETA
-          elseif( CZ(k) <= ENV_L3_ZBOTTOM ) then ! Layer 3
+          elseif( CZ(k) >= ENV_L3_ZBOTTOM ) then ! Layer 3
              pott(k,i,j) = ENV_L3_THETA
           else                                   ! Layer 2
              fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
@@ -1265,5 +1273,432 @@ contains
 
     return
   end subroutine MKINIT_squalline
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for strato cumulus
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_stratocumulus
+    implicit none
+
+    ! Surface state
+    real(8) :: SFC_THETA               ! surface potential temperature [K]
+    real(8) :: SFC_PRES                ! surface pressure [Pa]
+    ! Environment state
+    real(8) :: ENV_L1_ZTOP    = 840.0D0  ! top    height of the layer1 (low  THETA) [m]
+    real(8) :: ENV_L3_ZBOTTOM = 840.0D0  ! bottom height of the layer3 (high THETA) [m]
+    real(8) :: ENV_L1_THETA   = 289.0D0  ! THETA in the layer1 (low  THETA) [K]
+    real(8) :: ENV_L3_THETA   = 297.5D0  ! THETA in the layer3 (high THETA) [K]
+    real(8) :: ENV_L1_QV      =   8.5D-3 ! Specific Humidity in the layer1 (low  THETA) [kg/kg]
+    real(8) :: ENV_L3_QV      =   1.0D-3 ! Specific Humidity in the layer3 (high THETA) [kg/kg]
+
+    real(8) :: ENV_CL_ZBOTTOM = 600.0D0  ! bottom height of the cloud layer [m]
+    real(8) :: ENV_CL_ZTOP    = 840.0D0  ! top    height of the cloud layer [m]
+    real(8) :: ENV_CL_QC      =   0.5D-3 ! cloud water mixing ratio in the cloud layer   [kg/kg]
+    real(8) :: ENV_CL_NC      = 120.0D6  ! cloud number concentration in the cloud layer [1/m3]
+
+    real(8) :: ENV_U          =   7.0D0  ! velocity u in the layer1 (low  THETA) [K]
+    real(8) :: ENV_V          =  -5.5D0  ! velocity u in the layer3 (high THETA) [K]
+
+    real(8) :: RANDOM_AMP     =   1.0D-2 ! ratio of random disturbance [0-1]
+
+    NAMELIST / PARAM_MKINIT_STRATOCUMULUS / &
+       SFC_THETA,      &
+       SFC_PRES,       &
+       ENV_L1_ZTOP,    &
+       ENV_L3_ZBOTTOM, &
+       ENV_L1_THETA,   &
+       ENV_L3_THETA,   &
+       ENV_L1_QV,      &
+       ENV_L3_QV,      &
+       ENV_CL_ZBOTTOM, &
+       ENV_CL_ZTOP,    &
+       ENV_CL_QC,      &
+       ENV_CL_NC,      &
+       ENV_U,          &
+       ENV_V,          &
+       RANDOM_AMP
+
+    real(8) :: fact, disturb
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[STRATOCUMULUS)]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_STRATOCUMULUS,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_STRATOCUMULUS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_STRATOCUMULUS)
+
+    ! calc in moist condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+       disturb = ( 1.D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * RANDOM_AMP )
+
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA * disturb
+       qv_sfc  (1,i,j) = ENV_L1_QV
+
+       do k = KS, KE
+          disturb = ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP )
+
+          if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
+             pott(k,i,j) = ENV_L1_THETA * disturb
+             qv  (k,i,j) = ENV_L1_QV
+          elseif( CZ(k) >= ENV_L3_ZBOTTOM ) then ! Layer 3
+             pott(k,i,j) = ENV_L3_THETA * disturb &
+                         + ( CZ(k) - ENV_L3_ZBOTTOM )**(1.D0/3.D0) ! increase with height
+             qv  (k,i,j) = ENV_L3_QV
+          else                                   ! Layer 2
+             fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
+
+             pott(k,i,j) = ( ENV_L1_THETA * ( 1.D0 - fact ) &
+                           + ENV_L3_THETA * (        fact ) ) * disturb
+             qv  (k,i,j) = ENV_L1_QV    * ( 1.D0 - fact ) &
+                         + ENV_L3_QV    * (        fact )
+          endif
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.D0
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = ( ENV_U * ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
+                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = ( ENV_V * ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
+                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.D0
+    enddo
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+
+       if ( CZ(k) >= ENV_CL_ZBOTTOM .and. CZ(k) <= ENV_CL_ZTOP ) then
+          QTRC(k,i,j,I_QC) = ENV_CL_QC
+          QTRC(k,i,j,I_NC) = ENV_CL_NC / DENS(k,i,j)
+       endif
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_stratocumulus
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for strato cumulus
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_DYCOMS2_RF01
+    implicit none
+
+    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(8) :: qall(KA,IA,JA) ! QV+QC
+    real(8) :: qc  (KA,IA,JA) ! QC
+    real(8) :: fact
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    ! calc in moist condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
+       pott_sfc(1,i,j) = 292.5D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
+
+       do k = KS, KE
+          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+             velx(k,i,j) =   6.7D0
+             vely(k,i,j) =  -4.9D0
+!             velx(k,i,j) =   7.0D0
+!             vely(k,i,j) =  -5.5D0
+             potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
+          else
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
+             potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
+          endif
+
+          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+             qall(k,i,j) = 9.0D-3 ! [kg/kg]
+          elseif(       CZ(k) >   840.D0 &
+                  .AND. CZ(k) <= 5000.D0 ) then
+             qall(k,i,j) = 1.5D-3 ! [kg/kg]
+          else
+             qall(k,i,j) = 0.0D0
+          endif
+
+          if (       CZ(k) >  600.D0 &
+               .AND. CZ(k) <= 840.D0 ) then ! in the cloud
+             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
+
+             qc(k,i,j) = 0.45D-3 * fact
+          else
+             qc(k,i,j) = 0.D0
+          endif
+          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.D0
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.D0
+    enddo
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       QTRC(k,i,j,I_QC) = qc(k,i,j)
+
+       if ( qc(k,i,j) > 0.D0 ) then
+          QTRC(k,i,j,I_NC) = 120.D0 / DENS(k,i,j)
+       endif
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_DYCOMS2_RF01
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for strato cumulus
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_DYCOMS2_RF02
+    implicit none
+
+    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(8) :: qall(KA,IA,JA) ! QV+QC
+    real(8) :: qc  (KA,IA,JA) ! QC
+    real(8) :: fact, disturb
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    ! calc in dry condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+       disturb = 2.D0 * ( rndm(KS-1,i,j)-0.50 ) ! [-1 to 1]
+
+       pres_sfc(1,i,j) = 1017.8D2                ! [Pa]
+       pott_sfc(1,i,j) = 288.3 + disturb * 0.1D0 ! [K]
+       qv_sfc  (1,i,j) = 0.D0
+
+       do k = KS, KE
+          disturb = 2.D0 * ( rndm(k,i,j)-0.50 ) ! [-1 to 1]
+
+          velx(k,i,j) =  3.D0 + 4.3 * CZ(k)*1.D-3
+          vely(k,i,j) = -9.D0 + 5.6 * CZ(k)*1.D-3
+
+          if ( CZ(k) <= 795.D0 ) then ! below initial cloud top
+             potl(k,i,j) = 288.3D0 + disturb * 0.1D0 ! [K]
+             qall(k,i,j) = 9.45D-3 ! [kg/kg]
+          else
+             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0) + disturb * 0.1D0 ! [K]
+             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0- exp( (CZ(k)-795.D0)/500.D0 ) ) ! [kg/kg]
+          endif
+
+          if (       CZ(k) >= 400.D0 &
+               .AND. CZ(k) <= 795.D0 ) then ! in the cloud
+             fact = ( CZ(k)-400.D0 ) / ( 795.D0-400.D0 )
+
+             qc(k,i,j) = 0.5D-3 * fact
+          else
+             qc(k,i,j) = 0.D0
+          endif
+          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
+
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.D0
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.D0
+    enddo
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       QTRC(k,i,j,I_QC) = qc(k,i,j)
+
+       if ( qc(k,i,j) > 0.D0 ) then
+          QTRC(k,i,j,I_NC) = 55.D0 / DENS(k,i,j)
+       endif
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_DYCOMS2_RF02
 
 end module mod_mkinit
