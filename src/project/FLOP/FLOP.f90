@@ -96,6 +96,9 @@ program scaleles3
   ! setup time
   call TIME_setup
   call TIME_rapstart('Initialize')
+#ifdef _FPCOLL_
+call START_COLLECTION("Initialize")
+#endif
 
   ! setup file I/O
   call FIO_setup
@@ -121,6 +124,9 @@ program scaleles3
   ! setup ocean
   call OCEAN_setup
 
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Initialize")
+#endif
   call TIME_rapend('Initialize')
 
 
@@ -129,6 +135,9 @@ program scaleles3
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
   call TIME_rapstart('Main Loop(Total)')
+#ifdef _FPCOLL_
+call START_COLLECTION("Main")
+#endif
 
   do
 
@@ -154,6 +163,9 @@ program scaleles3
 
   enddo
 
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Main")
+#endif
   call TIME_rapend('Main Loop(Total)')
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)

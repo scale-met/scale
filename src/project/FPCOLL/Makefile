@@ -13,16 +13,16 @@
 # %> make -B       (ignore the timestamp)
 #
 ################################################################################
-include ../../sysdep/Makedef.K_NOSIMD
+include ../../sysdep/Makedef.K_FPCOLL
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
 #default index & tracer set
-index   = 436x16x16
+index   = 1256x32x32
 tracer  = ndw6
 postfix = 
 
-PROJ_EXE = FLOP
+PROJ_EXE = FPCOLL
 
 all: makedir makeinclude makebin
 
