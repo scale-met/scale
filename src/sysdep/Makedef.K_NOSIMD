@@ -3,12 +3,12 @@
 FC     = mpifrtpx
 # new setting 20120413
 FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-         -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
+         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp -D_FPCOLL_ \
+         -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Knosimd -Knofp_contract -Kdynamic_iteration
 
 FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-             -Knoprefetch -Ksimd=2 -Kdynamic_iteration
+             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=2 -Cpp -D_FPCOLL_ \
+             -Knoprefetch -Knosimd -Knofp_contract -Kdynamic_iteration
 
 # old setting 20120214
 #FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
@@ -25,7 +25,7 @@ FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_com
 #         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
 
 CC     = mpifccpx
-CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd
+CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Knosimd -Knofp_contract
 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
