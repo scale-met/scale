@@ -18,6 +18,7 @@
 !! @li      2012-02-14 (H.Yashiro)  [mod] Cache tiling
 !! @li      2012-03-14 (H.Yashiro)  [mod] Bugfix (Y.Miyamoto)
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2012-04-09 (H.Yashiro)  [mod] Integrate RDMA communication
 !!
 !<
 !-------------------------------------------------------------------------------
