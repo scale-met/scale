@@ -92,14 +92,14 @@ contains
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_rho")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     rho(:,:) = pre(:,:) / tem(:,:) &
          / ( qd(:,:)*CNST_RAIR+qv(:,:)*CNST_RVAP )
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_rho")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -129,7 +129,7 @@ call STOP_COLLECTION("thrmdyn_rho")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_ein")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     call thrmdyn_cv( &
@@ -139,7 +139,7 @@ call START_COLLECTION("thrmdyn_ein")
     ein(:,:) = cv(:,:) * tem(:,:)
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_ein")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -159,13 +159,13 @@ call STOP_COLLECTION("thrmdyn_ein")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_eth")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     eth(:,:) = ein(:,:) + pre(:,:) / rho(:,:)
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_eth")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -190,7 +190,7 @@ call STOP_COLLECTION("thrmdyn_eth")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tem")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     call thrmdyn_cv( &
@@ -200,7 +200,7 @@ call START_COLLECTION("thrmdyn_tem")
     tem(:,:) = ein(:,:) / cv(:,:)
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tem")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -225,9 +225,9 @@ call STOP_COLLECTION("thrmdyn_tem")
     !
     real(8) :: rpres0, wkappa
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('old_thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempre2")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     !
@@ -243,9 +243,9 @@ call START_COLLECTION("thrmdyn_tempre2")
     !
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempre2")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('old_thrmdyn')
 
     return
   end subroutine thrmdyn_tempre2
@@ -266,14 +266,14 @@ call STOP_COLLECTION("thrmdyn_tempre2")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_pre")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     pre(:,:) = rho(:,:) * tem(:,:) &
          * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_pre")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -294,7 +294,7 @@ call STOP_COLLECTION("thrmdyn_pre")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_th")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     p0k=CNST_PRE00**CNST_KAPPA
@@ -302,7 +302,7 @@ call START_COLLECTION("thrmdyn_th")
     th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_th")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -332,7 +332,7 @@ call STOP_COLLECTION("thrmdyn_th")
     !
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempreth")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     p0k=CNST_PRE00**CNST_KAPPA
@@ -348,7 +348,7 @@ call START_COLLECTION("thrmdyn_tempreth")
     th(:,:) =tem(:,:)*(abs(pre(:,:))**(-CNST_KAPPA))*p0k
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempreth")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return
@@ -374,9 +374,9 @@ call STOP_COLLECTION("thrmdyn_tempreth")
     real(8) :: cv(size(tem,1),size(tem,2))
     !
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('old_thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_tempre")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     call thrmdyn_cv( &
@@ -389,9 +389,9 @@ call START_COLLECTION("thrmdyn_tempre")
          * ( qd(:,:)*CNST_RAIR+q(:,:,I_QV)*CNST_RVAP )
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_tempre")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('old_thrmdyn')
 
     return
   end subroutine thrmdyn_tempre
@@ -410,9 +410,9 @@ call STOP_COLLECTION("thrmdyn_tempre")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('old_thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_cv")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     cva(:,:) = qd(:,:) * CNST_CV
@@ -422,9 +422,9 @@ call START_COLLECTION("thrmdyn_cv")
     !
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_cv")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('old_thrmdyn')
 
     return
   end subroutine thrmdyn_cv
@@ -442,9 +442,9 @@ call STOP_COLLECTION("thrmdyn_cv")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('old_thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_cp")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     cpa(:,:) = qd(:,:) * CNST_CP
@@ -454,9 +454,9 @@ call START_COLLECTION("thrmdyn_cp")
     !
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_cp")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('old_thrmdyn')
 
     return
   end subroutine thrmdyn_cp
@@ -472,9 +472,9 @@ call STOP_COLLECTION("thrmdyn_cp")
     integer :: nq
     !
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('old_thrmdyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_qd")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     qd(:,:) = 1.0D0
@@ -483,9 +483,9 @@ call START_COLLECTION("thrmdyn_qd")
     end do
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_qd")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('old_thrmdyn')
 
     return
   end subroutine thrmdyn_qd
@@ -515,7 +515,7 @@ call STOP_COLLECTION("thrmdyn_qd")
     integer :: nq
 
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn_ent")
+call START_COLLECTION("old_thrmdyn")
 #endif
 
     !
@@ -547,7 +547,7 @@ call START_COLLECTION("thrmdyn_ent")
     !
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn_ent")
+call STOP_COLLECTION("old_thrmdyn")
 #endif
 
     return

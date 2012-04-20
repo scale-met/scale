@@ -128,6 +128,10 @@ contains
        CDY => GRID_CDY
     use mod_geometrics, only : &
        lat => GEOMETRICS_lat
+#ifdef _USE_RDMA
+    use mod_comm, only: &
+       COMM_set_rdma_variable
+#endif
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -326,6 +330,24 @@ contains
     CNMY(3,   1:JS-2) = CNMY(3,JS-1)
     CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
 
+#ifdef _USE_RDMA
+    ! RDMA setting
+    call COMM_set_rdma_variable( DENS_RK1(:,:,:), 5+QA+ 1)
+    call COMM_set_rdma_variable( MOMZ_RK1(:,:,:), 5+QA+ 2)
+    call COMM_set_rdma_variable( MOMY_RK1(:,:,:), 5+QA+ 3)
+    call COMM_set_rdma_variable( MOMX_RK1(:,:,:), 5+QA+ 4)
+    call COMM_set_rdma_variable( RHOT_RK1(:,:,:), 5+QA+ 5)
+
+    call COMM_set_rdma_variable( DENS_RK2(:,:,:), 5+QA+ 6)
+    call COMM_set_rdma_variable( MOMZ_RK2(:,:,:), 5+QA+ 7)
+    call COMM_set_rdma_variable( MOMY_RK2(:,:,:), 5+QA+ 8)
+    call COMM_set_rdma_variable( MOMX_RK2(:,:,:), 5+QA+ 9)
+    call COMM_set_rdma_variable( RHOT_RK2(:,:,:), 5+QA+10)
+
+    call COMM_set_rdma_variable( rjmns(:,:,:), 5+QA+11)
+#endif
+
+    return
   end subroutine ATMOS_DYN_setup
 
   !-----------------------------------------------------------------------------
@@ -342,9 +364,6 @@ contains
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use mod_grid, only : &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
@@ -355,6 +374,12 @@ contains
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+    use mod_comm, only: &
+#ifdef _USE_RDMA
+       COMM_rdma_vars8, &
+#endif
+       COMM_vars8, &
+       COMM_wait
     use mod_atmos_vars, only: &
        ATMOS_vars_total,   &
        DENS, &
@@ -397,7 +422,7 @@ contains
 
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: pjmns(KA,IA,JA)
+    real(8) :: pjmns    (KA,IA,JA)
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -406,10 +431,6 @@ contains
     real(8) :: dtrk, rdtrk
     integer :: i, j, k, iq, iw, rko, step
     !---------------------------------------------------------------------------
-
-#ifdef _FPCOLL_
-call START_COLLECTION("DYNAMICS")
-#endif
 
 !OCL XFILL
     do j = JS, JE+1
@@ -438,7 +459,9 @@ call START_COLLECTION("DYNAMICS")
     enddo
 
     do step = 1, TIME_NSTEP_ATMOS_DYN
-!
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
+
 !    DENS_RK1(:,:,:) = -9.999D30
 !    MOMZ_RK1(:,:,:) = -9.999D30
 !    MOMZ_RK1(1:KS-1,:,:) = 0.D0
@@ -474,10 +497,9 @@ call START_COLLECTION("DYNAMICS")
 !    qflx_lo  (:,:,:,:)   = -9.999D30
 !    qflx_anti(:,:,:,:)   = -9.999D30
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
-
 #ifdef _FPCOLL_
-call START_COLLECTION("SET")
+call TIME_rapstart   ('DYN-set')
+call START_COLLECTION("DYN-set")
 #endif
 
     do JJS = JS, JE, JBLOCK
@@ -495,8 +517,12 @@ call START_COLLECTION("SET")
           do k = KS, KE
              ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
                                     * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5D0 * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
+          enddo 
+          do k = KS, KE
              ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
                                     * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5D0 * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
+          enddo 
+          do k = KS, KE
              ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
                                     * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
           enddo 
@@ -571,19 +597,6 @@ call START_COLLECTION("SET")
        enddo
        enddo
        enddo
-
-!       do j = JJS,   JJE
-!       do i = IIS,   IIE
-!          num_diff(KS  ,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KS) &
-!                                         * 4.0D0 * ( MOMZ(KS  ,i,j)-MOMZ(KS-1,i,j) ) 
-!          num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KS+1) &
-!                                         * 4.0D0 * ( MOMZ(KS+1,i,j)-MOMZ(KS  ,i,j) ) 
-!          num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KE-1) &
-!                                         * 4.0D0 * ( MOMZ(KE-1,i,j)-MOMZ(KE-2,i,j) )
-!          num_diff(KE  ,i,j,I_MOMZ,ZDIR) = DIFF2 * CDZ(KE) &
-!                                         * 4.0D0 * ( MOMZ(KE  ,i,j)-MOMZ(KE-1,i,j) ) 
-!       enddo
-!       enddo
 
        do j = JJS,   JJE
        do i = IIS-1, IIE
@@ -740,16 +753,23 @@ call START_COLLECTION("SET")
        ! Gas constant
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-          do k = KS, KE
-             QDRY(k,i,j) = 1.D0
-
-             do iw = QQS, QQE
-                QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
-             enddo
-          enddo
-          do k = KS, KE
-             Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-          enddo
+       do k = KS, KE
+          QDRY(k,i,j) = 1.D0
+       enddo
+       enddo
+       enddo
+       do iw = QQS, QQE
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
+       enddo
+       enddo
+       enddo
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       enddo
        enddo
        enddo
 
@@ -757,8 +777,10 @@ call START_COLLECTION("SET")
     enddo ! end tile
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("SET")
-call START_COLLECTION("RK3")
+call STOP_COLLECTION ("DYN-set")
+call TIME_rapend     ('DYN-set')
+call TIME_rapstart   ('DYN-rk3')
+call START_COLLECTION("DYN-rk3")
 #endif
 
     !##### Start RK #####
@@ -1093,6 +1115,9 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+1, 5 )
+#else
     call COMM_vars8( DENS_RK1(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
     call COMM_vars8( MOMX_RK1(:,:,:), 3 )
@@ -1103,6 +1128,8 @@ call START_COLLECTION("RK3")
     call COMM_wait ( MOMX_RK1(:,:,:), 3 )
     call COMM_wait ( MOMY_RK1(:,:,:), 4 )
     call COMM_wait ( RHOT_RK1(:,:,:), 5 )
+#endif
+
 
     !##### RK2 #####
     rko = 2
@@ -1434,6 +1461,9 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+6, 5 )
+#else
     call COMM_vars8( DENS_RK2(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
     call COMM_vars8( MOMX_RK2(:,:,:), 3 )
@@ -1444,6 +1474,7 @@ call START_COLLECTION("RK3")
     call COMM_wait ( MOMX_RK2(:,:,:), 3 )
     call COMM_wait ( MOMY_RK2(:,:,:), 4 )
     call COMM_wait ( RHOT_RK2(:,:,:), 5 )
+#endif
 
     !##### RK3 #####
     rko = 3
@@ -1775,6 +1806,9 @@ call START_COLLECTION("RK3")
     enddo
     enddo
 
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 1, 5 )
+#else
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
     call COMM_vars8( MOMX(:,:,:), 3 )
@@ -1785,10 +1819,13 @@ call START_COLLECTION("RK3")
     call COMM_wait ( MOMX(:,:,:), 3 )
     call COMM_wait ( MOMY(:,:,:), 4 )
     call COMM_wait ( RHOT(:,:,:), 5 )
+#endif
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("RK3")
-call START_COLLECTION("FCT")
+call STOP_COLLECTION ("DYN-rk3")
+call TIME_rapend     ('DYN-rk3')
+call TIME_rapstart   ('DYN-fct')
+call START_COLLECTION("DYN-fct")
 #endif
 
     !##### advection of scalar quantity #####
@@ -1879,8 +1916,12 @@ call START_COLLECTION("FCT")
     enddo
     enddo
 
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+11, 1 )
+#else
     call COMM_vars8( rjmns(:,:,:), 1 )
     call COMM_wait ( rjmns(:,:,:), 1 )
+#endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1946,25 +1987,25 @@ call START_COLLECTION("FCT")
 
     enddo ! scalar quantities loop
 
-    ! fill IHALO & JHALO
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 6, QA )
+#else
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
     do iq = 1, QA
        call COMM_wait ( QTRC(:,:,:,iq), iq )
     enddo
+#endif
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("FCT")
+call STOP_COLLECTION ("DYN-fct")
+call TIME_rapend     ('DYN-fct')
 #endif
 
     enddo ! dynamical steps
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION("DYNAMICS")
-#endif
-
-    ! fill KHALO
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -1979,6 +2020,7 @@ call STOP_COLLECTION("DYNAMICS")
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+!OCL XFILL
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE
