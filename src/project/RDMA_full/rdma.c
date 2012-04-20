@@ -149,14 +149,12 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 {
 	struct FJMPI_Rdma_cq cq ;
 	int	j , v;
-	int	c ;
-
 
 	/* set status_flag(recv) */
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
 	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
 	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
 
 	FJMPI_Rdma_put(RANK_S, RDMA_TAG,
 			remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
@@ -182,12 +180,19 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 			sizeof(sf_t),
 			FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
 
+	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = FALSE ;
+
 	/* send data */
 	do {
 		// to north
 		if(!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(NORTH,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(NORTH,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -214,6 +219,8 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(SOUTH,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -240,6 +247,8 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(WEST,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(WEST,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(WEST,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -266,6 +275,8 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(EAST,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(EAST,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(EAST,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -288,10 +299,16 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 					FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
 		}
 
-	} while(!status_flag[sidx(WEST,LOCAL_PUT_DONE)]  ||
+	} while(!status_flag[sidx(WEST, LOCAL_PUT_DONE)]  ||
 			!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] ||
-			!status_flag[sidx(EAST,LOCAL_PUT_DONE)]  ||
+			!status_flag[sidx(EAST, LOCAL_PUT_DONE)]  ||
 			!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] ) ;
+
+	status_flag[sidx(WEST, LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(EAST, LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = FALSE;
+
 
 	put_cnt[NORTH] = 2 + *num * JHALO;
 	put_cnt[SOUTH] = 2 + *num * JHALO;
@@ -328,21 +345,22 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 			!status_flag[sidx(EAST,LOCAL_RECV_DONE)]  ||
 			!status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] ) ;
 
-	for(c=0; c<BEARING_CNT*FLAG_CNT; c++) status_flag[c] = FALSE ;
+	status_flag[sidx(WEST, LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(EAST, LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] = FALSE ;
 }
 
 void rdma_put8_(const int32_t *vid, const int32_t *num)
 {
 	struct FJMPI_Rdma_cq cq ;
 	int	j , v;
-	int	c ;
-
 
 	/* set status_flag(recv) */
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
 	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
 	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
 
 	FJMPI_Rdma_put(RANK_S, RDMA_TAG,
 			remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
@@ -368,12 +386,20 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 			sizeof(sf_t),
 			FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
 
+
+	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = FALSE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = FALSE ;
+
 	/* send data */
 	do {
 		// to north
 		if(!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(NORTH,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(NORTH,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -400,6 +426,8 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(SOUTH,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -426,6 +454,8 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(WEST,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(WEST,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(WEST,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -447,6 +477,8 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 		if(!status_flag[sidx(EAST,LOCAL_PUT_DONE)] &&
 				status_flag[sidx(EAST,REMOTE_RECV_READY)] )
 		{
+			status_flag[sidx(EAST,REMOTE_RECV_READY)] = FALSE ;
+
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -525,6 +557,10 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 			sizeof(sf_t),
 			FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
 
+	status_flag[sidx(WEST, LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(EAST, LOCAL_PUT_DONE)] = FALSE;
+	status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = FALSE;
 
 	put_cnt[WEST] += 1 + *num * 2 * JHALO;
 	put_cnt[EAST] += 1 + *num * 2 * JHALO;
@@ -556,7 +592,10 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 	while( !status_flag[sidx(WEST,LOCAL_RECV_DONE)]  ||
 			!status_flag[sidx(EAST,LOCAL_RECV_DONE)]  ) ;
 
-	for(c=0; c<BEARING_CNT*FLAG_CNT; c++) status_flag[c] = FALSE ;
+	status_flag[sidx(WEST, LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(NORTH,LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(EAST, LOCAL_RECV_DONE)] = FALSE ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] = FALSE ;
 }
 
 
