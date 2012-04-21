@@ -55,7 +55,7 @@ program scaleinit
      ATMOS_vars_fillhalo, &
      ATMOS_vars_restart_write
   use mod_atmos_thermodyn, only: &
-     ATMOS_THRRMODYN_setup
+     ATMOS_THERMODYN_setup
   use mod_mkinit, only: &
      MKINIT_TYPE,     &
      I_PLANESTATE,    &
@@ -136,7 +136,7 @@ program scaleinit
   call TIME_rapstart('Main')
 
   ! setup restart
-  call ATMOS_THRRMODYN_setup
+  call ATMOS_THERMODYN_setup
   call ATMOS_vars_setup
 
   ! setup mkinit

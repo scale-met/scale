@@ -410,7 +410,7 @@ contains
 
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: pjmns(KA,IA,JA)
+    real(8) :: pjmns    (KA,IA,JA)
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -2174,7 +2174,6 @@ call START_COLLECTION("FCT")
 
     enddo ! scalar quantities loop
 
-    ! fill IHALO & JHALO
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
@@ -2193,6 +2192,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! fill KHALO
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -2207,6 +2207,7 @@ call STOP_COLLECTION("DYNAMICS")
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+!OCL XFILL
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE
@@ -2218,7 +2219,7 @@ call STOP_COLLECTION("DYNAMICS")
 
     call ATMOS_vars_total
 
-    call HIST_in( QDRY  (:,:,:), 'QDRY',   'Dry Air mixng ratio',       'kg/kg',   '3D', TIME_DTSEC )
+    call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio',       'kg/kg',   '3D', TIME_DTSEC )
     call HIST_in( sink(:,:,:), 'sink', 'tendency large scale sink', 'kg/m3/s', '3D', TIME_DTSEC )
 
     return

@@ -1464,10 +1464,10 @@ contains
 
        do k = KS, KE
           if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
-             velx(k,i,j) =   6.7D0
-             vely(k,i,j) =  -4.9D0
-!             velx(k,i,j) =   7.0D0
-!             vely(k,i,j) =  -5.5D0
+!             velx(k,i,j) =   6.7D0
+!             vely(k,i,j) =  -4.9D0
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
              potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
           else
              velx(k,i,j) =   7.0D0
@@ -1500,6 +1500,18 @@ contains
 
     ! make density & pressure profile in moist condition
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
 
     do j = JS, JE

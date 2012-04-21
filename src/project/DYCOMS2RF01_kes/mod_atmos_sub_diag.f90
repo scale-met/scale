@@ -85,9 +85,6 @@ contains
     use mod_grid, only : &
        CZ  => GRID_CZ,  &
        CDZ => GRID_CDZ
-    use mod_geometrics, only: &
-       area    => GEOMETRICS_area,    &
-       totarea => GEOMETRICS_totarea
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -166,19 +163,19 @@ contains
     statval(:,:,PRC_myrank) = 0.D0
     do j = JS, JE
     do i = IS, IE
-       do k = KS, KE
-          statval(k,1,PRC_myrank) = statval(k,1,PRC_myrank) + LWPT(k,i,j) * area(1,i,j)
-          statval(k,2,PRC_myrank) = statval(k,2,PRC_myrank) + VELZ(k,i,j) * area(1,i,j)
-          statval(k,3,PRC_myrank) = statval(k,3,PRC_myrank) + VELX(k,i,j) * area(1,i,j)
-          statval(k,4,PRC_myrank) = statval(k,4,PRC_myrank) + VELY(k,i,j) * area(1,i,j)
-       enddo
+    do k = KS, KE
+       statval(k,1,PRC_myrank) = statval(k,1,PRC_myrank) + LWPT(k,i,j)
+       statval(k,2,PRC_myrank) = statval(k,2,PRC_myrank) + VELZ(k,i,j)
+       statval(k,3,PRC_myrank) = statval(k,3,PRC_myrank) + VELX(k,i,j)
+       statval(k,4,PRC_myrank) = statval(k,4,PRC_myrank) + VELY(k,i,j)
+    enddo
     enddo
     enddo
     do k = KS, KE
-       statval(k,1,PRC_myrank) = statval(k,1,PRC_myrank) / totarea
-       statval(k,2,PRC_myrank) = statval(k,2,PRC_myrank) / totarea
-       statval(k,3,PRC_myrank) = statval(k,3,PRC_myrank) / totarea
-       statval(k,4,PRC_myrank) = statval(k,4,PRC_myrank) / totarea
+       statval(k,1,PRC_myrank) = statval(k,1,PRC_myrank) / (IMAX*JMAX)
+       statval(k,2,PRC_myrank) = statval(k,2,PRC_myrank) / (IMAX*JMAX)
+       statval(k,3,PRC_myrank) = statval(k,3,PRC_myrank) / (IMAX*JMAX)
+       statval(k,4,PRC_myrank) = statval(k,4,PRC_myrank) / (IMAX*JMAX)
     enddo
 
     ! MPI broadcast
