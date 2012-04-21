@@ -117,7 +117,7 @@ contains
 
     call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -133,7 +133,7 @@ call START_COLLECTION("thrmdyn")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
     call TIME_rapend  ('SUB_thermodyn')
 
@@ -153,7 +153,7 @@ call STOP_COLLECTION("thrmdyn")
 
     call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -169,7 +169,7 @@ call START_COLLECTION("thrmdyn")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
     call TIME_rapend  ('SUB_thermodyn')
 
@@ -189,7 +189,7 @@ call STOP_COLLECTION("thrmdyn")
 
     call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -205,7 +205,7 @@ call START_COLLECTION("thrmdyn")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
     call TIME_rapend  ('SUB_thermodyn')
 
@@ -232,7 +232,7 @@ call STOP_COLLECTION("thrmdyn")
 
     call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -252,7 +252,7 @@ call START_COLLECTION("thrmdyn")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
     call TIME_rapend  ('SUB_thermodyn')
 
@@ -279,7 +279,7 @@ call STOP_COLLECTION("thrmdyn")
 
     call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("thrmdyn")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     RPRE00   = 1.D0 / PRE00
@@ -295,7 +295,7 @@ call START_COLLECTION("thrmdyn")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("thrmdyn")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
     call TIME_rapend  ('SUB_thermodyn')
 
