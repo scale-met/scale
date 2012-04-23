@@ -146,6 +146,7 @@
 
 &HISTITEM item='sink'    /
 &HISTITEM item='EFLX_rd' /
+&HISTITEM item='TEMP_t_rd' /
 &HISTITEM item='QT'      /
 &HISTITEM item='QL'      /
 &HISTITEM item='LWPT'    /

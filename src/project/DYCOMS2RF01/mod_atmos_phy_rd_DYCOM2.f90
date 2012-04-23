@@ -177,7 +177,6 @@ contains
           pres   = P00 * ( RHOT(k,i,j) * Rmoist / P00 )**CPovCV
 
           RHOT(k,i,j) = RHOT(k,i,j) + dtrd * DENS(k,i,j) * TEMP_t(k,i,j) * ( P00/pres )**RovCP
-    if( IO_L ) write(IO_FID_LOG,*) k,i,j,TEMP_t(k,i,j),DENS(k,i,j) * TEMP_t(k,i,j) * ( P00/pres )**RovCP
        enddo
 
     enddo
