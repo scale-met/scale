@@ -10,7 +10,7 @@
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* /data1/user0117/scale3/run/K/DYCOMS2/scale3_test_DYCOMS2RF01_005h-1.cnf %r:./"
 #PJM --stgin  "rank=* /data1/user0117/scale3/bin/K/DYCOMS2RF01_005m438x8x8_ndw6_              %r:./"
-#PJM --stgin  "rank=* /data1/user0117/scale3/output/DYCOMS2RF01_005m438x8x8_ndw6_96x96-0/init_DYCOMS2RF01_63072000000.000.pe%06r %r:./"
+#PJM --stgin  "rank=* /data1/user0117/scale3/output/DYCOMS2RF01_005h438x8x8_ndw6_96x96-0/init_DYCOMS2RF01_63072000000.000.pe%06r %r:./"
 #PJM --stgout "rank=* %r:./* /data1/user0117/scale3/output/DYCOMS2RF01_005h438x8x8_ndw6_96x96-1/"
 #PJM -s
 #

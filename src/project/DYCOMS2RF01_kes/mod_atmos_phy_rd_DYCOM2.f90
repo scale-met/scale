@@ -69,11 +69,17 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD
     use mod_const, only: &
-       CPdry => CONST_CPdry
+       Rdry    => CONST_Rdry,   &
+       CPdry   => CONST_CPdry,  &
+       RovCP   => CONST_RovCP,  &
+       CPovCV  => CONST_CPovCV, &
+       EPSTvap => CONST_CPdry,  &
+       P00     => CONST_PRE00
     use mod_time, only: &
        dtrd => TIME_DTSEC_ATMOS_PHY_RD
     use mod_grid, only : &
        CZ   => GRID_CZ,  &
+       FZ   => GRID_FZ,  &
        CDZ  => GRID_CDZ, &
        RCDZ => GRID_RCDZ
     use mod_comm, only: &
@@ -88,20 +94,21 @@ contains
        QTRC
     implicit none
 
-    real(8) :: RHOT_t  (KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
+    real(8) :: TEMP_t  (KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
     real(8) :: EFLX_rad(KA,IA,JA) ! Radiative heating flux [J/m2/s]
     real(8) :: Zi      (1 ,IA,JA) ! Cloud top height [m]
 
     real(8) :: QTOT ! Qv + Qc + Qr [kg/kg]
 
     real(8) :: Qbelow, Qabove ! scaled LWP (above/below layer)
-    real(8) :: H              ! Heaviside Step Function
 
     real(8), parameter :: kappa = 85.0D0  ! scaling factor for LWP [m2/kg]
     real(8), parameter :: a     =  1.0D0  ! [K/m**-1/3]
     real(8), parameter :: F0    = 70.0D0  ! Upward [J/m2/s]
     real(8), parameter :: F1    = 22.0D0  ! [K/m**-1/3]
     real(8), parameter :: D     = 3.75D-6 ! divergence of large scale horizontal winds [1/s]
+
+    real(8) :: Rmoist,  pres
 
     real(8) :: dQ, dZ
     integer :: k_cldtop
@@ -115,7 +122,7 @@ contains
     do i = IS, IE
        do k = KS, KE
           EFLX_rad(k,i,j) = 0.D0
-          RHOT_t  (k,i,j) = 0.D0
+          TEMP_t  (k,i,j) = 0.D0
           Zi      (1,i,j) = 0.D0
        enddo
 
@@ -134,12 +141,12 @@ contains
 
        Zi(1,i,j) = CZ(k_cldtop)
 
-       do k = KS, KE
+       do k = KS-1, KE
 
           Qbelow = 0.D0
           Qabove = 0.D0
           do k2 = KS, KE
-             dQ = kappa * DENS(k2,i,j) * CDZ(k2) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
+             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
 
              if ( k2 <= k ) then ! below layer
                 Qbelow = Qbelow + dQ
@@ -148,26 +155,28 @@ contains
              endif
           enddo
 
-          dZ = CZ(k)-CZ(k_cldtop)
-
-          ! Heaviside Step Function
-          if ( dZ > 0.D0 ) then
-             H = 1.0D0
-          elseif( dZ < 0.D0 ) then
-             H = 0.0D0
-          else
-             H = 0.5D0
-          endif
-
           EFLX_rad(k,i,j) = F0 * exp( -Qabove ) &
-                          + F1 * exp( -Qbelow ) &
-                          + a * DENS(k_cldtop,i,j) * CPdry * D * H &
+                          + F1 * exp( -Qbelow )
+       enddo
+
+       do k = k_cldtop, KE
+          dZ = FZ(k)-CZ(k_cldtop)
+
+          EFLX_rad(k,i,j) = EFLX_rad(k,i,j) &
+                          + a * DENS(k_cldtop,i,j) * CPdry * D &
                           * ( 0.25D0 * dZ  * dZ**(1.D0/3.D0) &
                             + CZ(k_cldtop) * dZ**(1.D0/3.D0) )
+       enddo
 
-          RHOT_t(k,i,j) = EFLX_rad(k,i,j) / CPdry * RCDZ(k)
+       do k = KS, KE
+          TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
+       enddo
 
-          RHOT(k,i,j) = RHOT(k,i,j) + RHOT_t(k,i,j) * dtrd
+       do k = KS, KE
+          Rmoist = Rdry * ( 1.D0 + EPSTvap * QTRC(k,i,j,I_QV) )
+          pres   = P00 * ( RHOT(k,i,j) * Rmoist / P00 )**CPovCV
+
+          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * DENS(k,i,j) * TEMP_t(k,i,j) * ( P00/pres )**RovCP
        enddo
 
     enddo
@@ -180,7 +189,6 @@ contains
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
-
     ! fill IHALO & JHALO
     call COMM_vars8( RHOT(:,:,:), 5 )
     call COMM_wait ( RHOT(:,:,:), 5 )
@@ -188,7 +196,7 @@ contains
     call ATMOS_vars_total
 
     call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'J/m2/s',    '3D', dtrd )
-    call HIST_in( RHOT_t  (:,:,:), 'RHOT_t_rd', 'tendency of RHOT in rd', 'K*kg/m3/s', '3D', dtrd )
+    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K*kg/m3/s', '3D', dtrd )
     call HIST_in( Zi      (:,:,:), 'Zi',        'Cloud top height',       'm',         '2D', dtrd )
 
     return

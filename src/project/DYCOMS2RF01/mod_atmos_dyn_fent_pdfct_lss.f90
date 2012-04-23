@@ -786,19 +786,19 @@ call START_COLLECTION("SET")
           enddo
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_sink(KS-1,i,j) = 0.0D0
-             qflx_sink(KS  ,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)-QTRC(KS,i,j,iw) )
-             qflx_sink(KE-1,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)-QTRC(KE-1,i,j,iw) )
-             qflx_sink(KE  ,i,j) = 0.0D0
+             qflx_sink(KS-1,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)+QTRC(KS,i,j,iw) )
+             qflx_sink(KS  ,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)+QTRC(KS,i,j,iw) )
+             qflx_sink(KE-1,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)+QTRC(KE-1,i,j,iw) )
+             qflx_sink(KE  ,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)+QTRC(KE-1,i,j,iw) )
           enddo
           enddo
 
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
-                sink(k,i,j) = sink(k,i,j) &
-                            + ATMOS_DYN_LSsink_D * CZ(k) &
-                            * ( qflx_sink(k,i,j)-qflx_sink(k-1,i,j) ) * RCDZ(k)
+             sink(k,i,j) = sink(k,i,j) &
+                         + ATMOS_DYN_LSsink_D * CZ(k) &
+                         * ( qflx_sink(k,i,j)-qflx_sink(k-1,i,j) ) * RCDZ(k)
           enddo
           enddo
           enddo
