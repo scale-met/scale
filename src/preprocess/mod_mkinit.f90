@@ -210,6 +210,7 @@ contains
     real(8) :: RANDOM_U     =  0.D0 ! amplitude of random disturbance u
     real(8) :: RANDOM_V     =  0.D0 ! amplitude of random disturbance v
     real(8) :: RANDOM_RH    =  0.D0 ! amplitude of random disturbance RH
+    real(8) :: RANDOM_QTRC  =  0.D0 ! amplitude of random disturbance QTRC
 
     NAMELIST / PARAM_MKINIT_PLANESTATE / &
        SFC_THETA,    &
@@ -224,7 +225,8 @@ contains
        RANDOM_W,     &
        RANDOM_U,     &
        RANDOM_V,     &
-       RANDOM_RH
+       RANDOM_RH,    &
+       RANDOM_QTRC
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -276,9 +278,11 @@ contains
     do j = JS, JE
     do i = IS, IE
        qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = max( qv_sfc(1,i,j), 0.D0 )
 
        do k = KS, KE
           qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.D-2 * qsat(k,i,j)
+          qv(k,i,j) = max( qv(k,i,j), 0.D0 )
        enddo
     enddo
     enddo
@@ -332,7 +336,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = rndm(k,i,j) * RANDOM_QTRC
        enddo
        enddo
        enddo
@@ -1574,7 +1578,7 @@ contains
        QTRC(k,i,j,I_QC) = qc(k,i,j)
 
        if ( qc(k,i,j) > 0.D0 ) then
-          QTRC(k,i,j,I_NC) = 120.D0 / DENS(k,i,j)
+          QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
        endif
 
     enddo
