@@ -459,17 +459,17 @@ contains
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMX(KS:KE,IS:IE,JS:JE)
     call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'MOMX', AP_DESC(2), '', AP_UNIT(2),          &
+                     'MOMX', AP_DESC(3), '', AP_UNIT(3),          &
                      FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMY(KS:KE,IS:IE,JS:JE)
     call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'MOMY', AP_DESC(2), '', AP_UNIT(2),          &
+                     'MOMY', AP_DESC(4), '', AP_UNIT(4),          &
                      FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = RHOT(KS:KE,IS:IE,JS:JE)
     call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'RHOT', AP_DESC(2), '', AP_UNIT(2),          &
+                     'RHOT', AP_DESC(5), '', AP_UNIT(5),          &
                      FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
 
     do iq = 1, QA

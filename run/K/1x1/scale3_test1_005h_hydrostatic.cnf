@@ -4,6 +4,10 @@
 #
 #####
 
+&PARAM_IO
+ IO_LOG_SUPPRESS = .true.,
+/
+
 &PARAM_PRC
  PRC_NUM_X=1,
  PRC_NUM_Y=1,
@@ -47,7 +51,7 @@
 /
 
 &PARAM_COMM
- COMM_total_doreport  = .true.,
+ COMM_total_doreport  = .false.,
  COMM_total_globalsum = .false.,
 /
 
@@ -60,7 +64,7 @@
 
 &PARAM_ATMOS_VARS
  ATMOS_RESTART_IN_BASENAME    = "./init1_hydrostatic_63072000000.000",
- ATMOS_RESTART_OUTPUT         = .true.,
+ ATMOS_RESTART_OUTPUT         = .false.,
  ATMOS_RESTART_OUT_BASENAME   = "init1_hydrostatic",
  ATMOS_RESTART_CHECK          = .false.,
 /
@@ -103,16 +107,16 @@
  HISTORY_DATATYPE          = "REAL4",
 /
 
-&HISTITEM item='DENS' /
+#&HISTITEM item='DENS' /
 #&HISTITEM item='MOMX' /
 #&HISTITEM item='MOMY' /
 #&HISTITEM item='MOMZ' /
 #&HISTITEM item='RHOT' /
 
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item='PT'   /
+#&HISTITEM item='U'    /
+#&HISTITEM item='V'    /
+#&HISTITEM item='W'    /
+#&HISTITEM item='PT'   /
 #&HISTITEM item='PRES' /
 #&HISTITEM item='T'    /
 
@@ -121,7 +125,7 @@
 #&HISTITEM item='ENGK' /
 #&HISTITEM item='ENGI' /
 
-&HISTITEM item='QV'   /
+#&HISTITEM item='QV'   /
 #&HISTITEM item='QTOT' /
 #&HISTITEM item='QC'   /
 #&HISTITEM item='QR'   /

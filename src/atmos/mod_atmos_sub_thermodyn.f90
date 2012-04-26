@@ -42,12 +42,12 @@ module mod_atmos_thermodyn
   !
   !++ Public procedure
   !
-  public :: ATMOS_THRRMODYN_setup
-  public :: ATMOS_THRRMODYN_qd
-  public :: ATMOS_THRRMODYN_cv
-  public :: ATMOS_THRRMODYN_cp
-  public :: ATMOS_THRRMODYN_tempre
-  public :: ATMOS_THRRMODYN_tempre2
+  public :: ATMOS_THERMODYN_setup
+  public :: ATMOS_THERMODYN_qd
+  public :: ATMOS_THERMODYN_cv
+  public :: ATMOS_THERMODYN_cp
+  public :: ATMOS_THERMODYN_tempre
+  public :: ATMOS_THERMODYN_tempre2
 
   !-----------------------------------------------------------------------------
   !
@@ -74,7 +74,7 @@ module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_setup
+  subroutine ATMOS_THERMODYN_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -103,10 +103,10 @@ contains
     endif
 
     return
-  end subroutine ATMOS_THRRMODYN_setup
+  end subroutine ATMOS_THERMODYN_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_qd( qdry, q )
+  subroutine ATMOS_THERMODYN_qd( qdry, q )
     implicit none
 
     real(8), intent(out) :: qdry(IJA,KA)    ! dry mass concentration
@@ -115,9 +115,9 @@ contains
     integer :: ij, k, iqw
     !-----------------------------------------------------------------------------
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("ATMOS_THRRMODYN_qd")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -133,15 +133,15 @@ call START_COLLECTION("ATMOS_THRRMODYN_qd")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("ATMOS_THRRMODYN_qd")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THRRMODYN_qd
+  end subroutine ATMOS_THERMODYN_qd
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_cp( cptot, q, qdry )
+  subroutine ATMOS_THERMODYN_cp( cptot, q, qdry )
     implicit none
 
     real(8), intent(out) :: cptot(IJA,KA)    ! total specific heat
@@ -151,9 +151,9 @@ call STOP_COLLECTION("ATMOS_THRRMODYN_qd")
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("ATMOS_THRRMODYN_cp")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -169,15 +169,15 @@ call START_COLLECTION("ATMOS_THRRMODYN_cp")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("ATMOS_THRRMODYN_cp")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THRRMODYN_cp
+  end subroutine ATMOS_THERMODYN_cp
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_cv( cvtot, q, qdry )
+  subroutine ATMOS_THERMODYN_cv( cvtot, q, qdry )
     implicit none
 
     real(8), intent(out) :: cvtot(IJA,KA)    ! total specific heat
@@ -187,9 +187,9 @@ call STOP_COLLECTION("ATMOS_THRRMODYN_cp")
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("ATMOS_THRRMODYN_cv")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -205,15 +205,15 @@ call START_COLLECTION("ATMOS_THRRMODYN_cv")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("ATMOS_THRRMODYN_cv")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THRRMODYN_cv
+  end subroutine ATMOS_THERMODYN_cv
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_tempre( &
+  subroutine ATMOS_THERMODYN_tempre( &
       temp, pres,         &
       Ein,  dens, qdry, q )
     implicit none
@@ -230,9 +230,9 @@ call STOP_COLLECTION("ATMOS_THRRMODYN_cv")
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("ATMOS_THRRMODYN_tempre")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     do k  = 1, KA
@@ -252,15 +252,15 @@ call START_COLLECTION("ATMOS_THRRMODYN_tempre")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("ATMOS_THRRMODYN_tempre")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THRRMODYN_tempre
+  end subroutine ATMOS_THERMODYN_tempre
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THRRMODYN_tempre2( &
+  subroutine ATMOS_THERMODYN_tempre2( &
       temp, pres,         &
       dens, pott, qdry, q )
     implicit none
@@ -277,9 +277,9 @@ call STOP_COLLECTION("ATMOS_THRRMODYN_tempre")
     integer :: ij, k
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('thrmdyn')
+    call TIME_rapstart('SUB_thermodyn')
 #ifdef _FPCOLL_
-call START_COLLECTION("ATMOS_THRRMODYN_tempre2")
+call START_COLLECTION('SUB_thermodyn')
 #endif
 
     RPRE00   = 1.D0 / PRE00
@@ -295,12 +295,12 @@ call START_COLLECTION("ATMOS_THRRMODYN_tempre2")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("ATMOS_THRRMODYN_tempre2")
+call STOP_COLLECTION('SUB_thermodyn')
 #endif
-    call TIME_rapend  ('thrmdyn')
+    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THRRMODYN_tempre2
+  end subroutine ATMOS_THERMODYN_tempre2
 
 end module mod_atmos_thermodyn
 

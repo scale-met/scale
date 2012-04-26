@@ -61,7 +61,7 @@ contains
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
     use mod_atmos_thermodyn, only: &
-       ATMOS_THRRMODYN_setup
+       ATMOS_THERMODYN_setup
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
     use mod_atmos_phy_sf, only: &
@@ -75,7 +75,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_THRRMODYN_setup
+    call ATMOS_THERMODYN_setup
 
     call ATMOS_vars_setup
 
@@ -128,37 +128,67 @@ contains
 
     !########## Dynamics ##########
     call TIME_rapstart('Dynamics')
+#ifdef _FPCOLL_
+call START_COLLECTION("Dynamics")
+#endif
     if ( sw_dyn .AND. do_dyn ) then
        call ATMOS_DYN
     endif
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Dynamics")
+#endif
     call TIME_rapend  ('Dynamics')
 
     !########## Turbulence ##########
 
     call TIME_rapstart('Turbulence')
+#ifdef _FPCOLL_
+call START_COLLECTION("Turbulence")
+#endif
     if ( sw_phy_tb .AND. do_phy_tb ) then
        call ATMOS_PHY_SF
        call ATMOS_PHY_TB
     endif
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Turbulence")
+#endif
     call TIME_rapend  ('Turbulence')
 
     !########## Microphysics ##########
     call TIME_rapstart('Microphysics')
+#ifdef _FPCOLL_
+call START_COLLECTION("Microphysics")
+#endif
     if ( sw_phy_mp .AND. do_phy_mp ) then
 !       call ATMOS_PHY_MP
     endif
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Microphysics")
+#endif
     call TIME_rapend  ('Microphysics')
 
     !########## Radiation ##########
     call TIME_rapstart('Radiation')
+#ifdef _FPCOLL_
+call START_COLLECTION("Radiation")
+#endif
     if ( sw_phy_rd .AND. do_phy_rd ) then
 !       call ATMOS_PHY_RD
     endif
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("Radiation")
+#endif
     call TIME_rapend  ('Radiation')
 
     !########## History&Monitor ##########
     call TIME_rapstart('History')
+#ifdef _FPCOLL_
+call START_COLLECTION("History")
+#endif
        call ATMOS_vars_history
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("History")
+#endif
     call TIME_rapend  ('History')
 
     return

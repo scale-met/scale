@@ -210,6 +210,7 @@ contains
     real(8) :: RANDOM_U     =  0.D0 ! amplitude of random disturbance u
     real(8) :: RANDOM_V     =  0.D0 ! amplitude of random disturbance v
     real(8) :: RANDOM_RH    =  0.D0 ! amplitude of random disturbance RH
+    real(8) :: RANDOM_QTRC  =  0.D0 ! amplitude of random disturbance QTRC
 
     NAMELIST / PARAM_MKINIT_PLANESTATE / &
        SFC_THETA,    &
@@ -224,7 +225,8 @@ contains
        RANDOM_W,     &
        RANDOM_U,     &
        RANDOM_V,     &
-       RANDOM_RH
+       RANDOM_RH,    &
+       RANDOM_QTRC
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -276,9 +278,11 @@ contains
     do j = JS, JE
     do i = IS, IE
        qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = max( qv_sfc(1,i,j), 0.D0 )
 
        do k = KS, KE
           qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.D-2 * qsat(k,i,j)
+          qv(k,i,j) = max( qv(k,i,j), 0.D0 )
        enddo
     enddo
     enddo
@@ -332,7 +336,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = rndm(k,i,j) * RANDOM_QTRC
        enddo
        enddo
        enddo
@@ -1464,10 +1468,10 @@ contains
 
        do k = KS, KE
           if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
-             velx(k,i,j) =   6.7D0
-             vely(k,i,j) =  -4.9D0
-!             velx(k,i,j) =   7.0D0
-!             vely(k,i,j) =  -5.5D0
+!             velx(k,i,j) =   6.7D0
+!             vely(k,i,j) =  -4.9D0
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
              potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
           else
              velx(k,i,j) =   7.0D0
@@ -1500,6 +1504,18 @@ contains
 
     ! make density & pressure profile in moist condition
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
 
     do j = JS, JE
@@ -1562,7 +1578,7 @@ contains
        QTRC(k,i,j,I_QC) = qc(k,i,j)
 
        if ( qc(k,i,j) > 0.D0 ) then
-          QTRC(k,i,j,I_NC) = 120.D0 / DENS(k,i,j)
+          QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
        endif
 
     enddo
