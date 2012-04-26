@@ -368,6 +368,10 @@ module mod_atmos_phy_mp
   real(8), private, allocatable, save :: rgs    (:,:)
   real(8), private, allocatable, save :: rgsh   (:,:)
 
+  logical, private, save :: doautoconversion = .true.
+  logical, private, save :: doprecipitation  = .true.
+  real(8), private, save :: MP_ssw_lim = 1.D1
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -375,14 +379,37 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
+
+    NAMELIST / PARAM_ATMOS_PHY_MP / &
+       doautoconversion, &
+       doprecipitation,  &
+       MP_ssw_lim
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for NDW6'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     WLABEL( 1) = "VAPOR"
     WLABEL( 2) = "CLOUD"
@@ -1085,11 +1112,11 @@ contains
     use mod_atmos_precipitation, only : &
        precipitation => ATMOS_PRECIPITATION
     use mod_atmos_thermodyn, only : &
-       thrmdyn_qd      => ATMOS_THRRMODYN_qd, &
-       thrmdyn_cv      => ATMOS_THRRMODYN_cv, &
-       thrmdyn_cp      => ATMOS_THRRMODYN_cp, &
-       thrmdyn_tempre  => ATMOS_THRRMODYN_tempre, &
-       thrmdyn_tempre2 => ATMOS_THRRMODYN_tempre2, &
+       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
+       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
+       thrmdyn_cp      => ATMOS_THERMODYN_cp, &
+       thrmdyn_tempre  => ATMOS_THERMODYN_tempre, &
+       thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
        CVw => AQ_CV
     use mod_mp_saturation, only : &
        moist_psat_water    => MP_SATURATION_psat_water,   &
@@ -1724,6 +1751,9 @@ contains
     enddo
     enddo
 
+    ! Auto-conversion, Accretion, Self-collection, Break-up
+    ! [Mod] T.Seiki
+    if ( doautoconversion ) then
        call aut_acc_slc_brk(  &
             IJA, KA,      &
             KS, KE,       &
@@ -1734,7 +1764,17 @@ contains
             lc, lr, nc, nr,xc,&
             dr_xa,            &
             rho, tem          )
-       !
+    else
+       PLCaut = 0.D0
+       PNCaut = 0.D0
+       PNRaut = 0.D0
+       PLCacc = 0.D0
+       PNCacc = 0.D0
+       PNRslc = 0.D0
+       PNRbrk = 0.D0
+    endif
+
+
        call mixed_phase_collection(         &
             IJA, KA,                    & ! in
             KS, KE,                     & ! in
@@ -2071,6 +2111,8 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MP5 Sedimentation')
 
+    if ( doprecipitation ) then
+
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2108,6 +2150,8 @@ contains
 !       if( opt_debug ) call debugreport_sedimentation
 
     enddo
+
+    endif
 
     call TIME_rapend  ('MP5 Sedimentation')
 
@@ -2608,7 +2652,7 @@ contains
     do k=KS, KE
        do ij=1, IJA
           pv        = LV(ij,k)*Rvap*tem(ij,k)
-          ssw(ij,k) = (pv/esw(ij,k) - 1.0d0)*100.D0
+          ssw(ij,k) = min( MP_ssw_lim, (pv/esw(ij,k) - 1.0d0) )*100.D0
           ssi(ij,k) = (pv/esi(ij,k) - 1.0d0)
           ssw_below(ij,k+1) = ssw(ij,k)
           ssi_below(ij,k+1) = ssi(ij,k)
@@ -4617,9 +4661,9 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_thermodyn, only: &
-       thrmdyn_qd      => ATMOS_THRRMODYN_qd, &
-       thrmdyn_cv      => ATMOS_THRRMODYN_cv, &
-       thrmdyn_cp      => ATMOS_THRRMODYN_cp
+       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
+       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
+       thrmdyn_cp      => ATMOS_THERMODYN_cp
     use mod_mp_saturation, only : &
        moist_qsat_water     => MP_SATURATION_qsat_water,     &
        moist_qsat_ice       => MP_SATURATION_qsat_ice,       &
@@ -4979,8 +5023,12 @@ contains
              !
              r_qsw            = 1.d0/qsw(ij,k)
              r_qsi            = 1.d0/qsi(ij,k)
-             ssw_o            = ssw - Pdynliq*r_qsw*(dt_dyn-dt_mp) + Pradliq*r_qsw*dt_mp
-             ssi_o            = ssi - Pdynsol*r_qsi*(dt_dyn-dt_mp) + Pradsol*r_qsi*dt_mp
+
+             ! [Mod] T.Seiki xxxxxx
+             ssw_o            = min( MP_ssw_lim, ssw )
+             ssi_o            = ssi
+!             ssw_o            = ssw - Pdynliq*r_qsw*(dt_dyn-dt_mp) + Pradliq*r_qsw*dt_mp
+!             ssi_o            = ssi - Pdynsol*r_qsi*(dt_dyn-dt_mp) + Pradsol*r_qsi*dt_mp
              !
              Acnd             = Pdynliq + Pradliq &
                   - ( r_taudep_i+r_taudep_s+r_taudep_g ) * ( qsw(ij,k) - qsi(ij,k) )

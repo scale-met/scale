@@ -3,11 +3,11 @@
 FC     = mpifrtpx
 # new setting 20120413
 FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp -D_FPCOLL_ \
+         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
          -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
 
 FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=2 -Cpp -D_FPCOLL_ \
+             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
              -Knoprefetch -Ksimd=2 -Kdynamic_iteration
 
 # old setting 20120214

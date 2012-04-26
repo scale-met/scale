@@ -104,9 +104,9 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('precipitation')
+    call TIME_rapstart('SUB_precipitation')
 #ifdef _FPCOLL_
-call START_COLLECTION("precipitation")
+call START_COLLECTION('SUB_precipitation')
 #endif
 
     ! tracer/energy transport by falldown
@@ -137,7 +137,7 @@ call START_COLLECTION("precipitation")
                                + qflx(k,I_QG) )
        enddo 
 
-       !OCL XFILL
+!OCL XFILL
        do k = KS, KE
           rhoe_new(k) = 0.D0
        enddo
@@ -227,9 +227,9 @@ call START_COLLECTION("precipitation")
     enddo ! J loop
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("precipitation")
+call STOP_COLLECTION('SUB_precipitation')
 #endif
-    call TIME_rapend  ('precipitation')
+    call TIME_rapend  ('SUB_precipitation')
 
     return
   end subroutine ATMOS_PRECIPITATION

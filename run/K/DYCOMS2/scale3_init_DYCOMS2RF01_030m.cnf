@@ -1,0 +1,28 @@
+#####
+#
+# Scale3 mkinit configulation
+#
+#####
+
+&PARAM_PRC
+ PRC_NUM_X=16,
+ PRC_NUM_Y=16,
+/
+
+&PARAM_GRID
+ GRID_OUT_BASENAME = "grid_030m_88x8x8",
+/
+
+&PARAM_COMM
+ COMM_total_doreport  = .true.,
+ COMM_total_globalsum = .true.,
+/
+
+&PARAM_ATMOS_VARS
+ ATMOS_RESTART_OUTPUT         = .true.,
+ ATMOS_RESTART_OUT_BASENAME   = "init_DYCOMS2RF01",
+/
+
+&PARAM_MKINIT
+ MKINIT_initname = "DYCOMS2_RF01",
+/

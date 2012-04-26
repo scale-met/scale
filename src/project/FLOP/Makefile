@@ -13,7 +13,7 @@
 # %> make -B       (ignore the timestamp)
 #
 ################################################################################
-include Makedef.K_NOSIMD
+include ../../sysdep/Makedef.K_NOSIMD
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 

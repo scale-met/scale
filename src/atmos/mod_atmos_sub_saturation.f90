@@ -94,9 +94,9 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -116,9 +116,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_psat_water
@@ -135,9 +135,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -157,9 +157,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_psat_ice
@@ -178,9 +178,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -201,9 +201,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_qsat_sfc
@@ -222,9 +222,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -246,9 +246,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_qsat_water
@@ -267,9 +267,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -291,9 +291,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_qsat_ice
@@ -316,9 +316,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -347,9 +347,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_dqsw_dtem_rho
@@ -372,9 +372,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -403,9 +403,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_dqsi_dtem_rho
@@ -430,9 +430,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -466,9 +466,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_dqsw_dtem_dpre
@@ -493,9 +493,9 @@ call STOP_COLLECTION("satadjust")
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('satadjust')
+    call TIME_rapstart('SUB_satadjust')
 #ifdef _FPCOLL_
-call START_COLLECTION("satadjust")
+call START_COLLECTION('SUB_satadjust')
 #endif
 
     RTEM00   = 1.D0 / TEM00
@@ -529,9 +529,9 @@ call START_COLLECTION("satadjust")
     enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION("satadjust")
+call STOP_COLLECTION('SUB_satadjust')
 #endif
-    call TIME_rapend  ('satadjust')
+    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_dqsi_dtem_dpre

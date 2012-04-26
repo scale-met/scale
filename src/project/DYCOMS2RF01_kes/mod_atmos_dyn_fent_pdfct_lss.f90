@@ -410,7 +410,7 @@ contains
 
     ! For FCT
     real(8) :: qflx_lo  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face low  order
-    real(8) :: pjmns(KA,IA,JA)
+    real(8) :: pjmns    (KA,IA,JA)
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -786,19 +786,19 @@ call START_COLLECTION("SET")
           enddo
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_sink(KS-1,i,j) = 0.0D0
-             qflx_sink(KS  ,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)-QTRC(KS,i,j,iw) )
-             qflx_sink(KE-1,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)-QTRC(KE-1,i,j,iw) )
-             qflx_sink(KE  ,i,j) = 0.0D0
+             qflx_sink(KS-1,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)+QTRC(KS,i,j,iw) )
+             qflx_sink(KS  ,i,j) = 0.5D0 * ( QTRC(KS+1,i,j,iw)+QTRC(KS,i,j,iw) )
+             qflx_sink(KE-1,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)+QTRC(KE-1,i,j,iw) )
+             qflx_sink(KE  ,i,j) = 0.5D0 * ( QTRC(KE,i,j,iw)+QTRC(KE-1,i,j,iw) )
           enddo
           enddo
 
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
-                sink(k,i,j) = sink(k,i,j) &
-                            + ATMOS_DYN_LSsink_D * CZ(k) &
-                            * ( qflx_sink(k,i,j)-qflx_sink(k-1,i,j) ) * RCDZ(k)
+             sink(k,i,j) = sink(k,i,j) &
+                         + ATMOS_DYN_LSsink_D * CZ(k) &
+                         * ( qflx_sink(k,i,j)-qflx_sink(k-1,i,j) ) * RCDZ(k)
           enddo
           enddo
           enddo
@@ -2174,7 +2174,6 @@ call START_COLLECTION("FCT")
 
     enddo ! scalar quantities loop
 
-    ! fill IHALO & JHALO
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
@@ -2193,6 +2192,7 @@ call STOP_COLLECTION("DYNAMICS")
 #endif
 
     ! fill KHALO
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -2207,6 +2207,7 @@ call STOP_COLLECTION("DYNAMICS")
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+!OCL XFILL
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE
@@ -2218,7 +2219,7 @@ call STOP_COLLECTION("DYNAMICS")
 
     call ATMOS_vars_total
 
-    call HIST_in( QDRY  (:,:,:), 'QDRY',   'Dry Air mixng ratio',       'kg/kg',   '3D', TIME_DTSEC )
+    call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio',       'kg/kg',   '3D', TIME_DTSEC )
     call HIST_in( sink(:,:,:), 'sink', 'tendency large scale sink', 'kg/m3/s', '3D', TIME_DTSEC )
 
     return

@@ -1085,11 +1085,11 @@ contains
     use mod_atmos_precipitation, only : &
        precipitation => ATMOS_PRECIPITATION
     use mod_atmos_thermodyn, only : &
-       thrmdyn_qd      => ATMOS_THRRMODYN_qd, &
-       thrmdyn_cv      => ATMOS_THRRMODYN_cv, &
-       thrmdyn_cp      => ATMOS_THRRMODYN_cp, &
-       thrmdyn_tempre  => ATMOS_THRRMODYN_tempre, &
-       thrmdyn_tempre2 => ATMOS_THRRMODYN_tempre2, &
+       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
+       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
+       thrmdyn_cp      => ATMOS_THERMODYN_cp, &
+       thrmdyn_tempre  => ATMOS_THERMODYN_tempre, &
+       thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
        CVw => AQ_CV
     use mod_mp_saturation, only : &
        moist_psat_water    => MP_SATURATION_psat_water,   &
@@ -4617,9 +4617,9 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_thermodyn, only: &
-       thrmdyn_qd      => ATMOS_THRRMODYN_qd, &
-       thrmdyn_cv      => ATMOS_THRRMODYN_cv, &
-       thrmdyn_cp      => ATMOS_THRRMODYN_cp
+       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
+       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
+       thrmdyn_cp      => ATMOS_THERMODYN_cp
     use mod_mp_saturation, only : &
        moist_qsat_water     => MP_SATURATION_qsat_water,     &
        moist_qsat_ice       => MP_SATURATION_qsat_ice,       &

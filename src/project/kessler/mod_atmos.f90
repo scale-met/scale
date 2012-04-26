@@ -61,7 +61,7 @@ contains
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
     use mod_atmos_thermodyn, only: &
-       ATMOS_THRRMODYN_setup
+       ATMOS_THERMODYN_setup
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
     use mod_atmos_phy_sf, only: &
@@ -75,7 +75,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_THRRMODYN_setup
+    call ATMOS_THERMODYN_setup
 
     call ATMOS_vars_setup
 
