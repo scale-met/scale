@@ -121,21 +121,24 @@ module mod_atmos_vars
   real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
   integer, private, save      :: ATMOS_HIST_sw (20)
+  integer, private, save      :: ATMOS_PREP_sw (20)
   integer, private, save      :: ATMOS_MONIT_sw(20)
-  integer, private, parameter :: I_PRES =  1
-  integer, private, parameter :: I_VELZ =  2
-  integer, private, parameter :: I_VELX =  3
-  integer, private, parameter :: I_VELY =  4
-  integer, private, parameter :: I_POTT =  5
-  integer, private, parameter :: I_TEMP =  6
-  integer, private, parameter :: I_RH   =  7
-  integer, private, parameter :: I_QTOT =  8
-  integer, private, parameter :: I_VOR  =  9
-  integer, private, parameter :: I_DIV  = 10
-  integer, private, parameter :: I_ENGP = 11
-  integer, private, parameter :: I_ENGK = 12
-  integer, private, parameter :: I_ENGI = 13
-  integer, private, parameter :: I_ENGT = 14
+  integer, private, parameter :: I_VELZ =  1
+  integer, private, parameter :: I_VELX =  2
+  integer, private, parameter :: I_VELY =  3
+  integer, private, parameter :: I_POTT =  4
+  integer, private, parameter :: I_QDRY =  5
+  integer, private, parameter :: I_RTOT =  6
+  integer, private, parameter :: I_PRES =  7
+  integer, private, parameter :: I_TEMP =  8
+  integer, private, parameter :: I_RH   =  9
+  integer, private, parameter :: I_QTOT = 10
+  integer, private, parameter :: I_VOR  = 11
+  integer, private, parameter :: I_DIV  = 12
+  integer, private, parameter :: I_ENGP = 13
+  integer, private, parameter :: I_ENGK = 14
+  integer, private, parameter :: I_ENGI = 15
+  integer, private, parameter :: I_ENGT = 16
   !-----------------------------------------------------------------------------
 contains
 
@@ -288,26 +291,101 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
-    ATMOS_HIST_sw(:) = -1
-    call HIST_reg( ATMOS_HIST_sw(I_PRES), 'PRES', 'pressure',        'Pa',  '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VELZ), 'W',    'velocity w',      'm/s', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VELX), 'U',    'velocity u',      'm/s', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VELY), 'V',    'velocity v',      'm/s', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_POTT), 'PT',   'potential temp.', 'K',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_TEMP), 'T',    'temperature',     'K',   '3D' )
+    ATMOS_HIST_sw (:) = -1
+    ATMOS_MONIT_sw(:) = -1
+    ATMOS_PREP_sw (:) = -1
 
-    call HIST_reg( ATMOS_HIST_sw(I_RH),   'RH',   'relative humidity',     '%',     '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELZ), 'W',    'velocity w',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELX), 'U',    'velocity u',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VELY), 'V',    'velocity v',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_POTT), 'PT',   'potential temp.',       'K',     '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_QDRY), 'QDRY', 'dry air',               'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_RTOT), 'RTOT', 'Total gas constant',    'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_PRES), 'PRES', 'pressure',              'Pa',    '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_TEMP), 'T',    'temperature',           'K',     '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_RH  ), 'RH',   'relative humidity',     '%',     '3D' )
     call HIST_reg( ATMOS_HIST_sw(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VOR),  'VOR',  'vertical vorticity',    '1/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_DIV),  'DIV',  'horizontal divergence', '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_VOR ), 'VOR',  'vertical vorticity',    '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_sw(I_DIV ), 'DIV',  'horizontal divergence', '1/s',   '3D' )
+
     call HIST_reg( ATMOS_HIST_sw(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  '3D' )
     call HIST_reg( ATMOS_HIST_sw(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  '3D' )
     call HIST_reg( ATMOS_HIST_sw(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  '3D' )
-
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGP), 'ENGP', 'potential energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGK), 'ENGK', 'kinetic   energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGI), 'ENGI', 'internal  energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGT), 'ENGT', 'total     energy', 'J', '3D' )
+
+    if ( ATMOS_HIST_sw(I_VELZ) > 0 ) then
+       ATMOS_PREP_sw(I_VELZ) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_VELX) > 0 ) then
+       ATMOS_PREP_sw(I_VELX) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_VELY) > 0 ) then
+       ATMOS_PREP_sw(I_VELY) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_POTT) > 0 ) then
+       ATMOS_PREP_sw(I_POTT) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_QDRY) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_RTOT) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+       ATMOS_PREP_sw(I_RTOT) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_PRES) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+       ATMOS_PREP_sw(I_RTOT) = 1
+       ATMOS_PREP_sw(I_PRES) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_TEMP) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+       ATMOS_PREP_sw(I_RTOT) = 1
+       ATMOS_PREP_sw(I_PRES) = 1
+       ATMOS_PREP_sw(I_TEMP) = 1
+    endif
+    if ( ATMOS_HIST_sw(I_RH) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+       ATMOS_PREP_sw(I_RTOT) = 1
+       ATMOS_PREP_sw(I_PRES) = 1
+       ATMOS_PREP_sw(I_TEMP) = 1
+       ATMOS_PREP_sw(I_RH  ) = 1
+    endif
+    if ( ATMOS_HIST_sw (I_QTOT) > 0 ) then
+       ATMOS_PREP_sw(I_QTOT) = 1
+    endif
+    if ( ATMOS_HIST_sw (I_VOR) > 0 ) then
+       ATMOS_PREP_sw(I_VOR) = 1
+    endif
+
+    if (      ATMOS_HIST_sw (I_ENGP) > 0 &
+         .OR. ATMOS_MONIT_sw(I_ENGP) > 0 ) then
+       ATMOS_PREP_sw(I_ENGP) = 1
+    endif
+    if (      ATMOS_HIST_sw (I_ENGK) > 0 &
+         .OR. ATMOS_MONIT_sw(I_ENGK) > 0 ) then
+       ATMOS_PREP_sw(I_VELZ) = 1
+       ATMOS_PREP_sw(I_VELX) = 1
+       ATMOS_PREP_sw(I_VELY) = 1
+       ATMOS_PREP_sw(I_ENGK) = 1
+    endif
+    if (      ATMOS_HIST_sw (I_ENGI) > 0 &
+         .OR. ATMOS_MONIT_sw(I_ENGI) > 0 ) then
+       ATMOS_PREP_sw(I_QDRY) = 1
+       ATMOS_PREP_sw(I_RTOT) = 1
+       ATMOS_PREP_sw(I_PRES) = 1
+       ATMOS_PREP_sw(I_TEMP) = 1
+       ATMOS_PREP_sw(I_ENGI) = 1
+    endif
+    if (      ATMOS_HIST_sw (I_ENGT) > 0 &
+         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+       ATMOS_PREP_sw(I_ENGP) = 1
+       ATMOS_PREP_sw(I_ENGK) = 1
+       ATMOS_PREP_sw(I_ENGI) = 1
+       ATMOS_PREP_sw(I_ENGT) = 1
+    endif
 
     return
   end subroutine ATMOS_vars_setup
@@ -622,6 +700,7 @@ contains
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
+       Rvap   => CONST_Rvap,   &
        CVdry  => CONST_CVdry,  &
        CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
@@ -639,12 +718,17 @@ contains
        MONIT_in
     use mod_atmos_thermodyn, only: &
        CVw => AQ_CV
+    use mod_atmos_saturation, only: &
+       saturation_qsat_water => ATMOS_SATURATION_qsat_water
     implicit none
 
-    real(8) :: QTOT(KA,IA,JA)
+    real(8) :: RTOT (KA,IA,JA)
+    real(8) :: QSAT (KA,IA,JA)
+    real(8) :: RH   (KA,IA,JA)
+    real(8) :: QTOT (KA,IA,JA)
     real(8) :: VELXH(KA,IA,JA)
     real(8) :: VELYH(KA,IA,JA)
-    real(8) :: VOR (KA,IA,JA)
+    real(8) :: VOR  (KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -667,24 +751,7 @@ contains
        call MONIT_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D' )
     enddo
 
-    if (      ATMOS_HIST_sw (I_PRES) > 0 &
-         .OR. ATMOS_HIST_sw (I_TEMP) > 0 &
-         .OR. ATMOS_HIST_sw (I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
-       enddo
-       enddo
-       enddo
-    endif
-
-    if (      ATMOS_HIST_sw (I_VELZ) > 0 &
-         .OR. ATMOS_HIST_sw (I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_VELZ) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -694,10 +761,7 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_VELX) > 0 &
-         .OR. ATMOS_HIST_sw (I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_VELX) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -707,10 +771,7 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_VELY) > 0 &
-         .OR. ATMOS_HIST_sw (I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_VELY) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -720,7 +781,7 @@ contains
        enddo
     endif
 
-    if ( ATMOS_HIST_sw(I_POTT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_POTT) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -730,29 +791,78 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_TEMP) > 0 &
-         .OR. ATMOS_HIST_sw (I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rdry )
+    if ( ATMOS_PREP_sw(I_QDRY) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QDRY(k,i,j) = 1.D0
+       enddo
+       enddo
+       enddo
+
+       do iq = QQS, QQE
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+       enddo
        enddo
        enddo
        enddo
     endif
 
-    if ( ATMOS_HIST_sw(I_QTOT) > 0 ) then
-       if ( iq >= 2 ) then
-          do j  = JS, JE
-          do i  = IS, IE
-          do k  = KS, KE
-             QTOT(k,i,j) = 0.D0
-          enddo
-          enddo
-          enddo
+    if ( ATMOS_PREP_sw(I_RTOT) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RTOT(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       enddo
+       enddo
+       enddo
+    endif
 
+    if ( ATMOS_PREP_sw(I_PRES) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( ATMOS_PREP_sw(I_TEMP) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( ATMOS_HIST_sw(I_RH) > 0 ) then
+       call saturation_qsat_water( QSAT(:,:,:), TEMP(:,:,:), PRES(:,:,:) )
+
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.D2
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( ATMOS_PREP_sw(I_QTOT) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTOT(k,i,j) = 0.D0
+       enddo
+       enddo
+       enddo
+
+       if ( iq >= 2 ) then
           do iq = QQS+1, QQE
           do j  = JS, JE
           do i  = IS, IE
@@ -765,8 +875,7 @@ contains
        endif
     endif
 
-
-    if ( ATMOS_HIST_sw(I_VOR) > 0 ) then
+    if ( ATMOS_PREP_sw(I_VOR) > 0 ) then
        ! at u, v, layer
        do j = JS-1, JE
        do i = IS-1, IE
@@ -799,9 +908,7 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_ENGP) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGP) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_ENGP) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -811,9 +918,7 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGK) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_ENGK) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -826,27 +931,7 @@ contains
        enddo
     endif
 
-    if (      ATMOS_HIST_sw (I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGI) > 0 &
-         .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QDRY(k,i,j) = 1.D0
-       enddo
-       enddo
-       enddo
-
-       do iq = QQS, QQE
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-
+    if ( ATMOS_PREP_sw(I_ENGI) > 0 ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -877,14 +962,17 @@ contains
        enddo
     endif
 
-    if( ATMOS_HIST_sw(I_PRES) > 0 ) call HIST_put( ATMOS_HIST_sw(I_PRES), PRES(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_VELZ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELZ), VELZ(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_VELX) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELX), VELX(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_VELY) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELY), VELY(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_POTT) > 0 ) call HIST_put( ATMOS_HIST_sw(I_POTT), POTT(:,:,:), TIME_DTSEC )
+    if( ATMOS_HIST_sw(I_QDRY) > 0 ) call HIST_put( ATMOS_HIST_sw(I_QDRY), QDRY(:,:,:), TIME_DTSEC )
+    if( ATMOS_HIST_sw(I_PRES) > 0 ) call HIST_put( ATMOS_HIST_sw(I_PRES), PRES(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_TEMP) > 0 ) call HIST_put( ATMOS_HIST_sw(I_TEMP), TEMP(:,:,:), TIME_DTSEC )
+    if( ATMOS_HIST_sw(I_RH  ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_RH  ), RH  (:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_QTOT) > 0 ) call HIST_put( ATMOS_HIST_sw(I_QTOT), QTOT(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_VOR)  > 0 ) call HIST_put( ATMOS_HIST_sw(I_VOR),  VOR(:,:,:),  TIME_DTSEC )
+    if( ATMOS_HIST_sw(I_VOR ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VOR),  VOR (:,:,:), TIME_DTSEC )
+
     if( ATMOS_HIST_sw(I_ENGP) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGP), ENGP(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_ENGK) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGK), ENGK(:,:,:), TIME_DTSEC )
     if( ATMOS_HIST_sw(I_ENGI) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
