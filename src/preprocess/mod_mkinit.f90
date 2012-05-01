@@ -1463,7 +1463,7 @@ contains
     do i = IS, IE
 
        pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
-       pott_sfc(1,i,j) = 292.5D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       pott_sfc(1,i,j) = 289.0D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
        qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
 
        do k = KS, KE

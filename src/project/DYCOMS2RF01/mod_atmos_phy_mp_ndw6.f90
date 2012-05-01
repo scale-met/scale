@@ -2652,7 +2652,7 @@ contains
     do k=KS, KE
        do ij=1, IJA
           pv        = LV(ij,k)*Rvap*tem(ij,k)
-          ssw(ij,k) = min( MP_ssw_lim, (pv/esw(ij,k) - 1.0d0) )*100.D0
+          ssw(ij,k) = min( MP_ssw_lim, ( pv/esw(ij,k)-1.D0 ) )*100.D0
           ssi(ij,k) = (pv/esi(ij,k) - 1.0d0)
           ssw_below(ij,k+1) = ssw(ij,k)
           ssi_below(ij,k+1) = ssi(ij,k)
@@ -4987,7 +4987,7 @@ contains
              pv               = lv(ij,k)*Rvap*tem(ij,k)
              r_esw            = 1.d0/esw(ij,k)
              r_esi            = 1.d0/esi(ij,k)
-             ssw              = pv*r_esw - 1.0d0 
+             ssw              = min( MP_ssw_lim, ( pv*r_esw-1.D0 ) ) 
              ssi              = pv*r_esi - 1.0d0 
              r_lvsw           = 1.d0/lvsw
              r_lvsi           = 1.d0/lvsi
@@ -5025,7 +5025,7 @@ contains
              r_qsi            = 1.d0/qsi(ij,k)
 
              ! [Mod] T.Seiki xxxxxx
-             ssw_o            = min( MP_ssw_lim, ssw )
+             ssw_o            = ssw
              ssi_o            = ssi
 !             ssw_o            = ssw - Pdynliq*r_qsw*(dt_dyn-dt_mp) + Pradliq*r_qsw*dt_mp
 !             ssi_o            = ssi - Pdynsol*r_qsi*(dt_dyn-dt_mp) + Pradsol*r_qsi*dt_mp
