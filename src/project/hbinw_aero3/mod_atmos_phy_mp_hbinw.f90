@@ -15,13 +15,12 @@ module mod_atmos_phy_mp
   !++ History: NDW6
   !      Version   Date       Comment 
   !      -----------------------------------------------------------------------
-  !        0.00   12/06/04 Y.Sato, import from version 4.1 of original code
+  !        0.00   12/06/14 Y.Sato, import from version 4.1 of original code
   !               
   !      -----------------------------------------------------------------------
   !      Reference:  -- Journals 
   !                   Suzuki et al.(2006): SOLA,vol.2,pp.116-119(original code)
   !                   Suzuki et al.(2010): J. Atmos. Sci.,vol.67,pp.1126-1141
-  !                   Sato et al. (2009): J. Geophys. Res.114,doi
   !
   !-----------------------------------------------------------------------------
   !

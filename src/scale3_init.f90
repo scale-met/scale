@@ -9,6 +9,7 @@
 !!
 !! @par History
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
+!! @li      2012-06-13 (Y.Sato)     [mod] add HBINW option
 !!
 !<
 !-------------------------------------------------------------------------------

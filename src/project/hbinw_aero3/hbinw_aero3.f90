@@ -8,9 +8,7 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
-!! @li      2012-01-10 (H.Yashiro)  [mod] Change setup order, HISTORY module
-!! @li      2012-03-23 (H.Yashiro)  [mod] GEOMETRICS, MONITOR module
+!! @li      2012-06-13 (Y.Sato)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
