@@ -1,0 +1,242 @@
+
+#####
+#
+# Scale3 benchmark configuration
+#
+#####
+
+&PARAM_PRC
+ PRC_NUM_X       = 7,
+ PRC_NUM_Y       = 7,
+ PRC_PERIODIC_X  = .true.,
+ PRC_PERIODIC_Y  = .true.,
+/
+
+&PARAM_CONST
+/
+
+&PARAM_TIME
+ TIME_STARTDATE             = 2000, 1, 1, 0, 0, 0,
+ TIME_STARTMS               = 0.D0,
+ TIME_DURATION              = 1800.D0,
+ TIME_DURATION_UNIT         = "SEC",
+ TIME_DT                    = 0.24D0,
+ TIME_DT_UNIT               = "SEC",
+ TIME_DT_ATMOS_DYN          = 0.006D0,
+ TIME_DT_ATMOS_DYN_UNIT     = "SEC",
+ TIME_NSTEP_ATMOS_DYN       = 40,
+ TIME_DT_ATMOS_PHY_TB       = 0.24D0,
+ TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_MP       = 0.24D0,
+ TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_RD       = 0.24D0,
+ TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
+ TIME_DT_ATMOS_RESTART      = 900.0D0,
+ TIME_DT_ATMOS_RESTART_UNIT = "SEC",
+ TIME_DT_OCEAN              = 7200.D0,
+ TIME_DT_OCEAN_UNIT         = "SEC",
+ TIME_DT_OCEAN_RESTART      = 7200.D0,
+ TIME_DT_OCEAN_RESTART_UNIT = "SEC",
+/
+
+&PARAM_GRID
+ GRID_IN_BASENAME  = "",
+ GRID_OUT_BASENAME = '/group2/gc24/c24045/dycom2_bin_8/grid_50m_uniso276x8x8',
+/
+
+&PARAM_GEOMETRICS
+ GEOMETRICS_OUT_BASENAME = "",
+/
+
+&PARAM_COMM
+ COMM_total_doreport  = .true.,
+ COMM_total_globalsum = .false.,
+/
+
+&PARAM_ATMOS_VARS
+ ATMOS_RESTART_IN_BASENAME    = '/group2/gc24/c24045/dycom2_bin_7/dycom__63072001800.000',
+ ATMOS_RESTART_OUTPUT         = .true.,
+ ATMOS_RESTART_OUT_BASENAME   = '/group2/gc24/c24045/dycom2_bin_8/dycom_',
+ ATMOS_RESTART_CHECK          = .false.,
+ ATMOS_RESTART_CHECK_BASENAME = '',
+/
+
+&PARAM_ATMOS_REFSTATE
+ ATMOS_REFSTATE_IN_BASENAME  = "",
+ ATMOS_REFSTATE_OUT_BASENAME = "",
+ ATMOS_REFSTATE_TYPE         = "ISA",
+ ATMOS_REFSTATE_POTT_UNIFORM = 300.D0
+ ATMOS_REFSTATE_TEMP_SFC     = 289.D0     
+! ATMOS_REFSTATE_TYPE    =   'UNIFORM',
+! ATMOS_REFSTATE_POTT_UNIFORM    =   300.D0     
+! ATMOS_REFSTATE_OUT_BASENAME = 'refstate',
+/
+
+&PARAM_ATMOS_BOUNDARY
+ ATMOS_BOUNDARY_OUT_BASENAME = "/group2/gc24/c24045/dycom2_bin_8/boundary",
+! ATMOS_BOUNDARY_VALUE_VELZ   =   0.D0,
+ ATMOS_BOUNDARY_TAUZ         =  10.D0,
+/
+
+&PARAM_ATMOS
+ ATMOS_TYPE_DYN    = "fent_pdfct",
+ ATMOS_TYPE_PHY_TB = 'smagorinsky',
+ ATMOS_TYPE_PHY_MP = "NDW6",
+ ATMOS_TYPE_PHY_RD = "mstrnX",
+/
+
+&PARAM_ATMOS_DYN
+ ATMOS_DYN_NUMERICAL_DIFF = 0.d0,
+ ATMOS_DYN_LSsink_D = 3.75d-6
+/
+
+&PARAM_ATMOS_PHY_SF
+ ATMOS_PHY_SF_CM_min = 0.0011D0,
+ ATMOS_PHY_SF_CH_min = 0.0011D0,
+ ATMOS_PHY_SF_CE_min = 0.0011D0,
+! ATMOS_PHY_SF_CM_min = 0.0D0,
+! ATMOS_PHY_SF_CH_min = 0.0D0,
+! ATMOS_PHY_SF_CE_min = 0.0D0,
+/
+
+&PARAM_ATMOS_PHY_MP
+! DOAUTOCONVERSION = .false.,
+! DOPRECIPITATION  = .false.,
+! MP_ssw_lim       = 0.01D0,
+ ATMOS_PHY_MP_RHOA = 2.25D+3,
+ ATMOS_PHY_MP_EMAER = 58.D0,
+ ATMOS_PHY_MP_RAMIN = 1.D-08,
+ ATMOS_PHY_MP_RAMAX = 1.D-06,
+ ATMOS_PHY_MP_R0A   = 1.D-07,
+ ATMOS_PHY_MP_FLAG_REGENE  = .true.
+ ATMOS_PHY_MP_FLAG_NUCLEAT = .false.
+ ATMOS_PHY_MP_FLAG_SFAERO  = .false.
+/
+ 
+/
+
+&PARAM_OCEAN
+ OCEAN_TYPE = "FIXEDSST",
+/
+
+&PARAM_OCEAN_FIXEDSST
+ OCEAN_FIXEDSST_STARTSST = 292.5D0,
+/
+
+&PARAM_HISTORY
+ HISTORY_OUT_BASENAME      = "/group2/gc24/c24045/dycom2_bin_8/history",
+ HISTORY_DEFAULT_TINTERVAL = 60.D0
+ HISTORY_DEFAULT_TUNIT     = "SEC",
+ HISTORY_DEFAULT_AVERAGE   = .false.,
+ HISTORY_DATATYPE          = "REAL4",
+/
+
+&HISTITEM item='DENS' /
+#&HISTITEM item='MOMX' /
+#&HISTITEM item='MOMY' /
+#&HISTITEM item='MOMZ' /
+#&HISTITEM item='RHOT' /
+
+&HISTITEM item='U'    /
+&HISTITEM item='V'    /
+&HISTITEM item='W'    /
+&HISTITEM item='PT'   /
+&HISTITEM item='PRES' /
+&HISTITEM item='T'    /
+
+&HISTITEM item='RH'  /
+#&HISTITEM item='VOR'  /
+#&HISTITEM item='ENGP' /
+#&HISTITEM item='ENGK' /
+#&HISTITEM item='ENGI' /
+
+&HISTITEM item='QV'   /
+#&HISTITEM item='QTOT' /
+#&HISTITEM item='QC'   /
+#&HISTITEM item='QR'   /
+#&HISTITEM item='QI'   /
+#&HISTITEM item='QS'   /
+#&HISTITEM item='QG'   /
+#&HISTITEM item='NC'   /
+#&HISTITEM item='NR'   /
+#&HISTITEM item='NI'   /
+#&HISTITEM item='NS'   /
+#&HISTITEM item='NG'   /
+
+&HISTITEM item='TKE'  /
+#&HISTITEM item='NU'   /
+#&HISTITEM item='Pr'   /
+#&HISTITEM item='Ri'   /
+
+#&HISTITEM item='SST'   /
+
+&HISTITEM item='sink'    /
+&HISTITEM item='EFLX_rd' /
+&HISTITEM item='TEMP_t_rd' /
+&HISTITEM item='QT'      /
+&HISTITEM item='QL'      /
+&HISTITEM item='LWPT'    /
+&HISTITEM item='LWPT_v'  /
+&HISTITEM item='VELZ_v'  /
+&HISTITEM item='VELX_v'  /
+&HISTITEM item='VELY_v'  /
+
+&HISTITEM item='LWP'   /
+&HISTITEM item='SHFLX' /
+&HISTITEM item='LHFLX' /
+&HISTITEM item='Zi'    /
+&HISTITEM item='Zb'    /
+
+&HISTITEM item='Qc1' /
+&HISTITEM item='Qc2' /
+&HISTITEM item='Qc3' /
+&HISTITEM item='Qc4' /
+&HISTITEM item='Qc5' /
+&HISTITEM item='Qc6' /
+&HISTITEM item='Qc7' /
+&HISTITEM item='Qc8' /
+&HISTITEM item='Qc9' /
+&HISTITEM item='Qc10' /
+&HISTITEM item='Qc11' /
+&HISTITEM item='Qc12' /
+&HISTITEM item='Qc13' /
+&HISTITEM item='Qc14' /
+&HISTITEM item='Qc15' /
+&HISTITEM item='Qc16' /
+&HISTITEM item='Qc17' /
+&HISTITEM item='Qc18' /
+&HISTITEM item='Qc19' /
+&HISTITEM item='Qc20' /
+&HISTITEM item='Qc21' /
+&HISTITEM item='Qc22' /
+&HISTITEM item='Qc23' /
+&HISTITEM item='Qc24' /
+&HISTITEM item='Qc25' /
+&HISTITEM item='Qc26' /
+&HISTITEM item='Qc27' /
+&HISTITEM item='Qc28' /
+&HISTITEM item='Qc29' /
+&HISTITEM item='Qc30' /
+&HISTITEM item='Qc31' /
+&HISTITEM item='Qc32' /
+&HISTITEM item='Qc33' /
+&HISTITEM item='Qaer1' /
+&HISTITEM item='Qaer2' /
+&HISTITEM item='Qaer3' /
+&HISTITEM item='Qaer4' /
+&HISTITEM item='Qaer5' /
+&HISTITEM item='Qaer6' /
+&HISTITEM item='Qaer7' /
+&HISTITEM item='Qaer8' /
+&HISTITEM item='Qaer9' /
+&HISTITEM item='Qaer10' /
+&HISTITEM item='Qaer11' /
+&HISTITEM item='Qaer12' /
+&HISTITEM item='Qaer13' /
+&HISTITEM item='Qaer14' /
+&HISTITEM item='Qaer15' /
+&HISTITEM item='Qaer16' /
+&HISTITEM item='Qaer17' /
+&HISTITEM item='Qaer18' /
+&HISTITEM item='Qaer19' /
+&HISTITEM item='Qaer20' /
