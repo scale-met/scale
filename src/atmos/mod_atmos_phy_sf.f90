@@ -87,10 +87,6 @@ module mod_atmos_phy_sf
   real(8), private, parameter :: U_maxH  =  100.0D0  !                   T
   real(8), private, parameter :: U_maxE  =  100.0D0  !                   q
 
-  integer, private, save      :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
-  real(8), private, save      :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
-  real(8), private, save      :: R10H1, R10H2        ! scaling factor for 10m value (heat)
-  real(8), private, save      :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
   !-----------------------------------------------------------------------------
 contains
 
@@ -156,30 +152,6 @@ contains
     CH_min = ATMOS_PHY_SF_CH_min
     CE_min = ATMOS_PHY_SF_CE_min
 
-    if ( CZ(KS) >= 10.D0 ) then
-          R10M1 = 10.D0 / CZ(KS) * 0.5D0 ! scale with height
-          R10M2 = 10.D0 / CZ(KS) * 0.5D0 ! scale with height
-          R10H1 = 1.D0 * 0.5D0
-          R10H2 = 1.D0 * 0.5D0
-          R10E1 = 1.D0 * 0.5D0
-          R10E2 = 1.D0 * 0.5D0
-          K10_1 = KS 
-          K10_2 = KS
-    else
-       k = 1
-       do while ( CZ(k) < 10.D0 )
-          k = k + 1
-          K10_1 = k 
-          K10_2 = k + 1
-          R10M1 = ( CZ(k+1) - 10.D0 ) / CDZ(k)
-          R10M2 = ( 10.D0   - CZ(k) ) / CDZ(k)
-          R10H1 = ( CZ(k+1) - 10.D0 ) / CDZ(k)
-          R10H2 = ( 10.D0   - CZ(k) ) / CDZ(k)
-          R10E1 = ( CZ(k+1) - 10.D0 ) / CDZ(k)
-          R10E2 = ( 10.D0   - CZ(k) ) / CDZ(k)
-       enddo
-    endif
-
     return
   end subroutine ATMOS_PHY_SF_setup
 
@@ -203,7 +175,8 @@ contains
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_grid, only : &
-       CDZ => GRID_CDZ
+       CDZ => GRID_CDZ, &
+       CZ  => GRID_CZ
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -226,6 +199,12 @@ contains
     ! monitor
     real(8) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
     real(8) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
+
+    real(8) :: FB  = 9.4d0  ! Louis factor b (bM)
+    real(8) :: FBS = 4.7d0  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
+    real(8) :: FDM = 7.4d0  ! Louis factor d of u (dM)
+    real(8) :: FDH = 5.3d0  ! Louis factor d of T, q (dH)
+    real(8) :: THS = 300.0d0
 
     ! work
     real(8) :: VELZ(IA,JA)
@@ -252,6 +231,10 @@ contains
     real(8) :: CMH
     real(8) :: CME
 
+    real(8) :: FM, FH
+    real(8) :: FCM, FCH
+    real(8) :: FZH, FZE
+    real(8) :: RIX, RIB
     real(8) :: qdry, Rtot, pres, temp, qvap
     real(8) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(8) :: qv_evap   ! saturation water vapor mixing ratio at surface [kg/kg]
@@ -264,93 +247,107 @@ contains
     ! momentum -> velocity
     do j = JS-2, JE+2
     do i = IS-2, IE+2
-       VELZ(i,j) = MOMZ(K10_1,i,j) / ( DENS(K10_1+1,i,j)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMZ(K10_2,i,j) / ( DENS(K10_2+1,i,j)+DENS(K10_2,i,j) ) * R10M2
+       VELZ(i,j) = MOMZ(KS+1,i,j) / ( DENS(KS+1,i,j)+DENS(KS  ,i,j) ) &
+                 + MOMZ(KS  ,i,j) / ( DENS(KS  ,i,j)+DENS(KS  ,i,j) ) 
     enddo
     enddo
 
     do j = JS-2, JE+2
     do i = IS-2, IE+1
-       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMX(K10_2,i,j) / ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) * R10M2
+       VELX(i,j) = 2.D0 * MOMX(KS,i,j) / ( DENS(KS,i+1,j)+DENS(KS,i,j) )
     enddo
     enddo
 
     do j = JS-2, JE+1
     do i = IS-2, IE+2
-       VELY(i,j) = MOMY(K10_1,i,j) / ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
+       VELY(i,j) = 2.D0 * MOMY(KS,i,j) / ( DENS(KS,i,j+1)+DENS(KS,i,j) )
     enddo
     enddo
 
     do j = JS-1, JE
     do i = IS-1, IE
+
+       ! Gas constant
+       qdry = 1.D0
+       do iw = QQS, QQE
+          qdry = qdry - QTRC(KS,i,j,iw)
+       enddo
+       Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+
+       !--- Qv at sea surface
+       pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+       temp      = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres )**RovCP
+       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
+!       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
+       qv_evap   = EPSvap * pres_evap / P00
+
        !--- absolute velocity
        ! at (x, y, layer)
-       Uabsw = sqrt( ( ( VELZ(i,j)                 ) * 0.5D0 )**2 & ! surface is zero
-                   + ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.5D0 )**2 &
-                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.5D0 )**2 )
+       Uabsw = sqrt( ( ( VELZ(i,j)                 )          )**2 &
+                   + ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50D0 )**2 &
+                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50D0 )**2 )
        ! at (u, y, layer)
-       Uabsu = sqrt( ( ( VELZ(i,j  ) + VELZ(i+1,j  ) ) * 0.25D0 )**2 &
+       Uabsu = sqrt( ( ( VELZ(i,j  ) + VELZ(i+1,j  ) ) * 0.50D0 )**2 &
                    + ( ( VELX(i,j  )                 )          )**2 &
                    + ( ( VELY(i,j  ) + VELY(i+1,j  ) &
                        + VELY(i,j-1) + VELY(i+1,j-1) ) * 0.25D0 )**2 )
        ! at (x, v, layer)
-       Uabsv = sqrt( ( ( VELZ(i  ,j) + VELZ(i  ,j+1) ) * 0.25D0 )**2 &
+       Uabsv = sqrt( ( ( VELZ(i  ,j) + VELZ(i  ,j+1) ) * 0.50D0 )**2 &
                    + ( ( VELX(i  ,j) + VELX(i  ,j+1) &
                        + VELX(i-1,j) + VELX(i-1,j+1) ) * 0.25D0 )**2 &
                    + ( ( VELY(i  ,j)                 )          )**2 )
 
-       !--- friction velocity
+       !--- friction velocity at u, v, and w points
        Ustaru = max ( sqrt ( CM0 ) * Uabsu , Ustar_min )
        Ustarv = max ( sqrt ( CM0 ) * Uabsv , Ustar_min )
        Ustarw = max ( sqrt ( CM0 ) * Uabsw , Ustar_min )
 
-       !--- roughness lengths
+       !--- roughness lengths at u, v, and w points
        Z0Mu = max( Z0M0 + Z0MR/GRAV * Ustaru*Ustaru + Z0MS*visck / Ustaru, Z0M_min )
        Z0Mv = max( Z0M0 + Z0MR/GRAV * Ustarv*Ustarv + Z0MS*visck / Ustarv, Z0M_min )
        Z0Mw = max( Z0M0 + Z0MR/GRAV * Ustarw*Ustarw + Z0MS*visck / Ustarw, Z0M_min )
        Z0H  = max( Z0H0 + Z0HR/GRAV * Ustarw*Ustarw + Z0HS*visck / Ustarw, Z0H_min )
        Z0E  = max( Z0E0 + Z0ER/GRAV * Ustarw*Ustarw + Z0ES*visck / Ustarw, Z0E_min )
+       FZH  = log( Z0Mw/Z0H ) / log( CZ(KS)/Z0Mw )
+       FZE  = log( Z0Mw/Z0E ) / log( CZ(KS)/Z0Mw )
+
+       CMX  = ( KARMAN / log( CZ(KS)/Z0Mw ) )**2
+       RIB  = GRAV/THS * CZ(KS) * ( temp*( P00/pres )**RovCP - SST(1,i,j) ) / Uabsw
+       FCM  = FDM * CMX * FB * sqrt( CZ(KS)/Z0Mw )
+       FCH  = FDH * CMX * FB * sqrt( CZ(KS)/Z0Mw )
+       if ( RIB >= 0.D0 ) then
+          FM   = 1.D0/( 1.D0 + FBS * RIB*1.D0/( 1.D0 + FZH ) )**2
+          FH   = FM
+       else
+          RIX  = sqrt( abs( RIB*1.D0/( 1.D0 + FZH ) ) )
+          FM   = 1.D0 - FB*RIB*1.D0/( 1.D0 + FZH )/( 1.D0 + FCM*RIX )
+          FH   = 1.D0 - FB*RIB*1.D0/( 1.D0 + FZH )/( 1.D0 + FCH*RIX )
+       endif
 
        !--- surface exchange coefficients
-       CMX   = KARMAN*KARMAN / log( 10.D0/Z0Mu )
-       CMMu  = max( min( CMX / log( 10.D0/Z0Mu ), CM_max ), CM_min ) * min( max( Uabsu, U_minM ), U_maxM )
+       CMX   = ( KARMAN / log( CZ(KS)/Z0Mu ) )**2 * FM
+       CMMu  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsu, U_minM ), U_maxM )
 
-       CMX   = KARMAN*KARMAN / log( 10.D0/Z0Mv )
-       CMMv  = max( min( CMX / log( 10.D0/Z0Mv ), CM_max ), CM_min ) * min( max( Uabsv, U_minM ), U_maxM )
+       CMX   = ( KARMAN / log( CZ(KS)/Z0Mv ) )**2 * FM
+       CMMv  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsv, U_minM ), U_maxM )
 
-       CMX   = KARMAN*KARMAN / log( 10.D0/Z0Mw )
-       CMMw  = max( min( CMX / log( 10.D0/Z0Mw ), CM_max ), CM_min ) * min( max( Uabsw, U_minM ), U_maxM )
-       CMH   = max( min( CMX / log( 10.D0/Z0H  ), CH_max ), CH_min ) * min( max( Uabsw, U_minH ), U_maxH )
-       CME   = max( min( CMX / log( 10.D0/Z0E  ), CE_max ), CE_min ) * min( max( Uabsw, U_minE ), U_maxE )
+       CMX   = ( KARMAN / log( CZ(KS)/Z0Mw ) )**2 * FM
+       CMMw  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsw, U_minM ), U_maxM )
 
-       ! Gas constant
-       qdry = 1.D0
-       do iw = QQS, QQE
-          qdry = qdry - QTRC(K10_1,i,j,iw)
-       enddo
-       Rtot = Rdry*qdry + Rvap*QTRC(K10_1,i,j,I_QV)
+       CMX   = ( KARMAN*KARMAN / log( CZ(KS)/Z0Mw ) / log( CZ(KS)/Z0H ) ) &
+               * FH * 1.D0/( 1.D0 + FZH/sqrt( FM )*FH )
+       CMH   = max( min( CMX , CH_max ), CH_min ) * min( max( Uabsw, U_minH ), U_maxH )
 
-       !--- Qv at sea surface
-       pres      = P00 * ( ( R10H1 * RHOT(K10_1,i,j) + R10H2 * RHOT(K10_2,i,j) ) * Rtot / P00 )**CPovCV
-       temp      = ( R10H1 * RHOT(K10_1,i,j) / DENS(K10_1,i,j) + R10H2 * RHOT(K10_2,i,j) / DENS(K10_2,i,j) ) &
-                 * ( P00 / pres )**RovCP
-       qvap      = R10E1 * QTRC(K10_1,i,j,I_QV) + R10E2 * QTRC(K10_2,i,j,I_QV)
-       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
-       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
+       CMX   = ( KARMAN*KARMAN / log( CZ(KS)/Z0Mw ) / log( CZ(KS)/Z0E ) ) &
+               * FH * 1.D0/( 1.D0 + FZE/sqrt( FM )*FH )
+       CME   = max( min( CMX , CE_max ), CE_min ) * min( max( Uabsw, U_minE ), U_maxE )
 
        !--- surface fluxes ( at x, y, 10m ) 
-       SFLX_MOMZ(i,j) = - ( R10H1 * DENS(K10_1,i,j) + R10H2 * DENS(K10_2,i,j) ) &
-                        * CMMw * VELZ(i,j) 
-       SFLX_MOMX(i,j) = - 0.5D0 * ( R10H1 * ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) + R10H2 * ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) ) *10 &
-                        * CMMu * VELX(i,j)
-       SFLX_MOMY(i,j) = - 0.5D0 * ( R10H1 * ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) + R10H2 * ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) ) *10 &
-                        * CMMv * VELY(i,j)
-       SFLX_POTT(i,j) = ( R10H1 * DENS(K10_1,i,j) + R10H2 * DENS(K10_2,i,j) ) &
-                        * CMH  * ( SST(1,i,j) - temp )
-       SFLX_QV  (i,j) = ( R10H1 * DENS(K10_1,i,j) + R10H2 * DENS(K10_2,i,j) ) &
-                        * CME  * ( qv_evap - qvap )
+       SFLX_MOMX(i,j) = - 0.5D0 * ( DENS(KS,i+1,j)+DENS(KS,i,j) ) * CMMu * VELX(i,j)
+       SFLX_MOMY(i,j) = - 0.5D0 * ( DENS(KS,i,j+1)+DENS(KS,i,j) ) * CMMv * VELY(i,j)
+       SFLX_MOMZ(i,j) = - DENS(KS,i,j) * CMMw * VELZ(i,j) 
+       SFLX_POTT(i,j) =   DENS(KS,i,j) * CMH * ( SST(1,i,j) - RHOT(KS,i,j) / DENS(KS,i,j) )
+       SFLX_QV  (i,j) =   DENS(KS,i,j) * CME * ( qv_evap - QTRC(KS,i,j,I_QV) )
 
     enddo
     enddo
