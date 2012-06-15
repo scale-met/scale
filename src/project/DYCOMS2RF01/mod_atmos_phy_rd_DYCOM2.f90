@@ -8,7 +8,8 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2012-03-26 (H.Yashiro) [new]
+!! @li      2012-03-26 (H.Yashiro)  [new]
+!! @li      2012-06-10 (Y.Miyamoto) [mod] bug-fix and some modification
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -108,7 +109,7 @@ contains
     real(8), parameter :: F1    = 22.0D0  ! [K/m**-1/3]
     real(8), parameter :: D     = 3.75D-6 ! divergence of large scale horizontal winds [1/s]
 
-    real(8) :: Rmoist,  pres
+    real(8) :: pres
 
     real(8) :: dQ, dZ
     integer :: k_cldtop
@@ -170,13 +171,8 @@ contains
 
        do k = KS, KE
           TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
-       enddo
 
-       do k = KS, KE
-          Rmoist = Rdry * ( 1.D0 + EPSTvap * QTRC(k,i,j,I_QV) )
-          pres   = P00 * ( RHOT(k,i,j) * Rmoist / P00 )**CPovCV
-
-          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * DENS(k,i,j) * TEMP_t(k,i,j) * ( P00/pres )**RovCP
+          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)
        enddo
 
     enddo

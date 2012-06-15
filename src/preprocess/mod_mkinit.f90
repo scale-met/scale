@@ -18,6 +18,7 @@
 !! @li      2012-04-04 (Y.Miyamoto) [new] SQUALLINE test, for GCSS model comparison (Redelsperger et al. 2000)
 !! @li      2012-04-06 (H.Yashiro)  [new] uniform state test
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
+!! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -56,7 +57,7 @@ module mod_mkinit
      RHOT, &
      QTRC
   use mod_atmos_hydrostatic, only: &
-     hydro_buildrho      => ATMOS_HYDRO_buildrho
+     hydro_buildrho => ATMOS_HYDRO_buildrho
   use mod_atmos_saturation, only: &
      saturation_qsat_sfc   => ATMOS_SATURATION_qsat_sfc, &
      saturation_qsat_water => ATMOS_SATURATION_qsat_water
@@ -78,6 +79,8 @@ module mod_mkinit
   public :: MKINIT_squalline
   public :: MKINIT_DYCOMS2_RF01
   public :: MKINIT_DYCOMS2_RF02
+  public :: MKINIT_DYCOMS2_RF01_hbinw
+  public :: MKINIT_warmbubble_hbinw
 
   !-----------------------------------------------------------------------------
   !
@@ -91,16 +94,18 @@ module mod_mkinit
   !++ Public parameters & variables
   !
   integer, public, save      :: MKINIT_TYPE
-  integer, public, parameter :: I_PLANESTATE    =  1
-  integer, public, parameter :: I_TRACERBUBBLE  =  2
-  integer, public, parameter :: I_COLDBUBBLE    =  3
-  integer, public, parameter :: I_WARMBUBBLE    =  4
-  integer, public, parameter :: I_KHWAVE        =  5
-  integer, public, parameter :: I_TURBULENCE    =  6
-  integer, public, parameter :: I_SUPERCELL     =  7
-  integer, public, parameter :: I_SQUALLINE     =  8
-  integer, public, parameter :: I_DYCOMS2_RF01  =  9
-  integer, public, parameter :: I_DYCOMS2_RF02  = 10
+  integer, public, parameter :: I_PLANESTATE          =  1
+  integer, public, parameter :: I_TRACERBUBBLE        =  2
+  integer, public, parameter :: I_COLDBUBBLE          =  3
+  integer, public, parameter :: I_WARMBUBBLE          =  4
+  integer, public, parameter :: I_KHWAVE              =  5
+  integer, public, parameter :: I_TURBULENCE          =  6
+  integer, public, parameter :: I_SUPERCELL           =  7
+  integer, public, parameter :: I_SQUALLINE           =  8
+  integer, public, parameter :: I_DYCOMS2_RF01        =  9
+  integer, public, parameter :: I_DYCOMS2_RF02        = 10
+  integer, public, parameter :: I_DYCOMS2_RF01_hbinw  = 11
+  integer, public, parameter :: I_WARMBUBBLE_hbinw    = 12
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -133,6 +138,10 @@ contains
   !> Initialize Reference state
   !-----------------------------------------------------------------------------
   subroutine MKINIT_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
@@ -180,6 +189,10 @@ contains
        MKINIT_TYPE = I_DYCOMS2_RF01
     case('DYCOMS2_RF02')
        MKINIT_TYPE = I_DYCOMS2_RF02
+    case('DYCOMS2_RF01_hbinw')
+       MKINIT_TYPE = I_DYCOMS2_RF01_hbinw
+    case('WARMBUBBLE_hbinw')
+       MKINIT_TYPE = I_WARMBUBBLE_hbinw
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -210,7 +223,6 @@ contains
     real(8) :: RANDOM_U     =  0.D0 ! amplitude of random disturbance u
     real(8) :: RANDOM_V     =  0.D0 ! amplitude of random disturbance v
     real(8) :: RANDOM_RH    =  0.D0 ! amplitude of random disturbance RH
-    real(8) :: RANDOM_QTRC  =  0.D0 ! amplitude of random disturbance QTRC
 
     NAMELIST / PARAM_MKINIT_PLANESTATE / &
        SFC_THETA,    &
@@ -225,8 +237,7 @@ contains
        RANDOM_W,     &
        RANDOM_U,     &
        RANDOM_V,     &
-       RANDOM_RH,    &
-       RANDOM_QTRC
+       RANDOM_RH
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -278,11 +289,9 @@ contains
     do j = JS, JE
     do i = IS, IE
        qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.D-2 * qsat_sfc(1,i,j)
-       qv_sfc(1,i,j) = max( qv_sfc(1,i,j), 0.D0 )
 
        do k = KS, KE
           qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.D-2 * qsat(k,i,j)
-          qv(k,i,j) = max( qv(k,i,j), 0.D0 )
        enddo
     enddo
     enddo
@@ -331,12 +340,12 @@ contains
     enddo
     enddo
 
-    if ( QA >= 2 ) then
+    if ( QA >= 2 .and. QA <= 11 ) then
        do iq = 2, QA
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = rndm(k,i,j) * RANDOM_QTRC
+          QTRC(k,i,j,iq) = 0.D0
        enddo
        enddo
        enddo
@@ -345,7 +354,21 @@ contains
 
     return
   end subroutine MKINIT_planestate
+  !-----------------------------------------------------------------------------
+  function faero( f0,r0,x,alpha )
 
+  real(8), intent(in) ::  x, f0, r0, alpha
+  real(8) :: faero
+  real(8) :: rad
+  real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+
+  rad = ( exp( x )*3.D0/4.D0/pi/rhoa )**( 1.D0/3.D0 )
+
+  faero = f0*( rad/r0 )**( -alpha )
+
+  return
+
+  end function faero
   !-----------------------------------------------------------------------------
   !> Make initial state for cold bubble experiment
   !-----------------------------------------------------------------------------
@@ -630,11 +653,11 @@ contains
        qv_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
-          if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
+          if( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
              pott(k,i,j) = SFC_THETA
-          elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+          elseif ( CZ(k) < ENV_L2_ZTOP ) then    ! Layer 1
              pott(k,i,j) = pott(k-1,i,j) + ENV_L2_TLAPS * ( CZ(k)-CZ(k-1) )
-          else                                ! Layer 3
+          else 
              pott(k,i,j) = pott(k-1,i,j) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
           endif
           qv  (k,i,j) = 0.D0
@@ -655,13 +678,14 @@ contains
        qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
 
        do k = KS, KE
-          if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
-             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
-          elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
-             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
-          else                                ! Layer 3
-             qv(k,i,j) = 0.D0
-          endif
+           if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
+              qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+           elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+              qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+           else                                ! Layer 3
+              qv(k,i,j) = 0.D0
+           endif
+
        enddo
     enddo
     enddo
@@ -766,7 +790,7 @@ contains
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
              pott(k,i,j) = ENV_L1_THETA
-          elseif( CZ(k) >= ENV_L3_ZBOTTOM ) then ! Layer 3
+          elseif( CZ(k) <= ENV_L3_ZBOTTOM ) then ! Layer 3
              pott(k,i,j) = ENV_L3_THETA
           else                                   ! Layer 2
              fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
@@ -1570,20 +1594,33 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-       QTRC(k,i,j,I_QC) = qc(k,i,j)
+    if( QA < 30 ) then !--- for ndw6
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
 
-       if ( qc(k,i,j) > 0.D0 ) then
-          QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
-       endif
+        QTRC(k,i,j,I_QV) = qv(k,i,j)
+        QTRC(k,i,j,I_QC) = qc(k,i,j)
 
-    enddo
-    enddo
-    enddo
+        if ( qc(k,i,j) > 0.D0 ) then
+           QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
+        endif
+
+     enddo
+     enddo
+     enddo
+    else if ( QA >= 30 ) then !--- for HUCM
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+
+        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) !--- Super saturated air at initial
+
+     enddo
+     enddo
+     enddo
+    end if
 
     return
   end subroutine MKINIT_DYCOMS2_RF01
@@ -1716,5 +1753,458 @@ contains
 
     return
   end subroutine MKINIT_DYCOMS2_RF02
+  !-----------------------------------------------------------------------------
+  !> Make initial state for strato cumulus
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_DYCOMS2_RF01_hbinw
+    implicit none
+
+    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(8) :: qall(KA,IA,JA) ! QV+QC
+    real(8) :: qc  (KA,IA,JA) ! QC
+    real(8) :: fact
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    real(8) :: gan, xasta, xaend, dxaer
+    real(8), allocatable :: xabnd( : ), xactr( : )
+    real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+
+    real(8) :: F0_AERO      =  1.D+7 ! 
+    real(8) :: R0_AERO      =  1.D-7 !
+    real(8) :: R_MAX        =  1.D-08 
+    real(8) :: R_MIN        =  1.D-08 
+    real(8) :: A_ALPHA      =  3.D0
+    integer :: nccn_i       =  20
+    integer :: nbin_i       =  33
+ 
+   NAMELIST / PARAM_MKINIT_HBINW / &
+       F0_AERO,      &
+       R0_AERO,      &
+       R_MAX,        &
+       R_MIN,        &
+       A_ALPHA,      &
+       nccn_i,       &
+       nbin_i
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01_hbinw)]/Categ[MKINIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_HBINW,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_HBINW. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_HBINW)
+
+    allocate( xabnd( nccn_i+1 ) )
+    allocate( xactr( nccn_i ) )
+
+    ! calc in moist condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
+       pott_sfc(1,i,j) = 289.0D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
+
+       do k = KS, KE
+          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+!             velx(k,i,j) =   6.7D0
+!             vely(k,i,j) =  -4.9D0
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
+             potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
+          else
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
+             potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
+          endif
+
+          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+             qall(k,i,j) = 9.0D-3 ! [kg/kg]
+          elseif(       CZ(k) >   840.D0 &
+                  .AND. CZ(k) <= 5000.D0 ) then
+             qall(k,i,j) = 1.5D-3 ! [kg/kg]
+          else
+             qall(k,i,j) = 0.0D0
+          endif
+
+          if (       CZ(k) >  600.D0 &
+               .AND. CZ(k) <= 840.D0 ) then ! in the cloud
+             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
+
+!             qc(k,i,j) = 0.45D-3 * fact
+             qc(k,i,j) = 0.D0
+          else
+             qc(k,i,j) = 0.D0
+          endif
+          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.D0
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.D0
+    enddo
+    enddo
+    enddo
+    enddo
+
+
+    if( QA < 30 ) then !--- for ndw6
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+
+        QTRC(k,i,j,I_QV) = qv(k,i,j)
+        QTRC(k,i,j,I_QC) = qc(k,i,j)
+
+        if ( qc(k,i,j) > 0.D0 ) then
+           QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
+        endif
+
+     enddo
+     enddo
+     enddo
+    else if ( QA >= 30 ) then !--- for HUCM
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+
+        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) !--- Super saturated air at initial
+
+      if ( QA >= 35 .and. nccn_i /= 0 ) then
+       do iq = 2, QA-nccn_i
+         QTRC(k,i,j,iq) = 0.D0
+       enddo
+       xasta = log( rhoa*4.D0/3.D0*pi * ( R_MIN )**3 )
+       xaend = log( rhoa*4.D0/3.D0*pi * ( R_MAX )**3 )
+       dxaer = ( xaend-xasta )/nccn_i
+       do iq = 1, nccn_i+1
+        xabnd( iq ) = xasta + dxaer*( iq-1 )
+       end do
+       do iq = 1, nccn_i
+        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5D0
+       end do
+       do iq = QA-nccn_i+1, QA
+        gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
+        QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
+       enddo
+      end if
+     enddo
+     enddo
+     enddo
+    end if
+    deallocate(xactr)
+    deallocate(xabnd)
+
+    return
+  end subroutine MKINIT_DYCOMS2_RF01_hbinw
+  !-----------------------------------------------------------------------------
+  !> Make initial state for warm bubble experiment
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_warmbubble_hbinw
+    implicit none
+
+    ! Surface state
+    real(8) :: SFC_THETA              ! surface potential temperature [K]
+    real(8) :: SFC_PRES               ! surface pressure [Pa]
+    real(8) :: SFC_RH       =  80.D0  ! surface relative humidity [%]
+    ! Environment state
+    real(8) :: ENV_RH       =  80.D0  ! Relative Humidity of environment [%]
+    real(8) :: SFC_U        =  0.D0   ! of environment [%]
+    real(8) :: ENV_L1_U     =  0.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L3_U     =  0.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L2_U     =  0.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L1_RH    =  80.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L2_RH    =  80.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L3_RH    =  80.D0  ! Relative Humidity of environment [%]
+    real(8) :: ENV_L1_ZTOP  =   1.D3  ! top height of the layer1 (constant THETA)       [m]
+    real(8) :: ENV_L2_ZTOP  =  12.D3  ! top height of the layer2 (small THETA gradient) [m]
+    real(8) :: ENV_L3_ZTOP  =  12.D3  ! top height of the layer2 (small THETA gradient) [m]
+    real(8) :: ENV_L2_TLAPS =   4.D-3 ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(8) :: ENV_L3_TLAPS =   3.D-2 ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    ! Bubble
+    real(8) :: BBL_THETA    =  1.D0 ! extremum of temperature in bubble [K]
+    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
+    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
+    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
+    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
+    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
+    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+
+    real(8) :: F0_AERO      =  1.D+7  ! number concentration of aerosol whose radii is R0_aero [#/m^3]
+    real(8) :: R0_AERO      =  1.D-7  ! center radius of Jounge distribution [m]
+    real(8) :: R_MAX        =  1.D-06 ! max radius of aerosol [m]
+    real(8) :: R_MIN        =  1.D-08 ! min radius of aerosol [m]
+    real(8) :: A_ALPHA      =  3.D0 ! index of power low distribution of aerosol (=3 -> Jounge distribution)
+    integer :: nbin_i       =  33   ! number of hydrometeors bin
+    integer :: nccn_i       =  20   ! number of aerosol bin
+
+    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       SFC_RH,       &
+       ENV_RH,       &
+       SFC_U,        &
+       ENV_L1_U ,    &
+       ENV_L2_U ,    &
+       ENV_L3_U ,    &
+       ENV_L1_RH,    &
+       ENV_L2_RH,    &
+       ENV_L3_RH,    &
+       ENV_L1_ZTOP,  &
+       ENV_L2_ZTOP,  &
+       ENV_L3_ZTOP,  &
+       ENV_L2_TLAPS, &
+       ENV_L3_TLAPS, &
+       BBL_THETA,    &
+       BBL_CZ,       &
+       BBL_CX,       &
+       BBL_CY,       &
+       BBL_RZ,       &
+       BBL_RX,       &
+       BBL_RY,       &
+       F0_AERO,      &
+       R0_AERO,      &
+       R_MAX,        &
+       R_MIN,        &
+       A_ALPHA,      &
+       nccn_i,       &
+       nbin_i
+
+    real(8) :: dist, ENV_U
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    real(8) :: gan, xasta, xaend, dxaer
+    real(8), allocatable :: xabnd( : ), xactr( : )
+    real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLE_hbin]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_WARMBUBBLE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+
+    allocate( xabnd( nccn_i+1 ) )
+    allocate( xactr( nccn_i ) )
+
+    ! calc in dry condition
+    do j = JS, JE
+    do i = IS, IE
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA
+       qv_sfc  (1,i,j) = 0.D0
+
+       do k = KS, KE
+          if( k == KS ) then
+             pott(k,i,j) = SFC_THETA
+          elseif ( CZ(k) < ENV_L2_ZTOP ) then    ! Layer 1
+             pott(k,i,j) = SFC_THETA + ENV_L2_TLAPS * ( CZ(k) )
+          else 
+             pott(k,i,j) =  309.02899D0 + ENV_L3_TLAPS * ( CZ(k)-ENV_L2_ZTOP )
+          endif
+
+         ! make warm bubble
+          dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
+            + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
+            + ( (CY(j)-BBL_CY)/BBL_RY )**2
+          if( dist < 1.D0 ) then
+           if( dist < ( 500.d0/600.d0 )**2 ) then
+            pott(k,i,j) = pott(k,i,j) + BBL_THETA 
+           else if ( dist >= ( 500.d0/600.d0 )**2 .and. dist < 1.d0 ) then
+            pott(k,i,j) = pott(k,i,j) + BBL_THETA-BBL_THETA/(1.d0-(500.d0/600.d0)**2)*(dist-(500.d0/600.d0)**2)
+           end if 
+          endif
+          qv  (k,i,j) = 0.D0
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    ! calc QV from RH
+    call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
+    call saturation_qsat_water( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
+
+       do k = KS, KE
+       ! make warm bubble
+        dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
+             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
+             + ( (CY(j)-BBL_CY)/BBL_RY )**2
+         if( dist < 1.D0 ) then
+             ENV_RH = ENV_L3_RH 
+             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+         else                                ! Layer 3
+          if ( CZ(k) <= ENV_L2_ZTOP ) then    ! Layer 1
+             ENV_RH = SFC_RH + CZ(k)*( ENV_L2_RH-SFC_RH )/( ENV_L2_ZTOP )
+             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+          else                                ! Layer 3
+             ENV_RH = ENV_L3_RH 
+             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+          endif
+         endif
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       MOMZ(k,i,j) = 0.D0
+!       MOMX(k,i,j) = 0.D0
+       MOMY(k,i,j) = 0.D0
+!---- SUzuki Ex.
+       if( CZ(k) <= ENV_L3_ZTOP ) then
+        ENV_U = SFC_U + CZ(k)*( ENV_L3_U-ENV_L1_U )/( ENV_L3_ZTOP-ENV_L1_ZTOP )
+       else
+        ENV_U = ENV_L3_U
+       end if
+       MOMX(k,i,j) = ENV_U * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+
+       RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       if ( QA >= 35 .and. nccn_i /= 0 ) then
+        do iq = 2, QA-nccn_i+1
+          QTRC(k,i,j,iq) = 0.D0
+        enddo
+        xasta = log( rhoa*4.D0/3.D0*pi * ( R_MIN )**3 )
+        xaend = log( rhoa*4.D0/3.D0*pi * ( R_MAX )**3 )
+        dxaer = ( xaend-xasta )/nccn_i
+        do iq = 1, nccn_i+1
+         xabnd( iq ) = xasta + dxaer*( iq-1 )
+        end do
+        do iq = 1, nccn_i
+         xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5D0
+        end do
+        do iq = QA-nccn_i+1, QA
+         gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
+         QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
+        enddo
+        do iq = 2, QA-nccn_i
+          QTRC(k,i,j,iq) = 0.D0
+        enddo
+       else 
+        do iq = 2, QA
+          QTRC(k,i,j,iq) = 0.D0
+        enddo
+       end if
+
+       ! make warm bubble
+!       dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
+!            + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
+!            + ( (CY(j)-BBL_CY)/BBL_RY )**2
+
+!       if ( dist <= 1.D0 ) then
+!          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5D0*PI*sqrt(dist) )**2
+!             ENV_RH = ENV_L3_RH 
+!             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+!       endif
+
+    enddo
+    enddo
+    enddo
+    deallocate(xactr)
+    deallocate(xabnd)
+
+    return
+  end subroutine MKINIT_warmbubble_hbinw
 
 end module mod_mkinit

@@ -9,7 +9,6 @@
 !!
 !! @par History
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
-!! @li      2012-06-13 (Y.Sato)     [mod] add HBINW option
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -35,9 +34,8 @@ program scaleinit
      TIME_rapstart, &
      TIME_rapend,   &
      TIME_rapreport
-  use mod_fileio, only: &
-     FIO_setup, &
-     FIO_finalize
+  use gtool_file, only: &
+     FileCloseAll
   use mod_grid, only: &
      GRID_setup
   use mod_geometrics, only: &
@@ -69,8 +67,6 @@ program scaleinit
      I_SQUALLINE,     &
      I_DYCOMS2_RF01,  &
      I_DYCOMS2_RF02,  &
-     I_DYCOMS2_RF01_hbinw,&
-     I_WARMBUBBLE_hbinw,  &
      MKINIT_setup,        &
      MKINIT_planestate,   &
      MKINIT_tracerbubble, &
@@ -81,9 +77,7 @@ program scaleinit
      MKINIT_supercell,    &
      MKINIT_squalline,    &
      MKINIT_DYCOMS2_RF01, &
-     MKINIT_DYCOMS2_RF02, &
-     MKINIT_DYCOMS2_RF01_hbinw, &
-     MKINIT_WARMBUBBLE_hbinw
+     MKINIT_DYCOMS2_RF02
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -112,9 +106,6 @@ program scaleinit
   ! setup time
   call TIME_setup
   call TIME_rapstart('Initialize')
-
-  ! setup file I/O
-  call FIO_setup
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -168,10 +159,6 @@ program scaleinit
      call MKINIT_DYCOMS2_RF01
   case(I_DYCOMS2_RF02)
      call MKINIT_DYCOMS2_RF02
-  case(I_DYCOMS2_RF01_hbinw)
-     call MKINIT_DYCOMS2_RF01_hbinw
-  case(I_WARMBUBBLE_hbinw)
-     call MKINIT_WARMBUBBLE_hbinw
   case default
      write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
      call PRC_MPIstop
@@ -189,7 +176,7 @@ program scaleinit
 
   call TIME_rapreport
 
-  call FIO_finalize
+  call FileCloseAll
   call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop
