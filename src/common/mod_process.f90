@@ -316,41 +316,41 @@ contains
        call MPI_CART_SHIFT(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr) ! next rank search Left/Right
 
        ! get neighbor_coordinates
-       call MPI_CART_COORDS(iptbl,PRC_next(PRC_W),2,coords_W,ierr)
-       call MPI_CART_COORDS(iptbl,PRC_next(PRC_N),2,coords_N,ierr)
-       call MPI_CART_COORDS(iptbl,PRC_next(PRC_E),2,coords_E,ierr)
-       call MPI_CART_COORDS(iptbl,PRC_next(PRC_S),2,coords_S,ierr)
+       if( PRC_next(PRC_W) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_W),2,coords_W,ierr)
+       if( PRC_next(PRC_N) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_N),2,coords_N,ierr)
+       if( PRC_next(PRC_E) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_E),2,coords_E,ierr)
+       if( PRC_next(PRC_S) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_S),2,coords_S,ierr)
        ! next rank search NorthWest
-       if (      PRC_next(PRC_N) == -1 &
-            .OR. PRC_next(PRC_W) == -1 ) then
-          PRC_next(PRC_NW) = -1
+       if (      PRC_next(PRC_N) == MPI_PROC_NULL &
+            .OR. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+          PRC_next(PRC_NW) = MPI_PROC_NULL
        else
           next_coords(1) = coords_N(1)
           next_coords(2) = coords_W(2)
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NW), ierr)
        endif
        ! next rank search NorthEast
-       if (      PRC_next(PRC_N) == -1 &
-            .OR. PRC_next(PRC_E) == -1 ) then
-          PRC_next(PRC_NE) = -1
+       if (      PRC_next(PRC_N) == MPI_PROC_NULL &
+            .OR. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+          PRC_next(PRC_NE) = MPI_PROC_NULL
        else
           next_coords(1) = coords_N(1)
           next_coords(2) = coords_E(2)
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NE), ierr)
        endif
        ! next rank search SouthWest
-       if (      PRC_next(PRC_S) == -1 &
-            .OR. PRC_next(PRC_W) == -1 ) then
-          PRC_next(PRC_SW) = -1
+       if (      PRC_next(PRC_S) == MPI_PROC_NULL &
+            .OR. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+          PRC_next(PRC_SW) = MPI_PROC_NULL
        else
           next_coords(1) = coords_S(1)
           next_coords(2) = coords_W(2)
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SW), ierr)
        endif
        ! next rank search SouthEast
-       if (      PRC_next(PRC_S) == -1 &
-            .OR. PRC_next(PRC_E) == -1 ) then
-          PRC_next(PRC_SE) = -1
+       if (      PRC_next(PRC_S) == MPI_PROC_NULL &
+            .OR. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+          PRC_next(PRC_SE) = MPI_PROC_NULL
        else
           next_coords(1) = coords_S(1)
           next_coords(2) = coords_E(2)
