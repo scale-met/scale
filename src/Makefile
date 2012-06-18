@@ -63,13 +63,16 @@ makebin: $(PRJS)
 	install $(PRJ2) ../bin/$(SCALE_SYS)/$(PRJ2)_$(index)_$(tracer)_$(postfix)
 
 $(PRJ1): $(PRJ1).o
-	$(LD) $(LFLAGS) -o $(PRJ1) $(PRJ1).o ${MODS}
+	$(LD) $(LFLAGS) -o $(PRJ1) $(PRJ1).o libscale.a
 
 $(PRJ2): $(PRJ2).o
-	$(LD) $(LFLAGS) -o $(PRJ2) $(PRJ2).o ${MODS}
+	$(LD) $(LFLAGS) -o $(PRJ2) $(PRJ2).o libscale.a
 
-$(PRJ1).o: $(PRJ1).f90 $(MODS)
-$(PRJ2).o: $(PRJ2).f90 $(MODS)
+$(PRJ1).o: $(PRJ1).f90 libscale.a
+$(PRJ2).o: $(PRJ2).f90 libscale.a
+
+libscale.a: $(MODS)
+	ar r libscale.a $?
 
 mod_stdio.o	: mod_stdio.f90
 mod_process.o	: mod_process.f90 mod_stdio.o
@@ -86,7 +89,7 @@ mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_g
 mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_time.o mod_fileio.o
 mod_monitor.o	: mod_monitor.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_geometrics.o mod_time.o
 mod_atmos_sub_thermodyn.o	: mod_atmos_sub_thermodyn.f90 mod_stdio.o mod_const.o mod_time.o
-mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_history.o mod_monitor.o mod_comm.o mod_fileio.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_sub_thermodyn.o
+mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_history.o mod_monitor.o mod_comm.o mod_fileio.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o mod_const.o mod_grid_cartesian_plane.o
 mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_comm.o mod_time.o mod_atmos_sub_refstate.o
 mod_atmos_dyn_fent_pdfct.o	: mod_atmos_dyn_fent_pdfct.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_geometrics.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o
@@ -103,7 +106,7 @@ mod_atmos_sub_saturation.o	: mod_atmos_sub_saturation.f90 mod_stdio.o mod_const.
 mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_hydrostatic.o mod_atmos_sub_saturation.o
 
 clean:
-	rm -f $(PRJS) include/inc_index.h include/inc_tracer.h *.mod *.o *.lst
+	rm -f $(PRJS) include/inc_index.h include/inc_tracer.h *.mod *.o *.lst libscale.a
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
