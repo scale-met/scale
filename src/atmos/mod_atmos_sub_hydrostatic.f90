@@ -210,7 +210,8 @@ contains
 !          endif
 
           if ( ite > itelim ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k,i,j), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
+             if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', &
+                  k, ite, dens(k,i,j), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
           endif
        enddo
     enddo
