@@ -329,7 +329,7 @@ contains
 
           ! buoyancy
           do k = KS, KE-1
-             buoy(k,i,j) = GRAV * 2.D0 / ( POTT(k+1,i,j)+POTT(k,i,j) ) * ( POTT(k,i,j)-POTT(k+1,i,j) ) * RFDZ(k) &
+             buoy(k,i,j) = GRAV * 2.D0 / ( POTT(k+1,i,j)+POTT(k,i,j) ) * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k) &
                          / Pr(k,i,j)
           enddo
        enddo
