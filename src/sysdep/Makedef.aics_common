@@ -1,34 +1,51 @@
 # ------ FOR AICS common cluster ------
 #
+# system Information
+#   Compute host:
+#     HP Proliant SL390s G7 2U
+#       Xeon X5670 * 2
+#       memory 24 GB (12 GB/socket)
+#       Tesla M2050 (Not used this configuration)
+#     network
+#        Infiniband 4x QDR for MPI and File I/O
+#        Ethernet
+#     OS
+#       Centos 5.5
+#     Total hosts: 48 Max allocatable host 32
+# Front end:
+#  same as compute hosts but GPU is not installed
+# compiler
+#   gcc (centos defaults), Intel, pgi are installed
+#   Intel compiler is used in this configuration
+# MPI:
+#   Intel MPI, OpenMPI and MVAPITCH are installed
+#   Intel MPI is used in this configuration
 
 ##### for computation
 
+# Fortran Compiler
 FC     = mpiifort
-FFLAGS = -fpp3 -O3 -ftz -m64                  \
+FFLAGS = -fpp3 -O3 -ftz -m64 \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias              \
          -xSSE4.2
 
-#FFLAGS = -fpp3 -O0 -m64                       \
-#         -assume byterecl -convert big_endian \
-#         -fp-model precise -pc 80             \
-#         -heap-arrays -fno-alias              \
-#         -check all -warn all -g -traceback
-#
-
+# compiler flag for mod_atmos_dyn_fent_pdfct
 FFLAGS_DYN = $(FFLAGS)
 
+# C compiler
 CC     = mpiicc
 CFLAGS = -O3 -ftz -m64 -xSSE4.2
 
+# linker
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 # for frontend
 
 FRONT_F90     = ifort
-FRONT_FFLAGS  = -O3 -ftz -m64                        \
+FRONT_FFLAGS  = -O3 -ftz -m64 \
                 -assume byterecl -convert big_endian \
                 -fp-model precise -pc 80             \
                 -heap-arrays -fno-alias
@@ -44,3 +61,12 @@ FRONT_CFLAGS = -O3 -ftz -m64 -xSSE4.2
 
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
+
+# Libraries
+# Netcdf 4.2 is installed from source
+NETCDF_INCLUDE = -I/work/netcdf4/serial-intel/include
+NETCDF_LIBS = -L/work/netcdf4/serial-intel/lib -lnetcdf -L/work/hdf5/serial-intel//lib -lhdf5_hl -lhdf5 -lz -L/usr/kerberos/lib64 -lcurl -ldl -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err -lidn -lssl -lcrypto -lz
+
+#HDF5 1.5.9 is installed from source
+HDF5_INCLUDE = -I/work/hdf5/1.8.9/serial-intel/include
+HDF5_LIBS = -L/work/hdf5/serial-intel/lib -L/work/hdf5/szip-intel/lib -lhdf5_hl -lhdf5 -lsz -lz
