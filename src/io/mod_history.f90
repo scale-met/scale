@@ -440,7 +440,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
  
     do n = 1, HIST_id_count-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1x,f13.3,1x,L)') HIST_item(n), HIST_unit(n), HIST_ktype(n), HIST_tintsec(n), HIST_tavg(n)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1x,f13.3,1x,L)') HIST_item(n),&
+            HIST_unit(n), HIST_ktype(n), HIST_tintsec(n), HIST_tavg(n)
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
