@@ -777,7 +777,9 @@ call START_COLLECTION("DYN-set")
        do iw = QQS, QQE
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
+       do k = KS, KE
           QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
+       enddo
        enddo
        enddo
        enddo
