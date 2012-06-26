@@ -753,16 +753,25 @@ call START_COLLECTION("SET")
        ! Gas constant
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-          do k = KS, KE
-             QDRY(k,i,j) = 1.D0
-
-             do iw = QQS, QQE
-                QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
-             enddo
-          enddo
-          do k = KS, KE
-             Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-          enddo
+       do k = KS, KE
+          QDRY(k,i,j) = 1.D0
+       enddo
+       enddo
+       enddo
+       do iw = QQS, QQE
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
+       enddo
+       enddo
+       enddo
+       enddo
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       enddo
        enddo
        enddo
 
