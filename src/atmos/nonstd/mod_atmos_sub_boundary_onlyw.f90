@@ -76,9 +76,6 @@ module mod_atmos_boundary
   logical,                   private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
   real(8),                   private :: ATMOS_BOUNDARY_VALUE_VELZ   =  0.D0 ! w at boundary, 0 [m/s]
   real(8),                   private :: ATMOS_BOUNDARY_VALUE_VELX   =  5.D0 ! u at boundary, 5 [m/s]
-  real(8),                   private :: ATMOS_BOUNDARY_VALUE_VELY   =  5.D0 ! v at boundary, 5 [m/s]
-  real(8),                   private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.D0! PT at boundary, 300 [K]
-  real(8),                   private :: ATMOS_BOUNDARY_VALUE_QV     = 1.D-3 ! QV at boundary, 1.d-3 [kg/kg]
   real(8),                   private :: ATMOS_BOUNDARY_tauz         = 75.D0 ! maximum value for damping tau (z) [s]
   real(8),                   private :: ATMOS_BOUNDARY_taux         = 75.D0 ! maximum value for damping tau (x) [s]
   real(8),                   private :: ATMOS_BOUNDARY_tauy         = 75.D0 ! maximum value for damping tau (y) [s]
@@ -111,9 +108,6 @@ contains
        ATMOS_BOUNDARY_USE_QV,       &
        ATMOS_BOUNDARY_VALUE_VELZ,   &
        ATMOS_BOUNDARY_VALUE_VELX,   &
-       ATMOS_BOUNDARY_VALUE_VELY,   &
-       ATMOS_BOUNDARY_VALUE_POTT,   &
-       ATMOS_BOUNDARY_VALUE_QV,     &
        ATMOS_BOUNDARY_tauz,         &
        ATMOS_BOUNDARY_taux,         &
        ATMOS_BOUNDARY_tauy
@@ -446,31 +440,13 @@ contains
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
        else                   ! Buffer Layer
-         if( ATMOS_BOUNDARY_USE_VELZ ) then
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
-         end if
-         if( ATMOS_BOUNDARY_USE_VELY ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
-         end if
-         if( ATMOS_BOUNDARY_USE_VELX ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
-         end if
-         if( ATMOS_BOUNDARY_USE_POTT ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
-         end if
-         if( ATMOS_BOUNDARY_USE_QV ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV) = ATMOS_BOUNDARY_VALUE_QV
-         end if
        endif
     enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
 
 !    do j = JS-1, JE+1
 !    do i = IS-1, IE+1
@@ -484,7 +460,7 @@ contains
 !       enddo
 !    enddo
 !    enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
 
     ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV
