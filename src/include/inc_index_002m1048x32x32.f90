@@ -8,7 +8,9 @@
   integer, private, parameter :: IHALO =   2 ! # of halo cells: x
   integer, private, parameter :: JHALO =   2 ! # of halo cells: y
 
-  real(8), private, parameter :: DXYZ  =   2 ! length in the main region [m]: x,y,z
+  real(8), private, parameter :: DX  =   2 ! length in the main region [m]: x
+  real(8), private, parameter :: DY  =   2 ! length in the main region [m]: y
+  real(8), private, parameter :: DZ  =   2 ! length in the main region [m]: z
 
   real(8), private, parameter :: BUFFER_DZ = 2.0D0 ! thickness of buffer region [m]: z
   real(8), private, parameter :: BUFFER_DX = 0.0D0 ! thickness of buffer region [m]: x

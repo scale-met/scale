@@ -9,7 +9,6 @@
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
-!! @li      2012-06-25 (Y.Sato)     [mod] change for unisotropic grid
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -142,7 +141,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** GRID INFORMATION ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0)')         '*** delta Z, X, Y [m]                  :', &
-                                                       DZ, DX, DY
+                                                       DXYZ
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Computational Grid (global) :', &
                                                        KMAX,           ' x ',                      &
                                                        IMAX*PRC_NUM_X, ' x ',                      &
@@ -191,7 +190,7 @@ contains
        call GRID_write
     endif
 
-    call FIO_setgridinfo( DZ, IMAX, JMAX )
+    call FIO_setgridinfo( DXYZ, IMAX, JMAX )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Grid (including HALO,1node) :', &
@@ -427,7 +426,7 @@ contains
 
     ! X-direction
     ! calculate buffer grid size
-    buffx(0) = DX
+    buffx(0) = DXYZ
     bufftotx = 0.D0
 
     do i = 1, IAG
@@ -464,7 +463,7 @@ contains
     endif
 
     do i = IHALO+ibuff+1, IHALO+ibuff+imain
-       GRID_FXG     (i) = GRID_FXG(i-1) + DX
+       GRID_FXG     (i) = GRID_FXG(i-1) + DXYZ
        GRID_CXG     (i) = 0.5D0 * ( GRID_FXG(i)+GRID_FXG(i-1) )
        GRID_CXG_mask(i) = .true.
     enddo
@@ -513,7 +512,7 @@ contains
 
     ! Y-direction
     ! calculate buffer grid size
-    buffy(0) = DY
+    buffy(0) = DXYZ
     bufftoty = 0.D0
 
     do j = 1, JAG
@@ -550,7 +549,7 @@ contains
     endif
 
     do j = JHALO+jbuff+1, JHALO+jbuff+jmain
-       GRID_FYG     (j) = GRID_FYG(j-1) + DY
+       GRID_FYG     (j) = GRID_FYG(j-1) + DXYZ
        GRID_CYG     (j) = 0.5D0 * ( GRID_FYG(j)+GRID_FYG(j-1) )
        GRID_CYG_mask(j) = .true.
     enddo
@@ -605,7 +604,7 @@ contains
 
     ! Z-direction
     ! calculate buffer grid size
-    buffz(0) = DZ
+    buffz(0) = DXYZ
     bufftotz = 0.D0
 
     do k = 1, KA
@@ -625,7 +624,7 @@ contains
     ! vartical coordinate (local=global domaim)
     GRID_FZ(KHALO) = 0.D0
     do k = KHALO-1, 0, -1
-       GRID_FZ(k) = GRID_FZ(k+1) - DZ
+       GRID_FZ(k) = GRID_FZ(k+1) - DXYZ
     enddo
 
     do k = 1, KHALO
@@ -634,7 +633,7 @@ contains
     enddo
 
     do k = KHALO+1, KHALO+kmain
-       GRID_FZ     (k) = GRID_FZ(k-1) + DZ
+       GRID_FZ     (k) = GRID_FZ(k-1) + DXYZ
        GRID_CZ     (k) = 0.5D0 * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo
