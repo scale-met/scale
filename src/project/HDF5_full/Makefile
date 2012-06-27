@@ -13,7 +13,7 @@
 # %> make -B       (ignore the timestamp)
 #
 ################################################################################
-include Makedef.K_HDF5
+include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
 
@@ -37,15 +37,15 @@ makebin: $(PROJ_EXE)
 	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)/$(PROJ_EXE)_$(index)_$(tracer)_$(postfix)
 
 $(PROJ_EXE): $(PROJ_EXE).o
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS)
+	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) $(HDF5_LIBS)
 
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FC)  $(FFLAGS) -I../../include -o $@ -c $<
+	$(FC) -DCONFIG_HDF5 -DCONFIG_HDF5_INPUT $(HDF5_INCLUDE) $(FFLAGS) -I../../include -o $@ -c $<
 
 .c.o:
-	$(CC)  $(CFLAGS) -o $@ -c $<
+	$(CC) -DCONFIG_HDF5 -DCONFIG_HDF5_INPUT $(HDF5_INCLUDE) $(CFLAGS) -o $@ -c $<
 
 %.o: %.mod
 
@@ -55,13 +55,7 @@ $(PROJ_EXE): $(PROJ_EXE).o
 clean:
 	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
 
-freeze: clean depends copylocal mktar
-
-copylocal:
-	@for i in $(MODSRC) ; do \
-		cp $$i . ; \
-	done
-	cp ../../sysdep/Makedef.$(SCALE_SYS) .
+freeze: clean depends mktar
 
 mktar:
 	tar -czf ../$(PROJ_EXE).tgz ./

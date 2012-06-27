@@ -137,7 +137,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** GRID INFORMATION ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0)')         '*** delta Z, X, Y [m]                  :', &
-                                                       DXYZ
+                                                       DZ, DX, DY
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Computational Grid (global) :', &
                                                        KMAX,           ' x ',                      &
                                                        IMAX*PRC_NUM_X, ' x ',                      &
@@ -335,7 +335,7 @@ contains
 
     ! X-direction
     ! calculate buffer grid size
-    buffx(0) = DXYZ
+    buffx(0) = DX
     bufftotx = 0.D0
 
     do i = 1, IAG
@@ -372,7 +372,7 @@ contains
     endif
 
     do i = IHALO+ibuff+1, IHALO+ibuff+imain
-       GRID_FXG     (i) = GRID_FXG(i-1) + DXYZ
+       GRID_FXG     (i) = GRID_FXG(i-1) + DX
        GRID_CXG     (i) = 0.5D0 * ( GRID_FXG(i)+GRID_FXG(i-1) )
        GRID_CXG_mask(i) = .true.
     enddo
@@ -421,7 +421,7 @@ contains
 
     ! Y-direction
     ! calculate buffer grid size
-    buffy(0) = DXYZ
+    buffy(0) = DZ
     bufftoty = 0.D0
 
     do j = 1, JAG
@@ -458,7 +458,7 @@ contains
     endif
 
     do j = JHALO+jbuff+1, JHALO+jbuff+jmain
-       GRID_FYG     (j) = GRID_FYG(j-1) + DXYZ
+       GRID_FYG     (j) = GRID_FYG(j-1) + DY
        GRID_CYG     (j) = 0.5D0 * ( GRID_FYG(j)+GRID_FYG(j-1) )
        GRID_CYG_mask(j) = .true.
     enddo
@@ -513,7 +513,7 @@ contains
 
     ! Z-direction
     ! calculate buffer grid size
-    buffz(0) = DXYZ
+    buffz(0) = DZ
     bufftotz = 0.D0
 
     do k = 1, KA
@@ -533,7 +533,7 @@ contains
     ! vartical coordinate (local=global domaim)
     GRID_FZ(KHALO) = 0.D0
     do k = KHALO-1, 0, -1
-       GRID_FZ(k) = GRID_FZ(k+1) - DXYZ
+       GRID_FZ(k) = GRID_FZ(k+1) - DZ
     enddo
 
     do k = 1, KHALO
@@ -542,7 +542,7 @@ contains
     enddo
 
     do k = KHALO+1, KHALO+kmain
-       GRID_FZ     (k) = GRID_FZ(k-1) + DXYZ
+       GRID_FZ     (k) = GRID_FZ(k-1) + DZ
        GRID_CZ     (k) = 0.5D0 * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo

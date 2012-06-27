@@ -47,10 +47,10 @@ makebin: $(PROJ_EXE)
 	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)/$(PROJ_EXE)_$(index)_$(tracer)_$(precision)_$(postfix)
 
 $(PROJ_EXE): $(PROJ_EXE).o gtool_history.o gtool_file_f.o $(FORMAT_OBJ)
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) gtool_history.o gtool_file.o gtool_file_f.o $(FORMAT_OBJ) -L/ap/netcdf/4.1.2/lib -L/ap/hdf5/1.8.7/lib -lnetcdf -lhdf5
+	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) gtool_history.o gtool_file.o gtool_file_f.o $(FORMAT_OBJ) $(NETCDF_LIBS)
 
 scale3_init: scale3_init.o mod_mkinit.o mod_atmos_sub_hydrostatic.o mod_random.o
-	$(LD) $(LFLAGS) -o $@ $^ $(MODS) gtool_history.o gtool_file.o gtool_file_f.o $(FORMAT_OBJ) -L/ap/netcdf/4.1.2/lib -L/ap/hdf5/1.8.7/lib -lnetcdf -lhdf5
+	$(LD) $(LFLAGS) -o $@ $^ $(MODS) gtool_history.o gtool_file.o gtool_file_f.o $(FORMAT_OBJ) $(NETCDF_LIBS)
 
 mod_random.o: ../../common/mod_random.f90
 mod_atmos_sub_hydrostatic.o: ../../atmos/mod_atmos_sub_hydrostatic.f90
@@ -74,10 +74,10 @@ mod_history.o: gtool_history.o
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FC) $(FFLAGS) $(CFLAGS_LOCAL) -I../../include -o $@ -c $<
+	$(FC) $(FFLAGS) $(CFLAGS_LOCAL) -I../../include $(NETCDF_INCLUDE) -o $@ -c $<
 
 .c.o:
-	$(CC) $(CFLAGS) $(CFLAGS_LOCAL) -I/ap/netcdf/4.1.2/include -o $@ -c $<
+	$(CC) $(CFLAGS) $(CFLAGS_LOCAL) $(NETCDF_INCLUDE) -o $@ -c $<
 
 %.o: %.mod
 

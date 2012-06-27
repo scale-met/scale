@@ -29,18 +29,18 @@ FFLAGS = -fpp3 -O3 -ftz -m64 \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias              \
-         -xSSE4.2
+         -xSSE4.2 -mcmodel=medium
 
 # compiler flag for mod_atmos_dyn_fent_pdfct
 FFLAGS_DYN = $(FFLAGS)
 
 # C compiler
 CC     = mpiicc
-CFLAGS = -O3 -ftz -m64 -xSSE4.2
+CFLAGS = -O3 -ftz -m64 -xSSE4.2  -mcmodel=medium
 
 # linker
 LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LFLAGS = $(FFLAGS)  -shared-intel
 
 # for frontend
 
