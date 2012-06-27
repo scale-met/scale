@@ -172,7 +172,8 @@ contains
        do k = KS, KE
           TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
 
-          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)
+          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) &
+                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)*DENS(k,i,j)
        enddo
 
     enddo

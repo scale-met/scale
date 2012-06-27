@@ -147,11 +147,11 @@ contains
           Qbelow = 0.D0
           Qabove = 0.D0
           do k2 = KS, KE
-            if( CZ(k2) <=  1.2D0 ) then
+!            if( CZ(k2) <=  1200.D0 ) then
              dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
-            else if( CZ(k2) > 1.2D0 ) then
-             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * 0.d0 
-            end if
+!            else if( CZ(k2) > 1200.D0 ) then
+!             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * 0.d0 
+!            end if
 
              if ( k2 <= k ) then ! below layer
                 Qbelow = Qbelow + dQ
@@ -176,7 +176,8 @@ contains
        do k = KS, KE
           TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
 
-          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)
+          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) &
+                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)*DENS(k,i,j)
        enddo
 
     enddo
