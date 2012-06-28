@@ -19,6 +19,7 @@ module mod_atmos_hydrostatic
   !
   use mod_stdio, only: &
      IO_FID_LOG, &
+     IO_FID_CONF, &
      IO_L
   !-----------------------------------------------------------------------------
   implicit none
@@ -47,7 +48,7 @@ module mod_atmos_hydrostatic
   !
   !++ Private parameters & variables
   !
-  logical, parameter :: use_rapserate = .true.
+  logical  :: use_rapserate = .true.
   !-----------------------------------------------------------------------------
 contains
 
@@ -81,6 +82,8 @@ contains
     use mod_grid, only : &
        CZ  => GRID_CZ, &
        FDZ => GRID_FDZ
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(8), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
@@ -103,8 +106,29 @@ contains
     real(8), parameter :: criteria = 1.D-15
     integer, parameter :: itelim = 100
 
-    integer :: k, i, j, ite
+    integer :: k, i, j, ite, ierr
+
+    NAMELIST / PARAM_ATMOS_RAPSE / &
+       use_rapserate
+
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDRO/Categ[HYDRO]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_RAPSE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
+       call PRC_MPIstop
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_RAPSE. Check!'
+       call PRC_MPIstop
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_RAPSE)
 
     ! make density at surface
     do j = JS, JE
