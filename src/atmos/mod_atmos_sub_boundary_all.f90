@@ -463,7 +463,7 @@ contains
          if( ATMOS_BOUNDARY_USE_POTT ) then
           ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
          end if
-         if( ATMOS_BOUNDARY_USE_QT ) then
+         if( ATMOS_BOUNDARY_USE_QV ) then
           ATMOS_BOUNDARY_var(k,:,:,I_BND_QV) = ATMOS_BOUNDARY_VALUE_QV
          end if
        endif
