@@ -141,7 +141,7 @@ contains
     JEG = JHALO + JMAX + PRC_2Drank(PRC_myrank,2) * JMAX
 
     if( IO_L ) write(IO_FID_LOG,*) '*** GRID INFORMATION ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0)')         '*** delta Z, X, Y [m]                  :', &
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,f6.0,f6.0,f6.0)')         '*** delta Z, X, Y [m]                  :', &
                                                        DZ, DX, DY
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Computational Grid (global) :', &
                                                        KMAX,           ' x ',                      &
