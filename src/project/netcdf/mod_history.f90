@@ -104,6 +104,9 @@ contains
        units,  & ! (in)
        ktype   & ! (in)
        )
+    use mod_process, only: &
+         PRC_master, &
+         PRC_myrank
     implicit none
 
     integer,          intent(out) :: itemid
@@ -127,7 +130,7 @@ contains
        call PRC_MPIstop
     end if
 
-    call HistoryAddVariable(item, dims, desc, units, itemid)
+    call HistoryAddVariable(item, dims, desc, units, PRC_master, PRC_myrank, itemid)
 
     deallocate(dims)
 

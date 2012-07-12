@@ -100,7 +100,7 @@ module gtool_history
   real(8),                    private, allocatable, save :: History_tstrsec(:)
   real(8),                    private, allocatable, save :: History_tsumsec(:)
 
-  integer,                    private,              save :: History_id_count = 1 !> number of registered item
+  integer,                    private,              save :: History_id_count = 0 !> number of registered item
 
   character(len=File_HSHORT), private, allocatable, save :: History_dim_name(:)
   integer,                    private, allocatable, save :: History_dim_size(:)
@@ -333,6 +333,8 @@ contains
       dims,    &
       desc,    &
       units,   &
+      master,  &
+      myrank,  &
       itemid   )
     use gtool_file, only : &
          FileCreate, &
@@ -343,6 +345,8 @@ contains
     character(len=*), intent( in) :: dims(:)
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    integer,          intent( in) :: master
+    integer,          intent( in) :: myrank
     integer,          intent(out), optional :: itemid
 
     integer :: id
@@ -362,12 +366,13 @@ contains
        endif
     enddo
 
+
     if ( id < 0 ) then ! request-register matching check
        do n = 1, History_req_nmax
           if ( trim(varname) == History_req_item(n) ) then
-             id = History_id_count
              reqid  = n
              History_id_count = History_id_count + 1
+             id = History_id_count
 
              ! new file registration
              call FileCreate(History_fid(id),                           & ! (out)
@@ -375,6 +380,7 @@ contains
                   HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION,   & ! (in)
                   History_dim_name, History_dim_size, History_dim_desc, & ! (in)
                   History_dim_units, History_dim_type,                  & ! (in)
+                  master, myrank,                                       & ! (in)
                   time_units = HISTORY_TIME_UNITS                       & ! (in)
                   )
 
@@ -383,7 +389,7 @@ contains
                   varname, desc, units, dims,      & ! (in)
                   History_req_dtype  (reqid),      & ! (in)
                   History_req_tintsec(reqid),      & ! (in)
-                  History_req_tavg   (reqid)      & ! (in)
+                  History_req_tavg   (reqid)       & ! (in)
                   )
 
              ary_size = 1
@@ -397,6 +403,8 @@ contains
                    end if
                 end do
              end do
+
+             History_item   (id) = varname
 
              History_tintsec(id) = History_req_tintsec(reqid)
              History_tavg   (id) = History_req_tavg   (reqid)
@@ -434,7 +442,7 @@ contains
     character(len=*), intent(in) :: dim
     real(RP),         intent(in) :: val(:)
 
-    integer :: m
+    integer :: m, n
     logical :: flag = .false.
     intrinsic size
     !---------------------------------------------------------------------------
@@ -451,8 +459,15 @@ contains
        call PRC_MPIstop
     end if
 
-    do m = 1, History_req_nmax
-       call FilePutAxis( History_fid(m), dim, val )
+    do m = 1, History_id_count
+       flag = .true.
+       do n = 1, m-1
+          if ( History_fid(m) == History_fid(n) ) then
+             flag = .false.
+             exit
+          end if
+       end do
+       if ( flag ) call FilePutAxis( History_fid(m), dim, val )
     end do
 
     return
@@ -482,7 +497,8 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m
+    integer :: m, n
+    logical flag
     intrinsic size
     !---------------------------------------------------------------------------
 
@@ -513,9 +529,18 @@ contains
        end if
     end do
 
-    do m = 1, History_req_nmax
-       call FilePutAdditionalAxis( History_fid(m),     & ! (in)
-            name, desc, units, dim, type, var, size(var) ) ! (in)
+    do m = 1, History_id_count
+       flag = .true.
+       do n = 1, m-1
+          if ( History_fid(m) == History_fid(n) ) then
+             flag = .false.
+             exit
+          end if
+       end do
+       if ( flag ) then
+          call FilePutAdditionalAxis( History_fid(m),       & ! (in)
+               name, desc, units, dim, type, var, size(var) ) ! (in)
+       end if
     end do
 
     return
@@ -543,7 +568,7 @@ contains
 
     ! search item id
     itemid = -1
-    do n = 1, History_req_nmax
+    do n = 1, History_id_count
        if ( trim(varname) == trim(History_item(n)) ) then
           itemid = n
           exit
@@ -606,7 +631,7 @@ contains
 
     ! search item id
     itemid = -1
-    do n = 1, History_req_nmax
+    do n = 1, History_id_count
        if ( trim(varname) == trim(History_item(n)) ) then
           itemid = n
           exit
@@ -682,7 +707,7 @@ contains
 
     ! search item id
     itemid = -1
-    do n = 1, History_req_nmax
+    do n = 1, History_id_count
        if ( trim(varname) == trim(History_item(n)) ) then
           itemid = n
           exit
@@ -755,7 +780,7 @@ contains
 
     integer :: n
 
-    do n = 1, History_req_nmax
+    do n = 1, History_id_count
        call HistoryWrite( n, time )
     end do
 
@@ -846,7 +871,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) 'NAME           :size         :interval[sec]:avg'
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
  
-    do n = 1, History_id_count-1
+    do n = 1, History_id_count
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I10,1x,f13.3,1x,L)') History_item(n), History_size(n), History_tintsec(n), History_tavg(n)
     enddo
 
@@ -864,7 +889,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    do n = 1, History_req_nmax
+    do n = 1, History_id_count
        call FileClose( History_fid(n) )
     end do
 
@@ -890,7 +915,7 @@ contains
     logical, save :: firsttime = .true.
     !---------------------------------------------------------------------------
 
-    if( History_id_count == 1 ) return
+    if( History_id_count == 0 ) return
 
     if (firsttime) then
        firsttime = .false.

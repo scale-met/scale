@@ -121,6 +121,9 @@ contains
   !> Write lon&lat, control area/volume
   !-----------------------------------------------------------------------------
   subroutine GEOMETRICS_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -154,13 +157,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Output geometrics file ***'
 
     bname = trim(GEOMETRICS_OUT_BASENAME)
-    call FileCreate( fid,                                      & ! (out)
-         bname,                                                & ! (in)
-         GEOMETRICS_OUT_TITLE,                                 & ! (in)
-         GEOMETRICS_OUT_SOURCE,                                & ! (in)
-         GEOMETRICS_OUT_INSTITUTE,                             & ! (in)
-         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/), & ! (in)
-         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/) ) ! (in)
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         GEOMETRICS_OUT_TITLE,                                  & ! (in)
+         GEOMETRICS_OUT_SOURCE,                                 & ! (in)
+         GEOMETRICS_OUT_INSTITUTE,                              & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
 
     call FileAddVariable( vid(I_LON),             & ! (out)
          fid, 'lon', 'Longitude', 'degrees_east', & ! (in)

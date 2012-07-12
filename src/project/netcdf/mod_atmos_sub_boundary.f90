@@ -370,6 +370,9 @@ contains
   !> Write boundary data
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file, only: &
@@ -393,13 +396,14 @@ contains
 
     bname = ATMOS_BOUNDARY_OUT_BASENAME
 
-    call FileCreate( fid,                                      & ! (out)
-         bname,                                                & ! (in)
-         ATMOS_BOUNDARY_OUT_TITLE,                             & ! (in)
-         ATMOS_BOUNDARY_OUT_SOURCE,                            & ! (in)
-         ATMOS_BOUNDARY_OUT_INSTITUTE,                         & ! (in)
-         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/), & ! (in)
-         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/) ) ! (in)
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         ATMOS_BOUNDARY_OUT_TITLE,                              & ! (in)
+         ATMOS_BOUNDARY_OUT_SOURCE,                             & ! (in)
+         ATMOS_BOUNDARY_OUT_INSTITUTE,                          & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
 
     call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))

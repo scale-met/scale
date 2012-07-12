@@ -19,9 +19,13 @@ program scaleles3
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit, &
+     LogFinalize
   use mod_stdio, only: &
      IO_setup,   &
      IO_FID_LOG, &
+     IO_FID_CONF, &
      IO_L
   use mod_process, only: &
      PRC_setup,    &
@@ -88,6 +92,8 @@ program scaleles3
 
   ! setup process
   call PRC_setup
+
+  call LogInit(IO_FID_CONF, IO_FID_LOG)
 
   ! setup constants
   call CONST_setup
@@ -181,8 +187,11 @@ call STOP_COLLECTION  ("Main")
   call FileCloseAll
 
   call MONIT_finalize
+
   ! stop MPI
   call PRC_MPIstop
+
+  call LogFinalize
 
   stop
   !=============================================================================

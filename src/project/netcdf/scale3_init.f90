@@ -17,14 +17,19 @@ program scaleinit
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit, &
+     LogFinalize
   use mod_stdio, only: &
      IO_setup,   &
      IO_FID_LOG, &
+     IO_FID_CONF, &
      IO_L
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
-     PRC_MPIstop
+     PRC_MPIstop,&
+     PRC_myrank
   use mod_const, only: &
      CONST_setup
   use mod_random, only: &
@@ -96,6 +101,8 @@ program scaleinit
 
   ! setup process
   call PRC_setup
+
+  if ( IO_L ) call LogInit(IO_FID_CONF, IO_FID_LOG)
 
   ! setup constants
   call CONST_setup
@@ -180,6 +187,8 @@ program scaleinit
   call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop
+
+  call LogFinalize
 
   stop
   !=============================================================================

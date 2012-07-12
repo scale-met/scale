@@ -526,6 +526,9 @@ contains
   !> Write restart of atmospheric variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_restart_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -577,7 +580,7 @@ contains
     do n = 1, 15
        if ( bname(n:n) == ' ' ) bname(n:n) = '0'
     end do
-    write(bname,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(bname)
+    bname = trim(ATMOS_RESTART_OUT_BASENAME) // '_' // trim(bname)
 
     if ( RP == 8 ) then
        dtype = File_REAL8
@@ -585,13 +588,14 @@ contains
        dtype = File_REAL4
     end if
 
-    call FileCreate( fid,                                      & ! (out)
-         bname,                                                & ! (in)
-         ATMOS_RESTART_OUT_TITLE,                              & ! (in)
-         ATMOS_RESTART_OUT_SOURCE,                             & ! (in)
-         ATMOS_RESTART_OUT_INSTITUTE,                          & ! (in)
-         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/), & ! (in)
-         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/) ) ! (in)
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         ATMOS_RESTART_OUT_TITLE,                               & ! (in)
+         ATMOS_RESTART_OUT_SOURCE,                              & ! (in)
+         ATMOS_RESTART_OUT_INSTITUTE,                           & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
 
     call FileAddVariable( ap_vid(I_DENS),                        & ! (out)
          fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)

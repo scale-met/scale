@@ -205,6 +205,9 @@ contains
   !> Read restart of oceanpheric variables
   !-----------------------------------------------------------------------------
   subroutine OCEAN_vars_restart_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -245,7 +248,8 @@ contains
          OCEAN_RESTART_OUT_SOURCE,                & ! (in)
          OCEAN_RESTART_OUT_INSTITUTE,             & ! (in)
          (/'x','y'/), (/IMAX,JMAX/), (/'X','Y'/), & ! (in)
-         (/'m','m'/), (/File_REAL4,File_REAL4/) ) ! (in)
+         (/'m','m'/), (/File_REAL4,File_REAL4/),  & ! (in)
+         PRC_master, PRC_myrank                   ) ! (in)
 
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
     call FilePutAxis(fid, 'y', GRID_CY(JS:JE))

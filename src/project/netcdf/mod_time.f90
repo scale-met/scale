@@ -470,15 +470,15 @@ contains
     !---------------------------------------------------------------------------
 
     select case(trim(unit))
-    case('MSEC')
+    case('MSEC','msec')
        second = value * 1.D-3
-    case('SEC')
+    case('SEC','sec','s')
        second = value
-    case('MIN')
+    case('MIN','min')
        second = value * TIME_SEC
-    case('HOUR')
+    case('HOUR','hour','h')
        second = value * TIME_SEC * TIME_MIN
-    case('DAY')
+    case('DAY','day')
        second = value * TIME_SEC * TIME_MIN * TIME_HOUR
     case default
        write(*,*) ' xxx Unsupported UNIT:', trim(unit), value
@@ -506,15 +506,15 @@ contains
     !---------------------------------------------------------------------------
 
     select case(trim(unit))
-    case('MSEC')
+    case('MSEC', 'msec')
        value = second / 1.D-3
-    case('SEC')
+    case('SEC', 'sec', 's')
        value = second
-    case('MIN')
+    case('MIN', 'min')
        value = second / TIME_SEC
-    case('HOUR')
+    case('HOUR', 'hour', 'h')
        value = second / (TIME_SEC * TIME_MIN)
-    case('DAY')
+    case('DAY', 'day')
        value = second / (TIME_SEC * TIME_MIN * TIME_HOUR)
     case default
        write(*,*) ' xxx Unsupported UNIT:', trim(unit), value

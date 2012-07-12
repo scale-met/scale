@@ -199,7 +199,8 @@ contains
             ATMOS_REFSTATE_OUT_INSTITUTE, & ! (in)
             (/'z'/), (/KMAX/), (/'Z'/),   & ! (in)
             (/'m'/), (/File_REAL4/),      & ! (in)
-            single = .true.               )
+            PRC_master, PRC_myrank,       & ! (in)
+            single = .true.               ) ! (in)
 
        call FileAddVariable( vid_dens,                      & ! (out)
             fid, 'DENS', 'Reference state of rho', 'kg/m3', & ! (in)
