@@ -1,0 +1,1287 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+# -*- f90 -*-
+# vi: set sw=4 ts=8:
+$:.push "rb2f90"
+require("lib-rb2f90-macro")
+require("optparse")
+#
+# "dc_test.f90" Generator with Ruby.
+#
+opt = OptionParser.new
+opt.on('--max_dim=VAL') {|v| $max_dim = v.to_i}
+opt.parse!(ARGV)
+$max_dim = 7 unless $max_dim
+print <<"__EndOfFortran90Code__"
+!--
+#{rb2f90_header_comment}!
+!++
+!
+!= テストプログラム作成支援
+!
+!= Support making test programs
+!
+! Authors::   Yasuhiro MORIKAWA
+! Version::   $Id: dc_test.rb2f90,v 1.2 2009-03-22 02:17:34 morikawa Exp $
+! Tag Name::  $Name:  $
+! Copyright:: Copyright (C) GFD Dennou Club, 2005-2007. All rights reserved.
+! License::   See COPYRIGHT[link:../../COPYRIGHT]
+!
+
+module dc_test
+  !
+  != テストプログラム作成支援
+  !
+  != Support making test programs
+  !
+  ! <b>Note that Japanese and English are described in parallel.</b>
+  !
+  ! Fortran 90/95 におけるテストプログラム作成を補助するための
+  ! モジュールです.
+  !
+  ! {オブジェクト指向スクリプト言語 Ruby}[http://www.ruby-lang.org/]
+  ! の {Test::Unit クラス}[http://www.ruby-lang.org/ja/man/?cmd=view;name=Test%3A%3AUnit]
+  ! の機能の一部を模倣しています.
+  !
+  ! This module supports making Fortran 90/95 test programs.
+  !
+  ! A part of {Test::Unit class}[http://www.ruby-lang.org/ja/man/?cmd=view;name=Test%3A%3AUnit] 
+  ! in {Object-oriented programming language Ruby}[http://www.ruby-lang.org/]
+  ! is imitated.
+  !
+  !== Procedures List
+  !
+  ! AssertEqual        :: 正答とチェックすべき値が等しいことをチェックする.
+  ! AssertGreaterThan  :: ある値よりもチェックすべき値が大きいことをチェックする.
+  ! AssertLessThan     :: ある値よりもチェックすべき値が小さいことをチェックする.
+  ! ------------       :: ------------
+  ! AssertEqual        :: It is verified that a examined value is equal to 
+  !                       a right answer. 
+  ! AssertGreaterThan  :: It is verified that examined value is greater than
+  !                       a certain value. 
+  ! AssertLessThan     :: It is verified that examined value is less than
+  !                       a certain value. 
+  !
+  !== Usage
+  !
+  ! AssertEqual サブルーチンの使用例として, 以下に簡単な
+  ! テストプログラムを記します. 
+  ! *message* にはテストプログラムを実行した際に表示する
+  ! 任意の長さの文字列を与えます. 
+  ! そして, *answer* には正答を, *check* には照合すべき値を与えます.
+  ! *answer* と *check* にはそれぞれ文字型, 整数型, 単精度実数型, 
+  ! 倍精度実数型, 論理型の変数および
+  ! 配列 (1 〜 #{$max_dim}次元) を与えることができます. 
+  ! 2 つの引数の型および次元数は一致している必要があります. 
+  !
+  ! A simple test program is showed as an example of how "AssertEqual" 
+  ! subroutine is used as follows. 
+  ! Give arbitrary length string to *message*. This string is displayed 
+  ! when the test program is execute. 
+  ! And give the right answer to *answer*, examined value to *check*. 
+  ! Character, integer, simple precision real, double precision real, 
+  ! logical variables and arrays (rank 1 - #{$max_dim}) are allowed to 
+  ! give to *answer* and *check*. 
+  ! The types of *answer* and *check* must be same. 
+  !
+  !
+  !   program test
+  !     use dc_test, only: AssertEqual
+  !     implicit none
+  !     character(32):: str1
+  !     real:: r1(2)
+  !   
+  !     str1 = 'foo'
+  !     r1 = (/ 1.0, 2.0 /)
+  !     call AssertEqual(message='String test', answer='foo', check=str1)
+  !     call AssertEqual(message='Float test', &
+  !       & answer=(/1.0, 2.0/), check=r1)
+  !   end program test
+  !
+  !
+  ! *check* と *answer* との値, および配列のサイズが一致する場合に
+  ! テストプログラムは「Checking <i><*message* に与えられた文字></i> OK」
+  ! というメッセージを表示します. プログラムは続行します.
+  ! AssertEqual の代わりに AssertGreaterThan を使用する場合には
+  ! *check* が *answer* よりも大きい場合,
+  ! AssertLessThan を使用する場合には *check* が *answer* よりも小さい場合に
+  ! プログラムは続行します.
+  !
+  ! 一方で *answer* と *check* の値, もしくは配列のサイズが異なる場合には,
+  ! テストプログラムは「Checking <i><*message* に与えられた文字></i> FAILURE」
+  ! というメッセージを表示します. プログラムはエラーを発生させて終了します.
+  ! AssertEqual の代わりに AssertGreaterThan を使用する場合には
+  ! *check* が *answer* よりも大きくない場合,
+  ! AssertLessThan を使用する場合には *check* が *answer* よりも
+  ! 小さくない場合にプログラムは終了します.
+  !
+  !
+  ! When the values and array sizes of *check* and *answer* are same, 
+  ! the test program displays a message 
+  ! "Checking <i><string given to *message*></i> OK", and the program 
+  ! continues. Using "AssertGreaterThan" instead of "AssertEqual", 
+  ! the program continues when *check* is greater than *answer*.
+  ! Using "AssertLessThan", 
+  ! the program continues when *check* is less than *answer*.
+  !
+  ! On the other hand, when the values or array sizes of *check* and 
+  ! *answer* are different, the test program displays a message 
+  ! "Checking <i><string given to *message*></i> FAILURE", and the 
+  ! program aborts. Using "AssertGreaterThan" instead of "AssertEqual", 
+  ! the program aborts when *check* is not greater than *answer*.
+  ! Using "AssertLessThan", 
+  ! the program aborts when *check* is not less than *answer*.
+  ! 
+  !
+  !=== 精度の指定
+  !=== Specification of accuracy
+  !
+  ! 単精度実数型, 倍精度実数型同士の比較において, 
+  ! 丸め誤差や情報落ち誤差を考慮したい場合には, 
+  ! 引数 *significant_digits*, *ignore_digits* に整数型を与えてください. 
+  ! *significant_digits* には有効数字の桁数を, *ignore_digits* には 
+  ! 無視するオーダーを与えます. 以下の例では, 有効数字の桁数を 7 とし, 
+  ! 1.0e-6 以下の数値を無視して値の比較を行っています. 
+  !
+  ! About comparison of single precision reals or double precision reals, 
+  ! in order to consider rounding errors and information loss errors, 
+  ! specify integer to *significant_digits*, *ignore_digits* arguments. 
+  ! Specify significant digits to *significant_digits*, and 
+  ! negligible order to *ignore_digits*. 
+  ! In the following example, significant digits is 7, and
+  ! numerical value less than 1.0e-6 is ignored. 
+  !
+  !   program test2
+  !     use dc_test, only: AssertEqual
+  !     implicit none
+  !     real:: numd1(2,3)
+  !   
+  !     numd1 = reshape((/-19.432,  75.3, 3.183, &
+  !       &                 0.023,  -0.9, 328.2/), &
+  !       &              (/2,3/))
+  !   
+  !     call AssertEqual( 'Float (single precision) test', &
+  !       & answer = numd1, &
+  !       & check = ( numd1 / 3.0 ) * 3.0, &
+  !       & significant_digits = 7, ignore_digits = -6 )
+  !   
+  !   end program test2
+  !
+  !
+  !=== 負の値の取り扱い
+  !=== Treatment of negative values
+  !
+  ! 比較される *answer* の値と *check* の値が両方とも負の場合,
+  ! AssertGreaterThan および AssertLessThan は 2 つの値の絶対値の
+  ! 比較を行います. エラーメッセージは以下のようになります.
+  ! オプショナル引数 *negative_support* に .false. を与える場合, 
+  ! 絶対値での比較を行いません.
+  !
+  ! "AssertGreaterThan" and "AssertLessThan" compare absolute values
+  ! of *answer* and *check* when both compared two values are negative.
+  ! In this case, error message is as follows. 
+  ! When an optional argument *negative_support* is .false., 
+  ! the comparison with absolute values is not done.
+  !
+  !   ABSOLUTE value of check(14,1)  =  -1.189774221E-09
+  !     is NOT LESS THAN
+  !   ABSOLUTE value of answer(14,1) =  -1.189774405E-09
+  !
+  !
+  !=== 使用例
+  !=== Example
+  !
+  ! 使用例は以下の通りです.
+  !
+  ! Example of use is showed as follows.
+  !
+  !
+  !   program test_sample
+  !     use dc_types, only: STRING, DP
+  !     use dc_test, only: AssertEqual, AssertGreaterThan, AssertLessThan
+  !     implicit none
+  !     character(STRING):: str1, str2
+  !     real:: r1(2)
+  !     integer:: int1
+  !     real:: numr1(2)
+  !     real(DP):: numd1(2,3), numd2(2,3)
+  !     logical:: y_n
+  !   continue
+  !   
+  !     str1 = 'foo'
+  !     r1 = (/ 1.0_DP, 2.0_DP /)
+  !     call AssertEqual( message = 'String test', answer = 'foo', check = str1 )
+  !     call AssertEqual( message = 'Float test', &
+  !       & answer = (/1.0e0, 2.0e0/), check = r1 )
+  !   
+  !     str2 = "foo"
+  !     call AssertEqual( 'Character test', answer = 'foo', check = str2 )
+  !     int1 = 1
+  !     call AssertEqual( 'Integer test', answer = 1, check = int1 )
+  !     numr1(:) = (/ 0.001235423, 0.248271 /)
+  !     call AssertGreaterThan( 'Float test 1', &
+  !       & answer = (/ 0.00061771142, 0.1241354 /), check = numr1 / 2.0 )
+  !     call AssertLessThan( 'Float test 2', &
+  !       & answer = (/ 0.00061771158, 0.1241358 /), check = numr1 / 2.0 )
+  !     y_n = .true.
+  !     call AssertEqual( 'Logical test', answer = .true., check = y_n )
+  !   
+  !     numd1 = reshape( (/ -19.432_DP, 75.3_DP, 3.183_DP, &
+  !       &                  0.023_DP,  -0.9_DP, 328.2_DP /), &
+  !       &              (/ 2,3 /) )
+  !     call AssertGreaterThan( 'Double precision test 1', &
+  !       & answer = reshape( (/ -38.8639_DP, 150.5999_DP, 6.365999_DP, &
+  !       &                     0.0459999_DP,  -1.7999_DP, 656.3999_DP /), &
+  !       &                   (/ 2,3 /) ), &
+  !       & check = numd1*2.0_DP )
+  !     call AssertLessThan( 'Double precision test 2', &
+  !       & answer = reshape( (/ -38.86401_DP, 150.60001_DP,  6.3660001_DP, &
+  !       &                     0.04600001_DP, -1.8000001_DP,     656.6_DP /), &
+  !       &                   (/ 2,3 /) ), &
+  !       & check = numd1*2.0_DP, negative_support=.true. )
+  !   
+  !     call AssertEqual( 'Double precision test 3', &
+  !       & answer = numd1, &
+  !       & check = ( numd1 / 3.0_DP ) * 3.0_DP, &
+  !       & significant_digits = 10, ignore_digits = -10 )
+  !   
+  !     numd2 = reshape( (/  19.4e+7_DP,     75.3_DP, 3.18e-7_DP, &
+  !       &                   0.023e-7_DP, 0.9e+7_DP,   328.2_DP /), &
+  !       &              (/ 2,3 /) )
+  !   
+  !     call AssertEqual( 'Double precision test 4', &
+  !       & answer = numd2, &
+  !       & check = ( ( ( numd2 + 0.008_DP - 0.008_DP ) / 1.5_DP ) * 3.0_DP ) / 2.0_DP, &
+  !       & significant_digits = 10, ignore_digits = -15 )
+  !   
+  !     call AssertEqual( 'Double precision test 5', &
+  !       & answer = numd2, &
+  !       & check = ( ( ( numd2 + 0.008_DP - 0.008_DP ) / 1.5_DP ) * 3.0_DP ) / 2.0_DP, &
+  !       & significant_digits = 15, ignore_digits = -19 )
+  !   
+  !   end program test_sample
+  !
+  !
+  ! 上記の例では, 最後のテストで敢えて小さすぎる値を無視するオーダー
+  ! として設定しているため, 以下のようなメッセージを出力して
+  ! プログラムは強制終了します.
+  !
+  ! In above example, too small negligible order is specified on purpose 
+  ! in the last test. Then the program displays a following message, 
+  ! and aborts.
+  !
+  !     *** MESSAGE [AssertEQ] *** Checking String test OK
+  !     *** MESSAGE [AssertEQ] *** Checking Float test OK
+  !     *** MESSAGE [AssertEQ] *** Checking Character test OK
+  !     *** MESSAGE [AssertEQ] *** Checking Integer test OK
+  !     *** MESSAGE [AssertGT] *** Checking Float test 1 OK
+  !     *** MESSAGE [AssertLT] *** Checking Float test 2 OK
+  !     *** MESSAGE [AssertEQ] *** Checking Logical test OK
+  !     *** MESSAGE [AssertGT] *** Checking Double precision test 1 OK
+  !     *** MESSAGE [AssertLT] *** Checking Double precision test 2 OK
+  !     *** MESSAGE [AssertEQ] *** Checking Double precision test 3 OK
+  !     *** MESSAGE [AssertEQ] *** Checking Double precision test 4 OK
+  !     *** Error [AssertEQ] *** Checking Double precision test 5 FAILURE
+  !    
+  !      check(1,2)  =  3.179999999991523E-07
+  !        is NOT EQUAL to
+  !                     3.179999999998997E-07  < 
+  !      answer(1,2) <  3.180000000001004E-07
+  !   
+  !
+  use dc_types, only : STRING, DP
+  implicit none
+  private
+  public AssertEqual, AssertGreaterThan, AssertLessThan
+
+  interface AssertEqual
+                    #{foreach("\\$type\\$", "Char", "Int", "Real", "Double", %Q{
+                      #{forloop("\\$num\\$", 0, $max_dim, %Q{
+    module procedure DCTestAssertEqual$type$$num$
+                      })}
+                    })}
+
+                    #{forloop("\\$num\\$", 0, $max_dim, %Q{
+    module procedure DCTestAssertEqualLogical$num$
+                    })}
+
+                    #{foreach("\\$type\\$", "Real", "Double", %Q{
+                      #{forloop("\\$num\\$", 0, $max_dim, %Q{
+    module procedure DCTestAssertEqual$type$$num$Digits
+                      })}
+                    })}
+
+  end interface
+
+  interface AssertGreaterThan
+                    #{foreach("\\$type\\$", "Int", "Real", "Double", %Q{
+                      #{forloop("\\$num\\$", 0, $max_dim, %Q{
+    module procedure DCTestAssertGreaterThan$type$$num$
+                      })}
+                    })}
+  end interface
+
+  interface AssertLessThan
+                    #{foreach("\\$type\\$", "Int", "Real", "Double", %Q{
+                      #{forloop("\\$num\\$", 0, $max_dim, %Q{
+    module procedure DCTestAssertLessThan$type$$num$
+                      })}
+                    })}
+  end interface
+
+contains
+
+__EndOfFortran90Code__
+
+
+############################################################
+# AssertEqual
+                   types = ["Char", "Int", "Real", "Double"]
+                   def trim(type, value)
+                     return "trim(#{value})" if type == "Char"
+                     return value
+                   end
+types.each{ |type|
+for num in 0..$max_dim
+print <<"__EndOfFortran90Code__"
+
+  subroutine DCTestAssertEqual#{type}#{num}(message, answer, check)
+    use dc_types, only: STRING, TOKEN
+    implicit none
+    character(*), intent(in):: message
+    #{$type_intent_in[type]}, intent(in):: answer#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, intent(in):: check#{array_colon("#{num}")}
+    logical:: err_flag
+    character(STRING):: pos_str
+    #{$type_internal[type]}:: wrong, right
+
+                    #{ifelse(num, 0, %Q{
+                    }, %Q{
+    integer:: answer_shape(#{num}), check_shape(#{num}), pos(#{num})
+    logical:: consist_shape(#{num})
+    character(TOKEN):: pos_array(#{num})
+    integer, allocatable:: mask_array#{array_colon("#{num}")}
+    logical, allocatable:: judge#{array_colon("#{num}")}
+    logical, allocatable:: judge_rev#{array_colon("#{num}")}
+                    })}
+
+                    #{ifelse(type, "Char", %Q{
+                      #{ifelse(num, 0, %Q{
+                      }, %Q{
+    #{$type_internal[type]}, allocatable:: answer_fixed_length#{array_colon("#{num}")}
+    #{$type_internal[type]}, allocatable:: check_fixed_length#{array_colon("#{num}")}
+                      })}
+                    })}
+
+  continue
+    err_flag = .false.
+
+                    #{ifelse(num, 0, %Q{
+
+    err_flag = .not. #{trim(type, "answer")} == #{trim(type, "check")}
+    wrong = check
+    right = answer
+    pos_str = ''
+
+                    }, %Q{
+
+    answer_shape = shape(answer)
+    check_shape = shape(check)
+
+    consist_shape = answer_shape == check_shape
+
+    if (.not. all(consist_shape)) then
+      write(*,*) ' *** Error [AssertEQ] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  shape of check is (', check_shape, ')'
+      write(*,*) '    is INCORRECT'
+      write(*,*) '  Correct shape of answer is (', answer_shape, ')'
+
+      call abort()
+    end if
+
+
+    allocate( mask_array ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge_rev ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+                      #{ifelse(type, "Char", %Q{
+
+    allocate( answer_fixed_length ( &
+                        #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                        })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( check_fixed_length ( &
+                        #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    check_shape($dimnum$), &
+                        })}
+      &    check_shape(#{num})  )  &
+      &  )
+
+    answer_fixed_length = answer
+    check_fixed_length = check
+
+    judge = answer_fixed_length == check_fixed_length
+    deallocate(answer_fixed_length, check_fixed_length)
+
+                      }, %Q{
+
+    judge = answer == check
+
+                      })}
+
+    judge_rev = .not. judge
+    err_flag = any(judge_rev)
+    mask_array = 1
+    pos = maxloc(mask_array, judge_rev)
+
+    if (err_flag) then
+
+      wrong = check ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      right = answer ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+                      #{forloop("\\$dimnum\\$", 1, num, %Q{
+      write(unit=pos_array($dimnum$), fmt="(i20)") pos($dimnum$)
+                      })}
+
+      pos_str = '(' // &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    trim(adjustl(pos_array($dimnum$))) // ',' // &
+                      })}
+        &    trim(adjustl(pos_array(#{num}))) // ')'
+
+    end if
+    deallocate(mask_array, judge, judge_rev)
+
+                    })}
+
+
+    if (err_flag) then
+      write(*,*) ' *** Error [AssertEQ] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  check' // trim(pos_str) // '  = ', #{trim(type, "wrong")}
+      write(*,*) '    is NOT EQUAL to'
+      write(*,*) '  answer' // trim(pos_str) // ' = ', #{trim(type, "right")}
+
+      call abort()
+    else
+      write(*,*) ' *** MESSAGE [AssertEQ] *** Checking ' // trim(message) // ' OK'
+    end if
+
+
+  end subroutine DCTestAssertEqual#{type}#{num}
+
+__EndOfFortran90Code__
+end
+}
+
+
+for num in 0..$max_dim
+print <<"__EndOfFortran90Code__"
+  subroutine DCTestAssertEqualLogical#{num}(message, answer, check)
+    use dc_types, only: STRING
+    implicit none
+    character(*), intent(in):: message
+    logical, intent(in):: answer#{array_colon("#{num}")}
+    logical, intent(in):: check#{array_colon("#{num}")}
+
+                    #{ifelse(num, 0, %Q{
+    character(STRING):: answer_str
+    character(STRING):: check_str
+                    }, %Q{
+    integer:: answer_shape(#{num}), check_shape(#{num}), i
+    logical, allocatable:: answer_tmp(:), check_tmp(:)
+    character(STRING), allocatable:: answer_str_tmp(:), check_str_tmp(:)
+    character(STRING), allocatable:: answer_str#{array_colon("#{num}")}
+    character(STRING), allocatable:: check_str#{array_colon("#{num}")}
+                    })}
+
+
+  continue
+
+                    #{ifelse(num, 0, %Q{
+
+    if (answer) then
+      answer_str = ".true."
+    else
+      answer_str = ".false."
+    end if
+
+    if (check) then
+      check_str = ".true."
+    else
+      check_str = ".false."
+    end if
+
+                    }, %Q{
+
+    allocate(answer_tmp(size(answer)))
+    allocate(check_tmp(size(check)))
+    allocate(answer_str_tmp(size(answer)))
+    allocate(check_str_tmp(size(check)))
+    answer_tmp = pack(answer, .true.)
+    check_tmp = pack(check, .true.)
+
+    do i = 1, size(answer_tmp)
+      if (answer_tmp(i)) then
+        answer_str_tmp(i) = '.true.'
+      else
+        answer_str_tmp(i) = '.false.'
+      end if
+    end do
+
+    do i = 1, size(check_tmp)
+      if (check_tmp(i)) then
+        check_str_tmp(i) = '.true.'
+      else
+        check_str_tmp(i) = '.false.'
+      end if
+    end do
+
+    answer_shape = shape(answer)
+    check_shape = shape(check)
+
+    allocate( answer_str ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( check_str ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    check_shape($dimnum$), &
+                      })}
+      &    check_shape(#{num})  )  &
+      &  )
+
+    answer_str = reshape(answer_str_tmp, answer_shape)
+    check_str = reshape(check_str_tmp, check_shape)
+
+                    })}
+
+    call DCTestAssertEqualChar#{num}(message, answer_str, check_str)
+
+                    #{ifelse(num, 0, %Q{
+                    }, %Q{
+    deallocate(answer_str, answer_tmp, answer_str_tmp)
+    deallocate(check_str, check_tmp, check_str_tmp)
+                    })}
+
+  end subroutine DCTestAssertEqualLogical#{num}
+__EndOfFortran90Code__
+end
+
+                   types = ["Real", "Double"]
+types.each{ |type|
+for num in 0..$max_dim
+print <<"__EndOfFortran90Code__"
+
+  subroutine DCTestAssertEqual#{type}#{num}Digits( &
+    & message, answer, check, significant_digits, ignore_digits )
+    use dc_types, only: STRING, TOKEN
+    implicit none
+    character(*), intent(in):: message
+    #{$type_intent_in[type]}, intent(in):: answer#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, intent(in):: check#{array_colon("#{num}")}
+    integer, intent(in):: significant_digits
+    integer, intent(in):: ignore_digits
+    logical:: err_flag
+    character(STRING):: pos_str
+    #{$type_internal[type]}:: wrong, right_max, right_min
+    character(STRING):: pos_str_space
+    integer:: pos_str_len
+    #{$type_internal[type]}:: right_tmp
+
+                    #{ifelse(num, 0, %Q{
+    #{$type_intent_in[type]}:: answer_max
+    #{$type_intent_in[type]}:: answer_min
+                    }, %Q{
+    integer:: answer_shape(#{num}), check_shape(#{num}), pos(#{num})
+    logical:: consist_shape(#{num})
+    character(TOKEN):: pos_array(#{num})
+    integer, allocatable:: mask_array#{array_colon("#{num}")}
+    logical, allocatable:: judge#{array_colon("#{num}")}
+    logical, allocatable:: judge_rev#{array_colon("#{num}")}
+    logical, allocatable:: answer_negative#{array_colon("#{num}")}
+    logical, allocatable:: check_negative#{array_colon("#{num}")}
+    logical, allocatable:: both_negative#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, allocatable:: answer_max#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, allocatable:: answer_min#{array_colon("#{num}")}
+                    })}
+  continue
+    err_flag = .false.
+
+    if ( significant_digits < 1 ) then
+      write(*,*) ' *** Error [AssertEQ] *** '
+      write(*,*) '  Specify a number more than 1 to "significant_digits"'
+      call abort()
+    end if
+                    #{ifelse(num, 0, %Q{
+
+    if ( answer < 0#{$type_numsuf[type]} .and. check < 0#{$type_numsuf[type]} ) then
+      answer_max = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       - 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & + 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+
+      answer_min = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       + 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & - 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+    else
+
+      answer_max = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       + 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & + 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+
+      answer_min = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       - 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & - 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+    end if
+
+    wrong = check
+    right_max = answer_max
+    right_min = answer_min
+    if ( right_max < right_min ) then
+      right_tmp = right_max
+      right_max = right_min
+      right_min = right_tmp
+    end if
+
+    err_flag = .not. (answer_max > check .and. check > answer_min)
+
+    pos_str = ''
+
+                    }, %Q{
+
+    answer_shape = shape(answer)
+    check_shape = shape(check)
+
+    consist_shape = answer_shape == check_shape
+
+    if (.not. all(consist_shape)) then
+      write(*,*) ' *** Error [AssertEQ] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  shape of check is (', check_shape, ')'
+      write(*,*) '    is INCORRECT'
+      write(*,*) '  Correct shape of answer is (', answer_shape, ')'
+
+      call abort()
+    end if
+
+
+    allocate( mask_array ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge_rev ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( answer_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( check_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( both_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( answer_max ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( answer_min ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    answer_negative = answer < 0#{$type_numsuf[type]}
+    check_negative = check < 0#{$type_numsuf[type]}
+    both_negative = answer_negative .and. check_negative
+
+    where (both_negative)
+      answer_max = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       - 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & + 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+
+      answer_min = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       + 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & - 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+    elsewhere
+      answer_max = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       + 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & + 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+
+      answer_min = &
+        &   answer &
+        &   * (   1.0#{$type_dpsuf[type]} &
+        &       - 0.1#{$type_dpsuf[type]} ** significant_digits ) &
+        & - 0.1#{$type_dpsuf[type]} ** (- ignore_digits)
+    end where
+
+    judge = answer_max > check .and. check > answer_min
+    judge_rev = .not. judge
+    err_flag = any(judge_rev)
+    mask_array = 1
+    pos = maxloc(mask_array, judge_rev)
+
+    if (err_flag) then
+
+      wrong = check ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      right_max = answer_max ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      right_min = answer_min ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      if ( right_max < right_min ) then
+        right_tmp = right_max
+        right_max = right_min
+        right_min = right_tmp
+      end if
+
+                      #{forloop("\\$dimnum\\$", 1, num, %Q{
+      write(unit=pos_array($dimnum$), fmt="(i20)") pos($dimnum$)
+                      })}
+
+      pos_str = '(' // &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    trim(adjustl(pos_array($dimnum$))) // ',' // &
+                      })}
+        &    trim(adjustl(pos_array(#{num}))) // ')'
+
+    end if
+    deallocate(mask_array, judge, judge_rev)
+    deallocate(answer_negative, check_negative, both_negative)
+    deallocate(answer_max, answer_min)
+
+                    })}
+
+    if (err_flag) then
+      pos_str_space = ''
+      pos_str_len = len_trim(pos_str)
+
+      write(*,*) ' *** Error [AssertEQ] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  check' // trim(pos_str)  // '  = ', #{trim(type, "wrong")}
+      write(*,*) '    is NOT EQUAL to'
+      write(*,*) '        ' // pos_str_space(1:pos_str_len) &
+        &                                     // '   ', #{trim(type, "right_min")}, ' < '
+      write(*,*) '  answer' // trim(pos_str)  // ' < ', #{trim(type, "right_max")}
+
+      call abort()
+    else
+      write(*,*) ' *** MESSAGE [AssertEQ] *** Checking ' // trim(message) // ' OK'
+    end if
+
+
+  end subroutine DCTestAssertEqual#{type}#{num}Digits
+
+__EndOfFortran90Code__
+end
+}
+
+
+
+############################################################
+# AssertGreaterThan
+                   types = ["Int", "Real", "Double"]
+                   def trim(type, value)
+                     return value
+                   end
+types.each{ |type|
+for num in 0..$max_dim
+print <<"__EndOfFortran90Code__"
+
+  subroutine DCTestAssertGreaterThan#{type}#{num}( &
+    & message, answer, check, negative_support)
+    use dc_types, only: STRING, TOKEN
+    implicit none
+    character(*), intent(in):: message
+    #{$type_intent_in[type]}, intent(in):: answer#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, intent(in):: check#{array_colon("#{num}")}
+    logical, intent(in), optional:: negative_support
+    logical:: err_flag
+    logical:: negative_support_on
+    character(STRING):: pos_str
+    character(TOKEN):: abs_mes
+    #{$type_internal[type]}:: wrong, right
+
+                    #{ifelse(num, 0, %Q{
+                    }, %Q{
+    integer:: answer_shape(#{num}), check_shape(#{num}), pos(#{num})
+    logical:: consist_shape(#{num})
+    character(TOKEN):: pos_array(#{num})
+    integer, allocatable:: mask_array#{array_colon("#{num}")}
+    logical, allocatable:: judge#{array_colon("#{num}")}
+    logical, allocatable:: judge_rev#{array_colon("#{num}")}
+    logical, allocatable:: answer_negative#{array_colon("#{num}")}
+    logical, allocatable:: check_negative#{array_colon("#{num}")}
+    logical, allocatable:: both_negative#{array_colon("#{num}")}
+                    })}
+
+  continue
+    if (present(negative_support)) then
+      negative_support_on = negative_support
+    else
+      negative_support_on = .true.
+    end if
+
+    err_flag = .false.
+
+                    #{ifelse(num, 0, %Q{
+
+    err_flag = .not. #{trim(type, "answer")} < #{trim(type, "check")}
+    abs_mes = ''
+
+    if ( #{trim(type, "answer")} < 0#{$type_numsuf[type]} &
+      &  .and. #{trim(type, "check")} < 0#{$type_numsuf[type]} &
+      &  .and. negative_support_on ) then
+
+      err_flag = .not. err_flag
+      abs_mes = 'ABSOLUTE value of'
+    end if
+
+    wrong = check
+    right = answer
+    pos_str = ''
+
+                    }, %Q{
+
+    answer_shape = shape(answer)
+    check_shape = shape(check)
+
+    consist_shape = answer_shape == check_shape
+
+    if (.not. all(consist_shape)) then
+      write(*,*) ' *** Error [AssertGT] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  shape of check is (', check_shape, ')'
+      write(*,*) '    is INCORRECT'
+      write(*,*) '  Correct shape of answer is (', answer_shape, ')'
+
+      call abort()
+    end if
+
+
+    allocate( mask_array ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge_rev ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( answer_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( check_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( both_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    answer_negative = answer < 0#{$type_numsuf[type]}
+    check_negative = check < 0#{$type_numsuf[type]}
+    both_negative = answer_negative .and. check_negative
+    if (.not. negative_support_on) both_negative = .false.
+
+    judge = answer < check
+    where (both_negative) judge = .not. judge
+
+    judge_rev = .not. judge
+    err_flag = any(judge_rev)
+    mask_array = 1
+    pos = maxloc(mask_array, judge_rev)
+
+    if (err_flag) then
+
+      wrong = check ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      right = answer ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+                      #{forloop("\\$dimnum\\$", 1, num, %Q{
+      write(unit=pos_array($dimnum$), fmt="(i20)") pos($dimnum$)
+                      })}
+
+      pos_str = '(' // &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    trim(adjustl(pos_array($dimnum$))) // ',' // &
+                      })}
+        &    trim(adjustl(pos_array(#{num}))) // ')'
+
+      if ( both_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )  ) then
+
+        abs_mes = 'ABSOLUTE value of'
+      else
+        abs_mes = ''
+
+      end if
+
+    end if
+    deallocate(mask_array, judge, judge_rev)
+    deallocate(answer_negative, check_negative, both_negative)
+
+                    })}
+
+
+    if (err_flag) then
+      write(*,*) ' *** Error [AssertGT] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) ' ' // trim(abs_mes) // &
+        &        ' check' // trim(pos_str) // '  = ', #{trim(type, "wrong")}
+      write(*,*) '    is NOT GREATER THAN'
+      write(*,*) ' ' // trim(abs_mes) // &
+        &        ' answer' // trim(pos_str) // ' = ', #{trim(type, "right")}
+
+      call abort()
+    else
+      write(*,*) ' *** MESSAGE [AssertGT] *** Checking ' // trim(message) // ' OK'
+    end if
+
+
+  end subroutine DCTestAssertGreaterThan#{type}#{num}
+
+__EndOfFortran90Code__
+end
+}
+
+
+############################################################
+# AssertLessThan
+                   types = ["Int", "Real", "Double"]
+                   def trim(type, value)
+                     return value
+                   end
+types.each{ |type|
+for num in 0..$max_dim
+print <<"__EndOfFortran90Code__"
+
+  subroutine DCTestAssertLessThan#{type}#{num}( &
+    & message, answer, check, negative_support)
+    use dc_types, only: STRING, TOKEN
+    implicit none
+    character(*), intent(in):: message
+    #{$type_intent_in[type]}, intent(in):: answer#{array_colon("#{num}")}
+    #{$type_intent_in[type]}, intent(in):: check#{array_colon("#{num}")}
+    logical, intent(in), optional:: negative_support
+    logical:: err_flag
+    logical:: negative_support_on
+    character(STRING):: pos_str
+    character(TOKEN):: abs_mes
+    #{$type_internal[type]}:: wrong, right
+
+                    #{ifelse(num, 0, %Q{
+                    }, %Q{
+    integer:: answer_shape(#{num}), check_shape(#{num}), pos(#{num})
+    logical:: consist_shape(#{num})
+    character(TOKEN):: pos_array(#{num})
+    integer, allocatable:: mask_array#{array_colon("#{num}")}
+    logical, allocatable:: judge#{array_colon("#{num}")}
+    logical, allocatable:: judge_rev#{array_colon("#{num}")}
+    logical, allocatable:: answer_negative#{array_colon("#{num}")}
+    logical, allocatable:: check_negative#{array_colon("#{num}")}
+    logical, allocatable:: both_negative#{array_colon("#{num}")}
+                    })}
+
+  continue
+    if (present(negative_support)) then
+      negative_support_on = negative_support
+    else
+      negative_support_on = .true.
+    end if
+
+    err_flag = .false.
+
+                    #{ifelse(num, 0, %Q{
+
+
+
+    err_flag = .not. #{trim(type, "answer")} > #{trim(type, "check")}
+    abs_mes = ''
+
+    if ( #{trim(type, "answer")} < 0#{$type_numsuf[type]} &
+      &  .and. #{trim(type, "check")} < 0#{$type_numsuf[type]} &
+      &  .and. negative_support_on ) then
+
+      err_flag = .not. err_flag
+      abs_mes = 'ABSOLUTE value of'
+    end if
+
+    wrong = check
+    right = answer
+    pos_str = ''
+
+                    }, %Q{
+
+    answer_shape = shape(answer)
+    check_shape = shape(check)
+
+    consist_shape = answer_shape == check_shape
+
+    if (.not. all(consist_shape)) then
+      write(*,*) ' *** Error [AssertLT] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) '  shape of check is (', check_shape, ')'
+      write(*,*) '    is INCORRECT'
+      write(*,*) '  Correct shape of answer is (', answer_shape, ')'
+
+      call abort()
+    end if
+
+
+    allocate( mask_array ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( judge_rev ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( answer_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( check_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    allocate( both_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+      &    answer_shape($dimnum$), &
+                      })}
+      &    answer_shape(#{num})  )  &
+      &  )
+
+    answer_negative = answer < 0#{$type_numsuf[type]}
+    check_negative = check < 0#{$type_numsuf[type]}
+    both_negative = answer_negative .and. check_negative
+    if (.not. negative_support_on) both_negative = .false.
+
+    judge = answer > check
+    where (both_negative) judge = .not. judge
+
+    judge_rev = .not. judge
+    err_flag = any(judge_rev)
+    mask_array = 1
+    pos = maxloc(mask_array, judge_rev)
+
+    if (err_flag) then
+
+      wrong = check ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+      right = answer ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )
+
+                      #{forloop("\\$dimnum\\$", 1, num, %Q{
+      write(unit=pos_array($dimnum$), fmt="(i20)") pos($dimnum$)
+                      })}
+
+      pos_str = '(' // &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    trim(adjustl(pos_array($dimnum$))) // ',' // &
+                      })}
+        &    trim(adjustl(pos_array(#{num}))) // ')'
+
+      if ( both_negative ( &
+                      #{forloop("\\$dimnum\\$", 1, num-1, %Q{
+        &    pos($dimnum$), &
+                      })}
+        &    pos(#{num})  )  ) then
+
+        abs_mes = 'ABSOLUTE value of'
+      else
+        abs_mes = ''
+
+      end if
+
+    end if
+    deallocate(mask_array, judge, judge_rev)
+    deallocate(answer_negative, check_negative, both_negative)
+
+                    })}
+
+
+    if (err_flag) then
+      write(*,*) ' *** Error [AssertLT] *** Checking ' // trim(message) // ' FAILURE'
+      write(*,*) ''
+      write(*,*) ' ' // trim(abs_mes) // &
+        &        ' check' // trim(pos_str) // '  = ', #{trim(type, "wrong")}
+      write(*,*) '    is NOT LESS THAN'
+      write(*,*) ' ' // trim(abs_mes) // &
+        &        ' answer' // trim(pos_str) // ' = ', #{trim(type, "right")}
+
+      call abort()
+    else
+      write(*,*) ' *** MESSAGE [AssertLT] *** Checking ' // trim(message) // ' OK'
+    end if
+
+
+  end subroutine DCTestAssertLessThan#{type}#{num}
+
+__EndOfFortran90Code__
+end
+}
+
+
+
+
+print <<"__EndOfFortran90Code__"
+end module dc_test
+
+__EndOfFortran90Code__
+
+print <<"__EndOfFooter__"
+!--
+! vi:set readonly sw=4 ts=8:
+!
+#{rb2f90_emacs_readonly}!
+!++
+__EndOfFooter__
