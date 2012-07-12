@@ -44,9 +44,12 @@ module gtool_history
   public :: HistoryFinalize
 
   interface HistoryPut
-     module procedure HistoryPut1D
-     module procedure HistoryPut2D
-     module procedure HistoryPut3D
+     module procedure HistoryPut1DName
+     module procedure HistoryPut1DId
+     module procedure HistoryPut2DName
+     module procedure HistoryPut2DId
+     module procedure HistoryPut3DName
+     module procedure HistoryPut3DId
   end interface HistoryPut
 
   interface HistoryGet
@@ -92,8 +95,8 @@ module gtool_history
   real(8),                    private, allocatable, save :: History_tintsec(:)
   logical,                    private, allocatable, save :: History_tavg   (:)
 
-  real(DP),                   private, allocatable, save :: History_varsum (:,:)
-  logical,                    private, allocatable, save :: History_size   (:)
+  real(RP),                   private, allocatable, save :: History_varsum (:,:)
+  integer,                    private, allocatable, save :: History_size   (:)
   real(8),                    private, allocatable, save :: History_tstrsec(:)
   real(8),                    private, allocatable, save :: History_tsumsec(:)
 
@@ -136,14 +139,14 @@ contains
     character(len=*), intent(in)           :: dim_units(:)
     character(len=*), intent(in), optional :: dim_type(:)
     character(len=*), intent(in), optional :: default_basename
-    real(DP)        , intent(in), optional :: default_tinterval
+    real(RP)        , intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
     logical,          intent(in), optional :: default_taverage
     character(len=*), intent(in), optional :: default_datatype
 
     integer :: ndims
     character(len=IO_FILECHR)  :: HISTORY_DEFAULT_BASENAME  = 'history'
-    real(DP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.0D0
+    real(RP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.0D0
     character(len=File_HSHORT) :: HISTORY_DEFAULT_TUNIT     = 'sec'
     logical                    :: HISTORY_DEFAULT_TAVERAGE  = .false.
     character(len=File_HSHORT) :: HISTORY_DEFAULT_DATATYPE  = 'REAL4'
@@ -429,7 +432,7 @@ contains
     implicit none
 
     character(len=*), intent(in) :: dim
-    real(DP),         intent(in) :: val(:)
+    real(RP),         intent(in) :: val(:)
 
     integer :: m
     logical :: flag = .false.
@@ -475,7 +478,7 @@ contains
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim
-    real(DP),         intent(in) :: var(:)
+    real(RP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
@@ -493,9 +496,9 @@ contains
           call PRC_MPIstop
        end if
     else
-       if ( DP == 4 ) then
+       if ( RP == 4 ) then
           type = File_REAL4
-       else if ( DP == 8 ) then
+       else if ( RP == 8 ) then
           type = File_REAL8
        end if
     end if
@@ -521,106 +524,226 @@ contains
   !-----------------------------------------------------------------------------
   ! interface HistoryPut
   !-----------------------------------------------------------------------------
-  subroutine HistoryPut1D( &
+  subroutine HistoryPut1DName( &
        varname, &
        var,     &
        time,    &
        dt,      &
-       itemid,  &
        force    )
     implicit none
 
     character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:)
-    real(DP),         intent(in)           :: time
-    real(DP),         intent(in)           :: dt
-    integer,          intent(in), optional :: itemid
+    real(RP),         intent(in)           :: var(:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
     logical,          intent(in), optional :: force
 
-    integer :: id, n
+    integer :: itemid, n
     !---------------------------------------------------------------------------
 
-    if ( present(itemid) ) then
-       id = itemid
-    else
-       ! search item id
-       id = -1
-       do n = 1, History_req_nmax
-          if ( trim(varname) == trim(History_item(n)) ) then
-             id = n
-             exit
-          end if
-       end do
-    end if
+    ! search item id
+    itemid = -1
+    do n = 1, History_req_nmax
+       if ( trim(varname) == trim(History_item(n)) ) then
+          itemid = n
+          exit
+       end if
+    end do
 
-    if ( id < 0 ) return
+    call HistoryPut1DId(itemid, var, time, dt, force)
 
-    if ( History_tavg(id) ) then
-       History_varsum(1:History_size(id),id) = &
-            History_varsum(1:History_size(id),id) &
+    return
+  end subroutine HistoryPut1DName
+  subroutine HistoryPut1DId( &
+       itemid,  &
+       var,     &
+       time,    &
+       dt,      &
+       force    )
+    implicit none
+
+    integer,          intent(in)           :: itemid
+    real(RP),         intent(in)           :: var(:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
+    logical,          intent(in), optional :: force
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    if ( History_tavg(itemid) ) then
+       History_varsum(1:History_size(itemid),itemid) = &
+            History_varsum(1:History_size(itemid),itemid) &
             + var(:) * dt
     else
-       History_varsum(1:History_size(id),id) = var(:)
+       History_varsum(1:History_size(itemid),itemid) = var(:)
     endif
-    History_tsumsec(id) = History_tsumsec(id) + dt
+    History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     if ( ( present(force) .and. force ) .or. &
-         History_tsumsec(id) - History_tintsec(id) > -eps ) then
-       call HistoryWrite(id, time)
+         History_tsumsec(itemid) - History_tintsec(itemid) > -eps ) then
+       call HistoryWrite(itemid, time)
     end if
 
     return
-  end subroutine HistoryPut1D
-  subroutine HistoryPut2D( &
+  end subroutine HistoryPut1DId
+  subroutine HistoryPut2DName( &
        varname, &
        var,     &
        time,    &
        dt,      &
-       itemid,  &
        force    )
     implicit none
 
     character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:,:)
-    real(DP),         intent(in)           :: time
-    real(DP),         intent(in)           :: dt
-    integer,          intent(in), optional :: itemid
+    real(RP),         intent(in)           :: var(:,:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
     logical,          intent(in), optional :: force
 
-    intrinsic size
+    integer :: itemid, n
     !---------------------------------------------------------------------------
 
-    call HistoryPut1D(varname, &
-         reshape(var(:,:),(/size(var)/)), &
-         time, dt, itemid, force )
+    ! search item id
+    itemid = -1
+    do n = 1, History_req_nmax
+       if ( trim(varname) == trim(History_item(n)) ) then
+          itemid = n
+          exit
+       end if
+    end do
+
+    call HistoryPut2DId(itemid, var, time, dt, force)
 
     return
-  end subroutine HistoryPut2D
-  subroutine HistoryPut3D( &
+  end subroutine HistoryPut2DName
+  subroutine HistoryPut2DId( &
+       itemid,  &
+       var,     &
+       time,    &
+       dt,      &
+       force    )
+    implicit none
+
+    integer,          intent(in)           :: itemid
+    real(RP),         intent(in)           :: var(:,:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
+    logical,          intent(in), optional :: force
+
+    integer :: ij(2)
+    integer :: i, j
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    ij = shape(var)
+
+    if ( History_tavg(itemid) ) then
+       do j = 1, ij(2)
+       do i = 1, ij(1)
+          History_varsum(j*ij(1)+i,itemid) = &
+                  History_varsum(j*ij(1)+i,itemid) + var(i,j) * dt
+       end do
+       end do
+    else
+       do j = 1, ij(2)
+       do i = 1, ij(1)
+          History_varsum(j*ij(1)+i,itemid) = var(i,j)
+       end do
+       end do
+    endif
+    History_tsumsec(itemid) = History_tsumsec(itemid) + dt
+
+    if ( ( present(force) .and. force ) .or. &
+         History_tsumsec(itemid) - History_tintsec(itemid) > -eps ) then
+       call HistoryWrite(itemid, time)
+    end if
+
+    return
+  end subroutine HistoryPut2DId
+  subroutine HistoryPut3DName( &
        varname, &
        var,     &
        time,    &
        dt,      &
-       itemid,  &
        force    )
     implicit none
 
     character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:,:,:)
-    real(DP),         intent(in)           :: time
-    real(DP),         intent(in)           :: dt
-    integer,          intent(in), optional :: itemid
+    real(RP),         intent(in)           :: var(:,:,:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
     logical,          intent(in), optional :: force
 
-    intrinsic size
+    integer :: itemid, n
     !---------------------------------------------------------------------------
 
-    call HistoryPut1D(varname, &
-         reshape(var(:,:,:),(/size(var)/)), &
-         time, dt, itemid, force )
+    ! search item id
+    itemid = -1
+    do n = 1, History_req_nmax
+       if ( trim(varname) == trim(History_item(n)) ) then
+          itemid = n
+          exit
+       end if
+    end do
+
+    call HistoryPut3DId(itemid, var, time, dt, force)
 
     return
-  end subroutine HistoryPut3D
+  end subroutine HistoryPut3DName
+  subroutine HistoryPut3DId( &
+       itemid,  &
+       var,     &
+       time,    &
+       dt,      &
+       force    )
+    implicit none
+
+    integer,          intent(in)           :: itemid
+    real(RP),         intent(in)           :: var(:,:,:)
+    real(RP),         intent(in)           :: time
+    real(RP),         intent(in)           :: dt
+    logical,          intent(in), optional :: force
+
+    integer :: ijk(3)
+    integer :: i, j, k
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    ijk = shape(var)
+
+    if ( History_tavg(itemid) ) then
+       do k = 1, ijk(3)
+       do j = 1, ijk(2)
+       do i = 1, ijk(1)
+          History_varsum((k*ijk(2)+j)*ijk(1)+i,itemid) = &
+                  History_varsum((k*ijk(2)+j)*ijk(1)+i,itemid) &
+                  + var(i,j,k) * dt
+       end do
+       end do
+       end do
+    else
+       do k = 1, ijk(3)
+       do j = 1, ijk(2)
+       do i = 1, ijk(1)
+          History_varsum((k*ijk(2)+j)*ijk(1)+i,itemid) = var(i,j,k)
+       end do
+       end do
+       end do
+    endif
+    History_tsumsec(itemid) = History_tsumsec(itemid) + dt
+
+    if ( ( present(force) .and. force ) .or. &
+         History_tsumsec(itemid) - History_tintsec(itemid) > -eps ) then
+       call HistoryWrite(itemid, time)
+    end if
+
+    return
+  end subroutine HistoryPut3DId
 
   !-----------------------------------------------------------------------------
   subroutine HistoryWriteAll( &
@@ -628,7 +751,7 @@ contains
        )
     implicit none
 
-    real(DP), intent(in) :: time
+    real(RP), intent(in) :: time
 
     integer :: n
 
@@ -652,7 +775,7 @@ contains
          FileRead
     implicit none
 
-    real(DP),         intent(out) :: var(:)
+    real(RP),         intent(out) :: var(:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
@@ -673,7 +796,7 @@ contains
          FileRead
     implicit none
 
-    real(DP),         intent(out) :: var(:,:)
+    real(RP),         intent(out) :: var(:,:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
@@ -696,7 +819,7 @@ contains
          FileRead
     implicit none
 
-    real(DP),         intent(out) :: var(:,:,:)
+    real(RP),         intent(out) :: var(:,:,:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
@@ -797,7 +920,7 @@ contains
 
     endif
 
-    History_varsum(:,itemid) = 0.0_DP
+    History_varsum(:,itemid) = 0.0_RP
     History_tstrsec (itemid) = time
     History_tsumsec (itemid) = 0.D0
 

@@ -48,7 +48,7 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  real(DP), public, save :: SST(1,IA,JA) ! sea surface prognostics container (with HALO)
+  real(RP), public, save :: SST(1,IA,JA) ! sea surface prognostics container (with HALO)
 
   character(len=File_HSHORT), public, save :: OP_NAME(1)
   character(len=File_HMID),   public, save :: OP_DESC(1)
@@ -175,7 +175,7 @@ contains
        FileRead
     implicit none
 
-    real(DP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
 
@@ -221,7 +221,7 @@ contains
        GRID_CY
     implicit none
 
-    real(DP) :: restart_ocean(IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_ocean(IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     integer :: fid, vid
@@ -250,9 +250,9 @@ contains
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
     call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
 
-    if ( DP == 8 ) then
+    if ( RP == 8 ) then
        dtype = File_REAL8
-    else if ( DP == 4 ) then
+    else if ( RP == 4 ) then
        dtype = File_REAL4
     end if
 

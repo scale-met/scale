@@ -147,10 +147,10 @@ contains
     implicit none
 
     integer,  intent(in) :: itemid
-    real(DP), intent(in) :: var(:,:,:)
+    real(RP), intent(in) :: var(:,:,:)
     real(8),  intent(in) :: dt
 
-    real(DP) :: var2(IMAX*JMAX*KMAX)
+    real(RP) :: var2(IMAX*JMAX*KMAX)
     logical, save :: firsttime = .true.
     integer :: i, j, k
 
@@ -168,7 +168,7 @@ contains
           end do
        end do
     end do
-    call HistoryPut('', var2, TIME_NOWSEC, dt, itemid)
+    call HistoryPut(itemid, var2, TIME_NOWSEC, dt)
 
     call TIME_rapend  ('FILE O')
 
@@ -220,7 +220,7 @@ contains
        )
     implicit none
 
-    real(DP),         intent(out) :: var(:)
+    real(RP),         intent(out) :: var(:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
@@ -243,7 +243,7 @@ contains
        )
     implicit none
 
-    real(DP),         intent(out) :: var(:,:,:)
+    real(RP),         intent(out) :: var(:,:,:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step

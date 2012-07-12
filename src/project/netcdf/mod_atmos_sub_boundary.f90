@@ -59,8 +59,8 @@ module mod_atmos_boundary
   integer, public, parameter :: I_BND_POTT = 4 ! reference potential temperature [K]
   integer, public, parameter :: I_BND_QV   = 5 ! reference water vapor [kg/kg]
 
-  real(DP), public, save :: ATMOS_BOUNDARY_var  (KA,IA,JA,5) !> reference container (with HALO)
-  real(DP), public, save :: ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ! damping coefficient [0-1]
+  real(RP), public, save :: ATMOS_BOUNDARY_var  (KA,IA,JA,5) !> reference container (with HALO)
+  real(RP), public, save :: ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ! damping coefficient [0-1]
 
   !-----------------------------------------------------------------------------
   !
@@ -80,11 +80,11 @@ module mod_atmos_boundary
   logical,                   private :: ATMOS_BOUNDARY_USE_VELY      = .false. ! read from file?
   logical,                   private :: ATMOS_BOUNDARY_USE_POTT      = .false. ! read from file?
   logical,                   private :: ATMOS_BOUNDARY_USE_QV        = .false. ! read from file?
-  real(DP),                  private :: ATMOS_BOUNDARY_VALUE_VELZ    =  0.D0 ! w at boundary, 0 [m/s]
-  real(DP),                  private :: ATMOS_BOUNDARY_VALUE_VELX    =  5.D0 ! u at boundary, 5 [m/s]
-  real(DP),                  private :: ATMOS_BOUNDARY_tauz          = 75.D0 ! maximum value for damping tau (z) [s]
-  real(DP),                  private :: ATMOS_BOUNDARY_taux          = 75.D0 ! maximum value for damping tau (x) [s]
-  real(DP),                  private :: ATMOS_BOUNDARY_tauy          = 75.D0 ! maximum value for damping tau (y) [s]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELZ    =  0.D0 ! w at boundary, 0 [m/s]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELX    =  5.D0 ! u at boundary, 5 [m/s]
+  real(RP),                  private :: ATMOS_BOUNDARY_tauz          = 75.D0 ! maximum value for damping tau (z) [s]
+  real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.D0 ! maximum value for damping tau (x) [s]
+  real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.D0 ! maximum value for damping tau (y) [s]
 
   character(len=File_HSHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
@@ -173,8 +173,8 @@ contains
        FBFX => GRID_FBFX, &
        FBFY => GRID_FBFY
 
-    real(DP) :: coef, alpha
-    real(DP) :: ee1, ee2
+    real(RP) :: coef, alpha
+    real(RP) :: ee1, ee2
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
@@ -311,7 +311,7 @@ contains
        COMM_wait
     implicit none
 
-    real(DP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
 
@@ -384,7 +384,7 @@ contains
        GRID_CY
     implicit none
 
-    real(DP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     integer :: fid, vid
@@ -405,9 +405,9 @@ contains
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
     call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
 
-    if ( DP == 8 ) then
+    if ( RP == 8 ) then
        dtype = File_REAL8
-    else if ( DP == 4 ) then
+    else if ( RP == 4 ) then
        dtype = File_REAL4
     end if
 

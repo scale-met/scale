@@ -199,12 +199,12 @@ contains
        )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: dim_name
-    real(DP),         intent(in) :: val(:)
+    real(RP),         intent(in) :: val(:)
 
     integer error
 
     call file_put_axis( fid, & ! (in)
-         dim_name, val, DP,  & ! (in)
+         dim_name, val, RP,  & ! (in)
          error               ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx failed to put axis value'
@@ -230,13 +230,13 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(DP),         intent(in) :: val(:)
+    real(RP),         intent(in) :: val(:)
     integer,          intent(in) :: size
 
     integer error
 
     call file_put_additional_axis( fid,                     & ! (in)
-         name, desc, units, dim_name, dtype, val, size, DP, & ! (in)
+         name, desc, units, dim_name, dtype, val, size, RP, & ! (in)
          error                                              ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        write(*,*) 'xxx failed to put additional axis'
@@ -264,7 +264,7 @@ contains
     character(len=*), intent( in) :: units
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
-    real(DP),         intent( in), optional :: tint
+    real(RP),         intent( in), optional :: tint
     logical,          intent( in), optional :: tavg
 
     real(8) :: tint8
@@ -328,7 +328,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out) :: var(:)
+    real(RP),         intent(out) :: var(:)
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
@@ -368,7 +368,7 @@ contains
     end do
 
     call file_read_data( var(:), & ! (out)
-         dinfo, DP,              & ! (in)
+         dinfo, RP,              & ! (in)
          error                   ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to get data value'
@@ -387,7 +387,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:,:)
+    real(RP),         intent(out)           :: var(:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -438,7 +438,7 @@ contains
     end do
 
     call file_read_data( var(:,:), & ! (out)
-         dinfo, DP,                & ! (in)
+         dinfo, RP,                & ! (in)
          error                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to get data value'
@@ -457,7 +457,7 @@ contains
       )
     implicit none
 
-    real(DP),         intent(out)           :: var(:,:,:)
+    real(RP),         intent(out)           :: var(:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
@@ -508,7 +508,7 @@ contains
     end do
 
     call file_read_data( var(:,:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
+         dinfo, RP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to get data value'
@@ -529,10 +529,10 @@ contains
       )
     implicit none
 
-    real(DP), intent(in) :: var(:)
+    real(RP), intent(in) :: var(:)
     integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    real(RP), intent(in) :: t_start
+    real(RP), intent(in) :: t_end
 
     real(8) :: ts, te
 
@@ -541,7 +541,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:), ts, te, DP, & ! (in)
+    call file_write_data( vid, var(:), ts, te, RP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to write data'
@@ -558,10 +558,10 @@ contains
       )
     implicit none
 
-    real(DP), intent(in) :: var(:,:)
+    real(RP), intent(in) :: var(:,:)
     integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    real(RP), intent(in) :: t_start
+    real(RP), intent(in) :: t_end
 
     real(8) :: ts, te
     integer :: error
@@ -569,7 +569,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
+    call file_write_data( vid, var(:,:), ts, te, RP, & ! (in)
          error                                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to write data'
@@ -586,10 +586,10 @@ contains
       )
     implicit none
 
-    real(DP), intent(in) :: var(:,:,:)
+    real(RP), intent(in) :: var(:,:,:)
     integer,  intent(in) :: vid
-    real(DP), intent(in) :: t_start
-    real(DP), intent(in) :: t_end
+    real(RP), intent(in) :: t_start
+    real(RP), intent(in) :: t_end
 
     real(8) :: ts, te
     integer :: error
@@ -597,7 +597,7 @@ contains
 
     ts = t_start
     te = t_end
-    call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
+    call file_write_data( vid, var(:,:,:), ts, te, RP, & ! (in)
          error                                         ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        write(*,*) 'xxx faild to write data'

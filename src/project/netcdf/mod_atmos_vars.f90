@@ -78,7 +78,7 @@ module mod_atmos_vars
   integer,           public, save :: I_MOMY = 4
   integer,           public, save :: I_RHOT = 5
   character(len=4),  public, save :: AP_NAME(5)
-  character(len=10), public, save :: AP_DESC(5)
+  character(len=11), public, save :: AP_DESC(5)
   character(len=8),  public, save :: AP_UNIT(5)
 
   data AP_NAME / 'DENS', &
@@ -579,9 +579,9 @@ contains
     end do
     write(bname,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(bname)
 
-    if ( DP == 8 ) then
+    if ( RP == 8 ) then
        dtype = File_REAL8
-    else if ( DP == 4 ) then
+    else if ( RP == 4 ) then
        dtype = File_REAL4
     end if
 
@@ -962,7 +962,7 @@ contains
        enddo
        enddo
 
-       if ( iq >= 2 ) then
+       if ( QA >= 2 ) then
           do iq = QQS+1, QQE
           do j  = JS, JE
           do i  = IS, IE

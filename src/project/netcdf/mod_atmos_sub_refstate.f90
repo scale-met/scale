@@ -47,8 +47,8 @@ module mod_atmos_refstate
   !
   !++ Public parameters & variables
   !
-  real(DP), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
-  real(DP), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
+  real(RP), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -64,8 +64,8 @@ module mod_atmos_refstate
   character(len=File_HLONG), private :: ATMOS_REFSTATE_OUT_SOURCE    = 'SCALE-LES ver. 3'
   character(len=File_HLONG), private :: ATMOS_REFSTATE_OUT_INSTITUTE = 'AISC/RIKEN'
   character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE          = 'ISA'
-  real(DP),                  private :: ATMOS_REFSTATE_TEMP_SFC      = 300.D0 ! surface temperature
-  real(DP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM  = 300.D0 ! uniform potential temperature
+  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC      = 300.D0 ! surface temperature
+  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM  = 300.D0 ! uniform potential temperature
 
   !-----------------------------------------------------------------------------
 contains
@@ -184,9 +184,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Output grid file ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** Only at Master node ***'
 
-    if ( DP == 8 ) then
+    if ( RP == 8 ) then
        dtype = File_REAL8
-    else if ( DP == 4 ) then
+    else if ( RP == 4 ) then
        dtype = File_REAL4
     end if
 

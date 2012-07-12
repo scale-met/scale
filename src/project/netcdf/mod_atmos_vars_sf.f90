@@ -47,11 +47,11 @@ module mod_atmos_vars_sf
   !
   !++ Public parameters & variables
   !
-  real(DP), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
-  real(DP), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
-  real(DP), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
-  real(DP), public, save :: SFLX_POTT(IA,JA) ! POTT [K]
-  real(DP), public, save :: SFLX_QV  (IA,JA) ! tracer mixing ratio [kg/kg]
+  real(RP), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
+  real(RP), public, save :: SFLX_POTT(IA,JA) ! POTT [K]
+  real(RP), public, save :: SFLX_QV  (IA,JA) ! tracer mixing ratio [kg/kg]
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -117,7 +117,7 @@ contains
        FileRead
     implicit none
 
-!    real(DP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
 !    character(len=IO_FILECHR) :: bname
 !    character(len=8)          :: lname
@@ -158,7 +158,7 @@ contains
 !       FielClose
     implicit none
 
-!    real(DP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
 !    character(len=IO_FILECHR) :: bname
 !    integer :: n
