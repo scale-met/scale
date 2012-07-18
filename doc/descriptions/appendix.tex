@@ -1,0 +1,50 @@
+
+\appendix
+
+\chapter{4th order advection scheme}
+{
+\footnotesize
+The 4th order scheme of advection with the constant velocity:
+\begin{eqnarray}
+&&   \frac{\partial \phi}{\partial t}
+ + c \frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x} = 0
+\end{eqnarray}
+where
+\begin{eqnarray}
+&& \phi_{i+2} = \phi_{i}
++ 2 \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ 2 \Delta x^2 \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
++ \frac{4 \Delta x^3}{3} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{2 \Delta x^4}{3} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_{i+1} = \phi_{i}
++ \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ \frac{\Delta x^2}{2} \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
++ \frac{\Delta x^3}{6} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{\Delta x^4}{24} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_i = \phi_i\\
+&& \phi_{i-1} = \phi_{i}
+- \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ \frac{\Delta x^2}{2} \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
+- \frac{\Delta x^3}{6} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{\Delta x^4}{24} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)\\
+&& \phi_{i+2} = \phi_{i}
+- 2 \Delta x \left(\frac{\partial \phi}{\partial x}\right)_{i}
++ 2 \Delta x^2 \left(\frac{\partial^2 \phi}{\partial x^2}\right)_{i}
+- \frac{4 \Delta x^3}{3} \left(\frac{\partial^3 \phi}{\partial x^3}\right)_{i}
++ \frac{2 \Delta x^4}{3} \left(\frac{\partial^3 \phi}{\partial x^4}\right)_{i}
++ O(\Delta x^5)
+\end{eqnarray}
+Therefore,
+\begin{eqnarray}
+&&
+\frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x}
+= \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)\\
+&&
+\frac{-\phi_{i+2}+7\phi_{i+1}+\phi_{i+1}-7\phi_{i-1}-\phi_{i-1}+\phi_{i+2}}{12\Delta x}
+= \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)
+\end{eqnarray}
+
+
