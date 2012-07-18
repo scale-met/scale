@@ -93,6 +93,8 @@ contains
 
   call test_energy
 
+  call test_big
+
   call test_double
 
   call test_sfc_flux
@@ -310,14 +312,10 @@ subroutine test_energy
        GRID_FX, &
        GRID_FY
 
-  real(RP) :: BIG(KA,IA,JA)
-
   real(RP) :: eng1, eng2
   real(RP) :: PI2
   real(RP) :: dt
   PI2 = atan( 1.0_RP )*8.0_RP
-
-  BIG(:,:,:) = 9.99E10_RP
 
   write(*,*) "Test energy"
   ! Smagorinsky-Lilly SGS model has no back scatter,
@@ -363,16 +361,6 @@ subroutine test_energy
        SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
        )
 
-  call AssertLessThan("MOMZ_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMZ_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("MOMX_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMX_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("MOMY_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMY_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("RHOT_t", BIG(KS:KE,IS:IE,JS:JE), abs(RHOT_t(KS:KE,IS:IE,JS:JE)))
-  message = "iq = ??"
-  do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE), abs(QTRC_t(KS:KE,IS:IE,JS:JE,iq)))
-  end do
-
   do j = JS, JE
   do i = IS, IE
   do k = KS, KE
@@ -396,6 +384,66 @@ subroutine test_energy
   call AssertLessThan("energy", eng1, eng2)
 
 end subroutine test_energy
+!=============================================================================
+subroutine test_big
+  use mod_grid, only: &
+       GRID_FZ, &
+       GRID_FX, &
+       GRID_FY
+
+  real(RP) :: BIG(KA,IA,JA)
+
+  real(RP) :: eng1, eng2
+  real(RP) :: PI2
+  real(RP) :: dt
+  PI2 = atan( 1.0_RP )*8.0_RP
+
+  BIG(:,:,:) = 9.99E8_RP
+
+  write(*,*) "Test big"
+  ! check not to include BUG (UNDEF) value
+
+  SFLX_MOMZ(:,:) = 0.0_RP
+  SFLX_MOMX(:,:) = 0.0_RP
+  SFLX_MOMY(:,:) = 0.0_RP
+  SFLX_POTT(:,:) = 0.0_RP
+  SFLX_QV  (:,:) = 0.0_RP
+
+  do j = 1, JA
+  do i = 1, IA
+  do k = 1, KA
+     MOMZ(k,i,j) = 1.0_RP * sin( k*1.0_RP + i*2.0_RP + j*3.0_RP )
+     MOMX(k,i,j) = 2.0_RP * cos( k*2.0_RP + i*3.0_RP + j*1.0_RP )
+     MOMY(k,i,j) = 3.0_RP * sin( k*3.0_RP + i*1.0_RP + j*2.0_RP )
+     RHOT(k,i,j) = 4.0_RP * cos( k*1.0_RP + i*1.0_RP + j*3.0_RP ) + 300.0_RP
+     DENS(k,i,j) = 5.0_RP * sin( k*2.0_RP + i*2.0_RP + j*2.0_RP ) + 6.0_rp
+     do iq = 1, QA
+        QTRC(k,i,j,iq) = 6.0_RP * sin( k*3.0_RP + i*3.0_RP + j*1.0_RP + iq*2.0_RP ) + 6.0_RP
+     end do
+  end do
+  end do
+  end do
+
+  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
+
+  call ATMOS_PHY_TB_main( &
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
+       tke, nu_C, Ri, Pr,                      & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
+       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
+       )
+
+  call AssertLessThan("MOMZ_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMZ_t(KS:KE,IS:IE,JS:JE)))
+  call AssertLessThan("MOMX_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMX_t(KS:KE,IS:IE,JS:JE)))
+  call AssertLessThan("MOMY_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMY_t(KS:KE,IS:IE,JS:JE)))
+  call AssertLessThan("RHOT_t", BIG(KS:KE,IS:IE,JS:JE), abs(RHOT_t(KS:KE,IS:IE,JS:JE)))
+  message = "iq = ??"
+  do iq = 1, QA
+     write(message(6:7), "(i2)") iq
+     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE), abs(QTRC_t(KS:KE,IS:IE,JS:JE,iq)))
+  end do
+
+end subroutine test_big
 !=============================================================================
 subroutine test_noise
 
