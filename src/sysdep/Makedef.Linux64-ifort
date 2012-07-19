@@ -48,3 +48,6 @@ FRONT_CFLAGS = -O3 -ftz -m64
 
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
+
+
+NETCDF_LIBS = -lnetcdf
