@@ -73,6 +73,8 @@ module mod_history
 contains
   !-----------------------------------------------------------------------------
   subroutine HIST_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
 
     ! only for register
     call TIME_rapstart('FILE I')
@@ -88,7 +90,8 @@ contains
        (/IMAX,JMAX,KMAX/), &
        (/'X', 'Y', 'Z'/), &
        (/'meter','meter','meter'/), &
-       (/'REAL4','REAL4','REAL4'/) &
+       (/'REAL4','REAL4','REAL4'/), &
+       namelist_fid = IO_FID_CONF &
        )
 
     call TIME_rapend  ('FILE O')
@@ -145,8 +148,6 @@ contains
       var,    & ! (in)
       dt      & ! (in)
       )
-    use mod_time, only : &
-         TIME_NOWSEC
     implicit none
 
     integer,  intent(in) :: itemid
@@ -167,11 +168,11 @@ contains
     do k = 1, KMAX
        do j = 1, JMAX
           do i = 1, IMAX
-             var2(i + j*IMAX + k*JMAX*IMAX) = var(KS+k,IS+i,JS+j)
+             var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
           end do
        end do
     end do
-    call HistoryPut(itemid, var2, TIME_NOWSEC, dt)
+    call HistoryPut(itemid, var2, dt)
 
     call TIME_rapend  ('FILE O')
 
@@ -270,7 +271,11 @@ contains
          TIME_NOWSEC
     implicit none
 
+    call TIME_rapstart('FILE O')
+
     call HistoryWriteAll( TIME_NOWSEC )
+
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_write
@@ -305,9 +310,9 @@ contains
 
     call TIME_rapstart('FILE O')
 
-    call HistoryPutAxis('z', GRID_CZ(KS:KE))
     call HistoryPutAxis('x', GRID_CX(IS:IE))
     call HistoryPutAxis('y', GRID_CY(JS:JE))
+    call HistoryPutAxis('z', GRID_CZ(KS:KE))
 
     call HistoryPutAdditionalAxis('CZ', 'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
     call HistoryPutAdditionalAxis('CX', 'Grid Center Position X', 'm', 'CX', GRID_CX)

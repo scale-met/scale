@@ -31,7 +31,7 @@ module dc_log
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: LOG_LMSG = 256
+  integer, public, parameter :: LOG_LMSG = 1024
 
   !-----------------------------------------------------------------------------
   !
@@ -49,17 +49,20 @@ module dc_log
   integer, private :: LOG_ilevel = LOG_INFO
   integer, private :: LOG_fid   = STDOUT
 
+  logical, private :: LOG_master = .true.
   logical, private :: LOG_opened = .false.
 
 contains
 
   subroutine LogInit( &
        fid_conf, & ! (in)
-       fid_log   & ! (in) optional
+       fid_log,  & ! (in) optional
+       master    & ! (in) optional
        )
     implicit none
     integer, intent(in) :: fid_conf
     integer, intent(in), optional :: fid_log
+    logical, intent(in), optional :: master
 
     character(len=1)   :: LOG_LEVEL = 'I'
     character(len=100) :: LOG_FILE = "LOG_"
@@ -70,6 +73,8 @@ contains
          LOG_LEVEL, &
          LOG_FILE
   !-----------------------------------------------------------------------------
+
+    if ( present(master) ) LOG_master = master
 
     call date_and_time(LOG_FILE(4:11), LOG_FILE(12:21))
 
@@ -127,15 +132,15 @@ contains
 
     select case (trim(type))
     case ('E', 'e')
-       if ( LOG_ilevel >= LOG_ERROR ) write(LOG_fid,*) message
+       if ( LOG_ilevel >= LOG_ERROR ) call LogPut(message)
        write(STDERR,*) message
        call abort
     case ('W', 'w')
-       if ( LOG_ilevel >= LOG_WARN ) write(LOG_fid,*) message
+       if ( LOG_ilevel >= LOG_WARN ) call LogPut(message)
     case ('I', 'i')
-       if ( LOG_ilevel >= LOG_INFO ) write(LOG_fid,*) message
+       if ( LOG_ilevel >= LOG_INFO ) call LogPut(message)
     case ('D', 'd')
-       if ( LOG_ilevel >= LOG_DEBUG ) write(LOG_fid,*) message
+       if ( LOG_ilevel >= LOG_DEBUG ) call LogPut(message)
     case default
        write(STDERR,*) 'BUG: wrong log level'
        call abort
@@ -143,5 +148,16 @@ contains
 
     return
   end subroutine Log
+
+!  private
+  subroutine LogPut( &
+       message & ! (in)
+       )
+    character(len=*) :: message
+
+    if ( LOG_master ) write(LOG_fid, *) trim(message)
+
+    return
+  end subroutine LogPut
 
 end module dc_log

@@ -47,10 +47,10 @@ makebin: $(PROJ_EXE)
 	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)/$(PROJ_EXE)_$(index)_$(tracer)_$(precision)_$(postfix)
 
 $(PROJ_EXE): $(PROJ_EXE).o gtool_history.o gtool_file_f.o $(FORMAT_OBJ)
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) gtool_history.o gtool_file.o gtool_file_f.o dc_log.o $(FORMAT_OBJ) $(NETCDF_LIBS)
+	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) gtool_history.o gtool_file.o gtool_file_f.o dc_calendar.o $(FORMAT_OBJ) $(NETCDF_LIBS)
 
 scale3_init: scale3_init.o mod_mkinit.o mod_atmos_sub_hydrostatic.o mod_random.o
-	$(LD) $(LFLAGS) -o $@ $^ $(MODS) gtool_history.o gtool_file.o gtool_file_f.o dc_log.o $(FORMAT_OBJ) $(NETCDF_LIBS)
+	$(LD) $(LFLAGS) -o $@ $^ $(MODS) gtool_history.o gtool_file.o gtool_file_f.o dc_calendar.o $(FORMAT_OBJ) $(NETCDF_LIBS)
 
 mod_random.o: ../../common/mod_random.f90
 mod_atmos_sub_hydrostatic.o: ../../atmos/mod_atmos_sub_hydrostatic.f90
@@ -58,7 +58,7 @@ mod_mkinit.o: ../../preprocess/mod_mkinit.f90 mod_random.o mod_atmos_sub_hydrost
 scale3_init.o: ${PROJ_EXE} scale3_init.f90 mod_mkinit.o mod_atmos_sub_hydrostatic.o mod_random.o $(FORMAT_OBJ) gtool_file.o
 
 gtool_file.o: gtool_file.f90 gtool_file_h.o dc_log.o
-gtool_history.o: gtool_history.f90 gtool_file.o
+gtool_history.o: gtool_history.f90 gtool_file.o dc_calendar.o dc_log.o
 gtool_file_f.o: gtool_file_f.c
 
 mod_atmos_vars.o: gtool_file.o
@@ -71,7 +71,13 @@ mod_ocean_vars.o: gtool_file.o
 
 mod_history.o: gtool_history.o
 
+dc_calendar.f90 : dc_calendar.f90.erb
+	erb $< > $@
+
 gtool_file.f90: gtool_file.f90.erb
+	erb $< > $@
+
+gtool_history.f90: gtool_history.f90.erb
 	erb $< > $@
 
 

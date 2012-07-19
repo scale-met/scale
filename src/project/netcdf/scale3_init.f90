@@ -102,7 +102,8 @@ program scaleinit
   ! setup process
   call PRC_setup
 
-  if ( IO_L ) call LogInit(IO_FID_CONF, IO_FID_LOG)
+  ! init LOG
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
 
   ! setup constants
   call CONST_setup
