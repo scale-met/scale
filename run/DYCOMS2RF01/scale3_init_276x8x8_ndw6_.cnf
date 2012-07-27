@@ -1,0 +1,47 @@
+
+#####
+#
+# Scale3 init_turbdyn configulation
+#
+#####
+
+&PARAM_PRC
+ PRC_NUM_X       = 12,
+ PRC_NUM_Y       = 12,
+ PRC_PERIODIC_X  = .true.,
+ PRC_PERIODIC_Y  = .true.,
+/
+
+&PARAM_GRID
+ GRID_OUT_BASENAME = "grid_276x8x8",
+/
+
+&PARAM_GEOMETRICS
+ GEOMETRICS_startlonlat  = 120.D0, 30.D0,
+ GEOMETRICS_rotation     = 10.D0,
+ GEOMETRICS_OUT_BASENAME = "",
+/
+
+&PARAM_COMM
+ COMM_total_doreport  = .true.,
+ COMM_total_globalsum = .true.,
+/
+
+&PARAM_ATMOS_VARS
+ ATMOS_RESTART_OUTPUT         = .true.,
+ ATMOS_RESTART_OUT_BASENAME   = "init_dycom",
+/
+
+&PARAM_ATMOS_RAPSE
+ use_rapserate = .false.
+/
+
+&PARAM_MKINIT
+ MKINIT_initname = "DYCOMS2_RF01",
+/
+
+&PARAM_MKINIT_RF01 
+ PERTURB_AMP=0.02,
+ RANDOM_LIMIT=5,
+ RANDOM_FLAG=1
+/
