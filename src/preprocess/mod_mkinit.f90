@@ -121,6 +121,7 @@ module mod_mkinit
   real(8), private :: pott(KA,IA,JA) ! potential temperature [K]
   real(8), private :: qsat(KA,IA,JA) ! satulated water vapor [kg/kg]
   real(8), private :: qv  (KA,IA,JA) ! water vapor [kg/kg]
+  real(8), private :: qc  (KA,IA,JA) ! cloud water [kg/kg]
   real(8), private :: velx(KA,IA,JA) ! velocity u [m/s]
   real(8), private :: vely(KA,IA,JA) ! velocity v [m/s]
 
@@ -129,6 +130,7 @@ module mod_mkinit
   real(8), private :: pott_sfc(1,IA,JA)
   real(8), private :: qsat_sfc(1,IA,JA)
   real(8), private :: qv_sfc  (1,IA,JA)
+  real(8), private :: qc_sfc  (1,IA,JA)
 
   real(8), private :: rndm(KA,IA,JA) ! random number (0-1)
   !-----------------------------------------------------------------------------
@@ -278,8 +280,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -297,8 +299,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -445,8 +447,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -548,8 +550,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -666,8 +668,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -691,8 +693,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -804,8 +806,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -831,8 +833,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -935,8 +937,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:) )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -954,8 +956,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1131,8 +1133,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1278,8 +1280,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1403,8 +1405,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1471,15 +1473,40 @@ contains
 
     real(8) :: potl(KA,IA,JA) ! liquid potential temperature
     real(8) :: qall(KA,IA,JA) ! QV+QC
-    real(8) :: qc  (KA,IA,JA) ! QC
     real(8) :: fact
+
+    real(8) :: pi2 
+    real(8) :: sint
 
     integer :: ierr
     integer :: k, i, j, iq
+    real(8) :: PERTURB_AMP = 0.D0
+    integer :: RANDOM_LIMIT = 5
+    integer :: RANDOM_FLAG = 0  !- 0 -> no perturbation
+                                !- 1 -> petrurbation for pt
+                                !- 2 -> perturbation for u, v, w
+    real(8) :: dummy(KA,IA,JA)
+
+    NAMELIST / PARAM_MKINIT_RF01 / &
+       PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
     !---------------------------------------------------------------------------
 
+    dummy(:,:,:) = 0.d0
+    pi2 = atan(1.0D0) * 2.0D0 ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF01. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
 
     ! calc in moist condition
     call RANDOM_get(rndm) ! make random
@@ -1487,36 +1514,56 @@ contains
     do i = IS, IE
 
        pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
-       pott_sfc(1,i,j) = 289.0D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       pott_sfc(1,i,j) = 289.0D0 !+ 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
        qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0D0
 
        do k = KS, KE
-          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
 !             velx(k,i,j) =   6.7D0
 !             vely(k,i,j) =  -4.9D0
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
+!             velx(k,i,j) =   0.0D0
+!             vely(k,i,j) =   0.0D0
+             potl(k,i,j) = 289.0D0
+          else if ( CZ(k) <= 860.D0 ) then
+             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
+!             velx(k,i,j) =  6.7D0 * (1.D0-sint)*0.5D0 +  7.0D0 * (1.D0+sint)*0.5D0
+!             vely(k,i,j) = -4.9D0 * (1.D0-sint)*0.5D0 + -5.5D0 * (1.D0+sint)*0.5D0
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
+!             velx(k,i,j) = 0.0D0
+!             vely(k,i,j) = 0.0D0
+             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+(CZ(k)-840.D0)**(1.D0/3.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
+!             velx(k,i,j) =   0.0D0
+!             vely(k,i,j) =   0.0D0
              potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
           endif
 
-          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
              qall(k,i,j) = 9.0D-3 ! [kg/kg]
-          elseif(       CZ(k) >   840.D0 &
-                  .AND. CZ(k) <= 5000.D0 ) then
+          elseif ( CZ(k) <= 860.D0 ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
+             qall(k,i,j) = 9.0D-3 * (1.D0-sint)*0.5D0 + 1.5D-3 * (1.D0+sint)*0.5D0
+          elseif( CZ(k) <= 5000.D0 ) then
              qall(k,i,j) = 1.5D-3 ! [kg/kg]
           else
              qall(k,i,j) = 0.0D0
           endif
 
-          if (       CZ(k) >  600.D0 &
-               .AND. CZ(k) <= 840.D0 ) then ! in the cloud
+          if ( CZ(k) <=  600.D0 ) then
+             qc(k,i,j) = 0.D0
+          elseif ( CZ(k) < 820.D0 ) then ! in the cloud
              fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
-
              qc(k,i,j) = 0.45D-3 * fact
+          elseif ( CZ(k) <= 860.D0 ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
+             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
+             qc(k,i,j) = 0.45D-3 * fact * (1.D0-sint)*0.5D0 ! + 0.D0 * (1.D0+sint)*0.5D0
           else
              qc(k,i,j) = 0.D0
           endif
@@ -1527,8 +1574,10 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1539,8 +1588,10 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1551,15 +1602,27 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
-
+ 
+    call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+       MOMZ(k,i,j) = ( 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                     * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+     else
        MOMZ(k,i,j) = 0.D0
+     endif
+     if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+       RHOT(k,i,j) = ( pott(k,i,j)+2.d0*( rndm(k,i,j)-0.5d0 )*PERTURB_AMP ) * DENS(k,i,j)
+     else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
     enddo
     enddo
     enddo
@@ -1568,8 +1631,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
                    * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     else
+       MOMX(k,i,j) = velx(k,i,j) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
@@ -1578,8 +1645,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
                    * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     else
+       MOMY(k,i,j) = vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
@@ -1682,8 +1753,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1694,8 +1765,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1854,8 +1925,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1866,8 +1937,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -1878,8 +1949,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
 
     do j = JS, JE
@@ -2107,8 +2178,8 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -2140,8 +2211,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:)  )
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
