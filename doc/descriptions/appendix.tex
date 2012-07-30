@@ -1,13 +1,13 @@
 
 \appendix
 
-\chapter{4th order advection scheme}
+\chapter{4th order central differnce}
 {
 \footnotesize
-The 4th order scheme of advection with the constant velocity:
+The 4th order central difference is given by
 \begin{eqnarray}
-&&   \frac{\partial \phi}{\partial t}
- + c \frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x} = 0
+&& \frac{\partial \phi}{\partial x}
+=\frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x} = 0
 \end{eqnarray}
 where
 \begin{eqnarray}
@@ -43,7 +43,8 @@ Therefore,
 \frac{-\phi_{i+2}+8\phi_{i+1}-8\phi_{i-1}+\phi_{i+2}}{12\Delta x}
 = \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)\\
 &&
-\frac{-\phi_{i+2}+7\phi_{i+1}+\phi_{i+1}-7\phi_{i-1}-\phi_{i-1}+\phi_{i+2}}{12\Delta x}
+\frac{(-\phi_{i+2}+7\phi_{i+1}+7\phi_{i}-\phi_{i-1})-
+(-\phi_{i+1}+7\phi_{i}+7\phi_{i-1}-\phi_{i-2})}{12\Delta x}
 = \left(\frac{\partial \phi}{\partial x}\right)_{i}+ O(\Delta x^4)
 \end{eqnarray}
 
