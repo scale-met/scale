@@ -30,7 +30,7 @@ Usually, we use $p=2,3$ and $4$.
 We employ the Arakawa-C staggered grid with the 3-dimensional momentum 
 ($\rho u, \rho v, \rho w$), density ($\rho$) and mass-weighted potentail temperature($\rho \theta$)
 as the prognostic variables.
-Figure \ref{fig:cntrl-volume} shows the structure of the control volume for the mass,
+Figure \ref{fig:cntrl-volume}(a) shows the structure of the control volume for the mass,
 indicating the location of each of prognostic variables.
 Conceptually, we use the 4th order central difference scheme 
 for the advection or convection terms and
@@ -66,15 +66,6 @@ we should diagnose several quantities from the prognostic variables.
 
 
 
-\begin{figure}[t]
-\begin{center}
-  \includegraphics[scale=0.7]{./figure/cntrl-volume.eps}
-\end{center}
-  \caption{The control volume w.r.t. the mass}
-  \label{fig:cntrl-volume}
-\end{figure}
-
-
 \subsection{Continuity equation}
 \begin{eqnarray}
 %%
@@ -85,6 +76,9 @@ we should diagnose several quantities from the prognostic variables.
 \end{eqnarray}
 
 \subsection{Momentum equations}
+Figure \ref{fig:cntrl-volume}(a) shows the structure of the control volume for the momentum
+in the x direction.
+The momentum equation is descretized as
 \begin{eqnarray}
 %%
 \left(\frac{\partial \rho u}{\partial t}\right)_{i+\frac{1}{2},j,k}
@@ -198,3 +192,17 @@ This leads to the boundary condition of the prognostic variable as
 We impose no explicit numerical filter.
 The numerical stability can be achieved
 by aid of tiny portion of turbulence scheme.
+
+
+\begin{figure}[t]
+\begin{center}
+  \begin{tabular}{l}
+    (a) Control volume for the mass\\
+  \includegraphics[scale=0.6]{./figure/cntrl-volume.eps}\\
+    (b) Control volume for the momentum\\
+  \includegraphics[scale=0.6]{./figure/cntrl-volume2.eps}\\
+  \end{tabular}
+\end{center}
+  \caption{Control volume}
+  \label{fig:cntrl-volume}
+\end{figure}
