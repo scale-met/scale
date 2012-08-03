@@ -31,11 +31,11 @@ LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 # for frontend
-FRONT_CC     =  LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gcc
+FRONT_CC     =  LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gcc
 FRONT_CFLAGS = -O3
 
-FRONT_F90    = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
+FRONT_F90    = LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gfortran
 FRONT_FFLAGS = -O3
 
-FRONT_LD     = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
+FRONT_LD     = LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gfortran
 FRONT_LFLAGS = -lm
