@@ -30,6 +30,9 @@ CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=a
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
+# netcdf
+NETCDF_INCLUDE = -I/data/group084/netcdf/include
+NETCDF_LIBS = -L/data/group084/netcdf/lib -lnetcdf -L/data/group084/hdf5.mpi/lib -lhdf5_hl -lhdf5 -lsz -lz
 # for frontend
 FRONT_CC     =  LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gcc
 FRONT_CFLAGS = -O3
