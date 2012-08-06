@@ -30,12 +30,15 @@ CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=a
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
+# netcdf
+NETCDF_INCLUDE = -I/data/group084/netcdf/include
+NETCDF_LIBS = -L/data/group084/netcdf/lib -lnetcdf -L/data/group084/hdf5.mpi/lib -lhdf5_hl -lhdf5 -lsz -lz
 # for frontend
-FRONT_CC     =  LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gcc
+FRONT_CC     =  LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gcc
 FRONT_CFLAGS = -O3
 
-FRONT_F90    = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
+FRONT_F90    = LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gfortran
 FRONT_FFLAGS = -O3
 
-FRONT_LD     = LD_LIBRARY_PATH=/home/user0114/gnu/lib:/home/user0114/gnu/lib64:$$LD_LIBRARY_PATH /home/user0114/gnu/bin/gfortran
+FRONT_LD     = LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gfortran
 FRONT_LFLAGS = -lm
