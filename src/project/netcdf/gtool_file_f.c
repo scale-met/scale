@@ -47,6 +47,32 @@ void file_open_( int32_t *fid,       // (out)
   *error = file_open( fid, _fname, *mode );
 }
 
+void file_set_option_( int32_t *fid,      // (in)
+		       char    *filetype, // (in)
+		       char    *key,      // (in)
+		       char    *val,      // (in)
+		       int32_t *error,    // (out)
+		       int32_t filetype_len,
+		       int32_t key_len,
+		       int32_t val_len)
+{
+  char _filetype[File_HSHORT+1];
+  char _key[File_HMID+1];
+  char _val[File_HMID+1];
+  int32_t len;
+
+  len = filetype_len > File_HSHORT ? File_HSHORT : filetype_len;
+  fstr2cstr(_filetype, filetype, len);
+
+  len = key_len > File_HMID ? File_HMID : key_len;
+  fstr2cstr(_key, key, len);
+
+  len = val_len > File_HMID ? File_HMID : val_len;
+  fstr2cstr(_val, val, len);
+
+  *error = file_set_option(*fid, _filetype, _key, _val);
+}
+
 void file_get_datainfo_( datainfo_t *dinfo,       // (out)
 			 int32_t    *fid,         // (in)
 			 char       *varname,     // (in)

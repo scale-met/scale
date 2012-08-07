@@ -56,6 +56,11 @@ extern int32_t file_open( int32_t *fid,   // (out)
 			  char    *fname, // (in)
 			  int32_t  mode); // (in)
 
+extern int32_t file_set_option( int32_t  fid,      // (in)
+				char    *filetype, // (in)
+				char    *key,      // (in)
+				char    *val);     // (in)
+
 extern int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
 				  int32_t     fid,     // (in)
 				  char       *varname, // (in)

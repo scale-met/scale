@@ -133,7 +133,8 @@ contains
        call PRC_MPIstop
     end if
 
-    call HistoryAddVariable(item, dims, desc, units, PRC_master, PRC_myrank, itemid)
+    call HistoryAddVariable(item, dims, desc, units, PRC_master, PRC_myrank, & ! (in)
+         itemid = itemid) ! (out)
 
     deallocate(dims)
 

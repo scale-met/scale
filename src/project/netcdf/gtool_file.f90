@@ -32,6 +32,7 @@ module gtool_file
   !
   public :: FileOpen
   public :: FileCreate
+  public :: FileSetOption
   public :: FilePutAxis
   public :: FilePutAdditionalAxis
   public :: FileAddVariable
@@ -178,6 +179,30 @@ contains
 
     return
   end subroutine FileCreate
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetOption( &
+       fid,      & ! (in)
+       filetype, & ! (in)
+       key,      & ! (in)
+       val       & ! (in)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: filetype
+    character(LEN=*), intent(in) :: key
+    character(LEN=*), intent(in) :: val
+
+    integer error
+
+    call file_set_option( fid,                & ! (in)
+                          filetype, key, val, & ! (in)
+                          error               ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx faild to set option')
+    end if
+
+    return
+  end subroutine FileSetOption
 
   !-----------------------------------------------------------------------------
   subroutine FileOpen( &

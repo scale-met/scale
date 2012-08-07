@@ -389,9 +389,11 @@ contains
       units,   &
       master,  &
       myrank,  &
+      options, &
       itemid   )
     use gtool_file, only : &
          FileCreate, &
+         FileSetOption, &
          FileAddVariable
     implicit none
 
@@ -401,12 +403,14 @@ contains
     character(len=*), intent( in) :: units
     integer,          intent( in) :: master
     integer,          intent( in) :: myrank
+    character(len=*), intent( in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,          intent(out), optional :: itemid
 
     integer :: id
     integer :: ary_size
     integer :: nmax, reqid
     integer :: n, m, l
+    integer :: ic, ie, is, lo
     intrinsic size
     !---------------------------------------------------------------------------
 
@@ -437,6 +441,30 @@ contains
                   master, myrank,                                       & ! (in)
                   time_units = HISTORY_TIME_UNITS                       & ! (in)
                   )
+
+             if ( present(options) ) then
+                ic = -1 ! index of ':'
+                ie = -1 ! index of '='
+                is = 1  ! start index
+                lo = len_trim(options)
+                do m = 1, lo+1
+                   if ( m == lo+1 .or. options(m:m) == '&' ) then
+                      if ( ic == -1 .or. ie == -1 ) then
+                         call Log('E', 'xxx option is invalid: ' // trim(options))
+                      end if
+                      call FileSetOption(History_fid(id),        & ! (in)
+                           options(is:ic-1),                     & ! (in)
+                           options(ic+1:ie-1), options(ie+1:m-1) ) ! (in)
+                      ic = -1
+                      ie = -1
+                      is = m + 1
+                   else if ( options(m:m) == ':' ) then
+                      ic = m
+                   else if ( options(m:m) == '=' ) then
+                      ie = m
+                   end if
+                end do
+             end if
 
              call FileAddVariable(History_vid(id), & ! (out)
                   History_fid(id),                 & ! (in)

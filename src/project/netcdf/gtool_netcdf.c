@@ -40,9 +40,12 @@
   }
 
 
+#define DEFAULT_DEFLATE_LEVEL 2
+
 typedef struct {
   int ncid;
   char time_units[File_HSHORT+1];
+  int deflate_level;
 } fileinfo_t;
 
 typedef struct {
@@ -111,10 +114,27 @@ int32_t file_open( int32_t *fid,     // (out)
 
   files[nfile] = (fileinfo_t*) malloc(sizeof(fileinfo_t));
   files[nfile]->ncid = ncid;
+  files[nfile]->deflate_level = DEFAULT_DEFLATE_LEVEL;
   *fid = nfile;
   nfile++;
 
   return SUCCESS_CODE;
+}
+
+int32_t file_set_option( int32_t fid,    // (in)
+			 char* filetype, // (in)
+			 char* key,      // (in)
+			 char* val)      // (in)
+{
+  if ( strcmp(filetype, "netcdf") != 0 ) return SUCCESS_CODE;
+
+  if ( strcmp(key, "deflate_level") == 0 ) {
+    if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+    files[fid]->deflate_level = atoi(val);
+    return SUCCESS_CODE;
+  } else {
+    return ERROR_CODE;
+  }
 }
 
 int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
@@ -467,8 +487,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   if ( tint > 0.0 ) vars[nvar]->count[0] = 1;
 
   // set chunk size and deflate level
-  CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) );
-  CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, 2) );
+  if ( files[fid]->deflate_level > 0 ) {
+    CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) );
+    CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) );
+  }
 
   vars[nvar]->varid = varid;
   *vid = nvar;
