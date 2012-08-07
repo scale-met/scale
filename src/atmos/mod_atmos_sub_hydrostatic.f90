@@ -61,9 +61,11 @@ contains
       pres,     &
       pott,     &
       qv,       &
+      qc, &
       temp_sfc, &
       pres_sfc, &
       pott_sfc, &
+      qc_sfc,&
       qv_sfc    )
     use mod_const, only : &
        GRAV    => CONST_GRAV,    &
@@ -91,10 +93,12 @@ contains
     real(8), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
     real(8), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
     real(8), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
+    real(8), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
     real(8), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
     real(8), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
     real(8), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
     real(8), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
+    real(8), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
 
     real(8) :: Rmoist_sfc(1,IA,JA)
     real(8) :: dens_sfc  (1,IA,JA)
