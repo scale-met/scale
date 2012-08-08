@@ -68,8 +68,8 @@ contains
        ATMOS_PHY_SF_setup
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
-!    use mod_atmos_phy_mp, only: &
-!       ATMOS_PHY_MP_setup
+    use mod_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_setup
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD_setup
     implicit none
@@ -91,8 +91,8 @@ contains
 
     call ATMOS_PHY_TB_setup
 
-!    call ATMOS_PHY_MP_setup
-!
+    call ATMOS_PHY_MP_setup
+
 !    call ATMOS_PHY_RD_setup
 
     return
@@ -119,8 +119,8 @@ contains
        ATMOS_PHY_SF
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB
-!    use mod_atmos_phy_mp, only: &
-!       ATMOS_PHY_MP
+    use mod_atmos_phy_mp, only: &
+       ATMOS_PHY_MP
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
     implicit none
@@ -160,7 +160,7 @@ call STOP_COLLECTION  ("Turbulence")
 call START_COLLECTION("Microphysics")
 #endif
     if ( sw_phy_mp .AND. do_phy_mp ) then
-!       call ATMOS_PHY_MP
+       call ATMOS_PHY_MP
     endif
 #ifdef _FPCOLL_
 call STOP_COLLECTION  ("Microphysics")

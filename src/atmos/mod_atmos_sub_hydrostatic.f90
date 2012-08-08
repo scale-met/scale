@@ -126,7 +126,6 @@ contains
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
-       call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_RAPSE. Check!'
        call PRC_MPIstop

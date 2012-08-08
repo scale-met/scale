@@ -7,8 +7,9 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2011-11-11 (H.Yashiro)   [new]
+!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
+!! @li      2012-06-13 (S.Nishizawa) [mod] follows the  change of mod_hist
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -22,9 +23,8 @@ module mod_atmos_vars
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID
+  use gtool_file_h, only : &
+     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,6 +46,7 @@ module mod_atmos_vars
   !
   include 'inc_index.h'
   include 'inc_tracer.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -71,14 +72,19 @@ module mod_atmos_vars
   real(8), public, save :: ENGK(KA,IA,JA)    ! kinetic   energy [J/m3]
   real(8), public, save :: ENGI(KA,IA,JA)    ! internal  energy [J/m3]
 
-  character(len=FIO_HSHORT), public, save :: AP_NAME(5)
-  character(len=FIO_HMID),   public, save :: AP_DESC(5)
-  character(len=FIO_HSHORT), public, save :: AP_UNIT(5)
+  integer,           public, save :: I_DENS = 1
+  integer,           public, save :: I_MOMZ = 2
+  integer,           public, save :: I_MOMX = 3
+  integer,           public, save :: I_MOMY = 4
+  integer,           public, save :: I_RHOT = 5
+  character(len=4),  public, save :: AP_NAME(5)
+  character(len=11), public, save :: AP_DESC(5)
+  character(len=8),  public, save :: AP_UNIT(5)
 
   data AP_NAME / 'DENS', &
                  'MOMZ', &
-                 'MOMY', &
                  'MOMX', &
+                 'MOMY', &
                  'RHOT'  /
   data AP_DESC / 'density',    &
                  'momentum z', &
@@ -114,13 +120,19 @@ module mod_atmos_vars
   logical,                   private, save :: ATMOS_RESTART_OUTPUT           = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
+  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE3 PROGNOSTIC VARS.'
+  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_SOURCE       = 'SCALE-LES ver. 3'
+  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_INSTITUTE    = 'AICS/RIKEN'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
   logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
   real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
-  integer, private, save      :: ATMOS_HIST_sw (20)
+  integer, private, save      :: AP_HIST_id (5)
+  integer, private, save      :: AQ_HIST_id (QA)
+
+  integer, private, save      :: ATMOS_HIST_id (20)
   integer, private, save      :: ATMOS_PREP_sw (20)
   integer, private, save      :: ATMOS_MONIT_sw(20)
   integer, private, parameter :: I_VELZ =  1
@@ -173,6 +185,9 @@ contains
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
        ATMOS_RESTART_OUTPUT,           &
        ATMOS_RESTART_OUT_BASENAME,     &
+       ATMOS_RESTART_OUT_TITLE,        &
+       ATMOS_RESTART_OUT_SOURCE,       &
+       ATMOS_RESTART_OUT_INSTITUTE,    &
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION
@@ -260,15 +275,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '***       | VARNAME|DESCRIPTION', &
     '                                                     [UNIT            ]'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',1,'|',trim(AP_NAME(1)),'|', AP_DESC(1),'[', AP_UNIT(1),']'
+    '*** NO.',1,'|',trim(AP_NAME(I_DENS)),'|', AP_DESC(I_DENS),'[', AP_UNIT(I_DENS),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',2,'|',trim(AP_NAME(2)),'|', AP_DESC(2),'[', AP_UNIT(2),']'
+    '*** NO.',2,'|',trim(AP_NAME(I_MOMZ)),'|', AP_DESC(I_MOMZ),'[', AP_UNIT(I_MOMZ),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',3,'|',trim(AP_NAME(3)),'|', AP_DESC(3),'[', AP_UNIT(3),']'
+    '*** NO.',3,'|',trim(AP_NAME(I_MOMX)),'|', AP_DESC(I_MOMX),'[', AP_UNIT(I_MOMX),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',4,'|',trim(AP_NAME(4)),'|', AP_DESC(4),'[', AP_UNIT(4),']'
+    '*** NO.',4,'|',trim(AP_NAME(I_MOMY)),'|', AP_DESC(I_MOMY),'[', AP_UNIT(I_MOMY),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',5,'|',trim(AP_NAME(5)),'|', AP_DESC(5),'[', AP_UNIT(5),']'
+    '*** NO.',5,'|',trim(AP_NAME(I_RHOT)),'|', AP_DESC(I_RHOT),'[', AP_UNIT(I_RHOT),']'
     do iq = 1, QA
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))')  &
        '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
@@ -291,87 +306,99 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
-    ATMOS_HIST_sw (:) = -1
+    AP_HIST_id    (:) = -1
+    AQ_HIST_id    (:) = -1
+    ATMOS_HIST_id (:) = -1
     ATMOS_MONIT_sw(:) = -1
     ATMOS_PREP_sw (:) = -1
 
-    call HIST_reg( ATMOS_HIST_sw(I_VELZ), 'W',    'velocity w',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VELX), 'U',    'velocity u',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VELY), 'V',    'velocity v',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_POTT), 'PT',   'potential temp.',       'K',     '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_QDRY), 'QDRY', 'dry air',               'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_RTOT), 'RTOT', 'Total gas constant',    'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_PRES), 'PRES', 'pressure',              'Pa',    '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_TEMP), 'T',    'temperature',           'K',     '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_RH  ), 'RH',   'relative humidity',     '%',     '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_VOR ), 'VOR',  'vertical vorticity',    '1/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_DIV ), 'DIV',  'horizontal divergence', '1/s',   '3D' )
+    call HIST_reg( AP_HIST_id(I_DENS), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), '3D')
+    call HIST_reg( AP_HIST_id(I_MOMZ), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), '3D')
+    call HIST_reg( AP_HIST_id(I_MOMX), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), '3D')
+    call HIST_reg( AP_HIST_id(I_MOMY), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), '3D')
+    call HIST_reg( AP_HIST_id(I_RHOT), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), '3D')
+    do iq = 1, QA
+       call HIST_reg( AQ_HIST_id(iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D')
+    enddo
 
-    call HIST_reg( ATMOS_HIST_sw(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  '3D' )
-    call HIST_reg( ATMOS_HIST_sw(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  '3D' )
+
+    call HIST_reg( ATMOS_HIST_id(I_VELZ), 'W',    'velocity w',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_VELX), 'U',    'velocity u',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_VELY), 'V',    'velocity v',            'm/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_POTT), 'PT',   'potential temp.',       'K',     '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_QDRY), 'QDRY', 'dry air',               'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_RTOT), 'RTOT', 'Total gas constant',    'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_PRES), 'PRES', 'pressure',              'Pa',    '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_TEMP), 'T',    'temperature',           'K',     '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_RH  ), 'RH',   'relative humidity',     '%',     '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_VOR ), 'VOR',  'vertical vorticity',    '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_DIV ), 'DIV',  'horizontal divergence', '1/s',   '3D' )
+
+    call HIST_reg( ATMOS_HIST_id(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGP), 'ENGP', 'potential energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGK), 'ENGK', 'kinetic   energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGI), 'ENGI', 'internal  energy', 'J', '3D' )
     call MONIT_reg( ATMOS_MONIT_sw(I_ENGT), 'ENGT', 'total     energy', 'J', '3D' )
 
-    if ( ATMOS_HIST_sw(I_VELZ) > 0 ) then
+    if ( ATMOS_HIST_id(I_VELZ) > 0 ) then
        ATMOS_PREP_sw(I_VELZ) = 1
     endif
-    if ( ATMOS_HIST_sw(I_VELX) > 0 ) then
+    if ( ATMOS_HIST_id(I_VELX) > 0 ) then
        ATMOS_PREP_sw(I_VELX) = 1
     endif
-    if ( ATMOS_HIST_sw(I_VELY) > 0 ) then
+    if ( ATMOS_HIST_id(I_VELY) > 0 ) then
        ATMOS_PREP_sw(I_VELY) = 1
     endif
-    if ( ATMOS_HIST_sw(I_POTT) > 0 ) then
+    if ( ATMOS_HIST_id(I_POTT) > 0 ) then
        ATMOS_PREP_sw(I_POTT) = 1
     endif
-    if ( ATMOS_HIST_sw(I_QDRY) > 0 ) then
+    if ( ATMOS_HIST_id(I_QDRY) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
     endif
-    if ( ATMOS_HIST_sw(I_RTOT) > 0 ) then
+    if ( ATMOS_HIST_id(I_RTOT) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
        ATMOS_PREP_sw(I_RTOT) = 1
     endif
-    if ( ATMOS_HIST_sw(I_PRES) > 0 ) then
+    if ( ATMOS_HIST_id(I_PRES) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
        ATMOS_PREP_sw(I_RTOT) = 1
        ATMOS_PREP_sw(I_PRES) = 1
     endif
-    if ( ATMOS_HIST_sw(I_TEMP) > 0 ) then
+    if ( ATMOS_HIST_id(I_TEMP) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
        ATMOS_PREP_sw(I_RTOT) = 1
        ATMOS_PREP_sw(I_PRES) = 1
        ATMOS_PREP_sw(I_TEMP) = 1
     endif
-    if ( ATMOS_HIST_sw(I_RH) > 0 ) then
+    if ( ATMOS_HIST_id(I_RH) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
        ATMOS_PREP_sw(I_RTOT) = 1
        ATMOS_PREP_sw(I_PRES) = 1
        ATMOS_PREP_sw(I_TEMP) = 1
        ATMOS_PREP_sw(I_RH  ) = 1
     endif
-    if ( ATMOS_HIST_sw (I_QTOT) > 0 ) then
+    if ( ATMOS_HIST_id (I_QTOT) > 0 ) then
        ATMOS_PREP_sw(I_QTOT) = 1
     endif
-    if ( ATMOS_HIST_sw (I_VOR) > 0 ) then
+    if ( ATMOS_HIST_id (I_VOR) > 0 ) then
        ATMOS_PREP_sw(I_VOR) = 1
     endif
 
-    if (      ATMOS_HIST_sw (I_ENGP) > 0 &
+    if (      ATMOS_HIST_id (I_ENGP) > 0 &
          .OR. ATMOS_MONIT_sw(I_ENGP) > 0 ) then
        ATMOS_PREP_sw(I_ENGP) = 1
     endif
-    if (      ATMOS_HIST_sw (I_ENGK) > 0 &
+    if (      ATMOS_HIST_id (I_ENGK) > 0 &
          .OR. ATMOS_MONIT_sw(I_ENGK) > 0 ) then
        ATMOS_PREP_sw(I_VELZ) = 1
        ATMOS_PREP_sw(I_VELX) = 1
        ATMOS_PREP_sw(I_VELY) = 1
        ATMOS_PREP_sw(I_ENGK) = 1
     endif
-    if (      ATMOS_HIST_sw (I_ENGI) > 0 &
+    if (      ATMOS_HIST_id (I_ENGI) > 0 &
          .OR. ATMOS_MONIT_sw(I_ENGI) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
        ATMOS_PREP_sw(I_RTOT) = 1
@@ -379,7 +406,7 @@ contains
        ATMOS_PREP_sw(I_TEMP) = 1
        ATMOS_PREP_sw(I_ENGI) = 1
     endif
-    if (      ATMOS_HIST_sw (I_ENGT) > 0 &
+    if (      ATMOS_HIST_id (I_ENGT) > 0 &
          .OR. ATMOS_MONIT_sw(I_ENGT) > 0 ) then
        ATMOS_PREP_sw(I_ENGP) = 1
        ATMOS_PREP_sw(I_ENGK) = 1
@@ -456,14 +483,13 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_fileio, only: &
-       FIO_input
+    use gtool_file, only: &
+       FileRead
     implicit none
 
     real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
-    character(len=8)          :: lname
 
     integer :: iq
     !---------------------------------------------------------------------------
@@ -472,21 +498,20 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
     bname = ATMOS_RESTART_IN_BASENAME
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1 )
     DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMZ', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1 )
     MOMZ(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMX', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1 )
     MOMX(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMY', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1 )
     MOMY(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FIO_input( restart_atmos(:,:,:), bname, 'RHOT', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1 )
     RHOT(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     do iq = 1, QA
-       call FIO_input( restart_atmos(:,:,:), bname, AQ_NAME(iq), lname, 1, KMAX, 1 )
+       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1 )
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
@@ -501,62 +526,144 @@ contains
   !> Write restart of atmospheric variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_restart_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_fileio_h, only: &
-       FIO_REAL8
-    use mod_fileio, only: &
-       FIO_output
+    use gtool_file_h, only: &
+       File_REAL4, &
+       File_REAL8
+    use gtool_file, only: &
+       FileCreate, &
+       FileAddVariable, &
+       FilePutAxis, &
+       FilePutAdditionalAxis, &
+       FileWrite, &
+       FileClose
+    use mod_grid, only: &
+       GRID_CZ, &
+       GRID_CX, &
+       GRID_CY, &
+       GRID_FZ, &
+       GRID_FX, &
+       GRID_FY, &
+       GRID_CDZ, &
+       GRID_CDX, &
+       GRID_CDY, &
+       GRID_FDZ, &
+       GRID_FDX, &
+       GRID_FDY, &
+       GRID_CBFZ, &
+       GRID_CBFX, &
+       GRID_CBFY, &
+       GRID_FBFZ, &
+       GRID_FBFX, &
+       GRID_FBFY
     implicit none
 
     real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
 
+    integer :: fid, ap_vid(5), aq_vid(QA)
+    integer :: dtype
     integer :: iq
+    integer :: n
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
-    write(bname,'(A,A,F15.3)') trim(ATMOS_RESTART_OUT_BASENAME), '_', NOWSEC
-    desc  = 'SCALE3 PROGNOSTIC VARS.'
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+    bname = ''
+    write(bname(1:15), '(F15.3)') NOWSEC
+    do n = 1, 15
+       if ( bname(n:n) == ' ' ) bname(n:n) = '0'
+    end do
+    bname = trim(ATMOS_RESTART_OUT_BASENAME) // '_' // trim(bname)
+
+    if ( RP == 8 ) then
+       dtype = File_REAL8
+    else if ( RP == 4 ) then
+       dtype = File_REAL4
+    end if
+
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         ATMOS_RESTART_OUT_TITLE,                               & ! (in)
+         ATMOS_RESTART_OUT_SOURCE,                              & ! (in)
+         ATMOS_RESTART_OUT_INSTITUTE,                           & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
+
+    call FileAddVariable( ap_vid(I_DENS),                        & ! (out)
+         fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
+         (/'z','x','y'/), dtype                                  ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMZ),                        & ! (out)
+         fid, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), & ! (in)
+         (/'z','x','y'/), dtype                                  ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMX),                        & ! (out)
+         fid, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), & ! (in)
+         (/'z','x','y'/), dtype                                  ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMY),                        & ! (out)
+         fid, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), & ! (in)
+         (/'z','x','y'/), dtype                                  ) ! (in)
+    call FileAddVariable( ap_vid(I_RHOT),                        & ! (out)
+         fid, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), & ! (in)
+         (/'z','x','y'/), dtype                                  ) ! (in)
+    do iq = 1, QA
+       call FileAddVariable( aq_vid(iq),                & ! (out)
+            fid, AQ_NAME(iq), AQ_DESC(iq), AP_UNIT(iq), & ! (in)
+            (/'z','x','y'/), dtype                      ) ! (in)
+    end do
+
+    call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
+    call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
+    call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
+
+    call FilePutAdditionalAxis(fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ, KA)
+    call FilePutAdditionalAxis(fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX, IA)
+    call FilePutAdditionalAxis(fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY, JA)
+    call FilePutAdditionalAxis(fid, 'FZ', 'Grid Face Position Z', 'm', 'FZ', dtype, GRID_FZ, KA+1)
+    call FilePutAdditionalAxis(fid, 'FX', 'Grid Face Position X', 'm', 'FX', dtype, GRID_FX, IA+1)
+    call FilePutAdditionalAxis(fid, 'FY', 'Grid Face Position Y', 'm', 'FY', dtype, GRID_FY, JA+1)
+
+    call FilePutAdditionalAxis(fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ', dtype, GRID_CDZ, KA)
+    call FilePutAdditionalAxis(fid, 'CDX', 'Grid Cell length X', 'm', 'CX', dtype, GRID_CDX, IA)
+    call FilePutAdditionalAxis(fid, 'CDY', 'Grid Cell length Y', 'm', 'CY', dtype, GRID_CDY, JA)
+    call FilePutAdditionalAxis(fid, 'FDZ', 'Grid distance Z', 'm', 'FDZ', dtype, GRID_FDZ, KA-1)
+    call FilePutAdditionalAxis(fid, 'FDX', 'Grid distance X', 'm', 'FDX', dtype, GRID_FDX, IA-1)
+    call FilePutAdditionalAxis(fid, 'FDY', 'Grid distance Y', 'm', 'FDY', dtype, GRID_FDY, JA-1)
+
+    call FilePutAdditionalAxis(fid, 'CBFZ', 'Boundary factor Center Z', '', 'CZ', dtype, GRID_CBFZ, KA)
+    call FilePutAdditionalAxis(fid, 'CBFX', 'Boundary factor Center X', '', 'CX', dtype, GRID_CBFX, IA)
+    call FilePutAdditionalAxis(fid, 'CBFY', 'Boundary factor Center Y', '', 'CY', dtype, GRID_CBFY, JA)
+    call FilePutAdditionalAxis(fid, 'FBFZ', 'Boundary factor Face Z', '', 'CZ', dtype, GRID_FBFZ, KA)
+    call FilePutAdditionalAxis(fid, 'FBFX', 'Boundary factor Face X', '', 'CX', dtype, GRID_FBFX, IA)
+    call FilePutAdditionalAxis(fid, 'FBFY', 'Boundary factor Face Y', '', 'CY', dtype, GRID_FBFY, JA)
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = DENS(KS:KE,IS:IE,JS:JE)
-    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'DENS', AP_DESC(1), '', AP_UNIT(1),          &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( ap_vid(I_DENS), restart_atmos(:,:,:), NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMZ(KS:KE,IS:IE,JS:JE)
-    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'MOMZ', AP_DESC(2), '', AP_UNIT(2),          &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( ap_vid(I_MOMZ), restart_atmos(:,:,:), NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMX(KS:KE,IS:IE,JS:JE)
-    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'MOMX', AP_DESC(3), '', AP_UNIT(3),          &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( ap_vid(I_MOMX), restart_atmos(:,:,:), NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMY(KS:KE,IS:IE,JS:JE)
-    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'MOMY', AP_DESC(4), '', AP_UNIT(4),          &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( ap_vid(I_MOMY), restart_atmos(:,:,:), NOWSEC, NOWSEC )
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = RHOT(KS:KE,IS:IE,JS:JE)
-    call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                     'RHOT', AP_DESC(5), '', AP_UNIT(5),          &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( ap_vid(I_RHOT), restart_atmos(:,:,:), NOWSEC, NOWSEC )
 
     do iq = 1, QA
        restart_atmos(1:KMAX,1:IMAX,1:JMAX) = QTRC(KS:KE,IS:IE,JS:JE,iq)
-
-       call FIO_output( restart_atmos(:,:,:), bname, desc, '',       &
-                        AQ_NAME(iq), AQ_DESC(iq), '', AQ_UNIT(iq),   &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( aq_vid(iq), restart_atmos(:,:,:), NOWSEC, NOWSEC )
     enddo
+
+    call FileClose( fid )
 
     call ATMOS_vars_total
 
@@ -569,8 +676,8 @@ contains
   subroutine ATMOS_vars_restart_check
     use mod_process, only: &
        PRC_myrank
-    use mod_fileio, only: &
-       FIO_input
+    use gtool_file, only: &
+       FileRead
     implicit none
 
     real(8) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
@@ -583,7 +690,6 @@ contains
     real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
-    character(len=8)          :: lname
 
     logical :: datacheck
     integer :: k, i, j, iq
@@ -594,9 +700,8 @@ contains
     datacheck = .true.
 
     bname = ATMOS_RESTART_CHECK_BASENAME
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1 )
     DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -610,7 +715,7 @@ contains
     enddo
     enddo
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMZ', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1 )
     MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -624,7 +729,7 @@ contains
     enddo
     enddo
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMX', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1 )
     MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -638,7 +743,7 @@ contains
     enddo
     enddo
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'MOMY', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1 )
     MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -652,7 +757,7 @@ contains
     enddo
     enddo
 
-    call FIO_input( restart_atmos(:,:,:), bname, 'RHOT', lname, 1, KMAX, 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1 )
     RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -667,7 +772,7 @@ contains
     enddo
 
     do iq = 1, QA
-       call FIO_input( restart_atmos(:,:,:), bname, AQ_NAME(iq), lname, 1, KMAX, 1 )
+       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1 )
        QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE
        do j = JS, JE
@@ -711,8 +816,7 @@ contains
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
     use mod_history, only: &
-       HIST_put, &
-       HIST_in
+       HIST_put
     use mod_monitor, only: &
        MONIT_put, &
        MONIT_in
@@ -733,13 +837,13 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call HIST_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), '3D', TIME_DTSEC )
-    call HIST_in( MOMZ(:,:,:), 'MOMZ', AP_DESC(2), AP_UNIT(2), '3D', TIME_DTSEC )
-    call HIST_in( MOMX(:,:,:), 'MOMX', AP_DESC(3), AP_UNIT(3), '3D', TIME_DTSEC )
-    call HIST_in( MOMY(:,:,:), 'MOMY', AP_DESC(4), AP_UNIT(4), '3D', TIME_DTSEC )
-    call HIST_in( RHOT(:,:,:), 'RHOT', AP_DESC(5), AP_UNIT(5), '3D', TIME_DTSEC )
+    call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
+    call HIST_put( AP_HIST_id(I_MOMZ), MOMZ(:,:,:), TIME_DTSEC )
+    call HIST_put( AP_HIST_id(I_MOMX), MOMX(:,:,:), TIME_DTSEC )
+    call HIST_put( AP_HIST_id(I_MOMY), MOMY(:,:,:), TIME_DTSEC )
+    call HIST_put( AP_HIST_id(I_RHOT), RHOT(:,:,:), TIME_DTSEC )
     do iq = 1, QA
-       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D', TIME_DTSEC )
+       call HIST_put( AQ_HIST_id(iq), QTRC(:,:,:,iq), TIME_DTSEC )
     enddo
 
     call MONIT_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), '3D' )
@@ -841,7 +945,7 @@ contains
        enddo
     endif
 
-    if ( ATMOS_HIST_sw(I_RH) > 0 ) then
+    if ( ATMOS_HIST_id(I_RH) > 0 ) then
        call saturation_qsat_water( QSAT(:,:,:), TEMP(:,:,:), PRES(:,:,:) )
 
        do j  = JS, JE
@@ -862,7 +966,7 @@ contains
        enddo
        enddo
 
-       if ( iq >= 2 ) then
+       if ( QA >= 2 ) then
           do iq = QQS+1, QQE
           do j  = JS, JE
           do i  = IS, IE
@@ -952,7 +1056,7 @@ contains
        enddo
     endif
 
-    if ( ATMOS_HIST_sw(I_ENGT) > 0 ) then
+    if ( ATMOS_HIST_id(I_ENGT) > 0 ) then
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -962,25 +1066,25 @@ contains
        enddo
     endif
 
-    if( ATMOS_HIST_sw(I_VELZ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELZ), VELZ(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_VELX) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELX), VELX(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_VELY) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VELY), VELY(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_POTT) > 0 ) call HIST_put( ATMOS_HIST_sw(I_POTT), POTT(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_QDRY) > 0 ) call HIST_put( ATMOS_HIST_sw(I_QDRY), QDRY(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_PRES) > 0 ) call HIST_put( ATMOS_HIST_sw(I_PRES), PRES(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_TEMP) > 0 ) call HIST_put( ATMOS_HIST_sw(I_TEMP), TEMP(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_RH  ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_RH  ), RH  (:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_QTOT) > 0 ) call HIST_put( ATMOS_HIST_sw(I_QTOT), QTOT(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_VOR ) > 0 ) call HIST_put( ATMOS_HIST_sw(I_VOR),  VOR (:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_VELZ), VELZ(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_VELX), VELX(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_VELY), VELY(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_POTT), POTT(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_QDRY), QDRY(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_PRES), PRES(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_TEMP), TEMP(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_RH  ), RH  (:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_QTOT), QTOT(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_VOR),  VOR (:,:,:), TIME_DTSEC )
 
-    if( ATMOS_HIST_sw(I_ENGP) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGP), ENGP(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_ENGK) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGK), ENGK(:,:,:), TIME_DTSEC )
-    if( ATMOS_HIST_sw(I_ENGI) > 0 ) call HIST_put( ATMOS_HIST_sw(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_ENGP), ENGP(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_ENGK), ENGK(:,:,:), TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
 
-    if( ATMOS_MONIT_sw(I_ENGP) > 0 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGP), ENGP(:,:,:) )
-    if( ATMOS_MONIT_sw(I_ENGK) > 0 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGK), ENGK(:,:,:) )
-    if( ATMOS_MONIT_sw(I_ENGI) > 0 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGI), ENGI(:,:,:) )
-    if( ATMOS_MONIT_sw(I_ENGT) > 0 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGT), ENGT(:,:,:) )
+    if (ATMOS_MONIT_sw(I_ENGP) > 1 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGP), ENGP(:,:,:) )
+    if (ATMOS_MONIT_sw(I_ENGK) > 1 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGK), ENGK(:,:,:) )
+    if (ATMOS_MONIT_sw(I_ENGI) > 1 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGI), ENGI(:,:,:) )
+    if (ATMOS_MONIT_sw(I_ENGT) > 1 ) call MONIT_put( ATMOS_MONIT_sw(I_ENGT), ENGT(:,:,:) )
 
     return
   end subroutine ATMOS_vars_history
@@ -1009,11 +1113,11 @@ contains
 
     if ( COMM_total_doreport ) then
 
-       call COMM_total( DENS(:,:,:), AP_NAME(1) )
-       call COMM_total( MOMZ(:,:,:), AP_NAME(2) )
-       call COMM_total( MOMX(:,:,:), AP_NAME(3) )
-       call COMM_total( MOMY(:,:,:), AP_NAME(4) )
-       call COMM_total( RHOT(:,:,:), AP_NAME(5) )
+       call COMM_total( DENS(:,:,:), AP_NAME(I_DENS) )
+       call COMM_total( MOMZ(:,:,:), AP_NAME(I_MOMZ) )
+       call COMM_total( MOMX(:,:,:), AP_NAME(I_MOMX) )
+       call COMM_total( MOMY(:,:,:), AP_NAME(I_MOMY) )
+       call COMM_total( RHOT(:,:,:), AP_NAME(I_RHOT) )
        do iq = 1, QA
           call COMM_total( QTRC(:,:,:,iq), AQ_NAME(iq) )
        enddo

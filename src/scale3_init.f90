@@ -20,6 +20,7 @@ program scaleinit
   !
   use mod_stdio, only: &
      IO_setup,   &
+     IO_FID_CONF, &
      IO_FID_LOG, &
      IO_L
   use mod_process, only: &
@@ -35,9 +36,6 @@ program scaleinit
      TIME_rapstart, &
      TIME_rapend,   &
      TIME_rapreport
-  use mod_fileio, only: &
-     FIO_setup, &
-     FIO_finalize
   use mod_grid, only: &
      GRID_setup
   use mod_geometrics, only: &
@@ -84,6 +82,10 @@ program scaleinit
      MKINIT_DYCOMS2_RF02, &
      MKINIT_DYCOMS2_RF01_hbinw, &
      MKINIT_WARMBUBBLE_hbinw
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -96,6 +98,9 @@ program scaleinit
 
   ! setup standard I/O
   call IO_setup
+
+  ! setup Log
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
 
   ! start MPI
   call PRC_MPIstart
@@ -112,9 +117,6 @@ program scaleinit
   ! setup time
   call TIME_setup
   call TIME_rapstart('Initialize')
-
-  ! setup file I/O
-  call FIO_setup
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -189,7 +191,8 @@ program scaleinit
 
   call TIME_rapreport
 
-  call FIO_finalize
+  call FileCloseAll
+
   call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop

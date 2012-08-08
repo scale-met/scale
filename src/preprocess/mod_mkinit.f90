@@ -1004,6 +1004,14 @@ contains
     enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+      QTRC(k,i,j,I_QV) = qv(k,i,j)
+    enddo
+    enddo
+    enddo
+
     if ( QA >= 2 ) then
        do iq = 2, QA
        do j = JS, JE

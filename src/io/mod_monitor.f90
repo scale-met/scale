@@ -20,9 +20,9 @@ module mod_monitor
      IO_FID_LOG, &
      IO_L,       &
      IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID
+  use gtool_file_h, only: &
+     File_HSHORT, &
+     File_HMID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -62,13 +62,13 @@ module mod_monitor
   character(len=IO_FILECHR), private,      save :: MONITOR_OUT_BASENAME = 'monitor'
 
   integer,                   private, parameter :: MONIT_req_limit = 1000 !> number limit for monitor item request
-  character(len=FIO_HSHORT), private,      save :: MONIT_req_item   (MONIT_req_limit)
+  character(len=File_HSHORT), private,      save :: MONIT_req_item   (MONIT_req_limit)
 
   integer,                   private,              save :: MONIT_req_nmax = 0 !> number of requested item
-  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_item   (:)
-  character(len=FIO_HMID),   private, allocatable, save :: MONIT_desc   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_unit   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: MONIT_ktype  (:)
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_item   (:)
+  character(len=File_HMID),   private, allocatable, save :: MONIT_desc   (:)
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_unit   (:)
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_ktype  (:)
   integer,                   private, allocatable, save :: MONIT_kmax   (:)
   real(8),                   private, allocatable, save :: MONIT_var    (:)
 
@@ -89,7 +89,7 @@ contains
     NAMELIST / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME
 
-    character(len=FIO_HSHORT) :: ITEM  !> name of monitor item
+    character(len=File_HSHORT) :: ITEM  !> name of monitor item
 
     NAMELIST / MONITITEM / &
        ITEM

@@ -1,0 +1,43 @@
+= How to run
+
+== Environment Variable
+* Set environment variable "SCALE_SYS" depending on your environment
+* Makedef.${SCALE_SYS} file in the scale3/src/sysdep directory is used in compiling
+* You might need to modify the Makedef.${SCALE_SYS} file.
+* example
+ % export SCALE_SYS=Linux64-ifort
+
+== compile
+ % cd scale3/src
+ % make
+* Compiled execution files are installed to the scale3/bin/${SCALE_SYS} directory
+
+== run
+* You can generate input data by your self, or download it from http://***/* for some cases.
+* If you download the input data, skip the process of generation of input data file.
+=== generate input data file
+==== initial data
+ % cd scale3/run
+ % ../bin/${SCALE_SYS}/scale3_init_1256x8x8_kessler_real8_ ./scale3_init_1256x8x8_kessler_real8_.cnf
+* input data
+  No
+* output data
+  * initial data: init_turbulence_63072000000.000.pe000000.nc
+  * log file: LOG.pe000000
+* spinup
+ % ../bin/${SCALE_SYS}/scale3_1256x8x8_kessler_real8_ ./scale3_1256x8x8_kessler_real8_spinup.cnf
+* input data
+  * initial data: init_turbulence_63072000000.000.pe000000.nc
+* output data
+  * restart data: restart_00000003600.000.pe000000.nc
+  * boundary data: boundary.pe000000.nc
+  * log file: LOG.pe000000
+
+=== benchmark run
+ % ../bin/${SCALE_SYS}/scale3_1256x8x8_kessler_real8_ ./scale3_1256x8x8_kessler_real8_.cnf
+* input data
+  * initial data: restart_00000003600.000.pe000000.nc
+* output data
+  * history data: history.pe000000.nc
+  * boundary data: boundary.pe000000.nc
+  * log file: LOG.pe000000
