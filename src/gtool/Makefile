@@ -38,7 +38,7 @@ gtool_history.f90: gtool_history.f90.erb
 	erb $< > $@
 
 gtool_netcdf.o: gtool_netcdf.c
-	$(FC) $(FFLAGS) $(NETCDF_INCLUDE) -o $@ -c $<
+	$(CC) $(FFLAGS) $(NETCDF_INCLUDE) -o $@ -c $<
 
 dc_calendar.o: dc_calendar.f90 dc_log.o
 gtool_file.o: gtool_file.f90 gtool_file_h.o dc_log.o
