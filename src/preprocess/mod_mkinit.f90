@@ -271,12 +271,10 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + rndm(k,i,j) * RANDOM_THETA
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -440,12 +438,10 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -545,12 +541,10 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -659,7 +653,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           if( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
@@ -670,7 +663,6 @@ contains
              pott(k,i,j) = pott(k-1,i,j) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
           endif
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -686,7 +678,6 @@ contains
     do j = JS, JE
     do i = IS, IE
        qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
-       qc_sfc(1,i,j) = 0.0D0
 
        do k = KS, KE
            if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
@@ -696,7 +687,6 @@ contains
            else                                ! Layer 3
               qv(k,i,j) = 0.D0
            endif
-           qc(k,i,j) = 0.D0
 
        enddo
     enddo
@@ -798,7 +788,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
@@ -812,7 +801,6 @@ contains
                          + ENV_L3_THETA * (        fact )
           endif
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -828,7 +816,6 @@ contains
     do j = JS, JE
     do i = IS, IE
        qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
-       qc_sfc(1,i,j) = 0.0D0
 
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
@@ -841,7 +828,6 @@ contains
              qv(k,i,j) = ( ENV_L1_RH * ( 1.D0 - fact ) &
                          + ENV_L3_RH * (        fact ) ) * 1.D-2 * qsat_sfc(k,i,j)
           endif
-          qc(k,i,j) = 0.0D0
        enddo
     enddo
     enddo
@@ -942,12 +928,10 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
@@ -1122,7 +1106,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = SFC_QV
-       qc_sfc  (1,i,j) = 0.0D0
     enddo
     enddo
 
@@ -1147,10 +1130,6 @@ contains
 
        endif
     enddo
-    enddo
-
-    do k    = KS, KE
-       qc(k,i,j) = 0.0D0
     enddo
 
     ! make density & pressure profile in moist condition
@@ -1274,7 +1253,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = SFC_QV
-       qv_sfc  (1,i,j) = 0.0D0
     enddo
     enddo
 
@@ -1300,11 +1278,6 @@ contains
        endif
     enddo
     enddo
-
-    do k    = KS, KE
-       qc(k,i,j) = 0.0D0
-    enddo
-
 
     ! make density & pressure profile in moist condition
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
@@ -1408,7 +1381,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA * disturb
        qv_sfc  (1,i,j) = ENV_L1_QV
-       qv_sfc  (1,i,j) = 0.0D0
 
        do k = KS, KE
           disturb = ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP )
@@ -1428,7 +1400,6 @@ contains
              qv  (k,i,j) = ENV_L1_QV    * ( 1.D0 - fact ) &
                          + ENV_L3_QV    * (        fact )
           endif
-          qc(k,i,j) = 0.0D0
        enddo
     enddo
     enddo
@@ -1504,7 +1475,7 @@ contains
     real(8) :: qall(KA,IA,JA) ! QV+QC
     real(8) :: fact
 
-    real(8) :: pi2
+    real(8) :: pi2 
     real(8) :: sint
 
     integer :: ierr
@@ -1514,6 +1485,7 @@ contains
     integer :: RANDOM_FLAG = 0  !- 0 -> no perturbation
                                 !- 1 -> petrurbation for pt
                                 !- 2 -> perturbation for u, v, w
+    real(8) :: dummy(KA,IA,JA)
 
     NAMELIST / PARAM_MKINIT_RF01 / &
        PERTURB_AMP,     &
@@ -1521,8 +1493,8 @@ contains
        RANDOM_FLAG
     !---------------------------------------------------------------------------
 
+    dummy(:,:,:) = 0.d0
     pi2 = atan(1.0D0) * 2.0D0 ! pi/2
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
 
@@ -1552,6 +1524,8 @@ contains
 !             vely(k,i,j) =  -4.9D0
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
+!             velx(k,i,j) =   0.0D0
+!             vely(k,i,j) =   0.0D0
              potl(k,i,j) = 289.0D0
           else if ( CZ(k) <= 860.D0 ) then
              sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
@@ -1559,7 +1533,9 @@ contains
 !             vely(k,i,j) = -4.9D0 * (1.D0-sint)*0.5D0 + -5.5D0 * (1.D0+sint)*0.5D0
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
+!             velx(k,i,j) = 0.0D0
+!             vely(k,i,j) = 0.0D0
+             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+(CZ(k)-840.D0)**(1.D0/3.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
@@ -1598,6 +1574,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1610,6 +1588,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1622,6 +1602,8 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
+!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
+!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1723,45 +1705,75 @@ contains
     real(8) :: potl(KA,IA,JA) ! liquid potential temperature
     real(8) :: qall(KA,IA,JA) ! QV+QC
     real(8) :: qc  (KA,IA,JA) ! QC
-    real(8) :: fact, disturb
+    real(8) :: fact !, disturb
+   
+    real(8) :: pi2, sint
 
     integer :: ierr
     integer :: k, i, j, iq
+    real(8) :: PERTURB_AMP = 0.d0
+    integer :: RANDOM_LIMIT = 5
+    integer :: RANDOM_FLAG = 0  !0 -> no perturbation
+                                !1 -> perturbation for PT  
+                                !2 -> perturbation for u,v,w
+
+    NAMELIST / PARAM_MKINIT_RF02 / &
+       PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
+
     !---------------------------------------------------------------------------
 
+    pi2 = atan(1.0D0) * 2.0D0  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       disturb = 2.D0 * ( rndm(KS-1,i,j)-0.50 ) ! [-1 to 1]
+!       disturb = 2.D0 * ( rndm(KS-1,i,j)-0.50 ) ! [-1 to 1]
 
        pres_sfc(1,i,j) = 1017.8D2                ! [Pa]
-       pott_sfc(1,i,j) = 288.3 + disturb * 0.1D0 ! [K]
-       qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
+       pott_sfc(1,i,j) = 288.3 !+ disturb * 0.1D0 ! [K]
+!       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 9.45D-3
 
        do k = KS, KE
-          disturb = 2.D0 * ( rndm(k,i,j)-0.50 ) ! [-1 to 1]
+!          disturb = 2.D0 * ( rndm(k,i,j)-0.50 ) ! [-1 to 1]
 
           velx(k,i,j) =  3.D0 + 4.3 * CZ(k)*1.D-3
           vely(k,i,j) = -9.D0 + 5.6 * CZ(k)*1.D-3
 
           if ( CZ(k) <= 795.D0 ) then ! below initial cloud top
-             potl(k,i,j) = 288.3D0 + disturb * 0.1D0 ! [K]
+             potl(k,i,j) = 288.3D0  !+ disturb * 0.1D0 ! [K]
              qall(k,i,j) = 9.45D-3 ! [kg/kg]
+          else if ( CZ(k) <= 835.D0 ) then
+             sint = sin( pi2 * (CZ(k) - 795.D0)/40.D0 )
+             potl(k,i,j) = 288.3D0 * (1.D0-sint)*0.5D0 + &
+                     ( 295.D0+(CZ(k)-795.D0)**(1.D0/3.D0)) * (1.D0+sint)*0.5D0 
+             qall(k,i,j) = 9.45D-3 * (1.D0-sint)*0.5D0 + &
+                   ( 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ) * (1.D0+sint)*0.5D0
           else
-             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0) + disturb * 0.1D0 ! [K]
-             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0- exp( (CZ(k)-795.D0)/500.D0 ) ) ! [kg/kg]
+             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0)! + disturb * 0.1D0 ! [K]
+             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ! [kg/kg]
           endif
 
           if (       CZ(k) >= 400.D0 &
                .AND. CZ(k) <= 795.D0 ) then ! in the cloud
              fact = ( CZ(k)-400.D0 ) / ( 795.D0-400.D0 )
 
-             qc(k,i,j) = 0.5D-3 * fact
+             qc(k,i,j) = 0.65D-3 * fact
           else
              qc(k,i,j) = 0.D0
           endif
@@ -1790,8 +1802,18 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMZ(k,i,j) = ( 0.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+     else
        MOMZ(k,i,j) = 0.D0
+     endif
+     if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * DENS(k,i,j)
+     else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
     enddo
     enddo
     enddo
@@ -1800,8 +1822,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
                    * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     else
+       MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
@@ -1810,8 +1836,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
                    * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     else
+       MOMY(k,i,j) = vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
@@ -1905,7 +1935,6 @@ contains
        pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
        pott_sfc(1,i,j) = 289.0D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
        qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
-       qc_sfc  (1,i,j) = 0.0D0
 
        do k = KS, KE
           if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
@@ -2171,7 +2200,6 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.D0
-       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           if( k == KS ) then
@@ -2194,7 +2222,6 @@ contains
            end if 
           endif
           qv  (k,i,j) = 0.D0
-          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
