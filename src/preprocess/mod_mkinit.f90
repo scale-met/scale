@@ -1742,22 +1742,17 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-!       disturb = 2.D0 * ( rndm(KS-1,i,j)-0.50 ) ! [-1 to 1]
-
        pres_sfc(1,i,j) = 1017.8D2                ! [Pa]
-       pott_sfc(1,i,j) = 288.3 !+ disturb * 0.1D0 ! [K]
-!       qv_sfc  (1,i,j) = 0.D0
+       pott_sfc(1,i,j) = 288.3  ! [K]
        qv_sfc  (1,i,j) = 9.45D-3
 
        do k = KS, KE
-!          disturb = 2.D0 * ( rndm(k,i,j)-0.50 ) ! [-1 to 1]
-
           velx(k,i,j) =  3.D0 + 4.3 * CZ(k)*1.D-3
           vely(k,i,j) = -9.D0 + 5.6 * CZ(k)*1.D-3
 
-          if ( CZ(k) <= 795.D0 ) then ! below initial cloud top
-             potl(k,i,j) = 288.3D0  !+ disturb * 0.1D0 ! [K]
-             qall(k,i,j) = 9.45D-3 ! [kg/kg]
+          if ( CZ(k) <= 780.D0 ) then ! below initial cloud top
+             potl(k,i,j) = 288.3D0  
+             qall(k,i,j) = 9.45D-3 
           else if ( CZ(k) <= 835.D0 ) then
              sint = sin( pi2 * (CZ(k) - 795.D0)/40.D0 )
              potl(k,i,j) = 288.3D0 * (1.D0-sint)*0.5D0 + &
@@ -1765,8 +1760,8 @@ contains
              qall(k,i,j) = 9.45D-3 * (1.D0-sint)*0.5D0 + &
                    ( 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ) * (1.D0+sint)*0.5D0
           else
-             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0)! + disturb * 0.1D0 ! [K]
-             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ! [kg/kg]
+             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0)
+             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) 
           endif
 
           if (       CZ(k) >= 400.D0 &
