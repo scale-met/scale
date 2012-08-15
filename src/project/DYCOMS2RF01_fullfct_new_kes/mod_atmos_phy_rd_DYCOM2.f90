@@ -73,6 +73,7 @@ contains
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
        RovCP   => CONST_RovCP,  &
+       RovCV   => CONST_RovCV,  &
        CPovCV  => CONST_CPovCV, &
        EPSTvap => CONST_CPdry,  &
        P00     => CONST_PRE00
@@ -178,7 +179,7 @@ contains
              - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k) !/ DENS(k,i,j)
 
           RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) &
-                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)!*DENS(k,i,j)
+                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)!*DENS(k,i,j)
        enddo
 
     enddo

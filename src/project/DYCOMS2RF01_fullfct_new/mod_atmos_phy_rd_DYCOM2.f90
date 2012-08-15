@@ -73,6 +73,7 @@ contains
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
        RovCP   => CONST_RovCP,  &
+       RovCV   => CONST_RovCV,  &
        CPovCV  => CONST_CPovCV, &
        EPSTvap => CONST_CPdry,  &
        P00     => CONST_PRE00
@@ -147,12 +148,7 @@ contains
           Qbelow = 0.D0
           Qabove = 0.D0
           do k2 = KS, KE
-!            if( CZ(k2) <=  1200.D0 ) then
              dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
-!            else if( CZ(k2) > 1200.D0 ) then
-!             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * 0.d0 
-!            end if
-
              if ( k2 <= k ) then ! below layer
                 Qbelow = Qbelow + dQ
              else                ! above layer
@@ -178,7 +174,7 @@ contains
              - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k) !/ DENS(k,i,j)
 
           RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.D0 - RovCP ) &
-                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCP * TEMP_t(k,i,j)!*DENS(k,i,j)
+                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)!*DENS(k,i,j)
        enddo
 
     enddo
