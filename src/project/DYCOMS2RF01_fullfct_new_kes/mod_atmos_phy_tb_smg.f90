@@ -394,6 +394,10 @@ contains
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+    use mod_history, only: &
+       HIST_in
+    use mod_time, only: &
+       dttb => TIME_DTSEC_ATMOS_PHY_TB
     implicit none
 
     ! tendency
@@ -473,6 +477,12 @@ contains
 
     real(RP) :: qflx_sgs(KA,IA,JA,3)
 
+    real(RP) :: sgs_flx_pott(KA,IA,JA)
+    real(RP) :: sgs_flx_qt(KA,IA,JA)
+    real(RP) :: sgs_flx_u(KA,IA,JA)
+    real(RP) :: sgs_flx_v(KA,IA,JA)
+    real(RP) :: sgs_flx_w(KA,IA,JA)
+
     real(RP) :: TMP1, TMP2, TMP3
 
     integer :: IIS, IIE
@@ -536,6 +546,13 @@ contains
 
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
+
+    !--- Y.Sato added for subgrid scale flux
+    sgs_flx_pott(:,:,:) = 0.d0
+    sgs_flx_qt(:,:,:) = 0.d0
+    sgs_flx_u(:,:,:) = 0.d0
+    sgs_flx_v(:,:,:) = 0.d0
+    sgs_flx_w(:,:,:) = 0.d0
 
    ! momentum -> velocity
     do j = JS-1, JE+1
@@ -2062,6 +2079,7 @@ contains
                - 2.0_RP * nu_C(k,i,j) &
                * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
+          sgs_flx_w(k,i,j) = qflx_sgs(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -2075,6 +2093,8 @@ contains
 #endif
           qflx_sgs(KS,i,j,ZDIR) = SFLX_MOMZ(i,j) ! bottom boundary
           qflx_sgs(KE,i,j,ZDIR) = 0.0_RP ! top boundary
+          sgs_flx_w(KS,i,j) = qflx_sgs(KS,i,j,ZDIR)
+          sgs_flx_w(KE,i,j) = qflx_sgs(KE,i,j,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -2168,6 +2188,7 @@ contains
 #endif
           qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
                                * nu_Y(k,i,j) * S31_Y(k,i,j)
+          sgs_flx_u(k,i,j) = qflx_sgs(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -2181,6 +2202,8 @@ contains
 #endif
           qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j) ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          sgs_flx_u(KS-1,i,j) = qflx_sgs(KS-1,i,j,ZDIR)
+          sgs_flx_u(KE,i,j) = qflx_sgs(KE,i,j,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -2273,6 +2296,7 @@ contains
 #endif
           qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
                                * nu_X(k,i,j) * S23_X(k,i,j)
+          sgs_flx_v(k,i,j) = qflx_sgs(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -2286,6 +2310,8 @@ contains
 #endif
           qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j) ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          sgs_flx_v(KS-1,i,j) = qflx_sgs(KS-1,i,j,ZDIR)
+          sgs_flx_v(KE,i,j) = qflx_sgs(KE,i,j,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -3442,6 +3468,7 @@ contains
           qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * nu_Z(k,i,j) &
                                * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k)
+          sgs_flx_pott(k,i,j) = qflx_sgs(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -3455,6 +3482,8 @@ contains
 #endif
           qflx_sgs(KS-1,i,j,ZDIR) = SFLX_POTT(i,j)
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP
+          sgs_flx_pott(KS-1,i,j) = qflx_sgs(KS-1,i,j,ZDIR)
+          sgs_flx_pott(KE,i,j) = qflx_sgs(KE,i,j,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -3561,6 +3590,9 @@ contains
           qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * nu_Z(k,i,j) &
                                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
+          if( iq <= QQE .and. iq >=QQS ) then
+           sgs_flx_qt(k,i,j) = sgs_flx_qt(k,i,j)+qflx_sgs(k,i,j,ZDIR)
+          endif
        enddo
        enddo
        enddo
@@ -3585,6 +3617,7 @@ contains
        call CHECK( __LINE__, SFLX_QV(i,j) )
 #endif
              qflx_sgs(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
+             sgs_flx_qt(KS-1,i,j) = sgs_flx_qt(KS-1,i,j)+qflx_sgs(KS-1,i,j,ZDIR)
           enddo
           enddo
 #ifdef DEBUG
@@ -3672,6 +3705,12 @@ contains
 #ifdef DEBUG
        iq = IUNDEF
 #endif
+    !--- Y.Sato added for output variable of DYCOMS-II RF01 intercomparison ---- 
+    call HIST_in( sgs_flx_pott(:,:,:), 'SGS_PTFLX',  'sgs PT FLUX', 'kgK/s/m3','3D', dttb )
+    call HIST_in( sgs_flx_qt(:,:,:),   'SGS_QTFLX',  'sgs QT FLUX', 'kg/s/m3','3D', dttb )
+    call HIST_in( sgs_flx_u(:,:,:),    'SGS_UFLX',   'sgs U FLUX', 'kgm2/m3/s2',  '3D', dttb )
+    call HIST_in( sgs_flx_v(:,:,:),    'SGS_VFLX',   'sgs V FLUX', 'kgm2/m3/s2',  '3D', dttb )
+    call HIST_in( sgs_flx_w(:,:,:),    'SGS_WFLX',   'sgs W FLUX' ,'kgm2/m3/s2',  '3D', dttb )
 
     return
   end subroutine ATMOS_PHY_TB_main
