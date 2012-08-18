@@ -84,9 +84,9 @@
  ATMOS_BOUNDARY_USE_VELY   =   .true., !(default is false)
  ATMOS_BOUNDARY_USE_QV     =   .false., !(default is false)
  ATMOS_BOUNDARY_USE_POTT   =   .false., !(default is false)
- ATMOS_BOUNDARY_VALUE_VELZ   =   0.D0, ![m/s]
- ATMOS_BOUNDARY_VALUE_VELX   =   0.D0, ![m/s]
- ATMOS_BOUNDARY_VALUE_VELY   =   0.D0, ![m/s]
+ ATMOS_BOUNDARY_VALUE_VELZ   =    0.D0, ![m/s]
+ ATMOS_BOUNDARY_VALUE_VELX   =    7.D0, ![m/s]
+ ATMOS_BOUNDARY_VALUE_VELY   =  -5.5D0, ![m/s]
  ATMOS_BOUNDARY_VALUE_QV     =  1.5D-3, ![kg/kg]
  ATMOS_BOUNDARY_VALUE_POTT   =  300.D0, ![K]
  ATMOS_BOUNDARY_TAUX         =  10.D0,
