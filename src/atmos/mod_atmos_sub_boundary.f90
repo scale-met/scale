@@ -446,7 +446,7 @@ contains
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
+          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
           ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
           ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
           ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
