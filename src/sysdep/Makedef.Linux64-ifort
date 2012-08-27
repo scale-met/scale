@@ -3,7 +3,7 @@
 
 ##### for computation
 
-FC     = mpif90
+FC     ?= mpif90
 FFLAGS = -fpp3 -O3 -ftz -xHost -ip               \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
@@ -23,7 +23,7 @@ FFLAGS = -fpp3 -O3 -ftz -xHost -ip               \
 
 FFLAGS_DYN = $(FFLAGS)
 
-CC     = mpicc
+CC     ?= mpicc
 CFLAGS = -O3 -xHost -ip -ftz
 
 LD     = $(FC)
@@ -50,4 +50,8 @@ FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
 
 
-NETCDF_LIBS = -lnetcdf
+#NETCDF_LIBS = -lnetcdf
+NETCDF_DIR ?= /usr
+NETCDF_INCLUDE= -I$(NETCDF_DIR)/include
+NETCDF_LIB_DIR=$(if $(shell ls $(NETCDF_DIR)/lib64 2>&1 | grep "No such file"),$(NETCDF_DIR)/lib,$(NETCDF_DIR)/lib64)
+NETCDF_LIBS=-L$(NETCDF_LIB_DIR) -lnetcdf
