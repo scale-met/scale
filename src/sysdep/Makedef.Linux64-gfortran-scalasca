@@ -1,16 +1,19 @@
 # ------ FOR MacOSX & gfortran & OpenMPI/MPICH2 -----
 #
 
+include Makedef.scalasca-common
+
 ##### for computation
 
 FC     ?= mpif90
-FFLAGS = -cpp -O3
+FC = $(SCALASCA_INST) $(FC)
+FFLAGS = -cpp -O3 -DUSE_SCALASCA
 #FFLAGS = -cpp -O0 -g
 
 #
-
 CC     ?= mpicc
-CFLAGS = -O3
+CC     = $(SCALASCA_INST) $(CC)
+CFLAGS = -O3 -Wall -DUSE_SCALASCA
 #CFLAGS = -O0 -g
 
 #
