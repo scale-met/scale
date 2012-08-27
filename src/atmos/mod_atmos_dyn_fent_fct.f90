@@ -29,11 +29,11 @@ module mod_atmos_dyn
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
+       IO_FID_LOG,  &
+       IO_L
   use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+       TIME_rapstart, &
+       TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -132,27 +132,27 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_setup
     use mod_stdio, only: &
-       IO_FID_CONF
+         IO_FID_CONF
     use mod_process, only: &
-       PRC_MPIstop
+         PRC_MPIstop
     use mod_const, only: &
-       PI   => CONST_PI,  &
-       EOHM => CONST_EOHM
+         PI   => CONST_PI,  &
+         EOHM => CONST_EOHM
     use mod_grid, only : &
-       CDZ => GRID_CDZ, &
-       CDX => GRID_CDX, &
-       CDY => GRID_CDY
+         CDZ => GRID_CDZ, &
+         CDX => GRID_CDX, &
+         CDY => GRID_CDY
     use mod_geometrics, only : &
-       lat => GEOMETRICS_lat
+         lat => GEOMETRICS_lat
 #ifdef _USE_RDMA
     use mod_comm, only: &
-       COMM_set_rdma_variable
+         COMM_set_rdma_variable
 #endif
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_DYN_numerical_diff, &
-       ATMOS_DYN_enable_coriolis
+         ATMOS_DYN_numerical_diff, &
+         ATMOS_DYN_enable_coriolis
 
     real(RP) :: d2r
 
@@ -194,27 +194,27 @@ contains
 #endif
     if ( ATMOS_DYN_enable_coriolis ) then
        do j = 1, JA
-       do i = 1, IA
-          CORIOLI(1,i,j) = 2.E0_RP * EOHM * sin( lat(1,i,j) * d2r )
-       enddo
+          do i = 1, IA
+             CORIOLI(1,i,j) = 2.E0_RP * EOHM * sin( lat(1,i,j) * d2r )
+          enddo
        enddo
     else
        do j = 1, JA
-       do i = 1, IA
-          CORIOLI(1,i,j) = 0.0E0_RP
-       enddo
+          do i = 1, IA
+             CORIOLI(1,i,j) = 0.0E0_RP
+          enddo
        enddo
     endif
 
 #ifdef DEBUG
     rjmns(:,:,:) = UNDEF
 #endif
-!OCL XFILL
+    !OCL XFILL
     do j = 1, JA
-    do i = 1, IA
-       rjmns(KS-1,i,j) = 0.0E0_RP
-       rjmns(KE+1,i,j) = 0.0E0_RP
-    enddo
+       do i = 1, IA
+          rjmns(KS-1,i,j) = 0.0E0_RP
+          rjmns(KE+1,i,j) = 0.0E0_RP
+       enddo
     enddo
 
 #ifdef DEBUG
@@ -234,16 +234,16 @@ contains
 
     do k = KS-1, KE+1
        CNDZ(2,k) = 1.E0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5E0_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP )
     enddo
     CNDZ(2,   1:KS-2) = CNDZ(2,KS-1)
     CNDZ(2,KE+2:KA  ) = CNDZ(2,KE+1)
 
     do k = KS, KE+2
        CNDZ(3,k) = 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5E0_RP )
     enddo
     CNDZ(3,1   :KS-1) = CNDZ(3,KS  )
     CNDZ(3,KE+2:KA  ) = CNDZ(3,KE+2)
@@ -256,16 +256,16 @@ contains
 
     do k = KS-1, KE+1
        CNMZ(2,k) = 1.E0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5E0_RP * CDZ(k  ) ) &   
-                 + 1.E0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5E0_RP * CDZ(k  ) ) &  
-                 + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) ) 
+            + 1.E0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5E0_RP * CDZ(k  ) ) &  
+            + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) ) 
     enddo
     CNMZ(2,   1:KS-2) = CNMZ(2,KS-1)
     CNMZ(2,KE+2:KA  ) = CNMZ(2,KE+1)
 
     do k = KS-1, KE+1
        CNMZ(3,k) = 1.E0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5E0_RP * CDZ(k  ) ) &
-                 + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) ) &
-                 + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) )
+            + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k  ) ) &
+            + 1.E0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5E0_RP * CDZ(k-1) )
     enddo
     CNMZ(3,   1:KS-2) = CNMZ(3,KS-1)
     CNMZ(3,KE+2:KA  ) = CNMZ(3,KE+1)
@@ -279,16 +279,16 @@ contains
 
     do i = IS-1, IE+1
        CNDX(2,i) = 1.E0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5E0_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP )
     enddo
     CNDX(2,   1:IS-2) = CNDX(2,IS-1)
     CNDX(2,IE+2:IA  ) = CNDX(2,IE+1)
 
     do i = IS, IE+2
        CNDX(3,i) = 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5E0_RP )
     enddo
     CNDX(3,   1:IS-1) = CNDX(3,IS  )
     CNDX(3,IE+2:IA  ) = CNDX(3,IE+2)
@@ -301,16 +301,16 @@ contains
 
     do i = IS-1, IE+1
        CNMX(2,i) = 1.E0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5E0_RP * CDX(i  ) ) & 
-                 + 1.E0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5E0_RP * CDX(i  ) ) & 
-                 + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) )
+            + 1.E0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5E0_RP * CDX(i  ) ) & 
+            + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) )
     enddo
     CNMX(2,   1:IS-2) = CNMX(2,IS-1)
     CNMX(2,IE+2:IA  ) = CNMX(2,IE+1)
 
     do i = IS-1, IE+1
        CNMX(3,i) = 1.E0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5E0_RP * CDX(i  ) ) & 
-                 + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) ) & 
-                 + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) )
+            + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i  ) ) & 
+            + 1.E0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5E0_RP * CDX(i-1) )
     enddo
     CNMX(3,   1:IS-2) = CNMX(3,IS-1)
     CNMX(3,IE+2:IA  ) = CNMX(3,IE+1)
@@ -324,16 +324,16 @@ contains
 
     do j = JS-1, JE+1
        CNDY(2,j) = 1.E0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5E0_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP )
     enddo
     CNDY(2,   1:JS-2) = CNDY(2,JS-1)
     CNDY(2,JE+2:JA  ) = CNDY(2,JE+1)
 
     do j = JS, JE+2
        CNDY(3,j) = 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
-                 + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5E0_RP )
+            + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP ) &
+            + 1.E0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5E0_RP )
     enddo
     CNDY(3,   1:JS-1) = CNDY(3,JS  )
     CNDY(3,JE+2:JA  ) = CNDY(3,JE+2)
@@ -346,16 +346,16 @@ contains
 
     do j = JS-1, JE+1
        CNMY(2,j) = 1.E0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5E0_RP * CDY(j  ) ) &   
-                 + 1.E0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5E0_RP * CDY(j  ) ) &  
-                 + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) ) 
+            + 1.E0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5E0_RP * CDY(j  ) ) &  
+            + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) ) 
     enddo
     CNMY(2,   1:JS-2) = CNMY(2,JS-1)
     CNMY(2,JE+2:JA  ) = CNMY(2,JE+1)
 
     do j = JS-1, JE+1
        CNMY(3,j) = 1.E0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5E0_RP * CDY(j  ) ) &
-                 + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) ) &
-                 + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) )
+            + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j  ) ) &
+            + 1.E0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5E0_RP * CDY(j-1) )
     enddo
     CNMY(3,   1:JS-2) = CNMY(3,JS-1)
     CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
@@ -387,25 +387,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   !-----------------------------------------------------------------------------
-!OCL NORECURRENCE
+  !OCL NORECURRENCE
   subroutine ATMOS_DYN
     use mod_time, only: &
-       TIME_DTSEC_ATMOS_DYN, &
-       TIME_NSTEP_ATMOS_DYN
+         TIME_DTSEC_ATMOS_DYN, &
+         TIME_NSTEP_ATMOS_DYN
     use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
+         ATMOS_vars_total,   &
+         DENS, &
+         MOMZ, &
+         MOMX, &
+         MOMY, &
+         RHOT, &
+         QTRC
     use mod_atmos_refstate, only: &
-       REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott
+         REF_dens => ATMOS_REFSTATE_dens, &
+         REF_pott => ATMOS_REFSTATE_pott
     use mod_atmos_boundary, only: &
-       DAMP_var   => ATMOS_BOUNDARY_var,   &
-       DAMP_alpha => ATMOS_BOUNDARY_alpha
+         DAMP_var   => ATMOS_BOUNDARY_var,   &
+         DAMP_alpha => ATMOS_BOUNDARY_alpha
     implicit none
 
     call ATMOS_DYN_main( &
@@ -422,39 +422,39 @@ contains
   end subroutine ATMOS_DYN
 
   subroutine ATMOS_DYN_main( &
-      DENS, MOMZ,  MOMX, MOMY, RHOT, QTRC,        & ! (inout)
-      REF_dens, REF_pott,                         & ! (in)
-      DAMP_var, DAMP_alpha,                       & ! (in)
-      TIME_DTSEC_ATMOS_DYN, TIME_NSTEP_ATMOS_DYN, & ! (in)
-      DIFF4, DIFF2                                & ! (in)
-      )
+       DENS, MOMZ,  MOMX, MOMY, RHOT, QTRC,        & ! (inout)
+       REF_dens, REF_pott,                         & ! (in)
+       DAMP_var, DAMP_alpha,                       & ! (in)
+       TIME_DTSEC_ATMOS_DYN, TIME_NSTEP_ATMOS_DYN, & ! (in)
+       DIFF4, DIFF2                                & ! (in)
+       )
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
-       Rdry   => CONST_Rdry,   &
-       Rvap   => CONST_Rvap,   &
-       CPovCV => CONST_CPovCV, &
-       P00    => CONST_PRE00
+         GRAV   => CONST_GRAV,   &
+         Rdry   => CONST_Rdry,   &
+         Rvap   => CONST_Rvap,   &
+         CPovCV => CONST_CPovCV, &
+         P00    => CONST_PRE00
     use mod_grid, only : &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+         CDZ  => GRID_CDZ,  &
+         CDX  => GRID_CDX,  &
+         CDY  => GRID_CDY,  &
+         RCDZ => GRID_RCDZ, &
+         RCDX => GRID_RCDX, &
+         RCDY => GRID_RCDY, &
+         RFDZ => GRID_RFDZ, &
+         RFDX => GRID_RFDX, &
+         RFDY => GRID_RFDY
     use mod_comm, only: &
 #ifdef _USE_RDMA
-       COMM_rdma_vars8, &
+         COMM_rdma_vars8, &
 #endif
-       COMM_vars8, &
-       COMM_wait
+         COMM_vars8, &
+         COMM_wait
     use mod_atmos_boundary, only: &
-       I_BND_VELZ,  &
-       I_BND_VELX,  &
-       I_BND_VELY,  &
-       I_BND_POTT
+         I_BND_VELZ,  &
+         I_BND_VELX,  &
+         I_BND_VELY,  &
+         I_BND_POTT
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -489,7 +489,7 @@ contains
     real(RP) :: num_diff (KA,IA,JA,5,3)
 
     ! mass flux
-!    real(RP) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
+    !    real(RP) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
 
     ! For FCT
@@ -523,346 +523,346 @@ contains
 #endif
 
 
-!OCL XFILL
+    !OCL XFILL
     do j = JS, JE+1
-    do i = IS, IE+1
-       VELZ(KS-1,i,j) = 0.0E0_RP
-       VELZ(KE  ,i,j) = 0.0E0_RP
-    enddo
+       do i = IS, IE+1
+          VELZ(KS-1,i,j) = 0.0E0_RP
+          VELZ(KE  ,i,j) = 0.0E0_RP
+       enddo
     enddo
 
-!OCL XFILL
+    !OCL XFILL
     do j = 1, JA
-    do i = 1, IA
-       MOMZ_RK1( 1:KS-1,i,j) = 0.0E0_RP
-       MOMZ_RK1(KE:KA  ,i,j) = 0.0E0_RP
-       MOMZ_RK2( 1:KS-1,i,j) = 0.0E0_RP
-       MOMZ_RK2(KE:KA  ,i,j) = 0.0E0_RP
-    enddo
+       do i = 1, IA
+          MOMZ_RK1( 1:KS-1,i,j) = 0.0E0_RP
+          MOMZ_RK1(KE:KA  ,i,j) = 0.0E0_RP
+          MOMZ_RK2( 1:KS-1,i,j) = 0.0E0_RP
+          MOMZ_RK2(KE:KA  ,i,j) = 0.0E0_RP
+       enddo
     enddo
 
-!OCL XFILL
+    !OCL XFILL
     do j = JS, JE
-    do i = IS, IE
-       mflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP ! bottom boundary
-       mflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP ! top    boundary
-    enddo
+       do i = IS, IE
+          mflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP ! bottom boundary
+          mflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP ! top    boundary
+       enddo
     enddo
 
     PROFILE_REGION_BEGIN(DYN_MAIN_LOOP)
-    
+
     do step = 1, TIME_NSTEP_ATMOS_DYN
-       
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
 
 #ifdef DEBUG
-    DENS_RK1(:,:,:) = UNDEF
-    MOMZ_RK1(KS:KE-1,IS:IE,JS:JE) = UNDEF
-    MOMX_RK1(:,:,:) = UNDEF
-    MOMY_RK1(:,:,:) = UNDEF
-    RHOT_RK1(:,:,:) = UNDEF
-    DENS_RK2(:,:,:) = UNDEF
-    MOMZ_RK2(KS:KE-1,IS:IE,JS:JE) = UNDEF
-    MOMX_RK2(:,:,:) = UNDEF
-    MOMY_RK2(:,:,:) = UNDEF
-    RHOT_RK2(:,:,:) = UNDEF
-    PRES    (:,:,:) = UNDEF
-    VELZ    (KS:KE-1,IS:IE,JS:JE) = UNDEF
-    VELX    (:,:,:) = UNDEF
-    VELY    (:,:,:) = UNDEF
-    POTT    (:,:,:) = UNDEF
+       DENS_RK1(:,:,:) = UNDEF
+       MOMZ_RK1(KS:KE-1,IS:IE,JS:JE) = UNDEF
+       MOMX_RK1(:,:,:) = UNDEF
+       MOMY_RK1(:,:,:) = UNDEF
+       RHOT_RK1(:,:,:) = UNDEF
+       DENS_RK2(:,:,:) = UNDEF
+       MOMZ_RK2(KS:KE-1,IS:IE,JS:JE) = UNDEF
+       MOMX_RK2(:,:,:) = UNDEF
+       MOMY_RK2(:,:,:) = UNDEF
+       RHOT_RK2(:,:,:) = UNDEF
+       PRES    (:,:,:) = UNDEF
+       VELZ    (KS:KE-1,IS:IE,JS:JE) = UNDEF
+       VELX    (:,:,:) = UNDEF
+       VELY    (:,:,:) = UNDEF
+       POTT    (:,:,:) = UNDEF
 
-    dens_s   (:,:,:)     = UNDEF
-    dens_diff(:,:,:)     = UNDEF
-    pott_diff(:,:,:)     = UNDEF
-    ray_damp (:,:,:,:)   = UNDEF
-    num_diff (:,:,:,:,:) = UNDEF
+       dens_s   (:,:,:)     = UNDEF
+       dens_diff(:,:,:)     = UNDEF
+       pott_diff(:,:,:)     = UNDEF
+       ray_damp (:,:,:,:)   = UNDEF
+       num_diff (:,:,:,:,:) = UNDEF
 
-    mflx_hi  (KS:KE-1,IS:IE,JS:JE,ZDIR)   = UNDEF
-    mflx_hi  (:,:,:,XDIR)   = UNDEF
-    mflx_hi  (:,:,:,YDIR)   = UNDEF
-    qflx_hi  (:,:,:,:)   = UNDEF
-    qflx_lo  (:,:,:,:)   = UNDEF
-    qflx_anti(:,:,:,:)   = UNDEF
+       mflx_hi  (KS:KE-1,IS:IE,JS:JE,ZDIR)   = UNDEF
+       mflx_hi  (:,:,:,XDIR)   = UNDEF
+       mflx_hi  (:,:,:,YDIR)   = UNDEF
+       qflx_hi  (:,:,:,:)   = UNDEF
+       qflx_lo  (:,:,:,:)   = UNDEF
+       qflx_anti(:,:,:,:)   = UNDEF
 #endif
 
 
 #ifdef _FPCOLL_
-    call TIME_rapstart   ('DYN-set')
-    call START_COLLECTION("DYN-set")
+       call TIME_rapstart   ('DYN-set')
+       call START_COLLECTION("DYN-set")
 #endif
 
-    PROFILE_REGION_BEGIN(DYN_SETUP)
+       PROFILE_REGION_BEGIN(DYN_SETUP)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+       do JJS = JS, JE, JBLOCK
+          JJE = JJS+JBLOCK-1
+          do IIS = IS, IE, IBLOCK
+             IIE = IIS+IBLOCK-1
 
-       !--- prepare rayleigh damping coefficient
-       do j = JJS, JJE
-       do i = IIS, IIE
-          do k = KS, KE-1
-             ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                                    * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5E0_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
-                                    * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5E0_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
-                                    * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5E0_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
-                                    * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
-          enddo
-       enddo
-       enddo
+             !--- prepare rayleigh damping coefficient
+             do j = JJS, JJE
+                do i = IIS, IIE
+                   do k = KS, KE-1
+                      ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5E0_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
+                   enddo
+                   do k = KS, KE
+                      ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
+                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5E0_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
+                   enddo
+                   do k = KS, KE
+                      ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
+                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5E0_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
+                   enddo
+                   do k = KS, KE
+                      ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
+                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !--- prepare numerical diffusion coefficient
-       do j  = JJS-2, JJE+2
-       do i  = IIS-2, IIE+2
-          do k = KS, KE
-             dens_s(k,i,j)    = DENS(k,i,j)
-             dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
-             pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
-          enddo
-       enddo
-       enddo
+             !--- prepare numerical diffusion coefficient
+             do j  = JJS-2, JJE+2
+                do i  = IIS-2, IIE+2
+                   do k = KS, KE
+                      dens_s(k,i,j)    = DENS(k,i,j)
+                      dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
+                      pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                      * ( CNDZ(1,k+1) * dens_diff(k+2,i,j) &
-                                        - CNDZ(2,k+1) * dens_diff(k+1,i,j) &
-                                        + CNDZ(3,k+1) * dens_diff(k  ,i,j) &
-                                        - CNDZ(1,k  ) * dens_diff(k-1,i,j) )
-       enddo
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   do k = KS+1, KE-2
+                      num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4 &
+                           * ( CNDZ(1,k+1) * dens_diff(k+2,i,j) &
+                           - CNDZ(2,k+1) * dens_diff(k+1,i,j) &
+                           + CNDZ(3,k+1) * dens_diff(k  ,i,j) &
+                           - CNDZ(1,k  ) * dens_diff(k-1,i,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-          num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS) &
-                                         * 4.0E0_RP * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) ) 
-          num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KE-1) &
-                                         * 4.0E0_RP * ( dens_diff(KE,i,j)-dens_diff(KE-1,i,j) )
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS) &
+                        * 4.0E0_RP * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) ) 
+                   num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KE-1) &
+                        * 4.0E0_RP * ( dens_diff(KE,i,j)-dens_diff(KE-1,i,j) )
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4 &
-                                      * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
-                                        - CNDX(2,i+1) * dens_diff(k,i+1,j) &
-                                        + CNDX(3,i+1) * dens_diff(k,i  ,j) &
-                                        - CNDX(1,i  ) * dens_diff(k,i-1,j) )
-       enddo
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS-1, IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4 &
+                           * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
+                           - CNDX(2,i+1) * dens_diff(k,i+1,j) &
+                           + CNDX(3,i+1) * dens_diff(k,i  ,j) &
+                           - CNDX(1,i  ) * dens_diff(k,i-1,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4 &
-                                      * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
-                                        - CNDY(2,j+1) * dens_diff(k,i,j+1) &
-                                        + CNDY(3,j+1) * dens_diff(k,i,j  ) &
-                                        - CNDY(1,j  ) * dens_diff(k,i,j-1) )
-       enddo
-       enddo
-       enddo
+             do j = JJS-1, JJE
+                do i = IIS,   IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4 &
+                           * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
+                           - CNDY(2,j+1) * dens_diff(k,i,j+1) &
+                           + CNDY(3,j+1) * dens_diff(k,i,j  ) &
+                           - CNDY(1,j  ) * dens_diff(k,i,j-1) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! z-momentum
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5E0_RP*(CDZ(k+1)+CDZ(k)) )**4 &
-                                      * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
-                                        - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
-                                        + CNMZ(3,k  ) * MOMZ(k-1,i,j) &
-                                        - CNMZ(1,k-1) * MOMZ(k-2,i,j) )
-       enddo
-       enddo
-       enddo
+             ! z-momentum
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5E0_RP*(CDZ(k+1)+CDZ(k)) )**4 &
+                           * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
+                           - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
+                           + CNMZ(3,k  ) * MOMZ(k-1,i,j) &
+                           - CNMZ(1,k-1) * MOMZ(k-2,i,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
-                                      * ( CNDX(1,i+1) * MOMZ(k,i+2,j) &
-                                        - CNDX(2,i+1) * MOMZ(k,i+1,j) &
-                                        + CNDX(3,i+1) * MOMZ(k,i  ,j) &
-                                        - CNDX(1,i  ) * MOMZ(k,i-1,j) )
-       enddo
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS-1, IIE
+                   do k = KS, KE-1
+                      num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
+                           * ( CNDX(1,i+1) * MOMZ(k,i+2,j) &
+                           - CNDX(2,i+1) * MOMZ(k,i+1,j) &
+                           + CNDX(3,i+1) * MOMZ(k,i  ,j) &
+                           - CNDX(1,i  ) * MOMZ(k,i-1,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
-                                      * ( CNDY(1,j+1) * MOMZ(k,i,j+2) &
-                                        - CNDY(2,j+1) * MOMZ(k,i,j+1) &
-                                        + CNDY(3,j+1) * MOMZ(k,i,j  ) &
-                                        - CNDY(1,j  ) * MOMZ(k,i,j-1) )
-       enddo
-       enddo
-       enddo
+             do j = JJS-1, JJE
+                do i = IIS,   IIE
+                   do k = KS, KE-1
+                      num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
+                           * ( CNDY(1,j+1) * MOMZ(k,i,j+2) &
+                           - CNDY(2,j+1) * MOMZ(k,i,j+1) &
+                           + CNDY(3,j+1) * MOMZ(k,i,j  ) &
+                           - CNDY(1,j  ) * MOMZ(k,i,j-1) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! x-momentum
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                      * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
-                                        - CNDZ(2,k+1) * MOMX(k+1,i,j) &
-                                        + CNDZ(3,k+1) * MOMX(k  ,i,j) &
-                                        - CNDZ(1,k  ) * MOMX(k-1,i,j) )
-       enddo
-       enddo
-       enddo
+             ! x-momentum
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   do k = KS, KE-1
+                      num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
+                           * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
+                           - CNDZ(2,k+1) * MOMX(k+1,i,j) &
+                           + CNDZ(3,k+1) * MOMX(k  ,i,j) &
+                           - CNDZ(1,k  ) * MOMX(k-1,i,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5E0_RP*(CDX(i+1)+CDX(i)) )**4 &
-                                      * ( CNMX(1,i  ) * MOMX(k,i+1,j) &
-                                        - CNMX(2,i  ) * MOMX(k,i  ,j) &
-                                        + CNMX(3,i  ) * MOMX(k,i-1,j) &
-                                        - CNMX(1,i-1) * MOMX(k,i-2,j) )
-       enddo
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS,   IIE+1
+                   do k = KS, KE
+                      num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5E0_RP*(CDX(i+1)+CDX(i)) )**4 &
+                           * ( CNMX(1,i  ) * MOMX(k,i+1,j) &
+                           - CNMX(2,i  ) * MOMX(k,i  ,j) &
+                           + CNMX(3,i  ) * MOMX(k,i-1,j) &
+                           - CNMX(1,i-1) * MOMX(k,i-2,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4 &
-                                      * ( CNDY(1,j+1) * MOMX(k,i,j+2) &
-                                        - CNDY(2,j+1) * MOMX(k,i,j+1) &
-                                        + CNDY(3,j+1) * MOMX(k,i,j  ) &
-                                        - CNDY(1,j  ) * MOMX(k,i,j-1) )
-       enddo
-       enddo
-       enddo
+             do j = JJS-1, JJE
+                do i = IIS,   IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4 &
+                           * ( CNDY(1,j+1) * MOMX(k,i,j+2) &
+                           - CNDY(2,j+1) * MOMX(k,i,j+1) &
+                           + CNDY(3,j+1) * MOMX(k,i,j  ) &
+                           - CNDY(1,j  ) * MOMX(k,i,j-1) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! y-momentum
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                      * ( CNDZ(1,k+1) * MOMY(k+2,i,j) &
-                                        - CNDZ(2,k+1) * MOMY(k+1,i,j) &
-                                        + CNDZ(3,k+1) * MOMY(k  ,i,j) &
-                                        - CNDZ(1,k  ) * MOMY(k-1,i,j) )
-       enddo
-       enddo
-       enddo
+             ! y-momentum
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   do k = KS, KE-1
+                      num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
+                           * ( CNDZ(1,k+1) * MOMY(k+2,i,j) &
+                           - CNDZ(2,k+1) * MOMY(k+1,i,j) &
+                           + CNDZ(3,k+1) * MOMY(k  ,i,j) &
+                           - CNDZ(1,k  ) * MOMY(k-1,i,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
-                                      * ( CNDX(1,i+1) * MOMY(k,i+2,j) &
-                                        - CNDX(2,i+1) * MOMY(k,i+1,j) &
-                                        + CNDX(3,i+1) * MOMY(k,i  ,j) &
-                                        - CNDX(1,i  ) * MOMY(k,i-1,j) )
-       enddo
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS-1, IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
+                           * ( CNDX(1,i+1) * MOMY(k,i+2,j) &
+                           - CNDX(2,i+1) * MOMY(k,i+1,j) &
+                           + CNDX(3,i+1) * MOMY(k,i  ,j) &
+                           - CNDX(1,i  ) * MOMY(k,i-1,j) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5E0_RP*(CDY(j+1)+CDY(j)) )**4 &
-                                      * ( CNMY(1,j  ) * MOMY(k,i,j+1) &
-                                        - CNMY(2,j  ) * MOMY(k,i,j  ) &
-                                        + CNMY(3,j  ) * MOMY(k,i,j-1) &
-                                        - CNMY(1,j-1) * MOMY(k,i,j-2) )
-       enddo
-       enddo
-       enddo
+             do j = JJS, JJE+1
+                do i = IIS, IIE
+                   do k = KS, KE
+                      num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5E0_RP*(CDY(j+1)+CDY(j)) )**4 &
+                           * ( CNMY(1,j  ) * MOMY(k,i,j+1) &
+                           - CNMY(2,j  ) * MOMY(k,i,j  ) &
+                           + CNMY(3,j  ) * MOMY(k,i,j-1) &
+                           - CNMY(1,j-1) * MOMY(k,i,j-2) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! rho * theta
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                      * ( CNDZ(1,k+1) * pott_diff(k+2,i,j)   &
-                                        - CNDZ(2,k+1) * pott_diff(k+1,i,j)   &
-                                        + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
-                                        - CNDZ(1,k  ) * pott_diff(k-1,i,j) ) &
-                                      * 0.5E0_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
-                                                + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
-       enddo
-       enddo
-       enddo
+             ! rho * theta
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   do k = KS+1, KE-2
+                      num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4 &
+                           * ( CNDZ(1,k+1) * pott_diff(k+2,i,j)   &
+                           - CNDZ(2,k+1) * pott_diff(k+1,i,j)   &
+                           + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
+                           - CNDZ(1,k  ) * pott_diff(k-1,i,j) ) &
+                           * 0.5E0_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
+                           + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+                   enddo
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-          num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) & 
-                                         * 4.0E0_RP * ( pott_diff(KS+1,i,j)-pott_diff(KS,i,j) ) &
-                                         * 0.5E0_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
-          num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KE-1) &
-                                         * 4.0E0_RP * ( pott_diff(KE,i,j)-pott_diff(KE-1,i,j) ) &
-                                         * 0.5E0_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
-       enddo
-       enddo
+             do j = JJS,   JJE
+                do i = IIS,   IIE
+                   num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) & 
+                        * 4.0E0_RP * ( pott_diff(KS+1,i,j)-pott_diff(KS,i,j) ) &
+                        * 0.5E0_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+                   num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KE-1) &
+                        * 4.0E0_RP * ( pott_diff(KE,i,j)-pott_diff(KE-1,i,j) ) &
+                        * 0.5E0_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+                enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        do j = JJS,   JJE
@@ -955,416 +955,15 @@ contains
     !##### RK1 #####
     rko = 1
     dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
-    rdtrk = 1.E0_RP / dtrk
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       ! momentum -> velocity
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS,  KE-1
-          VELZ(k,i,j) = 2.E0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS,   JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-          VELX(k,i,j) = 2.E0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS-1, JJE+1
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          VELY(k,i,j) = 2.E0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! pressure, pott. temp.
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          do k = KS, KE
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
-          enddo
-          do k = KS, KE
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
-          enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### continuity equation #####
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          mflx_hi(k,i,j,ZDIR) = MOMZ(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,XDIR) = MOMX(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,YDIR) = MOMY(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update density
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          DENS_RK1(k,i,j) = DENS(k,i,j) &
-                          + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                       + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                       + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (z) #####
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
-                              * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
-                                + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ(k,i+1,j)+MOMZ(k,i  ,j) ) &
-                                + FACT_F * ( MOMZ(k,i+2,j)+MOMZ(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, interface)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ(k,i,j+1)+MOMZ(k,i,j  ) ) &
-                                + FACT_F * ( MOMZ(k,i,j+2)+MOMZ(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(z)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          MOMZ_RK1(k,i,j) = MOMZ(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                                       + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                     - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
-                                     - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5E0_RP * GRAV                    & ! gravity force
-                                     + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (x) #####
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
-                                + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
-                              * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
-                                + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
-                                + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(x)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMX_RK1(k,i,j) = MOMX(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
-                                       + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                     - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
-                                     + 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )                   &
-                                     * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
-                                     + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (y) #####
-       ! at (x, v, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
-                                + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )              &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )              &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (u, v, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
-                                + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (x, y, layer)
-       do j = JJS, JJE+1
-       do i = IIS, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
-                              * ( FACT_N * ( MOMY(k,i,j  )+MOMY(k,i,j-1) ) &
-                                + FACT_F * ( MOMY(k,i,j+1)+MOMY(k,i,j-2) ) ) &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(y)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMY_RK1(k,i,j) = MOMY(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
-                                     - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
-                                     - 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )                   &
-                                     * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
-                                     + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### Thermodynamic Equation #####
-
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.5E0_RP * mflx_hi(k,i,j,ZDIR) &
-                              * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
-                                + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                   ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
-                                 * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KE-1,i,j,ZDIR)  &      ! just below the top boundary
-                                 * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                   ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.5E0_RP * mflx_hi(k,i,j,XDIR) &
-                              * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
-                                + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.5E0_RP * mflx_hi(k,i,j,YDIR) &
-                              * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
-                                + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update rho*theta
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOT_RK1(k,i,j) = RHOT(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
-                                     + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-    enddo
-    enddo
-#ifdef DEBUG
-    IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
+    call calc_rk(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
+         mflx_hi, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, & ! (in)
+         DENS, MOMZ, MOMX, MOMY, RHOT, & ! (in)
+         num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
+         VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
+         qflx_hi, qflx_lo, qflx_anti, & ! (work)
+         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
@@ -1384,417 +983,15 @@ contains
     !##### RK2 #####
     rko = 2
     dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
-    rdtrk = 1.E0_RP / dtrk
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       ! momentum -> velocity
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS,  KE-1
-          VELZ(k,i,j) = 2.E0_RP * MOMZ_RK1(k,i,j) / ( DENS_RK1(k+1,i,j)+DENS_RK1(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS,   JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-          VELX(k,i,j) = 2.E0_RP * MOMX_RK1(k,i,j) / ( DENS_RK1(k,i+1,j)+DENS_RK1(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS-1, JJE+1
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          VELY(k,i,j) = 2.E0_RP * MOMY_RK1(k,i,j) / ( DENS_RK1(k,i,j+1)+DENS_RK1(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! pressure, pott. temp.
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          do k = KS, KE
-             PRES(k,i,j) = P00 * ( RHOT_RK1(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
-          enddo
-          do k = KS, KE
-             POTT(k,i,j) = RHOT_RK1(k,i,j) / DENS_RK1(k,i,j) 
-          enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### continuity equation #####
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          mflx_hi(k,i,j,ZDIR) = MOMZ_RK1(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,XDIR) = MOMX_RK1(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,YDIR) = MOMY_RK1(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update density
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          DENS_RK2(k,i,j) = DENS(k,i,j) &
-                          + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                       + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                       + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (z) #####
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK1(k  ,i,j)+MOMZ_RK1(k-1,i,j) ) &
-                                + FACT_F * ( MOMZ_RK1(k+1,i,j)+MOMZ_RK1(k-2,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK1(k,i+1,j)+MOMZ_RK1(k,i  ,j) ) &
-                                + FACT_F * ( MOMZ_RK1(k,i+2,j)+MOMZ_RK1(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, interface)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK1(k,i,j+1)+MOMZ_RK1(k,i,j  ) ) &
-                                + FACT_F * ( MOMZ_RK1(k,i,j+2)+MOMZ_RK1(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(z)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          MOMZ_RK2(k,i,j) = MOMZ(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k)   &
-                                       + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i)   &
-                                       + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                     - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
-                                     - ( DENS_RK1(k+1,i,j)+DENS_RK1(k,i,j) ) * 0.5E0_RP * GRAV            & ! gravity force
-                                     + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (x) #####
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK1(k+1,i,j)+MOMX_RK1(k  ,i,j) ) &
-                                + FACT_F * ( MOMX_RK1(k+2,i,j)+MOMX_RK1(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMX_RK1(KS+1,i,j)+MOMX_RK1(KS,i,j) )      &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMX_RK1(KE,i,j)+MOMX_RK1(KE-1,i,j) )      &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
-                              * ( FACT_N * ( MOMX_RK1(k,i  ,j)+MOMX_RK1(k,i-1,j) ) &
-                                + FACT_F * ( MOMX_RK1(k,i+1,j)+MOMX_RK1(k,i-2,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK1(k,i,j+1)+MOMX_RK1(k,i,j  ) ) &
-                                + FACT_F * ( MOMX_RK1(k,i,j+2)+MOMX_RK1(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(x)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMX_RK2(k,i,j) = MOMX(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
-                                       + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                     - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
-                                     + 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )                   &
-                                     * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
-                                     + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (y) #####
-       ! at (x, v, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK1(k+1,i,j)+MOMY_RK1(k  ,i,j) ) &
-                                + FACT_F * ( MOMY_RK1(k+2,i,j)+MOMY_RK1(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMY_RK1(KS+1,i,j)+MOMY_RK1(KS,i,j) )      &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMY_RK1(KE,i,j)+MOMY_RK1(KE-1,i,j) )      &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (u, v, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK1(k,i+1,j)+MOMY_RK1(k,i  ,j) ) &
-                                + FACT_F * ( MOMY_RK1(k,i+2,j)+MOMY_RK1(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (x, y, layer)
-       do j = JJS, JJE+1
-       do i = IIS, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
-                              * ( FACT_N * ( MOMY_RK1(k,i,j  )+MOMY_RK1(k,i,j-1) ) &
-                                + FACT_F * ( MOMY_RK1(k,i,j+1)+MOMY_RK1(k,i,j-2) ) ) &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(y)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMY_RK2(k,i,j) = MOMY(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
-                                     - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
-                                     - 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )                   &
-                                     * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
-                                     + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### Thermodynamic Equation #####
-
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.5E0_RP * mflx_hi(k,i,j,ZDIR) &
-                              * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
-                                + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                   ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
-                                 * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KE-1,i,j,ZDIR)  &      ! just below the top boundary
-                                 * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                   ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.5E0_RP * mflx_hi(k,i,j,XDIR) &
-                              * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
-                                + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.5E0_RP * mflx_hi(k,i,j,YDIR) &
-                              * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
-                                + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update rho*theta
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOT_RK2(k,i,j) = RHOT(k,i,j) &
-                          + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
-                                     + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-    enddo
-    enddo
-#ifdef DEBUG
-    IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
-
+    call calc_rk(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
+         mflx_hi, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, & ! (in)
+         DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
+         num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
+         VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
+         qflx_hi, qflx_lo, qflx_anti, & ! (work)
+         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
@@ -1814,416 +1011,16 @@ contains
     !##### RK3 #####
     rko = 3
     dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
-    rdtrk = 1.E0_RP / dtrk
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    call calc_rk(DENS, MOMZ, MOMX, MOMY, RHOT, & ! (out)
+         mflx_hi, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, & ! (in)
+         DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
+         num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
+         VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
+         qflx_hi, qflx_lo, qflx_anti, & ! (work)
+         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
 
-       ! momentum -> velocity
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS,  KE-1
-          VELZ(k,i,j) = 2.E0_RP * MOMZ_RK2(k,i,j) / ( DENS_RK2(k+1,i,j)+DENS_RK2(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS,   JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-          VELX(k,i,j) = 2.E0_RP * MOMX_RK2(k,i,j) / ( DENS_RK2(k,i+1,j)+DENS_RK2(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS-1, JJE+1
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          VELY(k,i,j) = 2.E0_RP * MOMY_RK2(k,i,j) / ( DENS_RK2(k,i,j+1)+DENS_RK2(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! pressure, pott. temp.
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          do k = KS, KE
-             PRES(k,i,j) = P00 * ( RHOT_RK2(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
-          enddo
-          do k = KS, KE
-             POTT(k,i,j) = RHOT_RK2(k,i,j) / DENS_RK2(k,i,j) 
-          enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### continuity equation #####
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          mflx_hi(k,i,j,ZDIR) = MOMZ_RK2(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,XDIR) = MOMX_RK2(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,YDIR) = MOMY_RK2(k,i,j) &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update density
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          DENS(k,i,j) = DENS(k,i,j) &
-                      + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                   + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                   + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (z) #####
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k  ,i,j)+MOMZ_RK2(k-1,i,j) ) &
-                                + FACT_F * ( MOMZ_RK2(k+1,i,j)+MOMZ_RK2(k-2,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k,i+1,j)+MOMZ_RK2(k,i  ,j) ) &
-                                + FACT_F * ( MOMZ_RK2(k,i+2,j)+MOMZ_RK2(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, interface)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMZ_RK2(k,i,j+1)+MOMZ_RK2(k,i,j  ) ) &
-                                + FACT_F * ( MOMZ_RK2(k,i,j+2)+MOMZ_RK2(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(z)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS, KE-1
-          MOMZ(k,i,j) = MOMZ(k,i,j) &
-                      + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                                   + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                                   + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                 - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
-                                 - ( DENS_RK2(k+1,i,j)+DENS_RK2(k,i,j) ) * 0.5E0_RP * GRAV            & ! gravity force
-                                 + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (x) #####
-       ! at (u, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k+1,i,j)+MOMX_RK2(k  ,i,j) ) &
-                                + FACT_F * ( MOMX_RK2(k+2,i,j)+MOMX_RK2(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMX_RK2(KS+1,i,j)+MOMX_RK2(KS,i,j) )      &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMX_RK2(KE,i,j)+MOMX_RK2(KE-1,i,j) )      &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, y, layer)
-       do j = JJS,   JJE
-       do i = IIS,   IIE+1
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k,i  ,j)+MOMX_RK2(k,i-1,j) ) &
-                                + FACT_F * ( MOMX_RK2(k,i+1,j)+MOMX_RK2(k,i-2,j) ) ) &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
-                              * ( FACT_N * ( MOMX_RK2(k,i,j+1)+MOMX_RK2(k,i,j  ) ) &
-                                + FACT_F * ( MOMX_RK2(k,i,j+2)+MOMX_RK2(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(x)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMX(k,i,j) = MOMX(k,i,j) &
-                      + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
-                                   + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
-                                 - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
-                                 + 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )                   &
-                                 * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
-                                 + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### momentum equation (y) #####
-       ! at (x, v, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK2(k+1,i,j)+MOMY_RK2(k  ,i,j) ) &
-                                + FACT_F * ( MOMY_RK2(k+2,i,j)+MOMY_RK2(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
-                                 * ( MOMY_RK2(KS+1,i,j)+MOMY_RK2(KS,i,j) )      &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
-                                 * ( MOMY_RK2(KE,i,j)+MOMY_RK2(KE-1,i,j) )      &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (u, v, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
-                              * ( FACT_N * ( MOMY_RK2(k,i+1,j)+MOMY_RK2(k,i  ,j) ) &
-                                + FACT_F * ( MOMY_RK2(k,i+2,j)+MOMY_RK2(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       ! at (x, y, layer)
-       do j = JJS, JJE+1
-       do i = IIS, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
-                              * ( FACT_N * ( MOMY_RK2(k,i,j  )+MOMY_RK2(k,i,j-1) ) &
-                                + FACT_F * ( MOMY_RK2(k,i,j+1)+MOMY_RK2(k,i,j-2) ) ) &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update momentum(y)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMY(k,i,j) = MOMY(k,i,j) &
-                      + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                                   + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
-                                 - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
-                                 - 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )                   &
-                                 * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
-                                 + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !##### Thermodynamic Equation #####
-
-       ! at (x, y, interface)
-       do j = JJS,   JJE
-       do i = IIS,   IIE
-       do k = KS+1, KE-2
-          qflx_hi(k,i,j,ZDIR) = 0.5E0_RP * mflx_hi(k,i,j,ZDIR) &
-                              * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
-                                + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                   ! bottom boundary
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
-                                 * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KE-1,i,j,ZDIR)  &      ! just below the top boundary
-                                 * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                   ! top boundary
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (u, y, layer)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.5E0_RP * mflx_hi(k,i,j,XDIR) &
-                              * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
-                                + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-       ! at (x, v, layer)
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.5E0_RP * mflx_hi(k,i,j,YDIR) &
-                              * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
-                                + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       !--- update rho*theta
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOT(k,i,j) = RHOT(k,i,j) &
-                      + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                                   + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                                   + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
-                                 + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-    enddo
-    enddo
-#ifdef DEBUG
-    IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )
@@ -2637,5 +1434,500 @@ contains
 
     return
   end subroutine ATMOS_DYN_main
+
+  subroutine calc_rk(DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+       mflx_hi,                               &
+       DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
+       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
+       num_diff, ray_damp, CORIOLI, dtrk,           &
+       VELZ, VELX, VELY, PRES, POTT, Rtot,          &
+       qflx_hi, qflx_lo, qflx_anti,                 &
+       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns     )
+
+    use mod_const, only : &
+         GRAV   => CONST_GRAV,   &
+         Rdry   => CONST_Rdry,   &
+         Rvap   => CONST_Rvap,   &
+         CPovCV => CONST_CPovCV, &
+         P00    => CONST_PRE00
+    use mod_grid, only : &
+         CZ   => GRID_CZ,   &
+         FZ   => GRID_FZ,   &
+         CDZ  => GRID_CDZ,  &
+         CDX  => GRID_CDX,  &
+         CDY  => GRID_CDY,  &
+         FDZ  => GRID_FDZ,  &
+         FDX  => GRID_FDX,  &
+         FDY  => GRID_FDY,  &
+         RCDZ => GRID_RCDZ, &
+         RCDX => GRID_RCDX, &
+         RCDY => GRID_RCDY, &
+         RFDZ => GRID_RFDZ, &
+         RFDX => GRID_RFDX, &
+         RFDY => GRID_RFDY
+    implicit none
+
+    real(8), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
+    real(8), intent(out) :: MOMZ_RK(KA,IA,JA)   !
+    real(8), intent(out) :: MOMX_RK(KA,IA,JA)   !
+    real(8), intent(out) :: MOMY_RK(KA,IA,JA)   !
+    real(8), intent(out) :: RHOT_RK(KA,IA,JA)   !
+
+    real(8), intent(out) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+
+    real(8), intent(in) :: DENS0(KA,IA,JA)   ! prognostic variables
+    real(8), intent(in) :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
+    real(8), intent(in) :: MOMX0(KA,IA,JA)   !
+    real(8), intent(in) :: MOMY0(KA,IA,JA)   !
+    real(8), intent(in) :: RHOT0(KA,IA,JA)   !
+
+    real(8), intent(in) :: DENS(KA,IA,JA)   ! prognostic variables
+    real(8), intent(in) :: MOMZ(KA,IA,JA)   ! at previous RK step
+    real(8), intent(in) :: MOMX(KA,IA,JA)   !
+    real(8), intent(in) :: MOMY(KA,IA,JA)   !
+    real(8), intent(in) :: RHOT(KA,IA,JA)   !
+
+    real(8), intent(in) :: num_diff(KA,IA,JA,5,3)
+    real(8), intent(in) :: ray_damp(KA,IA,JA,5)
+    real(8), intent(in) :: CORIOLI(1,IA,JA)
+    real(8), intent(in) :: dtrk
+
+    ! diagnostic variables (work space)
+    real(8), intent(inout) :: PRES(KA,IA,JA) ! pressure [Pa]
+    real(8), intent(inout) :: VELZ(KA,IA,JA) ! velocity w [m/s]
+    real(8), intent(inout) :: VELX(KA,IA,JA) ! velocity u [m/s]
+    real(8), intent(inout) :: VELY(KA,IA,JA) ! velocity v [m/s]
+    real(8), intent(inout) :: POTT(KA,IA,JA) ! potential temperature [K]
+    real(8), intent(inout) :: Rtot(KA,IA,JA) ! R for dry air + vapor
+
+    ! flux (work space)
+    real(8), intent(inout) :: qflx_hi  (KA,IA,JA,3)
+    real(8), intent(inout) :: qflx_lo  (KA,IA,JA,3)
+    real(8), intent(inout) :: qflx_anti(KA,IA,JA,3)
+
+    ! factor for FCT (work space)
+    real(8), intent(inout) :: pjpls(KA,IA,JA)
+    real(8), intent(inout) :: pjmns(KA,IA,JA)
+    real(8), intent(inout) :: qjpls(KA,IA,JA)
+    real(8), intent(inout) :: qjmns(KA,IA,JA)
+    real(8), intent(inout) :: rjpls(KA,IA,JA)
+    real(8), intent(inout) :: rjmns(KA,IA,JA)
+
+    real(8) :: rdtrk
+    integer :: IIS, IIE, JJS, JJE
+    integer :: k, i, j
+
+    rdtrk = 1.E0_RP / dtrk
+
+    do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+          IIE = IIS+IBLOCK-1
+
+          ! momentum -> velocity
+          do j = JJS, JJE+1
+             do i = IIS, IIE+1
+                do k = KS,  KE-1
+                   VELZ(k,i,j) = 2.E0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          do j = JJS,   JJE+1
+             do i = IIS-1, IIE+1
+                do k = KS, KE
+                   VELX(k,i,j) = 2.E0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          do j = JJS-1, JJE+1
+             do i = IIS,   IIE+1
+                do k = KS, KE
+                   VELY(k,i,j) = 2.E0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          ! pressure, pott. temp.
+          do j = JJS-2, JJE+2
+             do i = IIS-2, IIE+2
+                do k = KS, KE
+                   PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
+                enddo
+                do k = KS, KE
+                   POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !##### continuity equation #####
+          ! at (x, y, interface)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS, KE-1
+                   mflx_hi(k,i,j,ZDIR) = MOMZ(k,i,j) &
+                        + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (u, y, layer)
+          do j = JJS,   JJE
+             do i = IIS-1, IIE
+                do k = KS, KE
+                   mflx_hi(k,i,j,XDIR) = MOMX(k,i,j) &
+                        + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (x, v, layer)
+          do j = JJS-1, JJE
+             do i = IIS,   IIE
+                do k = KS, KE
+                   mflx_hi(k,i,j,YDIR) = MOMY(k,i,j) &
+                        + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !--- update density
+          do j = JJS, JJE
+             do i = IIS, IIE
+                do k = KS, KE
+                   DENS_RK(k,i,j) = DENS0(k,i,j) &
+                        + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                        + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                        + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) ) ! divergence
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !##### momentum equation (z) #####
+          ! at (x, y, layer)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
+                        * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
+                        + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
+                        + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (u, y, interface)
+          do j = JJS,   JJE
+             do i = IIS-1, IIE
+                do k = KS, KE-1
+                   qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
+                        * ( FACT_N * ( MOMZ(k,i+1,j)+MOMZ(k,i  ,j) ) &
+                        + FACT_F * ( MOMZ(k,i+2,j)+MOMZ(k,i-1,j) ) ) &
+                        + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (x, v, interface)
+          do j = JJS-1, JJE
+             do i = IIS,   IIE
+                do k = KS, KE-1
+                   qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
+                        * ( FACT_N * ( MOMZ(k,i,j+1)+MOMZ(k,i,j  ) ) &
+                        + FACT_F * ( MOMZ(k,i,j+2)+MOMZ(k,i,j-1) ) ) &
+                        + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          
+          !--- update momentum(z)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS, KE-1
+                   MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                        + dtrk * ( - ( ( qflx_hi(k+1,i,j,ZDIR)-qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                        + ( qflx_hi(k  ,i,j,XDIR)-qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
+                        + ( qflx_hi(k  ,i,j,YDIR)-qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
+                        - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                         & ! pressure gradient force
+                        - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5E0_RP * GRAV                    & ! gravity force
+                        + ray_damp(k,i,j,I_MOMZ)                                          ) ! additional damping
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !##### momentum equation (x) #####
+          ! at (u, y, interface)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS+1, KE-2
+                   qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
+                        * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
+                        + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
+                        + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          do j = JJS, JJE
+             do i = IIS, IIE
+                qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
+                qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
+                     * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
+                     + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
+                qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
+                     * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
+                     + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
+                qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (x, y, layer)
+          do j = JJS,   JJE
+             do i = IIS,   IIE+1
+                do k = KS, KE
+                   qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
+                        * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
+                        + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
+                        + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (u, v, layer)
+          do j = JJS-1, JJE
+             do i = IIS,   IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
+                        * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
+                        + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
+                        + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          
+          !--- update momentum(x)
+          do j = JJS, JJE
+             do i = IIS, IIE
+                do k = KS, KE
+                   MOMX_RK(k,i,j) = MOMX0(k,i,j) &
+                        + dtrk * ( - ( ( qflx_hi(k,i  ,j,ZDIR)-qflx_hi(k-1,i,j,  ZDIR) ) * RCDZ(k) &
+                        + ( qflx_hi(k,i+1,j,XDIR)-qflx_hi(k  ,i,j,  XDIR) ) * RFDX(i) &
+                        + ( qflx_hi(k,i  ,j,YDIR)-qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) & ! flux divergence
+                        - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                         & ! pressure gradient force
+                        + 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )                   &
+                        * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) )     & ! coriolis force
+                        + ray_damp(k,i,j,I_MOMX)                                          ) ! additional damping
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          
+          !##### momentum equation (y) #####
+          ! at (x, v, interface)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS+1, KE-2
+                   qflx_hi(k,i,j,ZDIR) = 0.25E0_RP * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
+                        * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
+                        + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
+                        + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          do j = JJS, JJE
+             do i = IIS, IIE
+                qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                           ! bottom boundary
+                qflx_hi(KS  ,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
+                     * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )              &
+                     + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
+                qflx_hi(KE-1,i,j,ZDIR) = 0.25E0_RP * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
+                     * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )              &
+                     + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
+                qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                           ! top boundary
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          ! at (u, v, layer)
+          do j = JJS,   JJE
+             do i = IIS-1, IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,XDIR) = 0.25E0_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
+                        * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
+                        + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
+                        + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          ! at (x, y, layer)
+          do j = JJS, JJE+1
+             do i = IIS, IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,YDIR) = 0.25E0_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
+                        * ( FACT_N * ( MOMY(k,i,j  )+MOMY(k,i,j-1) ) &
+                        + FACT_F * ( MOMY(k,i,j+1)+MOMY(k,i,j-2) ) ) &
+                        + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !--- update momentum(y)
+          do j = JJS, JJE
+             do i = IIS, IIE
+                do k = KS, KE
+                   MOMY_RK(k,i,j) = MOMY0(k,i,j) &
+                        + dtrk * ( - ( ( qflx_hi(k,i,j  ,ZDIR)-qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                        + ( qflx_hi(k,i,j  ,XDIR)-qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                        + ( qflx_hi(k,i,j+1,YDIR)-qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) & ! flux divergence
+                        - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                         & ! pressure gradient force
+                        - 0.125E0_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )                   &
+                        * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) )     & ! coriolis force
+                        + ray_damp(k,i,j,I_MOMY)                                          ) ! additional damping
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+          !##### Thermodynamic Equation #####
+          
+          ! at (x, y, interface)
+          do j = JJS,   JJE
+             do i = IIS,   IIE
+                do k = KS+1, KE-2
+                   qflx_hi(k,i,j,ZDIR) = 0.5E0_RP * mflx_hi(k,i,j,ZDIR) &
+                        * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
+                        + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
+                        + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          do j = JJS, JJE
+             do i = IIS, IIE
+                qflx_hi(KS-1,i,j,ZDIR) = 0.0E0_RP                                   ! bottom boundary
+                qflx_hi(KS  ,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
+                     * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
+                     + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
+                qflx_hi(KE-1,i,j,ZDIR) = 0.5E0_RP * mflx_hi(KE-1,i,j,ZDIR)  &      ! just below the top boundary
+                     * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
+                     + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
+                qflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP                                   ! top boundary
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (u, y, layer)
+          do j = JJS,   JJE
+             do i = IIS-1, IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,XDIR) = 0.5E0_RP * mflx_hi(k,i,j,XDIR) &
+                        * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
+                        + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
+                        + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          ! at (x, v, layer)
+          do j = JJS-1, JJE
+             do i = IIS,   IIE
+                do k = KS, KE
+                   qflx_hi(k,i,j,YDIR) = 0.5E0_RP * mflx_hi(k,i,j,YDIR) &
+                        * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
+                        + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
+                        + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          
+          !--- update rho*theta
+          do j = JJS, JJE
+             do i = IIS, IIE
+                do k = KS, KE
+                   RHOT_RK(k,i,j) = RHOT0(k,i,j) &
+                        + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR)-qflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                        + ( qflx_hi(k,i,j,XDIR)-qflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                        + ( qflx_hi(k,i,j,YDIR)-qflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
+                        + ray_damp(k,i,j,I_RHOT)                                          ) ! additional damping
+                enddo
+             enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       enddo
+    enddo
+#ifdef DEBUG
+    IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
+#endif
+
+  end subroutine calc_rk
 
 end module mod_atmos_dyn
