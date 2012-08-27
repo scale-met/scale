@@ -65,6 +65,11 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+#include "profiler.h"
+  !
 #ifdef DEBUG
   real(RP), private, parameter :: UNDEF = -9.999E30_RP
   integer,  private, parameter :: IUNDEF = -9999
@@ -504,6 +509,11 @@ contains
     real(RP) :: dtrk, rdtrk
     integer :: i, j, k, iq, iw, rko, step
     !---------------------------------------------------------------------------
+    PROFILE_REGION_DECLARE(DYN_MAIN_LOOP)
+    PROFILE_REGION_DECLARE(DYN_SETUP)
+    PROFILE_REGION_DECLARE(DYN_RK3)
+    PROFILE_REGION_DECLARE(DYN_FCT)    
+    !---------------------------------------------------------------------------
 
 #ifdef DEBUG
     VELZ    (:,:,:)      = UNDEF
@@ -539,8 +549,10 @@ contains
     enddo
     enddo
 
+    PROFILE_REGION_BEGIN(DYN_MAIN_LOOP)
+    
     do step = 1, TIME_NSTEP_ATMOS_DYN
-
+       
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamical small step:', step
 
 #ifdef DEBUG
@@ -576,9 +588,11 @@ contains
 
 
 #ifdef _FPCOLL_
-call TIME_rapstart   ('DYN-set')
-call START_COLLECTION("DYN-set")
+    call TIME_rapstart   ('DYN-set')
+    call START_COLLECTION("DYN-set")
 #endif
+
+    PROFILE_REGION_BEGIN(DYN_SETUP)
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -927,11 +941,14 @@ call START_COLLECTION("DYN-set")
 #endif
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-set")
-call TIME_rapend     ('DYN-set')
-call TIME_rapstart   ('DYN-rk3')
-call START_COLLECTION("DYN-rk3")
+    call STOP_COLLECTION ("DYN-set")
+    call TIME_rapend     ('DYN-set')
+    call TIME_rapstart   ('DYN-rk3')
+    call START_COLLECTION("DYN-rk3")
 #endif
+
+    PROFILE_REGION_END(DYN_SETUP)
+    PROFILE_REGION_BEGIN(DYN_RK3)
 
     !##### Start RK #####
 
@@ -2224,11 +2241,14 @@ call START_COLLECTION("DYN-rk3")
 #endif
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-rk3")
-call TIME_rapend     ('DYN-rk3')
-call TIME_rapstart   ('DYN-fct')
-call START_COLLECTION("DYN-fct")
+    call STOP_COLLECTION ("DYN-rk3")
+    call TIME_rapend     ('DYN-rk3')
+    call TIME_rapstart   ('DYN-fct')
+    call START_COLLECTION("DYN-fct")
 #endif
+
+    PROFILE_REGION_END(DYN_RK3)
+    PROFILE_REGION_BEGIN(DYN_FCT)
 
     !##### advection of scalar quantity #####
 #ifdef _USE_RDMA
@@ -2573,12 +2593,16 @@ call START_COLLECTION("DYN-fct")
 #endif
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-fct")
-call TIME_rapend     ('DYN-fct')
+    call STOP_COLLECTION ("DYN-fct")
+    call TIME_rapend     ('DYN-fct')
 #endif
+
+    PROFILE_REGION_END(DYN_FCT)
 
     enddo ! dynamical steps
 
+    PROFILE_REGION_END(DYN_MAIN_LOOP)
+    
 !OCL XFILL
     do j  = JS, JE
     do i  = IS, IE

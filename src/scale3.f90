@@ -14,6 +14,8 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "profiler.h"
+  
 program scaleles3
   !-----------------------------------------------------------------------------
   !
@@ -79,6 +81,9 @@ program scaleles3
   !
   !++ parameters & variables
   !
+  !-----------------------------------------------------------------------------
+  PROFILE_REGION_DECLARE(MAIN)
+  PROFILE_REGION_DECLARE(INIT)
   !=============================================================================
 
   !########## Initial setup ##########
@@ -102,8 +107,10 @@ program scaleles3
   call TIME_setup
   call TIME_rapstart('Initialize')
 #ifdef _FPCOLL_
-call START_COLLECTION("Initialize")
+  call START_COLLECTION("Initialize")
 #endif
+
+  PROFILE_REGION_BEGIN(INIT)
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -127,10 +134,11 @@ call START_COLLECTION("Initialize")
   call OCEAN_setup
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION  ("Initialize")
+  call STOP_COLLECTION  ("Initialize")
 #endif
   call TIME_rapend('Initialize')
 
+  PROFILE_REGION_END(INIT)
 
   !########## main ##########
 
@@ -138,9 +146,11 @@ call STOP_COLLECTION  ("Initialize")
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
   call TIME_rapstart('Main Loop(Total)')
 #ifdef _FPCOLL_
-call START_COLLECTION("Main")
+  call START_COLLECTION("Main")
 #endif
 
+  PROFILE_REGION_BEGIN(MAIN)
+  
   do
 
     ! report current time
@@ -166,8 +176,11 @@ call START_COLLECTION("Main")
   enddo
 
 #ifdef _FPCOLL_
-call STOP_COLLECTION  ("Main")
+  call STOP_COLLECTION  ("Main")
 #endif
+
+  PROFILE_REGION_END(MAIN)
+
   call TIME_rapend('Main Loop(Total)')
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
