@@ -1,3 +1,0 @@
-# Scalasca commands
-
-SCALASCA_INST = scalasca -instrument -user -comp=none

@@ -1,7 +1,8 @@
 # ------ FOR MacOSX & gfortran & OpenMPI/MPICH2 -----
 #
 
-include Makedef.scalasca-common
+# Scalasca commands
+SCALASCA_INST = scalasca -instrument -user -comp=none
 
 ##### for computation
 
