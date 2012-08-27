@@ -114,6 +114,7 @@ mod_atmos_sub_saturation.o	: mod_atmos_sub_saturation.f90 mod_stdio.o mod_const.
 mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_hydrostatic.o mod_atmos_sub_saturation.o
 
 clean:
+	$(MAKE) -C gtool clean
 	rm -f $(MODS) *.mod
 
 distclean: clean
