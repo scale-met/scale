@@ -1,0 +1,39 @@
+#####
+#
+# Scale3 mkinit configulation
+#
+#####
+
+&PARAM_PRC
+ PRC_NUM_X       = 2,
+ PRC_NUM_Y       = 2,
+ PRC_PERIODIC_X  = .true.,
+ PRC_PERIODIC_Y  = .true.,
+/
+
+&PARAM_COMM
+ COMM_total_doreport  = .true.,
+ COMM_total_globalsum = .true.,
+/
+
+&PARAM_ATMOS_VARS
+ ATMOS_RESTART_OUTPUT         = .true.,
+ ATMOS_RESTART_OUT_BASENAME   = "init_turbulence_23x16x16",
+/
+
+&PARAM_MKINIT
+ MKINIT_initname = "TURBULENCE",
+/
+
+&PARAM_MKINIT_TURBULENCE
+ SFC_THETA    = 283.D0,
+ ENV_THETA    = 283.D0,
+ ENV_TLAPS    = 4.0D-3,
+ ENV_U        = 5.0D0,
+ ENV_V        = 0.0D0,
+ ENV_RH       = 80.0D0,
+ RANDOM_THETA = 1.0D0,
+ RANDOM_U     = 0.05D0,
+ RANDOM_V     = 0.0D0,
+ RANDOM_RH    = 0.5D0,
+/
