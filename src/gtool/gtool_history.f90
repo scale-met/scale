@@ -1338,6 +1338,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1349,12 +1350,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return
@@ -1364,6 +1367,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1375,12 +1379,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return
@@ -1390,6 +1396,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1401,12 +1408,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return
@@ -1416,6 +1425,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1427,12 +1437,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return
@@ -1442,6 +1454,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1453,12 +1466,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return
@@ -1468,6 +1483,7 @@ contains
        basename, &
        varname, &
        step, &
+       myrank, &
        allow_missing, &
        single &
        )
@@ -1479,12 +1495,14 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
+    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                                   & ! (out)
-         basename, varname, step, allow_missing, single & ! (in)
+    call FileRead(var,                    & ! (out)
+         basename, varname, step, myrank, & ! (in)
+         allow_missing, single            & ! (in)
          )
 
     return

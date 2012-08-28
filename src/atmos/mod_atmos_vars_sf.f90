@@ -113,6 +113,8 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use mod_process, only: &
+       PRC_myrank
     use gtool_file, only: &
        FileRead
     implicit none
@@ -131,7 +133,7 @@ contains
 !    bname = ATMOS_SF_RESTART_IN_BASENAME
 !    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-!    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1 )
+!    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
 !    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     ! fill IHALO & JHALO

@@ -507,6 +507,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -516,6 +517,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -527,6 +529,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)
@@ -576,6 +580,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -585,6 +590,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -596,6 +602,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)
@@ -645,6 +653,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -654,6 +663,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -665,6 +675,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)
@@ -714,6 +726,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -723,6 +736,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -734,6 +748,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)
@@ -783,6 +799,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -792,6 +809,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -803,6 +821,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)
@@ -852,6 +872,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
+      myrank,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -861,6 +882,7 @@ contains
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
     integer,          intent( in)           :: step
+    integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -872,6 +894,8 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     !--- search/register file
     call FileOpen( fid,               & ! (out)

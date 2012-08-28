@@ -309,6 +309,8 @@ contains
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
+    use mod_process, only: &
+         PRC_myrank
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -321,27 +323,27 @@ contains
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV ) then
-       call FileRead( reference_atmos(:,:,:), bname, 'QV',   1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 

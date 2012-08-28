@@ -138,6 +138,8 @@ contains
   subroutine ATMOS_REFSTATE_read
     use gtool_file, only: &
        FileRead
+    use mod_process, only: &
+       PRC_myrank
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -148,8 +150,8 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_IN_BASENAME)
 
-    call FileRead( ATMOS_REFSTATE_dens(:), bname, 'DENS', 1, .true. )
-    call FileRead( ATMOS_REFSTATE_pott(:), bname, 'POTT', 1, .true. )
+    call FileRead( ATMOS_REFSTATE_dens(:), bname, 'DENS', 1, PRC_myrank, single=.true. )
+    call FileRead( ATMOS_REFSTATE_pott(:), bname, 'POTT', 1, PRC_myrank, single=.true. )
 
     return
   end subroutine ATMOS_REFSTATE_read

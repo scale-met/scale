@@ -171,6 +171,8 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use mod_process, only: &
+       PRC_myrank
     use gtool_file, only: &
        FileRead
     implicit none
@@ -187,7 +189,7 @@ contains
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
        bname = OCEAN_RESTART_IN_BASENAME
 
-       call FileRead( restart_ocean(:,:,:), bname, 'SST', 1 )
+       call FileRead( restart_ocean(:,:,:), bname, 'SST', 1, PRC_myrank )
 
        SST(1,IS:IE,JS:JE) = restart_ocean(1,1:IMAX,1:JMAX)
 

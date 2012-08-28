@@ -485,6 +485,8 @@ contains
        COMM_wait
     use gtool_file, only: &
        FileRead
+    use mod_process, only: &
+       PRC_myrank
     implicit none
 
     real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -499,19 +501,19 @@ contains
 
     bname = ATMOS_RESTART_IN_BASENAME
 
-    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
     DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1, PRC_myrank )
     MOMZ(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1, PRC_myrank )
     MOMX(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1, PRC_myrank )
     MOMY(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1, PRC_myrank )
     RHOT(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1 )
+       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
@@ -701,7 +703,7 @@ contains
 
     bname = ATMOS_RESTART_CHECK_BASENAME
 
-    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
     DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -715,7 +717,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1, PRC_myrank )
     MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -729,7 +731,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1, PRC_myrank )
     MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -743,7 +745,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1, PRC_myrank )
     MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -757,7 +759,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1 )
+    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1, PRC_myrank )
     RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -772,7 +774,7 @@ contains
     enddo
 
     do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1 )
+       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
        QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE
        do j = JS, JE
