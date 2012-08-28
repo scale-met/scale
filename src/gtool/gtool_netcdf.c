@@ -565,7 +565,7 @@ int32_t file_close( int32_t fid ) // (in)
   for (i=0; i<nt; i++) {
     if ( tdims[i] != NULL && tdims[i]->ncid == ncid ) {
       free( tdims[i] );
-      tdims[i] == NULL;
+      tdims[i] = NULL;
     }
   }
 
