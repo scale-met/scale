@@ -148,6 +148,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   int dimids[MAX_RANK], tdim, uldims[NC_MAX_DIMS];
   char name[File_HSHORT+1];
   size_t size;
+  size_t idx[2];
   int i, n;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -171,23 +172,22 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   CHECK_ERROR( nc_inq_unlimdims(ncid, &n, uldims) );
   tdim = -1;
   for ( i=0; i<n; i++ ) {
-    if ( uldims[i] == dimids[rank-1] ) {
+    if ( uldims[i] == dimids[0] ) {
       tdim = uldims[i];
       break;
     }
   }
-  if ( tdim >= 0 ) rank = rank - 1; // do not count time dimension
   if (rank > MAX_RANK) {
     fprintf(stderr, "rank exceeds limit: %d\n", rank);
     return ERROR_CODE;
   }
-  dinfo-> rank = rank;
+  dinfo->rank = tdim >= 0 ? rank -1 : rank; // do not count time dimension
   // dim_name and dim_size
-  for (i=0; i<rank; i++) {
-    CHECK_ERROR( nc_inq_dim(ncid, dimids[i], name, &size) );
-    strncpy(dinfo->dim_name+i*File_HSHORT, name, File_HSHORT);
+  for (i=0; i<dinfo->rank; i++) {
     // note: C and Fortran orders are opposit
-    dinfo->dim_size[rank-i-1] = size;
+    CHECK_ERROR( nc_inq_dim(ncid, dimids[rank-i-1], name, &size) );
+    strncpy(dinfo->dim_name+i*File_HSHORT, name, File_HSHORT);
+    dinfo->dim_size[i] = size;
   }
 
   dinfo->step = step;
@@ -195,12 +195,13 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     // time_end
     CHECK_ERROR( nc_inq_dimname(ncid, tdim, name) );
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
-    size = step;
-    CHECK_ERROR( nc_get_var1_double(ncid, varid, &size, &(dinfo->time_end)) );
+    idx[0] = step;
+    CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) );
     // time_start
     strcat(name, "_bnds");
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
-    CHECK_ERROR( nc_get_var1_double(ncid, varid, &size, &(dinfo->time_start)) );
+    idx[1] = 0;
+    CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) );
   } else {
   }
 
@@ -226,11 +227,11 @@ int32_t file_read_data( void       *var,        // (out)
   count = (size_t*) malloc(sizeof(size_t)*rank);
   for (i=0; i<dinfo->rank; i++) {
     // note: C and Fortran orders are opposit
-    start[dinfo->rank -i-1] = 0;
-    count[dinfo->rank -i-1] = dinfo->dim_size[i];
+    start[rank -i-1] = 0;
+    count[rank -i-1] = dinfo->dim_size[i];
   }
   if (rank > dinfo->rank) { // have time dimension
-    start[0] = dinfo->step;
+    start[0] = dinfo->step - 1;
     count[0] = 1;
   }
   switch ( precision ) {
