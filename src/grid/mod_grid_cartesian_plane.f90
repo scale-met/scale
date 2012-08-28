@@ -9,7 +9,7 @@
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
-!! @li      2012-06-25 (Y.Sato)     [mod] change for unisotropic grid
+!! @li      2012-05-25 (Y.Sato)     [mod] un-isotropic grid
 !!
 !<
 !-------------------------------------------------------------------------------

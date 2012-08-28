@@ -51,3 +51,6 @@ FRONT_LFLAGS = $(FRONT_FFLAGS)
 
 
 NETCDF_LIBS = -lnetcdf
+
+AR     = ar r
+RANLIB = ranlib

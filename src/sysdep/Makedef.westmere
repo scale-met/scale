@@ -25,3 +25,6 @@ FRONT_CFLAGS = $(CFLAGS)
 
 FRONT_LD     = $(FC)
 FRONT_LFLAGS = $(LFLAGS)
+
+AR     = ar r
+RANLIB = ranlib

@@ -31,3 +31,6 @@ FRONT_FFLAGS = -Kfast,parallel
 
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
+
+AR     = ar r
+RANLIB = ranlib

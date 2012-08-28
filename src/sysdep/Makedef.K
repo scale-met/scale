@@ -42,3 +42,6 @@ FRONT_FFLAGS = -O3
 
 FRONT_LD     = LD_LIBRARY_PATH=/home/group084/user0202/gnu/lib:/home/group084/user0202/gnu/lib64:$$LD_LIBRARY_PATH /home/group084/user0202/gnu/bin/gfortran
 FRONT_LFLAGS = -lm
+
+AR     = ar r
+RANLIB = ranlib

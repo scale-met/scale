@@ -70,3 +70,7 @@ NETCDF_LIBS = -L/work/netcdf4/serial-intel/lib -lnetcdf -L/work/hdf5/serial-inte
 #HDF5 1.5.9 is installed from source
 HDF5_INCLUDE = -I/work/hdf5/1.8.9/serial-intel/include
 HDF5_LIBS = -L/work/hdf5/serial-intel/lib -L/work/hdf5/szip-intel/lib -lhdf5_hl -lhdf5 -lsz -lz
+
+AR     = ar r
+RANLIB = ranlib
+

@@ -9,9 +9,10 @@ include ./sysdep/Makedef.$(SCALE_SYS)
 VPATH = include:common:io:grid:atmos:ocean:preprocess
 
 #default index & tracer set
-index   = 1256x32x32
-tracer  = ndw6
-postfix = 
+index     = 1256x32x32
+tracer    = ndw6
+precision = real8
+postfix   = 
 
 PRJ1 = scale3
 PRJ2 = scale3_init
@@ -55,8 +56,9 @@ makedir:
 	mkdir -p ../bin/$(SCALE_SYS)
 
 makeinclude:
-	cp include/inc_tracer_$(tracer).f90 include/inc_tracer.h
-	cp include/inc_index_$(index).f90   include/inc_index.h
+	cp include/inc_tracer_$(tracer).f90       include/inc_tracer.h
+	cp include/inc_index_$(index).f90         include/inc_index.h
+	cp include/inc_precision_$(precision).f90 include/inc_precision.h
 
 makebin: $(PRJS)
 	install $(PRJ1) ../bin/$(SCALE_SYS)/$(PRJ1)_$(index)_$(tracer)_$(postfix)
@@ -72,7 +74,8 @@ $(PRJ1).o: $(PRJ1).f90 libscale.a
 $(PRJ2).o: $(PRJ2).f90 libscale.a
 
 libscale.a: $(MODS)
-	ar r libscale.a $?
+	${AR} libscale.a $?
+	${RANLIB} libscale.a
 
 mod_stdio.o	: mod_stdio.f90
 mod_process.o	: mod_process.f90 mod_stdio.o
