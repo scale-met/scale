@@ -1535,7 +1535,7 @@ contains
              vely(k,i,j) =  -5.5D0
 !             velx(k,i,j) = 0.0D0
 !             vely(k,i,j) = 0.0D0
-             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+(CZ(k)-840.D0)**(1.D0/3.D0)) * (1.D0+sint)*0.5D0
+             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
@@ -1742,26 +1742,27 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       pres_sfc(1,i,j) = 1017.8D2                ! [Pa]
-       pott_sfc(1,i,j) = 288.3  ! [K]
+
+       pres_sfc(1,i,j) = 1017.8D2   ! [Pa]
+       pott_sfc(1,i,j) = 288.3      ! [K]
        qv_sfc  (1,i,j) = 9.45D-3
 
        do k = KS, KE
           velx(k,i,j) =  3.D0 + 4.3 * CZ(k)*1.D-3
           vely(k,i,j) = -9.D0 + 5.6 * CZ(k)*1.D-3
 
-          if ( CZ(k) <= 780.D0 ) then ! below initial cloud top
-             potl(k,i,j) = 288.3D0  
-             qall(k,i,j) = 9.45D-3 
+          if ( CZ(k) < 780.D0 ) then ! below initial cloud top
+             potl(k,i,j) = 288.3D0 ! [K]
+             qall(k,i,j) = 9.45D-3 ! [kg/kg]
           else if ( CZ(k) <= 835.D0 ) then
              sint = sin( pi2 * (CZ(k) - 795.D0)/40.D0 )
              potl(k,i,j) = 288.3D0 * (1.D0-sint)*0.5D0 + &
-                     ( 295.D0+(CZ(k)-795.D0)**(1.D0/3.D0)) * (1.D0+sint)*0.5D0 
+                   ( 295.D0+sign(abs(CZ(k)-795.D0)**(1.D0/3.D0),CZ(k)-795.D0) ) * (1.D0+sint)*0.5D0 
              qall(k,i,j) = 9.45D-3 * (1.D0-sint)*0.5D0 + &
                    ( 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ) * (1.D0+sint)*0.5D0
           else
              potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0)
-             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) 
+             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ! [kg/kg]
           endif
 
           if (       CZ(k) >= 400.D0 &
