@@ -91,12 +91,12 @@ program check
 
   if ( PRC_myrank == 0 ) then
 
-     call assert( W2m(:)/DENSm(:), 0.238729_RP )
-     call assert( MOMXm(:)/DENSm(:), 4.92381_RP )
-     call assert( RHOTm(:)/DENSm(:), 284.974_RP )
-     call assert( RHOQVm(:)/DENSm(:), 6.28699E-3_RP )
-     call assert( RHOQCm(:)/DENSm(:), 1.70087E-5_RP )
-     call assert( RHOQRm(:)/DENSm(:), 2.48695E-9_RP )
+     call assert( W2m(:)   /DENSm(:), 0.232_RP,   7.4E-2_RP )
+     call assert( MOMXm(:) /DENSm(:), 4.919_RP,   1.8E-3_RP )
+     call assert( RHOTm(:) /DENSm(:), 285.001_RP, 5.0E-5_RP )
+     call assert( RHOQVm(:)/DENSm(:), 6.43E-3_RP, 3.1E-3_RP )
+     call assert( RHOQCm(:)/DENSm(:), 2.48E-5_RP, 0.11_RP )
+     call assert( RHOQRm(:)/DENSm(:), 3.1E-8_RP,  0.99_RP )
 
   end if
 
@@ -143,9 +143,10 @@ contains
 
   end subroutine mean
 
-  subroutine assert( PHIm, answer )
+  subroutine assert( PHIm, answer, error )
     real(RP), intent(in) :: PHIm(KMAX)
     real(RP), intent(in) :: answer
+    real(RP), intent(in) :: error
 
     real(RP) :: sum
 
@@ -157,10 +158,10 @@ contains
     end do
     sum = sum / K_zi
 
-    if ( abs(answer - sum) / answer .lt. 1.0E-3_RP ) then
+    if ( abs(answer - sum) / answer .lt. error ) then
        write(*,*) 'OK'
     else
-       write(*,*) 'NG: ', answer, sum
+       write(*,*) 'NG: ', sum, abs(answer-sum)/answer
     end if
 
     return

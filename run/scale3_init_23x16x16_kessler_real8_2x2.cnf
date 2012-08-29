@@ -35,5 +35,5 @@
  RANDOM_THETA = 1.0D0,
  RANDOM_U     = 0.05D0,
  RANDOM_V     = 0.0D0,
- RANDOM_RH    = 0.5D0,
+ RANDOM_RH    = 5.0D0,
 /
