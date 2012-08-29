@@ -10,6 +10,9 @@
 \hline
 \end{tabular}
 }
+
+\def\half{\frac{1}{2}}
+
 \subsection{Spatial filter}
 
 The governing euqations are the followings:
@@ -83,6 +86,7 @@ where
 where $S_{ij}$ is the strain tensor,
 \begin{equation}
   S_{ij} = \frac{1}{2}\left(\frac{\partial \widetilde{u_i}}{\partial x_j} + \frac{\partial \widetilde{u_j}}{\partial x_i}\right),
+  \label{eq:strain tensor}
 \end{equation}
 and
 \begin{equation}
@@ -93,21 +97,25 @@ $\Delta$ is the grid spacing,
 and $\left|S\right|$ is scale of the tensor $S$,
 \begin{equation}
   \left|S\right| = \sqrt{2S_{ij}S_{ij}}.
+  \label{eq:|S|}
 \end{equation}
 \begin{equation}
   \tau_{ij} = -2\nu_{SGS}\left(S_{ij}-\frac{1}{3}S_{kk}\delta_{ij}\right)
              + \frac{2}{3} TKE\delta_{ij},
+  \label{eq:tau}
 \end{equation}
 where
 \begin{equation}
   TKE = \frac{1}{2}\left(\widetilde{u_i^2} - \widetilde{u_i}^2\right)
    = \frac{1}{2}\tau_{ii}
    = \left(C_s\Delta\right)^2\left|S\right|^2.
+   \label{eq:tke}
 \end{equation}
 
 
 \begin{equation}
-  \tau^*_i = -\nu^*_{SGS} \frac{\partial \theta}{\partial x_i},
+  \tau^*_i = -\nu^*_{SGS} \frac{\partial \widetilde{\theta}}{\partial x_i},
+  \label{eq:tau*}
 \end{equation}
 where
 \begin{equation}
@@ -125,15 +133,23 @@ is used.
 \end{equation}
 where $Rf$ is the flux Richardson number ($Rf = Ri/Pr$),
 and $\lambda_r$ is a characteristic subgrid length scale.
-$Ri$ is the Richardson number ($Ri = N^2/|S|^2$),
-and $N^2$ is the Brunt-Visala frequency ($N^2 = g/\theta\:\partial\theta/\partial z$).
+$Ri$ is the Richardson number,
+\begin{equation}
+  Ri = \frac{N^2}{|S|^2},
+  \label{eq:Ri}
+\end{equation}
+and $N^2$ is the Brunt-Visala frequency,
+\begin{equation}
+  N^2 = \frac{g}{\theta}\frac{\partial\theta}{\partial z}.
+  \label{eq:N^2}
+\end{equation}
 The Prandtl number is an unknow parameter,
 and it depends on the Richardson number,
 while it is offten assumed a constant value.
 For the unstable conditions ($Ri < 0$),
 \begin{align}
-  \nu_{SGS} &= \left(C_s\Delta\right)^2 |S| \sqrt{1 - c Ri}, \\
-  \nu^*_{SGS} &= \frac{1}{Pr_N} \left(C_s\Delta\right)^2 |S| \sqrt{1 - b Ri},
+  \nu_{SGS} &= \left(C_s\Delta\right)^2 |S| \sqrt{1 - c Ri}, \label{eq:nu unstable} \\
+  \nu^*_{SGS} &= \frac{1}{Pr_N} \left(C_s\Delta\right)^2 |S| \sqrt{1 - b Ri} \label{eq:nu^* unstable},
 \end{align}
 where $Pr_N$ is the Prandtl number in neutral condtions.
 The values of $c, b, Pr_N$ are set 16, 40, and 0.7, respectively.
@@ -144,8 +160,8 @@ Then the Prandtl number is
 For the stable condtions,
 when the Richardson number is smaller than the critical Richardson number, $Ri_c (=0.25)$,
 \begin{align}
-  \nu_{SGS} &= \left(C_s\Delta\right)^2 \left(1-\frac{Ri}{Ri_c}\right)^4, \\
-  \nu^*_{SGS} &= \frac{1}{Pr_N}\left(C_s\Delta\right)^2 \left(1-\frac{Ri}{Ri_c}\right)^4\left(1-g Ri\right).
+  \nu_{SGS} &= \left(C_s\Delta\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4, \label{eq:nu stable} \\
+  \nu^*_{SGS} &= \frac{1}{Pr_N}\left(C_s\Delta\right)^2 |S| \left(1-\frac{Ri}{Ri_c}\right)^4\left(1-g Ri\right). \label{eq:nu^* stable}
 \end{align}
 The constant $g$ is determined as the Prandtl number becomes 1
 in the limit of $Ri \to Ri_C$ and then is $(1-Pr_N)/Ri_c$.
@@ -156,8 +172,426 @@ The Prandtl number is
 For the strongly stable condistions ($Ri > Ri_c$),
 the eddy viscosity and the diffusivity for scalars are 0;
 \begin{align}
-  \nu_{SGS} &= 0, \\
-  \nu^*_{SGS} &= 0.
+  \nu_{SGS} &= 0, \label{eq:nu strong stable} \\
+  \nu^*_{SGS} &= 0. \label{eq:nu^* strong stable}
 \end{align}
+
+
+\subsection{descretization}
+
+\subsubsection{Time integration method}
+The time integration in terms of the sub-grid scale turburence
+is done by the eular scheme:
+\begin{align}
+  \left(\overline{\rho} \widetilde{u}\right)^{t+\Delta t}
+  &= \left(\overline{\rho} \widetilde{u}\right)^t
+  - \left(
+    \frac{\partial \overline{\rho}\tau_{11}}{\partial x}
+  + \frac{\partial \overline{\rho}\tau_{12}}{\partial y}
+  + \frac{\partial \overline{\rho}\tau_{13}}{\partial z}
+  \right)^t
+  \Delta t, \\
+  \left(\overline{\rho} \widetilde{v}\right)^{t+\Delta t}
+  &= \left(\overline{\rho} \widetilde{v}\right)^t
+  - \left(
+    \frac{\partial \overline{\rho}\tau_{21}}{\partial x}
+  + \frac{\partial \overline{\rho}\tau_{22}}{\partial y}
+  + \frac{\partial \overline{\rho}\tau_{23}}{\partial z}
+  \right)^t
+  \Delta t, \\
+  \left(\overline{\rho} \widetilde{w}\right)^{t+\Delta t}
+  &= \left(\overline{\rho} \widetilde{w}\right)^t
+  - \left(
+    \frac{\partial \overline{\rho}\tau_{31}}{\partial x}
+  + \frac{\partial \overline{\rho}\tau_{32}}{\partial y}
+  + \frac{\partial \overline{\rho}\tau_{33}}{\partial z}
+  \right)^t
+  \Delta t, \\
+  \left(\overline{\rho} \widetilde{\theta}\right)^{t+\Delta t}
+  &= \left(\overline{\rho} \widetilde{\theta}\right)^t
+  - \left(
+    \frac{\partial \overline{\rho}\tau^*_1}{\partial x}
+  + \frac{\partial \overline{\rho}\tau^*_2}{\partial y}
+  + \frac{\partial \overline{\rho}\tau^*_3}{\partial z}
+  \right)^t
+  \Delta t.
+\end{align}
+
+\subsubsection{Spatial descretization}
+We use the 4th order differnce scheme for the advection term as mentioned
+in the chapter \ref{chap:descretization dynamics}.
+The $\tau_{ij}$ and $\tau^*_{i}$ are propotional to
+the square of the grid spacing ($\Delta^2$).
+Due to the consistency with the advection term
+in terms of order for spatial difference,
+the second order central difference scheme
+is used for the sub-grid scale turburence.
+In the following part in this sub-section,
+overline and tilde are ommited,
+and overline, and $i,j,k$ mean
+as they are in the chapter \ref{chap:descretization dynamics}.
+
+\paragraph{Momentam equation}
+The tendencies in the momentam equation related to the sub-grid scale mode are
+\begin{align}
+  \frac{\partial \rho u}{\partial t}_{i+\half,j,k} &=
+    \frac{\rho_{i+1,j,k}\tau_{11,i+1,j,k}-\rho_{i,j,k}\tau_{11,i,j,k}}{\Delta x}
+  + \frac{\overline{\rho}_{i+\half,j+\half,k}\tau_{12,i+\half,j+\half,k}-\overline{\rho}_{i+\half,j-\half,k}\tau_{12,i+\half,j-\half,k}}{\Delta y} \nonumber \\
+  &+ \frac{\overline{\rho}_{i+\half,j,k+\half}\tau_{13,i+\half,j,k+\half}-\overline{\rho}_{i+\half,j,k-\half}\tau_{13,i+\half,j,k-\half}}{\Delta z}, \\
+  \frac{\partial \rho v}{\partial t}_{i,j+\half,k} &=
+    \frac{\overline{\rho}_{i+\half,j+\half,k}\tau_{21,i+\half,j+\half,k}-\overline{\rho}_{i-\half,j+\half,k}\tau_{21,i-\half,j+\half,k}}{\Delta x}
+  + \frac{\rho_{i,j+1,k}\tau_{22,i,j+1,k}-\rho_{i,j,k}\tau_{22,i,j,k}}{\Delta y} \nonumber \\
+ &+ \frac{\overline{\rho}_{i,j+\half,k+\half}\tau_{23,i,j+\half,k+\half}-\overline{\rho}_{i,j+\half,k-\half}\tau_{23,i,j+\half,k-\half}}{\Delta z}, \\
+  \frac{\partial \rho w}{\partial t}_{i,j,k+\half} &=
+    \frac{\overline{\rho}_{i+\half,j,k+\half}\tau_{31,i+\half,j,k+\half}-\overline{\rho}_{i-\half,j,k+\half}\tau_{31,i-\half,j,k+\half}}{\Delta x}
+  + \frac{\overline{\rho}_{i,j+\half,k+\half}\tau_{32,i,j+\half,k+\half}-\overline{\rho}_{i,j-\half,k+\half}\tau_{32,i,j-\half,k+\half}}{\Delta y} \nonumber \\
+ &+ \frac{\rho_{i,j,k+1}\tau_{33,i,j,k+1}-\rho_{i,j,k}\tau_{33,i,j,k}}{\Delta z}.
+\end{align}
+The $\overline{\rho}$ is
+\begin{align}
+  \overline{\rho}_{i,j+\half,k+\half} &=
+  \frac{\rho_{i,j+1,k+1} + \rho_{i,j+1,k} + \rho_{i,j,k+1} + \rho_{i,j,k}}{4}, \\
+  \overline{\rho}_{i+\half,j,k+\half} &=
+  \frac{\rho_{i+1,j,k+1} + \rho_{i+1,j,k} + \rho_{i,j,k+1} + \rho_{i,j,k}}{4}, \\
+  \overline{\rho}_{i+\half,j+\half,k} &=
+  \frac{\rho_{i+1,j+1,k} + \rho_{i+1,j,k} + \rho_{i,j+1,k} + \rho_{i,j,k}}{4}.
+\end{align}
+The $\tau$ is calculated from the strain tensor and $N^2$ at each point,
+from eq.(\ref{eq:tau}),(\ref{eq:tke}), (\ref{eq:nu unstable}), (\ref{eq:nu stable}), (\ref{eq:nu strong stable}), (\ref{eq:|S|}), and (\ref{eq:Ri}).
+
+\paragraph{Thermal equation}
+The tendency in the thermal equation related to the sub-grid scale model is
+\begin{align}
+  \frac{\partial \rho \theta}{\partial t}_{i,j,k} &=
+  - \frac{\overline{\rho}_{i+\half,j,k}\tau^*_{1,i+\half,j,k}-\overline{\rho}_{i-\half,j,k}\tau^*_{1,i-\half,j,k}}{\Delta x}
+  - \frac{\overline{\rho}_{i,j+\half,k}\tau^*_{2,i,j+\half,k}-\overline{\rho}_{i,j-\half,k}\tau^*_{2,i,j-\half,k}}{\Delta y} \nonumber \\
+  &- \frac{\overline{\rho}_{i,j,k+\half}\tau^*_{2,i,j,k+\half}-\overline{\rho}_{i,j,k-\half}\tau^*_{3,i,j,k-\half}}{\Delta z}
+\end{align}
+The $\overline{\rho}$ at half-level is eq.(\ref{eq:rho half i})-(\ref{eq:rho half k}),
+the $\nu^*_{SGS}$ is calculated from the strain tensor and the $N^2$ with eq.(\ref{eq:nu^* unstable}),(\ref{eq:nu^* stable}), (\ref{eq:nu^* strong stable}), (\ref{eq:|S|}, and (\ref{eq:Ri}).
+The $\tau^*$ at half-level
+is proportional to spatial difference of potential temperature
+(eq.\ref{eq:tau*}),
+which requires potential temperature at full-level (eq.\ref{eq:theta full}):
+\begin{align}
+  \tau^*_{1,i+\half,j,k} &= -\nu^*_{SGS} \frac{\theta_{i+1,j,k}-\theta_{i,j,k}}{\Delta x}, \\
+  \tau^*_{2,i,j+\half,k} &= -\nu^*_{SGS} \frac{\theta_{i,j+1,k}-\theta_{i,j,k}}{\Delta y}, \\
+  \tau^*_{3,i,j,k+\half} &= -\nu^*_{SGS} \frac{\theta_{i,j,k+1}-\theta_{i,j,k}}{\Delta x}. \\
+\end{align}
+
+
+
+\paragraph{Strain tensor}
+The strain tensor, eq.(\ref{eq:strain tensor}), have to be calculated
+at full-level (grid cell center) and edge center for the momentum equations,
+and at hafl-level (plane center) for the thermal equation;
+
+\begin{itemize}
+  \item cell center ($i,j,k$)
+    \begin{align}
+      S_{11,i,j,k} &= \left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j,k}-\overline{u}_{i-\frac{1}{2},j,k}}{\Delta x}
+      \right\}, \\
+      S_{22,i,j,k} &= \left\{
+      \frac{\overline{v}_{i,j+\frac{1}{2},k}-\overline{v}_{i,j-\frac{1}{2},k}}{\Delta y}
+      \right\}, \\
+      S_{33,i,j,k} &= \left\{
+      \frac{\overline{w}_{i,j,k+\frac{1}{2}}-\overline{v}_{i,j,k-\frac{1}{2}}}{\Delta z}
+      \right\}, \\
+      S_{12,i,j,k} = S_{21,i,j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i,j+\frac{1}{2},k}-\overline{u}_{i,j-\frac{1}{2},k}}{\Delta y}
+     +\frac{\overline{v}_{i+\frac{1}{2},j,k}-\overline{v}_{i-\frac{1}{2},j,k}}{\Delta x}
+      \right\}, \\
+      S_{23,i,j,k} = S_{32,i,j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i,j,k+\frac{1}{2}}-\overline{v}_{i,j,k-\frac{1}{2}}}{\Delta z}
+     +\frac{\overline{w}_{i,j+\frac{1}{2},k}-\overline{w}_{i,j-\frac{1}{2},k}}{\Delta y}
+      \right\}, \\
+      S_{31,i,j,k} = S_{13,i,j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j,k}-\overline{w}_{i-\frac{1}{2},j,k}}{\Delta x}
+     +\frac{\overline{u}_{i,j,k+\frac{1}{2}}-\overline{u}_{i,j,k-\frac{1}{2}}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $x$-$y$ plane center ($i,j,k+\frac{1}{2}$)
+    \begin{align}
+      S_{11,i,j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{u}_{i-\frac{1}{2},j,k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{22,i,j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{v}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i,j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{33,i,j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{w}_{i,j,k+1}-\overline{v}_{i,j,k}}{\Delta z}
+      \right\}, \\
+      S_{12,i,j,k+\frac{1}{2}} = S_{21,i,j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{u}_{i,j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+     +\frac{\overline{v}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{v}_{i-\frac{1}{2},j,k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{23,i,j,k+\frac{1}{2}} = S_{32,i,j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i,j,k+1}-\overline{v}_{i,j,k}}{\Delta z}
+     +\frac{\overline{w}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{w}_{i,j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{31,i,j,k+\frac{1}{2}} = S_{13,i,j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{w}_{i-\frac{1}{2},j,k+\frac{1}{2}}}{\Delta x}
+     +\frac{\overline{u}_{i,j,k+1}-\overline{u}_{i,j,k}}{\Delta z}
+      \right\}.
+    \end{align}
+
+    \item $y$-$z$ plane center ($i+\frac{1}{2},j,k$)
+    \begin{align}
+      S_{11,i+\frac{1}{2},j,k} &= \left\{
+      \frac{\overline{u}_{i+1,j,k}-\overline{u}_{i,j,k}}{\Delta x}
+      \right\}, \\
+      S_{22,i+\frac{1}{2},j,k} &= \left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{v}_{i+\frac{1}{2},j-\frac{1}{2},k}}{\Delta y}
+      \right\}, \\
+      S_{33,i+\frac{1}{2},j,k} &= \left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{v}_{i+\frac{1}{2},j,k-\frac{1}{2}}}{\Delta z}
+      \right\}, \\
+      S_{12,i+\frac{1}{2},j,k} = S_{21,i+\frac{1}{2},j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{u}_{i+\frac{1}{2},j-\frac{1}{2},k}}{\Delta y}
+     +\frac{\overline{v}_{i+1,j,k}-\overline{v}_{i,j,k}}{\Delta x}
+      \right\}, \\
+      S_{23,i+\frac{1}{2},j,k} = S_{32,i+\frac{1}{2},j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{v}_{i+\frac{1}{2},j,k-\frac{1}{2}}}{\Delta z}
+     +\frac{\overline{w}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{w}_{i+\frac{1}{2},j-\frac{1}{2},k}}{\Delta y}
+      \right\}, \\
+      S_{31,i+\frac{1}{2},j,k} = S_{13,i+\frac{1}{2},j,k} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+1,j,k}-\overline{w}_{i,j,k}}{\Delta x}
+     +\frac{\overline{u}_{i+\frac{1}{2},j,k+\frac{1}{2}}-\overline{u}_{i+\frac{1}{2},j,k-\frac{1}{2}}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $z$-$x$ plane center ($i,j+\frac{1}{2},k$)
+    \begin{align}
+      S_{11,i,j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{u}_{i-\frac{1}{2},j+\frac{1}{2},k}}{\Delta x}
+      \right\}, \\
+      S_{22,i,j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{v}_{i,j+1,k}-\overline{v}_{i,j,k}}{\Delta y}
+      \right\}, \\
+      S_{33,i,j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{w}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i,j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+      \right\}, \\
+      S_{12,i,j+\frac{1}{2},k} = S_{21,i,j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i,j+1,k}-\overline{u}_{i,j,k}}{\Delta y}
+     +\frac{\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{v}_{i-\frac{1}{2},j+\frac{1}{2},k}}{\Delta x}
+      \right\}, \\
+      S_{23,i,j+\frac{1}{2},k} = S_{32,i,j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i,j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+     +\frac{\overline{w}_{i,j+1,k}-\overline{w}_{i,j,k}}{\Delta y}
+      \right\}, \\
+      S_{31,i,j+\frac{1}{2},k} = S_{13,i,j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j+\frac{1}{2},k}-\overline{w}_{i-\frac{1}{2},j+\frac{1}{2},k}}{\Delta x}
+     +\frac{\overline{u}_{i,j+\frac{1}{2},k+\frac{1}{2}}-\overline{u}_{i,j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $x$ edge center ($i,j+\frac{1}{2},k+\frac{1}{2}$)
+    \begin{align}
+      S_{11,i,j+\frac{1}{2},k+\frac{1}{2}} &= \left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{u}_{i-\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{22,i,j+\frac{1}{2},k+\frac{1}{2}} &= \left\{
+      \frac{\overline{v}_{i,j+1,k+\frac{1}{2}}-\overline{v}_{i,j,k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{33,i,j+\frac{1}{2},k+\frac{1}{2}} &= \left\{
+      \frac{\overline{w}_{i,j+\frac{1}{2},k+1}-\overline{v}_{i,j+\frac{1}{2},k}}{\Delta z}
+      \right\}, \\
+      S_{12,i,j+\frac{1}{2},k+\frac{1}{2}} = S_{21,i,j+\frac{1}{2},k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i,j+1,k+\frac{1}{2}}-\overline{u}_{i,j,k+\frac{1}{2}}}{\Delta y}
+     +\frac{\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i-\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{23,i,j+\frac{1}{2},k+\frac{1}{2}} = S_{32,i,j+\frac{1}{2},k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i,j+\frac{1}{2},k+1}-\overline{v}_{i,j+\frac{1}{2},k}}{\Delta z}
+     +\frac{\overline{w}_{i,j+1,k+\frac{1}{2}}-\overline{w}_{i,j,k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{31,i,j+\frac{1}{2},k+\frac{1}{2}} = S_{13,i,j+\frac{1}{2},k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{w}_{i-\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}}{\Delta x}
+     +\frac{\overline{u}_{i,j+\frac{1}{2},k+1}-\overline{u}_{i,j+\frac{1}{2},k}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $y$ edge center ($i+\frac{1}{2},j,k+\frac{1}{2}$)
+    \begin{align}
+      S_{11,i+\frac{1}{2},j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{u}_{i+1,j,k+\frac{1}{2}}-\overline{u}_{i,j,k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{22,i+\frac{1}{2},j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i+\frac{1}{2},j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{33,i+\frac{1}{2},j,k+\frac{1}{2}} &= \left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j,k+1}-\overline{v}_{i+\frac{1}{2},j,k}}{\Delta z}
+      \right\}, \\
+      S_{12,i+\frac{1}{2},j,k+\frac{1}{2}} = S_{21,i+\frac{1}{2},j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{u}_{i+\frac{1}{2},j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+     +\frac{\overline{v}_{i+1,j,k+\frac{1}{2}}-\overline{v}_{i,j,k+\frac{1}{2}}}{\Delta x}
+      \right\}, \\
+      S_{23,i+\frac{1}{2},j,k+\frac{1}{2}} = S_{32,i+\frac{1}{2},j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j,k+1}-\overline{v}_{i+\frac{1}{2},j,k}}{\Delta z}
+     +\frac{\overline{w}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{w}_{i+\frac{1}{2},j-\frac{1}{2},k+\frac{1}{2}}}{\Delta y}
+      \right\}, \\
+      S_{31,i+\frac{1}{2},j,k+\frac{1}{2}} = S_{13,i+\frac{1}{2},j,k+\frac{1}{2}} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+1,j,k+\frac{1}{2}}-\overline{w}_{i,j,k+\frac{1}{2}}}{\Delta x}
+     +\frac{\overline{u}_{i+\frac{1}{2},j,k+1}-\overline{u}_{i+\frac{1}{2},j,k}}{\Delta z}
+      \right\}.
+    \end{align}
+
+  \item $z$ edge center ($i+\frac{1}{2},j+\frac{1}{2},k$)
+    \begin{align}
+      S_{11,i+\frac{1}{2},j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{u}_{i+1,j+\frac{1}{2},k}-\overline{u}_{i,j+\frac{1}{2},k}}{\Delta x}
+      \right\}, \\
+      S_{22,i+\frac{1}{2},j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j+1,k}-\overline{v}_{i+\frac{1}{2},j,k}}{\Delta y}
+      \right\}, \\
+      S_{33,i+\frac{1}{2},j+\frac{1}{2},k} &= \left\{
+      \frac{\overline{w}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+      \right\}, \\
+      S_{12,i+\frac{1}{2},j+\frac{1}{2},k} = S_{21,i+\frac{1}{2},j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{u}_{i+\frac{1}{2},j+1,k}-\overline{u}_{i+\frac{1}{2},j,k}}{\Delta y}
+     +\frac{\overline{v}_{i+1,j+\frac{1}{2},k}-\overline{v}_{i,j+\frac{1}{2},k}}{\Delta x}
+      \right\}, \\
+      S_{23,i+\frac{1}{2},j+\frac{1}{2},k} = S_{32,i+\frac{1}{2},j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+     +\frac{\overline{w}_{i+\frac{1}{2},j+1,k}-\overline{w}_{i+\frac{1}{2},j,k}}{\Delta y}
+      \right\}, \\
+      S_{31,i+\frac{1}{2},j+\frac{1}{2},k} = S_{13,i+\frac{1}{2},j+\frac{1}{2},k} &= \frac{1}{2}\left\{
+      \frac{\overline{w}_{i+1,j+\frac{1}{2},k}-\overline{w}_{i,j+\frac{1}{2},k}}{\Delta x}
+     +\frac{\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k+\frac{1}{2}}-\overline{u}_{i+\frac{1}{2},j+\frac{1}{2},k-\frac{1}{2}}}{\Delta z}
+      \right\}.
+    \end{align}
+\end{itemize}
+
+
+\paragraph{velocity}
+Calculattion of the strain tensor
+requires value of velocity
+at cell center, plane center, edge center, and vertex.
+The velocities at cell center (full-level) are eq.(\ref{eq:u full}-\ref{eq:w full}).
+
+\begin{itemize}
+  \item $x$-$y$ plane center ($i,j,k+\frac{1}{2}$)
+    \begin{align}
+      \overline{u}_{i,j,k+\frac{1}{2}} &=
+      \frac{\overline{u}_{i,j,k+1}+\overline{u}_{i,j,k}}{2}, \\
+      \overline{v}_{i,j,k+\frac{1}{2}} &=
+      \frac{\overline{v}_{i,j,k+1}+\overline{v}_{i,j,k}}{2}, \\
+      \overline{w}_{i,j,k+\frac{1}{2}} &=
+      \frac{(\rho w)_{i,j,k+\frac{1}{2}}}{\overline{\rho}_{i,j,k+\frac{1}{2}}}.
+    \end{align}
+
+  \item $y$-$z$ plane center ($i+\frac{1}{2},j,k$)
+    \begin{align}
+      \overline{u}_{i+\frac{1}{2},j,k} &=
+      \frac{(\rho u)_{i+\frac{1}{2},j,k}}{\overline{\rho}_{i+\frac{1}{2},j,k}}, \\
+      \overline{v}_{i+\frac{1}{2},j,k} &=
+      \frac{\overline{v}_{i+1,j,k}+\overline{v}_{i,j,k}}{2}, \\
+      \overline{w}_{i+\frac{1}{2},j,k} &=
+      \frac{\overline{w}_{i+1,j,k}+\overline{w}_{i,j,k}}{2}.
+    \end{align}
+
+  \item $z$-$x$ plane center ($i,j+\frac{1}{2},k$)
+    \begin{align}
+      \overline{u}_{i,j+\frac{1}{2},k} &=
+      \frac{\overline{u}_{i,j+1,k}+\overline{u}_{i,j,k}}{2}, \\
+      \overline{v}_{i,j+\frac{1}{2},k} &=
+      \frac{(\rho v)_{i,j+\frac{1}{2},k}}{\overline{\rho}_{i,j+\frac{1}{2},k}}, \\
+      \overline{w}_{i,j+\frac{1}{2},k} &=
+      \frac{\overline{w}_{i,j+1,k}+\overline{w}_{i,j,k}}{2}.
+    \end{align}
+
+  \item $x$ edge center ($i,j+\frac{1}{2},k+\half$)
+    \begin{align}
+      \overline{u}_{i,j+\half,k+\half} &=
+      \frac{\overline{u}_{i,j+1,k+1}+\overline{u}_{i,j+1,k}+\overline{u}_{i,j,k+1}+\overline{u}_{i,j,k}}{4}, \\
+      \overline{v}_{i,j+\half,k+\half} &=
+      \frac{\overline{v}_{i,j+\half,k+1}+\overline{v}_{i,j+\half,k}}{2}, \\
+      \overline{w}_{i,j+\half,k+\half} &=
+      \frac{\overline{w}_{i,j+1,k+\half}+\overline{w}_{i,j,k+\half}}{2}.
+    \end{align}
+
+  \item $y$ edge center ($i+\half,j,k+\half$)
+    \begin{align}
+      \overline{u}_{i+\half,j,k+\half} &=
+      \frac{\overline{u}_{i+\half,j,k+1}+\overline{u}_{i+\half,j,k}}{2}, \\
+      \overline{v}_{i+\half,j,k+\half} &=
+      \frac{\overline{v}_{i+1,j,k+1}+\overline{v}_{i+1,j,k}+\overline{v}_{i,j,k+1}+\overline{v}_{i,j,k}}{4}, \\
+      \overline{w}_{i+\half,j,k+\half} &=
+      \frac{\overline{w}_{i+1,j,k+\half}+\overline{w}_{i,j,k+\half}}{2}.
+    \end{align}
+
+  \item $z$ edge center ($i+\half,j+\half,k$)
+    \begin{align}
+      \overline{u}_{i+\half,j+\half,k} &=
+      \frac{\overline{u}_{i+\half,j+1,k}+\overline{u}_{i+\half,j,k}}{2}, \\
+      \overline{v}_{i+\half,j+\half,k} &=
+      \frac{\overline{v}_{i+1,j+\half,k}+\overline{v}_{i,j+\half,k}}{2}, \\
+      \overline{w}_{i+\half,j+\half,k} &=
+      \frac{\overline{w}_{i+1,j+1,k}+\overline{w}_{i+1,j,k}+\overline{w}_{i,j+1,k}+\overline{w}_{i,j,k}}{4}.
+    \end{align}
+
+  \item vertex ($i+\half,j+\half,k+\half$)
+    \begin{align}
+      \overline{u}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{u}_{i+\half,j+1,k+1}+\overline{u}_{i+\half,j+1,k}+\overline{u}_{i+\half,j,k+1}+\overline{u}_{i+\half,j,k}}{4}, \\
+      \overline{v}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{v}_{i+1,j+\half,k+1}+\overline{v}_{i+1,j+\half,k}+\overline{v}_{i,j+\half,k+1}+\overline{v}_{i,j+\half,k}}{4}, \\
+      \overline{w}_{i+\half,j+\half,k+\half} &=
+      \frac{\overline{w}_{i+1,j+1,k+\half}+\overline{w}_{i+1,j,k+\half}+\overline{w}_{i,j+1,k+\half}+\overline{w}_{i,j,k+\half}}{4}.
+    \end{align}
+\end{itemize}
+
+
+\paragraph{Brunt-Visala frequency}
+The Brunt-Visala frequency, $N^2$ is required to calculate the Richardson number
+at cell center and edge center for the momentum equations,
+and plane center for the thermal equation.
+
+\begin{itemize}
+  \item cell center ($i,j,k$)
+    \begin{equation}
+      N^2_{i,j,k} = \frac{g}{\theta_{i,j,k}}
+      \frac{\theta_{i,j,k+1}-\theta_{i,j,k-1}}{2\Delta z}.
+    \end{equation}
+
+  \item $x$-$y$ plane center ($i,j,k+\half$)
+    \begin{equation}
+      N^2_{i,j,k+\half} = \frac{2g}{\theta_{i,j,k+1}+\theta_{i,j,k}}
+      \frac{\theta_{i,j,k+1}-\theta_{i,j,k}}{\Delta z}.
+    \end{equation}
+
+  \item $y$-$z$ plane center ($i+\half,j,k$)
+    \begin{equation}
+      N^2_{i+\half,j,k} = \frac{2g}{\theta_{i+1,j,k}+\theta_{i,j,k}}
+      \frac{(\theta_{i+1,j,k+1}+\theta_{i,j,k+1})-(\theta_{i+1,j,k-1}+\theta_{i,j,k-1})}{4\Delta z}.
+    \end{equation}
+
+  \item $z$-$x$ plane center ($i,j+\half,k$)
+    \begin{equation}
+      N^2_{i,j+\half,k} = \frac{2g}{\theta_{i,j+1,k}+\theta_{i,j,k}}
+      \frac{(\theta_{i,j+1,k+1}+\theta_{i,j,k+1})-(\theta_{i,j+1,k-1}+\theta_{i,j,k-1})}{4\Delta z}.
+    \end{equation}
+
+  \item $x$ edge center ($i,j+\half,k+\half$)
+    \begin{equation}
+      N^2_{i,j+\half,k+\half} = \frac{4g}{\theta_{i,j+1,k+1}+\theta_{i,j+1,k}+\theta_{i,j,k+1}+\theta_{i,j,k}}
+      \frac{(\theta_{i,j+1,k+1}+\theta_{i,j,k+1})-(\theta_{i,j+1,k}+\theta_{i,j,k})}{2\Delta z}.
+    \end{equation}
+
+  \item $y$ edge center ($i+\half,j,k+\half$)
+    \begin{equation}
+      N^2_{i+\half,j,k+\half} = \frac{4g}{\theta_{i+1,j,k+1}+\theta_{i+1,j,k}+\theta_{i,j,k+1}+\theta_{i,j,k}}
+      \frac{(\theta_{i+1,j,k+1}+\theta_{i,j,k+1})-(\theta_{i+1,j,k}+\theta_{i,j,k})}{2\Delta z}.
+    \end{equation}
+
+  \item $z$ edge center ($i+\half,j+\half,k$)
+    \begin{equation}
+      N^2_{i+\half,j+\half,k} = \frac{4g}{\theta_{i+1,j+1,k}+\theta_{i+1,j,k}+\theta_{i,j+1,k}+\theta_{i,j,k}}
+      \frac{(\theta_{i+1,j+1,k+1}+\theta_{i+1,j,k+1}+\theta_{i,j+1,k+1}+\theta_{i,j,k+1})-(\theta_{i+1,j+1,k-1}+\theta_{i+1,j,k-1}+\theta_{i,j+1,k-1}+\theta_{i,j,k-1})}{8\Delta z}.
+    \end{equation}
+
+
+\end{itemize}
 
 %\end{document}
