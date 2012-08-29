@@ -91,12 +91,12 @@ program check
 
   if ( PRC_myrank == 0 ) then
 
-     call assert( W2m(:)   /DENSm(:), 0.232_RP,   7.4E-2_RP )
-     call assert( MOMXm(:) /DENSm(:), 4.919_RP,   1.8E-3_RP )
-     call assert( RHOTm(:) /DENSm(:), 285.001_RP, 5.0E-5_RP )
-     call assert( RHOQVm(:)/DENSm(:), 6.43E-3_RP, 3.1E-3_RP )
-     call assert( RHOQCm(:)/DENSm(:), 2.48E-5_RP, 0.11_RP )
-     call assert( RHOQRm(:)/DENSm(:), 3.1E-8_RP,  0.99_RP )
+     call assert( W2m(:)   /DENSm(:), 0.240_RP,   0.15_RP )
+     call assert( MOMXm(:) /DENSm(:), 4.920_RP,   2.5E-3_RP )
+     call assert( RHOTm(:) /DENSm(:), 284.996_RP, 7.0E-5_RP )
+     call assert( RHOQVm(:)/DENSm(:), 6.43E-3_RP, 4.0E-3_RP )
+     call assert( RHOQCm(:)/DENSm(:), 2.47E-5_RP, 0.15_RP )
+     call assert( RHOQRm(:)/DENSm(:), 3.1E-8_RP,  1.0_RP )
 
   end if
 
