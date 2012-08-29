@@ -3,23 +3,22 @@
 
 ##### for computation
 
-FC     = /usr/local/mpich213/bin/mpif90
-FFLAGS = -fpp3 -O3 -ftz -m64                  \
-         -assume byterecl -convert big_endian \
-         -fp-model precise -pc 80             \
-         -heap-arrays -fno-alias
-
-
-#FFLAGS = -fpp3 -O0 -m64                       \
+FC     = /usr/local/mpich2-141p1/bin/mpif90
+#FFLAGS = -fpp3 -O3 -ftz -m64                  \
 #         -assume byterecl -convert big_endian \
 #         -fp-model precise -pc 80             \
-#         -heap-arrays -fno-alias              \
-#         -check all -warn all -g -traceback
-#
+#         -heap-arrays -fno-alias
+
+
+FFLAGS = -fpp3 -O0 -m64                       \
+         -assume byterecl -convert big_endian \
+         -fp-model precise -pc 80             \
+         -heap-arrays -fno-alias              \
+         -check all -warn all -g -traceback
 
 FFLAGS_DYN = $(FFLAGS)
 
-CC     = /usr/local/mpich213/bin/mpicc
+CC     = /usr/local/mpich2-141p1/bin/mpicc
 CFLAGS = -O3 -ftz -m64
 
 LD     = $(FC)
@@ -44,3 +43,11 @@ CFLAGS       = -O3
 
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
+
+AR     = ar -rv
+RANLIB = ranlib -c
+
+NETCDF_DIR ?= /opt/local
+NETCDF_INCLUDE= -I$(NETCDF_DIR)/include
+NETCDF_LIB_DIR=$(if $(shell ls $(NETCDF_DIR)/lib64 2>&1 | grep "No such file"),$(NETCDF_DIR)/lib,$(NETCDF_DIR)/lib64)
+NETCDF_LIBS=-L$(NETCDF_LIB_DIR) -lnetcdf
