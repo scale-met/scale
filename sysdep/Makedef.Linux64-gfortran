@@ -1,0 +1,24 @@
+# ------ FOR MacOSX & ifort & MPICH2 -----
+#
+
+##### for computation
+
+FC     = mpif90
+FFLAGS = -O3 -cpp
+
+
+FFLAGS_DYN = $(FFLAGS)
+
+CC     = mpicc
+CFLAGS = -O3
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+##### for frontend
+
+NETCDF_LIBS = -lnetcdf
+NETCDF_INCLUDE = 
+
+AR     = ar r
+RANLIB = ranlib
