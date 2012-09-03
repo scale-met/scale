@@ -1,4 +1,5 @@
 !-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 !> module History
 !!
 !! @par Description
@@ -7,8 +8,9 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-05 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2011-12-05 (H.Yashiro)   [new]
+!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
+!! @li      2012-06-11 (S.Nishizawa) [mod] use gtool_history
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -17,13 +19,18 @@ module mod_history
   !
   !++ Used modules
   !
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
+  use mod_process, only : &
+      PRC_MPIstop
+  use gtool_history, only: &
+       HistoryInit, &
+       HistoryAddVariable, &
+       HistoryPutAxis, &
+       HistoryPutAdditionalAxis, &
+       HistoryPut, &
+       HistoryGet
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -33,17 +40,22 @@ module mod_history
   !
   public :: HIST_setup
   public :: HIST_reg
-  public :: HIST_put
   public :: HIST_in
+  public :: HIST_put
+  public :: HIST_get
   public :: HIST_write
-  public :: HIST_outputlist
 
+  interface HIST_get
+     module procedure HIST_get_1D
+     module procedure HIST_get_3D
+  end interface HIST_get
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
   !
   include "inc_precision.h"
   include "inc_index.h"
+  include "inc_precision.h"
 
   !-----------------------------------------------------------------------------
   !
@@ -57,398 +69,294 @@ module mod_history
   !
   !++ Private parameters & variables
   !
+  !-----------------------------------------------------------------------------
 
-  character(len=IO_FILECHR), private,      save :: HISTORY_OUT_BASENAME = 'history'
-  integer,                   private,      save :: HISTORY_DTYPE
-
-  integer,                   private, parameter :: HIST_req_limit = 1000 !> number limit for history item request
-  character(len=FIO_HSHORT), private,      save :: HIST_req_item   (HIST_req_limit)
-  real(RP),                   private,      save :: HIST_req_tintsec(HIST_req_limit)
-  logical,                   private,      save :: HIST_req_tavg   (HIST_req_limit)
-
-  integer,                   private,              save :: HIST_req_nmax = 0 !> number of requested item
-  character(len=FIO_HSHORT), private, allocatable, save :: HIST_item   (:)
-  character(len=FIO_HMID),   private, allocatable, save :: HIST_desc   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: HIST_unit   (:)
-  character(len=FIO_HSHORT), private, allocatable, save :: HIST_ktype  (:)
-  integer,                   private, allocatable, save :: HIST_kmax   (:)
-  real(RP),                   private, allocatable, save :: HIST_tintsec(:)
-  logical,                   private, allocatable, save :: HIST_tavg   (:)
-
-  real(RP),                   private, allocatable, save :: HIST_varsum (:,:,:,:)
-  integer,                   private, allocatable, save :: HIST_step   (:)
-  real(RP),                   private, allocatable, save :: HIST_tstrsec(:)
-  real(RP),                   private, allocatable, save :: HIST_tsumsec(:)
-
-  integer,                   private,              save :: HIST_id_count = 1 !> number of registered item
-
-  real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
-
-  !-----------------------------------------------------------------------------  
 contains
   !-----------------------------------------------------------------------------
   subroutine HIST_setup
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
-    use mod_time, only: &
-       TIME_ymdhms2sec
-    use mod_fileio_h, only: &
-       FIO_REAL4, &
-       FIO_REAL8, &
-       FIO_preclist
-    implicit none
 
-    real(RP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.E0_RP
-    character(len=FIO_HSHORT) :: HISTORY_DEFAULT_TUNIT     = "MIN"
-    logical                   :: HISTORY_DEFAULT_AVERAGE   = .false.
-    character(len=FIO_HSHORT) :: HISTORY_DATATYPE          = "REAL4"
+    ! only for register
+    call TIME_rapstart('FILE I')
+    call TIME_rapend  ('FILE I')
+    call TIME_rapstart('FILE O')
+    call TIME_rapend  ('FILE O')
 
-    NAMELIST / PARAM_HISTORY / &
-       HISTORY_OUT_BASENAME,      &
-       HISTORY_DEFAULT_TINTERVAL, &
-       HISTORY_DEFAULT_TUNIT,     &
-       HISTORY_DEFAULT_AVERAGE,   &
-       HISTORY_DATATYPE
+    call TIME_rapstart('FILE O')
 
-    character(len=FIO_HSHORT) :: ITEM  !> name of history item
-    real(RP)                   :: TINT  !> time interval to output
-    character(len=FIO_HSHORT) :: TUNIT !> time unit
-    logical                   :: TAVG  !> time average  to output
+    call HistoryInit( &
+       'SCALE3 HISTORY OUTPUT', 'SCALE-LES ver. 3', 'AICS/RIKEN', &
+       (/'x','y','z'/), &
+       (/IMAX,JMAX,KMAX/), &
+       (/'X', 'Y', 'Z'/), &
+       (/'meter','meter','meter'/), &
+       (/'REAL4','REAL4','REAL4'/), &
+       namelist_fid = IO_FID_CONF &
+       )
 
-    NAMELIST / HISTITEM / &
-       ITEM,  &
-       TINT,  &
-       TUNIT, &
-       TAVG
-
-    integer :: ierr
-    integer :: n
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HISTORY]/Categ[IO]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_HISTORY,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_HISTORY. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_HISTORY)
-
-    if    ( trim(HISTORY_DATATYPE) == 'REAL4' ) then
-       HISTORY_DTYPE = FIO_REAL4
-    elseif( trim(HISTORY_DATATYPE) == 'REAL8' ) then
-       HISTORY_DTYPE = FIO_REAL8
-    else
-       write(*,*) 'xxx Not appropriate DATATYPE. Check!', HISTORY_DATATYPE
-       call PRC_MPIstop
-    endif
-
-    ! listup history request
-    rewind(IO_FID_CONF)
-    do n = 1, HIST_req_limit
-       read(IO_FID_CONF,nml=HISTITEM,iostat=ierr)
-       if( ierr /= 0 ) exit
-    enddo
-    HIST_req_nmax = n - 1
-
-    if    ( HIST_req_nmax > HIST_req_limit ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** request of history file is exceed! n >', HIST_req_limit
-    elseif( HIST_req_nmax == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** No history file specified.'
-       return
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested history item             : ', HIST_req_nmax
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output data type                             : ', HISTORY_DATATYPE
-       if( IO_L ) write(IO_FID_LOG,*) '*** Memory usage for history data buffer [Mbyte] : ', &
-                                      IMAX*JMAX*KMAX*HIST_req_nmax*FIO_preclist(HISTORY_DTYPE)/1024/1024
-    endif
-
-    allocate( HIST_item   (HIST_req_nmax) ); HIST_item(:) = ''
-    allocate( HIST_desc   (HIST_req_nmax) )
-    allocate( HIST_unit   (HIST_req_nmax) )
-    allocate( HIST_ktype  (HIST_req_nmax) )
-    allocate( HIST_kmax   (HIST_req_nmax) )
-    allocate( HIST_tintsec(HIST_req_nmax) )
-    allocate( HIST_tavg   (HIST_req_nmax) )
-
-    allocate( HIST_varsum (KMAX,IMAX,JMAX,HIST_req_nmax) )
-    allocate( HIST_step   (HIST_req_nmax) )
-    allocate( HIST_tstrsec(HIST_req_nmax) )
-    allocate( HIST_tsumsec(HIST_req_nmax) )
-
-    rewind(IO_FID_CONF)
-    do n = 1, HIST_req_nmax
-       ! set default
-       ITEM  = 'unknown'
-       TINT  = HISTORY_DEFAULT_TINTERVAL
-       TAVG  = HISTORY_DEFAULT_AVERAGE
-       TUNIT = HISTORY_DEFAULT_TUNIT
-
-       read(IO_FID_CONF,nml=HISTITEM,iostat=ierr)
-       if( ierr /= 0 ) exit
-
-       HIST_req_item(n) = ITEM
-       call TIME_ymdhms2sec( HIST_req_tintsec(n), TINT, TUNIT )
-       HIST_req_tavg(n) = TAVG
-
-       if ( HIST_req_tintsec(n) <= 0.0_RP ) then
-          write(*,*) 'xxx Not appropriate time interval. Check!', ITEM, TINT
-          call PRC_MPIstop
-       endif
-    enddo
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_setup
 
   !-----------------------------------------------------------------------------
   subroutine HIST_reg( &
-      itemid, &
-      item,   &
-      desc,   &
-      unit,   &
-      ktype   )
-    use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       itemid, & ! (out)
+       item,   & ! (in)
+       desc,   & ! (in)
+       units,  & ! (in)
+       ktype   & ! (in)
+       )
+    use mod_process, only: &
+         PRC_master, &
+         PRC_myrank
     implicit none
 
     integer,          intent(out) :: itemid
     character(len=*), intent( in) :: item
     character(len=*), intent( in) :: desc
-    character(len=*), intent( in) :: unit
+    character(len=*), intent( in) :: units
     character(len=*), intent( in) :: ktype
 
-    character(len=8) :: lname
+    character(len=1), allocatable :: dims(:)
 
-    integer :: n, nmax, reqid
-    !---------------------------------------------------------------------------
+    call TIME_rapstart('FILE O')
 
-    !--- search existing item
-    itemid = -1
-    nmax = min( HIST_id_count, HIST_req_nmax )
-    do n = 1, nmax
-       if ( trim(item) == trim(HIST_item(n)) ) then ! match existing item
-          itemid = n
-          return
-       endif
-    enddo
+    if ( trim(ktype)=="3D" ) then
+       allocate(dims(3))
+       dims = (/"x","y","z"/)
+    else if ( trim(ktype)=="2D" ) then
+       allocate(dims(2))
+       dims = (/"x","y"/)
+    else
+       write(*,*) "xxx ktype is invalid: ", ktype
+       call PRC_MPIstop
+    end if
 
-    if ( itemid < 0 ) then ! request-register matching check
-       do n = 1, HIST_req_nmax
-          if ( trim(item) == HIST_req_item(n) ) then
-             itemid = HIST_id_count
-             reqid  = n
-             HIST_id_count = HIST_id_count + 1
+    call HistoryAddVariable(item, dims, desc, units, PRC_master, PRC_myrank, & ! (in)
+         itemid = itemid) ! (out)
 
-             ! new file registration
-             HIST_item(itemid) = trim(item)
-             HIST_desc(itemid) = trim(desc)
-             HIST_unit(itemid) = trim(unit)
-             if    ( trim(ktype) == '2D' ) then
-                HIST_ktype(itemid) = 'ZSFC'
-                HIST_kmax (itemid) = 1
-             elseif( trim(ktype) == '3D' ) then
-                write(lname,'(A,I4.4)') 'ZDEF', KMAX
-                HIST_ktype(itemid) = lname
-                HIST_kmax (itemid) = KMAX
-             endif
-             HIST_tintsec(itemid) = HIST_req_tintsec(reqid)
-             HIST_tavg   (itemid) = HIST_req_tavg(reqid)
+    deallocate(dims)
 
-             HIST_varsum(:,:,:,itemid) = 0.0_RP
-             HIST_step        (itemid) = 1
-             HIST_tstrsec     (itemid) = NOWSEC
-             HIST_tsumsec     (itemid) = 0.0_RP
-
-             if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(HIST_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Description    : ', trim(HIST_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Unit           : ', trim(HIST_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Vert. type     : ', trim(HIST_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] # of layer     : ', HIST_kmax(itemid)
-             if( IO_L ) write(IO_FID_LOG,*) '] Interval [sec] : ', HIST_tintsec(itemid)
-             if( IO_L ) write(IO_FID_LOG,*) '] Average?       : ', HIST_tavg   (itemid)
-          endif
-       enddo
-    endif
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_reg
 
   !-----------------------------------------------------------------------------
   subroutine HIST_put( &
-      itemid, &
-      var,    &
-      dt      )
+      itemid, & ! (in)
+      var,    & ! (in)
+      dt      & ! (in)
+      )
     implicit none
 
-    integer, intent(in) :: itemid
+    integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:,:,:)
-    real(RP), intent(in) :: dt
+    real(8),  intent(in) :: dt
 
-    integer :: ksize, kstr, kend
-    !---------------------------------------------------------------------------
+    real(RP) :: var2(IMAX*JMAX*KMAX)
+    logical, save :: firsttime = .true.
+    integer :: i, j, k
+    integer :: s(3)
+    intrinsic shape
 
-    if ( HIST_kmax(itemid) == KMAX ) then ! 3D
-       ksize = KMAX
-       kstr  = KS
-       kend  = KE
+    call TIME_rapstart('FILE O')
+
+    if ( firsttime ) then
+       call HIST_put_axes
+       firsttime = .false.
+    end if
+
+    s = shape(var)
+    if ( s(1) == 1 ) then
+       do j = 1, JMAX
+          do i = 1, IMAX
+             var2(i + (j-1)*IMAX) = var(1,IS+i-1,JS+j-1)
+          end do
+       end do
+       call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
     else
-       ksize = 1
-       kstr  = 1
-       kend  = 1
-    endif
+       do k = 1, KMAX
+          do j = 1, JMAX
+             do i = 1, IMAX
+                var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+             end do
+          end do
+       end do
+       call HistoryPut(itemid, var2, dt)
+    end if
 
-    if ( HIST_tavg(itemid) ) then
-       HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) = HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) &
-                                                 + var(kstr:kend,IS:IE,JS:JE) * dt
-    else
-       HIST_varsum(1:ksize,1:IMAX,1:JMAX,itemid) = var(kstr:kend,IS:IE,JS:JE)
-    endif
-    HIST_tsumsec(itemid) = HIST_tsumsec(itemid) + dt
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_put
 
   !-----------------------------------------------------------------------------
   subroutine HIST_in( &
-      var,   &
-      item,  &
-      desc,  &
-      unit,  &
-      ktype, &
-      dt     )
+       var,    & ! (in)
+       item,   & ! (in)
+       desc,   & ! (in)
+       units,  & ! (in)
+       ktype,  & ! (in)
+       dt      & ! (in)
+       )
     implicit none
 
-    real(RP),          intent(in) :: var(:,:,:)
+    real(RP),         intent(in) :: var(:,:,:)
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
-    character(len=*), intent(in) :: unit
+    character(len=*), intent(in) :: units
     character(len=*), intent(in) :: ktype
-    real(RP),          intent(in) :: dt
-
+    real(8),          intent(in) :: dt
+       
     integer :: itemid
-    !---------------------------------------------------------------------------
 
-    call HIST_reg( itemid, item, desc, unit, ktype )
-    
-    if ( itemid > 0 ) then
-       call HIST_put( itemid, var(:,:,:), dt )
-    endif
+    call TIME_rapstart('FILE O')
+
+    call HIST_reg( &
+         itemid,                  & ! (out)
+         item, desc, units, ktype & ! (in)
+         )
+
+    call HIST_put( itemid, var, dt ) ! (in)
+
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_in
 
   !-----------------------------------------------------------------------------
-  subroutine HIST_write
-    use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
-    use mod_fileio, only: &
-#ifdef CONFIG_HDF5
-       FIO_output, &
-       FIO_getfid
-#else
-       FIO_output
-#endif
+  ! interface HIST_get
+  !-----------------------------------------------------------------------------
+  subroutine HIST_get_1D( &
+       var,       &
+       basename,  &
+       varname,   &
+       step       &
+       )
+    use mod_process, only: &
+       PRC_myrank
     implicit none
 
-#ifdef CONFIG_HDF5
-    integer :: fid
-!    character(LEN=64) :: gname
-#endif
+    real(RP),         intent(out) :: var(:)
+    character(len=*), intent( in) :: basename
+    character(len=*), intent( in) :: varname
+    integer,          intent( in) :: step
 
-    real(RP) :: var(KMAX,IMAX,JMAX)
+    call TIME_rapstart('FILE I')
 
-    logical, save :: firsttime = .true.
+    call HistoryGet( var,                                   & ! (out)
+         basename, varname, step, PRC_myrank, single=.true. ) ! (in)
 
-    integer :: n, ksize
+    call TIME_rapend  ('FILE I')
 
-    !---------------------------------------------------------------------------
+    return
+  end subroutine HIST_get_1D
+  subroutine HIST_get_3D( &
+       var,          &
+       basename,     &
+       varname,      &
+       step,         &
+       allow_missing &
+       )
+    use mod_process, only: &
+       PRC_myrank
+    implicit none
 
-    if( HIST_id_count == 1 ) return
+    real(RP),         intent(out) :: var(:,:,:)
+    character(len=*), intent( in) :: basename
+    character(len=*), intent( in) :: varname
+    integer,          intent( in) :: step
+    logical,          intent( in), optional :: allow_missing
 
-    if (firsttime) then
-       firsttime = .false.
-       call HIST_outputlist
-    endif
+    call TIME_rapstart('FILE I')
 
-#ifdef CONFIG_HDF5
-    call FIO_getfid(fid, trim(HISTORY_OUT_BASENAME), 1, 'SCALE3 HISTORY OUTPUT', '')
-    call fio_new_group(fid, NOWSEC, 6)
-#endif
+    call HistoryGet( var,                                   & ! (out)
+         basename, varname, step, PRC_myrank, allow_missing ) ! (in)
 
-    do n = 1, HIST_id_count-1
-       
-       if ( HIST_tsumsec(n) - HIST_tintsec(n) > -eps ) then
-          ksize = HIST_kmax(n)
+    call TIME_rapend  ('FILE I')
 
-          if ( HIST_tavg(n) ) then
-             var(1:HIST_kmax(n),:,:) = HIST_varsum(1:HIST_kmax(n),:,:,n) / HIST_tsumsec(n)
-          else
-             var(1:HIST_kmax(n),:,:) = HIST_varsum(1:HIST_kmax(n),:,:,n)
-          endif
+    return
+  end subroutine HIST_get_3D
 
-          call FIO_output( var(:,:,:),                     & ! data
-                           trim(HISTORY_OUT_BASENAME),     & ! package name
-                           'SCALE3 HISTORY OUTPUT',        & ! package desc
-                           '',                             & ! package note
-                           HIST_item(n),                   & ! data item name
-                           HIST_desc(n),                   & ! data desc
-                           '',                             & ! data note
-                           HIST_unit(n),                   & ! data unit
-                           HISTORY_DTYPE,                  & ! datatype
-                           HIST_ktype(n),                  & ! vertical layer name
-                           1,                              & ! start index of k
-                           HIST_kmax(n),                   & ! end   index pf k
-                           HIST_step(n),                   & ! step number
-                           HIST_tstrsec(n),                & ! package name
-                           HIST_tstrsec(n)+HIST_tsumsec(n) ) ! package name
+  !-----------------------------------------------------------------------------
+  subroutine HIST_write
+    use gtool_history, only : &
+         HistoryWriteAll
+    use mod_time, only : &
+         TIME_NOWSEC
+    implicit none
 
-          HIST_varsum(:,:,:,n) = 0.0_RP
-          HIST_step(n)         = HIST_step(n) + 1
-          HIST_tstrsec(n)      = NOWSEC
-          HIST_tsumsec(n)      = 0.0_RP
-       endif
+    call TIME_rapstart('FILE O')
 
-    enddo
+    call HistoryWriteAll( TIME_NOWSEC )
 
-#ifdef CONFIG_HDF5
-!    call fio_get_group(fid, gid)
-    call fio_close_group(fid)
-#endif
+    call TIME_rapend  ('FILE O')
 
     return
   end subroutine HIST_write
 
   !-----------------------------------------------------------------------------
-  subroutine HIST_outputlist
+  ! private
+  !-----------------------------------------------------------------------------
+  subroutine HIST_put_axes
+    use mod_grid, only : &
+         GRID_CZ, &
+         GRID_CX, &
+         GRID_CY, &
+         GRID_FZ, &
+         GRID_FX, &
+         GRID_FY, &
+         GRID_CDZ, &
+         GRID_CDX, &
+         GRID_CDY, &
+         GRID_FDZ, &
+         GRID_FDX, &
+         GRID_FDY, &
+         GRID_CBFZ, &
+         GRID_CBFX, &
+         GRID_CBFY, &
+         GRID_FBFZ, &
+         GRID_FBFX, &
+         GRID_FBFY
+    use gtool_history, only : &
+         HistoryPutAxis
     implicit none
+    integer i
 
-    integer :: n
-    !---------------------------------------------------------------------------
+    call TIME_rapstart('FILE O')
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Output item list '
-    if( IO_L ) write(IO_FID_LOG,*) '*** Number of history item :', HIST_req_nmax
-    if( IO_L ) write(IO_FID_LOG,*) 'NAME           :UNIT           :Layername         :interval[sec]:avg'
-    if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
- 
-    do n = 1, HIST_id_count-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1x,f13.3,1x,L)') HIST_item(n),&
-            HIST_unit(n), HIST_ktype(n), HIST_tintsec(n), HIST_tavg(n)
-    enddo
+    call HistoryPutAxis('x', GRID_CX(IS:IE))
+    call HistoryPutAxis('y', GRID_CY(JS:JE))
+    call HistoryPutAxis('z', GRID_CZ(KS:KE))
 
-    if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
+    call HistoryPutAdditionalAxis('CZ', 'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
+    call HistoryPutAdditionalAxis('CX', 'Grid Center Position X', 'm', 'CX', GRID_CX)
+    call HistoryPutAdditionalAxis('CY', 'Grid Center Position Y', 'm', 'CY', GRID_CY)
+    call HistoryPutAdditionalAxis('FZ', 'Grid Face Position Z', 'm', 'FZ', GRID_FZ)
+    call HistoryPutAdditionalAxis('FX', 'Grid Face Position X', 'm', 'FX', GRID_FX)
+    call HistoryPutAdditionalAxis('FY', 'Grid Face Position Y', 'm', 'FY', GRID_FY)
+
+    call HistoryPutAdditionalAxis('CDZ', 'Grid Cell length Z', 'm', 'CZ', GRID_CDZ)
+    call HistoryPutAdditionalAxis('CDX', 'Grid Cell length X', 'm', 'CX', GRID_CDX)
+    call HistoryPutAdditionalAxis('CDY', 'Grid Cell length Y', 'm', 'CY', GRID_CDY)
+    call HistoryPutAdditionalAxis('FDZ', 'Grid distance Z', 'm', 'FDZ', GRID_FDZ)
+    call HistoryPutAdditionalAxis('FDX', 'Grid distance X', 'm', 'FDX', GRID_FDX)
+    call HistoryPutAdditionalAxis('FDY', 'Grid distance Y', 'm', 'FDY', GRID_FDY)
+
+    call HistoryPutAdditionalAxis('CBFZ', 'Boundary factor Center Z', '', 'CZ', GRID_CBFZ)
+    call HistoryPutAdditionalAxis('CBFX', 'Boundary factor Center X', '', 'CX', GRID_CBFX)
+    call HistoryPutAdditionalAxis('CBFY', 'Boundary factor Center Y', '', 'CY', GRID_CBFY)
+    call HistoryPutAdditionalAxis('FBFZ', 'Boundary factor Face Z', '', 'CZ', GRID_FBFZ)
+    call HistoryPutAdditionalAxis('FBFX', 'Boundary factor Face X', '', 'CX', GRID_FBFX)
+    call HistoryPutAdditionalAxis('FBFY', 'Boundary factor Face Y', '', 'CY', GRID_FBFY)
+
+    call TIME_rapend  ('FILE O')
 
     return
-  end subroutine HIST_outputlist
+  end subroutine HIST_put_axes
 
 end module mod_history
 !-------------------------------------------------------------------------------

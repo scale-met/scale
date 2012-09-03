@@ -22,6 +22,8 @@ module mod_atmos_refstate
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
+  use gtool_file_h, only : &
+     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -40,6 +42,7 @@ module mod_atmos_refstate
   !
   include 'inc_precision.h'
   include 'inc_index.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -56,11 +59,14 @@ module mod_atmos_refstate
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''
-  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE         = 'ISA'
-  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP ! surface temperature
-  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP ! uniform potential temperature
+  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME   = ''
+  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME  = ''
+  character(len=File_HLONG), private :: ATMOS_REFSTATE_OUT_TITLE     = 'SCALE3 Refstate'
+  character(len=File_HLONG), private :: ATMOS_REFSTATE_OUT_SOURCE    = 'SCALE-LES ver. 3'
+  character(len=File_HLONG), private :: ATMOS_REFSTATE_OUT_INSTITUTE = 'AISC/RIKEN'
+  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE          = 'ISA'
+  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC      = 300.0_RP ! surface temperature
+  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM  = 300.0_RP ! uniform potential temperature
 
   !-----------------------------------------------------------------------------
 contains
@@ -76,10 +82,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
-       ATMOS_REFSTATE_IN_BASENAME,  &
-       ATMOS_REFSTATE_OUT_BASENAME, &
-       ATMOS_REFSTATE_TYPE,         &
-       ATMOS_REFSTATE_POTT_UNIFORM, &
+       ATMOS_REFSTATE_IN_BASENAME,   &
+       ATMOS_REFSTATE_OUT_BASENAME,  &
+       ATMOS_REFSTATE_OUT_TITLE,     &
+       ATMOS_REFSTATE_OUT_SOURCE,    &
+       ATMOS_REFSTATE_OUT_INSTITUTE, &
+       ATMOS_REFSTATE_TYPE,          &
+       ATMOS_REFSTATE_POTT_UNIFORM,  &
        ATMOS_REFSTATE_TEMP_SFC
 
     integer :: ierr
@@ -128,8 +137,10 @@ contains
   !> Read Reference state
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_read
-    use mod_fileio, only: &
-       FIO_input_1D
+    use gtool_file, only: &
+       FileRead
+    use mod_process, only: &
+       PRC_myrank
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -140,8 +151,8 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_IN_BASENAME)
 
-    call FIO_input_1D( ATMOS_REFSTATE_dens(:), bname, 'DENS', 'Z1D', 1, KA, 1, .true. )
-    call FIO_input_1D( ATMOS_REFSTATE_pott(:), bname, 'POTT', 'Z1D', 1, KA, 1, .true. )
+    call FileRead( ATMOS_REFSTATE_dens(:), bname, 'DENS', 1, PRC_myrank, single=.true. )
+    call FileRead( ATMOS_REFSTATE_pott(:), bname, 'POTT', 1, PRC_myrank, single=.true. )
 
     return
   end subroutine ATMOS_REFSTATE_read
@@ -153,31 +164,60 @@ contains
     use mod_process, only: &
        PRC_myrank, &
        PRC_master
-    use mod_fileio_h, only: &
-       FIO_HMID, &
-       FIO_REAL8
-    use mod_fileio, only: &
-       FIO_output_1D
+    use gtool_file_h, only: &
+       File_HMID,  &
+       File_REAL4, &
+       File_REAL8
+    use gtool_file, only: &
+       FileCreate, &
+       FileAddVariable, &
+       FilePutAxis, &
+       FileWrite, &
+       FileClose
+    use mod_grid, only : &
+         GRID_CZ
     implicit none
 
     character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
+    integer :: dtype
+    integer :: fid, vid_dens, vid_pott
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output grid file ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** Only at Master node ***'
 
+    if ( RP == 8 ) then
+       dtype = File_REAL8
+    else if ( RP == 4 ) then
+       dtype = File_REAL4
+    end if
+
     if ( PRC_myrank == PRC_master ) then
        write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_OUT_BASENAME)
-       desc  = 'SCALE3 Refstate'
+       call FileCreate( fid,              & ! (out)
+            bname,                        & ! (in)
+            ATMOS_REFSTATE_OUT_TITLE,     & ! (in)
+            ATMOS_REFSTATE_OUT_SOURCE,    & ! (in)
+            ATMOS_REFSTATE_OUT_INSTITUTE, & ! (in)
+            (/'z'/), (/KMAX/), (/'Z'/),   & ! (in)
+            (/'m'/), (/File_REAL4/),      & ! (in)
+            PRC_master, PRC_myrank,       & ! (in)
+            single = .true.               ) ! (in)
 
-       call FIO_output_1D( ATMOS_REFSTATE_dens(:), bname, desc, '',       &
-                          'DENS', 'Reference state of rho', '', 'kg/m3', &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
-       call FIO_output_1D( ATMOS_REFSTATE_pott(:), bname, desc, '',       &
-                          'POTT', 'Reference state of theta', '', 'K',   &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
+       call FileAddVariable( vid_dens,                      & ! (out)
+            fid, 'DENS', 'Reference state of rho', 'kg/m3', & ! (in)
+            (/'z'/), File_REAL8                             ) ! (in)
+       call FileAddVariable( vid_pott,                      & ! (out)
+            fid, 'DENS', 'Reference state of theta', 'K',   & ! (in)
+            (/'z'/), File_REAL8                             ) ! (in)
+
+       call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
+
+       call FileWrite( vid_dens, ATMOS_REFSTATE_dens(:), 0.0_RP, 0.0_RP )
+       call FileWrite( vid_pott, ATMOS_REFSTATE_pott(:), 0.0_RP, 0.0_RP )
+
+       call FileClose( fid )
     endif
 
     return

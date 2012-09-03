@@ -32,8 +32,6 @@ module mod_grid
   !
   public :: GRID_allocate
   public :: GRID_setup
-  public :: GRID_read
-  public :: GRID_write
   public :: GRID_generate
 
   !-----------------------------------------------------------------------------
@@ -111,8 +109,6 @@ contains
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y
-    use mod_fileio, only: &
-       FIO_setgridinfo
     implicit none
 
     namelist / PARAM_GRID / &
@@ -150,8 +146,6 @@ contains
                                                        KMAX,           ' x ',                      &
                                                        IMAX*PRC_NUM_X, ' x ',                      &
                                                        JMAX*PRC_NUM_Y
-
-
     call GRID_allocate
 
     if ( GRID_IN_BASENAME /= '' ) then
@@ -161,12 +155,6 @@ contains
        
        call GRID_generate
     endif
-
-    if ( GRID_OUT_BASENAME /= '' ) then
-       call GRID_write
-    endif
-
-    call FIO_setgridinfo( DZ, IMAX, JMAX )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Grid (including HALO,1node) :', &
@@ -190,6 +178,15 @@ contains
 
     return
   end subroutine GRID_setup
+
+  !-----------------------------------------------------------------------------
+  !> Allocate Arrays
+  !-----------------------------------------------------------------------------
+  subroutine GRID_allocate
+
+    call GRID_allocate
+
+  end subroutine GRID_allocate
 
   !-----------------------------------------------------------------------------
   !> Allocate Arrays
@@ -233,8 +230,10 @@ contains
   !> Read horizontal&vertical grid
   !-----------------------------------------------------------------------------
   subroutine GRID_read
-    use mod_fileio, only: &
-       FIO_input_1D
+    use mod_process, only: &
+         PRC_myrank
+    use gtool_file, only : &
+         FileRead
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -247,19 +246,19 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(GRID_IN_BASENAME)
 
-    call FIO_input_1D( GRID_CZ(:), bname, 'CZ', 'Z1D', 1, KA,   1, .false. )
-    call FIO_input_1D( GRID_CX(:), bname, 'CX', 'Z1D', 1, IA,   1, .false. )
-    call FIO_input_1D( GRID_CY(:), bname, 'CY', 'Z1D', 1, JA,   1, .false. )
-    call FIO_input_1D( GRID_FZ(:), bname, 'FZ', 'Z1D', 1, KA+1, 1, .false. )
-    call FIO_input_1D( GRID_FX(:), bname, 'FX', 'Z1D', 1, IA+1, 1, .false. )
-    call FIO_input_1D( GRID_FY(:), bname, 'FY', 'Z1D', 1, JA+1, 1, .false. )
+    call FileRead( GRID_CZ(:), bname, 'CZ', 1, PRC_myrank )
+    call FileRead( GRID_CX(:), bname, 'CX', 1, PRC_myrank )
+    call FileRead( GRID_CY(:), bname, 'CY', 1, PRC_myrank )
+    call FileRead( GRID_FZ(:), bname, 'FZ', 1, PRC_myrank )
+    call FileRead( GRID_FX(:), bname, 'FX', 1, PRC_myrank )
+    call FileRead( GRID_FY(:), bname, 'FY', 1, PRC_myrank )
 
-    call FIO_input_1D( GRID_CDZ(:), bname, 'CDZ', 'Z1D', 1, KA,   1, .false. )
-    call FIO_input_1D( GRID_CDX(:), bname, 'CDX', 'Z1D', 1, IA,   1, .false. )
-    call FIO_input_1D( GRID_CDY(:), bname, 'CDY', 'Z1D', 1, JA,   1, .false. )
-    call FIO_input_1D( GRID_FDZ(:), bname, 'FDZ', 'Z1D', 1, KA-1, 1, .false. )
-    call FIO_input_1D( GRID_FDX(:), bname, 'FDX', 'Z1D', 1, IA-1, 1, .false. )
-    call FIO_input_1D( GRID_FDY(:), bname, 'FDY', 'Z1D', 1, JA-1, 1, .false. )
+    call FileRead( GRID_CDZ(:), bname, 'CDZ', 1, PRC_myrank )
+    call FileRead( GRID_CDX(:), bname, 'CDX', 1, PRC_myrank )
+    call FileRead( GRID_CDY(:), bname, 'CDY', 1, PRC_myrank )
+    call FileRead( GRID_FDZ(:), bname, 'FDZ', 1, PRC_myrank )
+    call FileRead( GRID_FDX(:), bname, 'FDX', 1, PRC_myrank )
+    call FileRead( GRID_FDY(:), bname, 'FDY', 1, PRC_myrank )
 
     GRID_RCDZ(:) = 1.0_RP / GRID_CDZ(:)
     GRID_RCDX(:) = 1.0_RP / GRID_CDX(:)
@@ -268,12 +267,12 @@ contains
     GRID_RFDX(:) = 1.0_RP / GRID_FDX(:)
     GRID_RFDY(:) = 1.0_RP / GRID_FDY(:)
 
-    call FIO_input_1D( GRID_CBFZ(:), bname, 'CBFZ', 'Z1D', 1, KA, 1, .false. )
-    call FIO_input_1D( GRID_CBFX(:), bname, 'CBFX', 'Z1D', 1, IA, 1, .false. )
-    call FIO_input_1D( GRID_CBFY(:), bname, 'CBFY', 'Z1D', 1, JA, 1, .false. )
-    call FIO_input_1D( GRID_FBFZ(:), bname, 'FBFZ', 'Z1D', 1, KA, 1, .false. )
-    call FIO_input_1D( GRID_FBFX(:), bname, 'FBFX', 'Z1D', 1, IA, 1, .false. )
-    call FIO_input_1D( GRID_FBFY(:), bname, 'FBFY', 'Z1D', 1, JA, 1, .false. )
+    call FileRead( GRID_CBFZ(:), bname, 'CBFZ', 1, PRC_myrank )
+    call FileRead( GRID_CBFX(:), bname, 'CBFX', 1, PRC_myrank )
+    call FileRead( GRID_CBFY(:), bname, 'CBFY', 1, PRC_myrank )
+    call FileRead( GRID_FBFZ(:), bname, 'FBFZ', 1, PRC_myrank )
+    call FileRead( GRID_FBFX(:), bname, 'FBFX', 1, PRC_myrank )
+    call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
 
     do k = 1, KA
        if ( GRID_CBFZ(k) == 0.0_RP ) then
@@ -301,100 +300,6 @@ contains
 
     return
   end subroutine GRID_read
-
-  !-----------------------------------------------------------------------------
-  !> Write horizontal&vertical grid
-  !-----------------------------------------------------------------------------
-  subroutine GRID_write
-    use mod_fileio_h, only: &
-       FIO_HMID, &
-       FIO_REAL8, &
-       FIO_REAL4
-    use mod_fileio, only: &
-       FIO_output_1D
-    use mod_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    integer :: PREC
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output grid file ***'
-
-    write(bname,'(A,A,F15.3)') trim(GRID_OUT_BASENAME)
-    desc  = 'SCALE3 GRID VARS.'
-
-    if ( RP == 8 ) then
-       PREC = FIO_REAL8
-    else if ( RP == 4 ) then
-       PREC = FIO_REAL4
-    else
-       write(*,*) 'xxx Not supported real precision xxx'
-       call PRC_MPIstop
-    end if
-
-    call FIO_output_1D( GRID_CZ(:), bname, desc, '',                   &
-                       'CZ', 'Grid Center Position Z', '', 'm',        &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CX(:), bname, desc, '',                   &
-                       'CX', 'Grid Center Position X', '', 'm',        &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CY(:), bname, desc, '',                   &
-                       'CY', 'Grid Center Position Y', '', 'm',        &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FZ(:), bname, desc, '',                     &
-                       'FZ', 'Grid Face Position Z', '', 'm',            &
-                       PREC, 'Z1D', 1, KA+1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FX(:), bname, desc, '',                     &
-                       'FX', 'Grid Face Position X', '', 'm',            &
-                       PREC, 'Z1D', 1, IA+1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FY(:), bname, desc, '',                     &
-                       'FY', 'Grid Face Position Y', '', 'm',            &
-                       PREC, 'Z1D', 1, JA+1, 1, 0.0_RP, 0.0_RP, .false. )
-
-    call FIO_output_1D( GRID_CDZ(:), bname, desc, '',                  &
-                       'CDZ', 'Grid Cell length Z', '', 'm',           &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CDX(:), bname, desc, '',                  &
-                       'CDX', 'Grid Cell length X', '', 'm',           &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CDY(:), bname, desc, '',                  &
-                       'CDY', 'Grid Cell length Y', '', 'm',           &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDZ(:), bname, desc, '',                    &
-                       'FDZ', 'Grid distance Z', '', 'm',                &
-                       PREC, 'Z1D', 1, KA-1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDX(:), bname, desc, '',                    &
-                       'FDX', 'Grid distance X', '', 'm',                &
-                       PREC, 'Z1D', 1, IA-1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDY(:), bname, desc, '',                    &
-                       'FDY', 'Grid distance Y', '', 'm',                &
-                       PREC, 'Z1D', 1, JA-1, 1, 0.0_RP, 0.0_RP, .false. )
-
-    call FIO_output_1D( GRID_CBFZ(:), bname, desc, '',                 &
-                       'CBFZ', 'Boundary factor Center Z', '', '0-1',  &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CBFX(:), bname, desc, '',                 &
-                       'CBFX', 'Boundary factor Center X', '', '0-1',  &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CBFY(:), bname, desc, '',                 &
-                       'CBFY', 'Boundary factor Center Y', '', '0-1',  &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFZ(:), bname, desc, '',                 &
-                       'FBFZ', 'Boundary factor Face Z', '', '0-1',    &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFX(:), bname, desc, '',                 &
-                       'FBFX', 'Boundary factor Face X', '', '0-1',    &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFY(:), bname, desc, '',                 &
-                       'FBFY', 'Boundary factor Face Y', '', '0-1',    &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-
-    return
-  end subroutine GRID_write
 
   !-----------------------------------------------------------------------------
   !> Generate horizontal&vertical grid
