@@ -1,8 +1,8 @@
-TOPDIR = ../../../../..
+TOPDIR = ../..
 BINDIR = $(TOPDIR)/bin
 SRCDIR = $(TOPDIR)/src
 
-include $(SRCDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../..:$(SRCDIR)/common:$(SRCDIR)/io:$(SRCDIR)/grid:$(SRCDIR)/atmos:$(SRCDIR)/ocean:$(SRCDIR)/preprocess
 
