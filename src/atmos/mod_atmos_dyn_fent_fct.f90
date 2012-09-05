@@ -962,8 +962,7 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          DENS, MOMZ, MOMX, MOMY, RHOT, & ! (in)
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
-         qflx_hi, qflx_lo, qflx_anti, & ! (work)
-         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+         qflx_hi)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
@@ -990,8 +989,7 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
-         qflx_hi, qflx_lo, qflx_anti, & ! (work)
-         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+         qflx_hi)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
@@ -1018,8 +1016,7 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
-         qflx_hi, qflx_lo, qflx_anti, & ! (work)
-         pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+         qflx_hi)
 
 
 #ifdef _USE_RDMA
@@ -1441,8 +1438,7 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
        num_diff, ray_damp, CORIOLI, dtrk,           &
        VELZ, VELX, VELY, PRES, POTT, Rtot,          &
-       qflx_hi, qflx_lo, qflx_anti,                 &
-       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns     )
+       qflx_hi)
 
     use mod_const, only : &
          GRAV   => CONST_GRAV,   &
@@ -1502,16 +1498,6 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
 
     ! flux (work space)
     real(8), intent(inout) :: qflx_hi  (KA,IA,JA,3)
-    real(8), intent(inout) :: qflx_lo  (KA,IA,JA,3)
-    real(8), intent(inout) :: qflx_anti(KA,IA,JA,3)
-
-    ! factor for FCT (work space)
-    real(8), intent(inout) :: pjpls(KA,IA,JA)
-    real(8), intent(inout) :: pjmns(KA,IA,JA)
-    real(8), intent(inout) :: qjpls(KA,IA,JA)
-    real(8), intent(inout) :: qjmns(KA,IA,JA)
-    real(8), intent(inout) :: rjpls(KA,IA,JA)
-    real(8), intent(inout) :: rjmns(KA,IA,JA)
 
     real(8) :: rdtrk
     integer :: IIS, IIE, JJS, JJE
