@@ -1058,10 +1058,12 @@ call START_COLLECTION("DYN-set")
           enddo
           enddo
        else
+          do iw = 1, 5+QA
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS , KE
-             sink(k,i,j) = 0.0_RP
+             sink(k,i,j,iw) = 0.0_RP
+          enddo
           enddo
           enddo
           enddo
@@ -1087,7 +1089,9 @@ call START_COLLECTION("DYN-rk3")
                  DDIV, mflx_hi,                                    & ! (out)
                  DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                  DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                 num_diff, ray_damp, CORIOLI, dtrk,                & ! (in)
+                 CORIOLI,                                          & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
+                 dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT, Rtot,               & ! (work)
                  qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
                  pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
@@ -1114,7 +1118,9 @@ call START_COLLECTION("DYN-rk3")
                  DDIV, mflx_hi,                                    & ! (out)
                  DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                  DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
-                 num_diff, ray_damp, CORIOLI, dtrk,                & ! (in)
+                 CORIOLI,                                          & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
+                 dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT, Rtot,               & ! (work)
                  qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
                  pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
@@ -1141,7 +1147,9 @@ call START_COLLECTION("DYN-rk3")
                  DDIV, mflx_hi,                                    & ! (out)
                  DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                  DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
-                 num_diff, ray_damp, CORIOLI, dtrk,                & ! (in)
+                 CORIOLI,                                          & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
+                 dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT, Rtot,               & ! (work)
                  qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
                  pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
@@ -1386,14 +1394,16 @@ call TIME_rapend     ('DYN-fct')
   end subroutine ATMOS_DYN_main
 
 
-  subroutine calc_rk(DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-                     DDIV, mflx_hi,                               &
-                     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
-                     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
-                     num_diff, ray_damp, CORIOLI, dtrk,           &
-                     VELZ, VELX, VELY, PRES, POTT, Rtot,          &
-                     qflx_hi, qflx_lo, qflx_anti,                 &
-                     pjpls, pjmns, qjpls, qjmns, rjpls, rjmns     )
+  subroutine calc_rk(DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK,     &
+                     DDIV, mflx_hi,                                   &
+                     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,       &
+                     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,        &
+                     CORIOLI,                                         &
+                     num_diff, ray_damp, divdmp_coef, LSsink_d, sink, &
+                     dtrk,                                            &
+                     VELZ, VELX, VELY, PRES, POTT, Rtot,              &
+                     qflx_hi, qflx_lo, qflx_anti,                     &
+                     pjpls, pjmns, qjpls, qjmns, rjpls, rjmns         )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
@@ -1438,9 +1448,12 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: MOMY(KA,IA,JA)   !
     real(RP), intent(in) :: RHOT(KA,IA,JA)   !
 
+    real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in) :: ray_damp(KA,IA,JA,5)
-    real(RP), intent(in) :: CORIOLI(1,IA,JA)
+    real(RP), intent(in) :: divdmp_coef
+    real(RP), intent(in) :: LSsink_D
+    real(RP), intent(in) :: sink(KA,IA,JA,5+QA)
     real(RP), intent(in) :: dtrk
 
     ! diagnostic variables (work space)
