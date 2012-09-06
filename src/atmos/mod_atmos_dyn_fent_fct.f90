@@ -455,6 +455,8 @@ contains
          I_BND_VELX,  &
          I_BND_VELY,  &
          I_BND_POTT
+    use mod_perf, only : &
+         rk_elapsed_time
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -508,6 +510,7 @@ contains
 
     real(RP) :: dtrk, rdtrk
     integer :: i, j, k, iq, iw, rko, step
+    real(8) :: timestamp(10)
     !---------------------------------------------------------------------------
     PROFILE_REGION_DECLARE(DYN_MAIN_LOOP)
     PROFILE_REGION_DECLARE(DYN_SETUP)
@@ -548,6 +551,8 @@ contains
           mflx_hi(KE  ,i,j,ZDIR) = 0.0E0_RP ! top    boundary
        enddo
     enddo
+
+    rk_elapsed_time = 0.0d0
 
     PROFILE_REGION_BEGIN(DYN_MAIN_LOOP)
 
@@ -949,6 +954,8 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
 
     PROFILE_REGION_END(DYN_SETUP)
     PROFILE_REGION_BEGIN(DYN_RK3)
+    
+    call cpu_time(timestamp(1))
 
     !##### Start RK #####
 
@@ -963,6 +970,9 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
          qflx_hi)
+
+    call cpu_time(timestamp(2))
+    rk_elapsed_time = rk_elapsed_time + timestamp(2) - timestamp(1)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
@@ -979,6 +989,8 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
     call COMM_wait ( RHOT_RK1(:,:,:), 5 )
 #endif
 
+    call cpu_time(timestamp(3))
+
     !##### RK2 #####
     rko = 2
     dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
@@ -990,6 +1002,9 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
          qflx_hi)
+
+    call cpu_time(timestamp(4))
+    rk_elapsed_time = rk_elapsed_time + timestamp(4) - timestamp(3)
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
@@ -1005,7 +1020,9 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
     call COMM_wait ( MOMY_RK2(:,:,:), 4 )
     call COMM_wait ( RHOT_RK2(:,:,:), 5 )
 #endif
-
+    
+    call cpu_time(timestamp(5))
+    
     !##### RK3 #####
     rko = 3
     dtrk  = TIME_DTSEC_ATMOS_DYN / (RK - rko + 1)
@@ -1017,7 +1034,9 @@ k = IUNDEF; i = IUNDEF; j = IUNDEF
          num_diff, ray_damp, CORIOLI, dtrk, & ! (in)
          VELZ, VELX, VELY, PRES, POTT, Rtot, & ! (work)
          qflx_hi)
-
+    
+    call cpu_time(timestamp(6))
+    rk_elapsed_time = rk_elapsed_time + timestamp(6) - timestamp(5)    
 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )

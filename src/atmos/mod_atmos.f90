@@ -124,7 +124,7 @@ contains
 !    use mod_atmos_phy_rd, only: &
 !       ATMOS_PHY_RD
     implicit none
-    !---------------------------------------------------------------------------
+    !---------------------------------------------------------------------------    
 
     !########## Dynamics ##########
     call TIME_rapstart('Dynamics')
@@ -138,6 +138,7 @@ call START_COLLECTION("Dynamics")
 call STOP_COLLECTION  ("Dynamics")
 #endif
     call TIME_rapend  ('Dynamics')
+    
 
     !########## Turbulence ##########
 

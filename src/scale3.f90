@@ -43,7 +43,12 @@ program scaleles3
      TIME_DOend,           &
      TIME_rapstart,        &
      TIME_rapend,          &
-     TIME_rapreport
+     TIME_rapreport,       &
+     TIME_NSTEP_ATMOS_DYN     
+  use mod_atmos_dyn_fent_fct_perf, only: &
+       rk_ops, rk_min_ops
+  use mod_perf, only: &
+       rk_elapsed_time
   use mod_grid, only: &
      GRID_setup
   use mod_geometrics, only: &
@@ -81,6 +86,9 @@ program scaleles3
   !
   !++ parameters & variables
   !
+  !---------------------------------------------------------------------------
+  integer*8 fp_ops, ld_ops, st_ops, ld_min_ops, st_min_ops
+  integer num_iter
   !-----------------------------------------------------------------------------
   PROFILE_REGION_DECLARE(MAIN)
   PROFILE_REGION_DECLARE(INIT)
@@ -140,6 +148,7 @@ program scaleles3
 
   PROFILE_REGION_END(INIT)
 
+  num_iter = 0
   !########## main ##########
 
   if( IO_L ) write(IO_FID_LOG,*)
@@ -148,7 +157,7 @@ program scaleles3
 #ifdef _FPCOLL_
   call START_COLLECTION("Main")
 #endif
-
+  
   PROFILE_REGION_BEGIN(MAIN)
   
   do
@@ -171,6 +180,7 @@ program scaleles3
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
     if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
 
+    num_iter = num_iter + 1
     if ( TIME_DOend ) exit
 
   enddo
@@ -185,6 +195,20 @@ program scaleles3
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 
+
+  call rk_ops(fp_ops, ld_ops, st_ops)
+  call rk_min_ops(ld_min_ops, st_min_ops)
+  fp_ops = fp_ops * TIME_NSTEP_ATMOS_DYN * num_iter
+  ld_ops = ld_ops * TIME_NSTEP_ATMOS_DYN * num_iter
+  st_ops = st_ops * TIME_NSTEP_ATMOS_DYN * num_iter
+  ld_min_ops = ld_min_ops * TIME_NSTEP_ATMOS_DYN * num_iter
+  st_min_ops = st_min_ops * TIME_NSTEP_ATMOS_DYN * num_iter
+  write (*, '(A, F30.1, A)') "RK FLOPS: ", &
+       fp_ops / rk_elapsed_time * 1.0e-9, " (GFLOPS)"
+  write (*, '(A, F25.1, A)') "RK Throughput: ", &
+       (ld_ops + st_ops) * 8 / rk_elapsed_time * 1.0e-9, " (GB/s)"
+  write (*, '(A, F15.1, A)') "RK Effective Throughput: ", &
+       (ld_min_ops + st_min_ops) * 8 / rk_elapsed_time * 1.0e-9, " (GB/s)"  
 
   !########## Finalize ##########
 
