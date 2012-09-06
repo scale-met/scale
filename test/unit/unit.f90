@@ -37,8 +37,10 @@ program unit
   ! setup mpi communication
   call COMM_setup
 
+  write(*,*) "test_atmos_phy_tb_smg_run"
   call test_atmos_phy_tb_smg_run
 
+  write(*,*) "test_atmos_dyn_fent_fct_run"
   call test_atmos_dyn_fent_fct_run
 
   call PRC_MPIstop

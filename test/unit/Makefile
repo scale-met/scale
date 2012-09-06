@@ -26,7 +26,8 @@ MODS = \
 all: makelib makeinclude makebin
 
 makelib:
-	cd $(SRCDIR); make index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
+#	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
 
 makeinclude:
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h

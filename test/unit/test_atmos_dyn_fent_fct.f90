@@ -66,6 +66,8 @@ module test_atmos_dyn_fent_fct
 
   real(RP) :: CORIOLI(1,IA,JA)
 
+  real(RP) :: DIFF4, DIFF2
+  real(RP) :: divdmp_coef, LSsink_D
 
   real(RP), save :: ZERO(KA,IA,JA)
 
@@ -93,7 +95,6 @@ contains
   !++ parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP) :: DIFF4, DIFF2
   real(RP) :: lat(1,IA,JA)
   integer :: j
   !=============================================================================
@@ -118,6 +119,9 @@ contains
         exit
      end if
   end do
+
+  divdmp_coef = 0.0_RP
+  LSsink_D    = 0.0_RP
 
   !########## test ##########
 
@@ -161,15 +165,18 @@ subroutine test_undef
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
-  call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,      & ! (inout)
-         QDRY, DDIV, SINK,                        & ! (out)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,      & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,    & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      & ! (in)
-         REF_dens, REF_pott,                      & ! (in)
-         DAMP_var, DAMP_alpha,                    & ! (in)
-         1.0_RP, 1.0_RP, 1                        ) ! (in)
+  do i = 1, 2
+     call ATMOS_DYN_main( &
+          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
+          QDRY, DDIV, SINK,                     & ! (out)
+          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
+          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
+          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
+          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
+          DAMP_var, DAMP_alpha,                 & ! (in)
+          divdmp_coef, LSsink_D,                & ! (in)
+          1.0_RP, 1.0_RP, 1                     ) ! (in)
+  end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
   call AssertLessThan("MOMX", BIG(KS:KE,IS:IE,JS:JE), MOMX(KS:KE,IS:IE,JS:JE))
@@ -217,14 +224,15 @@ subroutine test_conserve
   call copy
 
   call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,      & ! (inout)
-         QDRY, DDIV, SINK,                        & ! (out)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,      & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,    & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      & ! (in)
-         REF_dens, REF_pott,                      & ! (in)
-         DAMP_var, DAMP_alpha,                    & ! (in)
-         1.0_RP, 1.0_RP, 1                        ) ! (in)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
+         QDRY, DDIV, SINK,                     & ! (out)
+         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
+         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
+         REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
+         DAMP_var, DAMP_alpha,                 & ! (in)
+         divdmp_coef, LSsink_D,                & ! (in)
+         1.0_RP, 1.0_RP, 1                     ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP
