@@ -168,7 +168,8 @@ subroutine test_undef
   do i = 1, 2
      call ATMOS_DYN_main( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-          QDRY, DDIV, SINK,                     & ! (out)
+          SINK,                                 & ! (inout)
+          QDRY, DDIV,                           & ! (out)
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
@@ -225,7 +226,8 @@ subroutine test_conserve
 
   call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-         QDRY, DDIV, SINK,                     & ! (out)
+         SINK,                                 & ! (inout)
+         QDRY, DDIV,                           & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
