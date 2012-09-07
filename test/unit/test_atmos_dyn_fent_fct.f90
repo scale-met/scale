@@ -106,11 +106,11 @@ contains
   do j = 0, JA
      lat(1,:,j) = real(j, RP)
   end do
-  call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI,               & ! (out)
+  call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI, SINK,         & ! (out)
                        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
                        CDZ, CDX, CDY,                       & ! (in)
                        lat,                                 & ! (in)
-                       0.0_RP, .false.                      ) ! (in)
+                       0.0_RP, 0.0_RP, .false.              ) ! (in)
 
 
   do k = KS+1, KE
