@@ -1344,23 +1344,24 @@ call START_COLLECTION("DYN-fct")
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       call advection_fct(RHOQ_lo, qflx_anti,                      & ! (out)
-                          RHOQ, qflx_lo, qflx_hi,                  & ! (in)
-                          RFDZ, RCDX, RCDY, dtrk,                  & ! (in)
-                          rjpls, rjmns ) ! (work)
-#ifdef DEBUG
-    qflx_lo  (:,:,:,:) = UNDEF
-    qflx_hi  (:,:,:,:) = UNDEF
-    qflx_anti(:,:,:,:) = UNDEF
-    do j = JS, JE
-    do i = IS, IE
-       qflx_anti(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-       qflx_anti(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
-    enddo
-    enddo
+       call advection_fct(RHOQ_lo,                 & ! (out)
+                          RHOQ, qflx_lo, qflx_hi,  & ! (in)
+                          RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                          qflx_anti, rjpls, rjmns  ) ! (work)
 
-    rjpls(:,:,:) = UNDEF
-    rjmns(:,:,:) = UNDEF
+#ifdef DEBUG
+       qflx_lo  (:,:,:,:) = UNDEF
+       qflx_hi  (:,:,:,:) = UNDEF
+       qflx_anti(:,:,:,:) = UNDEF
+       do j = JS, JE
+       do i = IS, IE
+          qflx_anti(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          qflx_anti(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
+       enddo
+       enddo
+
+       rjpls(:,:,:) = UNDEF
+       rjmns(:,:,:) = UNDEF
 #endif
 
        do j = JJS, JJE
@@ -1932,9 +1933,10 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    call advection_fct(MOMZ_RK, qflx_anti,                      & ! (out)
-                       MOMZ0, qflx_lo, qflx_hi,                 & ! (in)
-                       RFDZ, RCDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
+    call advection_fct(MOMZ_RK,                 & ! (out)
+                       MOMZ0, qflx_lo, qflx_hi, & ! (in)
+                       RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                       qflx_anti, rjpls, rjmns  ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2135,9 +2137,10 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    call advection_fct(MOMX_RK, qflx_anti,                      & ! (out)
-                       MOMX0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RFDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
+    call advection_fct(MOMX_RK,                 & ! (out)
+                       MOMX0, qflx_lo, qflx_hi, & ! (in)
+                       RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                       qflx_anti, rjpls, rjmns  ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2346,9 +2349,10 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    call advection_fct(MOMY_RK, qflx_anti,                      & ! (out)
-                       MOMY0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RCDX, RFDY, dtrk, rjpls, rjmns     ) ! (work)
+    call advection_fct(MOMY_RK,                 & ! (out)
+                       MOMY0, qflx_lo, qflx_hi, & ! (in)
+                       RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                       qflx_anti, rjpls, rjmns  ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2546,9 +2550,10 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    call advection_fct(RHOT_RK, qflx_anti,                      & ! (out)
-                       RHOT0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RCDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
+    call advection_fct(RHOT_RK,                 & ! (out)
+                       RHOT0, qflx_lo, qflx_hi, & ! (in)
+                       RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                       qflx_anti, rjpls, rjmns  ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2594,9 +2599,10 @@ call TIME_rapend     ('DYN-fct')
 
   end subroutine calc_rk
 
-  subroutine advection_fct( phi_out, qflx_anti,                      &
-                            phi_in, qflx_lo, qflx_hi,                &
-                            rdz, rdx, rdy, dtrk, rjpls, rjmns        )
+  subroutine advection_fct( phi_out,                  &
+                            phi_in, qflx_lo, qflx_hi, &
+                            rdz, rdx, rdy, dtrk,      &
+                            qflx_anti, rjpls, rjmns   )
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -2606,8 +2612,6 @@ call TIME_rapend     ('DYN-fct')
     implicit none
 
     real(RP), intent(out)   :: phi_out(KA,IA,JA)         ! physical quantity
-    real(RP), intent(inout) :: qflx_anti(KA,IA,JA,3)
-
     real(RP), intent(in) :: phi_in(KA,IA,JA) ! physical quantity
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
@@ -2617,6 +2621,8 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: RDY(:)
     real(RP), intent(in) :: dtrk
 
+    ! anti-diffusive flux (work space)
+    real(RP), intent(inout) :: qflx_anti(KA,IA,JA,3)
     ! factor for FCT (work space)
     real(RP), intent(inout) :: rjpls(KA,IA,JA)
     real(RP), intent(inout) :: rjmns(KA,IA,JA)
