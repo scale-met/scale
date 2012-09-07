@@ -8,11 +8,15 @@ program unit
      PRC_MPIstop
   use mod_const, only: &
      CONST_setup
+  use mod_comm, only: &
+     COMM_setup
   use mod_grid, only: &
      GRID_allocate, &
      GRID_generate
 
   use test_atmos_phy_tb_smg
+
+  use test_atmos_dyn_fent_fct
 
   ! setup standard I/O
   call IO_setup
@@ -30,7 +34,14 @@ program unit
   call GRID_allocate
   call GRID_generate
 
+  ! setup mpi communication
+  call COMM_setup
+
+  write(*,*) "test_atmos_phy_tb_smg_run"
   call test_atmos_phy_tb_smg_run
+
+  write(*,*) "test_atmos_dyn_fent_fct_run"
+  call test_atmos_dyn_fent_fct_run
 
   call PRC_MPIstop
 

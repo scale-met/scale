@@ -19,13 +19,15 @@ LIBNAME = libscale_$(index)_$(tracer)_$(precision)_$(postfix).a
 
 MODS = \
 	test_atmos_phy_tb_smg.o \
+	test_atmos_dyn_fent_fct.o \
 	dc_test.o \
 	dc_types.o
 
 all: makelib makeinclude makebin
 
 makelib:
-	cd $(SRCDIR); make index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
+#	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
 
 makeinclude:
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h
@@ -40,6 +42,8 @@ $(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME)
 $(PROJ_EXE).o: $(MODS)
 
 test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90 dc_test.o
+
+test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90 dc_test.o
 
 dc_test.o: dc_test.f90 dc_types.o
 
