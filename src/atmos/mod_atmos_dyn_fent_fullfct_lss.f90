@@ -634,10 +634,6 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
     real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
     real(RP) :: RHOQ_lo  (KA,IA,JA)    ! rho(updated)  * phi(updated by monotone flux)
-    real(RP) :: qjpls    (KA,IA,JA)    ! vaild value of incoming rho * phi
-    real(RP) :: qjmns    (KA,IA,JA)    ! vaild value of outgoing rho * phi 
-    real(RP) :: pjpls    (KA,IA,JA)    ! net incoming rho * phi by antidiffusive flux
-    real(RP) :: pjmns    (KA,IA,JA)    ! net outgoing rho * phi by antidiffusive flux
     real(RP) :: zerosw, dirsw, cj
 
     integer :: IIS, IIE
@@ -679,10 +675,6 @@ contains
     RHOQ   (:,:,:) = UNDEF
     RHOQ_lo(:,:,:) = UNDEF
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -1141,9 +1133,7 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
                  dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
-                 pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
-
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
 #else
@@ -1171,9 +1161,7 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
                  dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
-                 pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
-
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
 #else
@@ -1201,9 +1189,7 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
                  dtrk,                                             & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti,                      & ! (work)
-                 pjpls, pjmns, qjpls, qjmns, rjpls, rjmns          ) ! (work)
-
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work) 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )
 #else
@@ -1361,7 +1347,7 @@ call START_COLLECTION("DYN-fct")
        call advection_fct(RHOQ_lo, qflx_anti,                      & ! (out)
                           RHOQ, qflx_lo, qflx_hi,                  & ! (in)
                           RFDZ, RCDX, RCDY, dtrk,                  & ! (in)
-                          pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+                          rjpls, rjmns ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -1373,10 +1359,6 @@ call START_COLLECTION("DYN-fct")
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -1460,8 +1442,7 @@ call TIME_rapend     ('DYN-fct')
                      num_diff, ray_damp, divdmp_coef, LSsink_d, sink, &
                      dtrk,                                            &
                      VELZ, VELX, VELY, PRES, POTT,                    &
-                     qflx_hi, qflx_lo, qflx_anti,                     &
-                     pjpls, pjmns, qjpls, qjmns, rjpls, rjmns         )
+                     qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns        )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
@@ -1535,10 +1516,6 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(inout) :: qflx_anti(KA,IA,JA,3)
 
     ! factor for FCT (work space)
-    real(RP), intent(out) :: pjpls(KA,IA,JA)
-    real(RP), intent(out) :: pjmns(KA,IA,JA)
-    real(RP), intent(out) :: qjpls(KA,IA,JA)
-    real(RP), intent(out) :: qjmns(KA,IA,JA)
     real(RP), intent(out) :: rjpls(KA,IA,JA)
     real(RP), intent(out) :: rjmns(KA,IA,JA)
 
@@ -1564,10 +1541,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -1961,8 +1934,7 @@ call TIME_rapend     ('DYN-fct')
 
     call advection_fct(MOMZ_RK, qflx_anti,                      & ! (out)
                        MOMZ0, qflx_lo, qflx_hi,                 & ! (in)
-                       RFDZ, RCDX, RCDY, dtrk,                  & ! (in)
-                       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+                       RFDZ, RCDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -1974,10 +1946,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -2169,8 +2137,7 @@ call TIME_rapend     ('DYN-fct')
 
     call advection_fct(MOMX_RK, qflx_anti,                      & ! (out)
                        MOMX0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RFDX, RCDY, dtrk,                  & ! (in)
-                       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+                       RCDZ, RFDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2182,10 +2149,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -2385,8 +2348,7 @@ call TIME_rapend     ('DYN-fct')
 
     call advection_fct(MOMY_RK, qflx_anti,                      & ! (out)
                        MOMY0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RCDX, RFDY, dtrk,                  & ! (in)
-                       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+                       RCDZ, RCDX, RFDY, dtrk, rjpls, rjmns     ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2398,10 +2360,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -2590,8 +2548,7 @@ call TIME_rapend     ('DYN-fct')
 
     call advection_fct(RHOT_RK, qflx_anti,                      & ! (out)
                        RHOT0, qflx_lo, qflx_hi,                 & ! (in)
-                       RCDZ, RCDX, RCDY, dtrk,                  & ! (in)
-                       pjpls, pjmns, qjpls, qjmns, rjpls, rjmns ) ! (work)
+                       RCDZ, RCDX, RCDY, dtrk, rjpls, rjmns     ) ! (work)
 #ifdef DEBUG
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_hi  (:,:,:,:) = UNDEF
@@ -2603,10 +2560,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    pjpls(:,:,:) = UNDEF
-    pjmns(:,:,:) = UNDEF
-    qjpls(:,:,:) = UNDEF
-    qjmns(:,:,:) = UNDEF
     rjpls(:,:,:) = UNDEF
     rjmns(:,:,:) = UNDEF
 #endif
@@ -2643,8 +2596,7 @@ call TIME_rapend     ('DYN-fct')
 
   subroutine advection_fct( phi_out, qflx_anti,                      &
                             phi_in, qflx_lo, qflx_hi,                &
-                            rdz, rdx, rdy, dtrk,                     &
-                            pjpls, pjmns, qjpls, qjmns, rjpls, rjmns )
+                            rdz, rdx, rdy, dtrk, rjpls, rjmns        )
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -2666,12 +2618,15 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: dtrk
 
     ! factor for FCT (work space)
-    real(RP), intent(inout) :: pjpls(KA,IA,JA)
-    real(RP), intent(inout) :: pjmns(KA,IA,JA)
-    real(RP), intent(inout) :: qjpls(KA,IA,JA)
-    real(RP), intent(inout) :: qjmns(KA,IA,JA)
     real(RP), intent(inout) :: rjpls(KA,IA,JA)
     real(RP), intent(inout) :: rjmns(KA,IA,JA)
+
+
+    ! factor for FCT
+    real(RP) :: pjpls(KA,IA,JA)
+    real(RP) :: pjmns(KA,IA,JA)
+    real(RP) :: qjpls(KA,IA,JA)
+    real(RP) :: qjmns(KA,IA,JA)
 
     real(RP) :: zerosw, dirsw
 
@@ -2686,6 +2641,11 @@ call TIME_rapend     ('DYN-fct')
        qflx_anti(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
     enddo
     enddo
+
+    pjpls(:,:,:) = UNDEF
+    pjmns(:,:,:) = UNDEF
+    qjpls(:,:,:) = UNDEF
+    qjmns(:,:,:) = UNDEF
 #endif
 
     do JJS = JS, JE, JBLOCK
