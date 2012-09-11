@@ -103,7 +103,7 @@ contains
   !########## Initial setup ##########
   ZERO(:,:,:) = 0.0_RP
 
-  do j = 0, JA
+  do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
   call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI, SINK,         & ! (out)

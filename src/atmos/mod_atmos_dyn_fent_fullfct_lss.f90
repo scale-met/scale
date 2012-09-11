@@ -2053,7 +2053,7 @@ call TIME_rapend     ('DYN-fct')
        ! at (x, y, layer)
        ! note that x-index is added by -1
        do j = JJS-1, JJE+1
-       do i = IIS-2, IIE+2
+       do i = IIS-1, IIE+2
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMX(k,i-1,j) )
