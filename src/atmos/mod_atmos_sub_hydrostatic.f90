@@ -35,6 +35,7 @@ module mod_atmos_hydrostatic
   !++ included parameters
   !
   include 'inc_index.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -70,13 +71,12 @@ contains
     use mod_const, only : &
        GRAV    => CONST_GRAV,    &
        Rdry    => CONST_Rdry,    &
-       RovCP   => CONST_RovCP,   &
+       Rvap    => CONST_Rvap,    &
        CPovR   => CONST_CPovR,   &
        RovCV   => CONST_RovCV,   &
        CVovCP  => CONST_CVovCP,  &
        CPovCV  => CONST_CPovCV,  &
        LASPdry => CONST_LASPdry, &
-       EPSTvap => CONST_EPSTvap, &
        P00     => CONST_PRE00
     use mod_comm, only: &
        COMM_vars8, &
@@ -88,26 +88,26 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(8), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
-    real(8), intent(out) :: temp(KA,IA,JA) !< temperature [K]
-    real(8), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
-    real(8), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
-    real(8), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
-    real(8), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
-    real(8), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
-    real(8), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
-    real(8), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
-    real(8), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
-    real(8), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
+    real(RP), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
+    real(RP), intent(out) :: temp(KA,IA,JA) !< temperature [K]
+    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
+    real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
+    real(RP), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
+    real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
+    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
+    real(RP), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
 
-    real(8) :: Rmoist_sfc(1,IA,JA)
-    real(8) :: dens_sfc  (1,IA,JA)
+    real(RP) :: Rmoist_sfc(1,IA,JA)
+    real(RP) :: dens_sfc  (1,IA,JA)
 
-    real(8) :: Rmoist(KA,IA,JA)
+    real(RP) :: Rmoist(KA,IA,JA)
 
-    real(8) :: dens_s, dhyd, dgrd
+    real(RP) :: dens_s, dhyd, dgrd
 
-    real(8), parameter :: criteria = 1.D-15
+    real(RP), parameter :: criteria = 1.0E-15_RP
     integer, parameter :: itelim = 100
 
     integer :: k, i, j, ite, ierr
@@ -137,7 +137,8 @@ contains
     ! make density at surface
     do j = JS, JE
     do i = IS, IE
-       Rmoist_sfc(1,i,j) = Rdry * ( 1.D0 + EPSTvap * qv_sfc(1,i,j) )
+       Rmoist_sfc(1,i,j) = Rdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
+                         + Rvap * qv_sfc(1,i,j)
 
        dens_sfc(1,i,j) = P00 / Rmoist_sfc(1,i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP
        temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rmoist_sfc(1,i,j) )
@@ -149,7 +150,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       Rmoist(k,i,j) = Rdry * ( 1.D0 + EPSTvap * qv(k,i,j) )
+       Rmoist(1,i,j) = Rdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                     + Rvap * qv(k,i,j)
     enddo
     enddo
     enddo
@@ -171,7 +173,7 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          dens_s      = 0.D0
+          dens_s      = 0.0_RP
           dens(k,i,j) = dens_sfc(1,i,j) ! first guess
 
           do ite = 1, itelim
@@ -181,11 +183,11 @@ contains
 
              dhyd = + ( P00 * ( dens_sfc(1,i,j) * Rmoist_sfc(1,i,j) * pott_sfc(1,i,j) / P00 )**CPovCV &
                       - P00 * ( dens_s          * Rmoist    (k,i,j) * pott    (k,i,j) / P00 )**CPovCV ) / CZ(k) & ! dp/dz
-                    - GRAV * 0.5D0 * ( dens_sfc(1,i,j) + dens_s )                                                 ! rho*g
+                    - GRAV * 0.5_RP * ( dens_sfc(1,i,j) + dens_s )                                                 ! rho*g
 
              dgrd = - P00 * ( Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV / CZ(k) &
                     * CPovCV * dens_s**RovCV                                      &
-                    - 0.5D0 * GRAV
+                    - 0.5_RP * GRAV
 
              dens(k,i,j) = dens_s - dhyd/dgrd
 
@@ -209,7 +211,7 @@ contains
     do i = IS, IE
        do k = KS+1, KE
 
-          dens_s      = 0.D0
+          dens_s      = 0.0_RP
           dens(k,i,j) = dens(k-1,i,j)
 
           do ite = 1, itelim
@@ -219,11 +221,11 @@ contains
 
              dhyd = + ( P00 * ( dens(k-1,i,j) * Rmoist(k-1,i,j) * pott(k-1,i,j) / P00 )**CPovCV &
                       - P00 * ( dens_s        * Rmoist(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
-                    - GRAV * 0.5D0 * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
+                    - GRAV * 0.0_RP * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
 
              dgrd = - P00 * ( Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV / FDZ(k-1) &
                     * CPovCV * dens_s**RovCV                                         &
-                    - 0.5D0 * GRAV
+                    - 0.5_RP * GRAV
 
              dens(k,i,j) = dens_s - dhyd/dgrd
 
