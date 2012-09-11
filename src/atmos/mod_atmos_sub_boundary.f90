@@ -436,8 +436,6 @@ contains
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
-    use mod_atmos_refstate, only: &
-       ATMOS_REFSTATE_pott
     implicit none
 
     integer :: i, j, k, iv

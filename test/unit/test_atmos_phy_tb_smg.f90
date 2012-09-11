@@ -386,16 +386,11 @@ subroutine test_energy
 end subroutine test_energy
 !=============================================================================
 subroutine test_big
-  use mod_grid, only: &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
 
   real(RP) :: BIG(KA,IA,JA)
 
-  real(RP) :: eng1, eng2
   real(RP) :: PI2
-  real(RP) :: dt
+
   PI2 = atan( 1.0_RP )*8.0_RP
 
   BIG(:,:,:) = 9.99E8_RP
@@ -494,10 +489,6 @@ subroutine test_noise
 end subroutine test_noise
 !=============================================================================
 subroutine test_double
-  use mod_grid, only: &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
 
   real(RP) :: MOMZ_t2(KA,IA,JA)
   real(RP) :: MOMX_t2(KA,IA,JA)

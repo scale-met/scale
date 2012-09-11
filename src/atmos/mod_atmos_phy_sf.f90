@@ -98,10 +98,6 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only : &
-       CDZ => GRID_CDZ, &
-       CZ  => GRID_CZ,  &
-       FZ  => GRID_FZ
     implicit none
 
     real(8) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -120,7 +116,6 @@ contains
        ATMOS_PHY_SF_CE_min
 
     integer :: ierr
-    integer :: k
     !---------------------------------------------------------------------------
 
     ATMOS_PHY_SF_U_minM = U_minM
@@ -175,7 +170,6 @@ contains
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_grid, only : &
-       CDZ => GRID_CDZ, &
        CZ  => GRID_CZ
     use mod_history, only: &
        HIST_in
@@ -235,7 +229,7 @@ contains
     real(8) :: FCM, FCH
     real(8) :: FZH, FZE
     real(8) :: RIX, RIB
-    real(8) :: qdry, Rtot, pres, temp, qvap
+    real(8) :: qdry, Rtot, pres, temp
     real(8) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(8) :: qv_evap   ! saturation water vapor mixing ratio at surface [kg/kg]
 

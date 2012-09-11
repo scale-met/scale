@@ -172,7 +172,6 @@ contains
        ATMOS_DYN_LSsink_D
 
     integer :: ierr
-    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -522,7 +521,7 @@ contains
          REF_dens, REF_pott, DIFF4, DIFF2,          & ! (in)
          DAMP_var, DAMP_alpha,                      & ! (in)
          ATMOS_DYN_divdmp_coef, ATMOS_DYN_LSsink_D, & ! (in)
-         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN    ) ! (in)
+         DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN           ) ! (in)
 
     call ATMOS_vars_total
 
@@ -537,21 +536,19 @@ contains
   end subroutine ATMOS_DYN
 
   subroutine ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,      & ! (inout)
-         SINK,                                    & ! (inout)
-         QDRY, DDIV,                              & ! (out)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,      & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,    & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      & ! (in)
-         REF_dens, REF_pott, DIFF4, DIFF2,          & ! (in)
-         DAMP_var, DAMP_alpha,                    & ! (in)
-         divdmp_coef, LSsink_D,                   & ! (in)
-         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN  ) ! (in)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
+         SINK,                                 & ! (inout)
+         QDRY, DDIV,                           & ! (out)
+         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
+         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
+         REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
+         DAMP_var, DAMP_alpha,                 & ! (in)
+         divdmp_coef, LSsink_D,                & ! (in)
+         DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
-       CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
     use mod_comm, only: &
 #ifdef _USE_RDMA
@@ -603,7 +600,6 @@ contains
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
     real(RP), intent(in)    :: divdmp_coef
     real(RP), intent(in)    :: LSsink_D
-    real(RP), intent(in)    :: DTSEC
     real(RP), intent(in)    :: DTSEC_ATMOS_DYN
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
@@ -634,7 +630,6 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face antidiffusive
     real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
     real(RP) :: RHOQ_lo  (KA,IA,JA)    ! rho(updated)  * phi(updated by monotone flux)
-    real(RP) :: zerosw, dirsw, cj
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -1124,16 +1119,17 @@ call START_COLLECTION("DYN-rk3")
     !##### RK1 #####
     rko = 1
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
-                 DDIV,                                             & ! (out)
-                 mflx_hi,                                          & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                 Rtot, CORIOLI,                                    & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
-                 dtrk,                                             & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work)
+    call calc_rk(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,      & ! (out)
+                 DDIV,                                                  & ! (out)
+                 mflx_hi,                                               & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
+                 Rtot, CORIOLI,                                         & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
+                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk,                                                  & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
 #else
@@ -1152,16 +1148,17 @@ call START_COLLECTION("DYN-rk3")
     !##### RK2 #####
     rko = 2
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
-                 DDIV,                                             & ! (out)
-                 mflx_hi,                                          & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
-                 Rtot, CORIOLI,                                    & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
-                 dtrk,                                             & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work)
+    call calc_rk(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,      & ! (out)
+                 DDIV,                                                  & ! (out)
+                 mflx_hi,                                               & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
+                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,      & ! (in)
+                 Rtot, CORIOLI,                                         & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
+                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk,                                                  & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
 #else
@@ -1180,16 +1177,17 @@ call START_COLLECTION("DYN-rk3")
     !##### RK3 #####
     rko = 3
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
-                 DDIV,                                             & ! (out)
-                 mflx_hi,                                          & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
-                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
-                 Rtot, CORIOLI,                                    & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,  & ! (in)
-                 dtrk,                                             & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                     & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work) 
+    call calc_rk(DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (out)
+                 DDIV,                                                  & ! (out)
+                 mflx_hi,                                               & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
+                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,      & ! (in)
+                 Rtot, CORIOLI,                                         & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
+                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk,                                                  & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work) 
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )
 #else
@@ -1441,6 +1439,8 @@ call TIME_rapend     ('DYN-fct')
                      DENS,    MOMZ,    MOMX,    MOMY,    RHOT,        &
                      Rtot, CORIOLI,                                   &
                      num_diff, ray_damp, divdmp_coef, LSsink_d, sink, &
+                     CZ, FDZ, FDX, FDY,                           &
+                     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,              &
                      dtrk,                                            &
                      VELZ, VELX, VELY, PRES, POTT,                    &
                      qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns        )
@@ -1450,21 +1450,6 @@ call TIME_rapend     ('DYN-fct')
        Rvap   => CONST_Rvap,   &
        CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
-    use mod_grid, only : &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ,   &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -1502,6 +1487,18 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: divdmp_coef
     real(RP), intent(in) :: LSsink_D
     real(RP), intent(in) :: sink(KA,IA,JA,5+QA)
+
+    real(RP), intent(in)    :: CZ(KA)
+
+    real(RP), intent(in)    :: FDZ(KA)
+    real(RP), intent(in)    :: FDX(IA)
+    real(RP), intent(in)    :: FDY(JA)
+    real(RP), intent(in)    :: RCDZ(KA)
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+    real(RP), intent(in)    :: RFDZ(KA)
+    real(RP), intent(in)    :: RFDX(IA)
+    real(RP), intent(in)    :: RFDY(JA)
     real(RP), intent(in) :: dtrk
 
     ! diagnostic variables (work space)
@@ -2053,7 +2050,7 @@ call TIME_rapend     ('DYN-fct')
        ! at (x, y, layer)
        ! note that x-index is added by -1
        do j = JJS-1, JJE+1
-       do i = IIS-2, IIE+2
+       do i = IIS-1, IIE+2
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMX(k,i-1,j) )

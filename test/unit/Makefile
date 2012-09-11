@@ -26,8 +26,8 @@ MODS = \
 all: makelib makeinclude makebin
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
-#	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS) -DDEBUG -O0 -g"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
+#	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
 
 makeinclude:
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h
@@ -49,7 +49,7 @@ dc_test.o: dc_test.f90 dc_types.o
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FC) -DDEBUG $(FFLAGS) -O0 -g -I$(INCDIR) -I$(SRCDIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -o $@ -c $<
 #	$(FC) -DDEBUG -O0 -g -fpp3 -fpe0 -traceback -I$(SRCDIR) -o $@ -c $<
 
 .c.o:

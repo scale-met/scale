@@ -103,7 +103,7 @@ contains
   !########## Initial setup ##########
   ZERO(:,:,:) = 0.0_RP
 
-  do j = 0, JA
+  do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
   call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI, SINK,         & ! (out)
@@ -176,7 +176,7 @@ subroutine test_undef
           REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
           DAMP_var, DAMP_alpha,                 & ! (in)
           divdmp_coef, LSsink_D,                & ! (in)
-          1.0_RP, 1.0_RP, 1                     ) ! (in)
+          1.0_RP, 1                             ) ! (in)
   end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
@@ -234,7 +234,7 @@ subroutine test_conserve
          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
          DAMP_var, DAMP_alpha,                 & ! (in)
          divdmp_coef, LSsink_D,                & ! (in)
-         1.0_RP, 1.0_RP, 1                     ) ! (in)
+         1.0_RP, 1                             ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP

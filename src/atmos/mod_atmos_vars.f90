@@ -152,7 +152,6 @@ contains
        PRC_MPIstop
     use mod_const, only : &
        CPvap => CONST_CPvap, &
-       CVvap => CONST_CVvap, &
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
        CONST_UNDEF8

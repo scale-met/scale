@@ -1535,7 +1535,8 @@ contains
              vely(k,i,j) =  -5.5D0
 !             velx(k,i,j) = 0.0D0
 !             vely(k,i,j) = 0.0D0
-             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
+             potl(k,i,j) = 289.0D0                                            * (1.D0-sint)*0.5D0 + &
+                  (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
