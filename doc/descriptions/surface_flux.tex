@@ -1,4 +1,4 @@
-\section{Surface flux}
+%\section{Surface flux}
 {\bf \Large 
 \begin{tabular}{ccc}
 \hline
@@ -78,6 +78,7 @@ For the unstable condition ($Ri_B<0$),
 $F_i$s ($i=m,h$) could be
 \begin{equation}
   F_i = 1 - \frac{b Ri_B}{1 + c_i \sqrt{|Ri_B|}},
+  \label{eq: F_i unstable}
 \end{equation}
 under the consideration that
 $F_i$ must behave as $1/u$ (i.e. $\sqrt{|Ri_B|}$) in the free convection limit ($u \to 0$),
@@ -140,6 +141,7 @@ from eqs. (\ref{eq: flux-gradient t}) and (\ref{eq: Psi_h}).
 Therefore
 \begin{equation}
   \Psi_h = R\ln\left(\frac{z}{z_0}\right)\frac{\sqrt{F_m}}{F_h}.
+  \label{eq: Psi}
 \end{equation}
 
 Because $\Psi_h$ depends on $Ri_{B0}$,
@@ -152,9 +154,10 @@ but the solution is too complicated.}.
 Starting from $Ri_{Bt}$ as the first estimation of $Ri_{B0}$,
 the second estimate by the Newton-Raphson iteration becomes
 \begin{equation}
-  \hat{Ri}_{B0} = Ri_{Bt} - \frac{Ri_{Bt}R\ln(z_0/z_t)}{\ln(z_0/z_t) + \hat{\Psi_h}},
+  \hat{Ri}_{B0} = Ri_{Bt} - \frac{Ri_{Bt}R\ln(z_0/z_t)}{\ln(z_0/z_t) + \hat{\Psi}_h},
+  \label{eq: Ri_B0 estimation}
 \end{equation}
-where $\hat{\Psi_h}$ is the estimate of $\Psi_h$ using $Ri_{Bt}$ instead of $Ri_{B0}$.
+where $\hat{\Psi}_h$ is the estimate of $\Psi_h$ using $Ri_{Bt}$ instead of $Ri_{B0}$.
 Approximate values for $F_m, F_h$, and $\Psi_h$ are re-calculated
 based on the $\hat{Ri}_{B0}$,
 and then
@@ -163,16 +166,83 @@ are calculated from eqs. (\ref{eq: Delta t_0}), (\ref{eq: u_*^2}),
 and (\ref{eq: u_*t_*}), respectively.
 
 
-\subsection{Roughness length}
+R\subsection{Roughness length}
 Miller et al. (1992) provides the roughness length over the tropical ocean,
 based on the numerical calculations
 by combining the smooth surface values with the Charnock relation
 for the aerodynamic roughness length
 and the constant values for heat and moisture in accordance with Smith (1988,1989) suggestions:
 \begin{align}
-  z_{0M} &= 0.11u/\nu_* + 0.018u_*^2/g, \\
-  z_{0H} &= 0.40u/\nu_* + 1.4 \times 10^{-5}, \\
-  z_{0Q} &= 0.62u/\nu_* + 1.3 \times 10^{-4},
+  z_0 &= 0.11u/\nu_* + 0.018u_*^2/g, \label{eq: z_0} \\
+  z_t &= 0.40u/\nu_* + 1.4 \times 10^{-5}, \label{eq: z_t} \\
+  z_q &= 0.62u/\nu_* + 1.3 \times 10^{-4}, \label{eq: z_q}
 \end{align}
-where $z_{0M}, z_{0H}$, and $z_{0Q}$ are $z_0$ for the momentum, heat, and vapor,
-respectively.
+where $\nu_*$ is the kinematic viscosity of air ($\sim 1.5 \times 10^{-5}$),
+and $z_0, z_t$, and $z_q$ are the roughness length
+for the momentum, heat, and vapor, respectively.
+
+
+
+\subsection{Discretization}
+
+\def\half{\frac{1}{2}}
+
+All the fluxes are calculated based on the velocity at the first full-level (k=1)
+($z=\Delta z/2$).
+The absolute velocities $U$ are
+\begin{align}
+  U_{i+\half,j,1}^2 &=
+    \left\{\frac{2(\rho u)_{i+\half,j,1}}{\rho_{i,j,1}+\rho_{i+1,j,1}}\right\}^2
+  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1} + (\rho v)_{i+1,j-\half,1} + (\rho v)_{i+1,j+\half,1}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2 \nonumber \\
+ &+ \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i+1,j,1+\half}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2, \\
+  U_{i,j+\half,1}^2 &=
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1} + (\rho u)_{i-\half,j-1,1} + (\rho u)_{i+\half,j+1,1}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2 \nonumber\\
+ &+ \left\{\frac{2(\rho v)_{i,j+\half,1}}{\rho_{i,j,1}+\rho_{i,j+1,1}}\right\}^2
+  + \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i,j+1,1+\half}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2, \\
+  U_{i,j,1}^2 &=
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1}}{\rho_{i,j,1}}\right\}^2
+  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1}}{\rho_{i,j,1}}\right\}^2
+  + \left\{\frac{(\rho w)_{i,j,1+\half}}{2\rho_{i,j,1}}\right\}^2,
+\end{align}
+here it is note that $(\rho w)_{i,j,\half}=0$.
+The potential temperatures $\theta$ are
+\begin{align}
+  \theta_{i,j,1} &= \frac{(\rho \theta)_{i,j,1}}{\rho_{i,j,1}}, \\
+  \bar{\theta}_{i+\half,j,1} &= \frac{\theta_{i,j,1}+\theta_{i+1,j,1}}{2}, \\
+  \bar{\theta}_{i,j+\half,1} &= \frac{\theta_{i,j,1}+\theta_{i,j+1,1}}{2}.
+\end{align}
+
+The roughness lengthes, $z_0, z_t$, and $z_q$ are caluclated from
+the eqs. (\ref{eq: z_0}), (\ref{eq: z_t}), and (\ref{eq: z_q}),
+in which the friction verociy $u_*$ is estimated as
+\begin{equation}
+  u_* = \frac{k}{\ln(z_1/z_0)}U.
+\end{equation}
+
+From eq. (\ref{eq: Ri_B0})
+The $Ri_{Bt})$, which is the first guess of the $Ri_{B0}$, is
+\begin{equation}
+  Ri_{Bt} = \frac{gz_1(\theta_1-\theta_sfc)}{\Theta_{sfc}U^2},
+\end{equation}
+with the assumption that $\theta_{z_t} = \theta_{sfc}$.
+The estimation of the $\hat{\Psi}_h$ is calculated with $Ri_{Bt}$ from
+the eqs. (\ref{eq: Psi}), (\ref{eq: F_i unstable}), and (\ref{eq: F_i stable}).
+The final estimation of $Ri_{B0}$ is obtained from the eq. (\ref{eq: Ri_B0 estimation}),
+and the final estimation of $\Psi_h$ is obtaind with the $Ri_{B0}$.
+
+Now we can calculate the bulk coefficients, $C_m, C_h$, and $C_e$ for the moments, heat, and vapor:
+\begin{align}
+  C_m &= \frac{k^2}{\ln(z_1/z_0)}UF_m(Ri_{B0}), \\
+  C_h &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}-1\right\}^{-1}, \\
+  C_e &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}-1\right\}^{-1}.
+\end{align}
+The fluxes are
+\begin{align}
+  \overline{\rho u'w'} &= - C_m (\rho u), \\
+  \overline{\rho v'w'} &= - C_m (\rho v), \\
+  \overline{\rho w'w'} &= - C_m (\rho w), \\
+  \overline{\rho \theta} &= - C_h \{(\rho \theta) - \rho \theta_{sfc}\}, \\
+  \overline{\rho q} &= -C_e \rho ( q - q_{evap} ),
+\end{align}
+where $q_{evap}$ is the saturation value at surface.
+
