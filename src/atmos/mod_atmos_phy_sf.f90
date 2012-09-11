@@ -8,11 +8,11 @@
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
-!! @li      2011-12-03 (Y.Miyamoto) [new]
-!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
-!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
-!! @li      2012-04-10 (Y.Miyamoto) [mod] introduce coefficients for interpolation
-!!
+!! @li      2011-12-03 (Y.Miyamoto)  [new]
+!! @li      2011-12-11 (H.Yashiro)   [mod] integrate to SCALE3
+!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
+!! @li      2012-04-10 (Y.Miyamoto)  [mod] introduce coefficients for interpolation
+!! @li      2012-09-11 (S.Nishizawa) [mod] bugfix based on the scale document
 !<
 !-------------------------------------------------------------------------------
 module mod_atmos_phy_sf
@@ -39,6 +39,7 @@ module mod_atmos_phy_sf
   !
   include 'inc_index.h'
   include 'inc_tracer.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -52,40 +53,41 @@ module mod_atmos_phy_sf
   !
   !++ Private parameters & variables
   !
-  real(8), private, parameter :: CM0   = 1.0D-3  ! bulk coef. for U*
-  real(8), private, parameter :: visck = 1.5D-5  ! kinematic viscosity 
+  real(RP), private, parameter :: Cm0   = 1.0E-3_RP  ! bulk coef. for U*
+  real(RP), private, parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
 
   ! parameters
-  real(8), private, parameter :: Z0M0 =   0.0D0      ! base
-  real(8), private, parameter :: Z0MR = 0.018D0      ! rough factor
-  real(8), private, parameter :: Z0MS =  0.11D0      ! smooth factor
-  real(8), private, parameter :: Z0H0 =   1.4D-5
-  real(8), private, parameter :: Z0HR =   0.0D0
-  real(8), private, parameter :: Z0HS =   0.4D0
-  real(8), private, parameter :: Z0E0 =   1.3D-4
-  real(8), private, parameter :: Z0ER =   0.0D0
-  real(8), private, parameter :: Z0ES =  0.62D0
+  real(RP), private, save :: Z00 =   0.0_RP      ! base
+  real(RP), private, save :: Z0R = 0.018_RP      ! rough factor
+  real(RP), private, save :: Z0S =  0.11_RP      ! smooth factor
+  real(RP), private, save :: Zt0 =   1.4E-5_RP
+  real(RP), private, save :: ZtR =   0.0_RP
+  real(RP), private, save :: ZtS =   0.4_RP
+  real(RP), private, save :: Ze0 =   1.3E-4_RP
+  real(RP), private, save :: ZeR =   0.0_RP
+  real(RP), private, save :: ZeS =  0.62_RP
+  real(RP), private, save :: ThS = 300.0_RP
 
   ! limiter
-  real(8), private, parameter :: Ustar_min =  1.0D-3 ! minimum limit of U*
+  real(RP), private, parameter :: Ustar_min =  1.0E-3_RP ! minimum limit of U*
 
-  real(8), private, parameter :: Z0M_min =    1.0D-5 ! minimum roughness length of u,v,w
-  real(8), private, parameter :: Z0H_min =    1.0D-5 !                             T
-  real(8), private, parameter :: Z0E_min =    1.0D-5 !                             q
+  real(RP), private, parameter :: Z0_min =    1.0E-5_RP ! minimum roughness length of u,v,w
+  real(RP), private, parameter :: Zt_min =    1.0E-5_RP !                             T
+  real(RP), private, parameter :: Ze_min =    1.0E-5_RP !                             q
 
-  real(8), private, save      :: CM_min  =    1.0D-5 ! minimum bulk coef. of u,v,w
-  real(8), private, save      :: CH_min  =    1.0D-5 !                       T
-  real(8), private, save      :: CE_min  =    1.0D-5 !                       q
-  real(8), private, parameter :: CM_max  =    2.5D-3 ! maximum bulk coef. of u,v,w
-  real(8), private, parameter :: CH_max  =    1.0D0  !                       T
-  real(8), private, parameter :: CE_max  =    1.0D0  !                       q
+  real(RP), private, save      :: Cm_min  =    1.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, save      :: Ch_min  =    1.0E-5_RP !                       T
+  real(RP), private, save      :: Ce_min  =    1.0E-5_RP !                       q
+  real(RP), private, parameter :: Cm_max  =    2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private, parameter :: Ch_max  =    1.0_RP  !                       T
+  real(RP), private, parameter :: Ce_max  =    1.0_RP  !                       q
 
-  real(8), private, save      :: U_minM  =    0.0D0  ! minimum U_abs for u,v,w
-  real(8), private, save      :: U_minH  =    0.0D0  !                   T
-  real(8), private, save      :: U_minE  =    0.0D0  !                   q
-  real(8), private, parameter :: U_maxM  =  100.0D0  ! maximum U_abs for u,v,w
-  real(8), private, parameter :: U_maxH  =  100.0D0  !                   T
-  real(8), private, parameter :: U_maxE  =  100.0D0  !                   q
+  real(RP), private, save      :: U_minM  =    0.0_RP  ! minimum U_abs for u,v,w
+  real(RP), private, save      :: U_minH  =    0.0_RP  !                   T
+  real(RP), private, save      :: U_minE  =    0.0_RP  !                   q
+  real(RP), private, parameter :: U_maxM  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxH  =  100.0_RP  !                   T
+  real(RP), private, parameter :: U_maxE  =  100.0_RP  !                   q
 
   !-----------------------------------------------------------------------------
 contains
@@ -100,12 +102,22 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(8) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
-    real(8) :: ATMOS_PHY_SF_U_minH !                   T
-    real(8) :: ATMOS_PHY_SF_U_minE !                   q
-    real(8) :: ATMOS_PHY_SF_CM_min ! minimum bulk coef. of u,v,w
-    real(8) :: ATMOS_PHY_SF_CH_min !                       T
-    real(8) :: ATMOS_PHY_SF_CE_min !                       q
+    real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
+    real(RP) :: ATMOS_PHY_SF_U_minH !                   T
+    real(RP) :: ATMOS_PHY_SF_U_minE !                   q
+    real(RP) :: ATMOS_PHY_SF_CM_min ! minimum bulk coef. of u,v,w
+    real(RP) :: ATMOS_PHY_SF_CH_min !                       T
+    real(RP) :: ATMOS_PHY_SF_CE_min !                       q
+    real(RP) :: ATMOS_PHY_SF_Z00
+    real(RP) :: ATMOS_PHY_SF_Z0R
+    real(RP) :: ATMOS_PHY_SF_Z0S
+    real(RP) :: ATMOS_PHY_SF_Zt0
+    real(RP) :: ATMOS_PHY_SF_ZtR
+    real(RP) :: ATMOS_PHY_SF_ZtS
+    real(RP) :: ATMOS_PHY_SF_Ze0
+    real(RP) :: ATMOS_PHY_SF_ZeR
+    real(RP) :: ATMOS_PHY_SF_ZeS
+    real(RP) :: ATMOS_PHY_SF_ThS
 
     NAMELIST / PARAM_ATMOS_PHY_SF / &
        ATMOS_PHY_SF_U_minM, &
@@ -113,7 +125,17 @@ contains
        ATMOS_PHY_SF_U_minE, &
        ATMOS_PHY_SF_CM_min, &
        ATMOS_PHY_SF_CH_min, &
-       ATMOS_PHY_SF_CE_min
+       ATMOS_PHY_SF_CE_min, &
+       ATMOS_PHY_SF_Z00, &
+       ATMOS_PHY_SF_Z0R, &
+       ATMOS_PHY_SF_Z0S, &
+       ATMOS_PHY_SF_Zt0, &
+       ATMOS_PHY_SF_ZtR, &
+       ATMOS_PHY_SF_ZtS, &
+       ATMOS_PHY_SF_Ze0, &
+       ATMOS_PHY_SF_ZeR, &
+       ATMOS_PHY_SF_ZeS, &
+       ATMOS_PHY_SF_ThS
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -124,6 +146,16 @@ contains
     ATMOS_PHY_SF_CM_min = CM_min
     ATMOS_PHY_SF_CH_min = CH_min
     ATMOS_PHY_SF_CE_min = CE_min
+    ATMOS_PHY_SF_Z00    = Z00
+    ATMOS_PHY_SF_Z0R    = Z0R
+    ATMOS_PHY_SF_Z0S    = Z0S
+    ATMOS_PHY_SF_Zt0    = Zt0
+    ATMOS_PHY_SF_ZtR    = ZtR
+    ATMOS_PHY_SF_ZtS    = ZtS
+    ATMOS_PHY_SF_Ze0    = Ze0
+    ATMOS_PHY_SF_ZeR    = ZeR
+    ATMOS_PHY_SF_ZeS    = ZeS
+    ATMOS_PHY_SF_ThS    = ThS
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACE]/Categ[ATMOS]'
@@ -146,6 +178,16 @@ contains
     CM_min = ATMOS_PHY_SF_CM_min
     CH_min = ATMOS_PHY_SF_CH_min
     CE_min = ATMOS_PHY_SF_CE_min
+    Z00    = ATMOS_PHY_SF_Z00
+    Z0R    = ATMOS_PHY_SF_Z0R
+    Z0S    = ATMOS_PHY_SF_Z0S
+    Zt0    = ATMOS_PHY_SF_Zt0
+    ZtR    = ATMOS_PHY_SF_ZtR
+    ZtS    = ATMOS_PHY_SF_ZtS
+    Ze0    = ATMOS_PHY_SF_Ze0
+    ZeR    = ATMOS_PHY_SF_ZeR
+    ZeS    = ATMOS_PHY_SF_ZeS
+    ThS    = ATMOS_PHY_SF_ThS
 
     return
   end subroutine ATMOS_PHY_SF_setup
@@ -191,75 +233,80 @@ contains
     implicit none
 
     ! monitor
-    real(8) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
-    real(8) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
+    real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
+    real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
 
-    real(8) :: FB  = 9.4d0  ! Louis factor b (bM)
-    real(8) :: FBS = 4.7d0  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
-    real(8) :: FDM = 7.4d0  ! Louis factor d of u (dM)
-    real(8) :: FDH = 5.3d0  ! Louis factor d of T, q (dH)
-    real(8) :: THS = 300.0d0
+    real(RP) :: FB  = 9.4_RP  ! Louis factor b (bM)
+    real(RP) :: FBS = 4.7_RP  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
+    real(RP) :: FDM = 7.4_RP  ! Louis factor d of u (dM)
+    real(RP) :: FDH = 5.3_RP  ! Louis factor d of T, q (dH)
+    real(RP) :: FR  = 0.74_RP ! turbulent Prandtl number (Businger et al. 1971)
 
     ! work
-    real(8) :: VELZ(IA,JA)
-    real(8) :: VELX(IA,JA)
-    real(8) :: VELY(IA,JA)
+    real(RP) :: THETA(IA,JA)
 
-    real(8) :: Uabsu  ! absolute velocity at the lowermost atmos. layer [m/s]
-    real(8) :: Uabsv
-    real(8) :: Uabsw
-    real(8) :: Ustaru ! friction velocity [m/s]
-    real(8) :: Ustarv
-    real(8) :: Ustarw
+    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Ustar ! friction velocity [m/s]
 
-    real(8) :: Z0Mu   ! roughness length [m] (momentum,heat,tracer)
-    real(8) :: Z0Mv
-    real(8) :: Z0Mw
-    real(8) :: Z0H
-    real(8) :: Z0E
+    real(RP) :: Z0   ! roughness length [m] (momentum,heat,tracer)
+    real(RP) :: Zt
+    real(RP) :: Ze
 
-    real(8) :: CMX
-    real(8) :: CMMu   ! surface exchange coefficient (momentum,heat,tracer)
-    real(8) :: CMMv
-    real(8) :: CMMw
-    real(8) :: CMH
-    real(8) :: CME
+    real(RP) :: Cm   ! bulk coefficient (momentum,heat,tracer)
+    real(RP) :: Ch
+    real(RP) :: Ce
 
-    real(8) :: FM, FH
-    real(8) :: FCM, FCH
-    real(8) :: FZH, FZE
-    real(8) :: RIX, RIB
-    real(8) :: qdry, Rtot, pres, temp
-    real(8) :: pres_evap ! partial pressure of water vapor at surface [Pa]
-    real(8) :: qv_evap   ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: a2
+    real(RP) :: Fm, Fh, Psih
+    real(RP) :: RiB
+    real(RP) :: qdry, Rtot, pres, temp
+    real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
+    real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j, iw
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
-    ! momentum -> velocity
-    do j = JS-2, JE+2
-    do i = IS-2, IE+2
-       VELZ(i,j) = MOMZ(KS+1,i,j) / ( DENS(KS+1,i,j)+DENS(KS  ,i,j) ) &
-                 + MOMZ(KS  ,i,j) / ( DENS(KS  ,i,j)+DENS(KS  ,i,j) ) 
+    ! rho*theta -> potential temperature at cell centor
+    do j = JS, JE
+    do i = IS, IE
+       THETA(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
     enddo
     enddo
 
-    do j = JS-2, JE+2
-    do i = IS-2, IE+1
-       VELX(i,j) = 2.D0 * MOMX(KS,i,j) / ( DENS(KS,i+1,j)+DENS(KS,i,j) )
-    enddo
-    enddo
+    do j = JS, JE
+    do i = IS, IE
 
-    do j = JS-2, JE+1
-    do i = IS-2, IE+2
-       VELY(i,j) = 2.D0 * MOMY(KS,i,j) / ( DENS(KS,i,j+1)+DENS(KS,i,j) )
-    enddo
-    enddo
+       ! at cell center
 
-    do j = JS-1, JE
-    do i = IS-1, IE
+       !--- absolute velocity
+       Uabs = sqrt( &
+              ( MOMZ(KS,i,j)                  )**2 &
+            + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
+            + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
+            ) / DENS(KS,i,j) * 0.5_RP
+
+       !--- friction velocity at u, v, and w points
+       Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+       !--- roughness lengths at u, v, and w points
+       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
+       Ze = max( Ze0 + ZeR/GRAV * Ustar*Ustar + ZeS*visck / Ustar, Ze_min )
+
+       call get_RiB( &
+            RiB, Fm, Fh, Psih,             & ! (out)
+            THETA(i,j), SST(1,i,j), Uabs**2, & ! (in)
+            CZ(KS), Z0, Zt,                & ! (in)
+            KARMAN, FB, FBS, FDM, FDH,     & ! (in)
+            ThS, GRAV                    ) ! (in)
+
+       !--- surface exchange coefficients
+       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+       Cm = a2 * Fm
+       Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
+       Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
 
        ! Gas constant
        qdry = 1.D0
@@ -268,80 +315,76 @@ contains
        enddo
        Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
 
-       !--- Qv at sea surface
+       !--- saturation at surface
        pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
        temp      = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres )**RovCP
        pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
 !       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
        qv_evap   = EPSvap * pres_evap / P00
 
-       !--- absolute velocity
-       ! at (x, y, layer)
-       Uabsw = sqrt( ( ( VELZ(i,j)                 )          )**2 &
-                   + ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50D0 )**2 &
-                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50D0 )**2 )
+       ! flux
+       SFLX_MOMZ(i,j) = - min(max(Cm,Cm_min),Cm_max) * min(max(Uabs,U_minM),U_maxM) &
+            * MOMZ(KS,i,j) * 0.5_RP
+       SFLX_POTT(i,j) =   min(max(Ch,Ch_min),Ch_max) * min(max(Uabs,U_minH),U_maxH) &
+            * ( SST(1,i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+       SFLX_QV  (i,j) =   min(max(Ce,Ce_min),Ce_max) * min(max(Uabs,U_minE),U_maxE) &
+            * DENS(KS,i,j) * ( qv_evap - QTRC(KS,i,j,I_QV) )
+
+
+
        ! at (u, y, layer)
-       Uabsu = sqrt( ( ( VELZ(i,j  ) + VELZ(i+1,j  ) ) * 0.50D0 )**2 &
-                   + ( ( VELX(i,j  )                 )          )**2 &
-                   + ( ( VELY(i,j  ) + VELY(i+1,j  ) &
-                       + VELY(i,j-1) + VELY(i+1,j-1) ) * 0.25D0 )**2 )
+       Uabs = sqrt( &
+              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i+1,j)                                     ) )**2 &
+            + ( 2.0_RP *   MOMX(KS,i,j)                                                        )**2 &
+            + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
+            ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+       Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
+
+       call get_RiB( &
+            RiB, Fm, Fh, Psih,                    & ! (out)
+            ( THETA(i,j)+THETA(i+1,j) ) * 0.5_RP, & ! (in)
+            ( SST(1,i,j)+SST(1,i+1,j) ) * 0.5_RP,     & ! (in)
+            Uabs**2,                              & ! (in)
+            CZ(KS), Z0, Zt,                       & ! (in)
+            KARMAN, FB, FBS, FDM, FDH,            & ! (in)
+            ThS, GRAV                             ) ! (in)
+
+       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+       Cm = a2 * Fm
+
+       SFLX_MOMX(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
+            * MOMX(KS,i,j)
+
+
+
        ! at (x, v, layer)
-       Uabsv = sqrt( ( ( VELZ(i  ,j) + VELZ(i  ,j+1) ) * 0.50D0 )**2 &
-                   + ( ( VELX(i  ,j) + VELX(i  ,j+1) &
-                       + VELX(i-1,j) + VELX(i-1,j+1) ) * 0.25D0 )**2 &
-                   + ( ( VELY(i  ,j)                 )          )**2 )
+       Uabs = sqrt( &
+              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i,j+1)                                     ) )**2 &
+            + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
+            + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
+            ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+       Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
 
-       !--- friction velocity at u, v, and w points
-       Ustaru = max ( sqrt ( CM0 ) * Uabsu , Ustar_min )
-       Ustarv = max ( sqrt ( CM0 ) * Uabsv , Ustar_min )
-       Ustarw = max ( sqrt ( CM0 ) * Uabsw , Ustar_min )
+       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
 
-       !--- roughness lengths at u, v, and w points
-       Z0Mu = max( Z0M0 + Z0MR/GRAV * Ustaru*Ustaru + Z0MS*visck / Ustaru, Z0M_min )
-       Z0Mv = max( Z0M0 + Z0MR/GRAV * Ustarv*Ustarv + Z0MS*visck / Ustarv, Z0M_min )
-       Z0Mw = max( Z0M0 + Z0MR/GRAV * Ustarw*Ustarw + Z0MS*visck / Ustarw, Z0M_min )
-       Z0H  = max( Z0H0 + Z0HR/GRAV * Ustarw*Ustarw + Z0HS*visck / Ustarw, Z0H_min )
-       Z0E  = max( Z0E0 + Z0ER/GRAV * Ustarw*Ustarw + Z0ES*visck / Ustarw, Z0E_min )
-       FZH  = log( Z0Mw/Z0H ) / log( CZ(KS)/Z0Mw )
-       FZE  = log( Z0Mw/Z0E ) / log( CZ(KS)/Z0Mw )
+       call get_RiB( &
+            RiB, Fm, Fh, Psih,                    & ! (out)
+            ( THETA(i,j)+THETA(i,j+1) ) * 0.5_RP, & ! (in)
+            ( SST(1,i,j)+SST(1,i,j+1) ) * 0.5_RP,     & ! (in)
+            Uabs**2,                              & ! (in)
+            CZ(KS), Z0, Zt,                       & ! (in)
+            KARMAN, FB, FBS, FDM, FDH,            & ! (in)
+            ThS, GRAV                             ) ! (in)
 
-       CMX  = ( KARMAN / log( CZ(KS)/Z0Mw ) )**2
-       RIB  = GRAV/THS * CZ(KS) * ( temp*( P00/pres )**RovCP - SST(1,i,j) ) / Uabsw
-       FCM  = FDM * CMX * FB * sqrt( CZ(KS)/Z0Mw )
-       FCH  = FDH * CMX * FB * sqrt( CZ(KS)/Z0Mw )
-       if ( RIB >= 0.D0 ) then
-          FM   = 1.D0/( 1.D0 + FBS * RIB*1.D0/( 1.D0 + FZH ) )**2
-          FH   = FM
-       else
-          RIX  = sqrt( abs( RIB*1.D0/( 1.D0 + FZH ) ) )
-          FM   = 1.D0 - FB*RIB*1.D0/( 1.D0 + FZH )/( 1.D0 + FCM*RIX )
-          FH   = 1.D0 - FB*RIB*1.D0/( 1.D0 + FZH )/( 1.D0 + FCH*RIX )
-       endif
+       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+       Cm = a2 * Fm
 
-       !--- surface exchange coefficients
-       CMX   = ( KARMAN / log( CZ(KS)/Z0Mu ) )**2 * FM
-       CMMu  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsu, U_minM ), U_maxM )
-
-       CMX   = ( KARMAN / log( CZ(KS)/Z0Mv ) )**2 * FM
-       CMMv  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsv, U_minM ), U_maxM )
-
-       CMX   = ( KARMAN / log( CZ(KS)/Z0Mw ) )**2 * FM
-       CMMw  = max( min( CMX , CM_max ), CM_min ) * min( max( Uabsw, U_minM ), U_maxM )
-
-       CMX   = ( KARMAN*KARMAN / log( CZ(KS)/Z0Mw ) / log( CZ(KS)/Z0H ) ) &
-               * FH * 1.D0/( 1.D0 + FZH/sqrt( FM )*FH )
-       CMH   = max( min( CMX , CH_max ), CH_min ) * min( max( Uabsw, U_minH ), U_maxH )
-
-       CMX   = ( KARMAN*KARMAN / log( CZ(KS)/Z0Mw ) / log( CZ(KS)/Z0E ) ) &
-               * FH * 1.D0/( 1.D0 + FZE/sqrt( FM )*FH )
-       CME   = max( min( CMX , CE_max ), CE_min ) * min( max( Uabsw, U_minE ), U_maxE )
-
-       !--- surface fluxes ( at x, y, 10m ) 
-       SFLX_MOMX(i,j) = - 0.5D0 * ( DENS(KS,i+1,j)+DENS(KS,i,j) ) * CMMu * VELX(i,j)
-       SFLX_MOMY(i,j) = - 0.5D0 * ( DENS(KS,i,j+1)+DENS(KS,i,j) ) * CMMv * VELY(i,j)
-       SFLX_MOMZ(i,j) = - DENS(KS,i,j) * CMMw * VELZ(i,j) 
-       SFLX_POTT(i,j) =   DENS(KS,i,j) * CMH * ( SST(1,i,j) - RHOT(KS,i,j) / DENS(KS,i,j) )
-       SFLX_QV  (i,j) =   DENS(KS,i,j) * CME * ( qv_evap - QTRC(KS,i,j,I_QV) )
+       SFLX_MOMY(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
+            * MOMY(KS,i,j)
 
     enddo
     enddo
@@ -358,5 +401,65 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF
+
+
+  subroutine get_RiB( &
+       RiB, Fm, Fh, Psih,    &
+       theta, theta_sfc, u2, &
+       Z, Z0, Zt,            &
+       K, FB, FBS, FDM, FDH, &
+       ThS, G                )
+    real(RP), intent(out) :: RiB
+    real(RP), intent(out) :: Fm
+    real(RP), intent(out) :: Fh
+    real(RP), intent(out) :: Psih
+    real(RP), intent(in)  :: theta
+    real(RP), intent(in)  :: theta_sfc
+    real(RP), intent(in)  :: u2
+    real(RP), intent(in)  :: Z
+    real(RP), intent(in)  :: Z0
+    real(RP), intent(in)  :: Zt
+    real(RP), intent(in)  :: K
+    real(RP), intent(in)  :: FB
+    real(RP), intent(in)  :: FBS
+    real(RP), intent(in)  :: FDM
+    real(RP), intent(in)  :: FDH
+    real(RP), intent(in)  :: ThS
+    real(RP), intent(in)  :: G
+
+    real(RP) :: tmp
+
+    ! the first guess of RiB0 (= RiBt)
+    RiB = G/ThS * z * (  theta -  theta_sfc ) / u2
+
+    ! Fm, Fh, Psi_h/R
+    if ( RiB >= 0 ) then
+       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
+       Fh = Fm
+    else
+       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
+       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
+       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
+    end if
+    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
+
+    ! the final estimate of RiB0
+    tmp = log( Z0/Zt )
+    RiB = RiB - RiB * tmp / ( tmp + Psih )
+
+    ! Fm, Fh, Psih/R
+    if ( RiB >= 0.0_RP ) then
+       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
+       Fh = Fm
+    else
+       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
+       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
+       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
+    end if
+    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
+
+    return
+  end subroutine get_RiB
+
 
 end module mod_atmos_phy_sf
