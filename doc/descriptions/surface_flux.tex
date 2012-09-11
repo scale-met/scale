@@ -68,7 +68,9 @@ Then the fluxes could be written as
   u_*\theta_* &= \frac{a^2}{R} u \Delta \theta F_h\left(\frac{z}{z_0},Ri_B\right), \label{eq: u_*t_*}
 \end{align}
 where
-$R$ is ratio of the drag coefficients for momentum and heat in the neutral limit, and
+$R$ is ratio of the drag coefficients for momentum and heat in the neutral limit,
+(the turbulent Prandtl number),
+and
 \begin{equation}
   a^2 = \frac{k^2}{\left\{\ln\left(z/z_0\right)\right\}^2}
 \end{equation}
@@ -196,12 +198,12 @@ The absolute velocities $U$ are
   + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1} + (\rho v)_{i+1,j-\half,1} + (\rho v)_{i+1,j+\half,1}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2 \nonumber \\
  &+ \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i+1,j,1+\half}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2, \\
   U_{i,j+\half,1}^2 &=
-    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1} + (\rho u)_{i-\half,j-1,1} + (\rho u)_{i+\half,j+1,1}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2 \nonumber\\
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1} + (\rho u)_{i-\half,j+1,1} + (\rho u)_{i+\half,j+1,1}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2 \nonumber\\
  &+ \left\{\frac{2(\rho v)_{i,j+\half,1}}{\rho_{i,j,1}+\rho_{i,j+1,1}}\right\}^2
   + \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i,j+1,1+\half}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2, \\
   U_{i,j,1}^2 &=
-    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1}}{\rho_{i,j,1}}\right\}^2
-  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1}}{\rho_{i,j,1}}\right\}^2
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1}}{2\rho_{i,j,1}}\right\}^2
+  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1}}{2\rho_{i,j,1}}\right\}^2
   + \left\{\frac{(\rho w)_{i,j,1+\half}}{2\rho_{i,j,1}}\right\}^2,
 \end{align}
 here it is note that $(\rho w)_{i,j,\half}=0$.
@@ -216,13 +218,15 @@ The roughness lengthes, $z_0, z_t$, and $z_q$ are caluclated from
 the eqs. (\ref{eq: z_0}), (\ref{eq: z_t}), and (\ref{eq: z_q}),
 in which the friction verociy $u_*$ is estimated as
 \begin{equation}
-  u_* = \frac{k}{\ln(z_1/z_0)}U.
+  u_* = \sqrt{C_{m0}} U,
 \end{equation}
+where $C_{m0}$ is a constant bulk coefficient,
+and we use $1.0 \times 10^{-3}$ as its value.
 
 From eq. (\ref{eq: Ri_B0})
-The $Ri_{Bt})$, which is the first guess of the $Ri_{B0}$, is
+The $Ri_{Bt}$, which is the first guess of the $Ri_{B0}$, is
 \begin{equation}
-  Ri_{Bt} = \frac{gz_1(\theta_1-\theta_sfc)}{\Theta_{sfc}U^2},
+  Ri_{Bt} = \frac{gz_1(\theta_1-\theta_{sfc})}{\bar{\Theta}U^2},
 \end{equation}
 with the assumption that $\theta_{z_t} = \theta_{sfc}$.
 The estimation of the $\hat{\Psi}_h$ is calculated with $Ri_{Bt}$ from
@@ -232,17 +236,17 @@ and the final estimation of $\Psi_h$ is obtaind with the $Ri_{B0}$.
 
 Now we can calculate the bulk coefficients, $C_m, C_h$, and $C_e$ for the moments, heat, and vapor:
 \begin{align}
-  C_m &= \frac{k^2}{\ln(z_1/z_0)}UF_m(Ri_{B0}), \\
-  C_h &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}-1\right\}^{-1}, \\
-  C_e &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}-1\right\}^{-1}.
+  C_m &= \frac{k^2}{\ln(z_1/z_0)}F_m(Ri_{B0}), \\
+  C_h &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}+1\right\}^{-1}, \\
+  C_e &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}+1\right\}^{-1}.
 \end{align}
 The fluxes are
 \begin{align}
-  \overline{\rho u'w'} &= - C_m (\rho u), \\
-  \overline{\rho v'w'} &= - C_m (\rho v), \\
-  \overline{\rho w'w'} &= - C_m (\rho w), \\
-  \overline{\rho \theta} &= - C_h \{(\rho \theta) - \rho \theta_{sfc}\}, \\
-  \overline{\rho q} &= -C_e \rho ( q - q_{evap} ),
+  \overline{\rho u'w'} &= - C_m U \rho u, \\
+  \overline{\rho v'w'} &= - C_m U \rho v, \\
+  \overline{\rho w'w'} &= - C_m U \rho w, \\
+  \overline{\rho \theta'w'} &= - C_h U \{\rho \theta - \rho \theta_{sfc}\}, \\
+  \overline{\rho q'w'} &= -C_e U \rho ( q - q_{evap} ),
 \end{align}
 where $q_{evap}$ is the saturation value at surface.
 
