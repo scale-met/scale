@@ -232,17 +232,17 @@ and the final estimation of $\Psi_h$ is obtaind with the $Ri_{B0}$.
 
 Now we can calculate the bulk coefficients, $C_m, C_h$, and $C_e$ for the moments, heat, and vapor:
 \begin{align}
-  C_m &= \frac{k^2}{\ln(z_1/z_0)}UF_m(Ri_{B0}), \\
-  C_h &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}-1\right\}^{-1}, \\
-  C_e &= \frac{k^2}{R\ln(z_1/z_0)}UF_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}-1\right\}^{-1}.
+  C_m &= \frac{k^2}{\ln(z_1/z_0)}F_m(Ri_{B0}), \\
+  C_h &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}-1\right\}^{-1}, \\
+  C_e &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}-1\right\}^{-1}.
 \end{align}
 The fluxes are
 \begin{align}
-  \overline{\rho u'w'} &= - C_m (\rho u), \\
-  \overline{\rho v'w'} &= - C_m (\rho v), \\
-  \overline{\rho w'w'} &= - C_m (\rho w), \\
-  \overline{\rho \theta} &= - C_h \{(\rho \theta) - \rho \theta_{sfc}\}, \\
-  \overline{\rho q} &= -C_e \rho ( q - q_{evap} ),
+  \overline{\rho u'w'} &= - C_m U \rho u, \\
+  \overline{\rho v'w'} &= - C_m U \rho v, \\
+  \overline{\rho w'w'} &= - C_m U \rho w, \\
+  \overline{\rho \theta'w'} &= - C_h U \{\rho \theta - \rho \theta_{sfc}\}, \\
+  \overline{\rho q'w'} &= -C_e U \rho ( q - q_{evap} ),
 \end{align}
 where $q_{evap}$ is the saturation value at surface.
 
