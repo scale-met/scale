@@ -208,7 +208,6 @@ contains
        PI      => CONST_PI,     &
        ERADIUS => CONST_ERADIUS
     use mod_grid, only: &
-       CZ => GRID_CZ, &
        CX => GRID_CX, &
        CY => GRID_CY
     implicit none

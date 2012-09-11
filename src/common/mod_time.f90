@@ -424,25 +424,25 @@ contains
     !---------------------------------------------------------------------------
 
     temp  = mod( second, TIME_SEC )
-    datetime(6) = temp
+    datetime(6) = int( temp )
     nmin  = ( second-temp ) / TIME_SEC
 
     temp  = mod( nmin, TIME_MIN )
-    datetime(5) = temp
+    datetime(5) = int( temp )
     nhour = ( nmin-temp ) / TIME_MIN
 
     temp  = mod( nhour, TIME_HOUR )
-    datetime(4) = temp
+    datetime(4) = int( temp )
     nday  = ( nhour-temp ) / TIME_HOUR
 
     temp  = mod( nday, TIME_DOY )
-    datetime(1) = ( nday-temp ) / TIME_DOY
+    datetime(1) = int( ( nday-temp ) / TIME_DOY )
     nday  = temp
 
     do m = 1, 12
        if ( nday <= TIME_DOM(m) ) then
           datetime(2) = m
-          datetime(3) = nday + 1
+          datetime(3) = int( nday ) + 1
           exit
        endif
        nday = nday - TIME_DOM(m)

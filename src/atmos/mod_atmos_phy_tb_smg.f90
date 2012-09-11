@@ -382,9 +382,6 @@ contains
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
        FDZ  => GRID_FDZ,  &
        FDX  => GRID_FDX,  &
        FDY  => GRID_FDY,  &
