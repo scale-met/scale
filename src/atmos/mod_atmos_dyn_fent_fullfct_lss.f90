@@ -140,7 +140,7 @@ contains
     real(RP), intent(in) :: v
     if ( v == UNDEF ) then
        write(*,*) "use uninitialized value at line ", line
-       stop
+       call abort
     end if
   end subroutine CHECK
 #endif
@@ -1342,10 +1342,13 @@ call START_COLLECTION("DYN-fct")
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       call advection_fct(RHOQ_lo,                 & ! (out)
-                          RHOQ, qflx_lo, qflx_hi,  & ! (in)
-                          RCDZ, RCDX, RCDY, dtrk,  & ! (in)
-                          qflx_anti, rjpls, rjmns  ) ! (work)
+    enddo
+    enddo
+
+    call advection_fct(RHOQ_lo,                 & ! (out)
+                       RHOQ, qflx_lo, qflx_hi,  & ! (in)
+                       RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+                       qflx_anti, rjpls, rjmns  ) ! (work)
 
 #ifdef DEBUG
        qflx_lo  (:,:,:,:) = UNDEF
@@ -1361,6 +1364,11 @@ call START_COLLECTION("DYN-fct")
        rjpls(:,:,:) = UNDEF
        rjmns(:,:,:) = UNDEF
 #endif
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
        do j = JJS, JJE
        do i = IIS, IIE

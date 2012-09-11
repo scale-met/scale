@@ -199,8 +199,8 @@ subroutine test_conserve
 
   write(*,*) "Test conserve"
 
-  do j = JS, JE
-  do i = IS, IE
+  do j = 1, JA
+  do i = 1, IA
   do k = KS, KE
      MOMZ(k,i,j) = (k + i + j) * 1.0_RP
      MOMX(k,i,j) = (k*2 + i + j) * 1.0_RP

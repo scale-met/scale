@@ -1633,10 +1633,6 @@ contains
        ! tke = (Cs * Delta)^2 * |S|^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
-       nu_C(:,:,:) = UNDEF; nu_Z(:,:,:) = UNDEF; nu_X(:,:,:) = UNDEF; nu_Y(:,:,:) = UNDEF
-       tke(:,:,:) = UNDEF
-       Ri(:,:,:) = UNDEF
-       Pr(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
        ! (cell center)
@@ -3124,7 +3120,6 @@ contains
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-       nu_Z(:,:,:) = UNDEF; nu_X(:,:,:) = UNDEF; nu_Y(:,:,:) = UNDEF
 #endif
        ! (x-y plane)
        do j = JJS, JJE

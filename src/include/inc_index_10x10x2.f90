@@ -36,5 +36,5 @@
   integer, private, parameter :: IJS  =   1 !
   integer, private, parameter :: IJE  =  20 !
 
-  integer, private, parameter :: IBLOCK = 10 !
-  integer, private, parameter :: JBLOCK =  2 !
+  integer, private, parameter :: IBLOCK =  5 !
+  integer, private, parameter :: JBLOCK =  1 !
