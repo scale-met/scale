@@ -926,11 +926,11 @@ contains
     do j = JS, JE
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(1,i,j) = SFC_THETA 
        qv_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
-          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) 
           qv  (k,i,j) = 0.D0
        enddo
     enddo
@@ -959,11 +959,13 @@ contains
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
+    call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        MOMZ(k,i,j) = 0.D0
-       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+!       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+       RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j)*RANDOM_THETA ) ) * DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -1520,28 +1522,18 @@ contains
 
        do k = KS, KE
           if ( CZ(k) < 820.D0 ) then ! below initial cloud top
-!             velx(k,i,j) =   6.7D0
-!             vely(k,i,j) =  -4.9D0
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-!             velx(k,i,j) =   0.0D0
-!             vely(k,i,j) =   0.0D0
              potl(k,i,j) = 289.0D0
           else if ( CZ(k) <= 860.D0 ) then
              sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-!             velx(k,i,j) =  6.7D0 * (1.D0-sint)*0.5D0 +  7.0D0 * (1.D0+sint)*0.5D0
-!             vely(k,i,j) = -4.9D0 * (1.D0-sint)*0.5D0 + -5.5D0 * (1.D0+sint)*0.5D0
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-!             velx(k,i,j) = 0.0D0
-!             vely(k,i,j) = 0.0D0
-             potl(k,i,j) = 289.0D0                                            * (1.D0-sint)*0.5D0 + &
-                  (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
+             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + &
+                           (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-!             velx(k,i,j) =   0.0D0
-!             vely(k,i,j) =   0.0D0
              potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
           endif
 
@@ -1575,8 +1567,6 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
-!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), potl    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1589,8 +1579,6 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
-!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1603,8 +1591,6 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-!    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), dummy(:,:,:), &
-!                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), dummy(:,:,:)  )
     call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
@@ -1880,6 +1866,7 @@ contains
     real(8) :: qall(KA,IA,JA) ! QV+QC
     real(8) :: qc  (KA,IA,JA) ! QC
     real(8) :: fact
+    real(8) :: sint, pi2
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -1894,6 +1881,12 @@ contains
     real(8) :: A_ALPHA      =  3.D0
     integer :: nccn_i       =  20
     integer :: nbin_i       =  33
+
+    real(8) :: PERTURB_AMP = 0.D0
+    integer :: RANDOM_LIMIT = 5
+    integer :: RANDOM_FLAG = 0  !0 -> no perturbation
+                                !1 -> perturbation for PT  
+                                !2 -> perturbation for u,v,w
  
    NAMELIST / PARAM_MKINIT_HBINW / &
        F0_AERO,      &
@@ -1904,7 +1897,13 @@ contains
        nccn_i,       &
        nbin_i
 
+    NAMELIST / PARAM_MKINIT_RF01 / &
+       PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
+
     !---------------------------------------------------------------------------
+    pi2 = atan(1.0D0) * 2.0D0 ! pi/2
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01_hbinw)]/Categ[MKINIT]'
@@ -1913,6 +1912,9 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_HBINW,iostat=ierr)
 
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
+
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -1920,6 +1922,7 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_HBINW)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
 
     allocate( xabnd( nccn_i+1 ) )
     allocate( xactr( nccn_i ) )
@@ -1930,37 +1933,43 @@ contains
     do i = IS, IE
 
        pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
-       pott_sfc(1,i,j) = 289.0D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       pott_sfc(1,i,j) = 289.0D0  ! [K]
        qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
 
        do k = KS, KE
-          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
-!             velx(k,i,j) =   6.7D0
-!             vely(k,i,j) =  -4.9D0
+          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ! [K]
+             potl(k,i,j) = 289.0D0
+          else if ( CZ(k) <= 860.D0 ) then
+             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
+             velx(k,i,j) =   7.0D0
+             vely(k,i,j) =  -5.5D0
+             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + &
+                           (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
           else
              velx(k,i,j) =   7.0D0
              vely(k,i,j) =  -5.5D0
              potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
           endif
 
-          if ( CZ(k) <= 840.D0 ) then ! below initial cloud top
+          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
              qall(k,i,j) = 9.0D-3 ! [kg/kg]
-          elseif(       CZ(k) >   840.D0 &
-                  .AND. CZ(k) <= 5000.D0 ) then
+          elseif ( CZ(k) <= 860.D0 ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
+             qall(k,i,j) = 9.0D-3 * (1.D0-sint)*0.5D0 + 1.5D-3 * (1.D0+sint)*0.5D0
+          elseif( CZ(k) <= 5000.D0 ) then
              qall(k,i,j) = 1.5D-3 ! [kg/kg]
           else
              qall(k,i,j) = 0.0D0
           endif
 
-          if (       CZ(k) >  600.D0 &
-               .AND. CZ(k) <= 840.D0 ) then ! in the cloud
-             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
-
-!             qc(k,i,j) = 0.45D-3 * fact
+          if ( CZ(k) <=  600.D0 ) then
              qc(k,i,j) = 0.D0
+          elseif ( CZ(k) < 820.D0 ) then ! in the cloud
+             qc(k,i,j) = 0.D0  !-- super saturated air for bin microphysics
+          elseif ( CZ(k) <= 860.D0 ) then ! boundary
+             qc(k,i,j) = 0.D0  !-- super saturated air for bin microphysics
           else
              qc(k,i,j) = 0.D0
           endif
@@ -1999,11 +2008,21 @@ contains
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
 
+    call RANDOM_get(rndm)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMZ(k,i,j) = ( 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
+                     * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+      else
        MOMZ(k,i,j) = 0.D0
+      end if
+      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
+       RHOT(k,i,j) = ( pott(k,i,j)+2.D0*( rndm(k,i,j)-0.5D0 )*PERTURB_AMP )* DENS(k,i,j)
+      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
     enddo
     enddo
     enddo
@@ -2012,8 +2031,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
+                     * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) ) 
+      else
+       MOMX(k,i,j) = velx(k,i,j) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
@@ -2022,8 +2045,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * 0.1D0 ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
+                     * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) ) 
+      else
+       MOMY(k,i,j) =  vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     endif
     enddo
     enddo
     enddo
