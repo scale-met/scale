@@ -149,7 +149,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       Rmoist(1,i,j) = Rdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+       Rmoist(k,i,j) = Rdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap * qv(k,i,j)
     enddo
     enddo

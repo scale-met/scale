@@ -252,8 +252,8 @@ contains
     real(RP), intent(out) :: CNDY(3,JA)
     real(RP), intent(out) :: CNMY(3,JA)
     real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: CDX(KA)
-    real(RP), intent(in)  :: CDY(KA)
+    real(RP), intent(in)  :: CDX(IA)
+    real(RP), intent(in)  :: CDY(JA)
     real(RP), intent(in)  :: lat(1,IA,JA) 
     real(RP), intent(in)  :: numerical_diff
     real(RP), intent(in)  :: LSsink_D
