@@ -128,6 +128,8 @@ contains
 
   call test_undef
 
+  call test_const
+
   call test_conserve
 
 end subroutine test_atmos_dyn_fent_fct_run
@@ -190,6 +192,67 @@ subroutine test_undef
   end do
 
 end subroutine test_undef
+
+subroutine test_const
+  real(RP) :: answer(KA,IA,JA)
+
+  write(*,*) "Test constant"
+
+  DENS(:,:,:) = 1.0_RP
+  MOMZ(:,:,:) = 2.0_RP
+  MOMX(:,:,:) = 3.0_RP
+  MOMY(:,:,:) = 4.0_RP
+  RHOT(:,:,:) = 300.0_RP
+  QTRC(:,:,:,:) = 0.1_RP
+
+  REF_dens(:) = 1.0_RP
+  REF_pott(:) = 300.0_RP
+
+  DAMP_var  (:,:,:,:) = -9.999E30_RP
+  DAMP_alpha(:,:,:,:) = 0.0_RP
+
+  call ATMOS_DYN_main( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
+       SINK,                                 & ! (inout)
+       QDRY, DDIV,                           & ! (out)
+       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
+       CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
+       REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
+       DAMP_var, DAMP_alpha,                 & ! (in)
+       divdmp_coef, LSsink_D,                & ! (in)
+       1.0_RP, 1                             ) ! (in)
+
+  do k = KS, KE
+     answer(k,:,:) = MOMZ(k,IS,JS)
+  end do
+  call AssertEqual("MOMZ", answer(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
+  do k = KS, KE
+     answer(k,:,:) = MOMX(k,IS,JS)
+  end do
+  call AssertEqual("MOMX", answer(KS:KE,IS:IE,JS:JE), MOMX(KS:KE,IS:IE,JS:JE))
+  do k = KS, KE
+     answer(k,:,:) = MOMY(k,IS,JS)
+  end do
+  call AssertEqual("MOMY", answer(KS:KE,IS:IE,JS:JE), MOMY(KS:KE,IS:IE,JS:JE))
+  do k = KS, KE
+     answer(k,:,:) = DENS(k,IS,JS)
+  end do
+  call AssertEqual("DENS", answer(KS:KE,IS:IE,JS:JE), DENS(KS:KE,IS:IE,JS:JE))
+  do k = KS, KE
+     answer(k,:,:) = RHOT(k,IS,JS)
+  end do
+  call AssertEqual("RHOT", answer(KS:KE,IS:IE,JS:JE), RHOT(KS:KE,IS:IE,JS:JE))
+  message = "iq = ??"
+  do iq = 1, QA
+     do k = KS, KE
+        answer(k,:,:) = QTRC(k,IS,JS,iq)
+     end do
+     write(message(6:7), "(i2)") iq
+     call AssertEqual(message, answer(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq))
+  end do
+
+end subroutine test_const
 
 subroutine test_conserve
   use mod_atmos_vars, only: &

@@ -1703,6 +1703,25 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    enddo
+    enddo
+
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+11, 3 )
+#else
+    call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+    call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+    call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+#endif
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
        !--- update density
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1723,21 +1742,9 @@ call TIME_rapend     ('DYN-fct')
        enddo
        enddo
        enddo
-
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
-    call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
-
 
        !##### momentum equation (z) #####
        ! at (x, y, layer)
@@ -2003,6 +2010,14 @@ call TIME_rapend     ('DYN-fct')
                    ( VELZ(k,i+1,j)+VELZ(k,i,j) ) * ( MOMX(k+1,i,j)+MOMX(k,i,j) ) &
                -abs( VELZ(k,i+1,j)+VELZ(k,i,j) ) * ( MOMX(k+1,i,j)-MOMX(k,i,j) ) )
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+          qflx_lo(KE,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -2616,7 +2631,7 @@ call TIME_rapend     ('DYN-fct')
        COMM_wait
     implicit none
 
-    real(RP), intent(out)   :: phi_out(KA,IA,JA)         ! physical quantity
+    real(RP), intent(out) :: phi_out(KA,IA,JA)         ! physical quantity
     real(RP), intent(in) :: phi_in(KA,IA,JA) ! physical quantity
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
@@ -2633,11 +2648,13 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(inout) :: rjmns(KA,IA,JA)
 
 
-    ! factor for FCT
+    ! work for FCT
+    real(RP) :: phi_lo(KA,IA,JA)
     real(RP) :: pjpls(KA,IA,JA)
     real(RP) :: pjmns(KA,IA,JA)
     real(RP) :: qjpls(KA,IA,JA)
     real(RP) :: qjmns(KA,IA,JA)
+    real(RP) :: cj   (KA,IA,JA,3)
 
     real(RP) :: zerosw, dirsw
 
@@ -2720,7 +2737,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
 #endif
-          phi_out(k,i,j) = phi_in(k,i,j) &
+          phi_lo(k,i,j) = phi_in(k,i,j) &
                           + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                                        + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
                                        + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
@@ -2746,11 +2763,11 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, qflx_lo(KE  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_lo(KE  ,i  ,j-1,YDIR) )
 #endif
-          phi_out(KS,i,j) = phi_in(KS,i,j) &
+          phi_lo(KS,i,j) = phi_in(KS,i,j) &
                           + dtrk * ( - ( ( qflx_lo(KS,i,j,ZDIR)                            ) * RDZ(KS) &
                                        + ( qflx_lo(KS,i,j,XDIR)-qflx_lo(KS  ,i-1,j  ,XDIR) ) * RDX(i)  &
                                        + ( qflx_lo(KS,i,j,YDIR)-qflx_lo(KS  ,i  ,j-1,YDIR) ) * RDY(j)  ) )
-          phi_out(KE,i,j) = phi_in(KE,i,j) &
+          phi_lo(KE,i,j) = phi_in(KE,i,j) &
                           + dtrk * ( - ( (                     -qflx_lo(KE-1,i,j,ZDIR)     ) * RDZ(KE) &
                                        + ( qflx_lo(KE,i,j,XDIR)-qflx_lo(KE  ,i-1,j  ,XDIR) ) * RDX(i)  &
                                        + ( qflx_lo(KE,i,j,YDIR)-qflx_lo(KE  ,i  ,j-1,YDIR) ) * RDY(j)  ) )
@@ -2809,51 +2826,51 @@ call TIME_rapend     ('DYN-fct')
        do i = IIS, IIE
        do k = KS+1, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_in (k  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (k-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (k+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (k  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in (k  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in (k  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in (k  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_out(k  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(k-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(k+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(k  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_out(k  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_out(k  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_out(k  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_in(k  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(k-1,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(k+1,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(k  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_in(k  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_in(k  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_in(k  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_lo(k  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(k-1,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(k+1,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(k  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_lo(k  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_lo(k  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_lo(k  ,i  ,j-1) )
 #endif
-          qjpls(k,i,j) = max( phi_in (k  ,i  ,j  ), &
-                              phi_in (k+1,i  ,j  ), &
-                              phi_in (k-1,i  ,j  ), &
-                              phi_in (k  ,i+1,j  ), &
-                              phi_in (k  ,i-1,j  ), &
-                              phi_in (k  ,i  ,j+1), &
-                              phi_in (k  ,i  ,j-1), &
-                              phi_out(k  ,i  ,j  ), &
-                              phi_out(k+1,i  ,j  ), &
-                              phi_out(k-1,i  ,j  ), &
-                              phi_out(k  ,i+1,j  ), &
-                              phi_out(k  ,i-1,j  ), &
-                              phi_out(k  ,i  ,j+1), &
-                              phi_out(k  ,i  ,j-1) ) &
-                       - phi_out(k,i,j)
-          qjmns(k,i,j) = phi_out(k,i,j) &
-                       - min( phi_in (k  ,i  ,j  ), &
-                              phi_in (k+1,i  ,j  ), &
-                              phi_in (k-1,i  ,j  ), &
-                              phi_in (k  ,i-1,j  ), &
-                              phi_in (k  ,i+1,j  ), &
-                              phi_in (k  ,i  ,j+1), &
-                              phi_in (k  ,i  ,j-1), &
-                              phi_out(k  ,i  ,j  ), &
-                              phi_out(k+1,i  ,j  ), &
-                              phi_out(k-1,i  ,j  ), &
-                              phi_out(k  ,i-1,j  ), &
-                              phi_out(k  ,i+1,j  ), &
-                              phi_out(k  ,i  ,j+1), &
-                              phi_out(k  ,i  ,j-1) )
+          qjpls(k,i,j) = max( phi_in(k  ,i  ,j  ), &
+                              phi_in(k+1,i  ,j  ), &
+                              phi_in(k-1,i  ,j  ), &
+                              phi_in(k  ,i+1,j  ), &
+                              phi_in(k  ,i-1,j  ), &
+                              phi_in(k  ,i  ,j+1), &
+                              phi_in(k  ,i  ,j-1), &
+                              phi_lo(k  ,i  ,j  ), &
+                              phi_lo(k+1,i  ,j  ), &
+                              phi_lo(k-1,i  ,j  ), &
+                              phi_lo(k  ,i+1,j  ), &
+                              phi_lo(k  ,i-1,j  ), &
+                              phi_lo(k  ,i  ,j+1), &
+                              phi_lo(k  ,i  ,j-1) ) &
+                       - phi_lo(k,i,j)
+          qjmns(k,i,j) = phi_lo(k,i,j) &
+                       - min( phi_in(k  ,i  ,j  ), &
+                              phi_in(k+1,i  ,j  ), &
+                              phi_in(k-1,i  ,j  ), &
+                              phi_in(k  ,i-1,j  ), &
+                              phi_in(k  ,i+1,j  ), &
+                              phi_in(k  ,i  ,j+1), &
+                              phi_in(k  ,i  ,j-1), &
+                              phi_lo(k  ,i  ,j  ), &
+                              phi_lo(k+1,i  ,j  ), &
+                              phi_lo(k-1,i  ,j  ), &
+                              phi_lo(k  ,i-1,j  ), &
+                              phi_lo(k  ,i+1,j  ), &
+                              phi_lo(k  ,i  ,j+1), &
+                              phi_lo(k  ,i  ,j-1) )
        enddo
        enddo
        enddo
@@ -2863,83 +2880,83 @@ call TIME_rapend     ('DYN-fct')
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_in (KS  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (KS+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (KS  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in (KS  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in (KS  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in (KS  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_out(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(KS+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(KS  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_out(KS  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_out(KS  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_out(KS  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_in (KE  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (KE-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in (KE  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in (KE  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in (KE  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in (KE  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_out(KE  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(KE-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_out(KE  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_out(KE  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_out(KE  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_out(KE  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_in(KS  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(KS+1,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(KS  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_in(KS  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_in(KS  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_in(KS  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_lo(KS  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(KS+1,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(KS  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_lo(KS  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_lo(KS  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_lo(KS  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_in(KE  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(KE-1,i  ,j  ) )
+          call CHECK( __LINE__, phi_in(KE  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_in(KE  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_in(KE  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_in(KE  ,i  ,j-1) )
+          call CHECK( __LINE__, phi_lo(KE  ,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(KE-1,i  ,j  ) )
+          call CHECK( __LINE__, phi_lo(KE  ,i-1,j  ) )
+          call CHECK( __LINE__, phi_lo(KE  ,i+1,j  ) )
+          call CHECK( __LINE__, phi_lo(KE  ,i  ,j+1) )
+          call CHECK( __LINE__, phi_lo(KE  ,i  ,j-1) )
 #endif
-          qjpls(KS,i,j) = max( phi_in (KS  ,i  ,j  ), &
-                               phi_in (KS+1,i  ,j  ), &
-                               phi_in (KS  ,i+1,j  ), &
-                               phi_in (KS  ,i-1,j  ), &
-                               phi_in (KS  ,i  ,j+1), &
-                               phi_in (KS  ,i  ,j-1), &
-                               phi_out(KS  ,i  ,j  ), &
-                               phi_out(KS+1,i  ,j  ), &
-                               phi_out(KS  ,i+1,j  ), &
-                               phi_out(KS  ,i-1,j  ), &
-                               phi_out(KS  ,i  ,j+1), &
-                               phi_out(KS  ,i  ,j-1) ) &
-                        - phi_out(KS,i,j)
-          qjmns(KS,i,j) = phi_out(KS,i,j) &
-                        - min( phi_in (KS  ,i  ,j  ), &
-                               phi_in (KS+1,i  ,j  ), &
-                               phi_in (KS  ,i-1,j  ), &
-                               phi_in (KS  ,i+1,j  ), &
-                               phi_in (KS  ,i  ,j+1), &
-                               phi_in (KS  ,i  ,j-1), &
-                               phi_out(KS  ,i  ,j  ), &
-                               phi_out(KS+1,i  ,j  ), &
-                               phi_out(KS  ,i-1,j  ), &
-                               phi_out(KS  ,i+1,j  ), &
-                               phi_out(KS  ,i  ,j+1), &
-                               phi_out(KS  ,i  ,j-1) )
-          qjpls(KE,i,j) = max( phi_in (KE  ,i  ,j  ), &
-                               phi_in (KE-1,i  ,j  ), &
-                               phi_in (KE  ,i+1,j  ), &
-                               phi_in (KE  ,i-1,j  ), &
-                               phi_in (KE  ,i  ,j+1), &
-                               phi_in (KE  ,i  ,j-1), &
-                               phi_out(KE  ,i  ,j  ), &
-                               phi_out(KE-1,i  ,j  ), &
-                               phi_out(KE  ,i+1,j  ), &
-                               phi_out(KE  ,i-1,j  ), &
-                               phi_out(KE  ,i  ,j+1), &
-                               phi_out(KE  ,i  ,j-1) ) &
-                        - phi_out(KE,i,j)
-          qjmns(KE,i,j) = phi_out(KE,i,j) &
-                        - min( phi_in (KE  ,i  ,j  ), &
-                               phi_in (KE-1,i  ,j  ), &
-                               phi_in (KE  ,i-1,j  ), &
-                               phi_in (KE  ,i+1,j  ), &
-                               phi_in (KE  ,i  ,j+1), &
-                               phi_in (KE  ,i  ,j-1), &
-                               phi_out(KE  ,i  ,j  ), &
-                               phi_out(KE-1,i  ,j  ), &
-                               phi_out(KE  ,i-1,j  ), &
-                               phi_out(KE  ,i+1,j  ), &
-                               phi_out(KE  ,i  ,j+1), &
-                               phi_out(KE  ,i  ,j-1) )
+          qjpls(KS,i,j) = max( phi_in(KS  ,i  ,j  ), &
+                               phi_in(KS+1,i  ,j  ), &
+                               phi_in(KS  ,i+1,j  ), &
+                               phi_in(KS  ,i-1,j  ), &
+                               phi_in(KS  ,i  ,j+1), &
+                               phi_in(KS  ,i  ,j-1), &
+                               phi_lo(KS  ,i  ,j  ), &
+                               phi_lo(KS+1,i  ,j  ), &
+                               phi_lo(KS  ,i+1,j  ), &
+                               phi_lo(KS  ,i-1,j  ), &
+                               phi_lo(KS  ,i  ,j+1), &
+                               phi_lo(KS  ,i  ,j-1) ) &
+                        - phi_lo(KS,i,j)
+          qjmns(KS,i,j) = phi_lo(KS,i,j) &
+                        - min( phi_in(KS  ,i  ,j  ), &
+                               phi_in(KS+1,i  ,j  ), &
+                               phi_in(KS  ,i-1,j  ), &
+                               phi_in(KS  ,i+1,j  ), &
+                               phi_in(KS  ,i  ,j+1), &
+                               phi_in(KS  ,i  ,j-1), &
+                               phi_lo(KS  ,i  ,j  ), &
+                               phi_lo(KS+1,i  ,j  ), &
+                               phi_lo(KS  ,i-1,j  ), &
+                               phi_lo(KS  ,i+1,j  ), &
+                               phi_lo(KS  ,i  ,j+1), &
+                               phi_lo(KS  ,i  ,j-1) )
+          qjpls(KE,i,j) = max( phi_in(KE  ,i  ,j  ), &
+                               phi_in(KE-1,i  ,j  ), &
+                               phi_in(KE  ,i+1,j  ), &
+                               phi_in(KE  ,i-1,j  ), &
+                               phi_in(KE  ,i  ,j+1), &
+                               phi_in(KE  ,i  ,j-1), &
+                               phi_lo(KE  ,i  ,j  ), &
+                               phi_lo(KE-1,i  ,j  ), &
+                               phi_lo(KE  ,i+1,j  ), &
+                               phi_lo(KE  ,i-1,j  ), &
+                               phi_lo(KE  ,i  ,j+1), &
+                               phi_lo(KE  ,i  ,j-1) ) &
+                        - phi_lo(KE,i,j)
+          qjmns(KE,i,j) = phi_lo(KE,i,j) &
+                        - min( phi_in(KE  ,i  ,j  ), &
+                               phi_in(KE-1,i  ,j  ), &
+                               phi_in(KE  ,i-1,j  ), &
+                               phi_in(KE  ,i+1,j  ), &
+                               phi_in(KE  ,i  ,j+1), &
+                               phi_in(KE  ,i  ,j-1), &
+                               phi_lo(KE  ,i  ,j  ), &
+                               phi_lo(KE-1,i  ,j  ), &
+                               phi_lo(KE  ,i-1,j  ), &
+                               phi_lo(KE  ,i+1,j  ), &
+                               phi_lo(KE  ,i  ,j+1), &
+                               phi_lo(KE  ,i  ,j-1) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3012,8 +3029,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,ZDIR) )
-          qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) &
-               * ( min( rjpls(k+1,i,j),rjmns(k  ,i,j) ) * (          dirsw ) &
+          cj(k,i,j,ZDIR) = &
+                 ( min( rjpls(k+1,i,j),rjmns(k  ,i,j) ) * (          dirsw ) &
                  + min( rjpls(k  ,i,j),rjmns(k+1,i,j) ) * ( 1.0_RP - dirsw ) )
        enddo
        enddo
@@ -3034,8 +3051,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,XDIR) )
-          qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) &
-               * ( min( rjpls(k,i+1,j),rjmns(k,i  ,j) ) * (          dirsw ) &
+          cj(k,i,j,XDIR) = &
+                 ( min( rjpls(k,i+1,j),rjmns(k,i  ,j) ) * (          dirsw ) &
                  + min( rjpls(k,i  ,j),rjmns(k,i+1,j) ) * ( 1.0_RP - dirsw ) )
        enddo
        enddo
@@ -3056,8 +3073,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,YDIR) )
-          qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) &
-               * ( min( rjpls(k,i,j+1),rjmns(k,i,j  ) ) * (          dirsw ) &
+          cj(k,i,j,YDIR) = &
+                 ( min( rjpls(k,i,j+1),rjmns(k,i,j  ) ) * (          dirsw ) &
                  + min( rjpls(k,i,j  ),rjmns(k,i,j+1) ) * ( 1.0_RP - dirsw ) )
        enddo
        enddo
@@ -3069,9 +3086,9 @@ call TIME_rapend     ('DYN-fct')
        !--- update with antidiffusive flux
        do j = JJS, JJE
        do i = IIS, IIE
-       do k = KS+1, KE-1
+       do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_out(k,i,j) )
+          call CHECK( __LINE__, phi_lo(k,i,j) )
           call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
@@ -3080,10 +3097,10 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
 
-          phi_out(k,i,j) = phi_out(k,i,j) &
-                          + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR)-qflx_anti(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
-                                       + ( qflx_anti(k,i,j,XDIR)-qflx_anti(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                                       + ( qflx_anti(k,i,j,YDIR)-qflx_anti(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
+          phi_out(k,i,j) = phi_lo(k,i,j) + dtrk * &
+               ( - ( ( cj(k,i,j,ZDIR)*qflx_anti(k,i,j,ZDIR)-cj(k-1,i  ,j  ,ZDIR)*qflx_anti(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
+                   + ( cj(k,i,j,XDIR)*qflx_anti(k,i,j,XDIR)-cj(k  ,i-1,j  ,XDIR)*qflx_anti(k  ,i-1,j  ,XDIR) ) * RDX(i) &
+                   + ( cj(k,i,j,YDIR)*qflx_anti(k,i,j,YDIR)-cj(k  ,i  ,j-1,YDIR)*qflx_anti(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
        enddo
        enddo
        enddo
