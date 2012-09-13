@@ -277,47 +277,18 @@ contains
     real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
     real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
 
-    real(RP) :: FB  = 9.4_RP  ! Louis factor b (bM)
-    real(RP) :: FBS = 4.7_RP  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
-    real(RP) :: FDM = 7.4_RP  ! Louis factor d of u (dM)
-    real(RP) :: FDH = 5.3_RP  ! Louis factor d of T, q (dH)
-    real(RP) :: FR  = 0.74_RP ! turbulent Prandtl number (Businger et al. 1971)
-
     ! work
-    real(RP) :: THETA(IA,JA)
-
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Ustar ! friction velocity [m/s]
-
-    real(RP) :: Z0   ! roughness length [m] (momentum,heat,tracer)
-    real(RP) :: Zt
-    real(RP) :: Ze
-
-    real(RP) :: Cm   ! bulk coefficient (momentum,heat,tracer)
-    real(RP) :: Ch
-    real(RP) :: Ce
-
-    real(RP) :: a2
-    real(RP) :: Fm, Fh, Psih
-    real(RP) :: RiB
-    real(RP) :: qdry, Rtot, pres, temp
-    real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
-    real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Cm    !
 
     integer :: i, j, iw
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
-    ! rho*theta -> potential temperature at cell centor
-    do j = JS, JE
-    do i = IS, IE
-       THETA(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
+    do j = JS-1, JE
+    do i = IS-1, IE
 
        ! at cell center
 
@@ -335,44 +306,13 @@ contains
         Ustar = Const_Ustar
        endif
 
-       !--- roughness lengths at u, v, and w points
-       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
-       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
-       Ze = max( Ze0 + ZeR/GRAV * Ustar*Ustar + ZeS*visck / Ustar, Ze_min )
-
-       call get_RiB( &
-            RiB, Fm, Fh, Psih,             & ! (out)
-            THETA(i,j), SST(1,i,j), Uabs**2, & ! (in)
-            CZ(KS), Z0, Zt,                & ! (in)
-            KARMAN, FB, FBS, FDM, FDH,     & ! (in)
-            ThS, GRAV                    ) ! (in)
-
-       !--- surface exchange coefficients
-       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
-       Cm = a2 * Fm
-       Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
-       Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
-
-       ! Gas constant
-       qdry = 1.D0
-       do iw = QQS, QQE
-          qdry = qdry - QTRC(KS,i,j,iw)
-       enddo
-       Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
-
-       !--- saturation at surface
-       pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-       temp      = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres )**RovCP
-       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
-!       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
-       qv_evap   = EPSvap * pres_evap / P00
-
        ! flux
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
         SFLX_MOMZ(i,j) = - Cm_const * min(max(Uabs,U_minM),U_maxM) &
             * MOMZ(KS,i,j) * 0.5_RP
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
-        SFLX_MOMZ(i,j) = - min(max(Cm,Cm_min),Cm_max) * min(max(Uabs,U_minM),U_maxM) &
+        Cm = Ustar*Ustar * Uabs
+        SFLX_MOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) &
             * MOMZ(KS,i,j) * 0.5_RP
        endif
        if( FLG_SH_DIURNAL ) then
@@ -396,24 +336,10 @@ contains
         Ustar = Const_Ustar
        endif
 
-       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
-       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
-
-       call get_RiB( &
-            RiB, Fm, Fh, Psih,                    & ! (out)
-            ( THETA(i,j)+THETA(i+1,j) ) * 0.5_RP, & ! (in)
-            ( SST(1,i,j)+SST(1,i+1,j) ) * 0.5_RP,     & ! (in)
-            Uabs**2,                              & ! (in)
-            CZ(KS), Z0, Zt,                       & ! (in)
-            KARMAN, FB, FBS, FDM, FDH,            & ! (in)
-            ThS, GRAV                             ) ! (in)
-
-       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
-       Cm = a2 * Fm
-
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-        SFLX_MOMZ(i,j) = - Cm_const * min(max(Uabs,U_minM),U_maxM) &
-            * MOMZ(KS,i,j) * 0.5_RP
+        Cm = Ustar*Ustar * Uabs
+        SFLX_MOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) &
+            * MOMX(KS,i,j) * 0.5_RP
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
         SFLX_MOMX(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
             * MOMX(KS,i,j)
@@ -432,26 +358,12 @@ contains
         Ustar = Const_Ustar
        endif
 
-       Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
-       Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
-
-       call get_RiB( &
-            RiB, Fm, Fh, Psih,                    & ! (out)
-            ( THETA(i,j)+THETA(i,j+1) ) * 0.5_RP, & ! (in)
-            ( SST(1,i,j)+SST(1,i,j+1) ) * 0.5_RP,     & ! (in)
-            Uabs**2,                              & ! (in)
-            CZ(KS), Z0, Zt,                       & ! (in)
-            KARMAN, FB, FBS, FDM, FDH,            & ! (in)
-            ThS, GRAV                             ) ! (in)
-
-       a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
-       Cm = a2 * Fm
-
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-        SFLX_MOMZ(i,j) = - Cm_const * min(max(Uabs,U_minM),U_maxM) &
-            * MOMZ(KS,i,j) * 0.5_RP
+        SFLX_MOMY(i,j) = - Cm_const * min(max(Uabs,U_minM),U_maxM) &
+            * MOMY(KS,i,j) * 0.5_RP
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
-        SFLX_MOMY(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
+        Cm = Ustar*Ustar * Uabs
+        SFLX_MOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) &
             * MOMY(KS,i,j)
        endif
 
@@ -470,65 +382,5 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF
-
-
-  subroutine get_RiB( &
-       RiB, Fm, Fh, Psih,    &
-       theta, theta_sfc, u2, &
-       Z, Z0, Zt,            &
-       K, FB, FBS, FDM, FDH, &
-       ThS, G                )
-    real(RP), intent(out) :: RiB
-    real(RP), intent(out) :: Fm
-    real(RP), intent(out) :: Fh
-    real(RP), intent(out) :: Psih
-    real(RP), intent(in)  :: theta
-    real(RP), intent(in)  :: theta_sfc
-    real(RP), intent(in)  :: u2
-    real(RP), intent(in)  :: Z
-    real(RP), intent(in)  :: Z0
-    real(RP), intent(in)  :: Zt
-    real(RP), intent(in)  :: K
-    real(RP), intent(in)  :: FB
-    real(RP), intent(in)  :: FBS
-    real(RP), intent(in)  :: FDM
-    real(RP), intent(in)  :: FDH
-    real(RP), intent(in)  :: ThS
-    real(RP), intent(in)  :: G
-
-    real(RP) :: tmp
-
-    ! the first guess of RiB0 (= RiBt)
-    RiB = G/ThS * z * (  theta -  theta_sfc ) / u2
-
-    ! Fm, Fh, Psi_h/R
-    if ( RiB >= 0 ) then
-       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
-       Fh = Fm
-    else
-       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
-       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
-       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
-    end if
-    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
-
-    ! the final estimate of RiB0
-    tmp = log( Z0/Zt )
-    RiB = RiB - RiB * tmp / ( tmp + Psih )
-
-    ! Fm, Fh, Psih/R
-    if ( RiB >= 0.0_RP ) then
-       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
-       Fh = Fm
-    else
-       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
-       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
-       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
-    end if
-    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
-
-    return
-  end subroutine get_RiB
-
 
 end module mod_atmos_phy_sf
