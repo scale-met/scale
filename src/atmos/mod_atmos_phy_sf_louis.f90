@@ -119,7 +119,7 @@ contains
     real(RP) :: ATMOS_PHY_SF_ZeS
     real(RP) :: ATMOS_PHY_SF_ThS
 
-    NAMELIST / PARAM_ATMOS_PHY_SF / &
+    NAMELIST / PARAM_ATMOS_PHY_SF_LOUIS / &
        ATMOS_PHY_SF_U_minM, &
        ATMOS_PHY_SF_U_minH, &
        ATMOS_PHY_SF_U_minE, &
@@ -162,15 +162,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_LOUIS,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_LOUIS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_LOUIS)
 
     U_minM = ATMOS_PHY_SF_U_minM
     U_minH = ATMOS_PHY_SF_U_minH

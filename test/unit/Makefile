@@ -12,10 +12,11 @@ PROJ_EXE = unit
 #default index & tracer set
 index   = 10x10x2
 tracer  = kessler
+sfcflx  = const
 precision = real8
 postfix = debug
 
-LIBNAME = libscale_$(index)_$(tracer)_$(precision)_$(postfix).a
+LIBNAME = libscale_$(index)_$(tracer)_$(sfcflx)_$(precision)_$(postfix).a
 
 MODS = \
 	test_atmos_phy_tb_smg.o \
@@ -26,7 +27,7 @@ MODS = \
 all: makelib makeinclude makebin
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
 #	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
 
 makeinclude:
