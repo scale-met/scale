@@ -1,9 +1,7 @@
 TOPDIR = ../..
-LIBDIR = $(TOPDIR)/lib
-SRCDIR = $(TOPDIR)/src
-INCDIR = $(SRCDIR)/include
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/src/Mkinclude
 
 VPATH = $(SRCDIR)/common:$(SRCDIR)/io:$(SRCDIR)/grid:$(SRCDIR)/atmos:$(SRCDIR)/ocean:$(SRCDIR)/preprocess
 
@@ -12,11 +10,10 @@ PROJ_EXE = unit
 #default index & tracer set
 index   = 10x10x2
 tracer  = kessler
+radiation = mstrnX
 sfcflx  = const
 precision = real8
 postfix = debug
-
-LIBNAME = libscale_$(index)_$(tracer)_$(sfcflx)_$(precision)_$(postfix).a
 
 MODS = \
 	test_atmos_phy_tb_smg.o \
@@ -27,8 +24,7 @@ MODS = \
 all: makelib makeinclude makebin
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
-#	cd $(SRCDIR) && $(MAKE) clean && $(MAKE) index=$(index) tracer=$(tracer) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
 
 makeinclude:
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h
@@ -65,4 +61,5 @@ clean:
 	rm -f *.mod *.o *~ *.lst
 
 distclean: clean
+	$(MAKE) -C $(SRCDIR) distclean
 	rm -f $(PROJ_EXE)

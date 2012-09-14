@@ -4,17 +4,19 @@
 #
 ################################################################################
 
+TOPDIR = ..
+
 include ../sysdep/Makedef.$(SCALE_SYS)
+include ./Mkinclude
 
 VPATH = include:common:io:grid:atmos:ocean:preprocess
 
-LIBDIR = ../lib
 
 #default index & tracer set
 index     = 206x24x24
 tracer    = kessler
 precision = real8
-sfcfxl    = louis
+sfcflx    = louis
 radiation = mstrnX
 postfix   = 
 
@@ -22,8 +24,6 @@ PRJ1 = scale3
 PRJ2 = scale3_init
 
 PRJS = $(PRJ1) $(PRJ2)
-
-LIBNAME = libscale_$(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix).a
 
 MODS =	\
 	mod_stdio.o	\
@@ -71,8 +71,8 @@ makeinclude:
 	cp include/inc_precision_$(precision).f90 include/inc_precision.h
 
 makebin: $(PRJS)
-	install $(PRJ1) ../bin/$(SCALE_SYS)/$(PRJ1)_$(index)_$(tracer)_$(radiation)_$(sfcflx)_$(postfix)
-	install $(PRJ2) ../bin/$(SCALE_SYS)/$(PRJ2)_$(index)_$(tracer)_$(radiation)_$(sfcflx)_$(postfix)
+	install $(PRJ1) $(BINDIR)/$(BINNAME)
+	install $(PRJ2) $(BINDIR)/$(INITNAME)
 
 $(PRJ1): $(PRJ1).o $(LIBDIR)/$(LIBNAME)
 	$(LD) $(LFLAGS) -o $(PRJ1) $^
@@ -114,7 +114,7 @@ mod_ocean_vars.o	: mod_ocean_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o m
 mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_comm.o mod_fileio.o mod_time.o
 mod_atmos_phy_sf_$(sfcflx).o	: mod_atmos_phy_sf_$(sfcflx).f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_atmos_vars.o mod_ocean_vars.o mod_atmos_vars_sf.o
 mod_atmos_phy_tb_smg.o	: mod_atmos_phy_tb_smg.f90 mod_stdio.o mod_const.o mod_time.o mod_comm.o mod_grid_cartesian_plane.o mod_history.o mod_atmos_vars.o mod_atmos_vars_sf.o
-mod_atmos_phy_mp_$(tracer).o	: mod_atmos_phy_mp_$(tracer).f90 mod_stdio.o mod_const.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_history.o mod_atmos_vars.o mod_atmos_sub_precipitation.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
+mod_atmos_phy_mp_$(tracer).o	: mod_atmos_phy_mp_$(tracer).f90 mod_stdio.o mod_const.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_history.o mod_atmos_vars.o mod_atmos_sub_precipitation.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_mp_saturation.o
 mod_atmos_mp_saturation.o	: mod_atmos_mp_saturation.f90 mod_stdio.o mod_const.o mod_time.o
 mod_atmos_phy_rd_$(radiation).o	: mod_atmos_phy_rd_$(radiation).f90 mod_stdio.o mod_process.o mod_comm.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_history.o mod_atmos_vars.o 
 mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_time.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_sub_thermodyn.o mod_atmos_dyn_fent_fullfct_lss.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_smg.o mod_atmos_phy_mp_$(tracer).o mod_atmos_phy_rd_$(radiation).o
