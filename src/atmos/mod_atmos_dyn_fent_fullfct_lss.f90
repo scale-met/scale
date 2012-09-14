@@ -1222,8 +1222,8 @@ call START_COLLECTION("DYN-fct")
        do i = IIS-1, IIE+1
        do k = KS+1, KE-2
           mflx_sink = - 0.5_RP * LSsink_D * FZ(k)         &
-                      * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
-                        + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+                      * ( FACT_N * ( DENS_RK2(k+1,i,j)+DENS_RK2(k  ,i,j) ) &
+                        + FACT_F * ( DENS_RK2(k+2,i,j)+DENS_RK2(k-1,i,j) ) )
 
           qflx_lo(k,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                          - abs(mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
@@ -1241,7 +1241,7 @@ call START_COLLECTION("DYN-fct")
 #endif
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          mflx_sink = - 0.5_RP * LSsink_D * FZ(KS  ) * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+          mflx_sink = - 0.5_RP * LSsink_D * FZ(KS  ) * ( DENS_RK2(KS+1,i,j)+DENS_RK2(KS,i,j) )
 
           qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) & ! just above the bottom boundary
@@ -1259,7 +1259,7 @@ call START_COLLECTION("DYN-fct")
 #endif
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          mflx_sink = - 0.5_RP * LSsink_D * FZ(KE-1) * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+          mflx_sink = - 0.5_RP * LSsink_D * FZ(KE-1) * ( DENS_RK2(KE,i,j)+DENS_RK2(KE-1,i,j) )
 
           qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
                                            - abs(mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
