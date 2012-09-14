@@ -5,11 +5,10 @@
 
 FC     = mpif90
 FFLAGS = -fpp3 -O3 -ftz -xHost -ip               \
-         -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias
 
-FFLAGS_DEBUG = -fpp3 -O0 -check all -warn all -g -traceback -fpe0 -DEBUG
+FFLAGS_DEBUG = -fpp3 -O0 -check all -warn all -g -traceback -fpe0 -DDEBUG
 
 CC     = mpicc
 CFLAGS = -O3 -xHost -ip -ftz
