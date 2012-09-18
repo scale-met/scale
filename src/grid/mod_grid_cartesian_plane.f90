@@ -184,15 +184,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine GRID_allocate
 
-    call GRID_allocate
-
-  end subroutine GRID_allocate
-
-  !-----------------------------------------------------------------------------
-  !> Allocate Arrays
-  !-----------------------------------------------------------------------------
-  subroutine GRID_allocate
-
     allocate( GRID_FZ  (0:KA) )
     allocate( GRID_FX  (0:IA) )
     allocate( GRID_FY  (0:JA) )

@@ -5,9 +5,10 @@
 ################################################################################
 
 
-include ../sysdep/Makedef.$(SCALE_SYS)
+TOPDIR = ..
 
-LIBDIR = ../lib
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/src/Mkinclude
 
 MODS = \
 	dc_calendar.o \
@@ -20,7 +21,7 @@ $(LIBDIR)/libdcutils.a: libdcutils.a
 	mkdir -p $(LIBDIR)
 	install libdcutils.a $(LIBDIR)
 
-libutils.a: $(MODS)
+libdcutils.a: $(MODS)
 	ar r $@ $?
 
 dc_calendar.f90: dc_calendar.f90.erb
