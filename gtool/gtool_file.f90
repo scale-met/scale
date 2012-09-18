@@ -148,8 +148,8 @@ contains
 
     mpi_myrank = myrank
 
-    if ( present(single) .and. single ) then
-       if ( myrank .ne. master ) return
+    if ( present(single) ) then
+       if ( single .and. (myrank .ne. master) ) return
     endif
 
     call FileGetfid(  &
@@ -408,8 +408,12 @@ contains
 
        tint8 = real(tint,DP)
 
-       if ( present(tavg) .and. tavg ) then
-          itavg = 1
+       if ( present(tavg) ) then
+          if ( tavg ) then
+             itavg = 1
+          else
+             itavg = 0
+          end if
        else
           itavg = 0
        end if
@@ -476,8 +480,12 @@ contains
 
        tint8 = real(tint,DP)
 
-       if ( present(tavg) .and. tavg ) then
-          itavg = 1
+       if ( present(tavg) ) then
+          if ( tavg ) then
+             itavg = 1
+          else
+             itavg = 0
+          end if
        else
           itavg = 0
        end if
@@ -543,12 +551,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:) = 0.0_SP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:) = 0.0_SP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
@@ -616,12 +628,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:) = 0.0_DP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:) = 0.0_DP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
@@ -689,12 +705,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:,:) = 0.0_SP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:) = 0.0_SP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
@@ -762,12 +782,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:,:) = 0.0_DP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:) = 0.0_DP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
@@ -835,12 +859,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:,:,:) = 0.0_SP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:) = 0.0_SP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
@@ -908,12 +936,16 @@ contains
 
     !--- verify
     if ( error /= SUCCESS_CODE ) then
-       if ( present(allow_missing) .and. allow_missing) then
-          write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
-               'varname= ',trim(varname),', step=',step
-          call Log('I', message)
-          call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
-          var(:,:,:) = 0.0_DP
+       if ( present(allow_missing) ) then
+          if ( allow_missing ) then
+             write(message,*) 'xxx [INPUT]/[File] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step
+             call Log('I', message)
+             call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
+             var(:,:,:) = 0.0_DP
+          else
+             call Log('E', 'xxx faild to get data information')
+          end if
        else
           call Log('E', 'xxx faild to get data information')
        end if
