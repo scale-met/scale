@@ -139,7 +139,40 @@ call STOP_COLLECTION('SUB_thermodyn')
 
     return
   end subroutine ATMOS_THERMODYN_qd
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_qd_kij( qdry, q )
+    implicit none
 
+    real(8), intent(out) :: qdry(KA,IA,JA)    ! dry mass concentration
+    real(8), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration
+
+    integer :: i,j, k, iqw
+    !-----------------------------------------------------------------------------
+
+    call TIME_rapstart('SUB_thermodyn')
+#ifdef _FPCOLL_
+call START_COLLECTION('SUB_thermodyn')
+#endif
+
+    do j = 1, JA
+    do i = 1, IA
+    do k  = 1, KA
+       qdry(k,i,j) = 1.D0
+       do iqw = QQS, QQE
+          qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw)
+       enddo
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION('SUB_thermodyn')
+#endif
+    call TIME_rapend  ('SUB_thermodyn')
+
+    return
+  end subroutine ATMOS_THERMODYN_qd_kij
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_cp( cptot, q, qdry )
     implicit none
