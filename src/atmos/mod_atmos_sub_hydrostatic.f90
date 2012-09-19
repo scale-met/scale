@@ -220,7 +220,7 @@ contains
 
              dhyd = + ( P00 * ( dens(k-1,i,j) * Rmoist(k-1,i,j) * pott(k-1,i,j) / P00 )**CPovCV &
                       - P00 * ( dens_s        * Rmoist(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
-                    - GRAV * 0.0_RP * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
+                    - GRAV * 0.5_RP * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
 
              dgrd = - P00 * ( Rmoist(k,i,j) * pott(k,i,j) / P00 )**CPovCV / FDZ(k-1) &
                     * CPovCV * dens_s**RovCV                                         &
