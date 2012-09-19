@@ -21,7 +21,7 @@ MODS = \
 	dc_test.o \
 	dc_types.o
 
-all: makelib makeinclude makebin
+all: makelib makeinclude makebin run
 
 makelib:
 	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
@@ -32,6 +32,9 @@ makeinclude:
 	cp $(INCDIR)/inc_precision_$(precision).f90 $(INCDIR)/inc_precision.h
 
 makebin: $(PROJ_EXE)
+
+run:
+	./$(PROJ_EXE) dummy.cnf
 
 $(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME)
 	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^

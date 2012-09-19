@@ -16,7 +16,7 @@ LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 #FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG
-FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero
+FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero -finit-real=nan
 
 ##### for frontend
 

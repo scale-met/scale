@@ -138,7 +138,7 @@ contains
   subroutine CHECK( line, v )
     integer,  intent(in) :: line
     real(RP), intent(in) :: v
-    if ( v == UNDEF ) then
+    if ( .not. v .gt. UNDEF ) then
        write(*,*) "use uninitialized value at line ", line
        call abort
     end if
@@ -519,7 +519,7 @@ contains
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,      & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          REF_dens, REF_pott, DIFF4, DIFF2,          & ! (in)
-         DAMP_var, DAMP_alpha,                      & ! (in)
+         CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef, ATMOS_DYN_LSsink_D, & ! (in)
          DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN           ) ! (in)
 
@@ -543,7 +543,7 @@ contains
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-         DAMP_var, DAMP_alpha,                 & ! (in)
+         corioli, DAMP_var, DAMP_alpha,        & ! (in)
          divdmp_coef, LSsink_D,                & ! (in)
          DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
     use mod_const, only : &
@@ -596,6 +596,7 @@ contains
     real(RP), intent(in)    :: REF_pott(KA)
     real(RP), intent(in)    :: DIFF4
     real(RP), intent(in)    :: DIFF2
+    real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
     real(RP), intent(in)    :: divdmp_coef
@@ -3038,6 +3039,16 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       do j = JS, JE
+       do i = IS, IE
+          cj(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          cj(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
 
        do j = JJS  , JJE
        do i = IIS-1, IIE
@@ -3095,6 +3106,12 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+          call CHECK( __LINE__, cj       (k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, cj       (k-1,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, cj       (k  ,i  ,j  ,XDIR) )
+          call CHECK( __LINE__, cj       (k  ,i-1,j  ,XDIR) )
+          call CHECK( __LINE__, cj       (k  ,i  ,j  ,YDIR) )
+          call CHECK( __LINE__, cj       (k  ,i  ,j-1,YDIR) )
 #endif
 
           phi_out(k,i,j) = phi_lo(k,i,j) + dtrk * &

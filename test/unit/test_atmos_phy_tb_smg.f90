@@ -81,6 +81,8 @@ contains
      end if
   end do
 
+  MOMZ_t(KE,:,:) = 0.0_RP
+
   !########## test ##########
 
   call test_zero

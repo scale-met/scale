@@ -120,6 +120,8 @@ contains
      end if
   end do
 
+  MOMZ(KE,:,:) = 0.0_RP
+
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
 
@@ -176,7 +178,7 @@ subroutine test_undef
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
           REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-          DAMP_var, DAMP_alpha,                 & ! (in)
+          CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
           divdmp_coef, LSsink_D,                & ! (in)
           1.0_RP, 1                             ) ! (in)
   end do
@@ -219,7 +221,7 @@ subroutine test_const
        CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
        REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-       DAMP_var, DAMP_alpha,                 & ! (in)
+       CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
        divdmp_coef, LSsink_D,                & ! (in)
        1.0_RP, 1                             ) ! (in)
 
@@ -295,7 +297,7 @@ subroutine test_conserve
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-         DAMP_var, DAMP_alpha,                 & ! (in)
+         CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
          divdmp_coef, LSsink_D,                & ! (in)
          1.0_RP, 1                             ) ! (in)
 
