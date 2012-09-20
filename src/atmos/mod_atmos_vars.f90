@@ -1004,6 +1004,7 @@ contains
     implicit none
 
     integer :: i, j, k, iq
+    real(8) :: QT(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if ( COMM_total_doreport ) then
@@ -1014,8 +1015,13 @@ contains
        call COMM_total( MOMY(:,:,:), AP_NAME(4) )
        call COMM_total( RHOT(:,:,:), AP_NAME(5) )
        do iq = 1, QA
-          call COMM_total( QTRC(:,:,:,iq), AQ_NAME(iq) )
+          call COMM_total( QTRC(:,:,:,iq)*DENS(:,:,:), AQ_NAME(iq) )
        enddo
+       QT(:,:,:) = 0.0D0
+       do iq = QQS, QQE
+          QT(:,:,:) = QT(:,:,:) + QTRC(:,:,:,iq)
+       end do
+       call COMM_total( QT(:,:,:)*DENS(:,:,:), 'Qtotal  ' )
 
        do j = JS, JE
        do i = IS, IE

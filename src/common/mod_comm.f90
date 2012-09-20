@@ -2067,7 +2067,7 @@ contains
        totvol  => GEOMETRICS_totvol
     implicit none
 
-    real(8),           intent(inout) :: var(KA,IA,JA)
+    real(8),           intent(in) :: var(KA,IA,JA)
     character(len=*),  intent(in)    :: varname
 
     real(8) :: statval(0:PRC_nmax-1)
