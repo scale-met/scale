@@ -106,11 +106,11 @@ contains
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
-  call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI, SINK,         & ! (out)
+  call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI,               & ! (out)
                        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
                        CDZ, CDX, CDY,                       & ! (in)
                        lat,                                 & ! (in)
-                       0.0_RP, 0.0_RP, .false.              ) ! (in)
+                       0.0_RP, .false.                      ) ! (in)
 
 
   do k = KS+1, KE
@@ -172,7 +172,6 @@ subroutine test_undef
   do i = 1, 2
      call ATMOS_DYN_main( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-          SINK,                                 & ! (inout)
           QDRY, DDIV,                           & ! (out)
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
@@ -215,7 +214,6 @@ subroutine test_const
 
   call ATMOS_DYN_main( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-       SINK,                                 & ! (inout)
        QDRY, DDIV,                           & ! (out)
        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
        CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
@@ -291,7 +289,6 @@ subroutine test_conserve
 
   call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-         SINK,                                 & ! (inout)
          QDRY, DDIV,                           & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)

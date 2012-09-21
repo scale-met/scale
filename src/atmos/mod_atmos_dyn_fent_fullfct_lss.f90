@@ -119,8 +119,6 @@ module mod_atmos_dyn
   real(RP), private, save :: MOMY_RK2(KA,IA,JA)   !
   real(RP), private, save :: RHOT_RK2(KA,IA,JA)   !
 
-  real(RP), private, save :: SINK(KA,IA,JA,5+QA)  ! sinking term
-
   real(RP), private, save :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
   real(RP), private, save :: rjpls  (KA,IA,JA)    ! correction factor for incoming antidiffusive flux
   real(RP), private, save :: rjmns  (KA,IA,JA)    ! correction factor for outgoing antidiffusive flux
@@ -199,12 +197,11 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI, SINK,         & ! (out)
+    call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI,               & ! (out)
                          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
                          CDZ, CDX, CDY,                       & ! (in)
                          lat,                                 & ! (in)
                          ATMOS_DYN_numerical_diff,            & ! (in)
-                         ATMOS_DYN_LSsink_D,                  & ! (in)
                          ATMOS_DYN_enable_coriolis            ) ! (in)
 
 #ifdef _USE_RDMA
@@ -233,10 +230,10 @@ contains
 
   end subroutine ATMOS_DYN_setup
 
-  subroutine ATMOS_DYN_init( DIFF4, DIFF2, corioli, sink,         &
+  subroutine ATMOS_DYN_init( DIFF4, DIFF2, corioli,               &
                              CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  &
                              CDZ, CDX, CDY, lat,                  &
-                             numerical_diff, LSsink_D,            &
+                             numerical_diff,                      &
                              enable_coriolis                      )
     use mod_const, only: &
        PI   => CONST_PI, &
@@ -245,7 +242,6 @@ contains
     real(RP), intent(out) :: DIFF4
     real(RP), intent(out) :: DIFF2
     real(RP), intent(out) :: corioli(1,IA,JA)
-    real(RP), intent(out) :: sink(KA,IA,JA,5+QA)
     real(RP), intent(out) :: CNDZ(3,KA)
     real(RP), intent(out) :: CNMZ(3,KA)
     real(RP), intent(out) :: CNDX(3,IA)
@@ -257,7 +253,6 @@ contains
     real(RP), intent(in)  :: CDY(JA)
     real(RP), intent(in)  :: lat(1,IA,JA) 
     real(RP), intent(in)  :: numerical_diff
-    real(RP), intent(in)  :: LSsink_D
     logical , intent(in)  :: enable_coriolis
 
     real(RP) :: d2r
@@ -271,7 +266,6 @@ contains
     CNDY(:,:) = UNDEF
     CNMY(:,:) = UNDEF
     corioli(:,:,:) = UNDEF
-    sink(:,:,:,:) = UNDEF
 #endif
 
     ! coriolis parameter
@@ -289,12 +283,6 @@ contains
        enddo
        enddo
     endif
-
-
-    ! large scale sink
-    if ( LSsink_D == 0.0_RP ) then
-       sink(:,:,:,:) = 0.0_RP
-    end if
 
 
     ! numerical diffusion
@@ -514,7 +502,6 @@ contains
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
-         SINK,                                      & ! (inout)
          QDRY, DDIV,                                & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,        & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,      & ! (in)
@@ -528,17 +515,12 @@ contains
 
     call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', '3D', DTSEC )
     call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   '3D', DTSEC )
-    if ( ATMOS_DYN_LSsink_D .ne. 0.0_RP ) then
-       call HIST_in( SINK(:,:,:,5), 'sink', 'tendency large scale sink', 'kg/m3/s', '3D', DTSEC )
-    end if
-
     return
 
   end subroutine ATMOS_DYN
 
   subroutine ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-         SINK,                                 & ! (inout)
          QDRY, DDIV,                           & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
@@ -570,7 +552,6 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(inout) :: SINK(KA,IA,JA,5+QA)
     real(RP), intent(out)   :: QDRY(KA,IA,JA)
     real(RP), intent(out)   :: DDIV(KA,IA,JA)
     real(RP), intent(in)    :: CNDZ(3,KA)
@@ -620,14 +601,9 @@ contains
     real(RP) :: ray_damp (KA,IA,JA,5)
     real(RP) :: num_diff (KA,IA,JA,5,3)
 
-    real(RP) :: POTT_sink(KA,IA,JA)     ! Potential temperature for LS sink
-
     ! mass flux
 !    real(RP) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-
-    ! large scale sinking
-    real(RP) :: mflx_sink                ! sinking term
 
     ! For FCT
     real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face monotone
@@ -711,51 +687,11 @@ call TIME_rapstart   ('DYN-set')
 call START_COLLECTION("DYN-set")
 #endif
 
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-
-       !--- prepare rayleigh damping coefficient
-       do j = JJS, JJE
-       do i = IIS, IIE
-          do k = KS, KE-1
-             ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                                    * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
-                                    * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
-                                    * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
-          enddo
-          do k = KS, KE
-             ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
-                                    * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
-          enddo
-       enddo
-       enddo
-
-       do j  = JJS-2, JJE+2
-       do i  = IIS-2, IIE+2
-       do k = KS, KE
-          dens_s(k,i,j)    = DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !--- prepare potential temperature for large scale sink
-       if ( LSsink_D .ne. 0.0_RP ) then
-          do j = JJS-2, JJE+2
-          do i = IIS-2, IIE+2
-          do k = KS, KE
-             POTT_sink(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-          enddo
-          enddo
-          enddo
-       endif
 
        ! Gas constant
        do j = JJS-2, JJE+2
@@ -781,7 +717,35 @@ call START_COLLECTION("DYN-set")
        enddo
        enddo
        enddo
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          dens_s(k,i,j) = DENS(k,i,j)
+       enddo
+       enddo
+       enddo
 
+       !--- prepare rayleigh damping coefficient
+       do j = JJS, JJE
+       do i = IIS, IIE
+          do k = KS, KE-1
+             ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+                                    * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
+          enddo
+          do k = KS, KE
+             ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
+                                    * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
+          enddo
+          do k = KS, KE
+             ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
+                                    * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
+          enddo
+          do k = KS, KE
+             ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
+                                    * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
+          enddo
+       enddo
+       enddo
 
        !--- prepare numerical diffusion coefficient
        if ( DIFF4 /= 0.0_RP ) then
@@ -809,7 +773,7 @@ call START_COLLECTION("DYN-set")
           do j = JJS,   JJE
           do i = IIS,   IIE
              num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS) &
-                                            * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) ) 
+                                            * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) )
              num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KE-1) &
                                             * ( dens_diff(KE,i,j)-dens_diff(KE-1,i,j) )
           enddo
@@ -967,7 +931,7 @@ call START_COLLECTION("DYN-set")
 
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) & 
+             num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) &
                                             * ( pott_diff(KS+1,i,j)-pott_diff(KS,i,j) ) &
                                             * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
              num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KE-1) &
@@ -1052,85 +1016,6 @@ call START_COLLECTION("DYN-set")
           enddo
        end if
 
-       ! large scale sinking
-       if ( LSsink_D .ne. 0.0_RP ) then
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             do k = KS+2, KE-2
-                sink(k,i,j,1) = 0.0_RP ! DENS
-                sink(k,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(k+1,i,j)     +MOMX(k  ,i,j) )   &
-                                           + FACT_F * ( MOMX(k+2,i,j)     +MOMX(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMX(k  ,i,j)     +MOMX(k-1,i,j) )   &
-                                           + FACT_F * ( MOMX(k+1,i,j)     +MOMX(k-2,i,j) ) ) ) * RCDZ(k) ! MOMX
-                sink(k,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(k+1,i,j)     +MOMY(k  ,i,j) )   &
-                                           + FACT_F * ( MOMY(k+2,i,j)     +MOMY(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMY(k  ,i,j)     +MOMY(k-1,i,j) )   &
-                                           + FACT_F * ( MOMY(k+1,i,j)     +MOMY(k-2,i,j) ) ) ) * RCDZ(k) ! MOMY
-                sink(k,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(k+1,i,j)     +MOMZ(k  ,i,j) )   &
-                                           + FACT_F * ( MOMZ(k+2,i,j)     +MOMZ(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMZ(k  ,i,j)     +MOMZ(k-1,i,j) )   &
-                                           + FACT_F * ( MOMZ(k+1,i,j)     +MOMZ(k-2,i,j) ) ) ) * RFDZ(k) ! MOMZ
-                sink(k,i,j,5) = ( 0.5_RP * ( FACT_N * ( POTT_sink(k+1,i,j)+POTT_sink(k  ,i,j) )   &
-                                           + FACT_F * ( POTT_sink(k+2,i,j)+POTT_sink(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( POTT_sink(k  ,i,j)+POTT_sink(k-1,i,j) )   &
-                                           + FACT_F * ( POTT_sink(k+1,i,j)+POTT_sink(k-2,i,j) ) ) ) * RCDZ(k) ! RHOT
-                sink(k,i,j,5) = sink(k,i,j,5) * DENS(k,i,j)
-!                do iq = 1, QA
-!                   sink(k,i,j,iq+5) = ( DENS(k+1,i,j)*QTRC(k+1,i,j,iq)-DENS(k  ,i,j)*QTRC(k  ,i,j,iq) ) * RCDZ(k) ! QTRC
-!                enddo
-             enddo
-             sink(KS+1,i,j,1) = 0.0_RP ! DENS
-             sink(KS+1,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(KS+2,i,j)     +MOMX(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMX(KS+3,i,j)     +MOMX(KS  ,i,j) ) ) &
-                                - 0.5_RP * ( MOMX(KS+1,i,j)+MOMX(KS  ,i,j) ) ) * RCDZ(KS+1) ! MOMX
-             sink(KS+1,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(KS+2,i,j)     +MOMY(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMY(KS+3,i,j)     +MOMY(KS  ,i,j) ) ) &
-                                - 0.5_RP * ( MOMY(KS+1,i,j)+MOMY(KS  ,i,j) ) ) * RCDZ(KS+1) ! MOMY
-             sink(KS+1,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(KS+2,i,j)     +MOMZ(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMZ(KS+3,i,j)     +MOMZ(KS  ,i,j) ) ) &
-                                - 0.5_RP * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) ) * RFDZ(KS+1) ! MOMZ
-             sink(KS+1,i,j,5) = ( 0.5_RP * ( FACT_N * ( POTT_sink(KS+2,i,j)+POTT_sink(KS+1,i,j) )   &
-                                           + FACT_F * ( POTT_sink(KS+3,i,j)+POTT_sink(KS  ,i,j) ) ) &
-                                - 0.5_RP * ( POTT_sink(KS+1,i,j)+POTT_sink(KS  ,i,j) ) ) * RCDZ(KS+1) ! RHOT
-             sink(KS+1,i,j,5) = sink(KS+1,i,j,5) * DENS(KS+1,i,j)
-!             do iq = 1, QA
-!                sink(KS+1,i,j,iq+5) = ( DENS(KS+2,i,j)*QTRC(KS+2,i,j,iq)-DENS(KS  ,i,j)*QTRC(KS  ,i,j,iq) ) * RCDZ(k) ! QTRC
-!             enddo
-             sink(KE-1,i,j,1) = 0.0_RP ! DENS
-             sink(KE-1,i,j,2) = ( 0.5_RP * ( MOMX(KE  ,i,j)+MOMX(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMX(KE-1,i,j)     +MOMX(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMX(KE  ,i,j)     +MOMX(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMX
-             sink(KE-1,i,j,3) = ( 0.5_RP * ( MOMY(KE  ,i,j)+MOMY(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMY(KE-1,i,j)     +MOMY(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMY(KE  ,i,j)     +MOMY(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMY
-             sink(KE-1,i,j,4) = ( 0.5_RP * ( MOMZ(KE  ,i,j)+MOMZ(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMZ(KE-1,i,j)     +MOMZ(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMZ(KE  ,i,j)     +MOMZ(KE-3,i,j) ) ) ) * RFDZ(KE-1) ! MOMZ
-             sink(KE-1,i,j,5) = ( 0.5_RP * ( POTT_sink(KE  ,i,j)+POTT_sink(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( POTT_sink(KE-1,i,j)+POTT_sink(KE-2,i,j) )   &
-                                           + FACT_F * ( POTT_sink(KE  ,i,j)+POTT_sink(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! RHOT
-             sink(KE-1,i,j,5) = sink(KE-1,i,j,5) * DENS(KE-1,i,j)
-!             do iq = 1, QA
-!                sink(KE-1,i,j,iq+5) = ( DENS(KE  ,i,j)*QTRC(KE  ,i,j,iq)-DENS(KE-1,i,j)*QTRC(KE-1,i,j,iq) ) * RCDZ(k) ! QTRC
-!             enddo
-             do iw = 1, 5+QA
-                sink (KS,i,j,iw) = sink(KS+1,i,j,iw)
-                sink (KE,i,j,iw) = sink(KE-1,i,j,iw)
-             enddo
-          enddo
-          enddo
-       else
-          do iw = 1, 5 !+QA
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS , KE
-             sink(k,i,j,iw) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          enddo
-       end if
-
     enddo
     enddo ! end tile
 
@@ -1147,17 +1032,18 @@ call START_COLLECTION("DYN-rk3")
     !##### RK1 #####
     rko = 1
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,      & ! (out)
-                 DDIV,                                                  & ! (out)
-                 mflx_hi,                                               & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
-                 Rtot, CORIOLI,                                         & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
-                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
-                 dtrk,                                                  & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work)
+    call calc_rk(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,  & ! (out)
+                 DDIV,                                              & ! (out)
+                 mflx_hi,                                           & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
+                 Rtot, CORIOLI,                                     & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
+                 CZ, FZ,                                            & ! (in)
+                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
+                 dtrk,                                              & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns          ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
 #else
@@ -1176,17 +1062,18 @@ call START_COLLECTION("DYN-rk3")
     !##### RK2 #####
     rko = 2
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,      & ! (out)
-                 DDIV,                                                  & ! (out)
-                 mflx_hi,                                               & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
-                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,      & ! (in)
-                 Rtot, CORIOLI,                                         & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
-                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
-                 dtrk,                                                  & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work)
+    call calc_rk(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,  & ! (out)
+                 DDIV,                                              & ! (out)
+                 mflx_hi,                                           & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
+                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,  & ! (in)
+                 Rtot, CORIOLI,                                     & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
+                 CZ, FZ,                                            & ! (in)
+                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk,                                              & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns         ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
 #else
@@ -1205,17 +1092,18 @@ call START_COLLECTION("DYN-rk3")
     !##### RK3 #####
     rko = 3
     dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call calc_rk(DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (out)
-                 DDIV,                                                  & ! (out)
-                 mflx_hi,                                               & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,          & ! (in)
-                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,      & ! (in)
-                 Rtot, CORIOLI,                                         & ! (in)
-                 num_diff, ray_damp, divdmp_coef, LSsink_d, sink,       & ! (in)
-                 CZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
-                 dtrk,                                                  & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT,                          & ! (work)
-                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns              ) ! (work) 
+    call calc_rk(DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (out)
+                 DDIV,                                              & ! (out)
+                 mflx_hi,                                           & ! (inout)
+                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
+                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,  & ! (in)
+                 Rtot, CORIOLI,                                     & ! (in)
+                 num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
+                 CZ, FZ,                                            & ! (in)
+                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk,                                              & ! (in)
+                 VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns          )
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )
 #else
@@ -1249,14 +1137,10 @@ call START_COLLECTION("DYN-fct")
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-2
-          mflx_sink = - 0.5_RP * LSsink_D * FZ(k)         &
-                      * ( FACT_N * ( DENS_RK2(k+1,i,j)+DENS_RK2(k  ,i,j) ) &
-                        + FACT_F * ( DENS_RK2(k+2,i,j)+DENS_RK2(k-1,i,j) ) )
+          qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
+                                         - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_lo(k,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                         - abs(mflx_hi(k,i,j,ZDIR)+mflx_sink) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
-
-          qflx_hi(k,i,j,ZDIR) = 0.5_RP * (mflx_hi(k,i,j,ZDIR)+mflx_sink) &
+          qflx_hi(k,i,j,ZDIR) = 0.5_RP * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                 + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
 
@@ -1269,14 +1153,12 @@ call START_COLLECTION("DYN-fct")
 #endif
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          mflx_sink = - 0.5_RP * LSsink_D * FZ(KS  ) * ( DENS_RK2(KS+1,i,j)+DENS_RK2(KS,i,j) )
-
           qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) & ! just above the bottom boundary
-                                           - abs(mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+          qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) & ! just above the bottom boundary
+                                            - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
           qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * (mflx_hi(KS  ,i,j,ZDIR)+mflx_sink) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
 
           qflx_anti(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_anti(KS  ,i,j,ZDIR) = qflx_hi(KS  ,i,j,ZDIR) - qflx_lo(KS  ,i,j,ZDIR)
@@ -1287,13 +1169,11 @@ call START_COLLECTION("DYN-fct")
 #endif
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          mflx_sink = - 0.5_RP * LSsink_D * FZ(KE-1) * ( DENS_RK2(KE,i,j)+DENS_RK2(KE-1,i,j) )
-
-          qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (    (mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
-                                           - abs(mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+          qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
+                                            - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
           qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
 
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * (mflx_hi(KE-1,i,j,ZDIR)+mflx_sink) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
           qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
 
           qflx_anti(KE-1,i,j,ZDIR) = qflx_hi(KE-1,i,j,ZDIR) - qflx_lo(KE-1,i,j,ZDIR)
@@ -1308,7 +1188,7 @@ call START_COLLECTION("DYN-fct")
        do i = IIS-2, IIE+1
        do k = KS, KE
           qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                        - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+                                         - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
        enddo
        enddo
        enddo
@@ -1335,7 +1215,7 @@ call START_COLLECTION("DYN-fct")
        do i = IIS-1, IIE+1
        do k = KS, KE
           qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                        - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+                                         - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
        enddo
        enddo
        enddo
@@ -1398,6 +1278,15 @@ call START_COLLECTION("DYN-fct")
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
+       if ( LSsink_D .ne. 0.0_RP .and. iq .gt. QQE ) then
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             RHOQ_lo(k,i,j) = RHOQ_lo(k,i,j) + LSsink_D * QTRC(k,i,j,iq)
+          end do
+          end do
+          end do
+       end if
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1468,18 +1357,18 @@ call TIME_rapend     ('DYN-fct')
   end subroutine ATMOS_DYN_main
 
 
-  subroutine calc_rk(DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK,     &
-                     DDIV,                                            &
-                     mflx_hi,                                         &
-                     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,       &
-                     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,        &
-                     Rtot, CORIOLI,                                   &
-                     num_diff, ray_damp, divdmp_coef, LSsink_d, sink, &
-                     CZ, FDZ, FDX, FDY,                           &
-                     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,              &
-                     dtrk,                                            &
-                     VELZ, VELX, VELY, PRES, POTT,                    &
-                     qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns        )
+  subroutine calc_rk(DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+                     DDIV,                                        &
+                     mflx_hi,                                     &
+                     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
+                     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
+                     Rtot, CORIOLI,                               &
+                     num_diff, ray_damp, divdmp_coef, LSsink_d,   &
+                     CZ, FZ, FDZ, FDX, FDY,                       &
+                     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
+                     dtrk,                                        &
+                     VELZ, VELX, VELY, PRES, POTT,                &
+                     qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns    )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
@@ -1522,9 +1411,9 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: ray_damp(KA,IA,JA,5)
     real(RP), intent(in) :: divdmp_coef
     real(RP), intent(in) :: LSsink_D
-    real(RP), intent(in) :: sink(KA,IA,JA,5+QA)
 
     real(RP), intent(in)    :: CZ(KA)
+    real(RP), intent(in)    :: FZ(KA)
 
     real(RP), intent(in)    :: FDZ(KA)
     real(RP), intent(in)    :: FDX(IA)
@@ -1651,7 +1540,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, RHOT(k,i,j) )
           call CHECK( __LINE__, DENS(k,i,j) )
 #endif
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -1659,7 +1548,7 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! 3D divergence for damping 
+       ! 3D divergence for damping
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -1774,6 +1663,30 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    enddo
+    enddo
+
+
+    ! add momentum flux corresponding to large scale sinking
+    if ( LSsink_D .ne. 0.0_RP ) then
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE-1
+#ifdef DEBUG
+          call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
+#endif
+          mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) - LSsink_D * FZ(k)
+       enddo
+       enddo
+       enddo
+    end if
+
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
        !##### momentum equation (z) #####
        ! at (x, y, layer)
        ! note than z-index is added by -1
@@ -1785,8 +1698,10 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(k  ,i,j) )
           call CHECK( __LINE__, DENS(k,i,j) )
 #endif
-          vel = ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) / DENS(k,i,j)
-          qflx_lo(k-1,i,j,ZDIR) = 0.25_RP * ( &
+          vel = ( ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
+                  - LSsink_D * CZ(k) & ! large scale sinking
+                ) / DENS(k,i,j)
+          qflx_lo(k-1,i,j,ZDIR) = 0.5_RP * ( &
                     ( vel ) * ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) &
                - abs( vel ) * ( MOMZ(k,i,j)-MOMZ(k-1,i,j) ) )
        enddo
@@ -1816,7 +1731,10 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(k+1,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMZ,ZDIR) )
 #endif
-          qflx_hi(k-1,i,j,ZDIR) = 0.25_RP * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
+          vel = ( ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
+                  - LSsink_D * CZ(k) & ! large scale sinking
+                ) / DENS(k,i,j)
+          qflx_hi(k-1,i,j,ZDIR) = 0.5_RP * vel  &
                               * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
@@ -1841,11 +1759,17 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMZ,ZDIR) )
 #endif
           ! k = KS+1
-          qflx_hi(KS,i,j,ZDIR) = 0.25_RP * ( VELZ(KS+1,i,j)+VELZ(KS,i,j) ) &
+          vel = ( ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) * 0.5_RP &
+                  - LSsink_D * CZ(KS+1) & ! large scale sinking
+                ) / DENS(KS,i,j)
+          qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
                               + num_diff(KS+1,i,j,I_MOMZ,ZDIR) * rdtrk
           ! k = KE-1
-          qflx_hi(KE-2,i,j,ZDIR) = 0.25_RP * ( VELZ(KE-1,i,j)+VELZ(KE-2,i,j) ) &
+          vel = ( ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) * 0.5_RP &
+                  - LSsink_D * CZ(KE-1) & ! large scale sinking
+                ) / DENS(KE-1,i,j)
+          qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR) * rdtrk
           ! k = KE
@@ -2009,12 +1933,14 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k+1,i,j) )
           call CHECK( __LINE__, DDIV(k  ,i,j) )
           call CHECK( __LINE__, DDIV(k+1,i,j) )
+          call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, ray_damp(k,i,j,i_MOMZ) )
 #endif
           MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
                + dtrk * ( - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                      & ! pressure gradient force
                           - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5_RP * GRAV                & ! gravity force
                           + divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
+                          + LSsink_D * MOMZ0(k,i,j)                                     & ! large scale sinking
                           + ray_damp(k,i,j,I_MOMZ)                                       ) ! additional damping
        enddo
        enddo
@@ -2033,10 +1959,16 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, VELZ(k,i+1,j) )
           call CHECK( __LINE__, MOMX(k  ,i,j) )
           call CHECK( __LINE__, MOMX(k+1,i,j) )
+          call CHECK( __LINE__, DENS(k+1,i+1,j) )
+          call CHECK( __LINE__, DENS(k+1,i  ,j) )
+          call CHECK( __LINE__, DENS(k  ,i+1,j) )
+          call CHECK( __LINE__, DENS(k  ,i  ,j) )
 #endif
-          qflx_lo(k,i,j,ZDIR) = 0.25_RP * ( &
-                   ( VELZ(k,i+1,j)+VELZ(k,i,j) ) * ( MOMX(k+1,i,j)+MOMX(k,i,j) ) &
-               -abs( VELZ(k,i+1,j)+VELZ(k,i,j) ) * ( MOMX(k+1,i,j)-MOMX(k,i,j) ) )
+          vel = 0.5_RP * ( VELZ(k,i+1,j) + VELZ(k,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(k) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
+          qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
+                   ( vel ) * ( MOMX(k+1,i,j)+MOMX(k,i,j) ) &
+               -abs( vel ) * ( MOMX(k+1,i,j)-MOMX(k,i,j) ) )
        enddo
        enddo
        enddo
@@ -2057,13 +1989,19 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(k,i  ,j) )
           call CHECK( __LINE__, VELZ(k,i+1,j) )
+          call CHECK( __LINE__, DENS(k+1,i+1,j) )
+          call CHECK( __LINE__, DENS(k+1,i  ,j) )
+          call CHECK( __LINE__, DENS(k  ,i+1,j) )
+          call CHECK( __LINE__, DENS(k  ,i  ,j) )
           call CHECK( __LINE__, MOMX(k-1,i,j) )
           call CHECK( __LINE__, MOMX(k  ,i,j) )
           call CHECK( __LINE__, MOMX(k+1,i,j) )
           call CHECK( __LINE__, MOMX(k+2,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMX,ZDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = 0.25_RP * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
+          vel = 0.5_RP * ( VELZ(k,i+1,j) + VELZ(k,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(k) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
+          qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
                               * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
                                 + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
@@ -2078,19 +2016,31 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(KS,i  ,j) )
           call CHECK( __LINE__, VELZ(KS,i+1,j) )
+          call CHECK( __LINE__, DENS(KS+1,i+1,j) )
+          call CHECK( __LINE__, DENS(KS+1,i  ,j) )
+          call CHECK( __LINE__, DENS(KS  ,i+1,j) )
+          call CHECK( __LINE__, DENS(KS  ,i  ,j) )
           call CHECK( __LINE__, MOMX(KS+1,i,j) )
           call CHECK( __LINE__, MOMX(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_MOMX,ZDIR) )
           call CHECK( __LINE__, VELZ(KE-1,i  ,j) )
           call CHECK( __LINE__, VELZ(KE-1,i+1,j) )
+          call CHECK( __LINE__, DENS(KE  ,i+1,j) )
+          call CHECK( __LINE__, DENS(KE  ,i  ,j) )
+          call CHECK( __LINE__, DENS(KE-1,i+1,j) )
+          call CHECK( __LINE__, DENS(KE-1,i  ,j) )
           call CHECK( __LINE__, MOMX(KE-1,i,j) )
           call CHECK( __LINE__, MOMX(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMX,ZDIR) )
 #endif
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25_RP * ( VELZ(KS  ,i+1,j)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
+          vel = 0.5_RP * ( VELZ(KS,i+1,j) + VELZ(KS,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(KS) / ( DENS(KS+1,i+1,j)+DENS(KS+1,i,j)+DENS(KS,i+1,j)+DENS(KS,i,j) ) ! large scale sinking
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
                                  + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25_RP * ( VELZ(KE-1,i+1,j)+VELZ(KE-1,i,j) ) & ! just below the top boundary
+          vel = 0.5_RP * ( VELZ(KE-1,i+1,j) + VELZ(KE-1,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(KE-1) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) ! large scale sinking
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
                                  + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
        enddo
@@ -2225,6 +2175,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, VELY(k,i+1,j-1) )
           call CHECK( __LINE__, DDIV(k,i+1,j) )
           call CHECK( __LINE__, DDIV(k,i  ,j) )
+          call CHECK( __LINE__, MOMX0(k,i,j) )
           call CHECK( __LINE__, ray_damp(k,i,j,I_MOMX) )
 #endif
           MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
@@ -2232,6 +2183,7 @@ call TIME_rapend     ('DYN-fct')
                                      + 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )              &
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
+                                     + LSsink_D * MOMX0(k,i,j)                                     & ! large scale sinking
                                      + ray_damp(k,i,j,I_MOMX)                                      ) ! additional damping
        enddo
        enddo
@@ -2249,12 +2201,18 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(k,i,j+1) )
           call CHECK( __LINE__, VELZ(k,i,j  ) )
+          call CHECK( __LINE__, DENS(k+1,i+1,j) )
+          call CHECK( __LINE__, DENS(k+1,i  ,j) )
+          call CHECK( __LINE__, DENS(k  ,i+1,j) )
+          call CHECK( __LINE__, DENS(k  ,i  ,j) )
           call CHECK( __LINE__, MOMY(k  ,i,j) )
           call CHECK( __LINE__, MOMY(k+1,i,j) )
 #endif
-          qflx_lo(k,i,j,ZDIR) = 0.25_RP * ( &
-                   ( VELZ(k,i,j+1)+VELZ(k,i,j) ) * ( MOMY(k+1,i,j)+MOMY(k,i,j) ) &
-               -abs( VELZ(k,i,j+1)+VELZ(k,i,j) ) * ( MOMY(k+1,i,j)-MOMY(k,i,j) ) )
+          vel = 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(k) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
+          qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
+                   ( vel ) * ( MOMY(k+1,i,j)+MOMY(k,i,j) ) &
+               -abs( vel ) * ( MOMY(k+1,i,j)-MOMY(k,i,j) ) )
        enddo
        enddo
        enddo
@@ -2267,13 +2225,19 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(k,i,j+1) )
           call CHECK( __LINE__, VELZ(k,i,j  ) )
+          call CHECK( __LINE__, DENS(k+1,i+1,j) )
+          call CHECK( __LINE__, DENS(k+1,i  ,j) )
+          call CHECK( __LINE__, DENS(k  ,i+1,j) )
+          call CHECK( __LINE__, DENS(k  ,i  ,j) )
           call CHECK( __LINE__, MOMY(k-1,i,j) )
           call CHECK( __LINE__, MOMY(k  ,i,j) )
           call CHECK( __LINE__, MOMY(k+1,i,j) )
           call CHECK( __LINE__, MOMY(k+2,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMY,ZDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = 0.25_RP * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
+          vel = 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(k) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
+          qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
                               * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
                                 + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
@@ -2288,19 +2252,31 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(KS  ,i,j+1) )
           call CHECK( __LINE__, VELZ(KS  ,i,j  ) )
+          call CHECK( __LINE__, DENS(KS+1,i+1,j) )
+          call CHECK( __LINE__, DENS(KS+1,i  ,j) )
+          call CHECK( __LINE__, DENS(KS  ,i+1,j) )
+          call CHECK( __LINE__, DENS(KS  ,i  ,j) )
           call CHECK( __LINE__, MOMY(KS+1,i,j) )
           call CHECK( __LINE__, MOMY(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_MOMY,ZDIR) )
           call CHECK( __LINE__, VELZ(KE-1,i,j+1) )
           call CHECK( __LINE__, VELZ(KE-1,i,j  ) )
+          call CHECK( __LINE__, DENS(KE  ,i+1,j) )
+          call CHECK( __LINE__, DENS(KE  ,i  ,j) )
+          call CHECK( __LINE__, DENS(KE-1,i+1,j) )
+          call CHECK( __LINE__, DENS(KE-1,i  ,j) )
           call CHECK( __LINE__, MOMY(KE-1,i,j) )
           call CHECK( __LINE__, MOMY(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMY,ZDIR) )
 #endif
-          qflx_hi(KS  ,i,j,ZDIR) = 0.25_RP * ( VELZ(KS  ,i,j+1)+VELZ(KS  ,i,j) ) & ! just above the bottom boundary
+          vel = 0.5_RP * ( VELZ(KS,i,j+1) + VELZ(KS,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(KS) / ( DENS(KS+1,i,j+1)+DENS(KS+1,i,j)+DENS(KS,i,j+1)+DENS(KS,i,j) ) ! large scale sinking
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )              &
                                  + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
-          qflx_hi(KE-1,i,j,ZDIR) = 0.25_RP * ( VELZ(KE-1,i,j+1)+VELZ(KE-1,i,j) ) & ! just below the top boundary
+          vel = 0.5_RP * ( VELZ(KE-1,i,j+1) + VELZ(KE-1,i,j) ) &
+              - 4.0_RP * LSsink_D * FZ(KE-1) / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) ! large scale sinking
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )              &
                                  + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
        enddo
@@ -2437,6 +2413,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, VELX(k,i-1,j+1) )
           call CHECK( __LINE__, DDIV(k,i,j+1) )
           call CHECK( __LINE__, DDIV(k,i,j  ) )
+          call CHECK( __LINE__, MOMY0(k,i,j) )
           call CHECK( __LINE__, ray_damp(k,i,j,I_MOMY) )
 #endif
           MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
@@ -2444,6 +2421,7 @@ call TIME_rapend     ('DYN-fct')
                                      - 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )              &
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
+                                     + LSsink_D * MOMY0(k,i,j)                                     & ! large scale sinking
                                      + ray_damp(k,i,j,I_MOMY)                                      ) ! additional damping
        enddo
        enddo
@@ -2496,11 +2474,11 @@ call TIME_rapend     ('DYN-fct')
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
-          call CHECK( __LINE__, mflx_hi(KS,i,j,XDIR) )
+          call CHECK( __LINE__, mflx_hi(KS,i,j,ZDIR) )
           call CHECK( __LINE__, POTT(KS+1,i,j) )
           call CHECK( __LINE__, POTT(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_RHOT,ZDIR) )
-          call CHECK( __LINE__, mflx_hi(KE-1,i,j,XDIR) )
+          call CHECK( __LINE__, mflx_hi(KE-1,i,j,ZDIR) )
           call CHECK( __LINE__, POTT(KE-1,i,j) )
           call CHECK( __LINE__, POTT(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_RHOT,ZDIR) )
@@ -2628,13 +2606,12 @@ call TIME_rapend     ('DYN-fct')
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, RHOT_RK(k,i,j) )
-          call CHECK( __LINE__, sink(k,i,j,5) )
+          call CHECK( __LINE__, RHOT0(k,i,j) )
           call CHECK( __LINE__, ray_damp(k,i,j,i_RHOT) )
 #endif
           RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
-                          + dtrk * ( &
-                                     + LSsink_D * CZ(k) * sink(k,i,j,5)                      & ! large scale sink
-                                     + ray_damp(k,i,j,I_RHOT)                                ) ! additional damping
+               + dtrk * (   LSsink_D * RHOT0(k,i,j) & ! large scale sinking
+                          + ray_damp(k,i,j,I_RHOT)  )  ! additional damping
        enddo
        enddo
        enddo
