@@ -144,6 +144,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only : &
+       CONST_UNDEF8
     implicit none
 
     character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
@@ -152,6 +154,7 @@ contains
        MKINIT_initname
 
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -169,6 +172,32 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       pres(k,i,j) = CONST_UNDEF8
+       temp(k,i,j) = CONST_UNDEF8
+       pott(k,i,j) = CONST_UNDEF8
+       qsat(k,i,j) = CONST_UNDEF8
+       qv  (k,i,j) = CONST_UNDEF8
+       qc  (k,i,j) = CONST_UNDEF8
+       velx(k,i,j) = CONST_UNDEF8
+       vely(k,i,j) = CONST_UNDEF8
+    enddo
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA
+       pres_sfc(1,i,j) = CONST_UNDEF8
+       temp_sfc(1,i,j) = CONST_UNDEF8
+       pott_sfc(1,i,j) = CONST_UNDEF8
+       qsat_sfc(1,i,j) = CONST_UNDEF8
+       qv_sfc  (1,i,j) = CONST_UNDEF8
+       qc_sfc  (1,i,j) = CONST_UNDEF8
+    enddo
+    enddo
 
     select case(trim(MKINIT_initname))
     case('PLANESTATE')
@@ -271,17 +300,28 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
        qv_sfc  (1,i,j) = 0.D0
+       qc_sfc  (1,i,j) = 0.D0
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + rndm(k,i,j) * RANDOM_THETA
           qv  (k,i,j) = 0.D0
+          qc  (k,i,j) = 0.D0
        enddo
     enddo
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -299,8 +339,17 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -357,20 +406,7 @@ contains
     return
   end subroutine MKINIT_planestate
   !-----------------------------------------------------------------------------
-  function faero( f0,r0,x,alpha )
 
-  real(8), intent(in) ::  x, f0, r0, alpha
-  real(8) :: faero
-  real(8) :: rad
-  real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
-
-  rad = ( exp( x )*3.D0/4.D0/pi/rhoa )**( 1.D0/3.D0 )
-
-  faero = f0*( rad/r0 )**( -alpha )
-
-  return
-
-  end function faero
   !-----------------------------------------------------------------------------
   !> Make initial state for cold bubble experiment
   !-----------------------------------------------------------------------------
@@ -1052,7 +1088,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLE]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SUPERCELL]/Categ[INIT]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1108,35 +1144,49 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = SFC_QV
+       qc_sfc  (1,i,j) = 0.D0
     enddo
     enddo
 
     !--- linear interpolate to model grid
-    do k    = KS, KE
-    do kref = 2, EXP_kmax
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       qc  (k,i,j) = 0.D0
 
-       if (       CZ(k) >  EXP_z(kref-1) &
-            .AND. CZ(k) <= EXP_z(kref)   ) then
+       do kref = 2, EXP_kmax
+          if (       CZ(k) >  EXP_z(kref-1) &
+               .AND. CZ(k) <= EXP_z(kref)   ) then
 
-          fact1 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-          fact2 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
-          pott(k,i,j) = EXP_pott(kref-1) * fact1 &
-                      + EXP_pott(kref)   * fact2
-          velx(k,i,j) = EXP_u   (kref-1) * fact1 &
-                      + EXP_u   (kref)   * fact2
-          vely(k,i,j) = EXP_v   (kref-1) * fact1 &
-                      + EXP_v   (kref)   * fact2
-          qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
-                      + EXP_qv  (kref)   * fact2
-
-       endif
+             pott(k,i,j) = EXP_pott(kref-1) * fact1 &
+                         + EXP_pott(kref)   * fact2
+             velx(k,i,j) = EXP_u   (kref-1) * fact1 &
+                         + EXP_u   (kref)   * fact2
+             vely(k,i,j) = EXP_v   (kref-1) * fact1 &
+                         + EXP_v   (kref)   * fact2
+             qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
+                         + EXP_qv  (kref)   * fact2
+          endif
+       enddo
+    enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
@@ -2350,5 +2400,20 @@ contains
 
     return
   end subroutine MKINIT_warmbubble_hbinw
+
+  function faero( f0,r0,x,alpha )
+
+  real(8), intent(in) ::  x, f0, r0, alpha
+  real(8) :: faero
+  real(8) :: rad
+  real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+
+  rad = ( exp( x )*3.D0/4.D0/pi/rhoa )**( 1.D0/3.D0 )
+
+  faero = f0*( rad/r0 )**( -alpha )
+
+  return
+
+  end function faero
 
 end module mod_mkinit

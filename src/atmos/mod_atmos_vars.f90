@@ -256,8 +256,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,*) '***       | VARNAME|DESCRIPTION', &
-    '                                                     [UNIT            ]'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,5(A))') '***       |',' VARNAME','|', &
+    'DESCRIPTION                                                     ','[', 'UNIT            ',']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
     '*** NO.',1,'|',trim(AP_NAME(1)),'|', AP_DESC(1),'[', AP_UNIT(1),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
@@ -1003,8 +1003,10 @@ contains
        CVw => AQ_CV
     implicit none
 
+    real(8) :: RHOQ(KA,IA,JA)
+    real(8) :: QT  (KA,IA,JA)
+
     integer :: i, j, k, iq
-    real(8) :: QT(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if ( COMM_total_doreport ) then
@@ -1015,13 +1017,16 @@ contains
        call COMM_total( MOMY(:,:,:), AP_NAME(4) )
        call COMM_total( RHOT(:,:,:), AP_NAME(5) )
        do iq = 1, QA
-          call COMM_total( QTRC(:,:,:,iq)*DENS(:,:,:), AQ_NAME(iq) )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+
+          call COMM_total( RHOQ(:,:,:), AQ_NAME(iq) )
        enddo
-       QT(:,:,:) = 0.0D0
-       do iq = QQS, QQE
-          QT(:,:,:) = QT(:,:,:) + QTRC(:,:,:,iq)
-       end do
-       call COMM_total( QT(:,:,:)*DENS(:,:,:), 'Qtotal  ' )
 
        do j = JS, JE
        do i = IS, IE
@@ -1038,8 +1043,10 @@ contains
                               * VELY(k,i,j)**2
           QDRY(k,i,j) = 1.D0
           do iq = QQS, QQE
-             QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
           enddo
+          QT(k,i,j) = DENS(k,i,j) * ( 1.D0 - QDRY (k,i,j) )
+
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE
              ENGI(k,i,j) = ENGI(k,i,j) &
@@ -1050,6 +1057,7 @@ contains
        enddo
        enddo
 
+       call COMM_total( QT  (:,:,:), 'Qtotal  ' )
        call COMM_total( ENGT(:,:,:), 'ENGT    ' )
        call COMM_total( ENGP(:,:,:), 'ENGP    ' )
        call COMM_total( ENGK(:,:,:), 'ENGK    ' )

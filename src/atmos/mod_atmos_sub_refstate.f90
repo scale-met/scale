@@ -194,6 +194,8 @@ contains
        P00    => CONST_PRE00
     use mod_grid, only : &
        CZ   => GRID_CZ
+    use mod_atmos_hydrostatic, only: &
+       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
     implicit none
 
     integer, parameter :: nref = 8
@@ -216,10 +218,16 @@ contains
     real(8) :: temp_isa(nref)
     real(8) :: pres_isa(nref)
 
-    real(8), allocatable :: temp(:)
-    real(8), allocatable :: pres(:)
-    real(8), allocatable :: dens(:)
-    real(8), allocatable :: pott(:)
+    real(8) :: temp(KA)
+    real(8) :: pres(KA)
+    real(8) :: dens(KA)
+    real(8) :: pott(KA)
+
+    real(8) :: qv(KA) = 0.D0
+    real(8) :: qc(KA) = 0.D0
+    real(8) :: temp_sfc
+    real(8) :: qv_sfc = 0.D0
+    real(8) :: qc_sfc = 0.D0
 
     real(8) :: gmr !! grav / Rdry
     integer :: i, k
@@ -249,11 +257,6 @@ contains
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
-    allocate( pres(KA) )
-    allocate( temp(KA) )
-    allocate( dens(KA) )
-    allocate( pott(KA) )
-
     !--- make reference state
     do k = KS, KE
        do i = 2, nref
@@ -279,13 +282,13 @@ contains
           endif
        enddo
 
-       dens(k) = pres(k) / ( temp(k) * Rdry )
+!       dens(k) = pres(k) / ( temp(k) * Rdry )
        pott(k) = temp(k) * ( P00/pres(k) )**RovCP
     enddo
 
-    dens(   1:KS-1) = dens(KS)
+!    dens(   1:KS-1) = dens(KS)
+!    dens(KE+1:KA  ) = dens(KE)
     pott(   1:KS-1) = pott(KS)
-    dens(KE+1:KA  ) = dens(KE)
     pott(KE+1:KA  ) = pott(KE)
 
     if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
@@ -293,6 +296,19 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** pot.temp. is overwrited by uniform value:', ATMOS_REFSTATE_POTT_UNIFORM
        pott(:) = ATMOS_REFSTATE_POTT_UNIFORM
     endif
+
+    ! make density & pressure profile 
+    call hydro_buildrho_1d( dens    (:), & ! [OUT]
+                            temp    (:), & ! [OUT]
+                            pres    (:), & ! [OUT]
+                            pott    (:), &
+                            qv      (:), &
+                            qc      (:), &
+                            temp_sfc,    & ! [OUT]
+                            pres_isa(1), &
+                            temp_isa(1), &
+                            qv_sfc,      &
+                            qc_sfc       )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -304,11 +320,6 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
-
-    deallocate( pres )
-    deallocate( temp )
-    deallocate( dens )
-    deallocate( pott )
 
     return
   end subroutine ATMOS_REFSTATE_generate
