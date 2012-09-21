@@ -15,14 +15,15 @@ MODS = \
 	dc_log.o
 
 
-all: $(LIBDIR)/libdcutils.a
+all: makelibdcutils
 
-$(LIBDIR)/libdcutils.a: libdcutils.a
+makelibdcutils: libdcutils.a
 	mkdir -p $(LIBDIR)
 	install libdcutils.a $(LIBDIR)
 
 libdcutils.a: $(MODS)
-	ar r $@ $?
+	$(AR) $@ $?
+	$(RANLIB) $@
 
 dc_calendar.f90: dc_calendar.f90.erb
 	erb $< > $@
@@ -32,7 +33,7 @@ dc_calendar.o: dc_calendar.f90 dc_log.o
 clean:
 	rm -f $(MODS) *.mod
 distclean: clean
-	rm -f libgtool.a
+	rm -f libdcutils.a
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c

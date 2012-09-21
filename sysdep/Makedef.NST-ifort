@@ -33,6 +33,10 @@ CFLAGS = -O3 -ftz -m64 -xSSE4.2
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
+###### NetCDF library
+NETCDF_INCLUDE = -I/ap/netcdf/4.1.2/include
+NETCDF_LIBS    = -L/ap/netcdf/4.1.2/lib -lnetcdf
+
 # for frontend
 
 FRONT_F90     = ifort
@@ -53,5 +57,5 @@ FRONT_CFLAGS = -O3 -ftz -m64 -xSSE4.2
 FRONT_LD     = $(FRONT_F90)
 FRONT_LFLAGS = $(FRONT_FFLAGS)
 
-AR     = ar r
+AR     = ar -rv
 RANLIB = ranlib

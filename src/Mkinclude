@@ -9,7 +9,7 @@ endif
 SRCDIR = $(TOPDIR)/src
 INCDIR = $(SRCDIR)/include
 
-GTOOLDIR = $(TOPDIR)/gtool
+GTOOLDIR   = $(TOPDIR)/gtool
 DCUTILSDIR = $(TOPDIR)/dc_utils
 
 RUNDIR = $(TOPDIR)/run

@@ -18,16 +18,17 @@ MODS = \
 	gtool_netcdf.o
 
 
-all: $(LIBDIR)/libgtool.a
+all: makelibgtool
 
-$(LIBDIR)/libgtool.a: libgtool.a
+makelibgtool: libgtool.a
 	mkdir -p $(LIBDIR)
 	install libgtool.a $(LIBDIR)
 
-libgtool.a: $(LIBDIR)/libdcutils.a $(MODS)
-	ar r $@ $?
+libgtool.a: $(DCUTILSDIR)/libdcutils.a $(MODS)
+	$(AR) $@ $(MODS)
+	$(RANLIB) $@
 
-$(LIBDIR)/libdcutils.a:
+$(DCUTILSDIR)/libdcutils.a:
 	cd $(DCUTILSDIR); $(MAKE)
 
 gtool_file.f90: gtool_file.f90.erb
@@ -42,6 +43,8 @@ gtool_netcdf.o: gtool_netcdf.c
 gtool_file.o: gtool_file.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
 gtool_history.o: gtool_history.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
 
+allclean: distclean
+	cd $(DCUTILSDIR); $(MAKE) distclean
 clean:
 	rm -f $(MODS) *.mod
 distclean: clean
@@ -55,4 +58,4 @@ distclean: clean
 
 %.o: %.mod
 
-.PHONY : clean distclean
+.PHONY : clean distclean allclean
