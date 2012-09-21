@@ -23,6 +23,7 @@
 !! @li      2012-07-13 (H.Yashiro)   [mod] prevent conditional branching in FCT
 !! @li      2012-07-27 (Y.Miyamoto)  [mod] divegence damping option
 !! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
+!! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -619,6 +620,8 @@ contains
     real(RP) :: ray_damp (KA,IA,JA,5)
     real(RP) :: num_diff (KA,IA,JA,5,3)
 
+    real(RP) :: POTT_sink(KA,IA,JA)     ! Potential temperature for LS sink
+
     ! mass flux
 !    real(RP) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
@@ -742,6 +745,17 @@ call START_COLLECTION("DYN-set")
        enddo
        enddo
        enddo
+
+       !--- prepare potential temperature for large scale sink
+       if ( LSsink_D .ne. 0.0_RP ) then
+          do j = JJS-2, JJE+2
+          do i = IIS-2, IIE+2
+          do k = KS, KE
+             POTT_sink(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+       endif
 
        ! Gas constant
        do j = JJS-2, JJE+2
@@ -1044,62 +1058,75 @@ call START_COLLECTION("DYN-set")
           do i = IIS-1, IIE+1
              do k = KS+2, KE-2
                 sink(k,i,j,1) = 0.0_RP ! DENS
-                sink(k,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) )   &
-                                           + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMX(k  ,i,j)+MOMX(k-1,i,j) )   &
-                                           + FACT_F * ( MOMX(k+1,i,j)+MOMX(k-2,i,j) ) ) ) * RCDZ(k) ! MOMX
-                sink(k,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) )   &
-                                           + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMY(k  ,i,j)+MOMY(k-1,i,j) )   &
-                                           + FACT_F * ( MOMY(k+1,i,j)+MOMY(k-2,i,j) ) ) ) * RCDZ(k) ! MOMY
-                sink(k,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(k+1,i,j)+MOMZ(k  ,i,j) )   &
-                                           + FACT_F * ( MOMZ(k+2,i,j)+MOMZ(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) )   &
-                                           + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) ) * RFDZ(k) ! MOMZ
-                sink(k,i,j,5) = ( 0.5_RP * ( FACT_N * ( RHOT(k+1,i,j)+RHOT(k  ,i,j) )   &
-                                           + FACT_F * ( RHOT(k+2,i,j)+RHOT(k-1,i,j) ) ) &
-                                - 0.5_RP * ( FACT_N * ( RHOT(k  ,i,j)+RHOT(k-1,i,j) )   &
-                                           + FACT_F * ( RHOT(k+1,i,j)+RHOT(k-2,i,j) ) ) ) * RCDZ(k) ! RHOT
-                do iq = 1, QA
-                   sink(k,i,j,iq+5) = ( DENS(k+1,i,j)*QTRC(k+1,i,j,iq)-DENS(k  ,i,j)*QTRC(k  ,i,j,iq) ) * RCDZ(k) ! QTRC
-                enddo
+                sink(k,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(k+1,i,j)     +MOMX(k  ,i,j) )   &
+                                           + FACT_F * ( MOMX(k+2,i,j)     +MOMX(k-1,i,j) ) ) &
+                                - 0.5_RP * ( FACT_N * ( MOMX(k  ,i,j)     +MOMX(k-1,i,j) )   &
+                                           + FACT_F * ( MOMX(k+1,i,j)     +MOMX(k-2,i,j) ) ) ) * RCDZ(k) ! MOMX
+                sink(k,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(k+1,i,j)     +MOMY(k  ,i,j) )   &
+                                           + FACT_F * ( MOMY(k+2,i,j)     +MOMY(k-1,i,j) ) ) &
+                                - 0.5_RP * ( FACT_N * ( MOMY(k  ,i,j)     +MOMY(k-1,i,j) )   &
+                                           + FACT_F * ( MOMY(k+1,i,j)     +MOMY(k-2,i,j) ) ) ) * RCDZ(k) ! MOMY
+                sink(k,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(k+1,i,j)     +MOMZ(k  ,i,j) )   &
+                                           + FACT_F * ( MOMZ(k+2,i,j)     +MOMZ(k-1,i,j) ) ) &
+                                - 0.5_RP * ( FACT_N * ( MOMZ(k  ,i,j)     +MOMZ(k-1,i,j) )   &
+                                           + FACT_F * ( MOMZ(k+1,i,j)     +MOMZ(k-2,i,j) ) ) ) * RFDZ(k) ! MOMZ
+                sink(k,i,j,5) = ( 0.5_RP * ( FACT_N * ( POTT_sink(k+1,i,j)+POTT_sink(k  ,i,j) )   &
+                                           + FACT_F * ( POTT_sink(k+2,i,j)+POTT_sink(k-1,i,j) ) ) &
+                                - 0.5_RP * ( FACT_N * ( POTT_sink(k  ,i,j)+POTT_sink(k-1,i,j) )   &
+                                           + FACT_F * ( POTT_sink(k+1,i,j)+POTT_sink(k-2,i,j) ) ) ) * RCDZ(k) ! RHOT
+                sink(k,i,j,5) = sink(k,i,j,5) * DENS(k,i,j)
+!                do iq = 1, QA
+!                   sink(k,i,j,iq+5) = ( DENS(k+1,i,j)*QTRC(k+1,i,j,iq)-DENS(k  ,i,j)*QTRC(k  ,i,j,iq) ) * RCDZ(k) ! QTRC
+!                enddo
              enddo
              sink(KS+1,i,j,1) = 0.0_RP ! DENS
-             sink(KS+1,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(KS+2,i,j)+MOMX(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMX(KS+3,i,j)+MOMX(KS  ,i,j) ) ) &
+             sink(KS+1,i,j,2) = ( 0.5_RP * ( FACT_N * ( MOMX(KS+2,i,j)     +MOMX(KS+1,i,j) )   &
+                                           + FACT_F * ( MOMX(KS+3,i,j)     +MOMX(KS  ,i,j) ) ) &
                                 - 0.5_RP * ( MOMX(KS+1,i,j)+MOMX(KS  ,i,j) ) ) * RCDZ(KS+1) ! MOMX
-             sink(KS+1,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(KS+2,i,j)+MOMY(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMY(KS+3,i,j)+MOMY(KS  ,i,j) ) ) &
+             sink(KS+1,i,j,3) = ( 0.5_RP * ( FACT_N * ( MOMY(KS+2,i,j)     +MOMY(KS+1,i,j) )   &
+                                           + FACT_F * ( MOMY(KS+3,i,j)     +MOMY(KS  ,i,j) ) ) &
                                 - 0.5_RP * ( MOMY(KS+1,i,j)+MOMY(KS  ,i,j) ) ) * RCDZ(KS+1) ! MOMY
-             sink(KS+1,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(KS+2,i,j)+MOMZ(KS+1,i,j) )   &
-                                           + FACT_F * ( MOMZ(KS+3,i,j)+MOMZ(KS  ,i,j) ) ) &
+             sink(KS+1,i,j,4) = ( 0.5_RP * ( FACT_N * ( MOMZ(KS+2,i,j)     +MOMZ(KS+1,i,j) )   &
+                                           + FACT_F * ( MOMZ(KS+3,i,j)     +MOMZ(KS  ,i,j) ) ) &
                                 - 0.5_RP * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) ) * RFDZ(KS+1) ! MOMZ
-             sink(KS+1,i,j,5) = ( 0.5_RP * ( FACT_N * ( RHOT(KS+2,i,j)+RHOT(KS+1,i,j) )   &
-                                           + FACT_F * ( RHOT(KS+3,i,j)+RHOT(KS  ,i,j) ) ) &
-                                - 0.5_RP * ( RHOT(KS+1,i,j)+RHOT(KS  ,i,j) ) ) * RCDZ(KS+1) ! RHOT
-             do iq = 1, QA
-                sink(KS+1,i,j,iq+5) = ( DENS(KS+2,i,j)*QTRC(KS+2,i,j,iq)-DENS(KS  ,i,j)*QTRC(KS  ,i,j,iq) ) * RCDZ(k) ! QTRC
-             enddo
+             sink(KS+1,i,j,5) = ( 0.5_RP * ( FACT_N * ( POTT_sink(KS+2,i,j)+POTT_sink(KS+1,i,j) )   &
+                                           + FACT_F * ( POTT_sink(KS+3,i,j)+POTT_sink(KS  ,i,j) ) ) &
+                                - 0.5_RP * ( POTT_sink(KS+1,i,j)+POTT_sink(KS  ,i,j) ) ) * RCDZ(KS+1) ! RHOT
+             sink(KS+1,i,j,5) = sink(KS+1,i,j,5) * DENS(KS+1,i,j)
+!             do iq = 1, QA
+!                sink(KS+1,i,j,iq+5) = ( DENS(KS+2,i,j)*QTRC(KS+2,i,j,iq)-DENS(KS  ,i,j)*QTRC(KS  ,i,j,iq) ) * RCDZ(k) ! QTRC
+!             enddo
              sink(KE-1,i,j,1) = 0.0_RP ! DENS
              sink(KE-1,i,j,2) = ( 0.5_RP * ( MOMX(KE  ,i,j)+MOMX(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMX(KE-1,i,j)+MOMX(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMX(KE  ,i,j)+MOMX(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMX
+                                - 0.5_RP * ( FACT_N * ( MOMX(KE-1,i,j)     +MOMX(KE-2,i,j) )   &
+                                           + FACT_F * ( MOMX(KE  ,i,j)     +MOMX(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMX
              sink(KE-1,i,j,3) = ( 0.5_RP * ( MOMY(KE  ,i,j)+MOMY(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMY(KE-1,i,j)+MOMY(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMY(KE  ,i,j)+MOMY(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMY
+                                - 0.5_RP * ( FACT_N * ( MOMY(KE-1,i,j)     +MOMY(KE-2,i,j) )   &
+                                           + FACT_F * ( MOMY(KE  ,i,j)     +MOMY(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! MOMY
              sink(KE-1,i,j,4) = ( 0.5_RP * ( MOMZ(KE  ,i,j)+MOMZ(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) )   &
-                                           + FACT_F * ( MOMZ(KE  ,i,j)+MOMZ(KE-3,i,j) ) ) ) * RFDZ(KE-1) ! MOMZ
-             sink(KE-1,i,j,5) = ( 0.5_RP * ( RHOT(KE  ,i,j)+RHOT(KE-1,i,j) ) &
-                                - 0.5_RP * ( FACT_N * ( RHOT(KE-1,i,j)+RHOT(KE-2,i,j) )   &
-                                           + FACT_F * ( RHOT(KE  ,i,j)+RHOT(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! RHOT
-             do iq = 1, QA
-                sink(KE-1,i,j,iq+5) = ( DENS(KE  ,i,j)*QTRC(KE  ,i,j,iq)-DENS(KE-1,i,j)*QTRC(KE-1,i,j,iq) ) * RCDZ(k) ! QTRC
-             enddo
+                                - 0.5_RP * ( FACT_N * ( MOMZ(KE-1,i,j)     +MOMZ(KE-2,i,j) )   &
+                                           + FACT_F * ( MOMZ(KE  ,i,j)     +MOMZ(KE-3,i,j) ) ) ) * RFDZ(KE-1) ! MOMZ
+             sink(KE-1,i,j,5) = ( 0.5_RP * ( POTT_sink(KE  ,i,j)+POTT_sink(KE-1,i,j) ) &
+                                - 0.5_RP * ( FACT_N * ( POTT_sink(KE-1,i,j)+POTT_sink(KE-2,i,j) )   &
+                                           + FACT_F * ( POTT_sink(KE  ,i,j)+POTT_sink(KE-3,i,j) ) ) ) * RCDZ(KE-1) ! RHOT
+             sink(KE-1,i,j,5) = sink(KE-1,i,j,5) * DENS(KE-1,i,j)
+!             do iq = 1, QA
+!                sink(KE-1,i,j,iq+5) = ( DENS(KE  ,i,j)*QTRC(KE  ,i,j,iq)-DENS(KE-1,i,j)*QTRC(KE-1,i,j,iq) ) * RCDZ(k) ! QTRC
+!             enddo
              do iw = 1, 5+QA
                 sink (KS,i,j,iw) = sink(KS+1,i,j,iw)
                 sink (KE,i,j,iw) = sink(KE-1,i,j,iw)
              enddo
+          enddo
+          enddo
+       else
+          do iw = 1, 5 !+QA
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS , KE
+             sink(k,i,j,iw) = 0.0_RP
+          enddo
+          enddo
           enddo
           enddo
        end if
