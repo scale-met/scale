@@ -475,10 +475,12 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -578,10 +580,12 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -690,6 +694,7 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
@@ -700,6 +705,7 @@ contains
              pott(k,i,j) = pott(k-1,i,j) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
           endif
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -825,6 +831,7 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
@@ -838,6 +845,7 @@ contains
                          + ENV_L3_THETA * (        fact )
           endif
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -965,10 +973,12 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA 
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) 
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -1306,6 +1316,7 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = SFC_QV
+       qc_sfc  (1,i,j) = 0.0_RP
     enddo
     enddo
 
@@ -1329,6 +1340,9 @@ contains
                       + EXP_qv  (kref)   * fact2
 
        endif
+
+       qc(k,i,j) = 0.0_RP
+
     enddo
     enddo
 
@@ -1434,6 +1448,7 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA * disturb
        qv_sfc  (1,i,j) = ENV_L1_QV
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           disturb = ( 1.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP )
@@ -1453,6 +1468,7 @@ contains
              qv  (k,i,j) = ENV_L1_QV    * ( 1.0_RP - fact ) &
                          + ENV_L3_QV    * (        fact )
           endif
+          qc(k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -1784,6 +1800,7 @@ contains
        pres_sfc(1,i,j) = 1017.8_RP   ! [Pa]
        pott_sfc(1,i,j) = 288.3      ! [K]
        qv_sfc  (1,i,j) = 9.45E-3_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
@@ -1986,6 +2003,7 @@ contains
        pres_sfc(1,i,j) = 1017.8_RP ! [Pa]
        pott_sfc(1,i,j) = 289.0_RP  ! [K]
        qv_sfc  (1,i,j) = 9.0E-3_RP ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
@@ -2275,6 +2293,7 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if( k == KS ) then
@@ -2297,6 +2316,7 @@ contains
            end if 
           endif
           qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
