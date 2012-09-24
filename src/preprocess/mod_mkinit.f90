@@ -88,6 +88,7 @@ module mod_mkinit
   !
   include 'inc_index.h'
   include 'inc_tracer.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -114,25 +115,25 @@ module mod_mkinit
   !
   !++ Private parameters & variables
   !
-  real(8), private, parameter :: THETAstd = 300.D0 ! [K]
+  real(RP), private, parameter :: THETAstd = 300.0_RP ! [K]
 
-  real(8), private :: pres(KA,IA,JA) ! pressure [Pa]
-  real(8), private :: temp(KA,IA,JA) ! temperature [K]
-  real(8), private :: pott(KA,IA,JA) ! potential temperature [K]
-  real(8), private :: qsat(KA,IA,JA) ! satulated water vapor [kg/kg]
-  real(8), private :: qv  (KA,IA,JA) ! water vapor [kg/kg]
-  real(8), private :: qc  (KA,IA,JA) ! cloud water [kg/kg]
-  real(8), private :: velx(KA,IA,JA) ! velocity u [m/s]
-  real(8), private :: vely(KA,IA,JA) ! velocity v [m/s]
+  real(RP), private :: pres(KA,IA,JA) ! pressure [Pa]
+  real(RP), private :: temp(KA,IA,JA) ! temperature [K]
+  real(RP), private :: pott(KA,IA,JA) ! potential temperature [K]
+  real(RP), private :: qsat(KA,IA,JA) ! satulated water vapor [kg/kg]
+  real(RP), private :: qv  (KA,IA,JA) ! water vapor [kg/kg]
+  real(RP), private :: qc  (KA,IA,JA) ! cloud water [kg/kg]
+  real(RP), private :: velx(KA,IA,JA) ! velocity u [m/s]
+  real(RP), private :: vely(KA,IA,JA) ! velocity v [m/s]
 
-  real(8), private :: pres_sfc(1,IA,JA)
-  real(8), private :: temp_sfc(1,IA,JA)
-  real(8), private :: pott_sfc(1,IA,JA)
-  real(8), private :: qsat_sfc(1,IA,JA)
-  real(8), private :: qv_sfc  (1,IA,JA)
-  real(8), private :: qc_sfc  (1,IA,JA)
+  real(RP), private :: pres_sfc(1,IA,JA)
+  real(RP), private :: temp_sfc(1,IA,JA)
+  real(RP), private :: pott_sfc(1,IA,JA)
+  real(RP), private :: qsat_sfc(1,IA,JA)
+  real(RP), private :: qv_sfc  (1,IA,JA)
+  real(RP), private :: qc_sfc  (1,IA,JA)
 
-  real(8), private :: rndm(KA,IA,JA) ! random number (0-1)
+  real(RP), private :: rndm(KA,IA,JA) ! random number (0-1)
   !-----------------------------------------------------------------------------
 contains
 
@@ -144,6 +145,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only : &
+       CONST_UNDEF8
     implicit none
 
     character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
@@ -152,6 +155,7 @@ contains
        MKINIT_initname
 
     integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -169,6 +173,32 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       pres(k,i,j) = CONST_UNDEF8
+       temp(k,i,j) = CONST_UNDEF8
+       pott(k,i,j) = CONST_UNDEF8
+       qsat(k,i,j) = CONST_UNDEF8
+       qv  (k,i,j) = CONST_UNDEF8
+       qc  (k,i,j) = CONST_UNDEF8
+       velx(k,i,j) = CONST_UNDEF8
+       vely(k,i,j) = CONST_UNDEF8
+    enddo
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA
+       pres_sfc(1,i,j) = CONST_UNDEF8
+       temp_sfc(1,i,j) = CONST_UNDEF8
+       pott_sfc(1,i,j) = CONST_UNDEF8
+       qsat_sfc(1,i,j) = CONST_UNDEF8
+       qv_sfc  (1,i,j) = CONST_UNDEF8
+       qc_sfc  (1,i,j) = CONST_UNDEF8
+    enddo
+    enddo
 
     select case(trim(MKINIT_initname))
     case('PLANESTATE')
@@ -210,21 +240,21 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA            ! surface potential temperature [K]
-    real(8) :: SFC_PRES             ! surface pressure [Pa]
-    real(8) :: SFC_RH       =  0.D0 ! surface relative humidity [%]
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  0.0_RP ! surface relative humidity [%]
     ! Environment state
-    real(8) :: ENV_THETA            ! potential temperature of environment [K]
-    real(8) :: ENV_W        =  0.D0 ! velocity w of environment [m/s]
-    real(8) :: ENV_U        =  0.D0 ! velocity u of environment [m/s]
-    real(8) :: ENV_V        =  0.D0 ! velocity v of environment [m/s]
-    real(8) :: ENV_RH       =  0.D0 ! relative humidity of environment [%]
+    real(RP) :: ENV_THETA            ! potential temperature of environment [K]
+    real(RP) :: ENV_W        =  0.0_RP ! velocity w of environment [m/s]
+    real(RP) :: ENV_U        =  0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =  0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =  0.0_RP ! relative humidity of environment [%]
     ! Disturbance
-    real(8) :: RANDOM_THETA =  0.D0 ! amplitude of random disturbance theta
-    real(8) :: RANDOM_W     =  0.D0 ! amplitude of random disturbance w
-    real(8) :: RANDOM_U     =  0.D0 ! amplitude of random disturbance u
-    real(8) :: RANDOM_V     =  0.D0 ! amplitude of random disturbance v
-    real(8) :: RANDOM_RH    =  0.D0 ! amplitude of random disturbance RH
+    real(RP) :: RANDOM_THETA =  0.0_RP ! amplitude of random disturbance theta
+    real(RP) :: RANDOM_W     =  0.0_RP ! amplitude of random disturbance w
+    real(RP) :: RANDOM_U     =  0.0_RP ! amplitude of random disturbance u
+    real(RP) :: RANDOM_V     =  0.0_RP ! amplitude of random disturbance v
+    real(RP) :: RANDOM_RH    =  0.0_RP ! amplitude of random disturbance RH
 
     NAMELIST / PARAM_MKINIT_PLANESTATE / &
        SFC_THETA,    &
@@ -270,18 +300,29 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + rndm(k,i,j) * RANDOM_THETA
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     ! calc QV from RH
     call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
@@ -290,24 +331,33 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
 
        do k = KS, KE
-          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.D-2 * qsat(k,i,j)
+          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
        enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMZ(k,i,j) = ( ENV_W + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_W ) &
-                   * 0.5D0 * ( DENS(k,i,j) + DENS(k+1,i,j) )
+       MOMZ(k,i,j) = ( ENV_W + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_W ) &
+                   * 0.5_RP * ( DENS(k,i,j) + DENS(k+1,i,j) )
     enddo
     enddo
     enddo
@@ -316,8 +366,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP) * 2.0_RP * RANDOM_U ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -326,8 +376,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -347,7 +397,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
        enddo
        enddo
@@ -357,20 +407,7 @@ contains
     return
   end subroutine MKINIT_planestate
   !-----------------------------------------------------------------------------
-  function faero( f0,r0,x,alpha )
 
-  real(8), intent(in) ::  x, f0, r0, alpha
-  real(8) :: faero
-  real(8) :: rad
-  real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
-
-  rad = ( exp( x )*3.D0/4.D0/pi/rhoa )**( 1.D0/3.D0 )
-
-  faero = f0*( rad/r0 )**( -alpha )
-
-  return
-
-  end function faero
   !-----------------------------------------------------------------------------
   !> Make initial state for cold bubble experiment
   !-----------------------------------------------------------------------------
@@ -378,20 +415,20 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA            ! surface potential temperature [K]
-    real(8) :: SFC_PRES             ! surface pressure [Pa]
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [Pa]
     ! Environment state
-    real(8) :: ENV_THETA            ! potential temperature of environment [K]
-    real(8) :: ENV_U        =  0.D0 ! velocity u of environment [m/s]
-    real(8) :: ENV_V        =  0.D0 ! velocity v of environment [m/s]
+    real(RP) :: ENV_THETA            ! potential temperature of environment [K]
+    real(RP) :: ENV_U        =  0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =  0.0_RP ! velocity v of environment [m/s]
     ! Bubble
-    real(8) :: BBL_NC       =  1.D0 ! extremum of NC in bubble [kg/kg]
-    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
-    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
-    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
-    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
-    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
-    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+    real(RP) :: BBL_NC       =  1.0_RP ! extremum of NC in bubble [kg/kg]
+    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
 
     NAMELIST / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
@@ -407,7 +444,7 @@ contains
        BBL_RX,    &
        BBL_RY
 
-    real(8) :: dist
+    real(RP) :: dist
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -437,11 +474,11 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -453,13 +490,13 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMZ(k,i,j) = 0.D0
-       MOMX(k,i,j) = ENV_U * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j) = ENV_V * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j) = ENV_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
 
        do iq = 1, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
        ! make tracer bubble
@@ -467,8 +504,8 @@ contains
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
-       if ( dist <= 1.D0 ) then
-          QTRC(k,i,j,I_NC) = QTRC(k,i,j,I_NC) + BBL_NC * cos( 0.5D0*PI*sqrt(dist) )**2
+       if ( dist <= 1.0_RP ) then
+          QTRC(k,i,j,I_NC) = QTRC(k,i,j,I_NC) + BBL_NC * cos( 0.5_RP*PI*sqrt(dist) )**2
        endif
 
     enddo
@@ -485,18 +522,18 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA            ! surface potential temperature [K]
-    real(8) :: SFC_PRES             ! surface pressure [Pa]
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [Pa]
     ! Environment state
-    real(8) :: ENV_THETA            ! potential temperature of environment [K]
+    real(RP) :: ENV_THETA            ! potential temperature of environment [K]
     ! Bubble
-    real(8) :: BBL_THETA    = -5.D0 ! extremum of temperature in bubble [K]
-    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
-    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
-    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
-    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
-    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
-    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+    real(RP) :: BBL_THETA    = -5.0_RP ! extremum of temperature in bubble [K]
+    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
 
     NAMELIST / PARAM_MKINIT_COLDBUBBLE / &
        SFC_THETA, &
@@ -510,7 +547,7 @@ contains
        BBL_RX,    &
        BBL_RY
 
-    real(8) :: dist
+    real(RP) :: dist
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -540,11 +577,11 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -557,13 +594,13 @@ contains
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
-       MOMX(k,i,j) = 0.D0
-       MOMY(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        do iq = 1, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
        ! make cold bubble
@@ -571,8 +608,8 @@ contains
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
-       if ( dist <= 1.D0 ) then
-          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5D0*PI*sqrt(dist) )**2
+       if ( dist <= 1.0_RP ) then
+          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5_RP*PI*sqrt(dist) )**2
        endif
 
     enddo
@@ -589,23 +626,23 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA              ! surface potential temperature [K]
-    real(8) :: SFC_PRES               ! surface pressure [Pa]
-    real(8) :: SFC_RH       =  80.D0  ! surface relative humidity [%]
+    real(RP) :: SFC_THETA              ! surface potential temperature [K]
+    real(RP) :: SFC_PRES               ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  80.0_RP  ! surface relative humidity [%]
     ! Environment state
-    real(8) :: ENV_RH       =  80.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L1_ZTOP  =   1.D3  ! top height of the layer1 (constant THETA)       [m]
-    real(8) :: ENV_L2_ZTOP  =  12.D3  ! top height of the layer2 (small THETA gradient) [m]
-    real(8) :: ENV_L2_TLAPS =   4.D-3 ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
-    real(8) :: ENV_L3_TLAPS =   3.D-2 ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    real(RP) :: ENV_RH       =  80.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_ZTOP  =   1.E3_RP  ! top height of the layer1 (constant THETA)       [m]
+    real(RP) :: ENV_L2_ZTOP  =  12.E3_RP  ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L2_TLAPS =   4.E-3_RP ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(RP) :: ENV_L3_TLAPS =   3.E-2_RP ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
     ! Bubble
-    real(8) :: BBL_THETA    =  1.D0 ! extremum of temperature in bubble [K]
-    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
-    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
-    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
-    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
-    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
-    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+    real(RP) :: BBL_THETA    =  1.0_RP ! extremum of temperature in bubble [K]
+    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
 
     NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
        SFC_THETA,    &
@@ -623,7 +660,7 @@ contains
        BBL_RX,       &
        BBL_RY
 
-    real(8) :: dist
+    real(RP) :: dist
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -652,7 +689,7 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
@@ -662,7 +699,7 @@ contains
           else 
              pott(k,i,j) = pott(k-1,i,j) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
           endif
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -677,15 +714,15 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
 
        do k = KS, KE
            if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
-              qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+              qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
            elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
-              qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+              qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
            else                                ! Layer 3
-              qv(k,i,j) = 0.D0
+              qv(k,i,j) = 0.0_RP
            endif
 
        enddo
@@ -700,14 +737,14 @@ contains
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
-       MOMX(k,i,j) = 0.D0
-       MOMY(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
        ! make warm bubble
@@ -715,8 +752,8 @@ contains
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
-       if ( dist <= 1.D0 ) then
-          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5D0*PI*sqrt(dist) )**2
+       if ( dist <= 1.0_RP ) then
+          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5_RP*PI*sqrt(dist) )**2
        endif
 
     enddo
@@ -733,18 +770,18 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA               ! surface potential temperature [K]
-    real(8) :: SFC_PRES                ! surface pressure [Pa]
-    real(8) :: SFC_RH         =  0.D0  ! surface relative humidity [%]
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH         =  0.0_RP  ! surface relative humidity [%]
     ! Environment state
-    real(8) :: ENV_L1_ZTOP    = 1.95D3 ! top    height of the layer1 (low  THETA) [m]
-    real(8) :: ENV_L3_ZBOTTOM = 2.05D3 ! bottom height of the layer3 (high THETA) [m]
-    real(8) :: ENV_L1_THETA   = 300.D0 ! THETA in the layer1 (low  THETA) [K]
-    real(8) :: ENV_L3_THETA   = 305.D0 ! THETA in the layer3 (high THETA) [K]
-    real(8) :: ENV_L1_U       =   0.D0 ! velocity u in the layer1 (low  THETA) [K]
-    real(8) :: ENV_L3_U       =  20.D0 ! velocity u in the layer3 (high THETA) [K]
-    real(8) :: ENV_L1_RH      =  50.D0 ! Relative Humidity in the layer1 (low  THETA) [%]
-    real(8) :: ENV_L3_RH      =   0.D0 ! Relative Humidity in the layer3 (high THETA) [%]
+    real(RP) :: ENV_L1_ZTOP    = 1.95E3_RP ! top    height of the layer1 (low  THETA) [m]
+    real(RP) :: ENV_L3_ZBOTTOM = 2.05E3_RP ! bottom height of the layer3 (high THETA) [m]
+    real(RP) :: ENV_L1_THETA   = 300.0_RP ! THETA in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_L3_THETA   = 305.0_RP ! THETA in the layer3 (high THETA) [K]
+    real(RP) :: ENV_L1_U       =   0.0_RP ! velocity u in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_L3_U       =  20.0_RP ! velocity u in the layer3 (high THETA) [K]
+    real(RP) :: ENV_L1_RH      =  50.0_RP ! Relative Humidity in the layer1 (low  THETA) [%]
+    real(RP) :: ENV_L3_RH      =   0.0_RP ! Relative Humidity in the layer3 (high THETA) [%]
 
     NAMELIST / PARAM_MKINIT_KHWAVE / &
        SFC_THETA,      &
@@ -758,7 +795,7 @@ contains
        ENV_L1_RH,      &
        ENV_L3_RH
 
-    real(8) :: fact
+    real(RP) :: fact
     
     integer :: ierr
     integer :: k, i, j, iq
@@ -787,7 +824,7 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
@@ -797,10 +834,10 @@ contains
           else                                   ! Layer 2
              fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
 
-             pott(k,i,j) = ENV_L1_THETA * ( 1.D0 - fact ) &
+             pott(k,i,j) = ENV_L1_THETA * ( 1.0_RP - fact ) &
                          + ENV_L3_THETA * (        fact )
           endif
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -815,18 +852,18 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
 
        do k = KS, KE
           if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
-             qv(k,i,j) = ENV_L1_RH * 1.D-2 * qsat_sfc(k,i,j)
+             qv(k,i,j) = ENV_L1_RH * 1.E-2_RP * qsat_sfc(k,i,j)
           elseif( CZ(k) <= ENV_L3_ZBOTTOM ) then ! Layer 3
-             qv(k,i,j) = ENV_L3_RH * 1.D-2 * qsat_sfc(k,i,j)
+             qv(k,i,j) = ENV_L3_RH * 1.E-2_RP * qsat_sfc(k,i,j)
           else                                ! Layer 2
              fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
 
-             qv(k,i,j) = ( ENV_L1_RH * ( 1.D0 - fact ) &
-                         + ENV_L3_RH * (        fact ) ) * 1.D-2 * qsat_sfc(k,i,j)
+             qv(k,i,j) = ( ENV_L1_RH * ( 1.0_RP - fact ) &
+                         + ENV_L3_RH * (          fact ) ) * 1.E-2_RP * qsat_sfc(k,i,j)
           endif
        enddo
     enddo
@@ -840,20 +877,20 @@ contains
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
-       MOMY(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
        fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
 
-       MOMX(k,i,j) = ( ENV_L1_U * ( 1.D0 - fact ) &
+       MOMX(k,i,j) = ( ENV_L1_U * ( 1.0_RP - fact ) &
                      + ENV_L3_U * (        fact ) ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
 
     enddo
     enddo
@@ -869,20 +906,20 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA             ! surface potential temperature [K]
-    real(8) :: SFC_PRES              ! surface pressure [Pa]
-    real(8) :: SFC_RH       = 50.D0  ! surface relative humidity [%]
+    real(RP) :: SFC_THETA                ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                 ! surface pressure [Pa]
+    real(RP) :: SFC_RH       = 50.0_RP   ! surface relative humidity [%]
     ! Environment state
-    real(8) :: ENV_THETA             ! potential temperature of environment [K]
-    real(8) :: ENV_TLAPS    =  4.D-3 ! Lapse rate of THETA [K/m]
-    real(8) :: ENV_U        =  5.D0  ! velocity u of environment [m/s]
-    real(8) :: ENV_V        =  0.D0  ! velocity v of environment [m/s]
-    real(8) :: ENV_RH       = 50.D0  ! relative humidity of environment [%]
+    real(RP) :: ENV_THETA                ! potential temperature of environment [K]
+    real(RP) :: ENV_TLAPS    =  4.E-3_RP ! Lapse rate of THETA [K/m]
+    real(RP) :: ENV_U        =  5.0_RP   ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =  0.0_RP   ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       = 50.0_RP   ! relative humidity of environment [%]
     ! Disturbance
-    real(8) :: RANDOM_THETA =  3.D0  ! amplitude of random disturbance theta
-    real(8) :: RANDOM_U     =  5.D-2 ! amplitude of random disturbance u
-    real(8) :: RANDOM_V     =  0.D0  ! amplitude of random disturbance v
-    real(8) :: RANDOM_RH    =  5.D-1 ! amplitude of random disturbance RH
+    real(RP) :: RANDOM_THETA =  3.0_RP   ! amplitude of random disturbance theta
+    real(RP) :: RANDOM_U     =  5.E-2_RP ! amplitude of random disturbance u
+    real(RP) :: RANDOM_V     =  0.0_RP   ! amplitude of random disturbance v
+    real(RP) :: RANDOM_RH    =  5.E-1_RP ! amplitude of random disturbance RH
 
     NAMELIST / PARAM_MKINIT_TURBULENCE / &
        SFC_THETA,    &
@@ -927,11 +964,11 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA 
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) 
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -947,10 +984,10 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
 
        do k = KS, KE
-          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.D-2 * qsat(k,i,j)
+          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
        enddo
     enddo
     enddo
@@ -963,7 +1000,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
 !       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
        RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j)*RANDOM_THETA ) ) * DENS(k,i,j)
     enddo
@@ -974,8 +1011,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_U ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -984,8 +1021,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.50 ) * 2.D0 * RANDOM_V ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -995,7 +1032,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
        enddo
        enddo
@@ -1013,13 +1050,13 @@ contains
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
     ! Bubble
-    real(8) :: BBL_THETA    = -5.D0 ! extremum of temperature in bubble [K]
-    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
-    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
-    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
-    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
-    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
-    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+    real(RP) :: BBL_THETA    = -5.0_RP ! extremum of temperature in bubble [K]
+    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
 
     NAMELIST / PARAM_MKINIT_SUPERCELL / &
        ENV_IN_SOUNDING_file, &
@@ -1034,25 +1071,25 @@ contains
     integer, parameter :: EXP_klim = 100
     integer            :: EXP_kmax
 
-    real(8) :: SFC_THETA          ! surface potential temperature [K]
-    real(8) :: SFC_PRES           ! surface pressure [Pa]
-    real(8) :: SFC_QV             ! surface watervapor [g/kg]
+    real(RP) :: SFC_THETA          ! surface potential temperature [K]
+    real(RP) :: SFC_PRES           ! surface pressure [Pa]
+    real(RP) :: SFC_QV             ! surface watervapor [g/kg]
 
-    real(8) :: EXP_z   (EXP_klim) ! height      [m]
-    real(8) :: EXP_pott(EXP_klim) ! potential temperature [K]
-    real(8) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
-    real(8) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
-    real(8) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
+    real(RP) :: EXP_z   (EXP_klim) ! height      [m]
+    real(RP) :: EXP_pott(EXP_klim) ! potential temperature [K]
+    real(RP) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
+    real(RP) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
+    real(RP) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
 
-    real(8) :: dist
-    real(8) :: fact1, fact2
+    real(RP) :: dist
+    real(RP) :: fact1, fact2
 
     integer :: ierr, fid
     integer :: k, i, j, iq, kref
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLE]/Categ[INIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SUPERCELL]/Categ[INIT]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1094,13 +1131,13 @@ contains
        EXP_kmax = k - 1
     close(fid)
 
-    EXP_z   (1) = 0.D0
+    EXP_z   (1) = 0.0_RP
     EXP_pott(1) = SFC_THETA
     EXP_qv  (1) = SFC_QV
     EXP_u   (1) = EXP_u(2)
     EXP_v   (1) = EXP_v(2)
     do k = 1, EXP_klim
-       EXP_qv(k) = EXP_qv(k) * 1.D-3 ![g/kg] -> [kg/kg]
+       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
     do j = JS, JE
@@ -1108,48 +1145,62 @@ contains
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = SFC_QV
+       qc_sfc  (1,i,j) = 0.0_RP
     enddo
     enddo
 
     !--- linear interpolate to model grid
-    do k    = KS, KE
-    do kref = 2, EXP_kmax
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       qc  (k,i,j) = 0.0_RP
 
-       if (       CZ(k) >  EXP_z(kref-1) &
-            .AND. CZ(k) <= EXP_z(kref)   ) then
+       do kref = 2, EXP_kmax
+          if (       CZ(k) >  EXP_z(kref-1) &
+               .AND. CZ(k) <= EXP_z(kref)   ) then
 
-          fact1 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-          fact2 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
-          pott(k,i,j) = EXP_pott(kref-1) * fact1 &
-                      + EXP_pott(kref)   * fact2
-          velx(k,i,j) = EXP_u   (kref-1) * fact1 &
-                      + EXP_u   (kref)   * fact2
-          vely(k,i,j) = EXP_v   (kref-1) * fact1 &
-                      + EXP_v   (kref)   * fact2
-          qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
-                      + EXP_qv  (kref)   * fact2
-
-       endif
+             pott(k,i,j) = EXP_pott(kref-1) * fact1 &
+                         + EXP_pott(kref)   * fact2
+             velx(k,i,j) = EXP_u   (kref-1) * fact1 &
+                         + EXP_u   (kref)   * fact2
+             vely(k,i,j) = EXP_v   (kref-1) * fact1 &
+                         + EXP_v   (kref)   * fact2
+             qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
+                         + EXP_qv  (kref)   * fact2
+          endif
+       enddo
+    enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
+                         temp    (:,:,:), & ! [OUT]
+                         pres    (:,:,:), & ! [OUT]
+                         pott    (:,:,:), &
+                         qv      (:,:,:), &
+                         qc      (:,:,:), &
+                         temp_sfc(:,:,:), & ! [OUT]
+                         pres_sfc(:,:,:), &
+                         pott_sfc(:,:,:), &
+                         qv_sfc  (:,:,:), &
+                         qc_sfc  (:,:,:)  )
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
-       MOMX(k,i,j) = velx(k,i,j) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j) = vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
        ! make warm bubble
@@ -1157,8 +1208,8 @@ contains
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
-       if ( dist <= 1.D0 ) then
-          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5D0*PI*sqrt(dist) )**2
+       if ( dist <= 1.0_RP ) then
+          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5_RP*PI*sqrt(dist) )**2
        endif
 
     enddo
@@ -1182,17 +1233,17 @@ contains
     integer, parameter :: EXP_klim = 100
     integer            :: EXP_kmax
 
-    real(8) :: SFC_THETA          ! surface potential temperature [K]
-    real(8) :: SFC_PRES           ! surface pressure [Pa]
-    real(8) :: SFC_QV             ! surface watervapor [g/kg]
+    real(RP) :: SFC_THETA          ! surface potential temperature [K]
+    real(RP) :: SFC_PRES           ! surface pressure [Pa]
+    real(RP) :: SFC_QV             ! surface watervapor [g/kg]
 
-    real(8) :: EXP_z   (EXP_klim) ! height      [m]
-    real(8) :: EXP_pott(EXP_klim) ! potential temperature [K]
-    real(8) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
-    real(8) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
-    real(8) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
+    real(RP) :: EXP_z   (EXP_klim) ! height      [m]
+    real(RP) :: EXP_pott(EXP_klim) ! potential temperature [K]
+    real(RP) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
+    real(RP) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
+    real(RP) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
 
-    real(8) :: fact1, fact2
+    real(RP) :: fact1, fact2
 
     integer :: ierr, fid
     integer :: k, i, j, iq, kref
@@ -1241,13 +1292,13 @@ contains
        EXP_kmax = k - 1
     close(fid)
 
-    EXP_z   (1) = 0.D0
+    EXP_z   (1) = 0.0_RP
     EXP_pott(1) = SFC_THETA
     EXP_qv  (1) = SFC_QV
     EXP_u   (1) = EXP_u(2)
     EXP_v   (1) = EXP_v(2)
     do k = 1, EXP_klim
-       EXP_qv(k) = EXP_qv(k) * 1.D-3 ![g/kg] -> [kg/kg]
+       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
     do j = JS, JE
@@ -1289,14 +1340,14 @@ contains
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = DENS(k,i,j) * velx(k,i,j)
        MOMY(k,i,j) = DENS(k,i,j) * vely(k,i,j)
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
     enddo
@@ -1313,25 +1364,25 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA               ! surface potential temperature [K]
-    real(8) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
     ! Environment state
-    real(8) :: ENV_L1_ZTOP    = 840.0D0  ! top    height of the layer1 (low  THETA) [m]
-    real(8) :: ENV_L3_ZBOTTOM = 840.0D0  ! bottom height of the layer3 (high THETA) [m]
-    real(8) :: ENV_L1_THETA   = 289.0D0  ! THETA in the layer1 (low  THETA) [K]
-    real(8) :: ENV_L3_THETA   = 297.5D0  ! THETA in the layer3 (high THETA) [K]
-    real(8) :: ENV_L1_QV      =   8.5D-3 ! Specific Humidity in the layer1 (low  THETA) [kg/kg]
-    real(8) :: ENV_L3_QV      =   1.0D-3 ! Specific Humidity in the layer3 (high THETA) [kg/kg]
+    real(RP) :: ENV_L1_ZTOP    = 840.0_RP  ! top    height of the layer1 (low  THETA) [m]
+    real(RP) :: ENV_L3_ZBOTTOM = 840.0_RP  ! bottom height of the layer3 (high THETA) [m]
+    real(RP) :: ENV_L1_THETA   = 289.0_RP  ! THETA in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_L3_THETA   = 297.5_RP  ! THETA in the layer3 (high THETA) [K]
+    real(RP) :: ENV_L1_QV      =   8.5E-3_RP ! Specific Humidity in the layer1 (low  THETA) [kg/kg]
+    real(RP) :: ENV_L3_QV      =   1.0E-3_RP ! Specific Humidity in the layer3 (high THETA) [kg/kg]
 
-    real(8) :: ENV_CL_ZBOTTOM = 600.0D0  ! bottom height of the cloud layer [m]
-    real(8) :: ENV_CL_ZTOP    = 840.0D0  ! top    height of the cloud layer [m]
-    real(8) :: ENV_CL_QC      =   0.5D-3 ! cloud water mixing ratio in the cloud layer   [kg/kg]
-    real(8) :: ENV_CL_NC      = 120.0D6  ! cloud number concentration in the cloud layer [1/m3]
+    real(RP) :: ENV_CL_ZBOTTOM = 600.0_RP  ! bottom height of the cloud layer [m]
+    real(RP) :: ENV_CL_ZTOP    = 840.0_RP  ! top    height of the cloud layer [m]
+    real(RP) :: ENV_CL_QC      =   0.5E-3_RP ! cloud water mixing ratio in the cloud layer   [kg/kg]
+    real(RP) :: ENV_CL_NC      = 120.0E6_RP  ! cloud number concentration in the cloud layer [1/m3]
 
-    real(8) :: ENV_U          =   7.0D0  ! velocity u in the layer1 (low  THETA) [K]
-    real(8) :: ENV_V          =  -5.5D0  ! velocity u in the layer3 (high THETA) [K]
+    real(RP) :: ENV_U          =   7.0_RP  ! velocity u in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_V          =  -5.5_RP  ! velocity u in the layer3 (high THETA) [K]
 
-    real(8) :: RANDOM_AMP     =   1.0D-2 ! ratio of random disturbance [0-1]
+    real(RP) :: RANDOM_AMP     =   1.0E-2_RP ! ratio of random disturbance [0-1]
 
     NAMELIST / PARAM_MKINIT_STRATOCUMULUS / &
        SFC_THETA,      &
@@ -1350,7 +1401,7 @@ contains
        ENV_V,          &
        RANDOM_AMP
 
-    real(8) :: fact, disturb
+    real(RP) :: fact, disturb
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -1378,28 +1429,28 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       disturb = ( 1.D0 + 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * RANDOM_AMP )
+       disturb = ( 1.0_RP + 2.0_RP * ( rndm(KS-1,i,j)-0.50 ) * RANDOM_AMP )
 
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA * disturb
        qv_sfc  (1,i,j) = ENV_L1_QV
 
        do k = KS, KE
-          disturb = ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP )
+          disturb = ( 1.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP )
 
           if ( CZ(k) <= ENV_L1_ZTOP ) then       ! Layer 1
              pott(k,i,j) = ENV_L1_THETA * disturb
              qv  (k,i,j) = ENV_L1_QV
           elseif( CZ(k) >= ENV_L3_ZBOTTOM ) then ! Layer 3
              pott(k,i,j) = ENV_L3_THETA * disturb &
-                         + ( CZ(k) - ENV_L3_ZBOTTOM )**(1.D0/3.D0) ! increase with height
+                         + ( CZ(k) - ENV_L3_ZBOTTOM )**(1.0_RP/3.0_RP) ! increase with height
              qv  (k,i,j) = ENV_L3_QV
           else                                   ! Layer 2
              fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
 
-             pott(k,i,j) = ( ENV_L1_THETA * ( 1.D0 - fact ) &
+             pott(k,i,j) = ( ENV_L1_THETA * ( 1.0_RP - fact ) &
                            + ENV_L3_THETA * (        fact ) ) * disturb
-             qv  (k,i,j) = ENV_L1_QV    * ( 1.D0 - fact ) &
+             qv  (k,i,j) = ENV_L1_QV    * ( 1.0_RP - fact ) &
                          + ENV_L3_QV    * (        fact )
           endif
        enddo
@@ -1413,7 +1464,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
     enddo
     enddo
@@ -1423,8 +1474,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMX(k,i,j) = ( ENV_U * ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( ENV_U * ( 1.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -1433,8 +1484,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       MOMY(k,i,j) = ( ENV_V * ( 1.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = ( ENV_V * ( 1.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * RANDOM_AMP ) ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
     enddo
@@ -1443,7 +1494,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QTRC(k,i,j,iq) = 0.D0
+       QTRC(k,i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
@@ -1473,21 +1524,21 @@ contains
   subroutine MKINIT_DYCOMS2_RF01
     implicit none
 
-    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(8) :: qall(KA,IA,JA) ! QV+QC
-    real(8) :: fact
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: qall(KA,IA,JA) ! QV+QC
+    real(RP) :: fact
 
-    real(8) :: pi2 
-    real(8) :: sint
+    real(RP) :: pi2 
+    real(RP) :: sint
 
     integer :: ierr
     integer :: k, i, j, iq
-    real(8) :: PERTURB_AMP = 0.D0
+    real(RP) :: PERTURB_AMP = 0.0_RP
     integer :: RANDOM_LIMIT = 5
     integer :: RANDOM_FLAG = 0  !- 0 -> no perturbation
                                 !- 1 -> petrurbation for pt
                                 !- 2 -> perturbation for u, v, w
-    real(8) :: dummy(KA,IA,JA)
+    real(RP) :: dummy(KA,IA,JA)
 
     NAMELIST / PARAM_MKINIT_RF01 / &
        PERTURB_AMP,     &
@@ -1496,7 +1547,7 @@ contains
     !---------------------------------------------------------------------------
 
     dummy(:,:,:) = 0.d0
-    pi2 = atan(1.0D0) * 2.0D0 ! pi/2
+    pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
 
@@ -1515,50 +1566,50 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
-       pott_sfc(1,i,j) = 289.0D0 !+ 2.D0 * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
-       qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
-       qc_sfc  (1,i,j) = 0.0D0
+       pres_sfc(1,i,j) = 1017.8E2_RP ! [Pa]
+       pott_sfc(1,i,j) = 289.0_RP !+ 2.0_RP * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
-          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0
-          else if ( CZ(k) <= 860.D0 ) then
-             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + &
-                           (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
+          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 289.0_RP
+          else if ( CZ(k) <= 860.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 289.0_RP * (1.0_RP-sint)*0.5_RP + &
+                           (297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP)) * (1.0_RP+sint)*0.5_RP
           else
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) ! [K]
           endif
 
-          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
-             qall(k,i,j) = 9.0D-3 ! [kg/kg]
-          elseif ( CZ(k) <= 860.D0 ) then ! boundary
-             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-             qall(k,i,j) = 9.0D-3 * (1.D0-sint)*0.5D0 + 1.5D-3 * (1.D0+sint)*0.5D0
-          elseif( CZ(k) <= 5000.D0 ) then
-             qall(k,i,j) = 1.5D-3 ! [kg/kg]
+          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
+             qall(k,i,j) = 9.0E-3_RP ! [kg/kg]
+          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+             qall(k,i,j) = 9.0E-3_RP * (1.0_RP-sint)*0.5_RP + 1.5E-3_RP * (1.0_RP+sint)*0.5_RP
+          elseif( CZ(k) <= 5000.0_RP ) then
+             qall(k,i,j) = 1.5E-3_RP ! [kg/kg]
           else
-             qall(k,i,j) = 0.0D0
+             qall(k,i,j) = 0.0_RP
           endif
 
-          if ( CZ(k) <=  600.D0 ) then
-             qc(k,i,j) = 0.D0
-          elseif ( CZ(k) < 820.D0 ) then ! in the cloud
-             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
-             qc(k,i,j) = 0.45D-3 * fact
-          elseif ( CZ(k) <= 860.D0 ) then ! boundary
-             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-             fact = ( CZ(k)-600.D0 ) / ( 840.D0-600.D0 )
-             qc(k,i,j) = 0.45D-3 * fact * (1.D0-sint)*0.5D0 ! + 0.D0 * (1.D0+sint)*0.5D0
+          if ( CZ(k) <=  600.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif ( CZ(k) < 820.0_RP ) then ! in the cloud
+             fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+             qc(k,i,j) = 0.45E-3_RP * fact
+          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+             fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+             qc(k,i,j) = 0.45E-3_RP * fact * (1.0_RP-sint)*0.5_RP ! + 0.0_RP * (1.0_RP+sint)*0.5_RP
           else
-             qc(k,i,j) = 0.D0
+             qc(k,i,j) = 0.0_RP
           endif
           qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
        enddo
@@ -1600,10 +1651,10 @@ contains
     do i = IS, IE
     do k = KS, KE
      if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMZ(k,i,j) = ( 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                     * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+       MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                     * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
      endif
      if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
        RHOT(k,i,j) = ( pott(k,i,j)+2.d0*( rndm(k,i,j)-0.5d0 )*PERTURB_AMP ) * DENS(k,i,j)
@@ -1619,10 +1670,10 @@ contains
     do i = IS, IE
     do k = KS, KE
      if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
-       MOMX(k,i,j) = velx(k,i,j) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -1633,10 +1684,10 @@ contains
     do i = IS, IE
     do k = KS, KE
      if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
-       MOMY(k,i,j) = vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -1646,7 +1697,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QTRC(k,i,j,iq) = 0.D0
+       QTRC(k,i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
@@ -1661,8 +1712,8 @@ contains
         QTRC(k,i,j,I_QV) = qv(k,i,j)
         QTRC(k,i,j,I_QC) = qc(k,i,j)
 
-        if ( qc(k,i,j) > 0.D0 ) then
-           QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
+        if ( qc(k,i,j) > 0.0_RP ) then
+           QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
         endif
 
      enddo
@@ -1689,16 +1740,16 @@ contains
   subroutine MKINIT_DYCOMS2_RF02
     implicit none
 
-    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(8) :: qall(KA,IA,JA) ! QV+QC
-    real(8) :: qc  (KA,IA,JA) ! QC
-    real(8) :: fact !, disturb
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: qall(KA,IA,JA) ! QV+QC
+    real(RP) :: qc  (KA,IA,JA) ! QC
+    real(RP) :: fact !, disturb
    
-    real(8) :: pi2, sint
+    real(RP) :: pi2, sint
 
     integer :: ierr
     integer :: k, i, j, iq
-    real(8) :: PERTURB_AMP = 0.d0
+    real(RP) :: PERTURB_AMP = 0.d0
     integer :: RANDOM_LIMIT = 5
     integer :: RANDOM_FLAG = 0  !0 -> no perturbation
                                 !1 -> perturbation for PT  
@@ -1711,7 +1762,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    pi2 = atan(1.0D0) * 2.0D0  ! pi/2
+    pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
 
@@ -1730,35 +1781,35 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       pres_sfc(1,i,j) = 1017.8D2   ! [Pa]
+       pres_sfc(1,i,j) = 1017.8_RP   ! [Pa]
        pott_sfc(1,i,j) = 288.3      ! [K]
-       qv_sfc  (1,i,j) = 9.45D-3
+       qv_sfc  (1,i,j) = 9.45E-3_RP
 
        do k = KS, KE
-          velx(k,i,j) =  3.D0 + 4.3 * CZ(k)*1.D-3
-          vely(k,i,j) = -9.D0 + 5.6 * CZ(k)*1.D-3
+          velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
+          vely(k,i,j) = -9.0_RP + 5.6 * CZ(k)*1.E-3_RP
 
-          if ( CZ(k) < 780.D0 ) then ! below initial cloud top
-             potl(k,i,j) = 288.3D0 ! [K]
-             qall(k,i,j) = 9.45D-3 ! [kg/kg]
-          else if ( CZ(k) <= 835.D0 ) then
-             sint = sin( pi2 * (CZ(k) - 795.D0)/40.D0 )
-             potl(k,i,j) = 288.3D0 * (1.D0-sint)*0.5D0 + &
-                   ( 295.D0+sign(abs(CZ(k)-795.D0)**(1.D0/3.D0),CZ(k)-795.D0) ) * (1.D0+sint)*0.5D0 
-             qall(k,i,j) = 9.45D-3 * (1.D0-sint)*0.5D0 + &
-                   ( 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ) * (1.D0+sint)*0.5D0
+          if ( CZ(k) < 780.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 288.3_RP ! [K]
+             qall(k,i,j) = 9.45E-3_RP ! [kg/kg]
+          else if ( CZ(k) <= 835.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 795.0_RP)/40.0_RP )
+             potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
+                   ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP 
+             qall(k,i,j) = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
+                   ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
-             potl(k,i,j) = 295.D0 + ( CZ(k)-795.D0 )**(1.D0/3.D0)
-             qall(k,i,j) = 5.D-3 - 3.D-3 * ( 1.D0 - exp( (795.D0-CZ(k))/500.D0 ) ) ! [kg/kg]
+             potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+             qall(k,i,j) = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
 
-          if (       CZ(k) >= 400.D0 &
-               .AND. CZ(k) <= 795.D0 ) then ! in the cloud
-             fact = ( CZ(k)-400.D0 ) / ( 795.D0-400.D0 )
+          if (       CZ(k) >= 400.0_RP &
+               .AND. CZ(k) <= 795.0_RP ) then ! in the cloud
+             fact = ( CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
 
-             qc(k,i,j) = 0.65D-3 * fact
+             qc(k,i,j) = 0.65E-3_RP * fact
           else
-             qc(k,i,j) = 0.D0
+             qc(k,i,j) = 0.0_RP
           endif
           qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
 
@@ -1786,13 +1837,13 @@ contains
     do i = IS, IE
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.D0 + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
      endif
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -1806,10 +1857,10 @@ contains
     do i = IS, IE
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
-       MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -1820,10 +1871,10 @@ contains
     do i = IS, IE
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
-       MOMY(k,i,j) = vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -1833,7 +1884,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QTRC(k,i,j,iq) = 0.D0
+       QTRC(k,i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
@@ -1846,8 +1897,8 @@ contains
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        QTRC(k,i,j,I_QC) = qc(k,i,j)
 
-       if ( qc(k,i,j) > 0.D0 ) then
-          QTRC(k,i,j,I_NC) = 55.D0 / DENS(k,i,j)
+       if ( qc(k,i,j) > 0.0_RP ) then
+          QTRC(k,i,j,I_NC) = 55.0_RP / DENS(k,i,j)
        endif
 
     enddo
@@ -1862,27 +1913,27 @@ contains
   subroutine MKINIT_DYCOMS2_RF01_hbinw
     implicit none
 
-    real(8) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(8) :: qall(KA,IA,JA) ! QV+QC
-    real(8) :: qc  (KA,IA,JA) ! QC
-    real(8) :: fact
-    real(8) :: sint, pi2
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+    real(RP) :: qall(KA,IA,JA) ! QV+QC
+    real(RP) :: qc  (KA,IA,JA) ! QC
+    real(RP) :: fact
+    real(RP) :: sint, pi2
 
     integer :: ierr
     integer :: k, i, j, iq
-    real(8) :: gan, xasta, xaend, dxaer
-    real(8), allocatable :: xabnd( : ), xactr( : )
-    real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+    real(RP) :: gan, xasta, xaend, dxaer
+    real(RP), allocatable :: xabnd( : ), xactr( : )
+    real(RP), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
 
-    real(8) :: F0_AERO      =  1.D+7 ! 
-    real(8) :: R0_AERO      =  1.D-7 !
-    real(8) :: R_MAX        =  1.D-08 
-    real(8) :: R_MIN        =  1.D-08 
-    real(8) :: A_ALPHA      =  3.D0
+    real(RP) :: F0_AERO      =  1.E+7_RP ! 
+    real(RP) :: R0_AERO      =  1.E-7_RP !
+    real(RP) :: R_MAX        =  1.E-08_RP
+    real(RP) :: R_MIN        =  1.E-08_RP
+    real(RP) :: A_ALPHA      =  3.0_RP
     integer :: nccn_i       =  20
     integer :: nbin_i       =  33
 
-    real(8) :: PERTURB_AMP = 0.D0
+    real(RP) :: PERTURB_AMP = 0.0_RP
     integer :: RANDOM_LIMIT = 5
     integer :: RANDOM_FLAG = 0  !0 -> no perturbation
                                 !1 -> perturbation for PT  
@@ -1903,7 +1954,7 @@ contains
        RANDOM_FLAG
 
     !---------------------------------------------------------------------------
-    pi2 = atan(1.0D0) * 2.0D0 ! pi/2
+    pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01_hbinw)]/Categ[MKINIT]'
@@ -1932,46 +1983,46 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       pres_sfc(1,i,j) = 1017.8D2 ! [Pa]
-       pott_sfc(1,i,j) = 289.0D0  ! [K]
-       qv_sfc  (1,i,j) = 9.0D-3   ! [kg/kg]
+       pres_sfc(1,i,j) = 1017.8_RP ! [Pa]
+       pott_sfc(1,i,j) = 289.0_RP  ! [K]
+       qv_sfc  (1,i,j) = 9.0E-3_RP ! [kg/kg]
 
        do k = KS, KE
-          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0
-          else if ( CZ(k) <= 860.D0 ) then
-             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 289.0D0 * (1.D0-sint)*0.5D0 + &
-                           (297.5D0+sign(abs(CZ(k)-840.D0)**(1.D0/3.D0),CZ(k)-840.D0)) * (1.D0+sint)*0.5D0
+          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 289.0_RP
+          else if ( CZ(k) <= 860.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 289.0_RP * (1.0_RP-sint)*0.5_RP + &
+                           (297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP)) * (1.0_RP+sint)*0.5_RP
           else
-             velx(k,i,j) =   7.0D0
-             vely(k,i,j) =  -5.5D0
-             potl(k,i,j) = 297.5D0 + ( CZ(k)-840.D0 )**(1.D0/3.D0) ! [K]
+             velx(k,i,j) =   7.0_RP
+             vely(k,i,j) =  -5.5_RP
+             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) ! [K]
           endif
 
-          if ( CZ(k) < 820.D0 ) then ! below initial cloud top
-             qall(k,i,j) = 9.0D-3 ! [kg/kg]
-          elseif ( CZ(k) <= 860.D0 ) then ! boundary
-             sint = sin( pi2 * (CZ(k) - 840.D0)/20.D0 )
-             qall(k,i,j) = 9.0D-3 * (1.D0-sint)*0.5D0 + 1.5D-3 * (1.D0+sint)*0.5D0
-          elseif( CZ(k) <= 5000.D0 ) then
-             qall(k,i,j) = 1.5D-3 ! [kg/kg]
+          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
+             qall(k,i,j) = 9.0E-3_RP ! [kg/kg]
+          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+             qall(k,i,j) = 9.0E-3_RP * (1.0_RP-sint)*0.5_RP + 1.5E-3_RP * (1.0_RP+sint)*0.5_RP
+          elseif( CZ(k) <= 5000.0_RP ) then
+             qall(k,i,j) = 1.5E-3_RP ! [kg/kg]
           else
-             qall(k,i,j) = 0.0D0
+             qall(k,i,j) = 0.0_RP
           endif
 
-          if ( CZ(k) <=  600.D0 ) then
-             qc(k,i,j) = 0.D0
-          elseif ( CZ(k) < 820.D0 ) then ! in the cloud
-             qc(k,i,j) = 0.D0  !-- super saturated air for bin microphysics
-          elseif ( CZ(k) <= 860.D0 ) then ! boundary
-             qc(k,i,j) = 0.D0  !-- super saturated air for bin microphysics
+          if ( CZ(k) <=  600.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif ( CZ(k) < 820.0_RP ) then ! in the cloud
+             qc(k,i,j) = 0.0_RP  !-- super saturated air for bin microphysics
+          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
+             qc(k,i,j) = 0.0_RP  !-- super saturated air for bin microphysics
           else
-             qc(k,i,j) = 0.D0
+             qc(k,i,j) = 0.0_RP
           endif
           qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
        enddo
@@ -2013,13 +2064,13 @@ contains
     do i = IS, IE
     do k = KS, KE
       if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
-                     * 0.5D0 * ( DENS(k+1,i,j) + DENS(k,i,j) )
+       MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                     * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
       else
-       MOMZ(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
       end if
       if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j)+2.D0*( rndm(k,i,j)-0.5D0 )*PERTURB_AMP )* DENS(k,i,j)
+       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP )* DENS(k,i,j)
       else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
      endif
@@ -2032,10 +2083,10 @@ contains
     do i = IS, IE
     do k = KS, KE
       if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
-                     * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) ) 
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                     * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) ) 
       else
-       MOMX(k,i,j) = velx(k,i,j) * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -2046,10 +2097,10 @@ contains
     do i = IS, IE
     do k = KS, KE
       if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.D0 * ( rndm(k,i,j)-0.5D0 ) * PERTURB_AMP ) &
-                     * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) ) 
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                     * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) ) 
       else
-       MOMY(k,i,j) =  vely(k,i,j) * 0.5D0 * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMY(k,i,j) =  vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      endif
     enddo
     enddo
@@ -2059,7 +2110,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QTRC(k,i,j,iq) = 0.D0
+       QTRC(k,i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
@@ -2074,8 +2125,8 @@ contains
         QTRC(k,i,j,I_QV) = qv(k,i,j)
         QTRC(k,i,j,I_QC) = qc(k,i,j)
 
-        if ( qc(k,i,j) > 0.D0 ) then
-           QTRC(k,i,j,I_NC) = 120.D6 / DENS(k,i,j) ! [number/m3] / [kg/m3]
+        if ( qc(k,i,j) > 0.0_RP ) then
+           QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
         endif
 
      enddo
@@ -2090,16 +2141,16 @@ contains
 
       if ( QA >= 35 .and. nccn_i /= 0 ) then
        do iq = 2, QA-nccn_i
-         QTRC(k,i,j,iq) = 0.D0
+         QTRC(k,i,j,iq) = 0.0_RP
        enddo
-       xasta = log( rhoa*4.D0/3.D0*pi * ( R_MIN )**3 )
-       xaend = log( rhoa*4.D0/3.D0*pi * ( R_MAX )**3 )
+       xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+       xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
        dxaer = ( xaend-xasta )/nccn_i
        do iq = 1, nccn_i+1
         xabnd( iq ) = xasta + dxaer*( iq-1 )
        end do
        do iq = 1, nccn_i
-        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5D0
+        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
        end do
        do iq = QA-nccn_i+1, QA
         gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
@@ -2122,37 +2173,37 @@ contains
     implicit none
 
     ! Surface state
-    real(8) :: SFC_THETA              ! surface potential temperature [K]
-    real(8) :: SFC_PRES               ! surface pressure [Pa]
-    real(8) :: SFC_RH       =  80.D0  ! surface relative humidity [%]
+    real(RP) :: SFC_THETA              ! surface potential temperature [K]
+    real(RP) :: SFC_PRES               ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  80.0_RP  ! surface relative humidity [%]
     ! Environment state
-    real(8) :: ENV_RH       =  80.D0  ! Relative Humidity of environment [%]
-    real(8) :: SFC_U        =  0.D0   ! of environment [%]
-    real(8) :: ENV_L1_U     =  0.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L3_U     =  0.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L2_U     =  0.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L1_RH    =  80.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L2_RH    =  80.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L3_RH    =  80.D0  ! Relative Humidity of environment [%]
-    real(8) :: ENV_L1_ZTOP  =   1.D3  ! top height of the layer1 (constant THETA)       [m]
-    real(8) :: ENV_L2_ZTOP  =  12.D3  ! top height of the layer2 (small THETA gradient) [m]
-    real(8) :: ENV_L3_ZTOP  =  12.D3  ! top height of the layer2 (small THETA gradient) [m]
-    real(8) :: ENV_L2_TLAPS =   4.D-3 ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
-    real(8) :: ENV_L3_TLAPS =   3.D-2 ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    real(RP) :: ENV_RH       =  80.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: SFC_U        =  0.0_RP   ! of environment [%]
+    real(RP) :: ENV_L1_U     =  0.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L3_U     =  0.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L2_U     =  0.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_RH    =  80.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L2_RH    =  80.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L3_RH    =  80.0_RP  ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_ZTOP  =   1.E3_RP  ! top height of the layer1 (constant THETA)       [m]
+    real(RP) :: ENV_L2_ZTOP  =  12.E3_RP  ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L3_ZTOP  =  12.E3_RP  ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L2_TLAPS =   4.E-3_RP ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(RP) :: ENV_L3_TLAPS =   3.E-2_RP ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
     ! Bubble
-    real(8) :: BBL_THETA    =  1.D0 ! extremum of temperature in bubble [K]
-    real(8) :: BBL_CZ       =  2.D3 ! center location [m]: z
-    real(8) :: BBL_CX       =  2.D3 ! center location [m]: x
-    real(8) :: BBL_CY       =  2.D3 ! center location [m]: y
-    real(8) :: BBL_RZ       =  2.D3 ! bubble radius   [m]: z
-    real(8) :: BBL_RX       =  2.D3 ! bubble radius   [m]: x
-    real(8) :: BBL_RY       =  2.D3 ! bubble radius   [m]: y
+    real(RP) :: BBL_THETA    =  1.0_RP ! extremum of temperature in bubble [K]
+    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
 
-    real(8) :: F0_AERO      =  1.D+7  ! number concentration of aerosol whose radii is R0_aero [#/m^3]
-    real(8) :: R0_AERO      =  1.D-7  ! center radius of Jounge distribution [m]
-    real(8) :: R_MAX        =  1.D-06 ! max radius of aerosol [m]
-    real(8) :: R_MIN        =  1.D-08 ! min radius of aerosol [m]
-    real(8) :: A_ALPHA      =  3.D0 ! index of power low distribution of aerosol (=3 -> Jounge distribution)
+    real(RP) :: F0_AERO      =  1.E+7_RP  ! number concentration of aerosol whose radii is R0_aero [#/m^3]
+    real(RP) :: R0_AERO      =  1.E-7_RP  ! center radius of Jounge distribution [m]
+    real(RP) :: R_MAX        =  1.E-06_RP ! max radius of aerosol [m]
+    real(RP) :: R_MIN        =  1.E-08_RP ! min radius of aerosol [m]
+    real(RP) :: A_ALPHA      =  3.0_RP ! index of power low distribution of aerosol (=3 -> Jounge distribution)
     integer :: nbin_i       =  33   ! number of hydrometeors bin
     integer :: nccn_i       =  20   ! number of aerosol bin
 
@@ -2188,13 +2239,13 @@ contains
        nccn_i,       &
        nbin_i
 
-    real(8) :: dist, ENV_U
+    real(RP) :: dist, ENV_U
 
     integer :: ierr
     integer :: k, i, j, iq
-    real(8) :: gan, xasta, xaend, dxaer
-    real(8), allocatable :: xabnd( : ), xactr( : )
-    real(8), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+    real(RP) :: gan, xasta, xaend, dxaer
+    real(RP), allocatable :: xabnd( : ), xactr( : )
+    real(RP), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2223,7 +2274,7 @@ contains
     do i = IS, IE
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.D0
+       qv_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           if( k == KS ) then
@@ -2231,21 +2282,21 @@ contains
           elseif ( CZ(k) < ENV_L2_ZTOP ) then    ! Layer 1
              pott(k,i,j) = SFC_THETA + ENV_L2_TLAPS * ( CZ(k) )
           else 
-             pott(k,i,j) =  309.02899D0 + ENV_L3_TLAPS * ( CZ(k)-ENV_L2_ZTOP )
+             pott(k,i,j) =  309.02899_RP + ENV_L3_TLAPS * ( CZ(k)-ENV_L2_ZTOP )
           endif
 
          ! make warm bubble
           dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
-          if( dist < 1.D0 ) then
+          if( dist < 1.0_RP ) then
            if( dist < ( 500.d0/600.d0 )**2 ) then
             pott(k,i,j) = pott(k,i,j) + BBL_THETA 
            else if ( dist >= ( 500.d0/600.d0 )**2 .and. dist < 1.d0 ) then
             pott(k,i,j) = pott(k,i,j) + BBL_THETA-BBL_THETA/(1.d0-(500.d0/600.d0)**2)*(dist-(500.d0/600.d0)**2)
            end if 
           endif
-          qv  (k,i,j) = 0.D0
+          qv  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
@@ -2260,23 +2311,23 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.D-2 * qsat_sfc(1,i,j)
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
 
        do k = KS, KE
        ! make warm bubble
         dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
              + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
              + ( (CY(j)-BBL_CY)/BBL_RY )**2
-         if( dist < 1.D0 ) then
+         if( dist < 1.0_RP ) then
              ENV_RH = ENV_L3_RH 
-             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+             qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
          else                                ! Layer 3
           if ( CZ(k) <= ENV_L2_ZTOP ) then    ! Layer 1
              ENV_RH = SFC_RH + CZ(k)*( ENV_L2_RH-SFC_RH )/( ENV_L2_ZTOP )
-             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+             qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
           else                                ! Layer 3
              ENV_RH = ENV_L3_RH 
-             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+             qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
           endif
          endif
        enddo
@@ -2291,43 +2342,43 @@ contains
     do i = IS, IE
     do k = KS, KE
 
-       MOMZ(k,i,j) = 0.D0
-!       MOMX(k,i,j) = 0.D0
-       MOMY(k,i,j) = 0.D0
+       MOMZ(k,i,j) = 0.0_RP
+!       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
 !---- SUzuki Ex.
        if( CZ(k) <= ENV_L3_ZTOP ) then
         ENV_U = SFC_U + CZ(k)*( ENV_L3_U-ENV_L1_U )/( ENV_L3_ZTOP-ENV_L1_ZTOP )
        else
         ENV_U = ENV_L3_U
        end if
-       MOMX(k,i,j) = ENV_U * 0.5D0 * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMX(k,i,j) = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
 
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
        if ( QA >= 35 .and. nccn_i /= 0 ) then
         do iq = 2, QA-nccn_i+1
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
         enddo
-        xasta = log( rhoa*4.D0/3.D0*pi * ( R_MIN )**3 )
-        xaend = log( rhoa*4.D0/3.D0*pi * ( R_MAX )**3 )
+        xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+        xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
         dxaer = ( xaend-xasta )/nccn_i
         do iq = 1, nccn_i+1
          xabnd( iq ) = xasta + dxaer*( iq-1 )
         end do
         do iq = 1, nccn_i
-         xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5D0
+         xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
         end do
         do iq = QA-nccn_i+1, QA
          gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
          QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
         enddo
         do iq = 2, QA-nccn_i
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
         enddo
        else 
         do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.D0
+          QTRC(k,i,j,iq) = 0.0_RP
         enddo
        end if
 
@@ -2336,10 +2387,10 @@ contains
 !            + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
 !            + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
-!       if ( dist <= 1.D0 ) then
-!          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5D0*PI*sqrt(dist) )**2
+!       if ( dist <= 1.0_RP ) then
+!          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5_RP*PI*sqrt(dist) )**2
 !             ENV_RH = ENV_L3_RH 
-!             qv(k,i,j) = ENV_RH * 1.D-2 * qsat(k,i,j)
+!             qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,i,j)
 !       endif
 
     enddo
@@ -2350,5 +2401,20 @@ contains
 
     return
   end subroutine MKINIT_warmbubble_hbinw
+
+  function faero( f0,r0,x,alpha )
+
+  real(RP), intent(in) ::  x, f0, r0, alpha
+  real(RP) :: faero
+  real(RP) :: rad
+  real(RP), parameter :: pi = 3.141592_RP, rhoa = 2.25E+03_RP
+
+  rad = ( exp( x )*3.0_RP/4.0_RP/pi/rhoa )**( 1.0_RP/3.0_RP )
+
+  faero = f0*( rad/r0 )**( -alpha )
+
+  return
+
+  end function faero
 
 end module mod_mkinit

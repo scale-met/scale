@@ -29,6 +29,7 @@ module mod_atmos_hydrostatic
   !++ Public procedure
   !
   public :: ATMOS_hydro_buildrho
+  public :: ATMOS_hydro_buildrho_1d
 
   !-----------------------------------------------------------------------------
   !
@@ -49,7 +50,7 @@ module mod_atmos_hydrostatic
   !
   !++ Private parameters & variables
   !
-  logical  :: use_rapserate = .true.
+  logical :: HYDROSTATIC_userapserate = .true.
   !-----------------------------------------------------------------------------
 contains
 
@@ -62,7 +63,7 @@ contains
       pres,     &
       pott,     &
       qv,       &
-      qc, &
+      qc,       &
       temp_sfc, &
       pres_sfc, &
       pott_sfc, &
@@ -94,6 +95,7 @@ contains
     real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
     real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
     real(RP), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
+
     real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
     real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
     real(RP), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
@@ -112,26 +114,26 @@ contains
 
     integer :: k, i, j, ite, ierr
 
-    NAMELIST / PARAM_ATMOS_RAPSE / &
-       use_rapserate
+    NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
+       HYDROSTATIC_userapserate
 
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDRO/Categ[HYDRO]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC]/Categ[ATMOS]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_RAPSE,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_HYDROSTATIC,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_RAPSE. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_MPIstop
     endif
 
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_RAPSE)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
 
     ! make density at surface
     do j = JS, JE
@@ -158,7 +160,7 @@ contains
     ! make density at lowermost cell center
     k = KS
 
-    if ( use_rapserate ) then
+    if ( HYDROSTATIC_userapserate ) then
 
        do j = JS, JE
        do i = IS, IE
@@ -272,5 +274,175 @@ contains
 
     return
   end subroutine ATMOS_hydro_buildrho
+
+  !-----------------------------------------------------------------------------
+  !> Buildup density from surface
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_hydro_buildrho_1d( &
+      dens,     &
+      temp,     &
+      pres,     &
+      pott,     &
+      qv,       &
+      qc,       &
+      temp_sfc, &
+      pres_sfc, &
+      pott_sfc, &
+      qc_sfc,&
+      qv_sfc    )
+    use mod_const, only : &
+       GRAV    => CONST_GRAV,    &
+       Rdry    => CONST_Rdry,    &
+       Rvap    => CONST_Rvap,    &
+       CPovR   => CONST_CPovR,   &
+       RovCV   => CONST_RovCV,   &
+       CVovCP  => CONST_CVovCP,  &
+       CPovCV  => CONST_CPovCV,  &
+       LASPdry => CONST_LASPdry, &
+       P00     => CONST_PRE00
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use mod_grid, only : &
+       CZ  => GRID_CZ, &
+       FDZ => GRID_FDZ
+    use mod_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(RP), intent(out) :: dens(KA) !< density [kg/m3]
+    real(RP), intent(out) :: temp(KA) !< temperature [K]
+    real(RP), intent(out) :: pres(KA) !< pressure [Pa]
+    real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< water vapor [kg/kg]
+
+    real(RP), intent(out) :: temp_sfc !< surface temperature [K]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure [Pa]
+    real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
+
+    real(RP) :: Rmoist_sfc
+    real(RP) :: dens_sfc
+
+    real(RP) :: Rmoist(KA)
+
+    real(RP) :: dens_s, dhyd, dgrd
+
+    real(RP), parameter :: criteria = 1.0E-15_RP
+    integer, parameter :: itelim = 100
+
+    integer :: k, ite, ierr
+
+    NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
+       HYDROSTATIC_userapserate
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC_1d]/Categ[ATMOS]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_HYDROSTATIC,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
+       call PRC_MPIstop
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
+
+    ! make density at surface
+    Rmoist_sfc = Rdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + Rvap * qv_sfc
+
+    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**CVovCP
+    temp_sfc = pres_sfc / ( dens_sfc * Rmoist_sfc )
+
+    do k = KS, KE
+       Rmoist(k) = Rdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + Rvap * qv(k)
+    enddo
+
+    ! make density at lowermost cell center
+    k = KS
+
+    if ( HYDROSTATIC_userapserate ) then
+
+       temp(k) = pott_sfc - LASPdry * CZ(k) ! use dry lapse rate
+       pres(k) = P00 * ( temp(k)/pott(k) )**CPovR
+       dens(k) = P00 / Rmoist(k) / pott(k) * ( pres(k)/P00 )**CVovCP
+
+    else ! use itelation
+
+       dens_s      = 0.0_RP
+       dens(k) = dens_sfc ! first guess
+
+       do ite = 1, itelim
+          if( abs(dens(k)-dens_s) <= criteria ) exit
+
+          dens_s = dens(k)
+
+          dhyd = + ( P00 * ( dens_sfc * Rmoist_sfc * pott_sfc / P00 )**CPovCV &
+                   - P00 * ( dens_s   * Rmoist(k)  * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                                 ! rho*g
+
+          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV / CZ(k) &
+                 * CPovCV * dens_s**RovCV                                      &
+                 - 0.5_RP * GRAV
+
+          dens(k) = dens_s - dhyd/dgrd
+
+       enddo
+
+       if ( ite > itelim ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd
+       endif
+
+    endif
+
+    ! make density
+    do k = KS+1, KE
+
+       dens_s      = 0.0_RP
+       dens(k) = dens(k-1)
+
+       do ite = 1, itelim
+          if( abs(dens(k)-dens_s) <= criteria ) exit
+
+          dens_s = dens(k)
+
+          dhyd = + ( P00 * ( dens(k-1) * Rmoist(k-1) * pott(k-1) / P00 )**CPovCV &
+                   - P00 * ( dens_s    * Rmoist(k  ) * pott(k  ) / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                                ! rho*g
+
+          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV / FDZ(k-1) &
+                 * CPovCV * dens_s**RovCV                                         &
+                 - 0.5_RP * GRAV
+
+          dens(k) = dens_s - dhyd/dgrd
+
+       enddo
+
+       if ( ite > itelim ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
+       endif
+    enddo
+
+    do k = KS, KE
+       pres(k) = P00 * ( dens(k) * Rmoist(k) * pott(k) / P00 )**CPovCV
+       temp(k) = pres(k) / ( dens(k) * Rmoist(k) )
+    enddo
+
+    ! fill KHALO
+    dens(   1:KS-1) = dens(KS)
+    dens(KE+1:KA  ) = dens(KE)
+
+    return
+  end subroutine ATMOS_hydro_buildrho_1d
 
 end module mod_atmos_hydrostatic

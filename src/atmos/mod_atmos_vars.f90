@@ -46,30 +46,31 @@ module mod_atmos_vars
   !
   include 'inc_index.h'
   include 'inc_tracer.h'
+  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: DENS(KA,IA,JA)    ! Density    [kg/m3]
-  real(8), public, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
-  real(8), public, save :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
-  real(8), public, save :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
-  real(8), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-  real(8), public, save :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
+  real(RP), public, save :: DENS(KA,IA,JA)    ! Density    [kg/m3]
+  real(RP), public, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
+  real(RP), public, save :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
+  real(RP), public, save :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
+  real(RP), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+  real(RP), public, save :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
   ! diagnostic variables, defined at the cell center
-  real(8), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
-  real(8), public, save :: VELX(KA,IA,JA)    ! velocity u [m/s]
-  real(8), public, save :: VELY(KA,IA,JA)    ! velocity v [m/s]
-  real(8), public, save :: POTT(KA,IA,JA)    ! potential temperature [K]
-  real(8), public, save :: QDRY(KA,IA,JA)    ! dry air mixig ratio [kg/kg]
-  real(8), public, save :: PRES(KA,IA,JA)    ! pressure [Pa]
-  real(8), public, save :: TEMP(KA,IA,JA)    ! temperature [K]
-  real(8), public, save :: ENGT(KA,IA,JA)    ! total     energy [J/m3]
-  real(8), public, save :: ENGP(KA,IA,JA)    ! potential energy [J/m3]
-  real(8), public, save :: ENGK(KA,IA,JA)    ! kinetic   energy [J/m3]
-  real(8), public, save :: ENGI(KA,IA,JA)    ! internal  energy [J/m3]
+  real(RP), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
+  real(RP), public, save :: VELX(KA,IA,JA)    ! velocity u [m/s]
+  real(RP), public, save :: VELY(KA,IA,JA)    ! velocity v [m/s]
+  real(RP), public, save :: POTT(KA,IA,JA)    ! potential temperature [K]
+  real(RP), public, save :: QDRY(KA,IA,JA)    ! dry air mixig ratio [kg/kg]
+  real(RP), public, save :: PRES(KA,IA,JA)    ! pressure [Pa]
+  real(RP), public, save :: TEMP(KA,IA,JA)    ! temperature [K]
+  real(RP), public, save :: ENGT(KA,IA,JA)    ! total     energy [J/m3]
+  real(RP), public, save :: ENGP(KA,IA,JA)    ! potential energy [J/m3]
+  real(RP), public, save :: ENGK(KA,IA,JA)    ! kinetic   energy [J/m3]
+  real(RP), public, save :: ENGI(KA,IA,JA)    ! internal  energy [J/m3]
 
   character(len=FIO_HSHORT), public, save :: AP_NAME(5)
   character(len=FIO_HMID),   public, save :: AP_DESC(5)
@@ -118,7 +119,7 @@ module mod_atmos_vars
 
   logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(8),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
+  real(RP),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
 
   integer, private, save      :: ATMOS_HIST_sw (20)
   integer, private, save      :: ATMOS_PREP_sw (20)
@@ -256,8 +257,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,*) '***       | VARNAME|DESCRIPTION', &
-    '                                                     [UNIT            ]'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,5(A))') '***       |',' VARNAME','|', &
+    'DESCRIPTION                                                     ','[', 'UNIT            ',']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
     '*** NO.',1,'|',trim(AP_NAME(1)),'|', AP_DESC(1),'[', AP_UNIT(1),']'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
@@ -459,7 +460,7 @@ contains
        FIO_input
     implicit none
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
@@ -508,7 +509,7 @@ contains
        FIO_output
     implicit none
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     character(len=FIO_HMID)   :: desc
@@ -572,14 +573,14 @@ contains
        FIO_input
     implicit none
 
-    real(8) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
-    real(8) :: MOMZ_check(KA,IA,JA)    ! momentum z [kg/s/m2]
-    real(8) :: MOMX_check(KA,IA,JA)    ! momentum x [kg/s/m2]
-    real(8) :: MOMY_check(KA,IA,JA)    ! momentum y [kg/s/m2]
-    real(8) :: RHOT_check(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-    real(8) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
+    real(RP) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
+    real(RP) :: MOMZ_check(KA,IA,JA)    ! momentum z [kg/s/m2]
+    real(RP) :: MOMX_check(KA,IA,JA)    ! momentum x [kg/s/m2]
+    real(RP) :: MOMY_check(KA,IA,JA)    ! momentum y [kg/s/m2]
+    real(RP) :: RHOT_check(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+    real(RP) :: QTRC_check(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
-    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     character(len=8)          :: lname
@@ -721,13 +722,13 @@ contains
        saturation_qsat_water => ATMOS_SATURATION_qsat_water
     implicit none
 
-    real(8) :: RTOT (KA,IA,JA)
-    real(8) :: QSAT (KA,IA,JA)
-    real(8) :: RH   (KA,IA,JA)
-    real(8) :: QTOT (KA,IA,JA)
-    real(8) :: VELXH(KA,IA,JA)
-    real(8) :: VELYH(KA,IA,JA)
-    real(8) :: VOR  (KA,IA,JA)
+    real(RP) :: RTOT (KA,IA,JA)
+    real(RP) :: QSAT (KA,IA,JA)
+    real(RP) :: RH   (KA,IA,JA)
+    real(RP) :: QTOT (KA,IA,JA)
+    real(RP) :: VELXH(KA,IA,JA)
+    real(RP) :: VELYH(KA,IA,JA)
+    real(RP) :: VOR  (KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -754,7 +755,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELZ(k,i,j) = 0.5D0 * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -764,7 +765,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELX(k,i,j) = 0.5D0 * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -774,7 +775,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELY(k,i,j) = 0.5D0 * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -794,7 +795,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QDRY(k,i,j) = 1.D0
+          QDRY(k,i,j) = 1.0_RP
        enddo
        enddo
        enddo
@@ -846,7 +847,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.D2
+          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.E2_RP
        enddo
        enddo
        enddo
@@ -856,7 +857,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTOT(k,i,j) = 0.D0
+          QTOT(k,i,j) = 0.0_RP
        enddo
        enddo
        enddo
@@ -879,7 +880,7 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELXH(k,i,j) = 2.D0 * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
+          VELXH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
                               / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
@@ -889,7 +890,7 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELYH(k,i,j) = 2.D0 * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
+          VELYH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
                               / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
@@ -898,10 +899,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VOR(k,i,j) = 0.5D0 * ( ( VELYH(k,i,j  )-VELYH(k,i-1,j  ) ) * RCDX(i) &
-                               + ( VELYH(k,i,j-1)-VELYH(k,i-1,j-1) ) * RCDX(i) &
-                               - ( VELXH(k,i  ,j)-VELXH(k,i  ,j-1) ) * RCDY(j) &
-                               - ( VELXH(k,i-1,j)-VELXH(k,i-1,j-1) ) * RCDY(j) )
+          VOR(k,i,j) = 0.5_RP * ( ( VELYH(k,i,j  )-VELYH(k,i-1,j  ) ) * RCDX(i) &
+                                + ( VELYH(k,i,j-1)-VELYH(k,i-1,j-1) ) * RCDX(i) &
+                                - ( VELXH(k,i  ,j)-VELXH(k,i  ,j-1) ) * RCDY(j) &
+                                - ( VELXH(k,i-1,j)-VELXH(k,i-1,j-1) ) * RCDY(j) )
        enddo
        enddo
        enddo
@@ -921,10 +922,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGK(k,i,j) = 0.5D0 * DENS(k,i,j)    &
-                              * VELZ(k,i,j)**2 &
-                              * VELX(k,i,j)**2 &
-                              * VELY(k,i,j)**2
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j)    &
+                               * VELZ(k,i,j)**2 &
+                               * VELX(k,i,j)**2 &
+                               * VELY(k,i,j)**2
        enddo
        enddo
        enddo
@@ -1003,8 +1004,10 @@ contains
        CVw => AQ_CV
     implicit none
 
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: QT  (KA,IA,JA)
+
     integer :: i, j, k, iq
-    real(8) :: QT(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if ( COMM_total_doreport ) then
@@ -1015,31 +1018,36 @@ contains
        call COMM_total( MOMY(:,:,:), AP_NAME(4) )
        call COMM_total( RHOT(:,:,:), AP_NAME(5) )
        do iq = 1, QA
-          call COMM_total( QTRC(:,:,:,iq)*DENS(:,:,:), AQ_NAME(iq) )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+
+          call COMM_total( RHOQ(:,:,:), AQ_NAME(iq) )
        enddo
-       QT(:,:,:) = 0.0D0
-       do iq = QQS, QQE
-          QT(:,:,:) = QT(:,:,:) + QTRC(:,:,:,iq)
-       end do
-       call COMM_total( QT(:,:,:)*DENS(:,:,:), 'Qtotal  ' )
 
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELZ(k,i,j) = 0.5D0 * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-          VELX(k,i,j) = 0.5D0 * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-          VELY(k,i,j) = 0.5D0 * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rdry )
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
-          ENGK(k,i,j) = 0.5D0 * DENS(k,i,j)    &
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j)    &
                               * VELZ(k,i,j)**2 &
                               * VELX(k,i,j)**2 &
                               * VELY(k,i,j)**2
-          QDRY(k,i,j) = 1.D0
+          QDRY(k,i,j) = 1.0_RP
           do iq = QQS, QQE
-             QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
           enddo
+          QT(k,i,j) = DENS(k,i,j) * ( 1.D0 - QDRY (k,i,j) )
+
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE
              ENGI(k,i,j) = ENGI(k,i,j) &
@@ -1050,6 +1058,7 @@ contains
        enddo
        enddo
 
+       call COMM_total( QT  (:,:,:), 'Qtotal  ' )
        call COMM_total( ENGT(:,:,:), 'ENGT    ' )
        call COMM_total( ENGP(:,:,:), 'ENGP    ' )
        call COMM_total( ENGK(:,:,:), 'ENGK    ' )
