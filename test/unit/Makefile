@@ -34,7 +34,7 @@ makeinclude:
 makebin: $(PROJ_EXE)
 
 run:
-	./$(PROJ_EXE) dummy.cnf
+	./$(PROJ_EXE) dummy.conf
 
 $(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME)
 	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^
