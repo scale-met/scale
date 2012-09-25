@@ -69,6 +69,9 @@ module test_atmos_dyn_fent_fct
   real(RP) :: DIFF4, DIFF2
   real(RP) :: divdmp_coef, LSsink_D
 
+  logical  :: flag_fct_momentum = .false.
+  logical  :: flag_fct_t        = .false.
+
   real(RP), save :: ZERO(KA,IA,JA)
 
   integer, save :: KME ! end of main region
@@ -179,6 +182,7 @@ subroutine test_undef
           REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
           divdmp_coef, LSsink_D,                & ! (in)
+          flag_fct_momentum, flag_fct_t,        & ! (in)
           1.0_RP, 1                             ) ! (in)
   end do
 
@@ -221,6 +225,7 @@ subroutine test_const
        REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
        divdmp_coef, LSsink_D,                & ! (in)
+       flag_fct_momentum, flag_fct_t,        & ! (in)
        1.0_RP, 1                             ) ! (in)
 
   do k = KS, KE
@@ -296,6 +301,7 @@ subroutine test_conserve
          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
          divdmp_coef, LSsink_D,                & ! (in)
+         flag_fct_momentum, flag_fct_t,        & ! (in)
          1.0_RP, 1                             ) ! (in)
 
   total_o = 0.0_RP
