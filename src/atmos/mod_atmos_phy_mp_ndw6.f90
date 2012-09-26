@@ -593,8 +593,8 @@ contains
     ! default setting
     !
     ! Area parameters with mks unit originated by Mitchell(1996)
-    a_area(I_QC) = PI/4.d0 ! sphere
-    a_area(I_QR) = PI/4.d0 ! sphere
+    a_area(I_QC) = PI/4.0_RP ! sphere
+    a_area(I_QR) = PI/4.0_RP ! sphere
     a_area(I_QI) = 0.65_RP*1.E-4_RP*100.0_RP**(2.00_RP)   ! Mitchell(1996), Hexagonal Plate
     a_area(I_QS) = 0.2285_RP*1.E-4_RP*100.0_RP**(1.88_RP) ! Mitchell(1996), Aggregates
     a_area(I_QG) = 0.50_RP*1.E-4_RP*100.0_RP**(2.0_RP)    ! Mitchell(1996), Lump Graupel
@@ -1015,7 +1015,7 @@ contains
        w1(iw) = gammafunc( (beta_v(iw,2) + 2.0_RP*b_rea(iw) + nu(iw) + 1.0_RP + n)/mu(iw) )
        w2(iw) = gammafunc( (                   2.0_RP*b_rea(iw) + nu(iw) + 1.0_RP + n)/mu(iw) )
        w3(iw) = gammafunc( (beta_v(iw,2) + 2.0_RP*b_rea(iw) + nu(iw) + 1.0_RP    )/mu(iw) )
-       w4(iw) = gammafunc( (                   2.d0*b_rea(iw) + nu(iw) + 1.d0    )/mu(iw) )
+       w4(iw) = gammafunc( (                   2.0_RP*b_rea(iw) + nu(iw) + 1.0_RP    )/mu(iw) )
        !
        w5(iw) = gammafunc( (nu(iw) + 1.0_RP)/mu(iw) )
        w6(iw) = gammafunc( (nu(iw) + 2.0_RP)/mu(iw) )
@@ -1403,7 +1403,7 @@ contains
     do k  = 2, KA
     do ij = 1, IJA
        rho  (ij,k) = rhog(ij,k)
-       rrhog(ij,k) = 1.D0 / rhog(ij,k)
+       rrhog(ij,k) = 1.0_RP / rhog(ij,k)
        w    (ij,k) = ( rhogw(ij,k) + rhogw(ij,k-1) ) * rrhog(ij,k)
     enddo
     enddo
@@ -2187,7 +2187,7 @@ contains
     do ij = IJS, IJE
        if (      tem(ij,k) < tem_min &
             .OR. rho(ij,k) < rho_min &
-            .OR. pre(ij,k) < 1.d0    ) then
+            .OR. pre(ij,k) < 1.0_RP    ) then
 
           if( IO_L ) write(IO_FID_LOG,'(A,I3,A,4(F16.5),3(I6))') &
           "*** point: ", point, " low tem,rho,pre:", tem(ij,k), rho(ij,k), pre(ij,k), qv(ij,k), ij, k, PRC_myrank
@@ -3351,7 +3351,7 @@ contains
           if(ave_dg>dg0)then
              E_g = E_gm
           else
-             E_g = 0.D0
+             E_g = 0.0_RP
           end if
           E_ic = E_i*E_c
           E_sc = E_s*E_c
@@ -3672,7 +3672,7 @@ contains
     ! parameter for autoconversion
     real(RP), parameter :: kcc     = 4.44E+9_RP  ! collision efficiency [m3/kg2/sec]
     real(RP), parameter :: tau_min = 1.E-20_RP  ! empirical filter by T.Mitsui
-    real(RP), parameter :: rx_sep  = 1.d0/x_sep ! 1/x_sep, 10/08/03 [Add] T.Mitsui
+    real(RP), parameter :: rx_sep  = 1.0_RP/x_sep ! 1/x_sep, 10/08/03 [Add] T.Mitsui
     !
     ! parameter for accretion
     real(RP), parameter :: kcr     = 5.8_RP     ! collision efficiency [m3/kg2/sec]
@@ -4192,7 +4192,7 @@ contains
              jhom = 10.0_RP**(&
                   - 243.40_RP - 14.75_RP*temc - 0.307_RP*temc2 &
                   - 0.00287_RP*temc3 - 0.0000102_RP*temc4 ) *1.E+3_RP
-          else if( temc < 0.D0) then
+          else if( temc < 0.0_RP) then
              jhom = 10._RP**(-7.63_RP-2.996_RP*(temc+30.0_RP))*1.E+3_RP
           else
              Jhom = 0.0_RP
@@ -5062,7 +5062,7 @@ contains
                 taucnd(ij,k)     = 1.0_RP/r_taucnd
                 ! Production term for liquid water content
                 coef_a_cnd       = rho(ij,k)*Acnd*taucnd(ij,k)
-                coef_b_cnd       = rho(ij,k)*taucnd(ij,k)*r_dt*(ssw_o*qsw(ij,k)-Acnd*taucnd(ij,k)) * ( exp(-dt*r_taucnd) - 1.d0 )
+                coef_b_cnd       = rho(ij,k)*taucnd(ij,k)*r_dt*(ssw_o*qsw(ij,k)-Acnd*taucnd(ij,k)) * ( exp(-dt*r_taucnd) - 1.0_RP )
                 PLCdep_alt(ij,k) = coef_a_cnd*r_taucnd_c - coef_b_cnd*r_taucnd_c
                 PLRdep_alt(ij,k) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
                 PLR2NR           = PNRdep(ij,k)/(PLRdep(ij,k)+1.d-30)
@@ -5092,7 +5092,7 @@ contains
                 taudep(ij,k)     = 1.0_RP/r_taudep
                 ! Production term for ice water content
                 coef_a_dep       = rho(ij,k)*Adep*taudep(ij,k)
-                coef_b_dep       = rho(ij,k)*taudep(ij,k)*r_dt*(ssi_o*qsi(ij,k)-Adep*taudep(ij,k)) * ( exp(-dt*r_taudep) - 1.d0 )
+                coef_b_dep       = rho(ij,k)*taudep(ij,k)*r_dt*(ssi_o*qsi(ij,k)-Adep*taudep(ij,k)) * ( exp(-dt*r_taudep) - 1.0_RP )
                 ! [Mod] 11/08/30 T.Mitsui, add filter for deposition by solid particle
                 PLIdep_alt(ij,k) =  coef_a_dep*r_taudep_i - coef_b_dep*r_taudep_i
                 PLSdep_alt(ij,k) =  coef_a_dep*r_taudep_s - coef_b_dep*r_taudep_s
