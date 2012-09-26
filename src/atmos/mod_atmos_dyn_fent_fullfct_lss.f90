@@ -1266,7 +1266,7 @@ call START_COLLECTION("DYN-fct")
                         + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                      + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                      + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                                   + LSsink_D * QTRC(k,i,j,iq) ) & ! part of large scale sinking
+                                   - LSsink_D * QTRC(k,i,j,iq) ) & ! part of large scale sinking
                         ) / DENS(k,i,j)
        end do
        end do
@@ -1930,7 +1930,7 @@ call TIME_rapend     ('DYN-fct')
                           - ( PRES(k+1,i,j)-PRES(k,i,j) ) * RFDZ(k)                      & ! pressure gradient force
                           - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5_RP * GRAV                & ! gravity force
                           + divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
-                          + LSsink_D * MOMZ0(k,i,j)                                      & ! part of large scale sinking
+                          - LSsink_D * MOMZ0(k,i,j)                                      & ! part of large scale sinking
                           + ray_damp(k,i,j,I_MOMZ)                                       ) ! additional damping
        enddo
        enddo
@@ -2079,9 +2079,9 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMX(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMX,ZDIR) )
 #endif
+          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           vel = 0.5_RP * ( VELZ(KS,i+1,j) + VELZ(KS,i,j) ) &
               - 4.0_RP * LSsink_D * FZ(KS) / ( DENS(KS+1,i+1,j)+DENS(KS+1,i,j)+DENS(KS,i+1,j)+DENS(KS,i,j) ) ! large scale sinking
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
                                  + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
@@ -2196,7 +2196,7 @@ call TIME_rapend     ('DYN-fct')
                                      + 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )              &
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
-                                     + LSsink_D * MOMX0(k,i,j)                                     & ! part of large scale sinking
+                                     - LSsink_D * MOMX0(k,i,j)                                     & ! part of large scale sinking
                                      + ray_damp(k,i,j,I_MOMX)                                      ) ! additional damping
        enddo
        enddo
@@ -2454,7 +2454,7 @@ call TIME_rapend     ('DYN-fct')
                                      - 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )              &
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
-                                     + LSsink_D * MOMY0(k,i,j)                                     & ! part of large scale sinking
+                                     - LSsink_D * MOMY0(k,i,j)                                     & ! part of large scale sinking
                                      + ray_damp(k,i,j,I_MOMY)                                      ) ! additional damping
        enddo
        enddo
@@ -2664,7 +2664,7 @@ call TIME_rapend     ('DYN-fct')
                + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                             + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                             + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                          + LSsink_D * RHOT0(k,i,j) & ! part of large scale sinking
+                          - LSsink_D * RHOT0(k,i,j) & ! part of large scale sinking
                           + ray_damp(k,i,j,I_RHOT)  ) ! additional damping
        enddo
        enddo
