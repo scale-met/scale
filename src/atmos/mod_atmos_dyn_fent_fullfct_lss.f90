@@ -611,12 +611,11 @@ contains
     real(RP) :: ray_damp (KA,IA,JA,5)
     real(RP) :: num_diff (KA,IA,JA,5,3)
 
-    ! mass flux
-!    real(RP) :: mflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
 
     ! For FCT
-    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face monotone
+    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
+    real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
     real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
 
     integer :: IIS, IIE
@@ -1039,10 +1038,10 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_MOMENTUM, FLAG_FCT_T,                     & ! (in)
                  CZ, FZ,                                            & ! (in)
-                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
-                 dtrk,                                              & ! (in)
+                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
-                 qflx_hi, qflx_lo, rjpls, rjmns                     ) ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns          ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+1, 5 )
 #else
@@ -1071,9 +1070,9 @@ call START_COLLECTION("DYN-rk3")
                  FLAG_FCT_MOMENTUM, FLAG_FCT_T,                     & ! (in)
                  CZ, FZ,                                            & ! (in)
                  FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
-                 dtrk,                                              & ! (in)
+                 dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
-                 qflx_hi, qflx_lo, rjpls, rjmns                     ) ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns          ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 5+QA+6, 5 )
 #else
@@ -1102,9 +1101,9 @@ call START_COLLECTION("DYN-rk3")
                  FLAG_FCT_MOMENTUM, FLAG_FCT_T,                     & ! (in)
                  CZ, FZ,                                            & ! (in)
                  FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
-                 dtrk,                                              & ! (in)
+                 dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
-                 qflx_hi, qflx_lo, rjpls, rjmns                     ) ! (work)
+                 qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns          ) ! (work)
 #ifdef _USE_RDMA
     call COMM_rdma_vars8( 1, 5 )
 #else
@@ -1242,14 +1241,12 @@ call START_COLLECTION("DYN-fct")
     enddo
     enddo
 
-    call advection_fct(qflx_hi,                & ! (inout)
-                       RHOQ, qflx_lo,          & ! (in)
-                       RCDZ, RCDX, RCDY, dtrk, & ! (in)
-                       rjpls, rjmns            ) ! (work)
-
+    call fct(qflx_anti,              & ! (out)
+             RHOQ, qflx_hi, qflx_lo, & ! (in)
+             RCDZ, RCDX, RCDY, dtrk, & ! (in)
+             rjpls, rjmns            ) ! (work)
 #ifdef DEBUG
        qflx_lo  (:,:,:,:) = UNDEF
-       qflx_hi  (:,:,:,:) = UNDEF
        rjpls(:,:,:) = UNDEF
        rjmns(:,:,:) = UNDEF
 #endif
@@ -1263,10 +1260,13 @@ call START_COLLECTION("DYN-fct")
        do i = IIS, IIE
        do k = KS, KE
           QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
-                        + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                     + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                                   - LSsink_D * QTRC(k,i,j,iq) ) & ! part of large scale sinking
+               + dtrk * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
+                              - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                            + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
+                              - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                            + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
+                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                          - LSsink_D * QTRC(k,i,j,iq) ) & ! part of large scale sinking
                         ) / DENS(k,i,j)
        end do
        end do
@@ -1277,6 +1277,10 @@ call START_COLLECTION("DYN-fct")
 
     enddo
     enddo
+#ifdef DEBUG
+    qflx_hi  (:,:,:,:) = UNDEF
+    qflx_anti(:,:,:,:) = UNDEF
+#endif
 
     enddo ! scalar quantities loop
 
@@ -1344,9 +1348,9 @@ call TIME_rapend     ('DYN-fct')
                      FLAG_FCT_MOMENTUM, FLAG_FCT_T,               &
                      CZ, FZ, FDZ, FDX, FDY,                       &
                      RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-                     dtrk,                                        &
+                     dtrk, rko,                                   &
                      VELZ, VELX, VELY, PRES, POTT,                &
-                     qflx_hi, qflx_lo, rjpls, rjmns               )
+                     qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns    )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
@@ -1371,11 +1375,11 @@ call TIME_rapend     ('DYN-fct')
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
 
-    real(RP), intent(in) :: DENS0(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(in) :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
-    real(RP), intent(in) :: MOMX0(KA,IA,JA)   !
-    real(RP), intent(in) :: MOMY0(KA,IA,JA)   !
-    real(RP), intent(in) :: RHOT0(KA,IA,JA)   !
+    real(RP), intent(in)        :: DENS0(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(in),target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
+    real(RP), intent(in),target :: MOMX0(KA,IA,JA)   !
+    real(RP), intent(in),target :: MOMY0(KA,IA,JA)   !
+    real(RP), intent(in),target :: RHOT0(KA,IA,JA)   !
 
     real(RP), intent(in) :: DENS(KA,IA,JA)   ! prognostic variables
     real(RP), intent(in) :: MOMZ(KA,IA,JA)   ! at previous RK step
@@ -1393,19 +1397,20 @@ call TIME_rapend     ('DYN-fct')
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
 
-    real(RP), intent(in)    :: CZ(KA)
-    real(RP), intent(in)    :: FZ(0:KA)
+    real(RP), intent(in) :: CZ(KA)
+    real(RP), intent(in) :: FZ(0:KA)
 
-    real(RP), intent(in)    :: FDZ(KA-1)
-    real(RP), intent(in)    :: FDX(IA-1)
-    real(RP), intent(in)    :: FDY(JA-1)
-    real(RP), intent(in)    :: RCDZ(KA)
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
-    real(RP), intent(in)    :: RFDZ(KA-1)
-    real(RP), intent(in)    :: RFDX(IA-1)
-    real(RP), intent(in)    :: RFDY(JA-1)
+    real(RP), intent(in) :: FDZ(KA-1)
+    real(RP), intent(in) :: FDX(IA-1)
+    real(RP), intent(in) :: FDY(JA-1)
+    real(RP), intent(in) :: RCDZ(KA)
+    real(RP), intent(in) :: RCDX(IA)
+    real(RP), intent(in) :: RCDY(JA)
+    real(RP), intent(in) :: RFDZ(KA-1)
+    real(RP), intent(in) :: RFDX(IA-1)
+    real(RP), intent(in) :: RFDY(JA-1)
     real(RP), intent(in) :: dtrk
+    integer , intent(in) :: rko
 
     ! diagnostic variables (work space)
     real(RP), intent(out) :: PRES(KA,IA,JA) ! pressure [Pa]
@@ -1417,10 +1422,14 @@ call TIME_rapend     ('DYN-fct')
     ! flux (work space)
     real(RP), intent(out)   :: qflx_hi  (KA,IA,JA,3)
     real(RP), intent(out)   :: qflx_lo  (KA,IA,JA,3)
+    real(RP), intent(out)   :: qflx_anti(KA,IA,JA,3)
 
     ! factor for FCT (work space)
     real(RP), intent(out) :: rjpls(KA,IA,JA)
     real(RP), intent(out) :: rjmns(KA,IA,JA)
+
+    real(RP), pointer :: org(:,:,:)
+    real(RP), target  :: work(KA,IA,JA)
 
     real(RP) :: rdtrk
     real(RP) :: vel
@@ -1663,10 +1672,24 @@ call TIME_rapend     ('DYN-fct')
 
        !##### momentum equation (z) #####
 
-       ! monotonic flux
        if ( FLAG_FCT_MOMENTUM ) then
-         ! at (x, y, layer)
-         ! note than z-index is added by -1
+
+          if ( rko == RK ) then
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE-1
+                work(k,i,j) = MOMZ0(k,i,j)
+             enddo
+             enddo
+             enddo
+             org => work
+          else
+             org => MOMZ0
+          end if
+
+          ! monotonic flux
+          ! at (x, y, layer)
+          ! note than z-index is added by -1
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-1
@@ -1794,6 +1817,8 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(KE-1,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMZ,ZDIR) )
 #endif
+          ! k = KS
+          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           ! k = KS+1
           vel = ( ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) * 0.5_RP &
                   - LSsink_D * CZ(KS+1) & ! part of large scale sinking
@@ -1878,33 +1903,7 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-       call advection_fct(qflx_hi,                 & ! (inout)
-                          MOMZ0, qflx_lo,          & ! (in)
-                          RFDZ, RCDX, RCDY, dtrk,  & ! (in)
-                          rjpls, rjmns             ) ! (work)
-#ifdef DEBUG
-       qflx_lo(:,:,:,:) = UNDEF
-       rjpls(:,:,:) = UNDEF
-       rjmns(:,:,:) = UNDEF
-#endif
-    end if
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KE+1,i,j,ZDIR) = 0.0_RP
-       end do
-       end do
-       !--- update momentum(z) with the terms other than advection
+       !--- update momentum(z)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1942,9 +1941,58 @@ call TIME_rapend     ('DYN-fct')
 
     enddo
     enddo
+
+    if ( FLAG_FCT_MOMENTUM ) then
+       call fct(qflx_anti,              & ! (out)
+                org, qflx_hi, qflx_lo,  & ! (in)
+                RFDZ, RCDX, RCDY, dtrk, & ! (in)
+                rjpls, rjmns            ) ! (work)
 #ifdef DEBUG
-       qflx_hi(:,:,:,:) = UNDEF
+       qflx_lo(:,:,:,:) = UNDEF
+       rjpls(:,:,:) = UNDEF
+       rjmns(:,:,:) = UNDEF
 #endif
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
+          !--- update momentum(z)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMZ_RK(k,i,j) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
+                  + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                               + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                               + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       enddo
+       enddo
+#ifdef DEBUG
+       qflx_anti(:,:,:,:) = UNDEF
+#endif
+    end if
+
+#ifdef DEBUG
+    qflx_hi(:,:,:,:) = UNDEF
+#endif
+
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1955,6 +2003,20 @@ call TIME_rapend     ('DYN-fct')
 
        ! monotonic flux
        if ( FLAG_FCT_MOMENTUM ) then
+
+          if ( rko == RK ) then
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE-1
+                work(k,i,j) = MOMX0(k,i,j)
+             enddo
+             enddo
+             enddo
+             org => work
+          else
+             org => MOMX0
+          end if
+
           ! at (u, y, interface)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
@@ -2145,27 +2207,7 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-       call advection_fct(qflx_hi,                & ! (inout)
-                          MOMX0, qflx_lo,         & ! (in)
-                          RCDZ, RFDX, RCDY, dtrk, & ! (in)
-                          rjpls, rjmns            ) ! (work)
-#ifdef DEBUG
-       qflx_lo  (:,:,:,:) = UNDEF
-       rjpls(:,:,:) = UNDEF
-       rjmns(:,:,:) = UNDEF
-#endif
-    end if
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !--- update momentum(x) with the terms other than advection
+       !--- update momentum(x)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2205,9 +2247,55 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+    enddo
+    enddo
 
-    enddo
-    enddo
+    if ( FLAG_FCT_MOMENTUM ) then
+       call fct(qflx_anti,              & ! (out)
+                org, qflx_hi, qflx_lo,  & ! (in)
+                RCDZ, RFDX, RCDY, dtrk, & ! (in)
+                rjpls, rjmns            ) ! (work)
+#ifdef DEBUG
+       qflx_lo  (:,:,:,:) = UNDEF
+       rjpls(:,:,:) = UNDEF
+       rjmns(:,:,:) = UNDEF
+#endif
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
+          !--- update momentum(x)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMX_RK(k,i,j) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
+                  + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                               + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDZ(i) &
+                               + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       enddo
+       enddo
+#ifdef DEBUG
+       qflx_anti(:,:,:,:) = UNDEF
+#endif
+    end if
 #ifdef DEBUG
        qflx_hi(:,:,:,:) = UNDEF
 #endif
@@ -2220,6 +2308,20 @@ call TIME_rapend     ('DYN-fct')
        !##### momentum equation (y) #####
        ! monotonic flux
        if ( FLAG_FCT_MOMENTUM ) then
+
+          if ( rko == RK ) then
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE-1
+                work(k,i,j) = MOMY0(k,i,j)
+             enddo
+             enddo
+             enddo
+             org => work
+          else
+             org => MOMY0
+          end if
+
           ! at (x, v, interface)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
@@ -2403,27 +2505,7 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-       call advection_fct(qflx_hi,                & ! (inout)
-                          MOMY0, qflx_lo,         & ! (in)
-                          RCDZ, RCDX, RFDY, dtrk, & ! (in)
-                          rjpls, rjmns            ) ! (work)
-#ifdef DEBUG
-       qflx_lo  (:,:,:,:) = UNDEF
-       rjpls(:,:,:) = UNDEF
-       rjmns(:,:,:) = UNDEF
-#endif
-    end if
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !--- update momentum(y) with the terms other than advection
+       !--- update momentum(y)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2466,6 +2548,53 @@ call TIME_rapend     ('DYN-fct')
 
     enddo
     enddo
+
+    if ( FLAG_FCT_MOMENTUM ) then
+       call fct(qflx_anti,              & ! (out)
+                org, qflx_hi, qflx_lo,  & ! (in)
+                RCDZ, RCDX, RFDY, dtrk, & ! (in)
+                rjpls, rjmns            ) ! (work)
+#ifdef DEBUG
+       qflx_lo  (:,:,:,:) = UNDEF
+       rjpls(:,:,:) = UNDEF
+       rjmns(:,:,:) = UNDEF
+#endif
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
+          !--- update momentum(y)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMY_RK(k,i,j) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
+                  + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                               + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                               + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) )
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       enddo
+       enddo
+#ifdef DEBUG
+       qflx_anti(:,:,:,:) = UNDEF
+#endif
+    end if
 #ifdef DEBUG
        qflx_hi(:,:,:,:) = UNDEF
 #endif
@@ -2479,6 +2608,19 @@ call TIME_rapend     ('DYN-fct')
 
        ! monotonic flux
        if ( FLAG_FCT_T ) then
+          if ( rko == RK ) then
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE-1
+                work(k,i,j) = RHOT0(k,i,j)
+             enddo
+             enddo
+             enddo
+             org => work
+          else
+             org => RHOT0
+          end if
+
           ! at (x, y, interface)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
@@ -2627,27 +2769,7 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    enddo
-    enddo
-
-    if ( FLAG_FCT_T ) then
-       call advection_fct(qflx_hi,                & ! (inout)
-                          RHOT0, qflx_lo,         & ! (in)
-                          RCDZ, RCDX, RCDY, dtrk, & ! (in)
-                          rjpls, rjmns            ) ! (work)
-#ifdef DEBUG
-       qflx_lo  (:,:,:,:) = UNDEF
-       rjpls(:,:,:) = UNDEF
-       rjmns(:,:,:) = UNDEF
-#endif
-    end if
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !--- update rho*theta with the terms other than advection
+       !--- update rho*theta
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2673,19 +2795,65 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+    enddo
+    enddo
 
-    enddo
-    enddo
+    if ( FLAG_FCT_T ) then
+       call fct(qflx_anti,               & ! (out)
+            org, qflx_hi, qflx_lo, & ! (in)
+            RCDZ, RCDX, RCDY, dtrk,  & ! (in)
+            rjpls, rjmns             ) ! (work)
 #ifdef DEBUG
-    qflx_hi(:,:,:,:) = UNDEF
+       qflx_lo  (:,:,:,:) = UNDEF
+       rjpls(:,:,:) = UNDEF
+       rjmns(:,:,:) = UNDEF
+#endif
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
+          !--- update rho*theta
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, RHOT_RK(k,i,j) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
+                  + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                               + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                               + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       enddo
+       enddo
+#ifdef DEBUG
+       qflx_anti(:,:,:,:) = UNDEF
+#endif
+    end if
+#ifdef DEBUG
+       qflx_hi(:,:,:,:) = UNDEF
 #endif
 
   end subroutine calc_rk
 
-  subroutine advection_fct( qflx_hi,             &
-                            phi_in, qflx_lo,     &
-                            rdz, rdx, rdy, dtrk, &
-                            rjpls, rjmns         )
+  subroutine fct( qflx_anti,                &
+                  phi_in, qflx_hi, qflx_lo, &
+                  rdz, rdx, rdy, dtrk,      &
+                  rjpls, rjmns              )
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -2694,9 +2862,10 @@ call TIME_rapend     ('DYN-fct')
        COMM_wait
     implicit none
 
-    real(RP), intent(inout) :: qflx_hi(KA,IA,JA,3)
+    real(RP), intent(out) :: qflx_anti(KA,IA,JA,3)
 
     real(RP), intent(in) :: phi_in(KA,IA,JA) ! physical quantity
+    real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
 
     real(RP), intent(in) :: RDZ(:)
@@ -2710,7 +2879,6 @@ call TIME_rapend     ('DYN-fct')
 
 
     ! work for FCT
-    real(RP) :: qflx_anti(KA,IA,JA,3)
     real(RP) :: phi_lo(KA,IA,JA)
     real(RP) :: pjpls(KA,IA,JA)
     real(RP) :: pjmns(KA,IA,JA)
@@ -2720,7 +2888,7 @@ call TIME_rapend     ('DYN-fct')
     real(RP) :: zerosw, dirsw
 
     integer :: IIS, IIE, JJS, JJE
-    integer :: k, i, j
+    integer :: k, i, j, ijs
 
 #ifdef DEBUG
     qflx_anti(:,:,:,:) = UNDEF
@@ -3093,10 +3261,10 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,ZDIR) )
-          qflx_hi(k,i,j,ZDIR) = qflx_lo(k,i,j,ZDIR) &
-               + qflx_anti(k,i,j,ZDIR) &
+          qflx_anti(k,i,j,ZDIR) = qflx_anti(k,i,j,ZDIR) &
                  * ( min( rjpls(k+1,i,j),rjmns(k  ,i,j) ) * (          dirsw ) &
-                   + min( rjpls(k  ,i,j),rjmns(k+1,i,j) ) * ( 1.0_RP - dirsw ) )
+                   + min( rjpls(k  ,i,j),rjmns(k+1,i,j) ) * ( 1.0_RP - dirsw ) &
+                   - 1.0_RP )
        enddo
        enddo
        enddo
@@ -3105,16 +3273,21 @@ call TIME_rapend     ('DYN-fct')
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
+          qflx_anti(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          qflx_anti(KE  ,i,j,ZDIR) = 0.0_RP ! top    boundary
        enddo
        enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
+       if ( IIS == IS ) then
+          ijs = IIS-1
+       else
+          ijs = IIS
+       end if
+       do j = JJS, JJE
+       do i = ijs, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
@@ -3125,10 +3298,10 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,XDIR) )
-          qflx_hi(k,i,j,XDIR) = qflx_lo(k,i,j,XDIR) &
-               + qflx_anti(k,i,j,XDIR) &
+          qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) &
                  * ( min( rjpls(k,i+1,j),rjmns(k,i  ,j) ) * (          dirsw ) &
-                   + min( rjpls(k,i  ,j),rjmns(k,i+1,j) ) * ( 1.0_RP - dirsw ) )
+                   + min( rjpls(k,i  ,j),rjmns(k,i+1,j) ) * ( 1.0_RP - dirsw ) &
+                   - 1.0_RP )
        enddo
        enddo
        enddo
@@ -3136,8 +3309,13 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
+       if ( JJS == JS ) then
+          ijs = JJS-1
+       else
+          ijs = JJS
+       end if
+       do j = ijs, JJE
+       do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_anti(k,i,j,YDIR) )
@@ -3148,10 +3326,10 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! if qflx_anti > 0, dirsw = 1
           dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,YDIR) )
-          qflx_hi(k,i,j,YDIR) = qflx_lo(k,i,j,YDIR) &
-               + qflx_anti(k,i,j,YDIR) &
+          qflx_anti(k,i,j,YDIR) = qflx_anti(k,i,j,YDIR) &
                  * ( min( rjpls(k,i,j+1),rjmns(k,i,j  ) ) * (          dirsw ) &
-                   + min( rjpls(k,i,j  ),rjmns(k,i,j+1) ) * ( 1.0_RP - dirsw ) )
+                   + min( rjpls(k,i,j  ),rjmns(k,i,j+1) ) * ( 1.0_RP - dirsw ) &
+                   - 1.0_RP )
        enddo
        enddo
        enddo
@@ -3163,5 +3341,5 @@ call TIME_rapend     ('DYN-fct')
     enddo
 
     return
-  end subroutine advection_fct
+  end subroutine fct
 end module mod_atmos_dyn
