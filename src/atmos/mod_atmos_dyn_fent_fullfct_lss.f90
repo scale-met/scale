@@ -1169,7 +1169,7 @@ call START_COLLECTION("DYN-fct")
 
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
           qflx_hi(KE  ,i,j,ZDIR) = mflx_hi(KE,i,j,ZDIR) &
-               * QTRC(KE,i,j,iq) - 0.5_RP * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * FZ(KE) / FZ(KE-1) ! top boundary ( 0.0 if LSsink_D == 0 )
+               * ( QTRC(KE,i,j,iq) - 0.5_RP * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * FZ(KE) / FZ(KE-1) ) ! top boundary ( 0.0 if LSsink_D == 0 )
        enddo
        enddo
 #ifdef DEBUG
@@ -2753,7 +2753,7 @@ call TIME_rapend     ('DYN-fct')
                                  * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
                                  + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
           qflx_hi(KE  ,i,j,ZDIR) = mflx_hi(KE,i,j,ZDIR) &
-               * POTT(KE,i,j) - 0.5_RP * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * FZ(KE) / FZ(KE-1)
+               * ( POTT(KE,i,j) - 0.5_RP * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * FZ(KE) / FZ(KE-1) )
        enddo
        enddo
 #ifdef DEBUG
