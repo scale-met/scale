@@ -497,6 +497,8 @@ contains
     character (len=IO_SYSCHR) :: trapname
     !---------------------------------------------------------------------------
 
+    trapname = trim(rapname)
+
     do id = 1, TIME_rapnmax
        if( trapname == TIME_rapname(id) ) return
     enddo
