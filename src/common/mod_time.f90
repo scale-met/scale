@@ -494,15 +494,18 @@ contains
     character(len=*), intent(in) :: rapname
 
     integer :: id
+    character (len=IO_SYSCHR) :: trapname
     !---------------------------------------------------------------------------
 
-    do id = 1, TIME_rapnlimit
-       if( trim(rapname) == trim(TIME_rapname(id)) ) return
+    trapname = trim(rapname)
+
+    do id = 1, TIME_rapnmax
+       if( trapname == TIME_rapname(id) ) return
     enddo
 
     TIME_rapnmax     = TIME_rapnmax + 1
     id               = TIME_rapnmax
-    TIME_rapname(id) = trim(rapname)
+    TIME_rapname(id) = trapname
 
   end function TIME_rapid
 
