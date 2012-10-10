@@ -4,9 +4,19 @@
 ##### for computation
 
 FC     = mpif90
-FFLAGS = -fpp3 -O3 -ftz -xHost -ip               \
+FFLAGS = -fpp3 -O3 -ftz -xHost -ip            \
          -fp-model precise -pc 80             \
-         -heap-arrays -fno-alias
+         -heap-arrays -fno-alias              \
+	 -mkl=sequential
+#	 -opt-streaming-stores always         \
+
+ifneq ($(DISABLE_VEC),)
+      FFLAGS += -no-vec
+endif
+
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
 
 FFLAGS_DEBUG = -fpp3 -O0 -check all -warn all -g -traceback -fpe0 -DDEBUG
 
