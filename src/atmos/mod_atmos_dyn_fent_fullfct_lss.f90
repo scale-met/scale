@@ -1555,6 +1555,23 @@ call TIME_rapend     ('DYN-fct')
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
+#if defined(__INTEL_COMPILER)
+          do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, RHOT(k,i,j) )
+          call CHECK( __LINE__, Rtot(k,i,j) )
+#endif
+             PRES(k,i,j) = RHOT(k,i,j) * Rtot(k,i,j) / P00
+          enddo
+          call vdpowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+          do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, DENS(k,i,j) )
+#endif
+             PRES(k,i,j) = PRES(k,i,j) * P00
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+          enddo
+#else
           do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, RHOT(k,i,j) )
@@ -1569,6 +1586,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
              POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           enddo
+#endif
        enddo
        enddo
 #ifdef DEBUG
