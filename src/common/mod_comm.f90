@@ -83,6 +83,8 @@ module mod_comm
   integer, private, save :: datasize_WE
   integer, private, save :: datasize_4C
 
+  integer, private, save :: datatype
+
   integer, private, save :: IREQ_CNT_NS
   integer, private, save :: IREQ_CNT_WE
   integer, private, save :: IREQ_CNT_4C
@@ -192,6 +194,15 @@ contains
                     PRC_NEXT(PRC_S)  )
 #endif
 
+    if ( RP == kind(0.0d0) ) then
+       datatype = MPI_DOUBLE_PRECISION
+    else if ( RP == kind(0.0) ) then
+       datatype = MPI_REAL
+    else
+       write(*,*) 'xxx precision is not supportd'
+       call PRC_MPIstop
+    end if
+
     return
   end subroutine COMM_setup
 
@@ -223,25 +234,25 @@ contains
         !-- From 4-Direction HALO communicate
         ! From S
         call MPI_IRECV( var(:,:,JS-JHALO:JS-1), datasize_NS4,         &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+1, &
+                        datatype, PRC_next(PRC_S), tag+1, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
         ireqc = ireqc + 1
 
         ! From N
         call MPI_IRECV( var(:,:,JE+1:JE+JHALO), datasize_NS4,         &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+2, &
+                        datatype, PRC_next(PRC_N), tag+2, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
         ireqc = ireqc + 1
 
         ! From E
         call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,             &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+3, &
+                        datatype, PRC_next(PRC_E), tag+3, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
         ireqc = ireqc + 1
 
         ! From W
         call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,             &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+4, &
+                        datatype, PRC_next(PRC_W), tag+4, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
         ireqc = ireqc + 1
 
@@ -273,25 +284,25 @@ contains
 
         ! To W HALO communicate
         call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,             &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+3, &
+                        datatype, PRC_next(PRC_W), tag+3, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
         ireqc = ireqc + 1
 
         ! To E HALO communicate
         call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,             &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+4, &
+                        datatype, PRC_next(PRC_E), tag+4, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
         ireqc = ireqc + 1
 
         ! To N HALO communicate
         call MPI_ISEND( var(:,:,JE-JHALO+1:JE), datasize_NS4,         &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+1, &
+                        datatype, PRC_next(PRC_N), tag+1, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
         ireqc = ireqc + 1
 
         ! To S HALO communicate
         call MPI_ISEND( var(:,:,JS:JS+JHALO-1), datasize_NS4,         &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+2, &
+                        datatype, PRC_next(PRC_S), tag+2, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
         ireqc = ireqc + 1
 
@@ -301,7 +312,7 @@ contains
         ! From S
         if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
             call MPI_IRECV( var(:,:,JS-JHALO:JS-1), datasize_NS4,         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+1, &
+                            datatype, PRC_next(PRC_S), tag+1, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
             ireqc = ireqc + 1
         endif
@@ -309,7 +320,7 @@ contains
         ! From N
         if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
             call MPI_IRECV( var(:,:,JE+1:JE+JHALO), datasize_NS4,         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+2, &
+                            datatype, PRC_next(PRC_N), tag+2, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
             ireqc = ireqc + 1
         endif
@@ -317,7 +328,7 @@ contains
         ! From E
         if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
             call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,             &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+3, &
+                            datatype, PRC_next(PRC_E), tag+3, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
             ireqc = ireqc + 1
         endif
@@ -325,7 +336,7 @@ contains
         ! From W
         if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
             call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,             &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+4, &
+                            datatype, PRC_next(PRC_W), tag+4, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
             ireqc = ireqc + 1
         endif
@@ -363,7 +374,7 @@ contains
         ! To W HALO communicate
         if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
             call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,             &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+3, &
+                            datatype, PRC_next(PRC_W), tag+3, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
             ireqc = ireqc + 1
         endif
@@ -371,7 +382,7 @@ contains
         ! To E HALO communicate
         if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
             call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,             &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+4, &
+                            datatype, PRC_next(PRC_E), tag+4, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
             ireqc = ireqc + 1
         endif
@@ -379,7 +390,7 @@ contains
         ! To N HALO communicate
         if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
             call MPI_ISEND( var(:,:,JE-JHALO+1:JE), datasize_NS4,         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+1, &
+                            datatype, PRC_next(PRC_N), tag+1, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
             ireqc = ireqc + 1
         endif
@@ -387,7 +398,7 @@ contains
         ! To S HALO communicate
         if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
             call MPI_ISEND( var(:,:,JS:JS+JHALO-1), datasize_NS4,         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+2, &
+                            datatype, PRC_next(PRC_S), tag+2, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
             ireqc = ireqc + 1
         endif
@@ -436,7 +447,7 @@ contains
         tagc = 0
         do j = JS-JHALO, JS-1
             call MPI_IRECV( var(1,IE+1,j), datasize_4C,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_SE), tag+tagc, &
+                            datatype, PRC_next(PRC_SE), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -445,7 +456,7 @@ contains
         tagc = 10
         do j = JS-JHALO, JS-1
             call MPI_IRECV( var(1,IS-IHALO,j), datasize_4C,                   &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_SW), tag+tagc, &
+                            datatype, PRC_next(PRC_SW), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -454,7 +465,7 @@ contains
         tagc = 20
         do j = JE+1, JE+JHALO
             call MPI_IRECV( var(1,IE+1,j), datasize_4C,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_NE), tag+tagc, &
+                            datatype, PRC_next(PRC_NE), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -463,7 +474,7 @@ contains
         tagc = 30
         do j = JE+1, JE+JHALO
             call MPI_IRECV( var(1,IS-IHALO,j), datasize_4C,                   &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_NW), tag+tagc, &
+                            datatype, PRC_next(PRC_NW), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -472,7 +483,7 @@ contains
         tagc = 40
         do j = JS-JHALO, JS-1
             call MPI_IRECV( var(1,IS,j), datasize_NS8,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+tagc, &
+                            datatype, PRC_next(PRC_S), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
              ireqc = ireqc + 1
              tagc  = tagc  + 1
@@ -481,19 +492,19 @@ contains
         tagc = 50
         do j = JE+1, JE+JHALO
             call MPI_IRECV( var(1,IS,j), datasize_NS8,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+tagc, &
+                            datatype, PRC_next(PRC_N), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
         enddo
         ! From E
         call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,              &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+60, &
+                        datatype, PRC_next(PRC_E), tag+60, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
         ireqc = ireqc + 1
         ! From W
         call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,              &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+70, &
+                        datatype, PRC_next(PRC_W), tag+70, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
         ireqc = ireqc + 1
 
@@ -525,13 +536,13 @@ contains
 
         ! To W HALO communicate
         call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,              &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+60, &
+                        datatype, PRC_next(PRC_W), tag+60, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
         ireqc = ireqc + 1
 
         ! To E HALO communicate
         call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,              &
-                        MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+70, &
+                        datatype, PRC_next(PRC_E), tag+70, &
                         MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
         ireqc = ireqc + 1
 
@@ -539,7 +550,7 @@ contains
         tagc = 40
         do j = JE-JHALO+1, JE
             call MPI_ISEND( var(1,IS,j), datasize_NS8,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+tagc, &
+                            datatype, PRC_next(PRC_N), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -549,7 +560,7 @@ contains
         tagc = 50
         do j = JS, JS+JHALO-1
             call MPI_ISEND( var(1,IS,j), datasize_NS8,                       &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+tagc, &
+                            datatype, PRC_next(PRC_S), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -559,7 +570,7 @@ contains
         tagc = 0
         do j = JE-JHALO+1, JE
             call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_NW), tag+tagc, &
+                            datatype, PRC_next(PRC_NW), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -569,7 +580,7 @@ contains
         tagc = 10
         do j = JE-JHALO+1, JE
             call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_NE), tag+tagc, &
+                            datatype, PRC_next(PRC_NE), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -579,7 +590,7 @@ contains
         tagc = 20
         do j = JS, JS+JHALO-1
             call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_SW), tag+tagc, &
+                            datatype, PRC_next(PRC_SW), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -589,7 +600,7 @@ contains
         tagc = 30
         do j = JS, JS+JHALO-1
             call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_SE), tag+tagc, &
+                            datatype, PRC_next(PRC_SE), tag+tagc, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
             ireqc = ireqc + 1
             tagc  = tagc  + 1
@@ -602,7 +613,7 @@ contains
             tagc = 0
             do j = JS-JHALO, JS-1
                 call MPI_IRECV( var(1,IE+1,j), datasize_4C,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_SE), tag+tagc, &
+                                datatype, PRC_next(PRC_SE), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -614,7 +625,7 @@ contains
             tagc = 10
             do j = JS-JHALO, JS-1
                 call MPI_IRECV( var(1,IS-IHALO,j), datasize_4C,                   &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_SW), tag+tagc, &
+                                datatype, PRC_next(PRC_SW), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -626,7 +637,7 @@ contains
             tagc = 20
             do j = JE+1, JE+JHALO
                 call MPI_IRECV( var(1,IE+1,j), datasize_4C,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_NE), tag+tagc, &
+                                datatype, PRC_next(PRC_NE), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -638,7 +649,7 @@ contains
             tagc = 30
             do j = JE+1, JE+JHALO
                 call MPI_IRECV( var(1,IS-IHALO,j), datasize_4C,                   &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_NW), tag+tagc, &
+                                datatype, PRC_next(PRC_NW), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -650,7 +661,7 @@ contains
             tagc = 40
             do j = JS-JHALO, JS-1
                 call MPI_IRECV( var(1,IS,j), datasize_NS8,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+tagc, &
+                                datatype, PRC_next(PRC_S), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
                  ireqc = ireqc + 1
                  tagc  = tagc  + 1
@@ -662,7 +673,7 @@ contains
             tagc = 50
             do j = JE+1, JE+JHALO
                 call MPI_IRECV( var(1,IS,j), datasize_NS8,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+tagc, &
+                                datatype, PRC_next(PRC_N), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -672,7 +683,7 @@ contains
         ! From E
         if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
             call MPI_IRECV( recvpack_E2P(:,vid), datasize_WE,              &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+60, &
+                            datatype, PRC_next(PRC_E), tag+60, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
             ireqc = ireqc + 1
         endif
@@ -680,7 +691,7 @@ contains
         ! From W
         if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
             call MPI_IRECV( recvpack_W2P(:,vid), datasize_WE,              &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+70, &
+                            datatype, PRC_next(PRC_W), tag+70, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
             ireqc = ireqc + 1
         endif
@@ -718,7 +729,7 @@ contains
         ! To W HALO communicate
         if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
             call MPI_ISEND( sendpack_P2W(:,vid), datasize_WE,              &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_W), tag+60, &
+                            datatype, PRC_next(PRC_W), tag+60, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
             ireqc = ireqc + 1
         endif
@@ -726,7 +737,7 @@ contains
         ! To E HALO communicate
         if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
             call MPI_ISEND( sendpack_P2E(:,vid), datasize_WE,              &
-                            MPI_DOUBLE_PRECISION, PRC_next(PRC_E), tag+70, &
+                            datatype, PRC_next(PRC_E), tag+70, &
                             MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
             ireqc = ireqc + 1
         endif
@@ -736,7 +747,7 @@ contains
             tagc = 40
             do j = JE-JHALO+1, JE
                 call MPI_ISEND( var(1,IS,j), datasize_NS8,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_N), tag+tagc, &
+                                datatype, PRC_next(PRC_N), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -748,7 +759,7 @@ contains
             tagc = 50
             do j = JS, JS+JHALO-1
                 call MPI_ISEND( var(1,IS,j), datasize_NS8,                       &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_S), tag+tagc, &
+                                datatype, PRC_next(PRC_S), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -760,7 +771,7 @@ contains
             tagc = 0
             do j = JE-JHALO+1, JE
                 call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_NW), tag+tagc, &
+                                datatype, PRC_next(PRC_NW), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -772,7 +783,7 @@ contains
             tagc = 10
             do j = JE-JHALO+1, JE
                 call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_NE), tag+tagc, &
+                                datatype, PRC_next(PRC_NE), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -784,7 +795,7 @@ contains
             tagc = 20
             do j = JS, JS+JHALO-1
                 call MPI_ISEND( var(1,IS,j), datasize_4C,                         &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_SW), tag+tagc, &
+                                datatype, PRC_next(PRC_SW), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -796,7 +807,7 @@ contains
             tagc = 30
             do j = JS, JS+JHALO-1
                 call MPI_ISEND( var(1,IE-IHALO+1,j), datasize_4C,                 &
-                                MPI_DOUBLE_PRECISION, PRC_next(PRC_SE), tag+tagc, &
+                                datatype, PRC_next(PRC_SE), tag+tagc, &
                                 MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
                 ireqc = ireqc + 1
                 tagc  = tagc  + 1
@@ -2019,7 +2030,7 @@ contains
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,1,p),       &
                        vsize*2,              &
-                       MPI_DOUBLE_PRECISION, &
+                       datatype,             &
                        p,                    &
                        MPI_COMM_WORLD,       &
                        ierr                  )
@@ -2109,7 +2120,7 @@ contains
           do p = 0, PRC_nmax-1
              call MPI_Bcast( statval(p),           &
                              1,                    &
-                             MPI_DOUBLE_PRECISION, &
+                             datatype,             &
                              p,                    &
                              MPI_COMM_WORLD,       &
                              ierr                  )
