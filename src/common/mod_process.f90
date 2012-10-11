@@ -79,6 +79,7 @@ contains
        IO_FILECHR,           &
        IO_get_available_fid, &
        IO_make_idstr,        &
+       IO_LOG_BASENAME,      &
        IO_LOG_SUPPRESS,      &
        IO_LOG_ALLNODE
     implicit none
@@ -106,7 +107,7 @@ contains
 
        !--- Open logfile
        IO_FID_LOG = IO_get_available_fid()
-       call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+       call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
        open( unit   = IO_FID_LOG,  &
              file   = trim(fname), &
              form   = 'formatted', &
@@ -130,6 +131,7 @@ contains
        write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
        write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
        write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
+       write(IO_FID_LOG,*) '*** basename of log file  =', trim(IO_LOG_BASENAME)
     else
        if ( PRC_myrank == PRC_master ) then ! master node
           write(*,*) '*** Log report is suppressed.'

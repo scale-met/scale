@@ -8,7 +8,7 @@ FFLAGS = -fpp3 -O3 -ftz -m64                  \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias              \
-         -xSSE4.2 -lmpi
+         -xSSE4.2 -lmpi -mkl=sequential
 
 #FFLAGS = -fpp3 -O0 -m64                       \
 #         -assume byterecl -convert big_endian \
@@ -16,6 +16,14 @@ FFLAGS = -fpp3 -O3 -ftz -m64                  \
 #         -heap-arrays -fno-alias              \
 #         -check all -warn all -g -traceback   \
 #         -lmpi
+
+ifneq ($(DISABLE_VEC),)
+      FFLAGS += -no-vec
+endif
+
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
 
 FFLAGS_DYN = $(FFLAGS)
 

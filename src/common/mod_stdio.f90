@@ -36,9 +36,10 @@ module mod_stdio
   integer, public,      save :: IO_FID_CONF = 7       !< Config file ID
   integer, public,      save :: IO_FID_LOG  = 8       !< Log file ID
 
-  logical, public,      save :: IO_L            = .false. !< output log or not?
-  logical, public,      save :: IO_LOG_SUPPRESS = .false. !< suppress log output?
-  logical, public,      save :: IO_LOG_ALLNODE  = .false. !< output log for each node?
+  character(len=IO_FILECHR), public, save :: IO_LOG_BASENAME = 'LOG'   !< basename of logfile
+  logical,                   public, save :: IO_L            = .false. !< output log or not?
+  logical,                   public, save :: IO_LOG_SUPPRESS = .false. !< suppress log output?
+  logical,                   public, save :: IO_LOG_ALLNODE  = .false. !< output log for each node?
 
   !-----------------------------------------------------------------------------
   !
@@ -62,6 +63,7 @@ contains
     implicit none
 
     namelist / PARAM_IO / &
+       IO_LOG_BASENAME, &
        IO_LOG_SUPPRESS, &
        IO_LOG_ALLNODE
 

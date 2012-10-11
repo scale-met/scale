@@ -398,7 +398,7 @@ contains
              enddo
 
              if ( ite > itelim ) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx not converged!', &
+                if( IO_L ) write(IO_FID_LOG,*) 'xxx not converged!(after)', &
                            k,i,j,pt_prev,pott(k),QTRC(k,i,j,I_QV),QTRC(k,i,j,I_QC),dq_cond2(k)
              endif
 
@@ -420,6 +420,36 @@ contains
              output_coll(k,i,j) = dq_coll (k)
           enddo
        endif
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA
+       ! total hydrometeor (before correction)
+       do k = 1, KA
+          diffq(k) = QTRC(k,i,j,I_QV) &
+                   + QTRC(k,i,j,I_QC) &
+                   + QTRC(k,i,j,I_QR)
+       enddo
+
+       ! remove negative value of hydrometeor (mass, number)
+       do iq = I_QV, I_QR
+       do k  = 1, KA
+          if ( QTRC(k,i,j,iq) < 0.D0 ) then
+             QTRC(k,i,j,iq) = 0.D0
+          endif
+       enddo
+       enddo
+
+       ! apply correction of hydrometeor to total density
+       do k  = 1, KA
+          DENS(k,i,j) = DENS(k,i,j)        &
+                      * ( 1.D0             &
+                        + QTRC(k,i,j,I_QV) &
+                        + QTRC(k,i,j,I_QC) &
+                        + QTRC(k,i,j,I_QR) &
+                        - diffq(k)         ) ! after-before
+       enddo
     enddo
     enddo
 
