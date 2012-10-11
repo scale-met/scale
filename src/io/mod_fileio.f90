@@ -42,6 +42,11 @@ module mod_fileio
   public :: FIO_output_1D
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  !-----------------------------------------------------------------------------
+  !
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
@@ -120,7 +125,7 @@ contains
        PRC_myrank
     implicit none
 
-    real(8), intent(in) :: resolution
+    real(RP), intent(in) :: resolution
     integer, intent(in) :: imax
     integer, intent(in) :: jmax
 
@@ -220,7 +225,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(8),          intent(out) :: var(:,:,:)
+    real(RP),          intent(out) :: var(:,:,:)
     character(LEN=*), intent( in) :: basename
     character(LEN=*), intent( in) :: varname
     character(LEN=*), intent( in) :: layername
@@ -230,6 +235,7 @@ contains
     logical, intent(in), optional :: allow_missingq !--- if data is missing, set value to zero
 
     real(4) :: var4(k_start:k_end,FIO_IMAX,FIO_JMAX)
+    real(8) :: var8(k_start:k_end,FIO_IMAX,FIO_JMAX)
 
     integer :: did, fid
     !---------------------------------------------------------------------------
@@ -288,11 +294,12 @@ contains
     if ( dinfo%datatype == FIO_REAL4 ) then
 
        call fio_read_data(fid,did,var4(:,:,:))
-       var(k_start:k_end,:,:) = real(var4(1:dinfo%num_of_layer,:,:),kind=8)
+       var(k_start:k_end,:,:) = real(var4(1:dinfo%num_of_layer,:,:),kind=RP)
 
     elseif( dinfo%datatype == FIO_REAL8 ) then
 
-       call fio_read_data(fid,did,var(:,:,:))
+       call fio_read_data(fid,did,var8(:,:,:))
+       var(k_start:k_end,:,:) = real(var8(1:dinfo%num_of_layer,:,:),kind=RP)
 
     endif
 
@@ -330,11 +337,11 @@ contains
     character(LEN=*), intent(   in) :: varname
     character(LEN=*), intent(   in) :: layername
     integer,          intent(   in) :: k_start, k_end
-    real(8),          intent(   in) :: ctime
+    real(RP),          intent(   in) :: ctime
     integer,          intent(   in) :: cdate(6)
     logical,          intent(   in) :: opt_periodic_year
 
-    real(8) :: midtime  !--- [sec]
+    real(RP) :: midtime  !--- [sec]
     logical :: startflag
     integer :: did, fid
     integer :: i
@@ -418,10 +425,11 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
-       CONST_UNDEF4
+       CONST_UNDEF4, &
+       CONST_UNDEF8
     implicit none
 
-    real(8),          intent(in) :: var(:,:,:)
+    real(RP),          intent(in) :: var(:,:,:)
     character(LEN=*), intent(in) :: basename
     character(LEN=*), intent(in) :: pkg_desc
     character(LEN=*), intent(in) :: pkg_note
@@ -433,9 +441,10 @@ contains
     character(LEN=*), intent(in) :: layername
     integer,          intent(in) :: k_start, k_end
     integer,          intent(in) :: step
-    real(8),          intent(in) :: t_start, t_end
+    real(RP),          intent(in) :: t_start, t_end
 
     real(4) :: var4(k_start:k_end,FIO_IMAX,FIO_JMAX)
+    real(8) :: var8(k_start:k_end,FIO_IMAX,FIO_JMAX)
 
     integer :: did, fid
     !---------------------------------------------------------------------------
@@ -481,7 +490,11 @@ contains
 
     elseif( dtype == FIO_REAL8 ) then
 
-       call fio_put_write_datainfo_data(did,fid,dinfo,var(:,:,:))
+       var8(k_start:k_end,:,:) = real(var(k_start:k_end,:,:),kind=8)
+       where( var8(:,:,:) < (CONST_UNDEF8+1.0) )
+          var8(:,:,:) = CONST_UNDEF8
+       endwhere
+       call fio_put_write_datainfo_data(did,fid,dinfo,var8(:,:,:))
     else
        if( IO_L ) write(IO_FID_LOG,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
        call PRC_MPIstop
@@ -617,7 +630,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(8),          intent(out) :: var(:)
+    real(RP),          intent(out) :: var(:)
     character(LEN=*), intent( in) :: basename
     character(LEN=*), intent( in) :: varname
     character(LEN=*), intent( in) :: layername
@@ -661,12 +674,12 @@ contains
     if ( dinfo%datatype == FIO_REAL4 ) then
 
        call fio_read_data(fid,did,var4(:))
-       var(k_start:k_end) = real(var4(1:dinfo%num_of_layer),kind=8)
+       var(k_start:k_end) = real(var4(1:dinfo%num_of_layer),kind=RP)
 
     elseif( dinfo%datatype == FIO_REAL8 ) then
 
        call fio_read_data(fid,did,var8(:))
-       var(k_start:k_end) = var8(1:dinfo%num_of_layer)
+       var(k_start:k_end) = real(var8(1:dinfo%num_of_layer),kind=RP)
 
     endif
 
@@ -696,10 +709,11 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only : &
-       CONST_UNDEF4
+       CONST_UNDEF4, &
+       CONST_UNDEF8
     implicit none
 
-    real(8),          intent(in) :: var(:)
+    real(RP),          intent(in) :: var(:)
     character(LEN=*), intent(in) :: basename
     character(LEN=*), intent(in) :: pkg_desc
     character(LEN=*), intent(in) :: pkg_note
@@ -711,7 +725,7 @@ contains
     character(LEN=*), intent(in) :: layername
     integer,          intent(in) :: k_start, k_end
     integer,          intent(in) :: step
-    real(8),          intent(in) :: t_start, t_end
+    real(RP),          intent(in) :: t_start, t_end
     logical,          intent(in) :: single
 
     real(4) :: var4(k_start:k_end)
@@ -753,7 +767,10 @@ contains
 
     elseif( dtype == FIO_REAL8 ) then
 
-       var8(k_start:k_end)=var(k_start:k_end)
+       var8(k_start:k_end)=real(var(k_start:k_end),kind=8)
+       where( var8(:) < (CONST_UNDEF8+1.0) )
+          var8(:) = CONST_UNDEF8
+       endwhere
 
        call fio_put_write_datainfo_data(did,fid,dinfo,var8(:))
     else

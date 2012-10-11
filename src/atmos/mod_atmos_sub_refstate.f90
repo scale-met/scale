@@ -38,8 +38,8 @@ module mod_atmos_refstate
   !
   !++ included parameters
   !
-  include 'inc_index.h'
   include 'inc_precision.h'
+  include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !

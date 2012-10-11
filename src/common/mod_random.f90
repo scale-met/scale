@@ -28,7 +28,11 @@ module mod_random
   !
   public :: RANDOM_setup
   public :: RANDOM_get
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -78,7 +82,7 @@ contains
     integer :: time
 
     integer :: time1
-    real(8) :: time2
+    real(RP) :: time2
     !---------------------------------------------------------------------------
 
     time1 = time()
@@ -96,7 +100,7 @@ contains
   subroutine RANDOM_get( var )
     implicit none
 
-    real(8), intent(out) :: var(:,:,:)
+    real(RP), intent(out) :: var(:,:,:)
     !---------------------------------------------------------------------------
 
     call RANDOM_reset

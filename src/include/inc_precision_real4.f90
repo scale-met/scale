@@ -1,6 +1,6 @@
   !----------------------------------------------------------------------------
   !
-  !++ scale3 real precision (8)
+  !++ scale3 real precision (4)
   !
   !----------------------------------------------------------------------------
-  integer, private, parameter :: RP = 4 ! double precision
+  integer, private, parameter :: RP = 4 ! float

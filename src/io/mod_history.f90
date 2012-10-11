@@ -42,6 +42,7 @@ module mod_history
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include "inc_index.h"
 
   !-----------------------------------------------------------------------------
@@ -62,7 +63,7 @@ module mod_history
 
   integer,                   private, parameter :: HIST_req_limit = 1000 !> number limit for history item request
   character(len=FIO_HSHORT), private,      save :: HIST_req_item   (HIST_req_limit)
-  real(8),                   private,      save :: HIST_req_tintsec(HIST_req_limit)
+  real(RP),                   private,      save :: HIST_req_tintsec(HIST_req_limit)
   logical,                   private,      save :: HIST_req_tavg   (HIST_req_limit)
 
   integer,                   private,              save :: HIST_req_nmax = 0 !> number of requested item
@@ -71,17 +72,17 @@ module mod_history
   character(len=FIO_HSHORT), private, allocatable, save :: HIST_unit   (:)
   character(len=FIO_HSHORT), private, allocatable, save :: HIST_ktype  (:)
   integer,                   private, allocatable, save :: HIST_kmax   (:)
-  real(8),                   private, allocatable, save :: HIST_tintsec(:)
+  real(RP),                   private, allocatable, save :: HIST_tintsec(:)
   logical,                   private, allocatable, save :: HIST_tavg   (:)
 
-  real(8),                   private, allocatable, save :: HIST_varsum (:,:,:,:)
+  real(RP),                   private, allocatable, save :: HIST_varsum (:,:,:,:)
   integer,                   private, allocatable, save :: HIST_step   (:)
-  real(8),                   private, allocatable, save :: HIST_tstrsec(:)
-  real(8),                   private, allocatable, save :: HIST_tsumsec(:)
+  real(RP),                   private, allocatable, save :: HIST_tstrsec(:)
+  real(RP),                   private, allocatable, save :: HIST_tsumsec(:)
 
   integer,                   private,              save :: HIST_id_count = 1 !> number of registered item
 
-  real(8), private, parameter :: eps = 1.D-10 !> epsilon for timesec
+  real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------  
 contains
@@ -99,7 +100,7 @@ contains
        FIO_preclist
     implicit none
 
-    real(8)                   :: HISTORY_DEFAULT_TINTERVAL = 1.D0
+    real(RP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.E0_RP
     character(len=FIO_HSHORT) :: HISTORY_DEFAULT_TUNIT     = "MIN"
     logical                   :: HISTORY_DEFAULT_AVERAGE   = .false.
     character(len=FIO_HSHORT) :: HISTORY_DATATYPE          = "REAL4"
@@ -112,7 +113,7 @@ contains
        HISTORY_DATATYPE
 
     character(len=FIO_HSHORT) :: ITEM  !> name of history item
-    real(8)                   :: TINT  !> time interval to output
+    real(RP)                   :: TINT  !> time interval to output
     character(len=FIO_HSHORT) :: TUNIT !> time unit
     logical                   :: TAVG  !> time average  to output
 
@@ -289,8 +290,8 @@ contains
     implicit none
 
     integer, intent(in) :: itemid
-    real(8), intent(in) :: var(:,:,:)
-    real(8), intent(in) :: dt
+    real(RP), intent(in) :: var(:,:,:)
+    real(RP), intent(in) :: dt
 
     integer :: ksize, kstr, kend
     !---------------------------------------------------------------------------
@@ -326,12 +327,12 @@ contains
       dt     )
     implicit none
 
-    real(8),          intent(in) :: var(:,:,:)
+    real(RP),          intent(in) :: var(:,:,:)
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: unit
     character(len=*), intent(in) :: ktype
-    real(8),          intent(in) :: dt
+    real(RP),          intent(in) :: dt
 
     integer :: itemid
     !---------------------------------------------------------------------------
@@ -363,7 +364,7 @@ contains
 !    character(LEN=64) :: gname
 #endif
 
-    real(8) :: var(KMAX,IMAX,JMAX)
+    real(RP) :: var(KMAX,IMAX,JMAX)
 
     logical, save :: firsttime = .true.
 

@@ -60,6 +60,7 @@ module mod_atmos_saturation
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
 
@@ -75,7 +76,7 @@ module mod_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(8), private, parameter :: TEM_MIN   = 10.D0
+  real(RP), private, parameter :: TEM_MIN   = 10.E0_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -86,10 +87,10 @@ contains
   subroutine ATMOS_SATURATION_psat_water( psat, temp )
     implicit none
 
-    real(8), intent(out) :: psat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -127,10 +128,10 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_psat_ice( psat, temp )
     implicit none
 
-    real(8), intent(out) :: psat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -168,12 +169,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_sfc( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(1,IA,JA)
-    real(8), intent(in)  :: temp(1,IA,JA)
-    real(8), intent(in)  :: pres(1,IA,JA)
+    real(RP), intent(out) :: qsat(1,IA,JA)
+    real(RP), intent(in)  :: temp(1,IA,JA)
+    real(RP), intent(in)  :: pres(1,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -212,12 +213,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_water( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -257,12 +258,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_ice( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -304,14 +305,14 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsw_dtem_rho( dqsdtem, temp, dens )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -360,14 +361,14 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsi_dtem_rho( dqsdtem, temp, dens )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -416,16 +417,16 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsw_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: den1(KA), den2(KA) ! denominator
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -479,16 +480,16 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsi_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: den1(KA), den2(KA) ! denominator
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------

@@ -8,14 +8,14 @@
   integer, private, parameter :: IHALO =   2 ! # of halo cells: x
   integer, private, parameter :: JHALO =   2 ! # of halo cells: y
 
-  real(8), private, parameter :: DZ  =  100 ! length in the main region [m]: z
-  real(8), private, parameter :: DX  = 1000 ! length in the main region [m]: x
-  real(8), private, parameter :: DY  = 1000 ! length in the main region [m]: y
+  real(RP), private, parameter :: DZ  =  100 ! length in the main region [m]: z
+  real(RP), private, parameter :: DX  = 1000 ! length in the main region [m]: x
+  real(RP), private, parameter :: DY  = 1000 ! length in the main region [m]: y
 
-  real(8), private, parameter :: BUFFER_DZ = 13.5D3  ! thickness of buffer region [m]: z
-  real(8), private, parameter :: BUFFER_DX =  0.0D0  ! thickness of buffer region [m]: x
-  real(8), private, parameter :: BUFFER_DY =  0.0D0  ! thickness of buffer region [m]: y
-  real(8), private, parameter :: BUFFFACT  =  1.05D0 ! strech factor for dx/dy/dz of buffer region
+  real(RP), private, parameter :: BUFFER_DZ = 13.5E3_RP  ! thickness of buffer region [m]: z
+  real(RP), private, parameter :: BUFFER_DX =  0.0E0_RP  ! thickness of buffer region [m]: x
+  real(RP), private, parameter :: BUFFER_DY =  0.0E0_RP  ! thickness of buffer region [m]: y
+  real(RP), private, parameter :: BUFFFACT  =  1.05E0_RP ! strech factor for dx/dy/dz of buffer region
 
   integer, private, parameter :: KMAX  = 60 ! # of computational cells: z
   integer, private, parameter :: IMAX  = 30 ! # of computational cells: x

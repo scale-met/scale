@@ -40,13 +40,14 @@ module mod_ocean_vars
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: SST(1,IA,JA) ! sea surface prognostics container (with HALO)
+  real(RP), public, save :: SST(1,IA,JA) ! sea surface prognostics container (with HALO)
 
   character(len=FIO_HSHORT), public, save :: OP_NAME(1)
   character(len=FIO_HMID),   public, save :: OP_DESC(1)
@@ -167,7 +168,7 @@ contains
        FIO_input
     implicit none
 
-    real(8) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
 
@@ -205,7 +206,7 @@ contains
        FIO_output
     implicit none
 
-    real(8) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
+    real(RP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
     character(len=FIO_HMID)   :: desc

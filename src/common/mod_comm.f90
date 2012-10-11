@@ -56,6 +56,7 @@ module mod_comm
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include "inc_index.h"
 
   !-----------------------------------------------------------------------------
@@ -87,14 +88,14 @@ module mod_comm
   integer, private, save :: IREQ_CNT_4C
   integer, private, save :: IREQ_CNT_MAX
 
-  real(8), private, allocatable, save :: recvpack_W2P(:,:)
-  real(8), private, allocatable, save :: recvpack_E2P(:,:)
-  real(8), private, allocatable, save :: sendpack_P2W(:,:)
-  real(8), private, allocatable, save :: sendpack_P2E(:,:)
-  real(4), private, allocatable, save :: recvpack_W2P_r4(:,:)
-  real(4), private, allocatable, save :: recvpack_E2P_r4(:,:)
-  real(4), private, allocatable, save :: sendpack_P2W_r4(:,:)
-  real(4), private, allocatable, save :: sendpack_P2E_r4(:,:)
+  real(RP), private, allocatable, save :: recvpack_W2P(:,:)
+  real(RP), private, allocatable, save :: recvpack_E2P(:,:)
+  real(RP), private, allocatable, save :: sendpack_P2W(:,:)
+  real(RP), private, allocatable, save :: sendpack_P2E(:,:)
+  real(RP), private, allocatable, save :: recvpack_W2P_r4(:,:)
+  real(RP), private, allocatable, save :: recvpack_E2P_r4(:,:)
+  real(RP), private, allocatable, save :: sendpack_P2W_r4(:,:)
+  real(RP), private, allocatable, save :: sendpack_P2E_r4(:,:)
 
   integer, private, allocatable, save :: ireq_cnt(:)
   integer, private, allocatable, save :: ireq_list(:,:)
@@ -204,7 +205,7 @@ contains
        PRC_S
     implicit none
 
-    real(8), intent(inout) :: var(:,:,:)
+    real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag
@@ -414,7 +415,7 @@ contains
        PRC_SE
     implicit none
 
-    real(8), intent(inout) :: var(:,:,:)
+    real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag, tagc
@@ -822,7 +823,7 @@ contains
 
     implicit none
 
-    real(8), intent(inout) :: var(:,:,:)
+    real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ierr
@@ -1904,7 +1905,7 @@ contains
   subroutine COMM_set_rdma_variable(var, vid)
     implicit none
 
-    real(8), intent(in) :: var(:,:,:)
+    real(RP), intent(in) :: var(:,:,:)
     integer, intent(in) :: vid
     !---------------------------------------------------------------------------
 
@@ -1966,14 +1967,14 @@ contains
        CONST_UNDEF2
     implicit none
 
-    real(8),          intent(inout) :: var(:,:,:,:)
+    real(RP),          intent(inout) :: var(:,:,:,:)
     character(len=*), intent(in)    :: varname(:)
 
     logical :: halomask(KA,IA,JA)
 
-    real(8), allocatable :: statval   (:,:,:)
+    real(RP), allocatable :: statval   (:,:,:)
     integer, allocatable :: statidx   (:,:,:,:)
-    real(8), allocatable :: allstatval(:,:)
+    real(RP), allocatable :: allstatval(:,:)
     integer, allocatable :: allstatidx(:,:,:)
     integer              :: vsize
 
@@ -2067,12 +2068,12 @@ contains
        totvol  => GEOMETRICS_totvol
     implicit none
 
-    real(8),           intent(in) :: var(KA,IA,JA)
+    real(RP),           intent(in) :: var(KA,IA,JA)
     character(len=*),  intent(in)    :: varname
 
-    real(8) :: statval(0:PRC_nmax-1)
-    real(8) :: allstatval
-    real(8) :: ksize
+    real(RP) :: statval(0:PRC_nmax-1)
+    real(RP) :: allstatval
+    real(RP) :: ksize
 
     integer :: ierr
     integer :: k, i, j, p

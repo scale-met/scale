@@ -37,19 +37,20 @@ module mod_geometrics
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include "inc_index.h"
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: GEOMETRICS_lon (1,IA,JA)
-  real(8), public, save :: GEOMETRICS_lat (1,IA,JA)
+  real(RP), public, save :: GEOMETRICS_lon (1,IA,JA)
+  real(RP), public, save :: GEOMETRICS_lat (1,IA,JA)
 
-  real(8), public, save :: GEOMETRICS_area(1,IA,JA)
-  real(8), public, save :: GEOMETRICS_vol (KA,IA,JA)
-  real(8), public, save :: GEOMETRICS_totarea ! total area   (local)
-  real(8), public, save :: GEOMETRICS_totvol  ! total volume (local)
+  real(RP), public, save :: GEOMETRICS_area(1,IA,JA)
+  real(RP), public, save :: GEOMETRICS_vol (KA,IA,JA)
+  real(RP), public, save :: GEOMETRICS_totarea ! total area   (local)
+  real(RP), public, save :: GEOMETRICS_totvol  ! total volume (local)
 
   !-----------------------------------------------------------------------------
   !
@@ -59,8 +60,8 @@ module mod_geometrics
   !
   !++ Private parameters & variables
   !
-  real(8), private :: GEOMETRICS_startlonlat(2) = (/ 135.2D0, 34.7D0 /)
-  real(8), private :: GEOMETRICS_rotation       = 0.D0
+  real(RP), private :: GEOMETRICS_startlonlat(2) = (/ 135.2E0_RP, 34.7E0_RP /)
+  real(RP), private :: GEOMETRICS_rotation       = 0.E0_RP
 
   character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''
 
@@ -124,8 +125,8 @@ contains
        FIO_output
     implicit none
 
-    real(8) :: sfc(1,IMAX,JMAX)
-    real(8) :: var(KMAX,IMAX,JMAX)
+    real(RP) :: sfc(1,IMAX,JMAX)
+    real(RP) :: var(KMAX,IMAX,JMAX)
 
     character(len=IO_FILECHR) :: bname
     character(len=FIO_HMID)   :: desc
@@ -212,14 +213,14 @@ contains
        CY => GRID_CY
     implicit none
 
-    real(8) :: GRID_rotX(1,IA,JA)
-    real(8) :: GRID_rotY(1,IA,JA)
-    real(8) :: d2r, r2d, theta
+    real(RP) :: GRID_rotX(1,IA,JA)
+    real(RP) :: GRID_rotY(1,IA,JA)
+    real(RP) :: d2r, r2d, theta
 
-    real(8) :: c(2)
-    real(8) :: gno(2)
-    real(8) :: sph(2)
-    real(8) :: rho, gmm
+    real(RP) :: c(2)
+    real(RP) :: gno(2)
+    real(RP) :: sph(2)
+    real(RP) :: rho, gmm
 
     integer :: i, j
     !---------------------------------------------------------------------------
