@@ -429,7 +429,7 @@ contains
     vsize = size(var(:))
 
     allocate( statval(vsize,0:PRC_nmax-1) )
-    statval(:,:) = 0.D0
+    statval(:,:) = 0.0_RP
 
     do v = 1, vsize
        statval(v,PRC_myrank) = var(v)
@@ -446,7 +446,7 @@ contains
     enddo
 
     do v = 1, vsize
-       totalvar = 0.D0
+       totalvar = 0.0_RP
        do p = 0, PRC_nmax-1
           totalvar = totalvar + statval(v,p)
        enddo

@@ -199,7 +199,7 @@ contains
        call TIME_ymdhms2sec( HIST_req_tintsec(n), TINT, TUNIT )
        HIST_req_tavg(n) = TAVG
 
-       if ( HIST_req_tintsec(n) <= 0.D0 ) then
+       if ( HIST_req_tintsec(n) <= 0.0_RP ) then
           write(*,*) 'xxx Not appropriate time interval. Check!', ITEM, TINT
           call PRC_MPIstop
        endif
@@ -262,10 +262,10 @@ contains
              HIST_tintsec(itemid) = HIST_req_tintsec(reqid)
              HIST_tavg   (itemid) = HIST_req_tavg(reqid)
 
-             HIST_varsum(:,:,:,itemid) = 0.D0
+             HIST_varsum(:,:,:,itemid) = 0.0_RP
              HIST_step        (itemid) = 1
              HIST_tstrsec     (itemid) = NOWSEC
-             HIST_tsumsec     (itemid) = 0.D0
+             HIST_tsumsec     (itemid) = 0.0_RP
 
              if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Item registration No.= ', itemid
              if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(HIST_item (itemid))
@@ -411,10 +411,10 @@ contains
                            HIST_tstrsec(n),                & ! package name
                            HIST_tstrsec(n)+HIST_tsumsec(n) ) ! package name
 
-          HIST_varsum(:,:,:,n) = 0.D0
+          HIST_varsum(:,:,:,n) = 0.0_RP
           HIST_step(n)         = HIST_step(n) + 1
           HIST_tstrsec(n)      = NOWSEC
-          HIST_tsumsec(n)      = 0.D0
+          HIST_tsumsec(n)      = 0.0_RP
        endif
 
     enddo

@@ -99,7 +99,7 @@ contains
 call START_COLLECTION("satadjust")
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LH00 / Rvap
 
@@ -109,7 +109,7 @@ call START_COLLECTION("satadjust")
 
        psat(ij,k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
     enddo
     enddo

@@ -84,7 +84,7 @@ module mod_time
   !++ Private parameters & variables
   !
   integer, private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
-  real(RP), private,      save :: TIME_STARTMS      = 0.D0                           !< [millisec]
+  real(RP), private,      save :: TIME_STARTMS      = 0.0_RP                           !< [millisec]
   real(RP), private,      save :: TIME_STARTSECL
 
   integer, private,      save :: TIME_ENDDATE(6)
@@ -93,7 +93,7 @@ module mod_time
 
   integer, private,      save :: TIME_NSTEP
 
-  real(RP), private,      save :: TIME_RES_ATMOS_DYN     = 0.D0
+  real(RP), private,      save :: TIME_RES_ATMOS_DYN     = 0.0_RP
   real(RP), private,      save :: TIME_RES_ATMOS_PHY_TB  = 0.E0_RP
   real(RP), private,      save :: TIME_RES_ATMOS_PHY_MP  = 0.E0_RP
   real(RP), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.E0_RP

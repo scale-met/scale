@@ -100,7 +100,7 @@ contains
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -111,7 +111,7 @@ call START_COLLECTION('SUB_satadjust')
 
        psat(k,i,j) = PSAT0                                 &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
     enddo
     enddo
     enddo
@@ -141,7 +141,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -152,7 +152,7 @@ call START_COLLECTION('SUB_satadjust')
 
        psat(k,i,j) = PSAT0                                 &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
     enddo
     enddo
     enddo
@@ -184,7 +184,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -195,9 +195,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
 
@@ -228,7 +228,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -239,9 +239,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
     enddo
@@ -273,7 +273,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -284,9 +284,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
     enddo
@@ -322,7 +322,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -334,14 +334,14 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                  &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
           lhv(k)  = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
 
           dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.D0 )
+                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
        enddo
 
     enddo
@@ -378,7 +378,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -390,14 +390,14 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
           lhv(k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
 
           dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.D0 )
+                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
        enddo
 
     enddo
@@ -436,7 +436,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -448,12 +448,12 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) )
+          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
+                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
           den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
           lhv (k) = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
        enddo
@@ -499,7 +499,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -511,12 +511,12 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) )
+          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
+                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
           den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
           lhv (k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
        enddo

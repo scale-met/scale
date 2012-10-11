@@ -176,8 +176,8 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    GEOMETRICS_totarea     = 0.D0
-    GEOMETRICS_area(:,:,:) = 0.D0
+    GEOMETRICS_totarea     = 0.0_RP
+    GEOMETRICS_area(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -187,8 +187,8 @@ contains
     enddo
     enddo
 
-    GEOMETRICS_totvol     = 0.D0
-    GEOMETRICS_vol(:,:,:) = 0.D0
+    GEOMETRICS_totvol     = 0.0_RP
+    GEOMETRICS_vol(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -225,8 +225,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    d2r   = PI / 180.D0
-    r2d   = 180.D0 / PI
+    d2r   = PI / 180.0_RP
+    r2d   = 180.0_RP / PI
     theta = GEOMETRICS_rotation * d2r
 
     c(1) = GEOMETRICS_startlonlat(1) * d2r
@@ -247,7 +247,7 @@ contains
        rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
        gmm = atan( rho )
 
-       if ( rho == 0.D0 ) then
+       if ( rho == 0.0_RP ) then
           sph(1) = c(1)
           sph(2) = c(2)
        else

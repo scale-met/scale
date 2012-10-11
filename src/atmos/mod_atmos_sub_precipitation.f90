@@ -118,9 +118,9 @@ call START_COLLECTION('SUB_precipitation')
 
        !OCL XFILL
        do iq = I_QC, I_NG
-          qflx(KE,iq) = 0.D0
+          qflx(KE,iq) = 0.0_RP
        enddo
-       eflx(KE) = 0.D0
+       eflx(KE) = 0.0_RP
 
        !--- tracer
        do iq = I_QC, I_NG

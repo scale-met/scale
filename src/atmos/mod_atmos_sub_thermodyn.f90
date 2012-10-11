@@ -124,7 +124,7 @@ call START_COLLECTION('SUB_thermodyn')
     do k  = 1, KA
     do ij = 1, IJA
 
-       qdry(ij,k) = 1.D0
+       qdry(ij,k) = 1.0_RP
 
        do iqw = QQS, QQE
           qdry(ij,k) = qdry(ij,k) - q(ij,k,iqw)
@@ -158,7 +158,7 @@ call START_COLLECTION('SUB_thermodyn')
     do j = 1, JA
     do i = 1, IA
     do k  = 1, KA
-       qdry(k,i,j) = 1.D0
+       qdry(k,i,j) = 1.0_RP
        do iqw = QQS, QQE
           qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw)
        enddo
@@ -316,8 +316,8 @@ call STOP_COLLECTION('SUB_thermodyn')
 call START_COLLECTION('SUB_thermodyn')
 #endif
 
-    RPRE00   = 1.D0 / PRE00
-    WKAPPA   = 1.D0 / ( 1.D0 - RovCP )
+    RPRE00   = 1.0_RP / PRE00
+    WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
 
     do k  = 1, KA
     do ij = 1, IJA

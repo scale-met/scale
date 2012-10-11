@@ -2084,7 +2084,7 @@ contains
        statval(:) = CONST_UNDEF8
        ksize = size(var(:,:,:),1)
 
-       statval(PRC_myrank) = 0.D0
+       statval(PRC_myrank) = 0.0_RP
        if ( ksize == KA ) then ! 3D
           do j = JS, JE
           do i = IS, IE
@@ -2115,7 +2115,7 @@ contains
                              ierr                  )
           enddo
 
-          allstatval = 0.D0
+          allstatval = 0.0_RP
           do p = 0, PRC_nmax-1
              allstatval = allstatval + statval(p)
           enddo

@@ -129,7 +129,7 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CONST)
 
-    CONST_PI    = 4.E0_RP * atan( 1.D0 )
+    CONST_PI    = 4.E0_RP * atan( 1.0_RP )
     CONST_EPS   = epsilon(0.E0_RP)
 
     CONST_CVdry   = CONST_CPdry - CONST_Rdry
