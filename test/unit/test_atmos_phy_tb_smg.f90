@@ -13,9 +13,9 @@ module test_atmos_phy_tb_smg
   public :: test_atmos_phy_tb_smg_run
 
   !-----------------------------------------------------------------------------
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   real(RP) :: MOMZ_t(KA,IA,JA)
   real(RP) :: MOMX_t(KA,IA,JA)

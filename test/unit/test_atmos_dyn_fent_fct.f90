@@ -28,9 +28,9 @@ module test_atmos_dyn_fent_fct
   public :: test_atmos_dyn_fent_fct_run
 
   !-----------------------------------------------------------------------------
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   real(RP) :: DENS(KA,IA,JA)
   real(RP) :: MOMZ(KA,IA,JA)
