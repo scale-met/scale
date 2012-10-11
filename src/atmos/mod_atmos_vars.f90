@@ -119,7 +119,7 @@ module mod_atmos_vars
 
   logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.D-6
+  real(RP),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
 
   integer, private, save      :: ATMOS_HIST_sw (20)
   integer, private, save      :: ATMOS_PREP_sw (20)

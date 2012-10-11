@@ -1673,7 +1673,7 @@ contains
        MOMZ(k,i,j) = 0.0_RP
      endif
      if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       RHOT(k,i,j) = ( pott(k,i,j)+2.d0*( rndm(k,i,j)-0.5d0 )*PERTURB_AMP ) * DENS(k,i,j)
+       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP ) * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
      endif
@@ -1765,7 +1765,7 @@ contains
 
     integer :: ierr
     integer :: k, i, j, iq
-    real(RP) :: PERTURB_AMP = 0.d0
+    real(RP) :: PERTURB_AMP = 0.0_RP
     integer :: RANDOM_LIMIT = 5
     integer :: RANDOM_FLAG = 0  !0 -> no perturbation
                                 !1 -> perturbation for PT  
@@ -1940,7 +1940,7 @@ contains
     integer :: k, i, j, iq
     real(RP) :: gan, xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
-    real(RP), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+    real(RP), parameter :: pi = 3.141592_RP, rhoa = 2.25E+03_RP
 
     real(RP) :: F0_AERO      =  1.E+7_RP ! 
     real(RP) :: R0_AERO      =  1.E-7_RP !
@@ -2263,7 +2263,7 @@ contains
     integer :: k, i, j, iq
     real(RP) :: gan, xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
-    real(RP), parameter :: pi = 3.141592d0, rhoa = 2.25d+03
+    real(RP), parameter :: pi = 3.141592_RP, rhoa = 2.25e+03_RP
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2309,10 +2309,10 @@ contains
             + ( (CX(i)-BBL_CX)/BBL_RX )**2 &
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
           if( dist < 1.0_RP ) then
-           if( dist < ( 500.d0/600.d0 )**2 ) then
+           if( dist < ( 500.0_RP/600.0_RP )**2 ) then
             pott(k,i,j) = pott(k,i,j) + BBL_THETA 
-           else if ( dist >= ( 500.d0/600.d0 )**2 .and. dist < 1.d0 ) then
-            pott(k,i,j) = pott(k,i,j) + BBL_THETA-BBL_THETA/(1.d0-(500.d0/600.d0)**2)*(dist-(500.d0/600.d0)**2)
+           else if ( dist >= ( 500.0_RP/600.0_RP )**2 .and. dist < 1.0_RP ) then
+            pott(k,i,j) = pott(k,i,j) + BBL_THETA-BBL_THETA/(1.d0-(500.0_RP/600.0_RP)**2)*(dist-(500.0_RP/600.0_RP)**2)
            end if 
           endif
           qv  (k,i,j) = 0.0_RP

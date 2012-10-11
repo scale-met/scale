@@ -394,7 +394,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( PRC_mpi_alive ) then
-       time = MPI_WTIME()
+       time = real(MPI_WTIME(), kind=RP)
     else
        call cpu_time(time)
     endif
