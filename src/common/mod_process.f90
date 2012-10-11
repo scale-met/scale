@@ -422,7 +422,7 @@ contains
     integer              :: vsize
 
     real(RP) :: totalvar
-    integer :: ierr
+    integer :: datatype, ierr
     integer :: v, p
     !---------------------------------------------------------------------------
 
@@ -435,11 +435,20 @@ contains
        statval(v,PRC_myrank) = var(v)
     enddo
 
+    if ( RP == kind(0.0) ) then
+       datatype = MPI_REAL
+    else if ( RP == kind(0.D0) ) then
+       datatype = MPI_DOUBLE_PRECISION
+    else
+       write(*,*) 'xxx specified precision of real is not supported'
+       call PRC_MPIstop
+    end if
+
     ! MPI broadcast
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,p),         &
                        vsize,                &
-                       MPI_DOUBLE_PRECISION, &
+                       datatype,             &
                        p,                    &
                        MPI_COMM_WORLD,       &
                        ierr                  )
