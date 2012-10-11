@@ -35,8 +35,8 @@ module mod_atmos_hydrostatic
   !
   !++ included parameters
   !
-  include 'inc_index.h'
   include 'inc_precision.h'
+  include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -71,6 +71,7 @@ contains
       qv_sfc    )
     use mod_const, only : &
        GRAV    => CONST_GRAV,    &
+       EPS     => CONST_EPS,     &
        Rdry    => CONST_Rdry,    &
        Rvap    => CONST_Rvap,    &
        CPovR   => CONST_CPovR,   &
@@ -109,7 +110,7 @@ contains
 
     real(RP) :: dens_s, dhyd, dgrd
 
-    real(RP), parameter :: criteria = 1.0E-15_RP
+    real(RP) :: criteria
     integer, parameter :: itelim = 100
 
     integer :: k, i, j, ite, ierr
@@ -119,6 +120,7 @@ contains
 
     !---------------------------------------------------------------------------
 
+    criteria = EPS * 5
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC]/Categ[ATMOS]'
 
@@ -292,6 +294,7 @@ contains
       qv_sfc    )
     use mod_const, only : &
        GRAV    => CONST_GRAV,    &
+       EPS     => CONST_EPS,     &
        Rdry    => CONST_Rdry,    &
        Rvap    => CONST_Rvap,    &
        CPovR   => CONST_CPovR,   &
@@ -330,7 +333,7 @@ contains
 
     real(RP) :: dens_s, dhyd, dgrd
 
-    real(RP), parameter :: criteria = 1.0E-15_RP
+    real(RP) :: criteria
     integer, parameter :: itelim = 100
 
     integer :: k, ite, ierr
@@ -340,6 +343,7 @@ contains
 
     !---------------------------------------------------------------------------
 
+    criteria = EPS * 5
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC_1d]/Categ[ATMOS]'
 

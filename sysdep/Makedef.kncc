@@ -2,7 +2,7 @@
 
 # Fortran Compiler
 FC     = mpiifort
-FFLAGS = -mmic -fpp3 -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays \
+FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays \
          -assume byterecl -convert big_endian \
          -fno-alias
 
@@ -11,11 +11,11 @@ FFLAGS_DYN = $(FFLAGS)
 
 # C compiler
 CC     = mpiicc
-CFLAGS = -O3 -ftz -mmic -O3 -vec-report1 -parallel -openmp 
+CFLAGS = -O3 -ftz -mmic -g -O3 -parallel -openmp 
 
 # linker
 LD     = $(FC)
-LFLAGS = $(FFLAGS)  -shared-intel
+LFLAGS = $(FFLAGS)
 
 # for frontend
 

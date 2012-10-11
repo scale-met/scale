@@ -56,9 +56,9 @@ module mod_atmos_dyn
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -279,7 +279,7 @@ contains
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
-          corioli(1,i,j) = 2.D0 * EOHM * sin( lat(1,i,j) * d2r )
+          corioli(1,i,j) = 2.0_RP * EOHM * sin( lat(1,i,j) * d2r )
        enddo
        enddo
     else
@@ -1509,7 +1509,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k  ,i,j) )
           call CHECK( __LINE__, DENS(k+1,i,j) )
 #endif
-          VELZ(k,i,j) = 2.D0 * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
+          VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
        enddo
        enddo
        enddo
@@ -1526,7 +1526,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k,i  ,j) )
           call CHECK( __LINE__, DENS(k,i+1,j) )
 #endif
-          VELX(k,i,j) = 2.D0 * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
        enddo
        enddo
        enddo
@@ -1543,7 +1543,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k,i,j  ) )
           call CHECK( __LINE__, DENS(k,i,j+1) )
 #endif
-          VELY(k,i,j) = 2.D0 * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
+          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
        enddo
        enddo
        enddo

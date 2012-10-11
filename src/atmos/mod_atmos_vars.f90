@@ -44,9 +44,9 @@ module mod_atmos_vars
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -1046,7 +1046,7 @@ contains
           do iq = QQS, QQE
              QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
           enddo
-          QT(k,i,j) = DENS(k,i,j) * ( 1.D0 - QDRY (k,i,j) )
+          QT(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
 
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE

@@ -44,9 +44,9 @@ module mod_atmos_phy_tb
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -254,6 +254,7 @@ contains
     integer :: IIS, IIE, JJS, JJE
 
 
+    write(*,*) 'call ATMOS_PHY_TB_main'
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables

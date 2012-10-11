@@ -34,7 +34,11 @@ module mod_process
   public :: PRC_setup
   public :: PRC_MPItime
   public :: PRC_MPItimestat
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -386,7 +390,7 @@ contains
   function PRC_MPItime() result(time)
     implicit none
 
-    real(8) :: time
+    real(RP) :: time
     !---------------------------------------------------------------------------
 
     if ( PRC_mpi_alive ) then
@@ -407,17 +411,17 @@ contains
       var     )
     implicit none
 
-    real(8), intent(out) :: avgvar(:)
-    real(8), intent(out) :: maxvar(:)
-    real(8), intent(out) :: minvar(:)
+    real(RP), intent(out) :: avgvar(:)
+    real(RP), intent(out) :: maxvar(:)
+    real(RP), intent(out) :: minvar(:)
     integer, intent(out) :: maxidx(:)
     integer, intent(out) :: minidx(:)
-    real(8), intent(in)  :: var(:)
+    real(RP), intent(in)  :: var(:)
 
-    real(8), allocatable :: statval(:,:)
+    real(RP), allocatable :: statval(:,:)
     integer              :: vsize
 
-    real(8) :: totalvar
+    real(RP) :: totalvar
     integer :: ierr
     integer :: v, p
     !---------------------------------------------------------------------------
@@ -425,7 +429,7 @@ contains
     vsize = size(var(:))
 
     allocate( statval(vsize,0:PRC_nmax-1) )
-    statval(:,:) = 0.D0
+    statval(:,:) = 0.0_RP
 
     do v = 1, vsize
        statval(v,PRC_myrank) = var(v)
@@ -442,7 +446,7 @@ contains
     enddo
 
     do v = 1, vsize
-       totalvar = 0.D0
+       totalvar = 0.0_RP
        do p = 0, PRC_nmax-1
           totalvar = totalvar + statval(v,p)
        enddo

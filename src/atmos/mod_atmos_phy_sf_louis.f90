@@ -37,9 +37,9 @@ module mod_atmos_phy_sf
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -309,7 +309,7 @@ contains
        Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
 
        ! Gas constant
-       qdry = 1.D0
+       qdry = 1.0_RP
        do iw = QQS, QQE
           qdry = qdry - QTRC(KS,i,j,iw)
        enddo
@@ -318,7 +318,7 @@ contains
        !--- saturation at surface
        pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
        temp      = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres )**RovCP
-       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.D0/T00 - 1.D0/SST(1,i,j) ) )
+       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(1,i,j) ) )
 !       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
        qv_evap   = EPSvap * pres_evap / P00
 

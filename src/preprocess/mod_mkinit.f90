@@ -86,9 +86,9 @@ module mod_mkinit
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -1583,7 +1583,7 @@ contains
     do i = IS, IE
 
        pres_sfc(1,i,j) = 1017.8E2_RP ! [Pa]
-       pott_sfc(1,i,j) = 289.0_RP !+ 2.0_RP * ( rndm(KS-1,i,j)-0.50 ) * 0.1D0 ! [K]
+       pott_sfc(1,i,j) = 289.0_RP !+ 2.0_RP * ( rndm(KS-1,i,j)-0.50 ) * 0.1_RP ! [K]
        qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
 

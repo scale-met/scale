@@ -53,6 +53,7 @@ module mod_atmos_thermodyn
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include 'inc_index.h'
   include 'inc_tracer.h'
 
@@ -60,8 +61,8 @@ module mod_atmos_thermodyn
   !
   !++ Public parameters & variables
   !
-  real(8), public,      save :: AQ_CP(QQA) ! CP for each hydrometeors
-  real(8), public,      save :: AQ_CV(QQA) ! CV for each hydrometeors
+  real(RP), public,      save :: AQ_CP(QQA) ! CP for each hydrometeors
+  real(RP), public,      save :: AQ_CV(QQA) ! CV for each hydrometeors
 
   !-----------------------------------------------------------------------------
   !
@@ -109,8 +110,8 @@ contains
   subroutine ATMOS_THERMODYN_qd( qdry, q )
     implicit none
 
-    real(8), intent(out) :: qdry(IJA,KA)    ! dry mass concentration
-    real(8), intent(in)  :: q   (IJA,KA,QA) ! mass concentration
+    real(RP), intent(out) :: qdry(IJA,KA)    ! dry mass concentration
+    real(RP), intent(in)  :: q   (IJA,KA,QA) ! mass concentration
 
     integer :: ij, k, iqw
     !-----------------------------------------------------------------------------
@@ -123,7 +124,7 @@ call START_COLLECTION('SUB_thermodyn')
     do k  = 1, KA
     do ij = 1, IJA
 
-       qdry(ij,k) = 1.D0
+       qdry(ij,k) = 1.0_RP
 
        do iqw = QQS, QQE
           qdry(ij,k) = qdry(ij,k) - q(ij,k,iqw)
@@ -143,8 +144,8 @@ call STOP_COLLECTION('SUB_thermodyn')
   subroutine ATMOS_THERMODYN_qd_kij( qdry, q )
     implicit none
 
-    real(8), intent(out) :: qdry(KA,IA,JA)    ! dry mass concentration
-    real(8), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration
+    real(RP), intent(out) :: qdry(KA,IA,JA)    ! dry mass concentration
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration
 
     integer :: i,j, k, iqw
     !-----------------------------------------------------------------------------
@@ -157,7 +158,7 @@ call START_COLLECTION('SUB_thermodyn')
     do j = 1, JA
     do i = 1, IA
     do k  = 1, KA
-       qdry(k,i,j) = 1.D0
+       qdry(k,i,j) = 1.0_RP
        do iqw = QQS, QQE
           qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw)
        enddo
@@ -177,9 +178,9 @@ call STOP_COLLECTION('SUB_thermodyn')
   subroutine ATMOS_THERMODYN_cp( cptot, q, qdry )
     implicit none
 
-    real(8), intent(out) :: cptot(IJA,KA)    ! total specific heat
-    real(8), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
-    real(8), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
+    real(RP), intent(out) :: cptot(IJA,KA)    ! total specific heat
+    real(RP), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
+    real(RP), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
 
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
@@ -213,9 +214,9 @@ call STOP_COLLECTION('SUB_thermodyn')
   subroutine ATMOS_THERMODYN_cv( cvtot, q, qdry )
     implicit none
 
-    real(8), intent(out) :: cvtot(IJA,KA)    ! total specific heat
-    real(8), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
-    real(8), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
+    real(RP), intent(out) :: cvtot(IJA,KA)    ! total specific heat
+    real(RP), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
+    real(RP), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
 
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
@@ -251,14 +252,14 @@ call STOP_COLLECTION('SUB_thermodyn')
       Ein,  dens, qdry, q )
     implicit none
 
-    real(8), intent(out) :: temp(IJA,KA)    ! temperature
-    real(8), intent(out) :: pres(IJA,KA)    ! pressure
-    real(8), intent(in)  :: Ein (IJA,KA)    ! internal energy
-    real(8), intent(in)  :: dens(IJA,KA)    ! density
-    real(8), intent(in)  :: qdry(IJA,KA)    ! dry concentration
-    real(8), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+    real(RP), intent(out) :: temp(IJA,KA)    ! temperature
+    real(RP), intent(out) :: pres(IJA,KA)    ! pressure
+    real(RP), intent(in)  :: Ein (IJA,KA)    ! internal energy
+    real(RP), intent(in)  :: dens(IJA,KA)    ! density
+    real(RP), intent(in)  :: qdry(IJA,KA)    ! dry concentration
+    real(RP), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
 
-    real(8) :: cv, Rmoist
+    real(RP) :: cv, Rmoist
 
     integer :: ij, k, iqw
     !---------------------------------------------------------------------------
@@ -298,14 +299,14 @@ call STOP_COLLECTION('SUB_thermodyn')
       dens, pott, qdry, q )
     implicit none
 
-    real(8), intent(out) :: temp(IJA,KA)    ! temperature
-    real(8), intent(out) :: pres(IJA,KA)    ! pressure
-    real(8), intent(in)  :: dens(IJA,KA)    ! density
-    real(8), intent(in)  :: pott(IJA,KA)    ! potential temperature
-    real(8), intent(in)  :: qdry(IJA,KA)    ! dry concentration
-    real(8), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+    real(RP), intent(out) :: temp(IJA,KA)    ! temperature
+    real(RP), intent(out) :: pres(IJA,KA)    ! pressure
+    real(RP), intent(in)  :: dens(IJA,KA)    ! density
+    real(RP), intent(in)  :: pott(IJA,KA)    ! potential temperature
+    real(RP), intent(in)  :: qdry(IJA,KA)    ! dry concentration
+    real(RP), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
 
-    real(8) :: RPRE00, WKAPPA, rhoRmoist
+    real(RP) :: RPRE00, WKAPPA, rhoRmoist
 
     integer :: ij, k
     !---------------------------------------------------------------------------
@@ -315,8 +316,8 @@ call STOP_COLLECTION('SUB_thermodyn')
 call START_COLLECTION('SUB_thermodyn')
 #endif
 
-    RPRE00   = 1.D0 / PRE00
-    WKAPPA   = 1.D0 / ( 1.D0 - RovCP )
+    RPRE00   = 1.0_RP / PRE00
+    WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
 
     do k  = 1, KA
     do ij = 1, IJA
