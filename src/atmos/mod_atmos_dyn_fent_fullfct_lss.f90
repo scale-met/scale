@@ -1563,7 +1563,11 @@ call TIME_rapend     ('DYN-fct')
 #endif
              PRES(k,i,j) = RHOT(k,i,j) * Rtot(k,i,j) / P00
           enddo
-          call vdpowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+          if ( RP == 8 ) then
+             call vdpowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+          else
+             call vspowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+          end if
           do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, DENS(k,i,j) )
