@@ -109,9 +109,9 @@ module mod_atmos_phy_mp
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
