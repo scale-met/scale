@@ -1933,7 +1933,6 @@ contains
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall(KA,IA,JA) ! QV+QC
     real(RP) :: qc  (KA,IA,JA) ! QC
-    real(RP) :: fact
     real(RP) :: sint, pi2
 
     integer :: ierr

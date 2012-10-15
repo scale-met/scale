@@ -21,6 +21,7 @@ program scaleles3
   !
   use mod_stdio, only: &
      IO_setup,   &
+     IO_FID_CONF, &
      IO_FID_LOG, &
      IO_L
   use mod_process, only: &
@@ -41,9 +42,6 @@ program scaleles3
      TIME_rapstart,        &
      TIME_rapend,          &
      TIME_rapreport
-  use mod_fileio, only: &
-     FIO_setup, &
-     FIO_finalize
   use mod_grid, only: &
      GRID_setup
   use mod_geometrics, only: &
@@ -71,6 +69,10 @@ program scaleles3
   use mod_ocean_vars, only: &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -83,6 +85,9 @@ program scaleles3
 
   ! setup standard I/O
   call IO_setup
+
+  ! setup Log
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
 
   ! start MPI
   call PRC_MPIstart
@@ -99,9 +104,6 @@ program scaleles3
 #ifdef _FPCOLL_
 call START_COLLECTION("Initialize")
 #endif
-
-  ! setup file I/O
-  call FIO_setup
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -182,7 +184,8 @@ call STOP_COLLECTION  ("Main")
 
   call TIME_rapreport
 
-  call FIO_finalize
+  call FileCloseAll
+
   call MONIT_finalize
   ! stop MPI
   call PRC_MPIstop

@@ -23,10 +23,12 @@ module mod_atmos_boundary
      IO_FID_LOG, &
      IO_L,       &
      IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID,   &
-     FIO_REAL8
+  use gtool_file_h, only: &
+     File_HLONG, &
+     File_HSHORT, &
+     File_HMID,   &
+     File_REAL4,  &
+     File_REAL8
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -68,23 +70,27 @@ module mod_atmos_boundary
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELZ     = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELX     = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELY     = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_POTT     = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
-  real(RP),                   private :: ATMOS_BOUNDARY_VALUE_VELZ   =  0.E0_RP ! w at boundary, 0 [m/s]
-  real(RP),                   private :: ATMOS_BOUNDARY_VALUE_VELX   =  5.E0_RP ! u at boundary, 5 [m/s]
-  real(RP),                   private :: ATMOS_BOUNDARY_VALUE_VELY   =  5.E0_RP ! v at boundary, 5 [m/s]
-  real(RP),                   private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.E0_RP! PT at boundary, 300 [K]
-  real(RP),                   private :: ATMOS_BOUNDARY_VALUE_QV     = 1.E-3_RP ! QV at boundary, 1.d-3 [kg/kg]
-  real(RP),                   private :: ATMOS_BOUNDARY_tauz         = 75.E0_RP ! maximum value for damping tau (z) [s]
-  real(RP),                   private :: ATMOS_BOUNDARY_taux         = 75.E0_RP ! maximum value for damping tau (x) [s]
-  real(RP),                   private :: ATMOS_BOUNDARY_tauy         = 75.E0_RP ! maximum value for damping tau (y) [s]
+  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
+  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
+  character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE3 BOUNDARY CONDITION'
+  character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_SOURCE    = 'SCALE-LES ver. 3'
+  character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_INSTITUTE = 'AICS/RIKEN'
+  logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?
+  logical,                   private :: ATMOS_BOUNDARY_USE_VELX      = .false. ! read from file?
+  logical,                   private :: ATMOS_BOUNDARY_USE_VELY      = .false. ! read from file?
+  logical,                   private :: ATMOS_BOUNDARY_USE_POTT      = .false. ! read from file?
+  logical,                   private :: ATMOS_BOUNDARY_USE_QV        = .false. ! read from file?
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELZ    =  0.0_RP ! w at boundary, 0 [m/s]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELX    =  5.0_RP ! u at boundary, 5 [m/s]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELY    =  5.E0_RP ! v at boundary, 5 [m/s]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_POTT    = 300.E0_RP! PT at boundary, 300 [K]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_QV      = 1.E-3_RP ! QV at boundary, 1.d-3 [kg/kg]
 
-  character(len=FIO_HSHORT), private :: REF_NAME(5)
+  real(RP),                  private :: ATMOS_BOUNDARY_tauz          = 75.0_RP ! maximum value for damping tau (z) [s]
+  real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.0_RP ! maximum value for damping tau (x) [s]
+  real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.0_RP ! maximum value for damping tau (y) [s]
+
+  character(len=File_HSHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
 
   !-----------------------------------------------------------------------------
@@ -103,20 +109,20 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
-       ATMOS_BOUNDARY_IN_BASENAME,  &
-       ATMOS_BOUNDARY_OUT_BASENAME, &
-       ATMOS_BOUNDARY_USE_VELZ,     &
-       ATMOS_BOUNDARY_USE_VELX,     &
-       ATMOS_BOUNDARY_USE_VELY,     &
-       ATMOS_BOUNDARY_USE_POTT,     &
-       ATMOS_BOUNDARY_USE_QV,       &
-       ATMOS_BOUNDARY_VALUE_VELZ,   &
-       ATMOS_BOUNDARY_VALUE_VELX,   &
-       ATMOS_BOUNDARY_VALUE_VELY,   &
-       ATMOS_BOUNDARY_VALUE_POTT,   &
-       ATMOS_BOUNDARY_VALUE_QV,     &
-       ATMOS_BOUNDARY_tauz,         &
-       ATMOS_BOUNDARY_taux,         &
+       ATMOS_BOUNDARY_IN_BASENAME,   &
+       ATMOS_BOUNDARY_OUT_BASENAME,  &
+       ATMOS_BOUNDARY_OUT_TITLE,     &
+       ATMOS_BOUNDARY_OUT_SOURCE,    &
+       ATMOS_BOUNDARY_OUT_INSTITUTE, &
+       ATMOS_BOUNDARY_USE_VELZ,      &
+       ATMOS_BOUNDARY_USE_VELX,      &
+       ATMOS_BOUNDARY_USE_VELY,      &
+       ATMOS_BOUNDARY_USE_POTT,      &
+       ATMOS_BOUNDARY_USE_QV,        &
+       ATMOS_BOUNDARY_VALUE_VELZ,    &
+       ATMOS_BOUNDARY_VALUE_VELX,    &
+       ATMOS_BOUNDARY_tauz,          &
+       ATMOS_BOUNDARY_taux,          &
        ATMOS_BOUNDARY_tauy
 
     integer :: ierr
@@ -302,46 +308,46 @@ contains
   !> Read boundary data
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_read
-    use mod_fileio, only: &
-       FIO_input
+    use gtool_file, only: &
+       FileRead
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
+    use mod_process, only: &
+         PRC_myrank
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
-    character(len=8)          :: lname
 
     integer :: iv, i, j
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FIO_input( reference_atmos(:,:,:), bname, 'VELZ', lname, 1, KMAX, 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FIO_input( reference_atmos(:,:,:), bname, 'VELX', lname, 1, KMAX, 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FIO_input( reference_atmos(:,:,:), bname, 'VELY', lname, 1, KMAX, 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FIO_input( reference_atmos(:,:,:), bname, 'POTT', lname, 1, KMAX, 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV ) then
-       call FIO_input( reference_atmos(:,:,:), bname, 'QV',   lname, 1, KMAX, 1 )
+       call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
@@ -370,57 +376,92 @@ contains
   !> Write boundary data
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_fileio, only: &
-       FIO_output
+    use gtool_file, only: &
+       FileCreate, &
+       FileAddVariable, &
+       FilePutAxis, &
+       FileWrite, &
+       FileClose
+    use mod_grid, only :  &
+       GRID_CZ, &
+       GRID_CX, &
+       GRID_CY
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
+    integer :: fid, vid
+    integer :: dtype
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_OUT_BASENAME
-    desc  = 'SCALE3 BOUNDARY CONDITION'
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         ATMOS_BOUNDARY_OUT_TITLE,                              & ! (in)
+         ATMOS_BOUNDARY_OUT_SOURCE,                             & ! (in)
+         ATMOS_BOUNDARY_OUT_INSTITUTE,                          & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
+
+    call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
+    call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
+    call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
+
+    if ( RP == 8 ) then
+       dtype = File_REAL8
+    else if ( RP == 4 ) then
+       dtype = File_REAL4
+    end if
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
+       call FileAddVariable( vid,                      & ! (out)
+            fid, 'VELZ', 'Reference Velocit w', 'm/s', & ! (in)
+            (/'z','x','y'/), dtype                     ) ! (in)
        reference_atmos(1:KMAX,1:IMAX,1:JMAX) = ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ)
-       call FIO_output( reference_atmos(:,:,:), bname, desc, '',     &
-                        'VELZ', 'Reference Velocity w', '', 'm/s',   &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( vid, reference_atmos(:,:,:), NOWSEC, NOWSEC )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
+       call FileAddVariable( vid,                      & ! (out)
+            fid, 'VELX', 'Reference Velocit u', 'm/s', & ! (in)
+            (/'z','x','y'/), dtype                     ) ! (in)
        reference_atmos(1:KMAX,1:IMAX,1:JMAX) = ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELX)
-       call FIO_output( reference_atmos(:,:,:), bname, desc, '',     &
-                        'VELX', 'Reference Velocity u', '', 'm/s',   &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( vid, reference_atmos(:,:,:), NOWSEC, NOWSEC )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
+       call FileAddVariable( vid,                      & ! (out)
+            fid, 'VELY', 'Reference Velocit v', 'm/s', & ! (in)
+            (/'z','x','y'/), dtype                     ) ! (in)
        reference_atmos(1:KMAX,1:IMAX,1:JMAX) = ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELY)
-       call FIO_output( reference_atmos(:,:,:), bname, desc, '',     &
-                        'VELY', 'Reference Velocity v', '', 'm/s',   &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( vid, reference_atmos(:,:,:), NOWSEC, NOWSEC )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
+       call FileAddVariable( vid,             & ! (out)
+            fid, 'POTT', 'Reference PT', 'K', & ! (in)
+            (/'z','x','y'/), dtype            ) ! (in)
        reference_atmos(1:KMAX,1:IMAX,1:JMAX) = ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_POTT)
-       call FIO_output( reference_atmos(:,:,:), bname, desc, '',     &
-                        'POTT', 'Reference PT', '', 'K',             &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( vid, reference_atmos(:,:,:), NOWSEC, NOWSEC )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV ) then
+       call FileAddVariable( vid,                        & ! (out)
+            fid, 'QV', 'Reference water vapor', 'kg/kg', & ! (in)
+            (/'z','x','y'/), File_REAL8                  ) ! (in)
        reference_atmos(1:KMAX,1:IMAX,1:JMAX) = ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_QV)
-       call FIO_output( reference_atmos(:,:,:), bname, desc, '',     &
-                        'QV', 'Reference water vapor', '', 'kg/kg',  &
-                        FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FileWrite( vid, reference_atmos(:,:,:), NOWSEC, NOWSEC )
     endif
+
+    call FileClose( fid )
 
     return
   end subroutine ATMOS_BOUNDARY_write
@@ -445,31 +486,13 @@ contains
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
-          ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
        else                   ! Buffer Layer
-         if( ATMOS_BOUNDARY_USE_VELZ ) then
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
-         end if
-         if( ATMOS_BOUNDARY_USE_VELY ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
-         end if
-         if( ATMOS_BOUNDARY_USE_VELX ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
-         end if
-         if( ATMOS_BOUNDARY_USE_POTT ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
-         end if
-         if( ATMOS_BOUNDARY_USE_QV ) then
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV) = ATMOS_BOUNDARY_VALUE_QV
-         end if
        endif
     enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
 
 !    do j = JS-1, JE+1
 !    do i = IS-1, IE+1
@@ -483,7 +506,7 @@ contains
 !       enddo
 !    enddo
 !    enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
 
     ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV

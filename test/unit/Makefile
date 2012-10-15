@@ -36,8 +36,8 @@ makebin: $(PROJ_EXE)
 run:
 	./$(PROJ_EXE) dummy.conf
 
-$(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME)
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^
+$(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^ $(NETCDF_LIBS)
 
 $(PROJ_EXE).o: $(MODS)
 
@@ -51,9 +51,6 @@ dc_test.o: dc_test.f90 dc_types.o
 .f90.o:
 	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -o $@ -c $<
 #	$(FC) -DDEBUG -O0 -g -fpp3 -fpe0 -traceback -I$(SRCDIR) -o $@ -c $<
-
-.c.o:
-	$(CC) $(CFLAGS) -O0 -g -o $@ -c $<
 
 %.o: %.mod
 

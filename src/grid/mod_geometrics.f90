@@ -64,6 +64,9 @@ module mod_geometrics
   real(RP), private :: GEOMETRICS_rotation       = 0.E0_RP
 
   character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''
+  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_TITLE = 'SCALE3 GEOMETRICS'
+  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_SOURCE = 'SCALE-LES ver. 3' 
+  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_INSTITUTE = 'AICS/RIKEN'
 
   !-----------------------------------------------------------------------------
 contains
@@ -79,9 +82,12 @@ contains
     implicit none
 
     namelist / PARAM_GEOMETRICS / &
-       GEOMETRICS_startlonlat, &
-       GEOMETRICS_rotation,    &
-       GEOMETRICS_OUT_BASENAME
+       GEOMETRICS_startlonlat,  &
+       GEOMETRICS_rotation,     &
+       GEOMETRICS_OUT_BASENAME, &
+       GEOMETRICS_OUT_TITLE,    &
+       GEOMETRICS_OUT_SOURCE,   &
+       GEOMETRICS_OUT_INSTITUTE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -116,49 +122,81 @@ contains
   !> Write lon&lat, control area/volume
   !-----------------------------------------------------------------------------
   subroutine GEOMETRICS_write
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_fileio_h, only: &
-       FIO_HMID,   &
-       FIO_REAL8
-    use mod_fileio, only: &
-       FIO_output
+    use gtool_file_h, only: &
+       File_HMID,  &
+       File_REAL4, &
+       File_REAL8
+    use gtool_file, only: &
+       FileCreate, &
+       FileAddVariable, &
+       FilePutAxis, &
+       FileWrite, &
+       FileClose
+    use mod_grid, only: &
+       GRID_CZ, &
+       GRID_CX, &
+       GRID_CY
     implicit none
 
     real(RP) :: sfc(1,IMAX,JMAX)
     real(RP) :: var(KMAX,IMAX,JMAX)
 
     character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
+    integer :: fid, vid(4)
+    integer, parameter :: I_LON  = 1
+    integer, parameter :: I_LAT  = 2
+    integer, parameter :: I_AREA = 3
+    integer, parameter :: I_VOL  = 4
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output geometrics file ***'
 
     bname = trim(GEOMETRICS_OUT_BASENAME)
-    desc  = 'SCALE3 GEOMETRICS'
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+    call FileCreate( fid,                                       & ! (out)
+         bname,                                                 & ! (in)
+         GEOMETRICS_OUT_TITLE,                                  & ! (in)
+         GEOMETRICS_OUT_SOURCE,                                 & ! (in)
+         GEOMETRICS_OUT_INSTITUTE,                              & ! (in)
+         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
+         (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
+         PRC_master, PRC_myrank                                 ) ! (in)
+
+    call FileAddVariable( vid(I_LON),             & ! (out)
+         fid, 'lon', 'Longitude', 'degrees_east', & ! (in)
+         (/'x','y'/), File_REAL8                  ) ! (in)
+    call FileAddVariable( vid(I_LAT),             & ! (out)
+         fid, 'lat', 'Latitude', 'degrees_north', & ! (in)
+         (/'x','y'/), File_REAL8                  ) ! (in)
+    call FileAddVariable( vid(I_AREA),            & ! (out)
+         fid, 'area', 'Control Area', 'm2',       & ! (in)
+         (/'x','y'/), File_REAL8                  ) ! (in)
+    call FileAddVariable( vid(I_VOL),             & ! (out)
+         fid, 'vol', 'Control Volume', 'm3',      & ! (in)
+         (/'z','x','y'/), File_REAL8              ) ! (in)
+
+    call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
+    call FilePutAxis(fid, 'x', GRID_CX(KS:KE))
+    call FilePutAxis(fid, 'y', GRID_CY(KS:KE))
 
     sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lon(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'LON', 'Longitude', '', 'degree',          &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+    call FileWrite( vid(I_LON), sfc(1,:,:), NOWSEC, NOWSEC )
 
     sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lat(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'LAT', 'Latitude', '', 'degree',           &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+    call FileWrite( vid(I_LAT), sfc(1,:,:), NOWSEC, NOWSEC )
 
     sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_area(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'AREA', 'Control Area', '', 'm2',          &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+    call FileWrite( vid(I_AREA), sfc(1,:,:), NOWSEC, NOWSEC )
 
     var(1:KMAX,1:IMAX,1:JMAX) = GEOMETRICS_vol(KS:KE,IS:IE,JS:JE)
-    call FIO_output( var(:,:,:), bname, desc, '',                 &
-                     'VOL', 'Control Volume', '', 'm3',           &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+    call FileWrite( vid(I_VOL), sfc(:,:,:), NOWSEC, NOWSEC )
+
+    call FileClose( fid )
 
     return
   end subroutine GEOMETRICS_write

@@ -31,10 +31,6 @@ MODS =	\
 	mod_const.o	\
 	mod_random.o	\
 	mod_time.o	\
-	mod_fileio.o	\
-	mod_fileio_h.o	\
-	fio.o	\
-	fiof.o	\
 	mod_grid_cartesian_plane.o	\
 	mod_geometrics.o	\
 	mod_comm.o	\
@@ -60,7 +56,10 @@ MODS =	\
 	mod_atmos_mp_saturation.o	\
 	mod_atmos_sub_saturation.o
 
-all: makedir makeinclude makebin
+all: makedir makegtool makeinclude makebin
+
+makegtool:
+	cd $(GTOOLDIR); $(MAKE)
 
 makedir:
 	mkdir -p $(BINDIR)
@@ -74,11 +73,11 @@ makebin: $(PRJS)
 	install $(PRJ1) $(BINDIR)/$(BINNAME)
 	install $(PRJ2) $(BINDIR)/$(INITNAME)
 
-$(PRJ1): $(PRJ1).o $(LIBDIR)/$(LIBNAME)
-	$(LD) $(LFLAGS) -o $(PRJ1) $^
+$(PRJ1): $(PRJ1).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(LD) $(LFLAGS) -o $(PRJ1) $^ $(NETCDF_LIBS)
 
-$(PRJ2): $(PRJ2).o $(LIBDIR)/$(LIBNAME)
-	$(LD) $(LFLAGS) -o $(PRJ2) $^
+$(PRJ2): $(PRJ2).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(LD) $(LFLAGS) -o $(PRJ2) $^ $(NETCDF_LIBS)
 
 $(PRJ1).o: $(PRJ1).f90 $(LIBNAME)
 $(PRJ2).o: $(PRJ2).f90 $(LIBNAME)
@@ -96,11 +95,7 @@ mod_process.o	: mod_process.f90 mod_stdio.o
 mod_const.o	: mod_const.f90 mod_stdio.o mod_process.o
 mod_random.o	: mod_random.f90 mod_stdio.o mod_process.o
 mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o
-mod_fileio_h.o	: mod_fileio_h.f90
-fio.o	: fio.c fio.h fio_def.h
-fiof.o	: fiof.c fiof.h fio.h fio_def.h
-mod_fileio.o	: mod_fileio.f90 mod_stdio.o mod_time.o mod_fileio_h.o mod_process.o mod_const.o fio.o fiof.o
-mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o
+mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o $(LIBDIR)/libgtool.a
 mod_geometrics.o	: mod_geometrics.f90 mod_stdio.o mod_process.o mod_time.o mod_fileio_h.o mod_fileio.o mod_grid_cartesian_plane.o mod_const.o
 mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_geometrics.o
 mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_time.o mod_fileio.o
@@ -125,18 +120,19 @@ mod_atmos_sub_saturation.o	: mod_atmos_sub_saturation.f90 mod_stdio.o mod_const.
 mod_atmos_sub_precipitation.o	: mod_atmos_sub_precipitation.f90 mod_stdio.o mod_time.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_thermodyn.o
 mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_hydrostatic.o mod_atmos_sub_saturation.o
 
+allclean: distclean
+	cd $(GTOOLDIR); $(MAKE) allclean
 clean:
 	rm -f $(PRJS) include/inc_index.h include/inc_tracer.h include/inc_precision.h *.mod *.o *.lst
 distclean: clean
 	rm -f $(LIBNAME)
-	rm -f libscale_*.a
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
 
 .f90.o:
-	$(FC) $(FFLAGS) -I$(INCDIR) -o $@ -c $<
-.c.o:
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(INCDIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -o $@ -c $<
 
 %.o: %.mod
+
+.PHONY : clean distclean allclean
