@@ -34,7 +34,11 @@ module mod_process
   public :: PRC_setup
   public :: PRC_MPItime
   public :: PRC_MPItimestat
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -79,6 +83,7 @@ contains
        IO_FILECHR,           &
        IO_get_available_fid, &
        IO_make_idstr,        &
+       IO_LOG_BASENAME,      &
        IO_LOG_SUPPRESS,      &
        IO_LOG_ALLNODE
     implicit none
@@ -106,7 +111,7 @@ contains
 
        !--- Open logfile
        IO_FID_LOG = IO_get_available_fid()
-       call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+       call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
        open( unit   = IO_FID_LOG,  &
              file   = trim(fname), &
              form   = 'formatted', &
@@ -130,6 +135,7 @@ contains
        write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
        write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
        write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
+       write(IO_FID_LOG,*) '*** basename of log file  =', trim(IO_LOG_BASENAME)
     else
        if ( PRC_myrank == PRC_master ) then ! master node
           write(*,*) '*** Log report is suppressed.'
@@ -384,11 +390,11 @@ contains
   function PRC_MPItime() result(time)
     implicit none
 
-    real(8) :: time
+    real(RP) :: time
     !---------------------------------------------------------------------------
 
     if ( PRC_mpi_alive ) then
-       time = MPI_WTIME()
+       time = real(MPI_WTIME(), kind=RP)
     else
        call cpu_time(time)
     endif
@@ -405,42 +411,51 @@ contains
       var     )
     implicit none
 
-    real(8), intent(out) :: avgvar(:)
-    real(8), intent(out) :: maxvar(:)
-    real(8), intent(out) :: minvar(:)
+    real(RP), intent(out) :: avgvar(:)
+    real(RP), intent(out) :: maxvar(:)
+    real(RP), intent(out) :: minvar(:)
     integer, intent(out) :: maxidx(:)
     integer, intent(out) :: minidx(:)
-    real(8), intent(in)  :: var(:)
+    real(RP), intent(in)  :: var(:)
 
-    real(8), allocatable :: statval(:,:)
+    real(RP), allocatable :: statval(:,:)
     integer              :: vsize
 
-    real(8) :: totalvar
-    integer :: ierr
+    real(RP) :: totalvar
+    integer :: datatype, ierr
     integer :: v, p
     !---------------------------------------------------------------------------
 
     vsize = size(var(:))
 
     allocate( statval(vsize,0:PRC_nmax-1) )
-    statval(:,:) = 0.D0
+    statval(:,:) = 0.0_RP
 
     do v = 1, vsize
        statval(v,PRC_myrank) = var(v)
     enddo
 
+    if ( RP == kind(0.0) ) then
+       datatype = MPI_REAL
+    else if ( RP == kind(0.D0) ) then
+       datatype = MPI_DOUBLE_PRECISION
+    else
+       write(*,*) 'xxx specified precision of real is not supported'
+       call PRC_MPIstop
+    end if
+
     ! MPI broadcast
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,p),         &
                        vsize,                &
-                       MPI_DOUBLE_PRECISION, &
+                       datatype,             &
                        p,                    &
                        MPI_COMM_WORLD,       &
                        ierr                  )
     enddo
 
     do v = 1, vsize
-       totalvar = 0.D0
+       totalvar = 0.0_RP
        do p = 0, PRC_nmax-1
           totalvar = totalvar + statval(v,p)
        enddo

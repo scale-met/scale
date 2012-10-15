@@ -38,14 +38,15 @@ module mod_atmos_refstate
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
-  real(8), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
+  real(RP), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -58,8 +59,8 @@ module mod_atmos_refstate
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''
   character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''
   character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE         = 'ISA'
-  real(8),                   private :: ATMOS_REFSTATE_TEMP_SFC     = 300.D0 ! surface temperature
-  real(8),                   private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.D0 ! uniform potential temperature
+  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP ! surface temperature
+  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP ! uniform potential temperature
 
   !-----------------------------------------------------------------------------
 contains
@@ -173,10 +174,10 @@ contains
 
        call FIO_output_1D( ATMOS_REFSTATE_dens(:), bname, desc, '',       &
                           'DENS', 'Reference state of rho', '', 'kg/m3', &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.D0, 0.D0, .true. )
+                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
        call FIO_output_1D( ATMOS_REFSTATE_pott(:), bname, desc, '',       &
                           'POTT', 'Reference state of theta', '', 'K',   &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.D0, 0.D0, .true. )
+                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
     endif
 
     return
@@ -194,34 +195,42 @@ contains
        P00    => CONST_PRE00
     use mod_grid, only : &
        CZ   => GRID_CZ
+    use mod_atmos_hydrostatic, only: &
+       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
     implicit none
 
     integer, parameter :: nref = 8
-    real(8), parameter :: CZ_isa(nref) = (/     0.0D0,  &
-                                            11000.0D0,  &
-                                            20000.0D0,  &
-                                            32000.0D0,  &
-                                            47000.0D0,  &
-                                            51000.0D0,  &
-                                            71000.0D0,  &
-                                            84852.0D0   /)
-    real(8), parameter :: GAMMA(nref)  = (/    -6.5D-3, &
-                                                0.0D0 , &
-                                                1.0D-3, &
-                                                2.8D-3, &
-                                                0.0D-3, &
-                                               -2.8D-3, &
-                                               -2.0D-3, &
-                                                0.0D0   /)
-    real(8) :: temp_isa(nref)
-    real(8) :: pres_isa(nref)
+    real(RP), parameter :: CZ_isa(nref) = (/     0.0_RP,  &
+                                            11000.0_RP,  &
+                                            20000.0_RP,  &
+                                            32000.0_RP,  &
+                                            47000.0_RP,  &
+                                            51000.0_RP,  &
+                                            71000.0_RP,  &
+                                            84852.0_RP   /)
+    real(RP), parameter :: GAMMA(nref)  = (/    -6.5E-3_RP, &
+                                                0.0_RP , &
+                                                1.0E-3_RP, &
+                                                2.8E-3_RP, &
+                                                0.0E-3_RP, &
+                                               -2.8E-3_RP, &
+                                               -2.0E-3_RP, &
+                                                0.0_RP   /)
+    real(RP) :: temp_isa(nref)
+    real(RP) :: pres_isa(nref)
 
-    real(8), allocatable :: temp(:)
-    real(8), allocatable :: pres(:)
-    real(8), allocatable :: dens(:)
-    real(8), allocatable :: pott(:)
+    real(RP) :: temp(KA)
+    real(RP) :: pres(KA)
+    real(RP) :: dens(KA)
+    real(RP) :: pott(KA)
 
-    real(8) :: gmr !! grav / Rdry
+    real(RP) :: qv(KA) = 0.0_RP
+    real(RP) :: qc(KA) = 0.0_RP
+    real(RP) :: temp_sfc
+    real(RP) :: qv_sfc = 0.0_RP
+    real(RP) :: qc_sfc = 0.0_RP
+
+    real(RP) :: gmr !! grav / Rdry
     integer :: i, k
     !---------------------------------------------------------------------------
 
@@ -234,7 +243,7 @@ contains
     do i = 2, nref
        temp_isa(i) = temp_isa(i-1) + GAMMA(i-1) * ( CZ_isa(i)-CZ_isa(i-1) )
 
-       if ( GAMMA(i-1) == 0.D0 ) then
+       if ( GAMMA(i-1) == 0.0_RP ) then
           pres_isa(i) = pres_isa(i-1) * exp( -gmr / temp_isa(i) * ( CZ_isa(i)-CZ_isa(i-1) ) )
        else
           pres_isa(i) = pres_isa(i-1) * ( temp_isa(i)/temp_isa(i-1) ) ** ( -gmr/GAMMA(i-1) )
@@ -249,18 +258,13 @@ contains
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
-    allocate( pres(KA) )
-    allocate( temp(KA) )
-    allocate( dens(KA) )
-    allocate( pott(KA) )
-
     !--- make reference state
     do k = KS, KE
        do i = 2, nref
           if ( CZ(k) > CZ_isa(i-1) .AND. CZ(k) <= CZ_isa(i) ) then
 
              temp(k) = temp_isa(i-1) + GAMMA(i-1) * ( CZ(k)-CZ_isa(i-1) )
-             if ( GAMMA(i-1) == 0.D0 ) then
+             if ( GAMMA(i-1) == 0.0_RP ) then
                 pres(k) = pres_isa(i-1) * exp( -gmr/temp_isa(i-1) * ( CZ(k)-CZ_isa(i-1) ) )
              else
                 pres(k) = pres_isa(i-1) * ( temp(k)/temp_isa(i-1) ) ** ( -gmr/GAMMA(i-1) )
@@ -279,13 +283,13 @@ contains
           endif
        enddo
 
-       dens(k) = pres(k) / ( temp(k) * Rdry )
+!       dens(k) = pres(k) / ( temp(k) * Rdry )
        pott(k) = temp(k) * ( P00/pres(k) )**RovCP
     enddo
 
-    dens(   1:KS-1) = dens(KS)
+!    dens(   1:KS-1) = dens(KS)
+!    dens(KE+1:KA  ) = dens(KE)
     pott(   1:KS-1) = pott(KS)
-    dens(KE+1:KA  ) = dens(KE)
     pott(KE+1:KA  ) = pott(KE)
 
     if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
@@ -293,6 +297,19 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** pot.temp. is overwrited by uniform value:', ATMOS_REFSTATE_POTT_UNIFORM
        pott(:) = ATMOS_REFSTATE_POTT_UNIFORM
     endif
+
+    ! make density & pressure profile 
+    call hydro_buildrho_1d( dens    (:), & ! [OUT]
+                            temp    (:), & ! [OUT]
+                            pres    (:), & ! [OUT]
+                            pott    (:), &
+                            qv      (:), &
+                            qc      (:), &
+                            temp_sfc,    & ! [OUT]
+                            pres_isa(1), &
+                            temp_isa(1), &
+                            qv_sfc,      &
+                            qc_sfc       )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -304,11 +321,6 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
-
-    deallocate( pres )
-    deallocate( temp )
-    deallocate( dens )
-    deallocate( pott )
 
     return
   end subroutine ATMOS_REFSTATE_generate

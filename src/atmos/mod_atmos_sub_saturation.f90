@@ -60,6 +60,7 @@ module mod_atmos_saturation
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
 
@@ -75,7 +76,7 @@ module mod_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(8), private, parameter :: TEM_MIN   = 10.D0
+  real(RP), private, parameter :: TEM_MIN   = 10.E0_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -86,10 +87,10 @@ contains
   subroutine ATMOS_SATURATION_psat_water( psat, temp )
     implicit none
 
-    real(8), intent(out) :: psat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -99,7 +100,7 @@ contains
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -110,7 +111,7 @@ call START_COLLECTION('SUB_satadjust')
 
        psat(k,i,j) = PSAT0                                 &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
     enddo
     enddo
     enddo
@@ -127,10 +128,10 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_psat_ice( psat, temp )
     implicit none
 
-    real(8), intent(out) :: psat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -140,7 +141,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -151,7 +152,7 @@ call START_COLLECTION('SUB_satadjust')
 
        psat(k,i,j) = PSAT0                                 &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
     enddo
     enddo
     enddo
@@ -168,12 +169,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_sfc( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(1,IA,JA)
-    real(8), intent(in)  :: temp(1,IA,JA)
-    real(8), intent(in)  :: pres(1,IA,JA)
+    real(RP), intent(out) :: qsat(1,IA,JA)
+    real(RP), intent(in)  :: temp(1,IA,JA)
+    real(RP), intent(in)  :: pres(1,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -183,7 +184,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -194,9 +195,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
 
@@ -212,12 +213,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_water( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -227,7 +228,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -238,9 +239,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
     enddo
@@ -257,12 +258,12 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_qsat_ice( qsat, temp, pres )
     implicit none
 
-    real(8), intent(out) :: qsat(KA,IA,JA)
-    real(8), intent(in)  :: temp(KA,IA,JA)
-    real(8), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
     
-    real(8) :: psat
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -272,7 +273,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -283,9 +284,9 @@ call START_COLLECTION('SUB_satadjust')
 
        psat = PSAT0                                 &
             * ( TEM * RTEM00 )**CPovRvap            &
-            * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
 
-       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.D0-EPSvap ) * psat )
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.0_RP-EPSvap ) * psat )
     enddo
     enddo
     enddo
@@ -304,14 +305,14 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsw_dtem_rho( dqsdtem, temp, dens )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -321,7 +322,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -333,14 +334,14 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                  &
                    * ( TEM * RTEM00 )**CPovRvap            &
-                   * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                   * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
           lhv(k)  = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
 
           dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.D0 )
+                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
        enddo
 
     enddo
@@ -360,14 +361,14 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsi_dtem_rho( dqsdtem, temp, dens )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -377,7 +378,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -389,14 +390,14 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
           lhv(k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
 
           dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.D0 )
+                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
        enddo
 
     enddo
@@ -416,16 +417,16 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsw_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: den1(KA), den2(KA) ! denominator
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -435,7 +436,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
 
@@ -447,12 +448,12 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) )
+          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
+                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
           den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
           lhv (k) = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
        enddo
@@ -479,16 +480,16 @@ call STOP_COLLECTION('SUB_satadjust')
   subroutine ATMOS_SATURATION_dqsi_dtem_dpre( dqsdtem, dqsdpre, temp, pres )
     implicit none
 
-    real(8), intent(out) :: dqsdtem(KA,IA,JA)
-    real(8), intent(out) :: dqsdpre(KA,IA,JA)
-    real(8), intent(in)  :: temp   (KA,IA,JA)
-    real(8), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(8) :: psat(KA) ! saturation vapor pressure
-    real(8) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat(KA) ! saturation vapor pressure
+    real(RP) :: lhv (KA) ! latent heat for condensation
 
-    real(8) :: den1(KA), den2(KA) ! denominator
-    real(8) :: RTEM00, CPovRvap, LHovRvap, TEM
+    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -498,7 +499,7 @@ call STOP_COLLECTION('SUB_satadjust')
 call START_COLLECTION('SUB_satadjust')
 #endif
 
-    RTEM00   = 1.D0 / TEM00
+    RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
     LHovRvap = LHS00 / Rvap
 
@@ -510,12 +511,12 @@ call START_COLLECTION('SUB_satadjust')
 
           psat(k) = PSAT0                                 &
                   * ( TEM * RTEM00 )**CPovRvap            &
-                  * exp( LHovRvap * ( RTEM00 - 1.D0/TEM ) )
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
        enddo
 
        do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.D0-EPSvap) * psat(k) )
+          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
+                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
           den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
           lhv (k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
        enddo

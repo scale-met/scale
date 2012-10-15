@@ -1,0 +1,20 @@
+ifeq ($(origin BINDIR), undefined)
+	BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
+endif
+
+ifeq ($(origin LIBDIR), undefined)
+   LIBDIR = $(TOPDIR)/lib
+endif
+
+SRCDIR = $(TOPDIR)/src
+INCDIR = $(SRCDIR)/include
+
+RUNDIR = $(TOPDIR)/run
+SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
+
+SUFFIX = $(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix)
+
+LIBNAME = libscale_$(SUFFIX).a
+
+BINNAME  = scale3_$(SUFFIX)
+INITNAME = scale3_init_$(SUFFIX)

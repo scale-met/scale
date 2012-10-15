@@ -44,9 +44,9 @@ module mod_atmos_phy_tb
   !
   !++ included parameters
   !
+  include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -254,6 +254,7 @@ contains
     integer :: IIS, IIE, JJS, JJE
 
 
+    write(*,*) 'call ATMOS_PHY_TB_main'
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
@@ -382,9 +383,6 @@ contains
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
        FDZ  => GRID_FDZ,  &
        FDX  => GRID_FDX,  &
        FDY  => GRID_FDY,  &
@@ -1636,10 +1634,6 @@ contains
        ! tke = (Cs * Delta)^2 * |S|^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
-       nu_C(:,:,:) = UNDEF; nu_Z(:,:,:) = UNDEF; nu_X(:,:,:) = UNDEF; nu_Y(:,:,:) = UNDEF
-       tke(:,:,:) = UNDEF
-       Ri(:,:,:) = UNDEF
-       Pr(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
        ! (cell center)
@@ -3127,7 +3121,6 @@ contains
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-       nu_Z(:,:,:) = UNDEF; nu_X(:,:,:) = UNDEF; nu_Y(:,:,:) = UNDEF
 #endif
        ! (x-y plane)
        do j = JJS, JJE

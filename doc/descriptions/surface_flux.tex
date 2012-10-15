@@ -1,0 +1,252 @@
+%\section{Surface flux}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+
+\subsection{Monin-Obukhov similarity}
+The first of the all,
+we assume that in the boundary layer
+1. fluxes are constant,
+and 2. variables are horizontally uniform.
+
+
+Relations between flux and vertical gradient are
+\begin{align}
+  \frac{kz}{u_*} \frac{\partial u}{\partial z} &= \phi_m\left(\frac{z}{L}\right), \label{eq: flux-gradient u} \\
+  \frac{kz}{\theta_*} \frac{\partial \theta}{\partial z} &= \phi_h\left(\frac{z}{L}\right), \label{eq: flux-gradient t} \\
+  \frac{kz}{q_*} \frac{\partial q}{\partial z} &= \phi_q\left(\frac{z}{L}\right),
+\end{align}
+where $k$ is the Von Karman constant.
+$L$ is the Monin-Obukhov scale height, which is
+\begin{equation}
+  L = \frac{\theta u_*^2}{kg\theta_*},
+\end{equation}
+where $g$ is the gravity.
+The scaling velocity, $u_*$, temperature, $\theta_*$,
+and water vapor, $q_*$, are defined
+from the vertical eddy fluxes of momentum, sensible heat and water vapor:
+\begin{align}
+  \overline{u'w'} &= -u_*u_*, \\
+  \overline{w'\theta'} &= - u_*\theta_*, \\
+  \overline{w'q'} &= - u_*q_*.
+\end{align}
+
+The integration between the roughness length $z_0$ to the height $z$ of the lowest model level, eqs. (\ref{eq: flux-gradient u}) and (\ref{eq: flux-gradient t}) become
+\begin{align}
+  u(z) &= \frac{u_*}{k} \left\{\ln(z/z_0)-\Phi_m(z/L)+\Phi_m(z_0/L)\right\}, \\
+  \Delta\theta &= R\frac{\theta_*}{k} \left\{\ln(z/z_0)-\Phi_h(z/L)+\Phi_h(z_0/L)\right\},
+\end{align}
+where $\Delta\theta = \theta-\theta_0$,
+and
+\begin{align}
+  \Phi_m(z) = \int^z \frac{1-\phi_m(z')}{z'} dz', \\
+  \Phi_h(z) = \int^z \frac{R-\phi_h(z')}{R z'} dz'.
+\end{align}
+
+
+\subsection{Louis (1979) Model}
+Louis (1979) introduced a parametric model of vertical eddy fluxes.
+
+The $L$ becomes
+\begin{equation}
+  L = \frac{\theta u^2}{g\Delta\theta}
+    \frac{\ln(z/z_0)-\Phi_h(z/L)+\Phi_h(z_0/L)}{\left\{\ln(z/z_0)-\Phi_m(z/L)+\Phi_m(z/L)\right\}^2}.
+\end{equation}
+The bulk Richardson number for the layer $Ri_B$ is
+\begin{equation}
+  Ri_B = \frac{gz\Delta\theta}{\theta u^2},
+\end{equation}
+and its form implies relationship with the Monin-Obukhov scale height $L$.
+Then the fluxes could be written as
+\begin{align}
+  u_*^2 &= a^2 u^2 F_m\left(\frac{z}{z_0},Ri_B\right), \label{eq: u_*^2} \\
+  u_*\theta_* &= \frac{a^2}{R} u \Delta \theta F_h\left(\frac{z}{z_0},Ri_B\right), \label{eq: u_*t_*}
+\end{align}
+where
+$R$ is ratio of the drag coefficients for momentum and heat in the neutral limit,
+(the turbulent Prandtl number),
+and
+\begin{equation}
+  a^2 = \frac{k^2}{\left\{\ln\left(z/z_0\right)\right\}^2}
+\end{equation}
+is the drag coefficient in neutral conditions.
+
+For the unstable condition ($Ri_B<0$),
+$F_i$s ($i=m,h$) could be
+\begin{equation}
+  F_i = 1 - \frac{b Ri_B}{1 + c_i \sqrt{|Ri_B|}},
+  \label{eq: F_i unstable}
+\end{equation}
+under the consideration that
+$F_i$ must behave as $1/u$ (i.e. $\sqrt{|Ri_B|}$) in the free convection limit ($u \to 0$),
+and becomes $1$ in neutral conditions ($Ri_B \to 0$).
+In the stable conditions ($Ri_b$), on the other hand,
+Louis (1979) adopted the following form for $F_i$:
+\begin{equation}
+  F_i = \frac{1}{(1 + b' Ri_B)^2}.
+  \label{eq: F_i stable}
+\end{equation}
+
+The constants are estimated as
+$R=0.74$ by Businger et al. (1971),
+and $b=2b'=9.4$ by Louis (1979).
+By the dimensional analysis,
+\begin{equation}
+  c_i = C^*_i a^2 b \sqrt{\frac{z}{z_0}},
+\end{equation}
+and $C^*_m = 7.4, C^*_h = 5.3$, which result best fit curves.
+
+
+\subsection{Uno et al. (1995) Model}
+Uno et al. (1995) extended the Louis Model,
+which considers difference of the roughness length
+between for momentum, $z_0$, and temperature, $z_t$.
+
+The potential temperature difference between $z=z$ and $z=z_t$,
+$\Delta\theta_t$, is
+\begin{align}
+  \Delta\theta_t
+  &= R\frac{\theta_*}{k}\left\{\ln(z_0/z_t) - \Phi_h(z_0/L) + \Phi_h(z_t/L)\right\} + \Delta\theta_0, \nonumber \\
+  &= R\frac{\theta_*}{k}{\ln(z_0/z_t)} + \Delta\theta_0, \nonumber \\
+  &= \Delta\theta_0 \left\{\frac{R\ln(z_0/z_t)}{\Psi_h} + 1\right\},
+\end{align}
+where $\Delta\theta_0 = \theta_z - \theta_{z_0} (=\Delta\theta)$,
+\begin{equation}
+  \Psi_h = \int_{z_0}^z\frac{\phi_h}{z'}dz', \label{eq: Psi_h}
+\end{equation}
+and $\phi_h$ is assumed to be $R$ in the range $z_t < z < z_0$.
+Thus
+\begin{equation}
+  \Delta\theta_0 = \Delta\theta_t \left\{\frac{R\ln(z_0/z_t)}{\Psi_h}+1\right\}^{-1},
+  \label{eq: Delta t_0}
+\end{equation}
+or equivalently,
+\begin{equation}
+  Ri_{B0} = Ri_{Bt} \left\{\frac{R\ln(z_0/z_t)}{\Psi_h}+1\right\}^{-1}.
+  \label{eq: Ri_B0}
+\end{equation}
+
+From the eqs. (\ref{eq: u_*^2}) and (\ref{eq: u_*t_*}),
+\begin{equation}
+  \Delta\theta_0 = \frac{R\theta_*}{k}\ln\left(\frac{z}{z_0}\right)\frac{\sqrt{F_m}}{F_h},
+\end{equation}
+while
+\begin{equation}
+  \Delta\theta_0 = \frac{\theta_*}{k}\Psi_h,
+\end{equation}
+from eqs. (\ref{eq: flux-gradient t}) and (\ref{eq: Psi_h}).
+Therefore
+\begin{equation}
+  \Psi_h = R\ln\left(\frac{z}{z_0}\right)\frac{\sqrt{F_m}}{F_h}.
+  \label{eq: Psi}
+\end{equation}
+
+Because $\Psi_h$ depends on $Ri_{B0}$,
+$Ri_{B0}$ cannot be calculated from $Ri_{Bt}$ with eq. (\ref{eq: Ri_B0})
+directly,
+so numerical iteration is required to obtain $Ri_{B0}$
+\footnote{In the stable case, it can be solved analytically
+with eq. (\ref{eq: F_i stable}),
+but the solution is too complicated.}.
+Starting from $Ri_{Bt}$ as the first estimation of $Ri_{B0}$,
+the second estimate by the Newton-Raphson iteration becomes
+\begin{equation}
+  \hat{Ri}_{B0} = Ri_{Bt} - \frac{Ri_{Bt}R\ln(z_0/z_t)}{\ln(z_0/z_t) + \hat{\Psi}_h},
+  \label{eq: Ri_B0 estimation}
+\end{equation}
+where $\hat{\Psi}_h$ is the estimate of $\Psi_h$ using $Ri_{Bt}$ instead of $Ri_{B0}$.
+Approximate values for $F_m, F_h$, and $\Psi_h$ are re-calculated
+based on the $\hat{Ri}_{B0}$,
+and then
+$\Delta\theta_0$, and the surface fluxes $u_*^2$ and $u_*\theta_*$
+are calculated from eqs. (\ref{eq: Delta t_0}), (\ref{eq: u_*^2}),
+and (\ref{eq: u_*t_*}), respectively.
+
+
+R\subsection{Roughness length}
+Miller et al. (1992) provides the roughness length over the tropical ocean,
+based on the numerical calculations
+by combining the smooth surface values with the Charnock relation
+for the aerodynamic roughness length
+and the constant values for heat and moisture in accordance with Smith (1988,1989) suggestions:
+\begin{align}
+  z_0 &= 0.11u/\nu_* + 0.018u_*^2/g, \label{eq: z_0} \\
+  z_t &= 0.40u/\nu_* + 1.4 \times 10^{-5}, \label{eq: z_t} \\
+  z_q &= 0.62u/\nu_* + 1.3 \times 10^{-4}, \label{eq: z_q}
+\end{align}
+where $\nu_*$ is the kinematic viscosity of air ($\sim 1.5 \times 10^{-5}$),
+and $z_0, z_t$, and $z_q$ are the roughness length
+for the momentum, heat, and vapor, respectively.
+
+
+
+\subsection{Discretization}
+
+\def\half{\frac{1}{2}}
+
+All the fluxes are calculated based on the velocity at the first full-level (k=1)
+($z=\Delta z/2$).
+The absolute velocities $U$ are
+\begin{align}
+  U_{i+\half,j,1}^2 &=
+    \left\{\frac{2(\rho u)_{i+\half,j,1}}{\rho_{i,j,1}+\rho_{i+1,j,1}}\right\}^2
+  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1} + (\rho v)_{i+1,j-\half,1} + (\rho v)_{i+1,j+\half,1}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2 \nonumber \\
+ &+ \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i+1,j,1+\half}}{2(\rho_{i,j,1}+\rho_{i+1,j,1})}\right\}^2, \\
+  U_{i,j+\half,1}^2 &=
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1} + (\rho u)_{i-\half,j+1,1} + (\rho u)_{i+\half,j+1,1}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2 \nonumber\\
+ &+ \left\{\frac{2(\rho v)_{i,j+\half,1}}{\rho_{i,j,1}+\rho_{i,j+1,1}}\right\}^2
+  + \left\{\frac{(\rho w)_{i,j,1+\half} + (\rho w)_{i,j+1,1+\half}}{2(\rho_{i,j,1}+\rho_{i,j+1,1})}\right\}^2, \\
+  U_{i,j,1}^2 &=
+    \left\{\frac{(\rho u)_{i-\half,j,1} + (\rho u)_{i+\half,j,1}}{2\rho_{i,j,1}}\right\}^2
+  + \left\{\frac{(\rho v)_{i,j-\half,1} + (\rho v)_{i,j+\half,1}}{2\rho_{i,j,1}}\right\}^2
+  + \left\{\frac{(\rho w)_{i,j,1+\half}}{2\rho_{i,j,1}}\right\}^2,
+\end{align}
+here it is note that $(\rho w)_{i,j,\half}=0$.
+The potential temperatures $\theta$ are
+\begin{align}
+  \theta_{i,j,1} &= \frac{(\rho \theta)_{i,j,1}}{\rho_{i,j,1}}, \\
+  \bar{\theta}_{i+\half,j,1} &= \frac{\theta_{i,j,1}+\theta_{i+1,j,1}}{2}, \\
+  \bar{\theta}_{i,j+\half,1} &= \frac{\theta_{i,j,1}+\theta_{i,j+1,1}}{2}.
+\end{align}
+
+The roughness lengthes, $z_0, z_t$, and $z_q$ are caluclated from
+the eqs. (\ref{eq: z_0}), (\ref{eq: z_t}), and (\ref{eq: z_q}),
+in which the friction verociy $u_*$ is estimated as
+\begin{equation}
+  u_* = \sqrt{C_{m0}} U,
+\end{equation}
+where $C_{m0}$ is a constant bulk coefficient,
+and we use $1.0 \times 10^{-3}$ as its value.
+
+From eq. (\ref{eq: Ri_B0})
+The $Ri_{Bt}$, which is the first guess of the $Ri_{B0}$, is
+\begin{equation}
+  Ri_{Bt} = \frac{gz_1(\theta_1-\theta_{sfc})}{\bar{\Theta}U^2},
+\end{equation}
+with the assumption that $\theta_{z_t} = \theta_{sfc}$.
+The estimation of the $\hat{\Psi}_h$ is calculated with $Ri_{Bt}$ from
+the eqs. (\ref{eq: Psi}), (\ref{eq: F_i unstable}), and (\ref{eq: F_i stable}).
+The final estimation of $Ri_{B0}$ is obtained from the eq. (\ref{eq: Ri_B0 estimation}),
+and the final estimation of $\Psi_h$ is obtaind with the $Ri_{B0}$.
+
+Now we can calculate the bulk coefficients, $C_m, C_h$, and $C_e$ for the moments, heat, and vapor:
+\begin{align}
+  C_m &= \frac{k^2}{\ln(z_1/z_0)}F_m(Ri_{B0}), \\
+  C_h &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_t)}{\Psi_h}+1\right\}^{-1}, \\
+  C_e &= \frac{k^2}{R\ln(z_1/z_0)}F_h(Ri_{B0})\left\{\frac{R\ln(z_0/z_e)}{\Psi_h}+1\right\}^{-1}.
+\end{align}
+The fluxes are
+\begin{align}
+  \overline{\rho u'w'} &= - C_m U \rho u, \\
+  \overline{\rho v'w'} &= - C_m U \rho v, \\
+  \overline{\rho w'w'} &= - C_m U \rho w, \\
+  \overline{\rho \theta'w'} &= - C_h U \{\rho \theta - \rho \theta_{sfc}\}, \\
+  \overline{\rho q'w'} &= -C_e U \rho ( q - q_{evap} ),
+\end{align}
+where $q_{evap}$ is the saturation value at surface.
+

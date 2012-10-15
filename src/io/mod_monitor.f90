@@ -41,6 +41,7 @@ module mod_monitor
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include "inc_index.h"
 
   !-----------------------------------------------------------------------------
@@ -70,11 +71,11 @@ module mod_monitor
   character(len=FIO_HSHORT), private, allocatable, save :: MONIT_unit   (:)
   character(len=FIO_HSHORT), private, allocatable, save :: MONIT_ktype  (:)
   integer,                   private, allocatable, save :: MONIT_kmax   (:)
-  real(8),                   private, allocatable, save :: MONIT_var    (:)
+  real(RP),                   private, allocatable, save :: MONIT_var    (:)
 
   integer,                   private,              save :: MONIT_id_count = 1 !> number of registered item
 
-  real(8), private, parameter :: eps = 1.D-10 !> epsilon for timesec
+  real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------  
 contains
@@ -225,14 +226,14 @@ contains
     implicit none
 
     integer, intent(in) :: itemid
-    real(8), intent(in) :: var(:,:,:)
+    real(RP), intent(in) :: var(:,:,:)
 
-    real(8) :: total
+    real(RP) :: total
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    total = 0.D0
+    total = 0.E0_RP
     if ( MONIT_kmax(itemid) == KMAX ) then ! 3D
        do j = JS, JE
        do i = IS, IE
@@ -263,7 +264,7 @@ contains
       ktype  )
     implicit none
 
-    real(8),          intent(in) :: var(:,:,:)
+    real(RP),          intent(in) :: var(:,:,:)
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: unit

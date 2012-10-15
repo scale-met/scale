@@ -33,6 +33,7 @@ module mod_ocean_sf
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
@@ -47,7 +48,7 @@ module mod_ocean_sf
   !
   !++ Private parameters & variables
   !
-  real(8), private, save :: OCEAN_FIXEDSST_RATE = 2.D-5 ! SST change rate
+  real(RP), private, save :: OCEAN_FIXEDSST_RATE = 2.E-5_RP ! SST change rate
 
   !-----------------------------------------------------------------------------
 contains
@@ -65,7 +66,7 @@ contains
        SST
     implicit none
 
-    real(8) :: OCEAN_FIXEDSST_STARTSST = 290.D0  ! SST for initial state
+    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP  ! SST for initial state
     logical :: OCEAN_FIXEDSST_RESET    = .false. ! reset SST?
 
     NAMELIST / PARAM_OCEAN_FIXEDSST / &

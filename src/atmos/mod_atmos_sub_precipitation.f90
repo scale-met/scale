@@ -36,6 +36,7 @@ module mod_atmos_precipitation
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include 'inc_index.h'
   include 'inc_tracer.h'
 
@@ -88,18 +89,18 @@ contains
        CVw => AQ_CV
     implicit none
 
-    real(8), intent(out)   :: flux_rain(KA,IA,JA)
-    real(8), intent(out)   :: flux_snow(KA,IA,JA)
-    real(8), intent(in)    :: velw     (KA,IA,JA,QA) ! terminal velocity of cloud mass
-    real(8), intent(in)    :: rhoq     (KA,IA,JA,QA) ! rho * q
-    real(8), intent(in)    :: rhoe     (KA,IA,JA)
-    real(8), intent(in)    :: temp     (KA,IA,JA)
-    real(8), intent(in)    :: dt
+    real(RP), intent(out)   :: flux_rain(KA,IA,JA)
+    real(RP), intent(out)   :: flux_snow(KA,IA,JA)
+    real(RP), intent(in)    :: velw     (KA,IA,JA,QA) ! terminal velocity of cloud mass
+    real(RP), intent(in)    :: rhoq     (KA,IA,JA,QA) ! rho * q
+    real(RP), intent(in)    :: rhoe     (KA,IA,JA)
+    real(RP), intent(in)    :: temp     (KA,IA,JA)
+    real(RP), intent(in)    :: dt
 
-    real(8) :: qflx    (KA,QA)
-    real(8) :: eflx    (KA)
-    real(8) :: rhoe_new(KA)
-    real(8) :: qdry(KA), CVmoist(KA), Rmoist(KA), pres(KA)
+    real(RP) :: qflx    (KA,QA)
+    real(RP) :: eflx    (KA)
+    real(RP) :: rhoe_new(KA)
+    real(RP) :: qdry(KA), CVmoist(KA), Rmoist(KA), pres(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -117,9 +118,9 @@ call START_COLLECTION('SUB_precipitation')
 
        !OCL XFILL
        do iq = I_QC, I_NG
-          qflx(KE,iq) = 0.D0
+          qflx(KE,iq) = 0.0_RP
        enddo
-       eflx(KE) = 0.D0
+       eflx(KE) = 0.0_RP
 
        !--- tracer
        do iq = I_QC, I_NG
@@ -139,7 +140,7 @@ call START_COLLECTION('SUB_precipitation')
 
 !OCL XFILL
        do k = KS, KE
-          rhoe_new(k) = 0.D0
+          rhoe_new(k) = 0.E0_RP
        enddo
 
        do iq = I_QC, I_QG
@@ -163,8 +164,8 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum z (half level)
           do k  = KS-1, KE-2
-             eflx(k) = 0.5D0 * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) * MOMZ(k,i,j) &
-                     * 0.5D0 * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) )
+             eflx(k) = 0.5E0_RP * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) * MOMZ(k,i,j) &
+                     * 0.5E0_RP * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) )
           enddo
           do k  = KS,  KE-1
              MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1)-eflx(k) ) * RFDZ(k)
@@ -201,7 +202,7 @@ call START_COLLECTION('SUB_precipitation')
        enddo ! QC-QG,NC-NG loop
 
        do k  = KS,  KE
-          qdry(k) = 1.D0
+          qdry(k) = 1.E0_RP
           do iq = I_QV, I_QG
              qdry(k) = qdry(k) - QTRC(k,i,j,iq)
           enddo

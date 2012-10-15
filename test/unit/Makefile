@@ -1,43 +1,56 @@
-TOPDIR = ../../../../..
-BINDIR = $(TOPDIR)/bin
-SRCDIR = $(TOPDIR)/src
+TOPDIR = ../..
 
-include $(SRCDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/src/Mkinclude
 
-VPATH = ../..:$(SRCDIR)/common:$(SRCDIR)/io:$(SRCDIR)/grid:$(SRCDIR)/atmos:$(SRCDIR)/ocean:$(SRCDIR)/preprocess
+VPATH = $(SRCDIR)/common:$(SRCDIR)/io:$(SRCDIR)/grid:$(SRCDIR)/atmos:$(SRCDIR)/ocean:$(SRCDIR)/preprocess
 
 PROJ_EXE = unit
 
 #default index & tracer set
 index   = 10x10x2
-tracer  = ndw6
+tracer  = kessler
+radiation = mstrnX
+sfcflx  = const
 precision = real8
-postfix = 
+postfix = debug
 
-all: makedir makeinclude makebin
+MODS = \
+	test_atmos_phy_tb_smg.o \
+	test_atmos_dyn_fent_fct.o \
+	dc_test.o \
+	dc_types.o
 
-makedir:
-	mkdir -p $(BINDIR)/$(SCALE_SYS)
+all: makelib makeinclude makebin run
+
+makelib:
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
 
 makeinclude:
-	cp $(SRCDIR)/include/inc_tracer_$(tracer).f90 $(SRCDIR)/include/inc_tracer.h
-	cp $(SRCDIR)/include/inc_index_$(index).f90   $(SRCDIR)/include/inc_index.h
-	cp $(SRCDIR)/include/inc_precision_$(precision).f90 $(SRCDIR)/include/inc_precision.h
+	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h
+	cp $(INCDIR)/inc_index_$(index).f90         $(INCDIR)/inc_index.h
+	cp $(INCDIR)/inc_precision_$(precision).f90 $(INCDIR)/inc_precision.h
 
 makebin: $(PROJ_EXE)
 
-$(PROJ_EXE): $(PROJ_EXE).o
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS) dc_test.o dc_types.o
+run:
+	./$(PROJ_EXE) dummy.conf
 
+$(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME)
+	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^
 
-test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90 mod_atmos_phy_tb_smg.o dc_test.o
+$(PROJ_EXE).o: $(MODS)
+
+test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90 dc_test.o
+
+test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90 dc_test.o
 
 dc_test.o: dc_test.f90 dc_types.o
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FC) -DDEBUG $(FFLAGS) -O0 -g -I$(SRCDIR)/include -o $@ -c $<
-#	$(FC) -DDEBUG -O0 -g -fpp3 -fpe0 -traceback -I$(SRCDIR)/include -o $@ -c $<
+	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -o $@ -c $<
+#	$(FC) -DDEBUG -O0 -g -fpp3 -fpe0 -traceback -I$(SRCDIR) -o $@ -c $<
 
 .c.o:
 	$(CC) $(CFLAGS) -O0 -g -o $@ -c $<
@@ -45,23 +58,11 @@ dc_test.o: dc_test.f90 dc_types.o
 %.o: %.mod
 
 
-.PHONY: depends freeze clean copylocal mktar
+.PHONY: clean distclean
 
 clean:
 	rm -f *.mod *.o *~ *.lst
 
-cleanall: clean
-	rm -f $(PROJ_EXE) depends.info
-
-freeze: clean depends copylocal mktar
-
-copylocal:
-	@for i in $(MODSRC) ; do \
-		cp $$i . ; \
-	done
-	cp $(SRCDIR)/sysdep/Makedef.$(SCALE_SYS) .
-
-depends:
-	@../../../mkdepends.pl unit $(VPATH)
-
--include depends.info
+distclean: clean
+	$(MAKE) -C $(SRCDIR) distclean
+	rm -f $(PROJ_EXE)

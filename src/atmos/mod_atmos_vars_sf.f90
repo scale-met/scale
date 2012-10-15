@@ -39,17 +39,18 @@ module mod_atmos_vars_sf
   !
   !++ included parameters
   !
+  include "inc_precision.h"
   include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(8), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
-  real(8), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
-  real(8), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
-  real(8), public, save :: SFLX_POTT(IA,JA) ! POTT [K]
-  real(8), public, save :: SFLX_QV  (IA,JA) ! tracer mixing ratio [kg/kg]
+  real(RP), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
+  real(RP), public, save :: SFLX_POTT(IA,JA) ! POTT [K]
+  real(RP), public, save :: SFLX_QV  (IA,JA) ! tracer mixing ratio [kg/kg]
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -112,7 +113,7 @@ contains
        FIO_input
     implicit none
 
-!    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
 !    character(len=IO_FILECHR) :: bname
 !    character(len=8)          :: lname
@@ -148,7 +149,7 @@ contains
        FIO_output
     implicit none
 
-!    real(8) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
 !    character(len=IO_FILECHR) :: bname
 !    character(len=FIO_HMID)   :: desc

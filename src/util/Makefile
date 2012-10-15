@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-include ../sysdep/Makedef.$(SCALE_SYS)
+include ../../sysdep/Makedef.$(SCALE_SYS)
 
 VPATH = ../common:../io:../grid:../atmos:../ocean
 
