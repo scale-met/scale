@@ -1773,7 +1773,7 @@ call TIME_rapend     ('DYN-fct')
           ! monotonic flux
           ! at (x, y, layer)
           ! note than z-index is added by -1
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-1
@@ -1869,7 +1869,7 @@ call TIME_rapend     ('DYN-fct')
        ! high order flux
        ! at (x, y, layer)
        ! note than z-index is added by -1
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+2, KE-2
@@ -1895,7 +1895,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -2120,7 +2120,7 @@ call TIME_rapend     ('DYN-fct')
           end if
 
           ! at (u, y, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -2156,7 +2156,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! at (x, y, layer)
           ! note that x-index is added by -1
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+2
           do k = KS, KE
@@ -2198,7 +2198,7 @@ call TIME_rapend     ('DYN-fct')
        end if
        ! high order flux
        ! at (u, y, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
@@ -2227,7 +2227,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -2438,7 +2438,7 @@ call TIME_rapend     ('DYN-fct')
           end if
 
           ! at (x, v, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -2494,7 +2494,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
           ! at (x, y, layer)
           ! note that y-index is added by -1
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+2
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -2517,7 +2517,7 @@ call TIME_rapend     ('DYN-fct')
 
        ! high order flux
        ! at (x, v, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
@@ -2546,7 +2546,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -3349,7 +3349,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !--- incoming flux limitation factor [0-1]
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,zerosw) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -3368,7 +3368,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !--- outgoing flux limitation factor [0-1]
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,zerosw) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -3404,7 +3404,7 @@ call TIME_rapend     ('DYN-fct')
     IIE = IIS+IBLOCK-1
 
        !--- update high order flux with antidiffusive flux
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS , KE-1
@@ -3448,7 +3448,7 @@ call TIME_rapend     ('DYN-fct')
        else
           ijs = IIS
        end if
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = ijs, IIE
        do k = KS, KE
@@ -3477,7 +3477,7 @@ call TIME_rapend     ('DYN-fct')
        else
           ijs = JJS
        end if
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
        do j = ijs, JJE
        do i = IIS, IIE
        do k = KS, KE
