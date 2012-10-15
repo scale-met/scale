@@ -43,7 +43,6 @@ module mod_ocean_vars
   !
   include "inc_precision.h"
   include 'inc_index.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -266,7 +265,7 @@ contains
     call FileAddVariable( vid,               & ! (out)
          fid, 'SST', OP_DESC(1), OP_UNIT(1), & ! (in)
          (/'x','y'/), dtype                  ) ! (in)
-    restart_ocean(IMAX,1:JMAX) = SST(1,IS:IE,JS:JE)
+    restart_ocean(1:IMAX,1:JMAX) = SST(1,IS:IE,JS:JE)
     call FileWrite( vid, restart_ocean(:,:), NOWSEC, NOWSEC )
 
     call FileClose( fid )

@@ -42,7 +42,6 @@ module mod_atmos_vars_sf
   !
   include "inc_precision.h"
   include 'inc_index.h'
-  include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -114,8 +113,6 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_process, only: &
-       PRC_myrank
     use gtool_file, only: &
        FileRead
     implicit none

@@ -55,7 +55,6 @@ module mod_history
   !
   include "inc_precision.h"
   include "inc_index.h"
-  include "inc_precision.h"
 
   !-----------------------------------------------------------------------------
   !
@@ -324,7 +323,6 @@ contains
     use gtool_history, only : &
          HistoryPutAxis
     implicit none
-    integer i
 
     call TIME_rapstart('FILE O')
 

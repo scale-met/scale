@@ -626,7 +626,6 @@ contains
       step,      &
       single     )
     use mod_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     implicit none
 
