@@ -1,0 +1,15 @@
+SCALE-LES
+=========
+
+Large-Eddy Simulation model for weather and climate
+with Scalable Computing for Advanced Library and Environment (SCALE).
+(http://ranchu.aics.riken.jp)
+
+Contributing
+------------
+SCALE-LES is developed by Team SCALE.
+
+License
+-------
+- License: The BSD 2-Clause License
+
