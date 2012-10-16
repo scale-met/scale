@@ -239,7 +239,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
-    if ( ATMOS_TYPE_PHY_RD .ne. 'OFF' .and. ATMOS_TYPE_PHY_RD 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_RD .ne. 'OFF' .and. ATMOS_TYPE_PHY_RD .ne. 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
     else
