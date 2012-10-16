@@ -10,39 +10,50 @@ TOPDIR = ..
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
+LIBNAME = libdcutils.a
+
 MODS = \
 	dc_calendar.o \
-	dc_log.o
+	dc_log.o \
+	dc_types.o \
+	dc_test.o
 
+all: $(LIBDIR)/$(LIBNAME)
 
-all: makelibdcutils
-
-makelibdcutils: libdcutils.a
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	mkdir -p $(LIBDIR)
-	install libdcutils.a $(LIBDIR)
+	install $(LIBNAME) $(LIBDIR)
 
-libdcutils.a: $(MODS)
+$(LIBNAME): $(MODS)
 	$(AR) $@ $?
 	$(RANLIB) $@
 
 dc_calendar.f90: dc_calendar.f90.erb
 	erb $< > $@
 
+dc_test.f90: dc_test.rb2f90
+	ruby $< > $@
+
 dc_calendar.o: dc_calendar.f90 dc_log.o
+
+dc_types.o: dc_types.f90
+
+dc_test.o: dc_test.f90 dc_types.o
+	$(FC) $(FFLAGS) -O0 -o $@ -c $<
 
 clean:
 	rm -f $(MODS) *.mod
 distclean: clean
-	rm -f libdcutils.a
+	rm -f $(LIBNAME)
+allclean: distclean
+	rm -f $(LIBDIR)/$(LIBNAME)
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
 
 .f90.o:
 	$(FC) $(FFLAGS) -o $@ -c $<
-.c.o:
-	$(CC) $(CFLAGS) -o $@ -c $<
 
 %.o: %.mod
 
-.PHONY : clean distclean
+.PHONY : clean distclean allclean

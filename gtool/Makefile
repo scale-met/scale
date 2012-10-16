@@ -10,6 +10,8 @@ TOPDIR = ..
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
+LIBNAME = libgtool.a
+
 MODS = \
 	gtool_file.o \
 	gtool_file_f.o \
@@ -18,13 +20,13 @@ MODS = \
 	gtool_netcdf.o
 
 
-all: makelibgtool
+all: $(LIBDIR)/$(LIBNAME)
 
-makelibgtool: libgtool.a
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	mkdir -p $(LIBDIR)
-	install libgtool.a $(LIBDIR)
+	install $(LIBNAME) $(LIBDIR)
 
-libgtool.a: $(DCUTILSDIR)/libdcutils.a $(MODS)
+$(LIBNAME): $(DCUTILSDIR)/libdcutils.a $(MODS)
 	$(AR) $@ $(MODS)
 	$(RANLIB) $@
 
@@ -43,12 +45,13 @@ gtool_netcdf.o: gtool_netcdf.c
 gtool_file.o: gtool_file.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
 gtool_history.o: gtool_history.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
 
-allclean: distclean
-	cd $(DCUTILSDIR); $(MAKE) distclean
 clean:
 	rm -f $(MODS) *.mod
 distclean: clean
-	rm -f libgtool.a
+	rm -f $(LIBNAME)
+allclean: distclean
+	cd $(DCUTILSDIR); $(MAKE) distclean
+	rm -f $(LIBDIR)/$(LIBNAME)
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
