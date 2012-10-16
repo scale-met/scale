@@ -17,9 +17,7 @@ postfix = debug
 
 MODS = \
 	test_atmos_phy_tb_smg.o \
-	test_atmos_dyn_fent_fct.o \
-	dc_test.o \
-	dc_types.o
+	test_atmos_dyn_fent_fct.o
 
 all: makelib makeinclude makebin run
 
@@ -41,19 +39,15 @@ $(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(L
 
 $(PROJ_EXE).o: $(MODS)
 
-test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90 dc_test.o
+test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
 
-test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90 dc_test.o
+test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90
 
-dc_test.o: dc_test.f90 dc_types.o
-
-.SUFFIXES: .o .f90 .f .c
+.SUFFIXES: .o .f90 .f
 .f90.o:
-	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -o $@ -c $<
-#	$(FC) -DDEBUG -O0 -g -fpp3 -fpe0 -traceback -I$(SRCDIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -I$(DCUTILSDIR) -o $@ -c $<
 
 %.o: %.mod
-
 
 .PHONY: clean distclean
 
