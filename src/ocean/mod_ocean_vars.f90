@@ -122,11 +122,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
 
-    if ( OCEAN_TYPE == 'FIXEDSST' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : Fixed SST'
+    if ( OCEAN_TYPE .ne. 'OFF' .and. OCEAN_TYPE .ne. 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : ON'
        OCEAN_sw_sf = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : OFF'
        OCEAN_sw_sf = .false.
     endif
 

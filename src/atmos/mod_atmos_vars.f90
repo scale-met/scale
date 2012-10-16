@@ -214,43 +214,36 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] selected components'
 
     if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
-    if ( ATMOS_TYPE_DYN == 'fent_fct' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : Full-explicit No-terrain'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : FCT limitter'
-       ATMOS_sw_dyn = .true.
-    elseif( ATMOS_TYPE_DYN == 'fent_pdfct' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : Full-explicit No-terrain'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : Positive-Difinite FCT limitter'
+    if ( ATMOS_TYPE_DYN .ne. 'OFF' .and. ATMOS_TYPE_DYN .ne. 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
        ATMOS_sw_dyn = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : NONE'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : OFF'
        ATMOS_sw_dyn = .false.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
-    if ( ATMOS_TYPE_PHY_TB == 'smagorinsky' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : Smagorinsky'
+    if ( ATMOS_TYPE_PHY_TB .ne. 'OFF' .and. ATMOS_TYPE_PHY_TB .ne. 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
-    if ( ATMOS_TYPE_PHY_MP == 'NDW6' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : NDW6'
-       ATMOS_sw_phy_mp = .true.
-    elseif( ATMOS_TYPE_PHY_MP == 'kessler' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : Kessler'
+    if ( ATMOS_TYPE_PHY_MP .ne. 'OFF' .or. ATMOS_TYPE_PHY_MP .ne. 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
        ATMOS_sw_phy_mp = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
-    if ( ATMOS_TYPE_PHY_RD == 'mstrnX' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : mstrnX'
+    if ( ATMOS_TYPE_PHY_RD .ne. 'OFF' .and. ATMOS_TYPE_PHY_RD 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : NONE'
+       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
        ATMOS_sw_phy_rd = .false.
     endif
 
