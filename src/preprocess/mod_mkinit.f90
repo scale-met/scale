@@ -453,6 +453,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TRACERBUBBLE]/Categ[MKINIT]'
 
+    if ( I_NC < 1 ) then
+       write(*,*) 'xxx I_NC must be > 0.'
+       write(*,*) '    change microphysics'
+       call PRC_MPIstop
+    end if
+
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
     ENV_THETA = THETAstd
@@ -1424,6 +1430,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[STRATOCUMULUS)]/Categ[MKINIT]'
 
+    if ( I_NC < 1 ) then
+       write(*,*) 'xxx I_NC must be > 0.'
+       write(*,*) '    change microphysics'
+       call PRC_MPIstop
+    end if
+
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
 
@@ -1561,11 +1573,16 @@ contains
        RANDOM_LIMIT,    &
        RANDOM_FLAG
     !---------------------------------------------------------------------------
-
     dummy(:,:,:) = 0.d0
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    if ( I_NC < 1 ) then
+       write(*,*) 'xxx I_NC must be > 0.'
+       write(*,*) '    change microphysics'
+       call PRC_MPIstop
+    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
@@ -1777,10 +1794,15 @@ contains
        RANDOM_FLAG
 
     !---------------------------------------------------------------------------
-
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+
+    if ( I_NC < 1 ) then
+       write(*,*) 'xxx I_NC must be > 0.'
+       write(*,*) '    change microphysics'
+       call PRC_MPIstop
+    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
@@ -1974,6 +1996,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01_hbinw)]/Categ[MKINIT]'
+
+    if ( I_NC < 1 ) then
+       write(*,*) 'xxx I_NC must be > 0.'
+       write(*,*) '    change microphysics'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
