@@ -121,11 +121,12 @@ mod_atmos_sub_precipitation.o	: mod_atmos_sub_precipitation.f90 mod_stdio.o mod_
 mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_hydrostatic.o mod_atmos_sub_saturation.o
 
 allclean: distclean
-	cd $(GTOOLDIR); $(MAKE) allclean
+	$(MAKE) -C $(DCUTILSDIR) allclean
+	$(MAKE) -C $(GTOOLDIR) allclean
 clean:
 	rm -f $(PRJS) include/inc_index.h include/inc_tracer.h include/inc_precision.h *.mod *.o *.lst
 distclean: clean
-	rm -f $(LIBNAME)
+	rm -f $(LIBNAME) *.a
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
