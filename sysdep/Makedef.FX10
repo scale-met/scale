@@ -11,6 +11,8 @@ FFLAGS_DYN = -Kfast,parallel,auto,array_private,ilfunc,ocl,mfunc=2,preex,noalias
              -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
              -Ntl_trt -Qt -V -Cpp -Ksimd=2
 
+MODDIROPT = -M
+
 # old setting 20120104
 #FFLAGS = -Kvisimpact,ocl,ilfunc,preex,array_private,prefetch_cache_level=all,auto,mfunc=2,noalias=s,instance=8,prefetch_iteration_L2=50 \
 #         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \

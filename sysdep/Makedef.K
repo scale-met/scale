@@ -10,6 +10,8 @@ FFLAGS_DYN = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_com
              -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
              -Knoprefetch -Ksimd=2 -Kdynamic_iteration
 
+MODDIROPT = -M
+
 # old setting 20120214
 #FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
 #         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
