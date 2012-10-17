@@ -56,7 +56,10 @@ MODS =	\
 	mod_atmos_mp_saturation.o	\
 	mod_atmos_sub_saturation.o
 
-all: makedir makegtool makeinclude makebin
+all: makedir makedcutils makegtool makeinclude makebin
+
+makedcutils:
+	cd $(DCUTILSDIR); $(MAKE)
 
 makegtool:
 	cd $(GTOOLDIR); $(MAKE)

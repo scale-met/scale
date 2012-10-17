@@ -650,7 +650,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(<%=rp%>),         intent(in)           :: var(<%=idx%>)
-    real(<%=rp%>),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -678,7 +678,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(<%=rp%>),         intent(in)           :: var(<%=idx%>)
-    real(<%=rp%>),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(<%=n%>), idx

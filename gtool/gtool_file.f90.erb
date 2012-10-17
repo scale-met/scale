@@ -496,10 +496,10 @@ contains
 
     real(<%=rp%>), intent(in) :: var(<%=idx%>)
     integer,  intent(in) :: vid
-    real(<%=rp%>), intent(in) :: t_start
-    real(<%=rp%>), intent(in) :: t_end
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------

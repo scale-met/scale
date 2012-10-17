@@ -532,7 +532,7 @@ int32_t file_write_data( int32_t  vid,        // (in)
     CHECK_ERROR( nc_put_vara_double(ncid, vars[vid]->varid, vars[vid]->start, vars[vid]->count, (double*)var) );
     break;
   case 4:
-    CHECK_ERROR( nc_put_vara_float(ncid, vid, vars[vid]->start, vars[vid]->count, (float*)var) );
+    CHECK_ERROR( nc_put_vara_float(ncid, vars[vid]->varid, vars[vid]->start, vars[vid]->count, (float*)var) );
     break;
   default:
     fprintf(stderr, "unsuppoted data precision: %d\n", precision);

@@ -20,6 +20,8 @@ module mod_time
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR
+  use dc_types, only : &
+      DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,23 +47,23 @@ module mod_time
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: TIME_DTSEC                !< time interval of model       [sec]
+  real(DP), public, save :: TIME_DTSEC                !< time interval of model       [sec]
 
-  real(RP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
   integer, public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
-  real(RP), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence   [sec]
-  real(RP), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics [sec]
-  real(RP), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
-  real(RP), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of restart      [sec]
-  real(RP), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
-  real(RP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of restart      [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence   [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of restart      [sec]
+  real(DP), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
+  real(DP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of restart      [sec]
 
-  real(RP), public, save :: TIME_NOWSEC               !< current time [sec]
+  real(DP), public, save :: TIME_NOWSEC               !< current time [sec]
   integer, public, save :: TIME_NOWSTEP              !< current step [number]
 
   integer, public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
-  real(RP), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
-  real(RP), public, save :: TIME_NOWSECL              !< current time [sec]
+  real(DP), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
+  real(DP), public, save :: TIME_NOWSECL              !< current time [sec]
 
   logical, public, save :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical, public, save :: TIME_DOATMOS_DYN          !< execute dynamics?
@@ -84,38 +86,38 @@ module mod_time
   !++ Private parameters & variables
   !
   integer, private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
-  real(RP), private,      save :: TIME_STARTMS      = 0.0_RP                           !< [millisec]
-  real(RP), private,      save :: TIME_STARTSECL
+  real(DP), private,      save :: TIME_STARTMS      = 0.0_DP                           !< [millisec]
+  real(DP), private,      save :: TIME_STARTSECL
 
   integer, private,      save :: TIME_ENDDATE(6)
-  real(RP), private,      save :: TIME_ENDMS
-  real(RP), private,      save :: TIME_ENDSECL
+  real(DP), private,      save :: TIME_ENDMS
+  real(DP), private,      save :: TIME_ENDSECL
 
   integer, private,      save :: TIME_NSTEP
 
-  real(RP), private,      save :: TIME_RES_ATMOS_DYN     = 0.0_RP
-  real(RP), private,      save :: TIME_RES_ATMOS_PHY_TB  = 0.E0_RP
-  real(RP), private,      save :: TIME_RES_ATMOS_PHY_MP  = 0.E0_RP
-  real(RP), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.E0_RP
-  real(RP), private,      save :: TIME_RES_ATMOS_RESTART = 0.E0_RP
-  real(RP), private,      save :: TIME_RES_OCEAN         = 0.E0_RP
-  real(RP), private,      save :: TIME_RES_OCEAN_RESTART = 0.E0_RP
+  real(DP), private,      save :: TIME_RES_ATMOS_DYN     = 0.0_DP
+  real(DP), private,      save :: TIME_RES_ATMOS_PHY_TB  = 0.E0_DP
+  real(DP), private,      save :: TIME_RES_ATMOS_PHY_MP  = 0.E0_DP
+  real(DP), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.E0_DP
+  real(DP), private,      save :: TIME_RES_ATMOS_RESTART = 0.E0_DP
+  real(DP), private,      save :: TIME_RES_OCEAN         = 0.E0_DP
+  real(DP), private,      save :: TIME_RES_OCEAN_RESTART = 0.E0_DP
 
-  real(RP), private, parameter :: TIME_DOY     = 365.E0_RP
-  real(RP), private, parameter :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
-  real(RP), private, parameter :: TIME_HOUR    =  24.E0_RP
-  real(RP), private, parameter :: TIME_MIN     =  60.E0_RP
-  real(RP), private, parameter :: TIME_SEC     =  60.E0_RP
+  real(DP), private, parameter :: TIME_DOY     = 365.E0_DP
+  real(DP), private, parameter :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
+  real(DP), private, parameter :: TIME_HOUR    =  24.E0_DP
+  real(DP), private, parameter :: TIME_MIN     =  60.E0_DP
+  real(DP), private, parameter :: TIME_SEC     =  60.E0_DP
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
   character(len=IO_SYSCHR), private,      save :: TIME_rapname(TIME_rapnlimit)
-  real(RP),                  private,      save :: TIME_raptstr(TIME_rapnlimit)
-  real(RP),                  private,      save :: TIME_rapttot(TIME_rapnlimit)
+  real(DP),                  private,      save :: TIME_raptstr(TIME_rapnlimit)
+  real(DP),                  private,      save :: TIME_rapttot(TIME_rapnlimit)
   integer,                  private,      save :: TIME_rapnstr(TIME_rapnlimit)
   integer,                  private,      save :: TIME_rapnend(TIME_rapnlimit)
 
-  real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
+  real(DP), private, parameter :: eps = 1.E-10_DP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------
 contains
@@ -130,23 +132,23 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP)                  :: TIME_DURATION              = 60.0E0_RP
+    real(DP)                  :: TIME_DURATION              = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "MIN"
-    real(RP)                  :: TIME_DT                    =  0.6E0_RP
+    real(DP)                  :: TIME_DT                    =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
-    real(RP)                  :: TIME_DT_ATMOS_DYN          =  0.03E0_RP
+    real(DP)                  :: TIME_DT_ATMOS_DYN          =  0.03E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(RP)                  :: TIME_DT_ATMOS_PHY_TB       =  0.6E0_RP
+    real(DP)                  :: TIME_DT_ATMOS_PHY_TB       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC"
-    real(RP)                  :: TIME_DT_ATMOS_PHY_MP       =  0.6E0_RP
+    real(DP)                  :: TIME_DT_ATMOS_PHY_MP       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC"
-    real(RP)                  :: TIME_DT_ATMOS_PHY_RD       =  0.6E0_RP
+    real(DP)                  :: TIME_DT_ATMOS_PHY_RD       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC"
-    real(RP)                  :: TIME_DT_ATMOS_RESTART      = 60.0E0_RP
+    real(DP)                  :: TIME_DT_ATMOS_RESTART      = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "SEC"
-    real(RP)                  :: TIME_DT_OCEAN              = 60.0E0_RP
+    real(DP)                  :: TIME_DT_OCEAN              = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "MIN"
-    real(RP)                  :: TIME_DT_OCEAN_RESTART      = 60.0E0_RP
+    real(DP)                  :: TIME_DT_OCEAN_RESTART      = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "SEC"
 
     NAMELIST / PARAM_TIME / &
@@ -172,8 +174,8 @@ contains
        TIME_DT_OCEAN_RESTART,      &
        TIME_DT_OCEAN_RESTART_UNIT
 
-    real(RP) :: TIME_DURATIONSEC
-    real(RP) :: temp
+    real(DP) :: TIME_DURATIONSEC
+    real(DP) :: temp
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -195,7 +197,7 @@ contains
 
     !--- calculate time
     call TIME_date2sec( TIME_STARTSECL, TIME_STARTDATE(:) )
-    TIME_STARTMS = TIME_STARTMS * 1.E-3_RP
+    TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
 
     call TIME_ymdhms2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
 
@@ -227,8 +229,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
-    if ( TIME_DTSEC <= 0.E0_RP ) then
-       write(*,*) ' xxx Delta t <= 0.E0_RP is not accepted. Check!'
+    if ( TIME_DTSEC <= 0.E0_DP ) then
+       write(*,*) ' xxx Delta t <= 0.E0_DP is not accepted. Check!'
        call PRC_MPIstop
     endif
 
@@ -331,14 +333,14 @@ contains
 
     logical :: exists
 
-    real(RP) :: temp
+    real(DP) :: temp
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
 
     temp  = dble( int( TIME_NOWMS+TIME_DTSEC,kind=8 ) )
     TIME_NOWMS   = TIME_NOWMS + TIME_DTSEC - temp
-    TIME_NOWMS   = nint( TIME_NOWMS * 1.E5_RP ) * 1.D-5
+    TIME_NOWMS   = nint( TIME_NOWMS * 1.E5_DP ) * 1.D-5
     TIME_NOWSECL = TIME_NOWSECL + temp
 
     TIME_NOWSEC  = TIME_NOWSECL + TIME_NOWMS
@@ -387,13 +389,13 @@ contains
      datetime )
     implicit none
 
-    real(RP), intent(out) :: second
+    real(DP), intent(out) :: second
     integer, intent( in) :: datetime(6)
 
     integer :: m
     !---------------------------------------------------------------------------
 
-    second = 0.E0_RP
+    second = 0.E0_DP
     second = second + datetime(1) * TIME_SEC * TIME_MIN * TIME_HOUR * TIME_DOY
     if ( datetime(2) > 1 ) then
        do m = 1, datetime(2)-1
@@ -419,10 +421,10 @@ contains
     implicit none
 
     integer, intent(out) :: datetime(6)
-    real(RP), intent( in) :: second
+    real(DP), intent( in) :: second
 
-    real(RP) :: temp
-    real(RP) :: nmin, nhour, nday
+    real(DP) :: temp
+    real(DP) :: nmin, nhour, nday
 
     integer :: m
     !---------------------------------------------------------------------------
@@ -467,14 +469,14 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP),          intent(out) :: second
-    real(RP),          intent( in) :: value
+    real(DP),          intent(out) :: second
+    real(DP),          intent( in) :: value
     character(len=*), intent( in) :: unit
     !---------------------------------------------------------------------------
 
     select case(trim(unit))
     case('MSEC')
-       second = value * 1.E-3_RP
+       second = value * 1.E-3_DP
     case('SEC')
        second = value
     case('MIN')
@@ -562,9 +564,9 @@ contains
        PRC_MPItimestat
     implicit none
 
-    real(RP) :: avgvar(TIME_rapnlimit)
-    real(RP) :: maxvar(TIME_rapnlimit)
-    real(RP) :: minvar(TIME_rapnlimit)
+    real(DP) :: avgvar(TIME_rapnlimit)
+    real(DP) :: maxvar(TIME_rapnlimit)
+    real(DP) :: minvar(TIME_rapnlimit)
     integer :: maxidx(TIME_rapnlimit)
     integer :: minidx(TIME_rapnlimit)
 

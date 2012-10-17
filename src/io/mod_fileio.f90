@@ -327,6 +327,8 @@ contains
     use mod_time, only :&
       TIME_date2sec, &
       TIME_sec2date
+    use dc_types, only : &
+         DP
     implicit none
 
     integer,          intent(inout) :: start_step
@@ -341,7 +343,7 @@ contains
     integer,          intent(   in) :: cdate(6)
     logical,          intent(   in) :: opt_periodic_year
 
-    real(RP) :: midtime  !--- [sec]
+    real(DP) :: midtime  !--- [sec]
     logical :: startflag
     integer :: did, fid
     integer :: i

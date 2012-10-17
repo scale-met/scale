@@ -10,6 +10,10 @@ FFLAGS = -fpp3 -O3 -ftz -xHost -ip            \
 	 -mkl=sequential
 #	 -opt-streaming-stores always         \
 
+FFLAGS_DEBUG = -fpp3 -O0       \
+	       -mkl=sequential \
+	       -check all -warn all -g -traceback -fpe0 -DDEBUG
+
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
 endif
@@ -18,7 +22,6 @@ ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
 endif
 
-FFLAGS_DEBUG = -fpp3 -O0 -check all -warn all -g -traceback -fpe0 -DDEBUG
 
 CC     = mpicc
 CFLAGS = -O3 -xHost -ip -ftz

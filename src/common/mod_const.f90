@@ -19,6 +19,9 @@ module mod_const
   use mod_stdio, only : &
      IO_FID_LOG, &
      IO_L
+  use dc_types, only : &
+       DP, &
+       SP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -40,8 +43,9 @@ module mod_const
   real(RP), public, save      :: CONST_EPS   = 1.E-34_RP             !< small number
 
   integer, public, parameter :: CONST_UNDEF2 = -32768            !< undefined value (INT2)
-  real(4), public, parameter :: CONST_UNDEF4 = -9.9999E30        !< undefined value (REAL4)
-  real(8), public, parameter :: CONST_UNDEF8 = -9.9999D30        !< undefined value (REAL8)
+  real(SP), public, parameter :: CONST_UNDEF4 = -9.9999E30        !< undefined value (REAL4)
+  real(DP), public, parameter :: CONST_UNDEF8 = -9.9999D30        !< undefined value (REAL8)
+  real(RP), public, save      :: CONST_UNDEF
 
   ! physical constants
   real(RP), public, parameter :: CONST_ERADIUS = 6.37122E+6_RP !< earth radius           [m]
@@ -128,6 +132,15 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CONST)
+
+    if ( RP == SP ) then
+       CONST_UNDEF = CONST_UNDEF4
+    else if ( RP == DP ) then
+       CONST_UNDEF = CONST_UNDEF8
+    else
+       write(*,*) 'xxx unsupported precision: ', RP
+       call PRC_MPIstop
+    end if
 
     CONST_PI    = 4.E0_RP * atan( 1.0_RP )
     CONST_EPS   = epsilon(0.E0_RP)

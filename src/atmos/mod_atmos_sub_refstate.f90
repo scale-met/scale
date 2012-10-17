@@ -175,6 +175,8 @@ contains
        FileClose
     use mod_grid, only : &
          GRID_CZ
+    use dc_types, only : &
+         DP
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -213,8 +215,8 @@ contains
 
        call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
 
-       call FileWrite( vid_dens, ATMOS_REFSTATE_dens(:), 0.0_RP, 0.0_RP )
-       call FileWrite( vid_pott, ATMOS_REFSTATE_pott(:), 0.0_RP, 0.0_RP )
+       call FileWrite( vid_dens, ATMOS_REFSTATE_dens(:), 0.0_DP, 0.0_DP )
+       call FileWrite( vid_pott, ATMOS_REFSTATE_pott(:), 0.0_DP, 0.0_DP )
 
        call FileClose( fid )
     endif

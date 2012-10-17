@@ -554,6 +554,8 @@ contains
        I_BND_VELX,  &
        I_BND_VELY,  &
        I_BND_POTT
+    use dc_types, only: &
+         DP
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -595,7 +597,7 @@ contains
     real(RP), intent(in)    :: LSsink_D
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
-    real(RP), intent(in)    :: DTSEC_ATMOS_DYN
+    real(DP), intent(in)    :: DTSEC_ATMOS_DYN
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
     ! diagnostic variables
@@ -1564,9 +1566,17 @@ call TIME_rapend     ('DYN-fct')
              PRES(k,i,j) = RHOT(k,i,j) * Rtot(k,i,j) / P00
           enddo
           if ( RP == 8 ) then
+#ifdef DEBUG
+             call vdpowx( KE-KS+1, PRES(KS:KE,i,j), CPovCV, PRES(KS:KE,i,j) )
+#else
              call vdpowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+#endif
           else
+#ifdef DEBUG
+             call vspowx( KE-KS+1, PRES(KS:KE,i,j), CPovCV, PRES(KS:KE,i,j) )
+#else
              call vspowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
+#endif
           end if
           do k = KS, KE
 #ifdef DEBUG
