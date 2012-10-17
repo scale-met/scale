@@ -1,8 +1,10 @@
 TOPDIR = ../../..
+BUILD_DIR := $(shell pwd)/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
+VPATH = $(BUILD_DIR)
 
 index     = 10x56x56
 tracer    = ndw6
@@ -14,7 +16,7 @@ postfix   =
 all: build
 
 build:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix)
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR)
 
 runinit: build
 	$(SCRDIR)/run.sh $(BINDIR)/$(INITNAME) init.conf 6
@@ -25,5 +27,9 @@ run: build
 check:
 # to be add program to check result
 
+.PHONY: clean distclean
+
+clean:
+	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
 distclean:
-	$(MAKE) -C $(SRCDIR) distclean
+	rm -f *.nc LOG.pe000000

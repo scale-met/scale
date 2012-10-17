@@ -8,10 +8,9 @@ FFLAGS = -cpp -O0 -ffpe-trap=invalid,zero,overflow \
          -frecord-marker=4 -fconvert=big-endian    \
          -Wall -Wuninitialized -fbounds-check      \
          -g -fbacktrace
-#
-CC     = /opt/local/bin/mpicc
-CFLAGS = 
-#
+
+MODDIROPT = -J
+
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 

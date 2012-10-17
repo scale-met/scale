@@ -6,8 +6,10 @@
 FC     = mpif90
 FFLAGS = -O3 -cpp
 
+FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero -finit-real=nan
 
-FFLAGS_DYN = $(FFLAGS)
+MODDIROPT = -J
+
 
 CC     = mpicc
 CFLAGS = -O3
@@ -15,8 +17,6 @@ CFLAGS = -O3
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
-#FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG
-FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero -finit-real=nan
 
 ##### for frontend
 

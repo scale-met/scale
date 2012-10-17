@@ -5,7 +5,6 @@
 
 FC     = ifort
 FFLAGS = -fpp3 -O3 -ftz -m64                  \
-         -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias              \
          -xSSE4.2 -lmpi -mkl=sequential
@@ -25,10 +24,8 @@ ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
 endif
 
-FFLAGS_DYN = $(FFLAGS)
+MODDIROPT = -module
 
-CC     = icc
-CFLAGS = -O3 -ftz -m64 -xSSE4.2
 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)

@@ -14,6 +14,8 @@ FFLAGS_DEBUG = -fpp3 -O0       \
 	       -mkl=sequential \
 	       -check all -warn all -g -traceback -fpe0 -DDEBUG
 
+MODDIROPT = -module
+
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
 endif

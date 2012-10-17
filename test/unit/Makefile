@@ -1,9 +1,10 @@
 TOPDIR = ../..
+BUILD_DIR := $(shell pwd)/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
-VPATH = $(SRCDIR)/common:$(SRCDIR)/io:$(SRCDIR)/grid:$(SRCDIR)/atmos:$(SRCDIR)/ocean:$(SRCDIR)/preprocess
+VPATH = $(BUILD_DIR)
 
 PROJ_EXE = unit
 
@@ -19,41 +20,44 @@ MODS = \
 	test_atmos_phy_tb_smg.o \
 	test_atmos_dyn_fent_fct.o
 
-all: makelib makeinclude makebin run
+all: makedir makelib makeinclude makebin run
+
+makedir:
+	mkdir -p $(BUILD_DIR)
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)"
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
 
 makeinclude:
-	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(INCDIR)/inc_tracer.h
-	cp $(INCDIR)/inc_index_$(index).f90         $(INCDIR)/inc_index.h
-	cp $(INCDIR)/inc_precision_$(precision).f90 $(INCDIR)/inc_precision.h
+	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
+	cp $(INCDIR)/inc_index_$(index).f90         $(BUILD_DIR)/inc_index.h
+	cp $(INCDIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
 
-makebin: $(PROJ_EXE)
+makebin: $(BUILD_DIR)/$(PROJ_EXE)
 
 run:
-	./$(PROJ_EXE) dummy.conf
+	$(BUILD_DIR)/$(PROJ_EXE) dummy.conf
 
-$(PROJ_EXE): $(PROJ_EXE).o $(MODS) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $^ $(NETCDF_LIBS)
+$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(LD) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
 
-$(PROJ_EXE).o: $(MODS)
+$(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
 
-test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
+$(BUILD_DIR)/test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90
 
-test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90
+$(BUILD_DIR)/unit.o: unit.f90 test_atmos_phy_tb_smg.o test_atmos_dyn_fent_fct.o
 
-.SUFFIXES: .o .f90 .f
-.f90.o:
-	$(FC) $(FFLAGS_DEBUG) -I$(INCDIR) -I$(SRCDIR) -I$(DCUTILSDIR) -o $@ -c $<
+.SUFFIXES: .o .f90
+$(BUILD_DIR)/%.o : %.f90
+	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 %.o: %.mod
 
 .PHONY: clean distclean
 
 clean:
-	rm -f *.mod *.o *~ *.lst
+	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
 
 distclean: clean
-	$(MAKE) -C $(SRCDIR) distclean
-	rm -f $(PROJ_EXE)
+	rm -f $(BUILD_DIR)/$(PROJ_EXE)
+	rm -f LOG.pe000000
