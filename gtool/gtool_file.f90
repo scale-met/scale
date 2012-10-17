@@ -986,10 +986,10 @@ contains
 
     real(SP), intent(in) :: var(:)
     integer,  intent(in) :: vid
-    real(SP), intent(in) :: t_start
-    real(SP), intent(in) :: t_end
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------
@@ -1017,7 +1017,7 @@ contains
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------
@@ -1042,10 +1042,10 @@ contains
 
     real(SP), intent(in) :: var(:,:)
     integer,  intent(in) :: vid
-    real(SP), intent(in) :: t_start
-    real(SP), intent(in) :: t_end
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------
@@ -1073,7 +1073,7 @@ contains
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------
@@ -1098,10 +1098,10 @@ contains
 
     real(SP), intent(in) :: var(:,:,:)
     integer,  intent(in) :: vid
-    real(SP), intent(in) :: t_start
-    real(SP), intent(in) :: t_end
+    real(DP), intent(in) :: t_start
+    real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------
@@ -1129,7 +1129,7 @@ contains
     real(DP), intent(in) :: t_start
     real(DP), intent(in) :: t_end
 
-    real(8) :: ts, te
+    real(DP) :: ts, te
 
     integer :: error
     !---------------------------------------------------------------------------

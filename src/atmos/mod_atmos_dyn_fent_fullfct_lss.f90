@@ -554,6 +554,8 @@ contains
        I_BND_VELX,  &
        I_BND_VELY,  &
        I_BND_POTT
+    use dc_types, only: &
+         DP
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -595,7 +597,7 @@ contains
     real(RP), intent(in)    :: LSsink_D
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
-    real(RP), intent(in)    :: DTSEC_ATMOS_DYN
+    real(DP), intent(in)    :: DTSEC_ATMOS_DYN
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
     ! diagnostic variables

@@ -756,7 +756,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:)
-    real(SP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -784,7 +784,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:)
-    real(SP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(1), idx
@@ -822,7 +822,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:)
-    real(DP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -850,7 +850,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:)
-    real(DP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(1), idx
@@ -888,7 +888,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:)
-    real(SP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -916,7 +916,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:,:)
-    real(SP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(2), idx
@@ -958,7 +958,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:)
-    real(DP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -986,7 +986,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:,:)
-    real(DP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(2), idx
@@ -1028,7 +1028,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:,:)
-    real(SP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -1056,7 +1056,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:,:,:)
-    real(SP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(3), idx
@@ -1102,7 +1102,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:,:)
-    real(DP),         intent(in)           :: dt
+    real(8),          intent(in)           :: dt
     logical,          intent(in), optional :: force
 
     integer :: itemid, n
@@ -1130,7 +1130,7 @@ contains
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:,:,:)
-    real(DP),         intent(in)           :: dt
+    real(8),         intent(in)            :: dt
     logical,          intent(in), optional :: force
 
     integer :: ijk(3), idx

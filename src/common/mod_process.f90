@@ -409,53 +409,46 @@ contains
       maxidx, &
       minidx, &
       var     )
+    use dc_types, only: &
+         DP
     implicit none
 
-    real(RP), intent(out) :: avgvar(:)
-    real(RP), intent(out) :: maxvar(:)
-    real(RP), intent(out) :: minvar(:)
+    real(DP), intent(out) :: avgvar(:)
+    real(DP), intent(out) :: maxvar(:)
+    real(DP), intent(out) :: minvar(:)
     integer, intent(out) :: maxidx(:)
     integer, intent(out) :: minidx(:)
-    real(RP), intent(in)  :: var(:)
+    real(DP), intent(in)  :: var(:)
 
-    real(RP), allocatable :: statval(:,:)
+    real(DP), allocatable :: statval(:,:)
     integer              :: vsize
 
-    real(RP) :: totalvar
-    integer :: datatype, ierr
+    real(DP) :: totalvar
+    integer :: ierr
     integer :: v, p
     !---------------------------------------------------------------------------
 
     vsize = size(var(:))
 
     allocate( statval(vsize,0:PRC_nmax-1) )
-    statval(:,:) = 0.0_RP
+    statval(:,:) = 0.0_DP
 
     do v = 1, vsize
        statval(v,PRC_myrank) = var(v)
     enddo
 
-    if ( RP == kind(0.0) ) then
-       datatype = MPI_REAL
-    else if ( RP == kind(0.D0) ) then
-       datatype = MPI_DOUBLE_PRECISION
-    else
-       write(*,*) 'xxx specified precision of real is not supported'
-       call PRC_MPIstop
-    end if
-
     ! MPI broadcast
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,p),         &
                        vsize,                &
-                       datatype,             &
+                       MPI_DOUBLE_PRECISION, &
                        p,                    &
                        MPI_COMM_WORLD,       &
                        ierr                  )
     enddo
 
     do v = 1, vsize
-       totalvar = 0.0_RP
+       totalvar = 0.0_DP
        do p = 0, PRC_nmax-1
           totalvar = totalvar + statval(v,p)
        enddo

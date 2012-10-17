@@ -17,10 +17,10 @@ build:
 	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix)
 
 runinit: build
-	run.sh $(BINDIR)/$(INITNAME) init.conf 4
+	$(SCRDIR)/run.sh $(BINDIR)/$(INITNAME) init.conf 4
 
 run: build
-	run.sh $(BINDIR)/$(BINNAME) run.conf 4
+	$(SCRDIR)/run.sh $(BINDIR)/$(BINNAME) run.conf 4
 
 check:
 # to be add program to check result
