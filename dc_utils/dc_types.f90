@@ -18,7 +18,7 @@ module dc_types
   !
   implicit none
   private
-  public :: DP
+  public :: DP, SP
   public :: TOKEN, STRING
   public :: STDIN, STDOUT, STDERR
   public :: NF_KIND_INT1
@@ -27,6 +27,7 @@ module dc_types
   integer, parameter:: DP  = kind(0.0d0) ! Double Precision.
                                          ! 倍精度実数型変数の種別型パラメタ
                                          ! として用います。
+  integer, parameter:: SP  = kind(0.0e0) ! Single Precision.
 
   integer, parameter:: TOKEN  = 32       ! Token.
                                          ! 単語やキーワードを保持する

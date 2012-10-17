@@ -105,7 +105,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
-       CONST_UNDEF8
+       CONST_UNDEF
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
@@ -144,7 +144,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
     !--- set reference field for boundary
-    ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF
 
     if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_read
@@ -167,7 +167,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_setalpha
     use mod_const, only: &
-       CONST_UNDEF8, &
+       CONST_UNDEF, &
        PI => CONST_PI
     use mod_grid, only : &
        CBFZ => GRID_CBFZ, &
@@ -279,22 +279,22 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
        do k = KS, KE
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF8 ) then
+          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = 0.E0_RP
           endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) == CONST_UNDEF8 ) then
+          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) == CONST_UNDEF ) then
             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = 0.E0_RP
           endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) == CONST_UNDEF8 ) then
+          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = 0.E0_RP
           endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_QV) == CONST_UNDEF8 ) then
+          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_QV) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV) = 0.E0_RP
           endif
        enddo
 
        do k = KS-1, KE
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF8 ) then
+          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.E0_RP
          endif
       enddo
@@ -471,7 +471,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_generate
     use mod_const, only: &
-       CONST_UNDEF8
+       CONST_UNDEF
     use mod_grid, only : &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask
@@ -485,20 +485,20 @@ contains
 
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF8
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF
        else                   ! Buffer Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
        endif
     enddo
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF8
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF8
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF
 
 !    do j = JS-1, JE+1
 !    do i = IS-1, IE+1
 !       do k = KS, KE
 !          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
-!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF8
+!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF
 !          else                                    ! Buffer Area
 !             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
 !                                                  * ( 1.E0_RP - CBFZ(k) )
@@ -506,7 +506,7 @@ contains
 !       enddo
 !    enddo
 !    enddo
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF8
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
 
     ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV
