@@ -6,7 +6,7 @@ module test_atmos_dyn_fent_fct
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-    use mod_grid, only : &
+  use mod_grid, only : &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
@@ -21,6 +21,8 @@ module test_atmos_dyn_fent_fct
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+  use dc_types, only : &
+       DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -183,7 +185,7 @@ subroutine test_undef
           CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
           divdmp_coef, LSsink_D,                & ! (in)
           flag_fct_momentum, flag_fct_t,        & ! (in)
-          1.0_RP, 1                             ) ! (in)
+          1.0_DP, 1                             ) ! (in)
   end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
@@ -226,7 +228,7 @@ subroutine test_const
        CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
        divdmp_coef, LSsink_D,                & ! (in)
        flag_fct_momentum, flag_fct_t,        & ! (in)
-       1.0_RP, 1                             ) ! (in)
+       1.0_DP, 1                             ) ! (in)
 
   do k = KS, KE
      answer(k,:,:) = MOMZ(k,IS,JS)
@@ -302,7 +304,7 @@ subroutine test_conserve
          CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
          divdmp_coef, LSsink_D,                & ! (in)
          flag_fct_momentum, flag_fct_t,        & ! (in)
-         1.0_RP, 1                             ) ! (in)
+         1.0_DP, 1                             ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP
