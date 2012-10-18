@@ -6,7 +6,7 @@ include $(TOPDIR)/src/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
-index     = 10x56x56
+index     = 500m10x56x56
 tracer    = ndw6
 radiation = mstrnX
 sfcflx    = const
@@ -16,7 +16,7 @@ postfix   =
 all: build
 
 build:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR)
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
 
 runinit: build
 	$(SCRDIR)/run.sh $(BINDIR)/$(INITNAME) init.conf 6
