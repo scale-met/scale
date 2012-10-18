@@ -11,7 +11,7 @@ include ../sysdep/Makedef.$(SCALE_SYS)
 include ./Mkinclude
 
 VPATH = include:common:io:grid:atmos:ocean:preprocess:$(BUILD_DIR)
-
+INDEX_DIR = $(INCDIR)
 
 #default index & tracer set
 index     = 206x24x24
@@ -72,9 +72,9 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 makeinclude:
-	cp include/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
-	cp include/inc_index_$(index).f90         $(BUILD_DIR)/inc_index.h
-	cp include/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
+	cp $(INDEX_DIR)/inc_index_$(index).f90      $(BUILD_DIR)/inc_index.h
+	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
+	cp $(INCDIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
 
 makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ1) $(BINDIR)/$(BINNAME)
