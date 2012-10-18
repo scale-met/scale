@@ -55,6 +55,16 @@ module mod_mp_saturation
   public :: MP_SATURATION_dqsw_dtem_dpre 
   public :: MP_SATURATION_dqsi_dtem_dpre 
 
+  public :: MP_SATURATION_psat_water_kij
+  public :: MP_SATURATION_psat_ice_kij
+  public :: MP_SATURATION_qsat_water_kij
+  public :: MP_SATURATION_qsat_ice_kij
+
+  public :: MP_SATURATION_dqsw_dtem_rho_kij  
+  public :: MP_SATURATION_dqsi_dtem_rho_kij
+  public :: MP_SATURATION_dqsw_dtem_dpre_kij
+  public :: MP_SATURATION_dqsi_dtem_dpre_kij
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -121,7 +131,47 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_psat_water
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_psat_water_kij ( temp, psat )
+    implicit none
 
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.0_RP / TEM00
+    CPovRvap = ( CPvap - CL ) / Rvap
+    LHovRvap = LH00 / Rvap
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+       TEM = max( temp(k,i,j), TEM_MIN )
+
+       psat(k,i,j) = PSAT0                                 &
+                  * ( TEM * RTEM00 )**CPovRvap            &
+                  * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_psat_water_kij
   !-----------------------------------------------------------------------------
   subroutine MP_SATURATION_psat_ice ( temp, psat )
     implicit none
@@ -161,7 +211,47 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_psat_ice
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_psat_ice_kij ( temp, psat )
+    implicit none
 
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA)
+
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CI ) / Rvap
+    LHovRvap = LHS00 / Rvap
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+       TEM = max( temp(k,i,j), TEM_MIN )
+
+       psat(k,i,j) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_psat_ice_kij
   !-----------------------------------------------------------------------------
   subroutine MP_SATURATION_qsat_water( temp, pres, qsat )
     implicit none
@@ -205,7 +295,50 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_qsat_water
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_qsat_water_kij( temp, pres, qsat )
+    implicit none
 
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CL ) / Rvap
+    LHovRvap = LH00 / Rvap
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+       TEM = max( temp(k,i,j), TEM_MIN )
+
+       psat = PSAT0                                   &
+            * ( TEM * RTEM00 )**CPovRvap              &
+            * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.E0_RP-EPSvap ) * psat )
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_qsat_water_kij
   !-----------------------------------------------------------------------------
   subroutine MP_SATURATION_qsat_ice ( temp, pres, qsat )
     implicit none
@@ -250,7 +383,52 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_qsat_ice
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_qsat_ice_kij ( temp, pres, qsat )
+    implicit none
 
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CI ) / Rvap
+    LHovRvap = LHS00 / Rvap
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+
+       TEM = max( temp(k,i,j), TEM_MIN )
+
+       psat = PSAT0                                   &
+            * ( TEM * RTEM00 )**CPovRvap              &
+            * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+
+       qsat(k,i,j) = EPSvap * psat / ( pres(k,i,j) - ( 1.E0_RP-EPSvap ) * psat )
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_qsat_ice_kij
   !-----------------------------------------------------------------------------
   ! (d qsw/d T)_{rho}: partial difference of qsat_water
   !-----------------------------------------------------------------------------
@@ -305,6 +483,61 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_dqsw_dtem_rho
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_dqsw_dtem_rho_kij( temp, dens, dqsdtem )
+    implicit none
+
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+
+    real(RP) :: psat(IA,JA) ! saturation vapor pressure
+    real(RP) :: lhv (IA,JA) ! latent heat for condensation
+
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CL ) / Rvap
+    LHovRvap = LH00 / Rvap
+
+    do k  = KS, KE
+
+       do j = 1, JA
+       do i = 1, IA
+          TEM = max( temp(k,i,j), TEM_MIN )
+
+          psat(i,j) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          lhv(i,j)  = LH0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+
+          dqsdtem(k,i,j) = psat(i,j) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
+                      * ( lhv(i,j) / ( Rvap * temp(k,i,j) ) - 1.E0_RP )
+       enddo
+       enddo
+
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_dqsw_dtem_rho_kij
 
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice
@@ -360,6 +593,62 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_dqsi_dtem_rho
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_dqsi_dtem_rho_kij( temp, dens, dqsdtem )
+    implicit none
+
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: dens   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+
+    real(RP) :: psat(IA,JA) ! saturation vapor pressure
+    real(RP) :: lhv (IA,JA) ! latent heat for condensation
+
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CI ) / Rvap
+    LHovRvap = LHS00 / Rvap
+
+!    do k  = 1, KA
+    do k  = KS, KE
+
+       do j = 1, JA
+       do i = 1, IA
+          TEM = max( temp(k,i,j), TEM_MIN )
+
+          psat(i,j) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          lhv(i,j)  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+
+          dqsdtem(k,i,j) = psat(i,j) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
+                      * ( lhv(i,j) / ( Rvap * temp(k,i,j) ) - 1.E0_RP )
+       enddo
+       enddo
+
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_dqsi_dtem_rho_kij
 
   !-----------------------------------------------------------------------------
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
@@ -421,7 +710,70 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_dqsw_dtem_dpre
+  !-----------------------------------------------------------------------------
+  subroutine MP_SATURATION_dqsw_dtem_dpre_kij( temp, pres, dqsdtem, dqsdpre )
+    implicit none
 
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+
+    real(RP) :: psat(IA,JA) ! saturation vapor pressure
+    real(RP) :: lhv (IA,JA) ! latent heat for condensation
+
+    real(RP) :: den1(IA,JA), den2(IA,JA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CL ) / Rvap
+    LHovRvap = LH00 / Rvap
+
+    do k  = 1, KA
+
+       do j = 1, JA
+       do i = 1, IA
+          TEM = max( temp(k,i,j), TEM_MIN )
+
+          psat(i,j) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          den1(i,j) = ( pres(k,i,j) - (1.E0_RP-EPSvap) * psat(i,j) ) &
+                   * ( pres(k,i,j) - (1.E0_RP-EPSvap) * psat(i,j) )
+          den2(i,j) = den1(i,j) * Rvap * temp(k,i,j) * temp(k,i,j)
+          lhv(i,j)  = LH0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          dqsdpre(k,i,j) = - EPSvap * psat(i,j) / den1(i,j)
+          dqsdtem(k,i,j) =   EPSvap * psat(i,j) / den2(i,j) * lhv(i,j) * pres(k,i,j)
+       enddo
+       enddo
+
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_dqsw_dtem_dpre_kij
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
@@ -482,6 +834,70 @@ call STOP_COLLECTION("satadjust")
 
     return
   end subroutine MP_SATURATION_dqsi_dtem_dpre
+  !----------------------------------------------------------------------------
+  subroutine MP_SATURATION_dqsi_dtem_dpre_kij( temp, pres, dqsdtem, dqsdpre )
+    implicit none
+
+    real(RP), intent(in)  :: temp   (KA,IA,JA)
+    real(RP), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(out) :: dqsdtem(KA,IA,JA)
+    real(RP), intent(out) :: dqsdpre(KA,IA,JA)
+
+    real(RP) :: psat(IA,JA) ! saturation vapor pressure
+    real(RP) :: lhv (IA,JA) ! latent heat for condensation
+
+    real(RP) :: den1(IA,JA), den2(IA,JA) ! denominator
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('satadjust')
+#ifdef _FPCOLL_
+call START_COLLECTION("satadjust")
+#endif
+
+    RTEM00   = 1.E0_RP / TEM00
+    CPovRvap = ( CPvap - CI ) / Rvap
+    LHovRvap = LHS00 / Rvap
+
+    do k  = 1, KA
+
+       do j = 1, JA
+       do i = 1, IA
+          TEM = max( temp(k,i,j), TEM_MIN )
+
+          psat(i,j) = PSAT0                                   &
+                   * ( TEM * RTEM00 )**CPovRvap              &
+                   * exp( LHovRvap * ( RTEM00 - 1.E0_RP/TEM ) )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          den1(i,j) = ( pres(k,i,j) - (1.E0_RP-EPSvap) * psat(i,j) ) &
+                   * ( pres(k,i,j) - (1.E0_RP-EPSvap) * psat(i,j) )
+          den2(i,j) = den1(i,j) * Rvap * temp(k,i,j) * temp(k,i,j)
+          lhv(i,j)  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
+       enddo
+       enddo
+
+       do j = 1, JA
+       do i = 1, IA
+          dqsdpre(k,i,j) = - EPSvap * psat(i,j) / den1(i,j)
+          dqsdtem(k,i,j) =   EPSvap * psat(i,j) / den2(i,j) * lhv(i,j) * pres(k,i,j)
+       enddo
+       enddo
+
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION("satadjust")
+#endif
+    call TIME_rapend  ('satadjust')
+
+    return
+  end subroutine MP_SATURATION_dqsi_dtem_dpre_kij
 
 end module mod_mp_saturation
 !-------------------------------------------------------------------------------

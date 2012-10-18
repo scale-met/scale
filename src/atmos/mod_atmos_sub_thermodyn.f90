@@ -49,6 +49,11 @@ module mod_atmos_thermodyn
   public :: ATMOS_THERMODYN_tempre
   public :: ATMOS_THERMODYN_tempre2
 
+  public :: ATMOS_THERMODYN_qd_kij
+  public :: ATMOS_THERMODYN_cv_kij
+  public :: ATMOS_THERMODYN_cp_kij
+  public :: ATMOS_THERMODYN_tempre_kij
+  public :: ATMOS_THERMODYN_tempre2_kij
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -209,7 +214,43 @@ call STOP_COLLECTION('SUB_thermodyn')
 
     return
   end subroutine ATMOS_THERMODYN_cp
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_cp_kij( cptot, q, qdry )
+    implicit none
 
+    real(RP), intent(out) :: cptot(KA,IA,JA)    ! total specific heat
+    real(RP), intent(in)  :: q    (KA,IA,JA,QA) ! mass concentration
+    real(RP), intent(in)  :: qdry (KA,IA,JA)    ! dry mass concentration
+
+    integer :: i, j, k, iqw
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('SUB_thermodyn')
+#ifdef _FPCOLL_
+call START_COLLECTION('SUB_thermodyn')
+#endif
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+
+       cptot(k,i,j) = qdry(k,i,j) * CPdry
+
+       do iqw = QQS, QQE
+          cptot(k,i,j) = cptot(k,i,j) + q(k,i,j,iqw) * AQ_CP(iqw)
+       enddo
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION('SUB_thermodyn')
+#endif
+    call TIME_rapend  ('SUB_thermodyn')
+
+    return
+  end subroutine ATMOS_THERMODYN_cp_kij
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_cv( cvtot, q, qdry )
     implicit none
@@ -245,7 +286,43 @@ call STOP_COLLECTION('SUB_thermodyn')
 
     return
   end subroutine ATMOS_THERMODYN_cv
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_cv_kij( cvtot, q, qdry )
+    implicit none
 
+    real(RP), intent(out) :: cvtot(KA,IA,JA)    ! total specific heat
+    real(RP), intent(in)  :: q    (KA,IA,JA,QA) ! mass concentration
+    real(RP), intent(in)  :: qdry (KA,IA,JA)    ! dry mass concentration
+
+    integer :: i, j, k, iqw
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('SUB_thermodyn')
+#ifdef _FPCOLL_
+call START_COLLECTION('SUB_thermodyn')
+#endif
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+
+       cvtot(k,i,j) = qdry(k,i,j) * CVdry
+
+       do iqw = QQS, QQE
+          cvtot(k,i,j) = cvtot(k,i,j) + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION('SUB_thermodyn')
+#endif
+    call TIME_rapend  ('SUB_thermodyn')
+
+    return
+  end subroutine ATMOS_THERMODYN_cv_kij
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre( &
       temp, pres,         &
@@ -292,7 +369,54 @@ call STOP_COLLECTION('SUB_thermodyn')
 
     return
   end subroutine ATMOS_THERMODYN_tempre
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_tempre_kij( &
+      temp, pres,         &
+      Ein,  dens, qdry, q )
+    implicit none
 
+    real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
+    real(RP), intent(out) :: pres(KA,IA,JA)    ! pressure
+    real(RP), intent(in)  :: Ein (KA,IA,JA)    ! internal energy
+    real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
+    real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
+
+    real(RP) :: cv, Rmoist
+
+    integer :: i, j, k, iqw
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('SUB_thermodyn')
+#ifdef _FPCOLL_
+call START_COLLECTION('SUB_thermodyn')
+#endif
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+
+       cv = qdry(k,i,j) * CVdry
+       do iqw = QQS, QQE
+          cv = cv + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       Rmoist = qdry(k,i,j)*Rdry + q(k,i,j,I_QV)*Rvap
+
+       temp(k,i,j) = Ein(k,i,j) / cv
+
+       pres(k,i,j) = dens(k,i,j) * Rmoist * temp(k,i,j)
+
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION('SUB_thermodyn')
+#endif
+    call TIME_rapend  ('SUB_thermodyn')
+
+    return
+  end subroutine ATMOS_THERMODYN_tempre_kij
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre2( &
       temp, pres,         &
@@ -335,6 +459,50 @@ call STOP_COLLECTION('SUB_thermodyn')
 
     return
   end subroutine ATMOS_THERMODYN_tempre2
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_tempre2_kij( &
+      temp, pres,         &
+      dens, pott, qdry, q )
+    implicit none
 
+    real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
+    real(RP), intent(out) :: pres(KA,IA,JA)    ! pressure
+    real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
+    real(RP), intent(in)  :: pott(KA,IA,JA)    ! potential temperature
+    real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
+
+    real(RP) :: RPRE00, WKAPPA, rhoRmoist
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('SUB_thermodyn')
+#ifdef _FPCOLL_
+call START_COLLECTION('SUB_thermodyn')
+#endif
+
+    RPRE00   = 1.0_RP / PRE00
+    WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
+
+    do k = 1, KA
+    do j = 1, JA
+    do i = 1, IA
+       rhoRmoist = dens(k,i,j) * ( qdry(k,i,j)*Rdry + q(k,i,j,I_QV)*Rvap )
+
+       temp(k,i,j) = ( pott(k,i,j) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA
+       pres(k,i,j) = rhoRmoist * temp(k,i,j)
+    enddo
+    enddo
+    enddo
+
+#ifdef _FPCOLL_
+call STOP_COLLECTION('SUB_thermodyn')
+#endif
+    call TIME_rapend  ('SUB_thermodyn')
+
+    return
+  end subroutine ATMOS_THERMODYN_tempre2_kij
+  !-----------------------------------------------------------------------------
 end module mod_atmos_thermodyn
 
