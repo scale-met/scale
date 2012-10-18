@@ -702,8 +702,8 @@ call START_COLLECTION("DYN-set")
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k,iw) schedule(static,1) collapse(3)
        do iw = QQS, QQE
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
