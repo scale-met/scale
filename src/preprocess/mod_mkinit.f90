@@ -525,6 +525,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Make initial state for cold bubble experiment
+  !! Default values are following by Straka et al. (1993)
+  !<
   !-----------------------------------------------------------------------------
   subroutine MKINIT_coldbubble
     implicit none
@@ -535,19 +537,19 @@ contains
     ! Environment state
     real(RP) :: ENV_THETA            ! potential temperature of environment [K]
     ! Bubble
-    real(RP) :: BBL_THETA    = -5.0_RP ! extremum of temperature in bubble [K]
-    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
-    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
-    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
-    real(RP) :: BBL_RZ       =  2.E3_RP ! bubble radius   [m]: z
-    real(RP) :: BBL_RX       =  2.E3_RP ! bubble radius   [m]: x
-    real(RP) :: BBL_RY       =  2.E3_RP ! bubble radius   [m]: y
+    real(RP) :: BBL_TEMP = -15.0_RP  ! extremum of temperature in bubble [K]
+    real(RP) :: BBL_CZ   =   3.E3_RP  ! center location [m]: z
+    real(RP) :: BBL_CX   =  19.2E3_RP  ! center location [m]: x
+    real(RP) :: BBL_CY   =   1.E2_RP  ! center location [m]: y
+    real(RP) :: BBL_RZ   =   2.E3_RP  ! bubble radius   [m]: z
+    real(RP) :: BBL_RX   =   4.E3_RP  ! bubble radius   [m]: x
+    real(RP) :: BBL_RY   =   1.E30_RP ! bubble radius   [m]: y
 
     NAMELIST / PARAM_MKINIT_COLDBUBBLE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_THETA, &
-       BBL_THETA, &
+       BBL_TEMP,  &
        BBL_CZ,    &
        BBL_CX,    &
        BBL_CY,    &
@@ -619,7 +621,8 @@ contains
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
        if ( dist <= 1.0_RP ) then
-          RHOT(k,i,j) = RHOT(k,i,j) + DENS(k,i,j) * BBL_THETA * cos( 0.5_RP*PI*sqrt(dist) )**2
+          temp(k,i,j) = temp(k,i,j) + BBL_TEMP * ( cos( PI*sqrt(dist) ) + 1.0_RP ) * 0.5_RP
+          RHOT(k,i,j) = DENS(k,i,j) * temp(k,i,j) * ( P00 / pres(k,i,j) )**RovCP
        endif
 
     enddo
