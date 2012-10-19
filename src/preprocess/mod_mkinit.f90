@@ -453,12 +453,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TRACERBUBBLE]/Categ[MKINIT]'
 
-    if ( I_NC < 1 ) then
-       write(*,*) 'xxx I_NC must be > 0.'
-       write(*,*) '    change microphysics'
-       call PRC_MPIstop
-    end if
-
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
     ENV_THETA = THETAstd
@@ -1433,12 +1427,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[STRATOCUMULUS)]/Categ[MKINIT]'
 
-    if ( I_NC < 1 ) then
-       write(*,*) 'xxx I_NC must be > 0.'
-       write(*,*) '    change microphysics'
-       call PRC_MPIstop
-    end if
-
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
 
@@ -1576,16 +1564,11 @@ contains
        RANDOM_LIMIT,    &
        RANDOM_FLAG
     !---------------------------------------------------------------------------
+
     dummy(:,:,:) = 0.d0
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
-
-    if ( I_NC < 1 ) then
-       write(*,*) 'xxx I_NC must be > 0.'
-       write(*,*) '    change microphysics'
-       call PRC_MPIstop
-    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
@@ -1797,15 +1780,10 @@ contains
        RANDOM_FLAG
 
     !---------------------------------------------------------------------------
+
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
-
-    if ( I_NC < 1 ) then
-       write(*,*) 'xxx I_NC must be > 0.'
-       write(*,*) '    change microphysics'
-       call PRC_MPIstop
-    end if
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
@@ -1958,6 +1936,7 @@ contains
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall(KA,IA,JA) ! QV+QC
     real(RP) :: qc  (KA,IA,JA) ! QC
+    real(RP) :: fact
     real(RP) :: sint, pi2
 
     integer :: ierr
@@ -1968,11 +1947,11 @@ contains
 
     real(RP) :: F0_AERO      =  1.E+7_RP ! 
     real(RP) :: R0_AERO      =  1.E-7_RP !
-    real(RP) :: R_MAX        =  1.E-08_RP
+    real(RP) :: R_MAX        =  1.E-06_RP
     real(RP) :: R_MIN        =  1.E-08_RP
     real(RP) :: A_ALPHA      =  3.0_RP
-    integer :: nccn_i       =  20
-    integer :: nbin_i       =  33
+    integer :: nccn_i        =  20
+    integer :: nbin_i        =  33
 
     real(RP) :: PERTURB_AMP = 0.0_RP
     integer :: RANDOM_LIMIT = 5
@@ -2000,12 +1979,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01_hbinw)]/Categ[MKINIT]'
 
-    if ( I_NC < 1 ) then
-       write(*,*) 'xxx I_NC must be > 0.'
-       write(*,*) '    change microphysics'
-       call PRC_MPIstop
-    end if
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_HBINW,iostat=ierr)
@@ -2030,7 +2003,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       pres_sfc(1,i,j) = 1017.8_RP ! [Pa]
+       pres_sfc(1,i,j) = 1017.8E2_RP ! [Pa]
        pott_sfc(1,i,j) = 289.0_RP  ! [K]
        qv_sfc  (1,i,j) = 9.0E-3_RP ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
@@ -2063,15 +2036,7 @@ contains
              qall(k,i,j) = 0.0_RP
           endif
 
-          if ( CZ(k) <=  600.0_RP ) then
-             qc(k,i,j) = 0.0_RP
-          elseif ( CZ(k) < 820.0_RP ) then ! in the cloud
-             qc(k,i,j) = 0.0_RP  !-- super saturated air for bin microphysics
-          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
-             qc(k,i,j) = 0.0_RP  !-- super saturated air for bin microphysics
-          else
-             qc(k,i,j) = 0.0_RP
-          endif
+          qc(k,i,j) = 0.0_RP
           qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
        enddo
 
@@ -2165,50 +2130,30 @@ contains
     enddo
 
 
-    if( QA < 30 ) then !--- for ndw6
      do j = JS, JE
      do i = IS, IE
      do k = KS, KE
 
-        QTRC(k,i,j,I_QV) = qv(k,i,j)
-        QTRC(k,i,j,I_QC) = qc(k,i,j)
-
-        if ( qc(k,i,j) > 0.0_RP ) then
-           QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
-        endif
-
-     enddo
-     enddo
-     enddo
-    else if ( QA >= 30 ) then !--- for HUCM
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-
-        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) !--- Super saturated air at initial
-
-      if ( QA >= 35 .and. nccn_i /= 0 ) then
-       do iq = 2, QA-nccn_i
-         QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-       xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
-       dxaer = ( xaend-xasta )/nccn_i
-       do iq = 1, nccn_i+1
+      QTRC(k,i,j,I_QV) = qv(k,i,j)
+      do iq = 2, QA-nccn_i
+        QTRC(k,i,j,iq) = 0.0_RP
+      enddo
+      xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+      xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+      dxaer = ( xaend-xasta )/nccn_i
+      do iq = 1, nccn_i+1
         xabnd( iq ) = xasta + dxaer*( iq-1 )
-       end do
-       do iq = 1, nccn_i
-        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
-       end do
-       do iq = QA-nccn_i+1, QA
-        gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
-        QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
-       enddo
-      end if
+      end do
+      do iq = 1, nccn_i
+       xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
+      end do
+      do iq = QA-nccn_i+1, QA
+       gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
+       QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
+      enddo
      enddo
      enddo
      enddo
-    end if
     deallocate(xactr)
     deallocate(xabnd)
 
@@ -2406,31 +2351,25 @@ contains
        RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
-       if ( QA >= 35 .and. nccn_i /= 0 ) then
-        do iq = 2, QA-nccn_i+1
-          QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-        xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-        xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
-        dxaer = ( xaend-xasta )/nccn_i
-        do iq = 1, nccn_i+1
-         xabnd( iq ) = xasta + dxaer*( iq-1 )
-        end do
-        do iq = 1, nccn_i
-         xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
-        end do
-        do iq = QA-nccn_i+1, QA
-         gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
-         QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
-        enddo
-        do iq = 2, QA-nccn_i
-          QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-       else 
-        do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-       end if
+       do iq = 2, QA-nccn_i+1
+         QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+       xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+       xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+       dxaer = ( xaend-xasta )/nccn_i
+       do iq = 1, nccn_i+1
+        xabnd( iq ) = xasta + dxaer*( iq-1 )
+       end do
+       do iq = 1, nccn_i
+        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
+       end do
+       do iq = QA-nccn_i+1, QA
+        gan = faero( F0_AERO,R0_AERO,xactr( iq-nbin_i-1 ), A_ALPHA )
+        QTRC( k,i,j,iq ) = gan*exp( xactr( iq-nbin_i-1 ) )/DENS(k,i,j)
+       enddo
+       do iq = 2, QA-nccn_i
+         QTRC(k,i,j,iq) = 0.0_RP
+       enddo
 
        ! make warm bubble
 !       dist = ( (CZ(k)-BBL_CZ)/BBL_RZ )**2 &
