@@ -108,6 +108,8 @@ module mod_atmos_phy_mp
   logical :: flg_nucl=.false.              ! flag regeneration of aerosol
   logical :: flg_sf_aero =.false.          ! flag surface flux of aerosol
   integer, private, save :: rndm_flgp = 0  ! flag for sthastic integration for coll.-coag.
+  logical, private, save :: doautoconversion = .true.
+  logical, private, save :: doprecipitation  = .true.
   real(RP) :: marate( nccn )               ! mass rate of each aerosol bin to total aerosol mass
   integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
   real(RP), private, save      :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
@@ -153,6 +155,8 @@ contains
     integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_MSPC  
     integer :: ATMOS_PHY_MP_RNDM_MBIN 
+    logical :: ATMOS_PHY_MP_doautoconversion 
+    logical :: ATMOS_PHY_MP_doprecipitation 
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        ATMOS_PHY_MP_RHOA,  &
@@ -165,7 +169,9 @@ contains
        ATMOS_PHY_MP_R0A,   &
        ATMOS_PHY_MP_RNDM_FLGP, &
        ATMOS_PHY_MP_RNDM_MSPC, &
-       ATMOS_PHY_MP_RNDM_MBIN
+       ATMOS_PHY_MP_RNDM_MBIN, &
+       ATMOS_PHY_MP_doautoconversion, &
+       ATMOS_PHY_MP_doprecipitation 
 
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
@@ -183,6 +189,8 @@ contains
     ATMOS_PHY_MP_RNDM_FLGP = rndm_flgp
     ATMOS_PHY_MP_RNDM_MSPC = mspc
     ATMOS_PHY_MP_RNDM_MBIN = mbin
+    ATMOS_PHY_MP_doautoconversion = doautoconversion
+    ATMOS_PHY_MP_doprecipitation  = doprecipitation
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
@@ -210,6 +218,8 @@ contains
     rndm_flgp = ATMOS_PHY_MP_RNDM_FLGP
     mspc = ATMOS_PHY_MP_RNDM_MSPC 
     mbin = ATMOS_PHY_MP_RNDM_MBIN 
+    doautoconversion = ATMOS_PHY_MP_doautoconversion
+    doprecipitation = ATMOS_PHY_MP_doprecipitation
 
     call fio_register_file(n,fname_micpara)
     fid_micpara = n
@@ -352,7 +362,7 @@ contains
     real(RP) :: wfall( KA )  
     real(RP) :: gdga     (KA,IA,JA,nccn) !-- SDF of aerosol (not supported)
     
-    real(RP) :: ssliq, ssice, sum1, mixrate, rtotal, sum2
+    real(RP) :: ssliq, ssice, sum1, rtotal, sum2
     integer :: n, k, i, j, iq
     logical, save :: ofirst_sdfa = .true.
 
@@ -400,11 +410,6 @@ call START_COLLECTION("MICROPHYSICS")
     do j = JS-1, JE
     do i = IS-1, IE
        do k = KS, KE
-          mixrate = 0.0_RP
-          do n = QQS, QQE
-           mixrate = mixrate + QTRC(k,i,j,n)
-          end do
-          mixrate = 1.0_RP - mixrate
           rtotal = CONST_Rdry*( 1.0_RP-QTRC(k,i,j,I_QV) ) + CONST_Rvap*QTRC(k,i,j,I_QV)
           pres_mp(k,i,j) = CONST_PRE00 * &
              ( RHOT(k,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
@@ -433,11 +438,6 @@ call START_COLLECTION("MICROPHYSICS")
           end if
        enddo
        do k = 1, KS-1
-          mixrate = 0.0_RP
-          do n = QQS, QQE
-           mixrate = mixrate + QTRC(KS,i,j,n)
-          end do
-          mixrate = 1.0_RP - mixrate
           rtotal = CONST_Rdry*( 1.0_RP-QTRC(KS,i,j,I_QV) ) + CONST_Rvap*QTRC(KS,i,j,I_QV)
           pres_mp(k,i,j) = CONST_PRE00 * &
              ( RHOT(KS,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
@@ -454,11 +454,6 @@ call START_COLLECTION("MICROPHYSICS")
           end do
        enddo
        do k = KE+1, KA
-          mixrate = 0.0_RP
-          do n = QQS, QQE
-           mixrate = mixrate + QTRC(KE,i,j,n)
-          end do
-          mixrate = 1.0_RP - mixrate
           rtotal = CONST_Rdry*( 1.0_RP-QTRC(KE,i,j,I_QV) ) + CONST_Rvap*QTRC(KE,i,j,I_QV)
           pres_mp(k,i,j) = CONST_PRE00 * &
              ( RHOT(KE,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
@@ -504,6 +499,7 @@ call START_COLLECTION("MICROPHYSICS")
     end do
 
     !--- gravitational falling
+    if( doprecipitation ) then
      do j = JS, JE
       do i = IS, IE
        sum1 = 0.0_RP
@@ -529,6 +525,7 @@ call START_COLLECTION("MICROPHYSICS")
        end if
       end do
      end do
+    end if
 
     !--- SURFACE FLUX by Monahan et al. (1986)
     if( flg_sf_aero ) then
@@ -542,10 +539,6 @@ call START_COLLECTION("MICROPHYSICS")
          SFLX_AERO(i,j,n) = 1.373_RP * Uabs**( 3.41_RP ) * rada( n )**( -3.0_RP ) &
                           * ( 1.0_RP + 0.057_RP * rada( n )**( 1.05_RP ) ) &
                           * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) ) 
-!          rtotal = CONST_Rdry*mixrate + CONST_Rvap*QTRC(k,i,j,I_QV)
-!          rtotal = CONST_Rdry*mixrate + CONST_Rvap*QTRC(k,i,j,I_QV)
-!          rtotal = CONST_Rdry*mixrate + CONST_Rvap*QTRC(k,i,j,I_QV)
-!          rtotal = CONST_Rdry*mixrate + CONST_Rvap*QTRC(k,i,j,I_QV)
          ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
          SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
                           / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * exp( xactr( n ) )
@@ -560,11 +553,6 @@ call START_COLLECTION("MICROPHYSICS")
     do j = JS, JE
      do i = IS, IE
        do k = KS, KE
-!          mixrate = 0.0_RP
-!          do n = QQS, QQE
-!           mixrate = mixrate + QTRC(k,i,j,n)
-!          end do
-!          mixrate = 1.0_RP - mixrate
           RHOT(k,i,j) = temp_mp(k,i,j)* &
             ( CONST_PRE00/pres_mp(k,i,j) )**( CONST_RovCP )*DENS(k,i,j)
           QTRC(k,i,j,I_QV) = qv_mp(k,i,j)  
@@ -667,9 +655,11 @@ call STOP_COLLECTION("MICROPHYSICS")
            gc, ga, qvap, temp   ) !--- inout
 
   !--- collision-coagulation
-  call  collmain                &
+  if( doautoconversion ) then
+   call  collmain               &
           ( dtime,              & !--- in
             gc                  ) !--- inout
+  endif
 
   return
 
@@ -873,10 +863,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   nloop = int( dtime/dtcnd ) + 1
   dtcnd = dtime / nloop
   !
-!  ncount = 0
   regene_gcn = 0.0_RP
   !------- loop
-!  1000 continue
   do ncount = 1, nloop
 
   !----- matrix for supersaturation tendency
@@ -930,8 +918,6 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !----- continue/end
   end do
-!  ncount = ncount + 1
-!  if ( ncount < nloop ) go to 1000
   !
   !------- number -> mass
   gc( 1:nbin ) = gcn( 1:nbin )*exp( xctr( 1:nbin ) )
@@ -1200,8 +1186,6 @@ call STOP_COLLECTION("MICROPHYSICS")
     frcj = surj - gc( j )
     gprime = frci+frcj
 
-!    gprime = frci+frcj
-!    if ( gprime <= 0.0_RP ) cycle large
     gprimk = gc( k ) + gprime
     wgt = gprime / gprimk
     crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )
@@ -1239,10 +1223,6 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: gdu( KA )
   real(RP), intent(in) :: dtime
   real(RP), intent(inout) :: gdq( KA )
-!  real(RP), intent(in) :: delxa( KA ), delxb( KA )
-!  real(RP), intent(in) :: gdu( KA )
-!  real(RP), intent(in) :: dtime
-!  real(RP), intent(inout) :: gdq( KA )
 
   !--- local
   integer :: i
@@ -1296,12 +1276,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), parameter :: alpha = 3.0_RP
   integer :: n
 
-!  radmin = ( exp( xactr( 1 ) )*3.0_RP/4.0_RP/pi/rhoa )**( OneovThird )
-!  radmax = ( exp( xactr( nccn ) )*3.0_RP/4.0_RP/pi/rhoa )**( OneovThird )
-!  f1 = 2.0_RP*f0/r0a/r0a/r0a* &
-!        ( radmax*radmax*radmin*radmin/( radmax*radmax-radmin*radmin ) )
   do n = 1, nccn
-!   gaero( n ) = f1*( rada( n )/r0a )**( -alpha )*exp( xactr( n ) )/dxaer
    gaero( n ) = f0*marate( n )*exp( xactr( n ) )/dxaer
    ga( n ) = ga( n )+gaero( n )
   end do
