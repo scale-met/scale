@@ -6,8 +6,10 @@
 
 # Definition of Macro
 
-FC1 = f90
-FC2 = f77
+#FC1 = f90
+#FC2 = f77
+FC1 = gfortran-mp-4.7
+FC2 = gfortran-mp-4.7
 
 # No Option
 FFLAGS =
@@ -20,6 +22,9 @@ FFLAGS =
 
 # Dec fortran on alpha
 # FFLAGS = -fast -tune host -O4 -assume byterecl -convert big_endian
+
+# gfortran on Mac
+FFLAGS = -O3 -fconvert=big-endian
 
 TARGET = mkpara
 OBJS =  mkpara.o        \
