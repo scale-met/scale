@@ -3,12 +3,8 @@
   !++ scale3 grid parameters (1.5625m res)
   !
   !-----------------------------------------------------------------------------
-  integer, private, parameter :: KHALO = 2 ! # of halo cells: z
-  integer, private, parameter :: IHALO = 2 ! # of halo cells: x
-  integer, private, parameter :: JHALO = 2 ! # of halo cells: y
-
   real(RP), private, parameter :: DX  = 1.5625_RP ! length in the main region [m]: x
-  real(RP), private, parameter :: DY  = 1.5625_PR ! length in the main region [m]: y
+  real(RP), private, parameter :: DY  = 1.5625_RP ! length in the main region [m]: y
   real(RP), private, parameter :: DZ  = 1.5625_RP ! length in the main region [m]: z
 
   real(RP), private, parameter :: BUFFER_DZ =  0.0_RP ! thickness of buffer region [m]: z

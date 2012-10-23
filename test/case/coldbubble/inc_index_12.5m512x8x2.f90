@@ -5,7 +5,7 @@
   !-----------------------------------------------------------------------------
   real(RP), private, parameter :: DX  = 12.5_RP ! length in the main region [m]: x
   real(RP), private, parameter :: DY  = 12.5_RP ! length in the main region [m]: y
-  real(RP), private, parameter :: DZ  = 12.5_PR ! length in the main region [m]: z
+  real(RP), private, parameter :: DZ  = 12.5_RP ! length in the main region [m]: z
 
   real(RP), private, parameter :: BUFFER_DZ =  0.0_RP ! thickness of buffer region [m]: z
   real(RP), private, parameter :: BUFFER_DX =  0.0_RP ! thickness of buffer region [m]: x
