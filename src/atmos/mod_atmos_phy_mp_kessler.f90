@@ -349,7 +349,8 @@ contains
           pott(k)          = pott(k)          + (                       -dq_evap(k) )*dt * efact
           QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + (                        dq_evap(k) )*dt
           QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + ( -dq_auto(k)-dq_coll(k)            )*dt
-          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) + (  dq_auto(k)+dq_coll(k)-dq_evap(k) )*dt + dq_prcp(k)/DENS(k,i,j)*dt
+          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) &
+               + (  dq_auto(k)+dq_coll(k)-dq_evap(k) )*dt + dq_prcp(k)/DENS(k,i,j)*dt
        enddo
 
        ! negtive fixer
