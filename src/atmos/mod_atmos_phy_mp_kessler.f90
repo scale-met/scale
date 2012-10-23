@@ -145,7 +145,7 @@ contains
     real(RP) :: LEovSE(KA)  ! latent heat energy / sensible heat energy 
 
     real(RP), parameter :: TVf1 = 36.34E0_RP  ! Durran and Klemp (1983)
-    real(RP), parameter :: TVf2 = 0.1346E0_RP ! Durran and Klemp (1983)
+    real(RP), parameter :: TVf2 = 0.1364E0_RP ! Durran and Klemp (1983)
     real(RP) :: rho_prof(KA) ! averaged profile of rho
     real(RP) :: rho_fact(KA)
     real(RP) :: vel1, vel2, vent
