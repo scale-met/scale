@@ -142,7 +142,7 @@ distclean: clean
 .SUFFIXES: .o .f90
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 
 .PHONY : clean distclean allclean

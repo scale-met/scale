@@ -6,7 +6,7 @@ include $(TOPDIR)/src/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
-index     = 100m48x96x2
+index     = 100m64x128x2
 tracer    = dry
 radiation = mstrnX
 sfcflx    = const
