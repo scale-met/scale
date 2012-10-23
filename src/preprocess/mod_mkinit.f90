@@ -57,7 +57,8 @@ module mod_mkinit
      RHOT, &
      QTRC
   use mod_atmos_hydrostatic, only: &
-     hydro_buildrho => ATMOS_HYDRO_buildrho
+     hydro_buildrho    => ATMOS_HYDRO_buildrho, &
+     hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
   use mod_atmos_saturation, only: &
      saturation_qsat_sfc   => ATMOS_SATURATION_qsat_sfc, &
      saturation_qsat_water => ATMOS_SATURATION_qsat_water
@@ -577,33 +578,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_COLDBUBBLE)
 
     ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = 0.0_RP
-       qc_sfc  (1,i,j) = 0.0_RP
-
-       do k = KS, KE
-          pott(k,i,j) = ENV_THETA
-          qv  (k,i,j) = 0.0_RP
-          qc  (k,i,j) = 0.0_RP
-       enddo
-    enddo
+    do k = KS, KE
+       pott(k,1,1) = ENV_THETA
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
-                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+    call hydro_buildrho_1d( DENS(:,1,1), temp(:,1,1), pres(:,1,1), &
+                            pott(:,1,1), qv(:,1,1), qc(:,1,1),     &
+                            temp_sfc(1,1,1),                       &
+                            SFC_PRES, SFC_THETA, 0.0_RP, 0.0_RP    )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j =  1, JA
+    do i =  1, IA
     do k = KS, KE
 
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = 0.0_RP
        MOMY(k,i,j) = 0.0_RP
-       RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+       DENS(k,i,j) = DENS(k,1,1)
 
        do iq = 1, QA
           QTRC(k,i,j,iq) = 0.0_RP
@@ -615,8 +609,11 @@ contains
             + ( (CY(j)-BBL_CY)/BBL_RY )**2
 
        if ( dist <= 1.0_RP ) then
-          temp(k,i,j) = temp(k,i,j) + BBL_TEMP * ( cos( PI*sqrt(dist) ) + 1.0_RP ) * 0.5_RP
-          RHOT(k,i,j) = DENS(k,i,j) * temp(k,i,j) * ( P00 / pres(k,i,j) )**RovCP
+          RHOT(k,i,j) = DENS(k,1,1) &
+               * ( temp(k,1,1) + BBL_TEMP * ( cos( PI*sqrt(dist) ) + 1.0_RP ) * 0.5_RP ) &
+               * ( P00 / pres(k,1,1) )**RovCP
+       else
+          RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
        endif
 
     enddo
