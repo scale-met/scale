@@ -134,7 +134,7 @@ contains
        call buildrho(dens(:,i,j), temp(:,i,j), pres(:,i,j),         & ! (out)
                      pott(:,i,j), qv(:,i,j), qc(:,i,j),             & ! (in)
                      temp_sfc(1,i,j),                               & ! (out)
-                     pres_sfc(1,i,j), pott(1,i,j),                  & ! (in)
+                     pres_sfc(1,i,j), pott_sfc(1,i,j),              & ! (in)
                      qv_sfc(1,i,j), qc_sfc(1,i,j),                  & ! (in)
                      HYDROSTATIC_userapserate                       ) ! (in)
 
