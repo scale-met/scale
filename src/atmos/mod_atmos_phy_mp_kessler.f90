@@ -225,8 +225,26 @@ contains
           Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
           CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
           CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
+       end do
 
+#if defined(__INTEL_COMPILER)
+       do k = KS, KE
+          pres(k) = DENS(k, i, j) * pott(k)  * Rmoist(k) / P00
+       enddo
+       if ( RP == 8 ) then
+          call vdpowx( KE, PRES(:), CPovCV, PRES(:) )
+       else
+          call vspowx( KE, PRES(:), CPovCV, PRES(:) )
+       end if
+       do k = KS, KE
+          PRES(k) = PRES(k) * P00
+       enddo
+#else
+       do k = KS, KE
           pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+       enddo
+#endif
+       do k = KS, KE
           temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
           qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
 
