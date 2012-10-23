@@ -290,7 +290,11 @@ contains
                            / ( DENS(k,i,j) * ( 2.03E4_RP + 9.584E6_RP / ( pres(k) * qvs(k) ) ) )
                 dq_evap(k) = min( dq_evap(k), QTRC(k,i,j,I_QR)/dt )
 
-                if( QTRC(k,i,j,I_QV) + dq_evap(k)*dt > qvs(k) ) dq_evap(k) = ( qvs(k)-QTRC(k,i,j,I_QV) ) / dt
+                if ( QTRC(k,i,j,I_QV) + dq_evap(k)*dt > qvs(k) ) then
+                   dq_evap(k) = ( qvs(k)-QTRC(k,i,j,I_QV) ) / dt
+                end if
+             else
+                dq_evap(k) = 0.E0_RP
              endif
           else
              dq_evap(k) = 0.E0_RP
