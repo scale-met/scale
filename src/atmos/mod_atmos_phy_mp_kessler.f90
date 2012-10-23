@@ -52,6 +52,8 @@ module mod_atmos_phy_mp
   !
   logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
 
+#define SCHEDULE schedule(static)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -164,7 +166,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
-    !$omp parallel do private(i,j,k,iq) schedule(static) collapse(2)
+    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
@@ -198,7 +200,7 @@ contains
     ! averaged profile of density [g/cc]
     do k = KS, KE
        rho = 0.0_RP
-       !$omp parallel do private(i,j) schedule(static) collapse(2) reduction(+: rho)
+       !$omp parallel do private(i,j) SCHEDULE collapse(2) reduction(+: rho)
        do j = JS, JE
        do i = IS, IE
           rho = rho + DENS(k,i,j)
@@ -209,13 +211,13 @@ contains
 
     rho_prof(KS) = rho_prof(KS) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
     rho_fact(KS) = 1.0_RP
-    !$omp parallel do private(k) schedule(static)
+    !$omp parallel do private(k) SCHEDULE
     do k = KS+1, KE
        rho_prof(k) = rho_prof(k) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
        rho_fact(k) = sqrt( rho_prof(KS)/rho_prof(k) )
     enddo
 
-    !$omp parallel do private(i,j,k,vel1,vel2,vent,pt_prev,efact,iq,ite,dq_prcp,dq_cond1,dq_cond2,dq_evap,dq_auto,dq_coll,pott,pres,temp,qvs,Rmoist,CPmoist,CVmoist,LEovSE) schedule(static) collapse(2)
+    !$omp parallel do private(i,j,k,vel1,vel2,vent,pt_prev,efact,iq,ite,dq_prcp,dq_cond1,dq_cond2,dq_evap,dq_auto,dq_coll,pott,pres,temp,qvs,Rmoist,CPmoist,CVmoist,LEovSE) SCHEDULE collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -452,7 +454,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k,iq) schedule(static) collapse(2)
+    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
