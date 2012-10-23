@@ -447,8 +447,8 @@ contains
        ! remove negative value of hydrometeor (mass, number)
        do iq = I_QV, I_QR
        do k  = 1, KA
-          if ( QTRC(k,i,j,iq) < 0.D0 ) then
-             QTRC(k,i,j,iq) = 0.D0
+          if ( QTRC(k,i,j,iq) < 0.E0_RP ) then
+             QTRC(k,i,j,iq) = 0.E0_RP
           endif
        enddo
        enddo
@@ -456,7 +456,7 @@ contains
        ! apply correction of hydrometeor to total density
        do k  = 1, KA
           DENS(k,i,j) = DENS(k,i,j)        &
-                      * ( 1.D0             &
+                      * ( 1.E0_RP             &
                         + QTRC(k,i,j,I_QV) &
                         + QTRC(k,i,j,I_QC) &
                         + QTRC(k,i,j,I_QR) &
