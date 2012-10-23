@@ -147,6 +147,7 @@ contains
     real(RP), parameter :: TVf1 = 36.34E0_RP  ! Durran and Klemp (1983)
     real(RP), parameter :: TVf2 = 0.1364E0_RP ! Durran and Klemp (1983)
     real(RP) :: rho_prof(KA) ! averaged profile of rho
+    real(RP) :: rho
     real(RP) :: rho_fact(KA)
     real(RP) :: vel1, vel2, vent
 
@@ -163,6 +164,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
+    !$omp parallel do private(i,j,k,iq) schedule(static) collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
@@ -195,22 +197,25 @@ contains
 
     ! averaged profile of density [g/cc]
     do k = KS, KE
-       rho_prof(k) = 0.E0_RP
+       rho = 0.0_RP
+       !$omp parallel do private(i,j) schedule(static) collapse(2) reduction(+: rho)
+       do j = JS, JE
+       do i = IS, IE
+          rho = rho + DENS(k,i,j)
+       enddo
+       enddo
+       rho_prof(k) = rho
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rho_prof(k) = rho_prof(k) + DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    do k = KS, KE
+    rho_prof(KS) = rho_prof(KS) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
+    rho_fact(KS) = 1.0_RP
+    !$omp parallel do private(k) schedule(static)
+    do k = KS+1, KE
        rho_prof(k) = rho_prof(k) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
        rho_fact(k) = sqrt( rho_prof(KS)/rho_prof(k) )
     enddo
 
+    !$omp parallel do private(i,j,k,vel1,vel2,vent,pt_prev,efact,iq,ite,dq_prcp,dq_cond1,dq_cond2,dq_evap,dq_auto,dq_coll,pott,pres,temp,qvs,Rmoist,CPmoist,CVmoist,LEovSE) schedule(static) collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -428,6 +433,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(i,j,k,iq) schedule(static) collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
