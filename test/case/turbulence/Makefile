@@ -6,7 +6,7 @@ include $(TOPDIR)/src/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
-index     = 200m12x15x15
+index     = 30m10a82x16x16
 tracer    = dry
 radiation = mstrnX
 sfcflx    = const
@@ -19,10 +19,10 @@ build:
 	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
 
 runinit: build
-	$(SCRDIR)/run.sh $(BINDIR)/$(INITNAME) init_200m.conf 4
+	$(SCRDIR)/run.sh $(BINDIR)/$(INITNAME) init_30m10a.conf 4
 
 run: build
-	$(SCRDIR)/run.sh $(BINDIR)/$(BINNAME) run_200m.conf 4
+	$(SCRDIR)/run.sh $(BINDIR)/$(BINNAME) run_30m10a.conf 4
 
 check:
 # to be add program to check result
