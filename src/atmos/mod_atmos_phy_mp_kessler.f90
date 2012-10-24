@@ -52,6 +52,8 @@ module mod_atmos_phy_mp
   !
   logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
 
+#define SCHEDULE schedule(static)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -145,8 +147,9 @@ contains
     real(RP) :: LEovSE(KA)  ! latent heat energy / sensible heat energy 
 
     real(RP), parameter :: TVf1 = 36.34E0_RP  ! Durran and Klemp (1983)
-    real(RP), parameter :: TVf2 = 0.1346E0_RP ! Durran and Klemp (1983)
+    real(RP), parameter :: TVf2 = 0.1364E0_RP ! Durran and Klemp (1983)
     real(RP) :: rho_prof(KA) ! averaged profile of rho
+    real(RP) :: rho
     real(RP) :: rho_fact(KA)
     real(RP) :: vel1, vel2, vent
 
@@ -163,6 +166,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
+    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
@@ -195,22 +199,25 @@ contains
 
     ! averaged profile of density [g/cc]
     do k = KS, KE
-       rho_prof(k) = 0.E0_RP
+       rho = 0.0_RP
+       !$omp parallel do private(i,j) SCHEDULE collapse(2) reduction(+: rho)
+       do j = JS, JE
+       do i = IS, IE
+          rho = rho + DENS(k,i,j)
+       enddo
+       enddo
+       rho_prof(k) = rho
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rho_prof(k) = rho_prof(k) + DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    do k = KS, KE
+    rho_prof(KS) = rho_prof(KS) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
+    rho_fact(KS) = 1.0_RP
+    !$omp parallel do private(k) SCHEDULE
+    do k = KS+1, KE
        rho_prof(k) = rho_prof(k) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
        rho_fact(k) = sqrt( rho_prof(KS)/rho_prof(k) )
     enddo
 
+    !$omp parallel do private(i,j,k,vel1,vel2,vent,pt_prev,efact,iq,ite,dq_prcp,dq_cond1,dq_cond2,dq_evap,dq_auto,dq_coll,pott,pres,temp,qvs,Rmoist,CPmoist,CVmoist,LEovSE) SCHEDULE collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -220,8 +227,26 @@ contains
           Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
           CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
           CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
+       end do
 
+#if defined(__INTEL_COMPILER)
+       do k = KS, KE
+          pres(k) = DENS(k, i, j) * pott(k)  * Rmoist(k) / P00
+       enddo
+       if ( RP == 8 ) then
+          call vdpowx( KE, PRES(:), CPovCV, PRES(:) )
+       else
+          call vspowx( KE, PRES(:), CPovCV, PRES(:) )
+       end if
+       do k = KS, KE
+          PRES(k) = PRES(k) * P00
+       enddo
+#else
+       do k = KS, KE
           pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
+       enddo
+#endif
+       do k = KS, KE
           temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
           qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
 
@@ -290,7 +315,11 @@ contains
                            / ( DENS(k,i,j) * ( 2.03E4_RP + 9.584E6_RP / ( pres(k) * qvs(k) ) ) )
                 dq_evap(k) = min( dq_evap(k), QTRC(k,i,j,I_QR)/dt )
 
-                if( QTRC(k,i,j,I_QV) + dq_evap(k)*dt > qvs(k) ) dq_evap(k) = ( qvs(k)-QTRC(k,i,j,I_QV) ) / dt
+                if ( QTRC(k,i,j,I_QV) + dq_evap(k)*dt > qvs(k) ) then
+                   dq_evap(k) = ( qvs(k)-QTRC(k,i,j,I_QV) ) / dt
+                end if
+             else
+                dq_evap(k) = 0.E0_RP
              endif
           else
              dq_evap(k) = 0.E0_RP
@@ -340,7 +369,8 @@ contains
           pott(k)          = pott(k)          + (                       -dq_evap(k) )*dt * efact
           QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + (                        dq_evap(k) )*dt
           QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + ( -dq_auto(k)-dq_coll(k)            )*dt
-          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) + (  dq_auto(k)+dq_coll(k)-dq_evap(k) )*dt + dq_prcp(k)/DENS(k,i,j)*dt
+          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) &
+               + (  dq_auto(k)+dq_coll(k)-dq_evap(k) )*dt + dq_prcp(k)/DENS(k,i,j)*dt
        enddo
 
        ! negtive fixer
@@ -424,6 +454,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
     do j = 1, JA
     do i = 1, IA
        ! total hydrometeor (before correction)
@@ -436,8 +467,8 @@ contains
        ! remove negative value of hydrometeor (mass, number)
        do iq = I_QV, I_QR
        do k  = 1, KA
-          if ( QTRC(k,i,j,iq) < 0.D0 ) then
-             QTRC(k,i,j,iq) = 0.D0
+          if ( QTRC(k,i,j,iq) < 0.E0_RP ) then
+             QTRC(k,i,j,iq) = 0.E0_RP
           endif
        enddo
        enddo
@@ -445,7 +476,7 @@ contains
        ! apply correction of hydrometeor to total density
        do k  = 1, KA
           DENS(k,i,j) = DENS(k,i,j)        &
-                      * ( 1.D0             &
+                      * ( 1.E0_RP             &
                         + QTRC(k,i,j,I_QV) &
                         + QTRC(k,i,j,I_QC) &
                         + QTRC(k,i,j,I_QR) &
