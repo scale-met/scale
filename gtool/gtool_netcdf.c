@@ -539,6 +539,8 @@ int32_t file_write_data( int32_t  vid,        // (in)
     return ERROR_CODE;
   }
 
+  CHECK_ERROR( nc_sync(ncid) );
+
   return SUCCESS_CODE;
 }
 
