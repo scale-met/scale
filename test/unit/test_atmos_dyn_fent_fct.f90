@@ -71,8 +71,9 @@ module test_atmos_dyn_fent_fct
   real(RP) :: DIFF4, DIFF2
   real(RP) :: divdmp_coef, LSsink_D
 
-  logical  :: flag_fct_momentum = .false.
-  logical  :: flag_fct_t        = .false.
+  logical  :: flag_fct_rho      = .true.
+  logical  :: flag_fct_momentum = .true.
+  logical  :: flag_fct_t        = .true.
 
   real(RP), save :: ZERO(KA,IA,JA)
 
@@ -176,16 +177,16 @@ subroutine test_undef
 
   do i = 1, 2
      call ATMOS_DYN_main( &
-          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-          QDRY, DDIV,                           & ! (out)
-          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-          CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-          divdmp_coef, LSsink_D,                & ! (in)
-          flag_fct_momentum, flag_fct_t,        & ! (in)
-          1.0_DP, 1                             ) ! (in)
+          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+          QDRY, DDIV,                                  & ! (out)
+          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
+          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+          REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
+          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+          divdmp_coef, LSsink_D,                       & ! (in)
+          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+          1.0_DP, 1                                    ) ! (in)
   end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
@@ -219,16 +220,16 @@ subroutine test_const
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
   call ATMOS_DYN_main( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-       QDRY, DDIV,                           & ! (out)
-       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-       CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-       REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-       CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-       divdmp_coef, LSsink_D,                & ! (in)
-       flag_fct_momentum, flag_fct_t,        & ! (in)
-       1.0_DP, 1                             ) ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       QDRY, DDIV,                                  & ! (out)
+       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+       CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
+       CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+       divdmp_coef, LSsink_D,                       & ! (in)
+       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       1.0_DP, 1                                    ) ! (in)
 
   do k = KS, KE
      answer(k,:,:) = MOMZ(k,IS,JS)
@@ -295,16 +296,16 @@ subroutine test_conserve
   call copy
 
   call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-         QDRY, DDIV,                           & ! (out)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-         REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-         CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-         divdmp_coef, LSsink_D,                & ! (in)
-         flag_fct_momentum, flag_fct_t,        & ! (in)
-         1.0_DP, 1                             ) ! (in)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+         QDRY, DDIV,                                  & ! (out)
+         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+         REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
+         CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+         divdmp_coef, LSsink_D,                       & ! (in)
+         flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+         1.0_DP, 1                                    ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP
