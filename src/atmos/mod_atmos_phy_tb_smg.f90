@@ -254,7 +254,6 @@ contains
     integer :: IIS, IIE, JJS, JJE
 
 
-    write(*,*) 'call ATMOS_PHY_TB_main'
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
