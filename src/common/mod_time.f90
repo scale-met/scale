@@ -160,7 +160,6 @@ contains
        TIME_DT_UNIT,               &
        TIME_DT_ATMOS_DYN,          &
        TIME_DT_ATMOS_DYN_UNIT,     &
-       TIME_NSTEP_ATMOS_DYN,       &
        TIME_DT_ATMOS_PHY_TB,       &
        TIME_DT_ATMOS_PHY_TB_UNIT,  &
        TIME_DT_ATMOS_PHY_MP,       &
@@ -208,6 +207,8 @@ contains
     call TIME_sec2date( TIME_ENDDATE(:), TIME_ENDSECL )
 
     call TIME_ymdhms2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
+
+    TIME_NSTEP_ATMOS_DYN = int ( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN )
 
     TIME_NSTEP = int( TIME_DURATIONSEC / TIME_DTSEC )
 
