@@ -48,6 +48,12 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
 
+  real(RP) :: SFLX_MOMZ(IA,JA)
+  real(RP) :: SFLX_MOMX(IA,JA)
+  real(RP) :: SFLX_MOMY(IA,JA)
+  real(RP) :: SFLX_POTT(IA,JA)
+  real(RP) :: SFLX_QV(IA,JA)
+
   real(RP) :: QDRY(KA,IA,JA)
   real(RP) :: DDIV(KA,IA,JA)
   real(RP) :: SINK(KA,IA,JA,5+QA)
@@ -131,6 +137,12 @@ contains
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
 
+  SFLX_MOMZ(:,:) = 0.0_RP
+  SFLX_MOMX(:,:) = 0.0_RP
+  SFLX_MOMY(:,:) = 0.0_RP
+  SFLX_POTT(:,:) = 0.0_RP
+  SFLX_QV(:,:) = 0.0_RP
+
   !########## test ##########
 
 
@@ -182,6 +194,8 @@ subroutine test_undef
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+          SFLX_POTT, SFLX_QV,                          & ! (in)
           REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef, LSsink_D,                       & ! (in)
@@ -225,6 +239,8 @@ subroutine test_const
        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
        CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+       SFLX_POTT, SFLX_QV,                          & ! (in)
        REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef, LSsink_D,                       & ! (in)
@@ -301,6 +317,8 @@ subroutine test_conserve
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+         SFLX_POTT, SFLX_QV,                          & ! (in)
          REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef, LSsink_D,                       & ! (in)

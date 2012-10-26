@@ -13,6 +13,7 @@
 !! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
 !! @li      2012-03-27 (H.Yashiro)   [mod] reconstruction
 !! @li      2012-07-02 (S.Nishizawa) [mod] reconstruction with Brown et al. (1994)
+!! @li      2012-10-26 (S.Nishizawa) [mod] remove surface flux
 !!
 !! - Reference
 !!  - Brown et al., 1994:
@@ -229,12 +230,6 @@ contains
        MOMY, &
        RHOT, &
        QTRC
-    use mod_atmos_vars_sf, only: &
-       SFLX_MOMZ, &
-       SFLX_MOMX, &
-       SFLX_MOMY, &
-       SFLX_POTT, &
-       SFLX_QV
     implicit none
 
     ! tendency
@@ -257,8 +252,7 @@ contains
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)  diagnostic variables
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in) surface flux
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      & ! (in)  diagnostic variables
        )
 
     do JJS = JS, JE, JBLOCK
@@ -376,9 +370,7 @@ contains
   subroutine ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu_C, Ri, Pr,                      & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)  diagnostic variables
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in) surface flux
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)  diagnostic variables
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
@@ -411,13 +403,6 @@ contains
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-
-    real(RP), intent(in)  :: SFLX_MOMZ(IA,JA)
-    real(RP), intent(in)  :: SFLX_MOMX(IA,JA)
-    real(RP), intent(in)  :: SFLX_MOMY(IA,JA)
-    real(RP), intent(in)  :: SFLX_POTT(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV  (IA,JA)
-
 
     ! diagnostic variables
     real(RP) :: VELZ_C (KA,IA,JA)
@@ -2063,10 +2048,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMZ(i,j) )
-#endif
-          qflx_sgs(KS,i,j,ZDIR) = SFLX_MOMZ(i,j) ! bottom boundary
+          qflx_sgs(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -2169,10 +2151,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMX(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j) ! bottom boundary
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -2274,10 +2253,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMY(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j) ! bottom boundary
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -3442,10 +3418,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_POTT(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_POTT(i,j)
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
@@ -3568,21 +3541,6 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-
-       ! Surface QV Flux
-       if ( iq == I_QV ) then
-         do j = JJS, JJE
-         do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_QV(i,j) )
-#endif
-             qflx_sgs(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
-          enddo
-          enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       endif
 
        ! (y-z plane)
        do j = JJS,   JJE

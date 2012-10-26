@@ -57,15 +57,15 @@ module mod_atmos_phy_sf
   real(RP), private, parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
 
   ! parameters
-  real(RP), private, save :: Z00 =   0.0_RP      ! base
-  real(RP), private, save :: Z0R = 0.018_RP      ! rough factor
-  real(RP), private, save :: Z0S =  0.11_RP      ! smooth factor
-  real(RP), private, save :: Zt0 =   1.4E-5_RP
-  real(RP), private, save :: ZtR =   0.0_RP
-  real(RP), private, save :: ZtS =   0.4_RP
-  real(RP), private, save :: Ze0 =   1.3E-4_RP
-  real(RP), private, save :: ZeR =   0.0_RP
-  real(RP), private, save :: ZeS =  0.62_RP
+  real(RP), private, save :: Z00 = 0.0_RP      ! base
+  real(RP), private, save :: Z0R = 0.018_RP    ! rough factor
+  real(RP), private, save :: Z0S = 0.11_RP     ! smooth factor
+  real(RP), private, save :: Zt0 = 1.4E-5_RP
+  real(RP), private, save :: ZtR = 0.0_RP
+  real(RP), private, save :: ZtS = 0.4_RP
+  real(RP), private, save :: Ze0 = 1.3E-4_RP
+  real(RP), private, save :: ZeR = 0.0_RP
+  real(RP), private, save :: ZeS = 0.62_RP
   real(RP), private, save :: ThS = 300.0_RP
 
   ! limiter
@@ -188,6 +188,8 @@ contains
     ZeR    = ATMOS_PHY_SF_ZeR
     ZeS    = ATMOS_PHY_SF_ZeS
     ThS    = ATMOS_PHY_SF_ThS
+
+    call ATMOS_PHY_SF
 
     return
   end subroutine ATMOS_PHY_SF_setup

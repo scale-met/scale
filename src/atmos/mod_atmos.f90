@@ -104,11 +104,13 @@ contains
   subroutine ATMOS_step
     use mod_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
+       do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
        sw_dyn    => ATMOS_sw_dyn,    &
+       sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
@@ -139,6 +141,20 @@ call STOP_COLLECTION  ("Dynamics")
 #endif
     call TIME_rapend  ('Dynamics')
 
+    !########## Surface Flux ##########
+
+    call TIME_rapstart('SurfaceFlux')
+#ifdef _FPCOLL_
+call START_COLLECTION("SurfaceFlux")
+#endif
+    if ( sw_phy_sf .AND. do_phy_sf ) then
+       call ATMOS_PHY_SF
+    endif
+#ifdef _FPCOLL_
+call STOP_COLLECTION  ("SurfaceFlux")
+#endif
+    call TIME_rapend  ('SurfaceFlux')
+
     !########## Turbulence ##########
 
     call TIME_rapstart('Turbulence')
@@ -146,7 +162,6 @@ call STOP_COLLECTION  ("Dynamics")
 call START_COLLECTION("Turbulence")
 #endif
     if ( sw_phy_tb .AND. do_phy_tb ) then
-       call ATMOS_PHY_SF
        call ATMOS_PHY_TB
     endif
 #ifdef _FPCOLL_

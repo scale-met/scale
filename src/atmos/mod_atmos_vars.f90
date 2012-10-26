@@ -98,11 +98,13 @@ module mod_atmos_vars
                  'kg/m3*K'  /
 
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_DYN    = 'NONE'
+  character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_SF = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
 
   logical,                   public, save :: ATMOS_sw_dyn
+  logical,                   public, save :: ATMOS_sw_phy_sf
   logical,                   public, save :: ATMOS_sw_phy_tb
   logical,                   public, save :: ATMOS_sw_phy_mp
   logical,                   public, save :: ATMOS_sw_phy_rd
@@ -175,6 +177,7 @@ contains
 
     NAMELIST / PARAM_ATMOS / &
        ATMOS_TYPE_DYN,    &
+       ATMOS_TYPE_PHY_SF, &
        ATMOS_TYPE_PHY_TB, &
        ATMOS_TYPE_PHY_MP, &
        ATMOS_TYPE_PHY_RD
@@ -225,6 +228,13 @@ contains
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
+    if ( ATMOS_TYPE_PHY_SF .ne. 'OFF' .and. ATMOS_TYPE_PHY_SF .ne. 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
+       ATMOS_sw_phy_sf = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
+       ATMOS_sw_phy_sf = .false.
+    endif
     if ( ATMOS_TYPE_PHY_TB .ne. 'OFF' .and. ATMOS_TYPE_PHY_TB .ne. 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.

@@ -59,12 +59,12 @@ module mod_atmos_phy_sf
   real(RP), private, save      :: Cm_min  =    1.0E-5_RP ! minimum bulk coef. of u,v,w
   real(RP), private, parameter :: Cm_max  =    2.5E-3_RP ! maximum bulk coef. of u,v,w
 
-  real(RP), private, save      :: U_minM  =    0.0_RP  ! minimum U_abs for u,v,w
-  real(RP), private, parameter :: U_maxM  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, save      :: U_minM  =    0.0_RP   ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxM  =  100.0_RP   ! maximum U_abs for u,v,w
 
-  real(RP), private, save      :: Cm_const =  0.0011_RP ! constant bulk coef. of u,v,w
-  real(RP), private, save      :: Const_SH =  15.0_RP   ! constant surface sensible flux [W/m2]
-  real(RP), private, save      :: Const_LH =  115.0_RP  ! constant surface latent flux [W/m2]
+  real(RP), private, save      :: Cm_const =  0.0_RP    ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: Const_SH =  0.0_RP    ! constant surface sensible flux [W/m2]
+  real(RP), private, save      :: Const_LH =  0.0_RP    ! constant surface latent flux [W/m2]
   real(RP), private, save      :: Const_Ustar = 0.25_RP ! constant friction velocity [m/s]
 
   integer(4), private, save    :: FLG_MOM_FLUX = 0      ! 0->Bulk coef. is constant
@@ -144,6 +144,8 @@ contains
     Const_FREQ = ATMOS_PHY_SF_Const_FREQ
     FLG_MOM_FLUX = ATMOS_PHY_SF_FLG_MOM_FLUX
     FLG_SH_DIURNAL = ATMOS_PHY_SF_FLG_SH_DIURNAL
+
+    call ATMOS_PHY_SF
 
     return
   end subroutine ATMOS_PHY_SF_setup
