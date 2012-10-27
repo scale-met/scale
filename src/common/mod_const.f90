@@ -42,7 +42,7 @@ module mod_const
   real(RP), public, save      :: CONST_PI    = 3.14159265358979E0_RP !< pi
   real(RP), public, save      :: CONST_EPS   = 1.E-34_RP             !< small number
 
-  integer, public, parameter :: CONST_UNDEF2 = -32768            !< undefined value (INT2)
+  integer, public, parameter  :: CONST_UNDEF2 = -32768            !< undefined value (INT2)
   real(SP), public, parameter :: CONST_UNDEF4 = -9.9999E30        !< undefined value (REAL4)
   real(DP), public, parameter :: CONST_UNDEF8 = -9.9999D30        !< undefined value (REAL8)
   real(RP), public, save      :: CONST_UNDEF

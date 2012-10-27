@@ -84,6 +84,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_SF
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -121,7 +123,13 @@ contains
     ATMOS_PHY_SF_FLG_SH_DIURNAL = FLG_SH_DIURNAL
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
+
+    if ( trim(ATMOS_TYPE_PHY_SF) .ne. 'CONST' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not CONST. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)

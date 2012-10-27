@@ -112,6 +112,10 @@ contains
        FDZ => GRID_FDZ, &
        FDX => GRID_FDX, &
        FDY => GRID_FDY
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_TB
     implicit none
 
     integer :: k, i, j
@@ -120,6 +124,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
+
+    if ( trim(ATMOS_TYPE_PHY_TB) .ne. 'SMAGORINSKY' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
+       call PRC_MPIstop
+    end if
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC

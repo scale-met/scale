@@ -55,7 +55,9 @@ contains
        OCEAN_vars_setup, &
        OCEAN_vars_restart_read
     use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST_setup
+       OCEAN_SST_setup
+    use mod_ocean_vars, only: &
+       sw_sst => OCEAN_sw_sst
     implicit none
     !---------------------------------------------------------------------------
 
@@ -63,7 +65,7 @@ contains
 
     call OCEAN_vars_restart_read
 
-    call OCEAN_FIXEDSST_setup
+    if ( sw_sst ) call OCEAN_SST_setup
 
     return
   end subroutine OCEAN_setup
@@ -73,15 +75,15 @@ contains
   !-----------------------------------------------------------------------------
   subroutine OCEAN_step
     use mod_ocean_vars, only: &
-       sw_sf => OCEAN_sw_sf
+       sw_sst => OCEAN_sw_sst
     use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST
+       OCEAN_SST
     implicit none
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('Ocean')
-    if ( sw_sf ) then
-       call OCEAN_FIXEDSST
+    if ( sw_sst ) then
+       call OCEAN_SST
     endif
     call TIME_rapend  ('Ocean')
 

@@ -120,11 +120,11 @@ call START_COLLECTION("Initialize")
   ! setup monitor
   call MONIT_setup
 
-  ! setup atmosphere
-  call ATMOS_setup
-
   ! setup ocean
   call OCEAN_setup
+
+  ! setup atmosphere
+  call ATMOS_setup
 
 #ifdef _FPCOLL_
 call STOP_COLLECTION  ("Initialize")

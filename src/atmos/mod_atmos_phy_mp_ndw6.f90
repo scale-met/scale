@@ -385,6 +385,8 @@ contains
        PRC_MPIstop
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -398,6 +400,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for NDW6'
+
+    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'NDW6' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not NDW6. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -26,8 +26,8 @@ module mod_ocean_sf
   !
   !++ Public procedure
   !
-  public :: OCEAN_FIXEDSST_setup
-  public :: OCEAN_FIXEDSST
+  public :: OCEAN_SST_setup
+  public :: OCEAN_SST
 
   !-----------------------------------------------------------------------------
   !
@@ -56,13 +56,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup FIXEDSST
   !-----------------------------------------------------------------------------
-  subroutine OCEAN_FIXEDSST_setup
+  subroutine OCEAN_SST_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &
        OCEAN_RESTART_IN_BASENAME, &
+       OCEAN_TYPE, &
        SST
     implicit none
 
@@ -80,6 +81,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIXEDSST]/Categ[OCEAN]'
+
+    if ( trim(OCEAN_TYPE) .ne. 'FIXEDSST' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not FIXEDSST. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,12 +118,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** change rate [K/s]:', OCEAN_FIXEDSST_RATE
 
     return
-  end subroutine OCEAN_FIXEDSST_setup
+  end subroutine OCEAN_SST_setup
 
   !-----------------------------------------------------------------------------
   !> SST change
   !-----------------------------------------------------------------------------
-  subroutine OCEAN_FIXEDSST
+  subroutine OCEAN_SST
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN
     use mod_history, only: &
@@ -143,6 +149,6 @@ contains
     call HIST_in( SST(:,:,:), 'SST', OP_DESC(1), OP_UNIT(1), '2D', dt )
 
     return
-  end subroutine OCEAN_FIXEDSST
+  end subroutine OCEAN_SST
 
 end module mod_ocean_sf

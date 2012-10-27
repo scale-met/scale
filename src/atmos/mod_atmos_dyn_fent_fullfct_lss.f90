@@ -162,6 +162,8 @@ contains
        CDY => GRID_CDY
     use mod_geometrics, only : &
        lat => GEOMETRICS_lat
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_DYN
 #ifdef _USE_RDMA
     use mod_comm, only: &
        COMM_set_rdma_variable
@@ -182,6 +184,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** FENT + FCT'
+
+    if ( trim(ATMOS_TYPE_DYN) .ne. 'FENT-FCT' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not FENT-FCT. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -514,6 +522,8 @@ contains
     QDRY(:,:,:) = UNDEF
     DDIV(:,:,:) = UNDEF
 #endif
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
