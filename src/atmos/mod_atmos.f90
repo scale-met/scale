@@ -54,6 +54,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
     use mod_atmos_vars, only: &
+       sw_dyn    => ATMOS_sw_dyn,    &
+       sw_phy_sf => ATMOS_sw_phy_sf, &
+       sw_phy_tb => ATMOS_sw_phy_tb, &
+       sw_phy_mp => ATMOS_sw_phy_mp, &
+       sw_phy_rd => ATMOS_sw_phy_rd
+    use mod_atmos_vars, only: &
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
     use mod_atmos_refstate, only: &
@@ -85,15 +91,15 @@ contains
 
     call ATMOS_BOUNDARY_setup
 
-    call ATMOS_DYN_setup
+    if ( sw_dyn ) call ATMOS_DYN_setup
 
-    call ATMOS_PHY_SF_setup
+    if ( sw_phy_sf ) call ATMOS_PHY_SF_setup
 
-    call ATMOS_PHY_TB_setup
+    if ( sw_phy_tb ) call ATMOS_PHY_TB_setup
 
-    call ATMOS_PHY_MP_setup
+    if ( sw_phy_mp ) call ATMOS_PHY_MP_setup
 
-    call ATMOS_PHY_RD_setup
+    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup
 
     return
   end subroutine ATMOS_setup
