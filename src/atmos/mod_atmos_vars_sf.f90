@@ -103,6 +103,12 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SF_VARS)
 
+    SFLX_MOMZ(:,:) = 0.0_RP
+    SFLX_MOMX(:,:) = 0.0_RP
+    SFLX_MOMY(:,:) = 0.0_RP
+    SFLX_POTT(:,:) = 0.0_RP
+    SFLX_QV(:,:)   = 0.0_RP
+
     return
   end subroutine ATMOS_vars_sf_setup
 

@@ -62,9 +62,9 @@ module mod_atmos_phy_sf
   real(RP), private, save      :: U_minM  =    0.0_RP   ! minimum U_abs for u,v,w
   real(RP), private, parameter :: U_maxM  =  100.0_RP   ! maximum U_abs for u,v,w
 
-  real(RP), private, save      :: Cm_const =  0.0_RP    ! constant bulk coef. of u,v,w
-  real(RP), private, save      :: Const_SH =  0.0_RP    ! constant surface sensible flux [W/m2]
-  real(RP), private, save      :: Const_LH =  0.0_RP    ! constant surface latent flux [W/m2]
+  real(RP), private, save      :: Const_Cm =  0.0011_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: Const_SH =  15.0_RP   ! constant surface sensible flux [W/m2]
+  real(RP), private, save      :: Const_LH =  115.0_RP  ! constant surface latent flux [W/m2]
   real(RP), private, save      :: Const_Ustar = 0.25_RP ! constant friction velocity [m/s]
 
   integer(4), private, save    :: FLG_MOM_FLUX = 0      ! 0->Bulk coef. is constant
@@ -88,7 +88,7 @@ contains
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: ATMOS_PHY_SF_CM_min ! minimum bulk coef. of u,v,w
-    real(RP) :: ATMOS_PHY_SF_CM_const
+    real(RP) :: ATMOS_PHY_SF_Const_CM
     real(RP) :: ATMOS_PHY_SF_Const_SH
     real(RP) :: ATMOS_PHY_SF_Const_LH
     real(RP) :: ATMOS_PHY_SF_Const_Ustar
@@ -99,7 +99,7 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
        ATMOS_PHY_SF_U_minM, &
        ATMOS_PHY_SF_CM_min, &
-       ATMOS_PHY_SF_CM_const, &
+       ATMOS_PHY_SF_Const_CM, &
        ATMOS_PHY_SF_Const_SH, &
        ATMOS_PHY_SF_Const_LH, &
        ATMOS_PHY_SF_Const_Ustar, &
@@ -112,7 +112,7 @@ contains
 
     ATMOS_PHY_SF_U_minM = U_minM
     ATMOS_PHY_SF_CM_min = CM_min
-    ATMOS_PHY_SF_CM_const = Cm_const
+    ATMOS_PHY_SF_Const_CM = Const_Cm
     ATMOS_PHY_SF_Const_SH = Const_SH
     ATMOS_PHY_SF_Const_LH = Const_LH
     ATMOS_PHY_SF_Const_Ustar = Const_Ustar
@@ -137,7 +137,7 @@ contains
 
     U_minM = ATMOS_PHY_SF_U_minM
     CM_min = ATMOS_PHY_SF_CM_min
-    Cm_const = ATMOS_PHY_SF_CM_const
+    Const_Cm = ATMOS_PHY_SF_Const_Cm
     Const_SH = ATMOS_PHY_SF_Const_SH
     Const_LH = ATMOS_PHY_SF_Const_LH
     Const_Ustar = ATMOS_PHY_SF_Const_Ustar
@@ -202,7 +202,7 @@ contains
 
        !--- Bulk coef. at w, theta, and qv points
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif
@@ -228,7 +228,7 @@ contains
             + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
             ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif
@@ -243,7 +243,7 @@ contains
             + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
             ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif

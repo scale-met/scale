@@ -2049,7 +2049,7 @@ call TIME_rapend     ('DYN-fct')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             ! k = KE
+             ! k = KS
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMZ(i,j)
              ! k = KE
              qflx_lo(KE-1,i,j,ZDIR) = 0.0_RP
