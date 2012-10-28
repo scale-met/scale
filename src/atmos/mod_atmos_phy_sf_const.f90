@@ -86,6 +86,19 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_SF
+    use mod_time, only: &
+       NOWSEC => TIME_NOWSEC
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY
+    use mod_atmos_vars_sf, only: &
+       SFLX_MOMZ, &
+       SFLX_MOMX, &
+       SFLX_MOMY, &
+       SFLX_POTT, &
+       SFLX_QV
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -153,21 +166,24 @@ contains
     FLG_MOM_FLUX = ATMOS_PHY_SF_FLG_MOM_FLUX
     FLG_SH_DIURNAL = ATMOS_PHY_SF_FLG_SH_DIURNAL
 
-    call ATMOS_PHY_SF
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         NOWSEC                                               ) ! (in)
 
     return
   end subroutine ATMOS_PHY_SF_setup
 
   !-----------------------------------------------------------------------------
-  !
+  ! calculation flux
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF
+    use mod_time, only: &
+       dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
+       NOWSEC => TIME_NOWSEC
     use mod_const, only : &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
-    use mod_time, only: &
-       dttb => TIME_DTSEC_ATMOS_PHY_TB, &
-       ctime => TIME_NOWSEC
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -187,14 +203,60 @@ contains
     real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
     real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
 
+    integer :: i, j
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux'
+
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         NOWSEC                                               ) ! (out)
+
+    do j = JS, JE
+    do i = IS, IE
+       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
+    enddo
+    enddo
+
+    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dtsf )
+    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dtsf )
+
+    return
+  end subroutine ATMOS_PHY_SF
+  !-----------------------------------------------------------------------------
+  ! calculation flux
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         ctime                                                ) ! (in)
+    use mod_const, only : &
+       CPdry  => CONST_CPdry,  &
+       LH0    => CONST_LH0
+    use dc_types, only : &
+         DP
+    implicit none
+
+    real(RP), intent(out) :: SFLX_MOMZ(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMX(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMY(IA,JA)
+    real(RP), intent(out) :: SFLX_POTT(IA,JA)
+    real(RP), intent(out) :: SFLX_QV  (IA,JA)
+
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)
+
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm    !
 
+    real(DP) :: ctime
+
     integer :: i, j
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
     do j = JS-1, JE
     do i = IS-1, IE
@@ -261,17 +323,7 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
-    enddo
-    enddo
-
-    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dttb )
-    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dttb )
-
     return
-  end subroutine ATMOS_PHY_SF
+  end subroutine ATMOS_PHY_SF_main
 
 end module mod_atmos_phy_sf
