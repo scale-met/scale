@@ -242,7 +242,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
-    if ( ATMOS_TYPE_PHY_MP .ne. 'OFF' .or. ATMOS_TYPE_PHY_MP .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_MP .ne. 'OFF' .and. ATMOS_TYPE_PHY_MP .ne. 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
        ATMOS_sw_phy_mp = .true.
     else
