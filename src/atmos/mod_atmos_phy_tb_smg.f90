@@ -1161,7 +1161,8 @@ contains
        call CHECK( __LINE__, RCDZ(KS) )
 #endif
           S31_Z(KS,i,j) = S31_Z(KS,i,j) + &
-               0.5_RP * WORK_V(KS,i,j) * RCDZ(KS) ! WORK_V(KS-1,i,j) == 0
+               0.25_RP * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i,j+1) &
+                         - VELX_YZ(KS  ,i,j) - VELX_YZ(KS  ,i,j+1) ) * RFDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -1174,8 +1175,9 @@ contains
        call CHECK( __LINE__, WORK_V(KE-1,i,j) )
        call CHECK( __LINE__, RCDZ(KE) )
 #endif
-          S31_Z(KE,i,j) = S31_Z(KE,i,j) - &
-               0.5_RP * WORK_V(KE-1,i,j) * RCDZ(KE) ! WORK_V(KE,i,j) == 0
+          S31_Z(KE,i,j) = S31_Z(KE,i,j) + &
+               0.25_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i,j+1) &
+                         - VELX_YZ(KE-1,i,j) - VELX_YZ(KE-1,i,j+1) ) * RFDZ(KE-1)
        enddo
        enddo
 #ifdef DEBUG
@@ -1561,7 +1563,7 @@ contains
 #endif
           S23_Z(KS,i,j) = S23_Z(KS,i,j) + &
                0.25_RP * ( VELY_ZX(KS+1,i,j) + VELY_ZX(KS+1,i+1,j) &
-                         - VELY_ZX(KS  ,i,j) - VELY_ZX(KS  ,i+1,j) ) * RCDZ(KS)
+                         - VELY_ZX(KS  ,i,j) - VELY_ZX(KS  ,i+1,j) ) * RFDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -2806,7 +2808,7 @@ contains
 #endif
           S31_Y(KS,i,j) = S31_Y(KS,i,j) + &
                0.125_RP * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i+1,j) + VELX_YZ(KS+1,i,j+1) + VELX_YZ(KS+1,i+1,j+1) &
-                          - VELX_YZ(KS  ,i,j) + VELX_YZ(KS  ,i+1,j) + VELX_YZ(KS  ,i,j+1) + VELX_YZ(KS  ,i+1,j+1) ) * RCDZ(KS)
+                          - VELX_YZ(KS  ,i,j) - VELX_YZ(KS  ,i+1,j) - VELX_YZ(KS  ,i,j+1) - VELX_YZ(KS  ,i+1,j+1) ) * RCDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -2824,7 +2826,7 @@ contains
 #endif
           S31_Y(KE,i,j) = S31_Y(KE,i,j) + &
                0.125_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i+1,j) + VELX_YZ(KE  ,i,j+1) + VELX_YZ(KE  ,i+1,j+1) &
-                          - VELX_YZ(KE-1,i,j) + VELX_YZ(KE-1,i+1,j) + VELX_YZ(KE-1,i,j+1) + VELX_YZ(KE-1,i+1,j+1) ) * RCDZ(KE-1)
+                          - VELX_YZ(KE-1,i,j) - VELX_YZ(KE-1,i+1,j) - VELX_YZ(KE-1,i,j+1) - VELX_YZ(KE-1,i+1,j+1) ) * RCDZ(KE-1)
        enddo
        enddo
 #ifdef DEBUG
