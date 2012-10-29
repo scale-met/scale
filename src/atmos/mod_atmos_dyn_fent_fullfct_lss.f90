@@ -819,7 +819,7 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-          do k = KS, KE
+          do k = KS+1, KE-1
              num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**4 &
                                          * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
                                            - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
@@ -859,13 +859,19 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-          do k = KS, KE-1
+          do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
                                          * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
                                            - CNDZ(2,k+1) * MOMX(k+1,i,j) &
                                            + CNDZ(3,k+1) * MOMX(k  ,i,j) &
                                            - CNDZ(1,k  ) * MOMX(k-1,i,j) )
           enddo
+          enddo
+          enddo
+          do j = JJS,   JJE
+          do i = IIS,   IIE
+             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF2 * CDZ(KS  ) * ( MOMX(KS+1,i,j) - MOMX(KS  ,i,j) )
+             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF2 * CDZ(KE-1) * ( MOMX(KE  ,i,j) - MOMX(KE-1,i,j) )
           enddo
           enddo
 
@@ -899,13 +905,19 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-          do k = KS, KE-1
+          do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
                                          * ( CNDZ(1,k+1) * MOMY(k+2,i,j) &
                                            - CNDZ(2,k+1) * MOMY(k+1,i,j) &
                                            + CNDZ(3,k+1) * MOMY(k  ,i,j) &
                                            - CNDZ(1,k  ) * MOMY(k-1,i,j) )
           enddo
+          enddo
+          enddo
+          do j = JJS,   JJE
+          do i = IIS,   IIE
+             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF2 * CDZ(KS  ) * ( MOMY(KS+1,i,j) - MOMY(KS  ,i,j) )
+             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF2 * CDZ(KE-1) * ( MOMY(KE  ,i,j) - MOMY(KE-1,i,j) )
           enddo
           enddo
 
