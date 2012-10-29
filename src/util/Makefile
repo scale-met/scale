@@ -14,6 +14,8 @@ PRJ3 = check_diff
 PRJ4 = bin2txt
 PRJ5 = spddiff
 
+INCDIR = ../include/
+
 PRJS = $(PRJ1) $(PRJ2) $(PRJ3) $(PRJ4) $(PRJ5)
 
 MODS =	\
@@ -30,6 +32,7 @@ all: makedir makebin
 
 makedir:
 	mkdir -p ../../sbin/$(SCALE_SYS)
+	cp $(INCDIR)/inc_precision_real8.f90 ./inc_precision.h
 
 makebin: $(PRJS)
 	install $(PRJS) ../../sbin/$(SCALE_SYS)
@@ -68,7 +71,7 @@ prg_$(PRJ5).o	: prg_$(PRJ5).f90 mod_stdio.o mod_const.o mod_time.o mod_fileio_h.
 
 .SUFFIXES: .o .f90 .f .c
 .f90.o:
-	$(FRONT_F90) -DNO_MPIIO $(FRONT_FFLAGS) -o $@ -c $<
+	$(FRONT_F90) -DNO_MPIIO $(FRONT_FFLAGS) -I./ -o $@ -c $<
 
 .c.o:
 	$(FRONT_CC) -DNO_MPIIO $(FRONT_CFLAGS) -o $@ -c $<
@@ -79,4 +82,4 @@ prg_$(PRJ5).o	: prg_$(PRJ5).f90 mod_stdio.o mod_const.o mod_time.o mod_fileio_h.
 .PHONY: clean
 
 clean:
-	rm -f $(PRJS) *.mod *.o *.lst
+	rm -f $(PRJS) *.mod *.o *.lst ./inc_precision.h
