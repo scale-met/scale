@@ -8,7 +8,8 @@
 !!
 !! @par History: Hbinw
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
-!! @li  ver.0.01   2-12-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)               
+!! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)
+!! @li  ver.0.02   2012-10-18 (Y.Sato) [rev] extend to ice microphysics 
 !<
 !--------------------------------------------------------------------------------
 !      Reference:  -- Journals 
@@ -75,17 +76,23 @@ module mod_atmos_phy_mp
   !
   !--- Indeces
   integer, parameter :: il = 1
+  integer, parameter :: ic = 2
+  integer, parameter :: ip = 3
+  integer, parameter :: id = 4
+  integer, parameter :: iss = 5
+  integer, parameter :: ig = 6
+  integer, parameter :: ih = 7
 
   !--- bin information of hydrometeors
   real(RP) :: xctr( nbin )         !--- log( m ) value of bin center 
   real(RP) :: xbnd( nbin+1 )       !--- log( m ) value of bin boundary
   real(RP) :: radc( nbin )         !--- radius of hydrometeor at bin center [m]
   real(RP) :: dxmic                !--- d( log(m) ) of hydrometeor bin
-  real(RP) :: cctr( 7,nbin )       !--- capacitance of hydrometeor at bin center
-  real(RP) :: cbnd( 7,nbin+1 )     !--- capacitance of hydrometeor at bin boundary
-  real(RP) :: ck( 7,7,nbin,nbin )  !-- collection kernel
-  real(RP) :: vt( 7,nbin )         !--- terminal velocity of hydrometeor [m/s]
-  real(RP) :: br( 7,nbin )         !--- bulk density of hydrometeor [kg/m^3] 
+  real(RP) :: cctr( nspc,nbin )       !--- capacitance of hydrometeor at bin center
+  real(RP) :: cbnd( nspc,nbin+1 )     !--- capacitance of hydrometeor at bin boundary
+  real(RP) :: ck( nspc,nspc,nbin,nbin )  !-- collection kernel
+  real(RP) :: vt( nspc,nbin )         !--- terminal velocity of hydrometeor [m/s]
+  real(RP) :: br( nspc,nbin )         !--- bulk density of hydrometeor [kg/m^3] 
   !--- bin information of aerosol (not supported)
   real(RP) :: xactr( nccn )        !--- log( ma ) value of bin center
   real(RP) :: xabnd( nccn+1 )      !--- log( ma ) value of bin boundary
@@ -93,7 +100,8 @@ module mod_atmos_phy_mp
   real(RP) :: xasta
   real(RP) :: xaend
   real(RP) :: rada( nccn )
-  real(RP) :: sfc_precp
+  integer  :: ifrsl( nspc,nspc )
+  real(RP) :: sfc_precp( nspc ) 
   !--- constant for bin
   real(RP), parameter :: cldmin = 1.0E-10_RP, eps = 1.0E-30_RP
   real(RP), parameter :: OneovThird = 1.0_RP/3.0_RP, ThirdovForth = 3.0_RP/4.0_RP
@@ -126,9 +134,7 @@ module mod_atmos_phy_mp
   integer  :: mspc = 49
   integer  :: mbin = nbin/2
   real(RP), private :: rndm(1,1,1)
-  !--- for debug
-  real(RP) :: sumalldomain
-  !----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
@@ -142,8 +148,6 @@ contains
       CDZ => GRID_CDZ, &
       CZ  => GRID_CZ,  &
       FZ  => GRID_FZ
-    use mod_atmos_vars, only: &
-      ATMOS_PHY_MP_TYPE
     implicit none
     !---------------------------------------------------------------------------
 
@@ -157,7 +161,7 @@ contains
     logical :: ATMOS_PHY_MP_FLAG_SFAERO  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_MSPC  
-    integer :: ATMOS_PHY_MP_RNDM_MBIN 
+    integer :: ATMOS_PHY_MP_RNDM_MBIN
     logical :: ATMOS_PHY_MP_doautoconversion 
     logical :: ATMOS_PHY_MP_doprecipitation 
 
@@ -180,7 +184,6 @@ contains
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
 
- 
     ATMOS_PHY_MP_RHOA = rhoa
     ATMOS_PHY_MP_EMAER = emaer
     ATMOS_PHY_MP_RAMIN = rasta
@@ -197,12 +200,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
-
-    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'HBINW' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not HBINW. Check!'
-       call PRC_MPIstop
-    end if
+    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (mixed phase cloud)'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -249,7 +247,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
 
     ! capacity
-    do myu = 1, 7
+    do myu = 1, nspc
      do n = 1, nbin
       read( fid_micpara,* ) mmyu, nn, cctr( myu,n )
      end do
@@ -259,8 +257,8 @@ contains
     end do
 
     ! collection kernel 
-    do myu = 1, 7
-     do nyu = 1, 7
+    do myu = 1, nspc
+     do nyu = 1, nspc
       do i = 1, nbin
        do j = 1, nbin
         read( fid_micpara,* ) mmyu, nnyu, mm, nn, ck( myu,nyu,i,j )
@@ -270,14 +268,14 @@ contains
     enddo
 
     ! terminal velocity
-    do myu = 1, 7
+    do myu = 1, nspc
      do n = 1, nbin
       read( fid_micpara,* ) mmyu, nn, vt( myu,n )
      enddo
     enddo
 
     ! bulk density
-    do myu = 1, 7
+    do myu = 1, nspc
      do n = 1, nbin
       read( fid_micpara,* ) mmyu, nn, br( myu,n )
      enddo
@@ -329,6 +327,7 @@ contains
     if( rndm_flgp > 0 ) then
      call random_setup( IA*JA*KA )
     endif
+    sfc_precp( 1:nspc ) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_MP_setup
@@ -363,21 +362,23 @@ contains
     real(RP) :: dt
     real(RP) :: ct
 
+    real(RP) :: rho      (KA,IA,JA)
     real(RP) :: temp_mp  (KA,IA,JA)
     real(RP) :: pres_mp  (KA,IA,JA)
-    real(RP) :: gdgc     (KA,IA,JA,nbin) !-- SDF of hydrometeors [kg/m^3/unit ln(r)]
+    real(RP) :: gdgc     (KA,IA,JA,nspc,nbin) !-- SDF of hydrometeors [kg/m^3/unit ln(r)]
     real(RP) :: qv_mp    (KA,IA,JA)      !-- Qv [kg/kg]
     real(RP) :: wfall( KA )  
     real(RP) :: gdga     (KA,IA,JA,nccn) !-- SDF of aerosol (not supported)
     
-    real(RP) :: ssliq, ssice, sum1, rtotal, sum2
-    integer :: n, k, i, j, iq
+    real(RP) :: ssliq, ssice, sum1, rtotal, sum2, sum3( nspc )
+    integer :: m, n, k, i, j, iq, countbin
     logical, save :: ofirst_sdfa = .true.
 
     real(RP) :: VELX(IA,JA)
     real(RP) :: VELY(IA,JA)
     real(RP) :: SFLX_AERO(IA,JA,nccn)
     real(RP) :: Uabs, bparam
+    real(RP) :: tmp(KA)
     !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
@@ -410,7 +411,7 @@ call START_COLLECTION("MICROPHYSICS")
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWSEC
 
-    gdgc(:,:,:,:) = 0.0_RP
+    gdgc(:,:,:,:,:) = 0.0_RP
     gdga(:,:,:,:) = 0.0_RP
     pres_mp(:,:,:) = 0.0_RP
     temp_mp(:,:,:) = 0.0_RP
@@ -424,13 +425,17 @@ call START_COLLECTION("MICROPHYSICS")
           temp_mp(k,i,j) = &
                   pres_mp(k,i,j)/( DENS(k,i,j)*rtotal )
           qv_mp(k,i,j)   = QTRC(k,i,j,I_QV)
+          countbin = 1
+          do m = 1, nspc
           do n = 1, nbin
-           gdgc( k,i,j,n ) = &
-               QTRC(k,i,j,n+1)*DENS(k,i,j)/dxmic
+           gdgc( k,i,j,m,n ) = &
+               QTRC(k,i,j,countbin+1)*DENS(k,i,j)/dxmic
+           countbin = countbin + 1
+          end do
           end do
           do n = 1, nccn
            gdga( k,i,j,n ) = &
-               QTRC(k,i,j,n+nbin+1)*DENS(k,i,j)/dxaer
+               QTRC(k,i,j,n+nbin*nspc+1)*DENS(k,i,j)/dxaer
           end do
           !--- store initial SDF of aerosol 
           if( ofirst_sdfa ) then
@@ -452,13 +457,17 @@ call START_COLLECTION("MICROPHYSICS")
           temp_mp(k,i,j) = &
                   pres_mp(k,i,j)/( DENS(KS,i,j)*rtotal )
           qv_mp(k,i,j)   = QTRC(KS,i,j,I_QV)
+          countbin = 1
+          do m = 1, nspc
           do n = 1, nbin
-           gdgc( k,i,j,n ) = &
-                QTRC(KS,i,j,n+1)*DENS(KS,i,j)/dxmic
+           gdgc( k,i,j,m,n ) = &
+                QTRC(KS,i,j,countbin+1)*DENS(KS,i,j)/dxmic
+           countbin = countbin + 1
+          end do
           end do
           do n = 1, nccn
            gdga( k,i,j,n ) = &
-                QTRC(KS,i,j,n+nbin+1)*DENS(KS,i,j)/dxaer
+                QTRC(KS,i,j,n+nbin*nspc+1)*DENS(KS,i,j)/dxaer
           end do
        enddo
        do k = KE+1, KA
@@ -468,13 +477,17 @@ call START_COLLECTION("MICROPHYSICS")
           temp_mp( k,i,j ) = &
                   pres_mp(k,i,j)/( DENS(KE,i,j)*rtotal )
           qv_mp(k,i,j) = QTRC(KE,i,j,I_QV)
+          countbin = 1
+          do m = 1, nspc
           do n = 1, nbin
-           gdgc( k,i,j,n ) = &
-              QTRC(KE,i,j,n+1)*DENS(KE,i,j)/dxmic
+           gdgc( k,i,j,m,n ) = &
+              QTRC(KE,i,j,countbin+1)*DENS(KE,i,j)/dxmic
+           countbin = countbin + 1
+          end do
           end do
           do n = 1, nccn
            gdga( k,i,j,n ) = &
-              QTRC(KE,i,j,n+nbin+1)*DENS(KE,i,j)/dxaer
+              QTRC(KE,i,j,n+nbin*nspc+1)*DENS(KE,i,j)/dxaer
           end do
        enddo
     enddo
@@ -490,14 +503,16 @@ call START_COLLECTION("MICROPHYSICS")
         (  qv_mp(k,i,j), temp_mp(k,i,j), pres_mp(k,i,j), &
            ssliq, ssice )
       sum1 = 0.0_RP
+      do m = 1, nspc
       do n = 1, nbin
-        sum1 = sum1 + gdgc(k,i,j,n)*dxmic
+        sum1 = sum1 + gdgc(k,i,j,m,n)*dxmic
+      end do
       end do
 
       if( ssliq > 0.0_RP .or. ssice > 0.0_RP .or. sum1 > cldmin ) then
-       call mp_hbinw_evolve                    &
+       call mp_hbinf_evolve                    &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
-              gdgc(k,i,j,1:nbin),              &  !--- inout
+              gdgc(k,i,j,1:nspc,1:nbin),       &  !--- inout
               gdga(k,i,j,1:nccn),              &  !--- inout  for aerosol tracer
               qv_mp(k,i,j), temp_mp(k,i,j)     )  !--- inout
       end if
@@ -510,32 +525,41 @@ call START_COLLECTION("MICROPHYSICS")
     if( doprecipitation ) then
      do j = JS, JE
       do i = IS, IE
+       sum3( : ) = 0.0_RP
        sum1 = 0.0_RP
        do k = KS, KE
+        do m = 1, nspc
         do n = 1, nbin
-         sum1 = sum1 + gdgc(k,i,j,n)*dxmic
+         sum3( m ) = sum3( m ) + gdgc(k,i,j,m,n)*dxmic
+         sum1 = sum1 + gdgc(k,i,j,m,n)*dxmic
+        end do
         end do
        end do
        if( sum1 > cldmin ) then
-        do n = 1, nbin
-         wfall( 1:KA ) = -vt( il,n )
-         call  advec_1d             &
-              ( dz, dzh,            & !--- in
-                wfall,              & !--- in
-                dt,                 & !--- in
-                gdgc( 1:KA,i,j,n )  ) !--- inout
-         do k = KS, KE
-          if( gdgc(k,i,j,n) < cldmin ) then
-           gdgc(k,i,j,n) = max( gdgc(k,i,j,n),0.0_RP ) 
-          end if
+        countbin = 1
+        do m = 1, nspc
+        if( sum3( m ) > 0.0_RP ) then
+         do n = 1, nbin
+          wfall( 1:KA ) = -vt( m,n )
+          call  advec_1d             &
+               ( dz, dzh,            & !--- in
+                 wfall,              & !--- in
+                 dt, m,              & !--- in
+                 gdgc( 1:KA,i,j,m,n )  ) !--- inout
+!          do k = KS, KE
+!           if( gdgc(k,i,j,(m-1)*nbin+n) < 0.0_RP ) then
+!            gdgc(k,i,j,(m-1)*nbin+n) = max( gdgc(k,i,j,(m-1)*nbin+n),0.0_RP ) 
+!           end if
+!          end do
          end do
+        end if
         end do
        end if
       end do
      end do
     end if
 
-    !--- SURFACE FLUX by Monahan et al. (1986)
+    !--- SURFACE FLUX by Monahan et al. (1986) ---start---
     if( flg_sf_aero ) then
      do j = JS-1, JE
      do i = IS-1, IE
@@ -556,6 +580,7 @@ call START_COLLECTION("MICROPHYSICS")
      end do
      end do    
     end if
+    !--- SURFACE FLUX by Monahan et al. (1986) ---end---
 
     call TIME_rapstart('MPX ijkconvert')
     do j = JS, JE
@@ -564,14 +589,18 @@ call START_COLLECTION("MICROPHYSICS")
           RHOT(k,i,j) = temp_mp(k,i,j)* &
             ( CONST_PRE00/pres_mp(k,i,j) )**( CONST_RovCP )*DENS(k,i,j)
           QTRC(k,i,j,I_QV) = qv_mp(k,i,j)  
+          countbin = 1
+          do m = 1, nspc
           do n = 1, nbin
-            QTRC(k,i,j,n+1) = gdgc(k,i,j,n)/DENS(k,i,j)*dxmic
-            if( QTRC(k,i,j,n+1) <= eps ) then 
-              QTRC(k,i,j,n+1) = 0.0_RP
+            countbin = countbin+1
+            QTRC(k,i,j,countbin) = gdgc(k,i,j,m,n)/DENS(k,i,j)*dxmic
+            if( QTRC(k,i,j,countbin) <= eps ) then 
+              QTRC(k,i,j,countbin) = 0.0_RP
             end if
           end do
+          end do
           do n = 1, nccn
-            QTRC(k,i,j,n+1+nbin)=gdga(k,i,j,n)/DENS(k,i,j)*dxaer
+            QTRC(k,i,j,n+1+nbin*nspc)= gdga(k,i,j,n)/DENS(k,i,j)*dxaer
           end do
        enddo
      enddo
@@ -633,28 +662,43 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   end subroutine getsups
   !-----------------------------------------------------------------------------
-  subroutine mp_hbinw_evolve        &
+  subroutine mp_hbinf_evolve        &
       ( pres, dens,                 & !--- in
         dtime,                      & !--- in
         gc,                         & !--- inout
         ga,                         & !--- inout
         qvap, temp                  ) !--- inout
 
+  use mod_const, only: &
+     CONST_TEM00
   real(RP), intent(in) :: pres   !  pressure
-  real(RP), intent(in) :: dens   !  density of dry air
+  real(RP), intent(in) :: dens   !  density
   real(RP), intent(in) :: dtime  !  time interval
 
-  real(RP), intent(inout) :: gc( nbin )
+  real(RP), intent(inout) :: gc( nspc,nbin )
   real(RP), intent(inout) :: ga( nccn )  !--- aerosol SDF (not supported)
   real(RP), intent(inout) :: qvap  !  specific humidity
   real(RP), intent(inout) :: temp  !  temperature
-
   !
   !
   !--- nucleat
   call nucleat                  &
          ( dens, pres, dtime,   & !--- in
-           gc, ga, qvap, temp   ) !--- inout
+           gc(il,1:nbin), ga, qvap, temp )   !--- inout
+
+  !--- freezing / melting
+  if ( temp < CONST_TEM00 ) then
+    call freezing               &
+           ( dtime, dens,       & !--- in
+             gc, temp           ) !--- inout
+!    call ice_nucleat            &
+!           ( dtime, dens, pres, & !--- in
+!             gc, qvap, temp     ) !--- inout
+  else
+    call melting                &
+           ( dtime, dens,       & !--- in
+             gc, temp           ) !--- inout
+  end if
 
   !--- condensation / evaporation
   call cndevpsbl                &
@@ -663,15 +707,13 @@ call STOP_COLLECTION("MICROPHYSICS")
            gc, ga, qvap, temp   ) !--- inout
 
   !--- collision-coagulation
-  if( doautoconversion ) then
-   call  collmain               &
-          ( dtime,              & !--- in
+  call  collmain                &
+          ( temp, dtime,        & !--- in
             gc                  ) !--- inout
-  endif
 
   return
 
-  end subroutine mp_hbinw_evolve 
+  end subroutine mp_hbinf_evolve 
   !-----------------------------------------------------------------------------
   subroutine nucleat        &
       ( dens, pres, dtime,  & !--- in
@@ -780,6 +822,161 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   end subroutine nucleat
   !-----------------------------------------------------------------------------
+  subroutine ice_nucleat        &
+           ( dtime, dens, pres, & !--- in
+             gc, qvap, temp     ) !--- inout
+  !
+  use mod_const, only : rhow  => CONST_DWATR, &
+                        tmlt  => CONST_TMELT, &
+                        qlmlt => CONST_EMELT, &
+                        cp    => CONST_CPdry
+  !
+  real(RP), intent(in) :: dtime, dens, pres
+  real(RP), intent(inout) :: gc( nspc,nbin ), temp, qvap
+  !--- local variables
+  real(RP) :: ssliq, ssice
+  real(RP) :: numin, tdel, qdel
+  real(RP), parameter :: n0 = 1.E+3_RP
+  real(RP), parameter :: acoef = -0.639_RP, bcoef = 12.96_RP
+  real(RP), parameter :: tcolmu = 269.0_RP, tcolml = 265.0_RP
+  real(RP), parameter :: tdendu = 257.0_RP, tdendl = 255.0_RP
+  real(RP), parameter :: tplatu = 250.6_RP
+  !
+  !--- supersaturation
+  call  getsups               &
+          ( qvap, temp, pres, & !--- in
+            ssliq, ssice  )     !--- out
+
+  if( ssice <= 0.0_RP ) return
+ 
+  numin = bcoef * exp( acoef + bcoef * ssice )
+  numin = numin * exp( xctr( 1 ) )/dxmic
+  numin = min( numin,qvap*dens )
+  !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
+  if( temp <= tplatu .or. ( temp >= tcolml .and. temp < tcolmu ) ) then
+   gc( ic,1 ) = gc( ic,1 ) + numin 
+  !--- -14 [deg] > T >= -18 [deg] -> dendrite
+  elseif( temp <= tdendu .and. temp >= tdendl ) then
+   gc( id,1 ) = gc( id,1 ) + numin 
+  !--- else -> plate
+  else
+   gc( ip,1 ) = gc( ip,1 ) + numin
+  endif
+
+  tdel = numin/dens*qlmlt/cp
+  temp = temp + tdel
+  qdel = numin/dens
+  qvap = qvap - qdel
+
+  return
+  !
+  end subroutine ice_nucleat
+  !-----------------------------------------------------------------------------
+  subroutine  freezing       &
+      ( dtime, dens,  & !--- in
+        gc, temp  )            !--- inout
+  !
+  use mod_const, only : rhow  => CONST_DWATR,  &
+                        tmlt  => CONST_TMELT,  &
+                        qlmlt => CONST_EMELT, &
+                        cp    => CONST_CPdry
+  !
+  real(RP), intent(in) :: dtime, dens
+  real(RP), intent(inout) :: gc( nspc,nbin ), temp
+  !
+  !--- local variables
+  integer :: nbound, n
+  real(RP) :: xbound, tc, rate, dmp, frz, sumfrz, tdel
+  real(RP), parameter :: coefa = 1.0E-01_RP, coefb = 0.66_RP
+  real(RP), parameter :: rbound = 2.0E-04_RP, tthreth = 235.0_RP
+  real(RP), parameter :: ncoefim = 1.0E+7_RP, gamm = 3.3_RP
+  !
+  !
+!  if( temp <= tthreth ) then !--- Bigg (1975)
+   xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
+   nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
+ 
+   tc = temp-tmlt
+   rate = coefa*exp( -coefb*tc )
+
+   sumfrz = 0.0_RP
+   do n = 1, nbin
+     dmp = rate*exp( xctr( n ) )
+     frz = gc( il,n )*( 1.0_RP-exp( -dmp*dtime ) )
+ 
+     gc( il,n ) = gc( il,n ) - frz
+     gc( il,n ) = max( gc( il,n ),0.0_RP )
+ 
+     if ( n >= nbound ) then
+       gc( ih,n ) = gc( ih,n ) + frz
+     else
+       gc( ip,n ) = gc( ip,n ) + frz
+     end if
+
+     sumfrz = sumfrz + frz
+   end do
+!  elseif( temp > tthreth ) then !--- Vali (1975)
+!
+!   tc = temp-tmlt
+!   dmp = ncoefim * ( 0.1_RP * ( tmlt-temp )**gamm )
+!   sumfrz = 0.0_RP
+!   do n = 1, nbin
+!    frz = gc( (il-1)*nbin+n )*dmp*xctr( n )/dens
+!    frz = max( frz,gc( (il-1)*nbin+n )*dmp*xctr( n )/dens )
+!    gc( (il-1)*nbin+n ) = gc( (il-1)*nbin+n ) - frz
+!    if( n >= nbound ) then
+!     gc( (ih-1)*nbin+n ) = gc( (ih-1)*nbin+n ) + frz
+!    else
+!     gc( (ip-1)*nbin+n ) = gc( (ip-1)*nbin+n ) + frz
+!    end if
+!
+!    sumfrz = sumfrz + frz
+!   end do
+!  endif
+  sumfrz = sumfrz*dxmic
+
+  tdel = sumfrz/dens*qlmlt/cp
+  temp = temp + tdel
+  !
+  return
+  !
+  end subroutine freezing
+  !-----------------------------------------------------------------------------
+  subroutine  melting  &
+      ( dtime, dens,   & !--- in
+        gc, temp       ) !--- inout
+  !
+  use mod_const, only : qlmlt => CONST_EMELT, &
+                        cp    => CONST_CPdry
+  !
+  real(RP), intent(in) :: dtime, dens
+  !
+  real(RP), intent(inout) :: gc( nspc,nbin ), temp
+  !
+  !--- local variables
+  integer :: n, m
+  real(RP) :: summlt, sumice, tdel
+  !
+  !
+  summlt = 0.0_RP
+  do n = 1, nbin
+   sumice = 0.0_RP
+   do m = ic, ih
+    sumice = sumice + gc( m,n )
+    gc( m,n ) = 0.0_RP
+   end do
+   gc( il,n ) = gc( il,n ) + sumice
+   summlt = summlt + sumice
+  end do
+  summlt = summlt*dxmic
+
+  tdel = - summlt/dens*qlmlt/cp
+  temp = temp + tdel
+  !
+  return
+  !
+  end subroutine melting
+  !-----------------------------------------------------------------------------
   subroutine  cndevpsbl     &
       ( dtime,              & !--- in
         dens, pres,         & !--- in
@@ -788,14 +985,14 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: dens   !  atmospheric density [ kg/m3 ]
   real(RP), intent(in) :: pres   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin )  ! Size Distribution Function
+  real(RP), intent(inout) :: gc( nspc,nbin )  ! Size Distribution Function
   real(RP), intent(inout) :: ga( nccn )  !  SDF ( aerosol ) : mass
   real(RP), intent(inout) :: qvap    !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp    !  temperature [ K ]
   !
   !--- local variables
-  integer :: iflg( il ), n, iliq
-  real(RP) :: csum( il )
+  integer :: iflg( nspc ), n, iliq, iice
+  real(RP) :: csum( nspc )
   real(RP) :: regene_gcn
   !
   !
@@ -803,24 +1000,49 @@ call STOP_COLLECTION("MICROPHYSICS")
   csum( : ) = 0.0_RP
   regene_gcn = 0.0_RP
   do n = 1, nbin
-    csum( il ) = csum( il )+gc( n )*dxmic
+    csum( il ) = csum( il )+gc( il,n )*dxmic
+    csum( ic ) = csum( ic )+gc( ic,n )*dxmic
+    csum( ip ) = csum( ip )+gc( ip,n )*dxmic
+    csum( id ) = csum( id )+gc( id,n )*dxmic
+    csum( iss ) = csum( iss )+gc( iss,n )*dxmic
+    csum( ig ) = csum( ig )+gc( ig,n )*dxmic
+    csum( ih ) = csum( ih )+gc( ih,n )*dxmic
   end do
 
   if ( csum( il ) > cldmin ) iflg( il ) = 1
+  if ( csum( ic ) > cldmin ) iflg( ic ) = 1
+  if ( csum( ip ) > cldmin ) iflg( ip ) = 1
+  if ( csum( id ) > cldmin ) iflg( id ) = 1
+  if ( csum( iss ) > cldmin ) iflg( iss ) = 1
+  if ( csum( ig ) > cldmin ) iflg( ig ) = 1
+  if ( csum( ih ) > cldmin ) iflg( ih ) = 1
 
   iliq = iflg( il )
+  iice = iflg( ic ) + iflg( ip ) + iflg( id ) &
+       + iflg( iss ) + iflg( ig ) + iflg( ih )
 
   if ( iliq == 1 ) then
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
-                gc, qvap, temp, & !--- inout
+                gc(il,1:nbin), qvap, temp, & !--- inout
                 regene_gcn      ) !--- out
      !--- regeneration of aerosol
       if( flg_regeneration ) then
-       call faero( regene_gcn,  & !--- in
-                   ga           ) !--- inout
+       write(*,*) "regeneration is not supported in ice version"
+       write(*,*) "please set flg_regeneration = .false."
+       stop
       end if
+  elseif ( iliq == 0 .and. iice >= 1 ) then
+      call  icephase            &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
+  elseif ( iliq == 1 .and. iice >= 1 ) then
+      call  mixphase            &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
   end if
   !
   end subroutine cndevpsbl
@@ -871,9 +1093,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   nloop = int( dtime/dtcnd ) + 1
   dtcnd = dtime / nloop
   !
+  ncount = 0
   regene_gcn = 0.0_RP
   !------- loop
-  do ncount = 1, nloop
+  1000 continue
 
   !----- matrix for supersaturation tendency
   call  getsups                &
@@ -925,12 +1148,332 @@ call STOP_COLLECTION("MICROPHYSICS")
   gclold = gclnew
   !
   !----- continue/end
-  end do
+  ncount = ncount + 1
+  if ( ncount < nloop ) go to 1000
   !
   !------- number -> mass
   gc( 1:nbin ) = gcn( 1:nbin )*exp( xctr( 1:nbin ) )
   ! 
   end subroutine liqphase
+  !-------------------------------------------------------------------------------
+  subroutine icephase   &
+      ( dtime, iflg,    & !--- in
+        dens, pres,     & !--- in
+        gc, qvap, temp  ) !--- inout
+  !
+  use mod_const, only : rhow   => CONST_DWATR,  &
+                        qlevp  => CONST_LH0, &
+                        qlsbl  => CONST_LHS0, &
+                        rvap   => CONST_Rvap,  &
+                        cp     => CONST_CPdry
+  !
+  real(RP), intent(in) :: dtime
+  integer, intent(in) :: iflg( nspc )
+  real(RP), intent(in) :: dens, pres
+  real(RP), intent(inout) :: gc( nspc,nbin ), qvap, temp
+  !
+  !--- local variables
+  integer :: myu, n, nloop, ncount
+  real(RP) :: gciold, gtice, umax, uval, dtcnd
+  real(RP) :: sumice, cefice, d, sicetnd, gcinew, sblmss, ssliq, ssice
+  real(RP) :: gcn( nspc,nbin ), gdu( nbin+1 )
+  real(RP), parameter :: cflfct = 0.50_RP
+  real(RP) :: dumm_regene
+  !
+  !
+  !----- old mass
+  gciold = 0.0_RP
+  do n = 1, nbin
+  do myu = 2, nspc
+    gciold = gciold + gc( myu,n )
+  end do
+  end do
+  gciold = gciold*dxmic
+
+  !----- mass -> number 
+  do myu = 2, nspc
+    gcn( myu,1:nbin ) = gc( myu,1:nbin )/exp( xctr( 1:nbin ) )
+  end do
+
+  !----- CFL condition
+  call  getsups               &
+          ( qvap, temp, pres, & !--- in
+            ssliq, ssice )      !--- out  
+
+  gtice = gice( pres,temp )
+  umax = 0.0_RP
+  do myu = 2, nspc
+    uval = cbnd( myu,1 )/exp( xbnd( 1 ) )*gtice*abs( ssice )
+    umax = max( umax,uval )
+  end do
+
+  dtcnd = cflfct*dxmic/umax
+  nloop = int( dtime/dtcnd ) + 1
+  dtcnd = dtime/nloop
+
+!  ncount = 0
+  !----- loop
+!  1000 continue
+  do ncount = 1, nloop
+  !----- matrix for supersaturation tendency
+  call  getsups               &
+          ( qvap, temp, pres, & !--- in
+            ssliq, ssice )      !--- out
+
+  gtice = gice( pres,temp )
+
+  sumice = 0.0_RP
+  do n = 1, nbin
+    sumice = sumice + gcn( ic,n )*cctr( ic,n ) &
+                    + gcn( ip,n )*cctr( ip,n ) &
+                    + gcn( id,n )*cctr( id,n ) &
+                    + gcn( iss,n )*cctr( iss,n ) &
+                    + gcn( ig,n )*cctr( ig,n ) &
+                    + gcn( ih,n )*cctr( ih,n )
+  end do
+  sumice = sumice*dxmic
+  cefice = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl*qlsbl/cp/rvap/temp/temp )
+  d = - cefice*sumice*gtice/dens
+
+  !----- supersaturation tendency
+  if ( abs( d*dtcnd ) >= 0.10_RP ) then
+    sicetnd = ssice*( exp( d*dtcnd )-1.0_RP )/( d*dtcnd )
+  else
+    sicetnd = ssice
+  end if
+  !
+  !----- change of SDF
+  do myu = 2, nspc
+    if ( iflg( myu ) == 1 ) then
+      gdu( 1:nbin+1 ) = cbnd( myu,1:nbin+1 )/exp( xbnd( 1:nbin+1 ) )*gtice*sicetnd
+      call  advection                                    &
+              ( dtcnd, gdu( 1:nbin+1 ),                  & !--- in
+                gcn( myu,1:nbin ),                       & !--- inout
+                dumm_regene                              ) !--- out
+    end if
+  end do
+  !
+  !----- new mass
+  gcinew = 0.0_RP
+  do n = 1, nbin
+  do myu = 2, nspc
+    gcinew = gcinew + gcn( myu,n )*exp( xctr( n ) )
+  end do
+  end do
+  gcinew = gcinew * dxmic
+  !
+  !----- change of humidity and temperature
+  sblmss = gcinew - gciold
+  qvap = qvap - sblmss/dens
+  temp = temp + sblmss/dens*qlsbl/cp
+
+  gciold = gcinew
+
+  !
+  !----- continue / end
+  end do
+!  ncount = ncount + 1
+!  if ( ncount < nloop ) go to 1000
+  !
+  !------- number -> mass
+  do myu = 2, nspc
+    gc( myu,1:nbin ) = &
+                  gcn( myu,1:nbin )*exp( xctr( 1:nbin ) )
+  end do
+  !
+  end subroutine icephase
+  !-------------------------------------------------------------------------------
+  subroutine mixphase     &
+      ( dtime, iflg,      & !--- in
+        dens, pres,       & !--- in
+        gc, qvap, temp    )!--- inout 
+  !
+  use mod_const, only : rhow   => CONST_DWATR,  &
+                        qlevp  => CONST_LH0, &
+                        qlsbl  => CONST_LHS0, &
+                        rvap   => CONST_Rvap,  &
+                        cp     => CONST_CPdry
+  !
+  real(RP), intent(in) :: dtime
+  integer, intent(in) :: iflg( nspc )
+  real(RP), intent(in) :: dens, pres
+  !
+  real(RP), intent(inout) :: gc( nspc,nbin )
+  real(RP), intent(inout) :: qvap, temp
+  !
+  !--- local variables
+  integer :: n, myu, nloop, ncount
+  real(RP) :: gclold, gclnew, gciold, gcinew, cndmss, sblmss
+  real(RP) :: gtliq, gtice, umax, uval, dtcnd
+  real(RP) :: cef1, cef2, cef3, cef4, a, b, c, d
+  real(RP) :: rmdplus, rmdmins, ssplus, ssmins, tplus, tmins
+  real(RP) :: sliqtnd, sicetnd, ssliq, ssice, sumliq, sumice
+  real(RP) :: gcn( nspc,nbin ), gdu( nbin+1 )
+  real(RP), parameter :: cflfct = 0.50_RP
+  real(RP) :: dumm_regene
+  !
+  !
+  !----- old mass
+  gclold = 0.0_RP
+  do n = 1, nbin
+    gclold = gclold + gc( il,n )
+  end do
+  gclold = gclold*dxmic
+
+  gciold = 0.0_RP
+  do n = 1, nbin
+  do myu = 2, nspc
+    gciold = gciold + gc( myu,n )
+  end do
+  end do
+  gciold = gciold * dxmic
+
+  !----- mass -> number
+  do myu = 1, nspc
+    gcn( myu,1:nbin ) = &
+         gc( myu,1:nbin ) / exp( xctr( 1:nbin ) )
+  end do
+
+  !----- CFL condition
+  call  getsups                &
+          ( qvap, temp, pres,  & !--- in
+            ssliq, ssice )       !--- out
+
+  gtliq = gliq( pres,temp )
+  gtice = gice( pres,temp )
+
+  umax = cbnd( il,1 )/exp( xbnd( 1 ) )*gtliq*abs( ssliq )
+  do myu = 2, nspc
+    uval = cbnd( myu,1 )/exp( xbnd( 1 ) )*gtice*abs( ssice )
+    umax = max( umax,uval )
+  end do
+
+  dtcnd = cflfct*dxmic/umax
+  nloop = int( dtime/dtcnd ) + 1
+  dtcnd = dtime/nloop
+
+!  ncount = 0
+  !----- loop
+!  1000 continue
+  do ncount = 1, nloop
+
+  !-- matrix for supersaturation tendency
+  call  getsups               &
+          ( qvap, temp, pres, & !--- in
+            ssliq, ssice )      !--- out
+
+  gtliq = gliq( pres,temp )
+  gtice = gice( pres,temp )
+
+  sumliq = 0.0_RP
+  do n = 1, nbin
+    sumliq = sumliq + gcn( il,n )*cctr( il,n )
+  end do
+  sumliq = sumliq*dxmic
+
+  sumice = 0.0_RP
+  do n = 1, nbin
+    sumice = sumice + gcn( ic,n )*cctr( ic,n )  &
+                    + gcn( ip,n )*cctr( ip,n )  &
+                    + gcn( id,n )*cctr( id,n )  &
+                    + gcn( iss,n )*cctr( iss,n )  &
+                    + gcn( ig,n )*cctr( ig,n )  &
+                    + gcn( ih,n )*cctr( ih,n )
+  end do
+  sumice = sumice*dxmic
+
+  cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlevp/cp )
+  cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlsbl/cp )
+  cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlevp/cp )
+  cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlsbl/cp )
+
+  a = - cef1*sumliq*gtliq/dens
+  b = - cef2*sumice*gtice/dens
+  c = - cef3*sumliq*gtliq/dens
+  d = - cef4*sumice*gtice/dens
+
+  !--- eigenvalues
+  rmdplus = ( ( a+d ) + sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
+  rmdmins = ( ( a+d ) - sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
+
+  !--- supersaturation tendency
+  ssplus = ( ( rmdmins-a )*ssliq - b*ssice )/b/( rmdmins-rmdplus )
+  ssmins = ( ( a-rmdplus )*ssliq + b*ssice )/b/( rmdmins-rmdplus )
+
+  if ( abs( rmdplus*dtcnd ) >= 0.10_RP ) then
+    tplus = ( exp( rmdplus*dtcnd )-1.0_RP )/( rmdplus*dtcnd )
+  else
+    tplus = 1.0_RP
+  end if
+
+  if ( abs( rmdmins*dtcnd ) >= 0.10_RP ) then
+    tmins = ( exp( rmdmins*dtcnd )-1.0_RP )/( rmdmins*dtcnd )
+  else
+    tmins = 1.0_RP
+  end if
+
+  sliqtnd = b*tplus*ssplus + b*tmins*ssmins
+  sicetnd = ( rmdplus-a )*tplus*ssplus  &
+          + ( rmdmins-a )*tmins*ssmins
+
+  !--- change of SDF
+  !- liquid
+  if ( iflg( il ) == 1 ) then
+    gdu( 1:nbin+1 ) = cbnd( il,1:nbin+1 )/exp( xbnd( 1:nbin+1 ) )*gtliq*sliqtnd
+    call  advection                                  &
+            ( dtcnd, gdu( 1:nbin+1 ),                & !--- in
+              gcn( il,1:nbin ), & !--- inout
+              dumm_regene                            ) !--- out
+  end if
+
+  !- ice
+  do myu = 2, nspc
+    if ( iflg( myu ) == 1 ) then
+      gdu( 1:nbin+1 ) = cbnd( myu,1:nbin+1 )/exp( xbnd( 1:nbin+1 ) )*gtice*sicetnd
+      call  advection                                    &
+              ( dtcnd, gdu( 1:nbin+1 ),                  & !--- in
+                gcn( myu,1:nbin ), & !--- inout 
+                dumm_regene                              ) !--- out
+    end if
+  end do
+
+  !--- new mass
+  gclnew = 0.0_RP
+  do n = 1, nbin
+    gclnew = gclnew + gcn( il,n )*exp( xctr( n ) )
+  end do
+  gclnew = gclnew*dxmic
+
+  gcinew = 0.0_RP
+  do n = 1, nbin
+  do myu = 2, nspc
+    gcinew = gcinew + gcn( myu,n )*exp( xctr( n ) )
+  end do
+  end do
+  gcinew = gcinew*dxmic
+
+  !--- change of humidity and temperature
+  cndmss = gclnew - gclold
+  sblmss = gcinew - gciold
+
+  qvap = qvap - ( cndmss+sblmss )/dens
+  temp = temp + ( cndmss*qlevp+sblmss*qlsbl )/dens/cp
+
+  gclold = gclnew
+  gciold = gcinew
+
+  !--- continue/end
+  end do
+!  ncount = ncount + 1
+!  if ( ncount < nloop ) go to 1000
+
+  !----- number -> mass
+  do myu = 1, nspc
+    gc( myu,1:nbin ) = &
+         gcn( myu,1:nbin )*exp( xctr( 1:nbin ) )
+  end do
+
+  end subroutine mixphase
   !-------------------------------------------------------------------------------
   subroutine advection  &
        ( dtime,         & !--- in
@@ -1046,6 +1589,30 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   end function gliq
   !-------------------------------------------------------------------------------
+  function gice ( pres, temp )
+  !
+  use mod_const, only : rair  => CONST_Rdry,  &
+                        rvap  => CONST_Rvap,  &
+                        qlsbl => CONST_LHS0
+  !
+  real(RP), intent(in) :: pres, temp
+  real(RP) :: gice
+  !
+  real(RP) :: emu, dens, cefd, cefk, f1, f2
+  real(RP), parameter :: fct = 1.4E+3_RP
+  !
+  emu = fmyu( temp )
+  dens = pres/rair/temp
+  cefd = emu/dens
+  cefk = fct*emu
+
+  f1 = rvap*temp/fesati( temp )/cefd
+  f2 = qlsbl/cefk/temp*( qlsbl/rvap/temp - 1.0_RP )
+
+  gice = 4.0_RP*pi/( f1+f2 )
+
+  end function gice
+  !------------------------------------------------------------------------
   function fmyu( temp )
   !
   !
@@ -1092,58 +1659,82 @@ call STOP_COLLECTION("MICROPHYSICS")
   end function fesati
   !-------------------------------------------------------------------------------
  subroutine collmain &
-      ( dtime,       & !--- in
+      ( temp, dtime, & !--- in
         gc           ) !--- inout
 
   use mod_process, only: &
      PRC_MPIstop
   !
-  real(RP), intent(in) :: dtime
-  real(RP), intent(inout) :: gc( nbin )
+  real(RP), intent(in) :: dtime, temp
+  real(RP), intent(inout) :: gc( nspc,nbin )
   !
   !--- local variables
-  integer :: iflg( 1 ), n
-  real(RP) :: csum( 1 )
+  integer :: iflg( nspc ), n, irsl, ilrg, isml
+  real(RP) :: csum( nspc )
   real(RP), parameter :: tcrit = 271.15_RP
   !
   !--- judgement of particle existence
     iflg( : ) = 0
     csum( : ) = 0.0_RP
     do n = 1, nbin
-      csum( il ) = csum( il ) + gc( n )*dxmic
+      csum( il ) = csum( il ) + gc( il,n )*dxmic
+      csum( ic ) = csum( ic ) + gc( ic,n )*dxmic
+      csum( ip ) = csum( ip ) + gc( ip,n )*dxmic
+      csum( id ) = csum( id ) + gc( id,n )*dxmic
+      csum( iss ) = csum( iss ) + gc( iss,n )*dxmic
+      csum( ig ) = csum( ig ) + gc( ig,n )*dxmic
+      csum( ih ) = csum( ih ) + gc( ih,n )*dxmic
     end do
     if ( csum( il ) > cldmin ) iflg( il ) = 1
+    if ( csum( ic ) > cldmin ) iflg( ic ) = 1
+    if ( csum( ip ) > cldmin ) iflg( ip ) = 1
+    if ( csum( id ) > cldmin ) iflg( id ) = 1
+    if ( csum( iss ) > cldmin ) iflg( iss ) = 1
+    if ( csum( ig ) > cldmin ) iflg( ig ) = 1
+    if ( csum( ih ) > cldmin ) iflg( ih ) = 1
+  !
+  !--- rule of interaction
+    call  getrule    &
+            ( temp,  & !--- in
+              ifrsl  ) !--- out
   !
   !--- interaction
-   if ( iflg( il ) == 1 ) then
+  do isml = 1, nspc
+   if ( iflg( isml ) == 1 ) then
+    do ilrg = 1, nspc
+     if ( iflg( ilrg ) == 1 ) then
+      irsl = ifrsl( isml, ilrg )
       if ( rndm_flgp == 1 ) then  !--- stochastic method
-
-        call r_collcoag            &
-            ( dtime,  wgtbin,  & !--- in
-              gc               ) !--- inout
-
+        call r_collcoag         &
+            ( isml, ilrg, irsl, & !--- in
+              dtime,  wgtbin,   & !--- in
+              gc                ) !--- inout
       else  !--- default method
-
-        call  collcoag        &
-            ( dtime,      & !--- in
-              gc          ) !--- inout
+        call  collcoag          &
+            ( isml, ilrg, irsl, & !--- in
+              dtime,            & !--- in
+              gc                ) !--- inout
 
       end if
+     end if
+    end do
    end if
+  end do
   !
   !
   return
   !
   end subroutine collmain
   !-------------------------------------------------------------------------------
-  subroutine  collcoag( dtime,gc )
-  !-------------------------------------------------------------------------------
+  subroutine  collcoag( isml,ilrg,irsl,dtime,gc )
+  !------------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
-  !-------------------------------------------------------------------------------
+  !------------------------------------------------------------------------------
   !
+  integer,  intent(in) :: isml, ilrg, irsl
   real(RP), intent(in) :: dtime
-  real(RP), intent(inout) :: gc( nbin )
+  real(RP), intent(inout) :: gc( nspc,nbin )
   !
   !--- local variables
   integer :: i, j, k, l
@@ -1155,9 +1746,9 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP) :: suri, surj
   !
   small : do i = 1, nbin-1
-    if ( gc( i ) <= cldmin ) cycle small
+    if ( gc( isml,i ) <= cldmin ) cycle small
   large : do j = i+1, nbin
-    if ( gc( j ) <= cldmin ) cycle large
+    if ( gc( ilrg,j ) <= cldmin ) cycle large
 
     xi = exp( xctr( i ) )
     xj = exp( xctr( j ) )
@@ -1166,41 +1757,41 @@ call STOP_COLLECTION("MICROPHYSICS")
     k = max( max( k,j ),i )
     if ( k >= nbin ) cycle small
 
-    dmpi = ck( 1,1,i,j )*gc( j )/xj*dxmic*dtime
-    dmpj = ck( 1,1,i,j )*gc( i )/xi*dxmic*dtime
+    dmpi = ck( isml,ilrg,i,j )*gc( ilrg,j )/xj*dxmic*dtime
+    dmpj = ck( ilrg,isml,i,j )*gc( isml,i )/xi*dxmic*dtime
 
     if ( dmpi <= dmpmin ) then
-      frci = gc( i )*dmpi
+      frci = gc( isml,i )*dmpi
     else
-      frci = gc( i )*( 1.0_RP-exp( -dmpi ) )
+      frci = gc( isml,i )*( 1.0_RP-exp( -dmpi ) )
     end if
 
     if ( dmpj <= dmpmin ) then
-      frcj = gc( j )*dmpj
+      frcj = gc( ilrg,j )*dmpj
     else
-      frcj = gc( j )*( 1.0_RP-exp( -dmpj ) )
+      frcj = gc( ilrg,j )*( 1.0_RP-exp( -dmpj ) )
     end if
 
     gprime = frci+frcj
     if ( gprime <= 0.0_RP ) cycle large
 
-    suri = gc( i )
-    surj = gc( j )
-    gc( i ) = gc( i )-frci
-    gc( j ) = gc( j )-frcj
-    gc( i ) = max( gc( i )-frci, 0.0_RP )
-    gc( j ) = max( gc( j )-frcj, 0.0_RP )
-    frci = suri - gc( i )
-    frcj = surj - gc( j )
+    suri = gc( isml,i )
+    surj = gc( ilrg,j )
+    gc( isml,i ) = gc( isml,i )-frci
+    gc( ilrg,j ) = gc( ilrg,j )-frcj
+    gc( isml,i ) = max( gc( isml,i )-frci, 0.0_RP )
+    gc( ilrg,j ) = max( gc( ilrg,j )-frcj, 0.0_RP )
+    frci = suri - gc( isml,i )
+    frcj = surj - gc( ilrg,j )
     gprime = frci+frcj
 
-    gprimk = gc( k ) + gprime
+    gprimk = gc( irsl,k ) + gprime
     wgt = gprime / gprimk
     crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )
 
-    acoef( 0 ) = -( gc( k+1 )-26.0_RP*gprimk+gc( k-1 ) )/24.0_RP
-    acoef( 1 ) = ( gc( k+1 )-gc( k-1 ) ) *0.50_RP
-    acoef( 2 ) = ( gc( k+1 )-2.0_RP*gprimk+gc( k-1 ) ) *0.50_RP
+    acoef( 0 ) = -( gc( irsl,k+1 )-26.0_RP*gprimk+gc( irsl,k-1 ) )/24.0_RP
+    acoef( 1 ) =  ( gc( irsl,k+1 )-gc( irsl,k-1 ) ) *0.50_RP
+    acoef( 2 ) =  ( gc( irsl,k+1 )-2.0_RP*gprimk+gc( irsl,k-1 ) ) *0.50_RP
 
     sum = 0.0_RP
     do l = 0, ldeg
@@ -1211,8 +1802,8 @@ call STOP_COLLECTION("MICROPHYSICS")
     flux = wgt*sum
     flux = min( max( flux,0.0_RP ),gprime )
 
-    gc( k ) = gprimk - flux
-    gc( k+1 ) = gc( k+1 ) + flux
+    gc( irsl,k ) = gprimk - flux
+    gc( irsl,k+1 ) = gc( irsl,k+1 ) + flux
 
   end do large
   end do small
@@ -1224,12 +1815,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine  advec_1d     &
       ( delxa, delxb,      & !--- in
         gdu,               & !--- in
-        dtime,             & !--- in
+        dtime, spc,        & !--- in
         gdq              )   !--- inout
 
   real(RP), intent(in) :: delxa( KA ), delxb( KA )
   real(RP), intent(in) :: gdu( KA )
   real(RP), intent(in) :: dtime
+  integer, intent(in)  :: spc
   real(RP), intent(inout) :: gdq( KA )
 
   !--- local
@@ -1244,25 +1836,24 @@ call STOP_COLLECTION("MICROPHYSICS")
   !--- tracer flux
   !--- terminal velocity is always negative
   do i = KS, KE
-      dqr = ( gdq( i+1 )-gdq( i   ) )/delxb( i+1 )
-      dql = ( gdq( i   )-gdq( i-1 ) )/delxb( i )
+      dqr = ( gdq( i+1 )-gdq( i   ) )/delxb( i )
+      dql = ( gdq( i   )-gdq( i-1 ) )/delxb( i-1 )
       if ( dqr*dql > 0.0_RP ) then
         dq = 2.0_RP / ( 1.0_RP/dqr+1.0_RP/dql )
       else
         dq = 0.0_RP
       end if
-      qstar = gdq( i )-( delxa( i )+gdu( i )*dtime )*dq*0.50_RP
-      fq( i ) = qstar*gdu( i )
+      qstar = gdq( i )-( delxa( i )+gdu( i-1 )*dtime )*dq*0.50_RP
+      fq( i ) = qstar*gdu( i-1 )
   end do
 
   !--- change of concentration by flux convergence
   do i = KS, KE
     gdq( i ) = gdq( i ) - dtime/delxa( i )*( fq( i+1 )-fq( i ) )
     if( i == KS ) then
-     sfc_precp = dtime/delxa( i )*( -fq( i ) )
+     sfc_precp( spc ) = dtime/delxa( i )*( -fq( i ) )
     endif
   end do
-  !
   !
   return
 
@@ -1366,7 +1957,7 @@ call STOP_COLLECTION("MICROPHYSICS")
  
   end subroutine random_setup
  !-------------------------------------------------------------------------------
-  subroutine  r_collcoag( dtime, swgt, gc )
+  subroutine  r_collcoag( isml, ilrg, irsl, dtime, swgt, gc )
   !-------------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
@@ -1376,9 +1967,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   use mod_random, only: &
       RANDOM_get
 
+  integer,  intent(in) :: isml, ilrg, irsl
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: swgt
-  real(RP), intent(inout) :: gc( nbin )
+  real(RP), intent(inout) :: gc( nspc,nbin )
   !
   !--- local variables
   integer :: i, j, k, l
@@ -1407,8 +1999,8 @@ call STOP_COLLECTION("MICROPHYSICS")
     i = nums( s )
     j = numl( s )
 
-    if ( gc( i ) <= cmin ) cycle !small
-    if ( gc( j ) <= cmin ) cycle !large
+    if ( gc( isml,i ) <= cmin ) cycle !small
+    if ( gc( ilrg,j ) <= cmin ) cycle !large
 
     xi = exp( xctr( i ) )
     xj = exp( xctr( j ) )
@@ -1417,33 +2009,33 @@ call STOP_COLLECTION("MICROPHYSICS")
     k = max( max( k,j ),i )
     if( k>= nbin ) cycle
 
-    dmpi = ck( 1,1,i,j )*gc( j )/xj*dxmic*dtime
-    dmpj = ck( 1,1,i,j )*gc( i )/xi*dxmic*dtime
+    dmpi = ck( isml,ilrg,i,j )*gc( ilrg,j )/xj*dxmic*dtime
+    dmpj = ck( ilrg,isml,i,j )*gc( isml,i )/xi*dxmic*dtime
 
     if ( dmpi <= dmpmin ) then
-      frci = gc( i )*dmpi
+      frci = gc( isml,i )*dmpi
     else
-      frci = gc( i )*( 1.0_RP-exp( -dmpi ) )
+      frci = gc( isml,i )*( 1.0_RP-exp( -dmpi ) )
     end if
 
     if ( dmpj <= dmpmin ) then
-      frcj = gc( j )*dmpj
+      frcj = gc( ilrg,j )*dmpj
     else
-      frcj = gc( j )*( 1.0_RP-exp( -dmpj ) )
+      frcj = gc( ilrg,j )*( 1.0_RP-exp( -dmpj ) )
     end if
-    tmpi = gc( i )
-    tmpj = gc( j )
+    tmpi = gc( isml,i )
+    tmpj = gc( ilrg,j )
 
-    gc( i ) = gc( i )-frci*swgt
-    gc( j ) = gc( j )-frcj*swgt
+    gc( isml,i ) = gc( isml,i )-frci*swgt
+    gc( ilrg,j ) = gc( ilrg,j )-frcj*swgt
 
     if( j /= k ) then
-     gc( j ) = max( gc( j ), 0.0_RP )
+     gc( ilrg,j ) = max( gc( ilrg,j ), 0.0_RP )
     end if
-     gc( i ) = max( gc( i ), 0.0_RP )
+     gc( isml,i ) = max( gc( isml,i ), 0.0_RP )
 
-    frci = tmpi - gc( i )
-    frcj = tmpj - gc( j )
+    frci = tmpi - gc( isml,i )
+    frcj = tmpj - gc( ilrg,j )
 
     gprime = frci+frcj
 
@@ -1451,28 +2043,28 @@ call STOP_COLLECTION("MICROPHYSICS")
     !--- Exponential Flux Method (Bott, 2000, JAS)
     !-----------------------------------------------
 !    if ( gprime <= 0.0_RP ) cycle !large
-!    gprimk = gc( k ) + gprime
+!    gprimk = gc( (irsl-1)*nbin+k ) + gprime
 !
-!    beta = log( gc( k+1 )/gprimk+1.E-60_RP )
+!    beta = log( gc( (irsl-1)*nbin+k+1 )/gprimk+1.E-60_RP )
 !    crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )
 !
 !    flux = ( gprime/beta )*( exp( beta*0.50_RP ) -exp( beta*( 0.50_RP-crn ) ) )
 !    flux = min( gprimk ,gprime )
 !
-!    gc( k ) = gprimk - flux
-!    gc( k+1 ) = gc( k+1 ) + flux
+!    gc( (irsl-1)*nbin+k ) = gprimk - flux
+!    gc( (irsl-1)*nbin+k+1 ) = gc( (irsl-1)*nbin+k+1 ) + flux
 
     !-----------------------------------------------
     !--- Flux Method (Bott, 1998, JAS)
     !-----------------------------------------------
     if ( gprime <= 0.0_RP ) cycle !large
-    gprimk = gc( k ) + gprime
+    gprimk = gc( irsl,k ) + gprime
     wgt = gprime / gprimk
     crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )
 
-    acoef( 0 ) = -( gc( k+1 )-26.0_RP*gprimk+gc( k-1 ) )/24.0_RP
-    acoef( 1 ) = ( gc( k+1 )-gc( k-1 ) ) *0.5_RP
-    acoef( 2 ) = ( gc( k+1 )-2.0_RP*gprimk+gc( k-1 ) ) *0.50_RP
+    acoef( 0 ) = -( gc( irsl,k+1 )-26.0_RP*gprimk+gc( irsl,k-1 ) )/24.0_RP
+    acoef( 1 ) =  ( gc( irsl,k+1 )-gc( irsl,k-1 ) ) *0.5_RP
+    acoef( 2 ) =  ( gc( irsl,k+1 )-2.0_RP*gprimk+gc( irsl,k-1 ) ) *0.50_RP
 
     sum = 0.0_RP
     do l = 0, ldeg
@@ -1483,8 +2075,8 @@ call STOP_COLLECTION("MICROPHYSICS")
     flux = wgt*sum
     flux = min( max( flux,0.0_RP ),gprime )
 
-    gc( k ) = gprimk - flux
-    gc( k+1 ) = gc( k+1 ) + flux
+    gc( irsl,k ) = gprimk - flux
+    gc( irsl,k+1 ) = gc( irsl,k+1 ) + flux
 
    end do
 
@@ -1492,6 +2084,175 @@ call STOP_COLLECTION("MICROPHYSICS")
   return
   !
   end subroutine r_collcoag
+  !-------------------------------------------------------------------
+  subroutine  getrule   &
+      ( temp,           & !--- in
+        ifrsl           ) !--- out
+  !
+  real(RP), intent(in) :: temp
+  integer, intent(out) :: ifrsl( nspc,nspc )
+  !
+  real(RP), parameter :: tcrit = 271.15_RP
+  !
+  !--- liquid + liquid -> liquid
+  ifrsl( il,il ) = il
+  !
+  !--- liquid + column -> ( graupel, hail ) + column
+  ifrsl( il,ic ) = ic
+  if ( temp < tcrit ) then
+    ifrsl( ic,il ) = ig
+  else
+    ifrsl( ic,il ) = ih
+  end if
+  !
+  !--- liquid + plate -> ( graupel, hail ) + plate
+  ifrsl( il,ip ) = ip
+  if ( temp < tcrit ) then
+    ifrsl( ip,il ) = ig
+  else
+    ifrsl( ip,il ) = ih
+  end if
+  !
+  !--- liquid + dendrite -> ( graupel, hail ) + dendrite
+  ifrsl( il,id ) = id
+  if ( temp < tcrit ) then
+    ifrsl( id,il ) = ig
+  else
+    ifrsl( id,il ) = ih
+  end if
+  !
+  !--- liquid + snowflake -> ( graupel, hail ) + snowflake
+  ifrsl( il,iss ) = iss
+  if ( temp < tcrit ) then
+    ifrsl( iss,il ) = ig
+  else
+    ifrsl( iss,il ) = ih
+  end if
+  !
+  !--- liquid + graupel -> ( graupel, hail )
+  ifrsl( il,ig ) = ig
+  if ( temp < tcrit ) then
+    ifrsl( ig,il ) = ig
+  else
+    ifrsl( ig,il ) = ih
+  end if
+  !
+  !--- liquid + hail -> ( graupel, hail )
+  ifrsl( il,ih ) = ih
+  if ( temp < tcrit ) then
+    ifrsl( ih,il ) = ig
+  else
+    ifrsl( ih,il ) = ih
+  end if
+  !
+  !
+  !--- column + column -> snowflake
+  ifrsl( ic,ic ) = iss
+  !
+  !--- column + plate -> snowflake
+  ifrsl( ic,ip ) = iss
+  ifrsl( ip,ic ) = iss
+  !
+  !--- column + dendrite -> snowflake
+  ifrsl( ic,id ) = iss
+  ifrsl( id,ic ) = iss
+  !
+  !--- column + snowflake -> snowflake
+  ifrsl( ic,iss ) = iss
+  ifrsl( iss,ic ) = iss
+  !
+  !--- column + graupel -> column + graupel
+  ifrsl( ic,ig ) = ig
+  ifrsl( ig,ic ) = ic
+  !
+  !--- column + hail -> column + ( graupel, hail )
+  ifrsl( ih,ic ) = ic
+  if ( temp < tcrit ) then
+    ifrsl( ic,ih ) = ig
+  else
+    ifrsl( ic,ih ) = ih
+  end if
+  !
+  !
+  !--- plate + plate -> snowflake
+  ifrsl( ip,ip ) = iss
+  !
+  !--- plate + dendrite -> snowflake
+  ifrsl( ip,id ) = iss
+  ifrsl( id,ip ) = iss
+  !
+  !--- plate + snowflake -> snowflake
+  ifrsl( ip,iss ) = iss
+  ifrsl( iss,ip ) = iss
+  !
+  !--- plate + graupel -> plate + graupel
+  ifrsl( ip,ig ) = ig
+  ifrsl( ig,ip ) = ip
+  !
+  !--- plate + hail -> plate + ( graupel, hail )
+  ifrsl( ih,ip ) = ip
+  if ( temp < tcrit ) then
+    ifrsl( ip,ih ) = ig
+  else
+    ifrsl( ip,ih ) = ih
+  end if
+  !
+  !
+  !--- dendrite + dendrite -> snowflake
+  ifrsl( id,id ) = iss
+  !
+  !--- dendrite + snowflake -> snowflake
+  ifrsl( id,iss ) = iss
+  ifrsl( iss,id ) = iss
+  !
+  !--- dendrite + graupel -> dendrite + graupel
+  ifrsl( id,ig ) = ig
+  ifrsl( ig,id ) = id
+  !
+  !--- dendrite + hail -> dendrite + ( graupel, hail )
+  ifrsl( ih,id ) = id
+  if ( temp < tcrit ) then
+    ifrsl( id,ih ) = ig
+  else
+    ifrsl( id,ih ) = ih
+  end if
+  !
+  !
+  !--- snowflake + snowflake -> snowflake
+  ifrsl( iss,iss ) = iss
+  !
+  !--- snowflake + graupel -> snowflake + graupel
+  ifrsl( iss,ig ) = ig
+  ifrsl( ig,iss ) = iss
+  !
+  !--- snowflake + hail -> snowflake + ( graupel, hail )
+  ifrsl( ih,iss ) = iss
+  if ( temp < tcrit ) then
+    ifrsl( iss,ih ) = ig
+  else
+    ifrsl( iss,ih ) = ih
+  end if
+  !
+  !
+  !--- graupel + graupel -> graupel
+  ifrsl( ig,ig ) = ig
+  !
+  !--- graupel + hail -> ( graupel, hail )
+  if ( temp < tcrit ) then
+    ifrsl( ig,ih ) = ig
+    ifrsl( ih,ig ) = ig
+  else
+    ifrsl( ig,ih ) = ih
+    ifrsl( ih,ig ) = ih
+  end if
+  !
+  !--- hail + hail -> hail
+  ifrsl( ih,ih ) = ih
+  !
+  !
+  return
+  !
+  end subroutine getrule
  !-------------------------------------------------------------------------------
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------
