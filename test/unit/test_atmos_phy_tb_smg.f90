@@ -49,6 +49,8 @@ contains
   !
   !++ used modules
   !
+  use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_TB
   use mod_atmos_phy_tb, only: &
      ATMOS_PHY_TB_setup
   use mod_grid, only: &
@@ -64,6 +66,7 @@ contains
 
 
   !########## Initial setup ##########
+  ATMOS_TYPE_PHY_TB = 'SMAGORINSKY'
   call ATMOS_PHY_TB_setup
 
   ZERO(:,:,:) = 0.0_RP

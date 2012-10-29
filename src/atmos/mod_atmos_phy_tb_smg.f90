@@ -1157,7 +1157,10 @@ contains
        do i = IIS-1, IIE
 #ifdef DEBUG
        call CHECK( __LINE__, S31_Z(KS,i,j) )
-       call CHECK( __LINE__, WORK_V(KS,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KS  ,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KS  ,i,j+1) )
        call CHECK( __LINE__, RCDZ(KS) )
 #endif
           S31_Z(KS,i,j) = S31_Z(KS,i,j) + &
@@ -1172,8 +1175,11 @@ contains
        do i = IIS-1, IIE
 #ifdef DEBUG
        call CHECK( __LINE__, S31_Z(KE,i,j) )
-       call CHECK( __LINE__, WORK_V(KE-1,i,j) )
-       call CHECK( __LINE__, RCDZ(KE) )
+       call CHECK( __LINE__, VELX_YZ(KE  ,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KE  ,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j+1) )
+       call CHECK( __LINE__, RFDZ(KE) )
 #endif
           S31_Z(KE,i,j) = S31_Z(KE,i,j) + &
                0.25_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i,j+1) &
