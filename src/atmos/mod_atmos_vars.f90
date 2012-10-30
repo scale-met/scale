@@ -59,6 +59,13 @@ module mod_atmos_vars
   real(RP), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
   real(RP), public, save :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
 
+  real(RP), public, save :: DENS_av(KA,IA,JA)
+  real(RP), public, save :: MOMZ_av(KA,IA,JA)
+  real(RP), public, save :: MOMX_av(KA,IA,JA)
+  real(RP), public, save :: MOMY_av(KA,IA,JA)
+  real(RP), public, save :: RHOT_av(KA,IA,JA)
+  real(RP), public, save :: QTRC_av(KA,IA,JA,QA)
+
   ! diagnostic variables, defined at the cell center
   real(RP), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
   real(RP), public, save :: VELX(KA,IA,JA)    ! velocity u [m/s]
@@ -102,6 +109,8 @@ module mod_atmos_vars
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
+
+  logical,                   public, save :: ATMOS_USE_AVERAGE = .false.
 
   logical,                   public, save :: ATMOS_sw_dyn
   logical,                   public, save :: ATMOS_sw_phy_sf
@@ -180,7 +189,8 @@ contains
        ATMOS_TYPE_PHY_SF, &
        ATMOS_TYPE_PHY_TB, &
        ATMOS_TYPE_PHY_MP, &
-       ATMOS_TYPE_PHY_RD
+       ATMOS_TYPE_PHY_RD, &
+       ATMOS_USE_AVERAGE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &

@@ -238,7 +238,13 @@ contains
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC
+       QTRC, &
+       DENS_av, &
+       MOMZ_av, &
+       MOMX_av, &
+       MOMY_av, &
+       RHOT_av, &
+       QTRC_av
     implicit none
 
     ! tendency
@@ -261,7 +267,7 @@ contains
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      & ! (in)  diagnostic variables
+       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
        )
 
     do JJS = JS, JE, JBLOCK
@@ -379,7 +385,7 @@ contains
   subroutine ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu_C, Ri, Pr,                      & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)  diagnostic variables
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
