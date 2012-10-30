@@ -63,6 +63,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_RD
     implicit none
 
     real(RP) :: ATMOS_RD_F0
@@ -84,6 +86,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ DYCOMS-II Parametarized Radiative heating'
+
+    if ( trim(ATMOS_TYPE_PHY_RD) .ne. 'DYCOMSII' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not DYCOMSII. Check!'
+       call PRC_MPIstop
+    end if
+
 
     !--- read namelist
     rewind(IO_FID_CONF)

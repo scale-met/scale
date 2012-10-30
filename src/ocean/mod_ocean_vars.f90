@@ -58,9 +58,9 @@ module mod_ocean_vars
   data OP_DESC / 'sea surface temp.' /
   data OP_UNIT / 'K' /
 
-  character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE    = 'NONE'
+  character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE    = 'OFF'
 
-  logical,                   public, save :: OCEAN_sw_sf
+  logical,                   public, save :: OCEAN_sw_sst
   logical,                   public, save :: OCEAN_sw_restart
 
   !-----------------------------------------------------------------------------
@@ -89,6 +89,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only: &
+       CONST_Tstd
     implicit none
 
     NAMELIST / PARAM_OCEAN / &
@@ -124,10 +126,10 @@ contains
 
     if ( OCEAN_TYPE .ne. 'OFF' .and. OCEAN_TYPE .ne. 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : ON'
-       OCEAN_sw_sf = .true.
+       OCEAN_sw_sst = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : OFF'
-       OCEAN_sw_sf = .false.
+       OCEAN_sw_sst = .false.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -160,6 +162,8 @@ contains
        OCEAN_sw_restart = .false.
     endif
     if( IO_L ) write(IO_FID_LOG,*)
+
+    SST(1,:,:) = CONST_Tstd
 
     return
   end subroutine OCEAN_vars_setup

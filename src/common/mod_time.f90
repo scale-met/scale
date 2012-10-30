@@ -50,7 +50,8 @@ module mod_time
   real(DP), public, save :: TIME_DTSEC                !< time interval of model       [sec]
 
   real(DP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
-  integer, public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
+  integer,  public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_SF   !< time interval of surface flux [sec]
   real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence   [sec]
   real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics [sec]
   real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
@@ -67,6 +68,7 @@ module mod_time
 
   logical, public, save :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical, public, save :: TIME_DOATMOS_DYN          !< execute dynamics?
+  logical, public, save :: TIME_DOATMOS_PHY_SF       !< execute physics(surface flux)?
   logical, public, save :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
   logical, public, save :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
   logical, public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
@@ -85,17 +87,18 @@ module mod_time
   !
   !++ Private parameters & variables
   !
-  integer, private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
+  integer,  private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
   real(DP), private,      save :: TIME_STARTMS      = 0.0_DP                           !< [millisec]
   real(DP), private,      save :: TIME_STARTSECL
 
-  integer, private,      save :: TIME_ENDDATE(6)
+  integer,  private,      save :: TIME_ENDDATE(6)
   real(DP), private,      save :: TIME_ENDMS
   real(DP), private,      save :: TIME_ENDSECL
 
-  integer, private,      save :: TIME_NSTEP
+  integer,  private,      save :: TIME_NSTEP
 
   real(DP), private,      save :: TIME_RES_ATMOS_DYN     = 0.0_DP
+  real(DP), private,      save :: TIME_RES_ATMOS_PHY_SF  = 0.E0_DP
   real(DP), private,      save :: TIME_RES_ATMOS_PHY_TB  = 0.E0_DP
   real(DP), private,      save :: TIME_RES_ATMOS_PHY_MP  = 0.E0_DP
   real(DP), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.E0_DP
@@ -132,23 +135,25 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(DP)                  :: TIME_DURATION              = 60.0E0_DP
+    real(DP)                 :: TIME_DURATION              = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "MIN"
-    real(DP)                  :: TIME_DT                    =  0.6E0_DP
+    real(DP)                 :: TIME_DT                    =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
-    real(DP)                  :: TIME_DT_ATMOS_DYN          =  0.03E0_DP
+    real(DP)                 :: TIME_DT_ATMOS_DYN          =  0.03E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(DP)                  :: TIME_DT_ATMOS_PHY_TB       =  0.6E0_DP
+    real(DP)                 :: TIME_DT_ATMOS_PHY_SF       =  0.6E0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_TB       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC"
-    real(DP)                  :: TIME_DT_ATMOS_PHY_MP       =  0.6E0_DP
+    real(DP)                 :: TIME_DT_ATMOS_PHY_MP       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC"
-    real(DP)                  :: TIME_DT_ATMOS_PHY_RD       =  0.6E0_DP
+    real(DP)                 :: TIME_DT_ATMOS_PHY_RD       =  0.6E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC"
-    real(DP)                  :: TIME_DT_ATMOS_RESTART      = 60.0E0_DP
+    real(DP)                 :: TIME_DT_ATMOS_RESTART      = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "SEC"
-    real(DP)                  :: TIME_DT_OCEAN              = 60.0E0_DP
+    real(DP)                 :: TIME_DT_OCEAN              = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "MIN"
-    real(DP)                  :: TIME_DT_OCEAN_RESTART      = 60.0E0_DP
+    real(DP)                 :: TIME_DT_OCEAN_RESTART      = 60.0E0_DP
     character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "SEC"
 
     NAMELIST / PARAM_TIME / &
@@ -160,7 +165,8 @@ contains
        TIME_DT_UNIT,               &
        TIME_DT_ATMOS_DYN,          &
        TIME_DT_ATMOS_DYN_UNIT,     &
-       TIME_NSTEP_ATMOS_DYN,       &
+       TIME_DT_ATMOS_PHY_SF,       &
+       TIME_DT_ATMOS_PHY_SF_UNIT,  &
        TIME_DT_ATMOS_PHY_TB,       &
        TIME_DT_ATMOS_PHY_TB_UNIT,  &
        TIME_DT_ATMOS_PHY_MP,       &
@@ -236,6 +242,7 @@ contains
 
     !--- calculate intervals for atmosphere
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
+    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
     call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
@@ -243,7 +250,10 @@ contains
     call TIME_ymdhms2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
     call TIME_ymdhms2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
 
+    TIME_NSTEP_ATMOS_DYN = int ( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN )
+
     TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
+    TIME_DTSEC_ATMOS_PHY_SF  = max( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_PHY_MP  = max( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -255,6 +265,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)                  :', TIME_DTSEC_ATMOS_DYN
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)                  :', TIME_NSTEP_ATMOS_DYN
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Surface Flux            :', TIME_DTSEC_ATMOS_PHY_SF
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence              :', TIME_DTSEC_ATMOS_PHY_TB
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics      :', TIME_DTSEC_ATMOS_PHY_MP
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation               :', TIME_DTSEC_ATMOS_PHY_RD
@@ -276,12 +287,14 @@ contains
 
     TIME_DOATMOS_step   = .false.
     TIME_DOATMOS_DYN    = .false.
+    TIME_DOATMOS_PHY_SF = .false.
     TIME_DOATMOS_PHY_TB = .false.
     TIME_DOATMOS_PHY_MP = .false.
     TIME_DOATMOS_PHY_RD = .false.
     TIME_DOOCEAN_step   = .false.
 
     TIME_RES_ATMOS_DYN     = TIME_RES_ATMOS_DYN     + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_SF  = TIME_RES_ATMOS_PHY_SF  + TIME_DTSEC
     TIME_RES_ATMOS_PHY_TB  = TIME_RES_ATMOS_PHY_TB  + TIME_DTSEC
     TIME_RES_ATMOS_PHY_MP  = TIME_RES_ATMOS_PHY_MP  + TIME_DTSEC
     TIME_RES_ATMOS_PHY_RD  = TIME_RES_ATMOS_PHY_RD  + TIME_DTSEC
@@ -291,6 +304,11 @@ contains
        TIME_DOATMOS_step  = .true.
        TIME_DOATMOS_DYN   = .true.
        TIME_RES_ATMOS_DYN = TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN
+    endif
+    if ( TIME_RES_ATMOS_PHY_SF - TIME_DTSEC_ATMOS_PHY_SF > -eps ) then
+       TIME_DOATMOS_step     = .true.
+       TIME_DOATMOS_PHY_SF   = .true.
+       TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF - TIME_DTSEC_ATMOS_PHY_SF
     endif
     if ( TIME_RES_ATMOS_PHY_TB - TIME_DTSEC_ATMOS_PHY_TB > -eps ) then
        TIME_DOATMOS_step     = .true.

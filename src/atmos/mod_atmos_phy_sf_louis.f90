@@ -57,15 +57,15 @@ module mod_atmos_phy_sf
   real(RP), private, parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
 
   ! parameters
-  real(RP), private, save :: Z00 =   0.0_RP      ! base
-  real(RP), private, save :: Z0R = 0.018_RP      ! rough factor
-  real(RP), private, save :: Z0S =  0.11_RP      ! smooth factor
-  real(RP), private, save :: Zt0 =   1.4E-5_RP
-  real(RP), private, save :: ZtR =   0.0_RP
-  real(RP), private, save :: ZtS =   0.4_RP
-  real(RP), private, save :: Ze0 =   1.3E-4_RP
-  real(RP), private, save :: ZeR =   0.0_RP
-  real(RP), private, save :: ZeS =  0.62_RP
+  real(RP), private, save :: Z00 = 0.0_RP      ! base
+  real(RP), private, save :: Z0R = 0.018_RP    ! rough factor
+  real(RP), private, save :: Z0S = 0.11_RP     ! smooth factor
+  real(RP), private, save :: Zt0 = 1.4E-5_RP
+  real(RP), private, save :: ZtR = 0.0_RP
+  real(RP), private, save :: ZtS = 0.4_RP
+  real(RP), private, save :: Ze0 = 1.3E-4_RP
+  real(RP), private, save :: ZeR = 0.0_RP
+  real(RP), private, save :: ZeS = 0.62_RP
   real(RP), private, save :: ThS = 300.0_RP
 
   ! limiter
@@ -100,6 +100,25 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_SF
+    use mod_grid, only: &
+       CZ => GRID_CZ
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+    use mod_ocean_vars, only: &
+       SST
+    use mod_atmos_vars_sf, only: &
+       SFLX_MOMZ, &
+       SFLX_MOMX, &
+       SFLX_MOMY, &
+       SFLX_POTT, &
+       SFLX_QV
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -158,7 +177,13 @@ contains
     ATMOS_PHY_SF_ThS    = ThS
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Louis parameterization'
+
+    if ( trim(ATMOS_TYPE_PHY_SF) .ne. 'LOUIS' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not LOUIS. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -189,32 +214,24 @@ contains
     ZeS    = ATMOS_PHY_SF_ZeS
     ThS    = ATMOS_PHY_SF_ThS
 
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+         CZ                                                   ) ! (in)
+
     return
   end subroutine ATMOS_PHY_SF_setup
 
-  !-----------------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
-       KARMAN => CONST_KARMAN, &
-       Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
-       Rvap   => CONST_Rvap,   &
-       RovCP  => CONST_RovCP,  &
-       CPovCV => CONST_CPovCV, &
-       P00    => CONST_PRE00,  &
-       T00    => CONST_TEM00,  &
-       LH0    => CONST_LH0,    &
-       EPSvap => CONST_EPSvap, &
-       PSAT0  => CONST_PSAT0
+       CPdry  => CONST_CPdry, &
+       LH0    => CONST_LH0
     use mod_time, only: &
-       dttb => TIME_DTSEC_ATMOS_PHY_TB
-    use mod_grid, only : &
-       CZ  => GRID_CZ
+       dtsf => TIME_DTSEC_ATMOS_PHY_SF
     use mod_history, only: &
        HIST_in
+    use mod_grid, only: &
+       CZ => GRID_CZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -235,6 +252,61 @@ contains
     ! monitor
     real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
     real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
+
+    integer :: i, j
+
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+         CZ                                                   ) ! (in)
+
+    do j = JS, JE
+    do i = IS, IE
+       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
+    enddo
+    enddo
+
+    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dtsf )
+    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dtsf )
+
+  end subroutine ATMOS_PHY_SF
+  !-----------------------------------------------------------------------------
+  ! calclate surface flux
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+         CZ                                                   ) ! (in)
+    use mod_const, only : &
+       GRAV   => CONST_GRAV,   &
+       KARMAN => CONST_KARMAN, &
+       Rdry   => CONST_Rdry,   &
+       Rvap   => CONST_Rvap,   &
+       RovCP  => CONST_RovCP,  &
+       CPovCV => CONST_CPovCV, &
+       P00    => CONST_PRE00,  &
+       T00    => CONST_TEM00,  &
+       LH0    => CONST_LH0,    &
+       EPSvap => CONST_EPSvap, &
+       PSAT0  => CONST_PSAT0
+    implicit none
+
+    real(RP), intent(out) :: SFLX_MOMZ(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMX(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMY(IA,JA)
+    real(RP), intent(out) :: SFLX_POTT(IA,JA)
+    real(RP), intent(out) :: SFLX_QV  (IA,JA)
+
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)
+    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: SST (1,IA,JA)
+
+    real(RP), intent(in)  :: CZ(KA)
 
     real(RP) :: FB  = 9.4_RP  ! Louis factor b (bM)
     real(RP) :: FBS = 4.7_RP  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
@@ -389,18 +461,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
-    enddo
-    enddo
-
-    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dttb )
-    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dttb )
-
     return
-  end subroutine ATMOS_PHY_SF
+  end subroutine ATMOS_PHY_SF_main
 
 
   subroutine get_RiB( &

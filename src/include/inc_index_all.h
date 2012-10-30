@@ -16,6 +16,3 @@
   integer, private, parameter :: IJA  = IMAX*JMAX ! # merged inner region(tentative usage)
   integer, private, parameter :: IJS  = 1   !
   integer, private, parameter :: IJE  = IJA !
-
-  integer, private, parameter :: IBLOCK = 8 !
-  integer, private, parameter :: JBLOCK = 2 !

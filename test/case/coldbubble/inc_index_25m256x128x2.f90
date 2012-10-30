@@ -16,4 +16,7 @@
   integer, private, parameter :: IMAX = 128 ! # of computational cells: x
   integer, private, parameter :: JMAX =   2 ! # of computational cells: y
 
+  integer, private, parameter :: IBLOCK = IMAX !
+  integer, private, parameter :: JBLOCK = JMAX !
+
   include 'inc_index_all.h'

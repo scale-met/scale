@@ -64,6 +64,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_MP
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -75,6 +77,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type parametarization'
+
+    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'KESSLER' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)

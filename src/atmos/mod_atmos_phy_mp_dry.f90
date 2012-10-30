@@ -57,6 +57,10 @@ contains
   subroutine ATMOS_PHY_MP_setup
     use mod_stdio, only: &
        IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_MP
     implicit none
 
     !---------------------------------------------------------------------------
@@ -64,6 +68,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
+
+    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'DRY' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not DRY. Check!'
+       call PRC_MPIstop
+    end if
 
     return
   end subroutine ATMOS_PHY_MP_setup

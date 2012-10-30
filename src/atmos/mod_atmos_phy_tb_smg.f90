@@ -13,6 +13,7 @@
 !! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
 !! @li      2012-03-27 (H.Yashiro)   [mod] reconstruction
 !! @li      2012-07-02 (S.Nishizawa) [mod] reconstruction with Brown et al. (1994)
+!! @li      2012-10-26 (S.Nishizawa) [mod] remove surface flux
 !!
 !! - Reference
 !!  - Brown et al., 1994:
@@ -111,6 +112,10 @@ contains
        FDZ => GRID_FDZ, &
        FDX => GRID_FDX, &
        FDY => GRID_FDY
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_TB
     implicit none
 
     integer :: k, i, j
@@ -119,6 +124,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
+
+    if ( trim(ATMOS_TYPE_PHY_TB) .ne. 'SMAGORINSKY' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
+       call PRC_MPIstop
+    end if
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
@@ -229,12 +239,6 @@ contains
        MOMY, &
        RHOT, &
        QTRC
-    use mod_atmos_vars_sf, only: &
-       SFLX_MOMZ, &
-       SFLX_MOMX, &
-       SFLX_MOMY, &
-       SFLX_POTT, &
-       SFLX_QV
     implicit none
 
     ! tendency
@@ -257,8 +261,7 @@ contains
     call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)  diagnostic variables
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in) surface flux
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      & ! (in)  diagnostic variables
        )
 
     do JJS = JS, JE, JBLOCK
@@ -376,9 +379,7 @@ contains
   subroutine ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
        tke, nu_C, Ri, Pr,                      & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)  diagnostic variables
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in) surface flux
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)  diagnostic variables
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
@@ -411,13 +412,6 @@ contains
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-
-    real(RP), intent(in)  :: SFLX_MOMZ(IA,JA)
-    real(RP), intent(in)  :: SFLX_MOMX(IA,JA)
-    real(RP), intent(in)  :: SFLX_MOMY(IA,JA)
-    real(RP), intent(in)  :: SFLX_POTT(IA,JA)
-    real(RP), intent(in)  :: SFLX_QV  (IA,JA)
-
 
     ! diagnostic variables
     real(RP) :: VELZ_C (KA,IA,JA)
@@ -1163,11 +1157,15 @@ contains
        do i = IIS-1, IIE
 #ifdef DEBUG
        call CHECK( __LINE__, S31_Z(KS,i,j) )
-       call CHECK( __LINE__, WORK_V(KS,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KS  ,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KS  ,i,j+1) )
        call CHECK( __LINE__, RCDZ(KS) )
 #endif
           S31_Z(KS,i,j) = S31_Z(KS,i,j) + &
-               0.5_RP * WORK_V(KS,i,j) * RCDZ(KS) ! WORK_V(KS-1,i,j) == 0
+               0.25_RP * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i,j+1) &
+                         - VELX_YZ(KS  ,i,j) - VELX_YZ(KS  ,i,j+1) ) * RFDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -1177,11 +1175,15 @@ contains
        do i = IIS-1, IIE
 #ifdef DEBUG
        call CHECK( __LINE__, S31_Z(KE,i,j) )
-       call CHECK( __LINE__, WORK_V(KE-1,i,j) )
-       call CHECK( __LINE__, RCDZ(KE) )
+       call CHECK( __LINE__, VELX_YZ(KE  ,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KE  ,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j  ) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j+1) )
+       call CHECK( __LINE__, RFDZ(KE) )
 #endif
-          S31_Z(KE,i,j) = S31_Z(KE,i,j) - &
-               0.5_RP * WORK_V(KE-1,i,j) * RCDZ(KE) ! WORK_V(KE,i,j) == 0
+          S31_Z(KE,i,j) = S31_Z(KE,i,j) + &
+               0.25_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i,j+1) &
+                         - VELX_YZ(KE-1,i,j) - VELX_YZ(KE-1,i,j+1) ) * RFDZ(KE-1)
        enddo
        enddo
 #ifdef DEBUG
@@ -1567,7 +1569,7 @@ contains
 #endif
           S23_Z(KS,i,j) = S23_Z(KS,i,j) + &
                0.25_RP * ( VELY_ZX(KS+1,i,j) + VELY_ZX(KS+1,i+1,j) &
-                         - VELY_ZX(KS  ,i,j) - VELY_ZX(KS  ,i+1,j) ) * RCDZ(KS)
+                         - VELY_ZX(KS  ,i,j) - VELY_ZX(KS  ,i+1,j) ) * RFDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -2063,10 +2065,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMZ(i,j) )
-#endif
-          qflx_sgs(KS,i,j,ZDIR) = SFLX_MOMZ(i,j) ! bottom boundary
+          qflx_sgs(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -2169,10 +2168,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMX(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j) ! bottom boundary
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -2274,10 +2270,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_MOMY(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j) ! bottom boundary
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
@@ -2821,7 +2814,7 @@ contains
 #endif
           S31_Y(KS,i,j) = S31_Y(KS,i,j) + &
                0.125_RP * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i+1,j) + VELX_YZ(KS+1,i,j+1) + VELX_YZ(KS+1,i+1,j+1) &
-                          - VELX_YZ(KS  ,i,j) + VELX_YZ(KS  ,i+1,j) + VELX_YZ(KS  ,i,j+1) + VELX_YZ(KS  ,i+1,j+1) ) * RCDZ(KS)
+                          - VELX_YZ(KS  ,i,j) - VELX_YZ(KS  ,i+1,j) - VELX_YZ(KS  ,i,j+1) - VELX_YZ(KS  ,i+1,j+1) ) * RCDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -2839,7 +2832,7 @@ contains
 #endif
           S31_Y(KE,i,j) = S31_Y(KE,i,j) + &
                0.125_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i+1,j) + VELX_YZ(KE  ,i,j+1) + VELX_YZ(KE  ,i+1,j+1) &
-                          - VELX_YZ(KE-1,i,j) + VELX_YZ(KE-1,i+1,j) + VELX_YZ(KE-1,i,j+1) + VELX_YZ(KE-1,i+1,j+1) ) * RCDZ(KE-1)
+                          - VELX_YZ(KE-1,i,j) - VELX_YZ(KE-1,i+1,j) - VELX_YZ(KE-1,i,j+1) - VELX_YZ(KE-1,i+1,j+1) ) * RCDZ(KE-1)
        enddo
        enddo
 #ifdef DEBUG
@@ -3442,10 +3435,7 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_POTT(i,j) )
-#endif
-          qflx_sgs(KS-1,i,j,ZDIR) = SFLX_POTT(i,j)
+          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
@@ -3568,21 +3558,6 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-
-       ! Surface QV Flux
-       if ( iq == I_QV ) then
-         do j = JJS, JJE
-         do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, SFLX_QV(i,j) )
-#endif
-             qflx_sgs(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
-          enddo
-          enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       endif
 
        ! (y-z plane)
        do j = JJS,   JJE

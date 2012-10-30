@@ -1010,9 +1010,19 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       pott(k,i,j) = pott(k,i,j) + rndm(k,i,j)*RANDOM_THETA
+    enddo
+    enddo
+    enddo
+
+    ! make density profile
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
-!       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
-       RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j)*RANDOM_THETA ) ) * DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -1033,6 +1043,14 @@ contains
     do k = KS, KE
        MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
     enddo
     enddo
     enddo

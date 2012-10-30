@@ -59,10 +59,10 @@ module mod_atmos_phy_sf
   real(RP), private, save      :: Cm_min  =    1.0E-5_RP ! minimum bulk coef. of u,v,w
   real(RP), private, parameter :: Cm_max  =    2.5E-3_RP ! maximum bulk coef. of u,v,w
 
-  real(RP), private, save      :: U_minM  =    0.0_RP  ! minimum U_abs for u,v,w
-  real(RP), private, parameter :: U_maxM  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, save      :: U_minM  =    0.0_RP   ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxM  =  100.0_RP   ! maximum U_abs for u,v,w
 
-  real(RP), private, save      :: Cm_const =  0.0011_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: Const_Cm =  0.0011_RP ! constant bulk coef. of u,v,w
   real(RP), private, save      :: Const_SH =  15.0_RP   ! constant surface sensible flux [W/m2]
   real(RP), private, save      :: Const_LH =  115.0_RP  ! constant surface latent flux [W/m2]
   real(RP), private, save      :: Const_Ustar = 0.25_RP ! constant friction velocity [m/s]
@@ -84,11 +84,26 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_SF
+    use mod_time, only: &
+       NOWSEC => TIME_NOWSEC
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY
+    use mod_atmos_vars_sf, only: &
+       SFLX_MOMZ, &
+       SFLX_MOMX, &
+       SFLX_MOMY, &
+       SFLX_POTT, &
+       SFLX_QV
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: ATMOS_PHY_SF_CM_min ! minimum bulk coef. of u,v,w
-    real(RP) :: ATMOS_PHY_SF_CM_const
+    real(RP) :: ATMOS_PHY_SF_Const_CM
     real(RP) :: ATMOS_PHY_SF_Const_SH
     real(RP) :: ATMOS_PHY_SF_Const_LH
     real(RP) :: ATMOS_PHY_SF_Const_Ustar
@@ -99,7 +114,7 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
        ATMOS_PHY_SF_U_minM, &
        ATMOS_PHY_SF_CM_min, &
-       ATMOS_PHY_SF_CM_const, &
+       ATMOS_PHY_SF_Const_CM, &
        ATMOS_PHY_SF_Const_SH, &
        ATMOS_PHY_SF_Const_LH, &
        ATMOS_PHY_SF_Const_Ustar, &
@@ -112,7 +127,7 @@ contains
 
     ATMOS_PHY_SF_U_minM = U_minM
     ATMOS_PHY_SF_CM_min = CM_min
-    ATMOS_PHY_SF_CM_const = Cm_const
+    ATMOS_PHY_SF_Const_CM = Const_Cm
     ATMOS_PHY_SF_Const_SH = Const_SH
     ATMOS_PHY_SF_Const_LH = Const_LH
     ATMOS_PHY_SF_Const_Ustar = Const_Ustar
@@ -121,7 +136,13 @@ contains
     ATMOS_PHY_SF_FLG_SH_DIURNAL = FLG_SH_DIURNAL
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
+
+    if ( trim(ATMOS_TYPE_PHY_SF) .ne. 'CONST' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not CONST. Check!'
+       call PRC_MPIstop
+    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -137,7 +158,7 @@ contains
 
     U_minM = ATMOS_PHY_SF_U_minM
     CM_min = ATMOS_PHY_SF_CM_min
-    Cm_const = ATMOS_PHY_SF_CM_const
+    Const_Cm = ATMOS_PHY_SF_Const_Cm
     Const_SH = ATMOS_PHY_SF_Const_SH
     Const_LH = ATMOS_PHY_SF_Const_LH
     Const_Ustar = ATMOS_PHY_SF_Const_Ustar
@@ -145,19 +166,24 @@ contains
     FLG_MOM_FLUX = ATMOS_PHY_SF_FLG_MOM_FLUX
     FLG_SH_DIURNAL = ATMOS_PHY_SF_FLG_SH_DIURNAL
 
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         NOWSEC                                               ) ! (in)
+
     return
   end subroutine ATMOS_PHY_SF_setup
 
   !-----------------------------------------------------------------------------
-  !
+  ! calculation flux
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF
+    use mod_time, only: &
+       dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
+       NOWSEC => TIME_NOWSEC
     use mod_const, only : &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
-    use mod_time, only: &
-       dttb => TIME_DTSEC_ATMOS_PHY_TB, &
-       ctime => TIME_NOWSEC
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -177,14 +203,60 @@ contains
     real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
     real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
 
+    integer :: i, j
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux'
+
+    call ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         NOWSEC                                               ) ! (out)
+
+    do j = JS, JE
+    do i = IS, IE
+       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
+    enddo
+    enddo
+
+    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dtsf )
+    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dtsf )
+
+    return
+  end subroutine ATMOS_PHY_SF
+  !-----------------------------------------------------------------------------
+  ! calculation flux
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_SF_main( &
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+         DENS, MOMZ, MOMX, MOMY,                              & ! (in)
+         ctime                                                ) ! (in)
+    use mod_const, only : &
+       CPdry  => CONST_CPdry,  &
+       LH0    => CONST_LH0
+    use dc_types, only : &
+         DP
+    implicit none
+
+    real(RP), intent(out) :: SFLX_MOMZ(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMX(IA,JA)
+    real(RP), intent(out) :: SFLX_MOMY(IA,JA)
+    real(RP), intent(out) :: SFLX_POTT(IA,JA)
+    real(RP), intent(out) :: SFLX_QV  (IA,JA)
+
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: MOMZ(KA,IA,JA)
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)
+
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm    !
 
+    real(DP) :: ctime
+
     integer :: i, j
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
     do j = JS-1, JE
     do i = IS-1, IE
@@ -200,7 +272,7 @@ contains
 
        !--- Bulk coef. at w, theta, and qv points
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif
@@ -226,7 +298,7 @@ contains
             + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
             ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif
@@ -241,7 +313,7 @@ contains
             + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
             ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
        if( FLG_MOM_FLUX == 0  ) then     ! Bulk coef. is constant
-          Cm = Cm_const
+          Cm = Const_Cm
        elseif( FLG_MOM_FLUX == 1  ) then ! friction velocity is constant
           Cm = min( max(Const_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        endif
@@ -251,17 +323,7 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
-    enddo
-    enddo
-
-    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dttb )
-    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dttb )
-
     return
-  end subroutine ATMOS_PHY_SF
+  end subroutine ATMOS_PHY_SF_main
 
 end module mod_atmos_phy_sf

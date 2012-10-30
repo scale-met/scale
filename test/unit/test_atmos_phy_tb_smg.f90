@@ -35,12 +35,6 @@ module test_atmos_phy_tb_smg
   real(RP) :: DENS(KA,IA,JA)
   real(RP) :: QTRC(KA,IA,JA,QA)
 
-  real(RP) :: SFLX_MOMZ(IA,JA)
-  real(RP) :: SFLX_MOMX(IA,JA)
-  real(RP) :: SFLX_MOMY(IA,JA)
-  real(RP) :: SFLX_POTT(IA,JA)
-  real(RP) :: SFLX_QV  (IA,JA)
-
   real(RP), save :: ZERO(KA,IA,JA)
 
   integer, save :: KME ! end of main region
@@ -55,6 +49,8 @@ contains
   !
   !++ used modules
   !
+  use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_TB
   use mod_atmos_phy_tb, only: &
      ATMOS_PHY_TB_setup
   use mod_grid, only: &
@@ -70,6 +66,7 @@ contains
 
 
   !########## Initial setup ##########
+  ATMOS_TYPE_PHY_TB = 'SMAGORINSKY'
   call ATMOS_PHY_TB_setup
 
   ZERO(:,:,:) = 0.0_RP
@@ -99,8 +96,6 @@ contains
 
   call test_double
 
-  call test_sfc_flux
-
   call test_noise
 
 end subroutine test_atmos_phy_tb_smg_run
@@ -110,12 +105,6 @@ end subroutine test_atmos_phy_tb_smg_run
 subroutine test_zero
 
   write(*,*) "Test zero"
-
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
 
   MOMZ(:,:,:) = 0.0_RP
   MOMX(:,:,:) = 0.0_RP
@@ -127,9 +116,7 @@ subroutine test_zero
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertEqual("MOMZ_t", ZERO(KS:KE,IS:IE,JS:JE), MOMZ_t(KS:KE,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -147,12 +134,6 @@ subroutine test_constant
 
   write(*,*) "Test constant"
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   MOMZ(:,:,:) = 1.0_RP
   MOMX(:,:,:) = 1.0_RP
   MOMY(:,:,:) = 1.0_RP
@@ -165,9 +146,7 @@ subroutine test_constant
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertEqual("MOMZ_t", ZERO(KS+1:KE,IS:IE,JS:JE), MOMZ_t(KS+1:KE,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -188,12 +167,6 @@ subroutine test_linear_z
 
   write(*,*) "Test linear z"
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do k = 1, KA
      MOMZ(k,:,:) = 2.0_RP * GRID_CZ(k)
   end do
@@ -208,9 +181,7 @@ subroutine test_linear_z
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -230,12 +201,6 @@ subroutine test_linear_x
 
   write(*,*) "Test linear x"
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do i = 1, IA
      MOMX(:,i,:) = 2.0_RP * GRID_CX(i)
   end do
@@ -250,9 +215,8 @@ subroutine test_linear_x
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
+
 
   call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -272,12 +236,6 @@ subroutine test_linear_y
 
   write(*,*) "Test linear y"
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do j = 1, JA
      MOMY(:,:,j) = 2.0_RP * GRID_CY(j)
   end do
@@ -292,9 +250,7 @@ subroutine test_linear_y
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -322,12 +278,6 @@ subroutine test_energy
   write(*,*) "Test energy"
   ! Smagorinsky-Lilly SGS model has no back scatter,
   ! whcih means that energy of resolved grid scale must decrease.
-
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
 
   do j = 1, JA
   do i = 1, IA
@@ -359,9 +309,7 @@ subroutine test_energy
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   do j = JS, JE
   do i = IS, IE
@@ -400,12 +348,6 @@ subroutine test_big
   write(*,*) "Test big"
   ! check not to include BUG (UNDEF) value
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do j = 1, JA
   do i = 1, IA
   do k = 1, KA
@@ -426,9 +368,7 @@ subroutine test_big
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertLessThan("MOMZ_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMZ_t(KS:KE,IS:IE,JS:JE)))
   call AssertLessThan("MOMX_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMX_t(KS:KE,IS:IE,JS:JE)))
@@ -448,12 +388,6 @@ subroutine test_noise
   ! Smagorinsky-Lilly SGS model has no back scatter,
   ! whcih means that two-grid noise must be reduced
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do j = 1, JA
   do i = 1, IA
   do k = KS, KE
@@ -472,9 +406,7 @@ subroutine test_noise
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   ! tendency must be opposit sign
   call AssertLessThan("MOMZ", ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, MOMZ_t(KS:KE,IS:IE,JS:JE)*MOMZ(KS:KE,IS:IE,JS:JE) )
@@ -506,12 +438,6 @@ subroutine test_double
 
   write(*,*) "Test double"
 
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV  (:,:) = 0.0_RP
-
   do j = 1, JA
   do i = 1, IA
   do k = 1, KA
@@ -532,9 +458,7 @@ subroutine test_double
   call ATMOS_PHY_TB_main( &
        MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   MOMZ(:,:,:) = MOMZ(:,:,:) * 2.0_RP
   MOMX(:,:,:) = MOMX(:,:,:) * 2.0_RP
@@ -544,9 +468,7 @@ subroutine test_double
   call ATMOS_PHY_TB_main( &
        MOMZ_t2, MOMX_t2, MOMY_t2, RHOT_t2, QTRC_t2, & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
   call AssertEqual("MOMZ_t", FOUR(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t2(KS+1:KME-1,IS:IE,JS:JE)/MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
   call AssertEqual("MOMX_t", FOUR(KS:KE,IS:IE,JS:JE), MOMX_t2(KS:KE,IS:IE,JS:JE)/MOMX_t(KS:KE,IS:IE,JS:JE))
@@ -558,46 +480,6 @@ subroutine test_double
   end do
 
 end subroutine test_double
-!=============================================================================
-subroutine test_sfc_flux
-  use mod_grid, only: &
-       GRID_RFDZ
-
-  write(*,*) "Test surface flux"
-
-  do j = 1, JA
-  do i = 1, IA
-     SFLX_MOMZ(i,j) = real(i + j, RP) *     1.0_RP
-     SFLX_MOMX(:,:) = real(i + j, RP) *    10.0_RP
-     SFLX_MOMY(:,:) = real(i + j, RP) *   100.0_RP
-     SFLX_POTT(:,:) = real(i + j, RP) *  1000.0_RP
-     SFLX_QV  (:,:) = real(i + j, RP) * 10000.0_RP
-  end do
-  end do
-
-  MOMZ(:,:,:) = 0.0_RP
-  MOMX(:,:,:) = 0.0_RP
-  MOMY(:,:,:) = 0.0_RP
-  RHOT(:,:,:) = 1.0_RP
-  DENS(:,:,:) = 1.0_RP
-  QTRC(:,:,:,:) = 0.0_RP
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV & ! (in)
-       )
-
-  call AssertEqual("MOMZ_t", SFLX_MOMZ(IS:IE,JS:JE)*GRID_RFDZ(KS), MOMZ_t(KS,IS:IE,JS:JE) )
-  call AssertEqual("MOMX_t", SFLX_MOMX(IS:IE,JS:JE)*GRID_RFDZ(KS), MOMX_t(KS,IS:IE,JS:JE) )
-  call AssertEqual("MOMY_t", SFLX_MOMY(IS:IE,JS:JE)*GRID_RFDZ(KS), MOMY_t(KS,IS:IE,JS:JE) )
-  call AssertEqual("POTT_t", SFLX_POTT(IS:IE,JS:JE)*GRID_RFDZ(KS), RHOT_t(KS,IS:IE,JS:JE)/DENS(KS,IS:IE,JS:JE) )
-  call AssertEqual("QV",     SFLX_QV(IS:IE,JS:JE)*GRID_RFDZ(KS),   QTRC_t(KS,IS:IE,JS:JE,I_QV)/DENS(KS,IS:IE,JS:JE) )
-
-end subroutine test_sfc_flux
-
-
 
 !=============================================================================
 subroutine fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)

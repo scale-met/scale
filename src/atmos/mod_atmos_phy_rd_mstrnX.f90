@@ -55,8 +55,23 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_RD
     implicit none
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
+
+    if ( trim(ATMOS_TYPE_PHY_RD) .ne. 'MSTRNX' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not MSTRNX. Check!'
+       call PRC_MPIstop
+    end if
 
     return
   end subroutine ATMOS_PHY_RD_setup
