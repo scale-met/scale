@@ -1940,7 +1940,7 @@ contains
 #endif
           TMP1 = ( POTT(k+1,i,j) + POTT(k+1,i,j+1) ) * 0.5_RP
           TMP2 = ( POTT(k  ,i,j) + POTT(k  ,i,j+1) ) * 0.5_RP
-          WORK_X(k,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
+          WORK_X(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP2 ) &
                * RFDZ(k) / ( ( TMP1 + TMP2 ) * max(S2(k,i,j),1.0E-20_RP) )
        enddo
        enddo
@@ -2010,7 +2010,7 @@ contains
 #endif
           TMP1 = ( POTT(k+1,i,j) + POTT(k+1,i+1,j) ) * 0.5_RP
           TMP2 = ( POTT(k  ,i,j) + POTT(k  ,i+1,j) ) * 0.5_RP
-          WORK_Y(k,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
+          WORK_Y(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP2 ) &
                * RFDZ(k) / ( ( TMP1 + TMP2 ) * max(S2(k,i,j),1.0E-20_RP) )
        enddo
        enddo
@@ -3151,7 +3151,7 @@ contains
        call CHECK( __LINE__, RFDZ(k) )
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          WORK_Z(k,i,j) = 0.5_RP * GRAV * ( POTT(k+1,i,j) - POTT(k,i,j) ) &
+          WORK_Z(k,i,j) = 2.0_RP * GRAV * ( POTT(k+1,i,j) - POTT(k,i,j) ) &
                * RFDZ(k) / ( ( POTT(k+1,i,j) + POTT(k,i,j) ) * max(S2(k,i,j),1.0E-20_RP) )
        enddo
        enddo
@@ -3226,7 +3226,7 @@ contains
           TMP1 = ( POTT(k+1,i+1,j) + POTT(k+1,i,j) ) * 0.5_RP
           TMP2 = ( POTT(k  ,i+1,j) + POTT(k  ,i,j) ) * 0.5_RP
           TMP3 = ( POTT(k-1,i+1,j) + POTT(k-1,i,j) ) * 0.5_RP
-          WORK_X(k,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP3 ) &
+          WORK_X(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP3 ) &
                / ( ( FDZ(k) + FDZ(k-1) ) * TMP2 * max(S2(k,i,j),1.0E-20_RP) )
        enddo
        enddo
@@ -3340,7 +3340,7 @@ contains
           TMP1 = ( POTT(k+1,i,j+1) + POTT(k+1,i,j) ) * 0.5_RP
           TMP2 = ( POTT(k  ,i,j+1) + POTT(k  ,i,j) ) * 0.5_RP
           TMP3 = ( POTT(k-1,i,j+1) + POTT(k-1,i,j) ) * 0.5_RP
-          WORK_Y(k,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP3 ) &
+          WORK_Y(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP3 ) &
                / ( ( FDZ(k) + FDZ(k-1) ) * TMP2 * max(S2(k,i,j),1.0E-20_RP) )
        enddo
        enddo
