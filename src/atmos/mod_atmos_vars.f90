@@ -533,6 +533,13 @@ contains
 
     call ATMOS_vars_total
 
+    DENS_av(:,:,:) = DENS(:,:,:)
+    MOMZ_av(:,:,:) = MOMZ(:,:,:)
+    MOMX_av(:,:,:) = MOMX(:,:,:)
+    MOMY_av(:,:,:) = MOMY(:,:,:)
+    RHOT_av(:,:,:) = RHOT(:,:,:)
+    QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+
     return
   end subroutine ATMOS_vars_restart_read
 
