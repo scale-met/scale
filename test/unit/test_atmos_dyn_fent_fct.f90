@@ -55,6 +55,12 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
 
+  real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+
   real(RP) :: SFLX_MOMZ(IA,JA)
   real(RP) :: SFLX_MOMX(IA,JA)
   real(RP) :: SFLX_MOMY(IA,JA)
@@ -144,6 +150,12 @@ contains
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
 
+  qflx_sgs_momz(:,:,:,:) = 0.0_RP
+  qflx_sgs_momx(:,:,:,:) = 0.0_RP
+  qflx_sgs_momy(:,:,:,:) = 0.0_RP
+  qflx_sgs_rhot(:,:,:,:) = 0.0_RP
+  qflx_sgs_qtrc(:,:,:,:,:) = 0.0_RP
+
   SFLX_MOMZ(:,:) = 0.0_RP
   SFLX_MOMX(:,:) = 0.0_RP
   SFLX_MOMY(:,:) = 0.0_RP
@@ -202,6 +214,8 @@ subroutine test_undef
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
+          qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
           SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
           SFLX_POTT, SFLX_QV,                          & ! (in)
           REF_dens, REF_pott, DIFF4,                   & ! (in)
@@ -249,6 +263,8 @@ subroutine test_const
        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
        CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
        SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
        SFLX_POTT, SFLX_QV,                          & ! (in)
        REF_dens, REF_pott, DIFF4,                   & ! (in)
@@ -329,6 +345,8 @@ subroutine test_conserve
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+         qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
+         qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
          SFLX_POTT, SFLX_QV,                          & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)

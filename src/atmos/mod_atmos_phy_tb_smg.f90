@@ -244,15 +244,13 @@ contains
        MOMX_av, &
        MOMY_av, &
        RHOT_av, &
-       QTRC_av
+       QTRC_av, &
+       qflx_sgs_momz, &
+       qflx_sgs_momx, &
+       qflx_sgs_momy, &
+       qflx_sgs_rhot, &
+       qflx_sgs_qtrc
     implicit none
-
-    ! tendency
-    real(RP) :: MOMZ_t(KA,IA,JA)
-    real(RP) :: MOMX_t(KA,IA,JA)
-    real(RP) :: MOMY_t(KA,IA,JA)
-    real(RP) :: RHOT_t(KA,IA,JA)
-    real(RP) :: QTRC_t(KA,IA,JA,QA)
 
     ! diagnostic variables
     real(RP) :: tke(KA,IA,JA) ! TKE
@@ -260,119 +258,12 @@ contains
     real(RP) :: Ri (KA,IA,JA) ! Richardoson number
     real(RP) :: Pr (KA,IA,JA) ! Prandtle number
 
-    integer :: k, i, j, iq
-    integer :: IIS, IIE, JJS, JJE
-
-
     call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
-       tke, nu, Ri, Pr,                        & ! (out) diagnostic variables
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
        MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
        )
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          MOMZ(k,i,j) = MOMZ(k,i,j) + dttb * MOMZ_t(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMX(k,i,j) = MOMX(k,i,j) + dttb * MOMX_t(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          MOMY(k,i,j) = MOMY(k,i,j) + dttb * MOMY_t(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOT(k,i,j) = RHOT(k,i,j) + dttb * RHOT_t(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-    enddo
-    enddo
-#ifdef DEBUG
-       IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
-
-
-    do iq = 1, QA
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) + dttb * QTRC_t(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          if ( QTRC(k,i,j,iq) < 1.0E-10_RP ) then
-             QTRC(k,i,j,iq) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-    enddo
-    enddo
-#ifdef DEBUG
-       IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
-
-    enddo ! do iq = 1, QA
-
-    call ATMOS_vars_fillhalo
-
-    call ATMOS_vars_total
-
-    call HIST_in( MOMZ_t(:,:,:), 'MOMZ_t_tb', 'tendency of MOMZ in tb', 'kg/m2/s2',  '3D', dttb )
-    call HIST_in( MOMX_t(:,:,:), 'MOMX_t_tb', 'tendency of MOMX in tb', 'kg/m2/s2',  '3D', dttb )
-    call HIST_in( MOMY_t(:,:,:), 'MOMY_t_tb', 'tendency of MOMY in tb', 'kg/m2/s2',  '3D', dttb )
-    call HIST_in( RHOT_t(:,:,:), 'RHOT_t_tb', 'tendency of RHOT in tb', 'K*kg/m3/s', '3D', dttb )
-    do iq = 1, QA
-       call HIST_in( QTRC_t(:,:,:,iq), AQ_NAME(iq)//'_t_tb', AQ_DESC(iq), AQ_UNIT(iq)//'/s', '3D', dttb )
-    enddo
 
     call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', '3D', dttb )
     call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  '3D', dttb )
@@ -383,9 +274,10 @@ contains
 
 
   subroutine ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out) tendency
-       tke, nu_C, Ri, Pr,                      & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+       tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
     use mod_const, only : &
        GRAV => CONST_GRAV
     use mod_grid, only : &
@@ -400,12 +292,12 @@ contains
        RFDY => GRID_RFDY
     implicit none
 
-    ! tendency
-    real(RP), intent(out) :: MOMZ_t(KA,IA,JA)
-    real(RP), intent(out) :: MOMX_t(KA,IA,JA)
-    real(RP), intent(out) :: MOMY_t(KA,IA,JA)
-    real(RP), intent(out) :: RHOT_t(KA,IA,JA)
-    real(RP), intent(out) :: QTRC_t(KA,IA,JA,QA)
+    ! SGS flux
+    real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
 
     real(RP), intent(out) :: tke (KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu_C(KA,IA,JA) ! eddy viscosity (center)
@@ -468,8 +360,6 @@ contains
     real(RP) :: WORK_X(KA,IA,JA) !            (x edge or y-z plane)
     real(RP) :: WORK_Y(KA,IA,JA) !            (y edge or z-x plane)
 
-    real(RP) :: qflx_sgs(KA,IA,JA,3)
-
     real(RP) :: TMP1, TMP2, TMP3
 
     integer :: IIS, IIE
@@ -528,7 +418,11 @@ contains
     Pr  (:,:,:) = UNDEF
     Ri  (:,:,:) = UNDEF
 
-    qflx_sgs(:,:,:,:) = UNDEF
+    qflx_sgs_momz(:,:,:,:) = UNDEF
+    qflx_sgs_momx(:,:,:,:) = UNDEF
+    qflx_sgs_momy(:,:,:,:) = UNDEF
+    qflx_sgs_rhot(:,:,:,:) = UNDEF
+    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
 #endif
 
 
@@ -2045,9 +1939,6 @@ contains
 
        !##### momentum equation (z) #####
        ! (cell center)
-#ifdef DEBUG
-       qflx_sgs(:,:,:,:) = UNDEF
-#endif
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -2059,7 +1950,7 @@ contains
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,ZDIR) = DENS(k,i,j) * ( &
+          qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu_C(k,i,j) &
                * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
@@ -2071,8 +1962,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs(KE,i,j,ZDIR) = 0.0_RP ! top boundary
+          qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
 #ifdef DEBUG
@@ -2090,7 +1981,7 @@ contains
        call CHECK( __LINE__, nu_Y(k,i,j) )
        call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+          qflx_sgs_momz(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
                                * nu_Y(k,i,j) * S31_Y(k,i,j)
        enddo
        enddo
@@ -2110,7 +2001,7 @@ contains
        call CHECK( __LINE__, nu_X(k,i,j) )
        call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+          qflx_sgs_momz(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
                                * nu_X(k,i,j) * S23_X(k,i,j)
        enddo
        enddo
@@ -2119,38 +2010,6 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-       !--- tendency momentum(z)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, qflx_sgs(k+1,i,j,ZDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,ZDIR) )
-       call CHECK( __LINE__, RFDZ(k) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,XDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i-1,j,XDIR) )
-       call CHECK( __LINE__, RCDX(i) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,YDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j-1,YDIR) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          MOMZ_t(k,i,j) = - ( ( qflx_sgs(k+1,i,j,ZDIR)-qflx_sgs(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                            + ( qflx_sgs(k  ,i,j,XDIR)-qflx_sgs(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                            + ( qflx_sgs(k  ,i,j,YDIR)-qflx_sgs(k,i  ,j-1,YDIR) ) * RCDY(j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-
-#ifdef DEBUG
-       qflx_sgs(:,:,:,:) = UNDEF
-#endif
        !##### momentum equation (x) #####
        ! (y edge)
        do j = JJS, JJE
@@ -2164,7 +2023,7 @@ contains
        call CHECK( __LINE__, nu_Y(k,i,j) )
        call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
+          qflx_sgs_momx(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
                                * nu_Y(k,i,j) * S31_Y(k,i,j)
        enddo
        enddo
@@ -2174,8 +2033,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
 #ifdef DEBUG
@@ -2193,7 +2052,7 @@ contains
        call CHECK( __LINE__, S33_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,XDIR) = DENS(k,i,j) * ( &
+          qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu_C(k,i,j) &
                * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
@@ -2215,7 +2074,7 @@ contains
        call CHECK( __LINE__, nu_Z(k,i,j) )
        call CHECK( __LINE__, S12_Z(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+          qflx_sgs_momx(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
                                * nu_Z(k,i,j) * S12_Z(k,i,j)
        enddo
        enddo
@@ -2224,35 +2083,6 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-       !--- tendency momentum(x)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, qflx_sgs(k,i,j,ZDIR) )
-       call CHECK( __LINE__, qflx_sgs(k-1,i,j,ZDIR) )
-       call CHECK( __LINE__, RCDZ(k) )
-       call CHECK( __LINE__, qflx_sgs(k,i+1,j,XDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,XDIR) )
-       call CHECK( __LINE__, RFDX(i) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,YDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j-1,YDIR) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          MOMX_t(k,i,j) = - ( ( qflx_sgs(k,i  ,j,ZDIR)-qflx_sgs(k-1,i,j,  ZDIR) ) * RCDZ(k) &
-                            + ( qflx_sgs(k,i+1,j,XDIR)-qflx_sgs(k  ,i,j,  XDIR) ) * RFDX(i) &
-                            + ( qflx_sgs(k,i  ,j,YDIR)-qflx_sgs(k  ,i,j-1,YDIR) ) * RCDY(j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-
-#ifdef DEBUG
-       qflx_sgs(:,:,:,:) = UNDEF
-#endif
        !##### momentum equation (y) #####
        ! (x edge)
        do j = JJS, JJE
@@ -2266,7 +2096,7 @@ contains
        call CHECK( __LINE__, nu_X(k,i,j) )
        call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
+          qflx_sgs_momy(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
                                * nu_X(k,i,j) * S23_X(k,i,j)
        enddo
        enddo
@@ -2276,8 +2106,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
+          qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
+          qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
 #ifdef DEBUG
@@ -2296,7 +2126,7 @@ contains
        call CHECK( __LINE__, nu_Z(k,i,j) )
        call CHECK( __LINE__, S12_Z(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+          qflx_sgs_momy(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
                                * nu_Z(k,i,j) * S12_Z(k,i,j)
        enddo
        enddo
@@ -2317,35 +2147,10 @@ contains
        call CHECK( __LINE__, S33_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
-          qflx_sgs(k,i,j,YDIR) = DENS(k,i,j) * ( &
+          qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu_C(k,i,j) &
                * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       !--- tendency momentum(y)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, qflx_sgs(k,i,j,ZDIR) )
-       call CHECK( __LINE__, qflx_sgs(k-1,i,j,ZDIR) )
-       call CHECK( __LINE__, RCDZ(k) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,XDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i-1,j,XDIR) )
-       call CHECK( __LINE__, RCDX(i) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j+1,YDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,YDIR) )
-       call CHECK( __LINE__, RFDZ(j) )
-#endif
-          MOMY_t(k,i,j) = - ( ( qflx_sgs(k,i,j  ,ZDIR)-qflx_sgs(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                            + ( qflx_sgs(k,i,j  ,XDIR)-qflx_sgs(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                            + ( qflx_sgs(k,i,j+1,YDIR)-qflx_sgs(k  ,i  ,j,YDIR) ) * RFDY(j) )
        enddo
        enddo
        enddo
@@ -3415,9 +3220,6 @@ contains
 #endif
 
 
-#ifdef DEBUG
-       qflx_sgs(:,:,:,:) = UNDEF
-#endif
        ! (x-y plane)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -3430,7 +3232,7 @@ contains
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+          qflx_sgs_rhot(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * nu_Z(k,i,j) &
                                * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k)
        enddo
@@ -3441,8 +3243,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_rhot(KS-1,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_rhot(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -3461,7 +3263,7 @@ contains
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+          qflx_sgs_rhot(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                                * nu_X(k,i,j) &
                                * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i)
        enddo
@@ -3482,7 +3284,7 @@ contains
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+          qflx_sgs_rhot(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * nu_Y(k,i,j) &
                                * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)
        enddo
@@ -3492,43 +3294,13 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-       !--- tendency rho*theta
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, qflx_sgs(k,i,j,ZDIR) )
-       call CHECK( __LINE__, qflx_sgs(k-1,i,j,ZDIR) )
-       call CHECK( __LINE__, RCDZ(k) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,XDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i-1,j,XDIR) )
-       call CHECK( __LINE__, RCDX(i) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,YDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j-1,YDIR) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          RHOT_t(k,i,j) = - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                            + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                            + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
+    enddo
+    enddo
 
-    enddo
-    enddo
-#ifdef DEBUG
-       IIS = IUNDEF; IIE = IUNDEF; JJS = IUNDEF; JJE = IUNDEF
-#endif
 
     !##### Tracers #####
     do iq = 1, QA
 
-#ifdef DEBUG
-       qflx_sgs(:,:,:,:) = UNDEF
-#endif
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -3546,7 +3318,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+          qflx_sgs_qtrc(k,i,j,ZDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * nu_Z(k,i,j) &
                                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
        enddo
@@ -3557,8 +3329,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_sgs(KE  ,i,j,ZDIR) = 0.0_RP
+          qflx_sgs_qtrc(KS-1,i,j,ZDIR,iq) = 0.0_RP
+          qflx_sgs_qtrc(KE  ,i,j,ZDIR,iq) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -3577,7 +3349,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+          qflx_sgs_qtrc(k,i,j,XDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                                * nu_X(k,i,j) &
                                * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
        enddo
@@ -3598,36 +3370,9 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+          qflx_sgs_qtrc(k,i,j,YDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * nu_Y(k,i,j) &
                                * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       !--- tendency tracers
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, qflx_sgs(k,i,j,ZDIR) )
-       call CHECK( __LINE__, qflx_sgs(k-1,i,j,ZDIR) )
-       call CHECK( __LINE__, RCDZ(k) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,XDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i-1,j,XDIR) )
-       call CHECK( __LINE__, RCDX(i) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j,YDIR) )
-       call CHECK( __LINE__, qflx_sgs(k,i,j-1,YDIR) )
-       call CHECK( __LINE__, RCDY(j) )
-       call CHECK( __LINE__, DENS(k,i,j) )
-#endif
-          QTRC_t(k,i,j,iq) = - ( ( qflx_sgs(k,i,j,ZDIR)-qflx_sgs(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                               + ( qflx_sgs(k,i,j,XDIR)-qflx_sgs(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                               + ( qflx_sgs(k,i,j,YDIR)-qflx_sgs(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                             / DENS(k,i,j)
        enddo
        enddo
        enddo

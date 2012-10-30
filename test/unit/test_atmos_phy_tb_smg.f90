@@ -17,11 +17,11 @@ module test_atmos_phy_tb_smg
   include 'inc_index.h'
   include 'inc_tracer.h'
   !-----------------------------------------------------------------------------
-  real(RP) :: MOMZ_t(KA,IA,JA)
-  real(RP) :: MOMX_t(KA,IA,JA)
-  real(RP) :: MOMY_t(KA,IA,JA)
-  real(RP) :: RHOT_t(KA,IA,JA)
-  real(RP) :: QTRC_t(KA,IA,JA,QA)
+  real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
 
   real(RP) :: tke (KA,IA,JA) ! TKE
   real(RP) :: nu_C(KA,IA,JA) ! eddy viscosity (center)
@@ -35,7 +35,7 @@ module test_atmos_phy_tb_smg
   real(RP) :: DENS(KA,IA,JA)
   real(RP) :: QTRC(KA,IA,JA,QA)
 
-  real(RP), save :: ZERO(KA,IA,JA)
+  real(RP), save :: ZERO(KA,IA,JA,3)
 
   integer, save :: KME ! end of main region
 
@@ -69,7 +69,7 @@ contains
   ATMOS_TYPE_PHY_TB = 'SMAGORINSKY'
   call ATMOS_PHY_TB_setup
 
-  ZERO(:,:,:) = 0.0_RP
+  ZERO(:,:,:,:) = 0.0_RP
 
   do k = KS+1, KE
      if ( .not. GRID_CZ_mask(k) ) then
@@ -78,25 +78,15 @@ contains
      end if
   end do
 
-  MOMZ_t(KE,:,:) = 0.0_RP
-
   !########## test ##########
 
   call test_zero
 
   call test_constant
 
-  call test_linear_z
-  call test_linear_x
-  call test_linear_y
-
-  call test_energy
-
   call test_big
 
   call test_double
-
-  call test_noise
 
 end subroutine test_atmos_phy_tb_smg_run
 !=============================================================================
@@ -114,18 +104,19 @@ subroutine test_zero
   QTRC(:,:,:,:) = 0.0_RP
 
   call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
-  call AssertEqual("MOMZ_t", ZERO(KS:KE,IS:IE,JS:JE), MOMZ_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", ZERO(KS:KE,IS:IE,JS:JE), MOMY_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("RHOT_t", ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
+  call AssertEqual("qflx_sgs_momz", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momx", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momy", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
      write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
   end do
 
 end subroutine test_zero
@@ -144,206 +135,32 @@ subroutine test_constant
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
   call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
-  call AssertEqual("MOMZ_t", ZERO(KS+1:KE,IS:IE,JS:JE), MOMZ_t(KS+1:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", ZERO(KS:KE,IS:IE,JS:JE), MOMY_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("RHOT_t", ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
+  call AssertEqual("qflx_sgs_momz", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momx", ZERO(KS+1:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS+1:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momy", ZERO(KS+1:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS+1:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
      write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
   end do
 
 end subroutine test_constant
 !=============================================================================
-subroutine test_linear_z
-  use mod_grid, only: &
-       GRID_CZ
-  implicit none
-
-  write(*,*) "Test linear z"
-
-  do k = 1, KA
-     MOMZ(k,:,:) = 2.0_RP * GRID_CZ(k)
-  end do
-  MOMX(:,:,:) = 0.0_RP
-  MOMY(:,:,:) = 0.0_RP
-  RHOT(:,:,:) = 1.0_RP
-  DENS(:,:,:) = 1.0_RP
-  QTRC(:,:,:,:) = 0.0_RP
-
-  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
-
-  call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", ZERO(KS:KE,IS:IE,JS:JE), MOMY_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("RHOT_t", ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  message = "iq = ??"
-  do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  end do
-
-end subroutine test_linear_z
-!=============================================================================
-subroutine test_linear_x
-  use mod_grid, only: &
-       GRID_CX
-
-  write(*,*) "Test linear x"
-
-  do i = 1, IA
-     MOMX(:,i,:) = 2.0_RP * GRID_CX(i)
-  end do
-  MOMZ(:,:,:) = 0.0_RP
-  MOMY(:,:,:) = 0.0_RP
-  RHOT(:,:,:) = 1.0_RP
-  DENS(:,:,:) = 1.0_RP
-  QTRC(:,:,:,:) = 0.0_RP
-
-  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
-
-
-  call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", ZERO(KS:KE,IS:IE,JS:JE), MOMY_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("RHOT_t", ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  message = "iq = ??"
-  do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  end do
-
-end subroutine test_linear_x
-!=============================================================================
-subroutine test_linear_y
-  use mod_grid, only: &
-       GRID_CY
-
-  write(*,*) "Test linear y"
-
-  do j = 1, JA
-     MOMY(:,:,j) = 2.0_RP * GRID_CY(j)
-  end do
-  MOMZ(:,:,:) = 0.0_RP
-  MOMX(:,:,:) = 0.0_RP
-  RHOT(:,:,:) = 1.0_RP
-  DENS(:,:,:) = 1.0_RP
-  QTRC(:,:,:,:) = 0.0_RP
-
-  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
-
-  call AssertEqual("MOMZ_t", ZERO(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", ZERO(KS:KE,IS:IE,JS:JE), MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", ZERO(KS:KE,IS:IE,JS:JE), MOMY_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("RHOT_t", ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  message = "iq = ??"
-  do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE), RHOT_t(KS:KE,IS:IE,JS:JE))
-  end do
-
-end subroutine test_linear_y
-!=============================================================================
-subroutine test_energy
-  use mod_grid, only: &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
-
-  real(RP) :: eng1, eng2
-  real(RP) :: PI2
-  real(RP) :: dt
-  PI2 = atan( 1.0_RP )*8.0_RP
-
-  write(*,*) "Test energy"
-  ! Smagorinsky-Lilly SGS model has no back scatter,
-  ! whcih means that energy of resolved grid scale must decrease.
-
-  do j = 1, JA
-  do i = 1, IA
-  do k = 1, KA
-     MOMZ(k,i,j) = 1.0_RP * sin( PI2 * ( k*1.0_RP/(KE-KS+1) + i*2.0_RP/(IE-IS+1) + j*3.0_RP/(JE-JS+1) ) )
-     MOMX(k,i,j) = 2.0_RP * cos( PI2 * ( k*2.0_RP/(KE-KS+1) + i*3.0_RP/(IE-IS+1) + j*1.0_RP/(JE-JS+1) ) )
-     MOMY(k,i,j) = 3.0_RP * sin( PI2 * ( k*3.0_RP/(KE-KS+1) + i*1.0_RP/(IE-IS+1) + j*2.0_RP/(JE-JS+1) ) )
-  end do
-  end do
-  end do
-  RHOT(:,:,:) = 1.0_RP
-  DENS(:,:,:) = 1.0_RP
-  QTRC(:,:,:,:) = 0.0_RP
-
-  dt = 1.0E-3_RP *  min( min( GRID_FZ(KE)-GRID_FZ(KS-1), GRID_FX(IE)-GRID_FX(IS-1) ), GRID_FY(JE)-GRID_FY(JS-1) ) / ( PI2 * 3.0_RP )
-
-  eng1 = 0.0_RP
-  do j = JS, JE
-  do i = IS, IE
-  do k = KS, KE
-     eng1 = eng1 + &
-          0.5_RP * ( (MOMZ(k,i,j)/DENS(k,i,j))**2 + (MOMX(k,i,j)/DENS(k,i,j))**2 + (MOMY(k,i,j)/DENS(k,i,j))**2 )
-  end do
-  end do
-  end do
-
-  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
-
-  do j = JS, JE
-  do i = IS, IE
-  do k = KS, KE
-     MOMZ(k,i,j) = MOMZ(k,i,j) + dt * MOMZ_t(k,i,j)
-     MOMX(k,i,j) = MOMX(k,i,j) + dt * MOMX_t(k,i,j)
-     MOMY(k,i,j) = MOMY(k,i,j) + dt * MOMY_t(k,i,j)
-  end do
-  end do
-  end do
-
-  eng2 = 0.0_RP
-  do j = JS, JE
-  do i = IS, IE
-  do k = KS, KE
-     eng2 = eng2 + &
-          0.5_RP * ( (MOMZ(k,i,j)/DENS(k,i,j))**2 + (MOMX(k,i,j)/DENS(k,i,j))**2 + (MOMY(k,i,j)/DENS(k,i,j))**2 )
-  end do
-  end do
-  end do
-
-  call AssertLessThan("energy", eng1, eng2)
-
-end subroutine test_energy
-!=============================================================================
 subroutine test_big
 
-  real(RP) :: BIG(KA,IA,JA)
+  real(RP) :: BIG(KA,IA,JA,3)
 
   real(RP) :: PI2
 
   PI2 = atan( 1.0_RP )*8.0_RP
 
-  BIG(:,:,:) = 9.99E8_RP
+  BIG(:,:,:,:) = 9.99E8_RP
 
   write(*,*) "Test big"
   ! check not to include BUG (UNDEF) value
@@ -366,74 +183,36 @@ subroutine test_big
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
   call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
-  call AssertLessThan("MOMZ_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMZ_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("MOMX_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMX_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("MOMY_t", BIG(KS:KE,IS:IE,JS:JE), abs(MOMY_t(KS:KE,IS:IE,JS:JE)))
-  call AssertLessThan("RHOT_t", BIG(KS:KE,IS:IE,JS:JE), abs(RHOT_t(KS:KE,IS:IE,JS:JE)))
+  call AssertLessThan("qflx_sgs_momz", BIG(KS+1:KE-1,IS:IE,JS:JE,:), abs(qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:)))
+  call AssertLessThan("qflx_sgs_momx", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:)))
+  call AssertLessThan("qflx_sgs_momy", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:)))
+  call AssertLessThan("qflx_sgs_rhot", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:)))
   message = "iq = ??"
   do iq = 1, QA
      write(message(6:7), "(i2)") iq
-     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE), abs(QTRC_t(KS:KE,IS:IE,JS:JE,iq)))
+     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_qtrc(KS:KE,IS:IE,JS:JE,iq,:)))
   end do
 
 end subroutine test_big
 !=============================================================================
-subroutine test_noise
-
-  write(*,*) "Test Noise"
-  ! Smagorinsky-Lilly SGS model has no back scatter,
-  ! whcih means that two-grid noise must be reduced
-
-  do j = 1, JA
-  do i = 1, IA
-  do k = KS, KE
-     MOMZ(k,i,j) = real( mod(k+i+j,2) * 2 - 1, RP ) ! -1 or 1
-     MOMX(k,i,j) = MOMZ(k,i,j)
-     MOMY(k,i,j) = MOMZ(k,i,j)
-     RHOT(k,i,j) = MOMZ(k,i,j) + 300.0_RP
-     QTRC(k,i,j,:) = MOMZ(k,i,j)
-  end do
-  end do
-  end do
-  DENS(:,:,:) = 1.0_RP
-
-  call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
-
-  call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
-       tke, nu_C, Ri, Pr,                      & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
-
-  ! tendency must be opposit sign
-  call AssertLessThan("MOMZ", ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, MOMZ_t(KS:KE,IS:IE,JS:JE)*MOMZ(KS:KE,IS:IE,JS:JE) )
-  call AssertLessThan("MOMX", ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, MOMX_t(KS:KE,IS:IE,JS:JE)*MOMX(KS:KE,IS:IE,JS:JE) )
-  call AssertLessThan("MOMY", ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, MOMY_t(KS:KE,IS:IE,JS:JE)*MOMY(KS:KE,IS:IE,JS:JE) )
-  call AssertLessThan("RHOT", ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, RHOT_t(KS:KE,IS:IE,JS:JE)*(RHOT(KS:KE,IS:IE,JS:JE)-300.0_RP) )
-  message = "iq = ??"
-  do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertLessThan(message, ZERO(KS:KE,IS:IE,JS:JE)+1.E-10_RP, QTRC_t(KS:KE,IS:IE,JS:JE,iq)*QTRC(KS:KE,IS:IE,JS:JE,iq) )
-  end do
-
-
-end subroutine test_noise
-!=============================================================================
 subroutine test_double
 
-  real(RP) :: MOMZ_t2(KA,IA,JA)
-  real(RP) :: MOMX_t2(KA,IA,JA)
-  real(RP) :: MOMY_t2(KA,IA,JA)
-  real(RP) :: RHOT_t2(KA,IA,JA)
-  real(RP) :: QTRC_t2(KA,IA,JA,QA)
+  real(RP) :: qflx_sgs_momz2(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momx2(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momy2(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_rhot2(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_qtrc2(KA,IA,JA,QA,3)
 
-  real(RP) :: FOUR(KA,IA,JA)
+  real(RP) :: work(KA,IA,JA,3)
+  real(RP) :: FOUR(KA,IA,JA,3)
   real(RP) :: PI2
 
-  FOUR(:,:,:) = 4.0_RP
+  FOUR(:,:,:,:) = 4.0_RP
   PI2 = atan( 1.0_RP )*8.0_RP
 
   write(*,*) "Test double"
@@ -456,7 +235,8 @@ subroutine test_double
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
   call ATMOS_PHY_TB_main( &
-       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, QTRC_t, & ! (out)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
@@ -466,17 +246,25 @@ subroutine test_double
   QTRC(:,:,:,:) = QTRC(:,:,:,:) * 2.0_RP
 
   call ATMOS_PHY_TB_main( &
-       MOMZ_t2, MOMX_t2, MOMY_t2, RHOT_t2, QTRC_t2, & ! (out)
+       qflx_sgs_momz2, qflx_sgs_momx2, qflx_sgs_momy2, & ! (out)
+       qflx_sgs_rhot2, qflx_sgs_qtrc2,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
-  call AssertEqual("MOMZ_t", FOUR(KS+1:KME-1,IS:IE,JS:JE), MOMZ_t2(KS+1:KME-1,IS:IE,JS:JE)/MOMZ_t(KS+1:KME-1,IS:IE,JS:JE))
-  call AssertEqual("MOMX_t", FOUR(KS:KE,IS:IE,JS:JE), MOMX_t2(KS:KE,IS:IE,JS:JE)/MOMX_t(KS:KE,IS:IE,JS:JE))
-  call AssertEqual("MOMY_t", FOUR(KS:KE,IS:IE,JS:JE), MOMY_t2(KS:KE,IS:IE,JS:JE)/MOMY_t(KS:KE,IS:IE,JS:JE))
+
+  call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:))
+  where(qflx_sgs_momx .ne. 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
+  where(qflx_sgs_momx .eq. 0.0_RP) work = 4.0_RP
+  call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
+  where(qflx_sgs_momy .ne. 0.0_RP) work = qflx_sgs_momy2 / qflx_sgs_momy
+  where(qflx_sgs_momy .eq. 0.0_RP) work = 4.0_RP
+  call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
+     where(qflx_sgs_qtrc2(:,:,:,iq,:) .ne. 0.0_RP) work = qflx_sgs_qtrc2(:,:,:,iq,:) / qflx_sgs_qtrc(:,:,:,iq,:)
+     where(qflx_sgs_qtrc2(:,:,:,iq,:) .eq. 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
-     call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE), QTRC_t2(KS:KE,IS:IE,JS:JE,iq)/QTRC_t(KS:KE,IS:IE,JS:JE,iq))
+     call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   end do
 
 end subroutine test_double

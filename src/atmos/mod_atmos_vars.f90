@@ -66,6 +66,12 @@ module mod_atmos_vars
   real(RP), public, save :: RHOT_av(KA,IA,JA)
   real(RP), public, save :: QTRC_av(KA,IA,JA,QA)
 
+  real(RP), public, save :: qflx_sgs_momz(KA,IA,JA,3)
+  real(RP), public, save :: qflx_sgs_momx(KA,IA,JA,3)
+  real(RP), public, save :: qflx_sgs_momy(KA,IA,JA,3)
+  real(RP), public, save :: qflx_sgs_rhot(KA,IA,JA,3)
+  real(RP), public, save :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+
   ! diagnostic variables, defined at the cell center
   real(RP), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
   real(RP), public, save :: VELX(KA,IA,JA)    ! velocity u [m/s]
