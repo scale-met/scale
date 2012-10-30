@@ -1,6 +1,8 @@
 #include "netcdf.h"
 #include "gtool_file.h"
 
+#define RMISS -9.999e-30
+
 #define CHECK_ERROR(status)					\
   {								\
     if (status != NC_NOERR) {					\
@@ -396,6 +398,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   int i, n;
   size_t size;
   size_t chunksize[MAX_RANK];
+  double rmiss = RMISS;
 
   if ( nvar >= VAR_MAX ) {
     fprintf(stderr, "exceed max number of variable limit\n");
@@ -471,6 +474,8 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   // put variable attribute
   CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
   CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+  CHECK_ERROR( nc_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) );
+  CHECK_ERROR( nc_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) );
 
   if ( tavg ) {
     sprintf(buf, "%s: mean", tname);
