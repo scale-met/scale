@@ -97,7 +97,6 @@ module mod_atmos_dyn
   ! numerical filter settings
   real(RP), private, save      :: ATMOS_DYN_numerical_diff = 1.0E-2_RP ! nondimensional numerical diffusion
   real(RP), private, save      :: DIFF4 ! for 4th order numerical filter
-  real(RP), private, save      :: DIFF2 ! for 2nd order numerical filter
 
   ! coriolis force
   logical, private, save       :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
@@ -124,6 +123,7 @@ module mod_atmos_dyn
   real(RP), private, save :: RHOT_RK2(KA,IA,JA)   !
 
   real(RP), private, save :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
+  real(RP), private, save :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
   real(RP), private, save :: rjpls  (KA,IA,JA)    ! correction factor for incoming antidiffusive flux
   real(RP), private, save :: rjmns  (KA,IA,JA)    ! correction factor for outgoing antidiffusive flux
 
@@ -212,7 +212,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI,               & ! (out)
+    call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
                          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
                          CDZ, CDX, CDY,                       & ! (in)
                          lat,                                 & ! (in)
@@ -245,17 +245,16 @@ contains
 
   end subroutine ATMOS_DYN_setup
 
-  subroutine ATMOS_DYN_init( DIFF4, DIFF2, corioli,               &
-                             CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  &
-                             CDZ, CDX, CDY, lat,                  &
-                             numerical_diff,                      &
-                             enable_coriolis                      )
+  subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
+                             CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, &
+                             CDZ, CDX, CDY, lat,                 &
+                             numerical_diff,                     &
+                             enable_coriolis                     )
     use mod_const, only: &
        PI   => CONST_PI, &
        EOHM => CONST_EOHM
     implicit none
     real(RP), intent(out) :: DIFF4
-    real(RP), intent(out) :: DIFF2
     real(RP), intent(out) :: corioli(1,IA,JA)
     real(RP), intent(out) :: CNDZ(3,KA)
     real(RP), intent(out) :: CNMZ(3,KA)
@@ -305,7 +304,6 @@ contains
     ! numerical diffusion
     if ( numerical_diff == 0.0_RP ) then
        DIFF4 = 0.0_RP
-       DIFF2 = 0.0_RP
        CNDZ(:,:) = 0.0_RP
        CNMZ(:,:) = 0.0_RP
        CNDX(:,:) = 0.0_RP
@@ -314,7 +312,6 @@ contains
        CNMY(:,:) = 0.0_RP
     else
        DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 )
-       DIFF2 = - numerical_diff * (-1.0_RP)**( 2/2+1 ) * 4.0_RP
 
        ! z djrectjon
        do k = KS-1, KE+1
@@ -488,13 +485,20 @@ contains
        COMM_vars8, &
        COMM_wait
     use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
+       ATMOS_vars_total,  &
+       ATMOS_USE_AVERAGE, &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC
+       QTRC, &
+       DENS_av, &
+       MOMZ_av, &
+       MOMX_av, &
+       MOMY_av, &
+       RHOT_av, &
+       QTRC_av
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
        REF_pott => ATMOS_REFSTATE_pott
@@ -527,19 +531,21 @@ contains
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
+         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,        & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,      & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,           & ! (in)
          SFLX_POTT, SFLX_QV,                        & ! (in)
-         REF_dens, REF_pott, DIFF4, DIFF2,          & ! (in)
+         REF_dens, REF_pott, DIFF4,                 & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef, ATMOS_DYN_LSsink_D, & ! (in)
          ATMOS_DYN_FLAG_FCT_rho,                    & ! (in)
          ATMOS_DYN_FLAG_FCT_momentum,               & ! (in)
          ATMOS_DYN_FLAG_FCT_T,                      & ! (in)
-         DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN           ) ! (in)
+         ATMOS_USE_AVERAGE,                         & ! (in)
+         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN    ) ! (in)
 
     call ATMOS_vars_total
 
@@ -551,17 +557,19 @@ contains
 
   subroutine ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                  & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
          SFLX_POTT, SFLX_QV,                          & ! (in)
-         REF_dens, REF_pott, DIFF4, DIFF2,            & ! (in)
+         REF_dens, REF_pott, DIFF4,                   & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef, LSsink_D,                       & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
-         DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN             ) ! (in)
+         USE_AVERAGE,                                 & ! (in)
+         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
     use mod_const, only : &
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
@@ -587,6 +595,14 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP), intent(inout) :: DENS_av(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ_av(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX_av(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
+
     real(RP), intent(out)   :: QDRY(KA,IA,JA)
     real(RP), intent(out)   :: DDIV(KA,IA,JA)
     real(RP), intent(in)    :: CNDZ(3,KA)
@@ -619,7 +635,6 @@ contains
     real(RP), intent(in)    :: REF_dens(KA)
     real(RP), intent(in)    :: REF_pott(KA)
     real(RP), intent(in)    :: DIFF4
-    real(RP), intent(in)    :: DIFF2
     real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
@@ -630,6 +645,9 @@ contains
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
 
+    logical,  intent(in)    :: USE_AVERAGE
+
+    real(DP), intent(in)    :: DTSEC
     real(DP), intent(in)    :: DTSEC_ATMOS_DYN
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
@@ -659,7 +677,7 @@ contains
     integer :: JJS, JJE
 
     real(RP) :: dtrk
-    integer :: i, j, k, iq, iw, rko, step
+    integer :: i, j, k, iq, rko, step
 
 
 #ifdef DEBUG
@@ -713,6 +731,93 @@ contains
     enddo
     enddo
 
+    if ( USE_AVERAGE ) then
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS_av(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMZ_av(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMX_av(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMY_av(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       RHOT_av(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do iq = 1, QA
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       QTRC_av(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+    end if
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,ZDIR) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,XDIR) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,YDIR) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
     do step = 1, NSTEP_ATMOS_DYN
 
 #ifdef _FPCOLL_
@@ -735,12 +840,12 @@ call START_COLLECTION("DYN-set")
        enddo
        enddo
        enddo
-       do iw = QQS, QQE
+       do iq = QQS, QQE
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
-          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iw)
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
        enddo
        enddo
        enddo
@@ -1224,12 +1329,131 @@ call START_COLLECTION("DYN-rk3")
     call COMM_wait ( RHOT(:,:,:), 5 )
 #endif
 
+    if ( USE_AVERAGE ) then
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
+    do iq = 1, QA
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) + QTRC(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    end if
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) + mflx_hi(k,i,j,ZDIR)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) + mflx_hi(k,i,j,XDIR)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_av(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) + mflx_hi(k,i,j,YDIR)
+    enddo
+    enddo
+    enddo
+
 #ifdef _FPCOLL_
 call STOP_COLLECTION ("DYN-rk3")
 call TIME_rapend     ('DYN-rk3')
+#endif
+
+    enddo ! dynamical steps
+
+#ifdef _FPCOLL_
 call TIME_rapstart   ('DYN-fct')
 call START_COLLECTION("DYN-fct")
 #endif
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_hi(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_hi(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       mflx_hi(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
 
     !##### advection of scalar quantity #####
     do iq = 1, QA
@@ -1369,10 +1593,10 @@ call START_COLLECTION("DYN-fct")
     enddo
     enddo
 
-    call fct(qflx_anti,              & ! (out)
-             RHOQ, qflx_hi, qflx_lo, & ! (in)
-             RCDZ, RCDX, RCDY, dtrk, & ! (in)
-             rjpls, rjmns            ) ! (work)
+    call fct(qflx_anti,               & ! (out)
+             RHOQ, qflx_hi, qflx_lo,  & ! (in)
+             RCDZ, RCDX, RCDY, DTSEC, & ! (in)
+             rjpls, rjmns             ) ! (work)
 #ifdef DEBUG
        qflx_lo  (:,:,:,:) = UNDEF
        rjpls(:,:,:) = UNDEF
@@ -1389,7 +1613,7 @@ call START_COLLECTION("DYN-fct")
        do i = IIS, IIE
        do k = KS, KE
           QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
-               + dtrk * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
+              + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
                               - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                             + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
                               - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
@@ -1429,8 +1653,6 @@ call STOP_COLLECTION ("DYN-fct")
 call TIME_rapend     ('DYN-fct')
 #endif
 
-    enddo ! dynamical steps
-
 !OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
@@ -1462,6 +1684,123 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF; iq = IUNDEF
 #endif
 
+    if ( USE_AVERAGE ) then
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS_av(k,i,j) = DENS_av(k,i,j) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMZ_av(k,i,j) = MOMZ_av(k,i,j) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMX_av(k,i,j) = MOMX_av(k,i,j) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMY_av(k,i,j) = MOMY_av(k,i,j) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       RHOT_av(k,i,j) = RHOT_av(k,i,j) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
+    do iq = 1, QA
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) / NSTEP_ATMOS_DYN
+    enddo
+    enddo
+    enddo
+    enddo
+
+    else
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS_av(k,i,j) = DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMZ_av(k,i,j) = MOMZ(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMX_av(k,i,j) = MOMX(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       MOMY_av(k,i,j) = MOMY(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       RHOT_av(k,i,j) = RHOT(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
+    do iq = 1, QA
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       QTRC_av(k,i,j,iq) = QTRC(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    endif
 
     return
   end subroutine ATMOS_DYN_main
