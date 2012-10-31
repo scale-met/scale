@@ -3,18 +3,18 @@
 
 ##### for computation
 
-FC     = mpif90
-FFLAGS = -fpp3 -O3 -ftz -xHost -ip            \
-         -fp-model precise -pc 80             \
-         -heap-arrays -fno-alias              \
-	 -mkl=sequential
-#	 -opt-streaming-stores always         \
+FC     ?= mpif90
+FFLAGS ?= -fpp3 -O3 -ftz -xHost -ip            \
+          -fp-model precise -pc 80             \
+          -heap-arrays -fno-alias              \
+ 	  -mkl=sequential
+#	  -opt-streaming-stores always         \
 
-FFLAGS_DEBUG = -fpp3 -O0       \
+FFLAGS_DEBUG ?= -fpp3 -O0       \
 	       -mkl=sequential \
 	       -check all -warn all -g -traceback -fpe0 -DDEBUG
 
-MODDIROPT = -module
+MODDIROPT ?= -module
 
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
@@ -25,16 +25,16 @@ ifneq ($(ENABLE_OPENMP),)
 endif
 
 
-CC     = mpicc
-CFLAGS = -O3 -xHost -ip -ftz
+CC     ?= mpicc
+CFLAGS ?= -O3 -xHost -ip -ftz
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD     ?= $(FC)
+LFLAGS ?= $(FFLAGS)
 
 ##### for frontend
 
-NETCDF_LIBS = -lnetcdf
-NETCDF_INCLUDES =
+NETCDF_LIBS ?= -lnetcdf
+NETCDF_INCLUDE ?=
 
-AR     = ar r
-RANLIB = ranlib
+AR     ?= ar
+RANLIB ?= ranlib

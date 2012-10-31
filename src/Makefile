@@ -81,10 +81,10 @@ makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ2) $(BINDIR)/$(INITNAME)
 
 $(BUILD_DIR)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
 
 $(BUILD_DIR)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(LIBDIR)/$(LIBNAME)
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(LIBDIR)/$(LIBNAME)
@@ -94,7 +94,7 @@ $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
 
 $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-	$(AR) $@ $?
+	$(AR) r $@ $?
 	$(RANLIB) $@
 
 $(BUILD_DIR)/mod_stdio.o	: mod_stdio.f90

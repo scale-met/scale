@@ -3,24 +3,24 @@
 
 ##### for computation
 
-FC     = mpif90
-FFLAGS = -cpp -O3
-FFLAGS_DEBUG = -cpp -O0 -ffpe-trap=invalid,zero,overflow \
+FC     ?= mpif90
+FFLAGS ?= -cpp -O3
+FFLAGS_DEBUG ?= -cpp -O0 -ffpe-trap=invalid,zero,overflow \
          -Wall -Wuninitialized -fbounds-check      \
          -g -fbacktrace -fcheck=all -finit-real=nan \
          -DDEBUG
 
-MODDIROPT = -J
+MODDIROPT ?= -J
 
-CC	= gcc
-CFLAGS  = -O3
+CC	?= gcc
+CFLAGS  ?= -O3
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD     ?= $(FC)
+LFLAGS ?= $(FFLAGS)
 
-NETCDF_LIBS = -lnetcdf
-NETCDF_INCLUDE =
+NETCDF_LIBS ?= -lnetcdf
+NETCDF_INCLUDE ?=
 
 ##### for frontend
-AR     = ar r
-RANLIB = ranlib
+AR     ?= ar
+RANLIB ?= ranlib
