@@ -47,10 +47,10 @@ MODS =	\
 	mod_atmos_sub_hydrostatic.o	\
 	mod_atmos_sub_refstate.o	\
 	mod_atmos_sub_boundary.o	\
-	mod_atmos_sub_precipitation.o	\
 	mod_atmos_mp_saturation.o       \
 	mod_atmos_vars.o	\
 	mod_atmos_vars_sf.o	\
+	mod_atmos_sub_precipitation.o	\
 	mod_atmos_dyn_fent_fullfct_lss.o	\
 	mod_atmos_phy_sf_$(sfcflx).o	\
 	mod_atmos_phy_tb_smg.o	\
@@ -94,7 +94,7 @@ $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
 
 $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-	$(AR) r $@ $?
+	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
 $(BUILD_DIR)/mod_stdio.o	: mod_stdio.f90
@@ -143,6 +143,8 @@ distclean: clean
 
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+$(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o:
+	$(FC) $(FFLAGS_DYN) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 
 .PHONY : clean distclean allclean

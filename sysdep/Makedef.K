@@ -1,8 +1,8 @@
 # ------ FOR K -----
 
-FC     ?= mpifrtpx
+FC     = mpifrtpx
 # new setting 20120413
-FFLAGS ?= -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
+FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
          -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
          -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
 
@@ -26,15 +26,16 @@ MODDIROPT ?= -M
 #         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
 #         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
 
-CC     ?= mpifccpx
-CFLAGS ?= -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd
+CC     = fccpx
+CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd
 
-LD     ?= $(FC)
-LFLAGS ?= $(FFLAGS)
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
 
 # netcdf
 NETCDF_LIBS ?= -L/data/group084/netcdf/lib -lnetcdf -L/data/group084/hdf5.mpi/lib -lhdf5_hl -lhdf5 -lsz -lz
 NETCDF_INCLUDE ?= -I/data/group084/netcdf/include
 
-AR     ?= ar
-RANLIB ?= ranlib
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib

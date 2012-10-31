@@ -3,11 +3,13 @@
 
 ##### for computation
 
-FC     ?= mpif90
-FFLAGS ?= -fpp3 -O3 -ftz -m64                  \
+FC     = mpif90
+FFLAGS = -fpp3 -O3 -ftz -m64                  \
          -assume byterecl -convert big_endian \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias
+
+FFLAGS_DYN = $(FFLAGS)
 
 
 #FFLAGS = -fpp3 -O0 -m64                       \
@@ -18,16 +20,17 @@ FFLAGS ?= -fpp3 -O3 -ftz -m64                  \
 
 MODDIROPT ?= -module
 
-CC     ?= icc
-CFLAGS ?= -O3 -ftz -m64
+CC     = icc
+CFLAGS = -O3 -ftz -m64
 
-LD     ?= $(FC)
-LFLAGS ?= $(FFLAGS)
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/opt/local/include
 NETCDF_LIBS    ?= -L/opt/local/lib -lnetcdf
 
 
-AR     ?= ar
-RANLIB ?= ranlib -c
+AR      = ar
+ARFLAGS = -r
+RANLIB  = ranlib -c

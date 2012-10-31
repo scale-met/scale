@@ -3,8 +3,8 @@
 
 ##### for computation
 
-FC     ?= ifort
-FFLAGS ?= -fpp3 -O3 -ftz -m64                  \
+FC     = ifort
+FFLAGS = -fpp3 -O3 -ftz -m64                  \
          -fp-model precise -pc 80             \
          -heap-arrays -fno-alias              \
          -xSSE4.2 -lmpi -mkl=sequential
@@ -24,16 +24,20 @@ ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
 endif
 
+FFLAGS_DYN ?= $(FFLAGS)
+
+
 MODDIROPT ?= -module
 
 
-LD     ?= $(FC)
-LFLAGS ?= $(FFLAGS)
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/ap/netcdf/4.1.2/include
 NETCDF_LIBS    ?= -L/ap/netcdf/4.1.2/lib -lnetcdf
 
 
-AR     ?= ar
-RANLIB ?= ranlib
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
