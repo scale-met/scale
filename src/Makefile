@@ -10,7 +10,7 @@ BUILD_DIR = ./.libs
 include ../sysdep/Makedef.$(SCALE_SYS)
 include ./Mkinclude
 
-VPATH = include:common:io:grid:atmos:ocean:preprocess:$(BUILD_DIR)
+VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess
 INDEX_DIR = $(INCDIR)
 
 #default index & tracer set
@@ -39,25 +39,25 @@ MODS =	\
 	mod_comm.o	\
 	mod_history.o	\
 	mod_monitor.o	\
-	mod_atmos.o	\
-	mod_atmos_vars.o	\
-	mod_atmos_sub_thermodyn.o	\
-	mod_atmos_sub_refstate.o	\
-	mod_atmos_sub_boundary.o	\
-	mod_atmos_dyn_fent_fullfct_lss.o	\
-	mod_atmos_phy_sf_$(sfcflx).o	\
-	mod_atmos_vars_sf.o	\
-	mod_atmos_phy_tb_smg.o	\
-	mod_atmos_phy_mp_$(tracer).o \
-	mod_atmos_sub_precipitation.o	\
-	mod_atmos_phy_rd_$(radiation).o \
-	mod_ocean.o	\
 	mod_ocean_vars.o	\
 	mod_ocean_fixedsst.o	\
-	mod_mkinit.o	\
+	mod_ocean.o	\
+	mod_atmos_sub_saturation.o      \
+	mod_atmos_sub_thermodyn.o	\
 	mod_atmos_sub_hydrostatic.o	\
-	mod_atmos_mp_saturation.o	\
-	mod_atmos_sub_saturation.o
+	mod_atmos_sub_refstate.o	\
+	mod_atmos_sub_boundary.o	\
+	mod_atmos_sub_precipitation.o	\
+	mod_atmos_mp_saturation.o       \
+	mod_atmos_vars.o	\
+	mod_atmos_vars_sf.o	\
+	mod_atmos_dyn_fent_fullfct_lss.o	\
+	mod_atmos_phy_sf_$(sfcflx).o	\
+	mod_atmos_phy_tb_smg.o	\
+	mod_atmos_phy_mp_$(tracer).o \
+	mod_atmos_phy_rd_$(radiation).o \
+	mod_atmos.o	\
+	mod_mkinit.o
 
 all: makedir makedcutils makegtool makeinclude makebin
 
