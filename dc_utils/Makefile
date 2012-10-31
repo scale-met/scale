@@ -25,7 +25,7 @@ $(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	install $(LIBNAME) $(LIBDIR)
 
 $(LIBNAME): $(MODS)
-	$(AR) $@ $?
+	$(AR) r $@ $?
 	$(RANLIB) $@
 
 dc_calendar.f90: dc_calendar.f90.erb

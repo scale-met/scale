@@ -27,7 +27,7 @@ $(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	install $(LIBNAME) $(LIBDIR)
 
 $(LIBNAME): $(DCUTILSDIR)/libdcutils.a $(MODS)
-	$(AR) $@ $(MODS)
+	$(AR) r $@ $(MODS)
 	$(RANLIB) $@
 
 $(DCUTILSDIR)/libdcutils.a:
