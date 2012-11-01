@@ -537,7 +537,7 @@ contains
        bufftotz = bufftotz + buffz(k)
     enddo
     kbuff = k - 1
-    kmain = KA - kbuff - 2*KHALO
+    kmain = KE - KS + 1 - kbuff
 
     if ( kmain < 1 ) then
        write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
@@ -545,31 +545,31 @@ contains
     endif
 
     ! vartical coordinate (local=global domaim)
-    GRID_FZ(KHALO) = 0.0_RP
-    do k = KHALO-1, 0, -1
+    GRID_FZ(KS-1) = 0.0_RP
+    do k = KS-2, 0, -1
        GRID_FZ(k) = GRID_FZ(k+1) - DZ
     enddo
 
-    do k = 1, KHALO
+    do k = 1, KS-1
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo
 
-    do k = KHALO+1, KHALO+kmain
+    do k = KS, KS+kmain-1
        GRID_FZ     (k) = GRID_FZ(k-1) + DZ
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo
 
     if ( kbuff > 0 ) then
-       do k = KHALO+kmain+1, KHALO+kmain+kbuff
-          GRID_FZ     (k) = GRID_FZ(k-1) + buffz(k-KHALO-kmain)
+       do k = KS+kmain, KE
+          GRID_FZ     (k) = GRID_FZ(k-1) + buffz(k-KS-kmain+1)
           GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
           GRID_CZ_mask(k) = .false.
        enddo
     endif
 
-    do k = KHALO+kmain+kbuff+1, KHALO+kmain+kbuff+KHALO
+    do k = KE+1, KA
        GRID_FZ     (k) = GRID_FZ(k-1) + buffz(kbuff)
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .false.
@@ -579,13 +579,13 @@ contains
     GRID_CBFZ(:) = 0.0_RP
     GRID_FBFZ(:) = 0.0_RP
     if ( kbuff > 0 ) then
-       do k = KHALO+kmain+1, KHALO+kmain+kbuff
+       do k = KS+kmain, KE
           GRID_CBFZ(k) = (bufftotz-GRID_FZ(KE)+GRID_CZ(k)) / bufftotz
           GRID_FBFZ(k) = (bufftotz-GRID_FZ(KE)+GRID_FZ(k)) / bufftotz
        enddo
     endif
 
-    do k = KHALO+kmain+kbuff+1, KHALO+kmain+kbuff+KHALO
+    do k = KE+1, KA
        GRID_CBFZ(k) = 1.0_RP
        GRID_FBFZ(k) = 1.0_RP
     enddo
