@@ -141,6 +141,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
     use mod_stdio, only: &
+      IO_get_available_fid, &
       IO_FID_CONF
     use mod_process, only: &
       PRC_MPIstop
@@ -227,8 +228,7 @@ contains
     doautoconversion = ATMOS_PHY_MP_doautoconversion
     doprecipitation = ATMOS_PHY_MP_doprecipitation
 
-    call fio_register_file(n,fname_micpara)
-    fid_micpara = n
+    fid_micpara = IO_get_available_fid()
     !--- open parameter of cloud microphysics
     open ( fid_micpara, file = fname_micpara, form = 'formatted', status = 'old' )
 
