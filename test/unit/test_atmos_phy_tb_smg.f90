@@ -252,7 +252,8 @@ subroutine test_double
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC      ) ! (in)
 
 
-  call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), &
+       qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:))
   where(qflx_sgs_momx .ne. 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
   where(qflx_sgs_momx .eq. 0.0_RP) work = 4.0_RP
   call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
