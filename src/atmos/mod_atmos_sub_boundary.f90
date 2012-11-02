@@ -120,7 +120,10 @@ contains
        ATMOS_BOUNDARY_USE_POTT,      &
        ATMOS_BOUNDARY_USE_QV,        &
        ATMOS_BOUNDARY_VALUE_VELZ,    &
+       ATMOS_BOUNDARY_VALUE_VELY,    &
        ATMOS_BOUNDARY_VALUE_VELX,    &
+       ATMOS_BOUNDARY_VALUE_POTT,    &
+       ATMOS_BOUNDARY_VALUE_QV,      &
        ATMOS_BOUNDARY_tauz,          &
        ATMOS_BOUNDARY_taux,          &
        ATMOS_BOUNDARY_tauy
@@ -486,13 +489,21 @@ contains
     do k = KS, KE
        if ( CZ_mask(k) ) then ! Inner Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = CONST_UNDEF
        else                   ! Buffer Layer
           ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
        endif
     enddo
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF
+!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
+!    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
+!    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF
 
 !    do j = JS-1, JE+1
 !    do i = IS-1, IE+1
@@ -506,7 +517,7 @@ contains
 !       enddo
 !    enddo
 !    enddo
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
+!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
 
     ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV

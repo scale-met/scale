@@ -3341,7 +3341,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs_qtrc(k,i,j,ZDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                                * nu_Z(k,i,j) &
                                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
        enddo
@@ -3352,8 +3352,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_qtrc(KS-1,i,j,ZDIR,iq) = 0.0_RP
-          qflx_sgs_qtrc(KE  ,i,j,ZDIR,iq) = 0.0_RP
+          qflx_sgs_qtrc(KS-1,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_qtrc(KE  ,i,j,iq,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -3372,7 +3372,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_qtrc(k,i,j,XDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+          qflx_sgs_qtrc(k,i,j,iq,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                                * nu_X(k,i,j) &
                                * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
        enddo
@@ -3393,7 +3393,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_qtrc(k,i,j,YDIR,iq) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+          qflx_sgs_qtrc(k,i,j,iq,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                                * nu_Y(k,i,j) &
                                * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
        enddo
