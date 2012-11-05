@@ -99,14 +99,14 @@ program scaleinit
   ! setup standard I/O
   call IO_setup
 
-  ! setup Log
-  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
-
   ! start MPI
   call PRC_MPIstart
 
   ! setup process
   call PRC_setup
+
+  ! setup Log
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
 
   ! setup constants
   call CONST_setup

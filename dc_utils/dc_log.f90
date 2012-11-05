@@ -64,7 +64,7 @@ contains
     integer, intent(in), optional :: fid_log
     logical, intent(in), optional :: master
 
-    character(len=1)   :: LOG_LEVEL = 'I'
+    character(len=5)   :: LOG_LEVEL = 'I'
     character(len=100) :: LOG_FILE = "LOG_"
 
     integer :: ierr
@@ -99,8 +99,8 @@ contains
        LOG_opened = .true.
     end if
 
-    select case (LOG_LEVEL)
-    case ('E', 'e', 'ERRRO', 'error')
+    select case (trim(LOG_LEVEL))
+    case ('E', 'e', 'ERROR', 'error')
        LOG_ilevel = LOG_ERROR
     case ('W', 'w', 'WARN', 'warn')
        LOG_ilevel = LOG_WARN
