@@ -45,8 +45,19 @@ module mod_history
   public :: HIST_get
   public :: HIST_write
 
+  interface HIST_in
+     module procedure HIST_in_1D
+     module procedure HIST_in_2D
+     module procedure HIST_in_3D
+  end interface HIST_in
+  interface HIST_put
+     module procedure HIST_put_1D
+     module procedure HIST_put_2D
+     module procedure HIST_put_3D
+  end interface HIST_put
   interface HIST_get
      module procedure HIST_get_1D
+     module procedure HIST_get_2D
      module procedure HIST_get_3D
   end interface HIST_get
   !-----------------------------------------------------------------------------
@@ -105,7 +116,10 @@ contains
        item,   & ! (in)
        desc,   & ! (in)
        units,  & ! (in)
-       ktype   & ! (in)
+       ndim,  & ! (in)
+       xdim,   & ! (in)
+       ydim,   & ! (in)
+       zdim    & ! (in)
        )
     use mod_process, only: &
          PRC_master, &
@@ -116,27 +130,36 @@ contains
     character(len=*), intent( in) :: item
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
-    character(len=*), intent( in) :: ktype
+    integer,          intent( in) :: ndim
+    character(len=*), intent( in), optional :: xdim
+    character(len=*), intent( in), optional :: ydim
+    character(len=*), intent( in), optional :: zdim
 
-    character(len=1), allocatable :: dims(:)
+    character(len=2) :: dims(3)
+
+    if ( present(xdim) .and. trim(xdim)=='half' ) then
+       dims(1) = 'xh'
+    else
+       dims(1) = 'x'
+    end if
+    if ( present(ydim) .and. trim(ydim)=='half' ) then
+       dims(2) = 'yh'
+    else
+       dims(2) = 'y'
+    end if
+    if ( present(zdim) .and. trim(zdim)=='half' ) then
+       dims(3) = 'zh'
+    else
+       dims(3) = 'z'
+    end if
 
     call TIME_rapstart('FILE O')
 
-    if ( trim(ktype)=="3D" ) then
-       allocate(dims(3))
-       dims = (/"x","y","z"/)
-    else if ( trim(ktype)=="2D" ) then
-       allocate(dims(2))
-       dims = (/"x","y"/)
-    else
-       write(*,*) "xxx ktype is invalid: ", ktype
-       call PRC_MPIstop
-    end if
+    call HIST_put_axes
 
-    call HistoryAddVariable(item, dims, desc, units, PRC_master, PRC_myrank, & ! (in)
+    call HistoryAddVariable(item, dims(1:ndim), desc, units, PRC_master, PRC_myrank, & ! (in)
          itemid = itemid) ! (out)
 
-    deallocate(dims)
 
     call TIME_rapend  ('FILE O')
 
@@ -144,7 +167,62 @@ contains
   end subroutine HIST_reg
 
   !-----------------------------------------------------------------------------
-  subroutine HIST_put( &
+  subroutine HIST_put_1D( &
+      itemid, & ! (in)
+      var,    & ! (in)
+      dt      & ! (in)
+      )
+    implicit none
+
+    integer,  intent(in) :: itemid
+    real(RP), intent(in) :: var(:)
+    real(8),  intent(in) :: dt
+
+    real(RP) :: var2(KMAX)
+    integer :: k
+
+    call TIME_rapstart('FILE O')
+
+    do k = 1, KMAX
+       var2(k) = var(KS+k-1)
+    end do
+    call HistoryPut(itemid, var2, dt)
+
+    call TIME_rapend  ('FILE O')
+
+    return
+  end subroutine HIST_put_1D
+  !-----------------------------------------------------------------------------
+  subroutine HIST_put_2D( &
+      itemid, & ! (in)
+      var,    & ! (in)
+      dt      & ! (in)
+      )
+    implicit none
+
+    integer,  intent(in) :: itemid
+    real(RP), intent(in) :: var(:,:)
+    real(8),  intent(in) :: dt
+
+    real(RP) :: var2(IMAX*JMAX)
+    integer :: i, j
+
+    call TIME_rapstart('FILE O')
+
+    do j = 1, JMAX
+    do i = 1, IMAX
+       var2(i + (j-1)*IMAX) = var(IS+i-1,JS+j-1)
+    end do
+    end do
+
+    call HistoryPut(itemid, var2, dt)
+
+    call TIME_rapend  ('FILE O')
+
+    return
+  end subroutine HIST_put_2D
+  !-----------------------------------------------------------------------------
+  subroutine HIST_put_3D( &
       itemid, & ! (in)
       var,    & ! (in)
       dt      & ! (in)
@@ -156,17 +234,11 @@ contains
     real(8),  intent(in) :: dt
 
     real(RP) :: var2(IMAX*JMAX*KMAX)
-    logical, save :: firsttime = .true.
     integer :: i, j, k
     integer :: s(3)
     intrinsic shape
 
     call TIME_rapstart('FILE O')
-
-    if ( firsttime ) then
-       call HIST_put_axes
-       firsttime = .false.
-    end if
 
     s = shape(var)
     if ( s(1) == 1 ) then
@@ -190,33 +262,34 @@ contains
     call TIME_rapend  ('FILE O')
 
     return
-  end subroutine HIST_put
+  end subroutine HIST_put_3D
 
   !-----------------------------------------------------------------------------
-  subroutine HIST_in( &
+  subroutine HIST_in_1D( &
        var,    & ! (in)
        item,   & ! (in)
        desc,   & ! (in)
        units,  & ! (in)
-       ktype,  & ! (in)
-       dt      & ! (in)
+       dt,     & ! (in)
+       zdim    & ! (in)
        )
     implicit none
 
-    real(RP),         intent(in) :: var(:,:,:)
+    real(RP),         intent(in) :: var(:)
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    character(len=*), intent(in) :: ktype
     real(8),          intent(in) :: dt
-       
+    character(len=*), intent(in), optional :: zdim
+
     integer :: itemid
 
     call TIME_rapstart('FILE O')
 
     call HIST_reg( &
-         itemid,                  & ! (out)
-         item, desc, units, ktype & ! (in)
+         itemid,               & ! (out)
+         item, desc, units, 1, & ! (in)
+         zdim = zdim           & ! (in)
          )
 
     call HIST_put( itemid, var, dt ) ! (in)
@@ -224,7 +297,81 @@ contains
     call TIME_rapend  ('FILE O')
 
     return
-  end subroutine HIST_in
+  end subroutine HIST_in_1D
+  !-----------------------------------------------------------------------------
+  subroutine HIST_in_2D( &
+       var,    & ! (in)
+       item,   & ! (in)
+       desc,   & ! (in)
+       units,  & ! (in)
+       dt,     & ! (in)
+       xdim,   & ! (in)
+       ydim    & ! (in)
+       )
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:)
+    character(len=*), intent(in) :: item
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    real(8),          intent(in) :: dt
+    character(len=*), intent(in), optional :: xdim
+    character(len=*), intent(in), optional :: ydim
+
+    integer :: itemid
+
+    call TIME_rapstart('FILE O')
+
+    call HIST_reg( &
+         itemid,                  & ! (out)
+         item, desc, units, 2,    & ! (in)
+         xdim = xdim, ydim = ydim & ! (in)
+         )
+
+    call HIST_put( itemid, var, dt ) ! (in)
+
+    call TIME_rapend  ('FILE O')
+
+    return
+  end subroutine HIST_in_2D
+  !-----------------------------------------------------------------------------
+  subroutine HIST_in_3D( &
+       var,    & ! (in)
+       item,   & ! (in)
+       desc,   & ! (in)
+       units,  & ! (in)
+       dt,     & ! (in)
+       xdim,   & ! (in)
+       ydim,   & ! (in)
+       zdim    & ! (in)
+       )
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:,:)
+    character(len=*), intent(in) :: item
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    real(8),          intent(in) :: dt
+    character(len=*), intent(in), optional :: xdim
+    character(len=*), intent(in), optional :: ydim
+    character(len=*), intent(in), optional :: zdim
+
+    integer :: itemid
+
+    call TIME_rapstart('FILE O')
+
+    call HIST_reg( &
+         itemid,                         & ! (out)
+         item, desc, units, 3,           & ! (in)
+         xdim=xdim, ydim=ydim, zdim=zdim & ! (in)
+         )
+
+    call HIST_put( itemid, var, dt ) ! (in)
+
+    call TIME_rapend  ('FILE O')
+
+    return
+  end subroutine HIST_in_3D
 
   !-----------------------------------------------------------------------------
   ! interface HIST_get
@@ -253,6 +400,32 @@ contains
 
     return
   end subroutine HIST_get_1D
+  subroutine HIST_get_2D( &
+       var,          &
+       basename,     &
+       varname,      &
+       step,         &
+       allow_missing &
+       )
+    use mod_process, only: &
+       PRC_myrank
+    implicit none
+
+    real(RP),         intent(out) :: var(:,:)
+    character(len=*), intent( in) :: basename
+    character(len=*), intent( in) :: varname
+    integer,          intent( in) :: step
+    logical,          intent( in), optional :: allow_missing
+
+    call TIME_rapstart('FILE I')
+
+    call HistoryGet( var,                                   & ! (out)
+         basename, varname, step, PRC_myrank, allow_missing ) ! (in)
+
+    call TIME_rapend  ('FILE I')
+
+    return
+  end subroutine HIST_get_2D
   subroutine HIST_get_3D( &
        var,          &
        basename,     &
@@ -329,6 +502,10 @@ contains
     call HistoryPutAxis('x', GRID_CX(IS:IE))
     call HistoryPutAxis('y', GRID_CY(JS:JE))
     call HistoryPutAxis('z', GRID_CZ(KS:KE))
+
+    call HistoryPutAdditionalAxis('xh', 'X (half level)', 'm', 'xh', GRID_FX(IS:IE))
+    call HistoryPutAdditionalAxis('yh', 'Y (half level)', 'm', 'yh', GRID_FY(JS:JE))
+    call HistoryPutAdditionalAxis('zh', 'Z (half level)', 'm', 'zh', GRID_FZ(KS:KE))
 
     call HistoryPutAdditionalAxis('CZ', 'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
     call HistoryPutAdditionalAxis('CX', 'Grid Center Position X', 'm', 'CX', GRID_CX)

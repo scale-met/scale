@@ -267,8 +267,8 @@ contains
     enddo
     enddo
 
-    call HIST_in( SHFLX(:,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', '2D', dtsf )
-    call HIST_in( LHFLX(:,:,:), 'LHFLX', 'latent heat flux',   'W/m2', '2D', dtsf )
+    call HIST_in( SHFLX(1,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+    call HIST_in( LHFLX(1,:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
 
   end subroutine ATMOS_PHY_SF
   !-----------------------------------------------------------------------------

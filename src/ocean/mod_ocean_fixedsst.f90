@@ -146,7 +146,7 @@ contains
     enddo
     enddo
 
-    call HIST_in( SST(:,:,:), 'SST', OP_DESC(1), OP_UNIT(1), '2D', dt )
+    call HIST_in( SST(1,:,:), 'SST', OP_DESC(1), OP_UNIT(1), dt )
 
     return
   end subroutine OCEAN_SST

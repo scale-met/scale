@@ -556,8 +556,8 @@ contains
 
     call ATMOS_vars_total
 
-    call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', '3D', DTSEC )
-    call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   '3D', DTSEC )
+    call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', DTSEC )
+    call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   DTSEC )
     return
 
   end subroutine ATMOS_DYN

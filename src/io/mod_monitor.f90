@@ -158,14 +158,14 @@ contains
       item,   &
       desc,   &
       unit,   &
-      ktype   )
+      ndim   )
     implicit none
 
     integer,          intent(out) :: itemid
     character(len=*), intent( in) :: item
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: unit
-    character(len=*), intent( in) :: ktype
+    integer,          intent( in) :: ndim
 
     character(len=8) :: lname
 
@@ -193,10 +193,10 @@ contains
              MONIT_item(itemid) = trim(item)
              MONIT_desc(itemid) = trim(desc)
              MONIT_unit(itemid) = trim(unit)
-             if    ( trim(ktype) == '2D' ) then
+             if    ( ndim == 2 ) then
                 MONIT_ktype(itemid) = 'ZSFC'
                 MONIT_kmax (itemid) = 1
-             elseif( trim(ktype) == '3D' ) then
+             elseif( ndim == 3 ) then
                 write(lname,'(A,I4.4)') 'ZDEF', KMAX
                 MONIT_ktype(itemid) = lname
                 MONIT_kmax (itemid) = KMAX
@@ -273,7 +273,7 @@ contains
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONIT_reg( itemid, item, desc, unit, ktype )
+    call MONIT_reg( itemid, item, desc, unit, 3 )
     
     if ( itemid > 0 ) then
        call MONIT_put( itemid, var(:,:,:) )

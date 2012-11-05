@@ -330,36 +330,36 @@ contains
     ATMOS_MONIT_sw(:) = -1
     ATMOS_PREP_sw (:) = -1
 
-    call HIST_reg( AP_HIST_id(I_DENS), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), '3D')
-    call HIST_reg( AP_HIST_id(I_MOMZ), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), '3D')
-    call HIST_reg( AP_HIST_id(I_MOMX), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), '3D')
-    call HIST_reg( AP_HIST_id(I_MOMY), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), '3D')
-    call HIST_reg( AP_HIST_id(I_RHOT), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), '3D')
+    call HIST_reg( AP_HIST_id(I_DENS), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), 3)
+    call HIST_reg( AP_HIST_id(I_MOMZ), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), 3, zdim='half')
+    call HIST_reg( AP_HIST_id(I_MOMX), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), 3, xdim='half')
+    call HIST_reg( AP_HIST_id(I_MOMY), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), 3, ydim='half')
+    call HIST_reg( AP_HIST_id(I_RHOT), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), 3)
     do iq = 1, QA
-       call HIST_reg( AQ_HIST_id(iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), '3D')
+       call HIST_reg( AQ_HIST_id(iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 3)
     enddo
 
 
-    call HIST_reg( ATMOS_HIST_id(I_VELZ), 'W',    'velocity w',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_VELX), 'U',    'velocity u',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_VELY), 'V',    'velocity v',            'm/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_POTT), 'PT',   'potential temp.',       'K',     '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_QDRY), 'QDRY', 'dry air',               'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_RTOT), 'RTOT', 'Total gas constant',    'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_PRES), 'PRES', 'pressure',              'Pa',    '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_TEMP), 'T',    'temperature',           'K',     '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_RH  ), 'RH',   'relative humidity',     '%',     '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_VOR ), 'VOR',  'vertical vorticity',    '1/s',   '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_DIV ), 'DIV',  'horizontal divergence', '1/s',   '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_VELZ), 'W',    'velocity w',            'm/s',   3 )
+    call HIST_reg( ATMOS_HIST_id(I_VELX), 'U',    'velocity u',            'm/s',   3 )
+    call HIST_reg( ATMOS_HIST_id(I_VELY), 'V',    'velocity v',            'm/s',   3 )
+    call HIST_reg( ATMOS_HIST_id(I_POTT), 'PT',   'potential temp.',       'K',     3 )
+    call HIST_reg( ATMOS_HIST_id(I_QDRY), 'QDRY', 'dry air',               'kg/kg', 3 )
+    call HIST_reg( ATMOS_HIST_id(I_RTOT), 'RTOT', 'Total gas constant',    'kg/kg', 3 )
+    call HIST_reg( ATMOS_HIST_id(I_PRES), 'PRES', 'pressure',              'Pa',    3 )
+    call HIST_reg( ATMOS_HIST_id(I_TEMP), 'T',    'temperature',           'K',     3 )
+    call HIST_reg( ATMOS_HIST_id(I_RH  ), 'RH',   'relative humidity',     '%',     3 )
+    call HIST_reg( ATMOS_HIST_id(I_QTOT), 'QTOT', 'total hydrometeors',    'kg/kg', 3 )
+    call HIST_reg( ATMOS_HIST_id(I_VOR ), 'VOR',  'vertical vorticity',    '1/s',   3 )
+    call HIST_reg( ATMOS_HIST_id(I_DIV ), 'DIV',  'horizontal divergence', '1/s',   3 )
 
-    call HIST_reg( ATMOS_HIST_id(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  '3D' )
-    call HIST_reg( ATMOS_HIST_id(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  '3D' )
-    call MONIT_reg( ATMOS_MONIT_sw(I_ENGP), 'ENGP', 'potential energy', 'J', '3D' )
-    call MONIT_reg( ATMOS_MONIT_sw(I_ENGK), 'ENGK', 'kinetic   energy', 'J', '3D' )
-    call MONIT_reg( ATMOS_MONIT_sw(I_ENGI), 'ENGI', 'internal  energy', 'J', '3D' )
-    call MONIT_reg( ATMOS_MONIT_sw(I_ENGT), 'ENGT', 'total     energy', 'J', '3D' )
+    call HIST_reg( ATMOS_HIST_id(I_ENGP), 'ENGP', 'potential energy',      'J/m3',  3 )
+    call HIST_reg( ATMOS_HIST_id(I_ENGK), 'ENGK', 'kinetic energy',        'J/m3',  3 )
+    call HIST_reg( ATMOS_HIST_id(I_ENGI), 'ENGI', 'internal energy',       'J/m3',  3 )
+    call MONIT_reg( ATMOS_MONIT_sw(I_ENGP), 'ENGP', 'potential energy', 'J', 3 )
+    call MONIT_reg( ATMOS_MONIT_sw(I_ENGK), 'ENGK', 'kinetic   energy', 'J', 3 )
+    call MONIT_reg( ATMOS_MONIT_sw(I_ENGI), 'ENGI', 'internal  energy', 'J', 3 )
+    call MONIT_reg( ATMOS_MONIT_sw(I_ENGT), 'ENGT', 'total     energy', 'J', 3 )
 
     if ( ATMOS_HIST_id(I_VELZ) > 0 ) then
        ATMOS_PREP_sw(I_VELZ) = 1
