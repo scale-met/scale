@@ -1258,7 +1258,8 @@ call START_COLLECTION("DYN-rk3")
                  DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
-                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT,        & ! (in)
+                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CORIOLI,                                     & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
@@ -1292,7 +1293,8 @@ call START_COLLECTION("DYN-rk3")
                  DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,  & ! (in)
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
-                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT,        & ! (in)
+                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CORIOLI,                                     & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
@@ -1326,7 +1328,8 @@ call START_COLLECTION("DYN-rk3")
                  DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,  & ! (in)
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
-                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT,        & ! (in)
+                 SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CORIOLI,                                     & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
@@ -1845,7 +1848,8 @@ call TIME_rapend     ('DYN-fct')
                      DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
                      qflx_sgs_momz, qflx_sgs_momx,                &
                      qflx_sgs_momy, qflx_sgs_rhot,                &
-                     SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT,  &
+                     SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             &
+                     SFLX_POTT, SFLX_QV,                          &
                      Rtot, CORIOLI,                               &
                      num_diff, ray_damp, divdmp_coef, LSsink_d,   &
                      FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
@@ -1899,6 +1903,7 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: SFLX_MOMX(IA,JA)
     real(RP), intent(in) :: SFLX_MOMY(IA,JA)
     real(RP), intent(in) :: SFLX_POTT(IA,JA)
+    real(RP), intent(in) :: SFLX_QV  (IA,JA)
 
     real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
@@ -2146,7 +2151,7 @@ call TIME_rapend     ('DYN-fct')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -2229,7 +2234,7 @@ call TIME_rapend     ('DYN-fct')
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+          mflx_hi(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
           mflx_hi(KE,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
