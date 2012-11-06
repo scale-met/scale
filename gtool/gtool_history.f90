@@ -634,7 +634,6 @@ contains
     integer :: type
     integer :: m, n
     logical flag
-    intrinsic size
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -669,8 +668,8 @@ contains
           end if
        end do
        if ( flag ) then
-          call FilePutAdditionalAxis( History_fid(m),       & ! (in)
-               name, desc, units, dim, type, var, size(var) ) ! (in)
+          call FilePutAdditionalAxis( History_fid(m), & ! (in)
+               name, desc, units, dim, type, var      ) ! (in)
        end if
     end do
 
@@ -701,7 +700,6 @@ contains
     integer :: type
     integer :: m, n
     logical flag
-    intrinsic size
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -736,8 +734,8 @@ contains
           end if
        end do
        if ( flag ) then
-          call FilePutAdditionalAxis( History_fid(m),       & ! (in)
-               name, desc, units, dim, type, var, size(var) ) ! (in)
+          call FilePutAdditionalAxis( History_fid(m), & ! (in)
+               name, desc, units, dim, type, var      ) ! (in)
        end if
     end do
 

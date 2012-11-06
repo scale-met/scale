@@ -284,8 +284,7 @@ contains
        units,    & ! (in)
        dim_name, & ! (in)
        dtype,    & ! (in)
-       val,      & ! (in)
-       size      ) ! (in)
+       val       ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -293,13 +292,13 @@ contains
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
     real(SP),         intent(in) :: val(:)
-    integer,          intent(in) :: size
 
     integer error
+    intrinsic size
 
-    call file_put_additional_axis( fid,                     & ! (in)
-         name, desc, units, dim_name, dtype, val, size, SP, & ! (in)
-         error                                              ) ! (out)
+    call file_put_additional_axis( fid,                          & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
+         error                                                   ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put additional axis')
     end if
@@ -313,8 +312,7 @@ contains
        units,    & ! (in)
        dim_name, & ! (in)
        dtype,    & ! (in)
-       val,      & ! (in)
-       size      ) ! (in)
+       val       ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -322,13 +320,13 @@ contains
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
     real(DP),         intent(in) :: val(:)
-    integer,          intent(in) :: size
 
     integer error
+    intrinsic size
 
-    call file_put_additional_axis( fid,                     & ! (in)
-         name, desc, units, dim_name, dtype, val, size, DP, & ! (in)
-         error                                              ) ! (out)
+    call file_put_additional_axis( fid,                          & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
+         error                                                   ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
        call Log('E', 'xxx failed to put additional axis')
     end if
@@ -1218,7 +1216,6 @@ contains
 
     !                           12345678901234567
     character(len=17) :: fmt = "(A, '.', A, I*.*)"
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( len < 1 .or. len > 9 ) then

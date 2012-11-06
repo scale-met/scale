@@ -497,11 +497,11 @@ contains
     call ATMOS_vars_total
 
     if ( MP_doreport_tendency ) then
-       call HIST_in( output_prcp(:,:,:), 'dqprcp', 'tendency by precipitation' , 'kg/kg', '3D', dt )
-       call HIST_in( output_cond(:,:,:), 'dqcond', 'tendency by condensation'  , 'kg/kg', '3D', dt )
-       call HIST_in( output_evap(:,:,:), 'dqevap', 'tendency by evaporation'   , 'kg/kg', '3D', dt )
-       call HIST_in( output_auto(:,:,:), 'dqauto', 'tendency by autoconversion', 'kg/kg', '3D', dt )
-       call HIST_in( output_coll(:,:,:), 'dqcoll', 'tendency by collection'    , 'kg/kg', '3D', dt )
+       call HIST_in( output_prcp(:,:,:), 'dqprcp', 'tendency by precipitation' , 'kg/kg', dt )
+       call HIST_in( output_cond(:,:,:), 'dqcond', 'tendency by condensation'  , 'kg/kg', dt )
+       call HIST_in( output_evap(:,:,:), 'dqevap', 'tendency by evaporation'   , 'kg/kg', dt )
+       call HIST_in( output_auto(:,:,:), 'dqauto', 'tendency by autoconversion', 'kg/kg', dt )
+       call HIST_in( output_coll(:,:,:), 'dqcoll', 'tendency by collection'    , 'kg/kg', dt )
     endif
 
     return
