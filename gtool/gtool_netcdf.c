@@ -71,7 +71,7 @@ typedef struct {
 
 
 #define FILE_MAX 64
-#define VAR_MAX 128
+#define VAR_MAX 64000
 
 static fileinfo_t *files[FILE_MAX];
 static int nfile = 0;
