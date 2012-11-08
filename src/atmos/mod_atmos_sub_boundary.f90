@@ -494,11 +494,26 @@ contains
           ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF
           ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = CONST_UNDEF
        else                   ! Buffer Layer
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF
+          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = CONST_UNDEF
+          if ( ATMOS_BOUNDARY_USE_VELZ ) then
+            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+          endif
+          if ( ATMOS_BOUNDARY_USE_VELY ) then
+            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
+          endif
+          if ( ATMOS_BOUNDARY_USE_VELX ) then
+            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
+          endif
+          if ( ATMOS_BOUNDARY_USE_POTT ) then
+            ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
+          endif
+          if ( ATMOS_BOUNDARY_USE_QV ) then
+            ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
+          endif
        endif
     enddo
 !    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
