@@ -833,6 +833,15 @@ contains
     enddo
     enddo
 
+    do j = JJS-1, JJE+1
+    do i = IIS-1, IIE+1
+    do k = KS, KE
+       dens_s(k,i,j) = DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+
     do step = 1, NSTEP_ATMOS_DYN
 
 #ifdef _FPCOLL_
@@ -869,13 +878,6 @@ call START_COLLECTION("DYN-set")
        do i = IIS-2, IIE+2
        do k = KS, KE
           Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-       enddo
-       enddo
-       enddo
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-          dens_s(k,i,j) = DENS(k,i,j)
        enddo
        enddo
        enddo
