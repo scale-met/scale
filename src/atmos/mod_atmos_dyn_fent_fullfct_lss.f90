@@ -833,8 +833,8 @@ contains
     enddo
     enddo
 
-    do j = JJS-1, JJE+1
-    do i = IIS-1, IIE+1
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
     do k = KS, KE
        dens_s(k,i,j) = DENS(k,i,j)
     enddo
