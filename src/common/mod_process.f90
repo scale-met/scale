@@ -460,6 +460,8 @@ contains
        minidx(v:v) = minloc(statval(v,:))
     enddo
 
+    deallocate( statval )
+
     return
   end subroutine PRC_MPItimestat
 

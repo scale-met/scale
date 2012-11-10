@@ -2062,6 +2062,12 @@ contains
                                       statidx(3,v,2,allstatidx(1,v,2)),')'
     enddo
 
+    deallocate( statval )
+    deallocate( statidx )
+
+    deallocate( allstatval )
+    deallocate( allstatidx )
+
     return
   end subroutine COMM_stats
 
