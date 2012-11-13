@@ -5163,7 +5163,8 @@ contains
              lowlim_cnd       = min( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
              ! [Mod] 11/08/30 T.Mitsui
 !!$             if( r_taucnd < 1.d-30 )then ! condensation is almost negligible
-             if( r_taudep < r_tau100day )then
+!!             if( r_taudep < r_tau100day )then
+             if( r_taucnd < r_tau100day )then
                 taucnd(k,i,j)     = tau100day
                 PLCdep_alt(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLCdep(k,i,j)*ssw_o ))
                 PLRdep_alt(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLRdep(k,i,j)*ssw_o ))
