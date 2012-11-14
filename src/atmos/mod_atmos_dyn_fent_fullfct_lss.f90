@@ -1357,88 +1357,96 @@ call START_COLLECTION("DYN-rk3")
 
     if ( USE_AVERAGE ) then
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
-    do iq = 1, QA
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) + QTRC(k,i,j,iq)
-    enddo
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
+       do iq = 1, QA
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) + QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
 
     end if
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       mflx_av(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) + mflx_hi(k,i,j,ZDIR)
-    enddo
-    enddo
-    enddo
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-1, JE+1
-    do i = IS-2, IE+1
-    do k = KS, KE
-       mflx_av(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) + mflx_hi(k,i,j,XDIR)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          mflx_av(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) + mflx_hi(k,i,j,ZDIR)
+       enddo
+       enddo
+       enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-2, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       mflx_av(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) + mflx_hi(k,i,j,YDIR)
-    enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          mflx_av(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) + mflx_hi(k,i,j,XDIR)
+       enddo
+       enddo
+       enddo
+
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          mflx_av(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) + mflx_hi(k,i,j,YDIR)
+       enddo
+       enddo
+       enddo
+
     enddo
     enddo
 
@@ -1455,8 +1463,8 @@ call START_COLLECTION("DYN-fct")
 #endif
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        mflx_hi(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) / NSTEP_ATMOS_DYN
     enddo
@@ -1464,8 +1472,8 @@ call START_COLLECTION("DYN-fct")
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-1, JE+1
-    do i = IS-2, IE+1
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        mflx_hi(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) / NSTEP_ATMOS_DYN
     enddo
@@ -1473,13 +1481,27 @@ call START_COLLECTION("DYN-fct")
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = JS-2, JE+1
-    do i = IS-1, IE+1
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        mflx_hi(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) / NSTEP_ATMOS_DYN
     enddo
     enddo
     enddo
+
+
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+11, 3 )
+#else
+    call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+    call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+    call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+#endif
+
+
 
     !##### advection of scalar quantity #####
     do iq = 1, QA
@@ -3762,20 +3784,6 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
     qflx_hi(:,:,:,:) = UNDEF
 #endif
-
-   if ( .not. (FLAG_FCT_MOMENTUM .and. FLAG_FCT_T) ) then
-
-#ifdef _USE_RDMA
-       call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
-       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
-    end if
 
 
   end subroutine calc_rk
