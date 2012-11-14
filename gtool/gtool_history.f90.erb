@@ -427,6 +427,7 @@ contains
        do n = 1, History_req_nmax
           if ( trim(varname) == History_req_item(n) ) then
              reqid  = n
+             if ( trim(History_req_basename(reqid)) == '' ) exit
              History_id_count = History_id_count + 1
              id = History_id_count
 
@@ -508,6 +509,8 @@ contains
              call Log('I', message)
              write(message,*) '] Average?       : ', History_tavg   (id)
              call Log('I', message)
+
+             exit
           endif
        enddo
     endif

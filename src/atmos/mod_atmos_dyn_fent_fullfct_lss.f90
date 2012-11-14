@@ -1416,27 +1416,27 @@ call START_COLLECTION("DYN-rk3")
     end if
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
        mflx_av(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) + mflx_hi(k,i,j,ZDIR)
     enddo
     enddo
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-1, JE+1
+    do i = IS-2, IE+1
+    do k = KS, KE
        mflx_av(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) + mflx_hi(k,i,j,XDIR)
     enddo
     enddo
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-2, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
        mflx_av(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) + mflx_hi(k,i,j,YDIR)
     enddo
     enddo
@@ -1455,27 +1455,27 @@ call START_COLLECTION("DYN-fct")
 #endif
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
        mflx_hi(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) / NSTEP_ATMOS_DYN
     enddo
     enddo
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-1, JE+1
+    do i = IS-2, IE+1
+    do k = KS, KE
        mflx_hi(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) / NSTEP_ATMOS_DYN
     enddo
     enddo
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS-2, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
        mflx_hi(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) / NSTEP_ATMOS_DYN
     enddo
     enddo
@@ -2381,17 +2381,6 @@ call TIME_rapend     ('DYN-fct')
     qflx_hi(:,:,:,:) = UNDEF
 #endif
 
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
-    call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
-
     ! add momentum flux corresponding to large scale sinking
     if ( LSsink_D .ne. 0.0_RP ) then
        do JJS = JS, JE, JBLOCK
@@ -2400,8 +2389,8 @@ call TIME_rapend     ('DYN-fct')
        IIE = IIS+IBLOCK-1
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
@@ -2413,6 +2402,20 @@ call TIME_rapend     ('DYN-fct')
           enddo
        enddo
        enddo
+    end if
+
+    if ( FLAG_FCT_MOMENTUM .or. FLAG_FCT_T ) then
+
+#ifdef _USE_RDMA
+       call COMM_rdma_vars8( 5+QA+11, 3 )
+#else
+       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+#endif
     end if
 
 #ifdef DEBUG
@@ -3719,8 +3722,23 @@ call TIME_rapend     ('DYN-fct')
 #endif
     end if
 #ifdef DEBUG
-       qflx_hi(:,:,:,:) = UNDEF
+    qflx_hi(:,:,:,:) = UNDEF
 #endif
+
+   if ( .not. (FLAG_FCT_MOMENTUM .and. FLAG_FCT_T) ) then
+
+#ifdef _USE_RDMA
+       call COMM_rdma_vars8( 5+QA+11, 3 )
+#else
+       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+#endif
+    end if
+
 
   end subroutine calc_rk
 
