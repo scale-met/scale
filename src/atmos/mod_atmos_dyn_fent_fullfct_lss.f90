@@ -1526,8 +1526,8 @@ call START_COLLECTION("DYN-fct")
        ! Surface QV Flux
        if ( iq == I_QV ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
              qflx_hi(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
           enddo
@@ -1537,8 +1537,8 @@ call START_COLLECTION("DYN-fct")
 #endif
        else
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           enddo
@@ -2368,14 +2368,8 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
              call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
              call CHECK( __LINE__, qflx_anti(k,i,j,ZDIR) )
-             call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
-             call CHECK( __LINE__, mflx_hi(k,i,j,YDIR) )
-             call CHECK( __LINE__, qflx_anti(k,i,j,YDIR) )
 #endif
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + qflx_anti(k,i,j,ZDIR)
-             mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + qflx_anti(k,i,j,XDIR)
-             mflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) + qflx_anti(k,i,j,YDIR)
           enddo
           enddo
           enddo
@@ -2384,6 +2378,39 @@ call TIME_rapend     ('DYN-fct')
 #endif
        enddo
        enddo
+
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS-1, IE
+       do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
+          call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
+#endif
+          mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + qflx_anti(k,i,j,XDIR)
+       enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS-1, JE
+       do i = IS  , IE
+       do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, mflx_hi(k,i,j,YDIR) )
+          call CHECK( __LINE__, qflx_anti(k,i,j,YDIR) )
+#endif
+          mflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) + qflx_anti(k,i,j,YDIR)
+       enddo
+       enddo
+       enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
