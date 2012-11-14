@@ -16,16 +16,17 @@
 {\Huge TBD}
 
 \subsection{Spectral Bin Model(SBM) of Suzuki et al. (2010)}
-Spectral Bin Model (SBM) developed by Suzuki et al. (2010) forecasts Size Distribution Function(SDF) of 7 hydrometeors (liquid, plate-ice, columner-ice, dendrite-ice, snow, graupel, and hail). \\
-The SBM calculates mass density of the 7 species of hydrometeor and aerosol as their SDF. The SDF of aerosol is changed only by advection and the acvitvaiton process. The SDF of hydrometeors are changed with time by several growth process (i.e. activation from aerosol to cloud, condensation/evaporation, collision/coaguration, freezing/melting, ice nucleation, riming, aggregation, advection, and gravitational falling). \\
+The Spectral Bin Model (SBM) was developed by Suzuki et al. (2010). The model forecasts Size Distribution Function(SDF) of 7 types hydrometeors (liquid, plate-ice, columner-ice, dendrite-ice, snow, graupel, and hail). \\
+The SBM calculates mass density of the 7 types of hydrometeor and 1 type of aerosol as their SDFs. The SDF of aerosol can be changed by advection and acvitvaiton (i.e. nucleation from aerosol to cloud) process. The SDF of hydrometeors can be changed by several growth processes (i.e. activation from aerosol to cloud, condensation/evaporation, collision/coaguration, freezing/melting, ice nucleation, riming, aggregation, advection, and gravitational falling). \\
 The time evolution of SDF (number density) of aerosol ($f_{a}(m,t)$) and SDF (number density) of hydrometeor ($f_{c}(m,t)$) are shown as equations:
 
 \begin{eqnarray}
-\frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}&=&Adv(f^{(\mu)}_{c}(m,t))+Grav(f^{(\mu)}_{c}(m,t))+\Bigl[ \frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}\Bigr ]_{cloud\;microphysics}\\
-\frac{\partial f_{a}(m_{a},t)}{\partial t}&=&Adv(f_{a}(m_{a},t))+Grav(f_{a}(m_{a},t)+\Bigl[ \frac{\partial f_{a}(m_{a},t)}{\partial t} \Bigr ]_{cloud\;microphysics}
+\frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}&=&Adv\bigl[f^{(\mu)}_{c}(m,t)\bigr]+Grav\bigl[f^{(\mu)}_{c}(m,t)\bigr]+\Bigl[ \frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}\Bigr ]_{cloud\;microphysics}\\
+\frac{\partial f_{a}(m_{a},t)}{\partial t}&=&Adv\bigl[f_{a}(m_{a},t)\bigr]+Grav\bigl[f_{a}(m_{a},t)\bigr]+\Bigl[ \frac{\partial f_{a}(m_{a},t)}{\partial t} \Bigr ]_{cloud\;microphysics}.
 \end{eqnarray} 
 
-where $\mu$ shows species of hydrometeor (the 7 species), $Adv()$, $Grav()$ shows change of SDF by advection and gravitational falling. $\Bigl[ \Bigr]_{cloud\;microphycis}$ shows changes of SDF by cloud microphysical process.
+where $\mu$ shows type of hydrometeor (the 7 types), $Adv[]$, $Grav[])$ shows change of SDF by the advection and the gravitational falling. $\Bigl[ \Bigr]_{cloud\;microphycis}$ shows changes of SDF by the cloud microphysical processes.\\
+The time evolution of $f_{c}^{(\mu)}(m,t)$ and $f_{a}(m,t)$ are shown as:
 
 \begin{eqnarray}
 \Bigl[ \frac{\partial f_{c}^{(\mu)}(m,t)}{\partial t}\Bigl]_{cloud\;microphysics}&=&\Bigl[\frac{\partial f_{c}^{(\mu)}(m,t)}{\partial t}\Bigr]_{activation}+\Bigl[\frac{\partial f_{c}^{(\mu)}(m,t)}{\partial t}\Bigr]_{cond/evap}\nonumber\\
@@ -34,24 +35,24 @@ where $\mu$ shows species of hydrometeor (the 7 species), $Adv()$, $Grav()$ show
 \Bigl[ \frac{\partial f_{a}(m_{a},t)}{\partial t}\Bigl]_{cloud\;microphysics}&=&\Bigl[\frac{\partial f_{a}(m_{a},t)}{\partial t}\Bigr]_{activation}\nonumber
 \end{eqnarray}
 
-where $\Bigl[\;\Bigr]_{***}$ shows change of SDF by each cloud growth processes. The detail of these growth processes will be shown later.
- The change of SDFs by advection and gravitational falling (i.e. first and second term of equation (4.120), (4.121) ) are calculated by dynamical core of SCALE-LES3 shown in section 3.
+where $\Bigl[\;\Bigr]_{***}$ show change of SDF by each cloud growth processes. The detail of these processes will be shown later.\\
+ The change of SDFs by advection and gravitational falling (i.e. first and second term of equation (???), (???) ) are calculated by dynamical core of SCALE-LES3 shown in section 3.
 
 
 \subsubsection{Discretization of Size Distribution Function(SDF)}
-The SDF of aerosol and cloud is predict as mass density of each particle size ($g_{a}(m)$, $g_{c}^{(\mu)}(m)$). However most of equations to calculate cloud processed are based on number density of clouds ($f_{c}^{(\mu)}(m,t)$, $f_{a}(m_{a},t)$), the mass density of each particles are transferred to number density of each particles as $g_{a}(m_{a},t)=m_{a}g_{a}(m_{a},t)$, $g_{c}^{(\mu)}(m,t)=m^{(\mu)}f_{c}^{(\mu)}(m,t)$.\\
-To cover wide size range (i.e. $2\;\mu$ $^sim$ $3\;mm$), grid system of logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied. 
+The SDF of aerosol and cloud is predict as mass density of each particle size ($g_{a}(m_{a})$, $g_{c}^{(\mu)}(m)$). However most of equations are given as equations of number density of cloud/aerosol ($f_{c}^{(\mu)}(m,t)$, $f_{a}(m_{a},t)$), the mass density of cloud/aerosol are transferred to number density of cloud/aerosol ($g_{a}(m_{a},t)=m_{a}g_{a}(m_{a},t)$, $g_{c}^{(\mu)}(m,t)=m^{(\mu)}f_{c}^{(\mu)}(m,t)$).\\
+To cover wide size range (i.e. $2\;\mu m$ $\sim$ $3\;mm$), logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied. 
 
 \subsubsection{Activation from aerosol to cloud particles (Nucleation process)}
-The change of SDFs by activation from aerosol to cloud particles are calculated based on Kohler theory (Kohler 1936). The critical radius of aerosol ($r_{a,crit}$), above which aerosol can activate from aerosol to cloud particles, are given as equation (4.122) by Kohler theory.
+The change of SDFs by activation from aerosol to cloud particles are calculated based on Kohler theory (Kohler 1936). Through this process, aerosols whose radii are larger than critical radius of aerosol ($r_{a,crit}$) are activated to clouds. The critical radius is given as
 
 \begin{eqnarray}
-r_{a,crit}=\bigl( \frac{4}{27}\frac{A^{3}}{B}\frac{1}{S_{w}}\Bigr )^{1/3}, \:\:\:A=\frac{2\sigma}{R_{v}\rho_{L}T},\:\:\: B=i\frac{M_{v}}{M_{s}}\frac{\rho_{s}}{\rho_{L}}
+r_{a,crit}=\bigl( \frac{4}{27}\frac{A^{3}}{B}\frac{1}{S_{w}}\Bigr )^{1/3}, \:\:\:A=\frac{2\sigma}{R_{v}\rho_{L}T},\:\:\: B=i_{v}\frac{M_{v}}{M_{s}}\frac{\rho_{s}}{\rho_{L}}.
 \end{eqnarray}
 
-where $S_{w}$, $\sigma$, $R_{v}$, $\rho_{L}$, $T$, $i$, $M_{v}$, $M_{s}$, $\rho_{s}$ show super saturation of water, surface tention of water, gas constant of vapor, temperature, van't Hoff factor ($=2$), moleculer weight of water, moleculer weight of aerosol, and density of aerosol respectively.\\
-At each time step, $r_{a,crit}$ are calculated by using temperature obtained from dynamical code, and mass of aerosols whose radii are larger than $r_{a,crit}$ remove from SDF of aerosol and transfer to SDF of cloud as newly generated cloud particles.\\
-The radii of newly generated clouds are corresponding to aerosol, but if the size of aeorol are smaller than the range of cloud SDF, the radii of newly generated clouds are set to smallest size of cloud SDF.\\
+where $S_{w}$, $\sigma$, $R_{v}$, $\rho_{L}$, $T$, $i_{v}$, $M_{v}$, $M_{s}$, $\rho_{s}$ show supersaturation of water, surface tention of water, gas constant of vapor, temperature, van't Hoff factor ($=2$), moleculer weight of water, moleculer weight of aerosol, and density of aerosol, respectively.\\
+At each time step, $r_{a,crit}$ are calculated by using temperature, and mass of aerosols whose radii are larger than $r_{a,crit}$ remove from SDF of aerosol and they are transferred to SDF of cloud as newly generated cloud particles.\\
+The radii of newly generated clouds are corresponding to those of aerosols, but if the radii of aeorol are smaller than the lower limit of cloud SDF, the radii of newly generated clouds are set to smallest size of cloud SDF ($\sim 2 \mu m$).\\
 The change of aerosol's SDF and hydrometeor's SDF are shown as:
 
 \begin{eqnarray}
@@ -59,13 +60,13 @@ The change of aerosol's SDF and hydrometeor's SDF are shown as:
 \Bigl[\frac{\partial f_{c}^{(\mu)}}{\partial t}\Bigr]_{activation}&=&-\Bigl[\frac{\partial f_{a}}{\partial t}\Bigr]_{activarion}
 \end{eqnarray}
 
-where $m_{a,crit}$ is mass of aerosol particles whose radii are $r_{a,crit}$. When there are not enough vapor to activate all aerosol particles whose radii are larger than the critical radius, i.e.
+where $m_{a,crit}=\bigl(=\frac{4\pi}{3}r_{a}^{3}\rho_{a}$ is mass of aerosol particles whose radii are the same as critical radii, $r_{a,crit}$. When there are not enough vapor to activate all aerosol particles whose radii are larger than the critical radius, i.e.
 
 \begin{eqnarray}
 \int_{m_{a,crit}}^{\infty}m_{a}f_{a}(m_{a},t)dm_{a} > q_{v}\rho,
 \end{eqnarray}
 
-aerosol particles whose radii are larger than $r_{a0,crit}$, which are
+only the aerosol particles whose radii are larger than $r_{a0,crit}$, which are given as:
 
 \begin{eqnarray}
 \int_{m_{a0,crit}}^{\infty}m_{a}f_{a}(m_{a},t)dm_{a} = q_{v}\rho,
@@ -75,14 +76,14 @@ aerosol particles whose radii are larger than $r_{a0,crit}$, which are
 are transferred to cloud paricles as:
 
 \begin{eqnarray}
-\Bigl[\frac{\partial f_{a}}{\partial t}\Bigr]_{activation}&=&-\int_{m_{a0,crit}}^{\infty}f_{a}(m_{a},t)dm_{a}\\
+\Bigl[\frac{\partial f_{a}}{\partial t}\Bigr]_{activation}&=&-\int_{m_{a0,crit}}^{\infty}f_{a}(m_{a},t)dm_{a},\\
 \Bigl[\frac{\partial f_{c}^{(\mu)}}{\partial t}\Bigr]_{activation}&=&-\Bigl[\frac{\partial f_{a}}{\partial t}\Bigr]_{activarion}.
 \end{eqnarray}
 
-where $q_{v}$ is mixing ratio of water vapor.
+where $q_{v}$ and $\rho$ is mixing ratio of water vapor and density.
 
 \subsubsection{Condensation/Evaporation}
-Calculation of condensation and evaporation process are based on sam equation. The mass change by these two process are given by an equation (e.g. Rogers and Yau, 1989):
+Calculation of condensation and evaporation process are based on a equation. The mass change by these two process are given by an equation (e.g. Rogers and Yau, 1989):
 
 \begin{eqnarray}
 \frac{dm}{dt}&=&C^{(\mu)}(m)G^{(\mu)}(T)S^{(\mu)}\\
@@ -102,8 +103,8 @@ S_{i}\;\;\;(\mu : ice)
 \end{array}\right.\nonumber
 \end{eqnarray}
 
-where $C^{(\mu)}(m)$ is capasitance, which depends on shape of each species, $S_{w}$, $S_{i}$ are super saturation of water and ice, $L_{w}$, $L_{i}$ is sensible heat of evaporation, sublimation, $D_{v}$ is diffusion constant of vapor, $K$ is conductivity of air, and $e_{w}$, $e_{i}$ is saturation vapor pressure and saturation ice pressure, respectively. The particles of hydrometeors condense (evaporate) when $S^{(\mu)}$ is positive (negative).\\
-To calculate change of SDF by condensation/evaporation, mass fluxi ($F^{(\mu)}_{cond/evap}$) on each bin is given by number density ($f_{c}^{(\mu)}$) times $\frac{dm}{dt}$ as:
+where $C^{(\mu)}(m)$ is capasitance, which depends on shape of each types of hydrometeor, $S_{w}$, $S_{i}$ are super saturation of water and ice, $L_{w}$, $L_{i}$ is sensible heat of evaporation, sublimation, $D_{v}$ is diffusion constant of vapor, $K$ is conductivity of air, and $e_{w}$, $e_{i}$ is saturation vapor pressure and saturation ice pressure, respectively. Condensation (evaporation) occur when $S^{(\mu)}$ is positive (negative).\\
+To calculate change of SDF by condensation/evaporation, mass flux ($F^{(\mu)}_{cond/evap}$) on each bin is given by using number density ($f_{c}^{(\mu)}$) and $\frac{dm}{dt}$ as:
 
 \begin{eqnarray}
 F^{(\mu)}_{cond/evap}=f^{(\mu)}(m)\frac{dm}{dt}=f^{(\mu)}(m)C^{(\mu)}G^{(\mu)}(T)S^{(\mu)}.
@@ -112,21 +113,22 @@ F^{(\mu)}_{cond/evap}=f^{(\mu)}(m)\frac{dm}{dt}=f^{(\mu)}(m)C^{(\mu)}G^{(\mu)}(T
 Using this equation, time evolution of SDF ($f^{(\mu)}$) is given as
 
 \begin{eqnarray}
-\frac{\partial f^{m,t}(\eta)}{\partial t}&=&-\frac{\partial}{\partial m}F^{(\mu)}_{cond/evap}(m)=-\frac{\partial}{\partial m}\bigl (f^{(\mu)}(m)C^{(\mu)}\bigr ) G^{(\mu)}(T)S^{(\mu)}.
+\Bigl[\frac{\partial f^{(\mu)}(m,t)}{\partial t}\Bigr]_{cond/evap}&=&-\frac{\partial}{\partial m}F^{(\mu)}_{cond/evap}(m)\nonumber\\
+&=&-\frac{\partial}{\partial m}\bigl (f^{(\mu)}(m)C^{(\mu)}\bigr ) G^{(\mu)}(T)S^{(\mu)}.
 \end{eqnarray}
 
 
-The equation(???) is transferred to the equation (???):
+By using the $\eta(=\log(m))$, the equation(???) is transferred to advection equation :
 
 \begin{eqnarray}
 \frac{\partial f^{(\mu)}(\eta)}{\partial t}&=&-\frac{\partial}{\partial \eta}\bigl ( f^{(\mu)}(\eta)U^{(\mu)}(\eta)\bigr)\\
-U^{(\mu)}(\eta)&=&\frac{C^{(\mu)}(\eta)}{\exp (\eta)}G^{(\eta)}(T)S^{(\eta)}\nonumber
+U^{(\mu)}(\eta)&=&\frac{C^{(\mu)}(\eta)}{\exp (\eta)}G^{(\eta)}(T)S^{(\eta)}.\nonumber
 \end{eqnarray}
 
-To solve the equation (???), a scheme developed by Bott (1989) is used. Based on Bott(1989), the number density of i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follow:
+To solve the equation (???), a scheme developed by Bott (1989) is used. The number density of i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follow:
 
 \begin{eqnarray}
-f_{i}(t+\Delta t)&=&f_{i}(t)-\frac{\Delta t}{\Delta \eta}\bigl [F_{cond/evap,i+1/2}-F_{cond/evap,i-1/2}\Bigr ]\nonumber\\
+f_{i}(t+\Delta t)&=&f_{i}(t)-\frac{\Delta t}{\Delta \eta}\bigl [F_{cond/evap,i+1/2}-F_{cond/evap,i-1/2}\Bigr ].\nonumber\\
 F_{cond/evap,i+1/2}&=&\frac{\Delta \eta}{\Delta t}\Bigl[ \frac{i^{+}_{l,i+1/2}}{i_{l,j}}f_{i}(t)-\frac{i^{-}_{l,i+1/2}}{i_{l,i+1}}f_{i+1}(t)\Bigr ]\nonumber\\
 i^{+}_{l,i+1/2}&=&max\bigl(0,I^{+}_{l}(c_{i+1/2})\bigr)\nonumber\\
 i^{-}_{l,i+1/2}&=&max\bigl(0,I^{-}_{l}(c_{i+1/2})\bigr)\nonumber\\
@@ -140,9 +142,8 @@ c_{i}^{\pm}&=&\pm\bigl( c^{n}_{i+1/2}\pm | c^{n}_{i+1/2}|\bigr )/2\nonumber\\
 c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}
 \end{eqnarray}
 
-
 Since the super saturation ($S^{(\mu)}$) can change during time step ($\Delta t$), we apply a method shown below to reflect the change of supersaturation during $\Delta t$.\\
-Time evolution of super saturation is calculated by equations: 
+Time evolution of supersaturation can be given by equations: 
 
 \begin{eqnarray}
 \frac{d}{dt}\left(
@@ -176,7 +177,7 @@ d_{c/e}&=&-(S_{i}+1)\Bigl(\frac{1}{q_{v}}+\frac{L_{i}}{R_{v}T^{2}}\frac{L_{i}}{C
 
 
 where $q_{v}$ is mixing ration of vapor. \\
-Using eigen value of $A$ ($\Lambda_{+}$, $\Lambda_{-}$ ($\Lambda_{+}>\Lambda{-})$), and assuming $a_{c/e}$, $b_{c/e}$, $c_{c/e}$, $d_{c/e}$ is constant during $\Delta t$, average value of super saturation ($\bar{S_{w,i}}(t)$) during $\Delta t$ is given as:
+Using eigen value of $A$ ($\Lambda_{+}$, $\Lambda_{-}$ ($\Lambda_{+}>\Lambda_{-})$), and assuming $a_{c/e}$, $b_{c/e}$, $c_{c/e}$, $d_{c/e}$ is constant during $\Delta t$, average value of super saturation ($\bar{S_{w,i}}(t)$) during $\Delta t$ is given as:
 
 \begin{eqnarray}
 \bar{S_{w}(t)}=\frac{1}{\Delta t}\int_{t}^{t+\Delta t}S_{w}(\tau)d\tau&=&b\frac{e^{\Lambda_{+}\Delta t}-1}{\Lambda_{+}\Delta t}S_{+}(t)+b\frac{e^{\Lambda_{-}\Delta t}-1}{\Lambda_{-}\Delta t}S_{-}(t)\nonumber\\
@@ -185,6 +186,7 @@ S_{+}(t)&=&\frac{(\Lambda_{-}-a)S_{w}(t)-bS_{i}(t)}{b(\Lambda_{-}-\Lambda_{+})}\
 S_{+}(t)&=&\frac{(a-\Lambda_{+})S_{w}(t)+bS_{i}(t)}{b(\Lambda_{-}-\Lambda_{+})}\nonumber
 \end{eqnarray}
 
+The averaged super saturation ($\bar{S_{w,i}}(t)$) is used to solve the equation (???).
 
 \subsubsection{Collision/Coagulation/Riming/Aggregation}
 Collision/Coagulation process are calculated by solving Stochastic Collision Equation (e.g. Pruppecher and Klett, 1997):
@@ -200,7 +202,7 @@ where $K(m,m')$ is collection kernel function. Three types of the kernel functio
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')
 \end{eqnarray}
 
-where "$r(m)$ shows radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are show nin Figure 4.1. $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\ 
+where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are shown in Figure 4.1. $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\ 
 
 \begin{figure}[h]
 \begin{center}
@@ -210,27 +212,27 @@ where "$r(m)$ shows radius of hydrometeros whose mass is $m$, and $V(m)$ is term
 \end{figure}
 
 
-The first, and second term of righthand side of eq. (???) corresponds to gain of each bin by collision of cloud particles whose mass is smaller than $m$, and reduce of each bin by collision of particles whose mass is $m$ and particles whose mass is larger than $m$.\\
-Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros, the SCALE-LES3 predict 7 types of hydrometeors, and interactions of these species (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation: 
+Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-LES3 predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation: 
 
 \begin{eqnarray}
-\frac{\partial f^{(\mu)}(m)}{\partial t}&=&\sum_{\lambda}\sum_{\nu} \int_0^{m/2}f^{(\lambda)}(m')f^{(\nu)}(m-m')K_{\lambda\nu}(m',m-m')dm' \nonumber\\
-&-&f^{(\mu)}(m)\sum_{\kappa}\int_0^{\infty}f^{(\kappa)}(m'')K_{\kappa\mu}(m,m'')dm''
+\Bigr[\frac{\partial f^{(\mu)}(m)}{\partial t}\Bigr]_{coll/coag/rim/agg}&=&\nonumber\\
+\sum_{\lambda}\sum_{\nu}\int_{0}^{m/2}f^{(\lambda)}&(&m')f^{(\nu)}(m-m')K_{\lambda\nu}(m',m-m')dm' \nonumber\\
+-f^{(\mu)}(m)\sum_{\kappa}\int_0^{\infty}f^{(\kappa)}&(&m'')K_{\kappa\mu}(m,m'')dm''
 \end{eqnarray}
 
-is applied (where $\mu$, $\nu$, $\lambda$, $\kappa$ represent species of hydrometeor). The convinations of $\mu$, $\nu$, $\lambda$ are shown in table 4.???.
+is applied (where $\mu$, $\nu$, $\lambda$, $\kappa$ represent species of hydrometeor). The convinations of $\mu$, $\nu$, $\lambda$ are shown in table 4.1.
 
 \begin{table}[h]
 \begin{center}
-\caption{Catalog of interaction between 7 species. Graupel/Hail shows graupel(hail) generates when T is lower(higher) than 270.15}
+\caption{Catalog of interaction between 7 species. W, I, S, G, H shows water, ice, snow, graupel, and hail, respectively. G/H shows graupel(hail) generates when T is lower(higher) than 270.15}
 \begin{tabular}{cccccc}
 \hline
-         & Water        & Ice          & Snow         & Graupel      & Hail         \\ \hline\hline
-Water    & Watar        & Graupel/Hail & Graupel/Hai  & Graupel/Hail & Graupel/Hail \\ \hline
-Ice      & Ice          & Snow         & Snow         & Ice          & Ice          \\ \hline
-Snow     & Snow         & Snow         & Snow         & Snow         & Snow         \\ \hline
-Ggraupel & Graupel/Hail & Graupel/Hail & Graupel      & Graupel      & Graupel/Hail \\ \hline
-Hail     & Graupel/Hail & Graupel/Hail & Graupel/Hail & Graupel/Hail & Hail         \\ \hline
+     & W   & I   & S   & G   & H   \\ \hline\hline
+W    & W   & G/H & G/H & G/H & G/H \\ \hline
+I    & I   & S   & S   & I   & I   \\ \hline
+S    & S   & S   & S   & S   & S   \\ \hline
+G    & G/H & G/H & G   & G   & G/H \\ \hline
+H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{tabular}
 \end{center}
 \end{table}
@@ -241,10 +243,10 @@ The Bott (1998) scheme calculate evolution of mass density distribution ($g(\eta
 
 \begin{eqnarray}
 \frac{\partial g(\eta)}{\partial t}&=&\int_{\eta_{0}}^{\eta_{1}}\frac{m^{2}}{(m-m')^{2} m'}g(\eta-\eta') K(\eta-\eta',\eta')g(\eta')d\eta' \nonumber\\
-&-&\int_{\eta_{0}}^{\infty} g(\eta)\frac{K(\eta,\eta')}{m'}g(\eta')d\eta'
+&-&\int_{\eta_{0}}^{\infty} g(\eta)\frac{K(\eta,\eta')}{m'}g(\eta')d\eta'.
 \end{eqnarray}
 
- where $\eta_{1}=\log(m/2)$. Mass reduction of i-th bin and j-th bin are given by
+ where $\eta_{1}=\log(m/2)$. Decreases of mass of i-th bin and j-th bin are given by
 
 \begin{eqnarray}
 \frac{\partial g_{i}^{(\mu)}}{\partial t}=-\Delta g^{(\mu)}_{i} K_{\mu\nu}(i,j)\frac{g_{j}^{(\nu)}}{m_{j}}\Delta \eta
@@ -261,10 +263,10 @@ respectively. The terms corresponds to the second term of right-hand side of eq.
 
 \begin{eqnarray}
 \Delta g_{i}^{(\mu)}=g_{i}^{(\mu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\nu)}_{j}}{m_{j}}\Delta \eta\Delta t\bigr) \Bigl]\\ 
-\Delta g_{j}^{(\nu)}=g_{j}^{(\nu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\mu)}_{i}}{m_{i}}\Delta \eta\Delta t\bigr) \Bigl] 
+\Delta g_{j}^{(\nu)}=g_{j}^{(\nu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\mu)}_{i}}{m_{i}}\Delta \eta\Delta t\bigr) \Bigl].
 \end{eqnarray}
 
-The sum of $\Delta g_{i}^{(\mu)}$ and $\Delta g_{j}^{(\nu)}$ corresponds to newley generated mass by collision of hydrometeor whose mass is $m_{i}$ and $m_{j}$. The newly generated mass ($g'=\Delta g_{i}^{\mu}+\Delta g_{j}^{(\nu)}$) added k-th bin ($m_{k}=m{i}+m_{j}$). Since $m_{k}$ is not always bin center, newly generated mass is devided to k-th and k+1-th bin as follow.\\
+The sum of $\Delta g_{i}^{(\mu)}$ and $\Delta g_{j}^{(\nu)}$ corresponds to newley generated mass by collision of hydrometeor whose mass is $m_{i}$ and $m_{j}$. The newly generated mass ($g'=\Delta g_{i}^{(\mu)}+\Delta g_{j}^{(\nu)}$, which is coresponding to first term of right-hand side of eq.(???)) added k-th bin ($m_{k}=m_{i}+m_{j}$). Since $m_{k}$ is not always bin center, newly generated mass is devided to k-th and k+1-th bin as follow.\\
 The production of k-th and k+1-th bin is represened:
 
 \begin{eqnarray}
@@ -277,10 +279,11 @@ a_{k,1}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-g_{k-1}^{(\lambda)})\nonumber\\
 a_{k,2}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-2g_{k}^{(\lambda)}+g_{k-1}^{(\lambda)})\nonumber
 \end{eqnarray}
 
-These procedure is applied for all bin.
+These procedure is applied for all bin of all types of hydrometeors.\\
+In addition, to calculate this process fastly, a scheme of Sato et al. (2009) are also implemented into SCALE-LES3.
 
 \subsubsection{Freezing}
-The calculation of freezing process is based on a parameterization of Bigg (1953). The parameterization is calculated number density of water ($f^{(w)}$) as:
+The calculation of freezing process is based on a parameterization of Bigg (1953). The parameterization is calculated number density of water ($f_{c}^{(w)}$), wchich can be freezed:
 
 \begin{eqnarray}
 \frac{\partial}{\partial t}f^{(w)}(m)&=&-\frac{f^{(w)}(m)}{\tau_{fr}}\\
@@ -291,8 +294,8 @@ where $a_{fr}=10^{-4}s^{-1}$, and $b_{fr}=0.66^{o}C^{-1}$ are emperical paramete
 The equation (???) can transfer to
 
 \begin{eqnarray}
-\frac{\partial g_{i}^{(w)}}{\partial t}&=&-\frac{g_{i}^{(w)}}{\tau_{fr,i}}\\
-\tau_{fr,i}&=&\frac{\exp\bigl (b_{fr}(T_{0}-T)\bigr )}{a_{fr}m_{i}}\nonumber
+\frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\\
+\tau_{fr,i}&=&\frac{\exp\bigl (b_{fr}(T_{0}-T)\bigr )}{a_{fr}m}\nonumber
 \end{eqnarray} 
 
 From this equation, The mass change of i-th bin during $\Delta t$ is given as
