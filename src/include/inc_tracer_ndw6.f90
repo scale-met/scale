@@ -22,6 +22,11 @@
   integer, private, parameter :: QQS =  1 ! start index for mass tracer
   integer, private, parameter :: QQE =  6 ! end   index for mass tracer
 
+  integer, private, parameter :: QWS =  2 ! start index for water tracer
+  integer, private, parameter :: QWE =  3 ! end   index for water tracer
+  integer, private, parameter :: QIS =  4 ! start index for ice tracer
+  integer, private, parameter :: QIE =  6 ! end   index for ice tracer
+
   character(len=16), private, save :: AQ_NAME(QA)
   character(len=64), private, save :: AQ_DESC(QA)
   character(len=16), private, save :: AQ_UNIT(QA)

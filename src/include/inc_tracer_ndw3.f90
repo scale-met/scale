@@ -4,19 +4,13 @@
   !++ scale3 grid parameters
   !
   !-----------------------------------------------------------------------------
-  integer, private, parameter :: QA = 3
+  integer, private, parameter :: QA = 5
 
   integer, private, parameter :: I_QV =  1
   integer, private, parameter :: I_QC =  2
   integer, private, parameter :: I_QR =  3
-  integer, private, parameter :: I_QI =  0
-  integer, private, parameter :: I_QS =  0
-  integer, private, parameter :: I_QG =  0
-  integer, private, parameter :: I_NC =  0
-  integer, private, parameter :: I_NR =  0
-  integer, private, parameter :: I_NI =  0
-  integer, private, parameter :: I_NS =  0
-  integer, private, parameter :: I_NG =  0
+  integer, private, parameter :: I_NC =  4
+  integer, private, parameter :: I_NR =  5
 
   integer, private, parameter :: QQA =  3 ! mass tracer (water)
   integer, private, parameter :: QQS =  1 ! start index for mass tracer
@@ -33,12 +27,18 @@
 
   data AQ_NAME / 'QV', &
                  'QC', &
-                 'QR'  /
+                 'QR', &
+                 'NC', &
+                 'NR'  /
 
   data AQ_DESC / 'Water Vapor mixing ratio',   &
                  'Cloud Water mixing ratio',   &
-                 'Rain Water mixing ratio'     /
+                 'Rain Water mixing ratio',    &
+                 'Cloud Water Number Density', &
+                 'Rain Water Number Density'   /
 
   data AQ_UNIT / 'kg/kg',  &
                  'kg/kg',  &
-                 'kg/kg'   /
+                 'kg/kg',  &
+                 'num/kg', &
+                 'num/kg'  /

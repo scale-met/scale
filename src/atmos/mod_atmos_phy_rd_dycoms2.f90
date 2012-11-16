@@ -156,10 +156,10 @@ contains
 
     real(RP) :: pres
 
-    real(RP) :: dQ, dZ
+    real(RP) :: dQ, dZ, QWSUM
     integer :: k_cldtop
 
-    integer :: k, k2, i, j
+    integer :: k, k2, i, j, iq
 
     !---------------------------------------------------------------------------
 
@@ -176,10 +176,10 @@ contains
        ! diagnose cloud top
        k_cldtop = -1
        do k = KS, KE
-          QTOT = QTRC(k,i,j,I_QV) &
-               + QTRC(k,i,j,I_QC) &
-               + QTRC(k,i,j,I_QR)
-
+           QTOT = 0.0_RP
+           do iq = QQS, QWE
+              QTOT = QTOT + QTRC(k,i,j,iq)
+           enddo 
           if( QTOT < 8.E-3_RP ) exit ! above cloud
           k_cldtop = k
        enddo
@@ -193,7 +193,12 @@ contains
           Qbelow = 0.0_RP
           Qabove = 0.0_RP
           do k2 = KS, KE
-             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
+!             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
+             QWSUM = 0.0_RP
+             do iq = QWS, QWE
+                QWSUM = QWSUM + QTRC(k2,i,j,iq)
+             enddo
+             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * QWSUM
              if ( k2 <= k ) then ! below layer
                 Qbelow = Qbelow + dQ
              else                ! above layer
@@ -207,7 +212,10 @@ contains
 
        do k = k_cldtop, KE
           dZ = FZ(k)-CZ(k_cldtop)
-          QTOT = QTRC(k,i,j,I_QV)+QTRC(k,i,j,I_QC)+QTRC(k,i,j,I_QR)
+          QTOT = 0.0_RP
+          do iq = QQS, QWE
+             QTOT = QTOT + QTRC(k,i,j,iq)
+          enddo 
           EFLX_rad(k,i,j) = EFLX_rad(k,i,j) &
                           + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
                           * ( 0.250_RP * dZ  * dZ**(1.0_RP/3.0_RP) &
@@ -238,9 +246,9 @@ contains
 
     call ATMOS_vars_total
 
-    call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'J/m2/s',    '3D', dtrd )
-    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K*kg/m3/s', '3D', dtrd )
-    call HIST_in( Zi      (:,:,:), 'Zi',        'Cloud top height',       'm',         '2D', dtrd )
+    call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'J/m2/s',    dtrd )
+    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K*kg/m3/s', dtrd )
+    call HIST_in( Zi      (:,:,:), 'Zi',        'Cloud top height',       'm',         dtrd )
 
     return
   end subroutine ATMOS_PHY_RD

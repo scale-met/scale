@@ -82,30 +82,25 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_setup
     implicit none
+  
+    integer :: n
     !---------------------------------------------------------------------------
 
     AQ_CP(I_QV) = CPvap
     AQ_CV(I_QV) = CVvap
 
-    if ( I_QC > 0 ) then
-       AQ_CP(I_QC) = CL
-       AQ_CV(I_QC) = CL
+    if( QWS /= 0 ) then
+     do n = QWS, QWE
+       AQ_CP(n) = CL
+       AQ_CV(n) = CL
+     enddo
     endif
-    if ( I_QR > 0 ) then
-       AQ_CP(I_QR) = CL
-       AQ_CV(I_QR) = CL
-    endif
-    if ( I_QI > 0 ) then
-       AQ_CP(I_QI) = CI
-       AQ_CV(I_QI) = CI
-    endif
-    if ( I_QS > 0 ) then
-       AQ_CP(I_QS) = CI
-       AQ_CV(I_QS) = CI
-    endif
-    if ( I_QG > 0 ) then
-       AQ_CP(I_QG) = CI
-       AQ_CV(I_QG) = CI
+
+    if( QIS /= 0 ) then
+     do n = QIS, QIE
+       AQ_CP(n) = CI
+       AQ_CV(n) = CI
+     enddo
     endif
 
     return
