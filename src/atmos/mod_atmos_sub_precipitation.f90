@@ -117,13 +117,15 @@ call START_COLLECTION('SUB_precipitation')
     do i  = IS, IE
 
        !OCL XFILL
-       do iq = I_QC, I_NG
+!       do iq = I_QC, I_NG
+       do iq = I_QC, QA
           qflx(KE,iq) = 0.0_RP
        enddo
        eflx(KE) = 0.0_RP
 
        !--- tracer
-       do iq = I_QC, I_NG
+!       do iq = I_QC, I_NG
+       do iq = I_QC, QA
        do k  = KS-1, KE-1
           qflx(k,iq) = velw(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
        enddo
@@ -131,11 +133,19 @@ call START_COLLECTION('SUB_precipitation')
 
        !--- lowermost flux is saved for land process
        do k  = KS-1, KE
-          flux_rain(k,i,j) = - ( qflx(k,I_QC) &
-                               + qflx(k,I_QR) )
-          flux_snow(k,i,j) = - ( qflx(k,I_QI) &
-                               + qflx(k,I_QS) &
-                               + qflx(k,I_QG) )
+           flux_rain(k,i,j) = 0.0_RP
+           flux_snow(k,i,j) = 0.0_RP
+           do iq = QWS, QWE
+              flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,iq)
+           enddo
+           do iq = QIS, QIE
+              flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
+           enddo
+!          flux_rain(k,i,j) = - ( qflx(k,I_QC) &
+!                               + qflx(k,I_QR) )
+!          flux_snow(k,i,j) = - ( qflx(k,I_QI) &
+!                               + qflx(k,I_QS) &
+!                               + qflx(k,I_QG) )
        enddo 
 
 !OCL XFILL
@@ -143,7 +153,8 @@ call START_COLLECTION('SUB_precipitation')
           rhoe_new(k) = 0.E0_RP
        enddo
 
-       do iq = I_QC, I_QG
+!       do iq = I_QC, I_QG
+       do iq = I_QC, QQE
 
           !--- internal energy
           do k  = KS-1, KE-1
@@ -195,7 +206,8 @@ call START_COLLECTION('SUB_precipitation')
        enddo ! QC-QG loop
 
        !--- update tracer
-       do iq = I_QC, I_NG
+!       do iq = I_QC, I_NG
+       do iq = I_QC, QA
        do k  = KS, KE
           QTRC(k,i,j,iq) = QTRC(k,i,j,iq) - dt * ( qflx(k,iq)-qflx(k-1,iq) ) * RCDZ(k) / DENS(k,i,j)
        enddo 
@@ -203,14 +215,16 @@ call START_COLLECTION('SUB_precipitation')
 
        do k  = KS,  KE
           qdry(k) = 1.E0_RP
-          do iq = I_QV, I_QG
+!          do iq = I_QV, I_QG
+          do iq = QQS, QQE
              qdry(k) = qdry(k) - QTRC(k,i,j,iq)
           enddo
        enddo
 
        do k  = KS,  KE
           CVmoist(k) = qdry(k) * CVdry
-          do iq = I_QV, I_QG
+!          do iq = I_QV, I_QG
+          do iq = QQS, QQE
              CVmoist(k) = CVmoist(k) + QTRC(k,i,j,iq) * CVw(iq)
           enddo
        enddo
