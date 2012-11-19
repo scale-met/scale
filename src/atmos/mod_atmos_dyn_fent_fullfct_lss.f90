@@ -2256,10 +2256,11 @@ call TIME_rapend     ('DYN-fct')
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(KS,i,j) )
+          call CHECK( __LINE__, MOMZ(KS+1,i,j) )
+          call CHECK( __LINE__, MOMZ(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_DENS,ZDIR) )
 #endif
-          mflx_hi(KS,i,j,ZDIR) = MOMZ(KS,i,j) &
+          mflx_hi(KS,i,j,ZDIR) = ( -MOMZ(KS+1,i,j) + 8.0_RP*MOMZ(KS,i,j) ) / 6.0_RP & ! MOMZ(KS-1,i,j) == 0
                               + num_diff(KS,i,j,I_DENS,ZDIR) * rdtrk
        enddo
        enddo
