@@ -248,7 +248,7 @@ contains
 
     call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'J/m2/s',    dtrd )
     call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K*kg/m3/s', dtrd )
-    call HIST_in( Zi      (:,:,:), 'Zi',        'Cloud top height',       'm',         dtrd )
+    call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',         dtrd )
 
     return
   end subroutine ATMOS_PHY_RD
