@@ -144,7 +144,7 @@ distclean: clean
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o:
-	$(FC) $(FFLAGS_DYN) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DYN) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 
 .PHONY : clean distclean allclean
