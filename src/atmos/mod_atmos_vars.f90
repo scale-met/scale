@@ -432,6 +432,12 @@ contains
        ATMOS_PREP_sw(I_ENGT) = 1
     endif
 
+    qflx_sgs_momz(:,:,:,:) = 0.0_RP
+    qflx_sgs_momx(:,:,:,:) = 0.0_RP
+    qflx_sgs_momy(:,:,:,:) = 0.0_RP
+    qflx_sgs_rhot(:,:,:,:) = 0.0_RP
+    qflx_sgs_qtrc(:,:,:,:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_vars_setup
 

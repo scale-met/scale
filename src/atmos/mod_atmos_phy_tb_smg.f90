@@ -116,7 +116,25 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_TB
+    use mod_atmos_vars, only: &
+       DENS_av, &
+       MOMZ_av, &
+       MOMX_av, &
+       MOMY_av, &
+       RHOT_av, &
+       QTRC_av, &
+       qflx_sgs_momz, &
+       qflx_sgs_momx, &
+       qflx_sgs_momy, &
+       qflx_sgs_rhot, &
+       qflx_sgs_qtrc
     implicit none
+
+    ! diagnostic variables
+    real(RP) :: tke(KA,IA,JA) ! TKE
+    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
+    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
+    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -213,6 +231,13 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+    call ATMOS_PHY_TB_main( &
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
+       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
+       )
 
     return
   end subroutine ATMOS_PHY_TB_setup
@@ -3075,7 +3100,7 @@ contains
           TMP2 = ( POTT(KE  ,i+1,j) + POTT(KE  ,i,j) ) * 0.5_RP
           TMP3 = ( POTT(KE-1,i+1,j) + POTT(KE-1,i,j) ) * 0.5_RP
           WORK_X(KE,i,j) = 0.5_RP * GRAV * ( TMP2 - TMP3 ) &
-               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20) )
+               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3094,7 +3119,7 @@ contains
           TMP1 = ( POTT(KS+1,i+1,j) + POTT(KS+1,i,j) ) * 0.5_RP
           TMP2 = ( POTT(KS  ,i+1,j) + POTT(KS  ,i,j) ) * 0.5_RP
           WORK_X(KS,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20) )
+               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3189,7 +3214,7 @@ contains
           TMP2 = ( POTT(KE  ,i,j+1) + POTT(KE  ,i,j) ) * 0.5_RP
           TMP3 = ( POTT(KE-1,i,j+1) + POTT(KE-1,i,j) ) * 0.5_RP
           WORK_Y(KE,i,j) = 0.5_RP * GRAV * ( TMP2 - TMP3 ) &
-               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20) )
+               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3208,7 +3233,7 @@ contains
           TMP1 = ( POTT(KS+1,i,j+1) + POTT(KS+1,i,j) ) * 0.5_RP
           TMP2 = ( POTT(KS  ,i,j+1) + POTT(KS  ,i,j) ) * 0.5_RP
           WORK_Y(KS,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20) )
+               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
