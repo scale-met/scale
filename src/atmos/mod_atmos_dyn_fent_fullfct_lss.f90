@@ -2465,20 +2465,6 @@ call TIME_rapend     ('DYN-fct')
        enddo
     end if
 
-    if ( FLAG_FCT_MOMENTUM .or. FLAG_FCT_T ) then
-
-#ifdef _USE_RDMA
-       call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
-       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
-    end if
-
 #ifdef DEBUG
     work(:,:,:) = UNDEF
 #endif
@@ -3508,6 +3494,17 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
     if ( FLAG_FCT_T ) then
+
+#ifdef _USE_RDMA
+       call COMM_rdma_vars8( 5+QA+11, 3 )
+#else
+       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+#endif
        if ( rko == RK ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           !OCL XFILL
