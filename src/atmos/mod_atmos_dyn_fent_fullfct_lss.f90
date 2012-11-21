@@ -1081,7 +1081,7 @@ call START_COLLECTION("DYN-set")
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
                                          * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
                                            - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
                                            + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
