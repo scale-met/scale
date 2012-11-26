@@ -519,7 +519,7 @@ int32_t file_write_data( int32_t  vid,        // (in)
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time
-	 abs(t_end - vars[vid]->t->t) > EPS ) { // time goes next step
+	 fabs(t_end - vars[vid]->t->t) > EPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
       size_t index[2];
