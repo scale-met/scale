@@ -676,7 +676,7 @@ contains
          (/'z','x','y'/), dtype                                  ) ! (in)
     do iq = 1, QA
        call FileAddVariable( aq_vid(iq),                & ! (out)
-            fid, AQ_NAME(iq), AQ_DESC(iq), AP_UNIT(iq), & ! (in)
+            fid, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), & ! (in)
             (/'z','x','y'/), dtype                      ) ! (in)
     end do
 
