@@ -833,6 +833,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -840,6 +841,18 @@ contains
     enddo
     enddo
     enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS, KE
+       RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * dens_s(k,i,j)
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
 
 
     do step = 1, NSTEP_ATMOS_DYN
@@ -859,13 +872,19 @@ call START_COLLECTION("DYN-set")
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
+          QTRC(KS,i,j,I_QV) = RHOQ(KS,i,j) / DENS(KS,i,j)
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
        do k = KS, KE
           QDRY(k,i,j) = 1.0_RP
        enddo
        enddo
        enddo
+       !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(3)
        do iq = QQS, QQE
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -874,6 +893,7 @@ call START_COLLECTION("DYN-set")
        enddo
        enddo
        enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -1355,6 +1375,18 @@ call START_COLLECTION("DYN-rk3")
     call COMM_wait ( RHOT(:,:,:), 5 )
 #endif
 
+    !$omp parallel do private(i,j) schedule(static,1) collapse(2)
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       RHOQ(KS,i,j) = RHOQ(KS,i,j) &
+                    + dtrk * SFLX_QV(i,j) * RCDZ(KS)
+    end do
+    end do
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+
     if ( USE_AVERAGE ) then
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
@@ -1398,17 +1430,6 @@ call START_COLLECTION("DYN-rk3")
        do i = 1, IA
        do k = 1, KA
           RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
-       do iq = 1, QA
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) + QTRC(k,i,j,iq)
-       enddo
        enddo
        enddo
        enddo
@@ -1546,29 +1567,16 @@ call START_COLLECTION("DYN-fct")
 #endif
 
        ! Surface QV Flux
-       if ( iq == I_QV ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
-             qflx_hi(KS-1,i,j,ZDIR) = SFLX_QV(i,j)
-          enddo
-          enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+          qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
+          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+       enddo
+       enddo
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       else
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          enddo
-          enddo
-#ifdef DEBUG
-          i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       endif
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-1, JJE+1
@@ -1647,18 +1655,19 @@ call START_COLLECTION("DYN-fct")
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !--- update rho*Q with monotone(diffusive) flux divergence
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-          RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
-       enddo
-       enddo
-       enddo
+       if (iq .ne. I_QV) then
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS, KE
+             RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       end if
 
     enddo
     enddo
@@ -1801,17 +1810,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
-    do iq = 1, QA
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       QTRC_av(k,i,j,iq) = QTRC_av(k,i,j,iq) / NSTEP_ATMOS_DYN
-    enddo
-    enddo
-    enddo
-    enddo
-
     else
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
@@ -1859,6 +1857,8 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
+    endif
+
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
     do iq = 1, QA
     do j = 1, JA
@@ -1869,8 +1869,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
     enddo
-
-    endif
 
     return
   end subroutine ATMOS_DYN_main
