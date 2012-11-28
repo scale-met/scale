@@ -580,9 +580,12 @@ contains
          USE_AVERAGE,                                 & ! (in)
          DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
     use mod_const, only : &
-       Rdry   => CONST_Rdry,   &
-       Rvap   => CONST_Rvap,   &
+       Rdry   => CONST_Rdry,  &
+       Rvap   => CONST_Rvap,  &
+       CVdry  => CONST_CVdry, &
        P00    => CONST_PRE00
+    use mod_atmos_thermodyn, only : &
+       AQ_CV
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -674,6 +677,7 @@ contains
     real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
     real(RP) :: dens_s(KA,IA,JA) ! saved density
     real(RP) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
+    real(RP) :: CVtot (KA,IA,JA) ! CV
 
     ! rayleigh damping, numerical diffusion
     real(RP) :: dens_diff(KA,IA,JA)     ! anomary of density
@@ -854,6 +858,44 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS+1, KE
+       QDRY(k,i,j) = 1.0_RP
+    enddo
+    enddo
+    enddo
+    !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS+1, KE
+    do iq = QQS, QQE
+       QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS+1, KE
+       Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+    enddo
+    enddo
+    enddo
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS+1, KE
+       CVtot(k,i,j) = CVdry*QDRY(k,i,j)
+       do iq = QQS, QQE
+          CVtot(k,i,j) = CVtot(k,i,j) + AQ_CV(iq)*QTRC(k,i,j,iq)
+       enddo
+    enddo
+    enddo
+    enddo
+
 
     do step = 1, NSTEP_ATMOS_DYN
 
@@ -878,26 +920,34 @@ call START_COLLECTION("DYN-set")
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-       do k = KS, KE
-          QDRY(k,i,j) = 1.0_RP
-       enddo
+          QDRY(KS,i,j) = 1.0_RP
        enddo
        enddo
        !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(3)
        do iq = QQS, QQE
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-       do k = KS, KE
-          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-       enddo
+          QDRY(KS,i,j) = QDRY(KS,i,j) - QTRC(KS,i,j,iq)
        enddo
        enddo
        enddo
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-       do k = KS, KE
-          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+          Rtot(KS,i,j) = Rdry*QDRY(KS,i,j) + Rvap*QTRC(KS,i,j,I_QV)
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+          CVtot(KS,i,j) = CVdry*QDRY(KS,i,j)
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       do iq = QQS, QQE
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+          CVtot(KS,i,j) = CVtot(KS,i,j) + AQ_CV(iq)*QTRC(KS,i,j,iq)
        enddo
        enddo
        enddo
@@ -1282,7 +1332,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
                  SFLX_POTT, SFLX_QV,                                & ! (in)
-                 Rtot, CORIOLI,                                     & ! (in)
+                 Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CZ, FZ, CDZ,                                       & ! (in)
@@ -1317,7 +1367,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
                  SFLX_POTT, SFLX_QV,                                & ! (in)
-                 Rtot, CORIOLI,                                     & ! (in)
+                 Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CZ, FZ, CDZ,                                       & ! (in)
@@ -1352,7 +1402,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
                  SFLX_POTT, SFLX_QV,                                & ! (in)
-                 Rtot, CORIOLI,                                     & ! (in)
+                 Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef, LSsink_d,         & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CZ, FZ, CDZ,                                       & ! (in)
@@ -1883,7 +1933,7 @@ call TIME_rapend     ('DYN-fct')
                      qflx_sgs_momy, qflx_sgs_rhot,                &
                      SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             &
                      SFLX_POTT, SFLX_QV,                          &
-                     Rtot, CORIOLI,                               &
+                     Rtot, CVtot, CORIOLI,                        &
                      num_diff, ray_damp, divdmp_coef, LSsink_d,   &
                      FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
                      CZ, FZ, CDZ, FDZ, FDX, FDY,                  &
@@ -1895,7 +1945,6 @@ call TIME_rapend     ('DYN-fct')
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
-       CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
     use mod_comm, only: &
 #ifdef _USE_RDMA
@@ -1939,6 +1988,7 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: SFLX_QV  (IA,JA)
 
     real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
+    real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV
     real(RP), intent(in) :: CORIOLI(1,IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in) :: ray_damp(KA,IA,JA,5)
@@ -2088,41 +2138,13 @@ call TIME_rapend     ('DYN-fct')
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-#if defined(__INTEL_COMPILER)
           do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, RHOT(k,i,j) )
           call CHECK( __LINE__, Rtot(k,i,j) )
+          call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
-             PRES(k,i,j) = RHOT(k,i,j) * Rtot(k,i,j) / P00
-          enddo
-          if ( RP == 8 ) then
-#ifdef DEBUG
-             call vdpowx( KE-KS+1, PRES(KS:KE,i,j), CPovCV, PRES(KS:KE,i,j) )
-#else
-             call vdpowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
-#endif
-          else
-#ifdef DEBUG
-             call vspowx( KE-KS+1, PRES(KS:KE,i,j), CPovCV, PRES(KS:KE,i,j) )
-#else
-             call vspowx( KE, PRES(:,i,j), CPovCV, PRES(:,i,j) )
-#endif
-          end if
-          do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, DENS(k,i,j) )
-#endif
-             PRES(k,i,j) = PRES(k,i,j) * P00
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-          enddo
-#else
-          do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, Rtot(k,i,j) )
-#endif
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
           enddo
           do k = KS, KE
 #ifdef DEBUG
@@ -2131,7 +2153,6 @@ call TIME_rapend     ('DYN-fct')
 #endif
              POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           enddo
-#endif
        enddo
        enddo
 #ifdef DEBUG

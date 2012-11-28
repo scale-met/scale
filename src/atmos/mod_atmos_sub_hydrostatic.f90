@@ -231,10 +231,9 @@ contains
        EPS     => CONST_EPS,     &
        Rdry    => CONST_Rdry,    &
        Rvap    => CONST_Rvap,    &
-       CPovR   => CONST_CPovR,   &
-       RovCV   => CONST_RovCV,   &
-       CVovCP  => CONST_CVovCP,  &
-       CPovCV  => CONST_CPovCV,  &
+       CVdry   => CONST_CVdry,   &
+       CVvap   => CONST_CVvap,   &
+       CL      => CONST_CL,      &
        LASPdry => CONST_LASPdry, &
        P00     => CONST_PRE00
     use mod_grid, only : &
@@ -254,10 +253,18 @@ contains
     real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
     logical,  intent(in)  :: userapserate
 
+
+    real(RP) :: Qdry_sfc
     real(RP) :: Rmoist_sfc
+    real(RP) :: CVtot_sfc
     real(RP) :: dens_sfc
 
+    real(RP) :: Qdry(KA)
     real(RP) :: Rmoist(KA)
+    real(RP) :: CVtot(KA)
+    real(RP) :: CPtot(KA)
+
+    real(RP) :: CPovCV(KA)
 
     real(RP) :: dens_s, dhyd, dgrd
 
@@ -271,15 +278,19 @@ contains
     criteria = EPS * 5
 
     ! make density at surface
-    Rmoist_sfc = Rdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + Rvap * qv_sfc
+    Qdry_sfc = 1.0_RP - qv_sfc - qc_sfc
+    Rmoist_sfc = Rdry * Qdry_sfc + Rvap * qv_sfc
+    CVtot_sfc = CVdry * Qdry_sfc + CVvap * qv_sfc + CL * qc_sfc
 
-    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**CVovCP
+    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**((CVtot_sfc+Rmoist_sfc)/CVtot_sfc)
     temp_sfc = pres_sfc / ( dens_sfc * Rmoist_sfc )
 
     do k = KS, KE
-       Rmoist(k) = Rdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                 + Rvap * qv(k)
+       Qdry(k) = 1.0_RP - qv(k) - qc(k)
+       Rmoist(k) = Rdry * Qdry(k) + Rvap * qv(k)
+       CVtot(k) = CVdry * Qdry(k) + CVvap * qv(k) + CL * qc(k)
+       CPtot(k) = CVtot(k) + Rmoist(k)
+       CPovCV(k) = CPtot(k) / CVtot(k)
     enddo
 
     ! make density at lowermost cell center
@@ -288,8 +299,8 @@ contains
     if ( userapserate ) then
 
        temp(k) = pott_sfc - LASPdry * CZ(k) ! use dry lapse rate
-       pres(k) = P00 * ( temp(k)/pott(k) )**CPovR
-       dens(k) = P00 / Rmoist(k) / pott(k) * ( pres(k)/P00 )**CVovCP
+       pres(k) = P00 * ( temp(k)/pott(k) )**(CPtot(k)/Rmoist(k))
+       dens(k) = P00 / Rmoist(k) / pott(k) * ( pres(k)/P00 )**(CVtot(k)/CPtot(k))
 
     else ! use itelation
 
@@ -301,12 +312,12 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = + ( P00 * ( dens_sfc * Rmoist_sfc * pott_sfc / P00 )**CPovCV &
-                   - P00 * ( dens_s   * Rmoist(k)  * pott(k)  / P00 )**CPovCV ) / CZ(k) & ! dp/dz
+          dhyd = + ( P00 * ( dens_sfc * Rmoist_sfc * pott_sfc / P00 )**((CVtot_sfc+Rmoist_sfc)/CVtot_sfc) &
+                   - P00 * ( dens_s   * Rmoist(k)  * pott(k)  / P00 )**CPovCV(k)) / CZ(k) & ! dp/dz
                  - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                                 ! rho*g
 
-          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV / CZ(k) &
-                 * CPovCV * dens_s**RovCV                                      &
+          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV(k) / CZ(k) &
+                 * CPovCV(k) * dens_s**(Rmoist(k)/CVtot(k))               &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -330,12 +341,12 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = + ( P00 * ( dens(k-1) * Rmoist(k-1) * pott(k-1) / P00 )**CPovCV &
-                   - P00 * ( dens_s    * Rmoist(k  ) * pott(k  ) / P00 )**CPovCV ) / FDZ(k-1) & ! dp/dz
+          dhyd = + ( P00 * ( dens(k-1) * Rmoist(k-1) * pott(k-1) / P00 )**CPovCV(k-1) &
+                   - P00 * ( dens_s    * Rmoist(k  ) * pott(k  ) / P00 )**CPovCV(k) ) / FDZ(k-1) & ! dp/dz
                  - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                                ! rho*g
 
-          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV / FDZ(k-1) &
-                 * CPovCV * dens_s**RovCV                                         &
+          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV(k) / FDZ(k-1) &
+                 * CPovCV(k) * dens_s**(Rmoist(k)/CVtot(k))                  &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -348,7 +359,7 @@ contains
     enddo
 
     do k = KS, KE
-       pres(k) = P00 * ( dens(k) * Rmoist(k) * pott(k) / P00 )**CPovCV
+       pres(k) = P00 * ( dens(k) * Rmoist(k) * pott(k) / P00 )**CPovCV(k)
        temp(k) = pres(k) / ( dens(k) * Rmoist(k) )
     enddo
 
