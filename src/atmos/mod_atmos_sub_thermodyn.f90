@@ -467,9 +467,9 @@ call STOP_COLLECTION('SUB_thermodyn')
     real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
 
-    real(RP) :: RPRE00, WKAPPA, rhoRmoist
+    real(RP) :: RPRE00, Rmoist, cv
 
-    integer :: i, j, k
+    integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('SUB_thermodyn')
@@ -478,15 +478,19 @@ call START_COLLECTION('SUB_thermodyn')
 #endif
 
     RPRE00   = 1.0_RP / PRE00
-    WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
 
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       rhoRmoist = dens(k,i,j) * ( qdry(k,i,j)*Rdry + q(k,i,j,I_QV)*Rvap )
 
-       temp(k,i,j) = ( pott(k,i,j) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA
-       pres(k,i,j) = rhoRmoist * temp(k,i,j)
+       cv = qdry(k,i,j) * CVdry
+       do iqw = QQS, QQE
+          cv = cv + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       Rmoist = qdry(k,i,j)*Rdry + q(k,i,j,I_QV)*Rvap
+
+       pres(k,i,j) = PRE00 * ( dens(k,i,j)*Rmoist*pott(k,i,j)*RPRE00 )**((cv+Rmoist)/cv)
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rmoist )
     enddo
     enddo
     enddo

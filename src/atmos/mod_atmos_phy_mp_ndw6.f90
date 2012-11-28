@@ -69,10 +69,6 @@ module mod_atmos_phy_mp
      PI     => CONST_PI,      &
      UNDEF8 => CONST_UNDEF8,  &
      Rdry   => CONST_Rdry,    &
-     CPdry  => CONST_CPdry,   &
-     CVdry  => CONST_CVdry,   &
-     RovCP  => CONST_RovCP,   &
-     CPovCV => CONST_CPovCV,  &
      P00    => CONST_PRE00,   &
      T00    => CONST_TEM00,   &
      Rvap   => CONST_Rvap,    &
@@ -80,7 +76,6 @@ module mod_atmos_phy_mp
      CVvap  => CONST_CVvap,   &
      CL     => CONST_CL,      &
      CI     => CONST_CI,      &
-     EPSvap => CONST_EPSvap,  &
      LHV    => CONST_LH00,    &
      LHF    => CONST_LHF00,   &
      LHS    => CONST_LHS00,   &
@@ -1201,6 +1196,7 @@ contains
     real(RP) :: rho_fac_g_d(KA,IA,JA) !            graupel
     real(RP) :: cva_d(KA,IA,JA)    !
     real(RP) :: cpa_d(KA,IA,JA)       ! [Add] 09/08/18 T.Mitsui
+    real(RP) :: ra_d
     !
     real(RP) :: drhogqv               ! d (rho*qv*gsgam2)
     real(RP) :: drhogqc, drhognc      !        qc, nc
@@ -2098,7 +2094,9 @@ contains
     do i = 1,    IA
     do k  = KS, KE
        tem_d(k,i,j) = rhoge_d(k,i,j) / ( rhog_d(k,i,j) * cva_d(k,i,j) )
-       pre_d(k,i,j) = rho_d(k,i,j)*( qd_d(k,i,j)*Rdry+q_d(k,i,j,I_QV)*Rvap )*tem_d(k,i,j)
+       ra_d = qd_d(k,i,j)*Rdry+q_d(k,i,j,I_QV)*Rvap
+       pre_d(k,i,j) = rho_d(k,i,j)*ra_d*tem_d(k,i,j)
+       th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(ra_d/(cva_d(k,i,j)+ra_d))
     enddo
     enddo
     enddo
@@ -2110,13 +2108,6 @@ contains
 
     call TIME_rapstart('MPX ijkconvert')
 
-    do j = 1,    JA
-    do i = 1,    IA
-    do k  = KS, KE
-       th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**RovCP
-    enddo
-    enddo
-    enddo
 
     do j = JS, JE
     do i = IS, IE
