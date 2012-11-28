@@ -834,8 +834,8 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        dens_s(k,i,j) = DENS(k,i,j)
     enddo
@@ -843,8 +843,8 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * dens_s(k,i,j)
     enddo
