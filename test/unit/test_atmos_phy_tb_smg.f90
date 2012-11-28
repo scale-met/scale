@@ -67,7 +67,7 @@ contains
 
   !########## Initial setup ##########
   ATMOS_TYPE_PHY_TB = 'SMAGORINSKY'
-  call ATMOS_PHY_TB_setup
+  call ATMOS_PHY_TB_setup( .false. )
 
   ZERO(:,:,:,:) = 0.0_RP
 
