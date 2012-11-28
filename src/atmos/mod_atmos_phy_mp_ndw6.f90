@@ -1149,9 +1149,7 @@ contains
     !
     real(RP) :: rhogvx_d(KA,IA,JA)
     real(RP) :: rhogvy_d(KA,IA,JA)
-    real(RP) :: rhogw_d (KA,IA,JA)
     real(RP) :: rhogq_d (KA,IA,JA,QA)
-    real(RP) :: rhog_d  (KA,IA,JA)
     real(RP) :: th_d    (KA,IA,JA)
     !
     ! diagnostic variables
@@ -1323,11 +1321,6 @@ contains
     real(RP) :: r_ntmax
     integer :: ntdiv
 
-    real(RP) :: rhoe(KA,IA,JA)
-    real(RP) :: temp(KA,IA,JA)
-    real(RP) :: pres(KA,IA,JA)
-    real(RP) :: rhoq(KA,IA,JA,QA)
-
     real(RP) :: velw(KA,IA,JA,QA)
     real(RP) :: flux_rain (KA,IA,JA)
     real(RP) :: flux_snow (KA,IA,JA)
@@ -1367,49 +1360,18 @@ contains
 
 !OCL XFILL
        do k = KS, KE
-          rhog_d  (k,i,j) = DENS(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          rhogw_d (k,i,j) = MOMZ(k,i,j)
-       enddo
-       do k = KS, KE
           th_d    (k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
        enddo
-       rhog_d  (1:KS-1,i,j) = rhog_d  (KS,i,j)
-       rhogw_d (1:KS-1,i,j) = rhogw_d (KS,i,j)
-       th_d    (1:KS-1,i,j) = th_d    (KS,i,j)
-
-       rhog_d  (KE+1:KA,i,j) = rhog_d  (KE,i,j)
-       rhogw_d (KE+1:KA,i,j) = rhogw_d (KE,i,j)
-       th_d    (KE+1:KA,i,j) = th_d    (KE,i,j)
+       th_d(1:KS-1,i,j) = th_d(KS,i,j)
+       th_d(KE+1:KA,i,j) = th_d(KE,i,j)
     enddo
-    enddo
-
-    do iq = 1, QA
-       do j = 1, JA
-       do i = 1, IA
-          do k = KS, KE
-             q_d(k,i,j,iq) = QTRC(k,i,j,iq)
-          enddo
-       enddo
-       enddo
-    enddo
-
-    do iq = 1, QA
-       do j = 1, JA
-       do i = 1, IA
-          q_d(1:KS-1, i,j  ,iq) = q_d(KS,i,j,iq)
-          q_d(KE+1:KA,i,j  ,iq) = q_d(KE,i,j,iq)
-       enddo
-       enddo
     enddo
 
     do iq = 1, QA
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       rhogq_d(k,i,j,iq) = rhog_d(k,i,j) * q_d(k,i,j,iq)
+       rhogq_d(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
     enddo
     enddo
     enddo
@@ -1418,26 +1380,26 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 2, KA
-       rho_d  (k,i,j) = rhog_d(k,i,j)
-       rrhog_d(k,i,j) = 1.0_RP / rhog_d(k,i,j)
-       w_d    (k,i,j) = ( rhogw_d(k,i,j) + rhogw_d(k-1,i,j) ) * rrhog_d(k,i,j)
+       rho_d  (k,i,j) = DENS(k,i,j)
+       rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
+       w_d    (k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
     enddo
     enddo
     enddo
 
-    call thrmdyn_qd_kij( qd_d, q_d )
-    call thrmdyn_cv_kij( cva_d, q_d, qd_d )
-    call thrmdyn_tempre2_kij( tem_d, pre_d, rho_d, th_d, qd_d, q_d )
+    call thrmdyn_qd_kij( qd_d, QTRC )
+    call thrmdyn_cv_kij( cva_d, QTRC, qd_d )
+    call thrmdyn_tempre2_kij( tem_d, pre_d, rho_d, th_d, qd_d, QTRC )
 
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       rhoge_d(k,i,j) = rhog_d(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
+       rhoge_d(k,i,j) = DENS(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
     enddo
     enddo
     enddo
 
-    if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
+    if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), QTRC(:,:,:,I_QV) )
 
     call TIME_rapend  ('MPX ijkconvert')
 
@@ -1471,7 +1433,7 @@ contains
     end do
     end do
 
-    call thrmdyn_cp_kij( cpa_d, q_d, qd_d )
+    call thrmdyn_cp_kij( cpa_d, QTRC, qd_d )
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1492,9 +1454,9 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       lv_d(k,i,j) = rho_d(k,i,j)*q_d(k,i,j,I_QV)
-       ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*q_d(k,i,j,I_NI) )
-       nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*q_d(k,i,j,I_NC) )
+       lv_d(k,i,j) = rho_d(k,i,j)*QTRC(k,i,j,I_QV)
+       ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NI) )
+       nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NC) )
     enddo
     enddo
     enddo
@@ -1558,7 +1520,7 @@ contains
     do j = 1,    JA
     do i = 1,    IA
     do k  = KS, KE
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( rhog_d(k,i,j) * cva_d(k,i,j) )
+       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
        pre_d(k,i,j) = rho_d(k,i,j)*( qd_d(k,i,j)*Rdry+q_d(k,i,j,I_QV)*Rvap )*tem_d(k,i,j)
     enddo
     enddo
@@ -1694,7 +1656,7 @@ contains
             dz,                            & ! in
             w_d,                           & ! in
             dTdt_equiv_d,                  & ! in
-            rhog_d,                        & ! in
+            DENS,                        & ! in
             rhoge_d,                       & ! inout
             rhogq_d, q_d,                  & ! inout
             tem_d, pre_d, rho_d,           & ! inout
@@ -2093,7 +2055,7 @@ contains
     do j = 1,    JA
     do i = 1,    IA
     do k  = KS, KE
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( rhog_d(k,i,j) * cva_d(k,i,j) )
+       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
        ra_d = qd_d(k,i,j)*Rdry+q_d(k,i,j,I_QV)*Rvap
        pre_d(k,i,j) = rho_d(k,i,j)*ra_d*tem_d(k,i,j)
        th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(ra_d/(cva_d(k,i,j)+ra_d))
@@ -2112,19 +2074,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
-          RHOT(k,i,j) = th_d(k,i,j) * rhog_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          rhoe(k,i,j) = rhoge_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          temp(k,i,j) = tem_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          pres(k,i,j) = pre_d(k,i,j)
+          RHOT(k,i,j) = th_d(k,i,j) * DENS(k,i,j)
        enddo
     enddo
     enddo
@@ -2132,20 +2082,10 @@ contains
 !OCL SERIAL
     do iq = 1, QA
 !OCL PARALLEL
-       do j  = JS, JE
-       do i  = IS, IE
-!OCL XFILL
-          do k = KS, KE
-             rhoq(k,i,j,iq) = rhogq_d(k,i,j,iq)
-          enddo
-       enddo
-       enddo
-
-!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = rhoq(k,i,j,iq) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = rhogq_d(k,i,j,iq) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -2183,16 +2123,16 @@ contains
     do step = 1, MP_NSTEP_SEDIMENTATION
 
        call MP_terminal_velocity( velw(:,:,:,:), &
-                                  rhoq(:,:,:,:), &
-                                  temp(:,:,:),   &
-                                  pres(:,:,:)    )
+                                  rhogq_d(:,:,:,:), &
+                                  tem_d(:,:,:),   &
+                                  pre_d(:,:,:)    )
 
        call precipitation( wflux_rain(:,:,:),     &
                            wflux_snow(:,:,:),     &
                            velw(:,:,:,:),         &
-                           rhoq(:,:,:,:),         &
-                           rhoe(:,:,:),           &
-                           temp(:,:,:),           &
+                           rhogq_d(:,:,:,:),         &
+                           rhoge_d(:,:,:),           &
+                           tem_d(:,:,:),           &
                            MP_DTSEC_SEDIMENTATION )
 
        do j = JS, JE
