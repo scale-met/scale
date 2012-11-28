@@ -225,9 +225,9 @@ call STOP_COLLECTION('SUB_thermodyn')
 call START_COLLECTION('SUB_thermodyn')
 #endif
 
-    do k = 1, KA
     do j = 1, JA
     do i = 1, IA
+    do k = 1, KA
 
        cptot(k,i,j) = qdry(k,i,j) * CPdry
 
@@ -297,9 +297,9 @@ call STOP_COLLECTION('SUB_thermodyn')
 call START_COLLECTION('SUB_thermodyn')
 #endif
 
-    do k = 1, KA
     do j = 1, JA
     do i = 1, IA
+    do k = 1, KA
 
        cvtot(k,i,j) = qdry(k,i,j) * CVdry
 
@@ -387,9 +387,9 @@ call STOP_COLLECTION('SUB_thermodyn')
 call START_COLLECTION('SUB_thermodyn')
 #endif
 
-    do k = 1, KA
     do j = 1, JA
     do i = 1, IA
+    do k = 1, KA
 
        cv = qdry(k,i,j) * CVdry
        do iqw = QQS, QQE
@@ -480,9 +480,9 @@ call START_COLLECTION('SUB_thermodyn')
     RPRE00   = 1.0_RP / PRE00
     WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
 
-    do k = 1, KA
     do j = 1, JA
     do i = 1, IA
+    do k = 1, KA
        rhoRmoist = dens(k,i,j) * ( qdry(k,i,j)*Rdry + q(k,i,j,I_QV)*Rvap )
 
        temp(k,i,j) = ( pott(k,i,j) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA
