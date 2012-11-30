@@ -1003,16 +1003,18 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * dens_diff(KS,i,j) )
-             num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
+!             num_diff(KS,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS)**4 &
+!                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
+!                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
+!                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
+!                                           - CNDZ(1,KS  ) * dens_diff(KS  ,i,j) )
+!             num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+!                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
+!                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
+!                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
+!                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
+             num_diff(KS,i,j,I_DENS,ZDIR) = num_diff(KS+1,i,j,I_DENS,ZDIR)
+             num_diff(KE-1,i,j,I_DENS,ZDIR) = num_diff(KE-2,i,j,I_DENS,ZDIR)
           enddo
           enddo
 
@@ -1046,13 +1048,27 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-          do k = KS+1, KE-1
+          do k = KS+2, KE-2
              num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**4 &
                                          * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
                                            - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
                                            + CNMZ(3,k  ) * MOMZ(k-1,i,j) &
                                            - CNMZ(1,k-1) * MOMZ(k-2,i,j) )
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS,   JJE
+          do i = IIS,   IIE
+             num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+2)+CDZ(KS+1)) )**4 &
+                                         * ( CNMZ(1,KS+1) * MOMZ(KS+2,i,j) &
+                                           - CNMZ(2,KS+1) * MOMZ(KS+1,i,j) &
+                                           + CNMZ(3,KS+1) * MOMZ(KS,i,j) )
+             num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE)+CDZ(KE-1)) )**4 &
+                                         * ( &
+                                           - CNMZ(2,KE-1) * MOMZ(KE-1,i,j) &
+                                           + CNMZ(3,KE-1) * MOMZ(KE-2,i,j) &
+                                           - CNMZ(1,KE-2) * MOMZ(KE-3,i,j) )
           enddo
           enddo
 
@@ -1097,16 +1113,18 @@ call START_COLLECTION("DYN-set")
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
+!             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+!                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
+!                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
+!                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
+!                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
+!             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+!                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
+!                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
+!                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
+!                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
+             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
+             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
           enddo
           enddo
 
@@ -1151,16 +1169,18 @@ call START_COLLECTION("DYN-set")
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
+!             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+!                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
+!                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
+!                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
+!                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
+!             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+!                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
+!                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
+!                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
+!                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
+             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
+             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
           enddo
           enddo
 
@@ -1201,7 +1221,7 @@ call START_COLLECTION("DYN-set")
                                            + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
                                            - CNDZ(1,k  ) * pott_diff(k-1,i,j) ) &
                                          * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
-                                                   + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+                                                    + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
           enddo
           enddo
           enddo
@@ -1209,18 +1229,20 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
-                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
-                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
-                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
-                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
-                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
-                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
-                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
-                                         * 0.5_RP * ( DENS(KE  ,i,j)+DENS(KE-1,i,j) )
+!             num_diff(KS,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS)**4 &
+!                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
+!                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
+!                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
+!                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
+!                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+!             num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+!                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
+!                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
+!                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
+!                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
+!                                         * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+             num_diff(KS  ,i,j,I_RHOT,ZDIR) = num_diff(KS+1,i,j,I_RHOT,ZDIR)
+             num_diff(KE-1,i,j,I_RHOT,ZDIR) = num_diff(KE-2,i,j,I_RHOT,ZDIR)
           enddo
           enddo
 
@@ -2140,11 +2162,11 @@ call TIME_rapend     ('DYN-fct')
        do i = IIS-2, IIE+2
           do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, Rtot(k,i,j) )
-          call CHECK( __LINE__, CVtot(k,i,j) )
+             call CHECK( __LINE__, RHOT(k,i,j) )
+             call CHECK( __LINE__, Rtot(k,i,j) )
+             call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
+             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
           enddo
           do k = KS, KE
 #ifdef DEBUG
@@ -3665,8 +3687,7 @@ call TIME_rapend     ('DYN-fct')
                                  * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
                                  + qflx_sgs_rhot(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = mflx_hi(KE,i,j,ZDIR) &
-               * ( POTT(KE,i,j) - 0.5_RP * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * FZ(KE) / FZ(KE-1) )
+          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
