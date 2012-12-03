@@ -282,7 +282,7 @@ contains
     Rmoist_sfc = Rdry * Qdry_sfc + Rvap * qv_sfc
     CVtot_sfc = CVdry * Qdry_sfc + CVvap * qv_sfc + CL * qc_sfc
 
-    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**((CVtot_sfc+Rmoist_sfc)/CVtot_sfc)
+    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**(CVtot_sfc/(CVtot_sfc+Rmoist_sfc))
     temp_sfc = pres_sfc / ( dens_sfc * Rmoist_sfc )
 
     do k = KS, KE
