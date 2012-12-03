@@ -1352,8 +1352,8 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MPX ijkconvert')
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        sl_PLCdep_d(1,i,j) = 0.0_RP
        sl_PLRdep_d(1,i,j) = 0.0_RP
        sl_PNRdep_d(1,i,j) = 0.0_RP
@@ -1368,18 +1368,18 @@ contains
     enddo
 
     do iq = 1, QA
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        rhogq_d(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
     enddo
     enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 2, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        rho_d  (k,i,j) = DENS(k,i,j)
        rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
        w_d    (k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
@@ -1389,11 +1389,11 @@ contains
 
     call thrmdyn_qd_kij( qd_d, QTRC )
     call thrmdyn_cv_kij( cva_d, QTRC, qd_d )
-    call thrmdyn_tempre2_kij( tem_d, pre_d, rho_d, th_d, qd_d, QTRC )
+    call thrmdyn_tempre2_kij( tem_d, pre_d, DENS, th_d, qd_d, QTRC )
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        rhoge_d(k,i,j) = DENS(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
     enddo
     enddo
@@ -1405,8 +1405,8 @@ contains
 
     call TIME_rapstart('MP1 Nucleation')
 
-    do j = 1,  JA
-    do i = 1,  IA
+    do j = JS,  JE
+    do i = IS,  IE
     do k = KS, KE
        rho_fac         = rho_0 / max(rho_d(k,i,j),rho_min)
        rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
@@ -1417,8 +1417,8 @@ contains
     enddo
     enddo
     enddo
-    do j=1, JA
-    do i=1, IA
+    do j=JS, JE
+    do i=IS, IE
        rho_fac_c_d(1:KS-1,i,j)    = 1.0_RP
        rho_fac_r_d(1:KS-1,i,j)    = 1.0_RP
        rho_fac_i_d(1:KS-1,i,j)    = 1.0_RP
@@ -1434,26 +1434,26 @@ contains
     end do
 
     call thrmdyn_cp_kij( cpa_d, QTRC, qd_d )
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
     enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        qke_d       (k,i,j) = 0.0_RP ! 2*TKE
        dTdt_equiv_d(k,i,j) = 0.0_RP
     enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        lv_d(k,i,j) = rho_d(k,i,j)*QTRC(k,i,j,I_QV)
        ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NI) )
        nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NC) )
@@ -1502,8 +1502,8 @@ contains
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
     do k  = KS, KE
        q_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) * rrhog_d(k,i,j)
        q_d(k,i,j,I_QC) = rhogq_d(k,i,j,I_QC) * rrhog_d(k,i,j)
@@ -1698,9 +1698,9 @@ contains
     flag_history_in=.true.
 
     ! parameter setting
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! Mass concentration [kg/m3]
        lv_d(k,i,j) = rhogq_d(k,i,j,I_QV)
        lc_d(k,i,j) = rhogq_d(k,i,j,I_QC)
@@ -1711,9 +1711,9 @@ contains
     enddo
     enddo
     enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! Number concentration[/m3]
        nc_d(k,i,j) = rhogq_d(k,i,j,I_NC)
        nr_d(k,i,j) = rhogq_d(k,i,j,I_NR)
@@ -1723,9 +1723,9 @@ contains
     enddo
     enddo
     enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! Mass of mean particle [kg]
        xc_d(k,i,j) = min(xc_max, max(xc_min, lc_d(k,i,j)/(nc_d(k,i,j)+nc_min) ) )
        xr_d(k,i,j) = min(xr_max, max(xr_min, lr_d(k,i,j)/(nr_d(k,i,j)+nr_min) ) )
@@ -1735,9 +1735,9 @@ contains
     enddo
     enddo
     enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! effective cross section is assume as area equivalent circle
        dc_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QC)*xc_d(k,i,j)**b_rea(I_QC)
        dr_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QR)*xr_d(k,i,j)**b_rea(I_QR)
@@ -1747,9 +1747,9 @@ contains
     enddo
     enddo
     enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! terminal velocity of average mass
        ! SB06(33)
        vt_xa_d(k,i,j,I_QC,2) = alpha_v(I_QC,2)*(xc_d(k,i,j)**beta_v(I_QC,2))*rho_fac_c_d(k,i,j)
@@ -5424,9 +5424,9 @@ contains
 
     ! total hydrometeor (before correction)
 !OCL NORECURRENCE
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        diffq(k,i,j) = QTRC(k,i,j,I_QV) &
                     + QTRC(k,i,j,I_QC) &
                     + QTRC(k,i,j,I_QR) &
@@ -5441,9 +5441,9 @@ contains
 !OCL SERIAL, SIMD
     do iq = 1, QA
 !OCL PARALLEL
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,iq) < 0.0_RP ) then
           QTRC(k,i,j,iq) = 0.0_RP
        endif
@@ -5455,9 +5455,9 @@ contains
     ! apply correction of hydrometeor to total density
     ! [note] mass conservation is broken here to fill rounding error.
 !OCL NORECURRENCE
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        DENS(k,i,j) = DENS(k,i,j)        &
                    * ( 1.0_RP           &
                      + QTRC(k,i,j,I_QV) &
@@ -5476,9 +5476,9 @@ contains
     r_xmin = 1.0_RP / xmin_filter
 
 !OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NC) > QTRC(k,i,j,I_QC)*r_xmin ) then
           QTRC(k,i,j,I_NC) = QTRC(k,i,j,I_QC)*r_xmin
        endif
@@ -5486,9 +5486,9 @@ contains
     enddo
     enddo
 !OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NR) > QTRC(k,i,j,I_QR)*r_xmin ) then
           QTRC(k,i,j,I_NR) = QTRC(k,i,j,I_QR)*r_xmin
        endif
@@ -5496,9 +5496,9 @@ contains
     enddo
     enddo
 !OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NI) > QTRC(k,i,j,I_QI)*r_xmin ) then
           QTRC(k,i,j,I_NI) = QTRC(k,i,j,I_QI)*r_xmin
        endif
@@ -5506,9 +5506,9 @@ contains
     enddo
     enddo
 !OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NS) > QTRC(k,i,j,I_QS)*r_xmin ) then
           QTRC(k,i,j,I_NS) = QTRC(k,i,j,I_QS)*r_xmin
        endif
@@ -5516,9 +5516,9 @@ contains
     enddo
     enddo
 !OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NG) > QTRC(k,i,j,I_QG)*r_xmin ) then
           QTRC(k,i,j,I_NG) = QTRC(k,i,j,I_QG)*r_xmin
        endif
