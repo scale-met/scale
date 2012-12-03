@@ -844,7 +844,6 @@ contains
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
        CVdry  => CONST_CVdry,  &
-       CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
     use mod_time, only: &
        TIME_DTSEC
@@ -870,6 +869,8 @@ contains
     real(RP) :: VELXH(KA,IA,JA)
     real(RP) :: VELYH(KA,IA,JA)
     real(RP) :: VOR  (KA,IA,JA)
+
+    real(RP) :: CVtot
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -966,7 +967,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV
+          CVtot = CVdry*QDRY(k,i,j)
+          do iq = QQS, QQE
+             CVtot = CVtot + CVw(iq) * QTRC(k,i,j,iq)
+          enddo
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**((CVtot+RTOT(k,i,j))/CVtot)
        enddo
        enddo
        enddo
@@ -1133,8 +1138,8 @@ contains
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
+       Rvap   => CONST_Rvap,   &
        CVdry  => CONST_CVdry,  &
-       CPovCV => CONST_CPovCV, &
        P00    => CONST_PRE00
     use mod_grid, only : &
        CZ   => GRID_CZ
@@ -1147,6 +1152,9 @@ contains
 
     real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: QT  (KA,IA,JA)
+
+    real(RP) :: Rtot
+    real(RP) :: CVtot
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -1176,17 +1184,24 @@ contains
           VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
           VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
           VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
+
+          QDRY(k,i,j) = 1.0_RP
+          do iq = QQS, QQE
+             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
+          enddo
+          Rtot = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
+          CVtot = CVdry * QDRY(k,i,j)
+          do iq = QQS, QQE
+             CVtot = CVtot + CVw(iq) * QTRC(k,i,j,iq)
+          enddo
+
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot / P00 )**((CVtot+Rtot)/CVtot)
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rdry )
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j)    &
                               * VELZ(k,i,j)**2 &
                               * VELX(k,i,j)**2 &
                               * VELY(k,i,j)**2
-          QDRY(k,i,j) = 1.0_RP
-          do iq = QQS, QQE
-             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
-          enddo
           QT(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
 
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
