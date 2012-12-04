@@ -2493,7 +2493,7 @@ call TIME_rapend     ('DYN-fct')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JS, JE
           do i = IS, IE
-          do k = KS, KE
+          do k = KS-1, KE
 #ifdef DEBUG
              call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
 #endif
@@ -3591,7 +3591,8 @@ call TIME_rapend     ('DYN-fct')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = SFLX_POTT(i,j)
+             qflx_lo(KS-1,i,j,ZDIR) = mflx_hi(KS-1,i,j,ZDIR) & ! = 0 if LSsink_D == 0
+                                    + SFLX_POTT(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -3678,7 +3679,8 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, POTT(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_RHOT,ZDIR) )
 #endif
-          qflx_hi(KS-1,i,j,ZDIR) = SFLX_POTT(i,j)
+          qflx_hi(KS-1,i,j,ZDIR) = mflx_hi(KS-1,i,j,ZDIR) & ! = 0 if LSsink_D == 0
+                                   + SFLX_POTT(i,j)
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
                                  * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
                                  + qflx_sgs_rhot(KS  ,i,j,ZDIR) &
@@ -3687,7 +3689,8 @@ call TIME_rapend     ('DYN-fct')
                                  * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
                                  + qflx_sgs_rhot(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+          qflx_hi(KE  ,i,j,ZDIR) = mflx_hi(KE,i,j,ZDIR) &
+               * ( POTT(KE,i,j) - 0.5_RP * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * FZ(KE) / FZ(KE-1) ) ! = 0 if LSsink_D == 0
        enddo
        enddo
 #ifdef DEBUG
