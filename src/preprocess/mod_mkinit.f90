@@ -1804,7 +1804,7 @@ contains
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF02)]/Categ[MKINIT]'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF02,iostat=ierr)
@@ -1821,8 +1821,8 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       pres_sfc(1,i,j) = 1017.8_RP   ! [Pa]
-       pott_sfc(1,i,j) = 288.3      ! [K]
+       pres_sfc(1,i,j) = 1017.8E2_RP   ! [Pa]
+       pott_sfc(1,i,j) = 288.3_RP      ! [K]
        qv_sfc  (1,i,j) = 9.45E-3_RP
        qc_sfc  (1,i,j) = 0.0_RP
 
@@ -1830,11 +1830,11 @@ contains
           velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
           vely(k,i,j) = -9.0_RP + 5.6 * CZ(k)*1.E-3_RP
 
-          if ( CZ(k) < 780.0_RP ) then ! below initial cloud top
+          if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 288.3_RP ! [K]
              qall(k,i,j) = 9.45E-3_RP ! [kg/kg]
-          else if ( CZ(k) <= 835.0_RP ) then
-             sint = sin( pi2 * (CZ(k) - 795.0_RP)/40.0_RP )
+          else if ( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
                    ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP 
              qall(k,i,j) = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
@@ -1844,11 +1844,15 @@ contains
              qall(k,i,j) = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
 
-          if (       CZ(k) >= 400.0_RP &
-               .AND. CZ(k) <= 795.0_RP ) then ! in the cloud
+          if( CZ(k) < 400.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif( CZ(k) < 775.0_RP ) then
              fact = ( CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
-
              qc(k,i,j) = 0.65E-3_RP * fact
+          elseif( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * ( CZ(k)-795.0_RP )/20.0_RP )
+             fact = ( CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
+             qc(k,i,j) = 0.65E-3_RP * fact * (1.0_RP-sint) * 0.5_RP
           else
              qc(k,i,j) = 0.0_RP
           endif
@@ -1877,14 +1881,27 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho( DENS(:,:,:), temp    (:,:,:), pres    (:,:,:), pott    (:,:,:), qv    (:,:,:), qc    (:,:,:), &
+                                      temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
        MOMZ(k,i,j) = 0.0_RP
      endif
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -1898,7 +1915,7 @@ contains
     do i = IS, IE
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
        MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -1912,7 +1929,7 @@ contains
     do i = IS, IE
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -1939,7 +1956,7 @@ contains
        QTRC(k,i,j,I_QC) = qc(k,i,j)
 
        if ( qc(k,i,j) > 0.0_RP ) then
-          QTRC(k,i,j,I_NC) = 55.0_RP / DENS(k,i,j)
+          QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j)
        endif
 
     enddo
