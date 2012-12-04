@@ -2427,7 +2427,7 @@ contains
     real(RP), save :: bm_M92 = 12.96_RP
     !
     real(RP), save :: in_max = 1000.E+3_RP ! max num. of Ice-Nuclei [num/m3]
-    real(RP), save :: ssi_max= 0.60_RP
+    real(RP), save :: ssi_max= 1.0_RP
     real(RP), save :: ssw_max= 1.1_RP  ! [%]
     !
     logical, save :: flag_first = .true.
@@ -2633,7 +2633,6 @@ contains
        !
        ! ice nucleation
        !
-       ssi_max = 1.0_RP
        ! +++ NOTE +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
        ! Based on Phillips etal.(2006).
        ! However this approach doesn't diagnose Ni itself but diagnose tendency.
