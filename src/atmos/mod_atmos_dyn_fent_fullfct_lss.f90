@@ -1503,10 +1503,10 @@ call START_COLLECTION("DYN-rk3")
 #endif
 
     !$omp parallel do private(i,j) schedule(static,1) collapse(2)
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
        RHOQ(KS,i,j) = RHOQ(KS,i,j) &
-                    + dtrk * SFLX_QV(i,j) * RCDZ(KS)
+                    + DTSEC_ATMOS_DYN * SFLX_QV(i,j) * RCDZ(KS)
     end do
     end do
 #ifdef DEBUG

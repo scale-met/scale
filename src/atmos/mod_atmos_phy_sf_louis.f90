@@ -341,14 +341,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
     ! rho*theta -> potential temperature at cell centor
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        THETA(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        ! at cell center
 

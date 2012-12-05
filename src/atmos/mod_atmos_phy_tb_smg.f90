@@ -128,6 +128,9 @@ contains
        qflx_sgs_momy, &
        qflx_sgs_rhot, &
        qflx_sgs_qtrc
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     logical, intent(in), optional :: do_calc
@@ -138,7 +141,7 @@ contains
     real(RP) :: Ri (KA,IA,JA) ! Richardoson number
     real(RP) :: Pr (KA,IA,JA) ! Prandtle number
 
-    integer :: k, i, j
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -243,6 +246,41 @@ contains
        MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
        )
 
+    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
+    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
+    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
+    do iq = 1, QA
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+    end do
+    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
+    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
+    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
+    do iq = 1, QA
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+    end do
+
     return
   end subroutine ATMOS_PHY_TB_setup
 
@@ -279,6 +317,9 @@ contains
        qflx_sgs_momy, &
        qflx_sgs_rhot, &
        qflx_sgs_qtrc
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     ! diagnostic variables
@@ -287,12 +328,49 @@ contains
     real(RP) :: Ri (KA,IA,JA) ! Richardoson number
     real(RP) :: Pr (KA,IA,JA) ! Prandtle number
 
+    integer :: iq
+
     call ATMOS_PHY_TB_main( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
        tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
        MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
        )
+
+    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
+    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
+    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
+    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
+    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
+    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
+    do iq = 1, QA
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
+       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+    end do
+    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
+    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
+    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
+    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
+    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
+    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
+    do iq = 1, QA
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
+       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+    end do
 
     call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
     call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )

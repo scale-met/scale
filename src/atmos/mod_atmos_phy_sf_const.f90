@@ -258,8 +258,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS-1, JE
-    do i = IS-1, IE
+    do j = 1, JA
+    do i = 1, IA
 
        ! at cell center
 
