@@ -125,6 +125,9 @@ module mod_atmos_dyn
 
   real(RP), private, save :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
   real(RP), private, save :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
+  real(RP), private, save :: VELZ   (KA,IA,JA)    ! velocity w [m/s]
+  real(RP), private, save :: VELX   (KA,IA,JA)    ! velocity u [m/s]
+  real(RP), private, save :: VELY   (KA,IA,JA)    ! velocity v [m/s]
   real(RP), private, save :: rjpls  (KA,IA,JA)    ! correction factor for incoming antidiffusive flux
   real(RP), private, save :: rjmns  (KA,IA,JA)    ! correction factor for outgoing antidiffusive flux
 
@@ -248,6 +251,10 @@ contains
 
     call COMM_set_rdma_variable( rjpls  (:,:,:),      5+QA+14)
     call COMM_set_rdma_variable( rjmns  (:,:,:),      5+QA+15)
+
+    call COMM_set_rdma_variable( VELZ   (:,:,:),      5+QA+16)
+    call COMM_set_rdma_variable( VELX   (:,:,:),      5+QA+17)
+    call COMM_set_rdma_variable( VELY   (:,:,:),      5+QA+18)
 #endif
 
     return
@@ -723,9 +730,6 @@ contains
 
     ! diagnostic variables
     real(RP) :: PRES  (KA,IA,JA) ! pressure [Pa]
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v [m/s]
     real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
     real(RP) :: dens_s(KA,IA,JA) ! saved density
     real(RP) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
@@ -1820,7 +1824,6 @@ call START_COLLECTION("DYN-fct")
              rjpls, rjmns             ) ! (work)
 #ifdef DEBUG
        qflx_lo  (:,:,:,:) = UNDEF
-       fct_dt(:,:,:) = UNDEF
        rjpls(:,:,:) = UNDEF
        rjmns(:,:,:) = UNDEF
 #endif
@@ -2182,8 +2185,8 @@ call TIME_rapend     ('DYN-fct')
 
        ! momentum -> velocity
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-1, JJE+2
-       do i = IIS-1, IIE+2
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE-1
 #ifdef DEBUG
           call CHECK( __LINE__, MOMZ(k,i,j) )
@@ -2199,8 +2202,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-1, JJE+2
-       do i = IIS-2, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMX(k,i,j) )
@@ -2216,8 +2219,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-2, JJE+1
-       do i = IIS-1, IIE+2
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMY(k,i,j) )
@@ -2232,6 +2235,25 @@ call TIME_rapend     ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    enddo
+    enddo
+
+#ifdef _USE_RDMA
+    call COMM_rdma_vars8( 5+QA+16, 3 )
+#else
+    call COMM_vars8( VELZ(:,:,:), 1 )
+    call COMM_vars8( VELX(:,:,:), 2 )
+    call COMM_vars8( VELY(:,:,:), 3 )
+    call COMM_wait ( VELZ(:,:,:), 1 )
+    call COMM_wait ( VELX(:,:,:), 2 )
+    call COMM_wait ( VELY(:,:,:), 3 )
+#endif
+
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
        ! pressure, pott. temp.
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
@@ -2627,14 +2649,14 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
              call CHECK( __LINE__, MOMZ(k-1,i,j) )
              call CHECK( __LINE__, MOMZ(k  ,i,j) )
-             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, VELZ(k-1,i,j) )
+             call CHECK( __LINE__, VELZ(k  ,i,j) )
 #endif
-             vel = ( ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
-                     + MOMZ_LS(k,1) & ! part of large scale sinking
-                   ) / DENS(k,i,j)
+             vel = ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
+                   + MOMZ_LS(k,1)
              qflx_lo(k-1,i,j,ZDIR) = 0.5_RP * ( &
-                       ( vel ) * ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) &
-                  - abs( vel ) * ( MOMZ(k,i,j)-MOMZ(k-1,i,j) ) ) &
+                       ( vel ) * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
+                  - abs( vel ) * ( VELZ(k,i,j)-VELZ(k-1,i,j) ) ) &
                                    + qflx_sgs_momz(k,i,j,ZDIR)
           enddo
           enddo
@@ -2649,7 +2671,7 @@ call TIME_rapend     ('DYN-fct')
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMZ(i,j)
              ! k = KE
              qflx_lo(KE-1,i,j,ZDIR) = &
-               + MOMZ_LS(KE-1,1) * MOMZ(KE-1,i,j) / DENS(KE-1,i,j) &
+               + MOMZ_LS(KE-1,1) * VELZ(KE-1,i,j) &
                + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) )
              ! k = KE+1
              qflx_lo(KE,i,j,ZDIR) = 0.0_RP
@@ -2664,14 +2686,14 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-2, IIE+1
           do k = KS, KE-1
 #ifdef DEBUG
-             call CHECK( __LINE__, VELX(k  ,i,j) )
-             call CHECK( __LINE__, VELX(k+1,i,j) )
-             call CHECK( __LINE__, MOMZ(k,i  ,j) )
-             call CHECK( __LINE__, MOMZ(k,i+1,j) )
+             call CHECK( __LINE__, MOMX(k  ,i,j) )
+             call CHECK( __LINE__, MOMX(k+1,i,j) )
+             call CHECK( __LINE__, VELZ(k,i,j) )
+             call CHECK( __LINE__, VELZ(k,i+1,j) )
 #endif
              qflx_lo(k,i,j,XDIR) = 0.25_RP * ( &
-                       ( VELX(k+1,i,j)+VELX(k,i,j) ) * ( MOMZ(k,i+1,j)+MOMZ(k,i,j) ) &
-                  - abs( VELX(k+1,i,j)+VELX(k,i,j) ) * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) ) &
+                       ( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
+                  - abs( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)-VELZ(k,i,j) ) ) &
                                  + qflx_sgs_momz(k,i,j,XDIR)
           enddo
           enddo
@@ -2694,14 +2716,14 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
           do k = KS, KE-1
 #ifdef DEBUG
-             call CHECK( __LINE__, VELY(k  ,i,j) )
-             call CHECK( __LINE__, VELY(k+1,i,j) )
-             call CHECK( __LINE__, MOMZ(k,i,j  ) )
-             call CHECK( __LINE__, MOMZ(k,i,j+1) )
+             call CHECK( __LINE__, MOMY(k,i,j  ) )
+             call CHECK( __LINE__, MOMY(k+1,i,j) )
+             call CHECK( __LINE__, VELZ(k,i,j) )
+             call CHECK( __LINE__, VELZ(k,i,j+1) )
 #endif
              qflx_lo(k,i,j,YDIR) = 0.25_RP * ( &
-                      ( VELY(k+1,i,j)+VELY(k,i,j) ) * ( MOMZ(k,i,j+1)+MOMZ(k,i,j) ) &
-                  -abs( VELY(k+1,i,j)+VELY(k,i,j) ) * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) ) &
+                      ( MOMY(k+1,i,j)+MOMY(k,i,j) ) * ( VELZ(k,i,j+1)+VELZ(k,i,j) ) &
+                  -abs( MOMY(k+1,i,j)+MOMY(k,i,j) ) * ( VELZ(k,i,j+1)-VELZ(k,i,j) ) ) &
                                  + qflx_sgs_momz(k,i,j,YDIR)
           enddo
           enddo
@@ -3015,20 +3037,16 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
           do k = KS, KE-1
 #ifdef DEBUG
-             call CHECK( __LINE__, VELZ(k,i  ,j) )
-             call CHECK( __LINE__, VELZ(k,i+1,j) )
-             call CHECK( __LINE__, MOMX(k  ,i,j) )
-             call CHECK( __LINE__, MOMX(k+1,i,j) )
-             call CHECK( __LINE__, DENS(k+1,i+1,j) )
-             call CHECK( __LINE__, DENS(k+1,i  ,j) )
-             call CHECK( __LINE__, DENS(k  ,i+1,j) )
-             call CHECK( __LINE__, DENS(k  ,i  ,j) )
+             call CHECK( __LINE__, MOMZ(k,i  ,j) )
+             call CHECK( __LINE__, MOMZ(k,i+1,j) )
+             call CHECK( __LINE__, VELX(k  ,i,j) )
+             call CHECK( __LINE__, VELX(k+1,i,j) )
 #endif
-             vel = 0.5_RP * ( VELZ(k,i+1,j) + VELZ(k,i,j) ) &
-                 + 4.0_RP * MOMZ_LS(k,2) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
+             vel = 0.5_RP * ( MOMZ(k,i+1,j) + MOMZ(k,i,j) ) &
+                 + MOMZ_LS(k,2) ! large scale sinking
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
-                  ( vel ) * ( MOMX(k+1,i,j)+MOMX(k,i,j) ) &
-              -abs( vel ) * ( MOMX(k+1,i,j)-MOMX(k,i,j) ) ) &
+                  ( vel ) * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
+              -abs( vel ) * ( VELX(k+1,i,j)-VELX(k,i,j) ) ) &
                                  + qflx_sgs_momx(k,i,j,ZDIR)
           enddo
           enddo
@@ -3041,7 +3059,7 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j)
              qflx_lo(KE,i,j,ZDIR) = &
-                  + 4.0_RP * MOMZ_LS(KE-1,2) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) &
+                  + MOMZ_LS(KE-1,2) * VELX(KE,i,j) &
                   + 2.0_RP * MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) )
           enddo
           enddo
@@ -3057,12 +3075,13 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
              call CHECK( __LINE__, MOMX(k,i-1,j) )
              call CHECK( __LINE__, MOMX(k,i  ,j) )
-             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, VELX(k,i-1,j) )
+             call CHECK( __LINE__, VELX(k,i  ,j) )
 #endif
-             vel = ( MOMX(k,i,j)+MOMX(k,i-1,j) ) / DENS(k,i,j)
+             vel = MOMX(k,i,j)+MOMX(k,i-1,j)
              qflx_lo(k,i-1,j,XDIR) = 0.25_RP * ( &
-                  ( vel ) * ( MOMX(k,i,j)+MOMX(k,i-1,j) ) &
-              -abs( vel ) * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) ) &
+                  ( vel ) * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
+              -abs( vel ) * ( VELX(k,i,j)-VELX(k,i-1,j) ) ) &
                                    + qflx_sgs_momx(k,i,j,XDIR)
           enddo
           enddo
@@ -3076,14 +3095,14 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
           do k = KS, KE
 #ifdef DEBUG
-             call CHECK( __LINE__, VELY(k,i+1,j) )
-             call CHECK( __LINE__, VELY(k,i  ,j) )
-             call CHECK( __LINE__, MOMX(k,i,j  ) )
-             call CHECK( __LINE__, MOMX(k,i,j+1) )
+             call CHECK( __LINE__, MOMY(k,i+1,j) )
+             call CHECK( __LINE__, MOMY(k,i  ,j) )
+             call CHECK( __LINE__, VELX(k,i,j  ) )
+             call CHECK( __LINE__, VELX(k,i,j+1) )
 #endif
              qflx_lo(k,i,j,YDIR) = 0.25_RP * ( &
-                  ( VELY(k,i+1,j)+VELY(k,i,j) ) * ( MOMX(k,i,j+1)+MOMX(k,i,j) ) &
-              -abs( VELY(k,i+1,j)+VELY(k,i,j) ) * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) ) &
+                  ( MOMY(k,i+1,j)+MOMY(k,i,j) ) * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
+              -abs( MOMY(k,i+1,j)+MOMY(k,i,j) ) * ( VELX(k,i,j+1)-VELX(k,i,j) ) ) &
                                  + qflx_sgs_momx(k,i,j,YDIR)
           enddo
           enddo
@@ -3367,20 +3386,16 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
           do k = KS, KE-1
 #ifdef DEBUG
-             call CHECK( __LINE__, VELZ(k,i,j+1) )
-             call CHECK( __LINE__, VELZ(k,i,j  ) )
-             call CHECK( __LINE__, DENS(k+1,i+1,j) )
-             call CHECK( __LINE__, DENS(k+1,i  ,j) )
-             call CHECK( __LINE__, DENS(k  ,i+1,j) )
-             call CHECK( __LINE__, DENS(k  ,i  ,j) )
-             call CHECK( __LINE__, MOMY(k  ,i,j) )
-             call CHECK( __LINE__, MOMY(k+1,i,j) )
+             call CHECK( __LINE__, MOMZ(k,i,j+1) )
+             call CHECK( __LINE__, MOMZ(k,i,j  ) )
+             call CHECK( __LINE__, VELY(k+1,i,j) )
+             call CHECK( __LINE__, VELY(k  ,i,j) )
 #endif
-             vel = 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
-                 + 4.0_RP * MOMZ_LS(k,2) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
+             vel = 0.5_RP * ( MOMZ(k,i,j+1) + MOMZ(k,i,j) ) &
+                 + MOMZ_LS(k,2) ! large scale sinking
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
-                  ( vel ) * ( MOMY(k+1,i,j)+MOMY(k,i,j) ) &
-              -abs( vel ) * ( MOMY(k+1,i,j)-MOMY(k,i,j) ) ) &
+                  ( vel ) * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
+              -abs( vel ) * ( VELY(k+1,i,j)-VELY(k,i,j) ) ) &
                                  + qflx_sgs_momy(k,i,j,ZDIR)
           enddo
           enddo
@@ -3393,7 +3408,7 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = &
-                  + 4.0_RP * MOMZ_LS(KE-1,2) * MOMY(KE,i,j)/ ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) &
+                  + MOMZ_LS(KE-1,2) * VELY(KE,i,j) &
                   + 2.0_RP * MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMY(KE,i,j) / ( DENS(KE,i,j+1)+DENS(KE,i,j) )
           enddo
           enddo
@@ -3406,14 +3421,14 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-2, IIE+1
           do k = KS, KE
 #ifdef DEBUG
-             call CHECK( __LINE__, VELX(k,i,j+1) )
-             call CHECK( __LINE__, VELX(k,i,j  ) )
-             call CHECK( __LINE__, MOMY(k,i  ,j) )
-             call CHECK( __LINE__, MOMY(k,i+1,j) )
+             call CHECK( __LINE__, VELX(k,i,j) )
+             call CHECK( __LINE__, VELX(k,i+1,j) )
+             call CHECK( __LINE__, MOMY(k,i,j) )
+             call CHECK( __LINE__, MOMY(k,i,j+1) )
 #endif
              qflx_lo(k,i,j,XDIR) = 0.25_RP * ( &
-                  ( VELX(k,i,j+1)+VELX(k,i,j) ) * ( MOMY(k,i+1,j)+MOMY(k,i,j) ) &
-              -abs( VELX(k,i,j+1)+VELX(k,i,j) ) * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) ) &
+                  ( MOMX(k,i,j+1)+MOMX(k,i,j) ) * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
+              -abs( MOMX(k,i,j+1)+MOMX(k,i,j) ) * ( VELY(k,i+1,j)-VELY(k,i,j) ) ) &
                                  + qflx_sgs_momy(k,i,j,XDIR)
           enddo
           enddo
@@ -3430,12 +3445,13 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
              call CHECK( __LINE__, MOMY(k,i,j-1) )
              call CHECK( __LINE__, MOMY(k,i,j  ) )
-             call CHECK( __LINE__, DENS(k,i,j) )
+             call CHECK( __LINE__, VELY(k,i,j-1) )
+             call CHECK( __LINE__, VELY(k,i,j  ) )
 #endif
-             vel = ( MOMY(k,i,j)+MOMY(k,i,j-1) ) / DENS(k,i,j)
+             vel = MOMY(k,i,j)+MOMY(k,i,j-1)
              qflx_lo(k,i,j-1,YDIR) = 0.25_RP * ( &
-                  ( vel ) * ( MOMY(k,i,j)+MOMY(k,i,j-1) ) &
-              -abs( vel ) * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) ) &
+                  ( vel ) * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
+              -abs( vel ) * ( VELY(k,i,j)-VELY(k,i,j-1) ) ) &
                                    + qflx_sgs_momy(k,i,j,YDIR)
           enddo
           enddo
