@@ -2185,8 +2185,8 @@ call TIME_rapend     ('DYN-fct')
 
        ! momentum -> velocity
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JJS-1, JJE+2
+       do i = IIS-1, IIE+2
        do k = KS, KE-1
 #ifdef DEBUG
           call CHECK( __LINE__, MOMZ(k,i,j) )
@@ -2202,8 +2202,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JJS-1, JJE+2
+       do i = IIS-2, IIE+1
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMX(k,i,j) )
@@ -2219,8 +2219,8 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JJS-2, JJE+1
+       do i = IIS-1, IIE+2
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMY(k,i,j) )
@@ -2238,16 +2238,18 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
+    if ( FLAG_FCT_MOMENTUM ) then
 #ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+16, 3 )
+       call COMM_rdma_vars8( 5+QA+16, 3 )
 #else
-    call COMM_vars8( VELZ(:,:,:), 1 )
-    call COMM_vars8( VELX(:,:,:), 2 )
-    call COMM_vars8( VELY(:,:,:), 3 )
-    call COMM_wait ( VELZ(:,:,:), 1 )
-    call COMM_wait ( VELX(:,:,:), 2 )
-    call COMM_wait ( VELY(:,:,:), 3 )
+       call COMM_vars8( VELZ(:,:,:), 1 )
+       call COMM_vars8( VELX(:,:,:), 2 )
+       call COMM_vars8( VELY(:,:,:), 3 )
+       call COMM_wait ( VELZ(:,:,:), 1 )
+       call COMM_wait ( VELX(:,:,:), 2 )
+       call COMM_wait ( VELY(:,:,:), 3 )
 #endif
+    end if
 
 
     do JJS = JS, JE, JBLOCK
