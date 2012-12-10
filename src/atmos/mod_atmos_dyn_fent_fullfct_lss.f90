@@ -1837,15 +1837,29 @@ call START_COLLECTION("DYN-fct")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
+          RHOQ(k,i,j) = RHOQ(k,i,j) &
               + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
                               - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                             + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
                               - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                             + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
-                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                          + fct_dt(k,i,j) ) &
-                        ) / DENS(k,i,j)
+                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          RHOQ(k,i,j) = RHOQ(k,i,j) + max( MOMZ_LS_DZ(k,1) * QTRC(k,i,j,iq), -RHOQ(k,i,j) ) ! part of large scale sinking
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          QTRC(k,i,j,iq) = RHOQ(k,i,j) /DENS(k,i,j)
        end do
        end do
        end do
