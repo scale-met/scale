@@ -1851,7 +1851,7 @@ call START_COLLECTION("DYN-fct")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          RHOQ(k,i,j) = RHOQ(k,i,j) + max( MOMZ_LS_DZ(k,1) * QTRC(k,i,j,iq), -RHOQ(k,i,j) ) ! part of large scale sinking
+          RHOQ(k,i,j) = RHOQ(k,i,j) + max( MOMZ_LS_DZ(k,1) * QTRC(k,i,j,iq) * DTSEC, -RHOQ(k,i,j) ) ! part of large scale sinking
        end do
        end do
        end do
@@ -1859,7 +1859,7 @@ call START_COLLECTION("DYN-fct")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          QTRC(k,i,j,iq) = RHOQ(k,i,j) /DENS(k,i,j)
+          QTRC(k,i,j,iq) = RHOQ(k,i,j) / DENS(k,i,j)
        end do
        end do
        end do
