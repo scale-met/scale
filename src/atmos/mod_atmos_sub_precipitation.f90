@@ -237,7 +237,7 @@ call START_COLLECTION('SUB_precipitation')
        enddo
 
        do k  = KS,  KE
-          RHOT(k,i,j) = rhoe_new(k) / CVmoist(k) * ( PRE00 / pres(k) )**(Rmoist(k)/(Cvmoist(k)+Rmoist(k))
+          RHOT(k,i,j) = rhoe_new(k) / CVmoist(k) * ( PRE00 / pres(k) )**(Rmoist(k)/(Cvmoist(k)+Rmoist(k)))
        enddo
 
     enddo ! I loop
