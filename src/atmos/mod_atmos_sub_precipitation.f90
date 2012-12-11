@@ -209,7 +209,9 @@ call START_COLLECTION('SUB_precipitation')
 !       do iq = I_QC, I_NG
        do iq = I_QC, QA
        do k  = KS, KE
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) - dt * ( qflx(k,iq)-qflx(k-1,iq) ) * RCDZ(k) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = ( rhoq(k,i,j,iq) &
+               - dt * ( qflx(k,iq)-qflx(k-1,iq) ) * RCDZ(k) &
+               ) / DENS(k,i,j)
        enddo 
        enddo ! QC-QG,NC-NG loop
 
@@ -235,7 +237,7 @@ call START_COLLECTION('SUB_precipitation')
        enddo
 
        do k  = KS,  KE
-          RHOT(k,i,j) = rhoe_new(k) / CVmoist(k) * ( PRE00 / pres(k) )**RovCP
+          RHOT(k,i,j) = rhoe_new(k) / CVmoist(k) * ( PRE00 / pres(k) )**(Rmoist(k)/(Cvmoist(k)+Rmoist(k))
        enddo
 
     enddo ! I loop
