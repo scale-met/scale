@@ -2962,6 +2962,16 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          MOMZ_RK(KS,i,j) = MOMZ_RK(KS,i,j) &
+                          + dtrk * VELZ(KS,i,j) * 0.5_RP * SFLX_QV(i,j) * RFDZ(KS)
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
 
     enddo
     enddo
@@ -3309,6 +3319,17 @@ call TIME_rapend     ('DYN-fct')
                                      + fct_dt(k,i,j)                                               &
                                      + ray_damp(k,i,j,I_MOMX)                                      ) ! additional damping
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          MOMX_RK(KS,i,j) = MOMX_RK(KS,i,j) &
+                          + dtrk * VELX(KS,i,j) &
+                          * 0.5_RP * ( SFLX_QV(i,j) + SFLX_QV(i+1,j) ) * RCDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
@@ -3664,6 +3685,17 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          MOMY_RK(KS,i,j) = MOMY_RK(KS,i,j) &
+                          + dtrk * VELY(KS,i,j) &
+                          * 0.5_RP * ( SFLX_QV(i,j) + SFLX_QV(i,j+1) ) * RCDZ(KS)
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
 
     enddo
     enddo
@@ -3973,6 +4005,16 @@ call TIME_rapend     ('DYN-fct')
                             + fct_dt(k,i,j) &
                             + ray_damp(k,i,j,I_RHOT)  ) ! additional damping
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          RHOT_RK(KS,i,j) = RHOT_RK(KS,i,j) &
+                          + dtrk * POTT(KS,i,j) * SFLX_QV(i,j) * RCDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
