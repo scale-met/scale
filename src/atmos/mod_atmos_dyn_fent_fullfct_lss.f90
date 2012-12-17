@@ -561,6 +561,8 @@ contains
        qflx_sgs_momy, &
        qflx_sgs_rhot, &
        qflx_sgs_qtrc
+    use mod_atmos_thermodyn, only: &
+       AQ_CV
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
        REF_pott => ATMOS_REFSTATE_pott
@@ -604,6 +606,7 @@ contains
          qflx_sgs_rhot, qflx_sgs_qtrc,              & !(in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,           & ! (in)
          SFLX_POTT, SFLX_QV, SST,                   & ! (in)
+         AQ_CV,                                     & ! (in)
          REF_dens, REF_pott, DIFF4,                 & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
@@ -633,6 +636,7 @@ contains
          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
          SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+         AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef, MOMZ_LS, MOMZ_LS_DZ,            & ! (in)
@@ -644,8 +648,6 @@ contains
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry, &
        P00    => CONST_PRE00
-    use mod_atmos_thermodyn, only : &
-       AQ_CV
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -711,6 +713,8 @@ contains
     real(RP), intent(in)    :: SFLX_QV  (IA,JA)
 
     real(RP), intent(in)    :: SST(1,IA,JA)
+
+    real(RP), intent(in)    :: AQ_CV(QA)
 
     real(RP), intent(in)    :: REF_dens(KA)
     real(RP), intent(in)    :: REF_pott(KA)

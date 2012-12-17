@@ -91,6 +91,8 @@ module test_atmos_dyn_fent_fct
   real(RP) :: MOMZ_LS(KA,IA,JA,2)
   real(RP) :: MOMZ_LS_DZ(KA,IA,JA,2)
 
+  real(RP) :: AQ_CV(QA)
+
   real(RP) :: DIFF4
   real(RP) :: divdmp_coef, LSsink_D
 
@@ -151,6 +153,8 @@ contains
   end do
 
   MOMZ(KE,:,:) = 0.0_RP
+
+  AQ_CV(:) = 1.0_RP
 
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
@@ -220,10 +224,11 @@ subroutine test_undef
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
           CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
-          qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
+          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
           SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
           SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+          AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, DIFF4,                   & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
@@ -270,10 +275,11 @@ subroutine test_const
        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
        CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
        SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
        SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+       AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, DIFF4,                   & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
@@ -353,10 +359,11 @@ subroutine test_conserve
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-         qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
-         qflx_sgs_rhot, qflx_sgs_qtrc,                & !(in)
+         qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+         qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
          SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+         AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
