@@ -176,8 +176,10 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum z (half level)
           do k  = KS-1, KE-2
-             eflx(k) = 0.5E0_RP * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) * MOMZ(k,i,j) &
-                     * 0.5E0_RP * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) )
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) ) &
+                  * MOMZ(k,i,j)
           enddo
           do k  = KS,  KE-1
              MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1)-eflx(k) ) * RFDZ(k)
@@ -185,7 +187,10 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum x
           do k  = KS-1, KE-1
-             eflx(k) = velw(k+1,i,j,iq) * MOMX(k+1,i,j) * QTRC(k+1,i,j,iq)
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k+1,i+1,j,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k+1,i+1,j,iq) ) &
+                  * MOMX(k+1,i,j)
           enddo
           do k  = KS,  KE
              MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
@@ -193,7 +198,10 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum y
           do k  = KS-1, KE-1
-             eflx(k) = velw(k+1,i,j,iq) * MOMY(k+1,i,j) * QTRC(k+1,i,j,iq)
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k+1,i,j+1,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k+1,i,j+1,iq) ) &
+                  * MOMY(k+1,i,j)
           enddo
           do k  = KS,  KE
              MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
