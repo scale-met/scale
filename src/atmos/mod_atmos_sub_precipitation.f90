@@ -76,6 +76,7 @@ contains
        PRE00 => CONST_PRE00
     use mod_grid, only: &
        CZ   => GRID_CZ,   &
+       FDZ  => GRID_FDZ,   &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
@@ -165,18 +166,20 @@ call START_COLLECTION('SUB_precipitation')
           enddo
 
           !--- potential energy
-          do k  = KS-1, KE-1
-             eflx(k) = qflx(k,iq) * GRAV * CZ(k+1)
+          do k  = KS, KE-1
+             eflx(k) = qflx(k,iq) * GRAV * FDZ(k)
           enddo
+          eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
           do k  = KS,   KE
-             rhoe_new(k) = rhoe_new(k) - dt * ( ( eflx(k)   -eflx(k-1)    ) &
-                                              - ( qflx(k,iq)-qflx(k-1,iq) ) * GRAV * CZ(k) ) * RCDZ(k)
+             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
           enddo
 
           !--- momentum z (half level)
           do k  = KS-1, KE-2
-             eflx(k) = 0.5E0_RP * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) * MOMZ(k,i,j) &
-                     * 0.5E0_RP * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) )
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) ) &
+                  * MOMZ(k,i,j)
           enddo
           do k  = KS,  KE-1
              MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1)-eflx(k) ) * RFDZ(k)
@@ -184,7 +187,10 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum x
           do k  = KS-1, KE-1
-             eflx(k) = velw(k+1,i,j,iq) * MOMX(k+1,i,j) * QTRC(k+1,i,j,iq)
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k+1,i+1,j,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k+1,i+1,j,iq) ) &
+                  * MOMX(k+1,i,j)
           enddo
           do k  = KS,  KE
              MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
@@ -192,7 +198,10 @@ call START_COLLECTION('SUB_precipitation')
 
           !--- momentum y
           do k  = KS-1, KE-1
-             eflx(k) = velw(k+1,i,j,iq) * MOMY(k+1,i,j) * QTRC(k+1,i,j,iq)
+             eflx(k) = 0.25_RP &
+                  * ( velw(k+1,i,j,iq) + velw(k+1,i,j+1,iq) ) &
+                  * ( QTRC(k+1,i,j,iq) + QTRC(k+1,i,j+1,iq) ) &
+                  * MOMY(k+1,i,j)
           enddo
           do k  = KS,  KE
              MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k)-eflx(k-1) ) * RCDZ(k)
