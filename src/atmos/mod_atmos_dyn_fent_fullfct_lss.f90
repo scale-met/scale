@@ -3202,7 +3202,8 @@ call TIME_rapend     ('DYN-fct')
                                  + qflx_sgs_momx(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
           qflx_hi(KE,i,j,ZDIR) = 2.0_RP &
-               * ( MOMZ_LS(KE-1,2) * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) &
+               * ( MOMZ_LS(KE-1,2) * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
+                   / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) &
                  + MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) ) )
        enddo
        enddo
