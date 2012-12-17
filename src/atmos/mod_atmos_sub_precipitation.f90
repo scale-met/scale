@@ -76,6 +76,7 @@ contains
        PRE00 => CONST_PRE00
     use mod_grid, only: &
        CZ   => GRID_CZ,   &
+       FDZ  => GRID_FDZ,   &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
@@ -165,12 +166,12 @@ call START_COLLECTION('SUB_precipitation')
           enddo
 
           !--- potential energy
-          do k  = KS-1, KE-1
-             eflx(k) = qflx(k,iq) * GRAV * CZ(k+1)
+          do k  = KS, KE-1
+             eflx(k) = qflx(k,iq) * GRAV * FDZ(k)
           enddo
+          eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
           do k  = KS,   KE
-             rhoe_new(k) = rhoe_new(k) - dt * ( ( eflx(k)   -eflx(k-1)    ) &
-                                              - ( qflx(k,iq)-qflx(k-1,iq) ) * GRAV * CZ(k) ) * RCDZ(k)
+             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
           enddo
 
           !--- momentum z (half level)
