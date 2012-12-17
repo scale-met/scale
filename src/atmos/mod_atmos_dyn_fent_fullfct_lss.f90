@@ -519,8 +519,6 @@ contains
        DTSEC_ATMOS_DYN => TIME_DTSEC_ATMOS_DYN, &
        NSTEP_ATMOS_DYN => TIME_NSTEP_ATMOS_DYN
     use mod_grid, only : &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
        CDY  => GRID_CDY,  &
@@ -600,7 +598,7 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,        & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,      & ! (in)
+         CDZ, CDX, CDY, FDZ, FDX, FDY,              & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
          qflx_sgs_rhot, qflx_sgs_qtrc,              & !(in)
@@ -630,7 +628,7 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                  & ! (out)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY,        & ! (in)
+         CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
@@ -685,8 +683,7 @@ contains
     real(RP), intent(in)    :: CNMX(3,IA)
     real(RP), intent(in)    :: CNDY(3,JA)
     real(RP), intent(in)    :: CNMY(3,JA)
-    real(RP), intent(in)    :: CZ(KA)
-    real(RP), intent(in)    :: FZ(0:KA)
+
     real(RP), intent(in)    :: CDZ(KA)
     real(RP), intent(in)    :: CDX(IA)
     real(RP), intent(in)    :: CDY(JA)
@@ -1423,8 +1420,8 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CZ, FZ, CDZ,                                       & ! (in)
-                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
                  qflx_hi, qflx_lo, qflx_anti, fct_dt, rjpls, rjmns  ) ! (work)
@@ -1459,8 +1456,8 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CZ, FZ, CDZ,                                       & ! (in)
-                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
                  qflx_hi, qflx_lo, qflx_anti, fct_dt, rjpls, rjmns  ) ! (work)
@@ -1495,8 +1492,8 @@ call START_COLLECTION("DYN-rk3")
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CZ, FZ, CDZ,                                       & ! (in)
-                 FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, & ! (in)
+                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, rko,                                         & ! (in)
                  VELZ, VELX, VELY, PRES, POTT,                      & ! (work)
                  qflx_hi, qflx_lo, qflx_anti, fct_dt, rjpls, rjmns  ) ! (work)
@@ -2055,7 +2052,7 @@ call TIME_rapend     ('DYN-fct')
                      num_diff, ray_damp, divdmp_coef,             &
                      MOMZ_LS, MOMZ_LS_DZ,                         &
                      FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
-                     CZ, FZ, CDZ, FDZ, FDX, FDY,                  &
+                     CDZ, FDZ, FDX, FDY,                          &
                      RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
                      dtrk, rko,                                   &
                      VELZ, VELX, VELY, PRES, POTT,                &
@@ -2120,9 +2117,6 @@ call TIME_rapend     ('DYN-fct')
     logical,  intent(in) :: FLAG_FCT_RHO
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
-
-    real(RP), intent(in) :: CZ(KA)
-    real(RP), intent(in) :: FZ(0:KA)
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: FDZ(KA-1)
