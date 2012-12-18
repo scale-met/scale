@@ -711,7 +711,7 @@ contains
 
     real(RP), intent(in)    :: SST(1,IA,JA)
 
-    real(RP), intent(in)    :: AQ_CV(QA)
+    real(RP), intent(in)    :: AQ_CV(QQA)
 
     real(RP), intent(in)    :: REF_dens(KA)
     real(RP), intent(in)    :: REF_pott(KA)
