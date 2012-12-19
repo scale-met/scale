@@ -3918,6 +3918,8 @@ contains
     ! temperature function of homegenous/heterogenous freezing
     real(RP) :: Jhom, Jhet
     real(RP) :: rdt
+
+    real(RP) :: zerosw
     !
     integer :: i,j,k
     !
@@ -3929,15 +3931,15 @@ contains
     do j=JS, JE
     do i=IS, IE
     do k=KS, KE
-       temc = max( tem(k,i,j) - T00, temc_min )
+       temc = tem(k,i,j) - T00
        ! These cause from aerosol-droplet interaction.
        ! Bigg(1953) formula, Khain etal.(2000) eq.(4.5), Pruppacher and Klett(1997) eq.(9-48)
-       Jhet =  a_het*exp( -b_het*temc - 1.0_RP )
+       Jhet =  a_het*exp( -b_het*max(temc,temc_min) - 1.0_RP )
+       zerosw = 1.0_RP
        ! These cause in nature.
        ! Cotton and Field 2002, QJRMS. (12)
        if( temc < -65.0_RP )then
           jhom = 10.0_RP**(24.37236_RP)*1.E+3_RP
-          Jhet =  a_het*exp( 65.0_RP*b_het - 1.0_RP ) ! 09/04/14 [Add], fixer T.Mitsui
        else if( temc < -30.0_RP ) then
           temc2 = temc*temc
           temc3 = temc*temc2
@@ -3950,6 +3952,7 @@ contains
        else
           Jhom = 0.0_RP
           Jhet = 0.0_RP
+          zerosw = 0.0_RP
        end if
        ! Note, xc should be limited in range[xc_min:xc_max].
        ! and PNChom need to be calculated by NC
@@ -3961,10 +3964,10 @@ contains
        PLChom(k,i,j) = 0.0_RP
        PNChom(k,i,j) = 0.0_RP
        ! Heterogenous Freezing
-       PLChet(k,i,j) = -rdt*LC(k,i,j)*( 1.0_RP - exp( -coef_m2_c*xc(k,i,j)*(Jhet+Jhom)*dt ) )
-       PNChet(k,i,j) = -rdt*NC(k,i,j)*( 1.0_RP - exp( -          xc(k,i,j)*(Jhet+Jhom)*dt ) )
-       PLRhet(k,i,j) = -rdt*LR(k,i,j)*( 1.0_RP - exp( -coef_m2_r*xr(k,i,j)*(Jhet+Jhom)*dt ) )
-       PNRhet(k,i,j) = -rdt*NR(k,i,j)*( 1.0_RP - exp( -          xr(k,i,j)*(Jhet+Jhom)*dt ) )
+       PLChet(k,i,j) = -zerosw*rdt*LC(k,i,j)*( 1.0_RP - exp( -coef_m2_c*xc(k,i,j)*(Jhet+Jhom)*dt ) )
+       PNChet(k,i,j) = -zerosw*rdt*NC(k,i,j)*( 1.0_RP - exp( -          xc(k,i,j)*(Jhet+Jhom)*dt ) )
+       PLRhet(k,i,j) = -zerosw*rdt*LR(k,i,j)*( 1.0_RP - exp( -coef_m2_r*xr(k,i,j)*(Jhet+Jhom)*dt ) )
+       PNRhet(k,i,j) = -zerosw*rdt*NR(k,i,j)*( 1.0_RP - exp( -          xr(k,i,j)*(Jhet+Jhom)*dt ) )
     end do
     end do
     end do
