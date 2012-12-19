@@ -51,6 +51,7 @@ module mod_comm
 #endif
   public :: COMM_stats
   public :: COMM_total
+  public :: COMM_horizontal_mean
 
   !-----------------------------------------------------------------------------
   !
@@ -1978,16 +1979,16 @@ contains
        CONST_UNDEF2
     implicit none
 
-    real(RP),          intent(inout) :: var(:,:,:,:)
+    real(RP),         intent(inout) :: var(:,:,:,:)
     character(len=*), intent(in)    :: varname(:)
 
     logical :: halomask(KA,IA,JA)
 
     real(RP), allocatable :: statval   (:,:,:)
-    integer, allocatable :: statidx   (:,:,:,:)
+    integer,  allocatable :: statidx   (:,:,:,:)
     real(RP), allocatable :: allstatval(:,:)
-    integer, allocatable :: allstatidx(:,:,:)
-    integer              :: vsize
+    integer,  allocatable :: allstatidx(:,:,:)
+    integer               :: vsize
 
     integer :: ierr
     integer :: v, p
@@ -2072,12 +2073,7 @@ contains
   end subroutine COMM_stats
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_total( var, varname )
-    use mod_process, only : &
-       PRC_nmax,   &
-       PRC_myrank
-    use mod_const, only : &
-       CONST_UNDEF8
+  subroutine COMM_total( allstatval, var, varname )
     use mod_geometrics, only: &
        area    => GEOMETRICS_area,    &
        vol     => GEOMETRICS_vol,     &
@@ -2085,71 +2081,119 @@ contains
        totvol  => GEOMETRICS_totvol
     implicit none
 
-    real(RP),           intent(in) :: var(KA,IA,JA)
-    character(len=*),  intent(in)    :: varname
+    real(RP),         intent(out) :: allstatval
+    real(RP),         intent(in)  :: var(KA,IA,JA)
+    character(len=*), intent(in)  :: varname
 
-    real(RP) :: statval(0:PRC_nmax-1)
-    real(RP) :: allstatval
+    real(RP) :: statval
     real(RP) :: ksize
 
     integer :: ierr
-    integer :: k, i, j, p
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( COMM_total_doreport ) then
+    ksize = size(var(:,:,:),1)
 
-       statval(:) = CONST_UNDEF8
-       ksize = size(var(:,:,:),1)
+    statval = 0.0_RP
+    if ( ksize == KA ) then ! 3D
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          statval = statval + var(k,i,j) * vol(k,i,j)
+       enddo
+       enddo
+       enddo
+    elseif( ksize == 1 ) then ! 2D
+       do j = JS, JE
+       do i = IS, IE
+          statval = statval + var(1,i,j) * area(1,i,j)
+       enddo
+       enddo
+    endif
 
-       statval(PRC_myrank) = 0.0_RP
-       if ( ksize == KA ) then ! 3D
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             statval(PRC_myrank) = statval(PRC_myrank) + var(k,i,j) * vol(k,i,j)
-          enddo
-          enddo
-          enddo
-          statval(PRC_myrank) = statval(PRC_myrank) / totvol
-       elseif( ksize == 1 ) then ! 2D
-          do j = JS, JE
-          do i = IS, IE
-             statval(PRC_myrank) = statval(PRC_myrank) + var(1,i,j) * area(1,i,j)
-          enddo
-          enddo
-          statval(PRC_myrank) = statval(PRC_myrank) / totarea
-       endif
+    if ( COMM_total_globalsum ) then
+       call TIME_rapstart('COMM MPIAllreduce')
+       ! All reduce
+       call MPI_Allreduce( statval,              &
+                           allstatval,           &
+                           1,                    &
+                           datatype,             &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
 
-       if ( COMM_total_globalsum ) then
-          call TIME_rapstart('COMM Bcast MPI')
-          ! MPI broadcast
-          do p = 0, PRC_nmax-1
-             call MPI_Bcast( statval(p),           &
-                             1,                    &
-                             datatype,             &
-                             p,                    &
-                             MPI_COMM_WORLD,       &
-                             ierr                  )
-          enddo
+       call TIME_rapend  ('COMM MPIAllreduce')
 
-          allstatval = 0.0_RP
-          do p = 0, PRC_nmax-1
-             allstatval = allstatval + statval(p)
-          enddo
-          allstatval = allstatval / PRC_nmax
-
+       ! statistics over the all node
+       if ( varname /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
                      '[', varname, '] SUM(global) =', allstatval
+       endif
+    else
+       allstatval = statval
 
-          call TIME_rapend  ('COMM Bcast MPI')
-       else
-          ! statistics on each node
+       ! statistics on each node
+       if ( varname /= "" ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
-                     '[', varname, '] SUM(local)  =', statval(PRC_myrank)
+                     '[', varname, '] SUM(local)  =', statval
        endif
     endif
 
     return
   end subroutine COMM_total
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_horizontal_mean( varmean, var )
+    use mod_process, only: &
+       PRC_nmax
+    implicit none
+
+    real(RP), intent(out) :: varmean(KA)
+    real(RP), intent(in)  :: var    (KA,IA,JA)
+
+    real(RP) :: statval   (KA)
+    real(RP) :: allstatval(KA)
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval(:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       statval(k) = statval(k) + var(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do k = KS, KE
+       statval(k) = statval(k) / real(IMAX*JMAX,kind=RP)
+    enddo
+
+    if ( COMM_total_globalsum ) then
+       call TIME_rapstart('COMM MPIAllreduce')
+       ! All reduce
+       call MPI_Allreduce( statval(1),           &
+                           allstatval(1),        &
+                           KA,                   &
+                           datatype,             &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
+
+       call TIME_rapend  ('COMM MPIAllreduce')
+    else
+       allstatval(:) = statval(:)
+    endif
+
+    do k = KS, KE
+       varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP) 
+    enddo
+    varmean(   1:KS-1) = 0.0_RP
+    varmean(KE+1:KA  ) = 0.0_RP
+
+    return
+  end subroutine COMM_horizontal_mean
 
 end module mod_comm
