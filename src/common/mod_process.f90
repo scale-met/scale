@@ -133,9 +133,9 @@ contains
        write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-       write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
-       write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
-       write(IO_FID_LOG,*) '*** basename of log file  =', trim(IO_LOG_BASENAME)
+       write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
+       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
+       write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
     else
        if ( PRC_myrank == PRC_master ) then ! master node
           write(*,*) '*** Log report is suppressed.'

@@ -116,7 +116,7 @@ contains
        item,   & ! (in)
        desc,   & ! (in)
        units,  & ! (in)
-       ndim,  & ! (in)
+       ndim,   & ! (in)
        xdim,   & ! (in)
        ydim,   & ! (in)
        zdim    & ! (in)
