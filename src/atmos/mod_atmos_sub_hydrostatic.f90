@@ -48,11 +48,15 @@ module mod_atmos_hydrostatic
   !
   !++ Private procedure
   !
+  private :: buildrho
+  private :: buildrho_temp
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   logical :: HYDROSTATIC_userapserate = .true.
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -60,34 +64,20 @@ contains
   !> Buildup density from surface
   !-----------------------------------------------------------------------------
   subroutine ATMOS_hydro_buildrho( &
-      dens,     &
-      temp,     &
-      pres,     &
-      pott,     &
-      qv,       &
-      qc,       &
-      temp_sfc, &
-      pres_sfc, &
-      pott_sfc, &
-      qv_sfc,&
-      qc_sfc    )
-    use mod_const, only : &
-       GRAV    => CONST_GRAV,    &
-       EPS     => CONST_EPS,     &
-       Rdry    => CONST_Rdry,    &
-       Rvap    => CONST_Rvap,    &
-       CPovR   => CONST_CPovR,   &
-       RovCV   => CONST_RovCV,   &
-       CVovCP  => CONST_CVovCP,  &
-       CPovCV  => CONST_CPovCV,  &
-       LASPdry => CONST_LASPdry, &
-       P00     => CONST_PRE00
+       dens,     &
+       temp,     &
+       pres,     &
+       pott,     &
+       qv,       &
+       qc,       &
+       temp_sfc, &
+       pres_sfc, &
+       pott_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_grid, only : &
-       CZ  => GRID_CZ, &
-       FDZ => GRID_FDZ
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -105,12 +95,11 @@ contains
     real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
     real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
 
-    integer :: i, j
-    integer :: ierr
-
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
        HYDROSTATIC_userapserate
 
+    integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -126,20 +115,22 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_MPIstop
     endif
-
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
-
 
     do j = JS, JE
     do i = IS, IE
-
-       call buildrho(dens(:,i,j), temp(:,i,j), pres(:,i,j),         & ! (out)
-                     pott(:,i,j), qv(:,i,j), qc(:,i,j),             & ! (in)
-                     temp_sfc(1,i,j),                               & ! (out)
-                     pres_sfc(1,i,j), pott_sfc(1,i,j),              & ! (in)
-                     qv_sfc(1,i,j), qc_sfc(1,i,j),                  & ! (in)
-                     HYDROSTATIC_userapserate                       ) ! (in)
-
+       call buildrho( dens(:,i,j),             & ! [OUT]
+                      temp(:,i,j),             & ! [OUT]
+                      pres(:,i,j),             & ! [OUT]
+                      pott(:,i,j),             & ! [IN]
+                      qv  (:,i,j),             & ! [IN]
+                      qc  (:,i,j),             & ! [IN]
+                      temp_sfc(1,i,j),         & ! [OUT]
+                      pres_sfc(1,i,j),         & ! [IN]
+                      pott_sfc(1,i,j),         & ! [IN]
+                      qv_sfc  (1,i,j),         & ! [IN]
+                      qc_sfc  (1,i,j),         & ! [IN]
+                      HYDROSTATIC_userapserate ) ! [IN]
     enddo
     enddo
 
@@ -149,18 +140,20 @@ contains
 
     return
   end subroutine ATMOS_hydro_buildrho
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_hydro_buildrho_1d( &
-      dens,     &
-      temp,     &
-      pres,     &
-      pott,     &
-      qv,       &
-      qc,       &
-      temp_sfc, &
-      pres_sfc, &
-      pott_sfc, &
-      qv_sfc,&
-      qc_sfc    )
+       dens,     &
+       temp,     &
+       pres,     &
+       pott,     &
+       qv,       &
+       qc,       &
+       temp_sfc, &
+       pres_sfc, &
+       pott_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -178,10 +171,11 @@ contains
     real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
     real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
 
-    integer :: ierr
-
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
          HYDROSTATIC_userapserate
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC_1d]/Categ[ATMOS]'
@@ -196,14 +190,20 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_MPIstop
     endif
-
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
 
-    call buildrho(dens, temp, pres,          & ! (out)
-         pott, qv, qc,                       & ! (in)
-         temp_sfc,                           & ! (out)
-         pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! (in)
-         HYDROSTATIC_userapserate            ) ! (in)
+    call buildrho( dens(:),                 & ! [OUT]
+                   temp(:),                 & ! [OUT]
+                   pres(:),                 & ! [OUT]
+                   pott(:),                 & ! [IN]
+                   qv  (:),                 & ! [IN]
+                   qc  (:),                 & ! [IN]
+                   temp_sfc,                & ! [OUT]
+                   pres_sfc,                & ! [IN]
+                   pott_sfc,                & ! [IN]
+                   qv_sfc,                  & ! [IN]
+                   qc_sfc,                  & ! [IN]
+                   HYDROSTATIC_userapserate ) ! [IN]
 
     return
   end subroutine ATMOS_hydro_buildrho_1d
@@ -212,36 +212,20 @@ contains
   !> Buildup density from surface with temperature
   !-----------------------------------------------------------------------------
   subroutine ATMOS_hydro_buildrho_temp( &
-      dens,     &
-      pott,     &
-      pres,     &
-      temp,     &
-      qv,       &
-      qc,       &
-      pott_sfc, &
-      pres_sfc, &
-      temp_sfc, &
-      qv_sfc,&
-      qc_sfc    )
-    use mod_const, only : &
-       GRAV    => CONST_GRAV,    &
-       EPS     => CONST_EPS,     &
-       Rdry    => CONST_Rdry,    &
-       Rvap    => CONST_Rvap,    &
-       CPovR   => CONST_CPovR,   &
-       RovCV   => CONST_RovCV,   &
-       CVovCP  => CONST_CVovCP,  &
-       CPovCV  => CONST_CPovCV,  &
-       LASPdry => CONST_LASPdry, &
-       P00     => CONST_PRE00
+       dens,     &
+       pott,     &
+       pres,     &
+       temp,     &
+       qv,       &
+       qc,       &
+       pott_sfc, &
+       pres_sfc, &
+       temp_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_grid, only : &
-       CZ  => GRID_CZ, &
-       FDZ => GRID_FDZ
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
@@ -258,23 +242,21 @@ contains
     real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
 
     integer :: i, j
-    integer :: ierr
-
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC]/Categ[ATMOS]'
-
 
     do j = JS, JE
     do i = IS, IE
-
-       call buildrho_temp(dens(:,i,j), pott(:,i,j), pres(:,i,j), & ! (out)
-                          temp(:,i,j), qv(:,i,j), qc(:,i,j),     & ! (in)
-                          pott_sfc(1,i,j),                       & ! (out)
-                          pres_sfc(1,i,j), temp_sfc(1,i,j),      & ! (in)
-                          qv_sfc(1,i,j), qc_sfc(1,i,j)           ) ! (in)
-
+       call buildrho_temp( dens(:,i,j),     & ! [OUT]
+                           pott(:,i,j),     & ! [OUT]
+                           pres(:,i,j),     & ! [OUT]
+                           temp(:,i,j),     & ! [IN]
+                           qv  (:,i,j),     & ! [IN]
+                           qc  (:,i,j),     & ! [IN]
+                           pott_sfc(1,i,j), & ! [OUT]
+                           pres_sfc(1,i,j), & ! [IN]
+                           temp_sfc(1,i,j), & ! [IN]
+                           qv_sfc  (1,i,j), & ! [IN]
+                           qc_sfc  (1,i,j)  ) ! [IN]
     enddo
     enddo
 
@@ -284,18 +266,20 @@ contains
 
     return
   end subroutine ATMOS_hydro_buildrho_temp
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_hydro_buildrho_temp_1d( &
-      dens,     &
-      pott,     &
-      pres,     &
-      temp,     &
-      qv,       &
-      qc,       &
-      pott_sfc, &
-      pres_sfc, &
-      temp_sfc, &
-      qv_sfc,&
-      qc_sfc    )
+       dens,     &
+       pott,     &
+       pres,     &
+       temp,     &
+       qv,       &
+       qc,       &
+       pott_sfc, &
+       pres_sfc, &
+       temp_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -312,16 +296,19 @@ contains
     real(RP), intent(in)  :: temp_sfc !< surface temperature [K]
     real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
     real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
+    !---------------------------------------------------------------------------
 
-    integer :: ierr
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC_1d]/Categ[ATMOS]'
-
-    call buildrho_temp(dens, pott, pres,                  & ! (out)
-                       temp, qv, qc,                      & ! (in)
-                       pott_sfc,                          & ! (out)
-                       pres_sfc, temp_sfc, qv_sfc, qc_sfc ) ! (in)
+    call buildrho_temp( dens(:),  & ! [OUT]
+                        pott(:),  & ! [OUT]
+                        pres(:),  & ! [OUT]
+                        temp(:),  & ! [IN]
+                        qv  (:),  & ! [IN]
+                        qc  (:),  & ! [IN]
+                        pott_sfc, & ! [OUT]
+                        pres_sfc, & ! [IN]
+                        temp_sfc, & ! [IN]
+                        qv_sfc  , & ! [IN]
+                        qc_sfc    ) ! [IN]
 
     return
   end subroutine ATMOS_hydro_buildrho_temp_1d
@@ -330,19 +317,19 @@ contains
   !> Buildup density from surface
   !-----------------------------------------------------------------------------
   subroutine buildrho( &
-      dens,     &
-      temp,     &
-      pres,     &
-      pott,     &
-      qv,       &
-      qc,       &
-      temp_sfc, &
-      pres_sfc, &
-      pott_sfc, &
-      qc_sfc,   &
-      qv_sfc,   &
-      userapserate )
-    use mod_const, only : &
+       dens,        &
+       temp,        &
+       pres,        &
+       pott,        &
+       qv,          &
+       qc,          &
+       temp_sfc,    &
+       pres_sfc,    &
+       pott_sfc,    &
+       qc_sfc,      &
+       qv_sfc,      &
+       userapserate )
+    use mod_const, only: &
        GRAV    => CONST_GRAV,    &
        EPS     => CONST_EPS,     &
        Rdry    => CONST_Rdry,    &
@@ -352,9 +339,11 @@ contains
        CL      => CONST_CL,      &
        LASPdry => CONST_LASPdry, &
        P00     => CONST_PRE00
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ  => GRID_CZ, &
        FDZ => GRID_FDZ
+    implicit none
+
     real(RP), intent(out) :: dens(KA) !< density [kg/m3]
     real(RP), intent(out) :: temp(KA) !< temperature [K]
     real(RP), intent(out) :: pres(KA) !< pressure [Pa]
@@ -369,58 +358,65 @@ contains
     real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
     logical,  intent(in)  :: userapserate
 
-
-    real(RP) :: Qdry_sfc
-    real(RP) :: Rmoist_sfc
-    real(RP) :: CVtot_sfc
     real(RP) :: dens_sfc
+    real(RP) :: Rtot_sfc
+    real(RP) :: CVtot_sfc
+    real(RP) :: CPovCV_sfc
 
-    real(RP) :: Qdry(KA)
-    real(RP) :: Rmoist(KA)
+    real(RP) :: Rtot(KA)
     real(RP) :: CVtot(KA)
-    real(RP) :: CPtot(KA)
-
     real(RP) :: CPovCV(KA)
+    real(RP) :: CPovR, CVovCP, RovCV
 
     real(RP) :: dens_s, dhyd, dgrd
-
     real(RP) :: criteria
+
     integer, parameter :: itelim = 100
 
     integer :: k, ite
-
     !---------------------------------------------------------------------------
 
     criteria = EPS * 5
 
     ! make density at surface
-    Qdry_sfc = 1.0_RP - qv_sfc - qc_sfc
-    Rmoist_sfc = Rdry * Qdry_sfc + Rvap * qv_sfc
-    CVtot_sfc = CVdry * Qdry_sfc + CVvap * qv_sfc + CL * qc_sfc
+    Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + Rvap  * qv_sfc
+    CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CVvap * qv_sfc                       &
+               + CL    * qc_sfc
 
-    dens_sfc = P00 / Rmoist_sfc / pott_sfc * ( pres_sfc/P00 )**(CVtot_sfc/(CVtot_sfc+Rmoist_sfc))
-    temp_sfc = pres_sfc / ( dens_sfc * Rmoist_sfc )
+    CPovCV_sfc = ( CVtot_sfc + Rtot_sfc ) / CVtot_sfc
+    CVovCP = CVtot_sfc / ( CVtot_sfc + Rtot_sfc )
+
+    dens_sfc = P00 / Rtot_sfc / pott_sfc * ( pres_sfc/P00 )**CVovCP
+    temp_sfc = pres_sfc / ( dens_sfc * Rtot_sfc )
 
     do k = KS, KE
-       Qdry(k) = 1.0_RP - qv(k) - qc(k)
-       Rmoist(k) = Rdry * Qdry(k) + Rvap * qv(k)
-       CVtot(k) = CVdry * Qdry(k) + CVvap * qv(k) + CL * qc(k)
-       CPtot(k) = CVtot(k) + Rmoist(k)
-       CPovCV(k) = CPtot(k) / CVtot(k)
+       Rtot(k)   = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + Rvap  * qv(k)
+       CVtot(k)  = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CVvap * qv(k)                      &
+                 + CL    * qc(k)
+
+       CPovCV(k) = ( CVtot(k) + Rtot(k) ) / CVtot(k)
     enddo
 
     ! make density at lowermost cell center
     k = KS
 
     if ( userapserate ) then
+       CPovR  = ( CVtot(k) + Rtot(k) ) / Rtot (k)
+       CVovCP = CVtot(k) / ( CVtot(k) + Rtot(k) )
 
        temp(k) = pott_sfc - LASPdry * CZ(k) ! use dry lapse rate
-       pres(k) = P00 * ( temp(k)/pott(k) )**(CPtot(k)/Rmoist(k))
-       dens(k) = P00 / Rmoist(k) / pott(k) * ( pres(k)/P00 )**(CVtot(k)/CPtot(k))
+       pres(k) = P00 * ( temp(k)/pott(k) )**CPovR
+       dens(k) = P00 / Rtot(k) / pott(k) * ( pres(k)/P00 )**CVovCP
 
     else ! use itelation
 
-       dens_s      = 0.0_RP
+       RovCV = Rtot(k) / CVtot(k)
+
+       dens_s  = 0.0_RP
        dens(k) = dens_sfc ! first guess
 
        do ite = 1, itelim
@@ -428,12 +424,12 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = + ( P00 * ( dens_sfc * Rmoist_sfc * pott_sfc / P00 )**((CVtot_sfc+Rmoist_sfc)/CVtot_sfc) &
-                   - P00 * ( dens_s   * Rmoist(k)  * pott(k)  / P00 )**CPovCV(k)) / CZ(k) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                                 ! rho*g
+          dhyd = + ( P00 * ( dens_sfc * Rtot_sfc * pott_sfc / P00 )**CPovCV_sfc &
+                   - P00 * ( dens_s   * Rtot(k)  * pott(k)  / P00 )**CPovCV(k)  ) / CZ(k) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                    ! rho*g
 
-          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV(k) / CZ(k) &
-                 * CPovCV(k) * dens_s**(Rmoist(k)/CVtot(k))               &
+          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / CZ(k) &
+                 * CPovCV(k) * dens_s**RovCV                            &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -449,6 +445,8 @@ contains
     ! make density
     do k = KS+1, KE
 
+       RovCV = Rtot(k) / CVtot(k)
+
        dens_s      = 0.0_RP
        dens(k) = dens(k-1)
 
@@ -457,12 +455,12 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = + ( P00 * ( dens(k-1) * Rmoist(k-1) * pott(k-1) / P00 )**CPovCV(k-1) &
-                   - P00 * ( dens_s    * Rmoist(k  ) * pott(k  ) / P00 )**CPovCV(k) ) / FDZ(k-1) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                                ! rho*g
+          dhyd = + ( P00 * ( dens(k-1) * Rtot(k-1) * pott(k-1) / P00 )**CPovCV(k-1) &
+                   - P00 * ( dens_s    * Rtot(k  ) * pott(k  ) / P00 )**CPovCV(k  ) ) / FDZ(k-1) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                          ! rho*g
 
-          dgrd = - P00 * ( Rmoist(k) * pott(k) / P00 )**CPovCV(k) / FDZ(k-1) &
-                 * CPovCV(k) * dens_s**(Rmoist(k)/CVtot(k))                  &
+          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / FDZ(k-1) &
+                 * CPovCV(k) * dens_s**RovCV                               &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -470,13 +468,13 @@ contains
        enddo
 
        if ( ite > itelim ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rtot, FDZ(k-1)
        endif
     enddo
 
     do k = KS, KE
-       pres(k) = P00 * ( dens(k) * Rmoist(k) * pott(k) / P00 )**CPovCV(k)
-       temp(k) = pres(k) / ( dens(k) * Rmoist(k) )
+       pres(k) = P00 * ( dens(k) * Rtot(k) * pott(k) / P00 )**CPovCV(k)
+       temp(k) = pres(k) / ( dens(k) * Rtot(k) )
     enddo
 
     ! fill KHALO
@@ -485,19 +483,23 @@ contains
 
     return
   end subroutine buildrho
+
+  !-----------------------------------------------------------------------------
+  !> Buildup density from surface
+  !-----------------------------------------------------------------------------
   subroutine buildrho_temp( &
-      dens,     &
-      pott,     &
-      pres,     &
-      temp,     &
-      qv,       &
-      qc,       &
-      pott_sfc, &
-      pres_sfc, &
-      temp_sfc, &
-      qc_sfc,   &
-      qv_sfc   )
-    use mod_const, only : &
+       dens,     &
+       pott,     &
+       pres,     &
+       temp,     &
+       qv,       &
+       qc,       &
+       pott_sfc, &
+       pres_sfc, &
+       temp_sfc, &
+       qc_sfc,   &
+       qv_sfc    )
+    use mod_const, only: &
        GRAV    => CONST_GRAV,    &
        EPS     => CONST_EPS,     &
        Rdry    => CONST_Rdry,    &
@@ -507,9 +509,11 @@ contains
        CL      => CONST_CL,      &
        LASPdry => CONST_LASPdry, &
        P00     => CONST_PRE00
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ  => GRID_CZ, &
        FDZ => GRID_FDZ
+    implicit none
+
     real(RP), intent(out) :: dens(KA) !< density [kg/m3]
     real(RP), intent(out) :: pott(KA) !< potential temperature [K]
     real(RP), intent(out) :: pres(KA) !< pressure [Pa]
@@ -523,42 +527,45 @@ contains
     real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
     real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
 
-
-    real(RP) :: Qdry_sfc
-    real(RP) :: Rmoist_sfc
-    real(RP) :: CVtot_sfc
     real(RP) :: dens_sfc
+    real(RP) :: Rtot_sfc
+    real(RP) :: CVtot_sfc
+    real(RP) :: RovCP_sfc
 
-    real(RP) :: Qdry(KA)
-    real(RP) :: Rmoist(KA)
+    real(RP) :: Rtot(KA)
     real(RP) :: CVtot(KA)
-
     real(RP) :: RovCP(KA)
 
     real(RP) :: dens_s, dhyd, dgrd
-
     real(RP) :: criteria
+
     integer, parameter :: itelim = 100
 
     integer :: k, ite
-
     !---------------------------------------------------------------------------
 
     criteria = EPS * 5
 
     ! make density at surface
-    Qdry_sfc = 1.0_RP - qv_sfc - qc_sfc
-    Rmoist_sfc = Rdry * Qdry_sfc + Rvap * qv_sfc
-    CVtot_sfc = CVdry * Qdry_sfc + CVvap * qv_sfc + CL * qc_sfc
+    Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + Rvap  * qv_sfc
+    CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CVvap * qv_sfc                       &
+               + CL    * qc_sfc
 
-    dens_sfc = pres_sfc / ( Rmoist_sfc * temp_sfc )
-    pott_sfc = temp_sfc * ( P00/pres_sfc )**(Rmoist_sfc/(CVtot_sfc+Rmoist_sfc))
+    RovCP_sfc = Rtot_sfc / ( CVtot_sfc + Rtot_sfc )
+
+    dens_sfc = pres_sfc / ( Rtot_sfc * temp_sfc )
+    pott_sfc = temp_sfc * ( P00/pres_sfc )**RovCP_sfc
 
     do k = KS, KE
-       Qdry(k) = 1.0_RP - qv(k) - qc(k)
-       Rmoist(k) = Rdry * Qdry(k) + Rvap * qv(k)
-       CVtot(k) = CVdry * Qdry(k) + CVvap * qv(k) + CL * qc(k)
-       RovCP(k) = Rmoist(k) / ( CVtot(k) + Rmoist(k) )
+       Rtot(k)   = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + Rvap  * qv(k)
+       CVtot(k)  = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CVvap * qv(k)                      &
+                 + CL    * qc(k)
+
+       RovCP(k) = Rtot(k) / ( CVtot(k) + Rtot(k) )
     enddo
 
     ! make density at lowermost cell center
@@ -572,11 +579,11 @@ contains
 
        dens_s = dens(k)
 
-       dhyd = + ( dens_sfc * Rmoist_sfc * temp_sfc   &
-                - dens_s   * Rmoist(k)  * temp(k)  ) / CZ(k) & ! dp/dz
-              - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                                 ! rho*g
+       dhyd = + ( dens_sfc * Rtot_sfc * temp_sfc &
+                - dens_s   * Rtot(k)  * temp(k)  ) / CZ(k) & ! dp/dz
+              - GRAV * 0.5_RP * ( dens_sfc + dens_s )        ! rho*g
 
-       dgrd = - Rmoist(k) * temp(k) / CZ(k) &
+       dgrd = - Rtot(k) * temp(k) / CZ(k) &
               - 0.5_RP * GRAV
 
        dens(k) = dens_s - dhyd/dgrd
@@ -598,11 +605,11 @@ contains
 
           dens_s = dens(k)
 
-          dhyd = + ( dens(k-1) * Rmoist(k-1) * temp(k-1)  &
-                   - dens_s    * Rmoist(k  ) * temp(k  ) ) / FDZ(k-1) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                                ! rho*g
+          dhyd = + ( dens(k-1) * Rtot(k-1) * temp(k-1)  &
+                   - dens_s    * Rtot(k  ) * temp(k  ) ) / FDZ(k-1) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )             ! rho*g
 
-          dgrd = - Rmoist(k) * temp(k) / FDZ(k-1) &
+          dgrd = - Rtot(k) * temp(k) / FDZ(k-1) &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -610,12 +617,12 @@ contains
        enddo
 
        if ( ite > itelim ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rmoist, FDZ(k-1)
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rtot, FDZ(k-1)
        endif
     enddo
 
     do k = KS, KE
-       pres(k) = dens(k) * Rmoist(k) * temp(k)
+       pres(k) = dens(k) * Rtot(k) * temp(k)
        pott(k) = temp(k) * ( P00 / pres(k) )**RovCP(k)
     enddo
 

@@ -45,11 +45,11 @@ MODS =	\
 	mod_atmos_sub_saturation.o      \
 	mod_atmos_sub_thermodyn.o	\
 	mod_atmos_sub_hydrostatic.o	\
-	mod_atmos_sub_refstate.o	\
-	mod_atmos_sub_boundary.o	\
 	mod_atmos_mp_saturation.o       \
 	mod_atmos_vars.o	\
 	mod_atmos_vars_sf.o	\
+	mod_atmos_sub_refstate.o	\
+	mod_atmos_sub_boundary.o	\
 	mod_atmos_sub_precipitation.o	\
 	mod_atmos_dyn_fent_fullfct_lss.o	\
 	mod_atmos_phy_sf_$(sfcflx).o	\
@@ -111,7 +111,7 @@ $(BUILD_DIR)/mod_history.o	: mod_history.f90 mod_stdio.o mod_fileio_h.o mod_proc
 $(BUILD_DIR)/mod_monitor.o	: mod_monitor.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_geometrics.o mod_time.o
 $(BUILD_DIR)/mod_atmos_sub_thermodyn.o	: mod_atmos_sub_thermodyn.f90 mod_stdio.o mod_const.o mod_time.o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_history.o mod_monitor.o mod_comm.o mod_fileio.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
-$(BUILD_DIR)/mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_sub_hydrostatic.o
+$(BUILD_DIR)/mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o mod_process.o mod_fileio.o mod_fileio_h.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_sub_hydrostatic.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o mod_comm.o mod_time.o mod_atmos_sub_refstate.o
 $(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o	: mod_atmos_dyn_fent_fullfct_lss.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_geometrics.o mod_comm.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o
 $(BUILD_DIR)/mod_ocean_vars.o	: mod_ocean_vars.f90 mod_stdio.o mod_fileio_h.o mod_process.o mod_comm.o mod_fileio.o mod_time.o

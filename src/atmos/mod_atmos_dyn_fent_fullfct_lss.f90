@@ -339,7 +339,7 @@ contains
     else
        DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 )
 
-       ! z djrectjon
+       ! z direction
        do k = KS-1, KE+1
           CNDZ(1,k) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
        enddo

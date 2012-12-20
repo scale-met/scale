@@ -1,0 +1,31 @@
+#
+# ------ FOR MacOSX & gfortran4.6 & OpenMPI1.6 -----
+#
+
+##### for computation
+
+FC     = openmpif90
+FFLAGS = -cpp -O3
+
+FFLAGS_DYN = $(FFLAGS)
+
+FFLAGS_DEBUG = -cpp -O0 -ffpe-trap=invalid,zero,overflow \
+         -Wall -Wuninitialized -fbounds-check      \
+         -g -fbacktrace -fcheck=all -finit-real=nan \
+         -DDEBUG
+
+MODDIROPT ?= -J
+
+CC	= gcc-mp-4.6
+CFLAGS  = -O3
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+NETCDF_LIBS ?= -lnetcdf
+NETCDF_INCLUDE ?=
+
+##### for frontend
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib

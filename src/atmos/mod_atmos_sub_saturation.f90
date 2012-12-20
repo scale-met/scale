@@ -47,6 +47,7 @@ module mod_atmos_saturation
   !
   public :: ATMOS_SATURATION_psat_water
   public :: ATMOS_SATURATION_psat_ice
+  public :: ATMOS_SATURATION_qsat_1d
   public :: ATMOS_SATURATION_qsat_sfc
   public :: ATMOS_SATURATION_qsat_water
   public :: ATMOS_SATURATION_qsat_ice
@@ -95,11 +96,6 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
-
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
     LHovRvap = LHV00 / Rvap
@@ -116,11 +112,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_psat_water
 
@@ -135,11 +126,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
@@ -157,13 +143,40 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_psat_ice
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_SATURATION_qsat_1d( KA0, KS0, KE0, qsat, temp, pres )
+    implicit none
+
+    integer,  intent(in)  :: KA0, KS0, KE0
+    real(RP), intent(out) :: qsat(KA0)
+    real(RP), intent(in)  :: temp(KA0)
+    real(RP), intent(in)  :: pres(KA0)
+    
+    real(RP) :: psat
+    real(RP) :: RTEM00, CPovRvap, LHovRvap, TEM
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    RTEM00   = 1.0_RP / TEM00
+    CPovRvap = ( CPvap - CL ) / Rvap
+    LHovRvap = LHV00 / Rvap
+
+    do k = KS0, KE0
+       TEM = max( temp(k), TEM_MIN )
+
+       psat = PSAT0                                 &
+            * ( TEM * RTEM00 )**CPovRvap            &
+            * exp( LHovRvap * ( RTEM00 - 1.0_RP/TEM ) )
+
+       qsat(k) = EPSvap * psat / ( pres(k) - ( 1.0_RP-EPSvap ) * psat )
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_qsat_1d
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_qsat_sfc( qsat, temp, pres )
@@ -178,11 +191,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
@@ -201,11 +209,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_qsat_sfc
 
@@ -222,11 +225,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
@@ -246,11 +244,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_qsat_water
 
@@ -267,11 +260,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
@@ -290,11 +278,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
     enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_qsat_ice
@@ -316,11 +299,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
@@ -347,11 +325,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_dqsw_dtem_rho
 
@@ -372,11 +345,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
@@ -403,11 +371,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_dqsi_dtem_rho
 
@@ -430,11 +393,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CL ) / Rvap
@@ -466,11 +424,6 @@ call START_COLLECTION('SUB_satadjust')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
-
     return
   end subroutine ATMOS_SATURATION_dqsw_dtem_dpre
 
@@ -493,11 +446,6 @@ call STOP_COLLECTION('SUB_satadjust')
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_satadjust')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_satadjust')
-#endif
 
     RTEM00   = 1.0_RP / TEM00
     CPovRvap = ( CPvap - CI ) / Rvap
@@ -528,11 +476,6 @@ call START_COLLECTION('SUB_satadjust')
 
     enddo
     enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_satadjust')
-#endif
-    call TIME_rapend  ('SUB_satadjust')
 
     return
   end subroutine ATMOS_SATURATION_dqsi_dtem_dpre

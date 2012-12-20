@@ -10,9 +10,9 @@ VPATH = ../common:../io:../grid:../atmos:../ocean
 
 PRJ1 = spddump
 PRJ2 = spd2bin
-PRJ3 = check_diff
-PRJ4 = bin2txt
-PRJ5 = spddiff
+#PRJ3 = check_diff
+#PRJ4 = bin2txt
+#PRJ5 = spddiff
 
 INCDIR = ../include/
 
