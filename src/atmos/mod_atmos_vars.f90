@@ -1372,56 +1372,56 @@ contains
     call MONIT_put( ATMOS_MONIT_id(I_ENGI), ENGI(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGT), ENGT(:,:,:) )
 
-    call COMM_horizontal_mean( mean1d(:), DENS(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       DENS_v(k,i,j) = DENS(k,i,j) - mean1d(k)
-    enddo
-    enddo
-    enddo
-
-    call COMM_horizontal_mean( mean1d(:), VELZ(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       VELZ_v(k,i,j) = VELZ(k,i,j) - mean1d(k)
-    enddo
-    enddo
-    enddo
-
-    call COMM_horizontal_mean( mean1d(:), VELX(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       VELX_v(k,i,j) = VELX(k,i,j) - mean1d(k)
-    enddo
-    enddo
-    enddo
-
-    call COMM_horizontal_mean( mean1d(:), VELY(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       VELY_v(k,i,j) = VELY(k,i,j) - mean1d(k)
-    enddo
-    enddo
-    enddo
-
-    call COMM_horizontal_mean( mean1d(:), POTT(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       POTT_v(k,i,j) = POTT(k,i,j) - mean1d(k)
-    enddo
-    enddo
-    enddo
-
-    call HIST_in( DENS_v(:,:,:), 'DENS_v', 'Variance of rho', 'kg/m3', TIME_DTSEC )
-    call HIST_in( VELZ_v(:,:,:), 'W_v',    'Variance of W',   'm/s',   TIME_DTSEC )
-    call HIST_in( VELX_v(:,:,:), 'U_v',    'Variance of U',   'm/s',   TIME_DTSEC )
-    call HIST_in( VELY_v(:,:,:), 'V_v',    'Variance of V',   'm/s',   TIME_DTSEC )
-    call HIST_in( POTT_v(:,:,:), 'PT_v',   'Variance of PT',  'K',     TIME_DTSEC )
+!    call COMM_horizontal_mean( mean1d(:), DENS(:,:,:) )
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       DENS_v(k,i,j) = DENS(k,i,j) - mean1d(k)
+!    enddo
+!    enddo
+!    enddo
+!
+!    call COMM_horizontal_mean( mean1d(:), VELZ(:,:,:) )
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       VELZ_v(k,i,j) = VELZ(k,i,j) - mean1d(k)
+!    enddo
+!    enddo
+!    enddo
+!
+!    call COMM_horizontal_mean( mean1d(:), VELX(:,:,:) )
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       VELX_v(k,i,j) = VELX(k,i,j) - mean1d(k)
+!    enddo
+!    enddo
+!    enddo
+!
+!    call COMM_horizontal_mean( mean1d(:), VELY(:,:,:) )
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       VELY_v(k,i,j) = VELY(k,i,j) - mean1d(k)
+!    enddo
+!    enddo
+!    enddo
+!
+!    call COMM_horizontal_mean( mean1d(:), POTT(:,:,:) )
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       POTT_v(k,i,j) = POTT(k,i,j) - mean1d(k)
+!    enddo
+!    enddo
+!    enddo
+!
+!    call HIST_in( DENS_v(:,:,:), 'DENS_v', 'Variance of rho', 'kg/m3', TIME_DTSEC )
+!    call HIST_in( VELZ_v(:,:,:), 'W_v',    'Variance of W',   'm/s',   TIME_DTSEC )
+!    call HIST_in( VELX_v(:,:,:), 'U_v',    'Variance of U',   'm/s',   TIME_DTSEC )
+!    call HIST_in( VELY_v(:,:,:), 'V_v',    'Variance of V',   'm/s',   TIME_DTSEC )
+!    call HIST_in( POTT_v(:,:,:), 'PT_v',   'Variance of PT',  'K',     TIME_DTSEC )
 
     return
   end subroutine ATMOS_vars_history

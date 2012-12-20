@@ -2171,7 +2171,7 @@ contains
        statval(k) = statval(k) / real(IMAX*JMAX,kind=RP)
     enddo
 
-    if ( COMM_total_globalsum ) then
+!    if ( COMM_total_globalsum ) then ! always communicate globally
        call TIME_rapstart('COMM MPIAllreduce')
        ! All reduce
        call MPI_Allreduce( statval(1),           &
@@ -2183,9 +2183,9 @@ contains
                            ierr                  )
 
        call TIME_rapend  ('COMM MPIAllreduce')
-    else
-       allstatval(:) = statval(:)
-    endif
+!    else
+!       allstatval(:) = statval(:)
+!    endif
 
     do k = KS, KE
        varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP) 
