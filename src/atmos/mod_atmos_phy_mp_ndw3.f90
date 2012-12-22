@@ -1001,12 +1001,6 @@ contains
        precipitation => ATMOS_PRECIPITATION
     use mod_atmos_thermodyn, only : &
        !-- For kji
-       thrmdyn_qd_kij      => ATMOS_THERMODYN_qd_kij, &
-       thrmdyn_cv_kij      => ATMOS_THERMODYN_cv_kij, &
-       thrmdyn_cp_kij      => ATMOS_THERMODYN_cp_kij, &
-       thrmdyn_tempre_kij  => ATMOS_THERMODYN_tempre_kij, &
-       thrmdyn_tempre2_kij => ATMOS_THERMODYN_tempre2_kij, &
-       !-- For kji
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
        thrmdyn_cp      => ATMOS_THERMODYN_cp, &
@@ -1260,9 +1254,9 @@ contains
     enddo
     enddo
 
-    call thrmdyn_qd_kij( qd_d, q_d )
-    call thrmdyn_cv_kij( cva_d, q_d, qd_d )
-    call thrmdyn_tempre2_kij( tem_d, pre_d, rho_d, th_d, qd_d, q_d )
+    call thrmdyn_qd( qd_d, q_d )
+    call thrmdyn_cv( cva_d, q_d, qd_d )
+    call thrmdyn_tempre2( tem_d, pre_d, rho_d, th_d, qd_d, q_d )
 
     do k = 1, KA
     do j = 1, JA
@@ -1297,7 +1291,7 @@ contains
     end do
     end do
 
-    call thrmdyn_cp_kij( cpa_d, q_d, qd_d )
+    call thrmdyn_cp( cpa_d, q_d, qd_d )
     do k = 1, KA
     do j = 1, JA
     do i = 1, IA
@@ -1368,8 +1362,8 @@ contains
     enddo
     enddo
 
-    call thrmdyn_qd_kij( qd_d, q_d )
-    call thrmdyn_cv_kij( cva_d, q_d, qd_d )
+    call thrmdyn_qd( qd_d, q_d )
+    call thrmdyn_cv( cva_d, q_d, qd_d )
 
     do k  = KS, KE
     do j = 1,    JA
@@ -1441,7 +1435,7 @@ contains
 !!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
 !!$       call moist_psat_ice_kij( wtem_d, esi_d )
        !
-       call thrmdyn_qd_kij( qd_d, q_d )
+       call thrmdyn_qd( qd_d, q_d )
        !
        call dep_vapor_melt_ice_kij( &
             IA, JA, KA,           & ! in
@@ -1582,8 +1576,8 @@ contains
     enddo
     enddo
 
-    call thrmdyn_qd_kij( qd_d, q_d )
-    call thrmdyn_cv_kij( cva_d, q_d, qd_d )
+    call thrmdyn_qd( qd_d, q_d )
+    call thrmdyn_cv( cva_d, q_d, qd_d )
 
     do k  = KS, KE
     do j = 1,    JA
@@ -2716,9 +2710,9 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_thermodyn, only: &
-       thrmdyn_qd_kij      => ATMOS_THERMODYN_qd_kij, &
-       thrmdyn_cv_kij      => ATMOS_THERMODYN_cv_kij, &
-       thrmdyn_cp_kij      => ATMOS_THERMODYN_cp_kij
+       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
+       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
+       thrmdyn_cp      => ATMOS_THERMODYN_cp
     use mod_mp_saturation, only : &
        moist_qsat_water_kij     => MP_SATURATION_qsat_water_kij,     &
        moist_dqsw_dtem_rho_kij  => MP_SATURATION_dqsw_dtem_rho_kij,  &
@@ -2841,14 +2835,14 @@ contains
        end do
     end do
     !
-    call thrmdyn_qd_kij(   &
+    call thrmdyn_qd(   &
          qd,           & !--- out
          q )             !--- in
-    call thrmdyn_cv_kij(   &
+    call thrmdyn_cv(   &
          cva,          & !--- out
          q,            & !--- in
          qd )            !--- in
-    call thrmdyn_cp_kij(   &
+    call thrmdyn_cp(   &
          cpa,          & !--- out
          q,            & !--- in
          qd )            !--- in
@@ -3009,10 +3003,10 @@ contains
           end do
        end do
     end do
-    call thrmdyn_qd_kij(   &
+    call thrmdyn_qd(   &
          qd,           & !--- out
          q )             !--- in
-    call thrmdyn_cv_kij(   &
+    call thrmdyn_cv(   &
          cva,          & !--- out
          q,            & !--- in
          qd )            !--- in

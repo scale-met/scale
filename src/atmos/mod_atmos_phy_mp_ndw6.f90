@@ -3,6 +3,7 @@
 !+  NICAM Double moment Water 6 scheme
 !
 !-------------------------------------------------------------------------------
+#include "macro_thermodyn.h"
 module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
@@ -68,11 +69,13 @@ module mod_atmos_phy_mp
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
      UNDEF8 => CONST_UNDEF8,  &
-     Rdry   => CONST_Rdry,    &
      P00    => CONST_PRE00,   &
      T00    => CONST_TEM00,   &
+     Rdry   => CONST_Rdry,    &
      Rvap   => CONST_Rvap,    &
+     CPdry  => CONST_CPdry,   &
      CPvap  => CONST_CPvap,   &
+     CVdry  => CONST_CVdry,   &
      CVvap  => CONST_CVvap,   &
      CL     => CONST_CL,      &
      CI     => CONST_CI,      &
@@ -87,6 +90,9 @@ module mod_atmos_phy_mp
      PSAT0  => CONST_PSAT0,   &
      EMELT  => CONST_EMELT,   &
      DWATR  => CONST_DWATR
+  use mod_atmos_thermodyn, only: &
+     AQ_CV, &
+     AQ_CP
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
@@ -1114,20 +1120,6 @@ contains
        dz   => GRID_CDZ
     use mod_atmos_precipitation, only : &
        precipitation => ATMOS_PRECIPITATION
-    use mod_atmos_thermodyn, only : &
-       !-- For kji
-       thrmdyn_qd_kij      => ATMOS_THERMODYN_qd_kij, &
-       thrmdyn_cv_kij      => ATMOS_THERMODYN_cv_kij, &
-       thrmdyn_cp_kij      => ATMOS_THERMODYN_cp_kij, &
-       thrmdyn_tempre_kij  => ATMOS_THERMODYN_tempre_kij, &
-       thrmdyn_tempre2_kij => ATMOS_THERMODYN_tempre2_kij, &
-       !-- For kji
-       thrmdyn_qd      => ATMOS_THERMODYN_qd, &
-       thrmdyn_cv      => ATMOS_THERMODYN_cv, &
-       thrmdyn_cp      => ATMOS_THERMODYN_cp, &
-       thrmdyn_tempre  => ATMOS_THERMODYN_tempre, &
-       thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
-       CVw => AQ_CV
     use mod_mp_saturation, only : &
        moist_psat_water_kij    => MP_SATURATION_psat_water_kij,   &
        moist_psat_ice_kij      => MP_SATURATION_psat_ice_kij,     &
@@ -1192,7 +1184,6 @@ contains
     real(RP) :: rho_fac_g_d(KA,IA,JA) !            graupel
     real(RP) :: cva_d(KA,IA,JA)    !
     real(RP) :: cpa_d(KA,IA,JA)       ! [Add] 09/08/18 T.Mitsui
-    real(RP) :: ra_d
     !
     real(RP) :: drhogqv               ! d (rho*qv*gsgam2)
     real(RP) :: drhogqc, drhognc      !        qc, nc
@@ -1326,6 +1317,8 @@ contains
     real(RP) :: wflux_snow(KA,IA,JA)
     integer :: step
 
+    real(RP) :: Rtot
+
     integer :: k, i, j, iq, ij
     !---------------------------------------------------------------------------
 
@@ -1348,72 +1341,56 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MPX ijkconvert')
+
+    call TIME_rapstart('MP1 Nucleation')
 
     do j = JS, JE
     do i = IS, IE
        sl_PLCdep_d(1,i,j) = 0.0_RP
        sl_PLRdep_d(1,i,j) = 0.0_RP
        sl_PNRdep_d(1,i,j) = 0.0_RP
-    enddo
-    enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rhogq_d(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
-    enddo
-    enddo
-    enddo
-    enddo
+       do k = KS, KE
+          do iq = 1, QA
+             rhogq_d(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
-       th_d   (k,i,j) = RHOT(k,i,j) * rrhog_d(k,i,j)
-       rho_d  (k,i,j) = DENS(k,i,j)
-    enddo
-       w_d    (KS,i,j) = MOMZ(KS,i,j) * rrhog_d(k,i,j) ! MOMZ(KS-1,i,j) = 0.0
-    do k = KS+1, KE
-       w_d    (k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
-    enddo
-    enddo
-    enddo
+          rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
+          th_d   (k,i,j) = RHOT(k,i,j) * rrhog_d(k,i,j)
+          rho_d  (k,i,j) = DENS(k,i,j)
+       enddo
 
-    call thrmdyn_qd_kij( qd_d, QTRC )
-    call thrmdyn_cv_kij( cva_d, QTRC, qd_d )
-    call thrmdyn_cp_kij( cpa_d, QTRC, qd_d )
-    call thrmdyn_tempre2_kij( tem_d, pre_d, DENS, th_d, qd_d, QTRC )
+       w_d(KS,i,j) = MOMZ(KS,i,j) * rrhog_d(k,i,j) ! MOMZ(KS-1,i,j) = 0.0
+       do k = KS+1, KE
+          w_d(k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
+       enddo
 
-    if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), QTRC(:,:,:,I_QV) )
+       do k = KS, KE
+          CALC_QDRY( qd_d(k,i,j), QTRC, k, i, j, iq )
+          CALC_R( Rtot, QTRC(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
+          CALC_CV( cva_d(k,i,j), qd_d(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
+          cpa_d(k,i,j) = cva_d(k,i,j) + Rtot
+          CALC_PRE( pre_d(k,i,j), DENS(k,i,j), th_d(k,i,j), Rtot, cpa_d(k,i,j), P00 )
+          tem_d(k,i,j) = pre_d(k,i,j) / ( DENS(k,i,j) * Rtot )
 
-    call TIME_rapend  ('MPX ijkconvert')
+          rhoge_d(k,i,j) = DENS(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
 
-    call TIME_rapstart('MP1 Nucleation')
+          rho_fac         = rho_0 / max(rho_d(k,i,j),rho_min)
+          rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
+          rho_fac_r_d(k,i,j) = rho_fac**gamma_v(I_QR)
+          rho_fac_i_d(k,i,j) = (pre_d(k,i,j)/pre0_vt)**a_pre0_vt * (tem_d(k,i,j)/tem0_vt)**a_tem0_vt
+          rho_fac_s_d(k,i,j) = rho_fac_i_d(k,i,j)
+          rho_fac_g_d(k,i,j) = rho_fac_i_d(k,i,j)
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rhoge_d(k,i,j) = DENS(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
+          wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
 
-       rho_fac         = rho_0 / max(rho_d(k,i,j),rho_min)
-       rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
-       rho_fac_r_d(k,i,j) = rho_fac**gamma_v(I_QR)
-       rho_fac_i_d(k,i,j) = (pre_d(k,i,j)/pre0_vt)**a_pre0_vt * (tem_d(k,i,j)/tem0_vt)**a_tem0_vt
-       rho_fac_s_d(k,i,j) = rho_fac_i_d(k,i,j)
-       rho_fac_g_d(k,i,j) = rho_fac_i_d(k,i,j)
+          qke_d       (k,i,j) = 0.0_RP ! 2*TKE
+          dTdt_equiv_d(k,i,j) = 0.0_RP
 
-       wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
-
-       qke_d       (k,i,j) = 0.0_RP ! 2*TKE
-       dTdt_equiv_d(k,i,j) = 0.0_RP
-
-       lv_d(k,i,j) = rho_d(k,i,j)*QTRC(k,i,j,I_QV)
-       ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NI) )
-       nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NC) )
-    enddo
+          lv_d(k,i,j) = rho_d(k,i,j)*QTRC(k,i,j,I_QV)
+          ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NI) )
+          nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*QTRC(k,i,j,I_NC) )
+       enddo
     enddo
     enddo
 
@@ -1435,45 +1412,40 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       ! nucleation
-       drhogqc = dt * PLCccn_d(k,i,j)
-       drhognc = dt * PNCccn_d(k,i,j)
-       drhogqi = dt * PLIccn_d(k,i,j)
-       drhogni = dt * PNIccn_d(k,i,j)
-       drhogqv = max( -rhogq_d(k,i,j,I_QV), -drhogqc-drhogqi )
-       fac1    = drhogqv / min( -drhogqc-drhogqi, -eps ) ! limiting coefficient
+       do k = KS, KE
+          ! nucleation
+          drhogqc = dt * PLCccn_d(k,i,j)
+          drhognc = dt * PNCccn_d(k,i,j)
+          drhogqi = dt * PLIccn_d(k,i,j)
+          drhogni = dt * PNIccn_d(k,i,j)
+          drhogqv = max( -rhogq_d(k,i,j,I_QV), -drhogqc-drhogqi )
+          fac1    = drhogqv / min( -drhogqc-drhogqi, -eps ) ! limiting coefficient
 
-       rhogq_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) + drhogqv
-       rhogq_d(k,i,j,I_QC) = max(0.0_RP, rhogq_d(k,i,j,I_QC) + drhogqc*fac1)
-       rhogq_d(k,i,j,I_QI) = max(0.0_RP, rhogq_d(k,i,j,I_QI) + drhogqi*fac1)
-       rhogq_d(k,i,j,I_NC) = max(0.0_RP, rhogq_d(k,i,j,I_NC) + drhognc)
-       rhogq_d(k,i,j,I_NI) = max(0.0_RP, rhogq_d(k,i,j,I_NI) + drhogni)
+          rhogq_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) + drhogqv
+          rhogq_d(k,i,j,I_QC) = max(0.0_RP, rhogq_d(k,i,j,I_QC) + drhogqc*fac1)
+          rhogq_d(k,i,j,I_QI) = max(0.0_RP, rhogq_d(k,i,j,I_QI) + drhogqi*fac1)
+          rhogq_d(k,i,j,I_NC) = max(0.0_RP, rhogq_d(k,i,j,I_NC) + drhognc)
+          rhogq_d(k,i,j,I_NI) = max(0.0_RP, rhogq_d(k,i,j,I_NI) + drhogni)
 
-       ! cloud number concentration filter
-       rhogq_d(k,i,j,I_NC) = min( rhogq_d(k,i,j,I_NC), nc_uplim_d(1,i,j) )
+          ! cloud number concentration filter
+          rhogq_d(k,i,j,I_NC) = min( rhogq_d(k,i,j,I_NC), nc_uplim_d(1,i,j) )
 
-       rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv + LHF * drhogqi*fac1
+          rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv + LHF * drhogqi*fac1
 
-       q_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_QC) = rhogq_d(k,i,j,I_QC) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_QI) = rhogq_d(k,i,j,I_QI) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_NC) = rhogq_d(k,i,j,I_NC) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_NI) = rhogq_d(k,i,j,I_NI) * rrhog_d(k,i,j)
-    enddo
-    enddo
-    enddo
+          q_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_QC) = rhogq_d(k,i,j,I_QC) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_QI) = rhogq_d(k,i,j,I_QI) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_NC) = rhogq_d(k,i,j,I_NC) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_NI) = rhogq_d(k,i,j,I_NI) * rrhog_d(k,i,j)
 
-    call thrmdyn_qd_kij( qd_d, q_d )
-    call thrmdyn_cv_kij( cva_d, q_d, qd_d )
+          CALC_QDRY( qd_d(k,i,j), q_d, k, i, j, iq )
+          CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
+          CALC_R( Rtot, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
-       pre_d(k,i,j) = rho_d(k,i,j)*( qd_d(k,i,j)*Rdry+q_d(k,i,j,I_QV)*Rvap )*tem_d(k,i,j)
-       wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
-    enddo
+          tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+          pre_d(k,i,j) = rho_d(k,i,j) * Rtot * tem_d(k,i,j)
+          wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
+       enddo
     enddo
     enddo
 
@@ -1951,31 +1923,18 @@ contains
        ! update
        ! rhogq = l*gsgam
        rhoge_d(k,i,j) = rhoge_d(k,i,j) + LHF * ( drhogqi + drhogqs + drhogqg )
-    enddo
-    enddo
-    enddo
 
-    !--- update mixing ratio
-    do iq = 1,  QA
-    do j  = JS,  JE
-    do i  = IS,  IE
-    do k  = KS, KE
-       QTRC(k,i,j,iq) = rhogq_d(k,i,j,iq) * rrhog_d(k,i,j)
-    enddo
-    enddo
-    enddo
-    enddo
+       !--- update mixing ratio
+       do iq = 1,  QA
+          QTRC(k,i,j,iq) = rhogq_d(k,i,j,iq) * rrhog_d(k,i,j)
+       enddo
 
-    call thrmdyn_qd_kij( qd_d, QTRC )
-    call thrmdyn_cv_kij( cva_d, QTRC, qd_d )
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+       CALC_QDRY( qd_d(k,i,j), QTRC, k, i, j, iq )
+       CALC_CV( cva_d(k,i,j), qd_d(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
+       CALC_R( Rtot, QTRC(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
        tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
-       ra_d = qd_d(k,i,j)*Rdry + QTRC(k,i,j,I_QV)*Rvap
-       pre_d(k,i,j) = rho_d(k,i,j)*ra_d*tem_d(k,i,j)
-       RHOT(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(ra_d/(cva_d(k,i,j)+ra_d)) &
+       pre_d(k,i,j) = rho_d(k,i,j) * Rtot * tem_d(k,i,j)
+       RHOT(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(Rtot/(cva_d(k,i,j)+Rtot)) &
             * DENS(k,i,j)
     enddo
     enddo
@@ -1991,9 +1950,9 @@ contains
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP4 Saturation adjustment')
+!    call TIME_rapstart('MP4 Saturation adjustment')
     ! nothing to do
-    call TIME_rapend  ('MP4 Saturation adjustment')
+!    call TIME_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
@@ -4090,10 +4049,6 @@ contains
        sl_PLRdep, sl_PNRdep ) !
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_atmos_thermodyn, only: &
-       thrmdyn_qd_kij      => ATMOS_THERMODYN_qd_kij, &
-       thrmdyn_cv_kij      => ATMOS_THERMODYN_cv_kij, &
-       thrmdyn_cp_kij      => ATMOS_THERMODYN_cp_kij
     use mod_mp_saturation, only : &
        moist_qsat_water_kij     => MP_SATURATION_qsat_water_kij,     &
        moist_qsat_ice_kij       => MP_SATURATION_qsat_ice_kij,       &
@@ -4259,7 +4214,7 @@ contains
     real(RP), parameter :: r_tau100day = 1.E-7_RP
     real(RP), parameter :: eps=1.E-30_RP
     !
-    integer :: i,j,k,iu
+    integer :: i,j,k,iu,iqw
     !
 
     ! [Add] 11/08/30 T.Mitsui
@@ -4285,17 +4240,16 @@ contains
     r_xi_ccn=1.0_RP/xi_ccn
     !
 
-    call thrmdyn_qd_kij(   &
-         qd,           & !--- out
-         q )             !--- in
-    call thrmdyn_cv_kij(   &
-         cva,          & !--- out
-         q,            & !--- in
-         qd )            !--- in
-    call thrmdyn_cp_kij(   &
-         cpa,          & !--- out
-         q,            & !--- in
-         qd )            !--- in
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
+       CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
+       CALC_CP( cpa(k,i,j), qd(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP )
+    enddo
+    enddo
+    enddo
+
     call moist_qsat_water_kij    ( wtem, pre, qsw )
     call moist_qsat_ice_kij      ( wtem, pre, qsi )
     call moist_dqsw_dtem_rho_kij ( wtem, rho, dqswdtem_rho )
@@ -4693,26 +4647,43 @@ contains
           sl_PLRdep(1,i,j) = sl_PLRdep(1,i,j) + dep_dqr*Dz(k)*gsgam2(k,i,j)
           sl_PNRdep(1,i,j) = sl_PNRdep(1,i,j) + dep_dnr*Dz(k)*gsgam2(k,i,j)
 !             endif
+
+          CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
+          CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
+
        end do
        end do
        end do
-       call thrmdyn_qd_kij(   &
-            qd,           & !--- out
-            q )             !--- in
-       call thrmdyn_cv_kij(   &
-            cva,          & !--- out
-            q,            & !--- in
-            qd )            !--- in
+
        !
        ! [Add] 11/08/30 T.Mitsui
        if( opt_fix_lhcnd_c .and. iu==2 )then
-          rhoge(:,:,:) = tem_lh(:,:,:)*rhog(:,:,:)*cva(:,:,:)
-          tem(:,:,:)   = tem_lh(:,:,:)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rhoge(k,i,j) = tem_lh(k,i,j)*rhog(k,i,j)*cva(k,i,j)
+             tem(k,i,j)   = tem_lh(k,i,j)
+          enddo
+          enddo
+          enddo
        else
-          tem(:,:,:) = rhoge(:,:,:) / ( rhog(:,:,:) * cva(:,:,:) )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             tem(k,i,j) = rhoge(k,i,j) / ( rhog(k,i,j) * cva(k,i,j) )
+          enddo
+          enddo
+          enddo
        end if
-       wtem(:,:,:) = max(tem(:,:,:), tem_min )
-       pre(:,:,:) = rho(:,:,:)*( qd(:,:,:)*Rdry+q(:,:,:,I_QV)*Rvap )*tem(:,:,:)
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          wtem(k,i,j) = max(tem(k,i,j), tem_min )
+          pre(k,i,j) = rho(k,i,j)*( qd(k,i,j)*Rdry+q(k,i,j,I_QV)*Rvap )*tem(k,i,j)
+       enddo
+       enddo
+       enddo
     end do
     !
     return
