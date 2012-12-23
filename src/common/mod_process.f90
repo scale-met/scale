@@ -31,6 +31,7 @@ module mod_process
   public :: PRC_MPIstart
   public :: PRC_NOMPIstart
   public :: PRC_MPIstop
+  public :: PRC_MPIfinish
   public :: PRC_setup
   public :: PRC_MPItime
   public :: PRC_MPItimestat
@@ -207,9 +208,32 @@ contains
   end subroutine PRC_NOMPIstart
 
   !-----------------------------------------------------------------------------
-  !> Stop MPI
+  !> Abort MPI
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
+    use mod_stdio, only : &
+       IO_FID_CONF, &
+       IO_SYSCHR
+    implicit none
+
+    character(len=IO_SYSCHR) :: request = 'STOP'
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    ! Stop MPI
+    if ( PRC_mpi_alive ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
+       call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+    endif
+
+  end subroutine PRC_MPIstop
+
+  !-----------------------------------------------------------------------------
+  !> Stop MPI peacefully
+  !-----------------------------------------------------------------------------
+  subroutine PRC_MPIfinish
     use mod_stdio, only : &
        IO_FID_CONF, &
        IO_SYSCHR
@@ -233,7 +257,7 @@ contains
                        ierr            )
        call MPI_Barrier(MPI_COMM_WORLD,ierr)
        call MPI_Finalize(ierr)
-       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is normaly finalized'
+       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -244,7 +268,7 @@ contains
 
     ! Stop program
     stop
-  end subroutine PRC_MPIstop
+  end subroutine PRC_MPIfinish
 
   !-----------------------------------------------------------------------------
   !> Setup Processor topology

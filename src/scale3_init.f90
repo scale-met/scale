@@ -26,7 +26,8 @@ program scaleinit
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
-     PRC_MPIstop
+     PRC_MPIstop,  &
+     PRC_MPIfinish
   use mod_const, only: &
      CONST_setup
   use mod_random, only: &
@@ -195,7 +196,7 @@ program scaleinit
 
   call MONIT_finalize
   ! stop MPI
-  call PRC_MPIstop
+  call PRC_MPIfinish
 
   stop
   !=============================================================================

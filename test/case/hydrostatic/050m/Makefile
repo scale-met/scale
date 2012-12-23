@@ -7,7 +7,7 @@ include $(TOPDIR)/src/Mkinclude
 VPATH = $(BUILD_DIR)
 
 # for build
-index     = 500m40x40x40
+index     = 050m230x16x16
 tracer    = dry
 radiation = mstrnX
 sfcflx    = const
@@ -18,18 +18,15 @@ postfix   =
 INITCONF  = init.conf
 RUNCONF   = run.conf
 
-all: makedir build
+all: build
 
-makedir:
-	mkdir -p $(BUILD_DIR)
-
-build: makedir
-	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
+build:
+	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
 
 jobshell: build
 	sh $(SCRDIR)/Mkjobshell.sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) 6
 
-run: jobshell
+run: build jobshell
 	$(JOBSUB) run.sh
 
 check:
@@ -37,8 +34,6 @@ check:
 
 .PHONY: clean distclean
 
-allclean:
-	$(MAKE) -C $(SRCDIR) allclean
 clean:
 	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
 distclean:

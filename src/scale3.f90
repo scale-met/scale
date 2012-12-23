@@ -27,7 +27,7 @@ program scaleles3
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
-     PRC_MPIstop
+     PRC_MPIfinish
   use mod_const, only: &
      CONST_setup
   use mod_time, only: &
@@ -175,7 +175,7 @@ program scaleles3
 
   call MONIT_finalize
   ! stop MPI
-  call PRC_MPIstop
+  call PRC_MPIfinish
 
   stop
   !=============================================================================
