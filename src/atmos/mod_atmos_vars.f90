@@ -154,7 +154,9 @@ module mod_atmos_vars
 
   logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),                   private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+  real(RP),                  private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+
+  logical,                   private, save :: ATMOS_VARS_CHECKRANGE          = .false.
 
   integer, private, save      :: AP_HIST_id(5)
   integer, private, save      :: AQ_HIST_id(QA)
@@ -227,7 +229,8 @@ contains
        ATMOS_RESTART_OUT_INSTITUTE,    &
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
-       ATMOS_RESTART_CHECK_CRITERION
+       ATMOS_RESTART_CHECK_CRITERION,  &
+       ATMOS_VARS_CHECKRANGE
 
     integer :: ierr
     integer :: iq
@@ -621,11 +624,11 @@ contains
     RHOT_av(:,:,:) = RHOT(:,:,:)
     QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     ! first monitor
-    call MONIT_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), 'MOMZ', AP_DESC(2), AP_UNIT(2), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), 'MOMX', AP_DESC(3), AP_UNIT(3), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), 'MOMY', AP_DESC(4), AP_UNIT(4), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), 'RHOT', AP_DESC(5), AP_UNIT(5), ndim=3 )
+    call MONIT_in( DENS(:,:,:), AP_NAME(1), AP_DESC(1), AP_UNIT(1), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), AP_NAME(2), AP_DESC(2), AP_UNIT(2), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), AP_NAME(3), AP_DESC(3), AP_UNIT(3), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), AP_NAME(4), AP_DESC(4), AP_UNIT(4), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), AP_NAME(5), AP_DESC(5), AP_UNIT(5), ndim=3 )
     do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
@@ -976,6 +979,8 @@ contains
        CPdry  => CONST_CPdry,  &
        CVdry  => CONST_CVdry,  &
        P00    => CONST_PRE00
+    use mod_misc, only: &
+       MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC
     use mod_grid, only : &
@@ -998,7 +1003,7 @@ contains
        saturation_qsat_water => ATMOS_SATURATION_qsat_water
     implicit none
 
-    real(RP) :: RHOQ  (KA,IA,JA) ! working
+    real(RP) :: RHOQ  (KA,IA,JA)
     real(RP) :: QSAT  (KA,IA,JA)
     real(RP) :: RH    (KA,IA,JA)
     real(RP) :: VELXH (KA,IA,JA)
@@ -1017,6 +1022,14 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    if ( ATMOS_VARS_CHECKRANGE ) then
+       call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(1) )
+       call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(2) )
+       call MISC_valcheck( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(3) )
+       call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(4) )
+       call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(5) )
+    endif
+
     call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
     call HIST_put( AP_HIST_id(I_MOMZ), MOMZ(:,:,:), TIME_DTSEC )
     call HIST_put( AP_HIST_id(I_MOMX), MOMX(:,:,:), TIME_DTSEC )
@@ -1026,11 +1039,11 @@ contains
        call HIST_put( AQ_HIST_id(iq), QTRC(:,:,:,iq), TIME_DTSEC )
     enddo
 
-    call MONIT_in( DENS(:,:,:), 'DENS', AP_DESC(1), AP_UNIT(1), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), 'MOMZ', AP_DESC(2), AP_UNIT(2), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), 'MOMX', AP_DESC(3), AP_UNIT(3), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), 'MOMY', AP_DESC(4), AP_UNIT(4), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), 'RHOT', AP_DESC(5), AP_UNIT(5), ndim=3 )
+    call MONIT_in( DENS(:,:,:), AP_NAME(1), AP_DESC(1), AP_UNIT(1), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), AP_NAME(2), AP_DESC(2), AP_UNIT(2), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), AP_NAME(3), AP_DESC(3), AP_UNIT(3), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), AP_NAME(4), AP_DESC(4), AP_UNIT(4), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), AP_NAME(5), AP_DESC(5), AP_UNIT(5), ndim=3 )
     do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
@@ -1489,10 +1502,10 @@ contains
           CPTOT (k,i,j) = CPdry*QDRY(k,i,j) + CPTOT(k,i,j)
           CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
 
-          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
-
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+
+          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
 
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
