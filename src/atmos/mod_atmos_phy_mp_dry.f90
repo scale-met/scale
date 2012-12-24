@@ -83,7 +83,7 @@ contains
   subroutine ATMOS_PHY_MP
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(dummy)'
 
     return
   end subroutine ATMOS_PHY_MP

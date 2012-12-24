@@ -45,11 +45,20 @@ module mod_atmos_thermodyn
   !++ Public procedure
   !
   public :: ATMOS_THERMODYN_setup
+
   public :: ATMOS_THERMODYN_qd
   public :: ATMOS_THERMODYN_cv
   public :: ATMOS_THERMODYN_cp
   public :: ATMOS_THERMODYN_tempre
   public :: ATMOS_THERMODYN_tempre2
+
+  public :: ATMOS_THERMODYN_temp_pres
+
+  interface ATMOS_THERMODYN_temp_pres
+     module procedure ATMOS_THERMODYN_temp_pres_0D
+     module procedure ATMOS_THERMODYN_temp_pres_3D
+  end interface ATMOS_THERMODYN_temp_pres
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -112,11 +121,6 @@ contains
     integer :: i,j, k, iqw
     !-----------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
     do j = 1, JA
     do i = 1, IA
     do k  = 1, KA
@@ -127,13 +131,9 @@ call START_COLLECTION('SUB_thermodyn')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
     return
   end subroutine ATMOS_THERMODYN_qd
+
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_cp( cptot, q, qdry )
     implicit none
@@ -145,11 +145,6 @@ call STOP_COLLECTION('SUB_thermodyn')
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -160,13 +155,9 @@ call START_COLLECTION('SUB_thermodyn')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
     return
   end subroutine ATMOS_THERMODYN_cp
+
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_cv( cvtot, q, qdry )
     implicit none
@@ -178,11 +169,6 @@ call STOP_COLLECTION('SUB_thermodyn')
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -193,13 +179,9 @@ call START_COLLECTION('SUB_thermodyn')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
     return
   end subroutine ATMOS_THERMODYN_cv
+
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre( &
       temp, pres,         &
@@ -218,11 +200,6 @@ call STOP_COLLECTION('SUB_thermodyn')
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -238,13 +215,9 @@ call START_COLLECTION('SUB_thermodyn')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
     return
   end subroutine ATMOS_THERMODYN_tempre
+
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre2( &
       temp, pres,         &
@@ -263,10 +236,6 @@ call STOP_COLLECTION('SUB_thermodyn')
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
 
     do j = 1, JA
     do i = 1, IA
@@ -279,12 +248,90 @@ call START_COLLECTION('SUB_thermodyn')
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
     return
   end subroutine ATMOS_THERMODYN_tempre2
+
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres_0D( &
+       temp, &
+       pres, &
+       dens, &
+       pott, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp  ! temperature
+    real(RP), intent(out) :: pres  ! pressure
+    real(RP), intent(in)  :: dens  ! density
+    real(RP), intent(in)  :: pott  ! potential temperature
+    real(RP), intent(in)  :: q(QA) ! water concentration 
+
+    real(RP) :: qdry ! dry concentration
+    real(RP) :: Rtot, CPtot, CPovCV
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    qdry  = 1.0_RP
+    CPtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+    enddo
+    CPtot = CPdry * qdry + CPtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+
+    CPovCV = CPtot / ( CPtot - Rtot )
+
+    pres = PRE00 * ( dens * Rtot * pott / PRE00 )**CPovCV
+    temp = pres / ( dens * Rtot )
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres_3D( &
+       temp, &
+       pres, &
+       dens, &
+       pott, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
+    real(RP), intent(out) :: pres(KA,IA,JA)    ! pressure
+    real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
+    real(RP), intent(in)  :: pott(KA,IA,JA)    ! potential temperature
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
+
+    real(RP) :: qdry ! dry concentration
+    real(RP) :: Rtot, CPtot, CPovCV
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+
+       qdry  = 1.0_RP
+       CPtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+       enddo
+       CPtot = CPdry * qdry + CPtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+
+       CPovCV = CPtot / ( CPtot - Rtot )
+
+       pres(k,i,j) = PRE00 * ( dens(k,i,j) * Rtot * pott(k,i,j) / PRE00 )**CPovCV
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_3D
+
 end module mod_atmos_thermodyn
