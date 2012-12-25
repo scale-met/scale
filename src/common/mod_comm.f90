@@ -2074,6 +2074,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_total( allstatval, var, varname )
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_geometrics, only: &
        area    => GEOMETRICS_area,    &
        vol     => GEOMETRICS_vol,     &
