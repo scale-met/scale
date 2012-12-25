@@ -2888,7 +2888,7 @@ contains
     character(len=*), intent(in)  :: varname
 
     real(RP) :: statval
-    real(RP) :: ksize
+    integer  :: ksize
 
     integer :: ierr
     integer :: k, i, j
