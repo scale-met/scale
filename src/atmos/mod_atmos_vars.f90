@@ -1000,7 +1000,7 @@ contains
        CPw => AQ_CP, &
        CVw => AQ_CV
     use mod_atmos_saturation, only: &
-       saturation_qsat_water => ATMOS_SATURATION_qsat_water
+       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     implicit none
 
     real(RP) :: RHOQ  (KA,IA,JA)
@@ -1016,7 +1016,7 @@ contains
 !    real(RP) :: VELX_v(KA,IA,JA)
 !    real(RP) :: VELY_v(KA,IA,JA)
 !    real(RP) :: POTT_v(KA,IA,JA)
-
+!
 !    real(RP) :: mean1d(KA)
 
     integer :: k, i, j, iq
@@ -1217,12 +1217,14 @@ contains
     endif
 
     if ( ATMOS_HIST_id(I_RH) > 0 ) then
-       call saturation_qsat_water( QSAT(:,:,:), TEMP(:,:,:), PRES(:,:,:) )
+       call SATURATION_dens2qsat_liq( QSAT(:,:,:), & ! [OUT]
+                                      TEMP(:,:,:), & ! [IN]
+                                      DENS(:,:,:)  ) ! [IN]
 
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.D2
+          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
        enddo
        enddo
@@ -1456,7 +1458,8 @@ contains
        COMM_total_doreport, &
        COMM_total
     use mod_atmos_thermodyn, only: &
-       CPw => AQ_CP, &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd_kij,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV
     implicit none
 
@@ -1485,6 +1488,15 @@ contains
           call COMM_total( total, RHOQ(:,:,:), AQ_NAME(iq) )
        enddo
 
+       call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
+                          QTRC(:,:,:,:) ) ! [IN]
+
+       call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                                 PRES(:,:,:),  & ! [OUT]
+                                 DENS(:,:,:),  & ! [IN]
+                                 RHOT(:,:,:),  & ! [IN]
+                                 QTRC(:,:,:,:) ) ! [IN]
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1492,30 +1504,20 @@ contains
           VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
           VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-          QDRY (k,i,j) = 1.0_RP
-          CPTOT(k,i,j) = 0.0_RP
-          do iq = QQS, QQE
-             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
-             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-          enddo
-          RTOT  (k,i,j) = Rdry *QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-          CPTOT (k,i,j) = CPdry*QDRY(k,i,j) + CPTOT(k,i,j)
-          CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
-
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
-
-          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) ) ! Qtotal
 
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
                                                + VELX(k,i,j)**2 &
                                                + VELY(k,i,j)**2 )
+
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE
              ENGI(k,i,j) = ENGI(k,i,j) &
                          + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
           enddo
+
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
        enddo
        enddo

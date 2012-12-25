@@ -50,12 +50,14 @@ program scaleinit
      MONIT_setup, &
      MONIT_write, &
      MONIT_finalize
+  use mod_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_setup
+  use mod_atmos_saturation, only: &
+     ATMOS_SATURATION_setup
   use mod_atmos_vars, only: &
      ATMOS_vars_setup, &
      ATMOS_vars_fillhalo, &
      ATMOS_vars_restart_write
-  use mod_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
   use mod_mkinit, only: &
      MKINIT_TYPE,     &
      I_PLANESTATE,    &
@@ -143,8 +145,11 @@ program scaleinit
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
   call TIME_rapstart('Main')
 
-  ! setup restart
+  ! setup atmos
   call ATMOS_THERMODYN_setup
+
+  call ATMOS_SATURATION_setup
+
   call ATMOS_vars_setup
 
   ! setup mkinit
