@@ -1120,13 +1120,10 @@ contains
        dz   => GRID_CDZ
     use mod_atmos_precipitation, only : &
        precipitation => ATMOS_PRECIPITATION
-    use mod_mp_saturation, only : &
-       moist_psat_water_kij    => MP_SATURATION_psat_water_kij,   &
-       moist_psat_ice_kij      => MP_SATURATION_psat_ice_kij,     &
-       moist_dqsw_dtem_rho_kij => MP_SATURATION_dqsw_dtem_rho_kij,&
-       moist_psat_water    => MP_SATURATION_psat_water,   &
-       moist_psat_ice      => MP_SATURATION_psat_ice,     &
-       moist_dqsw_dtem_rho => MP_SATURATION_dqsw_dtem_rho
+    use mod_atmos_saturation, only : &
+       moist_psat_water    => ATMOS_SATURATION_psat_water,   &
+       moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
+       moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -1468,8 +1465,8 @@ contains
       flag_history_in=.true.
 !   end if
     !
-    call moist_psat_water_kij( wtem_d, esw_d )
-    call moist_psat_ice_kij( wtem_d, esi_d )
+    call moist_psat_water( esw_d, wtem_d )
+    call moist_psat_ice  ( esi_d, wtem_d )
     !
     do j = JS, JE
     do i = IS, IE
@@ -2331,14 +2328,14 @@ contains
     use mod_const, only : &
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
-    use mod_mp_saturation, only : &
-       moist_psat_water     => MP_SATURATION_psat_water_kij, &
-       moist_psat_ice       => MP_SATURATION_psat_ice_kij,   &
-       moist_qsat_water     => MP_SATURATION_qsat_water_kij, &
-       moist_qsat_ice       => MP_SATURATION_qsat_ice_kij,   &
-       moist_dqsw_dtem_rho  => MP_SATURATION_dqsw_dtem_rho_kij, &
-       moist_dqsi_dtem_rho  => MP_SATURATION_dqsi_dtem_rho_kij, &
-       moist_dqsw_dtem_dpre => MP_SATURATION_dqsw_dtem_dpre_kij
+    use mod_atmos_saturation, only : &
+       moist_psat_water     => ATMOS_SATURATION_psat_water, &
+       moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
+       moist_qsat_water     => ATMOS_SATURATION_qsat_water, &
+       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,   &
+       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
+       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
+       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
 
     integer, intent(in)  :: KA, IA, JA
@@ -2454,11 +2451,11 @@ contains
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
     !
-    call moist_psat_water    ( tem, esw )
-    call moist_psat_ice      ( tem, esi )
-    call moist_qsat_water    ( tem, pre, qsw )
-    call moist_qsat_ice      ( tem, pre, qsi )
-    call moist_dqsi_dtem_rho ( tem, rho, dqsidtem_rho )
+    call moist_psat_water    ( esw, tem )
+    call moist_psat_ice      ( esi, tem )
+    call moist_qsat_water    ( qsw, tem, pre )
+    call moist_qsat_ice      ( qsi, tem, pre )
+    call moist_dqsi_dtem_rho ( dqsidtem_rho, tem, rho )
     !
     !
     !
@@ -2756,9 +2753,9 @@ contains
        flag_history_in                 ) ! in [Add] 11/08/30
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_mp_saturation, only : &
-       moist_psat_water     => MP_SATURATION_psat_water_kij, &
-       moist_psat_ice       => MP_SATURATION_psat_ice_kij
+    use mod_atmos_saturation, only : &
+       moist_psat_water     => ATMOS_SATURATION_psat_water, &
+       moist_psat_ice       => ATMOS_SATURATION_psat_ice
     implicit none
 
     integer, intent(in) :: IA,JA,KA
@@ -2984,7 +2981,7 @@ contains
        flag_first = .false.
     end if
     !
-    call moist_psat_ice( wtem, esi )
+    call moist_psat_ice( esi, wtem )
     if( opt_stick_KS96 )then
        do j=JS, JE
        do i=IS, IE
@@ -3454,9 +3451,6 @@ contains
        xc, xr, xi, xs, xg,   & ! in
        vt_xave,              &
        dc_xave, dr_xave, di_xave, ds_xave, dg_xave ) ! in
-    use mod_mp_saturation, only : &
-       moist_psat_water     => MP_SATURATION_psat_water, &
-       moist_psat_ice       => MP_SATURATION_psat_ice
     implicit none
 
     integer, intent(in)  :: IA,JA,KA
@@ -4049,13 +4043,13 @@ contains
        sl_PLRdep, sl_PNRdep ) !
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_mp_saturation, only : &
-       moist_qsat_water_kij     => MP_SATURATION_qsat_water_kij,     &
-       moist_qsat_ice_kij       => MP_SATURATION_qsat_ice_kij,       &
-       moist_dqsw_dtem_rho_kij  => MP_SATURATION_dqsw_dtem_rho_kij,  &
-       moist_dqsi_dtem_rho_kij  => MP_SATURATION_dqsi_dtem_rho_kij,  &
-       moist_dqsw_dtem_dpre_kij => MP_SATURATION_dqsw_dtem_dpre_kij, &
-       moist_dqsi_dtem_dpre_kij => MP_SATURATION_dqsi_dtem_dpre_kij
+    use mod_atmos_saturation, only : &
+       moist_qsat_water     => ATMOS_SATURATION_qsat_water,     &
+       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,       &
+       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
+       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho,  &
+       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre, &
+       moist_dqsi_dtem_dpre => ATMOS_SATURATION_dqsi_dtem_dpre
     implicit none
 
     integer, intent(in)    :: ntdiv                   ! [Add] 10/08/03
@@ -4250,12 +4244,12 @@ contains
     enddo
     enddo
 
-    call moist_qsat_water_kij    ( wtem, pre, qsw )
-    call moist_qsat_ice_kij      ( wtem, pre, qsi )
-    call moist_dqsw_dtem_rho_kij ( wtem, rho, dqswdtem_rho )
-    call moist_dqsi_dtem_rho_kij ( wtem, rho, dqsidtem_rho )
-    call moist_dqsw_dtem_dpre_kij( wtem, pre, dqswdtem_pre, dqswdpre_tem )
-    call moist_dqsi_dtem_dpre_kij( wtem, pre, dqsidtem_pre, dqsidpre_tem )
+    call moist_qsat_water    ( qsw, wtem, pre )
+    call moist_qsat_ice      ( qsi, wtem, pre )
+    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
+    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
+    call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
+    call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
     !
     do j=JS, JE
     do i=IS, IE

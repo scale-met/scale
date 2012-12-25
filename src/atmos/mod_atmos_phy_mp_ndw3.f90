@@ -1007,13 +1007,10 @@ contains
        thrmdyn_tempre  => ATMOS_THERMODYN_tempre, &
        thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
        CVw => AQ_CV
-    use mod_mp_saturation, only : &
-       moist_psat_water_kij    => MP_SATURATION_psat_water_kij,   &
-       moist_psat_ice_kij      => MP_SATURATION_psat_ice_kij,     &
-       moist_dqsw_dtem_rho_kij => MP_SATURATION_dqsw_dtem_rho_kij,&
-       moist_psat_water    => MP_SATURATION_psat_water,   &
-       moist_psat_ice      => MP_SATURATION_psat_ice,     &
-       moist_dqsw_dtem_rho => MP_SATURATION_dqsw_dtem_rho
+    use mod_atmos_saturation, only : &
+       moist_psat_water    => ATMOS_SATURATION_psat_water,   &
+       moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
+       moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -1431,9 +1428,7 @@ contains
        end do
        !
        wtem_d(:,:,:) = max(tem_d(:,:,:), tem_min)
-       call moist_psat_water_kij( wtem_d, esw_d )
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
-!!$       call moist_psat_ice_kij( wtem_d, esi_d )
+       call moist_psat_water( esw_d, wtem_d )
        !
        call thrmdyn_qd( qd_d, q_d )
        !
@@ -1764,14 +1759,14 @@ contains
     use mod_const, only : &
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
-    use mod_mp_saturation, only : &
-       moist_psat_water     => MP_SATURATION_psat_water_kij, &
-       moist_psat_ice       => MP_SATURATION_psat_ice_kij,   &
-       moist_qsat_water     => MP_SATURATION_qsat_water_kij, &
-       moist_qsat_ice       => MP_SATURATION_qsat_ice_kij,   &
-       moist_dqsw_dtem_rho  => MP_SATURATION_dqsw_dtem_rho_kij, &
-       moist_dqsi_dtem_rho  => MP_SATURATION_dqsi_dtem_rho_kij, &
-       moist_dqsw_dtem_dpre => MP_SATURATION_dqsw_dtem_dpre_kij
+    use mod_atmos_saturation, only : &
+       moist_psat_water     => ATMOS_SATURATION_psat_water, &
+       moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
+       moist_qsat_water     => ATMOS_SATURATION_qsat_water, &
+       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,   &
+       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
+       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
+       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
 
     integer, intent(in)  :: KA, IA, JA
@@ -1888,8 +1883,8 @@ contains
     nc_new(:,:,:)      = 0.0_RP
     nc_new_below(:,:,:)= 0.0_RP
     !
-    call moist_psat_water    ( tem, esw )
-    call moist_qsat_water    ( tem, pre, qsw )
+    call moist_psat_water( esw, tem )
+    call moist_qsat_water( qsw, tem, pre )
     r_qsw(:,:,:) = 1.0_RP/qsw
     !
     do k=KS, KE
@@ -2154,9 +2149,6 @@ contains
        xc, xr,               & ! in
        vt_xave,              & ! in
        dc_xave, dr_xave      ) ! in
-    use mod_mp_saturation, only : &
-       moist_psat_water     => MP_SATURATION_psat_water, &
-       moist_psat_ice       => MP_SATURATION_psat_ice
     implicit none
 
     integer, intent(in)  :: IA,JA,KA
@@ -2713,10 +2705,10 @@ contains
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
        thrmdyn_cp      => ATMOS_THERMODYN_cp
-    use mod_mp_saturation, only : &
-       moist_qsat_water_kij     => MP_SATURATION_qsat_water_kij,     &
-       moist_dqsw_dtem_rho_kij  => MP_SATURATION_dqsw_dtem_rho_kij,  &
-       moist_dqsw_dtem_dpre_kij => MP_SATURATION_dqsw_dtem_dpre_kij
+    use mod_atmos_saturation, only : &
+       moist_qsat_water     => ATMOS_SATURATION_qsat_water,     &
+       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
+       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
 
     integer, intent(in)    :: ntdiv                   ! [Add] 10/08/03
@@ -2846,9 +2838,9 @@ contains
          cpa,          & !--- out
          q,            & !--- in
          qd )            !--- in
-    call moist_qsat_water_kij    ( wtem, pre, qsw )
-    call moist_dqsw_dtem_rho_kij ( wtem, rho, dqswdtem_rho )
-    call moist_dqsw_dtem_dpre_kij( wtem, pre, dqswdtem_pre, dqswdpre_tem )
+    call moist_qsat_water    ( qsw, wtem, pre )
+    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
+    call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
     !
     do k=1, KA
        do j=1, JA
