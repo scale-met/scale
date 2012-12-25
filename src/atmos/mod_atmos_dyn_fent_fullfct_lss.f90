@@ -3989,7 +3989,7 @@ call TIME_rapend     ('DYN-fct')
        do j = JJS, JJE
        do i = IIS, IIE
           RHOT_RK(KS,i,j) = RHOT_RK(KS,i,j) &
-                          + dtrk * SST(1,i,j) * SFLX_QV(i,j) * RCDZ(KS)
+                          + dtrk * POTT(KS,i,j) * SFLX_QV(i,j) * RCDZ(KS)
        enddo
        enddo
 #ifdef DEBUG
