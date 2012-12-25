@@ -104,7 +104,11 @@ contains
   end subroutine CHECK
 #endif
 
-  subroutine ATMOS_PHY_TB_setup( do_calc )
+  subroutine ATMOS_PHY_TB_setup( &
+#ifdef DEBUG
+    do_calc &
+#endif
+    )
     use mod_grid, only : &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -133,7 +137,9 @@ contains
        COMM_wait
     implicit none
 
+#ifdef DEBUG
     logical, intent(in), optional :: do_calc
+#endif
 
     ! diagnostic variables
     real(RP) :: tke(KA,IA,JA) ! TKE
@@ -237,7 +243,11 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-    if ( present(do_calc) .and. .not. do_calc ) return
+#ifdef DEBUG
+    if ( present(do_calc) ) then
+       if ( do_calc ) return
+    end if
+#endif
 
     call ATMOS_PHY_TB_main( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)

@@ -248,9 +248,14 @@ contains
     if ( present(namelist_fid) ) then
        fid_conf = namelist_fid
        rewind(fid_conf)
-    else if ( present(namelist_filename) .and. trim(namelist_filename) /= '' ) then
-       open( fid_conf, file = trim(namelist_filename), &
-            form = 'formatted', status = 'old', iostat = ierr)
+    else if ( present(namelist_filename) ) then
+       if ( trim(namelist_filename) /= '' ) then
+          open( fid_conf, file = trim(namelist_filename), &
+               form = 'formatted', status = 'old', iostat = ierr)
+       else
+          call Log('I', '*** Brank namelist file was specified. Default used. ***')
+          fid_conf = -1
+       end if
     else
        call Log('I', '*** No namelist was specified. Default used. ***')
        fid_conf = -1
@@ -374,7 +379,9 @@ contains
     write(message,*) '*** Memory usage for history data buffer [Mbyte] : ', memsize/1024/1024
     call Log('I', message)
 
-    if ( (.not. present(namelist_fid)) .and. fid_conf > 0 ) close(fid_conf)
+    if ( (.not. present(namelist_fid)) ) then
+       if ( fid_conf > 0 ) close(fid_conf)
+    end if
 
     return
   end subroutine HistoryInit
@@ -749,9 +756,12 @@ contains
        call HistoryOutputList
     endif
 
-    if ( .not. ( present(force) .and. force ) .and. &
-         History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
-       return
+    if ( History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
+       if ( present(force) ) then
+          if ( .not. force ) return
+       else
+          return
+       end if
     end if
 
     if ( History_tsumsec(itemid) > eps ) then
