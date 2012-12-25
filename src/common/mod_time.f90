@@ -333,10 +333,10 @@ contains
 
     call TIME_sec2date( TIME_NOWDATE(:), TIME_NOWSEC )
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6)') '*** TIME: ', &
-               TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
-               TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
-               TIME_NOWMS,' STEP:',TIME_NOWSTEP
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
+               '*** TIME: ', TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
+                             TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
+                             TIME_NOWMS,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
 
   end subroutine TIME_checkstate
 

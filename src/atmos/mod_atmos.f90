@@ -53,6 +53,10 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
+    use mod_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_setup
+    use mod_atmos_saturation, only: &
+       ATMOS_SATURATION_setup
     use mod_atmos_vars, only: &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_sf => ATMOS_sw_phy_sf, &
@@ -66,8 +70,6 @@ contains
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
-    use mod_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_setup
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
     use mod_atmos_phy_sf, only: &
@@ -82,6 +84,8 @@ contains
     !---------------------------------------------------------------------------
 
     call ATMOS_THERMODYN_setup
+
+    call ATMOS_SATURATION_setup
 
     call ATMOS_vars_setup
 

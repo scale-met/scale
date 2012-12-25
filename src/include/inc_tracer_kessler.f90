@@ -1,7 +1,6 @@
-
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters
+  !++ scale3 tracer parameters (1-moment bulk 3 category)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 3
@@ -35,10 +34,10 @@
                  'QC', &
                  'QR'  /
 
-  data AQ_DESC / 'Water Vapor mixing ratio',   &
-                 'Cloud Water mixing ratio',   &
-                 'Rain Water mixing ratio'     /
+  data AQ_DESC / 'Water Vapor mixing ratio', &
+                 'Cloud Water mixing ratio', &
+                 'Rain Water mixing ratio'   /
 
-  data AQ_UNIT / 'kg/kg',  &
-                 'kg/kg',  &
-                 'kg/kg'   /
+  data AQ_UNIT / 'kg/kg', &
+                 'kg/kg', &
+                 'kg/kg'  /

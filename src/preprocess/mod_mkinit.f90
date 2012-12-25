@@ -61,9 +61,7 @@ module mod_mkinit
      hydro_buildrho_1d   => ATMOS_HYDRO_buildrho_1d,  &
      hydro_buildrho_temp => ATMOS_HYDRO_buildrho_temp
   use mod_atmos_saturation, only: &
-     saturation_qsat_1d    => ATMOS_SATURATION_qsat_1d,   &
-     saturation_qsat_sfc   => ATMOS_SATURATION_qsat_sfc,  &
-     saturation_qsat_water => ATMOS_SATURATION_qsat_water
+     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -314,8 +312,8 @@ contains
 
        ! make tracer bubble
        dist = ( (CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2 &
-            + ( (CX(i)-CZ_offset-BBL_CX)/BBL_RX )**2 &
-            + ( (CY(j)-CZ_offset-BBL_CY)/BBL_RY )**2
+            + ( (CX(i)-CX_offset-BBL_CX)/BBL_RX )**2 &
+            + ( (CY(j)-CY_offset-BBL_CY)/BBL_RY )**2
 
        bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(dist,1.0_RP) ) )**2
 
@@ -418,8 +416,8 @@ contains
                          qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc QV from RH
-    call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
-    call saturation_qsat_water( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_liq( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -787,8 +785,8 @@ contains
                             qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call saturation_qsat_1d( 1, 1, 1, qsat_sfc(:,1,1), temp_sfc(:,1,1), pres_sfc(:,1,1) )
-    call saturation_qsat_1d( KA,KS,KE,qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
@@ -931,8 +929,8 @@ contains
                          qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc QV from RH
-    call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
-    call saturation_qsat_water( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_liq( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
     do j = JS, JE
     do i = IS, IE
@@ -1082,8 +1080,8 @@ contains
                          qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc QV from RH
-    call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
-    call saturation_qsat_water( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_liq( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -2437,8 +2435,8 @@ contains
                                       temp_sfc(:,:,:), pres_sfc(:,:,:), pott_sfc(:,:,:), qv_sfc(:,:,:), qc_sfc(:,:,:)  )
 
     ! calc QV from RH
-    call saturation_qsat_sfc  ( qsat_sfc(:,:,:), temp_sfc(:,:,:), pres_sfc(:,:,:) )
-    call saturation_qsat_water( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_liq( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
     do j = JS, JE
     do i = IS, IE

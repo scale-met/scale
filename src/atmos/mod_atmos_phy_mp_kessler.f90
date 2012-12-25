@@ -2,13 +2,16 @@
 !> module Atmosphere / Physics Cloud Microphysics
 !!
 !! @par Description
-!!          Cloud Microphysics by Kessler parametarization
+!!          Cloud Microphysics by Kessler-type parametarization
+!!          Reference: Kessler(1969)
+!!                     Klemp and Wilhelmson(1978)
 !!
 !! @author H.Tomita and SCALE developpers
 !!
 !! @par History
 !! @li      2012-01-14 (Y.Miyamoto) [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2012-12-23 (H.Yashiro)  [mod] Reconstruction
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -29,6 +32,8 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
+  public :: MP_kessler
+  public :: MP_kessler_vterm
 
   !-----------------------------------------------------------------------------
   !
@@ -42,6 +47,8 @@ module mod_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
+  real(RP), public,  save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -51,8 +58,9 @@ module mod_atmos_phy_mp
   !++ Private parameters & variables
   !
   logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
+  logical, private, save  :: MP_donegative_fixer  = .true.  ! apply negative fixer?
 
-#define SCHEDULE schedule(static)
+  real(RP), private, save :: factor_vterm(KA) ! collection factor for terminal velocity of QR
 
   !-----------------------------------------------------------------------------
 contains
@@ -64,14 +72,21 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_comm, only: &
+       COMM_horizontal_mean
     use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_MP
+       ATMOS_TYPE_PHY_MP, &
+       DENS
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       MP_doreport_tendency
+       MP_doreport_tendency, &
+       MP_donegative_fixer
+
+    real(RP) :: rho_prof(KA) ! averaged profile of rho
 
     integer :: ierr
+    integer :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -81,7 +96,14 @@ contains
     if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
        call PRC_MPIstop
-    end if
+    endif
+
+    if (      I_QV <= 0 &
+         .OR. I_QC <= 0 &
+         .OR. I_QR <= 0 ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx KESSLER needs QV, QC, QR tracer. Check!'
+       call PRC_MPIstop
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -95,6 +117,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
+    ! Calculate collection factor for terminal velocity of QR
+    call COMM_horizontal_mean( rho_prof(:), DENS(:,:,:) )
+    rho_prof(:) = rho_prof(:) * 1.E-3_RP ! [kg/m3]->[g/cc]
+
+    do k = KS, KE
+       factor_vterm(k) = sqrt( rho_prof(KS)/rho_prof(k) )
+    enddo
+
+    vterm(:,:,:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_PHY_MP_setup
 
@@ -102,409 +134,263 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP
-    use mod_const, only: &
-       Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
-       CVdry  => CONST_CVdry,  &
-       CPovCV => CONST_CPovCV, &
-       Rvap   => CONST_Rvap,   &
-       CPvap  => CONST_CPvap,  &
-       CVvap  => CONST_CVvap,  &
-       EPSvap => CONST_EPSvap, &
-       P00    => CONST_PRE00,  &
-       T00    => CONST_TEM00,  &
-       PSAT0  => CONST_PSAT0,  &
-       LH0    => CONST_LH0
-    use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
-    use mod_grid, only : &
-       RCDZ => GRID_RCDZ
-    use mod_history, only: &
-       HIST_in
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &
        ATMOS_vars_total,    &
        DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
        RHOT, &
        QTRC
+    use mod_atmos_phy_mp_common, only: &
+       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
+       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
+       MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
+    use mod_atmos_thermodyn, only: &
+       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
+       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use mod_history, only: &
+       HIST_in
     implicit none
 
-    ! tendency
-    real(RP) :: dq_prcp (KA) ! tendency q (precipitation)
-    real(RP) :: dq_cond1(KA) ! tendency q (condensation)
-    real(RP) :: dq_cond2(KA) ! tendency q (condensation)
-    real(RP) :: dq_evap (KA) ! tendency q (evaporation)
-    real(RP) :: dq_auto (KA) ! tendency q (autoconversion)
-    real(RP) :: dq_coll (KA) ! tendency q (collection)
-    ! for output
-    real(RP) :: output_prcp(KA,IA,JA)
-    real(RP) :: output_cond(KA,IA,JA)
-    real(RP) :: output_evap(KA,IA,JA)
-    real(RP) :: output_auto(KA,IA,JA)
-    real(RP) :: output_coll(KA,IA,JA)
+    real(RP) :: RHOE  (KA,IA,JA)
+    real(RP) :: QTRC_t(KA,IA,JA,QA)
 
-    ! disgnostics
-    real(RP) :: pott(KA)    ! potential temperature [K]
-    real(RP) :: pres(KA)    ! pressure [Pa]
-    real(RP) :: temp(KA)    ! temperature [K]
-    real(RP) :: qvs(KA)     ! saturated water vapor
-    real(RP) :: Rmoist(KA)
-    real(RP) :: CPmoist(KA)
-    real(RP) :: CVmoist(KA)
-    real(RP) :: LEovSE(KA)  ! latent heat energy / sensible heat energy 
+    real(RP) :: temp (KA,IA,JA)
+    real(RP) :: pres (KA,IA,JA)
 
-    real(RP), parameter :: TVf1 = 36.34E0_RP  ! Durran and Klemp (1983)
-    real(RP), parameter :: TVf2 = 0.1364E0_RP ! Durran and Klemp (1983)
-    real(RP) :: rho_prof(KA) ! averaged profile of rho
-    real(RP) :: rho
-    real(RP) :: rho_fact(KA)
-    real(RP) :: vel1, vel2, vent
-
-    integer, parameter :: itelim = 1000
-    real(RP), parameter :: tt1 = 17.269E0_RP ! Tetens' formula
-    real(RP), parameter :: tt2 = 35.85E0_RP  ! Tetens' formula
-    real(RP) :: pt_prev
-    real(RP) :: efact
-
-    real(RP) :: diffq(KA)
-
-    integer :: k, i, j, iq, ite
+    real(RP) :: flux_rain(KA,IA,JA)
+    real(RP) :: flux_snow(KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(kessler)'
 
-    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-       ! total hydrometeor (before correction)
-       do k = 1, KA
-          diffq(k) = QTRC(k,i,j,I_QV) &
-                   + QTRC(k,i,j,I_QC) &
-                   + QTRC(k,i,j,I_QR)
-       enddo
+    if ( MP_donegative_fixer ) then
+       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
+                               RHOT(:,:,:),  & ! [INOUT]
+                               QTRC(:,:,:,:) ) ! [INOUT]
+    endif
 
-       ! remove negative value of hydrometeor (mass, number)
-       do iq = I_QV, I_QR
-       do k  = 1, KA
-          if ( QTRC(k,i,j,iq) < 0.E0_RP ) then
-             QTRC(k,i,j,iq) = 0.E0_RP
-          endif
-       enddo
-       enddo
+    call MP_kessler( QTRC_t(:,:,:,:), & ! [OUT]
+                     RHOT  (:,:,:),   & ! [INOUT]
+                     QTRC  (:,:,:,:), & ! [INOUT]
+                     DENS  (:,:,:)    ) ! [IN]
 
-       ! apply correction of hydrometeor to total density
-       do k  = 1, KA
-          DENS(k,i,j) = DENS(k,i,j)        &
-                      * ( 1.E0_RP             &
-                        + QTRC(k,i,j,I_QV) &
-                        + QTRC(k,i,j,I_QC) &
-                        + QTRC(k,i,j,I_QR) &
-                        - diffq(k)         ) ! after-before
-       enddo
-    enddo
-    enddo
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: after kessler main'
+    call ATMOS_vars_total
 
-    ! averaged profile of density [g/cc]
-    do k = KS, KE
-       rho = 0.0_RP
-       !$omp parallel do private(i,j) SCHEDULE collapse(2) reduction(+: rho)
-       do j = JS, JE
-       do i = IS, IE
-          rho = rho + DENS(k,i,j)
-       enddo
-       enddo
-       rho_prof(k) = rho
-    enddo
+    call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
+                           DENS (:,:,:),   & ! [IN]
+                           QTRC (:,:,:,:)  ) ! [IN]
 
-    rho_prof(KS) = rho_prof(KS) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
-    rho_fact(KS) = 1.0_RP
-    !$omp parallel do private(k) SCHEDULE
-    do k = KS+1, KE
-       rho_prof(k) = rho_prof(k) / real(IMAX*JMAX,kind=RP) * 1.E-3_RP
-       rho_fact(k) = sqrt( rho_prof(KS)/rho_prof(k) )
-    enddo
+    call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
+                              pres(:,:,:),  & ! [OUT]
+                              DENS(:,:,:),  & ! [IN]
+                              RHOT(:,:,:),  & ! [IN]
+                              QTRC(:,:,:,:) ) ! [IN]
 
-    !$omp parallel do private(i,j,k,vel1,vel2,vent,pt_prev,efact,iq,ite,dq_prcp,dq_cond1,dq_cond2,dq_evap,dq_auto,dq_coll,pott,pres,temp,qvs,Rmoist,CPmoist,CVmoist,LEovSE) SCHEDULE collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-
-       do k = KS, KE
-          pott(k) = RHOT(k,i,j) / DENS(k,i,j)
-
-          Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
-          CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
-          CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
-       end do
-
-#if defined(__INTEL_COMPILER)
-       do k = KS, KE
-          pres(k) = DENS(k, i, j) * pott(k)  * Rmoist(k) / P00
-       enddo
-       if ( RP == 8 ) then
-          call vdpowx( KE, PRES(:), CPovCV, PRES(:) )
-       else
-          call vspowx( KE, PRES(:), CPovCV, PRES(:) )
-       end if
-       do k = KS, KE
-          PRES(k) = PRES(k) * P00
-       enddo
-#else
-       do k = KS, KE
-          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
-       enddo
-#endif
-       do k = KS, KE
-          temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
-          qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
-
-          LEovSE(k) = ( LH0 * pott(k) ) / ( CPdry * temp(k) ) ! use prior value of temp & pt
-       enddo
-
-       ! Saturation adjustment
-       do k = KS, KE
-          if ( QTRC(k,i,j,I_QV) > qvs(k) ) then ! supersaturatd
-
-             do ite = 1, itelim
-                pt_prev = pott(k)
-
-                Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
-                CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
-                CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
-
-                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
-                temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
-                qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
-
-                efact = LEovSE(k) * CVdry/CVmoist(k) &
-                      - pott(k) * Rvap/CVmoist(k) * ( 1.E0_RP - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
-
-                dq_cond1(k) = ( QTRC(k,i,j,I_QV)-qvs(k) ) &
-                            / ( 1.E0_RP + qvs(k) * LH0 / CPdry * tt1 * ( T00-tt2 ) / (temp(k)-tt2) )
-
-                pott(k)          = pott(k)          + dq_cond1(k) * efact
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) - dq_cond1(k)
-                QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + dq_cond1(k)
-
-                if ( QTRC(k,i,j,I_QC) < 0.E0_RP ) then ! re-adjust negative value
-                   pott(k)          = pott(k)          - QTRC(k,i,j,I_QC) * efact
-                   QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + QTRC(k,i,j,I_QC)
-                   QTRC(k,i,j,I_QC) = 0.E0_RP
-                endif
-
-                if( abs( pott(k)-pt_prev ) <= 1.E-4_RP ) exit ! converged
-             enddo
-
-             if ( ite > itelim ) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx not converged!', &
-                           k,i,j,pt_prev,pott(k),QTRC(k,i,j,I_QV),QTRC(k,i,j,I_QC),dq_cond1(k)
-             endif
-
-          else
-             dq_cond1(k) = 0.E0_RP
-          endif
-       enddo
-
-       ! Evaporation
-       do k = KS, KE
-          if ( QTRC(k,i,j,I_QR) > 0.E0_RP ) then
-             Rmoist(k) = Rdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap * QTRC(k,i,j,I_QV)
-
-             pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
-             temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
-             qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
-
-             if ( qvs(k) > QTRC(k,i,j,I_QV) ) then ! unsaturatd
-                vent = 1.6E0_RP + 30.3922E0_RP * ( DENS(k,i,j) * QTRC(k,i,j,I_QR) )**0.2046E0_RP
-
-                ! --- evaporation rate (Ogura and Takahashi, 1971) ---
-                dq_evap(k) = ( qvs(k) - QTRC(k,i,j,I_QV) ) &
-                           / qvs(k) * vent * ( DENS(k,i,j) * QTRC(k,i,j,I_QR) )**0.525E0_RP   &
-                           / ( DENS(k,i,j) * ( 2.03E4_RP + 9.584E6_RP / ( pres(k) * qvs(k) ) ) )
-                dq_evap(k) = min( dq_evap(k), QTRC(k,i,j,I_QR)/dt )
-
-                if ( QTRC(k,i,j,I_QV) + dq_evap(k)*dt > qvs(k) ) then
-                   dq_evap(k) = ( qvs(k)-QTRC(k,i,j,I_QV) ) / dt
-                end if
-             else
-                dq_evap(k) = 0.E0_RP
-             endif
-          else
-             dq_evap(k) = 0.E0_RP
-          endif
-       enddo
-
-       do k = KS, KE
-          ! Autoconversion (ARPS)
-          if ( QTRC(k,i,j,I_QC) > 1.E-3_RP ) then
-             dq_auto(k) = 1.E-3_RP * ( QTRC(k,i,j,I_QC) - 1.E-3_RP )
-          else
-             dq_auto(k) = 0.E0_RP
-          endif
-
-          ! Collection
-          if ( QTRC(k,i,j,I_QC) > 0.E0_RP .and. QTRC(k,i,j,I_QR) > 0.E0_RP ) then
-             dq_coll(k) = 2.2E0_RP * QTRC(k,i,j,I_QC) * QTRC(k,i,j,I_QR)**0.875E0_RP
-          else
-             dq_coll(k) = 0.E0_RP
-          endif
-
-!          if ( ( dq_auto + dq_coll )*dt > QTRC(k,i,j,I_QC) ) then
-!             dq_auto = QTRC(k,i,j,I_QC) * dq_auto / ( dq_auto + dq_coll )
-!             dq_coll = QTRC(k,i,j,I_QC) * dq_coll / ( dq_auto + dq_coll )
-!          endif
-       enddo
-
-       ! Precipitation flux
-       do k = KS, KE
-          vel1 = TVf1 * ( rho_prof(k+1) * QTRC(k+1,i,j,I_QR) )**TVf2 * rho_fact(k+1)
-          vel2 = TVf1 * ( rho_prof(k  ) * QTRC(k  ,i,j,I_QR) )**TVf2 * rho_fact(k  )
-          if( k == KE ) vel1 = 0.E0_RP
-
-          dq_prcp(k) = ( DENS(k+1,i,j) * QTRC(k+1,i,j,I_QR) * vel1 &
-                       - DENS(k  ,i,j) * QTRC(k  ,i,j,I_QR) * vel2 ) * RCDZ(k)
-       enddo
-
-       ! Update POTT, QV, QC, QR
-       do k = KS, KE
-          Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
-          CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
-          CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
-
-          efact = LEovSE(k) * CVdry/CVmoist(k) &
-                - pott(k) * Rvap/CVmoist(k) * ( 1.E0_RP - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
-
-          pott(k)          = pott(k)          + (                       -dq_evap(k) )*dt * efact
-          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + (                        dq_evap(k) )*dt
-          QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + ( -dq_auto(k)-dq_coll(k)            )*dt
-          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) &
-               + (  dq_auto(k)+dq_coll(k)-dq_evap(k) )*dt + dq_prcp(k)/DENS(k,i,j)*dt
-       enddo
-
-       ! negtive fixer
-       do k = KS, KE
-          QTRC(k,i,j,I_QV) = max( QTRC(k,i,j,I_QV), 0.E0_RP )
+    call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
+                         RHOT(:,:,:),  & ! [IN]
+                         QTRC(:,:,:,:) ) ! [IN]
  
-          if ( QTRC(k,i,j,I_QC) < 0.E0_RP ) then
-             pott(k)          = pott(k)          - QTRC(k,i,j,I_QC) * efact
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + QTRC(k,i,j,I_QC)
-             QTRC(k,i,j,I_QC) = 0.E0_RP
-          endif
+    call MP_precipitation( flux_rain(:,:,:), & ! [OUT]
+                           flux_snow(:,:,:), & ! [OUT]
+                           DENS (:,:,:),     & ! [INOUT]
+                           MOMZ (:,:,:),     & ! [INOUT]
+                           MOMX (:,:,:),     & ! [INOUT]
+                           MOMY (:,:,:),     & ! [INOUT]
+                           RHOE (:,:,:),     & ! [INOUT]
+                           QTRC (:,:,:,:),   & ! [INOUT]
+                           vterm(:,:,:,:),   & ! [IN]
+                           temp (:,:,:)      ) ! [IN]
 
-          if ( QTRC(k,i,j,I_QR) < 0.E0_RP ) then
-             pott(k)          = pott(k)          - QTRC(k,i,j,I_QR) * efact
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + QTRC(k,i,j,I_QR)
-             QTRC(k,i,j,I_QR) = 0.E0_RP
-          endif
-       enddo
+    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
+                         RHOE(:,:,:),  & ! [IN]
+                         QTRC(:,:,:,:) ) ! [IN]
 
-       ! Saturation adjustment (again)
-       do k = KS, KE
-                Rmoist (k) = Rdry  * (1.E0_RP-QTRC(k,i,j,I_QV)) + Rvap  * QTRC(k,i,j,I_QV)
-                CPmoist(k) = CPdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CPvap * QTRC(k,i,j,I_QV)
-                CVmoist(k) = CVdry * (1.E0_RP-QTRC(k,i,j,I_QV)) + CVvap * QTRC(k,i,j,I_QV)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: after precipitation'
+    call ATMOS_vars_total
 
-          pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
-          temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
-          qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) ) ! Tetens' formula
+    call MP_saturation_adjustment( RHOT(:,:,:),   & ! [INOUT]
+                                   QTRC(:,:,:,:), & ! [INOUT]
+                                   DENS(:,:,:)    ) ! [IN]
 
-          if ( QTRC(k,i,j,I_QV) > qvs(k) ) then ! supersaturatd
+    if ( MP_donegative_fixer ) then
+       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
+                               RHOT(:,:,:),  & ! [INOUT]
+                               QTRC(:,:,:,:) ) ! [INOUT]
+    endif
 
-             do ite = 1, itelim
-                pt_prev = pott(k)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: after mp'
 
-                pres(k) = P00 * ( DENS(k,i,j) * pott(k) * Rmoist(k) / P00 )**CPovCV
-                temp(k) = pres(k) / ( DENS(k,i,j) * Rmoist(k) )
-                qvs (k) = EPSvap * PSAT0 / pres(k) * exp( tt1 * (temp(k)-T00) / (temp(k)-tt2) )
-
-                efact = LEovSE(k) * CVdry/CVmoist(k)                                               &
-                      - pott(k) * Rvap/CVmoist(k) * ( 1.E0_RP - (Rdry/Rmoist(k)) / (CPdry/CPmoist(k)) )
-
-                dq_cond2(k) = ( QTRC(k,i,j,I_QV)-qvs(k) ) &
-                            / ( 1.E0_RP + qvs(k) * LH0 / CPdry * tt1 * ( T00-tt2 ) / (temp(k)-tt2) )
-
-                pott(k)          = pott(k)          + dq_cond2(k) * efact
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) - dq_cond2(k)
-                QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + dq_cond2(k)
-
-                if ( QTRC(k,i,j,I_QC) < 0.E0_RP ) then ! re-adjust negative value
-                   pott(k)          = pott(k)          - QTRC(k,i,j,I_QC) * efact
-                   QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + QTRC(k,i,j,I_QC)
-                   QTRC(k,i,j,I_QC) = 0.E0_RP
-                endif
-
-                if( abs( pott(k)-pt_prev ) <= 1.E-4_RP ) exit ! converged
-             enddo
-
-             if ( ite > itelim ) then
-                if( IO_L ) write(IO_FID_LOG,*) 'xxx not converged!(after)', &
-                           k,i,j,pt_prev,pott(k),QTRC(k,i,j,I_QV),QTRC(k,i,j,I_QC),dq_cond2(k)
-             endif
-
-          else
-             dq_cond2(k) = 0.E0_RP
-          endif
-       enddo
-
-       do k = KS, KE
-          RHOT(k,i,j) = pott(k) * DENS(k,i,j)
-       enddo
-
-       if ( MP_doreport_tendency ) then
-          do k = KS, KE
-             output_prcp(k,i,j) = dq_prcp (k)
-             output_cond(k,i,j) = dq_cond1(k) + dq_cond2(k)
-             output_evap(k,i,j) = dq_evap (k)
-             output_auto(k,i,j) = dq_auto (k)
-             output_coll(k,i,j) = dq_coll (k)
-          enddo
-       endif
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k,iq) SCHEDULE collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-       ! total hydrometeor (before correction)
-       do k = 1, KA
-          diffq(k) = QTRC(k,i,j,I_QV) &
-                   + QTRC(k,i,j,I_QC) &
-                   + QTRC(k,i,j,I_QR)
-       enddo
-
-       ! remove negative value of hydrometeor (mass, number)
-       do iq = I_QV, I_QR
-       do k  = 1, KA
-          if ( QTRC(k,i,j,iq) < 0.E0_RP ) then
-             QTRC(k,i,j,iq) = 0.E0_RP
-          endif
-       enddo
-       enddo
-
-       ! apply correction of hydrometeor to total density
-       do k  = 1, KA
-          DENS(k,i,j) = DENS(k,i,j)        &
-                      * ( 1.E0_RP             &
-                        + QTRC(k,i,j,I_QV) &
-                        + QTRC(k,i,j,I_QC) &
-                        + QTRC(k,i,j,I_QR) &
-                        - diffq(k)         ) ! after-before
-       enddo
-    enddo
-    enddo
-
+    ! fill halo
     call ATMOS_vars_fillhalo
 
+    ! log report total (optional)
     call ATMOS_vars_total
 
     if ( MP_doreport_tendency ) then
-       call HIST_in( output_prcp(:,:,:), 'dqprcp', 'tendency by precipitation' , 'kg/kg', dt )
-       call HIST_in( output_cond(:,:,:), 'dqcond', 'tendency by condensation'  , 'kg/kg', dt )
-       call HIST_in( output_evap(:,:,:), 'dqevap', 'tendency by evaporation'   , 'kg/kg', dt )
-       call HIST_in( output_auto(:,:,:), 'dqauto', 'tendency by autoconversion', 'kg/kg', dt )
-       call HIST_in( output_coll(:,:,:), 'dqcoll', 'tendency by collection'    , 'kg/kg', dt )
     endif
 
     return
   end subroutine ATMOS_PHY_MP
+
+  !-----------------------------------------------------------------------------
+  !> Kessler-type warm rain microphysics
+  !-----------------------------------------------------------------------------
+  subroutine MP_kessler( &
+       QTRC_t, &
+       RHOT0,  &
+       QTRC0,  &
+       DENS0   )
+    use mod_const, only: &
+       LHV00 => CONST_LH00
+    use mod_time, only: &
+       dt => TIME_DTSEC_ATMOS_PHY_MP
+    use mod_atmos_thermodyn, only: &
+       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
+       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use mod_atmos_saturation, only: &
+       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
+    implicit none
+
+    real(RP), intent(out)   :: QTRC_t(KA,IA,JA,QA)
+    real(RP), intent(inout) :: RHOT0 (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS0 (KA,IA,JA)
+
+    ! working
+    real(RP) :: dens  ! density      [kg/m3]
+    real(RP) :: rhot  ! density * PT [K*kg/m3]
+    real(RP) :: q(QA) ! tracer Q [kg/kg]
+    real(RP) :: temp  ! temperature [K]
+    real(RP) :: pres  ! pressure [Pa]
+    real(RP) :: rhoe  ! density * internal energy
+    real(RP) :: qsat  ! saturated water vapor
+
+    ! tendency
+    real(RP) :: dq_evap ! tendency q (evaporation)
+    real(RP) :: dq_auto ! tendency q (autoconversion)
+    real(RP) :: dq_accr ! tendency q (accretion)
+    real(RP) :: dqv, dqc, dqr, correct
+
+    real(RP) :: vent_factor ! ventilation factor
+
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       dq_evap = 0.0_RP
+       dq_auto = 0.0_RP
+       dq_accr = 0.0_RP
+
+       ! store to work
+       dens = DENS0(k,i,j)
+       rhot = RHOT0(k,i,j)
+       do iq = I_QV, I_QR
+          q(iq) = QTRC0(k,i,j,iq)
+       enddo
+
+       call THERMODYN_temp_pres( temp, & ! [OUT]
+                                 pres, & ! [OUT]
+                                 dens, & ! [IN]
+                                 rhot, & ! [IN]
+                                 q(:)  ) ! [IN]
+
+       call THERMODYN_rhoe( rhoe, & ! [OUT]
+                            rhot, & ! [IN]
+                            q(:)  ) ! [IN]
+
+       call SATURATION_dens2qsat_liq( qsat, & ! [OUT]
+                                      temp, & ! [IN]
+                                      dens  ) ! [IN]
+
+
+       !##### Start Main #####
+
+       ! Auto-conversion (QC->QR)
+       dq_auto = 1.E-3_RP * max( q(I_QC)-1.E-3_RP, 0.0_RP )
+
+       ! Accretion (QC->QR)
+       dq_accr = 2.2_RP * q(I_QC) * q(I_QR)**0.875_RP
+
+       ! Evaporation (QR->QV)
+       vent_factor = 1.6_RP + 124.9_RP * ( dens * q(I_QR) )**0.2046_RP
+
+       dq_evap = max( qsat-q(I_QV), 0.0_RP ) / qsat / dens  &
+               * vent_factor * ( dens * q(I_QR) )**0.525_RP &
+               / ( 5.4E5_RP + 2.55E8_RP / ( pres*qsat ) )
+
+       ! tendency QV, QC, QR with limiter
+       dqv = (                  dq_evap ) * dt
+       dqc = ( -dq_auto-dq_accr         ) * dt
+       dqr = (  dq_auto+dq_accr-dq_evap ) * dt
+       correct = dqc + dqr
+
+       dqc = max( -q(I_QC), dqc )
+       dqr = max( -q(I_QR), dqr )
+       dqv = dqv + correct - ( dqc + dqr )
+
+       rhoe = rhoe - LHV00 * dqv
+
+       !##### End Main #####
+
+
+       ! update from 1D work
+
+       call THERMODYN_rhot( rhot, & ! [OUT]
+                            rhoe, & ! [IN]
+                            q(:)  ) ! [IN]
+
+       QTRC_t(k,i,j,I_QV) = dqv
+       QTRC_t(k,i,j,I_QC) = dqc
+       QTRC_t(k,i,j,I_QR) = dqr
+
+       QTRC0(k,i,j,I_QV) = q(I_QV) + dqv
+       QTRC0(k,i,j,I_QC) = q(I_QC) + dqc
+       QTRC0(k,i,j,I_QR) = q(I_QR) + dqr
+
+       RHOT0(k,i,j) = rhot
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MP_kessler
+
+  !-----------------------------------------------------------------------------
+  !> Kessler-type warm rain microphysics (terminal velocity)
+  !-----------------------------------------------------------------------------
+  subroutine MP_kessler_vterm( &
+       vterm, &
+       DENS,  &
+       QTRC   )
+    implicit none
+
+    real(RP), intent(inout) :: vterm(KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC (KA,IA,JA,QA)
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    ! only update QR
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       vterm(k,i,j,I_QR) = - 36.34_RP * ( DENS(k,i,j) * QTRC(k,i,j,I_QR) )**0.1364_RP * factor_vterm(k)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MP_kessler_vterm
 
 end module mod_atmos_phy_mp 
