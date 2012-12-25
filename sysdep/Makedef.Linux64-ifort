@@ -20,9 +20,12 @@ endif
 
 FFLAGS_DYN ?= $(FFLAGS)
 
-FFLAGS_DEBUG ?= -fpp3 -O0       \
+FFLAGS_DEBUG ?= -fpp3 -O0 -g      \
 	       -mkl=sequential \
-	       -check all -warn all -g -traceback -fpe0 -DDEBUG
+	       -check all -warn all -warn declarations -std \
+               -CB -check uninit \
+               -fpe0 -traceback \
+               -DDEBUG
 
 MODDIROPT ?= -module
 

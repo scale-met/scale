@@ -7,7 +7,12 @@ FC     = mpif90
 FFLAGS = -O3 -cpp
 FFLAGS_DYN ?= $(FFLAGS)
 
-FFLAGS_DEBUG ?= -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero -finit-real=nan
+FFLAGS_DEBUG ?= -cpp -O0 -g \
+                -fcheck=all -Wall -pedantic \
+                -fbounds-check -Wuninitialized \
+                -ffpe-trap=invalid,overflow,zero -finit-real=nan \
+                -fbacktrace \
+                -DDEBUG
 
 MODDIROPT ?= -J
 
