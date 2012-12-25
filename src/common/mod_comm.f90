@@ -2078,9 +2078,7 @@ contains
        PRC_MPIstop
     use mod_geometrics, only: &
        area    => GEOMETRICS_area,    &
-       vol     => GEOMETRICS_vol,     &
-       totarea => GEOMETRICS_totarea, &
-       totvol  => GEOMETRICS_totvol
+       vol     => GEOMETRICS_vol
     implicit none
 
     real(RP),         intent(out) :: allstatval

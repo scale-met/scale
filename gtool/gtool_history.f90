@@ -253,9 +253,14 @@ contains
     if ( present(namelist_fid) ) then
        fid_conf = namelist_fid
        rewind(fid_conf)
-    else if ( present(namelist_filename) .and. trim(namelist_filename) /= '' ) then
-       open( fid_conf, file = trim(namelist_filename), &
-            form = 'formatted', status = 'old', iostat = ierr)
+    else if ( present(namelist_filename) ) then
+       if ( trim(namelist_filename) /= '' ) then
+          open( fid_conf, file = trim(namelist_filename), &
+               form = 'formatted', status = 'old', iostat = ierr)
+       else
+          call Log('I', '*** Brank namelist file was specified. Default used. ***')
+          fid_conf = -1
+       end if
     else
        call Log('I', '*** No namelist was specified. Default used. ***')
        fid_conf = -1
@@ -379,7 +384,9 @@ contains
     write(message,*) '*** Memory usage for history data buffer [Mbyte] : ', memsize/1024/1024
     call Log('I', message)
 
-    if ( (.not. present(namelist_fid)) .and. fid_conf > 0 ) close(fid_conf)
+    if ( (.not. present(namelist_fid)) ) then
+       if ( fid_conf > 0 ) close(fid_conf)
+    end if
 
     return
   end subroutine HistoryInit
@@ -751,14 +758,12 @@ contains
   subroutine HistoryPut1DNameSP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -772,21 +777,19 @@ contains
        end if
     end do
 
-    call HistoryPut1DIdSP(itemid, var, dt, force)
+    call HistoryPut1DIdSP(itemid, var, dt)
 
     return
   end subroutine HistoryPut1DNameSP
   subroutine HistoryPut1DIdSP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(1), idx
     integer :: i
@@ -817,14 +820,12 @@ contains
   subroutine HistoryPut1DNameDP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -838,21 +839,19 @@ contains
        end if
     end do
 
-    call HistoryPut1DIdDP(itemid, var, dt, force)
+    call HistoryPut1DIdDP(itemid, var, dt)
 
     return
   end subroutine HistoryPut1DNameDP
   subroutine HistoryPut1DIdDP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(1), idx
     integer :: i
@@ -883,14 +882,12 @@ contains
   subroutine HistoryPut2DNameSP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -904,21 +901,19 @@ contains
        end if
     end do
 
-    call HistoryPut2DIdSP(itemid, var, dt, force)
+    call HistoryPut2DIdSP(itemid, var, dt)
 
     return
   end subroutine HistoryPut2DNameSP
   subroutine HistoryPut2DIdSP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:,:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(2), idx
     integer :: i, j
@@ -953,14 +948,12 @@ contains
   subroutine HistoryPut2DNameDP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -974,21 +967,19 @@ contains
        end if
     end do
 
-    call HistoryPut2DIdDP(itemid, var, dt, force)
+    call HistoryPut2DIdDP(itemid, var, dt)
 
     return
   end subroutine HistoryPut2DNameDP
   subroutine HistoryPut2DIdDP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:,:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(2), idx
     integer :: i, j
@@ -1023,14 +1014,12 @@ contains
   subroutine HistoryPut3DNameSP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:,:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1044,21 +1033,19 @@ contains
        end if
     end do
 
-    call HistoryPut3DIdSP(itemid, var, dt, force)
+    call HistoryPut3DIdSP(itemid, var, dt)
 
     return
   end subroutine HistoryPut3DNameSP
   subroutine HistoryPut3DIdSP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(SP),         intent(in)           :: var(:,:,:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(3), idx
     integer :: i, j, k
@@ -1097,14 +1084,12 @@ contains
   subroutine HistoryPut3DNameDP( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:,:)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1118,21 +1103,19 @@ contains
        end if
     end do
 
-    call HistoryPut3DIdDP(itemid, var, dt, force)
+    call HistoryPut3DIdDP(itemid, var, dt)
 
     return
   end subroutine HistoryPut3DNameDP
   subroutine HistoryPut3DIdDP( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(DP),         intent(in)           :: var(:,:,:)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(3), idx
     integer :: i, j, k
@@ -1197,9 +1180,12 @@ contains
        call HistoryOutputList
     endif
 
-    if ( .not. ( present(force) .and. force ) .and. &
-         History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
-       return
+    if ( History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
+       if ( present(force) ) then
+          if ( .not. force ) return
+       else
+          return
+       end if
     end if
 
     if ( History_tsumsec(itemid) > eps ) then
@@ -1257,9 +1243,12 @@ contains
        call HistoryOutputList
     endif
 
-    if ( .not. ( present(force) .and. force ) .and. &
-         History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
-       return
+    if ( History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
+       if ( present(force) ) then
+          if ( .not. force ) return
+       else
+          return
+       end if
     end if
 
     if ( History_tsumsec(itemid) > eps ) then
@@ -1305,10 +1294,13 @@ contains
     real(SP), intent(in) :: time
     logical,  intent(in), optional :: force
 
+    logical :: fforce = .false.
     integer :: n
 
+    if ( present(force) ) fforce = force
+
     do n = 1, History_id_count
-       call HistoryWrite( n, time, force )
+       call HistoryWrite( n, time, fforce )
     end do
 
     return
@@ -1322,10 +1314,13 @@ contains
     real(DP), intent(in) :: time
     logical,  intent(in), optional :: force
 
+    logical :: fforce = .false.
     integer :: n
 
+    if ( present(force) ) fforce = force
+
     do n = 1, History_id_count
-       call HistoryWrite( n, time, force )
+       call HistoryWrite( n, time, fforce )
     end do
 
     return
@@ -1524,7 +1519,7 @@ contains
     call Log('I', '============================================================================')
  
     do n = 1, History_id_count
-       write(message,'(1x,A,I10,1x,f13.3,1x,L)') History_item(n), History_size(n), History_tintsec(n), History_tavg(n)
+       write(message,'(1x,A,I10,1x,f13.3,1x,L8)') History_item(n), History_size(n), History_tintsec(n), History_tavg(n)
        call Log('I', message)
     enddo
 

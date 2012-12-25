@@ -212,11 +212,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
     use mod_stdio, only : &
-       IO_FID_CONF, &
        IO_SYSCHR
     implicit none
-
-    character(len=IO_SYSCHR) :: request = 'STOP'
 
     integer :: ierr
     !---------------------------------------------------------------------------
