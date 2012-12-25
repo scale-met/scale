@@ -4404,11 +4404,11 @@ contains
              !
 
              if( PLCdep_alt < -eps )then
-                PNCdep = min(0.0_RP, ((lc(k,i,j)+PLCdep_alt*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
+                PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep_alt*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
              else
-                PNCdep = 0.0_RP
+                PNCdep(k,i,j) = 0.0_RP
              end if
-             if( PLIdep(k,i,j) < -eps )then
+             if( PLIdep_alt < -eps )then
                 PNIdep(k,i,j) = min(0.0_RP, ((li(k,i,j)+PLIdep_alt*dt)*r_xi_ccn - ni(k,i,j))*r_dt )
              else
                 PNIdep(k,i,j) = 0.0_RP
@@ -4422,7 +4422,6 @@ contains
              PLSdep(k,i,j) = PLSdep_alt
              PLGdep(k,i,j) = PLGdep_alt
              PNRdep(k,i,j) = PNRdep_alt
-             PNIdep(k,i,j) = PNIdep_alt
              PNSdep(k,i,j) = PNSdep_alt
              PNGdep(k,i,j) = PNGdep_alt
              !
@@ -4457,8 +4456,6 @@ contains
                 dep_dqc = 0.0_RP
                 dep_dqr = 0.0_RP
              end if
-             !
-             fac2    = 1.0_RP
              !    always supersaturated
              if      ( (ddep >  eps) .and. (dlvsi > eps) )then
                 fac2    = min(dlvsi,ddep)/ddep
@@ -4613,7 +4610,7 @@ contains
        enddo
 
     enddo
-    end do
+    enddo
     !
     return
   
