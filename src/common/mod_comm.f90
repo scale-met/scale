@@ -53,6 +53,19 @@ module mod_comm
   public :: COMM_total
   public :: COMM_horizontal_mean
 
+  interface COMM_vars
+     module procedure COMM_vars_2D
+     module procedure COMM_vars_3D
+  end interface COMM_vars
+  interface COMM_vars8
+     module procedure COMM_vars8_2D
+     module procedure COMM_vars8_3D
+  end interface COMM_vars8
+  interface COMM_wait
+     module procedure COMM_wait_2D
+     module procedure COMM_wait_3D
+  end interface COMM_WAIT
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -83,6 +96,11 @@ module mod_comm
   integer, private, save :: datasize_NS8
   integer, private, save :: datasize_WE
   integer, private, save :: datasize_4C
+
+  integer, private, save :: datasize_2D_NS4
+  integer, private, save :: datasize_2D_NS8
+  integer, private, save :: datasize_2D_WE
+  integer, private, save :: datasize_2D_4C
 
   integer, private, save :: datatype
 
@@ -160,6 +178,11 @@ contains
     datasize_WE  = JMAX * KA * IHALO
     datasize_4C  =        KA * IHALO
 
+    datasize_2D_NS4 = IA   * JHALO
+    datasize_2D_NS8 = IMAX
+    datasize_2D_WE  = JMAX * IHALO
+    datasize_2D_4C  =        IHALO
+
     allocate( recvpack_W2P(datasize_WE,COMM_vsize_max) )
     allocate( recvpack_E2P(datasize_WE,COMM_vsize_max) )
     allocate( sendpack_P2W(datasize_WE,COMM_vsize_max) )
@@ -208,7 +231,7 @@ contains
   end subroutine COMM_setup
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_vars(var, vid)
+  subroutine COMM_vars_3D(var, vid)
     use mod_process, only : &
        PRC_next, &
        PRC_W,    &
@@ -411,10 +434,10 @@ contains
     call TIME_rapend  ('COMM vars MPI')
 
     return
-  end subroutine COMM_vars
+  end subroutine COMM_vars_3D
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_vars8(var, vid)
+  subroutine COMM_vars8_3D(var, vid)
     use mod_process, only : &
        PRC_next, &
        PRC_W,    &
@@ -822,10 +845,10 @@ contains
     call TIME_rapend  ('COMM vars MPI')
 
     return
-  end subroutine COMM_vars8
+  end subroutine COMM_vars8_3D
 
   !-----------------------------------------------------------------------------
-  subroutine COMM_wait(var, vid)
+  subroutine COMM_wait_3D(var, vid)
     use mod_process, only : &
        PRC_next, &
        PRC_W,    &
@@ -1056,7 +1079,786 @@ contains
     call TIME_rapend  ('COMM wait MPI')
 
     return
-  end subroutine COMM_wait
+  end subroutine COMM_wait_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_vars_2D(var, vid)
+    use mod_process, only : &
+       PRC_next, &
+       PRC_W,    &
+       PRC_N,    &
+       PRC_E,    &
+       PRC_S
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:)
+    integer, intent(in)    :: vid
+
+    integer :: ireqc, tag
+    integer :: ierr
+    integer :: i, j, n
+    !---------------------------------------------------------------------------
+
+    tag = vid * 100
+    ireqc = 1
+
+    call TIME_rapstart('COMM vars MPI')
+
+    if( IsAllPeriodic ) then
+    !--- periodic condition
+        !-- From 4-Direction HALO communicate
+        ! From S
+        call MPI_IRECV( var(:,JS-JHALO:JS-1), datasize_2D_NS4,        &
+                        datatype, PRC_next(PRC_S), tag+1, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+        ireqc = ireqc + 1
+
+        ! From N
+        call MPI_IRECV( var(:,JE+1:JE+JHALO), datasize_2D_NS4,        &
+                        datatype, PRC_next(PRC_N), tag+2, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+        ireqc = ireqc + 1
+
+        ! From E
+        call MPI_IRECV( recvpack_E2P(:,vid), datasize_2D_WE,       &
+                        datatype, PRC_next(PRC_E), tag+3, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+        ireqc = ireqc + 1
+
+        ! From W
+        call MPI_IRECV( recvpack_W2P(:,vid), datasize_2D_WE,       &
+                        datatype, PRC_next(PRC_W), tag+4, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+        ireqc = ireqc + 1
+
+        !-- To 4-Direction HALO communicate
+        !--- packing packets to West
+        do j = JS, JE
+        do i = IS, IS+IHALO-1
+            n =  (j-JS) * IHALO &
+               + (i-IS)
+            sendpack_P2W(n,vid) = var(i,j)
+        enddo
+        enddo
+
+        !--- packing packets to East
+        do j = JS, JE
+        do i = IE-IHALO+1, IE
+            n =  (j-JS)         * IHALO &
+               + (i-IE+IHALO-1)
+            sendpack_P2E(n,vid) = var(i,j)
+        enddo
+        enddo
+
+        ! To W HALO communicate
+        call MPI_ISEND( sendpack_P2W(:,vid), datasize_2D_WE,       &
+                        datatype, PRC_next(PRC_W), tag+3, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+        ireqc = ireqc + 1
+
+        ! To E HALO communicate
+        call MPI_ISEND( sendpack_P2E(:,vid), datasize_2D_WE,       &
+                        datatype, PRC_next(PRC_E), tag+4, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+        ireqc = ireqc + 1
+
+        ! To N HALO communicate
+        call MPI_ISEND( var(:,JE-JHALO+1:JE), datasize_2D_NS4,        &
+                        datatype, PRC_next(PRC_N), tag+1, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+        ireqc = ireqc + 1
+
+        ! To S HALO communicate
+        call MPI_ISEND( var(:,JS:JS+JHALO-1), datasize_2D_NS4,        &
+                        datatype, PRC_next(PRC_S), tag+2, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+        ireqc = ireqc + 1
+
+    else
+    !--- non-periodic condition
+        !-- From 4-Direction HALO communicate
+        ! From S
+        if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( var(:,JS-JHALO:JS-1), datasize_2D_NS4,        &
+                            datatype, PRC_next(PRC_S), tag+1, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+            ireqc = ireqc + 1
+        endif
+
+        ! From N
+        if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( var(:,JE+1:JE+JHALO), datasize_2D_NS4,        &
+                            datatype, PRC_next(PRC_N), tag+2, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+            ireqc = ireqc + 1
+        endif
+
+        ! From E
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( recvpack_E2P(:,vid), datasize_2D_WE,       &
+                            datatype, PRC_next(PRC_E), tag+3, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+            ireqc = ireqc + 1
+        endif
+
+        ! From W
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( recvpack_W2P(:,vid), datasize_2D_WE,       &
+                            datatype, PRC_next(PRC_W), tag+4, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+            ireqc = ireqc + 1
+        endif
+
+        !-- To 4-Direction HALO communicate
+        !--- packing packets to West
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IS, IS+IHALO-1
+                n =  (j-JS) * IHALO &
+                   + (i-IS)
+                sendpack_P2W(n,vid) = var(i,j)
+            enddo
+            enddo
+        endif
+
+        !--- packing packets to East
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IE-IHALO+1, IE
+                n =  (j-JS)         * IHALO &
+                   + (i-IE+IHALO-1)
+                sendpack_P2E(n,vid) = var(i,j)
+            enddo
+            enddo
+         endif
+
+        ! To W HALO communicate
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( sendpack_P2W(:,vid), datasize_2D_WE,       &
+                            datatype, PRC_next(PRC_W), tag+3, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+            ireqc = ireqc + 1
+        endif
+
+        ! To E HALO communicate
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( sendpack_P2E(:,vid), datasize_2D_WE,       &
+                            datatype, PRC_next(PRC_E), tag+4, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr )
+            ireqc = ireqc + 1
+        endif
+
+        ! To N HALO communicate
+        if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( var(:,JE-JHALO+1:JE), datasize_2D_NS4,        &
+                            datatype, PRC_next(PRC_N), tag+1, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+            ireqc = ireqc + 1
+        endif
+
+        ! To S HALO communicate
+        if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( var(:,JS:JS+JHALO-1), datasize_2D_NS4,        &
+                            datatype, PRC_next(PRC_S), tag+2, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr    )
+            ireqc = ireqc + 1
+        endif
+
+    endif
+
+    ireq_cnt(vid) = ireqc - 1
+
+    call TIME_rapend  ('COMM vars MPI')
+
+    return
+  end subroutine COMM_vars_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_vars8_2D(var, vid)
+    use mod_process, only : &
+       PRC_next, &
+       PRC_W,    &
+       PRC_N,    &
+       PRC_E,    &
+       PRC_S,    &
+       PRC_NW,   &
+       PRC_NE,   &
+       PRC_SW,   &
+       PRC_SE
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:)
+    integer, intent(in)    :: vid
+
+    integer :: ireqc, tag, tagc
+
+    integer :: ierr
+    integer :: i, j, n
+    !---------------------------------------------------------------------------
+
+    tag   = vid * 100
+    ireqc = 1
+
+    call TIME_rapstart('COMM vars MPI')
+
+    if( IsAllPeriodic ) then
+    !--- periodic condition
+        !-- From 8-Direction HALO communicate
+        ! From SE
+        tagc = 0
+        do j = JS-JHALO, JS-1
+            call MPI_IRECV( var(IE+1,j), datasize_2D_4C,                      &
+                            datatype, PRC_next(PRC_SE), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+        ! From SW
+        tagc = 10
+        do j = JS-JHALO, JS-1
+            call MPI_IRECV( var(IS-IHALO,j), datasize_2D_4C,                  &
+                            datatype, PRC_next(PRC_SW), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+        ! From NE
+        tagc = 20
+        do j = JE+1, JE+JHALO
+            call MPI_IRECV( var(IE+1,j), datasize_2D_4C,                      &
+                            datatype, PRC_next(PRC_NE), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+        ! From NW
+        tagc = 30
+        do j = JE+1, JE+JHALO
+            call MPI_IRECV( var(IS-IHALO,j), datasize_2D_4C,                  &
+                            datatype, PRC_next(PRC_NW), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+        ! From S
+        tagc = 40
+        do j = JS-JHALO, JS-1
+            call MPI_IRECV( var(IS,j), datasize_2D_NS8,                      &
+                            datatype, PRC_next(PRC_S), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+             ireqc = ireqc + 1
+             tagc  = tagc  + 1
+        enddo
+        ! From N
+        tagc = 50
+        do j = JE+1, JE+JHALO
+            call MPI_IRECV( var(IS,j), datasize_2D_NS8,                      &
+                            datatype, PRC_next(PRC_N), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+        ! From E
+        call MPI_IRECV( recvpack_E2P(:,vid), datasize_2D_WE,           &
+                        datatype, PRC_next(PRC_E), tag+60, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+        ireqc = ireqc + 1
+        ! From W
+        call MPI_IRECV( recvpack_W2P(:,vid), datasize_2D_WE,           &
+                        datatype, PRC_next(PRC_W), tag+70, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+        ireqc = ireqc + 1
+
+        !-- To 8-Direction HALO communicate
+        !--- packing packets to West
+        do j = JS, JE
+        do i = IS, IS+IHALO-1
+            n =  (j-JS) * IHALO &
+               + (i-IS)
+            sendpack_P2W(n,vid) = var(i,j)
+        enddo
+        enddo
+
+        !--- packing packets to East
+        do j = JS, JE
+        do i = IE-IHALO+1, IE
+            n =  (j-JS)         * IHALO &
+               + (i-IE+IHALO-1)
+            sendpack_P2E(n,vid) = var(i,j)
+        enddo
+        enddo
+
+        ! To W HALO communicate
+        call MPI_ISEND( sendpack_P2W(:,vid), datasize_2D_WE,            &
+                        datatype, PRC_next(PRC_W), tag+60, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+        ireqc = ireqc + 1
+
+        ! To E HALO communicate
+        call MPI_ISEND( sendpack_P2E(:,vid), datasize_2D_WE,           &
+                        datatype, PRC_next(PRC_E), tag+70, &
+                        MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+        ireqc = ireqc + 1
+
+        ! To N HALO communicate
+        tagc = 40
+        do j = JE-JHALO+1, JE
+            call MPI_ISEND( var(IS,j), datasize_2D_NS8,                      &
+                            datatype, PRC_next(PRC_N), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+
+        ! To S HALO communicate
+        tagc = 50
+        do j = JS, JS+JHALO-1
+            call MPI_ISEND( var(IS,j), datasize_2D_NS8,                      &
+                            datatype, PRC_next(PRC_S), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+
+        ! To NW HALO communicate
+        tagc = 0
+        do j = JE-JHALO+1, JE
+            call MPI_ISEND( var(IS,j), datasize_2D_4C,                        &
+                            datatype, PRC_next(PRC_NW), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+
+        ! To NE HALO communicate
+        tagc = 10
+        do j = JE-JHALO+1, JE
+            call MPI_ISEND( var(IE-IHALO+1,j), datasize_2D_4C,                &
+                            datatype, PRC_next(PRC_NE), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+
+        ! To SW HALO communicate
+        tagc = 20
+        do j = JS, JS+JHALO-1
+            call MPI_ISEND( var(IS,j), datasize_2D_4C,                        &
+                            datatype, PRC_next(PRC_SW), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+
+        ! To SE HALO communicate
+        tagc = 30
+        do j = JS, JS+JHALO-1
+            call MPI_ISEND( var(IE-IHALO+1,j), datasize_2D_4C,                &
+                            datatype, PRC_next(PRC_SE), tag+tagc, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+            ireqc = ireqc + 1
+            tagc  = tagc  + 1
+        enddo
+    else
+    !--- non-periodic condition
+        !-- From 8-Direction HALO communicate
+        ! From SE
+        if( PRC_next(PRC_SE) /= MPI_PROC_NULL ) then
+            tagc = 0
+            do j = JS-JHALO, JS-1
+                call MPI_IRECV( var(IE+1,j), datasize_2D_4C,                      &
+                                datatype, PRC_next(PRC_SE), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From SW
+        if( PRC_next(PRC_SW) /= MPI_PROC_NULL ) then
+            tagc = 10
+            do j = JS-JHALO, JS-1
+                call MPI_IRECV( var(IS-IHALO,j), datasize_2D_4C,                  &
+                                datatype, PRC_next(PRC_SW), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From NE
+        if( PRC_next(PRC_NE) /= MPI_PROC_NULL ) then
+            tagc = 20
+            do j = JE+1, JE+JHALO
+                call MPI_IRECV( var(IE+1,j), datasize_2D_4C,                      &
+                                datatype, PRC_next(PRC_NE), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From NW
+        if( PRC_next(PRC_NW) /= MPI_PROC_NULL ) then
+            tagc = 30
+            do j = JE+1, JE+JHALO
+                call MPI_IRECV( var(IS-IHALO,j), datasize_2D_4C,                  &
+                                datatype, PRC_next(PRC_NW), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From S
+        if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
+            tagc = 40
+            do j = JS-JHALO, JS-1
+                call MPI_IRECV( var(IS,j), datasize_2D_NS8,                      &
+                                datatype, PRC_next(PRC_S), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+                 ireqc = ireqc + 1
+                 tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From N
+        if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
+            tagc = 50
+            do j = JE+1, JE+JHALO
+                call MPI_IRECV( var(IS,j), datasize_2D_NS8,                      &
+                                datatype, PRC_next(PRC_N), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! From E
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( recvpack_E2P(:,vid), datasize_2D_WE,             &
+                            datatype, PRC_next(PRC_E), tag+60, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+            ireqc = ireqc + 1
+        endif
+
+        ! From W
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            call MPI_IRECV( recvpack_W2P(:,vid), datasize_2D_WE,           &
+                            datatype, PRC_next(PRC_W), tag+70, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+            ireqc = ireqc + 1
+        endif
+
+        !-- To 8-Direction HALO communicate
+        !--- packing packets to West
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IS, IS+IHALO-1
+                n =  (j-JS) * IHALO &
+                   + (i-IS)
+                sendpack_P2W(n,vid) = var(i,j)
+            enddo
+            enddo
+        endif
+
+        !--- packing packets to East
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IE-IHALO+1, IE
+                n =  (j-JS)         * IHALO &
+                   + (i-IE+IHALO-1)
+                sendpack_P2E(n,vid) = var(i,j)
+            enddo
+            enddo
+        endif
+
+        ! To W HALO communicate
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( sendpack_P2W(:,vid), datasize_2D_WE,           &
+                            datatype, PRC_next(PRC_W), tag+60, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+            ireqc = ireqc + 1
+        endif
+
+        ! To E HALO communicate
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            call MPI_ISEND( sendpack_P2E(:,vid), datasize_2D_WE,           &
+                            datatype, PRC_next(PRC_E), tag+70, &
+                            MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr     )
+            ireqc = ireqc + 1
+        endif
+
+        ! To N HALO communicate
+        if( PRC_next(PRC_N) /= MPI_PROC_NULL ) then
+            tagc = 40
+            do j = JE-JHALO+1, JE
+                call MPI_ISEND( var(IS,j), datasize_2D_NS8,                      &
+                                datatype, PRC_next(PRC_N), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! To S HALO communicate
+        if( PRC_next(PRC_S) /= MPI_PROC_NULL ) then
+            tagc = 50
+            do j = JS, JS+JHALO-1
+                call MPI_ISEND( var(IS,j), datasize_2D_NS8,                      &
+                                datatype, PRC_next(PRC_S), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr       )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! To NW HALO communicate
+        if( PRC_next(PRC_NW) /= MPI_PROC_NULL ) then
+            tagc = 0
+            do j = JE-JHALO+1, JE
+                call MPI_ISEND( var(IS,j), datasize_2D_4C,                        &
+                                datatype, PRC_next(PRC_NW), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! To NE HALO communicate
+        if( PRC_next(PRC_NE) /= MPI_PROC_NULL ) then
+            tagc = 10
+            do j = JE-JHALO+1, JE
+                call MPI_ISEND( var(IE-IHALO+1,j), datasize_2D_4C,                &
+                                datatype, PRC_next(PRC_NE), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! To SW HALO communicate
+        if( PRC_next(PRC_SW) /= MPI_PROC_NULL ) then
+            tagc = 20
+            do j = JS, JS+JHALO-1
+                call MPI_ISEND( var(IS,j), datasize_2D_4C,                        &
+                                datatype, PRC_next(PRC_SW), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+        ! To SE HALO communicate
+        if( PRC_next(PRC_SE) /= MPI_PROC_NULL ) then
+            tagc = 30
+            do j = JS, JS+JHALO-1
+                call MPI_ISEND( var(IE-IHALO+1,j), datasize_2D_4C,                &
+                                datatype, PRC_next(PRC_SE), tag+tagc, &
+                                MPI_COMM_WORLD, ireq_list(ireqc,vid), ierr        )
+                ireqc = ireqc + 1
+                tagc  = tagc  + 1
+            enddo
+        endif
+
+    endif
+
+    ireq_cnt(vid) = ireqc - 1
+
+    call TIME_rapend  ('COMM vars MPI')
+
+    return
+  end subroutine COMM_vars8_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine COMM_wait_2D(var, vid)
+    use mod_process, only : &
+       PRC_next, &
+       PRC_W,    &
+       PRC_N,    &
+       PRC_E,    &
+       PRC_S
+
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:)
+    integer, intent(in)    :: vid
+
+    integer :: ierr
+    integer :: i, j, n
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('COMM wait MPI')
+
+    !--- wait packets
+    call MPI_WAITALL(ireq_cnt(vid), ireq_list(1:ireq_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
+
+    if( IsAllPeriodic ) then
+    !--- periodic condition
+        !--- unpacking packets from East
+        do j = JS, JE
+        do i = IE+1, IE+IHALO
+           n = (j-JS)   * IHALO &
+             + (i-IE-1)
+           var(i,j) = recvpack_E2P(n,vid)
+        enddo
+        enddo
+
+        !--- unpacking packets from West
+        do j = JS, JE
+        do i = IS-IHALO, IS-1
+           n = (j-JS)       * IHALO &
+             + (i-IS+IHALO)
+           var(i,j) = recvpack_W2P(n,vid)
+        enddo
+        enddo
+
+    else
+    !--- non-periodic condition
+
+        !--- copy inner data to HALO(North)
+        if( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+            do j = JE+1, JE+JHALO
+            do i = IS, IE
+               var(i,j) = var(i,JE)
+            enddo
+            enddo
+        endif
+
+        !--- copy inner data to HALO(South)
+        if( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+            do j = JS-JHALO, JS-1
+            do i = IS, IE
+               var(i,j) = var(i,JS)
+            enddo
+            enddo
+        endif
+
+        !--- unpacking packets from East / copy inner data to HALO(East)
+        if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IE+1, IE+IHALO
+               n = (j-JS)   * IHALO &
+                 + (i-IE-1)
+               var(i,j) = recvpack_E2P(n,vid)
+            enddo
+            enddo
+        else
+            do j = JS, JE
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(IE,j)
+            enddo
+            enddo
+        endif
+
+        !--- unpacking packets from West / copy inner data to HALO(West)
+        if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            do j = JS, JE
+            do i = IS-IHALO, IS-1
+               n = (j-JS)       * IHALO &
+                 + (i-IS+IHALO)
+               var(i,j) = recvpack_W2P(n,vid)
+            enddo
+            enddo
+        else
+            do j = JS, JE
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(IS,j)
+            enddo
+            enddo
+        endif
+
+        !--- copy inner data to HALO(NorthWest)
+        if( PRC_next(PRC_N) == MPI_PROC_NULL .and. PRC_next(PRC_W) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(IS,JE)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_N) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(i,JE)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_W) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(IS,j)
+            enddo
+            enddo
+        endif
+
+        !--- copy inner data to HALO(SouthWest)
+        if( PRC_next(PRC_S) == MPI_PROC_NULL .and. PRC_next(PRC_W) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(IS,JS)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_S) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(i,JS)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_W) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IS-IHALO, IS-1
+               var(i,j) = var(IS,j)
+            enddo
+            enddo
+        endif
+
+        !--- copy inner data to HALO(NorthEast)
+        if( PRC_next(PRC_N) == MPI_PROC_NULL .and. PRC_next(PRC_E) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(IE,JE)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_N) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(i,JE)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_E) == MPI_PROC_NULL) then
+            do j = JE+1, JE+JHALO
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(IE,j)
+            enddo
+            enddo
+        endif
+
+        !--- copy inner data to HALO(SouthEast)
+        if( PRC_next(PRC_S) == MPI_PROC_NULL .and. PRC_next(PRC_E) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(IE,JS)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_S) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(i,JS)
+            enddo
+            enddo
+        else if ( PRC_next(PRC_E) == MPI_PROC_NULL) then
+            do j = JS-IHALO, JS-1
+            do i = IE+1, IE+IHALO
+               var(i,j) = var(IE,j)
+            enddo
+            enddo
+        endif
+
+    endif
+
+
+    call TIME_rapend  ('COMM wait MPI')
+
+    return
+  end subroutine COMM_wait_2D
 
   !-----------------------------------------------------------------------------
   subroutine COMM_vars_r4(var, vid)

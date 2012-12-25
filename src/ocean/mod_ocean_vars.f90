@@ -198,8 +198,8 @@ contains
        SST(1,IS:IE,JS:JE) = restart_ocean(1,1:IMAX,1:JMAX)
 
        ! fill IHALO & JHALO
-       call COMM_vars8( SST(:,:,:), 1 )
-       call COMM_wait ( SST(:,:,:), 1 )
+       call COMM_vars8( SST(1,:,:), 1 )
+       call COMM_wait ( SST(1,:,:), 1 )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
     endif

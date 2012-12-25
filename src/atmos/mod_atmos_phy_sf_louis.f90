@@ -228,6 +228,9 @@ contains
        LH0    => CONST_LH0
     use mod_time, only: &
        dtsf => TIME_DTSEC_ATMOS_PHY_SF
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use mod_history, only: &
        HIST_in
     use mod_grid, only: &
@@ -250,8 +253,8 @@ contains
     implicit none
 
     ! monitor
-    real(RP) :: SHFLX(1,IA,JA) ! sensible heat flux [W/m2]
-    real(RP) :: LHFLX(1,IA,JA) ! latent   heat flux [W/m2]
+    real(RP) :: SHFLX(IA,JA) ! sensible heat flux [W/m2]
+    real(RP) :: LHFLX(IA,JA) ! latent   heat flux [W/m2]
 
     integer :: i, j
 
@@ -260,15 +263,27 @@ contains
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
          CZ                                                   ) ! (in)
 
+    call COMM_vars8( SFLX_MOMZ(:,:), 1 )
+    call COMM_vars8( SFLX_MOMX(:,:), 2 )
+    call COMM_vars8( SFLX_MOMY(:,:), 3 )
+    call COMM_vars8( SFLX_POTT(:,:), 4 )
+    call COMM_vars8( SFLX_QV  (:,:), 5 )
+
     do j = JS, JE
     do i = IS, IE
-       SHFLX(1,i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(1,i,j) = SFLX_QV  (i,j) * LH0
+       SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
     enddo
     enddo
 
-    call HIST_in( SHFLX(1,:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-    call HIST_in( LHFLX(1,:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+    call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+    call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+
+    call COMM_wait ( SFLX_MOMZ(:,:), 1 )
+    call COMM_wait ( SFLX_MOMX(:,:), 2 )
+    call COMM_wait ( SFLX_MOMY(:,:), 3 )
+    call COMM_wait ( SFLX_POTT(:,:), 4 )
+    call COMM_wait ( SFLX_QV  (:,:), 5 )
 
   end subroutine ATMOS_PHY_SF
   !-----------------------------------------------------------------------------
@@ -341,14 +356,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
     ! rho*theta -> potential temperature at cell centor
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        THETA(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
 
        ! at cell center
 
