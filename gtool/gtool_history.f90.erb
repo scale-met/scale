@@ -653,14 +653,12 @@ contains
   subroutine HistoryPut<%=n%>DName<%=rp%>( &
        varname, &
        var,     &
-       dt,      &
-       force    )
+       dt       )
     implicit none
 
     character(len=*), intent(in)           :: varname
     real(<%=rp%>),         intent(in)           :: var(<%=idx%>)
     real(8),          intent(in)           :: dt
-    logical,          intent(in), optional :: force
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -674,21 +672,19 @@ contains
        end if
     end do
 
-    call HistoryPut<%=n%>DId<%=rp%>(itemid, var, dt, force)
+    call HistoryPut<%=n%>DId<%=rp%>(itemid, var, dt)
 
     return
   end subroutine HistoryPut<%=n%>DName<%=rp%>
   subroutine HistoryPut<%=n%>DId<%=rp%>( &
-       itemid,  &
-       var,     &
-       dt,      &
-       force    )
+       itemid, &
+       var,    &
+       dt      )
     implicit none
 
     integer,          intent(in)           :: itemid
     real(<%=rp%>),         intent(in)           :: var(<%=idx%>)
     real(8),         intent(in)            :: dt
-    logical,          intent(in), optional :: force
 
     integer :: ijk(<%=n%>), idx
     integer :: <%= ["i", "j", "k"][0...n].join(", ")%>
@@ -809,10 +805,13 @@ contains
     real(<%=rp%>), intent(in) :: time
     logical,  intent(in), optional :: force
 
+    logical :: fforce = .false.
     integer :: n
 
+    if ( present(force) ) fforce = force
+
     do n = 1, History_id_count
-       call HistoryWrite( n, time, force )
+       call HistoryWrite( n, time, fforce )
     end do
 
     return
@@ -871,7 +870,7 @@ contains
     call Log('I', '============================================================================')
  
     do n = 1, History_id_count
-       write(message,'(1x,A,I10,1x,f13.3,1x,L)') History_item(n), History_size(n), History_tintsec(n), History_tavg(n)
+       write(message,'(1x,A,I10,1x,f13.3,1x,L8)') History_item(n), History_size(n), History_tintsec(n), History_tavg(n)
        call Log('I', message)
     enddo
 

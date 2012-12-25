@@ -507,7 +507,6 @@ contains
        CVdry   => CONST_CVdry,   &
        CVvap   => CONST_CVvap,   &
        CL      => CONST_CL,      &
-       LASPdry => CONST_LASPdry, &
        P00     => CONST_PRE00
     use mod_grid, only: &
        CZ  => GRID_CZ, &

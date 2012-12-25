@@ -310,12 +310,6 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &
        ATMOS_vars_total,    &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
        DENS_av, &
        MOMZ_av, &
        MOMX_av, &

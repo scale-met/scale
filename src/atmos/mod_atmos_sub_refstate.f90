@@ -499,7 +499,6 @@ contains
     use mod_const, only : &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
-       CVdry  => CONST_CVdry,  &
        Rvap   => CONST_Rvap,   &
        P00    => CONST_PRE00
     use mod_grid, only : &
@@ -507,8 +506,7 @@ contains
     use mod_comm, only: &
        COMM_horizontal_mean
     use mod_atmos_thermodyn, only: &
-       CPw => AQ_CP, &
-       CVw => AQ_CV
+       CPw => AQ_CP
     use mod_atmos_hydrostatic, only: &
        hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
     use mod_atmos_vars, only: &

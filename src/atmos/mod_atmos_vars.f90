@@ -1011,13 +1011,13 @@ contains
     real(RP) :: VOR   (KA,IA,JA)
     real(RP) :: DIV   (KA,IA,JA)
 
-    real(RP) :: DENS_v(KA,IA,JA)
-    real(RP) :: VELZ_v(KA,IA,JA)
-    real(RP) :: VELX_v(KA,IA,JA)
-    real(RP) :: VELY_v(KA,IA,JA)
-    real(RP) :: POTT_v(KA,IA,JA)
+!    real(RP) :: DENS_v(KA,IA,JA)
+!    real(RP) :: VELZ_v(KA,IA,JA)
+!    real(RP) :: VELX_v(KA,IA,JA)
+!    real(RP) :: VELY_v(KA,IA,JA)
+!    real(RP) :: POTT_v(KA,IA,JA)
 
-    real(RP) :: mean1d(KA)
+!    real(RP) :: mean1d(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------

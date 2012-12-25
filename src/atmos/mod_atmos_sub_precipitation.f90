@@ -71,7 +71,6 @@ contains
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
-       RovCP => CONST_RovCP, &
        Rvap  => CONST_Rvap,  &
        PRE00 => CONST_PRE00
     use mod_grid, only: &

@@ -225,9 +225,6 @@ contains
       var     )
     use mod_comm, only: &
        COMM_total
-    use mod_geometrics, only: &
-       area => GEOMETRICS_area, &
-       vol  => GEOMETRICS_vol
     implicit none
 
     integer,  intent(in) :: itemid
