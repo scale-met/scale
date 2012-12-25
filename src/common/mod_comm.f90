@@ -2139,6 +2139,11 @@ contains
        endif
     endif
 
+    if ( .not. ( allstatval > -1.0_RP .or. allstatval < 1.0_RP ) ) then ! must be NaN
+       write(*,*) 'xxx NaN is detected'
+       call PRC_MPIstop
+    end if
+
     return
   end subroutine COMM_total
 
