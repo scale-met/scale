@@ -1458,7 +1458,7 @@ contains
        COMM_total_doreport, &
        COMM_total
     use mod_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd_kij,        &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV
     implicit none

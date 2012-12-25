@@ -100,7 +100,7 @@ contains
     real(RP) :: qflx    (KA,QA)
     real(RP) :: eflx    (KA)
     real(RP) :: rhoe_new(KA)
-    real(RP) :: qdry, CVtot, Rtot, pres
+    real(RP) :: qdry, CVtot, Rtot, pres, RovCP
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------

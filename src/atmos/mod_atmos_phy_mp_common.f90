@@ -129,8 +129,8 @@ contains
        LHV00  => CONST_LH00, &
        LHF00  => CONST_LHF00
     use mod_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd_kij,   &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv_kij,   &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
+       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
        THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_saturation, only: &
@@ -287,7 +287,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_thermodyn, only: &
-       THERMODYN_cv => ATMOS_THERMODYN_cv_kij, &
+       THERMODYN_cv => ATMOS_THERMODYN_cv, &
        CVw => AQ_CV
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
@@ -376,7 +376,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_thermodyn, only: &
-       THERMODYN_cv => ATMOS_THERMODYN_cv_kij, &
+       THERMODYN_cv => ATMOS_THERMODYN_cv, &
        CVw => AQ_CV
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
