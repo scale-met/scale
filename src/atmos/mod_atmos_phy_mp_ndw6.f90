@@ -1121,8 +1121,8 @@ contains
     use mod_atmos_precipitation, only : &
        precipitation => ATMOS_PRECIPITATION
     use mod_atmos_saturation, only : &
-       moist_psat_water    => ATMOS_SATURATION_psat_water,   &
-       moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq,     &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice,     &
        moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
     use mod_atmos_vars, only: &
        DENS, &
@@ -1465,8 +1465,8 @@ contains
       flag_history_in=.true.
 !   end if
     !
-    call moist_psat_water( esw_d, wtem_d )
-    call moist_psat_ice  ( esi_d, wtem_d )
+    call SATURATION_psat_liq( esw_d, wtem_d )
+    call SATURATION_psat_ice( esi_d, wtem_d )
     !
     do j = JS, JE
     do i = IS, IE
@@ -2329,13 +2329,13 @@ contains
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
     use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water, &
-       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,   &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
+       SATURATION_psat_liq      => ATMOS_SATURATION_psat_liq,      &
+       SATURATION_psat_ice      => ATMOS_SATURATION_psat_ice,      &
+       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq, &
+       SATURATION_pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice, &
+       moist_dqsw_dtem_rho      => ATMOS_SATURATION_dqsw_dtem_rho, &
+       moist_dqsi_dtem_rho      => ATMOS_SATURATION_dqsi_dtem_rho, &
+       moist_dqsw_dtem_dpre     => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
 
     integer, intent(in)  :: KA, IA, JA
@@ -2450,15 +2450,13 @@ contains
     !
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
-    !
-    call moist_psat_water    ( esw, tem )
-    call moist_psat_ice      ( esi, tem )
-    call moist_qsat_water    ( qsw, tem, pre )
-    call moist_qsat_ice      ( qsi, tem, pre )
-    call moist_dqsi_dtem_rho ( dqsidtem_rho, tem, rho )
-    !
-    !
-    !
+
+    call SATURATION_psat_liq     ( esw, tem )
+    call SATURATION_psat_ice     ( esi, tem )
+    call SATURATION_pres2qsat_liq( qsw, tem, pre )
+    call SATURATION_pres2qsat_ice( qsi, tem, pre )
+    call moist_dqsi_dtem_rho     ( dqsidtem_rho, tem, rho )
+
     ! dS/dz is evaluated by first order upstream difference
     !***  Solution for Twomey Equation ***
 
@@ -2754,8 +2752,8 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
     integer, intent(in) :: IA,JA,KA
@@ -2966,7 +2964,7 @@ contains
        flag_first = .false.
     end if
     !
-    call moist_psat_ice( esi, wtem )
+    call SATURATION_psat_ice( esi, wtem )
     if( opt_stick_KS96 )then
        do j=JS, JE
        do i=IS, IE
@@ -4002,12 +4000,12 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_saturation, only : &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water,     &
-       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,       &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho,  &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre, &
-       moist_dqsi_dtem_dpre => ATMOS_SATURATION_dqsi_dtem_dpre
+       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,  &
+       SATURATION_pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice,  &
+       moist_dqsw_dtem_rho      => ATMOS_SATURATION_dqsw_dtem_rho,  &
+       moist_dqsi_dtem_rho      => ATMOS_SATURATION_dqsi_dtem_rho,  &
+       moist_dqsw_dtem_dpre     => ATMOS_SATURATION_dqsw_dtem_dpre, &
+       moist_dqsi_dtem_dpre     => ATMOS_SATURATION_dqsi_dtem_dpre
     implicit none
 
     integer, intent(in)    :: ntdiv                   ! [Add] 10/08/03
@@ -4203,12 +4201,12 @@ contains
     end if
     !
           !
-    call moist_qsat_water    ( qsw, wtem, pre )
-    call moist_qsat_ice      ( qsi, wtem, pre )
-    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
-    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
-    call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
-    call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
+    call SATURATION_pres2qsat_liq( qsw, wtem, pre )
+    call SATURATION_pres2qsat_ice( qsi, wtem, pre )
+    call moist_dqsw_dtem_rho     ( dqswdtem_rho, wtem, rho )
+    call moist_dqsi_dtem_rho     ( dqsidtem_rho, wtem, rho )
+    call moist_dqsw_dtem_dpre    ( dqswdtem_pre, dqswdpre_tem, wtem, pre )
+    call moist_dqsi_dtem_dpre    ( dqsidtem_pre, dqsidpre_tem, wtem, pre )
     !
     do j = JS, JE
     do i = IS, IE

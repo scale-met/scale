@@ -1008,7 +1008,7 @@ contains
        thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
        CVw => AQ_CV
     use mod_atmos_saturation, only : &
-       moist_psat_water    => ATMOS_SATURATION_psat_water,   &
+       moist_psat_water    => ATMOS_SATURATION_psat_liq,     &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
        moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
     use mod_atmos_vars, only: &
@@ -1760,10 +1760,10 @@ contains
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
     use mod_atmos_saturation, only : &
-       moist_psat_water     => ATMOS_SATURATION_psat_water, &
-       moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water, &
-       moist_qsat_ice       => ATMOS_SATURATION_qsat_ice,   &
+       moist_psat_water     => ATMOS_SATURATION_psat_liq,      &
+       moist_psat_ice       => ATMOS_SATURATION_psat_ice,      &
+       moist_qsat_water     => ATMOS_SATURATION_pres2qsat_liq, &
+       moist_qsat_ice       => ATMOS_SATURATION_pres2qsat_ice, &
        moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
        moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
        moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
@@ -2706,8 +2706,8 @@ contains
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
        thrmdyn_cp      => ATMOS_THERMODYN_cp
     use mod_atmos_saturation, only : &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_water,     &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
+       moist_qsat_water     => ATMOS_SATURATION_qsat_liq,      &
+       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
        moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
 
