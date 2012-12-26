@@ -213,7 +213,7 @@ contains
        endif
     enddo
 
-    do k = KS-1, KE
+    do k = KS, KE-1
        ee2 = FBFZ(k)
 
        if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
@@ -291,8 +291,8 @@ contains
        endif
     enddo
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = JS, JE
+    do i = IS, IE
        do k = KS, KE
           if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = 0.0_RP
@@ -308,7 +308,7 @@ contains
           endif
        enddo
 
-       do k = KS-1, KE
+       do k = KS, KE-1
           if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.0_RP
          endif
@@ -489,7 +489,8 @@ contains
        CONST_UNDEF
     use mod_grid, only : &
        CZ_mask => GRID_CZ_mask, &
-       CX_mask => GRID_CX_mask
+       CX_mask => GRID_CX_mask, &
+       CY_mask => GRID_CX_mask
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
@@ -498,39 +499,35 @@ contains
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
 
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV  ) = CONST_UNDEF
+
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
-       if ( CZ_mask(k) ) then ! Inner Layer
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = CONST_UNDEF
-       else                   ! Buffer Layer
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = CONST_UNDEF
-          ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = CONST_UNDEF
+       if ( .not. ( CZ_mask(k) .or. CX_mask(i) .or. CY_mask(j) ) ) then ! Buffer Layer
           if ( ATMOS_BOUNDARY_USE_VELZ ) then
-            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
           endif
           if ( ATMOS_BOUNDARY_USE_VELY ) then
-            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
           endif
           if ( ATMOS_BOUNDARY_USE_VELX ) then
-            ATMOS_BOUNDARY_var(k,:,:,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
           endif
           if ( ATMOS_BOUNDARY_USE_POTT ) then
-            ATMOS_BOUNDARY_var(k,:,:,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
           endif
           if ( ATMOS_BOUNDARY_USE_QV ) then
-            ATMOS_BOUNDARY_var(k,:,:,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
           endif
        endif
     enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV)   = CONST_UNDEF
+    enddo
+    enddo
 
 !    do j = JS-1, JE+1
 !    do i = IS-1, IE+1
