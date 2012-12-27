@@ -43,6 +43,9 @@ program scaleinit
      GEOMETRICS_setup
   use mod_comm, only: &
      COMM_setup
+  use mod_topography, only: &
+     TOPO_setup, &
+     TOPO_write
   use mod_history, only: &
      HIST_setup, &
      HIST_write
@@ -58,6 +61,12 @@ program scaleinit
      ATMOS_vars_setup, &
      ATMOS_vars_fillhalo, &
      ATMOS_vars_restart_write
+  use mod_mktopo, only: &
+     MKTOPO_TYPE,     &
+     I_OFF,           &
+     I_BELLSHAPE,     &
+     MKTOPO_setup,    &
+     MKTOPO_bellshape
   use mod_mkinit, only: &
      MKINIT_TYPE,     &
      I_PLANESTATE,    &
@@ -95,6 +104,8 @@ program scaleinit
   !
   !++ parameters & variables
   !
+  logical :: output_topo = .false.
+
   !=============================================================================
 
   !########## Initial setup ##########
@@ -130,27 +141,52 @@ program scaleinit
   ! setup mpi communication
   call COMM_setup
 
+  ! setup topography
+  call TOPO_setup
+
   ! setup history
   call HIST_setup
 
   ! setup monitor
   call MONIT_setup
 
+  ! setup atmos
+  call ATMOS_THERMODYN_setup
+  call ATMOS_SATURATION_setup
+  call ATMOS_vars_setup
+
   call TIME_rapend('Initialize')
 
 
   !########## main ##########
-
-  if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
   call TIME_rapstart('Main')
 
-  ! setup atmos
-  call ATMOS_THERMODYN_setup
 
-  call ATMOS_SATURATION_setup
+  if( IO_L ) write(IO_FID_LOG,*)
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
 
-  call ATMOS_vars_setup
+  ! setup mktopo
+  call MKTOPO_setup
+
+  select case(MKTOPO_TYPE)
+  case(I_OFF)
+     if( IO_L ) write(IO_FID_LOG,*) '*** Nothing to do for topography'
+     output_topo = .false.
+  case(I_BELLSHAPE)
+     call MKTOPO_bellshape
+     output_topo = .true.
+  case default
+     write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+     call PRC_MPIstop
+  endselect
+
+  if ( output_topo ) then
+     call TOPO_write
+  endif
+
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
+  if( IO_L ) write(IO_FID_LOG,*)
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
 
   ! setup mkinit
   call MKINIT_setup
@@ -189,10 +225,10 @@ program scaleinit
   ! output restart
   call ATMOS_vars_restart_write
 
-  call TIME_rapend('Main')
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL DATA ++++++'
+  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 
+  call TIME_rapend('Main')
   !########## Finalize ##########
 
   call TIME_rapreport
