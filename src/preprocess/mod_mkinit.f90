@@ -95,7 +95,7 @@ module mod_mkinit
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: MKINIT_TYPE
+  integer, public, save      :: MKINIT_TYPE           = -1
   integer, public, parameter :: I_PLANESTATE          =  1
   integer, public, parameter :: I_TRACERBUBBLE        =  2
   integer, public, parameter :: I_COLDBUBBLE          =  3

@@ -19,6 +19,10 @@ program scaleles3
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
   use mod_stdio, only: &
      IO_setup,   &
      IO_FID_CONF, &
@@ -48,6 +52,8 @@ program scaleles3
      GEOMETRICS_setup
   use mod_comm, only: &
      COMM_setup
+  use mod_topography, only: &
+     TOPO_setup
   use mod_history, only: &
      HIST_setup, &
      HIST_write
@@ -69,10 +75,9 @@ program scaleles3
   use mod_ocean_vars, only: &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
-  use dc_log, only: &
-     LogInit
-  use gtool_file, only: &
-     FileCloseAll
+  use mod_user, only: &
+     USER_setup, &
+     USER_step
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -111,6 +116,9 @@ program scaleles3
   ! setup mpi communication
   call COMM_setup
 
+  ! setup topography
+  call TOPO_setup
+
   ! setup history
   call HIST_setup
 
@@ -123,6 +131,9 @@ program scaleles3
   ! setup atmosphere
   call ATMOS_setup
 
+  ! setup user-defined procedure
+  call USER_setup
+
   call TIME_rapend('Initialize')
 
   !########## main ##########
@@ -130,6 +141,9 @@ program scaleles3
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
   call TIME_rapstart('Main Loop(Total)')
+#ifdef _FIPP_
+call fipp_start()
+#endif
 
   do
 
@@ -139,6 +153,9 @@ program scaleles3
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_step
     if ( TIME_DOOCEAN_step ) call OCEAN_step
+
+    ! user-defined procedure
+    call USER_step
 
     ! time advance
     call TIME_advance
@@ -155,6 +172,9 @@ program scaleles3
 
   enddo
 
+#ifdef _FIPP_
+call fipp_stop()
+#endif
   call TIME_rapend('Main Loop(Total)')
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
