@@ -13,47 +13,75 @@
 # %> make -B       (ignore the timestamp)
 #
 ################################################################################
-include ../../sysdep/Makedef.$(SCALE_SYS)
+
+TOPDIR = ../../..
+
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/src/Mkinclude
 
 VPATH = ../../common:../../io:../../grid:../../atmos:../../ocean:../../preprocess
+INDEX_DIR = $(INCDIR)
 
 #default index & tracer set
-index   = 1256x32x32
-tracer  = ndw6
-postfix = 
+index     = 206x24x24
+tracer    = kessler
+precision = real8
+sfcflx    = louis
+radiation = mstrnX
+postfix   = 
 
 PROJ_EXE = #PROJECT#
 
-all: makedir makeinclude makebin
+all: makedir makedcutils makegtool makeinclude makebin
+
+makedcutils:
+	cd $(DCUTILSDIR); $(MAKE)
+
+makegtool:
+	cd $(GTOOLDIR); $(MAKE)
 
 makedir:
-	mkdir -p ../../../bin/$(SCALE_SYS)
+	mkdir -p $(BINDIR)
+	mkdir -p $(LIBDIR)
 
 makeinclude:
-	cp ../../include/inc_tracer_$(tracer).f90 ../../include/inc_tracer.h
-	cp ../../include/inc_index_$(index).f90   ../../include/inc_index.h
+	cp $(INDEX_DIR)/inc_index_$(index).f90      inc_index.h
+	cp $(INCDIR)/inc_tracer_$(tracer).f90       inc_tracer.h
+	cp $(INCDIR)/inc_precision_$(precision).f90 inc_precision.h
 
 makebin: $(PROJ_EXE)
-	install $(PROJ_EXE) ../../../bin/$(SCALE_SYS)/$(PROJ_EXE)_$(index)_$(tracer)_$(postfix)
+	install $(PROJ_EXE) $(BINDIR)/$(PROJ_EXE)_$(SUFFIX)
 
-$(PROJ_EXE): $(PROJ_EXE).o
-	$(LD) $(LFLAGS) -o $(PROJ_EXE) $(PROJ_EXE).o $(MODS)
+$(PROJ_EXE): $(PROJ_EXE).o $(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+
+$(LIBNAME): $(MODS)
+	$(AR) $(ARFLAGS) $@ $(MODS)
+	$(RANLIB) $@
 
 
+.SUFFIXES:
 .SUFFIXES: .o .f90 .f .c
-.f90.o:
-	$(FC)  $(FFLAGS) -I../../include -o $@ -c $<
+
+%.o : %.f90
+	$(FC) $(FFLAGS) -I./ -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $<
 
 .c.o:
 	$(CC)  $(CFLAGS) -o $@ -c $<
 
 %.o: %.mod
 
-
-.PHONY: depends freeze clean copylocal mktar
+.PHONY: depends freeze copylocal mktar clean distclean allclean
 
 clean:
-	rm -f $(PROJ_EXE) depends.info *.mod *.o *~ *.lst
+	rm -f *.mod *.o *.lst depends.info
+
+distclean: clean
+	rm -f $(PROJ_EXE) *.a *.h *~
+
+allclean: distclean
+	$(MAKE) -C $(DCUTILSDIR) allclean
+	$(MAKE) -C $(GTOOLDIR)   allclean
 
 freeze: clean depends copylocal mktar
 
