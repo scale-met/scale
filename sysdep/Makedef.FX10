@@ -2,12 +2,12 @@
 
 FC     = mpifrtpx
 # new setting 20120214
-FFLAGS = -Kfast,parallel,auto,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
+FFLAGS = -Kfast,parallel,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
          -Ntl_trt -Qt -V -Cpp -Ksimd \
          -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx \
          -Kprefetch_cache_level=all,prefetch_iteration_L2=50
 
-FFLAGS_DYN ?= -Kfast,parallel,auto,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
+FFLAGS_DYN ?= -Kfast,parallel,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
              -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
              -Ntl_trt -Qt -V -Cpp -Ksimd=2
 
