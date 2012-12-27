@@ -1065,18 +1065,18 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-!             num_diff(KS,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS)**4 &
-!                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
-!                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
-!                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
-!                                           - CNDZ(1,KS  ) * dens_diff(KS  ,i,j) )
-!             num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-!                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
-!                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
-!                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
-!                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
-             num_diff(KS,i,j,I_DENS,ZDIR) = num_diff(KS+1,i,j,I_DENS,ZDIR)
-             num_diff(KE-1,i,j,I_DENS,ZDIR) = num_diff(KE-2,i,j,I_DENS,ZDIR)
+             num_diff(KS,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS)**4 &
+                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
+                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
+                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
+                                           - CNDZ(1,KS  ) * dens_diff(KS  ,i,j) )
+             num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
+                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
+                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
+                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
+!             num_diff(KS,i,j,I_DENS,ZDIR) = num_diff(KS+1,i,j,I_DENS,ZDIR)
+!             num_diff(KE-1,i,j,I_DENS,ZDIR) = num_diff(KE-2,i,j,I_DENS,ZDIR)
           enddo
           enddo
 
@@ -1175,18 +1175,18 @@ call START_COLLECTION("DYN-set")
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
-!             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-!                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
-!                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
-!                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
-!                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
-!             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-!                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
-!                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
-!                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
-!                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
-             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
-             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
+             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
+                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
+                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
+                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
+             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
+                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
+                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
+                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
+!             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
+!             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
           enddo
           enddo
 
@@ -1231,18 +1231,18 @@ call START_COLLECTION("DYN-set")
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
-!             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-!                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
-!                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
-!                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
-!                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
-!             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-!                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
-!                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
-!                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
-!                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
-             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
-             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
+             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
+                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
+                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
+                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
+             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
+                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
+                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
+                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
+!             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
+!             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
           enddo
           enddo
 
@@ -1291,20 +1291,20 @@ call START_COLLECTION("DYN-set")
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-!             num_diff(KS,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS)**4 &
-!                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
-!                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
-!                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
-!                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
-!                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
-!             num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-!                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
-!                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
-!                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
-!                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
-!                                         * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
-             num_diff(KS  ,i,j,I_RHOT,ZDIR) = num_diff(KS+1,i,j,I_RHOT,ZDIR)
-             num_diff(KE-1,i,j,I_RHOT,ZDIR) = num_diff(KE-2,i,j,I_RHOT,ZDIR)
+             num_diff(KS,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS)**4 &
+                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
+                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
+                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
+                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
+                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+             num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
+                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
+                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
+                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
+                                         * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+!             num_diff(KS  ,i,j,I_RHOT,ZDIR) = num_diff(KS+1,i,j,I_RHOT,ZDIR)
+!             num_diff(KE-1,i,j,I_RHOT,ZDIR) = num_diff(KE-2,i,j,I_RHOT,ZDIR)
           enddo
           enddo
 
