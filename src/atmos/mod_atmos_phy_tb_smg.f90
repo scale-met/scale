@@ -245,7 +245,7 @@ contains
 
 #ifdef DEBUG
     if ( present(do_calc) ) then
-       if ( do_calc ) return
+       if ( .not. do_calc ) return
     end if
 #endif
 
