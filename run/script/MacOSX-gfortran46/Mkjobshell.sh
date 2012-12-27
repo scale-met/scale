@@ -22,6 +22,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 export OMP_NUM_THREADS=1
 export FORT_FMT_RECL=400
+export GFORTRAN_UNBUFFERED_ALL=Y
 
 ln -sv ${BINDIR}/${INITNAME} .
 ln -sv ${BINDIR}/${BINNAME}  .
