@@ -301,7 +301,6 @@ contains
                + (i-IE+IHALO-1) * KA         &
                + k
             sendpack_P2E(n,vid) = var(k,i,j)
-            n = n + 1
         enddo
         enddo
         enddo
@@ -389,7 +388,6 @@ contains
                    + (i-IE+IHALO-1) * KA         &
                    + k
                 sendpack_P2E(n,vid) = var(k,i,j)
-                n = n + 1
             enddo
             enddo
             enddo
@@ -553,7 +551,6 @@ contains
                + (i-IE+IHALO-1) * KA         &
                + k
             sendpack_P2E(n,vid) = var(k,i,j)
-            n = n + 1
         enddo
         enddo
         enddo
@@ -744,7 +741,6 @@ contains
                    + (i-IE+IHALO-1) * KA         &
                    + k
                 sendpack_P2E(n,vid) = var(k,i,j)
-                n = n + 1
             enddo
             enddo
             enddo
@@ -1136,7 +1132,7 @@ contains
         do j = JS, JE
         do i = IS, IS+IHALO-1
             n =  (j-JS) * IHALO &
-               + (i-IS)
+               + (i-IS) + 1
             sendpack_P2W(n,vid) = var(i,j)
         enddo
         enddo
@@ -1145,7 +1141,7 @@ contains
         do j = JS, JE
         do i = IE-IHALO+1, IE
             n =  (j-JS)         * IHALO &
-               + (i-IE+IHALO-1)
+               + (i-IE+IHALO-1) + 1
             sendpack_P2E(n,vid) = var(i,j)
         enddo
         enddo
@@ -1215,7 +1211,7 @@ contains
             do j = JS, JE
             do i = IS, IS+IHALO-1
                 n =  (j-JS) * IHALO &
-                   + (i-IS)
+                   + (i-IS) + 1
                 sendpack_P2W(n,vid) = var(i,j)
             enddo
             enddo
@@ -1226,7 +1222,7 @@ contains
             do j = JS, JE
             do i = IE-IHALO+1, IE
                 n =  (j-JS)         * IHALO &
-                   + (i-IE+IHALO-1)
+                   + (i-IE+IHALO-1) + 1
                 sendpack_P2E(n,vid) = var(i,j)
             enddo
             enddo
@@ -1374,7 +1370,7 @@ contains
         do j = JS, JE
         do i = IS, IS+IHALO-1
             n =  (j-JS) * IHALO &
-               + (i-IS)
+               + (i-IS) + 1
             sendpack_P2W(n,vid) = var(i,j)
         enddo
         enddo
@@ -1383,7 +1379,7 @@ contains
         do j = JS, JE
         do i = IE-IHALO+1, IE
             n =  (j-JS)         * IHALO &
-               + (i-IE+IHALO-1)
+               + (i-IE+IHALO-1) + 1
             sendpack_P2E(n,vid) = var(i,j)
         enddo
         enddo
@@ -1556,7 +1552,7 @@ contains
             do j = JS, JE
             do i = IS, IS+IHALO-1
                 n =  (j-JS) * IHALO &
-                   + (i-IS)
+                   + (i-IS) + 1
                 sendpack_P2W(n,vid) = var(i,j)
             enddo
             enddo
@@ -1567,7 +1563,7 @@ contains
             do j = JS, JE
             do i = IE-IHALO+1, IE
                 n =  (j-JS)         * IHALO &
-                   + (i-IE+IHALO-1)
+                   + (i-IE+IHALO-1) + 1
                 sendpack_P2E(n,vid) = var(i,j)
             enddo
             enddo
@@ -1699,7 +1695,7 @@ contains
         do j = JS, JE
         do i = IE+1, IE+IHALO
            n = (j-JS)   * IHALO &
-             + (i-IE-1)
+             + (i-IE-1) + 1
            var(i,j) = recvpack_E2P(n,vid)
         enddo
         enddo
@@ -1708,7 +1704,7 @@ contains
         do j = JS, JE
         do i = IS-IHALO, IS-1
            n = (j-JS)       * IHALO &
-             + (i-IS+IHALO)
+             + (i-IS+IHALO) + 1
            var(i,j) = recvpack_W2P(n,vid)
         enddo
         enddo
@@ -1739,7 +1735,7 @@ contains
             do j = JS, JE
             do i = IE+1, IE+IHALO
                n = (j-JS)   * IHALO &
-                 + (i-IE-1)
+                 + (i-IE-1) + 1
                var(i,j) = recvpack_E2P(n,vid)
             enddo
             enddo
@@ -1756,7 +1752,7 @@ contains
             do j = JS, JE
             do i = IS-IHALO, IS-1
                n = (j-JS)       * IHALO &
-                 + (i-IS+IHALO)
+                 + (i-IS+IHALO) + 1
                var(i,j) = recvpack_W2P(n,vid)
             enddo
             enddo
@@ -1932,7 +1928,6 @@ contains
                + (i-IE+IHALO-1) * KA         &
                + k
             sendpack_P2E_r4(n,vid) = var(k,i,j)
-            n = n + 1
         enddo
         enddo
         enddo
@@ -2019,7 +2014,6 @@ contains
                    + (i-IE+IHALO-1) * KA         &
                    + k
                 sendpack_P2E_r4(n,vid) = var(k,i,j)
-                n = n + 1
             enddo
             enddo
             enddo
@@ -2183,7 +2177,6 @@ contains
                + (i-IE+IHALO-1) * KA         &
                + k
             sendpack_P2E_r4(n,vid) = var(k,i,j)
-            n = n + 1
         enddo
         enddo
         enddo
