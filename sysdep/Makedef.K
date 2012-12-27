@@ -2,11 +2,11 @@
 
 FC     = mpifrtpx
 # new setting 20120413
-FFLAGS = -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
+FFLAGS = -Kfast,parallel,ocl,preex,array_private,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
          -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
          -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
 
-FFLAGS_DYN ?= -Kfast,parallel,ocl,preex,array_private,auto,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
+FFLAGS_DYN ?= -Kfast,parallel,ocl,preex,array_private,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
              -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
              -Knoprefetch -Ksimd=2 -Kdynamic_iteration
 
@@ -33,9 +33,8 @@ LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 # netcdf
-NETCDF_LIBS ?= -L/data/group084/netcdf/lib -lnetcdf -L/data/group084/hdf5.mpi/lib -lhdf5_hl -lhdf5 -lsz -lz
-NETCDF_INCLUDE ?= -I/data/group084/netcdf/include
-
+NETCDF_LIBS ?= -L/data/ra000006/SCALE/lib -lnetcdf -L/data/ra000006/SCALE/lib -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_INCLUDE ?= -I/data/ra000006/SCALE/include
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
