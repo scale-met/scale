@@ -549,6 +549,10 @@ contains
     TIME_raptstr(id) = PRC_MPItime()
     TIME_rapnstr(id) = TIME_rapnstr(id) + 1
 
+#ifdef _FAPP_
+call START_COLLECTION( rapname )
+#endif
+
     return
   end subroutine TIME_rapstart
 
@@ -567,6 +571,10 @@ contains
 
     TIME_rapttot(id) = TIME_rapttot(id) + ( PRC_MPItime()-TIME_raptstr(id) )
     TIME_rapnend(id) = TIME_rapnend(id) + 1
+
+#ifdef _FAPP_
+call STOP_COLLECTION( rapname )
+#endif
 
     return
   end subroutine TIME_rapend

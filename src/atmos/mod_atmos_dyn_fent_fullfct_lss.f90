@@ -961,9 +961,8 @@ contains
 
     do step = 1, NSTEP_ATMOS_DYN
 
-#ifdef _FPCOLL_
+#ifdef _FAPP_
 call TIME_rapstart   ('DYN-set')
-call START_COLLECTION("DYN-set")
 #endif
 
 
@@ -1394,11 +1393,9 @@ call START_COLLECTION("DYN-set")
     enddo
     enddo ! end tile
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-set")
+#ifdef _FAPP_
 call TIME_rapend     ('DYN-set')
 call TIME_rapstart   ('DYN-rk3')
-call START_COLLECTION("DYN-rk3")
 #endif
 
     !##### Start RK #####
@@ -1608,16 +1605,14 @@ call START_COLLECTION("DYN-rk3")
     enddo
     enddo
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-rk3")
+#ifdef _FAPP_
 call TIME_rapend     ('DYN-rk3')
 #endif
 
     enddo ! dynamical steps
 
-#ifdef _FPCOLL_
+#ifdef _FAPP_
 call TIME_rapstart   ('DYN-fct')
-call START_COLLECTION("DYN-fct")
 #endif
 
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
@@ -1892,8 +1887,7 @@ call START_COLLECTION("DYN-fct")
     enddo
 #endif
 
-#ifdef _FPCOLL_
-call STOP_COLLECTION ("DYN-fct")
+#ifdef _FAPP_
 call TIME_rapend     ('DYN-fct')
 #endif
 
