@@ -400,7 +400,8 @@ contains
       master,  &
       myrank,  &
       options, &
-      itemid   )
+      itemid,  &
+      existed  )
     use gtool_file, only : &
          FileCreate, &
          FileSetOption, &
@@ -415,6 +416,7 @@ contains
     integer,          intent( in) :: myrank
     character(len=*), intent( in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,          intent(out), optional :: itemid
+    logical,          intent(out), optional :: existed
 
     integer :: id
     integer :: ary_size
@@ -430,10 +432,12 @@ contains
     do n = 1, nmax
        if ( trim(varname) == trim(History_item(n)) ) then ! match existing item
           if ( present(itemid) ) itemid = n
+          if ( present(existed) ) existed = .true.
           return
        endif
     enddo
 
+    if ( present(existed) ) existed = .false.
 
     if ( id < 0 ) then ! request-register matching check
        do n = 1, History_req_nmax

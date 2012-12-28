@@ -135,30 +135,31 @@ contains
     character(len=*), intent( in), optional :: ydim
     character(len=*), intent( in), optional :: zdim
 
+    logical :: existed
+
     character(len=2) :: dims(3)
 
-    if ( present(xdim) .and. trim(xdim)=='half' ) then
-       dims(1) = 'xh'
-    else
-       dims(1) = 'x'
+    dims(1) = 'x'
+    if ( present(xdim) ) then
+       if ( trim(xdim)=='half' ) dims(1) = 'xh'
     end if
-    if ( present(ydim) .and. trim(ydim)=='half' ) then
-       dims(2) = 'yh'
-    else
-       dims(2) = 'y'
+    dims(2) = 'y'
+    if ( present(ydim) ) then
+       if ( trim(ydim)=='half' ) dims(2) = 'yh'
     end if
-    if ( present(zdim) .and. trim(zdim)=='half' ) then
-       dims(3) = 'zh'
-    else
-       dims(3) = 'z'
+    dims(3) = 'z'
+    if ( present(zdim) ) then
+       if ( trim(zdim)=='half' ) dims(3) = 'zh'
     end if
 
     call TIME_rapstart('FILE O')
 
-    call HIST_put_axes
-
     call HistoryAddVariable(item, dims(1:ndim), desc, units, PRC_master, PRC_myrank, & ! (in)
-         itemid = itemid) ! (out)
+         itemid = itemid, existed = existed) ! (out)
+
+    if ( .not. existed ) then
+       call HIST_put_axes
+    end if
 
 
     call TIME_rapend  ('FILE O')
@@ -521,12 +522,12 @@ contains
     call HistoryPutAdditionalAxis('FDX', 'Grid distance X', 'm', 'FDX', GRID_FDX)
     call HistoryPutAdditionalAxis('FDY', 'Grid distance Y', 'm', 'FDY', GRID_FDY)
 
-    call HistoryPutAdditionalAxis('CBFZ', 'Boundary factor Center Z', '', 'CZ', GRID_CBFZ)
-    call HistoryPutAdditionalAxis('CBFX', 'Boundary factor Center X', '', 'CX', GRID_CBFX)
-    call HistoryPutAdditionalAxis('CBFY', 'Boundary factor Center Y', '', 'CY', GRID_CBFY)
-    call HistoryPutAdditionalAxis('FBFZ', 'Boundary factor Face Z', '', 'CZ', GRID_FBFZ)
-    call HistoryPutAdditionalAxis('FBFX', 'Boundary factor Face X', '', 'CX', GRID_FBFX)
-    call HistoryPutAdditionalAxis('FBFY', 'Boundary factor Face Y', '', 'CY', GRID_FBFY)
+    call HistoryPutAdditionalAxis('CBFZ', 'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
+    call HistoryPutAdditionalAxis('CBFX', 'Boundary factor Center X', '1', 'CX', GRID_CBFX)
+    call HistoryPutAdditionalAxis('CBFY', 'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
+    call HistoryPutAdditionalAxis('FBFZ', 'Boundary factor Face Z', '1', 'CZ', GRID_FBFZ)
+    call HistoryPutAdditionalAxis('FBFX', 'Boundary factor Face X', '1', 'CX', GRID_FBFX)
+    call HistoryPutAdditionalAxis('FBFY', 'Boundary factor Face Y', '1', 'CY', GRID_FBFY)
 
     call TIME_rapend  ('FILE O')
 
