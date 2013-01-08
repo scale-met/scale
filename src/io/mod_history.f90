@@ -141,15 +141,15 @@ contains
 
     dims(1) = 'x'
     if ( present(xdim) ) then
-       if ( trim(xdim)=='half' ) dims(1) = 'xh'
+       if ( xdim=='half' ) dims(1) = 'xh'
     end if
     dims(2) = 'y'
     if ( present(ydim) ) then
-       if ( trim(ydim)=='half' ) dims(2) = 'yh'
+       if ( ydim=='half' ) dims(2) = 'yh'
     end if
     dims(3) = 'z'
     if ( present(zdim) ) then
-       if ( trim(zdim)=='half' ) dims(3) = 'zh'
+       if ( zdim=='half' ) dims(3) = 'zh'
     end if
 
     call TIME_rapstart('FILE O')
