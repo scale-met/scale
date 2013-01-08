@@ -4196,7 +4196,7 @@ contains
     r_xi_ccn=1.0_RP/xi_ccn
     !
 
-    if( opt_fix_lhcnd_c .and. iu==1 )then
+    if( opt_fix_lhcnd_c )then
        fac_cndc_wrk = fac_cndc_lh**(1.0_RP-b_m(I_QC))
        if( IO_L ) write(IO_FID_LOG,*) "lhcnd:fac_cndc_wrk=",fac_cndc_wrk
     else if( opt_fix_taucnd_c )then
