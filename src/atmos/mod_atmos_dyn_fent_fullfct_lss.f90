@@ -270,8 +270,8 @@ contains
                              LSsink_bottom,                      &
                              enable_coriolis                     )
     use mod_const, only: &
-       PI   => CONST_PI, &
-       EOHM => CONST_EOHM
+       PI  => CONST_PI, &
+       OHM => CONST_OHM
     implicit none
     real(RP), intent(out) :: DIFF4
     real(RP), intent(out) :: corioli(1,IA,JA)
@@ -314,7 +314,7 @@ contains
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
-          corioli(1,i,j) = 2.0_RP * EOHM * sin( lat(1,i,j) * d2r )
+          corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) * d2r )
        enddo
        enddo
     else

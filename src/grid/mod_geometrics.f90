@@ -244,8 +244,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine GEOMETRICS_makelonlat
     use mod_const, only: &
-       PI      => CONST_PI,     &
-       ERADIUS => CONST_ERADIUS
+       PI     => CONST_PI,     &
+       RADIUS => CONST_RADIUS
     use mod_grid, only: &
        CX => GRID_CX, &
        CY => GRID_CY
@@ -279,8 +279,8 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       gno(1) =  GRID_rotX(1,i,j) / ERADIUS ! angle from north-west corner (0,0)[m]
-       gno(2) = -GRID_rotY(1,i,j) / ERADIUS ! direction is north->south
+       gno(1) =  GRID_rotX(1,i,j) / RADIUS ! angle from north-west corner (0,0)[m]
+       gno(2) = -GRID_rotY(1,i,j) / RADIUS ! direction is north->south
 
        rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
        gmm = atan( rho )

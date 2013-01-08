@@ -48,13 +48,13 @@ module mod_const
   real(RP), public, save      :: CONST_UNDEF
 
   ! physical constants
-  real(RP), public, parameter :: CONST_ERADIUS = 6.37122E+6_RP !< earth radius           [m]
-  real(RP), public, parameter :: CONST_EOHM    = 7.292E-5_RP   !< Angular velocity of the Earth [1/s]
-  real(RP), public, save      :: CONST_GRAV    = 9.80616E0_RP  !< gravitational constant [m/s2]
+  real(RP), public, save      :: CONST_RADIUS  = 6.37122E+6_RP !< radius of the planet [m]
+  real(RP), public, save      :: CONST_OHM     = 7.292E-5_RP   !< Angular velocity of the planet [1/s]
+  real(RP), public, save      :: CONST_GRAV    = 9.80665E0_RP  !< gravitational constant [m/s2]
   real(RP), public, parameter :: CONST_KARMAN  = 0.4E0_RP      !< karman constant
 
-  real(RP), public, parameter :: CONST_Rdry    = 287.04E0_RP   !< gas constant   (dry)
-  real(RP), public, parameter :: CONST_CPdry   = 1003.5E0_RP   !< specific heat  (dry,constant pressure)
+  real(RP), public, save      :: CONST_Rdry    = 287.04E0_RP   !< gas constant   (dry)
+  real(RP), public, save      :: CONST_CPdry   = 1003.5E0_RP   !< specific heat  (dry,constant pressure)
   real(RP), public, save      :: CONST_CVdry                !< specific heat  (dry,constant volume)
   real(RP), public, save      :: CONST_RovCP                !< R / Cp = kappa (dry)
   real(RP), public, save      :: CONST_CPovR                !< 1 / kappa      (dry)
@@ -63,9 +63,9 @@ module mod_const
   real(RP), public, save      :: CONST_CVovCP               !< Cv / Cp        (dry)
   real(RP), public, save      :: CONST_LASPdry              !< g / Cp, Dry adiabatic lapse rate
 
-  real(RP), public, parameter :: CONST_Pstd  = 101325.E0_RP    !< standard pressure [Pa]
-  real(RP), public, parameter :: CONST_PRE00 = 100000.E0_RP    !< pressure reference [Pa]
-  real(RP), public, parameter :: CONST_Tstd  = 288.15E0_RP     !< standard temperature (15 degree C) [K]
+  real(RP), public, save      :: CONST_Pstd  = 101325.E0_RP    !< standard pressure [Pa]
+  real(RP), public, save      :: CONST_PRE00 = 100000.E0_RP    !< pressure reference [Pa]
+  real(RP), public, save      :: CONST_Tstd  = 288.15E0_RP     !< standard temperature (15 degree C) [K]
   real(RP), public, parameter :: CONST_TEM00 = 273.15E0_RP     !< temperature reference (0 degree C) [K]
 
   ! water constants
@@ -113,7 +113,14 @@ contains
     implicit none
 
     namelist / PARAM_CONST / &
-       CONST_GRAV
+       CONST_RADIUS, &
+       CONST_OHM, &
+       CONST_GRAV, &
+       CONST_Rdry, &
+       CONST_CPdry, &
+       CONST_Pstd, &
+       CONST_PRE00, &
+       CONST_Tstd
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -167,8 +174,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(INT2)                  : UNDEF2  = ', CONST_UNDEF2
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL4)                 : UNDEF4  = ', CONST_UNDEF4
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined num(REAL8)                 : UNDEF8  = ', CONST_UNDEF8
-    if( IO_L ) write(IO_FID_LOG,*) '*** radius of the Earth [m]              : ERADIUS = ', CONST_ERADIUS
-    if( IO_L ) write(IO_FID_LOG,*) '*** angular velocity of the Earth [1/s]  : EOHM    = ', CONST_EOHM
+    if( IO_L ) write(IO_FID_LOG,*) '*** radius of the planet [m]             : RADIUS = ', CONST_RADIUS
+    if( IO_L ) write(IO_FID_LOG,*) '*** angular velocity of the planet [1/s] : OHM    = ', CONST_OHM
     if( IO_L ) write(IO_FID_LOG,*) '*** gravitational constant [m/s2]        : GRAV    = ', CONST_GRAV
     if( IO_L ) write(IO_FID_LOG,*) '*** karman constant                      : KARMAN  = ', CONST_KARMAN
     if( IO_L ) write(IO_FID_LOG,*) '*** gas constant   (dry)                 : Rdry    = ', CONST_Rdry
