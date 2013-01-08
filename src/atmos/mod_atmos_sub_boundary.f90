@@ -508,7 +508,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       if ( .not. ( CZ_mask(k) .or. CX_mask(i) .or. CY_mask(j) ) ) then ! Buffer Layer
+       if ( .not. ( CZ_mask(k) .and. CX_mask(i) .and. CY_mask(j) ) ) then ! Buffer Layer
           if ( ATMOS_BOUNDARY_USE_VELZ ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
           endif
