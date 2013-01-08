@@ -351,7 +351,7 @@ contains
     vid = -1
     do n = 1, File_vid_count
        if ( File_vid_fid_list(n) == fid .and. &
-            trim(varname) == trim(File_vname_list(n)) ) then
+            varname == File_vname_list(n) ) then
           vid = File_vid_list(n)
        end if
     enddo
@@ -629,7 +629,7 @@ contains
     !--- search existing file
     fid = -1
     do n = 1, File_fid_count-1
-       if ( trim(basename)==trim(File_bname_list(n)) ) fid = File_fid_list(n)
+       if ( basename==File_bname_list(n) ) fid = File_fid_list(n)
     enddo
 
     if ( fid >= 0 ) then

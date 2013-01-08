@@ -254,7 +254,7 @@ contains
        fid_conf = namelist_fid
        rewind(fid_conf)
     else if ( present(namelist_filename) ) then
-       if ( trim(namelist_filename) /= '' ) then
+       if ( namelist_filename /= '' ) then
           open( fid_conf, file = trim(namelist_filename), &
                form = 'formatted', status = 'old', iostat = ierr)
        else
@@ -291,9 +291,9 @@ contains
       History_dim_type(n)  = File_REAL4
       if ( present(dim_type) ) then
          if ( size(dim_type) >= n ) then
-            if    ( trim(dim_type(n)) == 'REAL4' ) then
+            if    ( dim_type(n) == 'REAL4' ) then
                History_dim_type(n) = File_REAL4
-            elseif( trim(dim_type(n)) == 'REAL8' ) then
+            elseif( dim_type(n) == 'REAL8' ) then
                History_dim_type(n) = File_REAL8
             else
                write(message,*) 'xxx Not appropriate dim_type. Check!', dim_type(n), n
@@ -365,9 +365,9 @@ contains
           call Log('E', message)
        endif
 
-       if    ( trim(DATATYPE) == 'REAL4' ) then
+       if    ( DATATYPE == 'REAL4' ) then
           History_req_dtype(n) = File_REAL4
-       elseif( trim(DATATYPE) == 'REAL8' ) then
+       elseif( DATATYPE == 'REAL8' ) then
           History_req_dtype(n) = File_REAL8
        else
           write(message,*) 'xxx Not appropriate DATATYPE. Check!', DATATYPE
@@ -430,7 +430,7 @@ contains
     id = -1
     nmax = min( History_id_count, History_req_nmax )
     do n = 1, nmax
-       if ( trim(varname) == trim(History_item(n)) ) then ! match existing item
+       if ( varname == History_item(n) ) then ! match existing item
           if ( present(itemid) ) itemid = n
           if ( present(existed) ) existed = .true.
           return
@@ -441,9 +441,9 @@ contains
 
     if ( id < 0 ) then ! request-register matching check
        do n = 1, History_req_nmax
-          if ( trim(varname) == History_req_item(n) ) then
+          if ( varname == History_req_item(n) ) then
              reqid  = n
-             if ( trim(History_req_basename(reqid)) == '' ) exit
+             if ( History_req_basename(reqid) == '' ) exit
              History_id_count = History_id_count + 1
              id = History_id_count
 
@@ -492,7 +492,7 @@ contains
              ary_size = 1
              do m = 1, size(dims)
                 do l = 1, size(History_dim_name)
-                   if ( trim(dims(m)) == trim(History_dim_name(l)) ) then
+                   if ( dims(m) == History_dim_name(l) ) then
                       if ( History_dim_size(l) > 0 ) then
                          ary_size = ary_size * History_dim_size(l)
                          exit
@@ -556,7 +556,7 @@ contains
     !---------------------------------------------------------------------------
 
     do m = 1, size(History_dim_name)
-       if ( trim(History_dim_name(m)) == trim(dim) ) then ! dimension is found
+       if ( History_dim_name(m) == dim ) then ! dimension is found
           flag = .true.
           exit
        end if
@@ -597,7 +597,7 @@ contains
     !---------------------------------------------------------------------------
 
     do m = 1, size(History_dim_name)
-       if ( trim(History_dim_name(m)) == trim(dim) ) then ! dimension is found
+       if ( History_dim_name(m) == dim ) then ! dimension is found
           flag = .true.
           exit
        end if
@@ -651,9 +651,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
-       if ( trim(dtype) == 'REAL4' ) then
+       if ( dtype == 'REAL4' ) then
           type = File_REAL4
-       else if ( trim(dtype) == 'REAL8' ) then
+       else if ( dtype == 'REAL8' ) then
           type = File_REAL8
        else
           write(message,*) 'xxx Not appropriate dtype. Check!', dtype
@@ -664,7 +664,7 @@ contains
     end if
 
     do m = 1, size(History_dim_name)
-       if ( trim(History_dim_name(m)) == trim(dim) ) then
+       if ( History_dim_name(m) == dim ) then
           if ( History_dim_size(m) /= size(var) ) then
              write(message,*) 'xxx size of var is not match to dim. Check!', size(var), History_dim_size(m), '(', dim, ')'
              call Log('E', message)
@@ -717,9 +717,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
-       if ( trim(dtype) == 'REAL4' ) then
+       if ( dtype == 'REAL4' ) then
           type = File_REAL4
-       else if ( trim(dtype) == 'REAL8' ) then
+       else if ( dtype == 'REAL8' ) then
           type = File_REAL8
        else
           write(message,*) 'xxx Not appropriate dtype. Check!', dtype
@@ -730,7 +730,7 @@ contains
     end if
 
     do m = 1, size(History_dim_name)
-       if ( trim(History_dim_name(m)) == trim(dim) ) then
+       if ( History_dim_name(m) == dim ) then
           if ( History_dim_size(m) /= size(var) ) then
              write(message,*) 'xxx size of var is not match to dim. Check!', size(var), History_dim_size(m), '(', dim, ')'
              call Log('E', message)
@@ -775,7 +775,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
@@ -837,7 +837,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
@@ -899,7 +899,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
@@ -965,7 +965,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
@@ -1031,7 +1031,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
@@ -1101,7 +1101,7 @@ contains
     ! search item id
     itemid = -1
     do n = 1, History_id_count
-       if ( trim(varname) == trim(History_item(n)) ) then
+       if ( varname == History_item(n) ) then
           itemid = n
           exit
        end if
