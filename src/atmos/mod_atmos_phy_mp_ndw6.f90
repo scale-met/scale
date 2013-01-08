@@ -1131,6 +1131,8 @@ contains
        MOMY, &
        RHOT, &
        QTRC
+    use mod_history, only: &
+       HIST_in
     implicit none
 
     !
@@ -1962,7 +1964,7 @@ contains
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
+    do k = KS-1, KE
        flux_rain(k,i,j) = 0.0_RP
        flux_snow(k,i,j) = 0.0_RP
     enddo
@@ -1986,7 +1988,7 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-       do k = KS, KE
+       do k = KS-1, KE
           flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
           flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
        enddo
@@ -1994,6 +1996,10 @@ contains
        enddo
 
 !       if( opt_debug ) call debugreport_sedimentation
+
+       call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+       call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+       call HIST_in( flux_snow(KS-1,:,:)+flux_snow(KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
     enddo
 
