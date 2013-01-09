@@ -142,7 +142,8 @@ contains
                        MOMZ_LS, MOMZ_LS_DZ,                & ! (out)
                        CDZ, CDX, CDY, CZ, FZ,              & ! (in)
                        lat,                                & ! (in)
-                       0.0_RP, 0.0_RP, 0.0_RP, .false.     ) ! (in)
+                       0.0_RP, 1.0_RP,                     & ! (in)
+                       0.0_RP, 0.0_RP, .false.     ) ! (in)
 
 
   do k = KS+1, KE
