@@ -162,6 +162,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_time, only: &
+       DTSEC_ATMOS_DYN => TIME_DTSEC_ATMOS_DYN
     use mod_grid, only : &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -227,6 +229,7 @@ contains
                          CDZ, CDX, CDY, CZ, FZ,               & ! (in)
                          lat,                                 & ! (in)
                          ATMOS_DYN_numerical_diff,            & ! (in)
+                         DTSEC_ATMOS_DYN,                     & ! (in)
                          ATMOS_DYN_LSsink_D,                  & ! (in)
                          ATMOS_DYN_LSsink_bottom,             & ! (in)
                          ATMOS_DYN_enable_coriolis            ) ! (in)
@@ -265,7 +268,7 @@ contains
                              CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, &
                              MOMZ_LS, MOMZ_LS_DZ,                &
                              CDZ, CDX, CDY, CZ, FZ, lat,         &
-                             numerical_diff,                     &
+                             numerical_diff, dt_dyn,             &
                              LSsink_D,                           &
                              LSsink_bottom,                      &
                              enable_coriolis                     )
@@ -290,6 +293,7 @@ contains
     real(RP), intent(in)  :: FZ(0:KA)
     real(RP), intent(in)  :: lat(1,IA,JA) 
     real(RP), intent(in)  :: numerical_diff
+    real(RP), intent(in)  :: dt_dyn
     real(RP), intent(in)  :: LSsink_D
     real(RP), intent(in)  :: LSsink_bottom
     logical , intent(in)  :: enable_coriolis
@@ -337,7 +341,7 @@ contains
        CNDY(:,:) = 0.0_RP
        CNMY(:,:) = 0.0_RP
     else
-       DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 )
+       DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 ) / dt_dyn
 
        ! z direction
        do k = KS-1, KE+1
@@ -2153,7 +2157,6 @@ call TIME_rapend     ('DYN-fct')
     real(RP), pointer :: org(:,:,:)
     real(RP), target  :: work(KA,IA,JA)
 
-    real(RP) :: rdtrk
     real(RP) :: vel
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -2176,8 +2179,6 @@ call TIME_rapend     ('DYN-fct')
 
     work(:,:,:) = UNDEF
 #endif
-
-    rdtrk = 1.0_RP / dtrk
 
     if ( FLAG_FCT_RHO ) then
        if ( rko == RK ) then
@@ -2404,7 +2405,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
 #endif
           mflx_hi(k,i,j,ZDIR) = ( -MOMZ(k+1,i,j) + 8.0_RP*MOMZ(k,i,j) - MOMZ(k-1,i,j) ) / 6.0_RP &
-                              + num_diff(k,i,j,I_DENS,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENS,ZDIR)
        enddo
        enddo
        enddo
@@ -2420,7 +2421,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(KS,i,j,I_DENS,ZDIR) )
 #endif
           mflx_hi(KS,i,j,ZDIR) = ( -MOMZ(KS+1,i,j) + 8.0_RP*MOMZ(KS,i,j) ) / 6.0_RP & ! MOMZ(KS-1,i,j) == 0
-                              + num_diff(KS,i,j,I_DENS,ZDIR) * rdtrk
+                              + num_diff(KS,i,j,I_DENS,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -2448,7 +2449,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
           mflx_hi(k,i,j,XDIR) = ( -MOMX(k,i+1,j) + 8.0_RP*MOMX(k,i,j) -MOMX(k,i-1,j) ) / 6.0_RP &
-                              + num_diff(k,i,j,I_DENS,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENS,XDIR)
        enddo
        enddo
        enddo
@@ -2467,7 +2468,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,YDIR) )
 #endif
           mflx_hi(k,i,j,YDIR) = ( -MOMY(k,i,j+1) + 8.0_RP*MOMY(k,i,j) -MOMY(k,i,j-1) ) / 6.0_RP &
-                              + num_diff(k,i,j,I_DENS,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_DENS,YDIR)
        enddo
        enddo
        enddo
@@ -2785,7 +2786,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
                               + qflx_sgs_momz(k,i,j,ZDIR) &
-                              + num_diff(k,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZ,ZDIR)
        enddo
        enddo
        enddo
@@ -2816,7 +2817,7 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
                               + qflx_sgs_momz(KS+1,i,j,ZDIR) &
-                              + num_diff(KS+1,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
           ! k = KE-1
           vel = ( ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) * 0.5_RP &
                   + MOMZ_LS(KE-1,1) & ! part of large scale sinking
@@ -2824,7 +2825,7 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
                               + qflx_sgs_momz(KE-1,i,j,ZDIR) &
-                              + num_diff(KE-1,i,j,I_MOMZ,ZDIR) * rdtrk
+                              + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
           ! k = KE
           qflx_hi(KE-1,i,j,ZDIR) = &
                ( 0.5_RP * MOMZ_LS(KE-1,1) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
@@ -2852,7 +2853,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMZ(k,i+1,j)+MOMZ(k,i  ,j) ) &
                                 + FACT_F * ( MOMZ(k,i+2,j)+MOMZ(k,i-1,j) ) ) &
                               + qflx_sgs_momz(k,i,j,XDIR) &
-                              + num_diff(k,i,j,I_MOMZ,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZ,XDIR)
        enddo
        enddo
        enddo
@@ -2886,7 +2887,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMZ(k,i,j+1)+MOMZ(k,i,j  ) ) &
                                 + FACT_F * ( MOMZ(k,i,j+2)+MOMZ(k,i,j-1) ) ) &
                               + qflx_sgs_momz(k,i,j,YDIR) &
-                              + num_diff(k,i,j,I_MOMZ,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMZ,YDIR)
        enddo
        enddo
        enddo
@@ -3156,7 +3157,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
                                 + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
                               + qflx_sgs_momx(k,i,j,ZDIR) &
-                              + num_diff(k,i,j,I_MOMX,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMX,ZDIR)
        enddo
        enddo
        enddo
@@ -3192,13 +3193,13 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
                                  + qflx_sgs_momx(KS  ,i,j,ZDIR) &
-                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMX,ZDIR)
           vel = 0.5_RP * ( VELZ(KE-1,i+1,j) + VELZ(KE-1,i,j) ) &
               + 4.0_RP * MOMZ_LS(KE-1,2) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) ! large scale sinking
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
                                  + qflx_sgs_momx(KE-1,i,j,ZDIR) &
-                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMX,ZDIR)
           qflx_hi(KE,i,j,ZDIR) = 2.0_RP &
                * ( MOMZ_LS(KE-1,2) * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
                    / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) &
@@ -3227,7 +3228,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
                                 + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
                               + qflx_sgs_momx(k,i,j,XDIR) &
-                              + num_diff(k,i,j,I_MOMX,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMX,XDIR)
        enddo
        enddo
        enddo
@@ -3252,7 +3253,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
                                 + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
                               + qflx_sgs_momx(k,i,j,YDIR) &
-                              + num_diff(k,i,j,I_MOMX,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMX,YDIR)
        enddo
        enddo
        enddo
@@ -3508,7 +3509,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
                                 + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
                               + qflx_sgs_momy(k,i,j,ZDIR) &
-                              + num_diff(k,i,j,I_MOMY,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMY,ZDIR)
        enddo
        enddo
        enddo
@@ -3544,13 +3545,13 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )              &
                                  + qflx_sgs_momy(KS  ,i,j,ZDIR) &
-                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_MOMY,ZDIR)
           vel = 0.5_RP * ( VELZ(KE-1,i,j+1) + VELZ(KE-1,i,j) ) &
               + 4.0_RP * MOMZ_LS(KE-1,2) / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) ! large scale sinking
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )              &
                                  + qflx_sgs_momy(KE-1,i,j,ZDIR) &
-                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_MOMY,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = 2.0_RP &
                * ( MOMZ_LS(KE-1,2) * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) ) &
                / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) &
@@ -3578,7 +3579,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
                                 + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
                               + qflx_sgs_momy(k,i,j,XDIR) &
-                              + num_diff(k,i,j,I_MOMY,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMY,XDIR)
        enddo
        enddo
        enddo
@@ -3604,7 +3605,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( MOMY(k,i,j  )+MOMY(k,i,j-1) ) &
                                 + FACT_F * ( MOMY(k,i,j+1)+MOMY(k,i,j-2) ) ) &
                               + qflx_sgs_momy(k,i,j,YDIR) &
-                              + num_diff(k,i,j,I_MOMY,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_MOMY,YDIR)
        enddo
        enddo
        enddo
@@ -3855,7 +3856,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
                               + qflx_sgs_rhot(k,i,j,ZDIR) &
-                              + num_diff(k,i,j,I_RHOT,ZDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,ZDIR)
        enddo
        enddo
        enddo
@@ -3880,11 +3881,11 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR)  &      ! just above the bottom boundary
                                  * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
                                  + qflx_sgs_rhot(KS  ,i,j,ZDIR) &
-                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KS  ,i,j,I_RHOT,ZDIR)
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR)  &      ! just below the top boundary
                                  * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
                                  + qflx_sgs_rhot(KE-1,i,j,ZDIR) &
-                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR) * rdtrk
+                                 + num_diff(KE-1,i,j,I_RHOT,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = &
              + 0.5_RP * MOMZ_LS(KE-1,2) * ( POTT(KE,i,j) + POTT(KE-1,i,j) ) &
              + MOMZ_LS_DZ(KE,1) * CDZ(KE) * POTT(KE,i,j)
@@ -3910,7 +3911,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
                               + qflx_sgs_rhot(k,i,j,XDIR) &
-                              + num_diff(k,i,j,I_RHOT,XDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,XDIR)
        enddo
        enddo
        enddo
@@ -3934,7 +3935,7 @@ call TIME_rapend     ('DYN-fct')
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
                               + qflx_sgs_rhot(k,i,j,YDIR) &
-                              + num_diff(k,i,j,I_RHOT,YDIR) * rdtrk
+                              + num_diff(k,i,j,I_RHOT,YDIR)
        enddo
        enddo
        enddo
