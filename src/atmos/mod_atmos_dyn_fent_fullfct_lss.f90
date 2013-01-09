@@ -545,6 +545,7 @@ contains
        COMM_wait
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
+       ATMOS_vars_fillhalo, &
        ATMOS_USE_AVERAGE, &
        DENS, &
        MOMZ, &
@@ -596,6 +597,8 @@ contains
 #endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
+
+    call ATMOS_vars_fillhalo
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)

@@ -87,11 +87,14 @@ contains
        QTRC
     use mod_atmos_thermodyn, only: &
        CVw => AQ_CV
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP), intent(out)   :: flux_rain(KA,IA,JA)
     real(RP), intent(out)   :: flux_snow(KA,IA,JA)
-    real(RP), intent(in)    :: velw     (KA,IA,JA,QA) ! terminal velocity of cloud mass
+    real(RP), intent(inout) :: velw     (KA,IA,JA,QA) ! terminal velocity of cloud mass
     real(RP), intent(in)    :: rhoq     (KA,IA,JA,QA) ! rho * q
     real(RP), intent(in)    :: rhoe     (KA,IA,JA)
     real(RP), intent(in)    :: temp     (KA,IA,JA)
@@ -106,6 +109,19 @@ contains
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('SUB_precipitation')
+
+    do iq = 1, QA
+       call COMM_vars8( velw(:,:,:,iq), iq )
+    end do
+    do iq = 1, QA
+       call COMM_vars8( QTRC(:,:,:,iq), QA+iq )
+    end do
+    do iq = 1, QA
+       call COMM_wait( velw(:,:,:,iq), iq )
+    end do
+    do iq = 1, QA
+       call COMM_wait( QTRC(:,:,:,iq), QA+iq )
+    end do
 
 !OCL XFILL
     flux_rain(:,:,:) = 0.0_RP
