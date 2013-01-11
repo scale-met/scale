@@ -1341,9 +1341,14 @@ contains
   subroutine MKINIT_squallline
     implicit none
 
+    real(RP) :: SHIFT_X = 12.0_RP
+    real(RP) :: SHIFT_Y = -2.0_RP
+
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
 
     NAMELIST / PARAM_MKINIT_SQUALLLINE / &
+       SHIFT_X, &
+       SHIFT_Y, &
        ENV_IN_SOUNDING_file
 
     integer, parameter :: EXP_klim = 100
@@ -1417,14 +1422,10 @@ contains
        EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = SFC_QV
-       qc_sfc  (1,i,j) = 0.0_RP
-    enddo
-    enddo
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = SFC_QV
+    qc_sfc  (1,1,1) = 0.0_RP
 
     !--- linear interpolate to model grid
     do k = KS, KE
@@ -1483,8 +1484,8 @@ contains
     do i = IS, IE
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = velx(k,1,1) * DENS(k,1,1)
-       MOMY(k,i,j) = vely(k,1,1) * DENS(k,1,1)
+       MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
+       MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
        RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
