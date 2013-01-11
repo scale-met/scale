@@ -77,7 +77,7 @@ module mod_mkinit
   public :: MKINIT_khwave
   public :: MKINIT_turbulence
   public :: MKINIT_supercell
-  public :: MKINIT_squalline
+  public :: MKINIT_squallline
   public :: MKINIT_DYCOMS2_RF01
   public :: MKINIT_DYCOMS2_RF02
   public :: MKINIT_DYCOMS2_RF01_hbinw
@@ -103,7 +103,7 @@ module mod_mkinit
   integer, public, parameter :: I_KHWAVE              =  5
   integer, public, parameter :: I_TURBULENCE          =  6
   integer, public, parameter :: I_SUPERCELL           =  7
-  integer, public, parameter :: I_SQUALLINE           =  8
+  integer, public, parameter :: I_SQUALLLINE          =  8
   integer, public, parameter :: I_DYCOMS2_RF01        =  9
   integer, public, parameter :: I_DYCOMS2_RF02        = 10
   integer, public, parameter :: I_DYCOMS2_RF01_hbinw  = 11
@@ -225,8 +225,8 @@ contains
     case('SUPERCELL')
        MKINIT_TYPE = I_SUPERCELL
        call BUBBLE_setup
-    case('SQUALLINE')
-       MKINIT_TYPE = I_SQUALLINE
+    case('SQUALLLINE')
+       MKINIT_TYPE = I_SQUALLLINE
     case('DYCOMS2_RF01')
        MKINIT_TYPE = I_DYCOMS2_RF01
     case('DYCOMS2_RF02')
@@ -1336,14 +1336,19 @@ contains
   end subroutine MKINIT_supercell
 
   !-----------------------------------------------------------------------------
-  !> Make initial state for squalline experiment
+  !> Make initial state for squallline experiment
   !-----------------------------------------------------------------------------
-  subroutine MKINIT_squalline
+  subroutine MKINIT_squallline
     implicit none
+
+    real(RP) :: SHIFT_X = 12.0_RP
+    real(RP) :: SHIFT_Y = -2.0_RP
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
 
-    NAMELIST / PARAM_MKINIT_SQUALLINE / &
+    NAMELIST / PARAM_MKINIT_SQUALLLINE / &
+       SHIFT_X, &
+       SHIFT_Y, &
        ENV_IN_SOUNDING_file
 
     integer, parameter :: EXP_klim = 100
@@ -1370,15 +1375,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_SQUALLINE,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_SQUALLLINE,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLINE. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLINE)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
 
     !--- prepare sounding profile
     if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
@@ -1417,20 +1422,14 @@ contains
        EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
-       qv_sfc  (1,i,j) = SFC_QV
-       qc_sfc  (1,i,j) = 0.0_RP
-    enddo
-    enddo
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = SFC_QV
+    qc_sfc  (1,1,1) = 0.0_RP
 
     !--- linear interpolate to model grid
-    do j = JS, JE
-    do i = IS, IE
     do k = KS, KE
-       qc(k,i,j) = 0.0_RP
+       qc(k,1,1) = 0.0_RP
 
        do kref = 2, EXP_kmax
           if (       CZ(k) >  EXP_z(kref-1) &
@@ -1439,54 +1438,68 @@ contains
              fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
              fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
-             pott(k,i,j) = EXP_pott(kref-1) * fact1 &
+             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
                          + EXP_pott(kref)   * fact2
-             velx(k,i,j) = EXP_u   (kref-1) * fact1 &
+             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
                          + EXP_u   (kref)   * fact2
-             vely(k,i,j) = EXP_v   (kref-1) * fact1 &
+             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
                          + EXP_v   (kref)   * fact2
-             qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
+             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
                          + EXP_qv  (kref)   * fact2
+             exit
           endif
        enddo
-    enddo
-    enddo
+       if ( CZ(k) > EXP_z(EXP_kmax) ) then
+          kref = EXP_kmax
+          fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+          fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
+
+          pott(k,1,1) = EXP_pott(kref-1) * fact1 &
+                      + EXP_pott(kref)   * fact2
+          velx(k,1,1) = EXP_u   (kref-1) * fact1 &
+                      + EXP_u   (kref)   * fact2
+          vely(k,1,1) = EXP_v   (kref-1) * fact1 &
+                      + EXP_v   (kref)   * fact2
+          qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
+                      + EXP_qv  (kref)   * fact2
+       end if
+
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
-                         temp    (:,:,:), & ! [OUT]
-                         pres    (:,:,:), & ! [OUT]
-                         pott    (:,:,:), & ! [IN]
-                         qv      (:,:,:), & ! [IN]
-                         qc      (:,:,:), & ! [IN]
-                         temp_sfc(:,:,:), & ! [OUT]
-                         pres_sfc(:,:,:), & ! [IN]
-                         pott_sfc(:,:,:), & ! [IN]
-                         qv_sfc  (:,:,:), & ! [IN]
-                         qc_sfc  (:,:,:)  ) ! [IN]
+    call hydro_buildrho_1d( DENS    (:,1,1), & ! [OUT]
+                            temp    (:,1,1), & ! [OUT]
+                            pres    (:,1,1), & ! [OUT]
+                            pott    (:,1,1), & ! [IN]
+                            qv      (:,1,1), & ! [IN]
+                            qc      (:,1,1), & ! [IN]
+                            temp_sfc(1,1,1), & ! [OUT]
+                            pres_sfc(1,1,1), & ! [IN]
+                            pott_sfc(1,1,1), & ! [IN]
+                            qv_sfc  (1,1,1), & ! [IN]
+                            qc_sfc  (1,1,1)  ) ! [IN]
 
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-       RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+       MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
+       MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
+       RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
        do iq = 2, QA
           QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
-       ! make warm bubble
     enddo
     enddo
     enddo
 
     return
-  end subroutine MKINIT_squalline
+  end subroutine MKINIT_squallline
 
   !-----------------------------------------------------------------------------
   !> Make initial state for strato cumulus
