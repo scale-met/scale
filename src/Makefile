@@ -10,7 +10,7 @@ BUILD_DIR = ./.libs
 include ../sysdep/Makedef.$(SCALE_SYS)
 include ./Mkinclude
 
-VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess
+VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess:user
 INDEX_DIR = $(INCDIR)
 
 #default index & tracer set
