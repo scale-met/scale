@@ -1427,10 +1427,8 @@ contains
     enddo
 
     !--- linear interpolate to model grid
-    do j = JS, JE
-    do i = IS, IE
     do k = KS, KE
-       qc(k,i,j) = 0.0_RP
+       qc(k,1,1) = 0.0_RP
 
        do kref = 2, EXP_kmax
           if (       CZ(k) >  EXP_z(kref-1) &
@@ -1439,48 +1437,61 @@ contains
              fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
              fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
-             pott(k,i,j) = EXP_pott(kref-1) * fact1 &
+             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
                          + EXP_pott(kref)   * fact2
-             velx(k,i,j) = EXP_u   (kref-1) * fact1 &
+             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
                          + EXP_u   (kref)   * fact2
-             vely(k,i,j) = EXP_v   (kref-1) * fact1 &
+             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
                          + EXP_v   (kref)   * fact2
-             qv  (k,i,j) = EXP_qv  (kref-1) * fact1 &
+             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
                          + EXP_qv  (kref)   * fact2
+             exit
           endif
        enddo
-    enddo
-    enddo
+       if ( CZ(k) > EXP_z(EXP_kmax) ) then
+          kref = EXP_kmax
+          fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+          fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
+
+          pott(k,1,1) = EXP_pott(kref-1) * fact1 &
+                      + EXP_pott(kref)   * fact2
+          velx(k,1,1) = EXP_u   (kref-1) * fact1 &
+                      + EXP_u   (kref)   * fact2
+          vely(k,1,1) = EXP_v   (kref-1) * fact1 &
+                      + EXP_v   (kref)   * fact2
+          qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
+                      + EXP_qv  (kref)   * fact2
+       end if
+
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho( DENS    (:,:,:), & ! [OUT]
-                         temp    (:,:,:), & ! [OUT]
-                         pres    (:,:,:), & ! [OUT]
-                         pott    (:,:,:), & ! [IN]
-                         qv      (:,:,:), & ! [IN]
-                         qc      (:,:,:), & ! [IN]
-                         temp_sfc(:,:,:), & ! [OUT]
-                         pres_sfc(:,:,:), & ! [IN]
-                         pott_sfc(:,:,:), & ! [IN]
-                         qv_sfc  (:,:,:), & ! [IN]
-                         qc_sfc  (:,:,:)  ) ! [IN]
+    call hydro_buildrho_1d( DENS    (:,1,1), & ! [OUT]
+                            temp    (:,1,1), & ! [OUT]
+                            pres    (:,1,1), & ! [OUT]
+                            pott    (:,1,1), & ! [IN]
+                            qv      (:,1,1), & ! [IN]
+                            qc      (:,1,1), & ! [IN]
+                            temp_sfc(1,1,1), & ! [OUT]
+                            pres_sfc(1,1,1), & ! [IN]
+                            pott_sfc(1,1,1), & ! [IN]
+                            qv_sfc  (1,1,1), & ! [IN]
+                            qc_sfc  (1,1,1)  ) ! [IN]
 
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-       RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+       MOMX(k,i,j) = velx(k,1,1) * DENS(k,1,1)
+       MOMY(k,i,j) = vely(k,1,1) * DENS(k,1,1)
+       RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
        do iq = 2, QA
           QTRC(k,i,j,iq) = 0.0_RP
        enddo
 
-       ! make warm bubble
     enddo
     enddo
     enddo
