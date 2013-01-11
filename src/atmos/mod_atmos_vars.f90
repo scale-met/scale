@@ -386,6 +386,7 @@ contains
     call HIST_reg( ATMOS_HIST_id(I_ENGI),  'ENGI',  'internal energy',       'J/m3',   ndim=3 )
 
     call MONIT_reg( ATMOS_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3 )
+    call MONIT_reg( ATMOS_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3 )
@@ -404,7 +405,8 @@ contains
        ATMOS_PREP_sw(I_POTT) = 1
     endif
 
-    if ( ATMOS_HIST_id(I_QDRY) > 0 ) then
+    if (      ATMOS_HIST_id(I_QDRY) > 0 &
+         .OR. ATMOS_MONIT_id(I_QDRY) > 0 ) then
        ATMOS_PREP_sw(I_QDRY) = 1
     endif
     if (      ATMOS_HIST_id (I_QTOT) > 0 &
@@ -658,8 +660,6 @@ contains
           CPTOT (k,i,j) = CPdry*QDRY(k,i,j) + CPTOT(k,i,j)
           CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
 
-          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
-
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
 
@@ -677,7 +677,24 @@ contains
        enddo
        enddo
 
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+       enddo
+       enddo
+       enddo
+
     call MONIT_put( ATMOS_MONIT_id(I_QTOT), RHOQ(:,:,:) )
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+       enddo
+       enddo
+       enddo
+    call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGK), ENGK(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGI), ENGI(:,:,:) )
@@ -1382,6 +1399,16 @@ contains
        enddo
        call MONIT_put( ATMOS_MONIT_id(I_QTOT), RHOQ(:,:,:) )
     endif
+    if (ATMOS_MONIT_id(I_QDRY) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
+       enddo
+       enddo
+       enddo
+       call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+    endif
     call MONIT_put( ATMOS_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGK), ENGK(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGI), ENGI(:,:,:) )
@@ -1500,11 +1527,27 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) ) ! Qtotal
+       enddo
+       enddo
+       enddo
+       call COMM_total( total, RHOQ(:,:,:), 'Qtotal  ' )
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_total( total, RHOQ(:,:,:), 'Qdry    ' )
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
           VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
           VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
           VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-
-          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) ) ! Qtotal
 
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
 
@@ -1522,8 +1565,6 @@ contains
        enddo
        enddo
        enddo
-
-       call COMM_total( total, RHOQ(:,:,:), 'Qtotal  ' )
        call COMM_total( total, ENGT(:,:,:), 'ENGT    ' )
        call COMM_total( total, ENGP(:,:,:), 'ENGP    ' )
        call COMM_total( total, ENGK(:,:,:), 'ENGK    ' )
