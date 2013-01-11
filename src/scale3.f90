@@ -69,6 +69,9 @@ program scaleles3
   use mod_ocean_vars, only: &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
+  use mod_user, only: &
+     USER_setup, &
+     USER_step
   use dc_log, only: &
      LogInit
   use gtool_file, only: &
@@ -123,6 +126,9 @@ program scaleles3
   ! setup atmosphere
   call ATMOS_setup
 
+  ! setup user module
+  call USER_setup
+
   call TIME_rapend('Initialize')
 
   !########## main ##########
@@ -139,6 +145,8 @@ program scaleles3
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_step
     if ( TIME_DOOCEAN_step ) call OCEAN_step
+
+    call USER_step
 
     ! time advance
     call TIME_advance
