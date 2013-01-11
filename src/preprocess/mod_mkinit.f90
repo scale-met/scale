@@ -1483,6 +1483,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
        MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
