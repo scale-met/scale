@@ -1985,11 +1985,11 @@ contains
 
 !       if( opt_debug ) call debugreport_sedimentation
 
-       call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-       call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-       call HIST_in( flux_snow(KS-1,:,:)+flux_snow(KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
-
     enddo
+
+    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:)+flux_snow(KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
     endif
 
