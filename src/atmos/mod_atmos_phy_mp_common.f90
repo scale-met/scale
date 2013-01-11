@@ -493,6 +493,9 @@ contains
        RFDZ => GRID_RFDZ
     use mod_atmos_thermodyn, only: &
        CVw => AQ_CV
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP), intent(out)   :: flux_rain(KA,IA,JA)
@@ -503,7 +506,7 @@ contains
     real(RP), intent(inout) :: MOMY     (KA,IA,JA)
     real(RP), intent(inout) :: RHOE     (KA,IA,JA)
     real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
-    real(RP), intent(in)    :: vterm    (KA,IA,JA,QA) ! terminal velocity of cloud mass
+    real(RP), intent(inout) :: vterm    (KA,IA,JA,QA) ! terminal velocity of cloud mass
     real(RP), intent(in)    :: temp     (KA,IA,JA)
 
     real(RP) :: rhoq(KA,QA) ! rho * q before precipitation
@@ -514,6 +517,19 @@ contains
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('MP_precipitation')
+
+    do iq = 1, QA
+       call COMM_vars8( vterm(:,:,:,iq), iq )
+    end do
+    do iq = 1, QA
+       call COMM_vars8( QTRC(:,:,:,iq), QA+iq )
+    end do
+    do iq = 1, QA
+       call COMM_wait( vterm(:,:,:,iq), iq )
+    end do
+    do iq = 1, QA
+       call COMM_wait( QTRC(:,:,:,iq), QA+iq )
+    end do
 
     flux_rain(:,:,:) = 0.0_RP
     flux_snow(:,:,:) = 0.0_RP
@@ -526,12 +542,15 @@ contains
        eflx(KE) = 0.0_RP
 
        !--- mass flux for each mass tracer, upwind with vel < 0
+       do iq = 1, QA
+       do k  = KS-1, KE
+          rhoq(k,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+       enddo
+       enddo
        do iq = I_QC, QA
           do k  = KS-1, KE-1
-             rhoq(k,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
-             qflx(k,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq)
+             qflx(k,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,iq)
           enddo
-          rhoq(KE,iq) = DENS(KE,i,j) * QTRC(KE,i,j,iq)
           qflx(KE,iq) = 0.0_RP
        enddo
 
@@ -569,7 +588,7 @@ contains
           enddo
 
           !--- momentum z (half level)
-          do k  = KS-1, KE-2
+          do k  = KS-1, KE-1
              eflx(k) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k,i,j,iq) ) &
                                * ( QTRC (k+1,i,j,iq) + QTRC (k,i,j,iq) ) &
                                * MOMZ(k,i,j)
@@ -606,6 +625,9 @@ contains
        enddo ! mass tracer loop
 
        !--- update tracer
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = rhoq(k,I_QV) / DENS(k,i,j)
+       enddo
        do iq = I_QC, QA
        do k  = KS, KE
           QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) ) &

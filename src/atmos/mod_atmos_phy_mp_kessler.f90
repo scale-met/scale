@@ -153,6 +153,8 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_history, only: &
        HIST_in
+    use mod_time, only: &
+       dt => TIME_DTSEC_ATMOS_PHY_MP
     implicit none
 
     real(RP) :: RHOE  (KA,IA,JA)
@@ -205,6 +207,11 @@ contains
                            QTRC (:,:,:,:),   & ! [INOUT]
                            vterm(:,:,:,:),   & ! [IN]
                            temp (:,:,:)      ) ! [IN]
+
+    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:)+flux_snow(KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
+
 
     call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
                          RHOE(:,:,:),  & ! [IN]
