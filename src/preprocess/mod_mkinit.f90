@@ -77,7 +77,7 @@ module mod_mkinit
   public :: MKINIT_khwave
   public :: MKINIT_turbulence
   public :: MKINIT_supercell
-  public :: MKINIT_squalline
+  public :: MKINIT_squallline
   public :: MKINIT_DYCOMS2_RF01
   public :: MKINIT_DYCOMS2_RF02
   public :: MKINIT_DYCOMS2_RF01_hbinw
@@ -103,7 +103,7 @@ module mod_mkinit
   integer, public, parameter :: I_KHWAVE              =  5
   integer, public, parameter :: I_TURBULENCE          =  6
   integer, public, parameter :: I_SUPERCELL           =  7
-  integer, public, parameter :: I_SQUALLINE           =  8
+  integer, public, parameter :: I_SQUALLLINE          =  8
   integer, public, parameter :: I_DYCOMS2_RF01        =  9
   integer, public, parameter :: I_DYCOMS2_RF02        = 10
   integer, public, parameter :: I_DYCOMS2_RF01_hbinw  = 11
@@ -225,8 +225,8 @@ contains
     case('SUPERCELL')
        MKINIT_TYPE = I_SUPERCELL
        call BUBBLE_setup
-    case('SQUALLINE')
-       MKINIT_TYPE = I_SQUALLINE
+    case('SQUALLLINE')
+       MKINIT_TYPE = I_SQUALLLINE
     case('DYCOMS2_RF01')
        MKINIT_TYPE = I_DYCOMS2_RF01
     case('DYCOMS2_RF02')
@@ -1336,14 +1336,14 @@ contains
   end subroutine MKINIT_supercell
 
   !-----------------------------------------------------------------------------
-  !> Make initial state for squalline experiment
+  !> Make initial state for squallline experiment
   !-----------------------------------------------------------------------------
-  subroutine MKINIT_squalline
+  subroutine MKINIT_squallline
     implicit none
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
 
-    NAMELIST / PARAM_MKINIT_SQUALLINE / &
+    NAMELIST / PARAM_MKINIT_SQUALLLINE / &
        ENV_IN_SOUNDING_file
 
     integer, parameter :: EXP_klim = 100
@@ -1370,15 +1370,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_SQUALLINE,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_SQUALLLINE,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLINE. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLINE)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
 
     !--- prepare sounding profile
     if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
@@ -1486,7 +1486,7 @@ contains
     enddo
 
     return
-  end subroutine MKINIT_squalline
+  end subroutine MKINIT_squallline
 
   !-----------------------------------------------------------------------------
   !> Make initial state for strato cumulus

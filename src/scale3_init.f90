@@ -67,7 +67,7 @@ program scaleinit
      I_KHWAVE,        &
      I_TURBULENCE,    &
      I_SUPERCELL,     &
-     I_SQUALLINE,     &
+     I_SQUALLLINE,    &
      I_DYCOMS2_RF01,  &
      I_DYCOMS2_RF02,  &
      I_DYCOMS2_RF01_hbinw,&
@@ -80,7 +80,7 @@ program scaleinit
      MKINIT_khwave,       &
      MKINIT_turbulence,   &
      MKINIT_supercell,    &
-     MKINIT_squalline,    &
+     MKINIT_squallline,   &
      MKINIT_DYCOMS2_RF01, &
      MKINIT_DYCOMS2_RF02, &
      MKINIT_DYCOMS2_RF01_hbinw, &
@@ -170,8 +170,8 @@ program scaleinit
      call MKINIT_turbulence
   case(I_SUPERCELL)
      call MKINIT_supercell
-  case(I_SQUALLINE)
-     call MKINIT_squalline
+  case(I_SQUALLLINE)
+     call MKINIT_squallline
   case(I_DYCOMS2_RF01)
      call MKINIT_DYCOMS2_RF01
   case(I_DYCOMS2_RF02)
