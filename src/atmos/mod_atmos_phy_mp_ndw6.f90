@@ -72,8 +72,6 @@ module mod_atmos_phy_mp
      Rdry   => CONST_Rdry,    &
      CPdry  => CONST_CPdry,   &
      CVdry  => CONST_CVdry,   &
-     RovCP  => CONST_RovCP,   &
-     CPovCV => CONST_CPovCV,  &
      P00    => CONST_PRE00,   &
      T00    => CONST_TEM00,   &
      Rvap   => CONST_Rvap,    &
@@ -2090,7 +2088,9 @@ contains
     do i = IS, IE
 
        do k  = KS, KE
-          th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**RovCP
+          CALC_CP( cpa_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CPdry, AQ_CP )
+          CALC_R( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
+          th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(Rmoist/cpa_d(k,i,j))
        enddo
 
        do k = KS, KE
@@ -2518,9 +2518,6 @@ contains
        ct, dt            ) ! in
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_const, only : &
-       GRAV   => CONST_GRAV, &
-       UNDEF8 => CONST_UNDEF8
     use mod_atmos_saturation, only : &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -4498,8 +4495,6 @@ contains
       rhoq, &
       temp, &
       pres  )
-    use mod_const, only: &
-       PI => CONST_PI
     use mod_atmos_vars, only: &
        DENS
     implicit none
