@@ -1474,11 +1474,8 @@ contains
   subroutine ATMOS_vars_total
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
-       Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
        CVdry  => CONST_CVdry,  &
-       Rvap   => CONST_Rvap,   &
-       P00    => CONST_PRE00
+       Rvap   => CONST_Rvap
     use mod_grid, only : &
        CZ   => GRID_CZ
     use mod_comm, only: &

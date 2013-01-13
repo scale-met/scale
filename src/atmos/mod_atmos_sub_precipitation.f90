@@ -69,7 +69,6 @@ contains
     use mod_const, only : &
        GRAV  => CONST_GRAV,  &
        Rdry  => CONST_Rdry,  &
-       CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
        Rvap  => CONST_Rvap,  &
        PRE00 => CONST_PRE00

@@ -582,8 +582,6 @@ contains
        SFLX_MOMY, &
        SFLX_POTT, &
        SFLX_QV
-    use mod_ocean_vars, only: &
-      SST
     implicit none
 
     real(RP) :: QDRY(KA,IA,JA)      ! dry air mixing ratio [kg/kg]
@@ -610,7 +608,7 @@ contains
          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & !(in)
          qflx_sgs_rhot, qflx_sgs_qtrc,              & !(in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,           & ! (in)
-         SFLX_POTT, SFLX_QV, SST,                   & ! (in)
+         SFLX_POTT, SFLX_QV,                        & ! (in)
          AQ_CV,                                     & ! (in)
          REF_dens, REF_pott, DIFF4,                 & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
@@ -640,7 +638,7 @@ contains
          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-         SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+         SFLX_POTT, SFLX_QV,                          & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
@@ -651,8 +649,7 @@ contains
     use mod_const, only : &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
-       CVdry  => CONST_CVdry, &
-       P00    => CONST_PRE00
+       CVdry  => CONST_CVdry
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -715,8 +712,6 @@ contains
     real(RP), intent(in)    :: SFLX_MOMY(IA,JA)
     real(RP), intent(in)    :: SFLX_POTT(IA,JA)
     real(RP), intent(in)    :: SFLX_QV  (IA,JA)
-
-    real(RP), intent(in)    :: SST(1,IA,JA)
 
     real(RP), intent(in)    :: AQ_CV(QQA)
 
@@ -1422,7 +1417,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
-                 SFLX_POTT, SFLX_QV, SST,                           & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
@@ -1458,7 +1453,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
-                 SFLX_POTT, SFLX_QV, SST,                           & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
@@ -1494,7 +1489,7 @@ call START_COLLECTION("DYN-rk3")
                  qflx_sgs_momz, qflx_sgs_momx,                      & ! (in)
                  qflx_sgs_momy, qflx_sgs_rhot,                      & ! (in)
                  SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,                   & ! (in)
-                 SFLX_POTT, SFLX_QV, SST,                           & ! (in)
+                 SFLX_POTT, SFLX_QV,                                & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, ray_damp, divdmp_coef,                   & ! (in)
                  MOMZ_LS, MOMZ_LS_DZ,                               & ! (in)
@@ -2054,7 +2049,7 @@ call TIME_rapend     ('DYN-fct')
                      qflx_sgs_momz, qflx_sgs_momx,                &
                      qflx_sgs_momy, qflx_sgs_rhot,                &
                      SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             &
-                     SFLX_POTT, SFLX_QV, SST,                     &
+                     SFLX_POTT, SFLX_QV,                          &
                      Rtot, CVtot, CORIOLI,                        &
                      num_diff, ray_damp, divdmp_coef,             &
                      MOMZ_LS, MOMZ_LS_DZ,                         &
@@ -2066,8 +2061,6 @@ call TIME_rapend     ('DYN-fct')
                      qflx_hi, qflx_lo, qflx_anti, fct_dt, rjpls, rjmns )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
-       Rdry   => CONST_Rdry,   &
-       Rvap   => CONST_Rvap,   &
        P00    => CONST_PRE00
     use mod_comm, only: &
 #ifdef _USE_RDMA
@@ -2109,8 +2102,6 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in) :: SFLX_MOMY(IA,JA)
     real(RP), intent(in) :: SFLX_POTT(IA,JA)
     real(RP), intent(in) :: SFLX_QV  (IA,JA)
-
-    real(RP), intent(in) :: SST(1,IA,JA)
 
     real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
     real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV

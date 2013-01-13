@@ -390,7 +390,7 @@ contains
     real(RP) :: pres
     real(RP) :: Rtot, CVtot, RovCP
 
-    integer :: k, i, j, iqw
+    integer :: iqw
     !---------------------------------------------------------------------------
 
     qdry  = 1.0_RP
@@ -578,8 +578,6 @@ contains
   subroutine ATMOS_THERMODYN_tempre2( &
       temp, pres,         &
       dens, pott, qdry, q )
-    use mod_const, only : &
-       CONST_RovCP
     implicit none
 
     real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature

@@ -155,7 +155,6 @@ contains
        RHOT, &
        QTRC
     use mod_grid, only: &
-       CZ => GRID_CZ, &
        CX => GRID_CX, &
        CY => GRID_CY
     use mod_comm, only: &
