@@ -88,13 +88,13 @@ contains
     RANDOM_count = RANDOM_count + 1
 
     RANDOM_seedvar(:) = &
-         + ( time(1) - 1970 ) * 32140800
-         + time(2) * 2678400
-         + time(3) * 86400
-         + time(4) * 60
-         + time(5) * 3600
-         + time(6) * 60
-         + time(7) &
+         + ( time1(1) - 1970 ) * 32140800 &
+         + time1(2) * 2678400 &
+         + time1(3) * 86400 &
+         + time1(4) * 60 &
+         + time1(5) * 3600 &
+         + time1(6) * 60 &
+         + time1(7) &
          + int(time2*1.D6) + PRC_myrank
 
     call random_seed(put=RANDOM_seedvar)
