@@ -67,8 +67,6 @@ module test_atmos_dyn_fent_fct
   real(RP) :: SFLX_POTT(IA,JA)
   real(RP) :: SFLX_QV(IA,JA)
 
-  real(RP) :: SST(1,IA,JA)
-
   real(RP) :: QDRY(KA,IA,JA)
   real(RP) :: DDIV(KA,IA,JA)
   real(RP) :: SINK(KA,IA,JA,5+QA)
@@ -171,7 +169,6 @@ contains
   SFLX_MOMY(:,:) = 0.0_RP
   SFLX_POTT(:,:) = 0.0_RP
   SFLX_QV(:,:) = 0.0_RP
-  SST(:,:,:) = 0.0_RP
 
   !########## test ##########
 
@@ -228,7 +225,7 @@ subroutine test_undef
           qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
           qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
           SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-          SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+          SFLX_POTT, SFLX_QV,                          & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, DIFF4,                   & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
@@ -279,7 +276,7 @@ subroutine test_const
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
        qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
        SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-       SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+       SFLX_POTT, SFLX_QV,                          & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, DIFF4,                   & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
@@ -363,7 +360,7 @@ subroutine test_conserve
          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-         SFLX_POTT, SFLX_QV, SST,                     & ! (in)
+         SFLX_POTT, SFLX_QV,                          & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
