@@ -2070,21 +2070,21 @@ call TIME_rapend     ('DYN-fct')
        COMM_wait
     implicit none
 
-    real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
-    real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
+    real(RP), intent(inout) :: DENS_RK(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(inout) :: MOMZ_RK(KA,IA,JA)   !
+    real(RP), intent(inout) :: MOMX_RK(KA,IA,JA)   !
+    real(RP), intent(inout) :: MOMY_RK(KA,IA,JA)   !
+    real(RP), intent(inout) :: RHOT_RK(KA,IA,JA)   !
 
     real(RP), intent(out) :: DDIV(KA,IA,JA)      ! divergence
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
 
-    real(RP), intent(in),target :: DENS0(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(in),target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
-    real(RP), intent(in),target :: MOMX0(KA,IA,JA)   !
-    real(RP), intent(in),target :: MOMY0(KA,IA,JA)   !
-    real(RP), intent(in),target :: RHOT0(KA,IA,JA)   !
+    real(RP), intent(inout),target :: DENS0(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(inout),target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
+    real(RP), intent(inout),target :: MOMX0(KA,IA,JA)   !
+    real(RP), intent(inout),target :: MOMY0(KA,IA,JA)   !
+    real(RP), intent(inout),target :: RHOT0(KA,IA,JA)   !
 
     real(RP), intent(in) :: DENS(KA,IA,JA)   ! prognostic variables
     real(RP), intent(in) :: MOMZ(KA,IA,JA)   ! at previous RK step
