@@ -79,17 +79,23 @@ contains
        PRC_myrank
     implicit none
 
-    integer :: time
-
-    integer :: time1
+    integer :: time1(8)
     real(RP) :: time2
     !---------------------------------------------------------------------------
 
-    time1 = time()
+    call date_and_time(values=time1)
     call cpu_time(time2)
     RANDOM_count = RANDOM_count + 1
 
-    RANDOM_seedvar(:) = time1 + int(time2*1.D6) + PRC_myrank
+    RANDOM_seedvar(:) = &
+         + ( time(1) - 1970 ) * 32140800
+         + time(2) * 2678400
+         + time(3) * 86400
+         + time(4) * 60
+         + time(5) * 3600
+         + time(6) * 60
+         + time(7) &
+         + int(time2*1.D6) + PRC_myrank
 
     call random_seed(put=RANDOM_seedvar)
 
