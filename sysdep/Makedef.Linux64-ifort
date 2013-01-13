@@ -44,3 +44,4 @@ NETCDF_INCLUDE ?=
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
+JOBSUB  = sh
