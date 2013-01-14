@@ -1342,20 +1342,20 @@ contains
     call TIME_rapstart('MPX ijkconvert')
 
     do iq = 1, QA
-       do j = 1, JA
-       do i = 1, IA
+       do j = JS, JE
+       do i = IS, IE
           do k = KS, KE
              q_d(k,i,j,iq) = QTRC(k,i,j,iq)
           enddo
-          do k = 1, KA
+          do k = KS, KE
              rhogq_d(k,i,j,iq) = DENS(k,i,j) * q_d(k,i,j,iq)
           enddo
        enddo
        enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        sl_PLCdep_d(1,i,j) = 0.0_RP
        sl_PLRdep_d(1,i,j) = 0.0_RP
        sl_PNRdep_d(1,i,j) = 0.0_RP
@@ -1393,59 +1393,29 @@ contains
 
     call TIME_rapstart('MP1 Nucleation')
 
-    do j = 1,  JA
-    do i = 1,  IA
-    do k = KS, KE
-       rho_fac         = rho_0 / max(DENS(k,i,j),rho_min)
-       rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
-       rho_fac_r_d(k,i,j) = rho_fac**gamma_v(I_QR)
-       rho_fac_i_d(k,i,j) = (pre_d(k,i,j)/pre0_vt)**a_pre0_vt * (tem_d(k,i,j)/tem0_vt)**a_tem0_vt
-       rho_fac_s_d(k,i,j) = rho_fac_i_d(k,i,j)
-       rho_fac_g_d(k,i,j) = rho_fac_i_d(k,i,j)
-    enddo
-    enddo
-    enddo
-    do j=1, JA
-    do i=1, IA
-       rho_fac_c_d(1:KS-1,i,j)    = 1.0_RP
-       rho_fac_r_d(1:KS-1,i,j)    = 1.0_RP
-       rho_fac_i_d(1:KS-1,i,j)    = 1.0_RP
-       rho_fac_s_d(1:KS-1,i,j)    = 1.0_RP
-       rho_fac_g_d(1:KS-1,i,j)    = 1.0_RP
-
-       rho_fac_c_d(KE+1:KA,i,j) = rho_fac_c_d(KE,i,j)
-       rho_fac_r_d(KE+1:KA,i,j) = rho_fac_r_d(KE,i,j)
-       rho_fac_i_d(KE+1:KA,i,j) = rho_fac_i_d(KE,i,j)
-       rho_fac_s_d(KE+1:KA,i,j) = rho_fac_s_d(KE,i,j)
-       rho_fac_g_d(KE+1:KA,i,j) = rho_fac_g_d(KE,i,j)
-    end do
-    end do
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       CALC_CP( cpa_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CP )
-       wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
-    enddo
-    enddo
-    enddo
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       qke_d       (k,i,j) = 0.0_RP ! 2*TKE
-       dTdt_equiv_d(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       lv_d(k,i,j) = DENS(k,i,j)*q_d(k,i,j,I_QV)
-       ni_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NI) )
-       nc_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NC) )
-    enddo
+    do j = JS,  JE
+    do i = IS,  IE
+       do k = KS, KE
+          rho_fac         = rho_0 / max(DENS(k,i,j),rho_min)
+          rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
+          rho_fac_r_d(k,i,j) = rho_fac**gamma_v(I_QR)
+          rho_fac_i_d(k,i,j) = (pre_d(k,i,j)/pre0_vt)**a_pre0_vt * (tem_d(k,i,j)/tem0_vt)**a_tem0_vt
+          rho_fac_s_d(k,i,j) = rho_fac_i_d(k,i,j)
+          rho_fac_g_d(k,i,j) = rho_fac_i_d(k,i,j)
+       enddo
+       do k = KS, KE
+          CALC_CP( cpa_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CP )
+          wtem_d(k,i,j) = max(tem_d(k,i,j), tem_min)
+       enddo
+       do k = KS, KE
+          qke_d       (k,i,j) = 0.0_RP ! 2*TKE
+          dTdt_equiv_d(k,i,j) = 0.0_RP
+       enddo
+       do k = KS, KE
+          lv_d(k,i,j) = DENS(k,i,j)*q_d(k,i,j,I_QV)
+          ni_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NI) )
+          nc_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NC) )
+       enddo
     enddo
     enddo
 
@@ -1465,47 +1435,43 @@ contains
          flag_history_in,& ! in
          ct, dt         ) ! in
 
-    do j = 1,  JA
-    do i = 1,  IA
-    do k = KS, KE
-       ! nucleation
-       drhogqc = dt * PLCccn_d(k,i,j)
-       drhognc = dt * PNCccn_d(k,i,j)
-       drhogqi = dt * PLIccn_d(k,i,j)
-       drhogni = dt * PNIccn_d(k,i,j)
-       drhogqv = max( -rhogq_d(k,i,j,I_QV), -drhogqc-drhogqi )
-       fac1    = drhogqv / min( -drhogqc-drhogqi, -eps ) ! limiting coefficient
+    do j = JS,  JE
+    do i = IS,  IE
+       do k = KS, KE
+          ! nucleation
+          drhogqc = dt * PLCccn_d(k,i,j)
+          drhognc = dt * PNCccn_d(k,i,j)
+          drhogqi = dt * PLIccn_d(k,i,j)
+          drhogni = dt * PNIccn_d(k,i,j)
+          drhogqv = max( -rhogq_d(k,i,j,I_QV), -drhogqc-drhogqi )
+          fac1    = drhogqv / min( -drhogqc-drhogqi, -eps ) ! limiting coefficient
 
-       rhogq_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) + drhogqv
-       rhogq_d(k,i,j,I_QC) = max(0.0_RP, rhogq_d(k,i,j,I_QC) + drhogqc*fac1)
-       rhogq_d(k,i,j,I_QI) = max(0.0_RP, rhogq_d(k,i,j,I_QI) + drhogqi*fac1)
-       rhogq_d(k,i,j,I_NC) = max(0.0_RP, rhogq_d(k,i,j,I_NC) + drhognc)
-       rhogq_d(k,i,j,I_NI) = max(0.0_RP, rhogq_d(k,i,j,I_NI) + drhogni)
+          rhogq_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) + drhogqv
+          rhogq_d(k,i,j,I_QC) = max(0.0_RP, rhogq_d(k,i,j,I_QC) + drhogqc*fac1)
+          rhogq_d(k,i,j,I_QI) = max(0.0_RP, rhogq_d(k,i,j,I_QI) + drhogqi*fac1)
+          rhogq_d(k,i,j,I_NC) = max(0.0_RP, rhogq_d(k,i,j,I_NC) + drhognc)
+          rhogq_d(k,i,j,I_NI) = max(0.0_RP, rhogq_d(k,i,j,I_NI) + drhogni)
 
-       ! cloud number concentration filter
-       rhogq_d(k,i,j,I_NC) = min( rhogq_d(k,i,j,I_NC), nc_uplim_d(1,i,j) )
+          ! cloud number concentration filter
+          rhogq_d(k,i,j,I_NC) = min( rhogq_d(k,i,j,I_NC), nc_uplim_d(1,i,j) )
 
-       rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv + LHF * drhogqi*fac1
-    enddo
-    enddo
-    enddo
+          rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv + LHF * drhogqi*fac1
+       enddo
+       !
+       do k = KS, KE
+          q_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_QC) = rhogq_d(k,i,j,I_QC) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_QI) = rhogq_d(k,i,j,I_QI) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_NC) = rhogq_d(k,i,j,I_NC) * rrhog_d(k,i,j)
+          q_d(k,i,j,I_NI) = rhogq_d(k,i,j,I_NI) * rrhog_d(k,i,j)
 
-    do j = 1, JA
-    do i = 1, IA
-    do k  = KS, KE
-       q_d(k,i,j,I_QV) = rhogq_d(k,i,j,I_QV) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_QC) = rhogq_d(k,i,j,I_QC) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_QI) = rhogq_d(k,i,j,I_QI) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_NC) = rhogq_d(k,i,j,I_NC) * rrhog_d(k,i,j)
-       q_d(k,i,j,I_NI) = rhogq_d(k,i,j,I_NI) * rrhog_d(k,i,j)
+          CALC_QDRY( qd_d(k,i,j), q_d, k, i, j, iq )
+          CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
+          CALC_R ( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
 
-       CALC_QDRY( qd_d(k,i,j), q_d, k, i, j, iq )
-       CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
-       CALC_R ( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
-
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
-       pre_d(k,i,j) = DENS(k,i,j) * Rmoist * tem_d(k,i,j)
-    enddo
+          tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+          pre_d(k,i,j) = DENS(k,i,j) * Rmoist * tem_d(k,i,j)
+       enddo
     enddo
     enddo
 
@@ -1528,9 +1494,9 @@ contains
           flag_history_in=.true.
 !       end if
        !
-       do j=1, JA
-       do i=1, IA
-          do k=1, KA
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              lr_d(k,i,j)     = rhogq_d(k,i,j,I_QR)
              nr_d(k,i,j)     = rhogq_d(k,i,j,I_NR)
              xr_d(k,i,j)     = max(xr_min,  min(xr_max, lr_d(k,i,j)/(nr_d(k,i,j)+nr_min) ))
@@ -1675,66 +1641,50 @@ contains
     flag_history_in=.true.
 
     ! parameter setting
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ! Mass concentration [kg/m3]
-       lv_d(k,i,j) = rhogq_d(k,i,j,I_QV)
-       lc_d(k,i,j) = rhogq_d(k,i,j,I_QC)
-       lr_d(k,i,j) = rhogq_d(k,i,j,I_QR)
-       li_d(k,i,j) = rhogq_d(k,i,j,I_QI)
-       ls_d(k,i,j) = rhogq_d(k,i,j,I_QS)
-       lg_d(k,i,j) = rhogq_d(k,i,j,I_QG)
-    enddo
-    enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ! Number concentration[/m3]
-       nc_d(k,i,j) = rhogq_d(k,i,j,I_NC)
-       nr_d(k,i,j) = rhogq_d(k,i,j,I_NR)
-       ni_d(k,i,j) = rhogq_d(k,i,j,I_NI)
-       ns_d(k,i,j) = rhogq_d(k,i,j,I_NS)
-       ng_d(k,i,j) = rhogq_d(k,i,j,I_NG)
-    enddo
-    enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ! Mass of mean particle [kg]
-       xc_d(k,i,j) = min(xc_max, max(xc_min, lc_d(k,i,j)/(nc_d(k,i,j)+nc_min) ) )
-       xr_d(k,i,j) = min(xr_max, max(xr_min, lr_d(k,i,j)/(nr_d(k,i,j)+nr_min) ) )
-       xi_d(k,i,j) = min(xi_max, max(xi_min, li_d(k,i,j)/(ni_d(k,i,j)+ni_min) ) )
-       xs_d(k,i,j) = min(xs_max, max(xs_min, ls_d(k,i,j)/(ns_d(k,i,j)+ns_min) ) )
-       xg_d(k,i,j) = min(xg_max, max(xg_min, lg_d(k,i,j)/(ng_d(k,i,j)+ng_min) ) )
-    enddo
-    enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ! effective cross section is assume as area equivalent circle
-       dc_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QC)*xc_d(k,i,j)**b_rea(I_QC)
-       dr_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QR)*xr_d(k,i,j)**b_rea(I_QR)
-       di_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QI)*xi_d(k,i,j)**b_rea(I_QI)
-       ds_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QS)*xs_d(k,i,j)**b_rea(I_QS)
-       dg_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QG)*xg_d(k,i,j)**b_rea(I_QG)
-    enddo
-    enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ! terminal velocity of average mass
-       ! SB06(33)
-       vt_xa_d(k,i,j,I_QC,2) = alpha_v(I_QC,2)*(xc_d(k,i,j)**beta_v(I_QC,2))*rho_fac_c_d(k,i,j)
-       vt_xa_d(k,i,j,I_QR,2) = alpha_v(I_QR,2)*(xr_d(k,i,j)**beta_v(I_QR,2))*rho_fac_r_d(k,i,j)
-       vt_xa_d(k,i,j,I_QI,2) = alpha_v(I_QI,2)*(xi_d(k,i,j)**beta_v(I_QI,2))*rho_fac_i_d(k,i,j)
-       vt_xa_d(k,i,j,I_QS,2) = alpha_v(I_QS,2)*(xs_d(k,i,j)**beta_v(I_QS,2))*rho_fac_s_d(k,i,j)
-       vt_xa_d(k,i,j,I_QG,2) = alpha_v(I_QG,2)*(xg_d(k,i,j)**beta_v(I_QG,2))*rho_fac_g_d(k,i,j)
-    enddo
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
+          ! Mass concentration [kg/m3]
+          lv_d(k,i,j) = rhogq_d(k,i,j,I_QV)
+          lc_d(k,i,j) = rhogq_d(k,i,j,I_QC)
+          lr_d(k,i,j) = rhogq_d(k,i,j,I_QR)
+          li_d(k,i,j) = rhogq_d(k,i,j,I_QI)
+          ls_d(k,i,j) = rhogq_d(k,i,j,I_QS)
+          lg_d(k,i,j) = rhogq_d(k,i,j,I_QG)
+       enddo
+       do k = KS, KE
+          ! Number concentration[/m3]
+          nc_d(k,i,j) = rhogq_d(k,i,j,I_NC)
+          nr_d(k,i,j) = rhogq_d(k,i,j,I_NR)
+          ni_d(k,i,j) = rhogq_d(k,i,j,I_NI)
+          ns_d(k,i,j) = rhogq_d(k,i,j,I_NS)
+          ng_d(k,i,j) = rhogq_d(k,i,j,I_NG)
+       enddo
+       do k = KS, KE
+          ! Mass of mean particle [kg]
+          xc_d(k,i,j) = min(xc_max, max(xc_min, lc_d(k,i,j)/(nc_d(k,i,j)+nc_min) ) )
+          xr_d(k,i,j) = min(xr_max, max(xr_min, lr_d(k,i,j)/(nr_d(k,i,j)+nr_min) ) )
+          xi_d(k,i,j) = min(xi_max, max(xi_min, li_d(k,i,j)/(ni_d(k,i,j)+ni_min) ) )
+          xs_d(k,i,j) = min(xs_max, max(xs_min, ls_d(k,i,j)/(ns_d(k,i,j)+ns_min) ) )
+          xg_d(k,i,j) = min(xg_max, max(xg_min, lg_d(k,i,j)/(ng_d(k,i,j)+ng_min) ) )
+       enddo
+       do k = KS, KE
+          ! effective cross section is assume as area equivalent circle
+          dc_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QC)*xc_d(k,i,j)**b_rea(I_QC)
+          dr_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QR)*xr_d(k,i,j)**b_rea(I_QR)
+          di_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QI)*xi_d(k,i,j)**b_rea(I_QI)
+          ds_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QS)*xs_d(k,i,j)**b_rea(I_QS)
+          dg_xa_d(k,i,j)  = 2.0_RP*a_rea(I_QG)*xg_d(k,i,j)**b_rea(I_QG)
+       enddo
+       do k = KS, KE
+          ! terminal velocity of average mass
+          ! SB06(33)
+          vt_xa_d(k,i,j,I_QC,2) = alpha_v(I_QC,2)*(xc_d(k,i,j)**beta_v(I_QC,2))*rho_fac_c_d(k,i,j)
+          vt_xa_d(k,i,j,I_QR,2) = alpha_v(I_QR,2)*(xr_d(k,i,j)**beta_v(I_QR,2))*rho_fac_r_d(k,i,j)
+          vt_xa_d(k,i,j,I_QI,2) = alpha_v(I_QI,2)*(xi_d(k,i,j)**beta_v(I_QI,2))*rho_fac_i_d(k,i,j)
+          vt_xa_d(k,i,j,I_QS,2) = alpha_v(I_QS,2)*(xs_d(k,i,j)**beta_v(I_QS,2))*rho_fac_s_d(k,i,j)
+          vt_xa_d(k,i,j,I_QG,2) = alpha_v(I_QG,2)*(xg_d(k,i,j)**beta_v(I_QG,2))*rho_fac_g_d(k,i,j)
+       enddo
     enddo
     enddo
 
@@ -1816,9 +1766,9 @@ contains
        ! update
        ! rhogq = l*gsgam
        !
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              !
              ! warm collection process
              wrm_dqc = max( wdt*( PLCaut_d(k,i,j)+PLCacc_d(k,i,j) ), -lc_d(k,i,j)  )
@@ -2001,23 +1951,17 @@ contains
              rhogq_d(k,i,j,I_NS) = max(0.0_RP, rhogq_d(k,i,j,I_NS) + drhogns )
              rhogq_d(k,i,j,I_QG) = max(0.0_RP, rhogq_d(k,i,j,I_QG) + drhogqg )
              rhogq_d(k,i,j,I_NG) = max(0.0_RP, rhogq_d(k,i,j,I_NG) + drhogng )
-          end do
-       end do
-       end do
-       !
-       ! update
-       ! rhogq = l*gsgam
-    do j = 1,  JA
-    do i = 1,  IA
-    do k = KS, KE
-       rhoge_d(k,i,j) = rhoge_d(k,i,j) + LHF * ( drhogqi + drhogqs + drhogqg )
-    enddo
-    enddo
-    enddo
+             !
+             ! update
+             ! rhogq = l*gsgam
+             rhoge_d(k,i,j) = rhoge_d(k,i,j) + LHF * ( drhogqi + drhogqs + drhogqg )
+          enddo
+       enddo
+       enddo
 
     !--- update mixing ratio
-    do j  = 1,  JA
-    do i  = 1,  IA
+    do j  = JS, JE
+    do i  = IS, IE
     do k  = KS, KE
        do iq = 1,  QA
           q_d(k,i,j,iq) = rhogq_d(k,i,j,iq) * rrhog_d(k,i,j)
@@ -2623,9 +2567,9 @@ contains
     !
     ssi_max = 1.0_RP
     !
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           pv        = LV(k,i,j)*Rvap*tem(k,i,j)
           ssw(k,i,j) = min( MP_ssw_lim, ( pv/esw(k,i,j)-1.0_RP ) )*100.0_RP
           ssi(k,i,j) = (pv/esi(k,i,j) - 1.00_RP)
@@ -2810,9 +2754,9 @@ contains
     PLSspl(KE:KA,:,:)=0.0_RP
     PNIspl(KE:KA,:,:)=0.0_RP
     !
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           ! Here we assume particle temperature is same as environment temperature.
           ! If you want to treat in a better manner,
           ! you can diagnose with eq.(64) in CT(86)
@@ -3250,9 +3194,9 @@ contains
     tem(:,:,:) = max(wtem(:,:,:), tem_min ) ! 11/08/30 T.Mitsui
     call moist_psat_ice( esi, tem )
     if( opt_stick_KS96 )then
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              ! Khain and Sednev (1996), eq.(3.15)
              temc          = tem(k,i,j) - T00
              temc2         = temc*temc
@@ -3264,9 +3208,9 @@ contains
        end do
        end do
     else if( opt_stick_CO86 )then
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              ! [Add] 11/08/30 T.Mitsui, Cotton et al. (1986)
              temc          = min(tem(k,i,j) - T00,0.0_RP)
              w1            = 0.035_RP*temc-0.7_RP
@@ -3275,9 +3219,9 @@ contains
        end do
        end do
     else
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              ! Lin et al. (1983)
              temc_m        = min(tem(k,i,j) - T00,0.0_RP) ! T < 273.15
              E_stick(k,i,j) = exp(0.09_RP*temc_m)
@@ -3286,9 +3230,9 @@ contains
        end do
     end if
     !
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           !
           temc_m = min(tem(k,i,j) - T00,0.0_RP) ! T < 273.15
           temc_p = max(tem(k,i,j) - T00,0.0_RP) ! T > 273.15
@@ -3686,9 +3630,9 @@ contains
     coef_aut0 =  -kcc*coef_nuc0
     coef_aut1 =  -kcc/x_sep/20._RP*coef_nuc1
     !
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           lwc = LR(k,i,j)+LC(k,i,j)
           if( lwc > xc_min )then
              tau  = max(tau_min, LR(k,i,j)/lwc)
@@ -3913,9 +3857,9 @@ contains
     ! Because following phenomena are not adjustment but transition.
     ! Just time-scales differ among them.
     ! If we would treat more appropreately, there would be time-splitting method to solve each ones.
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           temc    = tem(k,i,j) - T00   ! degC
           temc_lim= max(temc, -40._RP )       ! [Add] 09/08/18 T.Mitsui, Pruppacher and Klett(1997),(13-3)
           rho_lim = max(rho(k,i,j),rho_min)   ! [Add] 09/08/18 T.Mitsui
@@ -4145,9 +4089,9 @@ contains
     coef_m2_c =   coef_m2(I_QC)
     coef_m2_r =   coef_m2(I_QR)
     !
-    do j=1, JA
-    do i=1, IA
-       do k=KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE
           temc = max( tem(k,i,j) - T00, temc_min )
           ! These cause from aerosol-droplet interaction.
           ! Bigg(1953) formula, Khain etal.(2000) eq.(4.5), Pruppacher and Klett(1997) eq.(9-48)
@@ -4829,9 +4773,9 @@ contains
     !
     w(1:KS,:,:)  = 0.0_RP
     w(KE:KA,:,:) = 0.0_RP
-    do j=1,JA
-    do i=1,IA
-       do k=KS,KE
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS,KE
           ! [Add] 11/08/30 T.Mitsui
           if( z(k) <= 25000.0_RP )then
              w(k,i,j) = 0.5_RP*(wh(k,i,j) + wh(k+1,i,j))
@@ -4853,9 +4797,9 @@ contains
     call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
     call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
     !
-    do j=1, JA
-    do i=1, IA
-       do k=1, KA
+    do j=JS, JE
+    do i=IS, IE
+       do k=KS, KE
           if( pre(k,i,j) < esw(k,i,j)+1.E-10_RP )then
              qsw(k,i,j) = 1.0_RP
              dqswdtem_rho(k,i,j) = 0.0_RP
@@ -4956,9 +4900,9 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) "lhcnd:fac_cndc_wrk=",fac_cndc_wrk
        end if
        !
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              r_rvaptem        = 1.0_RP/(Rvap*wtem(k,i,j))
              lvsw             = esw(k,i,j)*r_rvaptem        ! rho=p/(Rv*T)
              lvsi             = esi(k,i,j)*r_rvaptem        !
@@ -5104,9 +5048,9 @@ contains
        !
        r_xc_ccn=1.0_RP/xc_ccn
        r_xi_ccn=1.0_RP/xi_ccn
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              if( PLCdep_alt(k,i,j) < -eps )then
                 PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep_alt(k,i,j)*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
              end if
@@ -5119,9 +5063,9 @@ contains
        !
        xi(1:KS ,:,:)=xi_min
        xi(KE:KA,:,:)=xi_min
-       do j=1,JA
-       do i=1,IA
-          do k=KS,KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              xi(k,i,j) = min(xi_max, max(xi_min, li(k,i,j)/(ni(k,i,j)+ni_min) ))
           end do
        end do
@@ -5138,9 +5082,9 @@ contains
        PNGdep(:,:,:) = PNGdep_alt(:,:,:)
        !
 !OCL NORECURRENCE
-       do j=1, JA
-       do i=1, IA
-          do k=KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
              !
              !--- evaporation/condensation, deposition/sublimation
              !
@@ -5350,11 +5294,14 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    r_xmin = 1.0_RP / xmin_filter
+
     ! total hydrometeor (before correction)
 !OCL NORECURRENCE
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+
+    do k = KS, KE
        diffq(k,i,j) = QTRC(k,i,j,I_QV) &
                     + QTRC(k,i,j,I_QC) &
                     + QTRC(k,i,j,I_QR) &
@@ -5362,30 +5309,22 @@ contains
                     + QTRC(k,i,j,I_QS) &
                     + QTRC(k,i,j,I_QG)
     enddo
-    enddo
-    enddo
 
     ! remove negative value of hydrometeor (mass, number)
 !OCL SERIAL, SIMD
     do iq = 1, QA
 !OCL PARALLEL
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,iq) < 0.0_RP ) then
           QTRC(k,i,j,iq) = 0.0_RP
        endif
-    enddo
-    enddo
     enddo
     enddo
 
     ! apply correction of hydrometeor to total density
     ! [note] mass conservation is broken here to fill rounding error.
 !OCL NORECURRENCE
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        DENS(k,i,j) = DENS(k,i,j)        &
                    * ( 1.0_RP           &
                      + QTRC(k,i,j,I_QV) &
@@ -5396,61 +5335,36 @@ contains
                      + QTRC(k,i,j,I_QG) &
                      - diffq(k,i,j)      ) ! after-before
     enddo
-    enddo
-    enddo
 
     ! avoid unrealistical value of number concentration
     ! due to numerical diffusion in advection
-    r_xmin = 1.0_RP / xmin_filter
 
-!OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NC) > QTRC(k,i,j,I_QC)*r_xmin ) then
           QTRC(k,i,j,I_NC) = QTRC(k,i,j,I_QC)*r_xmin
        endif
     enddo
-    enddo
-    enddo
-!OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NR) > QTRC(k,i,j,I_QR)*r_xmin ) then
           QTRC(k,i,j,I_NR) = QTRC(k,i,j,I_QR)*r_xmin
        endif
     enddo
-    enddo
-    enddo
-!OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NI) > QTRC(k,i,j,I_QI)*r_xmin ) then
           QTRC(k,i,j,I_NI) = QTRC(k,i,j,I_QI)*r_xmin
        endif
     enddo
-    enddo
-    enddo
-!OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NS) > QTRC(k,i,j,I_QS)*r_xmin ) then
           QTRC(k,i,j,I_NS) = QTRC(k,i,j,I_QS)*r_xmin
        endif
     enddo
-    enddo
-    enddo
-!OCL SIMD
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
+    do k  = KS, KE
        if ( QTRC(k,i,j,I_NG) > QTRC(k,i,j,I_QG)*r_xmin ) then
           QTRC(k,i,j,I_NG) = QTRC(k,i,j,I_QG)*r_xmin
        endif
     enddo
+
     enddo
     enddo
 
