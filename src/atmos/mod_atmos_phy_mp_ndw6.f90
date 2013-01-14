@@ -2443,14 +2443,14 @@ contains
          tem_in_low,                 & ! [Add] 10/08/03 T.Mitsui
          ssw_max, ssi_max
     !
-    real(RP) :: c_ccn_map(1,IA,JA)   ! c_ccn horizontal distribution
-    real(RP) :: kappa_map(1,IA,JA)   ! kappa horizontal distribution
-    real(RP) :: c_in_map(1,IA,JA)    ! c_in  horizontal distribution ! [Add] 11/08/30 T.Mitsui
+!    real(RP) :: c_ccn_map(1,IA,JA)   ! c_ccn horizontal distribution
+!    real(RP) :: kappa_map(1,IA,JA)   ! kappa horizontal distribution
+!    real(RP) :: c_in_map(1,IA,JA)    ! c_in  horizontal distribution ! [Add] 11/08/30 T.Mitsui
     real(RP) :: esw(KA,IA,JA)      ! saturation vapor pressure, water
     real(RP) :: esi(KA,IA,JA)      !                            ice
     real(RP) :: ssw(KA,IA,JA)      ! super saturation (water)
     real(RP) :: ssi(KA,IA,JA)      ! super saturation (ice)
-    real(RP) :: w_dsswdz(KA,IA,JA) ! w*(d_ssw/ d_z) super saturation(water) flux
+!    real(RP) :: w_dsswdz(KA,IA,JA) ! w*(d_ssw/ d_z) super saturation(water) flux
     real(RP) :: w_dssidz(KA,IA,JA) ! w*(d_ssi/ d_z), 09/04/14 T.Mitsui
     real(RP) :: ssw_below(KA,IA,JA)! ssw(k-1)
     real(RP) :: ssi_below(KA,IA,JA)! ssi(k-1), 09/04/14 T.Mitsui
@@ -2459,7 +2459,6 @@ contains
     real(RP) :: pv                   ! vapor pressure
     ! work variables for Twomey Equation.
     real(RP) :: qsw(KA,IA,JA)
-    real(RP) :: r_qsw(KA,IA,JA)
     real(RP) :: qsi(KA,IA,JA)
     real(RP) :: dqsidtem_rho(KA,IA,JA)
     real(RP) :: dssidt_rad(KA,IA,JA)
@@ -2492,7 +2491,6 @@ contains
     real(RP) :: dlcdt_max, dli_max ! defined by supersaturation
     real(RP) :: dncdt_max, dni_max ! defined by supersaturation
     real(RP) :: rdt
-    real(RP) :: work
     !
     integer :: i, j, k
     !
@@ -2503,39 +2501,21 @@ contains
        flag_first=.false.
     endif
     !
-    c_ccn_map(1,:,:) = c_ccn
-    kappa_map(1,:,:) = kappa
-    c_in_map(1,:,:)  = c_in
+!    c_ccn_map(1,:,:) = c_ccn
+!    kappa_map(1,:,:) = kappa
+!    c_in_map(1,:,:)  = c_in
     !
-    nc_uplim_d(1,:,:)  = c_ccn_map(1,:,:)*1.5_RP
+!    nc_uplim_d(1,:,:)  = c_ccn_map(1,:,:)*1.5_RP
+    nc_uplim_d(1,:,:)  = c_ccn*1.5_RP
     !
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
-    PNCccn(:,:,:)    = 0.0_RP
-    PLCccn(:,:,:)    = 0.0_RP
-    PNIccn(:,:,:)    = 0.0_RP
-    PLIccn(:,:,:)    = 0.0_RP
-    ssw(:,:,:)       = 0.0_RP
-    ssi(:,:,:)       = 0.0_RP
-    ssw_below(:,:,:) = 0.0_RP
-    ssi_below(:,:,:) = 0.0_RP
-    w_dsswdz(:,:,:)  = 0.0_RP
-    w_dssidz(:,:,:)  = 0.0_RP
-    dssidt_rad(:,:,:)= 0.0_RP
-    dni_ratio(:,:,:) = UNDEF8
-    z_below(:,:,:)   = 0.0_RP
-    weff(:,:,:)      = 0.0_RP
-    work           = r_sqrt3*sqrt(qke_min)
-    sigma_w(:,:,:)   = work
-    nc_new(:,:,:)      = 0.0_RP
-    nc_new_below(:,:,:)= 0.0_RP
     !
     call moist_psat_liq     ( esw, tem )
     call moist_psat_ice     ( esi, tem )
     call moist_pres2qsat_liq( qsw, tem, pre )
     call moist_pres2qsat_ice( qsi, tem, pre )
     call moist_dqsi_dtem_rho( dqsidtem_rho, tem, rho )
-    r_qsw(:,:,:) = 1.0_RP/qsw
     !
     ! Lohmann (2002),JAS, eq.(1) but changing unit [cm-3] => [m-3]
     a_max = 1.E+6_RP*0.1_RP*(1.E-6_RP)**1.27_RP
@@ -2559,9 +2539,12 @@ contains
 
        ! dS/dz is evaluated by first order upstream difference
        !***  Solution for Twomey Equation ***
-       coef_ccn(i,j)  = 1.E+6_RP*0.88_RP*(c_ccn_map(1,i,j)*1.E-6_RP)**(2.0_RP/(kappa_map(1,i,j) + 2.0_RP)) * &
-            (70.0_RP)**(kappa_map(1,i,j)/(kappa_map(1,i,j) + 2.0_RP))
-       slope_ccn(i,j) = 1.5_RP*kappa_map(1,i,j)/(kappa_map(1,i,j) + 2.0_RP)
+!       coef_ccn(i,j)  = 1.E+6_RP*0.88_RP*(c_ccn_map(1,i,j)*1.E-6_RP)**(2.0_RP/(kappa_map(1,i,j) + 2.0_RP)) * &
+       coef_ccn(i,j)  = 1.E+6_RP*0.88_RP*(c_ccn*1.E-6_RP)**(2.0_RP/(kappa + 2.0_RP)) * &
+!            (70.0_RP)**(kappa_map(1,i,j)/(kappa_map(1,i,j) + 2.0_RP))
+            (70.0_RP)**(kappa/(kappa + 2.0_RP))
+!       slope_ccn(i,j) = 1.5_RP*kappa_map(1,i,j)/(kappa_map(1,i,j) + 2.0_RP)
+       slope_ccn(i,j) = 1.5_RP*kappa/(kappa + 2.0_RP)
        !
        do k=KS, KE
           sigma_w(k,i,j) = r_sqrt3*sqrt(max(qke(k,i,j),qke_min))
@@ -2583,6 +2566,8 @@ contains
              ! Lohmann (2002), eq.(1)
              nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
              nc_new(k,i,j) = a_max*nc_new_max**b_max
+          else
+             nc_new(k,i,j) = 0.0_RP
           end if
        end do
        !
@@ -2603,7 +2588,8 @@ contains
        ! search maximum value of nc_new
        do k=KS, KE
           if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .or. &
-               ( nc_new_below(k,i,j) > c_ccn_map(1,i,j)*0.05_RP ) )then ! 5% of c_ccn
+!               ( nc_new_below(k,i,j) > c_ccn_map(1,i,j)*0.05_RP ) )then ! 5% of c_ccn
+               ( nc_new_below(k,i,j) > c_ccn*0.05_RP ) )then ! 5% of c_ccn
              flag_nucleation(k,i,j) = .false.
           end if
        end do
@@ -2619,6 +2605,9 @@ contains
              dnc_new      = nc_new(k,i,j)-NC(k,i,j)
              PNCccn(k,i,j) = min( dncdt_max, dnc_new*rdt )
              PLCccn(k,i,j) = min( dlcdt_max, xc_min*PNCccn(k,i,j) )
+          else
+             PNCccn(k,i,j) = 0.0_RP
+             PLCccn(k,i,j) = 0.0_RP
           end if
        end do
        !
@@ -2642,7 +2631,8 @@ contains
                (tem(k,i,j) < 273.15_RP   ) .and. & !
                (NI(k,i,j)  < in_max     ) .and. &
                (wssi      >= eps       ) )then   !
-             PNIccn(k,i,j) = min(dni_max, c_in_map(1,i,j)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+!             PNIccn(k,i,j) = min(dni_max, c_in_map(1,i,j)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+             PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
              PLIccn(k,i,j) = min(dli_max, PNIccn(k,i,j)*xi_ccn )
              ! only for output
              dni_ratio(k,i,j) = dssidt_rad(k,i,j)/( w_dssidz(k,i,j)+dssidt_rad(k,i,j) )
@@ -3082,92 +3072,15 @@ contains
        flag_first = .false.
     end if
     !
-    PLIacLC2LI(1:KS,:,:)=0.0_RP
-    PNIacNC2NI(1:KS,:,:)=0.0_RP
-    PLSacLC2LS(1:KS,:,:)=0.0_RP
-    PNSacNC2NS(1:KS,:,:)=0.0_RP
-    PLGacLC2LG(1:KS,:,:)=0.0_RP
-    PNGacNC2NG(1:KS,:,:)=0.0_RP
-    PLRacLI2LG_I(1:KS,:,:)=0.0_RP
-    PNRacNI2NG_I(1:KS,:,:)=0.0_RP
-    PLRacLI2LG_R(1:KS,:,:)=0.0_RP
-    PNRacNI2NG_R(1:KS,:,:)=0.0_RP
-    PLRacLS2LG_S(1:KS,:,:)=0.0_RP
-    PNRacNS2NG_S(1:KS,:,:)=0.0_RP
-    PLRacLS2LG_R(1:KS,:,:)=0.0_RP
-    PNRacNS2NG_R(1:KS,:,:)=0.0_RP
-    PLRacLG2LG(1:KS,:,:)=0.0_RP
-    PNRacNG2NG(1:KS,:,:)=0.0_RP
-    PLIacLI2LS(1:KS,:,:)=0.0_RP
-    PNIacNI2NS(1:KS,:,:)=0.0_RP
-    PLIacLS2LS(1:KS,:,:)=0.0_RP
-    PNIacNS2NS(1:KS,:,:)=0.0_RP
-    PNSacNS2NS(1:KS,:,:)=0.0_RP
-    PLGacLS2LG(1:KS,:,:)=0.0_RP
-    PNGacNS2NG(1:KS,:,:)=0.0_RP
-    PLIcon(1:KS,:,:)=0.0_RP
-    PNIcon(1:KS,:,:)=0.0_RP
-    PLScon(1:KS,:,:)=0.0_RP
-    PNScon(1:KS,:,:)=0.0_RP
-    PLIacm(1:KS,:,:)=0.0_RP
-    PNIacm(1:KS,:,:)=0.0_RP
-    PLIarm(1:KS,:,:)=0.0_RP
-    PNIarm(1:KS,:,:)=0.0_RP
-    PLSacm(1:KS,:,:)=0.0_RP
-    PNSacm(1:KS,:,:)=0.0_RP
-    PLSarm(1:KS,:,:)=0.0_RP
-    PNSarm(1:KS,:,:)=0.0_RP
-    PLGacm(1:KS,:,:)=0.0_RP
-    PNGacm(1:KS,:,:)=0.0_RP
-    PLGarm(1:KS,:,:)=0.0_RP
-    PNGarm(1:KS,:,:)=0.0_RP
-    PLIacLC2LI(KE:KA,:,:)=0.0_RP
-    PNIacNC2NI(KE:KA,:,:)=0.0_RP
-    PLSacLC2LS(KE:KA,:,:)=0.0_RP
-    PNSacNC2NS(KE:KA,:,:)=0.0_RP
-    PLGacLC2LG(KE:KA,:,:)=0.0_RP
-    PNGacNC2NG(KE:KA,:,:)=0.0_RP
-    PLRacLI2LG_I(KE:KA,:,:)=0.0_RP
-    PNRacNI2NG_I(KE:KA,:,:)=0.0_RP
-    PLRacLI2LG_R(KE:KA,:,:)=0.0_RP
-    PNRacNI2NG_R(KE:KA,:,:)=0.0_RP
-    PLRacLS2LG_S(KE:KA,:,:)=0.0_RP
-    PNRacNS2NG_S(KE:KA,:,:)=0.0_RP
-    PLRacLS2LG_R(KE:KA,:,:)=0.0_RP
-    PNRacNS2NG_R(KE:KA,:,:)=0.0_RP
-    PLRacLG2LG(KE:KA,:,:)=0.0_RP
-    PNRacNG2NG(KE:KA,:,:)=0.0_RP
-    PLIacLI2LS(KE:KA,:,:)=0.0_RP
-    PNIacNI2NS(KE:KA,:,:)=0.0_RP
-    PLIacLS2LS(KE:KA,:,:)=0.0_RP
-    PNIacNS2NS(KE:KA,:,:)=0.0_RP
-    PNSacNS2NS(KE:KA,:,:)=0.0_RP
-    PLGacLS2LG(KE:KA,:,:)=0.0_RP
-    PNGacNS2NG(KE:KA,:,:)=0.0_RP
-    PLIcon(KE:KA,:,:)=0.0_RP
-    PNIcon(KE:KA,:,:)=0.0_RP
-    PLScon(KE:KA,:,:)=0.0_RP
-    PNScon(KE:KA,:,:)=0.0_RP
-    PLIacm(KE:KA,:,:)=0.0_RP
-    PNIacm(KE:KA,:,:)=0.0_RP
-    PLIarm(KE:KA,:,:)=0.0_RP
-    PNIarm(KE:KA,:,:)=0.0_RP
-    PLSacm(KE:KA,:,:)=0.0_RP
-    PNSacm(KE:KA,:,:)=0.0_RP
-    PLSarm(KE:KA,:,:)=0.0_RP
-    PNSarm(KE:KA,:,:)=0.0_RP
-    PLGacm(KE:KA,:,:)=0.0_RP
-    PNGacm(KE:KA,:,:)=0.0_RP
-    PLGarm(KE:KA,:,:)=0.0_RP
-    PNGarm(KE:KA,:,:)=0.0_RP
-    !
-    ci_aut(:,:,:)   = 0.0_RP
-    taui_aut(:,:,:) = 1.E+10_RP
-    tau_sce(:,:,:)  = 1.E+10_RP
-    !
     ! [Add] 10/08/03 T.Mitsui
-    E_stick(:,:,:)=0.0_RP
-    tem(:,:,:) = max(wtem(:,:,:), tem_min ) ! 11/08/30 T.Mitsui
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       tem(k,i,j) = max( wtem(k,i,j), tem_min ) ! 11/08/30 T.Mitsui
+    end do
+    end do
+    end do
+
     call moist_psat_ice( esi, tem )
     if( opt_stick_KS96 )then
        do j = JS, JE
@@ -3584,22 +3497,6 @@ contains
     !
     integer :: i, j, k
     !
-    PLCaut(1:KS,:,:)=0.0_RP
-    PNCaut(1:KS,:,:)=0.0_RP
-    PNRaut(1:KS,:,:)=0.0_RP
-    PLCacc(1:KS,:,:)=0.0_RP
-    PNCacc(1:KS,:,:)=0.0_RP
-    PNRslc(1:KS,:,:)=0.0_RP
-    PNRbrk(1:KS,:,:)=0.0_RP
-    !
-    PLCaut(KE:KA,:,:)=0.0_RP
-    PNCaut(KE:KA,:,:)=0.0_RP
-    PNRaut(KE:KA,:,:)=0.0_RP
-    PLCacc(KE:KA,:,:)=0.0_RP
-    PNCacc(KE:KA,:,:)=0.0_RP
-    PNRslc(KE:KA,:,:)=0.0_RP
-    PNRbrk(KE:KA,:,:)=0.0_RP
-    !
     coef_nuc0 = (nu(I_QC)+2.0_RP)/(nu(I_QC)+1.0_RP)
     coef_nuc1 = (nu(I_QC)+2.0_RP)*(nu(I_QC)+4.0_RP)/(nu(I_QC)+1.0_RP)/(nu(I_QC)+1.0_RP)
     coef_aut0 =  -kcc*coef_nuc0
@@ -3780,43 +3677,6 @@ contains
     real(RP), parameter :: Re_min=1.E-4_RP
     !
     integer :: i, j, k
-    !
-    PLCdep(1:KS,:,:)=0.0_RP
-    PLRdep(1:KS,:,:)=0.0_RP
-    PNRdep(1:KS,:,:)=0.0_RP
-    PLIdep(1:KS,:,:)=0.0_RP
-    PNIdep(1:KS,:,:)=0.0_RP
-    PLSdep(1:KS,:,:)=0.0_RP
-    PNSdep(1:KS,:,:)=0.0_RP
-    PLGdep(1:KS,:,:)=0.0_RP
-    PNGdep(1:KS,:,:)=0.0_RP
-    PLImlt(1:KS,:,:)=0.0_RP
-    PNImlt(1:KS,:,:)=0.0_RP
-    PLSmlt(1:KS,:,:)=0.0_RP
-    PNsmlt(1:KS,:,:)=0.0_RP
-    PLGmlt(1:KS,:,:)=0.0_RP
-    PNGmlt(1:KS,:,:)=0.0_RP
-    !
-    PLCdep(KE:KA,:,:)=0.0_RP
-    PLRdep(KE:KA,:,:)=0.0_RP
-    PNRdep(KE:KA,:,:)=0.0_RP
-    PLIdep(KE:KA,:,:)=0.0_RP
-    PNIdep(KE:KA,:,:)=0.0_RP
-    PLSdep(KE:KA,:,:)=0.0_RP
-    PNSdep(KE:KA,:,:)=0.0_RP
-    PLGdep(KE:KA,:,:)=0.0_RP
-    PNGdep(KE:KA,:,:)=0.0_RP
-    PLImlt(KE:KA,:,:)=0.0_RP
-    PNImlt(KE:KA,:,:)=0.0_RP
-    PLSmlt(KE:KA,:,:)=0.0_RP
-    PNsmlt(KE:KA,:,:)=0.0_RP
-    PLGmlt(KE:KA,:,:)=0.0_RP
-    PNGmlt(KE:KA,:,:)=0.0_RP
-    !
-    ah_vent1_rs(:,:,:)  = ah_vent1(I_QR,1)
-    ah_vent1_rl(:,:,:)  = ah_vent1(I_QR,2)
-    bh_vent1_rs(:,:,:)  = bh_vent1(I_QR,1)
-    bh_vent1_rl(:,:,:)  = bh_vent1(I_QR,2)
     !
     ventNR=0.0_RP
     ventNI=0.0_RP
@@ -4044,20 +3904,6 @@ contains
     real(RP) :: rdt
     !
     integer :: i,j,k
-    !
-    PLChom(1:KS,:,:)=0.0_RP
-    PNChom(1:KS,:,:)=0.0_RP
-    PLChet(1:KS,:,:)=0.0_RP
-    PNChet(1:KS,:,:)=0.0_RP
-    PLRhet(1:KS,:,:)=0.0_RP
-    PNRhet(1:KS,:,:)=0.0_RP
-    !
-    PLChom(KE:KA,:,:)=0.0_RP
-    PNChom(KE:KA,:,:)=0.0_RP
-    PLChet(KE:KA,:,:)=0.0_RP
-    PNChet(KE:KA,:,:)=0.0_RP
-    PLRhet(KE:KA,:,:)=0.0_RP
-    PNRhet(KE:KA,:,:)=0.0_RP
     !
     rdt = 1.0_RP/dt
     !
@@ -4738,16 +4584,15 @@ contains
 !    dt_mp      = dt*(ntdiv-1)
     !
     r_dt       = 1.0_RP/dt
-    rrhog(:,:,:) = 1.0_RP/rhog(:,:,:)
-    ! Temperature lower limit is only used for saturation condition.
-    ! On the other hand original "tem" is used for calculation of latent heat or energy equation.
-    wtem(:,:,:)  = max( tem(:,:,:), tem_min )
     !
-    w(1:KS,:,:)  = 0.0_RP
-    w(KE:KA,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
        do k = KS,KE
+          rrhog(k,i,j) = 1.0_RP/rhog(k,i,j)
+          ! Temperature lower limit is only used for saturation condition.
+          ! On the other hand original "tem" is used for calculation of latent heat or energy equation.
+          wtem(k,i,j)  = max( tem(k,i,j), tem_min )
+          !
           ! [Add] 11/08/30 T.Mitsui
           if( z(k) <= 25000.0_RP )then
              w(k,i,j) = 0.5_RP*(wh(k,i,j) + wh(k+1,i,j))
@@ -4787,24 +4632,6 @@ contains
        end do
     end do
     end do
-    !
-    ! taucnd, taudep
-    taucnd_c(:,:,:)   = tau100day
-    taucnd_r(:,:,:)   = tau100day
-    taudep_i(:,:,:)   = tau100day
-    taudep_s(:,:,:)   = tau100day
-    taudep_g(:,:,:)   = tau100day
-    taucnd(:,:,:)     = tau100day
-    taudep(:,:,:)     = tau100day
-    PLCdep_alt(:,:,:) = 0.0_RP ! 09/08/18
-    PLRdep_alt(:,:,:) = 0.0_RP
-    PLIdep_alt(:,:,:) = 0.0_RP
-    PLSdep_alt(:,:,:) = 0.0_RP
-    PLGdep_alt(:,:,:) = 0.0_RP
-    PNRdep_alt(:,:,:) = 0.0_RP
-    PNIdep_alt(:,:,:) = 0.0_RP
-    PNSdep_alt(:,:,:) = 0.0_RP
-    PNGdep_alt(:,:,:) = 0.0_RP
     !
     if( opt_fix_lhcnd_c )then
        iumax=2
@@ -5033,8 +4860,6 @@ contains
        end do
        end do
        !
-       xi(1:KS ,:,:)=xi_min
-       xi(KE:KA,:,:)=xi_min
        do j = JS, JE
        do i = IS, IE
           do k = KS, KE
@@ -5240,14 +5065,26 @@ contains
        !
        ! [Add] 11/08/30 T.Mitsui
        if( opt_fix_lhcnd_c .and. iu==2 )then
-          rhoge(:,:,:) = tem_lh(:,:,:)*rhog(:,:,:)*cva(:,:,:)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rhoge(k,i,j) = tem_lh(k,i,j)*rhog(k,i,j)*cva(k,i,j)
+             tem(k,i,j)   = tem_lh(k,i,j)
+          end do
+          end do
+          end do
 !          if( flag_history_in )then
 !             dtemdt_lh(:,:) = (tem(:,:)-tem_lh(:,:))*r_dt
 !!$             call history_in( 'ml_dTdt_lh', dtemdt_lh(:,:) )
 !          end if
-          tem(:,:,:)   = tem_lh(:,:,:)
        end if
-       pre(:,:,:) = rhog(:,:,:)*( qd(:,:,:)*Rdry+q(:,:,:,I_QV)*Rvap )*tem(:,:,:)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          pre(k,i,j) = rhog(k,i,j)*( qd(k,i,j)*Rdry+q(k,i,j,I_QV)*Rvap )*tem(k,i,j)
+       end do
+       end do
+       end do
     end do
     !
     return
