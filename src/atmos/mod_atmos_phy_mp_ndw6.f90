@@ -1111,8 +1111,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine mp_ndw6
     use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP, &
-       ct => TIME_NOWSEC
+       dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
@@ -1128,8 +1127,6 @@ contains
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
-       MOMX, &
-       MOMY, &
        RHOT, &
        QTRC
     implicit none
@@ -1205,7 +1202,7 @@ contains
     real(RP) :: PLIdep_d(KA,IA,JA), PNIdep_d(KA,IA,JA)
     real(RP) :: PLSdep_d(KA,IA,JA), PNSdep_d(KA,IA,JA)
     real(RP) :: PLGdep_d(KA,IA,JA), PNGdep_d(KA,IA,JA)
-    real(RP) :: PLCdep_d(KA,IA,JA), PNCdep_d(KA,IA,JA)
+    real(RP) :: PLCdep_d(KA,IA,JA) !, PNCdep_d(KA,IA,JA)
 
     ! production rate of warm collection process
     ! auto-conversion
@@ -1284,7 +1281,6 @@ contains
     ! work for explicit supersaturation modeling
     !-----------------------------------------------
     real(RP) :: dTdt_equiv_d(KA,IA,JA)    !
-    real(RP) :: dlvsi_d(KA,IA,JA)
     !--------------------------------------------------
     !
     ! variables for output
@@ -1295,7 +1291,6 @@ contains
     real(RP) :: sl_PLRdep_d(1,IA,JA), sl_PNRdep_d(1,IA,JA) !
     !--------------------------------------------------
     logical :: flag_history_in
-    real(RP) :: qke(IJA,KA)
     real(RP) :: qke_d(KA,IA,JA)
 
     real(RP), parameter :: eps       = 1.E-30_RP
@@ -1304,7 +1299,6 @@ contains
     real(RP), parameter :: eps_rhog  = 1.E-50_RP
     real(RP) :: r_dt
     real(RP) :: wdt, r_wdt
-    real(RP) :: r_ntmax
     integer :: ntdiv
 
     real(RP) :: Rmoist
@@ -1317,7 +1311,7 @@ contains
     real(RP) :: wflux_snow(KA,IA,JA)
     integer :: step
 
-    integer :: k, i, j, iq, ij
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     r_dt = 1.0_RP / dt
@@ -1429,11 +1423,11 @@ contains
          lv_d, nc_d, ni_d,     & ! in
          PNCccn_d, PLCccn_d, & ! out
          PNIccn_d, PLIccn_d, & ! out
-         cva_d, cpa_d,       & ! in
+         cpa_d,            & ! in
          dTdt_equiv_d,     & ! in
          qke_d,            & ! in
          flag_history_in,& ! in
-         ct, dt         ) ! in
+         dt              ) ! in
 
     do j = JS,  JE
     do i = IS,  IE
@@ -1702,7 +1696,7 @@ contains
             PNRslc_d, PNRbrk_d,   &
             lc_d, lr_d, nc_d, nr_d,xc_d,&
             dr_xa_d,            &
-            DENS, tem_d         )
+            DENS                )
     else
        PLCaut_d = 0.0_RP
        PNCaut_d = 0.0_RP
@@ -1747,7 +1741,7 @@ contains
             dc_xa_d, dr_xa_d, di_xa_d, ds_xa_d, dg_xa_d,& ! in
             vt_xa_d(:,:,:,I_QC,2), vt_xa_d(:,:,:,I_QR,2), &
             vt_xa_d(:,:,:,I_QI,2), vt_xa_d(:,:,:,I_QS,2), vt_xa_d(:,:,:,I_QG,2), &
-            DENS(:,:,:),                    & ! in
+!            DENS(:,:,:),                    & ! in
             flag_history_in                 ) ! in
    
        !
@@ -2112,7 +2106,7 @@ contains
   ! this is called from external procedure
   subroutine mp_ndw6_effective_radius(&
        IJA, KA, KS, KE,&
-       rho, tem, pre,      &
+       rho,                &
        nc, nr, ni, ns, ng, &
        qc, qr, qi, qs, qg, &
        rec, rer, rei, res, reg )
@@ -2124,8 +2118,6 @@ contains
     integer, intent(in) :: KE
     ! atmospheric condition
     real(RP), intent(in) :: rho(IJA,KA) ! air density[kg/m3]
-    real(RP), intent(in) :: tem(IJA,KA) ! temperature[K]
-    real(RP), intent(in) :: pre(IJA,KA) ! pressure[Pa]
     ! number concentration[/m3]
     real(RP), intent(in) :: nc(IJA,KA)
     real(RP), intent(in) :: nr(IJA,KA)
@@ -2158,9 +2150,6 @@ contains
     real(RP) :: ds_xa(IJA,KA)     !
     real(RP) :: dg_xa(IJA,KA)     !
     !
-    real(RP) :: wxr ! work
-    real(RP) :: ddr ! difference from equilibrium diameter
-    !
     real(RP), parameter :: eps=1.E-30_RP
     !
     integer :: ij, k
@@ -2192,10 +2181,10 @@ contains
     !
     call calc_effective_radius(        &
          IJA, KA, KS, KE,      & ! in
-         tem,                          & ! in
          nc, nr, ni, ns, ng,           & ! in
          xi, xs, xg,                   & ! in ! [Add] 09/09/03 T.Mitsui
-         dc_xa, dr_xa, di_xa, ds_xa, dg_xa, &
+         dc_xa, dr_xa,                 &
+!         di_xa, ds_xa, dg_xa,         &
          rec, rer, rei, res, reg       )
     !
     return
@@ -2203,10 +2192,10 @@ contains
   !
   subroutine calc_effective_radius( &
        IJA, KA, KS, KE,     &
-       tem,                         &
        NC, NR, NI, NS, NG,          &
        xi, xs, xg,                  & ! in ! [Add] 09/09/03 T.Mitsui
-       dc_ave, dr_ave, di_ave, ds_ave, dg_ave, &
+       dc_ave, dr_ave,              &
+!       di_ave, ds_ave, dg_ave,     &
        re_qc, re_qr, re_qi, re_qs, re_qg )
     implicit none
 
@@ -2215,8 +2204,6 @@ contains
     integer, intent(in) :: KA
     integer, intent(in) :: KS
     integer, intent(in) :: KE
-    ! temperature[K]
-    real(RP), intent(in) :: tem(IJA,KA)
     ! number concentration[/m3]
     real(RP), intent(in) :: NC(IJA,KA)
     real(RP), intent(in) :: NR(IJA,KA)
@@ -2230,9 +2217,9 @@ contains
     ! diameter of average mass[kg/m3]
     real(RP), intent(in) :: dc_ave(IJA,KA)
     real(RP), intent(in) :: dr_ave(IJA,KA)
-    real(RP), intent(in) :: di_ave(IJA,KA)
-    real(RP), intent(in) :: ds_ave(IJA,KA)
-    real(RP), intent(in) :: dg_ave(IJA,KA)
+!    real(RP), intent(in) :: di_ave(IJA,KA)
+!    real(RP), intent(in) :: ds_ave(IJA,KA)
+!    real(RP), intent(in) :: dg_ave(IJA,KA)
     ! effective radius[m] of each hydrometeors
 !!$    real(RP), intent(out):: re_liq(IJA,KA) ! liquid all
 !!$    real(RP), intent(out):: re_sol(IJA,KA) ! solid all
@@ -2246,9 +2233,6 @@ contains
     ! radius of average mass
     real(RP) :: rc,rc2,rc3
     real(RP) :: rr,rr2,rr3
-    real(RP) :: ri,ri2,ri3, di2,di3
-    real(RP) :: rs,rs2,rs3
-    real(RP) :: rg,rg2,rg3
     ! 2nd. and 3rd. order moment of DSD
     real(RP) :: rc2m, rc3m
     real(RP) :: rr2m, rr3m
@@ -2261,14 +2245,12 @@ contains
     ! work variables
     logical :: flag_rel(IJA,KA) ! liquic
     logical :: flag_rei(IJA,KA) ! ice
-    real(RP) :: work1,work2
     !
     real(RP) :: coef_Fuetal1998=0.0_RP
     !
     real(RP) :: r_pi
     ! r2m_min is minimum value(moment of 1 particle with 1 micron)
     real(RP), parameter :: r2m_min=1.E-12_RP
-    logical, save :: flag_first=.true.
     integer :: ij,k
     !
     r_pi = 1.0_RP/PI
@@ -2386,11 +2368,11 @@ contains
        LV, NC, NI,       &
        PNCccn, PLCccn,   &
        PNIccn, PLIccn,   &
-       cva, cpa,         & ! in
+       cpa,              & ! in
        dTdt_rad,         & ! in
        qke,              & ! in
        flag_history_in,  & ! in
-       ct, dt            ) ! in
+       dt                ) ! in
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_saturation, only : &
@@ -2421,11 +2403,9 @@ contains
     real(RP), intent(out) :: PNIccn(KA,IA,JA) !
     real(RP), intent(out) :: PLIccn(KA,IA,JA)
     !
-    real(RP), intent(in) ::  cva(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in) ::  cpa(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
-    real(RP), intent(in)  :: ct ! current time[sec.],   09/04/14x T.Mitsui
     real(RP), intent(in)  :: dt
     logical, intent(in)  :: flag_history_in      ! in 10/08/03 [Add] T.Mitsui
     !
@@ -2477,7 +2457,6 @@ contains
     real(RP) :: z_below(KA,IA,JA)  ! z(k-1)
     real(RP) :: dz                   ! z(k)-z(k-1)
     real(RP) :: pv                   ! vapor pressure
-    real(RP) :: n_in                 ! number of ice nuclei
     ! work variables for Twomey Equation.
     real(RP) :: qsw(KA,IA,JA)
     real(RP) :: r_qsw(KA,IA,JA)
@@ -2486,17 +2465,14 @@ contains
     real(RP) :: dssidt_rad(KA,IA,JA)
     real(RP) :: dni_ratio(KA,IA,JA)
     real(RP) :: wssi, wdssi
-    real(RP) :: in0
     !
-    real(RP) :: xi_nuc(1,IA,JA)    ! xi use the value @ cloud base
-    real(RP) :: alpha_nuc(1,IA,JA) ! alpha_nuc
-    real(RP) :: eta_nuc(1,IA,JA)   ! xi use the value @ cloud base
-    real(RP) :: Dw, Q1, Q2
+!    real(RP) :: xi_nuc(1,IA,JA)    ! xi use the value @ cloud base
+!    real(RP) :: alpha_nuc(1,IA,JA) ! alpha_nuc
+!    real(RP) :: eta_nuc(1,IA,JA)   ! xi use the value @ cloud base
     !
     real(RP) :: sigma_w(KA,IA,JA)
     real(RP) :: weff(KA,IA,JA)
     real(RP) :: weff_max(KA,IA,JA)
-    real(RP) :: w_m(KA,IA,JA)
     !
     real(RP) :: coef_ccn(IA,JA)
     real(RP) :: slope_ccn(IA,JA)
@@ -2518,7 +2494,7 @@ contains
     real(RP) :: rdt
     real(RP) :: work
     !
-    integer :: i, j, k, kk
+    integer :: i, j, k
     !
     if( flag_first )then
        rewind(IO_FID_CONF)
@@ -2731,7 +2707,7 @@ contains
     real(RP) :: a0,a1,a2,a3,a4,a5
     real(RP) :: a6,a7,a8,a9,a10
     real(RP) :: an1,an2,b0,b1,b2,c0,c1,c2
-    real(RP) :: d0,d1,d2,e0,e1,e2,h0,h1,h2
+    real(RP) :: d0,d1,d2,e1,e2,h0,h1,h2
     real(RP), parameter :: eps=1.0E-30_RP
     ! number of cloud droplets larger than 12 micron(radius).
     real(RP) :: n12
@@ -2869,7 +2845,7 @@ contains
        xc, xr, xi, xs, xg,             & ! in
        dc_xave, dr_xave, di_xave, ds_xave, dg_xave,& ! in
        vtc_xave, vtr_xave, vti_xave, vts_xave, vtg_xave, &
-       rho, & ! [Add] 11/08/30
+!       rho, & ! [Add] 11/08/30
        flag_history_in                 ) ! in [Add] 11/08/30
     use mod_stdio, only: &
        IO_FID_CONF
@@ -2981,7 +2957,7 @@ contains
     real(RP), intent(in) :: vts_xave(KA,IA,JA)
     real(RP), intent(in) :: vtg_xave(KA,IA,JA)
     ! [Add] 11/08/30 T.Mitsui, for autoconversion of ice
-    real(RP), intent(in) :: rho(KA,IA,JA)
+!    real(RP), intent(in) :: rho(KA,IA,JA)
     logical, intent(in) :: flag_history_in
     !
     ! namelist variables
@@ -3061,7 +3037,7 @@ contains
     real(RP) :: tau_sce(KA,IA,JA)
     !--- DSD averaged diameter for each species
     real(RP) :: ave_dc                     ! cloud
-    real(RP) :: ave_dr                     ! rain
+!    real(RP) :: ave_dr                     ! rain
     real(RP) :: ave_di                     ! ice
     real(RP) :: ave_ds                     ! snow
     real(RP) :: ave_dg                     ! graupel
@@ -3554,7 +3530,7 @@ contains
        PNRbrk,                 &
        LC, LR, NC, NR, xc,     &
        dr_xave,                &
-       rho, tem                )
+       rho                     )
     implicit none
 
     integer, intent(in)  :: IA, JA, KA
@@ -3576,7 +3552,6 @@ contains
     real(RP), intent(in)  :: xc(KA,IA,JA)
     real(RP), intent(in)  :: dr_xave(KA,IA,JA)
     real(RP), intent(in)  :: rho(KA,IA,JA)
-    real(RP), intent(in)  :: tem(KA,IA,JA)
     !
     ! parameter for autoconversion
     real(RP), parameter :: kcc     = 4.44E+9_RP  ! collision efficiency [m3/kg2/sec]
@@ -3759,10 +3734,10 @@ contains
     real(RP) :: temc_lim           ! limited temperature[celsius] 09/08/18 T.Mitsui
     real(RP) :: pre_lim            ! limited density              09/08/18 T.Mitsui
     real(RP) :: temc               ! temperature[celsius]
-    real(RP) :: pv                 ! vapor pressure
+!    real(RP) :: pv                 ! vapor pressure
     real(RP) :: qv                 ! mixing ratio of water vapor [Add] 09/08/18
-    real(RP) :: ssw                ! super saturation ratio(liquid water)
-    real(RP) :: ssi                ! super saturation ratio(ice water)
+!    real(RP) :: ssw                ! super saturation ratio(liquid water)
+!    real(RP) :: ssi                ! super saturation ratio(ice water)
     real(RP) :: nua, r_nua         ! kinematic viscosity of air
     real(RP) :: mua                ! viscosity of air
     real(RP) :: Kalfa              ! thermal conductance
@@ -4179,7 +4154,6 @@ contains
     real(RP), parameter :: ser0=1.000000000190015_RP
     real(RP) :: tmp(IJA,KA)
     real(RP) :: ser(IJA,KA)
-    integer :: ij,k,iter
     !
     ser(:,:) = ser0 &
          + coef(1)/(x(:,:)+1.0_RP) + coef(2)/(x(:,:)+2.0_RP) + coef(3)/(x(:,:)+3.0_RP) &
@@ -4213,7 +4187,7 @@ contains
     real(RP) :: b0,b1,b2,b3,b4,b5
     real(RP) :: c0,c1,c2,c3,c4,c5
     real(RP) :: d0,d1,d2,d3,d4,d5
-    real(RP) :: e0,e1,e2,e3,e4,e5
+    real(RP) ::    e1,e2,e3,e4,e5
     real(RP) :: h0,h1,h2,h3,h4,h5
     real(RP), parameter :: eps=1.E-30_RP
     !
@@ -4332,7 +4306,6 @@ contains
     real(RP) :: lg_x(IJA,KA)
     real(RP) :: lg_w(IJA,KA)
     real(RP) :: lg_xw(IJA,KA)
-    integer :: ij,k,iter
     !
     ! log(gamma(x))
     !
@@ -4703,7 +4676,7 @@ contains
     real(RP) :: drhogqc, drhogqr, drhogqi, drhogqs, drhogqg
     real(RP) :: drhognc, drhognr, drhogni, drhogns, drhogng
     !
-    real(RP) :: fac1, fac2, fac3, fac4, fac5, fac6, fac7
+    real(RP) :: fac1, fac2, fac3, fac4, fac5, fac6
     real(RP) :: r_rvaptem        ! 1/(Rvap*tem)
     real(RP) :: pv               ! vapor pressure
     real(RP) :: lvsw, lvsi       ! saturated vapor density
@@ -4718,14 +4691,13 @@ contains
     real(RP) :: ssw, ssi         ! supersaturation ratio
     real(RP) :: r_esw, r_esi     ! 1/esw, 1/esi
     real(RP) :: r_lvsw, r_lvsi   ! 1/(lvsw*ssw), 1/(lvsi*ssi)
-    real(RP) :: evap_max         !
     real(RP) :: r_dt             ! 1/dt
     real(RP) :: ssw_o, ssi_o
     real(RP) :: dt_dyn
 !    real(RP) :: dt_mp
     !
     real(RP)       :: tem_lh(KA,IA,JA)
-    real(RP)       :: dtemdt_lh(KA,IA,JA)
+!    real(RP)       :: dtemdt_lh(KA,IA,JA)
     real(RP)       :: PLCdep_old(KA,IA,JA),PLRdep_old(KA,IA,JA)
     real(RP)       :: PLIdep_old(KA,IA,JA),PLSdep_old(KA,IA,JA),PLGdep_old(KA,IA,JA)
     real(RP)       :: PNRdep_old(KA,IA,JA)
