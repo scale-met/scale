@@ -1137,18 +1137,13 @@ contains
     !
     ! primary variables
     !
-    real(RP) :: rhogvx_d(KA,IA,JA)
-    real(RP) :: rhogvy_d(KA,IA,JA)
-    real(RP) :: rhogw_d (KA,IA,JA)
     real(RP) :: rhogq_d (KA,IA,JA,QA)
-    real(RP) :: rhog_d  (KA,IA,JA)
     real(RP) :: th_d    (KA,IA,JA)
     !
     ! diagnostic variables
     !
     real(RP) :: qd_d(KA,IA,JA)
     real(RP) :: q_d(KA,IA,JA,QA)
-    real(RP) :: rho_d(KA,IA,JA)
     real(RP) :: tem_d(KA,IA,JA)
     real(RP) :: pre_d(KA,IA,JA)
     real(RP) :: rhoge_d(KA,IA,JA)
@@ -1312,11 +1307,6 @@ contains
     real(RP) :: r_ntmax
     integer :: ntdiv
 
-    real(RP) :: rhoe(KA,IA,JA)
-    real(RP) :: temp(KA,IA,JA)
-    real(RP) :: pres(KA,IA,JA)
-    real(RP) :: rhoq(KA,IA,JA,QA)
-
     real(RP) :: Rmoist
     real(RP) :: cpa
 
@@ -1351,87 +1341,53 @@ contains
     !----------------------------------------------------------------------------
     call TIME_rapstart('MPX ijkconvert')
 
-    do j = 1, JA
-    do i = 1, IA
-       sl_PLCdep_d(1,i,j) = 0.0_RP
-       sl_PLRdep_d(1,i,j) = 0.0_RP
-       sl_PNRdep_d(1,i,j) = 0.0_RP
-
-!OCL XFILL
-       do k = KS, KE
-          rhog_d  (k,i,j) = DENS(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          rhogw_d (k,i,j) = MOMZ(k,i,j)
-       enddo
-       do k = KS, KE
-          th_d    (k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       rhog_d  (1:KS-1,i,j) = rhog_d  (KS,i,j)
-       rhogw_d (1:KS-1,i,j) = rhogw_d (KS,i,j)
-       th_d    (1:KS-1,i,j) = th_d    (KS,i,j)
-
-       rhog_d  (KE+1:KA,i,j) = rhog_d  (KE,i,j)
-       rhogw_d (KE+1:KA,i,j) = rhogw_d (KE,i,j)
-       th_d    (KE+1:KA,i,j) = th_d    (KE,i,j)
-    enddo
-    enddo
-
     do iq = 1, QA
        do j = 1, JA
        do i = 1, IA
           do k = KS, KE
              q_d(k,i,j,iq) = QTRC(k,i,j,iq)
           enddo
+          do k = 1, KA
+             rhogq_d(k,i,j,iq) = DENS(k,i,j) * q_d(k,i,j,iq)
+          enddo
        enddo
        enddo
-    enddo
-
-    do iq = 1, QA
-       do j = 1, JA
-       do i = 1, IA
-          q_d(1:KS-1, i,j  ,iq) = q_d(KS,i,j,iq)
-          q_d(KE+1:KA,i,j  ,iq) = q_d(KE,i,j,iq)
-       enddo
-       enddo
-    enddo
-
-    do iq = 1, QA
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       rhogq_d(k,i,j,iq) = rhog_d(k,i,j) * q_d(k,i,j,iq)
-    enddo
-    enddo
-    enddo
     enddo
 
     do j = 1, JA
     do i = 1, IA
-    do k = 2, KA
-       rho_d  (k,i,j) = rhog_d(k,i,j)
-       rrhog_d(k,i,j) = 1.0_RP / rhog_d(k,i,j)
-       w_d    (k,i,j) = ( rhogw_d(k,i,j) + rhogw_d(k-1,i,j) ) * rrhog_d(k,i,j)
-       CALC_QDRY( qd_d(k,i,j), q_d, k, i, j, iq )
-       CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
-       CALC_R( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
-       cpa = cva_d(k,i,j) + Rmoist
-       CALC_PRE( pre_d(k,i,j), rho_d(k,i,j), th_d(k,i,j), Rmoist, cpa, P00 )
-       tem_d(k,i,j) = pre_d(k,i,j) / ( rho_d(k,i,j) * Rmoist )
-    enddo
+       sl_PLCdep_d(1,i,j) = 0.0_RP
+       sl_PLRdep_d(1,i,j) = 0.0_RP
+       sl_PNRdep_d(1,i,j) = 0.0_RP
+
+       do k = KS-1, KE+1
+          rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
+       enddo
+       do k = KS-1, KE+1
+          w_d(k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
+       enddo
+       do k = KS, KE
+          th_d(k,i,j) = RHOT(k,i,j) * rrhog_d(k,i,j)
+       enddo
+       do k = KS, KE
+          CALC_QDRY( qd_d(k,i,j), q_d, k, i, j, iq )
+       enddo
+       do k = KS, KE
+          CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
+       enddo
+       do k = KS, KE
+          CALC_R( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
+          cpa = cva_d(k,i,j) + Rmoist
+          CALC_PRE( pre_d(k,i,j), DENS(k,i,j), th_d(k,i,j), Rmoist, cpa, P00 )
+          tem_d(k,i,j) = pre_d(k,i,j) / ( DENS(k,i,j) * Rmoist )
+       enddo
+       do k = KS, KE
+          rhoge_d(k,i,j) = DENS(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
+       enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       rhoge_d(k,i,j) = rhog_d(k,i,j) * tem_d(k,i,j) * cva_d(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
+    if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
     call TIME_rapend  ('MPX ijkconvert')
 
@@ -1440,7 +1396,7 @@ contains
     do j = 1,  JA
     do i = 1,  IA
     do k = KS, KE
-       rho_fac         = rho_0 / max(rho_d(k,i,j),rho_min)
+       rho_fac         = rho_0 / max(DENS(k,i,j),rho_min)
        rho_fac_c_d(k,i,j) = rho_fac**gamma_v(I_QC)
        rho_fac_r_d(k,i,j) = rho_fac**gamma_v(I_QR)
        rho_fac_i_d(k,i,j) = (pre_d(k,i,j)/pre0_vt)**a_pre0_vt * (tem_d(k,i,j)/tem0_vt)**a_tem0_vt
@@ -1486,9 +1442,9 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       lv_d(k,i,j) = rho_d(k,i,j)*q_d(k,i,j,I_QV)
-       ni_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*q_d(k,i,j,I_NI) )
-       nc_d(k,i,j) = max( 0.0_RP, rho_d(k,i,j)*q_d(k,i,j,I_NC) )
+       lv_d(k,i,j) = DENS(k,i,j)*q_d(k,i,j,I_QV)
+       ni_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NI) )
+       nc_d(k,i,j) = max( 0.0_RP, DENS(k,i,j)*q_d(k,i,j,I_NC) )
     enddo
     enddo
     enddo
@@ -1499,7 +1455,7 @@ contains
          JS, JE,         & ! in
          KS, KE,         & ! in
          z, w_d,         & ! in
-         rho_d, wtem_d, pre_d, & ! in
+         DENS, wtem_d, pre_d, & ! in
          lv_d, nc_d, ni_d,     & ! in
          PNCccn_d, PLCccn_d, & ! out
          PNIccn_d, PLIccn_d, & ! out
@@ -1547,14 +1503,14 @@ contains
        CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
        CALC_R ( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
 
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( rhog_d(k,i,j) * cva_d(k,i,j) )
-       pre_d(k,i,j) = rho_d(k,i,j) * Rmoist * tem_d(k,i,j)
+       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+       pre_d(k,i,j) = DENS(k,i,j) * Rmoist * tem_d(k,i,j)
     enddo
     enddo
     enddo
 
 !    if( opt_debug )     call debugreport_nucleation
-    if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
+    if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
     call TIME_rapend  ('MP1 Nucleation')
     !----------------------------------------------------------------------------
@@ -1651,7 +1607,7 @@ contains
             PLImlt_d, PNImlt_d,   & ! out
             PLSmlt_d, PNSmlt_d,   & ! out
             PLGmlt_d, PNGmlt_d,   & ! out
-            rho_d, wtem_d, pre_d, lv_d,& ! in
+            DENS, wtem_d, pre_d, lv_d,& ! in
             qd_d,                 & ! in
             esw_d, esi_d,         & ! in
             nc_d,                 & ! in
@@ -1677,10 +1633,10 @@ contains
             dz,                            & ! in
             w_d,                           & ! in
             dTdt_equiv_d,                  & ! in
-            rhog_d,                        & ! in
+            DENS,                          & ! in
             rhoge_d,                       & ! inout
             rhogq_d, q_d,                  & ! inout
-            tem_d, pre_d, rho_d,           & ! inout
+            tem_d, pre_d,                  & ! inout
             cva_d,                         & ! out
             esw_d, esi_d, LV_d,            & ! in
             LC_d, LR_d, LI_d, LS_d, LG_d,  & ! in
@@ -1705,7 +1661,7 @@ contains
             sl_PLRdep_d, sl_PNRdep_d ) ! out
 
 !       if( opt_debug )     call debugreport_phasechange
-       if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
+       if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
     call TIME_rapend  ('MP2 Phase change')
     !----------------------------------------------------------------------------
@@ -1796,7 +1752,7 @@ contains
             PNRslc_d, PNRbrk_d,   &
             lc_d, lr_d, nc_d, nr_d,xc_d,&
             dr_xa_d,            &
-            rho_d, tem_d          )
+            DENS, tem_d         )
     else
        PLCaut_d = 0.0_RP
        PNCaut_d = 0.0_RP
@@ -1841,7 +1797,7 @@ contains
             dc_xa_d, dr_xa_d, di_xa_d, ds_xa_d, dg_xa_d,& ! in
             vt_xa_d(:,:,:,I_QC,2), vt_xa_d(:,:,:,I_QR,2), &
             vt_xa_d(:,:,:,I_QI,2), vt_xa_d(:,:,:,I_QS,2), vt_xa_d(:,:,:,I_QG,2), &
-            rho_d(:,:,:),                       & ! in
+            DENS(:,:,:),                    & ! in
             flag_history_in                 ) ! in
    
        !
@@ -2071,14 +2027,14 @@ contains
        CALC_CV( cva_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CVdry, AQ_CV )
        CALC_R( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
 
-       tem_d(k,i,j) = rhoge_d(k,i,j) / ( rhog_d(k,i,j) * cva_d(k,i,j) )
-       pre_d(k,i,j) = rho_d(k,i,j) * Rmoist * tem_d(k,i,j)
+       tem_d(k,i,j) = rhoge_d(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+       pre_d(k,i,j) = DENS(k,i,j) * Rmoist * tem_d(k,i,j)
     enddo
     enddo
     enddo
 
 !    if( opt_debug )     call debugreport_collection
-    if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
+    if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
     call TIME_rapend  ('MP3 Collection')
 
@@ -2090,23 +2046,8 @@ contains
        do k  = KS, KE
           CALC_CP( cpa_d(k,i,j), qd_d(k,i,j), q_d, k, i, j, iq, CPdry, AQ_CP )
           CALC_R( Rmoist, q_d(k,i,j,I_QV), qd_d(k,i,j), Rdry, Rvap )
-          th_d(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(Rmoist/cpa_d(k,i,j))
-       enddo
-
-       do k = KS, KE
-          RHOT(k,i,j) = th_d(k,i,j) * rhog_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          rhoe(k,i,j) = rhoge_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          temp(k,i,j) = tem_d(k,i,j)
-       enddo
-!OCL XFILL
-       do k = KS, KE
-          pres(k,i,j) = pre_d(k,i,j)
+          RHOT(k,i,j) = tem_d(k,i,j) * ( P00 / pre_d(k,i,j) )**(Rmoist/cpa_d(k,i,j)) &
+               * DENS(k,i,j)
        enddo
     enddo
     enddo
@@ -2114,20 +2055,10 @@ contains
 !OCL SERIAL
     do iq = 1, QA
 !OCL PARALLEL
-       do j  = JS, JE
-       do i  = IS, IE
-!OCL XFILL
-          do k = KS, KE
-             rhoq(k,i,j,iq) = rhogq_d(k,i,j,iq)
-          enddo
-       enddo
-       enddo
-
-!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,iq) = rhoq(k,i,j,iq) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = rhogq_d(k,i,j,iq) * rrhog_d(k,i,j)
        enddo
        enddo
        enddo
@@ -2165,16 +2096,16 @@ contains
     do step = 1, MP_NSTEP_SEDIMENTATION
 
        call MP_terminal_velocity( velw(:,:,:,:), &
-                                  rhoq(:,:,:,:), &
-                                  temp(:,:,:),   &
-                                  pres(:,:,:)    )
+                                  rhogq_d(:,:,:,:), &
+                                  tem_d(:,:,:),   &
+                                  pre_d(:,:,:)    )
 
        call precipitation( wflux_rain(:,:,:),     &
                            wflux_snow(:,:,:),     &
                            velw(:,:,:,:),         &
-                           rhoq(:,:,:,:),         &
-                           rhoe(:,:,:),           &
-                           temp(:,:,:),           &
+                           rhogq_d(:,:,:,:),      &
+                           rhoge_d(:,:,:),        &
+                           tem_d(:,:,:),           &
                            MP_DTSEC_SEDIMENTATION )
 
        do j = JS, JE
@@ -4681,7 +4612,7 @@ contains
        rhog,                     & ! in
        rhoge,                    & ! inout
        rhogq, q,                 & ! inout
-       tem, pre, rho,            & ! inout
+       tem, pre,                 & ! inout
        cva,                      & ! out
        esw, esi, LV,             & ! in
        LC, LR, LI, LS, LG,       & ! in
@@ -4740,7 +4671,6 @@ contains
     real(RP), intent(inout) :: q(KA,IA,JA,QA)     ! tracers mixing ratio[kg/kg]
     real(RP), intent(inout) :: tem(KA,IA,JA)         ! temperature[K]
     real(RP), intent(inout) :: pre(KA,IA,JA)         ! pressure[Pa]
-    real(RP), intent(in)    :: rho(KA,IA,JA)         ! air density[kg/m3]
     real(RP), intent(out)   :: cva(KA,IA,JA)         ! specific heat at constant volume
     real(RP), intent(in)    :: esw(KA,IA,JA)         ! saturated vapor pressure for liquid
     real(RP), intent(in)    :: esi(KA,IA,JA)         !                          for ice
@@ -4918,8 +4848,8 @@ contains
     !
     call moist_pres2qsat_liq ( qsw, wtem, pre )
     call moist_pres2qsat_ice ( qsi, wtem, pre )
-    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
-    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
+    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rhog )
+    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rhog )
     call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
     call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
     !
@@ -5064,8 +4994,8 @@ contains
              ! Coefficient of latent heat release for ssi change by PLIdep, PLSdep and PLGdep
              asolsol          = 1.0_RP &
                   + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
-             Pdynliq          = w(k,i,j)*GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rho(k,i,j)*dqswdpre_tem(k,i,j) )
-             Pdynsol          = w(k,i,j)*GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rho(k,i,j)*dqsidpre_tem(k,i,j) )
+             Pdynliq          = w(k,i,j)*GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rhog(k,i,j)*dqswdpre_tem(k,i,j) )
+             Pdynsol          = w(k,i,j)*GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rhog(k,i,j)*dqsidpre_tem(k,i,j) )
              Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
              Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
              !
@@ -5091,8 +5021,8 @@ contains
              !
 !!$          uplim_cnd        = max( (lv(ij,k) - lvsw)*r_dt, 0.D0 )
 !!$          lowlim_cnd       = min( (lv(ij,k) - lvsw)*r_dt, 0.D0 )
-             uplim_cnd        = max( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
-             lowlim_cnd       = min( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
+             uplim_cnd        = max( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
+             lowlim_cnd       = min( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
              ! [Mod] 11/08/30 T.Mitsui
 !!$             if( r_taucnd < 1.d-30 )then ! condensation is almost negligible
 !!             if( r_taudep < r_tau100day )then
@@ -5105,16 +5035,16 @@ contains
              else
                 taucnd(k,i,j)     = 1.0_RP/r_taucnd
                 ! Production term for liquid water content
-                coef_a_cnd = rho(k,i,j)*Acnd*taucnd(k,i,j)
-                coef_b_cnd = rho(k,i,j)*taucnd(k,i,j)*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd(k,i,j)) * ( exp(-dt*r_taucnd) - 1.0_RP )
+                coef_a_cnd = rhog(k,i,j)*Acnd*taucnd(k,i,j)
+                coef_b_cnd = rhog(k,i,j)*taucnd(k,i,j)*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd(k,i,j)) * ( exp(-dt*r_taucnd) - 1.0_RP )
                 PLCdep_alt(k,i,j) = coef_a_cnd*r_taucnd_c - coef_b_cnd*r_taucnd_c
                 PLRdep_alt(k,i,j) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
                 PLR2NR           = PNRdep(k,i,j)/(PLRdep(k,i,j)+1.d-30)
                 PNRdep_alt(k,i,j) = min(0.0_RP, PLRdep_alt(k,i,j)*PLR2NR )
              end if
              !
-             uplim_dep        = max( rho(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
-             lowlim_dep       = min( rho(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
+             uplim_dep        = max( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
+             lowlim_dep       = min( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
              ! [Mod] 11/08/30 T.Mitsui
 !!$             if( r_taudep < 1.d-30 )then
              if( r_taudep < r_tau100day )then
@@ -5135,8 +5065,8 @@ contains
              else
                 taudep(k,i,j)     = 1.0_RP/r_taudep
                 ! Production term for ice water content
-                coef_a_dep = rho(k,i,j)*Adep*taudep(k,i,j)
-                coef_b_dep = rho(k,i,j)*taudep(k,i,j)*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep(k,i,j)) * ( exp(-dt*r_taudep) - 1.0_RP )
+                coef_a_dep = rhog(k,i,j)*Adep*taudep(k,i,j)
+                coef_b_dep = rhog(k,i,j)*taudep(k,i,j)*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep(k,i,j)) * ( exp(-dt*r_taudep) - 1.0_RP )
                 ! [Mod] 11/08/30 T.Mitsui, add filter for deposition by solid particle
                 PLIdep_alt(k,i,j) =  coef_a_dep*r_taudep_i - coef_b_dep*r_taudep_i
                 PLSdep_alt(k,i,j) =  coef_a_dep*r_taudep_s - coef_b_dep*r_taudep_s
@@ -5401,7 +5331,7 @@ contains
 !          end if
           tem(:,:,:)   = tem_lh(:,:,:)
        end if
-       pre(:,:,:) = rho(:,:,:)*( qd(:,:,:)*Rdry+q(:,:,:,I_QV)*Rvap )*tem(:,:,:)
+       pre(:,:,:) = rhog(:,:,:)*( qd(:,:,:)*Rdry+q(:,:,:,I_QV)*Rvap )*tem(:,:,:)
     end do
     !
     return
