@@ -4853,7 +4853,7 @@ contains
              if( PLCdep_alt(k,i,j) < -eps )then
                 PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep_alt(k,i,j)*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
              end if
-             if( PLIdep(k,i,j) < -eps )then
+             if( PLIdep_alt(k,i,j) < -eps )then
                 PNIdep(k,i,j) = min(0.0_RP, ((li(k,i,j)+PLIdep_alt(k,i,j)*dt)*r_xi_ccn - ni(k,i,j))*r_dt )
              end if
           end do
