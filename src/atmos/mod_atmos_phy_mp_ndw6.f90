@@ -2721,12 +2721,6 @@ contains
        gm    = gammafunc(alpha)
        lgm   = log(gm)
     end if
-    PLGspl(1:KS,:,:)   =0.0_RP
-    PLSspl(1:KS,:,:)   =0.0_RP
-    PNIspl(1:KS,:,:)   =0.0_RP
-    PLGspl(KE:KA,:,:)=0.0_RP
-    PLSspl(KE:KA,:,:)=0.0_RP
-    PNIspl(KE:KA,:,:)=0.0_RP
     !
     do j = JS, JE
     do i = IS, IE
@@ -3672,28 +3666,15 @@ contains
     real(RP), parameter :: r_14=1.0_RP/1.4_RP
     real(RP), parameter :: r_15=1.0_RP/1.5_RP
     !
-    real(RP) :: ventNR, ventLR(KA,IA,JA)     !
+    real(RP) ::                   ventLR(KA,IA,JA)     !
     real(RP) :: ventNI(KA,IA,JA), ventLI(KA,IA,JA)     !
     real(RP) :: ventNS(KA,IA,JA), ventLS(KA,IA,JA)     !
     real(RP) :: ventNG(KA,IA,JA), ventLG(KA,IA,JA)     !
-    real(RP) :: ah_vent1_rs(KA,IA,JA)
-    real(RP) :: ah_vent1_rl(KA,IA,JA)
-    real(RP) :: bh_vent1_rs(KA,IA,JA)
-    real(RP) :: bh_vent1_rl(KA,IA,JA)
     !
     real(RP), parameter :: Re_max=1.E+3_RP
     real(RP), parameter :: Re_min=1.E-4_RP
     !
     integer :: i, j, k
-    !
-    ventNR=0.0_RP
-    ventNI=0.0_RP
-    ventNS=0.0_RP
-    ventNG=0.0_RP
-    ventLR=0.0_RP
-    ventLI=0.0_RP
-    ventLS=0.0_RP
-    ventLG=0.0_RP
     !
     ! Notice,T.Mitsui
     ! Vapor deposition and melting would not be solved iteratively to reach equilibrium.
@@ -4481,6 +4462,8 @@ contains
     real(RP), intent(inout) :: sl_PLCdep(1,IA,JA)
     real(RP), intent(inout) :: sl_PLRdep(1,IA,JA), sl_PNRdep(1,IA,JA)
     !
+    real(RP) :: Rmoist
+    !
     real(RP) :: xi(KA,IA,JA)                     ! mean mass of ice particles
     real(RP) :: rrhog(KA,IA,JA)                  ! 1/rhog
     real(RP) :: wtem(KA,IA,JA)                   ! temperature[K]
@@ -4515,11 +4498,6 @@ contains
     real(RP) :: taudep_g(KA,IA,JA), r_taudep_g  ! by graupel
     ! alternative tendency through changing ssw and ssi
     real(RP) :: PNCdep(KA,IA,JA) ! [Add] 11/08/30 T.Mitsui
-    real(RP) :: PLCdep_alt(KA,IA,JA)
-    real(RP) :: PLRdep_alt(KA,IA,JA), PNRdep_alt(KA,IA,JA)
-    real(RP) :: PLIdep_alt(KA,IA,JA), PNIdep_alt(KA,IA,JA)
-    real(RP) :: PLSdep_alt(KA,IA,JA), PNSdep_alt(KA,IA,JA)
-    real(RP) :: PLGdep_alt(KA,IA,JA), PNGdep_alt(KA,IA,JA)
     real(RP) :: PLR2NR, PLI2NI, PLS2NS, PLG2NG
     real(RP) :: coef_a_cnd, coef_b_cnd
     real(RP) :: coef_a_dep, coef_b_dep
@@ -4560,26 +4538,14 @@ contains
     real(RP) :: dt_dyn
 !    real(RP) :: dt_mp
     !
-    real(RP)       :: tem_lh(KA,IA,JA)
+!    real(RP)       :: tem_lh(KA,IA,JA)
 !    real(RP)       :: dtemdt_lh(KA,IA,JA)
-    real(RP)       :: PLCdep_old(KA,IA,JA),PLRdep_old(KA,IA,JA)
-    real(RP)       :: PLIdep_old(KA,IA,JA),PLSdep_old(KA,IA,JA),PLGdep_old(KA,IA,JA)
-    real(RP)       :: PNRdep_old(KA,IA,JA)
-    real(RP)       :: PNIdep_old(KA,IA,JA),PNSdep_old(KA,IA,JA),PNGdep_old(KA,IA,JA)
-    real(RP)       :: PLChom_old(KA,IA,JA),PNChom_old(KA,IA,JA)
-    real(RP)       :: PLChet_old(KA,IA,JA),PNChet_old(KA,IA,JA)
-    real(RP)       :: PLRhet_old(KA,IA,JA),PNRhet_old(KA,IA,JA)
-    real(RP)       :: rhoge_old(KA,IA,JA), rhogq_old(KA,IA,JA,QA)
-    real(RP)       :: tem_old(KA,IA,JA), pre_old(KA,IA,JA)
     real(RP), save :: fac_cndc        = 1.0_RP
-    real(RP), save :: fac_cndc_lh     = 1.0_RP
     logical, save :: opt_fix_taucnd_c=.false.
-    logical, save :: opt_fix_lhcnd_c =.false.
     logical, save :: flag_first      =.true.
-    integer :: iumax
     !
     namelist /nm_mp_ndw6_condensation/ &
-         opt_fix_taucnd_c, opt_fix_lhcnd_c, fac_cndc, fac_cndc_lh
+         opt_fix_taucnd_c, fac_cndc
 
     real(RP) :: fac_cndc_wrk
     !
@@ -4587,7 +4553,7 @@ contains
     real(RP), parameter :: r_tau100day = 1.E-7_RP
     real(RP), parameter :: eps=1.E-30_RP
     !
-    integer :: i,j,k,iu,iqw
+    integer :: i,j,k,iqw
     !
 
     ! [Add] 11/08/30 T.Mitsui
@@ -4603,6 +4569,21 @@ contains
     !
     r_dt       = 1.0_RP/dt
     !
+    r_xc_ccn=1.0_RP/xc_ccn
+    r_xi_ccn=1.0_RP/xi_ccn
+    !
+    if( opt_fix_taucnd_c )then
+       fac_cndc_wrk = fac_cndc**(1.0_RP-b_m(I_QC))
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          PLCdep(k,i,j)  = PLCdep(k,i,j)*fac_cndc_wrk
+       end do
+       end do
+       end do
+       if( IO_L ) write(IO_FID_LOG,*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
+    end if
+    !
     do j = JS, JE
     do i = IS, IE
        do k = KS,KE
@@ -4611,7 +4592,6 @@ contains
           ! On the other hand original "tem" is used for calculation of latent heat or energy equation.
           wtem(k,i,j)  = max( tem(k,i,j), tem_min )
           !
-          ! [Add] 11/08/30 T.Mitsui
           if( z(k) <= 25000.0_RP )then
              w(k,i,j) = 0.5_RP*(wh(k,i,j) + wh(k+1,i,j))
           else
@@ -4641,468 +4621,313 @@ contains
              dqswdtem_pre(k,i,j) = 0.0_RP
              dqswdpre_tem(k,i,j) = 0.0_RP
           end if
-          if( pre(k,i,j) < esi(k,i,j)+1.d-10 )then
+          if( pre(k,i,j) < esi(k,i,j)+1.E-10_RP )then
              qsi(k,i,j) = 1.0_RP
              dqsidtem_rho(k,i,j) = 0.0_RP
              dqsidtem_pre(k,i,j) = 0.0_RP
              dqsidpre_tem(k,i,j) = 0.0_RP
           end if
        end do
-    end do
-    end do
-    !
-    if( opt_fix_lhcnd_c )then
-       iumax=2
-    else
-       iumax=1
-    end if
-    !
-    ! [Add] 11/08/30 T.Mitsui
-    PLCdep_old(:,:,:) = PLCdep(:,:,:)
-    PLRdep_old(:,:,:) = PLRdep(:,:,:)
-    PLIdep_old(:,:,:) = PLIdep(:,:,:)
-    PLSdep_old(:,:,:) = PLSdep(:,:,:)
-    PLGdep_old(:,:,:) = PLGdep(:,:,:)
-    !
-    PNRdep_old(:,:,:) = PNRdep(:,:,:)
-    PNIdep_old(:,:,:) = PNIdep(:,:,:)
-    PNSdep_old(:,:,:) = PNSdep(:,:,:)
-    PNGdep_old(:,:,:) = PNGdep(:,:,:)
-    !
-    PLChom_old(:,:,:) = PLChom(:,:,:)
-    PLChet_old(:,:,:) = PLChet(:,:,:)
-    PNChom_old(:,:,:) = PNChom(:,:,:)
-    PNChet_old(:,:,:) = PNChet(:,:,:)
-    PLRhet_old(:,:,:) = PLRhet(:,:,:)
-    PNRhet_old(:,:,:) = PNRhet(:,:,:)
-    rhoge_old(:,:,:)  = rhoge(:,:,:)
-    rhogq_old(:,:,:,:)= rhogq(:,:,:,:)
-    tem_old(:,:,:)    = tem(:,:,:)
-    pre_old(:,:,:)    = pre(:,:,:)
-    do iu=1, iumax
-       if( iu==2 )then
-          PLCdep(:,:,:) = PLCdep_old(:,:,:)
-          PLRdep(:,:,:) = PLRdep_old(:,:,:)
-          PLIdep(:,:,:) = PLIdep_old(:,:,:)
-          PLSdep(:,:,:) = PLSdep_old(:,:,:)
-          PLGdep(:,:,:) = PLGdep_old(:,:,:)
+       !
+       do k = KS, KE
+          r_rvaptem        = 1.0_RP/(Rvap*wtem(k,i,j))
+          lvsw             = esw(k,i,j)*r_rvaptem        ! rho=p/(Rv*T)
+          lvsi             = esi(k,i,j)*r_rvaptem        !
+          pv               = lv(k,i,j)*Rvap*tem(k,i,j)
+          r_esw            = 1.0_RP/esw(k,i,j)
+          r_esi            = 1.0_RP/esi(k,i,j)
+          ssw              = min( MP_ssw_lim, ( pv*r_esw-1.0_RP ) )
+          ssi              = pv*r_esi - 1.0_RP
+          r_lvsw           = 1.0_RP/lvsw
+          r_lvsi           = 1.0_RP/lvsi
+          r_taucnd_c       = PLCdep(k,i,j)*r_lvsw
+          r_taucnd_r       = PLRdep(k,i,j)*r_lvsw
+          r_taudep_i       = PLIdep(k,i,j)*r_lvsi
+          r_taudep_s       = PLSdep(k,i,j)*r_lvsi
+          r_taudep_g       = PLGdep(k,i,j)*r_lvsi
+          taucnd_c(k,i,j)   = 1.0_RP/(r_taucnd_c+r_tau100day)
+          taucnd_r(k,i,j)   = 1.0_RP/(r_taucnd_r+r_tau100day)
+          taudep_i(k,i,j)   = 1.0_RP/(r_taudep_i+r_tau100day)
+          taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
+          taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
           !
-          PNRdep(:,:,:) = PNRdep_old(:,:,:)
-          PNIdep(:,:,:) = PNIdep_old(:,:,:)
-          PNSdep(:,:,:) = PNSdep_old(:,:,:)
-          PNGdep(:,:,:) = PNGdep_old(:,:,:)
-          PLChom(:,:,:) = PLChom_old(:,:,:)
-          PLChet(:,:,:) = PLChet_old(:,:,:)
-          PNChom(:,:,:) = PNChom_old(:,:,:)
-          PNChet(:,:,:) = PNChet_old(:,:,:)
-          PLRhet(:,:,:) = PLRhet_old(:,:,:)
-          PNRhet(:,:,:) = PNRhet_old(:,:,:)
-          rhoge(:,:,:)  = rhoge_old(:,:,:)
-          rhogq(:,:,:,:)= rhogq_old(:,:,:,:)
-          tem_lh(:,:,:) = tem(:,:,:)
-          tem(:,:,:)    = tem_old(:,:,:)
-          pre(:,:,:)    = pre_old(:,:,:)
+          r_cva            = 1.0_RP/cva(k,i,j)
+          r_cpa            = 1.0_RP/cpa(k,i,j)
+          ! Coefficient of latent heat release for ssw change by PLCdep and PLRdep
+          aliqliq          = 1.0_RP &
+               + r_cva*( LHV00              + (CVvap-CL)*tem(k,i,j) )*dqswdtem_rho(k,i,j)
+          ! Coefficient of latent heat release for ssw change by PLIdep, PLSdep and PLGdep
+          asolliq          = 1.0_RP &
+               + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqswdtem_rho(k,i,j)
+          ! Coefficient of latent heat release for ssi change by PLCdep and PLRdep
+          aliqsol          = 1.0_RP &
+               + r_cva*( LHV00              + (CVvap-CL)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
+          ! Coefficient of latent heat release for ssi change by PLIdep, PLSdep and PLGdep
+          asolsol          = 1.0_RP &
+               + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
+          Pdynliq          = w(k,i,j)*GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rhog(k,i,j)*dqswdpre_tem(k,i,j) )
+          Pdynsol          = w(k,i,j)*GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rhog(k,i,j)*dqsidpre_tem(k,i,j) )
+          Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
+          Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
           !
-       end if
-       !
-       if( opt_fix_taucnd_c )then
-          fac_cndc_wrk = fac_cndc**(1.0_RP-b_m(I_QC))
-          PLCdep(:,:,:)  = PLCdep_old(:,:,:)*fac_cndc_wrk
-          if( IO_L ) write(IO_FID_LOG,*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
-       end if
-       !
-       if( opt_fix_lhcnd_c .and. iu==1 )then
-          fac_cndc_wrk = fac_cndc_lh**(1.0_RP-b_m(I_QC))
-          PLCdep(:,:,:)  = PLCdep_old(:,:,:)*fac_cndc_wrk
-          if( IO_L ) write(IO_FID_LOG,*) "lhcnd:fac_cndc_wrk=",fac_cndc_wrk
-       end if
-       !
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS, KE
-             r_rvaptem        = 1.0_RP/(Rvap*wtem(k,i,j))
-             lvsw             = esw(k,i,j)*r_rvaptem        ! rho=p/(Rv*T)
-             lvsi             = esi(k,i,j)*r_rvaptem        !
-             pv               = lv(k,i,j)*Rvap*tem(k,i,j)
-             r_esw            = 1.0_RP/esw(k,i,j)
-             r_esi            = 1.0_RP/esi(k,i,j)
-             ssw              = min( MP_ssw_lim, ( pv*r_esw-1.0_RP ) )
-             ssi              = pv*r_esi - 1.0_RP
-             r_lvsw           = 1.0_RP/lvsw
-             r_lvsi           = 1.0_RP/lvsi
-             r_taucnd_c       = PLCdep(k,i,j)*r_lvsw
-             r_taucnd_r       = PLRdep(k,i,j)*r_lvsw
-             r_taudep_i       = PLIdep(k,i,j)*r_lvsi
-             r_taudep_s       = PLSdep(k,i,j)*r_lvsi
-             r_taudep_g       = PLGdep(k,i,j)*r_lvsi
-             taucnd_c(k,i,j)   = 1.0_RP/(r_taucnd_c+r_tau100day)
-             taucnd_r(k,i,j)   = 1.0_RP/(r_taucnd_r+r_tau100day)
-             taudep_i(k,i,j)   = 1.0_RP/(r_taudep_i+r_tau100day)
-             taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
-             taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
-             !
-             r_cva            = 1.0_RP/cva(k,i,j)
-             r_cpa            = 1.0_RP/cpa(k,i,j)
-             ! Coefficient of latent heat release for ssw change by PLCdep and PLRdep
-             aliqliq          = 1.0_RP &
-                  + r_cva*( LHV00              + (CVvap-CL)*tem(k,i,j) )*dqswdtem_rho(k,i,j)
-             ! Coefficient of latent heat release for ssw change by PLIdep, PLSdep and PLGdep
-             asolliq          = 1.0_RP &
-                  + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqswdtem_rho(k,i,j)
-             ! Coefficient of latent heat release for ssi change by PLCdep and PLRdep
-             aliqsol          = 1.0_RP &
-                  + r_cva*( LHV00              + (CVvap-CL)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
-             ! Coefficient of latent heat release for ssi change by PLIdep, PLSdep and PLGdep
-             asolsol          = 1.0_RP &
-                  + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
-             Pdynliq          = w(k,i,j)*GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rhog(k,i,j)*dqswdpre_tem(k,i,j) )
-             Pdynsol          = w(k,i,j)*GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rhog(k,i,j)*dqsidpre_tem(k,i,j) )
-             Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
-             Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
-             !
-             r_qsw            = 1.0_RP/qsw(k,i,j)
-             r_qsi            = 1.0_RP/qsi(k,i,j)
+          r_qsw            = 1.0_RP/qsw(k,i,j)
+          r_qsi            = 1.0_RP/qsi(k,i,j)
 
-             ! [Mod] T.Seiki xxxxxx
-             ssw_o            = ssw
-             ssi_o            = ssi
+          ! [Mod] T.Seiki xxxxxx
+          ssw_o            = ssw
+          ssi_o            = ssi
 !             ssw_o            = ssw - Pdynliq*r_qsw*(dt_dyn-dt_mp) + Pradliq*r_qsw*dt_mp
 !             ssi_o            = ssi - Pdynsol*r_qsi*(dt_dyn-dt_mp) + Pradsol*r_qsi*dt_mp
-             !
-             Acnd             = Pdynliq + Pradliq &
-                  - ( r_taudep_i+r_taudep_s+r_taudep_g ) * ( qsw(k,i,j) - qsi(k,i,j) )
-             Adep             = Pdynsol + Pradsol &
-                  + ( r_taucnd_c+r_taucnd_r )            * ( qsw(k,i,j) - qsi(k,i,j) )
-             r_taucnd         = &
-                  + aliqliq*( r_taucnd_c+r_taucnd_r ) &
-                  + asolliq*( r_taudep_i+r_taudep_s+r_taudep_g )
-             r_taudep         = &
-                  + aliqsol*( r_taucnd_c+r_taucnd_r )&
-                  + asolsol*( r_taudep_i+r_taudep_s+r_taudep_g )
-             !
-!!$          uplim_cnd        = max( (lv(ij,k) - lvsw)*r_dt, 0.D0 )
-!!$          lowlim_cnd       = min( (lv(ij,k) - lvsw)*r_dt, 0.D0 )
-             uplim_cnd        = max( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
-             lowlim_cnd       = min( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
-             ! [Mod] 11/08/30 T.Mitsui
-!!$             if( r_taucnd < 1.d-30 )then ! condensation is almost negligible
-!!             if( r_taudep < r_tau100day )then
-             if( r_taucnd < r_tau100day )then
-                taucnd(k,i,j)     = tau100day
-                PLCdep_alt(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLCdep(k,i,j)*ssw_o ))
-                PLRdep_alt(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLRdep(k,i,j)*ssw_o ))
-                PNRdep_alt(k,i,j) = min(0.0_RP, PNRdep(k,i,j)*ssw_o )
-                PLR2NR           = 0.0_RP
-             else
-                taucnd(k,i,j)     = 1.0_RP/r_taucnd
-                ! Production term for liquid water content
-                coef_a_cnd = rhog(k,i,j)*Acnd*taucnd(k,i,j)
-                coef_b_cnd = rhog(k,i,j)*taucnd(k,i,j)*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd(k,i,j)) * ( exp(-dt*r_taucnd) - 1.0_RP )
-                PLCdep_alt(k,i,j) = coef_a_cnd*r_taucnd_c - coef_b_cnd*r_taucnd_c
-                PLRdep_alt(k,i,j) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
-                PLR2NR           = PNRdep(k,i,j)/(PLRdep(k,i,j)+1.d-30)
-                PNRdep_alt(k,i,j) = min(0.0_RP, PLRdep_alt(k,i,j)*PLR2NR )
-             end if
-             !
-             uplim_dep        = max( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
-             lowlim_dep       = min( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
-             ! [Mod] 11/08/30 T.Mitsui
-!!$             if( r_taudep < 1.d-30 )then
-             if( r_taudep < r_tau100day )then
-                taudep(k,i,j)     = tau100day
-                ! [Mod] 11/08/30 T.Mitsui, add filter for deposition by solid particle
-!!$             PLIdep_alt(ij,k) = PLIdep(ij,k)*ssi_o
-!!$             PLSdep_alt(ij,k) = PLSdep(ij,k)*ssi_o
-!!$             PLGdep_alt(ij,k) = PLGdep(ij,k)*ssi_o
-                PLIdep_alt(k,i,j) = max(lowlim_dep, min(uplim_dep, PLIdep(k,i,j)*ssi_o ))
-                PLSdep_alt(k,i,j) = max(lowlim_dep, min(uplim_dep, PLSdep(k,i,j)*ssi_o ))
-                PLGdep_alt(k,i,j) = max(lowlim_dep, min(uplim_dep, PLGdep(k,i,j)*ssi_o ))
-                PNIdep_alt(k,i,j) = min(0.0_RP, PNIdep(k,i,j)*ssi_o )
-                PNSdep_alt(k,i,j) = min(0.0_RP, PNSdep(k,i,j)*ssi_o )
-                PNGdep_alt(k,i,j) = min(0.0_RP, PNGdep(k,i,j)*ssi_o )
-                PLI2NI           = 0.0_RP
-                PLS2NS           = 0.0_RP
-                PLG2NG           = 0.0_RP
-             else
-                taudep(k,i,j)     = 1.0_RP/r_taudep
-                ! Production term for ice water content
-                coef_a_dep = rhog(k,i,j)*Adep*taudep(k,i,j)
-                coef_b_dep = rhog(k,i,j)*taudep(k,i,j)*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep(k,i,j)) * ( exp(-dt*r_taudep) - 1.0_RP )
-                ! [Mod] 11/08/30 T.Mitsui, add filter for deposition by solid particle
-                PLIdep_alt(k,i,j) =  coef_a_dep*r_taudep_i - coef_b_dep*r_taudep_i
-                PLSdep_alt(k,i,j) =  coef_a_dep*r_taudep_s - coef_b_dep*r_taudep_s
-                PLGdep_alt(k,i,j) =  coef_a_dep*r_taudep_g - coef_b_dep*r_taudep_g
-                ! [Mod] 11/08/30 T.Mitsui
-!!$             PLI2NI           = PNIdep(ij,k)/(PLIdep(ij,k)+1.d-30)
-!!$             PLS2NS           = PNSdep(ij,k)/(PLSdep(ij,k)+1.d-30)
-!!$             PLG2NG           = PNGdep(ij,k)/(PLGdep(ij,k)+1.d-30)
-!!$                PLI2NI           = PNIdep(ij,k)/min(PLIdep(ij,k),-1.d-30)
-!!$                PLS2NS           = PNSdep(ij,k)/min(PLSdep(ij,k),-1.d-30)
-!!$                PLG2NG           = PNGdep(ij,k)/min(PLGdep(ij,k),-1.d-30)
-                PLI2NI           = PNIdep(k,i,j)/max(PLIdep(k,i,j),1.E-30_RP)
-                PLS2NS           = PNSdep(k,i,j)/max(PLSdep(k,i,j),1.E-30_RP)
-                PLG2NG           = PNGdep(k,i,j)/max(PLGdep(k,i,j),1.E-30_RP)
-                PNIdep_alt(k,i,j) = min(0.0_RP, PLIdep_alt(k,i,j)*PLI2NI )
-                PNSdep_alt(k,i,j) = min(0.0_RP, PLSdep_alt(k,i,j)*PLS2NS )
-                PNGdep_alt(k,i,j) = min(0.0_RP, PLGdep_alt(k,i,j)*PLG2NG )
-             end if
-             !
-          end do
-       end do
-       end do
-!!$       if( iu==2.and.flag_history_in )then
-!!$          call history_in( 'ml_taudep', taudep(:,:) )
-!!$          call history_in( 'ml_taucnd', taucnd(:,:) )
-!!$          call history_in( 'ml_taucndc', taucnd_c(:,:))
-!!$          call history_in( 'ml_taucndr', taucnd_r(:,:))
-!!$          call history_in( 'ml_taudepi', taudep_i(:,:))
-!!$          call history_in( 'ml_taudeps', taudep_s(:,:))
-!!$          call history_in( 'ml_taudepg', taudep_g(:,:))
-!!$       end if
-       !
-       PNCdep=0.0_RP
-       PNIdep=0.0_RP
-       !
-       r_xc_ccn=1.0_RP/xc_ccn
-       r_xi_ccn=1.0_RP/xi_ccn
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS, KE
-             if( PLCdep_alt(k,i,j) < -eps )then
-                PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep_alt(k,i,j)*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
-             end if
-             if( PLIdep_alt(k,i,j) < -eps )then
-                PNIdep(k,i,j) = min(0.0_RP, ((li(k,i,j)+PLIdep_alt(k,i,j)*dt)*r_xi_ccn - ni(k,i,j))*r_dt )
-             end if
-          end do
-       end do
+          !
+          Acnd             = Pdynliq + Pradliq &
+               - ( r_taudep_i+r_taudep_s+r_taudep_g ) * ( qsw(k,i,j) - qsi(k,i,j) )
+          Adep             = Pdynsol + Pradsol &
+               + ( r_taucnd_c+r_taucnd_r )            * ( qsw(k,i,j) - qsi(k,i,j) )
+          r_taucnd         = &
+               + aliqliq*( r_taucnd_c+r_taucnd_r ) &
+               + asolliq*( r_taudep_i+r_taudep_s+r_taudep_g )
+          r_taudep         = &
+               + aliqsol*( r_taucnd_c+r_taucnd_r )&
+               + asolsol*( r_taudep_i+r_taudep_s+r_taudep_g )
+          !
+          uplim_cnd        = max( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
+          lowlim_cnd       = min( rhog(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
+          if( r_taucnd < r_tau100day )then
+             taucnd(k,i,j)     = tau100day
+             PLCdep(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLCdep(k,i,j)*ssw_o ))
+             PLRdep(k,i,j) = max(lowlim_cnd, min(uplim_cnd, PLRdep(k,i,j)*ssw_o ))
+             PNRdep(k,i,j) = min(0.0_RP, PNRdep(k,i,j)*ssw_o )
+             PLR2NR           = 0.0_RP
+          else
+             taucnd(k,i,j)     = 1.0_RP/r_taucnd
+             ! Production term for liquid water content
+             coef_a_cnd = rhog(k,i,j)*Acnd*taucnd(k,i,j)
+             coef_b_cnd = rhog(k,i,j)*taucnd(k,i,j)*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd(k,i,j)) * ( exp(-dt*r_taucnd) - 1.0_RP )
+             PLCdep(k,i,j) = coef_a_cnd*r_taucnd_c - coef_b_cnd*r_taucnd_c
+             PLR2NR           = PNRdep(k,i,j)/(PLRdep(k,i,j)+1.E-30_RP)
+             PLRdep(k,i,j) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
+             PNRdep(k,i,j) = min(0.0_RP, PLRdep(k,i,j)*PLR2NR )
+          end if
+          !
+          uplim_dep        = max( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
+          lowlim_dep       = min( rhog(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
+          if( r_taudep < r_tau100day )then
+             taudep(k,i,j)     = tau100day
+             PLIdep(k,i,j) = max(lowlim_dep, min(uplim_dep, PLIdep(k,i,j)*ssi_o ))
+             PLSdep(k,i,j) = max(lowlim_dep, min(uplim_dep, PLSdep(k,i,j)*ssi_o ))
+             PLGdep(k,i,j) = max(lowlim_dep, min(uplim_dep, PLGdep(k,i,j)*ssi_o ))
+             PNIdep(k,i,j) = min(0.0_RP, PNIdep(k,i,j)*ssi_o )
+             PNSdep(k,i,j) = min(0.0_RP, PNSdep(k,i,j)*ssi_o )
+             PNGdep(k,i,j) = min(0.0_RP, PNGdep(k,i,j)*ssi_o )
+             PLI2NI           = 0.0_RP
+             PLS2NS           = 0.0_RP
+             PLG2NG           = 0.0_RP
+          else
+             taudep(k,i,j)     = 1.0_RP/r_taudep
+             ! Production term for ice water content
+             coef_a_dep = rhog(k,i,j)*Adep*taudep(k,i,j)
+             coef_b_dep = rhog(k,i,j)*taudep(k,i,j)*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep(k,i,j)) * ( exp(-dt*r_taudep) - 1.0_RP )
+             PLI2NI           = PNIdep(k,i,j)/max(PLIdep(k,i,j),1.E-30_RP)
+             PLS2NS           = PNSdep(k,i,j)/max(PLSdep(k,i,j),1.E-30_RP)
+             PLG2NG           = PNGdep(k,i,j)/max(PLGdep(k,i,j),1.E-30_RP)
+             PLIdep(k,i,j) =  coef_a_dep*r_taudep_i - coef_b_dep*r_taudep_i
+             PLSdep(k,i,j) =  coef_a_dep*r_taudep_s - coef_b_dep*r_taudep_s
+             PLGdep(k,i,j) =  coef_a_dep*r_taudep_g - coef_b_dep*r_taudep_g
+             PNIdep(k,i,j) = min(0.0_RP, PLIdep(k,i,j)*PLI2NI )
+             PNSdep(k,i,j) = min(0.0_RP, PLSdep(k,i,j)*PLS2NS )
+             PNGdep(k,i,j) = min(0.0_RP, PLGdep(k,i,j)*PLG2NG )
+          end if
+          !
        end do
        !
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS, KE
-             xi(k,i,j) = min(xi_max, max(xi_min, li(k,i,j)/(ni(k,i,j)+ni_min) ))
-          end do
-       end do
+       do k = KS, KE
+          if( PLCdep(k,i,j) < -eps )then
+             PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep(k,i,j)*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
+          else
+             PNCdep(k,i,j) = 0.0_RP
+          end if
+!          if( PLIdep(k,i,j) < -eps )then
+!             PNIdep(k,i,j) = min(0.0_RP, ((li(k,i,j)+PLIdep(k,i,j)*dt)*r_xi_ccn - ni(k,i,j))*r_dt )
+!          else
+!             PNIdep(k,i,j) = 0.0_RP
+!          end if
        end do
        !
-       PLCdep(:,:,:) = PLCdep_alt(:,:,:)
-       PLRdep(:,:,:) = PLRdep_alt(:,:,:)
-       PLIdep(:,:,:) = PLIdep_alt(:,:,:)
-       PLSdep(:,:,:) = PLSdep_alt(:,:,:)
-       PLGdep(:,:,:) = PLGdep_alt(:,:,:)
-       PNRdep(:,:,:) = PNRdep_alt(:,:,:)
-       PNIdep(:,:,:) = PNIdep_alt(:,:,:)
-       PNSdep(:,:,:) = PNSdep_alt(:,:,:)
-       PNGdep(:,:,:) = PNGdep_alt(:,:,:)
+       do k = KS, KE
+          xi(k,i,j) = min(xi_max, max(xi_min, li(k,i,j)/(ni(k,i,j)+ni_min) ))
+       end do
        !
-!OCL NORECURRENCE
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS, KE
-             !
-             !--- evaporation/condensation, deposition/sublimation
-             !
-             ! [Mod] 11/08/30 T.Mitsui, add filter to avoid instability
-!!$          dep_dqc = max( dt*PLCdep(ij,k), -lc(ij,k) )
-!!$          dep_dqr = max( dt*PLRdep(ij,k), -lr(ij,k) )
-!!$          dep_dqi = max( dt*PLIdep(ij,k), -li(ij,k) )
-!!$          dep_dqs = max( dt*PLSdep(ij,k), -ls(ij,k) )
-!!$          dep_dqg = max( dt*PLGdep(ij,k), -lg(ij,k) )
-             r_rvaptem = 1.0_RP/(Rvap*wtem(k,i,j))
-             lvsw    = esw(k,i,j)*r_rvaptem
-             lvsi    = esi(k,i,j)*r_rvaptem
-             dlvsw   = lv(k,i,j)-lvsw
-             dlvsi   = lv(k,i,j)-lvsi  ! limiter for esi>1.d0
-             dcnd    = dt*(PLCdep(k,i,j)+PLRdep(k,i,j))
-             ddep    = dt*(PLIdep(k,i,j)+PLSdep(k,i,j)+PLGdep(k,i,j))
+       do k = KS, KE
+          !
+          !--- evaporation/condensation, deposition/sublimation
+          !
+          r_rvaptem = 1.0_RP/(Rvap*wtem(k,i,j))
+          lvsw    = esw(k,i,j)*r_rvaptem
+          lvsi    = esi(k,i,j)*r_rvaptem
+          dlvsw   = lv(k,i,j)-lvsw
+          dlvsi   = lv(k,i,j)-lvsi  ! limiter for esi>1.d0
+          dcnd    = dt*(PLCdep(k,i,j)+PLRdep(k,i,j))
+          ddep    = dt*(PLIdep(k,i,j)+PLSdep(k,i,j)+PLGdep(k,i,j))
+          dep_dqc = 0.0_RP
+          dep_dqr = 0.0_RP
+          dep_dqi = 0.0_RP
+          dep_dqs = 0.0_RP
+          dep_dqg = 0.0_RP
+          !    always supersaturated
+          if     ( (dcnd >  eps) .and. (dlvsw > eps) )then
+             fac1    = min(dlvsw,dcnd)/dcnd
+             dep_dqc =  dt*PLCdep(k,i,j)*fac1
+             dep_dqr =  dt*PLRdep(k,i,j)*fac1
+             ! always unsaturated
+          else if( (dcnd < -eps) .and. (dlvsw < -eps) )then
+             fac1    = max( dlvsw,dcnd )/dcnd
+             dep_dqc = max( dt*PLCdep(k,i,j)*fac1, -lc(k,i,j) )
+             dep_dqr = max( dt*PLRdep(k,i,j)*fac1, -lr(k,i,j) )
+          else
+             ! partially unsaturated during timestep
+             fac1    = 1.0_RP
              dep_dqc = 0.0_RP
              dep_dqr = 0.0_RP
-             dep_dqi = 0.0_RP
-             dep_dqs = 0.0_RP
-             dep_dqg = 0.0_RP
-             !    always supersaturated
-             if     ( (dcnd >  eps) .and. (dlvsw > eps) )then
-                fac1    = min(dlvsw,dcnd)/dcnd
-                dep_dqc =  dt*PLCdep(k,i,j)*fac1
-                dep_dqr =  dt*PLRdep(k,i,j)*fac1
-                ! always unsaturated
-             else if( (dcnd < -eps) .and. (dlvsw < -eps) )then
-                fac1    = max( dlvsw,dcnd )/dcnd
-                dep_dqc = max( dt*PLCdep(k,i,j)*fac1, -lc(k,i,j) )
-                dep_dqr = max( dt*PLRdep(k,i,j)*fac1, -lr(k,i,j) )
-             else
-                ! partially unsaturated during timestep
-                fac1    = 1.0_RP
-                dep_dqc = 0.0_RP
-                dep_dqr = 0.0_RP
-             end if
-             !
+          end if
+          !
+          fac2    = 1.0_RP
+          !    always supersaturated
+          if      ( (ddep >  eps) .and. (dlvsi > eps) )then
+             fac2    = min(dlvsi,ddep)/ddep
+             dep_dqi = dt*PLIdep(k,i,j)*fac2
+             dep_dqs = dt*PLSdep(k,i,j)*fac2
+             dep_dqg = dt*PLGdep(k,i,j)*fac2
+             ! always unsaturated
+          else if ( (ddep < -eps) .and. (dlvsi < -eps) )then
+             fac2    = max(dlvsi,ddep)/ddep
+             dep_dqi = max(dt*PLIdep(k,i,j)*fac2, -li(k,i,j) )
+             dep_dqs = max(dt*PLSdep(k,i,j)*fac2, -ls(k,i,j) )
+             dep_dqg = max(dt*PLGdep(k,i,j)*fac2, -lg(k,i,j) )
+          else
+             ! partially unsaturated during timestep
              fac2    = 1.0_RP
-             !    always supersaturated
-             if      ( (ddep >  eps) .and. (dlvsi > eps) )then
-                fac2    = min(dlvsi,ddep)/ddep
-                dep_dqi = dt*PLIdep(k,i,j)*fac2
-                dep_dqs = dt*PLSdep(k,i,j)*fac2
-                dep_dqg = dt*PLGdep(k,i,j)*fac2
-                ! always unsaturated
-             else if ( (ddep < -eps) .and. (dlvsi < -eps) )then
-                fac2    = max(dlvsi,ddep)/ddep
-                dep_dqi = max(dt*PLIdep(k,i,j)*fac2, -li(k,i,j) )
-                dep_dqs = max(dt*PLSdep(k,i,j)*fac2, -ls(k,i,j) )
-                dep_dqg = max(dt*PLGdep(k,i,j)*fac2, -lg(k,i,j) )
-             else
-                ! partially unsaturated during timestep
-                fac2    = 1.0_RP
-                dep_dqi = dt*PLIdep(k,i,j)
-                dep_dqs = dt*PLSdep(k,i,j)
-                dep_dqg = dt*PLGdep(k,i,j)
-             end if
-             ! evaporation always lose number(always negative).
-             dep_dnc = max( dt*PNCdep(k,i,j)*fac1, -nc(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
-             dep_dnr = max( dt*PNRdep(k,i,j)*fac1, -nr(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
-             dep_dni = max( dt*PNIdep(k,i,j)*fac2, -ni(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
-             dep_dns = max( dt*PNSdep(k,i,j)*fac2, -ns(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
-             dep_dng = max( dt*PNGdep(k,i,j)*fac2, -ng(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+             dep_dqi = dt*PLIdep(k,i,j)
+             dep_dqs = dt*PLSdep(k,i,j)
+             dep_dqg = dt*PLGdep(k,i,j)
+          end if
+          ! evaporation always lose number(always negative).
+          dep_dnc = max( dt*PNCdep(k,i,j)*fac1, -nc(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
+          dep_dnr = max( dt*PNRdep(k,i,j)*fac1, -nr(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+          dep_dni = max( dt*PNIdep(k,i,j)*fac2, -ni(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+          dep_dns = max( dt*PNSdep(k,i,j)*fac2, -ns(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+          dep_dng = max( dt*PNGdep(k,i,j)*fac2, -ng(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+          !
+          !--- freezing of cloud drop
+          !
+          frz_dqc = max( dt*(PLChom(k,i,j)+PLChet(k,i,j)), -lc(k,i,j)-dep_dqc ) ! negative value
+          frz_dnc = max( dt*(PNChom(k,i,j)+PNChet(k,i,j)), -nc(k,i,j)-dep_dnc ) ! negative value
+          fac3    = ( frz_dqc-eps )/( dt*(PLChom(k,i,j)+PLChet(k,i,j))-eps )
+          fac4    = ( frz_dnc-eps )/( dt*(PNChom(k,i,j)+PNChet(k,i,j))-eps )
+          PLChom(k,i,j) = fac3*PLChom(k,i,j)
+          PLChet(k,i,j) = fac3*PLChet(k,i,j)
+          PNChom(k,i,j) = fac4*PNChom(k,i,j)
+          PNChet(k,i,j) = fac4*PNChet(k,i,j)
+          !
+          !--- melting
+          !
+          ! ice change
+          mlt_dqi = max( dt*PLImlt(k,i,j), -li(k,i,j)-dep_dqi )  ! negative value
+          mlt_dni = max( dt*PNImlt(k,i,j), -ni(k,i,j)-dep_dni )  ! negative value
+          ! snow change
+          mlt_dqs = max( dt*PLSmlt(k,i,j), -ls(k,i,j)-dep_dqs )  ! negative value
+          mlt_dns = max( dt*PNSmlt(k,i,j), -ns(k,i,j)-dep_dns )  ! negative value
+          ! graupel change
+          mlt_dqg = max( dt*PLGmlt(k,i,j), -lg(k,i,j)-dep_dqg )  ! negative value
+          mlt_dng = max( dt*PNGmlt(k,i,j), -ng(k,i,j)-dep_dng )  ! negative value
+          !
+          !--- freezing of larger droplets
+          !
+          frz_dqr = max( dt*(PLRhet(k,i,j)), min(0.0_RP, -lr(k,i,j)-dep_dqr) ) ! negative value
+          frz_dnr = max( dt*(PNRhet(k,i,j)), min(0.0_RP, -nr(k,i,j)-dep_dnr) ) ! negative value
+          !
+          fac5         = ( frz_dqr-eps )/( dt*PLRhet(k,i,j)-eps )
+          PLRhet(k,i,j) = fac5*PLRhet(k,i,j)
+          fac6         = ( frz_dnr-eps )/( dt*PNRhet(k,i,j)-eps )
+          PNRhet(k,i,j) = fac6*PNRhet(k,i,j)
+          !
+          ! water vapor change
+          drhogqv = -(dep_dqc+dep_dqi+dep_dqs+dep_dqg+dep_dqr)
+          if ( xi(k,i,j) > x_sep )then ! large ice crystals turn into rain by melting
+             ! total cloud change
+             drhogqc = ( frz_dqc                               + dep_dqc )
+             drhognc = ( frz_dnc                               + dep_dnc )
+             ! total rain change
+             drhogqr = ( frz_dqr - mlt_dqg - mlt_dqs - mlt_dqi + dep_dqr )
+             drhognr = ( frz_dnr - mlt_dng - mlt_dns - mlt_dni + dep_dnr )
              !
-             !--- freezing of cloud drop
-             !
-             frz_dqc = max( dt*(PLChom(k,i,j)+PLChet(k,i,j)), -lc(k,i,j)-dep_dqc ) ! negative value
-             ! [Mod] 11/08/30 T.Mitsui
-!!$          frz_dnc = max( dt*(PNChom(ij,k)+PNChet(ij,k)), -nc(ij,k)         ) ! negative value
-             frz_dnc = max( dt*(PNChom(k,i,j)+PNChet(k,i,j)), -nc(k,i,j)-dep_dnc ) ! negative value
-             ! [Add] 10/08/03 T.Mitsui
-             fac3    = ( frz_dqc-eps )/( dt*(PLChom(k,i,j)+PLChet(k,i,j))-eps )
-             fac4    = ( frz_dnc-eps )/( dt*(PNChom(k,i,j)+PNChet(k,i,j))-eps )
-             PLChom(k,i,j) = fac3*PLChom(k,i,j)
-             PLChet(k,i,j) = fac3*PLChet(k,i,j)
-             PNChom(k,i,j) = fac4*PNChom(k,i,j)
-             PNChet(k,i,j) = fac4*PNChet(k,i,j)
-             !
-             !--- melting
-             !
-             ! ice change
-             mlt_dqi = max( dt*PLImlt(k,i,j), -li(k,i,j)-dep_dqi )  ! negative value
-             mlt_dni = max( dt*PNImlt(k,i,j), -ni(k,i,j)-dep_dni )  ! negative value
-             ! snow change
-             mlt_dqs = max( dt*PLSmlt(k,i,j), -ls(k,i,j)-dep_dqs )  ! negative value
-             mlt_dns = max( dt*PNSmlt(k,i,j), -ns(k,i,j)-dep_dns )  ! negative value
-             ! graupel change
-             mlt_dqg = max( dt*PLGmlt(k,i,j), -lg(k,i,j)-dep_dqg )  ! negative value
-             mlt_dng = max( dt*PNGmlt(k,i,j), -ng(k,i,j)-dep_dng )  ! negative value
-             !
-             !--- freezing of larger droplets
-             !
-             frz_dqr = max( dt*(PLRhet(k,i,j)), min(0.0_RP, -lr(k,i,j)-dep_dqr) ) ! negative value
-             frz_dnr = max( dt*(PNRhet(k,i,j)), min(0.0_RP, -nr(k,i,j)-dep_dnr) ) ! negative value
-             !
-             ! [Add] 10/08/03 T.Mitsui
-             fac5         = ( frz_dqr-eps )/( dt*PLRhet(k,i,j)-eps )
-             PLRhet(k,i,j) = fac5*PLRhet(k,i,j)
-             fac6         = ( frz_dnr-eps )/( dt*PNRhet(k,i,j)-eps )
-             PNRhet(k,i,j) = fac6*PNRhet(k,i,j)
-             !
-             ! water vapor change
-             drhogqv = -(dep_dqc+dep_dqi+dep_dqs+dep_dqg+dep_dqr)
-             if ( xi(k,i,j) > x_sep )then ! large ice crystals turn into rain by melting
-                ! total cloud change
-                drhogqc = ( frz_dqc                               + dep_dqc )
-                ! [Mod] 11/08/30 T.Mitsui
-!!$             drhognc = ( frz_dnc                                         )
-                drhognc = ( frz_dnc                               + dep_dnc )
-                ! total rain change
-                drhogqr = ( frz_dqr - mlt_dqg - mlt_dqs - mlt_dqi + dep_dqr )
-                drhognr = ( frz_dnr - mlt_dng - mlt_dns - mlt_dni + dep_dnr )
-                !
-             else
-                ! total cloud change
-                drhogqc = ( frz_dqc - mlt_dqi           + dep_dqc )
-                ! [Mod] 11/08/30 T.Mitsui
-!!$             drhognc = ( frz_dnc - mlt_dni                     )
-                drhognc = ( frz_dnc - mlt_dni           + dep_dnc )
-                ! total rain change
-                drhogqr = ( frz_dqr - mlt_dqg - mlt_dqs + dep_dqr )
-                drhognr = ( frz_dnr - mlt_dng - mlt_dns + dep_dnr )
-             end if
-             ! total ice change
-             drhogqi = (-frz_dqc + mlt_dqi           + dep_dqi )
-             drhogni = (-frz_dnc + mlt_dni           + dep_dni )
-             ! total snow change
-             drhogqs = (           mlt_dqs           + dep_dqs )
-             drhogns = (           mlt_dns           + dep_dns )
-             ! total graupel change
-             drhogqg = (-frz_dqr + mlt_dqg           + dep_dqg )
-             drhogng = (-frz_dnr + mlt_dng           + dep_dng )
-             !
-             !--- update
-             ! filter for rounding error
-             rhogq(k,i,j,I_QV) = max(0.0_RP, rhogq(k,i,j,I_QV) + drhogqv )
-             !
-             rhogq(k,i,j,I_QC) = max(0.0_RP, rhogq(k,i,j,I_QC) + drhogqc )
-             rhogq(k,i,j,I_NC) = max(0.0_RP, rhogq(k,i,j,I_NC) + drhognc )
-             rhogq(k,i,j,I_QR) = max(0.0_RP, rhogq(k,i,j,I_QR) + drhogqr )
-             rhogq(k,i,j,I_NR) = max(0.0_RP, rhogq(k,i,j,I_NR) + drhognr )
-             rhogq(k,i,j,I_QI) = max(0.0_RP, rhogq(k,i,j,I_QI) + drhogqi )
-             rhogq(k,i,j,I_NI) = max(0.0_RP, rhogq(k,i,j,I_NI) + drhogni )
-             rhogq(k,i,j,I_QS) = max(0.0_RP, rhogq(k,i,j,I_QS) + drhogqs )
-             rhogq(k,i,j,I_NS) = max(0.0_RP, rhogq(k,i,j,I_NS) + drhogns )
-             rhogq(k,i,j,I_QG) = max(0.0_RP, rhogq(k,i,j,I_QG) + drhogqg )
-             rhogq(k,i,j,I_NG) = max(0.0_RP, rhogq(k,i,j,I_NG) + drhogng )
-             !
-             rhoge(k,i,j) = rhoge(k,i,j) &
-                  - LHV * drhogqv &
-                  + LHF * ( drhogqi + drhogqs + drhogqg )
-             !
-             !--- update mixing ratio
-             q(k,i,j,I_QV) = rhogq(k,i,j,I_QV) * rrhog(k,i,j)
-             q(k,i,j,I_QC) = rhogq(k,i,j,I_QC) * rrhog(k,i,j)
-             q(k,i,j,I_QR) = rhogq(k,i,j,I_QR) * rrhog(k,i,j)
-             q(k,i,j,I_QI) = rhogq(k,i,j,I_QI) * rrhog(k,i,j)
-             q(k,i,j,I_QS) = rhogq(k,i,j,I_QS) * rrhog(k,i,j)
-             q(k,i,j,I_QG) = rhogq(k,i,j,I_QG) * rrhog(k,i,j)
-             !
-             q(k,i,j,I_NC) = rhogq(k,i,j,I_NC) * rrhog(k,i,j)
-             q(k,i,j,I_NR) = rhogq(k,i,j,I_NR) * rrhog(k,i,j)
-             q(k,i,j,I_NI) = rhogq(k,i,j,I_NI) * rrhog(k,i,j)
-             q(k,i,j,I_NS) = rhogq(k,i,j,I_NS) * rrhog(k,i,j)
-             q(k,i,j,I_NG) = rhogq(k,i,j,I_NG) * rrhog(k,i,j)
-             !
-!             if( i >= IS .and. i <= IE .and. j >= JS .and. j <= JE ) then
-             sl_PLCdep(1,i,j) = sl_PLCdep(1,i,j) + dep_dqc*Dz(k)*gsgam2(k,i,j)
-             sl_PLRdep(1,i,j) = sl_PLRdep(1,i,j) + dep_dqr*Dz(k)*gsgam2(k,i,j)
-             sl_PNRdep(1,i,j) = sl_PNRdep(1,i,j) + dep_dnr*Dz(k)*gsgam2(k,i,j)
-!             endif
-             !
-             CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
-             CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
-             !
-             tem(k,i,j) = rhoge(k,i,j) / ( rhog(k,i,j) * cva(k,i,j) )
-          end do
-       end do
+          else
+             ! total cloud change
+             drhogqc = ( frz_dqc - mlt_dqi           + dep_dqc )
+             drhognc = ( frz_dnc - mlt_dni           + dep_dnc )
+             ! total rain change
+             drhogqr = ( frz_dqr - mlt_dqg - mlt_dqs + dep_dqr )
+             drhognr = ( frz_dnr - mlt_dng - mlt_dns + dep_dnr )
+          end if
+          ! total ice change
+          drhogqi = (-frz_dqc + mlt_dqi           + dep_dqi )
+          drhogni = (-frz_dnc + mlt_dni           + dep_dni )
+          ! total snow change
+          drhogqs = (           mlt_dqs           + dep_dqs )
+          drhogns = (           mlt_dns           + dep_dns )
+          ! total graupel change
+          drhogqg = (-frz_dqr + mlt_dqg           + dep_dqg )
+          drhogng = (-frz_dnr + mlt_dng           + dep_dng )
+          !
+          !--- update
+          ! filter for rounding error
+          rhogq(k,i,j,I_QV) = max(0.0_RP, rhogq(k,i,j,I_QV) + drhogqv )
+          !
+          rhogq(k,i,j,I_QC) = max(0.0_RP, rhogq(k,i,j,I_QC) + drhogqc )
+          rhogq(k,i,j,I_NC) = max(0.0_RP, rhogq(k,i,j,I_NC) + drhognc )
+          rhogq(k,i,j,I_QR) = max(0.0_RP, rhogq(k,i,j,I_QR) + drhogqr )
+          rhogq(k,i,j,I_NR) = max(0.0_RP, rhogq(k,i,j,I_NR) + drhognr )
+          rhogq(k,i,j,I_QI) = max(0.0_RP, rhogq(k,i,j,I_QI) + drhogqi )
+          rhogq(k,i,j,I_NI) = max(0.0_RP, rhogq(k,i,j,I_NI) + drhogni )
+          rhogq(k,i,j,I_QS) = max(0.0_RP, rhogq(k,i,j,I_QS) + drhogqs )
+          rhogq(k,i,j,I_NS) = max(0.0_RP, rhogq(k,i,j,I_NS) + drhogns )
+          rhogq(k,i,j,I_QG) = max(0.0_RP, rhogq(k,i,j,I_QG) + drhogqg )
+          rhogq(k,i,j,I_NG) = max(0.0_RP, rhogq(k,i,j,I_NG) + drhogng )
+          !
+          rhoge(k,i,j) = rhoge(k,i,j) &
+               - LHV * drhogqv &
+               + LHF * ( drhogqi + drhogqs + drhogqg )
        end do
        !
-       ! [Add] 11/08/30 T.Mitsui
-       if( opt_fix_lhcnd_c .and. iu==2 )then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             rhoge(k,i,j) = tem_lh(k,i,j)*rhog(k,i,j)*cva(k,i,j)
-             tem(k,i,j)   = tem_lh(k,i,j)
-          end do
-          end do
-          end do
-!          if( flag_history_in )then
-!             dtemdt_lh(:,:) = (tem(:,:)-tem_lh(:,:))*r_dt
-!!$             call history_in( 'ml_dTdt_lh', dtemdt_lh(:,:) )
-!          end if
-       end if
-       do j = JS, JE
-       do i = IS, IE
        do k = KS, KE
-          pre(k,i,j) = rhog(k,i,j)*( qd(k,i,j)*Rdry+q(k,i,j,I_QV)*Rvap )*tem(k,i,j)
+          !--- update mixing ratio
+          q(k,i,j,I_QV) = rhogq(k,i,j,I_QV) * rrhog(k,i,j)
+          q(k,i,j,I_QC) = rhogq(k,i,j,I_QC) * rrhog(k,i,j)
+          q(k,i,j,I_QR) = rhogq(k,i,j,I_QR) * rrhog(k,i,j)
+          q(k,i,j,I_QI) = rhogq(k,i,j,I_QI) * rrhog(k,i,j)
+          q(k,i,j,I_QS) = rhogq(k,i,j,I_QS) * rrhog(k,i,j)
+          q(k,i,j,I_QG) = rhogq(k,i,j,I_QG) * rrhog(k,i,j)
+          !
+          q(k,i,j,I_NC) = rhogq(k,i,j,I_NC) * rrhog(k,i,j)
+          q(k,i,j,I_NR) = rhogq(k,i,j,I_NR) * rrhog(k,i,j)
+          q(k,i,j,I_NI) = rhogq(k,i,j,I_NI) * rrhog(k,i,j)
+          q(k,i,j,I_NS) = rhogq(k,i,j,I_NS) * rrhog(k,i,j)
+          q(k,i,j,I_NG) = rhogq(k,i,j,I_NG) * rrhog(k,i,j)
        end do
+       !
+       do k = KS, KE
+          CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
+          CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
+          CALC_R( Rmoist, q(k,i,j,I_QV), qd(k,i,j), Rdry, Rvap )
+          tem(k,i,j) = rhoge(k,i,j) / ( rhog(k,i,j) * cva(k,i,j) )
+          pre(k,i,j) = rhog(k,i,j) * Rmoist * tem(k,i,j)
        end do
+       !
+       do k = KS, KE
+          sl_PLCdep(1,i,j) = sl_PLCdep(1,i,j) + dep_dqc*Dz(k)*gsgam2(k,i,j)
+          sl_PLRdep(1,i,j) = sl_PLRdep(1,i,j) + dep_dqr*Dz(k)*gsgam2(k,i,j)
+          sl_PNRdep(1,i,j) = sl_PNRdep(1,i,j) + dep_dnr*Dz(k)*gsgam2(k,i,j)
        end do
+    end do
     end do
     !
     return
