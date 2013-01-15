@@ -79,10 +79,8 @@ module mod_atmos_phy_mp
      CVvap  => CONST_CVvap,   &
      CL     => CONST_CL,      &
      CI     => CONST_CI,      &
-     EPSvap => CONST_EPSvap,  &
      LHV    => CONST_LH00,    &
      LHF    => CONST_LHF00,   &
-     LHS    => CONST_LHS00,   &
      LHV0    => CONST_LH0,    &
      LHF0    => CONST_LHF0,   &
      LHS0    => CONST_LHS0,   &
@@ -323,7 +321,7 @@ module mod_atmos_phy_mp
   !     A  = coef_A*N*lambda^slope_A
   real(RP), private, save :: coef_A(HYDRO_MAX)
   real(RP), private, save :: coef_lambda(HYDRO_MAX)
-  real(RP), private, save :: slope_A(HYDRO_MAX)
+!  real(RP), private, save :: slope_A(HYDRO_MAX)
   ! coefficeint of weighted ventilation effect.
   ! large, and small branch is by PK97(13-60),(13-61),(13-88),(13-89)
   real(RP), private, save :: ah_vent  (HYDRO_MAX,2) !
@@ -432,7 +430,7 @@ contains
     call mp_ndw6_init( IA, JA )
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
-    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=8)
+    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
     !--- For kij
@@ -459,7 +457,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP
     use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
+!       ATMOS_vars_fillhalo, &
        ATMOS_vars_total
     implicit none
     !---------------------------------------------------------------------------
@@ -476,7 +474,7 @@ contains
     call MP_negativefilter
     call TIME_rapend  ('MP6 Filter')
 
-    call ATMOS_vars_fillhalo
+!    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
 
@@ -560,7 +558,7 @@ contains
     coef_rea2(:)   = UNDEF8
     coef_rea3(:)   = UNDEF8
     coef_A(:)      = UNDEF8
-    slope_A(:)     = UNDEF8
+!    slope_A(:)     = UNDEF8
     coef_lambda(:) = UNDEF8
     coef_vt0(:,:)  = UNDEF8
     coef_vt1(:,:)  = UNDEF8
@@ -847,7 +845,7 @@ contains
        w1(iw) = gammafunc( (nu(iw) + 1.0_RP)/mu(iw) )
        w2(iw) = gammafunc( (nu(iw) + 2.0_RP)/mu(iw) )
        coef_A(iw)      = mu(iw)/w1(iw)
-       slope_A(iw)     = w1(iw)
+!       slope_A(iw)     = w1(iw)
        coef_lambda(iw) = (w1(iw)/w2(iw))**(-mu(iw))
     end do
     !-------------------------------------------------------
@@ -1122,8 +1120,7 @@ contains
        AQ_CP
     use mod_atmos_saturation, only : &
        moist_psat_liq      => ATMOS_SATURATION_psat_liq,   &
-       moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
-       moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
+       moist_psat_ice      => ATMOS_SATURATION_psat_ice
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -1299,8 +1296,7 @@ contains
     real(RP), parameter :: eps_qv    = 1.E-50_RP
     real(RP), parameter :: eps_rhoge = 1.E-50_RP
     real(RP), parameter :: eps_rhog  = 1.E-50_RP
-    real(RP) :: r_dt
-    real(RP) :: wdt, r_wdt
+    real(RP) :: wdt
     integer :: ntdiv
 
     real(RP) :: Rmoist
@@ -1316,8 +1312,6 @@ contains
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    r_dt = 1.0_RP / dt
 
     !============================================================================
     !
@@ -1485,7 +1479,6 @@ contains
 
     ! parameter setting
     wdt=dt
-    r_wdt=1.0_RP/wdt
 
 !       if(  ntdiv     == ntmax_phase_change  )then
           flag_history_in=.true.
@@ -1824,7 +1817,7 @@ contains
              gs_dqs  = max( wdt*PLGacLS2LG_d(k,i,j)       , min(0.0_RP, -ls_d(k,i,j)+sc_dqc+ii_dqi+is_dqi-rs_dqs )) ! => dqg
              ! snow num. decrease
              fac6    = (rs_dnr-eps)/(wdt*PNRacNS2NG_R_d(k,i,j)-eps) ! suppress factor by filter of rain
-             fac7    = (is_dni-eps)/(wdt*PNIacNS2NS_d  (k,i,j)-eps) ! suppress factor by filter of ice
+!             fac7    = (is_dni-eps)/(wdt*PNIacNS2NS_d  (k,i,j)-eps) ! suppress factor by filter of ice
              rs_dns  = max( wdt*PNRacNS2NG_S_d(k,i,j)*fac6, min(0.0_RP, -ns_d(k,i,j)+0.50_RP*ii_dni+is_dni       )) ! => dns:minus
              gs_dns  = max( wdt*PNGacNS2NG_d(k,i,j)       , min(0.0_RP, -ns_d(k,i,j)+0.50_RP*ii_dni+is_dni-rs_dns )) ! => dns:minus
              ss_dns  = max( wdt*PNSacNS2NS_d(k,i,j)       , min(0.0_RP, -ns_d(k,i,j)+0.50_RP*ii_dni+is_dni-rs_dns-gs_dns ))
@@ -2154,9 +2147,9 @@ contains
     ! mean diameter[m]
     real(RP) :: dc_xa(IJA,KA)     !
     real(RP) :: dr_xa(IJA,KA)     !
-    real(RP) :: di_xa(IJA,KA)     !
-    real(RP) :: ds_xa(IJA,KA)     !
-    real(RP) :: dg_xa(IJA,KA)     !
+!    real(RP) :: di_xa(IJA,KA)     !
+!    real(RP) :: ds_xa(IJA,KA)     !
+!    real(RP) :: dg_xa(IJA,KA)     !
     !
     real(RP), parameter :: eps=1.E-30_RP
     !
@@ -2180,9 +2173,9 @@ contains
           ! diamter of average mass  SB06(32)
           dc_xa(ij,k)  = a_m(I_QC)*xc(ij,k)**b_m(I_QC)
           dr_xa(ij,k)  = a_m(I_QR)*xr(ij,k)**b_m(I_QR)
-          di_xa(ij,k)  = a_m(I_QI)*xi(ij,k)**b_m(I_QI)
-          ds_xa(ij,k)  = a_m(I_QS)*xs(ij,k)**b_m(I_QS)
-          dg_xa(ij,k)  = a_m(I_QG)*xg(ij,k)**b_m(I_QG)
+!          di_xa(ij,k)  = a_m(I_QI)*xi(ij,k)**b_m(I_QI)
+!          ds_xa(ij,k)  = a_m(I_QS)*xs(ij,k)**b_m(I_QS)
+!          dg_xa(ij,k)  = a_m(I_QG)*xg(ij,k)**b_m(I_QG)
           !
        end do
     end do
@@ -2242,26 +2235,23 @@ contains
     real(RP) :: rc,rc2,rc3
     real(RP) :: rr,rr2,rr3
     ! 2nd. and 3rd. order moment of DSD
-    real(RP) :: rc2m, rc3m
-    real(RP) :: rr2m, rr3m
+!    real(RP) :: rc2m, rc3m
+!    real(RP) :: rr2m, rr3m
     real(RP) :: ri2m(IJA,KA), ri3m(IJA,KA)
     real(RP) :: rs2m(IJA,KA), rs3m(IJA,KA)
     real(RP) :: rg2m(IJA,KA), rg3m(IJA,KA)
     !
-    real(RP) :: r2m_solid
-    real(RP) :: r3m_solid
+!    real(RP) :: r2m_solid
+!    real(RP) :: r3m_solid
     ! work variables
-    logical :: flag_rel(IJA,KA) ! liquic
-    logical :: flag_rei(IJA,KA) ! ice
+!    logical :: flag_rel(IJA,KA) ! liquic
+!    logical :: flag_rei(IJA,KA) ! ice
     !
     real(RP) :: coef_Fuetal1998=0.0_RP
     !
-    real(RP) :: r_pi
     ! r2m_min is minimum value(moment of 1 particle with 1 micron)
     real(RP), parameter :: r2m_min=1.E-12_RP
     integer :: ij,k
-    !
-    r_pi = 1.0_RP/PI
     !
     re_qc(:,:)  = UNDEF8
     re_qr(:,:)  = UNDEF8
@@ -2279,8 +2269,8 @@ contains
     rg2m(:,:) = 0.0_RP
     rg3m(:,:) = 0.0_RP
     !
-    flag_rel(:,:)= .false.
-    flag_rei(:,:)= .false.
+!    flag_rel(:,:)= .false.
+!    flag_rei(:,:)= .false.
     !
     !
     ! cloud, rain
@@ -2289,15 +2279,15 @@ contains
           rc   = (0.5_RP*dc_ave(ij,k))
           rr   = (0.5_RP*dr_ave(ij,k))
           !
-          rc2  = rc*rc
-          rr2  = rr*rr
-          rc3  = rc*rc2
-          rr3  = rr*rr2
+!          rc2  = rc*rc
+!          rr2  = rr*rr
+!          rc3  = rc*rc2
+!          rr3  = rr*rr2
           !
-          rc2m = coef_r2(I_QC)*rc2*NC(ij,k)
-          rc3m = coef_r3(I_QC)*rc3*NC(ij,k)
-          rr2m = coef_r2(I_QR)*rr2*NR(ij,k)
-          rr3m = coef_r3(I_QR)*rr3*NR(ij,k)
+!          rc2m = coef_r2(I_QC)*rc2*NC(ij,k)
+!          rc3m = coef_r3(I_QC)*rc3*NC(ij,k)
+!          rr2m = coef_r2(I_QR)*rr2*NR(ij,k)
+!          rr3m = coef_r3(I_QR)*rr3*NR(ij,k)
           ! cloud effective radius
           if( rc >= rmin_re )then
              re_qc(ij,k)  = coef_re(I_QC)*rc
@@ -2350,8 +2340,8 @@ contains
              re_qg(ij,k) = UNDEF8
           end if
           ! total solid particles
-          r2m_solid = ri2m(ij,k)+rs2m(ij,k)+rg2m(ij,k)
-          r3m_solid = ri3m(ij,k)+rs3m(ij,k)+rg3m(ij,k)
+!          r2m_solid = ri2m(ij,k)+rs2m(ij,k)+rg2m(ij,k)
+!          r3m_solid = ri3m(ij,k)+rs3m(ij,k)+rg3m(ij,k)
 !!$          if( r2m_solid > r2m_min )then
 !!$             re_sol(ij,k) = r3m_solid/r2m_solid
 !!$             flag_rei(ij,k) = .true.
@@ -2388,9 +2378,7 @@ contains
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq, &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,   &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho, &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
+       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho
     implicit none
 
     integer, intent(in)  :: KA, IA, JA
@@ -2460,7 +2448,7 @@ contains
     real(RP) :: ssi(KA,IA,JA)      ! super saturation (ice)
 !    real(RP) :: w_dsswdz(KA,IA,JA) ! w*(d_ssw/ d_z) super saturation(water) flux
     real(RP) :: w_dssidz(KA,IA,JA) ! w*(d_ssi/ d_z), 09/04/14 T.Mitsui
-    real(RP) :: ssw_below(KA,IA,JA)! ssw(k-1)
+!    real(RP) :: ssw_below(KA,IA,JA)! ssw(k-1)
     real(RP) :: ssi_below(KA,IA,JA)! ssi(k-1), 09/04/14 T.Mitsui
     real(RP) :: z_below(KA,IA,JA)  ! z(k-1)
     real(RP) :: dz                   ! z(k)-z(k-1)
@@ -2470,7 +2458,7 @@ contains
     real(RP) :: qsi(KA,IA,JA)
     real(RP) :: dqsidtem_rho(KA,IA,JA)
     real(RP) :: dssidt_rad(KA,IA,JA)
-    real(RP) :: dni_ratio(KA,IA,JA)
+!    real(RP) :: dni_ratio(KA,IA,JA)
     real(RP) :: wssi, wdssi
     !
 !    real(RP) :: xi_nuc(1,IA,JA)    ! xi use the value @ cloud base
@@ -2541,11 +2529,11 @@ contains
           pv        = LV(k,i,j)*Rvap*tem(k,i,j)
           ssw(k,i,j) = min( MP_ssw_lim, ( pv/esw(k,i,j)-1.0_RP ) )*100.0_RP
           ssi(k,i,j) = (pv/esi(k,i,j) - 1.00_RP)
-          ssw_below(k+1,i,j) = ssw(k,i,j)
+!          ssw_below(k+1,i,j) = ssw(k,i,j)
           ssi_below(k+1,i,j) = ssi(k,i,j)
           z_below(k+1,i,j)   = z(k)
        end do
-       ssw_below(KS,i,j) = ssw(KS,i,j)
+!       ssw_below(KS,i,j) = ssw(KS,i,j)
        ssi_below(KS,i,j) = ssi(KS,i,j)
        z_below(KS,i,j)   = z(KS-1)
 
@@ -2647,7 +2635,7 @@ contains
              PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
              PLIccn(k,i,j) = min(dli_max, PNIccn(k,i,j)*xi_ccn )
              ! only for output
-             dni_ratio(k,i,j) = dssidt_rad(k,i,j)/( w_dssidz(k,i,j)+dssidt_rad(k,i,j) )
+!             dni_ratio(k,i,j) = dssidt_rad(k,i,j)/( w_dssidz(k,i,j)+dssidt_rad(k,i,j) )
           else
              PNIccn(k,i,j) = 0.0_RP
              PLIccn(k,i,j) = 0.0_RP
@@ -2846,7 +2834,6 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_atmos_saturation, only : &
-       moist_psat_liq => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
@@ -3028,9 +3015,9 @@ contains
     !
     real(RP) :: temc_p, temc_m             ! celcius tem.
     ! [Add] 11/08/30 T.Mitsui, estimation of autoconversion time
-    real(RP) :: ci_aut(KA,IA,JA)
-    real(RP) :: taui_aut(KA,IA,JA)
-    real(RP) :: tau_sce(KA,IA,JA)
+!    real(RP) :: ci_aut(KA,IA,JA)
+!    real(RP) :: taui_aut(KA,IA,JA)
+!    real(RP) :: tau_sce(KA,IA,JA)
     !--- DSD averaged diameter for each species
     real(RP) :: ave_dc                     ! cloud
 !    real(RP) :: ave_dr                     ! rain
@@ -3171,7 +3158,7 @@ contains
           drds = dr_xave(k,i,j) * ds_xave(k,i,j)
           drdg = dr_xave(k,i,j) * dg_xave(k,i,j)
           dids = di_xave(k,i,j) * ds_xave(k,i,j)
-          didg = di_xave(k,i,j) * dg_xave(k,i,j)
+!          didg = di_xave(k,i,j) * dg_xave(k,i,j)
           dsdg = ds_xave(k,i,j) * dg_xave(k,i,j)
           !
           vcvc = vtc_xave(k,i,j)* vtc_xave(k,i,j)
@@ -3186,7 +3173,7 @@ contains
           vrvs = vtr_xave(k,i,j)* vts_xave(k,i,j)
           vrvg = vtr_xave(k,i,j)* vtg_xave(k,i,j)
           vivs = vti_xave(k,i,j)* vts_xave(k,i,j)
-          vivg = vti_xave(k,i,j)* vtg_xave(k,i,j)
+!          vivg = vti_xave(k,i,j)* vtg_xave(k,i,j)
           vsvg = vts_xave(k,i,j)* vtg_xave(k,i,j)
           !------------------------------------------------------------------------
           !
@@ -3346,9 +3333,9 @@ contains
           PLIacLI2LS(k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_ii*NI(k,i,j)*LI(k,i,j)*coef_acc_LII
           PNIacNI2NS(k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_ii*NI(k,i,j)*NI(k,i,j)*coef_acc_NII
           !
-          ci_aut(k,i,j)   =  0.25_RP*pi*E_ii*NI(k,i,j)*coef_acc_LII
-          taui_aut(k,i,j) = 1._RP/max(E_stick(k,i,j)*ci_aut(k,i,j),1.E-10_RP)
-          tau_sce(k,i,j)  = LI(k,i,j)/max(LI(k,i,j)+LS(k,i,j),1.E-10_RP)
+!          ci_aut(k,i,j)   =  0.25_RP*pi*E_ii*NI(k,i,j)*coef_acc_LII
+!          taui_aut(k,i,j) = 1._RP/max(E_stick(k,i,j)*ci_aut(k,i,j),1.E-10_RP)
+!          tau_sce(k,i,j)  = LI(k,i,j)/max(LI(k,i,j)+LS(k,i,j),1.E-10_RP)
           !------------------------------------------------------------------------
           !
           !+++ pattern 4: a + a => a  (s-s)
@@ -3576,9 +3563,6 @@ contains
        xc, xr, xi, xs, xg,   & ! in
        vt_xave,              &
        dc_xave, dr_xave, di_xave, ds_xave, dg_xave ) ! in
-    use mod_atmos_saturation, only : &
-       moist_psat_liq => ATMOS_SATURATION_psat_liq, &
-       moist_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
     integer, intent(in)  :: IA,JA,KA
@@ -3651,10 +3635,10 @@ contains
     real(RP) :: Gm                 ! melting factor by balance between heat and vapor
     real(RP) :: Nsc_r3             !
     ! [Mod] 11/08/30 T.Mitsui, considering large and small branches
-    real(RP) :: Nrecs_r2            ! 09/08/18 [Add] T.Mitsui
+!    real(RP) :: Nrecs_r2            ! 09/08/18 [Add] T.Mitsui
     real(RP) :: Nrers_r2, Nreis_r2  !
     real(RP) :: Nress_r2, Nregs_r2  !
-    real(RP) :: Nrecl_r2            ! 09/08/18 [Add] T.Mitsui
+!    real(RP) :: Nrecl_r2            ! 09/08/18 [Add] T.Mitsui
     real(RP) :: Nrerl_r2, Nreil_r2  !
     real(RP) :: Nresl_r2, Nregl_r2  !
     real(RP) :: NscNrer_s, NscNrer_l
@@ -3716,13 +3700,13 @@ contains
           ! SB06 (30),(31) and each coefficient is by (88),(89)
           Nsc_r3  = (nua/Dw)**(0.33333333_RP)                    ! (Schmidt number )^(1/3)
           !
-          Nrecs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QC,1)*dc_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
+!          Nrecs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QC,1)*dc_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
           Nrers_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QR,1)*dr_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
           Nreis_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QI,1)*di_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
           Nress_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QS,1)*ds_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
           Nregs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QG,1)*dg_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) graupel
           !
-          Nrecl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QC,2)*dc_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
+!          Nrecl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QC,2)*dc_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
           Nrerl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QR,2)*dr_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
           Nreil_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QI,2)*di_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
           Nresl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,i,j,I_QS,2)*ds_xave(k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
@@ -4475,8 +4459,8 @@ contains
     !
     real(RP) :: r_cva                    ! specific heat at constant volume
     real(RP) :: cpa(KA,IA,JA), r_cpa   ! specific heat at constant pressure
-    real(RP) :: qsw(KA,IA,JA), r_qsw   ! saturated mixing ratio for liquid
-    real(RP) :: qsi(KA,IA,JA), r_qsi   ! saturated mixing ratio for solid
+    real(RP) :: qsw(KA,IA,JA)          ! saturated mixing ratio for liquid
+    real(RP) :: qsi(KA,IA,JA)          ! saturated mixing ratio for solid
     real(RP) :: dqswdtem_rho(KA,IA,JA) ! (dqsw/dtem)_rho
     real(RP) :: dqsidtem_rho(KA,IA,JA) ! (dqsi/dtem)_rho
     real(RP) :: dqswdtem_pre(KA,IA,JA) ! (dqsw/dtem)_pre
@@ -4539,7 +4523,7 @@ contains
     real(RP) :: r_lvsw, r_lvsi   ! 1/(lvsw*ssw), 1/(lvsi*ssi)
     real(RP) :: r_dt             ! 1/dt
     real(RP) :: ssw_o, ssi_o
-    real(RP) :: dt_dyn
+!    real(RP) :: dt_dyn
 !    real(RP) :: dt_mp
     !
 !    real(RP)       :: tem_lh(KA,IA,JA)
@@ -4568,13 +4552,13 @@ contains
 100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_ndw6_condensation)
     end if
     !
-    dt_dyn     = dt*ntmax
+!    dt_dyn     = dt*ntmax
 !    dt_mp      = dt*(ntdiv-1)
     !
     r_dt       = 1.0_RP/dt
     !
     r_xc_ccn=1.0_RP/xc_ccn
-    r_xi_ccn=1.0_RP/xi_ccn
+!    r_xi_ccn=1.0_RP/xi_ccn
     !
     if( opt_fix_taucnd_c )then
        fac_cndc_wrk = fac_cndc**(1.0_RP-b_m(I_QC))
@@ -4649,11 +4633,11 @@ contains
           r_taudep_i       = PLIdep(k,i,j)*r_lvsi
           r_taudep_s       = PLSdep(k,i,j)*r_lvsi
           r_taudep_g       = PLGdep(k,i,j)*r_lvsi
-          taucnd_c(k,i,j)   = 1.0_RP/(r_taucnd_c+r_tau100day)
-          taucnd_r(k,i,j)   = 1.0_RP/(r_taucnd_r+r_tau100day)
-          taudep_i(k,i,j)   = 1.0_RP/(r_taudep_i+r_tau100day)
-          taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
-          taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
+!          taucnd_c(k,i,j)   = 1.0_RP/(r_taucnd_c+r_tau100day)
+!          taucnd_r(k,i,j)   = 1.0_RP/(r_taucnd_r+r_tau100day)
+!          taudep_i(k,i,j)   = 1.0_RP/(r_taudep_i+r_tau100day)
+!          taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
+!          taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
           !
           r_cva            = 1.0_RP/cva(k,i,j)
           r_cpa            = 1.0_RP/cpa(k,i,j)
@@ -4674,14 +4658,10 @@ contains
           Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
           Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
           !
-          r_qsw            = 1.0_RP/qsw(k,i,j)
-          r_qsi            = 1.0_RP/qsi(k,i,j)
-
-          ! [Mod] T.Seiki xxxxxx
           ssw_o            = ssw
           ssi_o            = ssi
-!             ssw_o            = ssw - Pdynliq*r_qsw*(dt_dyn-dt_mp) + Pradliq*r_qsw*dt_mp
-!             ssi_o            = ssi - Pdynsol*r_qsi*(dt_dyn-dt_mp) + Pradsol*r_qsi*dt_mp
+!             ssw_o            = ssw - Pdynliq*(dt_dyn-dt_mp)/qsw(k,i,j) + Pradliq*r_qsw*dt_mp
+!             ssi_o            = ssi - Pdynsol*(dt_dyn-dt_mp)/qsi(k,i,j) + Pradsol*r_qsi*dt_mp
           !
           Acnd             = Pdynliq + Pradliq &
                - ( r_taudep_i+r_taudep_s+r_taudep_g ) * ( qsw(k,i,j) - qsi(k,i,j) )

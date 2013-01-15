@@ -308,8 +308,6 @@ contains
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total,    &
        DENS_av, &
        MOMZ_av, &
        MOMX_av, &

@@ -35,9 +35,11 @@ module mod_atmos_dyn
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+#ifdef _FPCOLL_
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -537,12 +539,6 @@ contains
        RFDY => GRID_RFDY
     use mod_history, only: &
        HIST_in
-    use mod_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
-       COMM_vars8, &
-       COMM_wait
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
        ATMOS_vars_fillhalo, &
@@ -571,11 +567,7 @@ contains
        REF_pott => ATMOS_REFSTATE_pott
     use mod_atmos_boundary, only: &
        DAMP_var   => ATMOS_BOUNDARY_var,   &
-       DAMP_alpha => ATMOS_BOUNDARY_alpha, &
-       I_BND_VELZ,  &
-       I_BND_VELX,  &
-       I_BND_VELY,  &
-       I_BND_POTT
+       DAMP_alpha => ATMOS_BOUNDARY_alpha
     use mod_atmos_vars_sf, only: &
        SFLX_MOMZ, &
        SFLX_MOMX, &
@@ -1693,7 +1685,8 @@ call START_COLLECTION("DYN-fct")
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) & ! just above the bottom boundary
+          ! just above the bottom boundary
+          qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                             - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) ) &
                                  + qflx_sgs_qtrc(KS,i,j,iq,ZDIR)
 
@@ -1720,7 +1713,8 @@ call START_COLLECTION("DYN-fct")
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-          qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) & ! just below the top boundary
+          ! just below the top boundary
+          qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                             - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) ) &
                                  + qflx_sgs_qtrc(KE-1,i,j,iq,ZDIR)
 
