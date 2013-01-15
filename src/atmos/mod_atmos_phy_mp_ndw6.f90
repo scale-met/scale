@@ -1129,6 +1129,8 @@ contains
        MOMZ, &
        RHOT, &
        QTRC
+    use mod_history, only: &
+       HIST_in
     implicit none
 
     !
@@ -1307,6 +1309,7 @@ contains
     real(RP) :: velw(KA,IA,JA,QA)
     real(RP) :: flux_rain (KA,IA,JA)
     real(RP) :: flux_snow (KA,IA,JA)
+    real(RP) :: flux_prec (IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
     integer :: step
@@ -1743,7 +1746,7 @@ contains
             vt_xa_d(:,:,:,I_QI,2), vt_xa_d(:,:,:,I_QS,2), vt_xa_d(:,:,:,I_QG,2), &
 !            DENS(:,:,:),                    & ! in
             flag_history_in                 ) ! in
-   
+
        !
        call ice_multiplication_kij( &
             IA, JA, KA,        & ! in
@@ -2024,7 +2027,7 @@ contains
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
+    do k = KS-1, KE
        flux_rain(k,i,j) = 0.0_RP
        flux_snow(k,i,j) = 0.0_RP
     enddo
@@ -2048,10 +2051,11 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-       do k = KS, KE
-          flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-          flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
-       enddo
+          do k = KS-1, KE
+             flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+             flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          enddo
+          flux_prec(i,j) = flux_rain(KS-1,i,j) + flux_snow(KS-1,i,j)
        enddo
        enddo
 
@@ -2060,6 +2064,10 @@ contains
     enddo
 
     endif
+
+    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
 
     call TIME_rapend  ('MP5 Sedimentation')
 
