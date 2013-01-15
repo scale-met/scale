@@ -2514,7 +2514,11 @@ contains
 !    c_in_map(1,:,:)  = c_in
     !
 !    nc_uplim_d(1,:,:)  = c_ccn_map(1,:,:)*1.5_RP
-    nc_uplim_d(1,:,:)  = c_ccn*1.5_RP
+    do j = JS, JE
+    do i = IS, IE
+       nc_uplim_d(1,i,j)  = c_ccn*1.5_RP
+    end do
+    end do
     !
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
@@ -4719,9 +4723,6 @@ contains
              PNIdep(k,i,j) = min(0.0_RP, PNIdep(k,i,j)*ssi_o )
              PNSdep(k,i,j) = min(0.0_RP, PNSdep(k,i,j)*ssi_o )
              PNGdep(k,i,j) = min(0.0_RP, PNGdep(k,i,j)*ssi_o )
-             PLI2NI           = 0.0_RP
-             PLS2NS           = 0.0_RP
-             PLG2NG           = 0.0_RP
           else
              taudep(k,i,j)     = 1.0_RP/r_taudep
              ! Production term for ice water content
