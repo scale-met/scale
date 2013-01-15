@@ -2618,7 +2618,7 @@ contains
        ! However this approach doesn't diagnose Ni itself but diagnose tendency.
        ! Original approach adjust Ni instantaneously .
        ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-       do k=KS+1, KE
+       do k=KS, KE
           dz             = z(k) - z_below(k,i,j)
           w_dssidz(k,i,j) = w(k,i,j)*(ssi(k,i,j) - ssi_below(k,i,j))/dz ! 09/04/14 [Add] T.Mitsui
           dssidt_rad(k,i,j) = -LV(k,i,j)/(rho(k,i,j)*qsi(k,i,j)*qsi(k,i,j))*dqsidtem_rho(k,i,j)*dTdt_rad(k,i,j)
@@ -3123,7 +3123,7 @@ contains
     do i = IS, IE
        do k = KS, KE
           !
-          temc_m = min(tem(k,i,j) - T00,0.0_RP) ! T < 273.15
+!          temc_m = min(tem(k,i,j) - T00,0.0_RP) ! T < 273.15
           temc_p = max(tem(k,i,j) - T00,0.0_RP) ! T > 273.15
           ! averaged diameter using SB06(82)
           ave_dc = coef_d(I_QC)*xc(k,i,j)**b_m(I_QC)
@@ -4326,32 +4326,42 @@ contains
        ! SB06(78) these are defined as negative value
        do k = KS, KE
           velw(k,i,j,I_QC) = -rhofac_q(k,I_QC) * coef_vt1(I_QC,1) * xq(k,I_QC)**beta_v(I_QC,1)
-          velw(k,i,j,I_NC) = -rhofac_q(k,I_QC) * coef_vt0(I_QC,1) * xq(k,I_QC)**beta_v(I_QC,1)
+          velw(k,i,j,I_NC) = -rhofac_q(k,I_QC) * coef_vt0(I_QC,1) * xq(k,I_QC)**beta_vn(I_QC,1)
        enddo
+       velw(KS-1,i,j,I_QC) = velw(KS,i,j,I_QC)
+       velw(KS-1,i,j,I_NC) = velw(KS,i,j,I_NC)
        do k = KS, KE
-          velw(k,i,j,I_QR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_QR) * (        weight(k,I_QR) ) &
+          velw(k,i,j,I_QR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_QR) * (          weight(k,I_QR) ) &
                                                  + velq_s(k,I_QR) * ( 1.0_RP - weight(k,I_QR) ) )
-          velw(k,i,j,I_NR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_NR) * (        weight(k,I_NR) ) &
+          velw(k,i,j,I_NR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_NR) * (          weight(k,I_NR) ) &
                                                  + velq_s(k,I_NR) * ( 1.0_RP - weight(k,I_NR) ) )
        enddo
+       velw(KS-1,i,j,I_QR) = velw(KS,i,j,I_QR)
+       velw(KS-1,i,j,I_NR) = velw(KS,i,j,I_NR)
        do k = KS, KE
-          velw(k,i,j,I_QI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_QI) * (        weight(k,I_QI) ) &
+          velw(k,i,j,I_QI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_QI) * (          weight(k,I_QI) ) &
                                                  + velq_s(k,I_QI) * ( 1.0_RP - weight(k,I_QI) ) )
-          velw(k,i,j,I_NI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_NI) * (        weight(k,I_NI) ) &
+          velw(k,i,j,I_NI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_NI) * (          weight(k,I_NI) ) &
                                                  + velq_s(k,I_NI) * ( 1.0_RP - weight(k,I_NI) ) )
        enddo
+       velw(KS-1,i,j,I_QI) = velw(KS,i,j,I_QI)
+       velw(KS-1,i,j,I_NI) = velw(KS,i,j,I_NI)
        do k = KS, KE
-          velw(k,i,j,I_QS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_QS) * (        weight(k,I_QS) ) &
+          velw(k,i,j,I_QS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_QS) * (          weight(k,I_QS) ) &
                                                  + velq_s(k,I_QS) * ( 1.0_RP - weight(k,I_QS) ) )
-          velw(k,i,j,I_NS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_NS) * (        weight(k,I_NS) ) &
+          velw(k,i,j,I_NS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_NS) * (          weight(k,I_NS) ) &
                                                  + velq_s(k,I_NS) * ( 1.0_RP - weight(k,I_NS) ) )
        enddo
+       velw(KS-1,i,j,I_QS) = velw(KS,i,j,I_QS)
+       velw(KS-1,i,j,I_NS) = velw(KS,i,j,I_NS)
        do k = KS, KE
-          velw(k,i,j,I_QG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_QG) * (        weight(k,I_QG) ) &
+          velw(k,i,j,I_QG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_QG) * (          weight(k,I_QG) ) &
                                                  + velq_s(k,I_QG) * ( 1.0_RP - weight(k,I_QG) ) )
-          velw(k,i,j,I_NG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_NG) * (        weight(k,I_NG) ) &
+          velw(k,i,j,I_NG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_NG) * (          weight(k,I_NG) ) &
                                                  + velq_s(k,I_NG) * ( 1.0_RP - weight(k,I_NG) ) )
        enddo
+       velw(KS-1,i,j,I_QG) = velw(KS,i,j,I_QG)
+       velw(KS-1,i,j,I_NG) = velw(KS,i,j,I_NG)
 
     enddo
     enddo
