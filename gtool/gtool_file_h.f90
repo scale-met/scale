@@ -17,6 +17,9 @@ module gtool_file_h
   !++ Used modules
   !
   !-----------------------------------------------------------------------------
+  use dc_types, only: &
+     DP
+  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -65,8 +68,8 @@ module gtool_file_h
      character(LEN=File_HSHORT) :: dim_name(MAX_RANK)
      integer                    :: dim_size(MAX_RANK)
      integer                    :: step
-     real(8)                    :: time_start
-     real(8)                    :: time_end
+     real(DP)                    :: time_start
+     real(DP)                    :: time_end
      integer                    :: fid
   endtype datainfo
 

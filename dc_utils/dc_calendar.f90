@@ -22,6 +22,9 @@ module dc_calendar
   use dc_log, only: &
      LOG_LMSG, &
      Log
+  use dc_types, only: &
+     SP, &
+     DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,9 +58,6 @@ module dc_calendar
   !
   !++ Private parameters & variables
   !
-  integer,  private, parameter :: SP = 4 ! single precision
-  integer,  private, parameter :: DP = 8 ! double precision
-
   real(DP), private, parameter :: TIME_HOUR    =  24.D0
   real(DP), private, parameter :: TIME_MIN     =  60.D0
   real(DP), private, parameter :: TIME_SEC     =  60.D0

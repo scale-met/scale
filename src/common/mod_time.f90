@@ -207,7 +207,7 @@ contains
 
     call TIME_ymdhms2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
 
-    temp  = dble( int( TIME_STARTMS+TIME_DURATIONSEC,kind=8 ) )
+    temp  = dble( int( TIME_STARTMS+TIME_DURATIONSEC,kind=DP ) )
     TIME_ENDMS   = TIME_STARTMS   + TIME_DURATIONSEC - temp
     TIME_ENDSECL = TIME_STARTSECL + temp
 
@@ -356,9 +356,9 @@ contains
 
     TIME_DOend = .false.
 
-    temp  = dble( int( TIME_NOWMS+TIME_DTSEC,kind=8 ) )
+    temp  = dble( int( TIME_NOWMS+TIME_DTSEC,kind=DP ) )
     TIME_NOWMS   = TIME_NOWMS + TIME_DTSEC - temp
-    TIME_NOWMS   = nint( TIME_NOWMS * 1.E5_DP ) * 1.D-5
+    TIME_NOWMS   = nint( TIME_NOWMS * 1.E5_DP ) * 1.E-5_DP
     TIME_NOWSECL = TIME_NOWSECL + temp
 
     TIME_NOWSEC  = TIME_NOWSECL + TIME_NOWMS

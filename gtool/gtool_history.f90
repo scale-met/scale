@@ -22,6 +22,9 @@ module gtool_history
   use dc_log, only: &
      Log, &
      LOG_LMSG
+  use dc_types, only: &
+     SP, &
+     DP
   use gtool_file_h, only: &
      File_HLONG, &
      File_HSHORT, &
@@ -103,9 +106,6 @@ module gtool_history
   !
   !++ Private parameters & variables
   !
-  integer,                    private, parameter :: SP = 4 ! single precision
-  integer,                    private, parameter :: DP = 8 ! double precision
-
   character(len=File_HMID),   private,      save :: HISTORY_TITLE
   character(len=File_HMID),   private,      save :: HISTORY_SOURCE
   character(len=File_HMID),   private,      save :: HISTORY_INSTITUTION
@@ -197,7 +197,7 @@ contains
 
     character(len=File_HLONG)  :: BASENAME  !> file base name
     character(len=File_HSHORT) :: ITEM      !> name of history item
-    real(DP)                    :: TINTERVAL !> time interval to output
+    real(DP)                   :: TINTERVAL !> time interval to output
     character(len=File_HSHORT) :: TUNIT     !> time unit
     logical                    :: TAVERAGE  !> time average to output
     character(len=File_HSHORT) :: DATATYPE  !> data type
@@ -767,7 +767,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -791,9 +791,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(SP),         intent(in)           :: var(:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(SP),        intent(in)            :: var(:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(1), idx
     integer :: i
@@ -829,7 +829,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -853,9 +853,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(DP),         intent(in)           :: var(:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(DP),        intent(in)            :: var(:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(1), idx
     integer :: i
@@ -891,7 +891,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -915,9 +915,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(SP),         intent(in)           :: var(:,:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(SP),        intent(in)            :: var(:,:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(2), idx
     integer :: i, j
@@ -957,7 +957,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -981,9 +981,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(DP),         intent(in)           :: var(:,:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(DP),        intent(in)            :: var(:,:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(2), idx
     integer :: i, j
@@ -1023,7 +1023,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(SP),         intent(in)           :: var(:,:,:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1047,9 +1047,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(SP),         intent(in)           :: var(:,:,:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(SP),        intent(in)            :: var(:,:,:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(3), idx
     integer :: i, j, k
@@ -1093,7 +1093,7 @@ contains
 
     character(len=*), intent(in)           :: varname
     real(DP),         intent(in)           :: var(:,:,:)
-    real(8),          intent(in)           :: dt
+    real(DP),         intent(in)           :: dt
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1117,9 +1117,9 @@ contains
        dt      )
     implicit none
 
-    integer,          intent(in)           :: itemid
-    real(DP),         intent(in)           :: var(:,:,:)
-    real(8),         intent(in)            :: dt
+    integer,         intent(in)            :: itemid
+    real(DP),        intent(in)            :: var(:,:,:)
+    real(DP),        intent(in)            :: dt
 
     integer :: ijk(3), idx
     integer :: i, j, k

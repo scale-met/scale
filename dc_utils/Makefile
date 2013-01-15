@@ -34,7 +34,7 @@ dc_calendar.f90: dc_calendar.f90.erb
 dc_test.f90: dc_test.rb2f90
 	ruby $< > $@
 
-dc_calendar.o: dc_calendar.f90 dc_log.o
+dc_calendar.o: dc_calendar.f90 dc_log.o dc_types.o
 
 dc_types.o: dc_types.f90
 

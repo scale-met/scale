@@ -24,6 +24,9 @@ module mod_comm
   !++ used modules
   !
   use mpi
+  use dc_types, only: &
+     SP, &
+     DP
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -113,10 +116,10 @@ module mod_comm
   real(RP), private, allocatable, save :: recvpack_E2P(:,:)
   real(RP), private, allocatable, save :: sendpack_P2W(:,:)
   real(RP), private, allocatable, save :: sendpack_P2E(:,:)
-  real(4),  private, allocatable, save :: recvpack_W2P_r4(:,:)
-  real(4),  private, allocatable, save :: recvpack_E2P_r4(:,:)
-  real(4),  private, allocatable, save :: sendpack_P2W_r4(:,:)
-  real(4),  private, allocatable, save :: sendpack_P2E_r4(:,:)
+  real(SP), private, allocatable, save :: recvpack_W2P_r4(:,:)
+  real(SP), private, allocatable, save :: recvpack_E2P_r4(:,:)
+  real(SP), private, allocatable, save :: sendpack_P2W_r4(:,:)
+  real(SP), private, allocatable, save :: sendpack_P2E_r4(:,:)
 
   integer, private, allocatable, save :: ireq_cnt(:)
   integer, private, allocatable, save :: ireq_list(:,:)
@@ -1870,7 +1873,7 @@ contains
        PRC_S
     implicit none
 
-    real(4), intent(inout) :: var(:,:,:)
+    real(SP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag
@@ -2078,7 +2081,7 @@ contains
        PRC_SE
     implicit none
 
-    real(4), intent(inout) :: var(:,:,:)
+    real(SP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ireqc, tag, tagc
@@ -2486,7 +2489,7 @@ contains
 
     implicit none
 
-    real(4), intent(inout) :: var(:,:,:)
+    real(SP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
 
     integer :: ierr

@@ -19,6 +19,8 @@ module mod_history
   !
   !++ Used modules
   !
+  use dc_types, only: &
+     DP
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
@@ -177,7 +179,7 @@ contains
 
     integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:)
-    real(8),  intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP) :: var2(KMAX)
     integer :: k
@@ -203,7 +205,7 @@ contains
 
     integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:,:)
-    real(8),  intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP) :: var2(IMAX*JMAX)
     integer :: i, j
@@ -232,7 +234,7 @@ contains
 
     integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:,:,:)
-    real(8),  intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP) :: var2(IMAX*JMAX*KMAX)
     integer :: i, j, k
@@ -280,7 +282,7 @@ contains
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    real(8),          intent(in) :: dt
+    real(DP),         intent(in) :: dt
     character(len=*), intent(in), optional :: zdim
 
     integer :: itemid
@@ -315,7 +317,7 @@ contains
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    real(8),          intent(in) :: dt
+    real(DP),         intent(in) :: dt
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
 
@@ -352,7 +354,7 @@ contains
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    real(8),          intent(in) :: dt
+    real(DP),         intent(in) :: dt
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim

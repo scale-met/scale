@@ -3,4 +3,4 @@
   !++ scale3 real precision (4)
   !
   !----------------------------------------------------------------------------
-  integer, private, parameter :: RP = 4 ! float
+  integer, private, parameter :: RP = kind(1.0) ! float
