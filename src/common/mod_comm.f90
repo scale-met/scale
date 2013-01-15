@@ -199,7 +199,11 @@ contains
     if (     PRC_NEXT(PRC_N) == MPI_PROC_NULL &
         .or. PRC_NEXT(PRC_S) == MPI_PROC_NULL &
         .or. PRC_NEXT(PRC_W) == MPI_PROC_NULL &
-        .or. PRC_NEXT(PRC_E) == MPI_PROC_NULL   ) IsAllPeriodic = .false.
+        .or. PRC_NEXT(PRC_E) == MPI_PROC_NULL   ) then
+       IsAllPeriodic = .false.
+    else
+       IsAllPeriodic = .true.
+    end if
 
 #ifdef _USE_RDMA
     call rdma_setup(COMM_vsize_max,  &
