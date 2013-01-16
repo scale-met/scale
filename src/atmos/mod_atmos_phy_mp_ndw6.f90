@@ -457,7 +457,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP
     use mod_atmos_vars, only: &
-!       ATMOS_vars_fillhalo, &
+       ATMOS_vars_fillhalo, &
        ATMOS_vars_total
     implicit none
     !---------------------------------------------------------------------------
