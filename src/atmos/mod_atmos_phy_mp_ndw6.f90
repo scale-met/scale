@@ -474,7 +474,7 @@ contains
     call MP_negativefilter
     call TIME_rapend  ('MP6 Filter')
 
-!    call ATMOS_vars_fillhalo
+    call ATMOS_vars_fillhalo
 
     call ATMOS_vars_total
 

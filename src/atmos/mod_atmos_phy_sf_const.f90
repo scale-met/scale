@@ -99,6 +99,9 @@ contains
        SFLX_MOMY, &
        SFLX_POTT, &
        SFLX_QV
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -170,6 +173,18 @@ contains
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY,                              & ! (in)
          NOWSEC                                               ) ! (in)
+
+    call COMM_vars8( SFLX_MOMZ(:,:), 1 )
+    call COMM_vars8( SFLX_MOMX(:,:), 2 )
+    call COMM_vars8( SFLX_MOMY(:,:), 3 )
+    call COMM_vars8( SFLX_POTT(:,:), 4 )
+    call COMM_vars8( SFLX_QV  (:,:), 5 )
+
+    call COMM_wait ( SFLX_MOMZ(:,:), 1 )
+    call COMM_wait ( SFLX_MOMX(:,:), 2 )
+    call COMM_wait ( SFLX_MOMY(:,:), 3 )
+    call COMM_wait ( SFLX_POTT(:,:), 4 )
+    call COMM_wait ( SFLX_QV  (:,:), 5 )
 
     return
   end subroutine ATMOS_PHY_SF_setup

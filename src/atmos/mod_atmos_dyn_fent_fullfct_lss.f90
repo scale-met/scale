@@ -588,7 +588,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
-    call ATMOS_vars_fillhalo
+!    call ATMOS_vars_fillhalo
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
