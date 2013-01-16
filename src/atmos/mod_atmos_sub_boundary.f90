@@ -88,6 +88,7 @@ module mod_atmos_boundary
   real(RP),                  private :: ATMOS_BOUNDARY_VALUE_POTT    = 300.E0_RP! PT at boundary, 300 [K]
   real(RP),                  private :: ATMOS_BOUNDARY_VALUE_QV      = 1.E-3_RP ! QV at boundary, 1.d-3 [kg/kg]
 
+  real(RP),                  private :: ATMOS_BOUNDARY_FRAC          = 1.0_RP  ! fraction of boundary region for dumping
   real(RP),                  private :: ATMOS_BOUNDARY_tauz          = 75.0_RP ! maximum value for damping tau (z) [s]
   real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.0_RP ! maximum value for damping tau (x) [s]
   real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.0_RP ! maximum value for damping tau (y) [s]
@@ -127,6 +128,7 @@ contains
        ATMOS_BOUNDARY_VALUE_VELX,    &
        ATMOS_BOUNDARY_VALUE_POTT,    &
        ATMOS_BOUNDARY_VALUE_QV,      &
+       ATMOS_BOUNDARY_FRAC,          &
        ATMOS_BOUNDARY_tauz,          &
        ATMOS_BOUNDARY_taux,          &
        ATMOS_BOUNDARY_tauy
@@ -218,6 +220,11 @@ contains
 
     do k = KS, KE
        ee1 = CBFZ(k)
+       if ( ee1 <= ATMOS_BOUNDARY_FRAC ) then
+          ee1 = 0.0_RP
+       else
+          ee1 = ( ee1 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
 
        if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
@@ -236,6 +243,11 @@ contains
 
     do k = KS, KE-1
        ee2 = FBFZ(k)
+       if ( ee2 <= ATMOS_BOUNDARY_FRAC ) then
+          ee2 = 0.0_RP
+       else
+          ee2 = ( ee2 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
 
        if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
@@ -255,6 +267,16 @@ contains
     do i = IS, IE
        ee1 = CBFX(i)
        ee2 = FBFX(i)
+       if ( ee1 <= ATMOS_BOUNDARY_FRAC ) then
+          ee1 = 0.0_RP
+       else
+          ee1 = ( ee1 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
+       if ( ee2 <= ATMOS_BOUNDARY_FRAC ) then
+          ee2 = 0.0_RP
+       else
+          ee2 = ( ee2 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
 
        if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
@@ -288,6 +310,16 @@ contains
     do j = JS, JE
        ee1 = CBFY(j)
        ee2 = FBFY(j)
+       if ( ee1 <= ATMOS_BOUNDARY_FRAC ) then
+          ee1 = 0.0_RP
+       else
+          ee1 = ( ee1 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
+       if ( ee2 <= ATMOS_BOUNDARY_FRAC ) then
+          ee2 = 0.0_RP
+       else
+          ee2 = ( ee2 - ATMOS_BOUNDARY_FRAC ) / ( 1.0_RP - ATMOS_BOUNDARY_FRAC )
+       end if
 
        if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
