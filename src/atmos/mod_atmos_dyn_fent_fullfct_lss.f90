@@ -652,7 +652,8 @@ contains
        I_BND_VELZ,  &
        I_BND_VELX,  &
        I_BND_VELY,  &
-       I_BND_POTT
+       I_BND_POTT,  &
+       I_BND_QV
     use dc_types, only: &
          DP
     implicit none
@@ -1013,20 +1014,29 @@ call START_COLLECTION("DYN-set")
        do j = JJS, JJE
        do i = IIS, IIE
           do k = KS, KE-1
-             ray_damp(k,i,j,I_MOMZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                                    * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
+             ray_damp(k,i,j,I_BND_VELZ) = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+                  * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )
           enddo
           do k = KS, KE
-             ray_damp(k,i,j,I_MOMX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
-                                    * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
+             ray_damp(k,i,j,I_BND_VELX) = - DAMP_alpha(k,i,j,I_BND_VELX) &
+                  * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )
           enddo
           do k = KS, KE
-             ray_damp(k,i,j,I_MOMY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
-                                    * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
+             ray_damp(k,i,j,I_BND_VELY) = - DAMP_alpha(k,i,j,I_BND_VELY) &
+                  * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
           enddo
           do k = KS, KE
-             ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
-                                    * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
+             ray_damp(k,i,j,I_BND_POTT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
+                  * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
+          enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+          do k = KS, KE
+             ray_damp(k,i,j,I_BND_QV  ) = - DAMP_alpha(k,i,j,I_BND_QV) &
+                                    * ( QTRC(k,i,j,I_QV) - DAMP_var(k,i,j,I_BND_QV) ) * DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -1814,6 +1824,18 @@ call START_COLLECTION("DYN-fct")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       if ( iq == I_QV ) then
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS, KE
+             fct_dt(k,i,j) = fct_dt(k,i,j) + ray_damp(k,i,j,I_BND_QV)
+          enddo
+          enddo
+          enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       end if
 
     enddo
     enddo
@@ -1852,7 +1874,7 @@ call START_COLLECTION("DYN-fct")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          RHOQ(k,i,j) = RHOQ(k,i,j) + max( MOMZ_LS_DZ(k,1) * QTRC(k,i,j,iq) * DTSEC, -RHOQ(k,i,j) ) ! part of large scale sinking
+          RHOQ(k,i,j) = RHOQ(k,i,j) + fct_dt(k,i,j)
        end do
        end do
        end do
@@ -2062,6 +2084,12 @@ call TIME_rapend     ('DYN-fct')
 #endif
        COMM_vars8, &
        COMM_wait
+    use mod_atmos_boundary, only: &
+       I_BND_VELZ,  &
+       I_BND_VELX,  &
+       I_BND_VELY,  &
+       I_BND_POTT,  &
+       I_BND_QV
     implicit none
 
     real(RP), intent(inout) :: DENS_RK(KA,IA,JA)   ! prognostic variables
@@ -2938,7 +2966,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DDIV(k+1,i,j) )
           call CHECK( __LINE__, fct_dt(k,i,j) )
           call CHECK( __LINE__, MOMZ0(k,i,j) )
-          call CHECK( __LINE__, ray_damp(k,i,j,i_MOMZ) )
+          call CHECK( __LINE__, ray_damp(k,i,j,I_BND_VELZ) )
 #endif
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
@@ -2948,7 +2976,7 @@ call TIME_rapend     ('DYN-fct')
                           - ( DENS(k+1,i,j)+DENS(k,i,j) ) * 0.5_RP * GRAV                & ! gravity force
                           + divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
                           + fct_dt(k,i,j)                                                &
-                          + ray_damp(k,i,j,I_MOMZ)                                       ) ! additional damping
+                          + ray_damp(k,i,j,I_BND_VELZ)                                   ) ! additional damping
        enddo
        enddo
        enddo
@@ -3290,7 +3318,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DDIV(k,i  ,j) )
           call CHECK( __LINE__, fct_dt(k,i,j) )
           call CHECK( __LINE__, MOMX0(k,i,j) )
-          call CHECK( __LINE__, ray_damp(k,i,j,I_MOMX) )
+          call CHECK( __LINE__, ray_damp(k,i,j,I_BND_VELX) )
 #endif
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
@@ -3301,7 +3329,7 @@ call TIME_rapend     ('DYN-fct')
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
                                      + fct_dt(k,i,j)                                               &
-                                     + ray_damp(k,i,j,I_MOMX)                                      ) ! additional damping
+                                     + ray_damp(k,i,j,I_BND_VELX)                                  ) ! additional damping
        enddo
        enddo
        enddo
@@ -3642,7 +3670,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DDIV(k,i,j  ) )
           call CHECK( __LINE__, fct_dt(k,i,j) )
           call CHECK( __LINE__, MOMY0(k,i,j) )
-          call CHECK( __LINE__, ray_damp(k,i,j,I_MOMY) )
+          call CHECK( __LINE__, ray_damp(k,i,j,I_BND_VELY) )
 #endif
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
                           + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
@@ -3653,7 +3681,7 @@ call TIME_rapend     ('DYN-fct')
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) ) & ! coriolis force
                                      + divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
                                      + fct_dt(k,i,j)                                               &
-                                     + ray_damp(k,i,j,I_MOMY)                                      ) ! additional damping
+                                     + ray_damp(k,i,j,I_BND_VELY)                                  ) ! additional damping
        enddo
        enddo
        enddo
@@ -3960,14 +3988,14 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, fct_dt(k,i,j) )
           call CHECK( __LINE__, RHOT0(k,i,j) )
-          call CHECK( __LINE__, ray_damp(k,i,j,i_RHOT) )
+          call CHECK( __LINE__, ray_damp(k,i,j,I_BND_POTT) )
 #endif
           RHOT_RK(k,i,j) = RHOT0(k,i,j) &
                + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                             + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                             + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                             + fct_dt(k,i,j) &
-                            + ray_damp(k,i,j,I_RHOT)  ) ! additional damping
+                            + ray_damp(k,i,j,I_BND_POTT)  ) ! additional damping
        enddo
        enddo
        enddo
