@@ -106,11 +106,11 @@ module mod_time
   real(DP), private,      save :: TIME_RES_OCEAN         = 0.E0_DP
   real(DP), private,      save :: TIME_RES_OCEAN_RESTART = 0.E0_DP
 
-  real(DP), private, parameter :: TIME_DOY     = 365.E0_DP
-  real(DP), private, parameter :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
-  real(DP), private, parameter :: TIME_HOUR    =  24.E0_DP
-  real(DP), private, parameter :: TIME_MIN     =  60.E0_DP
-  real(DP), private, parameter :: TIME_SEC     =  60.E0_DP
+  real(DP), private,      save :: TIME_DOY     = 365.E0_DP
+  real(DP), private,      save :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
+  real(DP), private,      save :: TIME_HOUR    =  24.E0_DP
+  real(DP), private,      save :: TIME_MIN     =  60.E0_DP
+  real(DP), private,      save :: TIME_SEC     =  60.E0_DP
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
@@ -178,7 +178,12 @@ contains
        TIME_DT_OCEAN,              &
        TIME_DT_OCEAN_UNIT,         &
        TIME_DT_OCEAN_RESTART,      &
-       TIME_DT_OCEAN_RESTART_UNIT
+       TIME_DT_OCEAN_RESTART_UNIT, &
+       TIME_DOY,                   &
+       TIME_DOM,                   &
+       TIME_HOUR,                  &
+       TIME_MIN,                   &
+       TIME_SEC
 
     real(DP) :: TIME_DURATIONSEC
     real(DP) :: temp
@@ -364,8 +369,8 @@ contains
     TIME_NOWSEC  = TIME_NOWSECL + TIME_NOWMS
     TIME_NOWSTEP = TIME_NOWSTEP + 1
 
-    if (       TIME_NOWSECL - TIME_ENDSECL > -eps &
-         .AND. TIME_NOWMS   - TIME_ENDMS   > -eps ) then
+    if ( ( TIME_NOWSECL-TIME_ENDSECL > -eps .AND. TIME_NOWMS-TIME_ENDMS > -eps ) &
+    .or. ( TIME_NOWSECL-TIME_ENDSECL > 1.0_RP-eps ) ) then
       TIME_DOend = .true.
     endif
 
