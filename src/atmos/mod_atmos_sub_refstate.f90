@@ -219,7 +219,7 @@ contains
             fid, 'DENS', 'Reference state of rho', 'kg/m3', & ! (in)
             (/'z'/), File_REAL8                             ) ! (in)
        call FileAddVariable( vid_pott,                      & ! (out)
-            fid, 'DENS', 'Reference state of theta', 'K',   & ! (in)
+            fid, 'PT'  , 'Reference state of theta', 'K',   & ! (in)
             (/'z'/), File_REAL8                             ) ! (in)
 
        call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
