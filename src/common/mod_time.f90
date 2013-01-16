@@ -87,7 +87,7 @@ module mod_time
   !
   !++ Private parameters & variables
   !
-  integer,  private,      save :: TIME_STARTDATE(6) = (/ 2000, 01, 01, 00, 00, 00 /)
+  integer,  private,      save :: TIME_STARTDATE(6) = (/ 0, 01, 01, 00, 00, 00 /)
   real(DP), private,      save :: TIME_STARTMS      = 0.0_DP                           !< [millisec]
   real(DP), private,      save :: TIME_STARTSECL
 
