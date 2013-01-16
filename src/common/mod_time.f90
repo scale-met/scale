@@ -115,8 +115,8 @@ module mod_time
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
   character(len=IO_SYSCHR), private,      save :: TIME_rapname(TIME_rapnlimit)
-  real(DP),                  private,      save :: TIME_raptstr(TIME_rapnlimit)
-  real(DP),                  private,      save :: TIME_rapttot(TIME_rapnlimit)
+  real(DP),                 private,      save :: TIME_raptstr(TIME_rapnlimit)
+  real(DP),                 private,      save :: TIME_rapttot(TIME_rapnlimit)
   integer,                  private,      save :: TIME_rapnstr(TIME_rapnlimit)
   integer,                  private,      save :: TIME_rapnend(TIME_rapnlimit)
 
@@ -530,6 +530,10 @@ contains
     TIME_rapnmax     = TIME_rapnmax + 1
     id               = TIME_rapnmax
     TIME_rapname(id) = trapname
+
+    TIME_rapnstr(id) = 0
+    TIME_rapnend(id) = 0
+    TIME_rapttot(id) = 0.0_RP
 
   end function TIME_rapid
 
