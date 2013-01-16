@@ -48,6 +48,7 @@ module mod_atmos_boundary
   !
   include "inc_precision.h"
   include 'inc_index.h'
+  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -70,6 +71,7 @@ module mod_atmos_boundary
   !
   !++ Private parameters & variables
   !
+  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
   character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE3 BOUNDARY CONDITION'
@@ -109,6 +111,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
+       ATMOS_BOUNDARY_TYPE,          &
        ATMOS_BOUNDARY_IN_BASENAME,   &
        ATMOS_BOUNDARY_OUT_BASENAME,  &
        ATMOS_BOUNDARY_OUT_TITLE,     &
@@ -149,14 +152,32 @@ contains
     !--- set reference field for boundary
     ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF
 
-    if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
-       call ATMOS_BOUNDARY_read
-    elseif( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
-       ATMOS_BOUNDARY_var(:,:,:,:) = 0.E0_RP
-    endif
-
-    if ( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
+    if     ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
+       ! for backward compatibility
+       if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
+          write(*,*) 'xxx [obsolete] use ATMOS_BOUNDARY_TYPE'
+          call ATMOS_BOUNDARY_read
+       elseif( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
+          write(*,*) 'xxx [obsolete] use ATMOS_BOUNDARY_TYPE'
+          call ATMOS_BOUNDARY_generate
+       endif
+    elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
+       call ATMOS_BOUNDARY_setinitval
+    elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
+       if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
+          call ATMOS_BOUNDARY_read
+       else
+          write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
+          call PRC_MPIstop
+       end if
+    elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
        call ATMOS_BOUNDARY_generate
+    else
+       write(*,*) 'xxx ATMOS_BOUNDARY_TYPE is invalid'
+       call PRC_MPIstop
+    end if
+
+    if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
     endif
 
@@ -318,6 +339,83 @@ contains
 
     return
   end subroutine ATMOS_BOUNDARY_setalpha
+
+  !-----------------------------------------------------------------------------
+  !> Read boundary data
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_BOUNDARY_setinitval
+    use mod_const, only: &
+       CONST_UNDEF
+    use mod_grid, only: &
+       CZ_mask => GRID_CZ_mask, &
+       CX_mask => GRID_CX_mask, &
+       CY_mask => GRID_CX_mask
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+    use mod_comm, only: &
+       COMM_vars, &
+       COMM_wait
+    implicit none
+
+    integer :: i, j, k, iv
+    !---------------------------------------------------------------------------
+
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
+    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV  ) = CONST_UNDEF
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( .not. ( CZ_mask(k) .and. CX_mask(i) .and. CY_mask(j) ) ) then ! Buffer Layer
+          if ( ATMOS_BOUNDARY_USE_VELZ ) then
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) )
+          endif
+          if ( ATMOS_BOUNDARY_USE_VELX ) then
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) )
+          endif
+          if ( ATMOS_BOUNDARY_USE_VELY ) then
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) )
+          endif
+          if ( ATMOS_BOUNDARY_USE_POTT ) then
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = RHOT(k,i,j) / DENS(k,i,j)
+          endif
+          if ( ATMOS_BOUNDARY_USE_QV ) then
+            ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = QTRC(k,i,j,I_QV)
+          endif
+       endif
+    enddo
+    enddo
+    enddo
+
+    ! fill KHALO
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = JS, JE
+    do i  = IS, IE
+       ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
+       ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
+    enddo
+    enddo
+    enddo
+
+    ! fill IHALO & JHALO
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+    enddo
+
+    return
+  end subroutine ATMOS_BOUNDARY_setinitval
 
   !-----------------------------------------------------------------------------
   !> Read boundary data
