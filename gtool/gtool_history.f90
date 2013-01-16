@@ -21,6 +21,9 @@ module gtool_history
   !
   use dc_log, only: &
      Log, &
+#ifdef __PGI
+     LOG_fid, &
+#endif
      LOG_LMSG
   use dc_types, only: &
      SP, &
@@ -274,7 +277,11 @@ contains
        elseif( ierr > 0 ) then !--- fatal error
           call Log('E', 'xxx Not appropriate names in namelist PARAM_HISTORY. Check!')
        endif
+#ifdef __PGI
+       write(LOG_fid,nml=PARAM_HISTORY)
+#else
        write(message,nml=PARAM_HISTORY)
+#endif
        call Log('I', message)
     end if
 

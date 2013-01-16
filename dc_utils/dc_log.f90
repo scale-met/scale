@@ -29,13 +29,7 @@ module dc_log
 
   !-----------------------------------------------------------------------------
   !
-  !++ Public parameters & variables
-  !
-  integer, public, parameter :: LOG_LMSG = 1024
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private parameters & variables
+  !++ Private parameters
   !
   integer, parameter :: LOG_NONE  = 0
   integer, parameter :: LOG_ERROR = 1
@@ -46,8 +40,18 @@ module dc_log
   integer, parameter :: STDERR = 0
   integer, parameter :: STDOUT = 6
 
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  integer, public, parameter :: LOG_LMSG = 1024
+  integer, public            :: LOG_fid  = STDOUT
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private variables
+  !
   integer, private :: LOG_ilevel = LOG_INFO
-  integer, private :: LOG_fid   = STDOUT
 
   logical, private :: LOG_master = .true.
   logical, private :: LOG_opened = .false.
