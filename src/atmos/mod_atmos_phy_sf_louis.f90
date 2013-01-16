@@ -119,6 +119,9 @@ contains
        SFLX_MOMY, &
        SFLX_POTT, &
        SFLX_QV
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
