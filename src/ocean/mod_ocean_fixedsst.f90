@@ -82,7 +82,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIXEDSST]/Categ[OCEAN]'
 
-    if ( trim(OCEAN_TYPE) .ne. 'FIXEDSST' ) then
+    if ( OCEAN_TYPE .ne. 'FIXEDSST' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not FIXEDSST. Check!'
        call PRC_MPIstop
     end if

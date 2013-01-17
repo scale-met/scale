@@ -93,7 +93,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type parametarization'
 
-    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'KESSLER' ) then
+    if ( ATMOS_TYPE_PHY_MP .ne. 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
        call PRC_MPIstop
     endif

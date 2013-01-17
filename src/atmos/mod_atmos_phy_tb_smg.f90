@@ -154,7 +154,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
 
-    if ( trim(ATMOS_TYPE_PHY_TB) .ne. 'SMAGORINSKY' ) then
+    if ( ATMOS_TYPE_PHY_TB .ne. 'SMAGORINSKY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
        call PRC_MPIstop
     end if

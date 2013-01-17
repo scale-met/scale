@@ -179,7 +179,7 @@ contains
     itemid = -1
     nmax = min( MONIT_id_count, MONIT_req_nmax )
     do n = 1, nmax
-       if ( trim(item) == trim(MONIT_item(n)) ) then ! match existing item
+       if ( item == MONIT_item(n) ) then ! match existing item
           itemid = n
           return
        endif
@@ -187,7 +187,7 @@ contains
 
     if ( itemid < 0 ) then ! request-register matching check
        do n = 1, MONIT_req_nmax
-          if ( trim(item) == MONIT_req_item(n) ) then
+          if ( item == MONIT_req_item(n) ) then
              itemid = MONIT_id_count
              reqid  = n
              MONIT_id_count = MONIT_id_count + 1
@@ -235,7 +235,8 @@ contains
 
     if( itemid <= 0 ) return
 
-    call COMM_total( total, var(:,:,:), '' )
+    call COMM_total( total, var(:,:,:), MONIT_item(itemid) )
+ )
 
     MONIT_var(itemid) = total ! overwrite by last put
 

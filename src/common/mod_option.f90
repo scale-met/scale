@@ -77,8 +77,8 @@ contains
           ninfile = ninfile + 1
           write(snf,'(I2.2)') ninfile
           write(OPT_fid,'(A)') ' infile('//snf//')="'//trim(adjustl(argstr))//'"'
-       elseif(      index(trim(argstr),'/') /= 0 &
-               .OR. index(trim(argstr),' ') /= 0 ) then                      !! append "string"
+       elseif(      index(argstr,'/') /= 0 &
+               .OR. index(argstr,' ') /= 0 ) then                      !! append "string"
           eq = index(argstr,'=')
           write(OPT_fid,'(A)') ' '//argstr(1:eq)//'"'//argstr(eq+1:ls)//'"'
        else                                                            !! without any change

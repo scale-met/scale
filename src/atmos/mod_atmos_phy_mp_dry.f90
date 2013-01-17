@@ -69,7 +69,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
 
-    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'DRY' ) then
+    if ( ATMOS_TYPE_PHY_MP .ne. 'DRY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not DRY. Check!'
        call PRC_MPIstop
     end if

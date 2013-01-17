@@ -68,7 +68,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
 
-    if ( trim(ATMOS_TYPE_PHY_RD) .ne. 'MSTRNX' ) then
+    if ( ATMOS_TYPE_PHY_RD .ne. 'MSTRNX' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not MSTRNX. Check!'
        call PRC_MPIstop
     end if

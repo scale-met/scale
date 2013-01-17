@@ -119,13 +119,13 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found reference state file. Generate!'
 
-       if ( trim(ATMOS_REFSTATE_TYPE) == 'ISA' ) then
+       if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
           call ATMOS_REFSTATE_generate_isa
-       elseif ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
+       elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
           call ATMOS_REFSTATE_generate_uniform
-       elseif ( trim(ATMOS_REFSTATE_TYPE) == 'INIT' ) then
+       elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
           call ATMOS_REFSTATE_generate_frominit
        else

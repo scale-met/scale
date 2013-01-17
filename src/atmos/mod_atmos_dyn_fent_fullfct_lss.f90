@@ -199,7 +199,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** FENT + FCT'
 
-    if ( trim(ATMOS_TYPE_DYN) .ne. 'FENT-FCT' ) then
+    if ( ATMOS_TYPE_DYN .ne. 'FENT-FCT' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not FENT-FCT. Check!'
        call PRC_MPIstop
     end if

@@ -398,7 +398,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for NDW6'
 
-    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'NDW6' ) then
+    if ( ATMOS_TYPE_PHY_MP .ne. 'NDW6' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not NDW6. Check!'
        call PRC_MPIstop
     end if

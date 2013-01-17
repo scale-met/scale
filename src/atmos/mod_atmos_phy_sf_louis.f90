@@ -183,7 +183,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Louis parameterization'
 
-    if ( trim(ATMOS_TYPE_PHY_SF) .ne. 'LOUIS' ) then
+    if ( ATMOS_TYPE_PHY_SF .ne. 'LOUIS' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not LOUIS. Check!'
        call PRC_MPIstop
     end if

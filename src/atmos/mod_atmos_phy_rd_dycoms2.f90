@@ -87,7 +87,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ DYCOMS-II Parametarized Radiative heating'
 
-    if ( trim(ATMOS_TYPE_PHY_RD) .ne. 'DYCOMSII' ) then
+    if ( ATMOS_TYPE_PHY_RD .ne. 'DYCOMSII' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not DYCOMSII. Check!'
        call PRC_MPIstop
     end if

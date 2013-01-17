@@ -200,7 +200,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
-    if ( trim(ATMOS_TYPE_PHY_MP) .ne. 'HBINW' ) then
+    if ( ATMOS_TYPE_PHY_MP .ne. 'HBINW' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not HBINW. Check!'
        call PRC_MPIstop
     end if

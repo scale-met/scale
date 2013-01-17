@@ -142,7 +142,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
 
-    if ( trim(ATMOS_TYPE_PHY_SF) .ne. 'CONST' ) then
+    if ( ATMOS_TYPE_PHY_SF .ne. 'CONST' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not CONST. Check!'
        call PRC_MPIstop
     end if
