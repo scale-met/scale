@@ -2877,6 +2877,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine COMM_total( allstatval, var, varname )
     use mod_process, only: &
+       PRC_myrank, &
        PRC_MPIstop
     use mod_geometrics, only: &
        area    => GEOMETRICS_area,    &
@@ -2913,6 +2914,11 @@ contains
        enddo
     endif
 
+    if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
+       write(*,*) 'xxx NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+       call PRC_MPIstop
+    end if
+
     if ( COMM_total_globalsum ) then
        call TIME_rapstart('COMM MPIAllreduce')
        ! All reduce
@@ -2940,11 +2946,6 @@ contains
                      '[', varname, '] SUM(local)  =', statval
        endif
     endif
-
-    if ( .not. ( allstatval > -1.0_RP .or. allstatval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx NaN is detected'
-       call PRC_MPIstop
-    end if
 
     return
   end subroutine COMM_total
