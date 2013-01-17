@@ -236,7 +236,6 @@ contains
     if( itemid <= 0 ) return
 
     call COMM_total( total, var(:,:,:), MONIT_item(itemid) )
- )
 
     MONIT_var(itemid) = total ! overwrite by last put
 
