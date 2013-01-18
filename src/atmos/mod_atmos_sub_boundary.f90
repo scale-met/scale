@@ -111,6 +111,9 @@ contains
        PRC_MPIstop
     use mod_const, only: &
        CONST_UNDEF
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
@@ -188,6 +191,11 @@ contains
     endif
 
     call ATMOS_BOUNDARY_setalpha
+
+    call COMM_vars8( ATMOS_BOUNDARY_var  (:,:,:,I_BND_QV), 1 )
+    call COMM_vars8( ATMOS_BOUNDARY_alpha(:,:,:,i_BND_QV), 2 )
+    call COMM_wait ( ATMOS_BOUNDARY_var  (:,:,:,I_BND_QV), 1 )
+    call COMM_wait ( ATMOS_BOUNDARY_alpha(:,:,:,i_BND_QV), 2 )
 
     return
   end subroutine ATMOS_BOUNDARY_setup
