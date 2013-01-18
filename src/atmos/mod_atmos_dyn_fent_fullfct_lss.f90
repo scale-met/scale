@@ -1874,7 +1874,7 @@ call START_COLLECTION("DYN-fct")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          RHOQ(k,i,j) = RHOQ(k,i,j) + fct_dt(k,i,j)
+          RHOQ(k,i,j) = RHOQ(k,i,j) + fct_dt(k,i,j) * DTSEC
        end do
        end do
        end do
