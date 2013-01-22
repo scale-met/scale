@@ -1261,7 +1261,7 @@ contains
     EXP_qv  (1) = SFC_QV
     EXP_u   (1) = EXP_u(2)
     EXP_v   (1) = EXP_v(2)
-    do k = 1, EXP_klim
+    do k = 1, EXP_kmax
        EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
@@ -1420,7 +1420,7 @@ contains
     EXP_qv  (1) = SFC_QV
     EXP_u   (1) = EXP_u(2)
     EXP_v   (1) = EXP_v(2)
-    do k = 1, EXP_klim
+    do k = 1, EXP_kmax
        EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
     enddo
 
