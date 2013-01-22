@@ -10,7 +10,7 @@ FFLAGS_DYN ?= $(FFLAGS)
 FFLAGS_DEBUG ?= -cpp -O0 -g \
                 -fcheck=all -Wall -pedantic \
                 -fbounds-check -Wuninitialized \
-                -ffpe-trap=invalid,overflow,zero -finit-real=nan \
+                -ffpe-trap=invalid,overflow,zero -finit-real=snan \
                 -fbacktrace \
                 -DDEBUG
 
