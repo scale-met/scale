@@ -1343,12 +1343,14 @@ contains
 
     real(RP) :: SHIFT_X = 12.0_RP
     real(RP) :: SHIFT_Y = -2.0_RP
+    real(RP) :: RANDOM_THETA = 0.01_RP
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
 
     NAMELIST / PARAM_MKINIT_SQUALLLINE / &
        SHIFT_X, &
        SHIFT_Y, &
+       RANDOM_THETA, &
        ENV_IN_SOUNDING_file
 
     integer, parameter :: EXP_klim = 100
@@ -1480,6 +1482,7 @@ contains
                             qc_sfc  (1,1,1)  ) ! [IN]
 
 
+    call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1487,7 +1490,7 @@ contains
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
        MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
-       RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
+       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
        do iq = 2, QA
