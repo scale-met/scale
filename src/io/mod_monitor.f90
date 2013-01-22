@@ -74,7 +74,7 @@ module mod_monitor
   integer,                    private, allocatable, save :: MONIT_kmax   (:)
   real(RP),                   private, allocatable, save :: MONIT_var    (:)
 
-  integer,                    private,              save :: MONIT_id_count = 1 !> number of registered item
+  integer,                    private,              save :: MONIT_id_count = 0 !> number of registered item
 
   real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
 
@@ -188,9 +188,9 @@ contains
     if ( itemid < 0 ) then ! request-register matching check
        do n = 1, MONIT_req_nmax
           if ( item == MONIT_req_item(n) ) then
+             MONIT_id_count = MONIT_id_count + 1
              itemid = MONIT_id_count
              reqid  = n
-             MONIT_id_count = MONIT_id_count + 1
 
              ! new file registration
              MONIT_item(itemid) = trim(item)
@@ -279,7 +279,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    if( MONIT_id_count == 1 ) return
+    if( MONIT_id_count == 0 ) return
 
     if (firsttime) then
        firsttime = .false.
@@ -290,7 +290,7 @@ contains
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
           write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
-          do n = 1, MONIT_id_count-1
+          do n = 1, MONIT_id_count
              write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
@@ -328,7 +328,7 @@ contains
                                             '               :UNIT           :Layername'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
                                             '====================================================='
-    do n = 1, MONIT_id_count-1
+    do n = 1, MONIT_id_count
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') MONIT_item(n), MONIT_desc(n), MONIT_unit(n), MONIT_ktype(n)
     enddo
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
@@ -355,7 +355,7 @@ contains
        endif
 
        write(MONIT_FID,'(A)',advance='no') '                   '
-       do n = 1, MONIT_id_count-1
+       do n = 1, MONIT_id_count
           write(MONIT_FID,'(A,A16)',advance='no') MONIT_item(n)
        enddo
        write(MONIT_FID,*)
