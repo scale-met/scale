@@ -62,10 +62,11 @@ contains
        sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
-       sw_phy_rd => ATMOS_sw_phy_rd
-    use mod_atmos_vars, only: &
+       sw_phy_rd => ATMOS_sw_phy_rd, &
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
+    use mod_atmos_vars_sf, only: &
+       ATMOS_vars_sf_setup
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
@@ -88,6 +89,8 @@ contains
     call ATMOS_SATURATION_setup
 
     call ATMOS_vars_setup
+
+    call ATMOS_vars_sf_setup
 
     call ATMOS_vars_restart_read
 
