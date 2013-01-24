@@ -177,7 +177,7 @@ contains
           enddo
 
           !--- momentum z (half level)
-          do k  = KS-1, KE-2
+          do k  = KS-1, KE-1
              eflx(k) = 0.25_RP * ( velw(k+1,i,j,iq) + velw(k,i,j,iq) ) &
                                * ( QTRC(k+1,i,j,iq) + QTRC(k,i,j,iq) ) &
                                * MOMZ(k,i,j)
