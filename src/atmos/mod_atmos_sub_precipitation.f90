@@ -128,7 +128,6 @@ contains
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
-!OCL NORECURRENCE,PARALLEL
     do j  = JS, JE
     do i  = IS, IE
 

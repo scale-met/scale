@@ -1618,9 +1618,7 @@ contains
     enddo
     enddo
 
-!OCL SERIAL
     do iq = 1, QA
-!OCL PARALLEL
        do j  = JS, JE
        do i  = IS, IE
 !OCL XFILL
@@ -1630,7 +1628,6 @@ contains
        enddo
        enddo
 
-!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2597,7 +2594,6 @@ contains
 
     mud_r = 3.0_RP * nu(I_QR) + 2.0_RP
 
-!OCL NORECURRENCE
     do j = JS, JE
     do i = IS, IE
 
@@ -2922,7 +2918,6 @@ contains
     end do
     !
 
-!OCL NORECURRENCE
     do k=KS, KE
        do j=1, JA
           do i=1, IA
@@ -3022,7 +3017,6 @@ contains
     !---------------------------------------------------------------------------
 
     ! total hydrometeor (before correction)
-!OCL NORECURRENCE
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -3034,9 +3028,7 @@ contains
     enddo
 
     ! remove negative value of hydrometeor (mass, number)
-!OCL SERIAL, SIMD
     do iq = 1, QA
-!OCL PARALLEL
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -3050,7 +3042,6 @@ contains
 
     ! apply correction of hydrometeor to total density
     ! [note] mass conservation is broken here to fill rounding error.
-!OCL NORECURRENCE
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -3067,8 +3058,6 @@ contains
     ! avoid unrealistical value of number concentration
     ! due to numerical diffusion in advection
     r_xmin = 1.0_RP / xmin_filter
-
-!OCL SIMD
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -3078,7 +3067,7 @@ contains
     enddo
     enddo
     enddo
-!OCL SIMD
+!
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA

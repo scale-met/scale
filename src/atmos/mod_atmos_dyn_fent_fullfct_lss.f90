@@ -518,7 +518,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   !-----------------------------------------------------------------------------
-!OCL NORECURRENCE
   subroutine ATMOS_DYN
     use mod_time, only: &
        DTSEC           => TIME_DTSEC,           &

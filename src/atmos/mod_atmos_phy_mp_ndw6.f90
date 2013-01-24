@@ -1986,9 +1986,7 @@ contains
     enddo
     enddo
 
-!OCL SERIAL
     do iq = 1, QA
-!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -4192,7 +4190,6 @@ contains
 
     mud_r = 3.0_RP * nu(I_QR) + 2.0_RP
 
-!OCL NORECURRENCE
     do j = JS, JE
     do i = IS, IE
 
@@ -4930,7 +4927,6 @@ contains
     r_xmin = 1.0_RP / xmin_filter
 
     ! total hydrometeor (before correction)
-!OCL NORECURRENCE
     do j = JS, JE
     do i = IS, IE
 
@@ -4944,9 +4940,7 @@ contains
     enddo
 
     ! remove negative value of hydrometeor (mass, number)
-!OCL SERIAL, SIMD
     do iq = 1, QA
-!OCL PARALLEL
     do k  = KS, KE
        if ( QTRC(k,i,j,iq) < 0.0_RP ) then
           QTRC(k,i,j,iq) = 0.0_RP
@@ -4956,7 +4950,6 @@ contains
 
     ! apply correction of hydrometeor to total density
     ! [note] mass conservation is broken here to fill rounding error.
-!OCL NORECURRENCE
     do k  = KS, KE
        DENS(k,i,j) = DENS(k,i,j)        &
                    * ( 1.0_RP           &
