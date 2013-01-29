@@ -23,9 +23,6 @@ module gtool_file
   use dc_log, only: &
        Log, &
        LOG_LMSG
-  use dc_types, only: &
-       SP, &
-       DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -86,6 +83,8 @@ module gtool_file
   !
   !++ Private parameters & variables
   !
+  integer,                   private, parameter :: SP = 4 ! single precision
+  integer,                   private, parameter :: DP = 8 ! double precision
   integer,                   private, parameter :: File_nfile_max = 64 ! number limit of file
   integer,                   private, parameter :: File_nvar_max  = 128 ! number limit of variables
   integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
@@ -151,6 +150,7 @@ contains
 
     if ( present(single) ) then
        if ( single .and. (myrank .ne. master) ) return
+       single_ = single
     endif
 
     call FileGetfid(  &

@@ -152,6 +152,7 @@ contains
 
     if ( present(single) ) then
        if ( single .and. (myrank .ne. master) ) return
+       single_ = single
     endif
 
     call FileGetfid(  &
