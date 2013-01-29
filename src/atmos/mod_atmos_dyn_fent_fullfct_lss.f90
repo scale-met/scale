@@ -2419,7 +2419,8 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(k-1,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
 #endif
-          mflx_hi(k,i,j,ZDIR) = ( -MOMZ(k+1,i,j) + 8.0_RP*MOMZ(k,i,j) - MOMZ(k-1,i,j) ) / 6.0_RP &
+!          mflx_hi(k,i,j,ZDIR) = ( -MOMZ(k+1,i,j) + 8.0_RP*MOMZ(k,i,j) - MOMZ(k-1,i,j) ) / 6.0_RP &
+          mflx_hi(k,i,j,ZDIR) = MOMZ(k,i,j) &
                               + num_diff(k,i,j,I_DENS,ZDIR)
        enddo
        enddo
@@ -2435,8 +2436,9 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_DENS,ZDIR) )
 #endif
-          mflx_hi(KS,i,j,ZDIR) = ( -MOMZ(KS+1,i,j) + 8.0_RP*MOMZ(KS,i,j) ) / 6.0_RP & ! MOMZ(KS-1,i,j) == 0
-                              + num_diff(KS,i,j,I_DENS,ZDIR)
+!          mflx_hi(KS,i,j,ZDIR) = ( -MOMZ(KS+1,i,j) + 8.0_RP*MOMZ(KS,i,j) ) / 6.0_RP & ! MOMZ(KS-1,i,j) == 0
+          mflx_hi(KS,i,j,ZDIR) = MOMZ(KS,i,j) &
+                               + num_diff(KS,i,j,I_DENS,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -2463,7 +2465,8 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMX(k,i-1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
-          mflx_hi(k,i,j,XDIR) = ( -MOMX(k,i+1,j) + 8.0_RP*MOMX(k,i,j) -MOMX(k,i-1,j) ) / 6.0_RP &
+!          mflx_hi(k,i,j,XDIR) = ( -MOMX(k,i+1,j) + 8.0_RP*MOMX(k,i,j) -MOMX(k,i-1,j) ) / 6.0_RP &
+          mflx_hi(k,i,j,XDIR) = MOMX(k,i,j) &
                               + num_diff(k,i,j,I_DENS,XDIR)
        enddo
        enddo
@@ -2482,7 +2485,8 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMY(k,i,j-1) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,YDIR) )
 #endif
-          mflx_hi(k,i,j,YDIR) = ( -MOMY(k,i,j+1) + 8.0_RP*MOMY(k,i,j) -MOMY(k,i,j-1) ) / 6.0_RP &
+!          mflx_hi(k,i,j,YDIR) = ( -MOMY(k,i,j+1) + 8.0_RP*MOMY(k,i,j) -MOMY(k,i,j-1) ) / 6.0_RP &
+          mflx_hi(k,i,j,YDIR) = MOMY(k,i,j) &
                               + num_diff(k,i,j,I_DENS,YDIR)
        enddo
        enddo
