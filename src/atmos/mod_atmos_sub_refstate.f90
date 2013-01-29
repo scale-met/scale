@@ -210,7 +210,7 @@ contains
             ATMOS_REFSTATE_OUT_TITLE,     & ! (in)
             ATMOS_REFSTATE_OUT_SOURCE,    & ! (in)
             ATMOS_REFSTATE_OUT_INSTITUTE, & ! (in)
-            (/'z'/), (/KMAX/), (/'Z'/),   & ! (in)
+            (/'z'/), (/KA/), (/'Z'/),     & ! (in)
             (/'m'/), (/File_REAL4/),      & ! (in)
             PRC_master, PRC_myrank,       & ! (in)
             single = .true.               ) ! (in)
@@ -222,7 +222,7 @@ contains
             fid, 'PT'  , 'Reference state of theta', 'K',   & ! (in)
             (/'z'/), File_REAL8                             ) ! (in)
 
-       call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
+       call FilePutAxis(fid, 'z', GRID_CZ(:))
 
        call FileWrite( vid_dens, ATMOS_REFSTATE_dens(:), 0.0_DP, 0.0_DP )
        call FileWrite( vid_pott, ATMOS_REFSTATE_pott(:), 0.0_DP, 0.0_DP )
