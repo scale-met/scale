@@ -151,6 +151,7 @@ contains
        PRC_myrank
     implicit none
 
+    real(RP) :: buffer(KMAX)
     character(len=IO_FILECHR) :: bname
     !---------------------------------------------------------------------------
 
@@ -159,8 +160,10 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_IN_BASENAME)
 
-    call FileRead( ATMOS_REFSTATE_dens(:), bname, 'DENS', 1, PRC_myrank, single=.true. )
-    call FileRead( ATMOS_REFSTATE_pott(:), bname, 'POTT', 1, PRC_myrank, single=.true. )
+    call FileRead( buffer(:), bname, 'DENS', 1, PRC_myrank, single=.true. )
+    ATMOS_REFSTATE_dens(KS:KE) = buffer(:)
+    call FileRead( buffer(:), bname, 'PT'  , 1, PRC_myrank, single=.true. )
+    ATMOS_REFSTATE_pott(KS:KE) = buffer(:)
 
     return
   end subroutine ATMOS_REFSTATE_read
@@ -224,8 +227,8 @@ contains
 
        call FilePutAxis(fid, 'z', GRID_CZ(:))
 
-       call FileWrite( vid_dens, ATMOS_REFSTATE_dens(:), 0.0_DP, 0.0_DP )
-       call FileWrite( vid_pott, ATMOS_REFSTATE_pott(:), 0.0_DP, 0.0_DP )
+       call FileWrite( vid_dens, ATMOS_REFSTATE_dens(KS:KE), 0.0_DP, 0.0_DP )
+       call FileWrite( vid_pott, ATMOS_REFSTATE_pott(KS:KE), 0.0_DP, 0.0_DP )
 
        call FileClose( fid )
     endif
