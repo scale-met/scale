@@ -534,14 +534,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
@@ -611,14 +615,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
@@ -688,14 +696,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
@@ -765,14 +777,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
@@ -842,14 +858,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
@@ -919,14 +939,18 @@ contains
     integer :: error
     integer :: n
 
+    logical :: single_ = .false.
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
+    if ( present(single) ) single_ = single
+
     !--- search/register file
-    call FileOpen( fid,               & ! (out)
-         basename, File_FREAD, single ) ! (in)
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo( dinfo, & ! (out)
