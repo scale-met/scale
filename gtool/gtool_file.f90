@@ -199,7 +199,7 @@ contains
                           filetype, key, val, & ! (in)
                           error               ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to set option')
+       call Log('E', 'xxx failed to set option')
     end if
 
     return
@@ -558,10 +558,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_SP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -581,7 +581,7 @@ contains
          dinfo, SP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -635,10 +635,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_DP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -658,7 +658,7 @@ contains
          dinfo, DP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -712,10 +712,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_SP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -735,7 +735,7 @@ contains
          dinfo, SP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -789,10 +789,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_DP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -812,7 +812,7 @@ contains
          dinfo, DP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -866,10 +866,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -889,7 +889,7 @@ contains
          dinfo, SP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -943,10 +943,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx faild to get data information')
+             call Log('E', 'xxx failed to get data information')
           end if
        else
-          call Log('E', 'xxx faild to get data information')
+          call Log('E', 'xxx failed to get data information')
        end if
     end if
 
@@ -966,7 +966,7 @@ contains
          dinfo, DP,                  & ! (in)
          error                       ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to get data value')
+       call Log('E', 'xxx failed to get data value')
     end if
 
     return
@@ -998,7 +998,7 @@ contains
     call file_write_data( vid, var(:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1026,7 +1026,7 @@ contains
     call file_write_data( vid, var(:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1054,7 +1054,7 @@ contains
     call file_write_data( vid, var(:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1082,7 +1082,7 @@ contains
     call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1110,7 +1110,7 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1138,7 +1138,7 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to write data')
+       call Log('E', 'xxx failed to write data')
     end if
 
     return
@@ -1276,10 +1276,10 @@ contains
          fname, mode,    & ! (in)
          error           ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx faild to open file')
+       call Log('E', 'xxx failed to open file :'//trim(fname))
     end if
 
-    write(message,*) '*** [File1D] File registration : ',trim(rwname(mode)),' -', fid
+    write(message,*) '*** [File] File registration : ',trim(rwname(mode)),' -', fid
     call Log("I", message)
     write(message,*) '*** filename: ', trim(fname)
     call Log("I", message)
