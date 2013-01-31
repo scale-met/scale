@@ -213,7 +213,7 @@ contains
             ATMOS_REFSTATE_OUT_TITLE,     & ! (in)
             ATMOS_REFSTATE_OUT_SOURCE,    & ! (in)
             ATMOS_REFSTATE_OUT_INSTITUTE, & ! (in)
-            (/'z'/), (/KA/), (/'Z'/),     & ! (in)
+            (/'z'/), (/KMAX/), (/'Z'/),   & ! (in)
             (/'m'/), (/File_REAL4/),      & ! (in)
             PRC_master, PRC_myrank,       & ! (in)
             single = .true.               ) ! (in)
