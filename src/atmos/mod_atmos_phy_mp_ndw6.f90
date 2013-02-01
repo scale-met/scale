@@ -2427,6 +2427,7 @@ contains
     real(RP), save :: qke_min = 0.03_RP ! sigma=0.1[m/s], 09/08/18 T.Mitsui
     real(RP), save :: tem_ccn_low=233.150_RP  ! = -40 degC  ! [Add] 10/08/03 T.Mitsui
     real(RP), save :: tem_in_low =173.150_RP  ! = -100 degC ! [Add] 10/08/03 T.Mitsui
+    logical, save :: nucl_twomey = .true.
     !
     namelist /nm_mp_ndw6_nucleation/ &
          in_max,                     & !
@@ -2435,7 +2436,8 @@ contains
          xc_ccn, xi_ccn,             &
          tem_ccn_low,                & ! [Add] 10/08/03 T.Mitsui
          tem_in_low,                 & ! [Add] 10/08/03 T.Mitsui
-         ssw_max, ssi_max
+         ssw_max, ssi_max,           &
+         nucl_twomey                   ! [Add] 13/01/30 Y.Sato
     !
 !    real(RP) :: c_ccn_map(1,IA,JA)   ! c_ccn horizontal distribution
 !    real(RP) :: kappa_map(1,IA,JA)   ! kappa horizontal distribution
@@ -2555,19 +2557,31 @@ contains
        end do
        weff(KS-1,i,j) = weff(KS,i,j)
        weff(KE,i,j)   = weff(KE-1,i,j)
+       !
+       if( nucl_twomey ) then
        ! diagnose cloud condensation nuclei
-       do k=KS, KE
-          ! effective vertical velocity (maximum vertical velocity in turbulent flow)
-          weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
-          ! large scale upward motion region and saturated
-          if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
-             ! Lohmann (2002), eq.(1)
-             nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
-             nc_new(k,i,j) = a_max*nc_new_max**b_max
-          else
-             nc_new(k,i,j) = 0.0_RP
-          end if
-       end do
+        do k=KS, KE
+           ! effective vertical velocity (maximum vertical velocity in turbulent flow)
+           weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
+           ! large scale upward motion region and saturated
+           if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
+              ! Lohmann (2002), eq.(1)
+              nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
+              nc_new(k,i,j) = a_max*nc_new_max**b_max
+           else
+              nc_new(k,i,j) = 0.0_RP
+           end if
+        end do
+       else
+        ! calculate cloud condensation nuclei
+        do k=KS, KE
+         if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+           nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
+         else
+           nc_new(k,i,j) = 0.0_RP
+         endif
+        enddo
+       endif
        !
        do k=KS, KE
           ! nc_new is bound by upper limit
@@ -2584,16 +2598,17 @@ contains
        end do
        nc_new_below(KS,i,j) = 0.0_RP
        ! search maximum value of nc_new
-       do k=KS, KE
-          if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .or. &
+!       do k=KS, KE
+!          if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .or. &
 !               ( nc_new_below(k,i,j) > c_ccn_map(1,i,j)*0.05_RP ) )then ! 5% of c_ccn
-               ( nc_new_below(k,i,j) > c_ccn*0.05_RP ) )then ! 5% of c_ccn
-             flag_nucleation(k,i,j) = .false.
-          end if
-       end do
-       ! nucleation occurs at only cloud base.
-       ! if CCN is more than below parcel, nucleation newly occurs
-       do k=KS, KE
+!               ( nc_new_below(k,i,j) > c_ccn*0.05_RP ) )then ! 5% of c_ccn
+!             flag_nucleation(k,i,j) = .false.
+!          end if
+!       end do
+       if( nucl_twomey ) then
+        ! nucleation occurs at only cloud base.
+        ! if CCN is more than below parcel, nucleation newly occurs
+        do k=KS, KE
           ! effective vertical velocity
           if(   flag_nucleation(k,i,j)               .and. & ! large scale upward motion region and saturated
                ( tem(k,i,j)    > tem_ccn_low       ) .and. &
@@ -2607,7 +2622,23 @@ contains
              PNCccn(k,i,j) = 0.0_RP
              PLCccn(k,i,j) = 0.0_RP
           end if
-       end do
+        end do
+       else
+        do k=KS, KE
+          ! effective vertical velocity
+          if(  ( tem(k,i,j)    > tem_ccn_low       ) .and. &
+               ( nc_new(k,i,j) > NC(k,i,j) )                )then
+             dlcdt_max    = (LV(k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+             dncdt_max    = dlcdt_max/xc_min
+             dnc_new      = nc_new(k,i,j)-NC(k,i,j)
+             PNCccn(k,i,j) = min( dncdt_max, dnc_new*rdt )
+             PLCccn(k,i,j) = min( dlcdt_max, xc_min*PNCccn(k,i,j) )
+          else
+             PNCccn(k,i,j) = 0.0_RP
+             PLCccn(k,i,j) = 0.0_RP
+          end if
+        end do
+       endif
        !
        ! ice nucleation
        !
