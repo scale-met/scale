@@ -543,7 +543,8 @@ contains
   subroutine ATMOS_BOUNDARY_write
     use mod_process, only: &
        PRC_master, &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_2Drank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file, only: &
@@ -563,10 +564,14 @@ contains
     character(len=IO_FILECHR) :: bname
     integer :: fid, vid
     integer :: dtype
+
+    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_OUT_BASENAME
 
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
     call FileCreate( fid,                                       & ! (out)
          bname,                                                 & ! (in)
          ATMOS_BOUNDARY_OUT_TITLE,                              & ! (in)
@@ -574,7 +579,7 @@ contains
          ATMOS_BOUNDARY_OUT_INSTITUTE,                          & ! (in)
          (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
          (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
-         PRC_master, PRC_myrank                                 ) ! (in)
+         PRC_master, PRC_myrank, rankidx                        ) ! (in)
 
     call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))

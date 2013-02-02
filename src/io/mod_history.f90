@@ -88,6 +88,12 @@ contains
   subroutine HIST_setup
     use mod_stdio, only: &
        IO_FID_CONF
+    use mod_process, only: &
+       PRC_master, &
+       PRC_myrank, &
+       PRC_2Drank
+    implicit none
+    integer :: rankidx(2)
 
     ! only for register
     call TIME_rapstart('FILE I')
@@ -97,8 +103,11 @@ contains
 
     call TIME_rapstart('FILE O')
 
+    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
+    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
     call HistoryInit( &
        'SCALE3 HISTORY OUTPUT', 'SCALE-LES ver. 3', 'AICS/RIKEN', &
+       PRC_master, PRC_myrank, rankidx, &
        (/'x','y','z'/), &
        (/IMAX,JMAX,KMAX/), &
        (/'X', 'Y', 'Z'/), &
@@ -123,9 +132,6 @@ contains
        ydim,   & ! (in)
        zdim    & ! (in)
        )
-    use mod_process, only: &
-         PRC_master, &
-         PRC_myrank
     implicit none
 
     integer,          intent(out) :: itemid
@@ -156,7 +162,7 @@ contains
 
     call TIME_rapstart('FILE O')
 
-    call HistoryAddVariable(item, dims(1:ndim), desc, units, PRC_master, PRC_myrank, & ! (in)
+    call HistoryAddVariable(item, dims(1:ndim), desc, units, & ! (in)
          itemid = itemid, existed = existed) ! (out)
 
     if ( .not. existed ) then
@@ -385,8 +391,6 @@ contains
        varname,   &
        step       &
        )
-    use mod_process, only: &
-       PRC_myrank
     implicit none
 
     real(RP),         intent(out) :: var(:)
@@ -396,8 +400,8 @@ contains
 
     call TIME_rapstart('FILE I')
 
-    call HistoryGet( var,                                   & ! (out)
-         basename, varname, step, PRC_myrank, single=.true. ) ! (in)
+    call HistoryGet( var,                       & ! (out)
+         basename, varname, step, single=.true. ) ! (in)
 
     call TIME_rapend  ('FILE I')
 
@@ -410,8 +414,6 @@ contains
        step,         &
        allow_missing &
        )
-    use mod_process, only: &
-       PRC_myrank
     implicit none
 
     real(RP),         intent(out) :: var(:,:)
@@ -422,8 +424,8 @@ contains
 
     call TIME_rapstart('FILE I')
 
-    call HistoryGet( var,                                   & ! (out)
-         basename, varname, step, PRC_myrank, allow_missing ) ! (in)
+    call HistoryGet( var,                       & ! (out)
+         basename, varname, step, allow_missing ) ! (in)
 
     call TIME_rapend  ('FILE I')
 
@@ -436,8 +438,6 @@ contains
        step,         &
        allow_missing &
        )
-    use mod_process, only: &
-       PRC_myrank
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:)
@@ -448,8 +448,8 @@ contains
 
     call TIME_rapstart('FILE I')
 
-    call HistoryGet( var,                                   & ! (out)
-         basename, varname, step, PRC_myrank, allow_missing ) ! (in)
+    call HistoryGet( var,                       & ! (out)
+         basename, varname, step, allow_missing ) ! (in)
 
     call TIME_rapend  ('FILE I')
 

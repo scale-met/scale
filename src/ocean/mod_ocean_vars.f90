@@ -213,7 +213,8 @@ contains
   subroutine OCEAN_vars_restart_write
     use mod_process, only: &
        PRC_master, &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_2Drank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -236,6 +237,8 @@ contains
     integer :: fid, vid
     integer :: dtype
     integer :: n
+
+    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -248,6 +251,8 @@ contains
     end do
     write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
 
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
     call FileCreate( fid,                         & ! (out)
          bname,                                   & ! (in)
          OCEAN_RESTART_OUT_TITLE,                 & ! (in)
@@ -255,7 +260,7 @@ contains
          OCEAN_RESTART_OUT_INSTITUTE,             & ! (in)
          (/'x','y'/), (/IMAX,JMAX/), (/'X','Y'/), & ! (in)
          (/'m','m'/), (/File_REAL4,File_REAL4/),  & ! (in)
-         PRC_master, PRC_myrank                   ) ! (in)
+         PRC_master, PRC_myrank, rankidx    ) ! (in)
 
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
     call FilePutAxis(fid, 'y', GRID_CY(JS:JE))

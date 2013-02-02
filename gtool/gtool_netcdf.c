@@ -260,12 +260,14 @@ int32_t file_read_data( void       *var,        // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_global_attributes( int32_t fid,         // (in)
-				    char   *title,       // (in)
-				    char   *source,      // (in)
-				    char   *institution, // (in)
-				    char   *time_units,  // (in)
-				    int32_t nodeid )     // (in)
+int32_t file_set_global_attributes( int32_t  fid,         // (in)
+				    char    *title,       // (in)
+				    char    *source,      // (in)
+				    char    *institution, // (in)
+				    char    *time_units,  // (in)
+				    int32_t  nodeid,      // (in)
+				    int32_t *nodeidx,     // (in)
+				    int32_t  nodeidx_dim) // (in)
 {
   int ncid;
   int tmp[1];
@@ -278,6 +280,7 @@ int32_t file_set_global_attributes( int32_t fid,         // (in)
   CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "institution", strlen(institution), institution) );
   tmp[0] = nodeid;
   CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_id", NC_INT, 1, tmp) );
+  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_index", NC_INT, nodeidx_dim, nodeidx) );
 
   strcpy(files[fid]->time_units, time_units);
 

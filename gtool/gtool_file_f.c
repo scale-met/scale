@@ -111,6 +111,8 @@ void file_set_global_attributes_( int32_t *fid,             // (in)
 				  char    *institution,     // (in)
 				  char    *time_units,      // (in)
 				  int32_t *nodeid,          // (in)
+				  int32_t *nodeidx,         // (in)
+				  int32_t *nodeidx_dim,     // (in)
 				  int32_t *error,           // (out)
 				  int32_t  title_len,       // (in)
 				  int32_t  source_len,      // (in)
@@ -135,7 +137,7 @@ void file_set_global_attributes_( int32_t *fid,             // (in)
   len = time_units_len > File_HSHORT ? File_HSHORT : time_units_len;
   fstr2cstr(_time_units, time_units, len);
 
-  *error = file_set_global_attributes( *fid, _title, _source, _institution, _time_units, *nodeid );
+  *error = file_set_global_attributes( *fid, _title, _source, _institution, _time_units, *nodeid, nodeidx, *nodeidx_dim );
 }
 
 void file_set_dim_info_( int32_t *fid,           // (in)
