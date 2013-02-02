@@ -562,10 +562,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -643,10 +643,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -724,10 +724,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -805,10 +805,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -886,10 +886,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -967,10 +967,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
