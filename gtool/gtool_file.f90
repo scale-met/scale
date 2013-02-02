@@ -36,6 +36,7 @@ module gtool_file
   public :: FilePutAxis
   public :: FilePutAdditionalAxis
   public :: FileAddVariable
+  public :: FileGetShape
   public :: FileRead
   public :: FileWrite
   public :: FileClose
@@ -514,6 +515,64 @@ contains
   end subroutine FileAddVariableRealDP
 
   !-----------------------------------------------------------------------------
+  ! FileGetShape
+  !-----------------------------------------------------------------------------
+  subroutine FileGetShape( &
+      dims,          & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      myrank,        & ! (in)
+      single         & ! (in) optional
+      )
+    implicit none
+
+    integer,          intent(out)           :: dims(:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: myrank
+    logical,          intent( in), optional :: single
+
+    integer :: fid
+    type(datainfo) :: dinfo
+    integer :: error
+    integer :: n
+
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    if ( present(single) ) single_ = single
+
+    !--- search/register file
+    call FileOpen( fid,                & ! (out)
+         basename, File_FREAD, single_ ) ! (in)
+
+    !--- get data information
+    call file_get_datainfo( dinfo, & ! (out)
+         fid, varname, 0,          & ! (in)
+         error                     ) ! (out)
+
+    !--- verify
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to get data information :'//trim(varname))
+    end if
+
+    if ( dinfo%rank /= size(dims) ) then
+       write(message,*) 'xxx rank is different, ', size(dims), dinfo%rank
+       call Log('E', message)
+    end if
+    do n = 1, size(dims)
+       dims(n) = dinfo%dim_size(n)
+    end do
+
+    return
+  end subroutine FileGetShape
+
+  !-----------------------------------------------------------------------------
   ! interface File_read
   !-----------------------------------------------------------------------------
   subroutine FileRead1DRealSP( &
@@ -536,7 +595,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(1)
     integer :: error
     integer :: n
@@ -617,7 +676,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(1)
     integer :: error
     integer :: n
@@ -698,7 +757,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(2)
     integer :: error
     integer :: n
@@ -779,7 +838,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(2)
     integer :: error
     integer :: n
@@ -860,7 +919,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(3)
     integer :: error
     integer :: n
@@ -941,7 +1000,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: fid
-    type(datainfo) :: dinfo 
+    type(datainfo) :: dinfo
     integer :: dim_size(3)
     integer :: error
     integer :: n

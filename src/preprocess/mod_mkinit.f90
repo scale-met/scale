@@ -82,6 +82,7 @@ module mod_mkinit
   public :: MKINIT_DYCOMS2_RF02
   public :: MKINIT_DYCOMS2_RF01_hbinw
   public :: MKINIT_warmbubble_hbinw
+  public :: MKINIT_interporation
 
   !-----------------------------------------------------------------------------
   !
@@ -108,6 +109,7 @@ module mod_mkinit
   integer, public, parameter :: I_DYCOMS2_RF02        = 10
   integer, public, parameter :: I_DYCOMS2_RF01_hbinw  = 11
   integer, public, parameter :: I_WARMBUBBLE_hbinw    = 12
+  integer, public, parameter :: I_INTERPORATION       = 13
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -235,6 +237,8 @@ contains
        MKINIT_TYPE = I_DYCOMS2_RF01_hbinw
     case('WARMBUBBLE_hbinw')
        MKINIT_TYPE = I_WARMBUBBLE_hbinw
+    case('INTERPORATION')
+       MKINIT_TYPE = I_INTERPORATION
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -2555,5 +2559,448 @@ contains
   return
 
   end function faero
+
+  subroutine MKINIT_interporation
+    use gtool_file, only: &
+       FileGetShape, &
+       FileRead
+    use mod_grid, only: &
+       FZ => GRID_FZ, &
+       FX => GRID_FX, &
+       FY => GRID_FY
+    use mod_atmos_hydrostatic, only: &
+         buildrho_fromKS => ATMOS_hydro_buildrho_fromKS
+    implicit none
+
+    real(RP) :: W(KA,IA,JA)
+    real(RP) :: U(KA,IA,JA)
+    real(RP) :: V(KA,IA,JA)
+
+    real(RP) :: fact_cz0(KA)
+    real(RP) :: fact_cz1(KA)
+    real(RP) :: fact_fz0(KA)
+    real(RP) :: fact_fz1(KA)
+    real(RP) :: fact_cx0(IA)
+    real(RP) :: fact_cx1(IA)
+    real(RP) :: fact_fx0(IA)
+    real(RP) :: fact_fx1(IA)
+    real(RP) :: fact_cy0(JA)
+    real(RP) :: fact_cy1(JA)
+    real(RP) :: fact_fy0(JA)
+    real(RP) :: fact_fy1(JA)
+
+    integer :: idx_cz0(KA)
+    integer :: idx_cz1(KA)
+    integer :: idx_fz0(KA)
+    integer :: idx_fz1(KA)
+    integer :: idx_cx0(IA)
+    integer :: idx_cx1(IA)
+    integer :: idx_fx0(IA)
+    integer :: idx_fx1(IA)
+    integer :: idx_cy0(JA)
+    integer :: idx_cy1(JA)
+    integer :: idx_fy0(JA)
+    integer :: idx_fy1(JA)
+
+    real(RP), allocatable :: DENS_ORG(:,:,:)
+    real(RP), allocatable :: MOMZ_ORG(:,:,:)
+    real(RP), allocatable :: MOMX_ORG(:,:,:)
+    real(RP), allocatable :: MOMY_ORG(:,:,:)
+    real(RP), allocatable :: RHOT_ORG(:,:,:)
+    real(RP), allocatable :: QTRC_ORG(:,:,:,:)
+
+    real(RP), allocatable :: W_ORG(:,:,:)
+    real(RP), allocatable :: U_ORG(:,:,:)
+    real(RP), allocatable :: V_ORG(:,:,:)
+    real(RP), allocatable :: POTT_ORG(:,:,:)
+
+    real(RP), allocatable :: CZ_ORG(:)
+    real(RP), allocatable :: FZ_ORG(:)
+    real(RP), allocatable :: CX_ORG(:)
+    real(RP), allocatable :: FX_ORG(:)
+    real(RP), allocatable :: CY_ORG(:)
+    real(RP), allocatable :: FY_ORG(:)
+
+    integer :: dims(3)
+
+    character(len=IO_FILECHR) :: BASENAME_ORG = ''
+
+    NAMELIST / PARAM_MKINIT_INTERPORATION / &
+         BASENAME_ORG
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Interporation]/Categ[MKINIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_INTERPORATION,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_INTERPORATION. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_INTERPORATION)
+
+    call FileGetShape( dims(:),                               &
+                       BASENAME_ORG, "DENS", 1, single=.true. )
+
+    allocate( dens_org(dims(1),dims(2),dims(3)) )
+    allocate( momz_org(dims(1),dims(2),dims(3)) )
+    allocate( momx_org(dims(1),dims(2),dims(3)) )
+    allocate( momy_org(dims(1),dims(2),dims(3)) )
+    allocate( rhot_org(dims(1),dims(2),dims(3)) )
+    allocate( qtrc_org(dims(1),dims(2),dims(3),QA) )
+
+    allocate( w_org(dims(1),dims(2),dims(3)) )
+    allocate( u_org(dims(1),dims(2),dims(3)) )
+    allocate( v_org(dims(1),dims(2),dims(3)) )
+    allocate( pott_org(dims(1),dims(2),dims(3)) )
+
+    allocate( cz_org(dims(1)) )
+    allocate( fz_org(dims(1)) )
+    allocate( cx_org(dims(2)) )
+    allocate( fx_org(dims(2)) )
+    allocate( cy_org(dims(3)) )
+    allocate( fy_org(dims(3)) )
+
+    call FileRead( dens_org(:,:,:),                          &
+                   BASENAME_ORG, "DENS", 1, 1, single=.true. )
+    call FileRead( momz_org(:,:,:),                          &
+                   BASENAME_ORG, "MOMZ", 1, 1, single=.true. )
+    call FileRead( momx_org(:,:,:),                          &
+                   BASENAME_ORG, "MOMX", 1, 1, single=.true. )
+    call FileRead( momy_org(:,:,:),                          &
+                   BASENAME_ORG, "MOMY", 1, 1, single=.true. )
+    call FileRead( rhot_org(:,:,:),                          &
+                   BASENAME_ORG, "RHOT", 1, 1, single=.true. )
+    do iq = 1, QA
+       call FileRead( qtrc_org(:,:,:,iq),                            &
+                      BASENAME_ORG, AQ_NAME(iq), 1, 1, single=.true. )
+    end do
+
+    call FileRead( cz_org(:),                              &
+                   BASENAME_ORG, "z" , 1, 1, single=.true. )
+    call FileRead( cx_org(:),                              &
+                   BASENAME_ORG, "x" , 1, 1, single=.true. )
+    call FileRead( cy_org(:),                              &
+                   BASENAME_ORG, "y" , 1, 1, single=.true. )
+    call FileRead( fx_org(:),                              &
+                   BASENAME_ORG, "xh", 1, 1, single=.true. )
+    call FileRead( fy_org(:),                              &
+                   BASENAME_ORG, "yh", 1, 1, single=.true. )
+
+    do k = KS, KE
+       call interporation_fact( fact_cz0(k), fact_cz1(k), & ! (OUT)
+                                idx_cz0(k), idx_cz1(k),   & ! (OUT)
+                                CZ(k), cz_org, dims(1),   & ! (IN)
+                                .false.                   ) ! (IN)
+       call interporation_fact( fact_fz0(k), fact_fz1(k), & ! (OUT)
+                                idx_fz0(k), idx_fz1(k),   & ! (OUT)
+                                FZ(k), fz_org, dims(1),   & ! (IN)
+                                .false.                   ) ! (IN)
+    enddo
+    do i = IS, IE
+       call interporation_fact( fact_cx0(i), fact_cx1(i), & ! (OUT)
+                                idx_cx0(i), idx_cx1(i),   & ! (OUT)
+                                CX(i), cx_org, dims(2),   & ! (IN)
+                                .true.                    ) ! (IN)
+       call interporation_fact( fact_fx0(i), fact_fx1(i), & ! (OUT)
+                                idx_fx0(i), idx_fx1(i),   & ! (OUT)
+                                FX(i), fx_org, dims(2),   & ! (IN)
+                                .true.                    ) ! (IN)
+    enddo
+    do j = JS, JE
+       call interporation_fact( fact_cy0(j), fact_cy1(j), & ! (OUT)
+                                idx_cy0(j), idx_cy1(j),   & ! (OUT)
+                                CY(j), cy_org, dims(3),   & ! (IN)
+                                .true.                    ) ! (IN)
+       call interporation_fact( fact_fy0(j), fact_fy1(j), & ! (OUT)
+                                idx_fy0(j), idx_fy1(j),   & ! (OUT)
+                                FY(j), fy_org, dims(3),   & ! (IN)
+                                .true.                    ) ! (IN)
+    enddo
+
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)-1
+       w_org(k,i,j) = 2.0_RP * momz_org(k,i,j) / ( dens_org(k+1,i,j) + dens_org(k,i,j) )
+    end do
+    end do
+    end do
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       w_org(dims(1),i,j) = 0.0_RP
+    end do
+    end do
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)-1
+    do k = 1, dims(1)
+       u_org(k,i,j) = 2.0_RP * momx_org(k,i,j) / ( dens_org(k,i+1,j) + dens_org(k,i,j) )
+    end do
+    end do
+    end do
+    do j = 1, dims(3)
+    do k = 1, dims(1)
+       u_org(k,dims(2),j) = 2.0_RP * momx_org(k,dims(2),j) / ( dens_org(k,1,j) + dens_org(k,dims(2),j) )
+    end do
+    end do
+
+    do j = 1, dims(3)-1
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       v_org(k,i,j) = 2.0_RP * momy_org(k,i,j) / ( dens_org(k,i,j+1) + dens_org(k,i,j) )
+    end do
+    end do
+    end do
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       v_org(k,i,dims(3)) = 2.0_RP * momy_org(k,i,dims(3)) / ( dens_org(k,i,1) + dens_org(k,i,dims(3)) )
+    end do
+    end do
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
+    end do
+    end do
+    end do
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       dens_org(k,i,j) = log( dens_org(k,i,j) )
+    end do
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, IE
+       DENS(k,i,j) = exp( &
+                     fact_cz0(k)*fact_cx0(i)*fact_cy0(j)*dens_org(idx_cz0(k),idx_cx0(i),idx_cy0(j)) &
+                   + fact_cz1(k)*fact_cx0(i)*fact_cy0(j)*dens_org(idx_cz1(k),idx_cx0(i),idx_cy0(j)) &
+                   + fact_cz0(k)*fact_cx1(i)*fact_cy0(j)*dens_org(idx_cz0(k),idx_cx1(i),idx_cy0(j)) &
+                   + fact_cz1(k)*fact_cx1(i)*fact_cy0(j)*dens_org(idx_cz1(k),idx_cx1(i),idx_cy0(j)) &
+                   + fact_cz0(k)*fact_cx0(i)*fact_cy1(j)*dens_org(idx_cz0(k),idx_cx0(i),idx_cy1(j)) &
+                   + fact_cz1(k)*fact_cx0(i)*fact_cy1(j)*dens_org(idx_cz1(k),idx_cx0(i),idx_cy1(j)) &
+                   + fact_cz0(k)*fact_cx1(i)*fact_cy1(j)*dens_org(idx_cz0(k),idx_cx1(i),idx_cy1(j)) &
+                   + fact_cz1(k)*fact_cx1(i)*fact_cy1(j)*dens_org(idx_cz1(k),idx_cx1(i),idx_cy1(j)) &
+                   )
+
+       W(k,i,j) = fact_fz0(k)*fact_cx0(i)*fact_cy0(j)*w_org(idx_fz0(k),idx_cx0(i),idx_cy0(j)) &
+                + fact_fz1(k)*fact_cx0(i)*fact_cy0(j)*w_org(idx_fz1(k),idx_cx0(i),idx_cy0(j)) &
+                + fact_fz0(k)*fact_cx1(i)*fact_cy0(j)*w_org(idx_fz0(k),idx_cx1(i),idx_cy0(j)) &
+                + fact_fz1(k)*fact_cx1(i)*fact_cy0(j)*w_org(idx_fz1(k),idx_cx1(i),idx_cy0(j)) &
+                + fact_fz0(k)*fact_cx0(i)*fact_cy1(j)*w_org(idx_fz0(k),idx_cx0(i),idx_cy1(j)) &
+                + fact_fz1(k)*fact_cx0(i)*fact_cy1(j)*w_org(idx_fz1(k),idx_cx0(i),idx_cy1(j)) &
+                + fact_fz0(k)*fact_cx1(i)*fact_cy1(j)*w_org(idx_fz0(k),idx_cx1(i),idx_cy1(j)) &
+                + fact_fz1(k)*fact_cx1(i)*fact_cy1(j)*w_org(idx_fz1(k),idx_cx1(i),idx_cy1(j))
+
+       U(k,i,j) = fact_cz0(k)*fact_fx0(i)*fact_cy0(j)*u_org(idx_cz0(k),idx_fx0(i),idx_cy0(j)) &
+                + fact_cz1(k)*fact_fx0(i)*fact_cy0(j)*u_org(idx_cz1(k),idx_fx0(i),idx_cy0(j)) &
+                + fact_cz0(k)*fact_fx1(i)*fact_cy0(j)*u_org(idx_cz0(k),idx_fx1(i),idx_cy0(j)) &
+                + fact_cz1(k)*fact_fx1(i)*fact_cy0(j)*u_org(idx_cz1(k),idx_fx1(i),idx_cy0(j)) &
+                + fact_cz0(k)*fact_fx0(i)*fact_cy1(j)*u_org(idx_cz0(k),idx_fx0(i),idx_cy1(j)) &
+                + fact_cz1(k)*fact_fx0(i)*fact_cy1(j)*u_org(idx_cz1(k),idx_fx0(i),idx_cy1(j)) &
+                + fact_cz0(k)*fact_fx1(i)*fact_cy1(j)*u_org(idx_cz0(k),idx_fx1(i),idx_cy1(j)) &
+                + fact_cz1(k)*fact_fx1(i)*fact_cy1(j)*u_org(idx_cz1(k),idx_fx1(i),idx_cy1(j))
+
+       V(k,i,j) = fact_cz0(k)*fact_cx0(i)*fact_fy0(j)*v_org(idx_cz0(k),idx_cx0(i),idx_fy0(j)) &
+                + fact_cz1(k)*fact_cx0(i)*fact_fy0(j)*v_org(idx_cz1(k),idx_cx0(i),idx_fy0(j)) &
+                + fact_cz0(k)*fact_cx1(i)*fact_fy0(j)*v_org(idx_cz0(k),idx_cx1(i),idx_fy0(j)) &
+                + fact_cz1(k)*fact_cx1(i)*fact_fy0(j)*v_org(idx_cz1(k),idx_cx1(i),idx_fy0(j)) &
+                + fact_cz0(k)*fact_cx0(i)*fact_fy1(j)*v_org(idx_cz0(k),idx_cx0(i),idx_fy1(j)) &
+                + fact_cz1(k)*fact_cx0(i)*fact_fy1(j)*v_org(idx_cz1(k),idx_cx0(i),idx_fy1(j)) &
+                + fact_cz0(k)*fact_cx1(i)*fact_fy1(j)*v_org(idx_cz0(k),idx_cx1(i),idx_fy1(j)) &
+                + fact_cz1(k)*fact_cx1(i)*fact_fy1(j)*v_org(idx_cz1(k),idx_cx1(i),idx_fy1(j))
+
+       POTT(k,i,j) = fact_cz0(k)*fact_cx0(i)*fact_cy0(j)*pott_org(idx_cz0(k),idx_cx0(i),idx_cy0(j)) &
+                   + fact_cz1(k)*fact_cx0(i)*fact_cy0(j)*pott_org(idx_cz1(k),idx_cx0(i),idx_cy0(j)) &
+                   + fact_cz0(k)*fact_cx1(i)*fact_cy0(j)*pott_org(idx_cz0(k),idx_cx1(i),idx_cy0(j)) &
+                   + fact_cz1(k)*fact_cx1(i)*fact_cy0(j)*pott_org(idx_cz1(k),idx_cx1(i),idx_cy0(j)) &
+                   + fact_cz0(k)*fact_cx0(i)*fact_cy1(j)*pott_org(idx_cz0(k),idx_cx0(i),idx_cy1(j)) &
+                   + fact_cz1(k)*fact_cx0(i)*fact_cy1(j)*pott_org(idx_cz1(k),idx_cx0(i),idx_cy1(j)) &
+                   + fact_cz0(k)*fact_cx1(i)*fact_cy1(j)*pott_org(idx_cz0(k),idx_cx1(i),idx_cy1(j)) &
+                   + fact_cz1(k)*fact_cx1(i)*fact_cy1(j)*pott_org(idx_cz1(k),idx_cx1(i),idx_cy1(j))
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = fact_cz0(k)*fact_cx0(i)*fact_cy0(j)*qtrc_org(idx_cz0(k),idx_cx0(i),idx_cy0(j),iq) &
+                         + fact_cz1(k)*fact_cx0(i)*fact_cy0(j)*qtrc_org(idx_cz1(k),idx_cx0(i),idx_cy0(j),iq) &
+                         + fact_cz0(k)*fact_cx1(i)*fact_cy0(j)*qtrc_org(idx_cz0(k),idx_cx1(i),idx_cy0(j),iq) &
+                         + fact_cz1(k)*fact_cx1(i)*fact_cy0(j)*qtrc_org(idx_cz1(k),idx_cx1(i),idx_cy0(j),iq) &
+                         + fact_cz0(k)*fact_cx0(i)*fact_cy1(j)*qtrc_org(idx_cz0(k),idx_cx0(i),idx_cy1(j),iq) &
+                         + fact_cz1(k)*fact_cx0(i)*fact_cy1(j)*qtrc_org(idx_cz1(k),idx_cx0(i),idx_cy1(j),iq) &
+                         + fact_cz0(k)*fact_cx1(i)*fact_cy1(j)*qtrc_org(idx_cz0(k),idx_cx1(i),idx_cy1(j),iq) &
+                         + fact_cz1(k)*fact_cx1(i)*fact_cy1(j)*qtrc_org(idx_cz1(k),idx_cx1(i),idx_cy1(j),iq)
+          enddo
+    enddo
+    enddo
+    enddo
+
+    deallocate( dens_org )
+    deallocate( momz_org )
+    deallocate( momx_org )
+    deallocate( momy_org )
+    deallocate( rhot_org )
+    deallocate( qtrc_org )
+
+    deallocate( w_org )
+    deallocate( u_org )
+    deallocate( v_org )
+    deallocate( pott_org )
+
+    deallocate( cz_org )
+    deallocate( fz_org )
+    deallocate( cx_org )
+    deallocate( fx_org )
+    deallocate( cy_org )
+    deallocate( fy_org )
+
+    if ( I_QV > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qv(k,i,j) = QTRC(k,i,j,I_QV)
+       end do
+       end do
+       end do
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qv(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
+    end if
+
+    if ( I_QC > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qc(k,i,j) = QTRC(k,i,j,I_QC)
+       end do
+       end do
+       end do
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qc(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
+    end if
+
+    ! make density & pressure profile in moist condition
+    call buildrho_fromKS( DENS    (:,:,:), & ! [INOUT]
+                          temp    (:,:,:), & ! [OUT]
+                          pres    (:,:,:), & ! [OUT]
+                          pott    (:,:,:), & ! [IN]
+                          qv      (:,:,:), & ! [IN]
+                          qc      (:,:,:)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.5_RP * W(k,i,j) * ( DENS(k,i,j) + DENS(k+1,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = 0.5_RP * U(k,i,j) * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = 0.5_RP * V(k,i,j) * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_interporation
+
+  subroutine interporation_fact( &
+       fact0, fact1, &
+       idx0, idx1,   &
+       x, x_org, nx, &
+       loop          )
+    implicit none
+
+    real(RP), intent(out) :: fact0
+    real(RP), intent(out) :: fact1
+    integer,  intent(out) :: idx0
+    integer,  intent(out) :: idx1
+    real(RP), intent(in)  :: x
+    integer,  intent(in)  :: nx
+    real(RP), intent(in)  :: x_org(nx)
+    logical,  intent(in)  :: loop
+
+    real(RP) :: xwork
+    integer :: i
+
+    if ( x < x_org(1) ) then
+       if ( loop ) then
+          xwork = x_org(1) - ( x_org(2) - x_org(1) )**2 / ( x_org(3) - x_org(2) )
+          fact0 = ( x_org(1) - x ) / ( x_org(1) - xwork )
+          fact1 = ( x - xwork )    / ( x_org(1) - xwork )
+          idx0 = nx
+          idx1 = 1
+       else
+          fact0 = ( x_org(2) - x ) / ( x_org(2) - x_org(1) )
+          fact1 = ( x - x_org(1) ) / ( x_org(2) - x_org(1) )
+          idx0 = 1
+          idx1 = 2
+       end if
+    else if ( x > x_org(nx) ) then
+       if ( loop ) then
+          xwork = x_org(nx) + ( x_org(nx) - x_org(nx-1) )**2 / ( x_org(nx-1) - x_org(nx-2) )
+          fact0 = ( xwork - x )     / ( xwork - x_org(nx) )
+          fact1 = ( x - x_org(nx) ) / ( xwork - x_org(nx) )
+          idx0 = nx
+          idx1 = 1
+       else
+          fact0 = ( x_org(nx) - x )   / ( x_org(nx) - x_org(nx-1) )
+          fact1 = ( x - x_org(nx-1) ) / ( x_org(nx) - x_org(nx-1) )
+          idx0 = nx-1
+          idx1 = nx
+       end if
+    else
+       do i = 2, nx
+          if ( x <= x_org(i) ) then
+             fact0 = ( x_org(i) - x )   / ( x_org(i) - x_org(i-1) )
+             fact1 = ( x - x_org(i-1) ) / ( x_org(i) - x_org(i-1) )
+             idx0 = i-1
+             idx1 = i
+             exit
+          end if
+       end do
+    end if
+
+  end subroutine interporation_fact
 
 end module mod_mkinit

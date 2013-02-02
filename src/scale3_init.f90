@@ -72,6 +72,7 @@ program scaleinit
      I_DYCOMS2_RF02,  &
      I_DYCOMS2_RF01_hbinw,&
      I_WARMBUBBLE_hbinw,  &
+     I_INTERPORATION,     &
      MKINIT_setup,        &
      MKINIT_planestate,   &
      MKINIT_tracerbubble, &
@@ -84,7 +85,8 @@ program scaleinit
      MKINIT_DYCOMS2_RF01, &
      MKINIT_DYCOMS2_RF02, &
      MKINIT_DYCOMS2_RF01_hbinw, &
-     MKINIT_WARMBUBBLE_hbinw
+     MKINIT_WARMBUBBLE_hbinw, &
+     MKINIT_INTERPORATION
   use dc_log, only: &
        LogInit
   use gtool_file, only: &
@@ -180,6 +182,8 @@ program scaleinit
      call MKINIT_DYCOMS2_RF01_hbinw
   case(I_WARMBUBBLE_hbinw)
      call MKINIT_WARMBUBBLE_hbinw
+  case(I_INTERPORATION)
+     call MKINIT_INTERPORATION
   case default
      write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
      call PRC_MPIstop
