@@ -115,6 +115,7 @@ contains
        dim_type,    & ! (in)
        master,      & ! (in)
        myrank,      & ! (in)
+       rankidx,     & ! (in)
        single,      & ! (in) optional
        time_units   & ! (in) optional
        )
@@ -132,6 +133,7 @@ contains
     integer,          intent( in)           :: dim_type(:)
     integer,          intent( in)           :: master
     integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankidx(:)
     character(LEN=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
 
@@ -139,6 +141,10 @@ contains
     logical :: single_ = .false.
     logical :: existed
     integer :: error
+
+    integer :: rankidx_dim
+
+    intrinsic size
 
     if ( present(time_units) ) then
        time_units_ = time_units
@@ -164,9 +170,10 @@ contains
     if ( existed ) return
 
     !--- append package header to the file
-    call file_set_global_attributes( fid,                 & ! (in)
-         title, source, institution, time_units_, myrank, & ! (in)
-         error                                            ) ! (out)
+    call file_set_global_attributes( fid,         & ! (in)
+         title, source, institution, time_units_, & ! (in)
+         myrank, rankidx, size(rankidx),          & ! (in)
+         error                                    ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set global attributes')
     end if
@@ -562,10 +569,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -643,10 +650,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -724,10 +731,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -805,10 +812,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -886,10 +893,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 
@@ -967,10 +974,10 @@ contains
              call Log('I', 'xxx [INPUT]/[File] Value is set to 0.')
              var(:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information')
+             call Log('E', 'xxx failed to get data information :'//trim(varname))
           end if
        else
-          call Log('E', 'xxx failed to get data information')
+          call Log('E', 'xxx failed to get data information :'//trim(varname))
        end if
     end if
 

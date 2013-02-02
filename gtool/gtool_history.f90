@@ -142,6 +142,9 @@ module gtool_history
   integer,                    private, allocatable, save :: History_dim_type(:)
 
   real(DP),                   private, parameter :: eps = 1.D-10 !> epsilon for timesec
+  integer,                    private,              save :: History_master
+  integer,                    private,              save :: History_myrank
+  integer,                    private, allocatable, save :: History_rankidx(:)
 
   character(LEN=LOG_LMSG),    private :: message
 
@@ -149,6 +152,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine HistoryInit( &
        title, source, institution,                         & ! (in)
+       master, myrank, rankidx,                            & ! (in)
        dim_name, dim_size, dim_desc, dim_units,            & ! (in)
        dim_type,                                           & ! (in) optional
        default_basename,                                   & ! (in) optional
@@ -167,6 +171,9 @@ contains
     character(len=*), intent(in)           :: title
     character(len=*), intent(in)           :: source
     character(len=*), intent(in)           :: institution
+    integer,          intent(in)           :: master
+    integer,          intent(in)           :: myrank
+    integer,          intent(in)           :: rankidx(:)
     character(len=*), intent(in)           :: dim_name(:)
     integer,          intent(in)           :: dim_size(:)
     character(len=*), intent(in)           :: dim_desc(:)
@@ -395,6 +402,11 @@ contains
        if ( fid_conf > 0 ) close(fid_conf)
     end if
 
+    History_master = master
+    History_myrank = myrank
+    allocate( History_rankidx(size(rankidx)) )
+    History_rankidx(:) = rankidx(:)
+
     return
   end subroutine HistoryInit
 
@@ -404,8 +416,6 @@ contains
       dims,    &
       desc,    &
       units,   &
-      master,  &
-      myrank,  &
       options, &
       itemid,  &
       existed  )
@@ -419,8 +429,6 @@ contains
     character(len=*), intent( in) :: dims(:)
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
-    integer,          intent( in) :: master
-    integer,          intent( in) :: myrank
     character(len=*), intent( in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,          intent(out), optional :: itemid
     logical,          intent(out), optional :: existed
@@ -460,7 +468,7 @@ contains
                   HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION,   & ! (in)
                   History_dim_name, History_dim_size, History_dim_desc, & ! (in)
                   History_dim_units, History_dim_type,                  & ! (in)
-                  master, myrank,                                       & ! (in)
+                  History_master, History_myrank, History_rankidx,      & ! (in)
                   time_units = HISTORY_TIME_UNITS                       & ! (in)
                   )
 
@@ -1345,7 +1353,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1357,14 +1364,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return
@@ -1374,7 +1380,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1386,14 +1391,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return
@@ -1403,7 +1407,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1415,14 +1418,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return
@@ -1432,7 +1434,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1444,14 +1445,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return
@@ -1461,7 +1461,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1473,14 +1472,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return
@@ -1490,7 +1488,6 @@ contains
        basename, &
        varname, &
        step, &
-       myrank, &
        allow_missing, &
        single &
        )
@@ -1502,14 +1499,13 @@ contains
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: varname
     integer,          intent( in) :: step
-    integer,          intent( in) :: myrank
     logical,          intent( in), optional :: allow_missing
     logical,          intent( in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                    & ! (out)
-         basename, varname, step, myrank, & ! (in)
-         allow_missing, single            & ! (in)
+    call FileRead(var,                            & ! (out)
+         basename, varname, step, History_myrank, & ! (in)
+         allow_missing, single                    & ! (in)
          )
 
     return

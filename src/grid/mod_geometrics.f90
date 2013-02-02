@@ -124,7 +124,8 @@ contains
   subroutine GEOMETRICS_write
     use mod_process, only: &
        PRC_master, &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_2Drank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -152,12 +153,16 @@ contains
     integer, parameter :: I_LAT  = 2
     integer, parameter :: I_AREA = 3
     integer, parameter :: I_VOL  = 4
+
+    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output geometrics file ***'
 
     bname = trim(GEOMETRICS_OUT_BASENAME)
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
     call FileCreate( fid,                                       & ! (out)
          bname,                                                 & ! (in)
          GEOMETRICS_OUT_TITLE,                                  & ! (in)
@@ -165,7 +170,7 @@ contains
          GEOMETRICS_OUT_INSTITUTE,                              & ! (in)
          (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
          (/'m','m','m'/), (/File_REAL4,File_REAL4,File_REAL4/), & ! (in)
-         PRC_master, PRC_myrank                                 ) ! (in)
+         PRC_master, PRC_myrank, rankidx                        ) ! (in)
 
     call FileAddVariable( vid(I_LON),             & ! (out)
          fid, 'lon', 'Longitude', 'degrees_east', & ! (in)

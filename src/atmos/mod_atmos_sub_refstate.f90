@@ -174,7 +174,8 @@ contains
   subroutine ATMOS_REFSTATE_write
     use mod_process, only: &
        PRC_myrank, &
-       PRC_master
+       PRC_master, &
+       PRC_2Drank
     use gtool_file_h, only: &
        File_HMID,  &
        File_REAL4, &
@@ -194,6 +195,8 @@ contains
     character(len=IO_FILECHR) :: bname
     integer :: dtype
     integer :: fid, vid_dens, vid_pott
+
+    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -208,15 +211,17 @@ contains
 
     if ( PRC_myrank == PRC_master ) then
        write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_OUT_BASENAME)
-       call FileCreate( fid,              & ! (out)
-            bname,                        & ! (in)
-            ATMOS_REFSTATE_OUT_TITLE,     & ! (in)
-            ATMOS_REFSTATE_OUT_SOURCE,    & ! (in)
-            ATMOS_REFSTATE_OUT_INSTITUTE, & ! (in)
-            (/'z'/), (/KMAX/), (/'Z'/),   & ! (in)
-            (/'m'/), (/File_REAL4/),      & ! (in)
-            PRC_master, PRC_myrank,       & ! (in)
-            single = .true.               ) ! (in)
+       rankidx(1) = PRC_2Drank(PRC_myrank,1)
+       rankidx(2) = PRC_2Drank(PRC_myrank,2)
+       call FileCreate( fid,                 & ! (out)
+            bname,                           & ! (in)
+            ATMOS_REFSTATE_OUT_TITLE,        & ! (in)
+            ATMOS_REFSTATE_OUT_SOURCE,       & ! (in)
+            ATMOS_REFSTATE_OUT_INSTITUTE,    & ! (in)
+            (/'z'/), (/KMAX/), (/'Z'/),      & ! (in)
+            (/'m'/), (/File_REAL4/),         & ! (in)
+            PRC_master, PRC_myrank, rankidx, & ! (in)
+            single = .true.                  ) ! (in)
 
        call FileAddVariable( vid_dens,                      & ! (out)
             fid, 'DENS', 'Reference state of rho', 'kg/m3', & ! (in)

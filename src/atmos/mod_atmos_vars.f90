@@ -711,7 +711,8 @@ contains
   subroutine ATMOS_vars_restart_write
     use mod_process, only: &
        PRC_master, &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_2Drank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -742,7 +743,15 @@ contains
        GRID_CBFY, &
        GRID_FBFZ, &
        GRID_FBFX, &
-       GRID_FBFY
+       GRID_FBFY, &
+       GRID_CXG, &
+       GRID_CYG, &
+       GRID_FXG, &
+       GRID_FYG, &
+       GRID_CBFXG, &
+       GRID_CBFYG, &
+       GRID_FBFXG, &
+       GRID_FBFYG
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -753,6 +762,8 @@ contains
     integer :: dtype
     integer :: iq
     integer :: n
+
+    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -771,6 +782,8 @@ contains
        dtype = File_REAL4
     end if
 
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
     call FileCreate( fid,                                       & ! (out)
          bname,                                                 & ! (in)
          ATMOS_RESTART_OUT_TITLE,                               & ! (in)
@@ -778,7 +791,7 @@ contains
          ATMOS_RESTART_OUT_INSTITUTE,                           & ! (in)
          (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
          (/'m','m','m'/), (/dtype,dtype,dtype/),                & ! (in)
-         PRC_master, PRC_myrank                                 ) ! (in)
+         PRC_master, PRC_myrank, rankidx                        ) ! (in)
 
     call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
     call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
@@ -802,12 +815,22 @@ contains
     call FilePutAdditionalAxis(fid, 'FDX', 'Grid distance X', 'm', 'FDX', dtype, GRID_FDX)
     call FilePutAdditionalAxis(fid, 'FDY', 'Grid distance Y', 'm', 'FDY', dtype, GRID_FDY)
 
-    call FilePutAdditionalAxis(fid, 'CBFZ', 'Boundary factor Center Z', '', 'CZ', dtype, GRID_CBFZ)
-    call FilePutAdditionalAxis(fid, 'CBFX', 'Boundary factor Center X', '', 'CX', dtype, GRID_CBFX)
-    call FilePutAdditionalAxis(fid, 'CBFY', 'Boundary factor Center Y', '', 'CY', dtype, GRID_CBFY)
-    call FilePutAdditionalAxis(fid, 'FBFZ', 'Boundary factor Face Z', '', 'CZ', dtype, GRID_FBFZ)
-    call FilePutAdditionalAxis(fid, 'FBFX', 'Boundary factor Face X', '', 'CX', dtype, GRID_FBFX)
-    call FilePutAdditionalAxis(fid, 'FBFY', 'Boundary factor Face Y', '', 'CY', dtype, GRID_FBFY)
+    call FilePutAdditionalAxis(fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ)
+    call FilePutAdditionalAxis(fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX)
+    call FilePutAdditionalAxis(fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY)
+    call FilePutAdditionalAxis(fid, 'FBFZ', 'Boundary factor Face Z', '1', 'CZ', dtype, GRID_FBFZ)
+    call FilePutAdditionalAxis(fid, 'FBFX', 'Boundary factor Face X', '1', 'CX', dtype, GRID_FBFX)
+    call FilePutAdditionalAxis(fid, 'FBFY', 'Boundary factor Face Y', '1', 'CY', dtype, GRID_FBFY)
+
+    call FilePutAdditionalAxis(fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG)
+    call FilePutAdditionalAxis(fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG)
+    call FilePutAdditionalAxis(fid, 'FXG', 'Grid Face Position X (global)', 'm', 'FXG', dtype, GRID_FXG)
+    call FilePutAdditionalAxis(fid, 'FYG', 'Grid Face Position Y (global)', 'm', 'FYG', dtype, GRID_FYG)
+
+    call FilePutAdditionalAxis(fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG)
+    call FilePutAdditionalAxis(fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG)
+    call FilePutAdditionalAxis(fid, 'FBFXG', 'Boundary factor Face X (global)', '1', 'CXG', dtype, GRID_FBFXG)
+    call FilePutAdditionalAxis(fid, 'FBFYG', 'Boundary factor Face Y (global)', '1', 'CYG', dtype, GRID_FBFYG)
 
     call FileAddVariable( ap_vid(I_DENS),                        & ! (out)
          fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
