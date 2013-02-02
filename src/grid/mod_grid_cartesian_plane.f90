@@ -52,36 +52,48 @@ module mod_grid
   integer, public, save :: GRID_IJA           ! # of x*y
   integer, public, save :: GRID_IJS, GRID_IJE ! start/end of inner domain
 
-  real(RP), public, allocatable, save :: GRID_CZ(:)      ! center coordinate [m]: z, local=global
-  real(RP), public, allocatable, save :: GRID_CX(:)      ! center coordinate [m]: x, local
-  real(RP), public, allocatable, save :: GRID_CY(:)      ! center coordinate [m]: y, local
-  real(RP), public, allocatable, save :: GRID_CDZ(:)     ! z-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_CDX(:)     ! x-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_CDY(:)     ! y-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_RCDZ(:)    ! reciprocal of center-dz
-  real(RP), public, allocatable, save :: GRID_RCDX(:)    ! reciprocal of center-dx
-  real(RP), public, allocatable, save :: GRID_RCDY(:)    ! reciprocal of center-dy
+  real(RP), public, save :: GRID_CZ(KA)      ! center coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_CX(IA)      ! center coordinate [m]: x, local
+  real(RP), public, save :: GRID_CY(JA)      ! center coordinate [m]: y, local
+  real(RP), public, save :: GRID_CDZ(KA)     ! z-length of control volume [m]
+  real(RP), public, save :: GRID_CDX(IA)     ! x-length of control volume [m]
+  real(RP), public, save :: GRID_CDY(JA)     ! y-length of control volume [m]
+  real(RP), public, save :: GRID_RCDZ(KA)    ! reciprocal of center-dz
+  real(RP), public, save :: GRID_RCDX(IA)    ! reciprocal of center-dx
+  real(RP), public, save :: GRID_RCDY(JA)    ! reciprocal of center-dy
 
-  real(RP), public, allocatable, save :: GRID_FZ(:)      ! face   coordinate [m]: z, local=global
-  real(RP), public, allocatable, save :: GRID_FX(:)      ! face   coordinate [m]: x, local
-  real(RP), public, allocatable, save :: GRID_FY(:)      ! face   coordinate [m]: y, local
-  real(RP), public, allocatable, save :: GRID_FDZ(:)     ! z-length of grid(k)-to-grid(k-1) [m]
-  real(RP), public, allocatable, save :: GRID_FDX(:)     ! x-length of grid(i)-to-grid(i-1) [m]
-  real(RP), public, allocatable, save :: GRID_FDY(:)     ! y-length of grid(j)-to-grid(j-1) [m]
-  real(RP), public, allocatable, save :: GRID_RFDZ(:)    ! reciprocal of face-dz
-  real(RP), public, allocatable, save :: GRID_RFDX(:)    ! reciprocal of face-dx
-  real(RP), public, allocatable, save :: GRID_RFDY(:)    ! reciprocal of face-dy
+  real(RP), public, save :: GRID_FZ(0:KA)    ! face   coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_FX(0:IA)    ! face   coordinate [m]: x, local
+  real(RP), public, save :: GRID_FY(0:JA)    ! face   coordinate [m]: y, local
+  real(RP), public, save :: GRID_FDZ(KA-1)   ! z-length of grid(k)-to-grid(k-1) [m]
+  real(RP), public, save :: GRID_FDX(IA-1)   ! x-length of grid(i)-to-grid(i-1) [m]
+  real(RP), public, save :: GRID_FDY(JA-1)   ! y-length of grid(j)-to-grid(j-1) [m]
+  real(RP), public, save :: GRID_RFDZ(KA-1)  ! reciprocal of face-dz
+  real(RP), public, save :: GRID_RFDX(IA-1)  ! reciprocal of face-dx
+  real(RP), public, save :: GRID_RFDY(JA-1)  ! reciprocal of face-dy
 
-  logical, public, allocatable, save :: GRID_CZ_mask(:) ! main/buffer region mask: z
-  logical, public, allocatable, save :: GRID_CX_mask(:) ! main/buffer region mask: x
-  logical, public, allocatable, save :: GRID_CY_mask(:) ! main/buffer region mask: y
+  logical,  public, save :: GRID_CZ_mask(KA) ! main/buffer region mask: z
+  logical,  public, save :: GRID_CX_mask(IA) ! main/buffer region mask: x
+  logical,  public, save :: GRID_CY_mask(JA) ! main/buffer region mask: y
 
-  real(RP), public, allocatable, save :: GRID_CBFZ(:)    ! center buffer factor [0-1]: z
-  real(RP), public, allocatable, save :: GRID_CBFX(:)    ! center buffer factor [0-1]: x
-  real(RP), public, allocatable, save :: GRID_CBFY(:)    ! center buffer factor [0-1]: y
-  real(RP), public, allocatable, save :: GRID_FBFZ(:)    ! face   buffer factor [0-1]: z
-  real(RP), public, allocatable, save :: GRID_FBFX(:)    ! face   buffer factor [0-1]: x
-  real(RP), public, allocatable, save :: GRID_FBFY(:)    ! face   buffer factor [0-1]: y
+  real(RP), public, save :: GRID_CBFZ(KA)    ! center buffer factor [0-1]: z
+  real(RP), public, save :: GRID_CBFX(IA)    ! center buffer factor [0-1]: x
+  real(RP), public, save :: GRID_CBFY(JA)    ! center buffer factor [0-1]: y
+  real(RP), public, save :: GRID_FBFZ(KA)    ! face   buffer factor [0-1]: z
+  real(RP), public, save :: GRID_FBFX(IA)    ! face   buffer factor [0-1]: x
+  real(RP), public, save :: GRID_FBFY(JA)    ! face   buffer factor [0-1]: y
+
+  real(RP), public, allocatable :: GRID_FXG(:)   ! face   coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_FYG(:)   ! face   coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_CXG(:)   ! center coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_CYG(:)   ! center coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_FBFXG(:) ! face   buffer factor [0-1]: x, global
+  real(RP), public, allocatable :: GRID_FBFYG(:) ! face   buffer factor [0-1]: y, global
+  real(RP), public, allocatable :: GRID_CBFXG(:) ! center buffer factor [0-1]: x, global
+  real(RP), public, allocatable :: GRID_CBFYG(:) ! center buffer factor [0-1]: y, global
+  logical,  public, allocatable :: GRID_CXG_mask(:)
+  logical,  public, allocatable :: GRID_CYG_mask(:)
+
 
   !-----------------------------------------------------------------------------
   !
@@ -183,37 +195,27 @@ contains
   !> Allocate Arrays
   !-----------------------------------------------------------------------------
   subroutine GRID_allocate
+    use mod_process, only: &
+       PRC_NUM_X,   &
+       PRC_NUM_Y
+    implicit none
 
-    allocate( GRID_FZ  (0:KA) )
-    allocate( GRID_FX  (0:IA) )
-    allocate( GRID_FY  (0:JA) )
-    allocate( GRID_FDZ (KA-1) )
-    allocate( GRID_FDX (IA-1) )
-    allocate( GRID_FDY (JA-1) )
-    allocate( GRID_RFDZ(KA-1) )
-    allocate( GRID_RFDX(IA-1) )
-    allocate( GRID_RFDY(JA-1) )
+    integer :: IAG, JAG
 
-    allocate( GRID_CZ  (KA) )
-    allocate( GRID_CX  (IA) )
-    allocate( GRID_CY  (JA) )
-    allocate( GRID_CDZ (KA) )
-    allocate( GRID_CDX (IA) )
-    allocate( GRID_CDY (JA) )
-    allocate( GRID_RCDZ(KA) )
-    allocate( GRID_RCDX(IA) )
-    allocate( GRID_RCDY(JA) )
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
-    allocate( GRID_CZ_mask(KA) )
-    allocate( GRID_CX_mask(IA) )
-    allocate( GRID_CY_mask(JA) )
-
-    allocate( GRID_CBFZ(KA) )
-    allocate( GRID_CBFX(IA) )
-    allocate( GRID_CBFY(JA) )
-    allocate( GRID_FBFZ(KA) )
-    allocate( GRID_FBFX(IA) )
-    allocate( GRID_FBFY(JA) )
+    allocate( GRID_FXG     (0:IAG) )
+    allocate( GRID_FYG     (0:JAG) )
+    allocate( GRID_CXG     (  IAG) )
+    allocate( GRID_CYG     (  JAG) )
+    allocate( GRID_CBFXG   (  IAG) )
+    allocate( GRID_CBFYG   (  JAG) )
+    allocate( GRID_FBFXG   (  IAG) )
+    allocate( GRID_FBFYG   (  JAG) )
+    allocate( GRID_CXG_mask(  IAG) )
+    allocate( GRID_CYG_mask(  JAG) )
 
   end subroutine GRID_allocate
 
@@ -307,17 +309,6 @@ contains
     integer :: IAG ! # of x whole cells (global, with HALO)
     integer :: JAG ! # of y whole cells (global, with HALO)
 
-    real(RP), allocatable :: GRID_FXG(:)      ! face   coordinate [m]: x, global
-    real(RP), allocatable :: GRID_FYG(:)      ! face   coordinate [m]: y, global
-    real(RP), allocatable :: GRID_CXG(:)      ! center coordinate [m]: x, global
-    real(RP), allocatable :: GRID_CYG(:)      ! center coordinate [m]: y, global
-    real(RP), allocatable :: GRID_FBFXG(:)    ! face   buffer factor [0-1]: x, global
-    real(RP), allocatable :: GRID_FBFYG(:)    ! face   buffer factor [0-1]: y, global
-    real(RP), allocatable :: GRID_CBFXG(:)    ! center buffer factor [0-1]: x, global
-    real(RP), allocatable :: GRID_CBFYG(:)    ! center buffer factor [0-1]: y, global
-    logical, allocatable :: GRID_CXG_mask(:)
-    logical, allocatable :: GRID_CYG_mask(:)
-
     real(RP), allocatable :: buffz(:), buffx(:), buffy(:)
     real(RP)              :: bufftotz, bufftotx, bufftoty
 
@@ -332,17 +323,6 @@ contains
     ! array size (global domain)
     IAG = IHALO + IMAX*PRC_NUM_X + IHALO
     JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
-
-    allocate( GRID_FXG     (0:IAG) )
-    allocate( GRID_FYG     (0:JAG) )
-    allocate( GRID_CXG     (  IAG) )
-    allocate( GRID_CYG     (  JAG) )
-    allocate( GRID_CBFXG   (  IAG) )
-    allocate( GRID_CBFYG   (  JAG) )
-    allocate( GRID_FBFXG   (  IAG) )
-    allocate( GRID_FBFYG   (  JAG) )
-    allocate( GRID_CXG_mask(  IAG) )
-    allocate( GRID_CYG_mask(  JAG) )
 
     allocate( buffx(0:IAG) )
     allocate( buffy(0:JAG) )
@@ -722,17 +702,6 @@ contains
 !    j = JA
 !    if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j), GRID_CY_mask(j)
 !    if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j)
-
-    deallocate( GRID_FXG      )
-    deallocate( GRID_FYG      )
-    deallocate( GRID_CXG      )
-    deallocate( GRID_CYG      )
-    deallocate( GRID_FBFXG    )
-    deallocate( GRID_FBFYG    )
-    deallocate( GRID_CBFXG    )
-    deallocate( GRID_CBFYG    )
-    deallocate( GRID_CXG_mask )
-    deallocate( GRID_CYG_mask )
 
     return
   end subroutine GRID_generate

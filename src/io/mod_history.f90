@@ -495,7 +495,15 @@ contains
          GRID_CBFY, &
          GRID_FBFZ, &
          GRID_FBFX, &
-         GRID_FBFY
+         GRID_FBFY, &
+         GRID_CXG, &
+         GRID_CYG, &
+         GRID_FXG, &
+         GRID_FYG, &
+         GRID_CBFXG, &
+         GRID_CBFYG, &
+         GRID_FBFXG, &
+         GRID_FBFYG
     use gtool_history, only : &
          HistoryPutAxis
     implicit none
@@ -530,6 +538,16 @@ contains
     call HistoryPutAdditionalAxis('FBFZ', 'Boundary factor Face Z', '1', 'CZ', GRID_FBFZ)
     call HistoryPutAdditionalAxis('FBFX', 'Boundary factor Face X', '1', 'CX', GRID_FBFX)
     call HistoryPutAdditionalAxis('FBFY', 'Boundary factor Face Y', '1', 'CY', GRID_FBFY)
+
+    call HistoryPutAdditionalAxis('CXG', 'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
+    call HistoryPutAdditionalAxis('CYG', 'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
+    call HistoryPutAdditionalAxis('FXG', 'Grid Face Position X (global)', 'm', 'FXG', GRID_FXG)
+    call HistoryPutAdditionalAxis('FYG', 'Grid Face Position Y (global)', 'm', 'FYG', GRID_FYG)
+
+    call HistoryPutAdditionalAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
+    call HistoryPutAdditionalAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
+    call HistoryPutAdditionalAxis('FBFXG', 'Boundary factor Face X (global)', '1', 'CXG', GRID_FBFXG)
+    call HistoryPutAdditionalAxis('FBFYG', 'Boundary factor Face Y (global)', '1', 'CYG', GRID_FBFYG)
 
     call TIME_rapend  ('FILE O')
 
