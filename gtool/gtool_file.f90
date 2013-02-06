@@ -139,7 +139,7 @@ contains
     logical,          intent( in), optional :: single
 
     character(len=File_HSHORT) :: time_units_
-    logical :: single_ = .false.
+    logical :: single_
     logical :: existed
     integer :: error
 
@@ -158,6 +158,8 @@ contains
     if ( present(single) ) then
        if ( single .and. (myrank .ne. master) ) return
        single_ = single
+    else
+       single_ = .false.
     endif
 
     call FileGetfid(  &
