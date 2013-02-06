@@ -186,8 +186,8 @@ contains
          (/'z','x','y'/), File_REAL8              ) ! (in)
 
     call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
-    call FilePutAxis(fid, 'x', GRID_CX(KS:KE))
-    call FilePutAxis(fid, 'y', GRID_CY(KS:KE))
+    call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
+    call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
 
     sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lon(1,IS:IE,JS:JE)
     call FileWrite( vid(I_LON), sfc(1,:,:), NOWSEC, NOWSEC )
