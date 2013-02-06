@@ -230,7 +230,7 @@ contains
             fid, 'PT'  , 'Reference state of theta', 'K',   & ! (in)
             (/'z'/), File_REAL8                             ) ! (in)
 
-       call FilePutAxis(fid, 'z', GRID_CZ(:))
+       call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
 
        call FileWrite( vid_dens, ATMOS_REFSTATE_dens(KS:KE), 0.0_DP, 0.0_DP )
        call FileWrite( vid_pott, ATMOS_REFSTATE_pott(KS:KE), 0.0_DP, 0.0_DP )
