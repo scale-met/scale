@@ -2429,7 +2429,7 @@ contains
     real(RP), save :: qke_min = 0.03_RP ! sigma=0.1[m/s], 09/08/18 T.Mitsui
     real(RP), save :: tem_ccn_low=233.150_RP  ! = -40 degC  ! [Add] 10/08/03 T.Mitsui
     real(RP), save :: tem_in_low =173.150_RP  ! = -100 degC ! [Add] 10/08/03 T.Mitsui
-    logical, save :: nucl_twomey = .true.
+    logical, save :: nucl_twomey = .false.
     !
     namelist /nm_mp_ndw6_nucleation/ &
          in_max,                     & !
