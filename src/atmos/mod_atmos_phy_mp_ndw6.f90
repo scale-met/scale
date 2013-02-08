@@ -2430,6 +2430,7 @@ contains
     real(RP), save :: tem_ccn_low=233.150_RP  ! = -40 degC  ! [Add] 10/08/03 T.Mitsui
     real(RP), save :: tem_in_low =173.150_RP  ! = -100 degC ! [Add] 10/08/03 T.Mitsui
     logical, save :: nucl_twomey = .false.
+    logical, save :: inucl_w     = .false.
     !
     namelist /nm_mp_ndw6_nucleation/ &
          in_max,                     & !
@@ -2439,7 +2440,7 @@ contains
          tem_ccn_low,                & ! [Add] 10/08/03 T.Mitsui
          tem_in_low,                 & ! [Add] 10/08/03 T.Mitsui
          ssw_max, ssi_max,           &
-         nucl_twomey                   ! [Add] 13/01/30 Y.Sato
+         nucl_twomey, inucl_w        ! [Add] 13/01/30 Y.Sato
     !
 !    real(RP) :: c_ccn_map(1,IA,JA)   ! c_ccn horizontal distribution
 !    real(RP) :: kappa_map(1,IA,JA)   ! kappa horizontal distribution
@@ -2663,7 +2664,11 @@ contains
                (NI(k,i,j)  < in_max     ) .and. &
                (wssi      >= eps       ) )then   !
 !             PNIccn(k,i,j) = min(dni_max, c_in_map(1,i,j)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
-             PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+             if( inucl_w ) then
+              PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+             else 
+              PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP)))
+             endif 
              PLIccn(k,i,j) = min(dli_max, PNIccn(k,i,j)*xi_ccn )
              ! only for output
 !             dni_ratio(k,i,j) = dssidt_rad(k,i,j)/( w_dssidz(k,i,j)+dssidt_rad(k,i,j) )
