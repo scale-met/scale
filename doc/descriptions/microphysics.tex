@@ -10,7 +10,45 @@
  The SCALE-LES has three types of cloud microphysics models. We will show description of these models below.
 
 \subsection{Kessler Parameterization}
-{\Huge TBD}
+An one-moment bulk microphysical scheme, which treats only warm cloud (cloud and rain), is implemented in SCALE3. This scehem predicts mixing ratio of cloud ($Q_{cloud}$) and rain ($Q_{rain}$). Cloud microphysical processes treated in this scheme is saturation adjustment (corresponding to nucleatioin, evaporation, and condensation of cloud), evaporation, auto-conversion, accretion, and sedimentation. The tendency of $Q_{cloud}$, $Q_{rain}$, and $Q_{v}$ (vapor mixing ratio) is given as
+
+\begin{eqnarray}
+\frac{\partial Q_{cloud}}{\partial t}&=&dQ|_{sat}-dQ|_{auto}-dQ|_{acc}\\
+\frac{\partial Q_{rain}}{\partial t}&=&dQ|_{auto}+dQ|_{acc}-dQ|_{evap}-F_{Q_{r}}|_{sed}\\
+\frac{\partial Q_{v}}{\partial t}&=&dQ|_{evap}-dQ|_{sat}
+\end{eqnarray}
+
+where $dQ|_{sat}$, $dQ|_{auto}$, $dQ|_{acc}$, and $dQ|_{evap}$ represents tendency of mixing ratio by saturation adjustment, auto-conversion, accretion, and evaporation, respectively. $F_{Q_{r}}|_{sed}$ represents flux of $Q_{r}$ by sedimentation.\\ $dQ|_{auto}$, $dQ|_{acc}$, and $dQ|_{evap}$ are given as
+
+\begin{eqnarray}
+dQ_{auto}&=&\left\{
+\begin{array}{ll}
+Q_{cloud}*10^{-3} & (Q_{cloud}>10^{-3})\\
+0 & (else)\\
+\end{array}\right.\\
+dQ_{acc}&=&2.2\times Q_{cloud}\times Q_{rain}^{0.875}\\
+dQ_{evap}&=&\left\{
+\begin{array}{ll}
+f_{vent} \frac{q_{s}-Q_{cloud}}{q_{s}\rho}\frac{(\rho*Q_{rain})^{0.525}}{5.4\times 10^{5}+\frac{2.55\times 10^{8}}{pq_{s}}} & ( q_{s} > Q_{cloud})\\
+0 & (else)\\
+\end{array} \right.
+\end{eqnarray}
+
+where $f_{vent}$ is ventiration factor ($f_{vent}=1.6+124.9(\rho Q_{rain})^{0.2046}$), and unit of $dQ_{***}$ is [kg/kg/s]. $p$, $q_{s}$, and $\rho$ is pressure, saturation vapor mixing ratio, and total density.\\
+The $dQ|_{sat}$ is given as
+
+\begin{eqnarray}
+dQ|_{sat}=Q_{v}-q_{s}.
+\end{eqnarray}
+
+Terminal velocity of cloud ($V_{t,c}$) and rain ($V_{t,r}$) is given as
+
+\begin{eqnarray}
+V_{t,c}&=&0\\
+V_{t,r}&=&36.34(\rho Q_{rain})^{0.1364} [m/s]
+\end{eqnarray} 
+
+
 
 \subsection{Double-Moment Bulk of Seiki (2011)}
 {\Huge TBD}
