@@ -105,6 +105,8 @@ module mod_grid
   !
   character(len=IO_FILECHR), private :: GRID_IN_BASENAME  = ''
   character(len=IO_FILECHR), private :: GRID_OUT_BASENAME = ''
+  real(RP)                 , private :: GRID_OFFSET_X = 0.0_RP
+  real(RP)                 , private :: GRID_OFFSET_Y = 0.0_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -125,7 +127,9 @@ contains
 
     namelist / PARAM_GRID / &
        GRID_IN_BASENAME,  &
-       GRID_OUT_BASENAME
+       GRID_OUT_BASENAME, &
+       GRID_OFFSET_X, &
+       GRID_OFFSET_Y
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -347,7 +351,7 @@ contains
     endif
 
     ! horizontal coordinate (global domaim)
-    GRID_FXG(IHALO) = 0.0_RP
+    GRID_FXG(IHALO) = GRID_OFFSET_X
     do i = IHALO-1, 0, -1
        GRID_FXG(i) = GRID_FXG(i+1) - buffx(ibuff)
     enddo
@@ -395,8 +399,8 @@ contains
 
     if ( ibuff > 0 ) then
        do i = IHALO+1, IHALO+ibuff
-          GRID_CBFXG(i) = (bufftotx-GRID_CXG(i)) / bufftotx
-          GRID_FBFXG(i) = (bufftotx-GRID_FXG(i)) / bufftotx
+          GRID_CBFXG(i) = (bufftotx+GRID_FXG(IHALO)-GRID_CXG(i)) / bufftotx
+          GRID_FBFXG(i) = (bufftotx+GRID_FXG(IHALO)-GRID_FXG(i)) / bufftotx
        enddo
 
        do i = IHALO+ibuff+imain+1, IHALO+ibuff+imain+ibuff
@@ -433,7 +437,7 @@ contains
     endif
 
     ! horizontal coordinate (global domaim)
-    GRID_FYG(JHALO) = 0.0_RP
+    GRID_FYG(JHALO) = GRID_OFFSET_Y
     do j = JHALO-1, 0, -1
        GRID_FYG(j) = GRID_FYG(j+1) - buffy(jbuff)
     enddo
@@ -481,8 +485,8 @@ contains
 
     if ( jbuff > 0 ) then
        do j = JHALO+1, JHALO+jbuff
-          GRID_CBFYG(j) = (bufftoty-GRID_CYG(j)) / bufftoty
-          GRID_FBFYG(j) = (bufftoty-GRID_FYG(j)) / bufftoty
+          GRID_CBFYG(j) = (bufftoty+GRID_FYG(JHALO)-GRID_CYG(j)) / bufftoty
+          GRID_FBFYG(j) = (bufftoty+GRID_FYG(JHALO)-GRID_FYG(j)) / bufftoty
        enddo
 
        do j = JHALO+jbuff+jmain+1, JHALO+jbuff+jmain+jbuff
