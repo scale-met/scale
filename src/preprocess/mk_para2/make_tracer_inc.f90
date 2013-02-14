@@ -62,9 +62,19 @@ program make_include_tracer
   write(10,'(a)')    "  integer, private, parameter :: I_NS =  11" 
   write(10,'(a)')    "  integer, private, parameter :: I_NG =  12" 
   write(10,*)
-  write(10,'(a,i4)') "  integer, private, parameter :: QQA  =", ispc*nbin+nccn+1
+  write(10,'(a,i4)') "  integer, private, parameter :: QQA  =", ispc*nbin+1
   write(10,'(a)')    "  integer, private, parameter :: QQS  = 1"
   write(10,'(a,i4)') "  integer, private, parameter :: QQE  =", ispc*nbin+1
+  write(10,*)
+  write(10,'(a)')    "  integer, private, parameter :: QWS  = 2"
+  write(10,'(a,i4)') "  integer, private, parameter :: QWE  =", 1*nbin+1
+  if( ICEFLG == 1 ) then
+   write(10,'(a,i4)') "  integer, private, parameter :: QIS  =", 1*nbin+1+1
+   write(10,'(a,i4)') "  integer, private, parameter :: QIE  =", ispc*nbin+1
+  else
+   write(10,'(a)')    "  integer, private, parameter :: QIS  = 0"
+   write(10,'(a)')    "  integer, private, parameter :: QIE  = 0"
+  endif
   write(10,*)
   write(10,'(a)')    "  character(len=16), private, save :: AQ_NAME(QA)"
   write(10,'(a)')    "  character(len=64), private, save :: AQ_DESC(QA)"

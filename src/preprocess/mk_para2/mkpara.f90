@@ -513,6 +513,14 @@ contains
   end do
   end do
 
+  if( kphase == 0 ) then
+    write( 21,* ) "use hydrodynamic kernel"
+  elseif( kphase == 1 ) then
+    write( 21,* ) "use LONG's kernel"
+  elseif( kphase == 2 ) then
+    write( 21,* ) "use GOLOVIN's kernel"
+  endif
+
   close ( 21 )
 
   end subroutine paraout

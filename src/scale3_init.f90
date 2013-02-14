@@ -70,8 +70,7 @@ program scaleinit
      I_SQUALLLINE,    &
      I_DYCOMS2_RF01,  &
      I_DYCOMS2_RF02,  &
-     I_DYCOMS2_RF01_hbinw,&
-     I_WARMBUBBLE_hbinw,  &
+     I_RICO,  &
      I_INTERPORATION,     &
      MKINIT_setup,        &
      MKINIT_planestate,   &
@@ -84,8 +83,7 @@ program scaleinit
      MKINIT_squallline,   &
      MKINIT_DYCOMS2_RF01, &
      MKINIT_DYCOMS2_RF02, &
-     MKINIT_DYCOMS2_RF01_hbinw, &
-     MKINIT_WARMBUBBLE_hbinw, &
+     MKINIT_RICO, &
      MKINIT_INTERPORATION
   use dc_log, only: &
        LogInit
@@ -178,10 +176,8 @@ program scaleinit
      call MKINIT_DYCOMS2_RF01
   case(I_DYCOMS2_RF02)
      call MKINIT_DYCOMS2_RF02
-  case(I_DYCOMS2_RF01_hbinw)
-     call MKINIT_DYCOMS2_RF01_hbinw
-  case(I_WARMBUBBLE_hbinw)
-     call MKINIT_WARMBUBBLE_hbinw
+  case(I_RICO)
+     call MKINIT_RICO
   case(I_INTERPORATION)
      call MKINIT_INTERPORATION
   case default
