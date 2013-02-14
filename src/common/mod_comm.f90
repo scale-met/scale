@@ -90,7 +90,7 @@ module mod_comm
   !
   !++ Private parameters & variables
   !
-  integer, private, save :: COMM_vsize_max  = 250
+  integer, private, save :: COMM_vsize_max  = 1024
   logical, private, save :: COMM_total_globalsum = .false.
 
   logical, private, save :: IsAllPeriodic
