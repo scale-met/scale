@@ -8,7 +8,8 @@
 !!
 !! @par History: Hbinw
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
-!! @li  ver.0.01   2-12-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)               
+!! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)               
+!! @li  ver.0.01   2013-02-12 (Y.Sato) [mod] modified for latest version              
 !<
 !--------------------------------------------------------------------------------
 !      Reference:  -- Journals 
@@ -17,6 +18,7 @@
 !                   Sato et al.  (2009): J.Geophys.Res.,vol.114,
 !                                        doi:10.1029/2008JD011247
 !-------------------------------------------------------------------------------
+#include "macro_thermodyn.h"
 module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
@@ -31,6 +33,7 @@ module mod_atmos_phy_mp
   use mod_const, only: &
      pi => CONST_PI, &
      CONST_CPdry, &
+     CONST_CVdry, &
      CONST_DWATR, &
      CONST_GRAV, &
      CONST_Rvap, &
@@ -44,6 +47,8 @@ module mod_atmos_phy_mp
      CONST_PRE00, &
      CONST_CPovCV, &
      CONST_RovCP
+  use mod_history, only: &
+     HIST_in
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -94,6 +99,12 @@ module mod_atmos_phy_mp
   real(RP) :: xaend
   real(RP) :: rada( nccn )
   real(RP) :: sfc_precp
+  real(RP), allocatable, save :: velw( :,:,:,: )
+  integer, private, save :: MP_NSTEP_SEDIMENTATION
+  real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
+  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+  integer, private, save :: ntmax_sedimentation= 1
+
   !--- constant for bin
   real(RP), parameter :: cldmin = 1.0E-10_RP, eps = 1.0E-30_RP
   real(RP), parameter :: OneovThird = 1.0_RP/3.0_RP, ThirdovForth = 3.0_RP/4.0_RP
@@ -106,11 +117,14 @@ module mod_atmos_phy_mp
   real(RP) :: raend  = 1.E-06_RP           ! maximum radius of aerosol (m)
   real(RP) :: r0a    = 1.E-07_RP           ! average radius of aerosol (m)
   logical :: flg_regeneration=.false.      ! flag regeneration of aerosol
-  logical :: flg_nucl=.false.              ! flag regeneration of aerosol
+  logical :: flg_nucl=.false.              ! flag nucleated cloud move into smallest bin
+  logical :: flg_icenucl=.false.           ! flag ice nucleation
   logical :: flg_sf_aero =.false.          ! flag surface flux of aerosol
   integer, private, save :: rndm_flgp = 0  ! flag for sthastic integration for coll.-coag.
   logical, private, save :: doautoconversion = .true.
   logical, private, save :: doprecipitation  = .true.
+  logical, private, save  :: MP_donegative_fixer  = .true.  ! apply negative fixer?
+
   real(RP) :: marate( nccn )               ! mass rate of each aerosol bin to total aerosol mass
   integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
   real(RP), private, save      :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
@@ -126,8 +140,6 @@ module mod_atmos_phy_mp
   integer  :: mspc = 49
   integer  :: mbin = nbin/2
   real(RP), private :: rndm(1,1,1)
-  !--- for debug
-  real(RP) :: sumalldomain
   !----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -145,6 +157,8 @@ contains
       FZ  => GRID_FZ
     use mod_atmos_vars, only: &
       ATMOS_TYPE_PHY_MP
+    use mod_time, only: &
+       TIME_DTSEC_ATMOS_PHY_MP
     implicit none
     !---------------------------------------------------------------------------
 
@@ -155,12 +169,15 @@ contains
     real(RP) :: ATMOS_PHY_MP_R0A   !--- maximum radius of aerosol (um)
     logical :: ATMOS_PHY_MP_FLAG_REGENE  !--- flag of regeneration
     logical :: ATMOS_PHY_MP_FLAG_NUCLEAT !--- flag of regeneration
+    logical :: ATMOS_PHY_MP_FLAG_ICENUCLEAT !--- flag of regeneration
     logical :: ATMOS_PHY_MP_FLAG_SFAERO  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_MSPC  
     integer :: ATMOS_PHY_MP_RNDM_MBIN 
     logical :: ATMOS_PHY_MP_doautoconversion 
     logical :: ATMOS_PHY_MP_doprecipitation 
+    logical :: ATMOS_PHY_MP_donegative_fixer  
+
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        ATMOS_PHY_MP_RHOA,  &
@@ -169,13 +186,15 @@ contains
        ATMOS_PHY_MP_RAMAX, &
        ATMOS_PHY_MP_FLAG_REGENE,  &
        ATMOS_PHY_MP_FLAG_NUCLEAT, &
+       ATMOS_PHY_MP_FLAG_ICENUCLEAT, &
        ATMOS_PHY_MP_FLAG_SFAERO,  &
        ATMOS_PHY_MP_R0A,   &
        ATMOS_PHY_MP_RNDM_FLGP, &
        ATMOS_PHY_MP_RNDM_MSPC, &
        ATMOS_PHY_MP_RNDM_MBIN, &
        ATMOS_PHY_MP_doautoconversion, &
-       ATMOS_PHY_MP_doprecipitation 
+       ATMOS_PHY_MP_doprecipitation, & 
+       ATMOS_PHY_MP_donegative_fixer  
 
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
@@ -189,12 +208,14 @@ contains
     ATMOS_PHY_MP_R0A = r0a
     ATMOS_PHY_MP_FLAG_REGENE = flg_regeneration
     ATMOS_PHY_MP_FLAG_NUCLEAT = flg_nucl
+    ATMOS_PHY_MP_FLAG_ICENUCLEAT = flg_icenucl
     ATMOS_PHY_MP_FLAG_SFAERO = flg_sf_aero
     ATMOS_PHY_MP_RNDM_FLGP = rndm_flgp
     ATMOS_PHY_MP_RNDM_MSPC = mspc
     ATMOS_PHY_MP_RNDM_MBIN = mbin
     ATMOS_PHY_MP_doautoconversion = doautoconversion
     ATMOS_PHY_MP_doprecipitation  = doprecipitation
+    ATMOS_PHY_MP_donegative_fixer = MP_donegative_fixer  
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
@@ -223,12 +244,14 @@ contains
     r0a   = ATMOS_PHY_MP_R0A
     flg_regeneration = ATMOS_PHY_MP_FLAG_REGENE
     flg_nucl = ATMOS_PHY_MP_FLAG_NUCLEAT
+    flg_icenucl = ATMOS_PHY_MP_FLAG_ICENUCLEAT
     flg_sf_aero = ATMOS_PHY_MP_FLAG_SFAERO
     rndm_flgp = ATMOS_PHY_MP_RNDM_FLGP
     mspc = ATMOS_PHY_MP_RNDM_MSPC 
     mbin = ATMOS_PHY_MP_RNDM_MBIN 
     doautoconversion = ATMOS_PHY_MP_doautoconversion
     doprecipitation = ATMOS_PHY_MP_doprecipitation
+    MP_donegative_fixer = ATMOS_PHY_MP_donegative_fixer 
 
     fid_micpara = IO_get_available_fid()
     !--- open parameter of cloud microphysics
@@ -297,6 +320,7 @@ contains
     do n = 1, nccn
      xactr( n ) = ( xabnd( n )+xabnd( n+1 ) )*0.50_RP
      rada( n )  = ( exp( xactr( n ) )*ThirdovForth/pi/rhoa )**( OneovThird )
+     if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)')  "Radius of ", n, "th aerosol bin (bin center)= ", rada( n ) , "[m]"
     enddo
 
     if( flg_sf_aero ) then
@@ -330,6 +354,18 @@ contains
      call random_setup( IA*JA*KA )
     endif
 
+    allocate( velw(KA,IA,JA,QA) )
+    velw(:,:,:,I_QV) = 0.0_RP
+    velw(:,:,:,QQE+1:QA) = 0.0_RP
+    mm = 0
+    do n = 1, nbin 
+      velw(:,:,:,n+I_QV) = -vt( 1,n )
+    enddo
+
+    MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
+    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
+    MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
+  
     return
   end subroutine ATMOS_PHY_MP_setup
 
@@ -356,6 +392,16 @@ contains
        MOMZ, &
        RHOT, &
        QTRC
+    use mod_atmos_thermodyn, only : &
+       AQ_CV, &
+       AQ_CP
+    use mod_atmos_precipitation, only : &
+       precipitation => ATMOS_PRECIPITATION
+    use mod_atmos_phy_mp_common, only: &
+       MP_negative_fixer => ATMOS_PHY_MP_negative_fixer
+    use mod_atmos_saturation, only : &
+       pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
+       pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     real(RP) :: dz (KA)
@@ -378,11 +424,37 @@ contains
     real(RP) :: VELY(IA,JA)
     real(RP) :: SFLX_AERO(IA,JA,nccn)
     real(RP) :: Uabs, bparam
+    real(RP) :: AMR(KA,IA,JA)
+
+    real(RP) :: rhogq(KA,IA,JA,QA)
+    real(RP) :: rrhog(KA,IA,JA)
+    real(RP) :: q(KA,IA,JA,QA)
+    real(RP) :: qd(KA,IA,JA)
+    real(RP) :: cva(KA,IA,JA)
+    real(RP) :: cpa(KA,IA,JA)
+    real(RP) :: rhoge(KA,IA,JA)
+    real(RP) :: th(KA,IA,JA)
+    real(RP) :: Rmoist
+
+    real(RP) :: wflux_rain(KA,IA,JA)
+    real(RP) :: wflux_snow(KA,IA,JA)
+    real(RP) :: flux_rain (KA,IA,JA)
+    real(RP) :: flux_snow (KA,IA,JA)
+    real(RP) :: flux_prec (IA,JA)
+    integer  :: step
     !---------------------------------------------------------------------------
 
 #ifdef _FPCOLL_
 call START_COLLECTION("MICROPHYSICS")
 #endif
+
+     if( MP_donegative_fixer ) then
+       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
+                               RHOT(:,:,:),  & ! [INOUT]
+                               QTRC(:,:,:,:) ) ! [INOUT]
+       QTRC(:,:,:,QQE+1:QA) = max( QTRC(:,:,:,QQE+1:QA),0.0_RP )
+     endif
+
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM-liquid only)'
 
@@ -415,22 +487,36 @@ call START_COLLECTION("MICROPHYSICS")
     pres_mp(:,:,:) = 0.0_RP
     temp_mp(:,:,:) = 0.0_RP
     qv_mp(:,:,:) = 0.0_RP
-    do j = JS-1, JE
-    do i = IS-1, IE
+    do j = JS, JE
+    do i = IS, IE
+
+       do k = KS-1, KE+1
+          rrhog(k,i,j) = 1.0_RP / DENS(k,i,j)
+          q(k,i,j,1:QA) = QTRC(k,i,j,1:QA)
+       enddo
        do k = KS, KE
-          rtotal = CONST_Rdry*( 1.0_RP-QTRC(k,i,j,I_QV) ) + CONST_Rvap*QTRC(k,i,j,I_QV)
-          pres_mp(k,i,j) = CONST_PRE00 * &
-             ( RHOT(k,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
-          temp_mp(k,i,j) = &
-                  pres_mp(k,i,j)/( DENS(k,i,j)*rtotal )
-          qv_mp(k,i,j)   = QTRC(k,i,j,I_QV)
+          th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
+       enddo
+       do k = KS, KE
+          CALC_QDRY( qd(k,i,j), q, k, i, j, iq )
+       enddo
+       do k = KS, KE
+          CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iq, CONST_CVdry, AQ_CV )
+       enddo
+       do k = KS, KE
+          CALC_R( Rmoist, q(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
+          cpa(k,i,j) = cva(k,i,j) + Rmoist
+          CALC_PRE( pres_mp(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
+          temp_mp(k,i,j) = pres_mp(k,i,j) / ( DENS(k,i,j) * Rmoist )
+          qv_mp(k,i,j) = QTRC(k,i,j,I_QV)
+
           do n = 1, nbin
            gdgc( k,i,j,n ) = &
-               QTRC(k,i,j,n+1)*DENS(k,i,j)/dxmic
+               QTRC(k,i,j,n+I_QV)*DENS(k,i,j)/dxmic
           end do
           do n = 1, nccn
            gdga( k,i,j,n ) = &
-               QTRC(k,i,j,n+nbin+1)*DENS(k,i,j)/dxaer
+               QTRC(k,i,j,n+nbin+I_QV)*DENS(k,i,j)/dxaer
           end do
           !--- store initial SDF of aerosol 
           if( ofirst_sdfa ) then
@@ -445,38 +531,7 @@ call START_COLLECTION("MICROPHYSICS")
            end if
           end if
        enddo
-       do k = 1, KS-1
-          rtotal = CONST_Rdry*( 1.0_RP-QTRC(KS,i,j,I_QV) ) + CONST_Rvap*QTRC(KS,i,j,I_QV)
-          pres_mp(k,i,j) = CONST_PRE00 * &
-             ( RHOT(KS,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
-          temp_mp(k,i,j) = &
-                  pres_mp(k,i,j)/( DENS(KS,i,j)*rtotal )
-          qv_mp(k,i,j)   = QTRC(KS,i,j,I_QV)
-          do n = 1, nbin
-           gdgc( k,i,j,n ) = &
-                QTRC(KS,i,j,n+1)*DENS(KS,i,j)/dxmic
-          end do
-          do n = 1, nccn
-           gdga( k,i,j,n ) = &
-                QTRC(KS,i,j,n+nbin+1)*DENS(KS,i,j)/dxaer
-          end do
-       enddo
-       do k = KE+1, KA
-          rtotal = CONST_Rdry*( 1.0_RP-QTRC(KE,i,j,I_QV) ) + CONST_Rvap*QTRC(KE,i,j,I_QV)
-          pres_mp(k,i,j) = CONST_PRE00 * &
-             ( RHOT(KE,i,j) * rtotal / CONST_PRE00 )**CONST_CPovCV
-          temp_mp( k,i,j ) = &
-                  pres_mp(k,i,j)/( DENS(KE,i,j)*rtotal )
-          qv_mp(k,i,j) = QTRC(KE,i,j,I_QV)
-          do n = 1, nbin
-           gdgc( k,i,j,n ) = &
-              QTRC(KE,i,j,n+1)*DENS(KE,i,j)/dxmic
-          end do
-          do n = 1, nccn
-           gdga( k,i,j,n ) = &
-              QTRC(KE,i,j,n+nbin+1)*DENS(KE,i,j)/dxaer
-          end do
-       enddo
+
     enddo
     enddo
 
@@ -486,15 +541,21 @@ call START_COLLECTION("MICROPHYSICS")
     do j = JS, JE
     do i = IS, IE
 
-      call getsups &
-        (  qv_mp(k,i,j), temp_mp(k,i,j), pres_mp(k,i,j), &
-           ssliq, ssice )
+!      call getsups &
+!        (  qv_mp(k,i,j), temp_mp(k,i,j), pres_mp(k,i,j), &
+!           ssliq, ssice )
+
+      call pres2qsat_liq( ssliq,temp_mp(k,i,j),pres_mp(k,i,j) )
+      call pres2qsat_ice( ssice,temp_mp(k,i,j),pres_mp(k,i,j) )
+      ssliq = qv_mp(k,i,j)/ssliq-1.0_RP
+      ssice = qv_mp(k,i,j)/ssice-1.0_RP
+
       sum1 = 0.0_RP
       do n = 1, nbin
         sum1 = sum1 + gdgc(k,i,j,n)*dxmic
       end do
 
-      if( ssliq > 0.0_RP .or. ssice > 0.0_RP .or. sum1 > cldmin ) then
+      if( ssliq > 0.0_RP .or. sum1 > cldmin ) then
        call mp_hbinw_evolve                    &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
               gdgc(k,i,j,1:nbin),              &  !--- inout
@@ -506,34 +567,6 @@ call START_COLLECTION("MICROPHYSICS")
     end do
     end do
 
-    !--- gravitational falling
-    if( doprecipitation ) then
-     do j = JS, JE
-      do i = IS, IE
-       sum1 = 0.0_RP
-       do k = KS, KE
-        do n = 1, nbin
-         sum1 = sum1 + gdgc(k,i,j,n)*dxmic
-        end do
-       end do
-       if( sum1 > cldmin ) then
-        do n = 1, nbin
-         wfall( 1:KA ) = -vt( il,n )
-         call  advec_1d             &
-              ( dz, dzh,            & !--- in
-                wfall,              & !--- in
-                dt,                 & !--- in
-                gdgc( 1:KA,i,j,n )  ) !--- inout
-         do k = KS, KE
-          if( gdgc(k,i,j,n) < cldmin ) then
-           gdgc(k,i,j,n) = max( gdgc(k,i,j,n),0.0_RP ) 
-          end if
-         end do
-        end do
-       end if
-      end do
-     end do
-    end if
 
     !--- SURFACE FLUX by Monahan et al. (1986)
     if( flg_sf_aero ) then
@@ -558,24 +591,113 @@ call START_COLLECTION("MICROPHYSICS")
     end if
 
     call TIME_rapstart('MPX ijkconvert')
+    AMR(:,:,:) = 0.0_RP
     do j = JS, JE
      do i = IS, IE
        do k = KS, KE
-          RHOT(k,i,j) = temp_mp(k,i,j)* &
-            ( CONST_PRE00/pres_mp(k,i,j) )**( CONST_RovCP )*DENS(k,i,j)
           QTRC(k,i,j,I_QV) = qv_mp(k,i,j)  
           do n = 1, nbin
-            QTRC(k,i,j,n+1) = gdgc(k,i,j,n)/DENS(k,i,j)*dxmic
-            if( QTRC(k,i,j,n+1) <= eps ) then 
-              QTRC(k,i,j,n+1) = 0.0_RP
+            QTRC(k,i,j,n+I_QV) = gdgc(k,i,j,n)/DENS(k,i,j)*dxmic
+            if( QTRC(k,i,j,n+I_QV) <= eps ) then 
+              QTRC(k,i,j,n+I_QV) = 0.0_RP
             end if
           end do
           do n = 1, nccn
-            QTRC(k,i,j,n+1+nbin)=gdga(k,i,j,n)/DENS(k,i,j)*dxaer
+            QTRC(k,i,j,n+I_QV+nbin)=gdga(k,i,j,n)/DENS(k,i,j)*dxaer
+            AMR(k,i,j) = AMR(k,i,j) + QTRC(k,i,j,n+I_QV+nbin)
           end do
+          do n = 1, QA
+           q(k,i,j,n) = QTRC(k,i,j,n)
+          enddo
        enddo
+          
+       do k = KS, KE
+          CALC_QDRY( qd(k,i,j), q, k, i, j, iq )
+       enddo
+       do k  = KS, KE
+          CALC_CP( cpa(k,i,j), qd(k,i,j), q, k, i, j, iq, CONST_CPdry, AQ_CP )
+          CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
+          RHOT(k,i,j) = temp_mp(k,i,j) * ( CONST_PRE00 / pres_mp(k,i,j) )**(Rmoist/cpa(k,i,j)) &
+               * DENS(k,i,j)
+       enddo
+
      enddo
     enddo
+
+    call HIST_in( AMR(:,:,:),  'aerosol', 'aerosol mass', 'kg/m^3', dt)
+
+    !--- gravitational falling
+    if ( doprecipitation ) then
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS-1, KE
+       flux_rain(k,i,j) = 0.0_RP
+       flux_snow(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    do step = 1, MP_NSTEP_SEDIMENTATION
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          do iq = 1, QA
+            rhogq(k,i,j,iq) = QTRC(k,i,j,iq) * DENS(k,i,j)
+            q(k,i,j,iq) = QTRC(k,i,j,iq)
+          enddo
+          th(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       enddo
+       do k = KS, KE
+          CALC_QDRY( qd(k,i,j), q, k, i, j, iq )
+       enddo
+       do k = KS, KE
+          CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iq, CONST_CVdry, AQ_CV )
+       enddo
+       do k = KS, KE
+          CALC_R( Rmoist, q(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
+          cpa(k,i,j) = cva(k,i,j) + Rmoist
+          CALC_PRE( pres_mp(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
+          temp_mp(k,i,j) = pres_mp(k,i,j) / ( DENS(k,i,j) * Rmoist )
+       enddo
+       do k = KS, KE
+          rhoge(k,i,j)  = DENS(k,i,j) * temp_mp(k,i,j) * cva(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call precipitation( wflux_rain(:,:,:),     &
+                           wflux_snow(:,:,:),     &
+                           velw(:,:,:,:),         &
+                           rhogq(:,:,:,:),        &
+                           rhoge(:,:,:),          &
+                           temp_mp(:,:,:),        &
+                           MP_DTSEC_SEDIMENTATION )
+
+       do j = JS, JE
+       do i = IS, IE
+          do k = KS-1, KE
+             flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+             flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          enddo
+          flux_prec(i,j) = flux_rain(KS-1,i,j) + flux_snow(KS-1,i,j)
+       enddo
+       enddo
+
+    enddo
+
+    endif
+
+    if( MP_donegative_fixer ) then
+       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
+                               RHOT(:,:,:),  & ! [INOUT]
+                               QTRC(:,:,:,:) ) ! [INOUT]
+       QTRC(:,:,:,QQE+1:QA) = max( QTRC(:,:,:,QQE+1:QA),0.0_RP )
+    endif
+
+    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
 
     call TIME_rapend  ('MPX ijkconvert')
 
@@ -648,7 +770,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: ga( nccn )  !--- aerosol SDF (not supported)
   real(RP), intent(inout) :: qvap  !  specific humidity
   real(RP), intent(inout) :: temp  !  temperature
-
+  integer :: n
   !
   !
   !--- nucleat
@@ -680,6 +802,14 @@ call STOP_COLLECTION("MICROPHYSICS")
   !  liquid nucleation from aerosol particle
   !
   !
+  use mod_const, only: &
+     cp    => CONST_CPdry, &
+     rhow  => CONST_DWATR, &
+     qlevp => CONST_LH0, &
+     rvap  => CONST_Rvap
+    use mod_atmos_saturation, only : &
+       pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
+       pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   real(RP), intent(in) :: dens   !  density  [ kg/m3 ]
   real(RP), intent(in) :: pres   !  pressure [ Pa ]
   real(RP), intent(in) :: dtime
@@ -689,10 +819,6 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: qvap  !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp  !  temperature [ K ]
   !
-  real(RP), parameter :: rhow  = CONST_DWATR
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: cp    = CONST_CPdry
-  real(RP), parameter :: rvap  = CONST_Rvap
   !--- local
   real(RP) :: gan( nccn )  !  SDF ( aerosol ) : number
   real(RP) :: ssliq, ssice, delcld
@@ -707,9 +833,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), parameter :: vhfct = 2.0_RP    ! van't hoff factor
   !
   !--- supersaturation
-  call  getsups               &
-          ( qvap, temp, pres, & !--- in
-            ssliq, ssice  )     !--- out
+!  call  getsups               &
+!          ( qvap, temp, pres, & !--- in
+!            ssliq, ssice  )     !--- out
+      call pres2qsat_liq( ssliq,temp,pres )
+      call pres2qsat_ice( ssice,temp,pres )
+      ssliq = qvap/ssliq-1.0_RP
+      ssice = qvap/ssice-1.0_RP
 
   if ( ssliq <= 0.0_RP ) return
   !--- use for aerosol coupled model
@@ -741,9 +871,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   !--- nucleation
   do n = nccn, 1, -1
 
-    call  getsups                &
-            ( qvap, temp, pres,  & !--- in
-              ssliq, ssice )       !--- out
+!    call  getsups                &
+!            ( qvap, temp, pres,  & !--- in
+!              ssliq, ssice )       !--- out
+      call pres2qsat_liq( ssliq,temp,pres )
+      call pres2qsat_ice( ssice,temp,pres )
+      ssliq = qvap/ssliq-1.0_RP
+      ssice = qvap/ssice-1.0_RP
 
     if ( ssliq <= 0.0_RP ) exit
     !--- use for aerosol coupled model
@@ -831,16 +965,19 @@ call STOP_COLLECTION("MICROPHYSICS")
         gc, qvap, temp, & !--- inout
         regene_gcn      ) !--- out
   !
+  use mod_const, only: &
+     cp    => CONST_CPdry, &
+     rhow  => CONST_DWATR, &
+     qlevp => CONST_LH0, &
+     rvap  => CONST_Rvap
+    use mod_atmos_saturation, only : &
+       pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
+       pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   real(RP), intent(in) :: dtime
   integer, intent(in) :: iflg
   real(RP), intent(in) :: dens, pres
   real(RP), intent(inout) :: gc( nbin ), qvap, temp
   real(RP), intent(out) :: regene_gcn
-  !
-  real(RP), parameter :: rhow  = CONST_DWATR
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: cp    = CONST_CPdry
   !
   !--- local variables
   integer :: n, nloop, ncount
@@ -861,9 +998,13 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   !
   !------- CFL condition
-  call  getsups                &
-          ( qvap, temp, pres,  & !--- in
-            ssliq, ssice )       !--- out  
+!  call  getsups                &
+!          ( qvap, temp, pres,  & !--- in
+!            ssliq, ssice )       !--- out  
+      call pres2qsat_liq( ssliq,temp,pres )
+      call pres2qsat_ice( ssice,temp,pres )
+      ssliq = qvap/ssliq-1.0_RP
+      ssice = qvap/ssice-1.0_RP
 
   gtliq = gliq( pres,temp )
   umax = cbnd( il,1 )/exp( xbnd( 1 ) )*gtliq*abs( ssliq )
@@ -876,9 +1017,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   do ncount = 1, nloop
 
   !----- matrix for supersaturation tendency
-  call  getsups                &
-          ( qvap, temp, pres,  & !--- in
-            ssliq, ssice )       !--- out
+!  call  getsups                &
+!          ( qvap, temp, pres,  & !--- in
+!            ssliq, ssice )       !--- out
+      call pres2qsat_liq( ssliq,temp,pres )
+      call pres2qsat_ice( ssice,temp,pres )
+      ssliq = qvap/ssliq-1.0_RP
+      ssice = qvap/ssice-1.0_RP
 
   gtliq = gliq( pres,temp )
   sumliq = 0.0_RP
@@ -928,7 +1073,15 @@ call STOP_COLLECTION("MICROPHYSICS")
   end do
   !
   !------- number -> mass
-  gc( 1:nbin ) = gcn( 1:nbin )*exp( xctr( 1:nbin ) )
+  do n = 1 , nbin
+   gc( n ) = gcn( n )*exp( xctr( n ) )
+   if( gc( n ) < 0.0_RP ) then
+     cndmss = -gc( n )
+     gc( n ) = 0.0_RP
+     qvap = qvap + cndmss/dens
+     temp = temp - cndmss/dens*qlevp/cp
+   endif
+  enddo
   ! 
   end subroutine liqphase
   !-------------------------------------------------------------------------------
@@ -960,7 +1113,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   qadv( -1 )     = 0.0_RP
   qadv( 0  )     = 0.0_RP
   qadv( nbin+1 ) = 0.0_RP
-  qadv( nbin+2 ) = 0.0_Rp
+  qadv( nbin+2 ) = 0.0_RP
 
   do i = 1, nbin+1
     uadv( i ) = gdu( i )
@@ -1049,9 +1202,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   function fmyu( temp )
   !
   !
+  use mod_const, only: &
+     tmlt => CONST_TMELT
   real(RP), intent(in) :: temp
   real(RP) :: fmyu
-  real(RP), parameter :: tmlt = CONST_TMELT
   !
   real(RP), parameter :: a = 1.72E-05_RP, b = 3.93E+2_RP, c = 1.2E+02_RP
   !
@@ -1061,13 +1215,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-------------------------------------------------------------------------------
   function fesatl( temp )
   !
+  use mod_const, only: &
+     temp0 => CONST_TEM00, &
+     esat0 => CONST_PSAT0, &
+     qlevp => CONST_LH0, &
+     rvap  => CONST_Rvap
   real(RP), intent(in) :: temp
   real(RP) :: fesatl
-  !
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: esat0 = CONST_PSAT0
-  real(RP), parameter :: temp0 = CONST_TEM00
   !
   fesatl = esat0*exp( qlevp/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !
@@ -1077,13 +1231,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-----------------------------------------------------------------------
   function fesati( temp )
   !
+  use mod_const, only: &
+     temp0 => CONST_TEM00, &
+     esat0 => CONST_PSAT0, &
+     qlsbl => CONST_LHS0, &
+     rvap  => CONST_Rvap
   real(RP), intent(in) :: temp
   real(RP) :: fesati
-  !
-  real(RP), parameter :: qlsbl = CONST_LHS0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: esat0 = CONST_PSAT0
-  real(RP), parameter :: temp0 = CONST_TEM00
   !
   fesati = esat0*exp( qlsbl/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !

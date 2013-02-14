@@ -145,9 +145,11 @@ contains
            do iq = QWS, QWE
               flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,iq)
            enddo
-           do iq = QIS, QIE
-              flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
-           enddo
+           if( QIS > 0 ) then
+             do iq = QIS, QIE
+               flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
+             enddo
+           endif
        enddo 
 
 !OCL XFILL
