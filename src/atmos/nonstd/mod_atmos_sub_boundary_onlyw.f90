@@ -23,7 +23,7 @@ module mod_atmos_boundary
      IO_FID_LOG, &
      IO_L,       &
      IO_FILECHR
-  use mod_fileio_h, only: &
+  use mod_fileio_c_h, only: &
      FIO_HSHORT, &
      FIO_HMID,   &
      FIO_REAL8
@@ -295,7 +295,7 @@ contains
   !> Read boundary data
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_read
-    use mod_fileio, only: &
+    use mod_fileio_c, only: &
        FIO_input
     use mod_comm, only: &
        COMM_vars, &
@@ -365,7 +365,7 @@ contains
   subroutine ATMOS_BOUNDARY_write
     use mod_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use mod_fileio, only: &
+    use mod_fileio_c, only: &
        FIO_output
     implicit none
 

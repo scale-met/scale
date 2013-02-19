@@ -105,7 +105,7 @@ foreach $dir (@dirs) {
       #print $usedmods,"\n";
 
       # special treatment for c file (fileio)
-      if ( $modname eq "mod_fileio" ) {
+      if ( $modname eq "mod_fileio_c" ) {
         $usedmods = $usedmods.'fio&fiof&';
       };
 

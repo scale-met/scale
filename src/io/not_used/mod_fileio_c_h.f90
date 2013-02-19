@@ -4,14 +4,14 @@
 !! @par Description
 !!          File I/O module (Parameter Container)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-FIO
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_fileio_h
+module mod_fileio_c_h
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -104,5 +104,5 @@ module mod_fileio_h
 
   integer, public, parameter :: FIO_preclist(0:3) = (/ 4, 8, 4, 8 /)
 
-end module mod_fileio_h
+end module mod_fileio_c_h
 !-------------------------------------------------------------------------------

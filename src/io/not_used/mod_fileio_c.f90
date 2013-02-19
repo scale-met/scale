@@ -4,14 +4,14 @@
 !! @par Description
 !!          Fortran-C interface for file I/O
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new] Imported from SCALE-FIO
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_fileio
+module mod_fileio_c
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -23,7 +23,7 @@ module mod_fileio
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use mod_fileio_h
+  use mod_fileio_c_h
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -324,10 +324,10 @@ contains
       opt_periodic_year )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_time, only :&
+    use mod_time, only:&
       TIME_date2sec, &
       TIME_sec2date
-    use dc_types, only : &
+    use dc_types, only: &
          DP
     implicit none
 
@@ -426,7 +426,7 @@ contains
       t_end      )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
+    use mod_const, only: &
        CONST_UNDEF4, &
        CONST_UNDEF8
     implicit none
@@ -709,7 +709,7 @@ contains
       single     )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
+    use mod_const, only: &
        CONST_UNDEF4, &
        CONST_UNDEF8
     implicit none
@@ -786,5 +786,5 @@ contains
     return
   end subroutine FIO_output_1D
 
-end module mod_fileio
+end module mod_fileio_c
 !-------------------------------------------------------------------------------

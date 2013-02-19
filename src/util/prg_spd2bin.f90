@@ -5,7 +5,7 @@
 !!          SCALE: Scalable Computing by Advanced Library and Environment
 !!          converter for formatted data (SPD format)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new]
@@ -17,14 +17,14 @@ program spd2bin
   !
   !++ Used modules
   !
-  use mod_stdio, only : &
+  use mod_stdio, only: &
     IO_get_available_fid
-  use mod_const, only : &
+  use mod_const, only: &
     CONST_UNDEF4, &
     CONST_UNDEF8
-  use mod_time, only : &
+  use mod_time, only: &
     TIME_sec2date
-  use mod_fileio_h
+  use mod_fileio_c_h
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -532,7 +532,7 @@ contains
   !> read option
   !-----------------------------------------------------------------------------
   subroutine readoption
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_get_available_fid
     use mod_option, only: &
        OPT_convert, &
