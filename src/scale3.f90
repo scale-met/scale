@@ -1,11 +1,13 @@
 !-------------------------------------------------------------------------------
-!> Program SCALE-LES ver.3
+!> Program SCALE-LES
 !!
 !! @par Description
 !!          SCALE: Scalable Computing by Advanced Library and Environment
 !!          Numerical model for LES-scale weather
 !!
-!! @author H.Tomita and SCALE developpers
+!! @version 3.1
+!!
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new]
@@ -34,6 +36,8 @@ program scaleles3
      PRC_MPIfinish
   use mod_const, only: &
      CONST_setup
+  use mod_calendar, only: &
+     CALENDAR_setup
   use mod_time, only: &
      TIME_setup,           &
      TIME_checkstate,      &
@@ -103,8 +107,12 @@ program scaleles3
   ! setup constants
   call CONST_setup
 
+  ! setup calendar
+  call CALENDAR_setup
+
   ! setup time
   call TIME_setup
+
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
@@ -138,12 +146,13 @@ program scaleles3
 
   !########## main ##########
 
+#ifdef _FIPP_
+  call fipp_start()
+#endif
+
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
   call TIME_rapstart('Main Loop(Total)')
-#ifdef _FIPP_
-call fipp_start()
-#endif
 
   do
 
@@ -172,13 +181,13 @@ call fipp_start()
 
   enddo
 
-#ifdef _FIPP_
-call fipp_stop()
-#endif
   call TIME_rapend('Main Loop(Total)')
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 
+#ifdef _FIPP_
+  call fipp_stop()
+#endif
 
   !########## Finalize ##########
 
