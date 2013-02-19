@@ -4,27 +4,30 @@
 !! @par Description
 !!          Miscellaneous tool module
 !!
-!! @author H.Tomita and SCALE developers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-22 (H.Yashiro) [new]
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_misc
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use mod_stdio, only : &
+  use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR
-  use dc_types, only : &
-      DP
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -36,11 +39,7 @@ module mod_misc
      module procedure MISC_valcheck_2D
      module procedure MISC_valcheck_3D
   end interface MISC_valcheck
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -55,10 +54,8 @@ module mod_misc
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (1D)
-  !-----------------------------------------------------------------------------
   subroutine MISC_valcheck_1D( &
        var,    &
        valmin, &
@@ -68,9 +65,9 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(DP)         :: var(:)
-    real(DP)         :: valmin
-    real(DP)         :: valmax
+    real(RP)         :: var(:)
+    real(RP)         :: valmin
+    real(RP)         :: valmax
     character(len=*) :: varname
 
     integer :: k, kstr, kend
@@ -96,7 +93,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (2D)
-  !-----------------------------------------------------------------------------
   subroutine MISC_valcheck_2D( &
        var,    &
        valmin, &
@@ -106,9 +102,9 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(DP)         :: var(:,:)
-    real(DP)         :: valmin
-    real(DP)         :: valmax
+    real(RP)         :: var(:,:)
+    real(RP)         :: valmin
+    real(RP)         :: valmax
     character(len=*) :: varname
 
     integer :: k, kstr, kend
@@ -140,7 +136,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (3D)
-  !-----------------------------------------------------------------------------
   subroutine MISC_valcheck_3D( &
        var,    &
        valmin, &
@@ -150,9 +145,9 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(DP)         :: var(:,:,:)
-    real(DP)         :: valmin
-    real(DP)         :: valmax
+    real(RP)         :: var(:,:,:)
+    real(RP)         :: valmin
+    real(RP)         :: valmax
     character(len=*) :: varname
 
     integer :: k, kstr, kend
@@ -189,4 +184,4 @@ contains
   end subroutine MISC_valcheck_3D
 
 end module mod_misc
-
+!-------------------------------------------------------------------------------

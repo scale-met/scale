@@ -4,13 +4,12 @@
 !! @par Description
 !!          random number generation module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-28 (H.Yashiro)  [new]
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_random
   !-----------------------------------------------------------------------------
   !
@@ -24,15 +23,17 @@ module mod_random
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: RANDOM_setup
   public :: RANDOM_get
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -42,16 +43,18 @@ module mod_random
   !++ Private procedure
   !
   private :: RANDOM_reset
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   integer, private, allocatable, save :: RANDOM_seedvar(:)
   integer, private,              save :: RANDOM_count
-  !-----------------------------------------------------------------------------
-contains
 
   !-----------------------------------------------------------------------------
+contains
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine RANDOM_setup
     implicit none
 
@@ -74,6 +77,7 @@ contains
   end subroutine RANDOM_setup
 
   !-----------------------------------------------------------------------------
+  !> Reset random seed
   subroutine RANDOM_reset
     use mod_process, only: &
        PRC_myrank
@@ -103,6 +107,7 @@ contains
   end subroutine RANDOM_reset
 
   !-----------------------------------------------------------------------------
+  !> Get random number
   subroutine RANDOM_get( var )
     implicit none
 
@@ -116,3 +121,4 @@ contains
   end subroutine RANDOM_get
 
 end module mod_random
+!-------------------------------------------------------------------------------

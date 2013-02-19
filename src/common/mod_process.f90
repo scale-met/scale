@@ -4,26 +4,31 @@
 !! @par Description
 !!          MPI/non-MPI management module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
-!! @li      2011-10-11 (R.Yoshida) [new]
-!! @li      2011-11-11 (H.Yashiro) [mod] Integrate to SCALE3
+!! @li      2011-10-11 (R.Yoshida)  [new]
+!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE3
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_process
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use mpi
-  use mod_stdio, only : &
+  use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -35,32 +40,30 @@ module mod_process
   public :: PRC_setup
   public :: PRC_MPItime
   public :: PRC_MPItimestat
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer, public,         parameter :: PRC_master = 0   !< master node
+  integer, public, parameter :: PRC_master = 0   !< master node
 
-  integer, public,              save :: PRC_myrank = 0   !< my node ID
-  integer, public,              save :: PRC_nmax   = 1   !< total number of processors
-  integer, public,              save :: PRC_NUM_X  = 1   !< x length of 2D processor topology
-  integer, public,              save :: PRC_NUM_Y  = 1   !< y length of 2D processor topology
+  integer, public,      save :: PRC_myrank = 0   !< my node ID
+  integer, public,      save :: PRC_nmax   = 1   !< total number of processors
+  integer, public,      save :: PRC_NUM_X  = 1   !< x length of 2D processor topology
+  integer, public,      save :: PRC_NUM_Y  = 1   !< y length of 2D processor topology
+
   integer, public, allocatable, save :: PRC_2Drank(:,:)  !< node index in 2D topology
 
-  integer, public,              save :: PRC_next(8) = -1 !< node ID of 8 neighbour process
-  integer, public,         parameter :: PRC_W  = 1       !< [node direction] west
-  integer, public,         parameter :: PRC_N  = 2       !< [node direction] north
-  integer, public,         parameter :: PRC_E  = 3       !< [node direction] east
-  integer, public,         parameter :: PRC_S  = 4       !< [node direction] south
-  integer, public,         parameter :: PRC_NW = 5       !< [node direction] northwest
-  integer, public,         parameter :: PRC_NE = 6       !< [node direction] northeast
-  integer, public,         parameter :: PRC_SW = 7       !< [node direction] southwest
-  integer, public,         parameter :: PRC_SE = 8       !< [node direction] southeast
+  integer, public,      save :: PRC_next(8) = -1 !< node ID of 8 neighbour process
+
+  integer, public, parameter :: PRC_W  = 1       !< [node direction] west
+  integer, public, parameter :: PRC_N  = 2       !< [node direction] north
+  integer, public, parameter :: PRC_E  = 3       !< [node direction] east
+  integer, public, parameter :: PRC_S  = 4       !< [node direction] south
+  integer, public, parameter :: PRC_NW = 5       !< [node direction] northwest
+  integer, public, parameter :: PRC_NE = 6       !< [node direction] northeast
+  integer, public, parameter :: PRC_SW = 7       !< [node direction] southwest
+  integer, public, parameter :: PRC_SE = 8       !< [node direction] southeast
 
   !-----------------------------------------------------------------------------
   !
@@ -74,12 +77,10 @@ module mod_process
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Start MPI
-  !-----------------------------------------------------------------------------
   subroutine PRC_MPIstart
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_FID_CONF,          &
        IO_FILECHR,           &
        IO_get_available_fid, &
@@ -89,7 +90,7 @@ contains
        IO_LOG_ALLNODE
     implicit none
 
-    character(len=IO_FILECHR) :: fname !< name of logfile for each process
+    character(len=IO_FILECHR) :: fname ! name of logfile for each process
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -137,10 +138,13 @@ contains
        write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
        write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
        write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
+
     else
+
        if ( PRC_myrank == PRC_master ) then ! master node
           write(*,*) '*** Log report is suppressed.'
        endif
+
     endif
 
     return
@@ -148,9 +152,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Dummy subroutine of MPIstart
-  !-----------------------------------------------------------------------------
   subroutine PRC_NOMPIstart
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_FID_CONF,          &
        IO_FILECHR,           &
        IO_get_available_fid, &
@@ -159,7 +162,7 @@ contains
        IO_LOG_ALLNODE
     implicit none
 
-    character(len=IO_FILECHR) :: fname
+    character(len=IO_FILECHR) :: fname ! name of logfile
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -209,16 +212,14 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Abort MPI
-  !-----------------------------------------------------------------------------
   subroutine PRC_MPIstop
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_SYSCHR
     implicit none
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    ! Stop MPI
     if ( PRC_mpi_alive ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
@@ -229,9 +230,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Stop MPI peacefully
-  !-----------------------------------------------------------------------------
   subroutine PRC_MPIfinish
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_FID_CONF, &
        IO_SYSCHR
     implicit none
@@ -269,7 +269,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup Processor topology
-  !-----------------------------------------------------------------------------
   subroutine PRC_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -326,7 +325,8 @@ contains
     endif
 
     ! set communication topology
-    allocate( PRC_2Drank(-1:PRC_nmax-1,2) ); PRC_2Drank(:,:) = -1
+    allocate( PRC_2Drank(-1:PRC_nmax-1,2) )
+    PRC_2Drank(:,:) = -1
 
     do p = 0, PRC_nmax-1
        PRC_2Drank(p,1) = mod(p,PRC_NUM_X)
@@ -405,9 +405,8 @@ contains
   end subroutine PRC_setup
 
   !-----------------------------------------------------------------------------
-  !> get MPI time
+  !> Get MPI time
   !> @return time
-  !-----------------------------------------------------------------------------
   function PRC_MPItime() result(time)
     implicit none
 
@@ -423,6 +422,7 @@ contains
   end function PRC_MPItime
 
   !-----------------------------------------------------------------------------
+  !> Calc global statistics for timer
   subroutine PRC_MPItimestat( &
       avgvar, &
       maxvar, &
@@ -434,19 +434,19 @@ contains
          DP
     implicit none
 
-    real(DP), intent(out) :: avgvar(:)
-    real(DP), intent(out) :: maxvar(:)
-    real(DP), intent(out) :: minvar(:)
-    integer, intent(out) :: maxidx(:)
-    integer, intent(out) :: minidx(:)
-    real(DP), intent(in)  :: var(:)
+    real(DP), intent(out) :: avgvar(:) !< average
+    real(DP), intent(out) :: maxvar(:) !< maximum
+    real(DP), intent(out) :: minvar(:) !< minimum
+    integer,  intent(out) :: maxidx(:) !< index of maximum
+    integer,  intent(out) :: minidx(:) !< index of minimum
+    real(DP), intent(in)  :: var(:)    !< values for statistics
 
     real(DP), allocatable :: statval(:,:)
-    integer              :: vsize
+    integer               :: vsize
 
     real(DP) :: totalvar
-    integer :: ierr
-    integer :: v, p
+    integer  :: ierr
+    integer  :: v, p
     !---------------------------------------------------------------------------
 
     vsize = size(var(:))
@@ -487,3 +487,4 @@ contains
   end subroutine PRC_MPItimestat
 
 end module mod_process
+!-------------------------------------------------------------------------------

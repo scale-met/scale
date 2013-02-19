@@ -4,13 +4,12 @@
 !! @par Description
 !!          Standard, common I/O module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new]
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_stdio
   !-----------------------------------------------------------------------------
   !
@@ -31,10 +30,10 @@ module mod_stdio
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: IO_SYSCHR   = 32      !< Character length of system control
-  integer, public, parameter :: IO_FILECHR  = 128     !< Character length of file name
-  integer, public,      save :: IO_FID_CONF = 7       !< Config file ID
-  integer, public,      save :: IO_FID_LOG  = 8       !< Log file ID
+  integer, public, parameter :: IO_SYSCHR   = 32  !< Character length of system control
+  integer, public, parameter :: IO_FILECHR  = 128 !< Character length of file name
+  integer, public,      save :: IO_FID_CONF = 7   !< Config file ID
+  integer, public,      save :: IO_FID_LOG  = 8   !< Log file ID
 
   character(len=IO_FILECHR), public, save :: IO_LOG_BASENAME = 'LOG'   !< basename of logfile
   logical,                   public, save :: IO_L            = .false. !< output log or not?
@@ -57,8 +56,8 @@ module mod_stdio
 contains
 
   !-----------------------------------------------------------------------------
-  !> initialize file ID
-  !-----------------------------------------------------------------------------
+  !> Setup
+  !> read command argument, open config file
   subroutine IO_setup
     implicit none
 
@@ -103,7 +102,6 @@ contains
   !-----------------------------------------------------------------------------
   !> search & get available file ID
   !> @return fid
-  !-----------------------------------------------------------------------------
   function IO_get_available_fid() result(fid)
     implicit none
 
@@ -120,7 +118,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename
-  !-----------------------------------------------------------------------------
   subroutine IO_make_idstr( &
       outstr, &
       instr,  &
@@ -144,3 +141,4 @@ contains
   end subroutine IO_make_idstr
 
 end module mod_stdio
+!-------------------------------------------------------------------------------

@@ -4,13 +4,12 @@
 !! @par Description
 !!          Read argument and convert to namelist format
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new]
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_option
   !-----------------------------------------------------------------------------
   !
@@ -24,6 +23,7 @@ module mod_option
   !++ public procedure
   !
   public :: OPT_convert
+
   !-----------------------------------------------------------------------------
   !
   !++ public param & variable
@@ -40,14 +40,12 @@ module mod_option
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Read argument and convert to namelist format
-  !-----------------------------------------------------------------------------
   subroutine OPT_convert( ninfile )
     implicit none
 
-    integer, intent(out) :: ninfile !< [out] nuber of input files
+    integer, intent(out) :: ninfile !< nuber of input files
 
     character(LEN=128) :: argstr
     character(LEN=2)   :: snf
@@ -66,22 +64,22 @@ contains
        ls = len_trim(argstr)
 
        if ( argstr(1:1) == '-' ) then
-          if ( argstr(2:2) == '-' ) then                               !! '--option' format
+          if ( argstr(2:2) == '-' ) then                               ! '--option' format
              write(OPT_fid,'(A)') ' '//argstr(3:ls)//'=F'
-          elseif ( argstr(2:3) == 'no' .OR. argstr(2:3) == 'NO' ) then !! '-nooption'/'-NOOPTION' format
+          elseif ( argstr(2:3) == 'no' .OR. argstr(2:3) == 'NO' ) then ! '-nooption'/'-NOOPTION' format
              write(OPT_fid,'(A)') ' '//argstr(4:ls)//'=F'
-          else                                                         !! '-option' format
+          else                                                         ! '-option' format
              write(OPT_fid,'(A)') ' '//argstr(2:ls)//'=T'
           endif
-       elseif( index(argstr,'=') == 0 ) then                           !! no '=' is filename
+       elseif( index(argstr,'=') == 0 ) then                           ! no '=' is filename
           ninfile = ninfile + 1
           write(snf,'(I2.2)') ninfile
           write(OPT_fid,'(A)') ' infile('//snf//')="'//trim(adjustl(argstr))//'"'
        elseif(      index(argstr,'/') /= 0 &
-               .OR. index(argstr,' ') /= 0 ) then                      !! append "string"
+               .OR. index(argstr,' ') /= 0 ) then                      ! append "string"
           eq = index(argstr,'=')
           write(OPT_fid,'(A)') ' '//argstr(1:eq)//'"'//argstr(eq+1:ls)//'"'
-       else                                                            !! without any change
+       else                                                            ! without any change
           write(OPT_fid,'(A)') ' '//argstr(1:ls)
        endif
     enddo
