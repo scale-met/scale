@@ -5,7 +5,7 @@
 !!          Geometrical convert from plane cartesian coordinate
 !!          to earths sphere
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-03-22 (H.Yashiro)  [new]
@@ -127,7 +127,7 @@ contains
        PRC_myrank, &
        PRC_2Drank
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_HMID,  &
        File_REAL4, &

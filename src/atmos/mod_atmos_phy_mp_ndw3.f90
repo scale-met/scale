@@ -64,7 +64,7 @@ module mod_atmos_phy_mp
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
-  use mod_const, only : &
+  use mod_const, only: &
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
      UNDEF8 => CONST_UNDEF8,  &
@@ -382,10 +382,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for NDW6'
 
-    if ( ATMOS_TYPE_PHY_MP .ne. 'NDW3' ) then
+    if ( ATMOS_TYPE_PHY_MP /= 'NDW3' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not NDW6. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -783,7 +783,7 @@ contains
           ah_vent0(iw,1)= 1.0_RP
           ah_vent0(iw,2)= 1.0_RP
           flag_vent0(iw)=.false.
-       end if
+       endif
        n = 1
        if( (nu(iw) + b_m(iw) + n) > eps_gamma  )then
           w1(iw) = gammafunc( (nu(iw) + b_m(iw) + n)/mu(iw) )
@@ -796,13 +796,13 @@ contains
           ah_vent1(iw,1)= 1.0_RP
           ah_vent1(iw,2)= 1.0_RP
           flag_vent1(iw)=.true.
-       end if
+       endif
     end do
     do iw=I_QC,I_QR
        n = 0
        if( (nu(iw) + 1.5_RP*b_m(iw) + 0.5_RP*beta_v(iw,1) + n) < eps_gamma )then
           flag_vent0(iw)=.false.
-       end if
+       endif
        if(flag_vent0(iw))then
           w1(iw) = gammafunc( (nu(iw) + 1.5_RP*b_m(iw) + 0.5_RP*beta_v(iw,1) + n)/mu(iw) )
           w2(iw) = gammafunc( (nu(iw) + 1.0_RP)/mu(iw) )
@@ -815,12 +815,12 @@ contains
        else
           bh_vent0(iw,1) = 0.0_RP
           bh_vent0(iw,2) = 0.0_RP
-       end if
+       endif
        !
        n = 1
        if( (nu(iw) + 1.5_RP*b_m(iw) + 0.5_RP*beta_v(iw,1) + n) < eps_gamma )then
           flag_vent1(iw)=.false.
-       end if
+       endif
        if(flag_vent1(iw))then
           w1(iw) = gammafunc( (nu(iw) + 1.5_RP*b_m(iw) + 0.5_RP*beta_v(iw,1) + n)/mu(iw) )
           w2(iw) = gammafunc( (nu(iw) + 1.0_RP)/mu(iw) )
@@ -834,7 +834,7 @@ contains
        else
           bh_vent1(iw,1) = 0.0_RP
           bh_vent1(iw,2) = 0.0_RP
-       end if
+       endif
     end do
 !!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
 !!$    !-------------------------------------------------------
@@ -993,13 +993,13 @@ contains
   subroutine mp_ndw2
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP, &
-       ct => TIME_NOWSEC
+       ct => TIME_NOWDAYSEC
     use mod_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
-    use mod_atmos_precipitation, only : &
+    use mod_atmos_precipitation, only: &
        precipitation => ATMOS_PRECIPITATION
-    use mod_atmos_thermodyn, only : &
+    use mod_atmos_thermodyn, only: &
        !-- For kji
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
@@ -1007,7 +1007,7 @@ contains
        thrmdyn_tempre  => ATMOS_THERMODYN_tempre, &
        thrmdyn_tempre2 => ATMOS_THERMODYN_tempre2, &
        CVw => AQ_CV
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_psat_water    => ATMOS_SATURATION_psat_liq,     &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
        moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
@@ -1388,7 +1388,7 @@ contains
 
 !       if(  ntdiv     == ntmax_phase_change  )then
           flag_history_in=.true.
-!       end if
+!       endif
        !
        do k=1, KA
           do j=1, JA
@@ -1753,10 +1753,10 @@ contains
        ct, dt            ) ! in
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_psat_water     => ATMOS_SATURATION_psat_liq,      &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,      &
        moist_qsat_water     => ATMOS_SATURATION_pres2qsat_liq, &
@@ -1933,11 +1933,11 @@ contains
           ! effective vertical velocity (maximum vertical velocity in turbulent flow)
           weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
           ! large scale upward motion region and saturated
-          if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
+          if( (weff(k,i,j) > 1.E-8_RP) .AND. (ssw(k,i,j) > 1.E-10_RP)  .AND. pre(k,i,j) > 300.E+2_RP )then
              ! Lohmann (2002), eq.(1)
              nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
              nc_new(k,i,j) = a_max*nc_new_max**b_max
-          end if
+          endif
        end do
        end do
     end do
@@ -1956,7 +1956,7 @@ contains
           else ! nucleation cannot occur(unsaturated or negative w)
              flag_nucleation(k,i,j) = .false.
              nc_new_below(k+1,i,j)  = 0.0_RP
-          end if
+          endif
        end do
        end do
     end do
@@ -1968,7 +1968,7 @@ contains
           if(  ( nc_new(k,i,j) < nc_new_below(k,i,j) ) .or. &
                ( nc_new_below(k,i,j) > c_ccn_map(1,i,j)*0.05_RP ) )then ! 5% of c_ccn
              flag_nucleation(k,i,j) = .false.
-          end if
+          endif
        end do
        end do
     end do
@@ -1978,15 +1978,15 @@ contains
        do j=1, JA
        do i=1, IA
           ! effective vertical velocity
-          if(   flag_nucleation(k,i,j)               .and. & ! large scale upward motion region and saturated
-               ( tem(k,i,j)    > tem_ccn_low       ) .and. &
+          if(   flag_nucleation(k,i,j)               .AND. & ! large scale upward motion region and saturated
+               ( tem(k,i,j)    > tem_ccn_low       ) .AND. &
                ( nc_new(k,i,j) > NC(k,i,j) )                )then
              dlcdt_max    = (LV(k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
              dncdt_max    = dlcdt_max/xc_min
              dnc_new      = nc_new(k,i,j)-NC(k,i,j)
              PNCccn(k,i,j) = min( dncdt_max, dnc_new*rdt )
              PLCccn(k,i,j) = min( dlcdt_max, xc_min*PNCccn(k,i,j) )
-          end if
+          endif
        end do
        end do
     end do
@@ -2091,7 +2091,7 @@ contains
              tau  = max(tau_min, LR(k,i,j)/lwc)
           else
              tau  = tau_min
-          end if
+          endif
           rho_fac = sqrt(rho_0/max(rho(k,i,j),rho_min))
           !
           ! Auto-conversion ( cloud-cloud => rain )
@@ -2121,7 +2121,7 @@ contains
           else
              psi_brk      = 2.0_RP*exp(kapbr*ddr) - 1.0_RP                   ! (15) SB06
              PNRbrk(k,i,j) = - (psi_brk + 1.0_RP)*PNRslc(k,i,j)              ! (13) SB06
-          end if
+          endif
           !
        end do
        end do
@@ -2495,7 +2495,7 @@ contains
              igm(ij,k)  = 1.0_RP - exp( -x(ij,k) + alpha(ij,k)*lx(ij,k) - lgm(ij,k) )*h5
           else   ! negligible
              igm(ij,k)  = 1.0_RP
-          end if
+          endif
        end do
     end do
     !
@@ -2701,7 +2701,7 @@ contains
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
        thrmdyn_cp      => ATMOS_THERMODYN_cp
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_qsat_water     => ATMOS_SATURATION_qsat_liq,      &
        moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
        moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
@@ -2818,7 +2818,7 @@ contains
              w(k,i,j) = 0.5_RP*(wh(k,i,j) + wh(k+1,i,j))
           else
              w(k,i,j) = 0.0_RP
-          end if
+          endif
        end do
        end do
     end do
@@ -2846,7 +2846,7 @@ contains
              dqswdtem_rho(k,i,j) = 0.0_RP
              dqswdtem_pre(k,i,j) = 0.0_RP
              dqswdpre_tem(k,i,j) = 0.0_RP
-          end if
+          endif
        end do
        end do
     end do
@@ -2905,13 +2905,13 @@ contains
                 PLRdep(k,i,j) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
                 PLR2NR           = PNRdep(k,i,j)/(PLRdep(k,i,j)+1.d-30)
                 PNRdep(k,i,j) = min(0.0_RP, PLRdep(k,i,j)*PLR2NR )
-             end if
+             endif
              !
              if( PLCdep(k,i,j) < -eps )then
                 PNCdep(k,i,j) = min(0.0_RP, ((lc(k,i,j)+PLCdep(k,i,j)*dt)*r_xc_ccn - nc(k,i,j))*r_dt )
              else
                 PNCdep=0.0_RP
-             end if
+             endif
              !
           end do
        end do
@@ -2931,12 +2931,12 @@ contains
              dep_dqc = 0.0_RP
              dep_dqr = 0.0_RP
              !    always supersaturated
-             if     ( (dcnd >  eps) .and. (dlvsw > eps) )then
+             if     ( (dcnd >  eps) .AND. (dlvsw > eps) )then
                 fac1    = min(dlvsw,dcnd)/dcnd
                 dep_dqc =  dt*PLCdep(k,i,j)*fac1
                 dep_dqr =  dt*PLRdep(k,i,j)*fac1
                 ! always unsaturated
-             else if( (dcnd < -eps) .and. (dlvsw < -eps) )then
+             else if( (dcnd < -eps) .AND. (dlvsw < -eps) )then
                 fac1    = max( dlvsw,dcnd )/dcnd
                 dep_dqc = max( dt*PLCdep(k,i,j)*fac1, -lc(k,i,j) )
                 dep_dqr = max( dt*PLRdep(k,i,j)*fac1, -lr(k,i,j) )
@@ -2945,7 +2945,7 @@ contains
                 fac1    = 1.0_RP
                 dep_dqc = 0.0_RP
                 dep_dqr = 0.0_RP
-             end if
+             endif
              !
              ! evaporation always lose number(always negative).
              dep_dnc = max( dt*PNCdep(k,i,j)*fac1, -nc(k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
@@ -2982,7 +2982,7 @@ contains
              q(k,i,j,I_NC) = rhogq(k,i,j,I_NC) * rrhog(k,i,j)
              q(k,i,j,I_NR) = rhogq(k,i,j,I_NR) * rrhog(k,i,j)
              !
-!             if( i >= IS .and. i <= IE .and. j >= JS .and. j <= JE ) then
+!             if( i >= IS .AND. i <= IE .AND. j >= JS .AND. j <= JE ) then
              sl_PLCdep(1,i,j) = sl_PLCdep(1,i,j) + dep_dqc*Dz(k)*gsgam2(k,i,j)
              sl_PLRdep(1,i,j) = sl_PLRdep(1,i,j) + dep_dqr*Dz(k)*gsgam2(k,i,j)
              sl_PNRdep(1,i,j) = sl_PNRdep(1,i,j) + dep_dnr*Dz(k)*gsgam2(k,i,j)

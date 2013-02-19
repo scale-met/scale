@@ -5,7 +5,7 @@
 !!          Topography module
 !!          Terrain-following and vertical metrics
 !!
-!! @author H.Tomita and SCALE developers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-26 (H.Yashiro)   [new]
@@ -18,21 +18,17 @@ module mod_topography
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FILECHR, &
      IO_FID_LOG, &
-     IO_L
+     IO_L,       &
+     IO_FILECHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   use gtool_file_h, only: &
      File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public procedure
-  !
-  public :: TOPO_setup
-  public :: TOPO_write
-  
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -42,17 +38,24 @@ module mod_topography
 
   !-----------------------------------------------------------------------------
   !
+  !++ Public procedure
+  !
+  public :: TOPO_setup
+  public :: TOPO_write
+  
+  !-----------------------------------------------------------------------------
+  !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: TOPO_Zsfc(1,IA,JA) ! absolute ground height [m]
+  real(RP), public, save :: TOPO_Zsfc  (1,IA,JA)    !< absolute ground height [m]
 
-  real(RP), public, save :: TOPO_CZ(KA,IA,JA) ! Xi center coordinate [m]: z
-  real(RP), public, save :: TOPO_FZ(KA,IA,JA) ! Xi face   coordinate [m]: z
+  real(RP), public, save :: TOPO_CZ    (KA,IA,JA)   !< Xi center coordinate [m]: z
+  real(RP), public, save :: TOPO_FZ    (KA,IA,JA)   !< Xi face   coordinate [m]: z
 
-  real(RP), public, save :: TOPO_CGSQRT(KA,IA,JA)   ! vertical metrics {G}^1/2
-  real(RP), public, save :: TOPO_FGSQRT(KA,IA,JA)   ! vertical metrics {G}^1/2
+  real(RP), public, save :: TOPO_CGSQRT(KA,IA,JA)   !< vertical metrics {G}^1/2
+  real(RP), public, save :: TOPO_FGSQRT(KA,IA,JA)   !< vertical metrics {G}^1/2
 
-  real(RP), public, save :: TOPO_Gvec  (KA,IA,JA,2) ! horizontal metrics vector
+  real(RP), public, save :: TOPO_Gvec  (KA,IA,JA,2) !< horizontal metrics vector
 
   !-----------------------------------------------------------------------------
   !
@@ -66,11 +69,11 @@ module mod_topography
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: XDIR = 1
-  integer, private, parameter :: YDIR = 2
+  integer, private, parameter :: XDIR = 1 !< [index] X direction
+  integer, private, parameter :: YDIR = 2 !< [index] Y direction
 
-  character(len=IO_FILECHR), private, save :: TOPO_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private, save :: TOPO_OUT_BASENAME = ''
+  character(len=IO_FILECHR), private, save :: TOPO_IN_BASENAME  = '' !< input  file name
+  character(len=IO_FILECHR), private, save :: TOPO_OUT_BASENAME = '' !< output file name
 
   character(len=File_HLONG), private, save :: TOPO_OUT_TITLE     = 'SCALE3 TOPOGRAPHY'
   character(len=File_HLONG), private, save :: TOPO_OUT_SOURCE    = 'SCALE-LES ver. 3'
@@ -123,14 +126,13 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read topography
-  !-----------------------------------------------------------------------------
   subroutine TOPO_read
     use mod_process, only: &
        PRC_myrank
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use gtool_file, only : &
+    use gtool_file, only: &
        FileRead
     implicit none
 
@@ -172,7 +174,7 @@ contains
        PRC_myrank, &
        PRC_2Drank
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -185,7 +187,7 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_grid, only :  &
+    use mod_grid, only:  &
        GRID_CX, &
        GRID_CY
     implicit none

@@ -5,7 +5,7 @@
 !!          Flux from/to bottom wall of atmosphere (surface)
 !!          Bulk Method
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-03 (Y.Miyamoto)  [new]
@@ -87,7 +87,7 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_SF
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -142,10 +142,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
 
-    if ( ATMOS_TYPE_PHY_SF .ne. 'CONST' ) then
+    if ( ATMOS_TYPE_PHY_SF /= 'CONST' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not CONST. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -195,8 +195,8 @@ contains
   subroutine ATMOS_PHY_SF
     use mod_time, only: &
        dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
-       NOWSEC => TIME_NOWSEC
-    use mod_const, only : &
+       NOWSEC => TIME_NOWDAYSEC
+    use mod_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
     use mod_comm, only: &
@@ -261,10 +261,10 @@ contains
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY,                              & ! (in)
          ctime                                                ) ! (in)
-    use mod_const, only : &
+    use mod_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
-    use dc_types, only : &
+    use dc_types, only: &
          DP
     implicit none
 

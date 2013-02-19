@@ -5,7 +5,7 @@
 !!          Boundary treatment of model domain
 !!          Additional forcing, Sponge layer, rayleigh dumping
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-07 (Y.Miyamoto) [new]
@@ -156,7 +156,7 @@ contains
     use mod_const, only: &
        CONST_UNDEF8, &
        PI => CONST_PI
-    use mod_grid, only : &
+    use mod_grid, only: &
        CBFZ => GRID_CBFZ, &
        CBFX => GRID_CBFX, &
        CBFY => GRID_CBFY, &
@@ -364,7 +364,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_write
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use mod_fileio, only: &
        FIO_output
     implicit none
@@ -424,7 +424,7 @@ contains
   subroutine ATMOS_BOUNDARY_generate
     use mod_const, only: &
        CONST_UNDEF8
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask
     use mod_comm, only: &

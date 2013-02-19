@@ -4,7 +4,7 @@
 !! @par Description
 !!          Container for oceanic variables
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
@@ -124,7 +124,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
 
-    if ( OCEAN_TYPE .ne. 'OFF' .and. OCEAN_TYPE .ne. 'NONE' ) then
+    if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : ON'
        OCEAN_sw_sst = .true.
     else
@@ -216,7 +216,7 @@ contains
        PRC_myrank, &
        PRC_2Drank
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -226,7 +226,7 @@ contains
        FilePutAxis, &
        FileWrite, &
        FileClose
-    use mod_grid, only :  &
+    use mod_grid, only:  &
        GRID_CX, &
        GRID_CY
     implicit none
@@ -269,7 +269,7 @@ contains
        dtype = File_REAL8
     else if ( RP == 4 ) then
        dtype = File_REAL4
-    end if
+    endif
 
     call FileAddVariable( vid,               & ! (out)
          fid, 'SST', OP_DESC(1), OP_UNIT(1), & ! (in)

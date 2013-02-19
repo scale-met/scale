@@ -375,7 +375,7 @@ contains
   subroutine ATMOS_PHY_MP
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     use mod_grid, only : &
        GRID_CZ,  &
        GRID_FZ,  &
@@ -480,7 +480,7 @@ call START_COLLECTION("MICROPHYSICS")
     dzh(2:KA) = GRID_FDZ(1:KA-1)
 
     dt = TIME_DTSEC_ATMOS_PHY_MP
-    ct = TIME_NOWSEC
+    ct = TIME_NOWDAYSEC
 
     gdgc(:,:,:,:) = 0.0_RP
     gdga(:,:,:,:) = 0.0_RP

@@ -5,7 +5,7 @@
 !!          Boundary treatment of model domain
 !!          Additional forcing, Sponge layer, rayleigh dumping
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-07 (Y.Miyamoto) [new]
@@ -178,13 +178,13 @@ contains
        else
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
           call PRC_MPIstop
-       end if
+       endif
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
        call ATMOS_BOUNDARY_generate
     else
        write(*,*) 'xxx ATMOS_BOUNDARY_TYPE is invalid'
        call PRC_MPIstop
-    end if
+    endif
 
     if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
@@ -207,7 +207,7 @@ contains
     use mod_const, only: &
        CONST_UNDEF, &
        PI => CONST_PI
-    use mod_grid, only : &
+    use mod_grid, only: &
        CBFZ => GRID_CBFZ, &
        CBFX => GRID_CBFX, &
        CBFY => GRID_CBFY, &
@@ -244,7 +244,7 @@ contains
           ee1 = 0.0_RP
        else
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACZ ) / ATMOS_BOUNDARY_FRACZ
-       end if
+       endif
 
        if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
@@ -267,7 +267,7 @@ contains
           ee2 = 0.0_RP
        else
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACZ ) / ATMOS_BOUNDARY_FRACZ
-       end if
+       endif
 
        if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
@@ -291,12 +291,12 @@ contains
           ee1 = 0.0_RP
        else
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACX ) / ATMOS_BOUNDARY_FRACX
-       end if
+       endif
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACX ) then
           ee2 = 0.0_RP
        else
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACX ) / ATMOS_BOUNDARY_FRACX
-       end if
+       endif
 
        if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
@@ -334,12 +334,12 @@ contains
           ee1 = 0.0_RP
        else
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACY ) / ATMOS_BOUNDARY_FRACY
-       end if
+       endif
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACY ) then
           ee2 = 0.0_RP
        else
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACY ) / ATMOS_BOUNDARY_FRACY
-       end if
+       endif
 
        if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
           alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
@@ -426,7 +426,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       if ( .not. ( CZ_mask(k) .and. CX_mask(i) .and. CY_mask(j) ) ) then ! Buffer Layer
+       if ( .not. ( CZ_mask(k) .AND. CX_mask(i) .AND. CY_mask(j) ) ) then ! Buffer Layer
           if ( ATMOS_BOUNDARY_USE_VELZ ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) )
           endif
@@ -546,14 +546,14 @@ contains
        PRC_myrank, &
        PRC_2Drank
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use gtool_file, only: &
        FileCreate, &
        FileAddVariable, &
        FilePutAxis, &
        FileWrite, &
        FileClose
-    use mod_grid, only :  &
+    use mod_grid, only:  &
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
@@ -589,7 +589,7 @@ contains
        dtype = File_REAL8
     else if ( RP == 4 ) then
        dtype = File_REAL4
-    end if
+    endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FileAddVariable( vid,                      & ! (out)
@@ -642,7 +642,7 @@ contains
   subroutine ATMOS_BOUNDARY_generate
     use mod_const, only: &
        CONST_UNDEF
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask, &
        CY_mask => GRID_CX_mask
@@ -663,7 +663,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       if ( .not. ( CZ_mask(k) .and. CX_mask(i) .and. CY_mask(j) ) ) then ! Buffer Layer
+       if ( .not. ( CZ_mask(k) .AND. CX_mask(i) .AND. CY_mask(j) ) ) then ! Buffer Layer
           if ( ATMOS_BOUNDARY_USE_VELZ ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
           endif

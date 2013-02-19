@@ -2,29 +2,35 @@
 !> module TIME
 !!
 !! @par Description
-!!          Calendar date and time module
+!!          Time management and timer module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
-!! @li      2011-11-11 (H.Yashiro) [new]
+!! @li      2011-11-11 (H.Yashiro)  [new]
+!! @li      2013-01-29 (H.Yashiro)  [mod] exclude calendar tools
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_time
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use mod_stdio, only : &
+  use dc_types, only: &
+     DP
+  use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR
-  use dc_types, only : &
-      DP
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -32,22 +38,16 @@ module mod_time
   public :: TIME_setup
   public :: TIME_checkstate
   public :: TIME_advance
-  public :: TIME_date2sec
-  public :: TIME_sec2date
-  public :: TIME_ymdhms2sec
+
   public :: TIME_rapstart
   public :: TIME_rapend
   public :: TIME_rapreport
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(DP), public, save :: TIME_DTSEC                !< time interval of model       [sec]
+  real(DP), public, save :: TIME_DTSEC                !< time interval of model        [sec]
 
   real(DP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
   integer,  public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
@@ -59,23 +59,23 @@ module mod_time
   real(DP), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
   real(DP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of restart      [sec]
 
-  real(DP), public, save :: TIME_NOWSEC               !< current time [sec]
-  integer, public, save :: TIME_NOWSTEP              !< current step [number]
-
-  integer, public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
+  integer,  public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
   real(DP), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
-  real(DP), public, save :: TIME_NOWSECL              !< current time [sec]
+  integer,  public, save :: TIME_NOWDAY               !< absolute day of current time [day]
+  real(DP), public, save :: TIME_NOWSEC               !< subday part  of current time [sec]
+  real(DP), public, save :: TIME_NOWDAYSEC            !< second of current time [sec]
+  integer,  public, save :: TIME_NOWSTEP              !< current step [number]
 
-  logical, public, save :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
-  logical, public, save :: TIME_DOATMOS_DYN          !< execute dynamics?
-  logical, public, save :: TIME_DOATMOS_PHY_SF       !< execute physics(surface flux)?
-  logical, public, save :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
-  logical, public, save :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
-  logical, public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
-  logical, public, save :: TIME_DOATMOS_restart      !< execute restart output?
-  logical, public, save :: TIME_DOOCEAN_step         !< execute ocean component in this step?
-  logical, public, save :: TIME_DOOCEAN_restart      !< execute restart output?
-  logical, public, save :: TIME_DOend                !< finish program in this step?
+  logical,  public, save :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
+  logical,  public, save :: TIME_DOATMOS_DYN          !< execute dynamics?
+  logical,  public, save :: TIME_DOATMOS_PHY_SF       !< execute physics(surface flux)?
+  logical,  public, save :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
+  logical,  public, save :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
+  logical,  public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
+  logical,  public, save :: TIME_DOATMOS_restart      !< execute restart output?
+  logical,  public, save :: TIME_DOOCEAN_step         !< execute ocean component in this step?
+  logical,  public, save :: TIME_DOOCEAN_restart      !< execute restart output?
+  logical,  public, save :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
   !
@@ -87,30 +87,26 @@ module mod_time
   !
   !++ Private parameters & variables
   !
-  integer,  private,      save :: TIME_STARTDATE(6) = (/ 0, 01, 01, 00, 00, 00 /)
-  real(DP), private,      save :: TIME_STARTMS      = 0.0_DP                           !< [millisec]
-  real(DP), private,      save :: TIME_STARTSECL
+  integer,  private, save :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
+  real(DP), private, save :: TIME_STARTMS      = 0.0_DP !< [millisec]
+  integer,  private, save :: TIME_STARTDAY
+  real(DP), private, save :: TIME_STARTSEC
 
-  integer,  private,      save :: TIME_ENDDATE(6)
-  real(DP), private,      save :: TIME_ENDMS
-  real(DP), private,      save :: TIME_ENDSECL
+  integer,  private, save :: TIME_ENDDATE(6)
+  real(DP), private, save :: TIME_ENDMS
+  integer,  private, save :: TIME_ENDDAY
+  real(DP), private, save :: TIME_ENDSEC
 
-  integer,  private,      save :: TIME_NSTEP
+  integer,  private, save :: TIME_NSTEP
 
-  real(DP), private,      save :: TIME_RES_ATMOS_DYN     = 0.0_DP
-  real(DP), private,      save :: TIME_RES_ATMOS_PHY_SF  = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_ATMOS_PHY_TB  = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_ATMOS_PHY_MP  = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_ATMOS_PHY_RD  = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_ATMOS_RESTART = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_OCEAN         = 0.E0_DP
-  real(DP), private,      save :: TIME_RES_OCEAN_RESTART = 0.E0_DP
-
-  real(DP), private,      save :: TIME_DOY     = 365.E0_DP
-  real(DP), private,      save :: TIME_DOM(12) = (/ 31,28,31,30,31,30,31,31,30,31,30,31 /)
-  real(DP), private,      save :: TIME_HOUR    =  24.E0_DP
-  real(DP), private,      save :: TIME_MIN     =  60.E0_DP
-  real(DP), private,      save :: TIME_SEC     =  60.E0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_DYN     = 0.0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_PHY_SF  = 0.0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_PHY_TB  = 0.0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_PHY_MP  = 0.0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_PHY_RD  = 0.0_DP
+  real(DP), private, save :: TIME_RES_ATMOS_RESTART = 0.0_DP
+  real(DP), private, save :: TIME_RES_OCEAN         = 0.0_DP
+  real(DP), private, save :: TIME_RES_OCEAN_RESTART = 0.0_DP
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
@@ -126,13 +122,18 @@ module mod_time
 contains
 
   !-----------------------------------------------------------------------------
-  !> Setup time
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine TIME_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_calendar, only: &
+       CALENDAR_date2daysec,    &
+       CALENDAR_daysec2date,    &
+       CALENDAR_adjust_daysec,  &
+       CALENDAR_combine_daysec, &
+       CALENDAR_unit2sec
     implicit none
 
     real(DP)                 :: TIME_DURATION              = 60.0E0_DP
@@ -178,15 +179,9 @@ contains
        TIME_DT_OCEAN,              &
        TIME_DT_OCEAN_UNIT,         &
        TIME_DT_OCEAN_RESTART,      &
-       TIME_DT_OCEAN_RESTART_UNIT, &
-       TIME_DOY,                   &
-       TIME_DOM,                   &
-       TIME_HOUR,                  &
-       TIME_MIN,                   &
-       TIME_SEC
+       TIME_DT_OCEAN_RESTART_UNIT
 
     real(DP) :: TIME_DURATIONSEC
-    real(DP) :: temp
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -207,26 +202,33 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TIME)
 
     !--- calculate time
-    call TIME_date2sec( TIME_STARTSECL, TIME_STARTDATE(:) )
     TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
+    call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
+                               TIME_STARTSEC,     & ! [OUT]
+                               TIME_STARTDATE(:), & ! [IN]
+                               TIME_STARTMS       ) ! [IN]
 
-    call TIME_ymdhms2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
-
-    temp  = dble( int( TIME_STARTMS+TIME_DURATIONSEC,kind=DP ) )
-    TIME_ENDMS   = TIME_STARTMS   + TIME_DURATIONSEC - temp
-    TIME_ENDSECL = TIME_STARTSECL + temp
-
-    call TIME_sec2date( TIME_ENDDATE(:), TIME_ENDSECL )
-
-    call TIME_ymdhms2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
-
-    TIME_NSTEP = int( TIME_DURATIONSEC / TIME_DTSEC )
-
-    TIME_NOWSECL    = TIME_STARTSECL
     TIME_NOWDATE(:) = TIME_STARTDATE(:)
     TIME_NOWMS      = TIME_STARTMS
+    TIME_NOWDAY     = TIME_STARTDAY
+    TIME_NOWSEC     = TIME_STARTSEC
+    TIME_NOWDAYSEC  = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
 
-    TIME_NOWSEC     = TIME_STARTSECL + TIME_STARTMS
+    call CALENDAR_unit2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
+
+    TIME_ENDDAY = TIME_STARTDAY
+    TIME_ENDSEC = TIME_STARTSEC + TIME_DURATIONSEC
+
+    call CALENDAR_adjust_daysec( TIME_ENDDAY, TIME_ENDSEC ) ! [INOUT]
+
+    call CALENDAR_daysec2date( TIME_ENDDATE(:), & ! [OUT]
+                               TIME_ENDMS,      & ! [OUT]
+                               TIME_ENDDAY,     & ! [IN]
+                               TIME_ENDSEC      ) ! [IN]
+
+    call CALENDAR_unit2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
+
+    TIME_NSTEP      = int( TIME_DURATIONSEC / TIME_DTSEC )
     TIME_NOWSTEP    = 1
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
@@ -240,22 +242,24 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
-    if ( TIME_DTSEC <= 0.E0_DP ) then
+    if( IO_L ) write(IO_FID_LOG,*) '*** now:', TIME_NOWDAYSEC, TIME_NOWDAY, TIME_NOWSEC
+
+    if ( TIME_DTSEC <= 0.0_DP ) then
        write(*,*) ' xxx Delta t <= 0.E0_DP is not accepted. Check!'
        call PRC_MPIstop
     endif
 
     !--- calculate intervals for atmosphere
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
-    call TIME_ymdhms2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
-    call TIME_ymdhms2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
-    call TIME_ymdhms2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
+    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
+    call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
+    call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
 
-    TIME_NSTEP_ATMOS_DYN = int ( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN )
+    TIME_NSTEP_ATMOS_DYN = int( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN )
 
     TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_ATMOS_PHY_SF  = max( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -284,8 +288,7 @@ contains
   end subroutine TIME_setup
 
   !-----------------------------------------------------------------------------
-  !> Check state of this time
-  !-----------------------------------------------------------------------------
+  !> Evaluate component execution
   subroutine TIME_checkstate
     implicit none
     !---------------------------------------------------------------------------
@@ -298,12 +301,12 @@ contains
     TIME_DOATMOS_PHY_RD = .false.
     TIME_DOOCEAN_step   = .false.
 
-    TIME_RES_ATMOS_DYN     = TIME_RES_ATMOS_DYN     + TIME_DTSEC
-    TIME_RES_ATMOS_PHY_SF  = TIME_RES_ATMOS_PHY_SF  + TIME_DTSEC
-    TIME_RES_ATMOS_PHY_TB  = TIME_RES_ATMOS_PHY_TB  + TIME_DTSEC
-    TIME_RES_ATMOS_PHY_MP  = TIME_RES_ATMOS_PHY_MP  + TIME_DTSEC
-    TIME_RES_ATMOS_PHY_RD  = TIME_RES_ATMOS_PHY_RD  + TIME_DTSEC
-    TIME_RES_OCEAN         = TIME_RES_OCEAN         + TIME_DTSEC
+    TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_TB = TIME_RES_ATMOS_PHY_TB + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_MP = TIME_RES_ATMOS_PHY_MP + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + TIME_DTSEC
+    TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
  
     if ( TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN > -eps ) then
        TIME_DOATMOS_step  = .true.
@@ -336,8 +339,6 @@ contains
        TIME_RES_OCEAN    = TIME_RES_OCEAN - TIME_DTSEC_OCEAN
     endif
 
-    call TIME_sec2date( TIME_NOWDATE(:), TIME_NOWSEC )
-
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
                '*** TIME: ', TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
                              TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
@@ -346,32 +347,38 @@ contains
   end subroutine TIME_checkstate
 
   !-----------------------------------------------------------------------------
-  !> Advance the time & eval. timing to restart&stop
-  !-----------------------------------------------------------------------------
+  !> Advance the time & evaluate restart & stop
   subroutine TIME_advance
     use mod_process, only: &
        PRC_master, &
        PRC_myrank
+    use mod_calendar, only: &
+       CALENDAR_daysec2date,   &
+       CALENDAR_adjust_daysec, &
+       CALENDAR_combine_daysec
     implicit none
 
     logical :: exists
-
-    real(DP) :: temp
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
 
-    temp  = dble( int( TIME_NOWMS+TIME_DTSEC,kind=DP ) )
-    TIME_NOWMS   = TIME_NOWMS + TIME_DTSEC - temp
-    TIME_NOWMS   = nint( TIME_NOWMS * 1.E5_DP ) * 1.E-5_DP
-    TIME_NOWSECL = TIME_NOWSECL + temp
+    TIME_NOWSEC = TIME_NOWSEC + TIME_DTSEC
 
-    TIME_NOWSEC  = TIME_NOWSECL + TIME_NOWMS
+    call CALENDAR_adjust_daysec( TIME_NOWDAY, TIME_NOWSEC ) ! [INOUT]
+
+    TIME_NOWDAYSEC = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
+
+    call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
+                               TIME_NOWMS,      & ! [OUT]
+                               TIME_NOWDAY,     & ! [IN]
+                               TIME_NOWSEC      ) ! [IN]
+
     TIME_NOWSTEP = TIME_NOWSTEP + 1
 
-    if ( ( TIME_NOWSECL-TIME_ENDSECL > -eps .AND. TIME_NOWMS-TIME_ENDMS > -eps ) &
-    .or. ( TIME_NOWSECL-TIME_ENDSECL > 1.0_RP-eps ) ) then
-      TIME_DOend = .true.
+    if (       TIME_NOWDAY - TIME_ENDDAY >= 0   &
+         .AND. TIME_NOWSEC - TIME_ENDSEC > -eps ) then
+       TIME_DOend = .true.
     endif
 
     ! QUIT file control
@@ -404,123 +411,11 @@ contains
   end subroutine TIME_advance
 
   !-----------------------------------------------------------------------------
-  !> convert date to second
-  !@todo fit to gregorian calendar
-  !-----------------------------------------------------------------------------
-  subroutine TIME_date2sec( &
-     second,  &
-     datetime )
-    implicit none
-
-    real(DP), intent(out) :: second
-    integer, intent( in) :: datetime(6)
-
-    integer :: m
-    !---------------------------------------------------------------------------
-
-    second = 0.E0_DP
-    second = second + datetime(1) * TIME_SEC * TIME_MIN * TIME_HOUR * TIME_DOY
-    if ( datetime(2) > 1 ) then
-       do m = 1, datetime(2)-1
-          second = second + TIME_DOM(m) * TIME_SEC * TIME_MIN * TIME_HOUR
-       enddo
-    endif
-    second = second + ( datetime(3)-1 ) * TIME_SEC * TIME_MIN * TIME_HOUR
-    second = second + datetime(4) * TIME_SEC * TIME_MIN
-    second = second + datetime(5) * TIME_SEC
-    second = second + datetime(6)
-
-    return
-  end subroutine TIME_date2sec
-
-  !-----------------------------------------------------------------------------
-  !> convert date to second
-  !
-  !@todo fit to gregorian calendar
-  !-----------------------------------------------------------------------------
-  subroutine TIME_sec2date( &
-     datetime, &
-     second    )
-    implicit none
-
-    integer, intent(out) :: datetime(6)
-    real(DP), intent( in) :: second
-
-    real(DP) :: temp
-    real(DP) :: nmin, nhour, nday
-
-    integer :: m
-    !---------------------------------------------------------------------------
-
-    temp  = mod( second, TIME_SEC )
-    datetime(6) = int( temp )
-    nmin  = ( second-temp ) / TIME_SEC
-
-    temp  = mod( nmin, TIME_MIN )
-    datetime(5) = int( temp )
-    nhour = ( nmin-temp ) / TIME_MIN
-
-    temp  = mod( nhour, TIME_HOUR )
-    datetime(4) = int( temp )
-    nday  = ( nhour-temp ) / TIME_HOUR
-
-    temp  = mod( nday, TIME_DOY )
-    datetime(1) = int( ( nday-temp ) / TIME_DOY )
-    nday  = temp
-
-    do m = 1, 12
-       if ( nday <= TIME_DOM(m) ) then
-          datetime(2) = m
-          datetime(3) = int( nday ) + 1
-          exit
-       endif
-       nday = nday - TIME_DOM(m)
-    enddo
-
-    return
-  end subroutine TIME_sec2date
-
-  !-----------------------------------------------------------------------------
-  !> convert several units to second
-  !@todo fit to gregorian calendar
-  !-----------------------------------------------------------------------------
-  subroutine TIME_ymdhms2sec( &
-     second, &
-     value,  &
-     unit    )
-    use mod_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    real(DP),          intent(out) :: second
-    real(DP),          intent( in) :: value
-    character(len=*), intent( in) :: unit
-    !---------------------------------------------------------------------------
-
-    select case(trim(unit))
-    case('MSEC')
-       second = value * 1.E-3_DP
-    case('SEC')
-       second = value
-    case('MIN')
-       second = value * TIME_SEC
-    case('HOUR')
-       second = value * TIME_SEC * TIME_MIN
-    case('DAY')
-       second = value * TIME_SEC * TIME_MIN * TIME_HOUR
-    case default
-       write(*,*) ' xxx Unsupported UNIT:', trim(unit), value
-       call PRC_MPIstop
-    endselect
-
-    return
-  end subroutine TIME_ymdhms2sec
-
-  !-----------------------------------------------------------------------------
+  !> Get item ID or register item
   function TIME_rapid( rapname ) result(id)
     implicit none
 
-    character(len=*), intent(in) :: rapname
+    character(len=*), intent(in) :: rapname !< name of item
 
     integer :: id
     character (len=IO_SYSCHR) :: trapname
@@ -543,12 +438,13 @@ contains
   end function TIME_rapid
 
   !-----------------------------------------------------------------------------
+  !> Start raptime
   subroutine TIME_rapstart( rapname )
     use mod_process, only: &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname
+    character(len=*), intent(in) :: rapname !< name of item
 
     integer :: id
     !---------------------------------------------------------------------------
@@ -566,12 +462,13 @@ call START_COLLECTION( rapname )
   end subroutine TIME_rapstart
 
   !-----------------------------------------------------------------------------
+  !> Save raptime
   subroutine TIME_rapend( rapname )
     use mod_process, only: &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname
+    character(len=*), intent(in) :: rapname !< name of item
 
     integer :: id
     !---------------------------------------------------------------------------
@@ -589,8 +486,9 @@ call STOP_COLLECTION( rapname )
   end subroutine TIME_rapend
 
   !-----------------------------------------------------------------------------
+  !> Report raptime
   subroutine TIME_rapreport
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_LOG_SUPPRESS, &
        IO_LOG_ALLNODE
     use mod_process, only: &
@@ -602,8 +500,8 @@ call STOP_COLLECTION( rapname )
     real(DP) :: avgvar(TIME_rapnlimit)
     real(DP) :: maxvar(TIME_rapnlimit)
     real(DP) :: minvar(TIME_rapnlimit)
-    integer :: maxidx(TIME_rapnlimit)
-    integer :: minidx(TIME_rapnlimit)
+    integer  :: maxidx(TIME_rapnlimit)
+    integer  :: minidx(TIME_rapnlimit)
 
     integer :: id
     !---------------------------------------------------------------------------
@@ -626,12 +524,12 @@ call STOP_COLLECTION( rapname )
 
     else
 
-       call PRC_MPItimestat( avgvar(1:TIME_rapnmax), &
-                             maxvar(1:TIME_rapnmax), &
-                             minvar(1:TIME_rapnmax), &
-                             maxidx(1:TIME_rapnmax), &
-                             minidx(1:TIME_rapnmax), &
-                             TIME_rapttot(1:TIME_rapnmax) )
+       call PRC_MPItimestat( avgvar      (1:TIME_rapnmax), &
+                             maxvar      (1:TIME_rapnmax), &
+                             minvar      (1:TIME_rapnmax), &
+                             maxidx      (1:TIME_rapnmax), &
+                             minidx      (1:TIME_rapnmax), &
+                             TIME_rapttot(1:TIME_rapnmax)  )
 
        do id = 1, TIME_rapnmax
           if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
@@ -661,4 +559,4 @@ call STOP_COLLECTION( rapname )
   end subroutine TIME_rapreport
 
 end module mod_time
-
+!-------------------------------------------------------------------------------

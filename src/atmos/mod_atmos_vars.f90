@@ -4,7 +4,7 @@
 !! @par Description
 !!          Container for atmospheric variables
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)   [new]
@@ -23,7 +23,7 @@ module mod_atmos_vars
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
-  use gtool_file_h, only : &
+  use gtool_file_h, only: &
      File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
@@ -200,7 +200,7 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
+    use mod_const, only: &
        CPvap => CONST_CPvap, &
        CL    => CONST_CL,    &
        CI    => CONST_CI,    &
@@ -255,7 +255,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] selected components'
 
     if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
-    if ( ATMOS_TYPE_DYN .ne. 'OFF' .and. ATMOS_TYPE_DYN .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_DYN /= 'OFF' .AND. ATMOS_TYPE_DYN /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
        if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
        ATMOS_sw_dyn = .true.
@@ -266,28 +266,28 @@ contains
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
-    if ( ATMOS_TYPE_PHY_SF .ne. 'OFF' .and. ATMOS_TYPE_PHY_SF .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_SF /= 'OFF' .AND. ATMOS_TYPE_PHY_SF /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
        ATMOS_sw_phy_sf = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
        ATMOS_sw_phy_sf = .false.
     endif
-    if ( ATMOS_TYPE_PHY_TB .ne. 'OFF' .and. ATMOS_TYPE_PHY_TB .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_TB /= 'OFF' .AND. ATMOS_TYPE_PHY_TB /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
-    if ( ATMOS_TYPE_PHY_MP .ne. 'OFF' .and. ATMOS_TYPE_PHY_MP .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_MP /= 'OFF' .AND. ATMOS_TYPE_PHY_MP /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
        ATMOS_sw_phy_mp = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
-    if ( ATMOS_TYPE_PHY_RD .ne. 'OFF' .and. ATMOS_TYPE_PHY_RD .ne. 'NONE' ) then
+    if ( ATMOS_TYPE_PHY_RD /= 'OFF' .AND. ATMOS_TYPE_PHY_RD /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
     else
@@ -567,14 +567,14 @@ contains
        FileRead
     use mod_process, only: &
        PRC_myrank
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
        CVdry  => CONST_CVdry,  &
        Rvap   => CONST_Rvap,   &
        P00    => CONST_PRE00
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_atmos_thermodyn, only: &
        CPw => AQ_CP, &
@@ -714,7 +714,7 @@ contains
        PRC_myrank, &
        PRC_2Drank
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_REAL4, &
        File_REAL8
@@ -780,7 +780,7 @@ contains
        dtype = File_REAL8
     else if ( RP == 4 ) then
        dtype = File_REAL4
-    end if
+    endif
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -1012,7 +1012,7 @@ contains
   !> History output set for prognostic variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_history
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
@@ -1023,7 +1023,7 @@ contains
        MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ,   &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
@@ -1495,11 +1495,11 @@ contains
   !> Budget monitor of atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_total
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry,  &
        Rvap   => CONST_Rvap
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_comm, only: &
        COMM_total_doreport, &

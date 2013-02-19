@@ -5,7 +5,7 @@
 !! @par Description
 !!          History output module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-05 (H.Yashiro)   [new]
@@ -24,7 +24,7 @@ module mod_history
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use mod_process, only : &
+  use mod_process, only: &
       PRC_MPIstop
   use gtool_history, only: &
        HistoryInit, &
@@ -150,15 +150,15 @@ contains
     dims(1) = 'x'
     if ( present(xdim) ) then
        if ( xdim=='half' ) dims(1) = 'xh'
-    end if
+    endif
     dims(2) = 'y'
     if ( present(ydim) ) then
        if ( ydim=='half' ) dims(2) = 'yh'
-    end if
+    endif
     dims(3) = 'z'
     if ( present(zdim) ) then
        if ( zdim=='half' ) dims(3) = 'zh'
-    end if
+    endif
 
     call TIME_rapstart('FILE O')
 
@@ -167,7 +167,7 @@ contains
 
     if ( .not. existed ) then
        call HIST_put_axes
-    end if
+    endif
 
 
     call TIME_rapend  ('FILE O')
@@ -266,7 +266,7 @@ contains
           end do
        end do
        call HistoryPut(itemid, var2, dt)
-    end if
+    endif
 
     call TIME_rapend  ('FILE O')
 
@@ -458,15 +458,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HIST_write
-    use gtool_history, only : &
+    use gtool_history, only: &
          HistoryWriteAll
-    use mod_time, only : &
-         TIME_NOWSEC
+    use mod_time, only: &
+         TIME_NOWDAYSEC
     implicit none
 
     call TIME_rapstart('FILE O')
 
-    call HistoryWriteAll( TIME_NOWSEC )
+    call HistoryWriteAll( TIME_NOWDAYSEC )
 
     call TIME_rapend  ('FILE O')
 
@@ -477,7 +477,7 @@ contains
   ! private
   !-----------------------------------------------------------------------------
   subroutine HIST_put_axes
-    use mod_grid, only : &
+    use mod_grid, only: &
          GRID_CZ, &
          GRID_CX, &
          GRID_CY, &
@@ -504,7 +504,7 @@ contains
          GRID_CBFYG, &
          GRID_FBFXG, &
          GRID_FBFYG
-    use gtool_history, only : &
+    use gtool_history, only: &
          HistoryPutAxis
     implicit none
 

@@ -4,7 +4,7 @@
 !! @par Description
 !!          Container for atmospheric surface variables
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-27 (H.Yashiro)  [new]
@@ -152,7 +152,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_sf_restart_write
 !    use mod_time, only: &
-!       NOWSEC => TIME_NOWSEC
+!       NOWSEC => TIME_NOWDAYSEC
 !    use gtool_file_h, only: &
 !       File_REAL4, &
 !       File_REAL8
