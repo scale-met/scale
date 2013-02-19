@@ -1378,7 +1378,7 @@ contains
        enddo
     endif
 
-    if ( ATMOS_HIST_id(I_ENGT) > 0 ) then
+    if ( ATMOS_PREP_sw(I_ENGT) > 0 ) then
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE

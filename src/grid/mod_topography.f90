@@ -169,7 +169,8 @@ contains
   subroutine TOPO_write
     use mod_process, only: &
        PRC_master, &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_2Drank
     use mod_time, only: &
        NOWSEC => TIME_NOWSEC
     use gtool_file_h, only: &
@@ -193,6 +194,8 @@ contains
 
     character(len=IO_FILECHR) :: bname
 
+    integer :: rankidx(2)
+
     integer :: dtype
     integer :: fid, vid
     !---------------------------------------------------------------------------
@@ -210,6 +213,8 @@ contains
 
        bname = TOPO_OUT_BASENAME
 
+       rankidx(1) = PRC_2Drank(PRC_myrank,1)
+       rankidx(2) = PRC_2Drank(PRC_myrank,2)
        call FileCreate( fid,                                     & ! [OUT]
                         bname,                                   & ! [IN]
                         TOPO_OUT_TITLE,                          & ! [IN]
@@ -217,7 +222,7 @@ contains
                         TOPO_OUT_INSTITUTE,                      & ! [IN]
                         (/'x','y'/), (/IMAX,JMAX/), (/'X','Y'/), & ! [IN]
                         (/'m','m'/), (/File_REAL4,File_REAL4/),  & ! [IN]
-                        PRC_master, PRC_myrank                   ) ! [IN]
+                        PRC_master, PRC_myrank, rankidx          ) ! [IN]
 
        call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
        call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
