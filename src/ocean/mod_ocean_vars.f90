@@ -195,11 +195,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Write ocean restart
   subroutine OCEAN_vars_restart_write
+    use mod_time, only: &
+       NOWSEC => TIME_NOWDAYSEC
     use mod_fileio, only: &
        FILEIO_write
     implicit none
 
     character(len=IO_FILECHR) :: bname
+
+    integer :: n
     !---------------------------------------------------------------------------
 
     if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
