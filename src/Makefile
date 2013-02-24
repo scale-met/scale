@@ -37,6 +37,7 @@ MODS =	\
 	mod_specfunc.o	\
 	mod_time.o	\
 	mod_grid_cartesian_plane.o	\
+	mod_fileio.o	\
 	mod_geometrics.o	\
 	mod_comm.o	\
 	mod_topography.o	\
@@ -113,8 +114,9 @@ $(BUILD_DIR)/mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o mod_calendar.o
 $(BUILD_DIR)/mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_geometrics.o
 
 $(BUILD_DIR)/mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_time.o
-$(BUILD_DIR)/mod_geometrics.o	: mod_geometrics.f90 mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian_plane.o
-$(BUILD_DIR)/mod_topography.o	: mod_topography.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_grid_cartesian_plane.o
+$(BUILD_DIR)/mod_fileio.o	: mod_fileio.f90  mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian_plane.o
+$(BUILD_DIR)/mod_geometrics.o	: mod_geometrics.f90 mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian_plane.o mod_fileio.o
+$(BUILD_DIR)/mod_topography.o	: mod_topography.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o  mod_grid_cartesian_plane.o mod_fileio.o
 
 $(BUILD_DIR)/mod_history.o	: mod_history.f90 mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian_plane.o
 $(BUILD_DIR)/mod_monitor.o	: mod_monitor.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o

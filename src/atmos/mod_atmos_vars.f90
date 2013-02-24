@@ -759,6 +759,7 @@ contains
     character(len=IO_FILECHR) :: bname
 
     integer :: fid, ap_vid(5), aq_vid(QA)
+    logical :: fileexisted
     integer :: dtype
     integer :: iq
     integer :: n
@@ -784,7 +785,7 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
-    call FileCreate( fid,                                       & ! (out)
+    call FileCreate( fid, fileexisted,                          & ! (out)
          bname,                                                 & ! (in)
          ATMOS_RESTART_OUT_TITLE,                               & ! (in)
          ATMOS_RESTART_OUT_SOURCE,                              & ! (in)

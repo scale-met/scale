@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> Program make tool for initial states for SCALE-LES ver.3
+!> Program make tool for initial states for SCALE-LES
 !!
 !! @par Description
 !!          SCALE: Scalable Computing by Advanced Library and Environment
 !!          Numerical model for LES-scale weather
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
@@ -39,6 +39,8 @@ program scaleinit
      TIME_rapreport
   use mod_grid, only: &
      GRID_setup
+  use mod_fileio, only: &
+     FILEIO_setup
   use mod_geometrics, only: &
      GEOMETRICS_setup
   use mod_comm, only: &
@@ -130,10 +132,14 @@ program scaleinit
 
   ! setup time
   call TIME_setup
+
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
   call GRID_setup
+
+  ! setup file I/O
+  call FILEIO_setup
 
   ! setup geometrics
   call GEOMETRICS_setup
@@ -144,10 +150,10 @@ program scaleinit
   ! setup topography
   call TOPO_setup
 
-  ! setup history
+  ! setup history I/O
   call HIST_setup
 
-  ! setup monitor
+  ! setup monitor I/O
   call MONIT_setup
 
   ! setup atmos
@@ -157,10 +163,9 @@ program scaleinit
 
   call TIME_rapend('Initialize')
 
-
   !########## main ##########
-  call TIME_rapstart('Main')
 
+  call TIME_rapstart('Main')
 
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
@@ -229,6 +234,7 @@ program scaleinit
   if( IO_L ) write(IO_FID_LOG,*)
 
   call TIME_rapend('Main')
+
   !########## Finalize ##########
 
   call TIME_rapreport

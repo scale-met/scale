@@ -562,6 +562,7 @@ contains
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=IO_FILECHR) :: bname
+    logical :: fileexisted
     integer :: fid, vid
     integer :: dtype
 
@@ -572,7 +573,7 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
-    call FileCreate( fid,                                       & ! (out)
+    call FileCreate( fid, fileexisted,                          & ! (out)
          bname,                                                 & ! (in)
          ATMOS_BOUNDARY_OUT_TITLE,                              & ! (in)
          ATMOS_BOUNDARY_OUT_SOURCE,                             & ! (in)

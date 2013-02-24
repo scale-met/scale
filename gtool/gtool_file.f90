@@ -87,7 +87,7 @@ module gtool_file
   integer,                   private, parameter :: SP = 4 ! single precision
   integer,                   private, parameter :: DP = 8 ! double precision
   integer,                   private, parameter :: File_nfile_max = 64 ! number limit of file
-  integer,                   private, parameter :: File_nvar_max  = 1024 ! number limit of variables
+  integer,                   private, parameter :: File_nvar_max  = 128 ! number limit of variables
   integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
 
   character(LEN=File_HLONG), private,      save :: File_bname_list(File_nfile_max)
@@ -105,6 +105,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FileCreate( &
        fid,         & ! (out)
+       existed,     & ! (out)
        basename,    & ! (in)
        title,       & ! (in)
        source,      & ! (in)
@@ -123,6 +124,7 @@ contains
     implicit none
 
     integer,          intent(out)           :: fid
+    logical,          intent(out)           :: existed
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: title
     character(LEN=*), intent( in)           :: source
@@ -140,7 +142,6 @@ contains
 
     character(len=File_HSHORT) :: time_units_
     logical :: single_
-    logical :: existed
     integer :: error
 
     integer :: rankidx_dim

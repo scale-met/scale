@@ -393,7 +393,7 @@ contains
 
     write(message,*) '*** Number of requested history item             : ', History_req_nmax
     call Log('I', message)
-    write(message,*) '*** Output default data type                             : ', HISTORY_DEFAULT_DATATYPE
+    write(message,*) '*** Output default data type                     : ', HISTORY_DEFAULT_DATATYPE
     call Log('I', message)
     write(message,*) '*** Memory usage for history data buffer [Mbyte] : ', memsize/1024/1024
     call Log('I', message)
@@ -433,6 +433,7 @@ contains
     integer,          intent(out), optional :: itemid
     logical,          intent(out), optional :: existed
 
+    logical :: fileexisted
     integer :: id
     integer :: ary_size
     integer :: nmax, reqid
@@ -463,7 +464,7 @@ contains
              id = History_id_count
 
              ! new file registration
-             call FileCreate(History_fid(id),                           & ! (out)
+             call FileCreate(History_fid(id), fileexisted,              & ! (out)
                   trim(History_req_basename(reqid)),                    & ! (in)
                   HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION,   & ! (in)
                   History_dim_name, History_dim_size, History_dim_desc, & ! (in)

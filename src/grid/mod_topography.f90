@@ -8,7 +8,7 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
+!! @li      2012-12-26 (H.Yashiro)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -20,12 +20,11 @@ module mod_topography
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
-     IO_FILECHR
+     IO_FILECHR, &
+     IO_SYSCHR
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use gtool_file_h, only: &
-     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -72,12 +71,10 @@ module mod_topography
   integer, private, parameter :: XDIR = 1 !< [index] X direction
   integer, private, parameter :: YDIR = 2 !< [index] Y direction
 
-  character(len=IO_FILECHR), private, save :: TOPO_IN_BASENAME  = '' !< input  file name
-  character(len=IO_FILECHR), private, save :: TOPO_OUT_BASENAME = '' !< output file name
-
-  character(len=File_HLONG), private, save :: TOPO_OUT_TITLE     = 'SCALE3 TOPOGRAPHY'
-  character(len=File_HLONG), private, save :: TOPO_OUT_SOURCE    = 'SCALE-LES ver. 3'
-  character(len=File_HLONG), private, save :: TOPO_OUT_INSTITUTE = 'AICS/RIKEN'
+  character(len=IO_FILECHR), private :: TOPO_IN_BASENAME  = ''                  !< basename of input  file
+  character(len=IO_FILECHR), private :: TOPO_OUT_BASENAME = ''                  !< basename of output file
+  character(len=IO_SYSCHR),  private :: TOPO_OUT_TITLE    = 'SCALE3 TOPOGRAPHY' !< title for output file
+  character(len=IO_SYSCHR),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
@@ -94,7 +91,8 @@ contains
 
     namelist / PARAM_TOPO / &
        TOPO_IN_BASENAME,  &
-       TOPO_OUT_BASENAME
+       TOPO_OUT_BASENAME, &
+       TOPO_OUT_DTYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -121,24 +119,21 @@ contains
     call TOPO_Xi
     call TOPO_metrics
 
+    ! write to file
+    call TOPO_write
+
     return
   end subroutine TOPO_setup
 
   !-----------------------------------------------------------------------------
   !> Read topography
   subroutine TOPO_read
-    use mod_process, only: &
-       PRC_myrank
+    use mod_fileio, only: &
+       FILEIO_read
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use gtool_file, only: &
-       FileRead
     implicit none
-
-    real(RP) :: temp(IMAX,JMAX) !> temp file (no HALO)
-
-    character(len=IO_FILECHR) :: bname
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -146,12 +141,8 @@ contains
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
-       bname = TOPO_IN_BASENAME
-
-       call FileRead( temp(:,:), bname, 'TOPO', 1, PRC_myrank )
-
-       TOPO_Zsfc(1,IS:IE,JS:JE) = temp(1:IMAX,1:JMAX)
-
+       call FILEIO_read( TOPO_Zsfc(1,:,:),                      & ! [OUT]
+                         TOPO_IN_BASENAME, 'TOPO', 'XY', step=1 ) ! [IN]
        ! fill IHALO & JHALO
        call COMM_vars8( TOPO_Zsfc(1,:,:), 1 )
        call COMM_wait ( TOPO_Zsfc(1,:,:), 1 )
@@ -159,7 +150,7 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'
 
-       TOPO_Zsfc(:,:,:) = 0.D0
+       TOPO_Zsfc(:,:,:) = 0.0_RP
     endif
 
     return
@@ -169,79 +160,15 @@ contains
   !> Write topography
   !-----------------------------------------------------------------------------
   subroutine TOPO_write
-    use mod_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank
-    use mod_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
-    use gtool_file, only: &
-       FileCreate, &
-       FileAddVariable, &
-       FilePutAxis, &
-       FileWrite, &
-       FileClose
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    use mod_grid, only:  &
-       GRID_CX, &
-       GRID_CY
+    use mod_fileio, only: &
+       FILEIO_write
     implicit none
-
-    real(RP) :: temp(IMAX,JMAX) !> temp file (no HALO)
-
-    character(len=IO_FILECHR) :: bname
-
-    integer :: rankidx(2)
-
-    integer :: dtype
-    integer :: fid, vid
     !---------------------------------------------------------------------------
 
     if ( TOPO_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
-
-       ! fill IHALO & JHALO
-       call COMM_vars8( TOPO_Zsfc(1,:,:), 1 )
-       call COMM_wait ( TOPO_Zsfc(1,:,:), 1 )
-
-       temp(1:IMAX,1:JMAX) = TOPO_Zsfc(1,IS:IE,JS:JE)
-
-       bname = TOPO_OUT_BASENAME
-
-       rankidx(1) = PRC_2Drank(PRC_myrank,1)
-       rankidx(2) = PRC_2Drank(PRC_myrank,2)
-       call FileCreate( fid,                                     & ! [OUT]
-                        bname,                                   & ! [IN]
-                        TOPO_OUT_TITLE,                          & ! [IN]
-                        TOPO_OUT_SOURCE,                         & ! [IN]
-                        TOPO_OUT_INSTITUTE,                      & ! [IN]
-                        (/'x','y'/), (/IMAX,JMAX/), (/'X','Y'/), & ! [IN]
-                        (/'m','m'/), (/File_REAL4,File_REAL4/),  & ! [IN]
-                        PRC_master, PRC_myrank, rankidx          ) ! [IN]
-
-       call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
-
-       if    ( RP == 8 ) then
-          dtype = File_REAL8
-       elseif( RP == 4 ) then
-          dtype = File_REAL4
-       endif
-
-       call FileAddVariable( vid,                              & ! [OUT]
-                             fid, 'TOPO', 'Topography', '[m]', & ! [IN]
-                             (/'x','y'/), dtype                ) ! [IN]
-
-       call FileWrite( vid, temp(:,:), NOWSEC, NOWSEC )
-
-       call FileClose( fid )
+       call FILEIO_write( TOPO_Zsfc(1,:,:),  TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
+                          'TOPO', 'Topography', 'm', 'XY',      TOPO_OUT_DTYPE  ) ! [IN]
 
     endif
 

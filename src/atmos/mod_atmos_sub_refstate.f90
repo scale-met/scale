@@ -4,7 +4,7 @@
 !! @par Description
 !!          Reference state of Atmosphere
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
@@ -22,7 +22,7 @@ module mod_atmos_refstate
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
-  use gtool_file_h, only : &
+  use gtool_file_h, only: &
      File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
@@ -186,15 +186,16 @@ contains
        FilePutAxis, &
        FileWrite, &
        FileClose
-    use mod_grid, only : &
+    use mod_grid, only: &
          GRID_CZ
-    use dc_types, only : &
+    use dc_types, only: &
          DP
     implicit none
 
     character(len=IO_FILECHR) :: bname
     integer :: dtype
     integer :: fid, vid_dens, vid_pott
+    logical :: fileexisted
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -207,13 +208,13 @@ contains
        dtype = File_REAL8
     else if ( RP == 4 ) then
        dtype = File_REAL4
-    end if
+    endif
 
     if ( PRC_myrank == PRC_master ) then
        write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_OUT_BASENAME)
        rankidx(1) = PRC_2Drank(PRC_myrank,1)
        rankidx(2) = PRC_2Drank(PRC_myrank,2)
-       call FileCreate( fid,                 & ! (out)
+       call FileCreate( fid, fileexisted,    & ! (out)
             bname,                           & ! (in)
             ATMOS_REFSTATE_OUT_TITLE,        & ! (in)
             ATMOS_REFSTATE_OUT_SOURCE,       & ! (in)
@@ -245,13 +246,13 @@ contains
   !> Generate Reference state (International Standard Atmosphere)
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_generate_isa
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,  &
        Rdry   => CONST_Rdry,  &
        RovCP  => CONST_RovCP, &
        Pstd   => CONST_Pstd,  &
        P00    => CONST_PRE00
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_atmos_hydrostatic, only: &
        hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
@@ -411,9 +412,9 @@ contains
   !> Generate Reference state (Uniform Potential Temperature)
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_generate_uniform
-    use mod_const, only : &
+    use mod_const, only: &
        Pstd   => CONST_Pstd
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_atmos_hydrostatic, only: &
        hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
@@ -504,12 +505,12 @@ contains
   !> Generate Reference state (Horizontal average from initial data)
   !-----------------------------------------------------------------------------
   subroutine ATMOS_REFSTATE_generate_frominit
-    use mod_const, only : &
+    use mod_const, only: &
        Rdry   => CONST_Rdry,   &
        CPdry  => CONST_CPdry,  &
        Rvap   => CONST_Rvap,   &
        P00    => CONST_PRE00
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_comm, only: &
        COMM_horizontal_mean

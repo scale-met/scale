@@ -235,6 +235,7 @@ contains
 
     character(len=IO_FILECHR) :: bname
     integer :: fid, vid
+    logical :: fileexisted
     integer :: dtype
     integer :: n
 
@@ -253,7 +254,7 @@ contains
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
-    call FileCreate( fid,                         & ! (out)
+    call FileCreate( fid, fileexisted,            & ! (out)
          bname,                                   & ! (in)
          OCEAN_RESTART_OUT_TITLE,                 & ! (in)
          OCEAN_RESTART_OUT_SOURCE,                & ! (in)
