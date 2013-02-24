@@ -4,7 +4,7 @@
 !! @par Description
 !!          Grid module for plane cartesian coordinate
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)   [new]
@@ -20,12 +20,22 @@ module mod_grid
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FILECHR, &
      IO_FID_LOG, &
-     IO_L
+     IO_L,       &
+     IO_FILECHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include "inc_precision.h"
+  include "inc_index.h"
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -36,69 +46,65 @@ module mod_grid
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
+  integer,  public, save :: ISG              !< start of the inner domain: x, global
+  integer,  public, save :: IEG              !< end   of the inner domain: x, global
+  integer,  public, save :: JSG              !< start of the inner domain: y, global
+  integer,  public, save :: JEG              !< end   of the inner domain: y, global
 
-  integer, public, save :: ISG, IEG ! start/end of inner domain: x, global
-  integer, public, save :: JSG, JEG ! start/end of inner domain: y, global
+  integer,  public, save :: GRID_IJS         !< start of the inner domain
+  integer,  public, save :: GRID_IJE         !< end   of the inner domain
+  integer,  public, save :: GRID_IJA         !< # of x*y
 
-  integer, public, save :: GRID_IJA           ! # of x*y
-  integer, public, save :: GRID_IJS, GRID_IJE ! start/end of inner domain
+  real(RP), public, save :: GRID_CZ(KA)      !< center coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_CX(IA)      !< center coordinate [m]: x, local
+  real(RP), public, save :: GRID_CY(JA)      !< center coordinate [m]: y, local
+  real(RP), public, save :: GRID_CDZ(KA)     !< z-length of control volume [m]
+  real(RP), public, save :: GRID_CDX(IA)     !< x-length of control volume [m]
+  real(RP), public, save :: GRID_CDY(JA)     !< y-length of control volume [m]
+  real(RP), public, save :: GRID_RCDZ(KA)    !< reciprocal of center-dz
+  real(RP), public, save :: GRID_RCDX(IA)    !< reciprocal of center-dx
+  real(RP), public, save :: GRID_RCDY(JA)    !< reciprocal of center-dy
 
-  real(RP), public, save :: GRID_CZ(KA)      ! center coordinate [m]: z, local=global
-  real(RP), public, save :: GRID_CX(IA)      ! center coordinate [m]: x, local
-  real(RP), public, save :: GRID_CY(JA)      ! center coordinate [m]: y, local
-  real(RP), public, save :: GRID_CDZ(KA)     ! z-length of control volume [m]
-  real(RP), public, save :: GRID_CDX(IA)     ! x-length of control volume [m]
-  real(RP), public, save :: GRID_CDY(JA)     ! y-length of control volume [m]
-  real(RP), public, save :: GRID_RCDZ(KA)    ! reciprocal of center-dz
-  real(RP), public, save :: GRID_RCDX(IA)    ! reciprocal of center-dx
-  real(RP), public, save :: GRID_RCDY(JA)    ! reciprocal of center-dy
+  real(RP), public, save :: GRID_FZ(0:KA)    !< face   coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_FX(0:IA)    !< face   coordinate [m]: x, local
+  real(RP), public, save :: GRID_FY(0:JA)    !< face   coordinate [m]: y, local
+  real(RP), public, save :: GRID_FDZ(KA-1)   !< z-length of grid(k)-to-grid(k-1) [m]
+  real(RP), public, save :: GRID_FDX(IA-1)   !< x-length of grid(i)-to-grid(i-1) [m]
+  real(RP), public, save :: GRID_FDY(JA-1)   !< y-length of grid(j)-to-grid(j-1) [m]
+  real(RP), public, save :: GRID_RFDZ(KA-1)  !< reciprocal of face-dz
+  real(RP), public, save :: GRID_RFDX(IA-1)  !< reciprocal of face-dx
+  real(RP), public, save :: GRID_RFDY(JA-1)  !< reciprocal of face-dy
 
-  real(RP), public, save :: GRID_FZ(0:KA)    ! face   coordinate [m]: z, local=global
-  real(RP), public, save :: GRID_FX(0:IA)    ! face   coordinate [m]: x, local
-  real(RP), public, save :: GRID_FY(0:JA)    ! face   coordinate [m]: y, local
-  real(RP), public, save :: GRID_FDZ(KA-1)   ! z-length of grid(k)-to-grid(k-1) [m]
-  real(RP), public, save :: GRID_FDX(IA-1)   ! x-length of grid(i)-to-grid(i-1) [m]
-  real(RP), public, save :: GRID_FDY(JA-1)   ! y-length of grid(j)-to-grid(j-1) [m]
-  real(RP), public, save :: GRID_RFDZ(KA-1)  ! reciprocal of face-dz
-  real(RP), public, save :: GRID_RFDX(IA-1)  ! reciprocal of face-dx
-  real(RP), public, save :: GRID_RFDY(JA-1)  ! reciprocal of face-dy
+  logical,  public, save :: GRID_CZ_mask(KA) !< main/buffer region mask: z
+  logical,  public, save :: GRID_CX_mask(IA) !< main/buffer region mask: x
+  logical,  public, save :: GRID_CY_mask(JA) !< main/buffer region mask: y
 
-  logical,  public, save :: GRID_CZ_mask(KA) ! main/buffer region mask: z
-  logical,  public, save :: GRID_CX_mask(IA) ! main/buffer region mask: x
-  logical,  public, save :: GRID_CY_mask(JA) ! main/buffer region mask: y
+  real(RP), public, save :: GRID_CBFZ(KA)    !< center buffer factor [0-1]: z
+  real(RP), public, save :: GRID_CBFX(IA)    !< center buffer factor [0-1]: x
+  real(RP), public, save :: GRID_CBFY(JA)    !< center buffer factor [0-1]: y
+  real(RP), public, save :: GRID_FBFZ(KA)    !< face   buffer factor [0-1]: z
+  real(RP), public, save :: GRID_FBFX(IA)    !< face   buffer factor [0-1]: x
+  real(RP), public, save :: GRID_FBFY(JA)    !< face   buffer factor [0-1]: y
 
-  real(RP), public, save :: GRID_CBFZ(KA)    ! center buffer factor [0-1]: z
-  real(RP), public, save :: GRID_CBFX(IA)    ! center buffer factor [0-1]: x
-  real(RP), public, save :: GRID_CBFY(JA)    ! center buffer factor [0-1]: y
-  real(RP), public, save :: GRID_FBFZ(KA)    ! face   buffer factor [0-1]: z
-  real(RP), public, save :: GRID_FBFX(IA)    ! face   buffer factor [0-1]: x
-  real(RP), public, save :: GRID_FBFY(JA)    ! face   buffer factor [0-1]: y
-
-  real(RP), public, allocatable :: GRID_FXG(:)   ! face   coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_FYG(:)   ! face   coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_CXG(:)   ! center coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_CYG(:)   ! center coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_FBFXG(:) ! face   buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_FBFYG(:) ! face   buffer factor [0-1]: y, global
-  real(RP), public, allocatable :: GRID_CBFXG(:) ! center buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_CBFYG(:) ! center buffer factor [0-1]: y, global
-  logical,  public, allocatable :: GRID_CXG_mask(:)
-  logical,  public, allocatable :: GRID_CYG_mask(:)
-
+  real(RP), public, allocatable, save :: GRID_FXG(:)      !< face   coordinate [m]: x, global
+  real(RP), public, allocatable, save :: GRID_FYG(:)      !< face   coordinate [m]: y, global
+  real(RP), public, allocatable, save :: GRID_CXG(:)      !< center coordinate [m]: x, global
+  real(RP), public, allocatable, save :: GRID_CYG(:)      !< center coordinate [m]: y, global
+  real(RP), public, allocatable, save :: GRID_FBFXG(:)    !< face   buffer factor [0-1]: x, global
+  real(RP), public, allocatable, save :: GRID_FBFYG(:)    !< face   buffer factor [0-1]: y, global
+  real(RP), public, allocatable, save :: GRID_CBFXG(:)    !< center buffer factor [0-1]: x, global
+  real(RP), public, allocatable, save :: GRID_CBFYG(:)    !< center buffer factor [0-1]: y, global
+  logical,  public, allocatable, save :: GRID_CXG_mask(:) !< main/buffer region mask: x, global
+  logical,  public, allocatable, save :: GRID_CYG_mask(:) !< main/buffer region mask: y, global
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  public :: GRID_read
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -110,10 +116,8 @@ module mod_grid
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup horizontal&vertical grid
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine GRID_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -196,15 +200,15 @@ contains
   end subroutine GRID_setup
 
   !-----------------------------------------------------------------------------
-  !> Allocate Arrays
-  !-----------------------------------------------------------------------------
+  !> Allocate arrays
   subroutine GRID_allocate
     use mod_process, only: &
-       PRC_NUM_X,   &
+       PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
 
     integer :: IAG, JAG
+    !---------------------------------------------------------------------------
 
     ! array size (global domain)
     IAG = IHALO + IMAX*PRC_NUM_X + IHALO
@@ -225,12 +229,11 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read horizontal&vertical grid
-  !-----------------------------------------------------------------------------
   subroutine GRID_read
+    use gtool_file, only: &
+       FileRead
     use mod_process, only: &
-         PRC_myrank
-    use gtool_file, only : &
-         FileRead
+       PRC_myrank
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -300,7 +303,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Generate horizontal&vertical grid
-  !-----------------------------------------------------------------------------
   subroutine GRID_generate
     use mod_process, only: &
        PRC_MPIstop, &

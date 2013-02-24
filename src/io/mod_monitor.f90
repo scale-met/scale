@@ -4,10 +4,10 @@
 !! @par Description
 !!          Monitor output module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
-!! @li      2012-03-22 (H.Yashiro) [new]
+!! @li      2012-03-22 (H.Yashiro)   [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -28,6 +28,13 @@ module mod_monitor
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include "inc_precision.h"
+  include "inc_index.h"
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedures
   !
   public :: MONIT_setup
@@ -36,13 +43,6 @@ module mod_monitor
   public :: MONIT_in
   public :: MONIT_write
   public :: MONIT_finalize
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
 
   !-----------------------------------------------------------------------------
   !
@@ -58,29 +58,29 @@ module mod_monitor
   !
   !++ Private parameters & variables
   !
-  integer,                    private,      save :: MONIT_FID = -1
+  integer,                    private,      save :: MONIT_FID = -1                    !< fileID for monitor output file
 
-  character(len=IO_FILECHR),  private,      save :: MONITOR_OUT_BASENAME  = 'monitor'
-  integer,                    private,      save :: MONITOR_STEP_INTERVAL = 1
+  character(len=IO_FILECHR),  private,      save :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
+  integer,                    private,      save :: MONITOR_STEP_INTERVAL = 1         !< step interval 
 
-  integer,                    private, parameter :: MONIT_req_limit = 1000 !> number limit for monitor item request
-  character(len=File_HSHORT), private,      save :: MONIT_req_item   (MONIT_req_limit)
+  integer,                    private, parameter :: MONIT_req_limit = 1000            !< number limit for item request
+  integer,                    private,      save :: MONIT_req_nmax = 0                !< number of requested item
+  character(len=File_HSHORT), private,      save :: MONIT_req_item(MONIT_req_limit)   !< name of requested monitor item
 
-  integer,                    private,              save :: MONIT_req_nmax = 0 !> number of requested item
-  character(len=File_HSHORT), private, allocatable, save :: MONIT_item   (:)
-  character(len=File_HMID),   private, allocatable, save :: MONIT_desc   (:)
-  character(len=File_HSHORT), private, allocatable, save :: MONIT_unit   (:)
-  character(len=File_HSHORT), private, allocatable, save :: MONIT_ktype  (:)
-  integer,                    private, allocatable, save :: MONIT_kmax   (:)
-  real(RP),                   private, allocatable, save :: MONIT_var    (:)
+  integer,                    private,              save :: MONIT_id_count = 0        !< number of item to output
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_item (:)            !< name                of the item
+  character(len=File_HMID),   private, allocatable, save :: MONIT_desc (:)            !< description         of the item
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_unit (:)            !< unit                of the item
+  character(len=File_HSHORT), private, allocatable, save :: MONIT_ktype(:)            !< vertical layer type of the item
+  integer,                    private, allocatable, save :: MONIT_kmax (:)            !< # of vertical grid  of the item
+  real(RP),                   private, allocatable, save :: MONIT_var  (:)            !< value               of the item
 
-  integer,                    private,              save :: MONIT_id_count = 0 !> number of registered item
-
-  real(RP), private, parameter :: eps = 1.E-10_RP !> epsilon for timesec
+  real(RP), private, parameter :: eps = 1.E-10_RP !< epsilon for timesec
 
   !-----------------------------------------------------------------------------  
 contains
   !-----------------------------------------------------------------------------
+  !> Setup
   subroutine MONIT_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -134,12 +134,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
     endif
 
-    allocate( MONIT_item   (MONIT_req_nmax) )
-    allocate( MONIT_desc   (MONIT_req_nmax) )
-    allocate( MONIT_unit   (MONIT_req_nmax) )
-    allocate( MONIT_ktype  (MONIT_req_nmax) )
-    allocate( MONIT_kmax   (MONIT_req_nmax) )
-    allocate( MONIT_var    (MONIT_req_nmax) )
+    allocate( MONIT_item (MONIT_req_nmax) )
+    allocate( MONIT_desc (MONIT_req_nmax) )
+    allocate( MONIT_unit (MONIT_req_nmax) )
+    allocate( MONIT_ktype(MONIT_req_nmax) )
+    allocate( MONIT_kmax (MONIT_req_nmax) )
+    allocate( MONIT_var  (MONIT_req_nmax) )
 
     rewind(IO_FID_CONF)
     do n = 1, MONIT_req_nmax
@@ -156,6 +156,7 @@ contains
   end subroutine MONIT_setup
 
   !-----------------------------------------------------------------------------
+  !> Search existing item, or matching check between requested and registered item
   subroutine MONIT_reg( &
       itemid, &
       item,   &
@@ -164,11 +165,11 @@ contains
       ndim    )
     implicit none
 
-    integer,          intent(out) :: itemid
-    character(len=*), intent( in) :: item
-    character(len=*), intent( in) :: desc
-    character(len=*), intent( in) :: unit
-    integer,          intent( in) :: ndim
+    integer,          intent(out) :: itemid !< index number of the item
+    character(len=*), intent(in)  :: item   !< name         of the item
+    character(len=*), intent(in)  :: desc   !< description  of the item
+    character(len=*), intent(in)  :: unit   !< unit         of the item
+    integer,          intent(in)  :: ndim   !< dimension    of the item
 
     character(len=8) :: lname
 
@@ -204,14 +205,14 @@ contains
                 MONIT_ktype(itemid) = lname
                 MONIT_kmax (itemid) = KMAX
              endif
-             MONIT_var(itemid) = 0.D0
+             MONIT_var(itemid) = 0.0_RP
 
-             if( IO_L ) write(IO_FID_LOG,*) '*** [MONIT] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) '] Name           : ', trim(MONIT_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Description    : ', trim(MONIT_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Unit           : ', trim(MONIT_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] Vert. type     : ', trim(MONIT_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) '] # of layer     : ', MONIT_kmax(itemid)
+             if( IO_L ) write(IO_FID_LOG,*) ' *** [MONIT] Item registration No.= ', itemid
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Name           : ', trim(MONIT_item (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Description    : ', trim(MONIT_desc (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Unit           : ', trim(MONIT_unit (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Vert. type     : ', trim(MONIT_ktype(itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] # of layer     : ', MONIT_kmax(itemid)
           endif
        enddo
     endif
@@ -220,6 +221,7 @@ contains
   end subroutine MONIT_reg
 
   !-----------------------------------------------------------------------------
+  !> Put total value to the monitor buffer
   subroutine MONIT_put( &
       itemid, &
       var     )
@@ -227,8 +229,8 @@ contains
        COMM_total
     implicit none
 
-    integer,  intent(in) :: itemid
-    real(RP), intent(in) :: var(:,:,:)
+    integer,  intent(in) :: itemid     !< index number of the item
+    real(RP), intent(in) :: var(:,:,:) !< value
 
     real(RP) :: total
     !---------------------------------------------------------------------------
@@ -243,6 +245,7 @@ contains
   end subroutine MONIT_put
 
   !-----------------------------------------------------------------------------
+  !> Wrapper routine of MONIT_reg+MONIT_put
   subroutine MONIT_in( &
       var,  &
       item, &
@@ -251,11 +254,11 @@ contains
       ndim  )
     implicit none
 
-    real(RP),         intent(in) :: var(:,:,:)
-    character(len=*), intent(in) :: item
-    character(len=*), intent(in) :: desc
-    character(len=*), intent(in) :: unit
-    integer,          intent(in) :: ndim
+    real(RP),         intent(in) :: var(:,:,:) !< value
+    character(len=*), intent(in) :: item       !< name        of the item
+    character(len=*), intent(in) :: desc       !< description of the item
+    character(len=*), intent(in) :: unit       !< unit        of the item
+    integer,          intent(in) :: ndim       !< dimension   of the item
 
     integer :: itemid
     !---------------------------------------------------------------------------
@@ -267,12 +270,13 @@ contains
   end subroutine MONIT_in
 
   !-----------------------------------------------------------------------------
+  !> Flush monitor buffer to formatted file
   subroutine MONIT_write( memo )
     use mod_time, only: &
        NOWSTEP => TIME_NOWSTEP
     implicit none
 
-    character(len=4), intent(in) :: memo
+    character(len=4), intent(in) :: memo !< note
 
     logical, save :: firsttime = .true.
 
@@ -302,13 +306,14 @@ contains
   end subroutine MONIT_write
 
   !-----------------------------------------------------------------------------
+  !> Open file and write header at the first time
   subroutine MONIT_writeheader
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_get_available_fid, &
        IO_make_idstr,        &
        IO_FILECHR,           &
        IO_LOG_ALLNODE
-    use mod_process, only : &
+    use mod_process, only: &
        PRC_myrank, &
        PRC_master, &
        PRC_MPIstop
@@ -366,10 +371,11 @@ contains
   end subroutine MONIT_writeheader
 
   !-----------------------------------------------------------------------------
+  !> Close file
   subroutine MONIT_finalize
-    use mod_stdio, only : &
+    use mod_stdio, only: &
        IO_make_idstr
-    use mod_process, only : &
+    use mod_process, only: &
        PRC_myrank
     implicit none
 

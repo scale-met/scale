@@ -4,7 +4,7 @@
 !! @par Description
 !!          Thermodynamics macros
 !!
-!! @author Theam Scale
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-22 (S.Nishizawa)  [new]

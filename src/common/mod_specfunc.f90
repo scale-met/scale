@@ -60,7 +60,6 @@ contains
     real(DP), parameter :: LRTP = 0.9189385332046727_DP ! log(sqrt(2*PI))
 
     real(DP) :: Ag, dx
-    integer  :: i
     !---------------------------------------------------------------------------
 
     dx = real(x, kind=DP)

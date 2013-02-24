@@ -225,7 +225,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP),          intent(out) :: var(:,:,:)
+    real(RP),         intent(out) :: var(:,:,:)
     character(LEN=*), intent( in) :: basename
     character(LEN=*), intent( in) :: varname
     character(LEN=*), intent( in) :: layername
@@ -269,7 +269,7 @@ contains
                                             'varname= ',trim(varname),', step=',step
              if( IO_L ) write(IO_FID_LOG,*) 'xxx [INPUT]/[FIO] Q Value is set to 0.'
 
-             var(k_start:k_end,:,:) = 0.D0
+             var(k_start:k_end,:,:) = 0.0_RP
 
              return
           endif
