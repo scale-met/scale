@@ -71,17 +71,15 @@ module mod_topography
   integer, private, parameter :: XDIR = 1 !< [index] X direction
   integer, private, parameter :: YDIR = 2 !< [index] Y direction
 
-  character(len=IO_FILECHR), private :: TOPO_IN_BASENAME  = ''                  !< basename of input  file
-  character(len=IO_FILECHR), private :: TOPO_OUT_BASENAME = ''                  !< basename of output file
-  character(len=IO_SYSCHR),  private :: TOPO_OUT_TITLE    = 'SCALE3 TOPOGRAPHY' !< title for output file
+  character(len=IO_FILECHR), private :: TOPO_IN_BASENAME  = ''                  !< basename of the input  file
+  character(len=IO_FILECHR), private :: TOPO_OUT_BASENAME = ''                  !< basename of the output file
+  character(len=IO_SYSCHR),  private :: TOPO_OUT_TITLE    = 'SCALE3 TOPOGRAPHY' !< title    of the output file
   character(len=IO_SYSCHR),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup horizontal&vertical grid
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine TOPO_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -158,7 +156,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Write topography
-  !-----------------------------------------------------------------------------
   subroutine TOPO_write
     use mod_fileio, only: &
        FILEIO_write
@@ -177,7 +174,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Convert Z to Xi coordinate
-  !-----------------------------------------------------------------------------
   subroutine TOPO_Xi
     use mod_grid, only: &
        GRID_CZ, &
@@ -214,7 +210,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Gvector
-  !-----------------------------------------------------------------------------
   subroutine TOPO_metrics
     use mod_grid, only: &
        GRID_CZ,   &

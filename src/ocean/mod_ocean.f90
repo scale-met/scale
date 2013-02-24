@@ -4,7 +4,7 @@
 !! @par Description
 !!          Ocean module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
@@ -32,6 +32,7 @@ module mod_ocean
   !
   public :: OCEAN_setup
   public :: OCEAN_step
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -46,10 +47,8 @@ module mod_ocean
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup ocean
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine OCEAN_setup
     use mod_ocean_vars, only: &
        OCEAN_vars_setup, &
@@ -71,8 +70,7 @@ contains
   end subroutine OCEAN_setup
 
   !-----------------------------------------------------------------------------
-  !> advance ocean state
-  !-----------------------------------------------------------------------------
+  !> Ocean step
   subroutine OCEAN_step
     use mod_ocean_vars, only: &
        sw_sst => OCEAN_sw_sst

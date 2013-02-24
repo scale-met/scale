@@ -4,7 +4,7 @@
 !! @par Description
 !!          subroutines for preparing topography data
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-26 (H.Yashiro)  [new]
@@ -23,7 +23,7 @@ module mod_mktopo
      IO_L
   use mod_process, only: &
      PRC_MPIstop
-  use mod_grid, only : &
+  use mod_grid, only: &
      CX => GRID_CX, &
      CY => GRID_CY
   use mod_topography, only: &
@@ -75,7 +75,7 @@ contains
   !> Initialize Reference state
   !-----------------------------------------------------------------------------
   subroutine MKTOPO_setup
-    use mod_const, only : &
+    use mod_const, only: &
        CONST_UNDEF8
     implicit none
 

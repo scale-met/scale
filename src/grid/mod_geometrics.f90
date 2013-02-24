@@ -68,8 +68,8 @@ module mod_geometrics
   real(RP), private :: GEOMETRICS_startlonlat(2) = (/ 135.2_RP, 34.7_RP /) !< lon&lat at north-west corner
   real(RP), private :: GEOMETRICS_rotation       = 0.0_RP                  !< rotation angle
 
-  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''                  !< basename of output file
-  character(len=IO_SYSCHR),  private :: GEOMETRICS_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title for output file
+  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''                  !< basename of the output file
+  character(len=IO_SYSCHR),  private :: GEOMETRICS_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title    of the output file
   character(len=IO_SYSCHR),  private :: GEOMETRICS_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------

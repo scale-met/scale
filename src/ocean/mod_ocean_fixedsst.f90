@@ -4,7 +4,7 @@
 !! @par Description
 !!          SST control module (tentative)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-03-27 (H.Yashiro)  [new]
@@ -24,17 +24,17 @@ module mod_ocean_sf
   private
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
-  !
-  public :: OCEAN_SST_setup
-  public :: OCEAN_SST
-
-  !-----------------------------------------------------------------------------
-  !
   !++ included parameters
   !
   include "inc_precision.h"
   include 'inc_index.h'
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: OCEAN_SST_setup
+  public :: OCEAN_SST
 
   !-----------------------------------------------------------------------------
   !
@@ -48,14 +48,12 @@ module mod_ocean_sf
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: OCEAN_FIXEDSST_RATE = 2.E-5_RP ! SST change rate
+  real(RP), private, save :: OCEAN_FIXEDSST_RATE = 2.E-5_RP !< SST change rate
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup FIXEDSST
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine OCEAN_SST_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -67,8 +65,8 @@ contains
        SST
     implicit none
 
-    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP  ! SST for initial state
-    logical :: OCEAN_FIXEDSST_RESET    = .false. ! reset SST?
+    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP !< SST for initial state
+    logical  :: OCEAN_FIXEDSST_RESET    = .false.   !< reset SST?
 
     NAMELIST / PARAM_OCEAN_FIXEDSST / &
        OCEAN_FIXEDSST_STARTSST, &
@@ -76,16 +74,16 @@ contains
        OCEAN_FIXEDSST_RATE
 
     integer :: ierr
-    integer :: i,j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIXEDSST]/Categ[OCEAN]'
 
-    if ( OCEAN_TYPE .ne. 'FIXEDSST' ) then
+    if ( OCEAN_TYPE /= 'FIXEDSST' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not FIXEDSST. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -122,7 +120,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> SST change
-  !-----------------------------------------------------------------------------
   subroutine OCEAN_SST
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN

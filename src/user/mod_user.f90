@@ -4,7 +4,7 @@
 !! @par Description
 !!          User defined module
 !!
-!! @author H.Tomita and SCALE developers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-26 (H.Yashiro)   [new]
@@ -24,19 +24,19 @@ module mod_user
   private
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
-  !
-  public :: USER_setup
-  public :: USER_step
-  
-  !-----------------------------------------------------------------------------
-  !
   !++ included parameters
   !
   include "inc_precision.h"
   include "inc_index.h"
   include 'inc_tracer.h'
 
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: USER_setup
+  public :: USER_step
+  
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -49,14 +49,12 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private, save :: USER_do = .false.
+  logical, private, save :: USER_do = .false. !< do user step?
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup
-  !-----------------------------------------------------------------------------
   subroutine USER_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -89,8 +87,7 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Step
-  !-----------------------------------------------------------------------------
+  !> User step
   subroutine USER_step
     use mod_process, only: &
        PRC_MPIstop
