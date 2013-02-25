@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Surface fluxes
+!> module ATMOSPHERE / Physics Surface fluxes
 !!
 !! @par Description
 !!          Flux from/to bottom wall of atmosphere (surface)
 !!          Bulk Method
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-03 (Y.Miyamoto)  [new]
@@ -183,10 +183,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Louis parameterization'
 
-    if ( ATMOS_TYPE_PHY_SF .ne. 'LOUIS' ) then
+    if ( ATMOS_TYPE_PHY_SF /= 'LOUIS' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_SF is not LOUIS. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -238,7 +238,7 @@ contains
   end subroutine ATMOS_PHY_SF_setup
 
   subroutine ATMOS_PHY_SF
-    use mod_const, only : &
+    use mod_const, only: &
        CPdry  => CONST_CPdry, &
        LH0    => CONST_LH0
     use mod_time, only: &
@@ -308,7 +308,7 @@ contains
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
          CZ                                                   ) ! (in)
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
        Rdry   => CONST_Rdry,   &
@@ -532,7 +532,7 @@ contains
        tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
        Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
        Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
-    end if
+    endif
     Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
 
     ! the final estimate of RiB0
@@ -547,7 +547,7 @@ contains
        tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
        Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
        Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
-    end if
+    endif
     Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
 
     return

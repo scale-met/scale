@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmospheric Surface Variables
+!> module ATMOSPHERIC Surface Variables
 !!
 !! @par Description
 !!          Container for atmospheric surface variables

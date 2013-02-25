@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Radiation
+!> module ATMOSPHERE / Physics Radiation
 !!
 !! @par Description
 !!          Atmospheric radiation transfer process
 !!          DYCOMS-II Parametarized Radiative heating
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-26 (H.Yashiro)  [new]
@@ -87,10 +87,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ DYCOMS-II Parametarized Radiative heating'
 
-    if ( ATMOS_TYPE_PHY_RD .ne. 'DYCOMSII' ) then
+    if ( ATMOS_TYPE_PHY_RD /= 'DYCOMSII' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not DYCOMSII. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
 
     !--- read namelist
@@ -126,7 +126,7 @@ contains
        P00     => CONST_PRE00
     use mod_time, only: &
        dtrd => TIME_DTSEC_ATMOS_PHY_RD
-    use mod_grid, only : &
+    use mod_grid, only: &
        CZ   => GRID_CZ,  &
        FZ   => GRID_FZ,  &
        CDZ  => GRID_CDZ, &

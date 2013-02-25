@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Cloud Microphysics
+!> module ATMOSPHERE / Physics Cloud Microphysics - Common
 !!
 !! @par Description
 !!          Common module for Cloud Microphysics
 !!          Sedimentation/Precipitation and Saturation adjustment
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-23 (H.Yashiro)  [new]
@@ -80,7 +80,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       diffq(:) = 0.D0
+       diffq(:) = 0.0_RP
 
        ! total hydrometeor (before correction)
        do iq = QQS+1, QQE
@@ -282,7 +282,7 @@ contains
        qsum,      &
        qdry,      &
        ein_moist0 )
-    use mod_const, only : &
+    use mod_const, only: &
        LHV00  => CONST_LH00
     use mod_process, only: &
        PRC_MPIstop
@@ -370,7 +370,7 @@ contains
        qsum,      &
        qdry,      &
        ein_moist0 )
-    use mod_const, only : &
+    use mod_const, only: &
        LHV00  => CONST_LH00,  &
        LHF00  => CONST_LHF00
     use mod_process, only: &
@@ -482,7 +482,7 @@ contains
        QTRC,      &
        vterm,     &
        temp       )
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV  => CONST_GRAV
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP

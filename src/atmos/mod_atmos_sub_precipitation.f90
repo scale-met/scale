@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Precipitation Transport
+!> module ATMOSPHERE / Precipitation transport
 !!
 !! @par Description
 !!          Precipitation Transport module
 !!          (1D advection)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-08 (H.Yashiro) [mod] New
@@ -66,7 +66,7 @@ contains
        rhoe,      &
        temp,      &
        dt         )
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV  => CONST_GRAV,  &
        Rdry  => CONST_Rdry,  &
        CVdry => CONST_CVdry, &

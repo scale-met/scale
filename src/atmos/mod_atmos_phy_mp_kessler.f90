@@ -1,12 +1,12 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Cloud Microphysics
+!> module ATMOSPHERE / Physics Cloud Microphysics
 !!
 !! @par Description
 !!          Cloud Microphysics by Kessler-type parametarization
 !!          Reference: Kessler(1969)
 !!                     Klemp and Wilhelmson(1978)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-01-14 (Y.Miyamoto) [new]
@@ -93,7 +93,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type parametarization'
 
-    if ( ATMOS_TYPE_PHY_MP .ne. 'KESSLER' ) then
+    if ( ATMOS_TYPE_PHY_MP /= 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
        call PRC_MPIstop
     endif

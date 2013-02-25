@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Cloud Microphysics
+!> module ATMOSPHERE / Physics Cloud Microphysics
 !!
 !! @par Description
 !!          Dummy Cloud Microphysics for dry atmosphere
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-10-18 (S.Nishizawa) [new]
@@ -69,10 +69,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
 
-    if ( ATMOS_TYPE_PHY_MP .ne. 'DRY' ) then
+    if ( ATMOS_TYPE_PHY_MP /= 'DRY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not DRY. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_setup

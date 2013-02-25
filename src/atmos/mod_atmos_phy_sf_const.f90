@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Surface fluxes
+!> module ATMOSPHERE / Physics Surface fluxes
 !!
 !! @par Description
 !!          Flux from/to bottom wall of atmosphere (surface)

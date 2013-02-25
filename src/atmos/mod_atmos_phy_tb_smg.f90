@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Turbulence
+!> module ATMOSPHERE / Physics Turbulence
 !!
 !! @par Description
 !!          Sub-grid scale turbulence process
 !!          Smagolinsky-type
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-29 (S.Iga)       [new]
@@ -100,7 +100,7 @@ contains
     if ( v == UNDEF ) then
        write(*,*) "use uninitialized value at line ", line
        stop
-    end if
+    endif
   end subroutine CHECK
 #endif
 
@@ -109,7 +109,7 @@ contains
     do_calc &
 #endif
     )
-    use mod_grid, only : &
+    use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
@@ -154,10 +154,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
 
-    if ( ATMOS_TYPE_PHY_TB .ne. 'SMAGORINSKY' ) then
+    if ( ATMOS_TYPE_PHY_TB /= 'SMAGORINSKY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
@@ -246,7 +246,7 @@ contains
 #ifdef DEBUG
     if ( present(do_calc) ) then
        if ( .not. do_calc ) return
-    end if
+    endif
 #endif
 
     call ATMOS_PHY_TB_main( &
@@ -399,19 +399,19 @@ contains
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
-    end if
+    endif
 
     if ( I_QC > 0 ) then
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
-    end if
+    endif
 
     if ( I_QR > 0 ) then
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
        call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
-    end if
+    endif
 
     return
   end subroutine ATMOS_PHY_TB
@@ -422,9 +422,9 @@ contains
        qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
        tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV => CONST_GRAV
-    use mod_grid, only : &
+    use mod_grid, only: &
        FDZ  => GRID_FDZ,  &
        FDX  => GRID_FDX,  &
        FDY  => GRID_FDY,  &
@@ -1768,7 +1768,7 @@ contains
                   * sqrt( S2(k,i,j) ) * ( 1.0_RP - Ri(k,i,j)*RRiC )**4
           else ! strongly stable
              nu_C(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -1804,7 +1804,7 @@ contains
              Pr(k,i,j) = PrN / ( 1.0_RP - PrNovRiC * Ri(k,i,j) )
           else ! strongly stable
              Pr(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -1931,7 +1931,7 @@ contains
                   * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Z(k,i,j)*RRiC )**4
           else
              nu_Z(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -2002,7 +2002,7 @@ contains
                   * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_X(k,i,j)*RRiC )**4
           else
              nu_X(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -2072,7 +2072,7 @@ contains
                   * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Y(k,i,j)*RRiC )**4
           else
              nu_Y(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -3125,7 +3125,7 @@ contains
                   * ( 1.0_RP - PrNovRiC*WORK_Z(k,i,j) )
           else
              nu_Z(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -3238,7 +3238,7 @@ contains
                   * ( 1.0_RP - PrNovRiC*WORK_X(k,i,j) )
           else
              nu_X(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo
@@ -3352,7 +3352,7 @@ contains
                   * ( 1.0_RP - PrNovRiC*WORK_Y(k,i,j) )
           else
              nu_Y(k,i,j) = 0.0_RP
-          end if
+          endif
        enddo
        enddo
        enddo

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmospheric Variables
+!> module ATMOSPHERIC Variables
 !!
 !! @par Description
 !!          Container for atmospheric variables

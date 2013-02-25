@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere
+!> module ATMOSPHERE driver
 !!
 !! @par Description
 !!          Atmosphere module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new]
@@ -84,21 +84,25 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    ! setup common tools
     call ATMOS_THERMODYN_setup
 
     call ATMOS_SATURATION_setup
 
+    ! setup variable container
     call ATMOS_vars_setup
 
     call ATMOS_vars_sf_setup
 
+    ! read restart
     call ATMOS_vars_restart_read
 
     call ATMOS_REFSTATE_setup
 
     call ATMOS_BOUNDARY_setup
 
-    if ( sw_dyn ) call ATMOS_DYN_setup
+    ! setup each components
+    if ( sw_dyn    ) call ATMOS_DYN_setup
 
     if ( sw_phy_sf ) call ATMOS_PHY_SF_setup
 

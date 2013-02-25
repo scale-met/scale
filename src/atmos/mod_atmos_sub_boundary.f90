@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Boundary treatment
+!> module ATMOSPHERE / Boundary treatment
 !!
 !! @par Description
 !!          Boundary treatment of model domain
