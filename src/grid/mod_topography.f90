@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Topography
+!> module TOPOGRAPHY
 !!
 !! @par Description
 !!          Topography module
@@ -163,6 +163,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( TOPO_OUT_BASENAME /= '' ) then
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
 
        call FILEIO_write( TOPO_Zsfc(1,:,:),  TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                           'TOPO', 'Topography', 'm', 'XY',      TOPO_OUT_DTYPE  ) ! [IN]

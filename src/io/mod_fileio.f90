@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module FILEIO
+!> module FILE I/O (netcdf)
 !!
 !! @par Description
 !!          general file I/O module

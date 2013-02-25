@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module mktopo
+!> module MKTOPO
 !!
 !! @par Description
 !!          subroutines for preparing topography data

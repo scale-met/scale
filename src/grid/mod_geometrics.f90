@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Geometrics
+!> module GEOMETRICS
 !!
 !! @par Description
 !!          Geometrical convert from plane cartesian coordinate

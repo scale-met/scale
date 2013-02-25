@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module History
+!> module HISTORY
 !!
 !! @par Description
 !!          History output module

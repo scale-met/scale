@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN Surface
+!> module OCEAN / Fixed SST
 !!
 !! @par Description
 !!          SST control module (tentative)

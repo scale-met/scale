@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN
+!> module OCEAN driver
 !!
 !! @par Description
 !!          Ocean module

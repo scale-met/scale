@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module random
+!> module RANDOM
 !!
 !! @par Description
 !!          random number generation module

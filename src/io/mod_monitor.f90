@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Monitor
+!> module MONITOR
 !!
 !! @par Description
 !!          Monitor output module

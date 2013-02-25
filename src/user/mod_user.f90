@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module User
+!> module USER
 !!
 !! @par Description
 !!          User defined module

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN VARIABLES
+!> module OCEAN Variables
 !!
 !! @par Description
 !!          Container for oceanic variables

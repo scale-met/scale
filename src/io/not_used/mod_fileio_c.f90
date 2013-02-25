@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module FILE I/O
+!> module FILE I/O (C)
 !!
 !! @par Description
 !!          Fortran-C interface for file I/O

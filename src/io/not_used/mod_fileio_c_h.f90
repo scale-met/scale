@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module FILE I/O HEADER
+!> module FILE I/O (C) include file
 !!
 !! @par Description
 !!          File I/O module (Parameter Container)
