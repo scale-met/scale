@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module hydrostatic
+!> module ATMOSPHERE / Hydrostatic barance
 !!
 !! @par Description
 !!          make hydrostatic profile in the model
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-02-20 (H.Yashiro)  [new] Extract from the tool of Y.Miyamoto
@@ -26,6 +26,13 @@ module mod_atmos_hydrostatic
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  include 'inc_index.h'
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: ATMOS_hydro_buildrho
@@ -33,13 +40,6 @@ module mod_atmos_hydrostatic
   public :: ATMOS_hydro_buildrho_1d
   public :: ATMOS_hydro_buildrho_temp
   public :: ATMOS_hydro_buildrho_temp_1d
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -51,19 +51,18 @@ module mod_atmos_hydrostatic
   !
   private :: buildrho
   private :: buildrho_temp
+  private :: buildrho_fromKS
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  logical :: HYDROSTATIC_userapserate = .true.
+  logical :: HYDROSTATIC_uselapserate = .true. !< use lapse rate?
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Buildup density from surface
-  !-----------------------------------------------------------------------------
+  !> Buildup density from surface (3D)
   subroutine ATMOS_hydro_buildrho( &
        dens,     &
        temp,     &
@@ -83,21 +82,21 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
-    real(RP), intent(out) :: temp(KA,IA,JA) !< temperature [K]
-    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
+    real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure              [Pa]
     real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
-    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
+    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
 
-    real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature [K]
-    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
+    real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure              [Pa]
     real(RP), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
-    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface liquid water          [kg/kg]
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
-       HYDROSTATIC_userapserate
+       HYDROSTATIC_uselapserate
 
     integer :: ierr
     integer :: i, j
@@ -131,7 +130,7 @@ contains
                       pott_sfc(1,i,j),         & ! [IN]
                       qv_sfc  (1,i,j),         & ! [IN]
                       qc_sfc  (1,i,j),         & ! [IN]
-                      HYDROSTATIC_userapserate ) ! [IN]
+                      HYDROSTATIC_uselapserate ) ! [IN]
     enddo
     enddo
 
@@ -143,6 +142,7 @@ contains
   end subroutine ATMOS_hydro_buildrho
 
   !-----------------------------------------------------------------------------
+  !> Buildup density from surface (1D)
   subroutine ATMOS_hydro_buildrho_1d( &
        dens,     &
        temp,     &
@@ -159,21 +159,21 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(out) :: dens(KA) !< density [kg/m3]
-    real(RP), intent(out) :: temp(KA) !< temperature [K]
-    real(RP), intent(out) :: pres(KA) !< pressure [Pa]
+    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA) !< temperature           [K]
+    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
     real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
-    real(RP), intent(in)  :: qv  (KA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA) !< water vapor [kg/kg]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
 
-    real(RP), intent(out) :: temp_sfc !< surface temperature [K]
-    real(RP), intent(in)  :: pres_sfc !< surface pressure [Pa]
+    real(RP), intent(out) :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
     real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
-    real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
-         HYDROSTATIC_userapserate
+         HYDROSTATIC_uselapserate
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -204,12 +204,13 @@ contains
                    pott_sfc,                & ! [IN]
                    qv_sfc,                  & ! [IN]
                    qc_sfc,                  & ! [IN]
-                   HYDROSTATIC_userapserate ) ! [IN]
+                   HYDROSTATIC_uselapserate ) ! [IN]
 
     return
   end subroutine ATMOS_hydro_buildrho_1d
 
   !-----------------------------------------------------------------------------
+  !> Buildup density from surface (3D, from KS)
   subroutine ATMOS_hydro_buildrho_fromKS( &
        dens,     &
        temp,     &
@@ -224,12 +225,12 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(inout) :: dens(KA,IA,JA) !< density [kg/m3]
-    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature [K]
-    real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure [Pa]
+    real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
     real(RP), intent(in)    :: pott(KA,IA,JA) !< potential temperature [K]
-    real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor [kg/kg]
-    real(RP), intent(in)    :: qc  (KA,IA,JA) !< water vapor [kg/kg]
+    real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -256,8 +257,7 @@ contains
   end subroutine ATMOS_hydro_buildrho_fromKS
 
   !-----------------------------------------------------------------------------
-  !> Buildup density from surface with temperature
-  !-----------------------------------------------------------------------------
+  !> Buildup density from surface with temperature (3D)
   subroutine ATMOS_hydro_buildrho_temp( &
        dens,     &
        pott,     &
@@ -275,18 +275,18 @@ contains
        COMM_wait
     implicit none
 
-    real(RP), intent(out) :: dens(KA,IA,JA) !< density [kg/m3]
+    real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
     real(RP), intent(out) :: pott(KA,IA,JA) !< potential temperature [K]
-    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure [Pa]
-    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature [K]
-    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA,IA,JA) !< water vapor [kg/kg]
+    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
 
     real(RP), intent(out) :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
-    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure [Pa]
-    real(RP), intent(in)  :: temp_sfc(1,IA,JA) !< surface temperature [K]
-    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure              [Pa]
+    real(RP), intent(in)  :: temp_sfc(1,IA,JA) !< surface temperature           [K]
+    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface liquid water          [kg/kg]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -315,6 +315,7 @@ contains
   end subroutine ATMOS_hydro_buildrho_temp
 
   !-----------------------------------------------------------------------------
+  !> Buildup density from surface with temperature (1D)
   subroutine ATMOS_hydro_buildrho_temp_1d( &
        dens,     &
        pott,     &
@@ -331,18 +332,18 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(out) :: dens(KA) !< density [kg/m3]
+    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
     real(RP), intent(out) :: pott(KA) !< potential temperature [K]
-    real(RP), intent(out) :: pres(KA) !< pressure [Pa]
-    real(RP), intent(in)  :: temp(KA) !< temperature [K]
-    real(RP), intent(in)  :: qv  (KA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA) !< water vapor [kg/kg]
+    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: temp(KA) !< temperature           [K]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
 
     real(RP), intent(out) :: pott_sfc !< surface potential temperature [K]
-    real(RP), intent(in)  :: pres_sfc !< surface pressure [Pa]
-    real(RP), intent(in)  :: temp_sfc !< surface temperature [K]
-    real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
+    real(RP), intent(in)  :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
     !---------------------------------------------------------------------------
 
     call buildrho_temp( dens(:),  & ! [OUT]
@@ -362,7 +363,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Buildup density from surface
-  !-----------------------------------------------------------------------------
   subroutine buildrho( &
        dens,        &
        temp,        &
@@ -375,7 +375,7 @@ contains
        pott_sfc,    &
        qc_sfc,      &
        qv_sfc,      &
-       userapserate )
+       uselapserate )
     use mod_const, only: &
        GRAV    => CONST_GRAV,    &
        EPS     => CONST_EPS,     &
@@ -390,19 +390,19 @@ contains
        CZ  => GRID_CZ
     implicit none
 
-    real(RP), intent(out) :: dens(KA) !< density [kg/m3]
-    real(RP), intent(out) :: temp(KA) !< temperature [K]
-    real(RP), intent(out) :: pres(KA) !< pressure [Pa]
-    real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
-    real(RP), intent(in)  :: qv  (KA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA) !< water vapor [kg/kg]
+    real(RP), intent(out) :: dens(KA)     !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA)     !< temperature           [K]
+    real(RP), intent(out) :: pres(KA)     !< pressure              [Pa]
+    real(RP), intent(in)  :: pott(KA)     !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA)     !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA)     !< liquid water          [kg/kg]
 
-    real(RP), intent(out) :: temp_sfc !< surface temperature [K]
-    real(RP), intent(in)  :: pres_sfc !< surface pressure [Pa]
-    real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
-    real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
-    logical,  intent(in)  :: userapserate
+    real(RP), intent(out) :: temp_sfc     !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc     !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc     !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc       !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc       !< surface liquid water          [kg/kg]
+    logical,  intent(in)  :: uselapserate !< use lapse rate?
 
     real(RP) :: dens_sfc
     real(RP) :: Rtot_sfc
@@ -447,7 +447,7 @@ contains
     CPovCV = ( CVtot + Rtot ) / CVtot
 
     ! make density at lowermost cell center
-    if ( userapserate ) then
+    if ( uselapserate ) then
        CPovR  = ( CVtot + Rtot ) / Rtot
        CVovCP = CVtot / ( CVtot + Rtot )
 
@@ -468,8 +468,8 @@ contains
           dens_s = dens(KS)
 
           dhyd = + ( P00 * ( dens_sfc * Rtot_sfc * pott_sfc / P00 )**CPovCV_sfc &
-                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV  ) / CZ(KS) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                    ! rho*g
+                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV     ) / CZ(KS) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                     ! rho*g
 
           dgrd = - P00 * ( Rtot * pott(KS) / P00 )**CPovCV / CZ(KS) &
                  * CPovCV * dens_s**RovCV                           &
@@ -493,7 +493,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Buildup density from surface
-  !-----------------------------------------------------------------------------
   subroutine buildrho_temp( &
        dens,     &
        pott,     &
@@ -520,18 +519,18 @@ contains
        FDZ => GRID_FDZ
     implicit none
 
-    real(RP), intent(out) :: dens(KA) !< density [kg/m3]
+    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
     real(RP), intent(out) :: pott(KA) !< potential temperature [K]
-    real(RP), intent(out) :: pres(KA) !< pressure [Pa]
-    real(RP), intent(in)  :: temp(KA) !< temperature [K]
-    real(RP), intent(in)  :: qv  (KA) !< water vapor [kg/kg]
-    real(RP), intent(in)  :: qc  (KA) !< water vapor [kg/kg]
+    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: temp(KA) !< temperature           [K]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
 
     real(RP), intent(out) :: pott_sfc !< surface potential temperature [K]
-    real(RP), intent(in)  :: pres_sfc !< surface pressure [Pa]
-    real(RP), intent(in)  :: temp_sfc !< surface temperature [K]
-    real(RP), intent(in)  :: qv_sfc   !< surface water vapor [kg/kg]
-    real(RP), intent(in)  :: qc_sfc   !< surface water vapor [kg/kg]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
+    real(RP), intent(in)  :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
 
     real(RP) :: dens_sfc
     real(RP) :: Rtot_sfc
@@ -639,6 +638,8 @@ contains
     return
   end subroutine buildrho_temp
 
+  !-----------------------------------------------------------------------------
+  !> Buildup density from lowermost atmosphere
   subroutine buildrho_fromKS( &
        dens,     &
        temp,     &
@@ -647,24 +648,24 @@ contains
        qv,       &
        qc        )
     use mod_const, only: &
-       GRAV    => CONST_GRAV,    &
-       EPS     => CONST_EPS,     &
-       Rdry    => CONST_Rdry,    &
-       Rvap    => CONST_Rvap,    &
-       CVdry   => CONST_CVdry,   &
-       CVvap   => CONST_CVvap,   &
-       CL      => CONST_CL,      &
+       GRAV    => CONST_GRAV,  &
+       EPS     => CONST_EPS,   &
+       Rdry    => CONST_Rdry,  &
+       Rvap    => CONST_Rvap,  &
+       CVdry   => CONST_CVdry, &
+       CVvap   => CONST_CVvap, &
+       CL      => CONST_CL,    &
        P00     => CONST_PRE00
     use mod_grid, only: &
        FDZ => GRID_FDZ
     implicit none
 
-    real(RP), intent(inout) :: dens(KA) !< density [kg/m3]
-    real(RP), intent(out)   :: temp(KA) !< temperature [K]
-    real(RP), intent(out)   :: pres(KA) !< pressure [Pa]
+    real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA) !< temperature           [K]
+    real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
     real(RP), intent(in)    :: pott(KA) !< potential temperature [K]
-    real(RP), intent(in)    :: qv  (KA) !< water vapor [kg/kg]
-    real(RP), intent(in)    :: qc  (KA) !< water vapor [kg/kg]
+    real(RP), intent(in)    :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA) !< liquid water          [kg/kg]
 
     real(RP) :: Rtot(KA)
     real(RP) :: CVtot(KA)

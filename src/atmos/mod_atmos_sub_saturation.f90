@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module Saturation Adjustment
+!> module ATMOSPHERE / Saturation adjustment
 !!
 !! @par Description
 !!          Saturation adjustment module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-10-24 (T.Seiki)   [new] Import from NICAM
@@ -20,7 +20,7 @@ module mod_atmos_saturation
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
-  use mod_const, only : &
+  use mod_const, only: &
      Rdry   => CONST_Rdry,   &
      CPdry  => CONST_CPdry,  &
      CVdry  => CONST_CVdry,  &
@@ -39,6 +39,14 @@ module mod_atmos_saturation
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -116,14 +124,6 @@ module mod_atmos_saturation
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, save :: CPovR_liq
@@ -132,6 +132,7 @@ module mod_atmos_saturation
   real(RP), public, save :: CVovR_ice
   real(RP), public, save :: LovR_liq
   real(RP), public, save :: LovR_ice
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -140,20 +141,18 @@ module mod_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: TEM_MIN   = 10.E0_RP
+  real(RP), private, parameter :: TEM_MIN   = 10.0_RP !< minimum temperature [K]
 
-  real(RP), private, save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP
-  real(RP), private, save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP
+  real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
+  real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
 
-  real(RP), private, save :: RTEM00
-  real(RP), private, save :: dalphadT_const
+  real(RP), private,      save :: RTEM00         !< inverse of TEM00
+  real(RP), private,      save :: dalphadT_const !< d(alfa)/dt
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Initialize SATURATION
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_SATURATION_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -198,15 +197,14 @@ contains
   end subroutine ATMOS_SATURATION_setup
 
   !-----------------------------------------------------------------------------
-  ! liquid/ice separation factor (0D)
-  !-----------------------------------------------------------------------------
+  !> calc liquid/ice separation factor (0D)
   subroutine ATMOS_SATURATION_alpha_0D( &
        alpha, &
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha
-    real(RP), intent(in)  :: temp
+    real(RP), intent(out) :: alpha !< liquid/ice separation factor [0-1]
+    real(RP), intent(in)  :: temp  !< temperature [K]
     !---------------------------------------------------------------------------
 
     alpha = ( temp                         - ATMOS_SATURATION_LLIMIT_TEMP ) &
@@ -218,15 +216,14 @@ contains
   end subroutine ATMOS_SATURATION_alpha_0D
 
   !-----------------------------------------------------------------------------
-  ! liquid/ice separation factor (3D)
-  !-----------------------------------------------------------------------------
+  !> calc liquid/ice separation factor (3D)
   subroutine ATMOS_SATURATION_alpha_3D( &
        alpha, &
        temp   )
     implicit none
 
-    real(RP), intent(out) :: alpha(KA,IA,JA)
-    real(RP), intent(in)  :: temp (KA,IA,JA)
+    real(RP), intent(out) :: alpha(KA,IA,JA) !< liquid/ice separation factor [0-1]
+    real(RP), intent(in)  :: temp (KA,IA,JA) !< temperature [K]
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -247,15 +244,14 @@ contains
   end subroutine ATMOS_SATURATION_alpha_3D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure (liquid/ice mixture)
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure (liquid/ice mixture) (0D)
   subroutine ATMOS_SATURATION_psat_all_0D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat
-    real(RP), intent(in)  :: temp
+    real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp !< temperature               [K]
 
     real(RP) :: alpha, psatl, psati
     !---------------------------------------------------------------------------
@@ -271,15 +267,14 @@ contains
   end subroutine ATMOS_SATURATION_psat_all_0D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure (liquid/ice mixture)
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure (liquid/ice mixture) (3D)
   subroutine ATMOS_SATURATION_psat_all_3D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat(KA,IA,JA)
-    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
 
     real(RP) :: alpha, psatl, psati
 
@@ -310,15 +305,14 @@ contains
   end subroutine ATMOS_SATURATION_psat_all_3D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL (0D)
   subroutine ATMOS_SATURATION_psat_liq_0D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat
-    real(RP), intent(in)  :: temp
+    real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp !< temperature               [K]
     !---------------------------------------------------------------------------
 
     psat = PSAT0 * ( temp * RTEM00 )**CPovR_liq     &
@@ -328,15 +322,14 @@ contains
   end subroutine ATMOS_SATURATION_psat_liq_0D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL (3D)
   subroutine ATMOS_SATURATION_psat_liq_3D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat(KA,IA,JA)
-    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -354,15 +347,14 @@ contains
   end subroutine ATMOS_SATURATION_psat_liq_3D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI (0D)
   subroutine ATMOS_SATURATION_psat_ice_0D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat
-    real(RP), intent(in)  :: temp
+    real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp !< temperature               [K]
     !---------------------------------------------------------------------------
 
     psat = PSAT0 * ( temp * RTEM00 )**CPovR_ice     &
@@ -372,15 +364,14 @@ contains
   end subroutine ATMOS_SATURATION_psat_ice_0D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI (3D)
   subroutine ATMOS_SATURATION_psat_ice_3D( &
        psat, &
        temp  )
     implicit none
 
-    real(RP), intent(out) :: psat(KA,IA,JA)
-    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -398,22 +389,21 @@ contains
   end subroutine ATMOS_SATURATION_psat_ice_3D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (liquid,0D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_0D( &
        qsat, &
        temp, &
        pres  )
     implicit none
 
-    real(RP), intent(out) :: qsat
-    real(RP), intent(in)  :: temp
-    real(RP), intent(in)  :: pres
+    real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp !< temperature           [K]
+    real(RP), intent(in)  :: pres !< pressure              [Pa]
     
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
-    call ATMOS_SATURATION_psat_liq_0D( psat, temp)
+    call ATMOS_SATURATION_psat_liq_0D( psat, temp )
 
     qsat = EPSvap * psat / ( pres - ( 1.0_RP-EPSvap ) * psat )
 
@@ -421,17 +411,16 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_liq_0D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (liquid,1D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_1D( &
        qsat, &
        temp, &
        pres  )
     implicit none
 
-    real(RP), intent(out) :: qsat(KA)
-    real(RP), intent(in)  :: temp(KA)
-    real(RP), intent(in)  :: pres(KA)
+    real(RP), intent(out) :: qsat(KA) !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp(KA) !< temperature           [K]
+    real(RP), intent(in)  :: pres(KA) !< pressure              [Pa]
     
     real(RP) :: psat
 
@@ -449,17 +438,16 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_liq_1D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (liquid,2D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_2D( &
        qsat, &
        temp, &
        pres  )
     implicit none
 
-    real(RP), intent(out) :: qsat(IA,JA)
-    real(RP), intent(in)  :: temp(IA,JA)
-    real(RP), intent(in)  :: pres(IA,JA)
+    real(RP), intent(out) :: qsat(IA,JA) !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature           [K]
+    real(RP), intent(in)  :: pres(IA,JA) !< pressure              [Pa]
     
     real(RP) :: psat
 
@@ -479,17 +467,16 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_liq_2D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CL
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (liquid,3D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_3D( &
        qsat, &
        temp, &
        pres  )
     implicit none
 
-    real(RP), intent(out) :: qsat(KA,IA,JA)
-    real(RP), intent(in)  :: temp(KA,IA,JA)
-    real(RP), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(out) :: qsat(KA,IA,JA) !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(in)  :: pres(KA,IA,JA) !< pressure              [Pa]
     
     real(RP) :: psat
 
@@ -511,22 +498,21 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_liq_3D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (ice,0D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_0D( &
        qsat, &
        temp, &
        pres  )
     implicit none
 
-    real(RP), intent(out) :: qsat
-    real(RP), intent(in)  :: temp
-    real(RP), intent(in)  :: pres
+    real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
+    real(RP), intent(in)  :: temp !< temperature           [K]
+    real(RP), intent(in)  :: pres !< pressure              [Pa]
     
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
-    call ATMOS_SATURATION_psat_liq_0D( psat, temp)
+    call ATMOS_SATURATION_psat_liq_0D( psat, temp )
 
     qsat = EPSvap * psat / ( pres - ( 1.0_RP-EPSvap ) * psat )
 
@@ -534,8 +520,7 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_ice_0D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (ice,1D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_1D( &
        qsat, &
        temp, &
@@ -562,8 +547,7 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_ice_1D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (ice,2D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_2D( &
        qsat, &
        temp, &
@@ -592,8 +576,7 @@ contains
   end subroutine ATMOS_SATURATION_pres2qsat_ice_2D
 
   !-----------------------------------------------------------------------------
-  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
-  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (ice,3D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_3D( &
        qsat, &
        temp, &
