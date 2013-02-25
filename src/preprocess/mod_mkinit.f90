@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module initial
+!> module INITIAL
 !!
 !! @par Description
 !!          subroutines for preparing initial data
@@ -19,6 +19,7 @@
 !! @li      2012-04-06 (H.Yashiro)  [new] uniform state test
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
 !! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
+!! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -56,6 +57,8 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
+  use mod_atmos_profile, only: &
+     PROFILE_isa => ATMOS_PROFILE_isa
   use mod_atmos_hydrostatic, only: &
      hydro_buildrho      => ATMOS_HYDRO_buildrho,     &
      hydro_buildrho_1d   => ATMOS_HYDRO_buildrho_1d,  &
@@ -65,6 +68,14 @@ module mod_mkinit
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -85,14 +96,6 @@ module mod_mkinit
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   integer, public, save      :: MKINIT_TYPE           = -1
@@ -108,12 +111,14 @@ module mod_mkinit
   integer, public, parameter :: I_DYCOMS2_RF02        = 10
   integer, public, parameter :: I_INTERPORATION       = 11
   integer, public, parameter :: I_RICO                = 12
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
   private :: BUBBLE_setup
   private :: SBMAERO_setup
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -446,6 +451,8 @@ contains
        RANDOM_V,     &
        RANDOM_RH
 
+    real(RP) :: pott_isa(KA)
+
     integer :: ierr
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -477,12 +484,38 @@ contains
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
        qv_sfc  (1,i,j) = 0.0_RP
        qc_sfc  (1,i,j) = 0.0_RP
+    enddo
+    enddo
 
+    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
+
+       call PROFILE_isa( pott_isa(:), & ! [OUT]
+                         SFC_THETA,   & ! [IN]
+                         SFC_PRES     ) ! [IN]
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          pott(k,i,j) = pott_isa(k) + rndm(k,i,j) * RANDOM_THETA
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + rndm(k,i,j) * RANDOM_THETA
-          qv  (k,i,j) = 0.0_RP
-          qc  (k,i,j) = 0.0_RP
        enddo
+       enddo
+       enddo
+    endif
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       qv  (k,i,j) = 0.0_RP
+       qc  (k,i,j) = 0.0_RP
+    enddo
     enddo
     enddo
 
