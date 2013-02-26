@@ -70,7 +70,6 @@ module mod_atmos_phy_mp
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -81,6 +80,8 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_MP, &
        DENS
+    use mod_atmos_phy_mpsub, only: &
+       ATMOS_PHY_MPsub_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -130,6 +131,8 @@ contains
     enddo
 
     vterm(:,:,:,:) = 0.0_RP
+
+    call ATMOS_PHY_MPsub_setup
 
     return
   end subroutine ATMOS_PHY_MP_setup
