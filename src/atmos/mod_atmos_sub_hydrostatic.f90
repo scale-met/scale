@@ -57,7 +57,7 @@ module mod_atmos_hydrostatic
   !
   !++ Private parameters & variables
   !
-  logical :: HYDROSTATIC_uselapserate = .true. !< use lapse rate?
+  logical :: HYDROSTATIC_uselapserate = .false. !< use lapse rate?
 
   !-----------------------------------------------------------------------------
 contains
