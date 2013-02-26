@@ -300,7 +300,6 @@ contains
     real(RP), intent(in)  :: LSsink_bottom
     logical , intent(in)  :: enable_coriolis
 
-    real(RP) :: d2r
     real(RP) :: zovzb
     integer :: i, j, k
 
@@ -316,11 +315,10 @@ contains
 
     ! coriolis parameter
     if ( enable_coriolis ) then
-       d2r = PI / 180.0_RP
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
-          corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) * d2r )
+          corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) )
        enddo
        enddo
     else
