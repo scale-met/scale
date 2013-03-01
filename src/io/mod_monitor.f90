@@ -61,6 +61,7 @@ module mod_monitor
   integer,                    private,      save :: MONIT_FID = -1                    !< fileID for monitor output file
 
   character(len=IO_FILECHR),  private,      save :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
+  logical,                    private,      save :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step? 
   integer,                    private,      save :: MONITOR_STEP_INTERVAL = 1         !< step interval 
 
   integer,                    private, parameter :: MONIT_req_limit = 1000            !< number limit for item request
@@ -74,6 +75,8 @@ module mod_monitor
   character(len=File_HSHORT), private, allocatable, save :: MONIT_ktype(:)            !< vertical layer type of the item
   integer,                    private, allocatable, save :: MONIT_kmax (:)            !< # of vertical grid  of the item
   real(RP),                   private, allocatable, save :: MONIT_var  (:)            !< value               of the item
+  logical,                    private, allocatable, save :: MONIT_first(:)            !< first time?         of the item
+  real(RP),                   private, allocatable, save :: MONIT_var0 (:)            !< value at first time of the item
 
   real(RP), private, parameter :: eps = 1.E-10_RP !< epsilon for timesec
 
@@ -90,6 +93,7 @@ contains
 
     NAMELIST / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME, &
+       MONITOR_USEDEVATION,  &
        MONITOR_STEP_INTERVAL
 
     character(len=File_HSHORT) :: ITEM  !> name of monitor item
@@ -140,6 +144,8 @@ contains
     allocate( MONIT_ktype(MONIT_req_nmax) )
     allocate( MONIT_kmax (MONIT_req_nmax) )
     allocate( MONIT_var  (MONIT_req_nmax) )
+    allocate( MONIT_var0 (MONIT_req_nmax) )
+    allocate( MONIT_first(MONIT_req_nmax) )
 
     rewind(IO_FID_CONF)
     do n = 1, MONIT_req_nmax
@@ -205,7 +211,9 @@ contains
                 MONIT_ktype(itemid) = lname
                 MONIT_kmax (itemid) = KMAX
              endif
-             MONIT_var(itemid) = 0.0_RP
+             MONIT_var  (itemid) = 0.0_RP
+             MONIT_var0 (itemid) = 0.0_RP
+             MONIT_first(itemid) = .true.
 
              if( IO_L ) write(IO_FID_LOG,*) ' *** [MONIT] Item registration No.= ', itemid
              if( IO_L ) write(IO_FID_LOG,*) ' ] Name           : ', trim(MONIT_item (itemid))
@@ -240,6 +248,18 @@ contains
     call COMM_total( total, var(:,:,:), MONIT_item(itemid) )
 
     MONIT_var(itemid) = total ! overwrite by last put
+
+    if ( MONITOR_USEDEVATION ) then
+       if ( MONIT_first(itemid) ) then
+          MONIT_var  (itemid) = 0.0_RP
+          MONIT_var0 (itemid) = total
+          MONIT_first(itemid) = .false.
+       else
+          MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+       endif
+    else
+       MONIT_var(itemid) = total ! overwrite by last put
+    endif
 
     return
   end subroutine MONIT_put
