@@ -1,0 +1,52 @@
+#
+# ------ FOR Linux 64bit & intel fortran&C & intel mpi -----
+#
+
+##### for computation
+
+
+FFLAGS_FAST = -fpp3 -O3 -xHost -ip          \
+              -ftz -fp-model precise -pc 80 \
+              -heap-arrays -fno-alias       \
+              -lmpi -mkl=sequential
+              
+
+FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
+               -fp-model precise -pc 80             \
+               -check all -warn all -g -traceback   \
+               -heap-arrays -fno-alias              \
+               -lmpi -mkl=sequential
+
+#               -DDEBUG
+
+FC     = ifort
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+ifneq ($(DISABLE_VEC),)
+      FFLAGS += -no-vec
+endif
+
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
+
+FFLAGS_DYN ?= $(FFLAGS)
+
+MODDIROPT ?= -module
+
+CC     = icc
+CFLAGS = -O3 -xHost -ip -ftz
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= 
+NETCDF_LIBS    ?= -lnetcdf
+
+##### for frontend
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh
