@@ -15,6 +15,8 @@ DCUTILSDIR = $(TOPDIR)/dc_utils
 RUNDIR = $(TOPDIR)/run
 SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
 
+TESTDIR = $(TOPDIR)/test
+
 SUFFIX = $(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix)
 
 LIBNAME = libscale_$(SUFFIX).a
