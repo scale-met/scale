@@ -20,16 +20,24 @@ cat << EOF1 > ./run.sh
 # for OAKLEAF-FX
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=short"
+#PJM --rsc-list "rscgrp=small"
 #PJM --rsc-list "node=${TPROC}"
 #PJM --rsc-list "elapse=00:30:00"
+#PJM --stg-transfiles all
+#PJM --mpi "use-rankdir"
+#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
+#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
+#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
+#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+#PJM --stgout "rank=* %r:./*      ./"
+#PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
 #PJM -s
+#
+. /work/system/Env_base
+#
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-
-ln -sv ${BINDIR}/${INITNAME} .
-ln -sv ${BINDIR}/${BINNAME}  .
 
 fprof="fipp -C -Srange -Ihwm -d prof"
 rm -rf ./prof
