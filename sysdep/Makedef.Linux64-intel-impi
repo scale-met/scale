@@ -8,18 +8,17 @@
 FFLAGS_FAST = -fpp3 -O3 -xHost -ip          \
               -ftz -fp-model precise -pc 80 \
               -heap-arrays -fno-alias       \
-              -lmpi -mkl=sequential
-              
+              -mkl=sequential
 
 FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -fp-model precise -pc 80             \
                -check all -warn all -g -traceback   \
                -heap-arrays -fno-alias              \
-               -lmpi -mkl=sequential
+               -mkl=sequential
 
 #               -DDEBUG
 
-FC     = ifort
+FC     = mpiifort
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
@@ -35,7 +34,7 @@ FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -module
 
-CC     = icc
+CC     = mpiicc
 CFLAGS = -O3 -xHost -ip -ftz
 
 LD     = $(FC)

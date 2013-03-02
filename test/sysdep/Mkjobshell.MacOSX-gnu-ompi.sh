@@ -28,8 +28,8 @@ ln -sv ${BINDIR}/${INITNAME} .
 ln -sv ${BINDIR}/${BINNAME}  .
 
 # run
-${MPIEXEC} ${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

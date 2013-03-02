@@ -35,11 +35,13 @@ run: jobshell
 check:
 # to be add program to check result
 
-.PHONY: clean distclean
+.PHONY: allclean clean distclean
 
-allclean:
+allclean: clean
 	$(MAKE) -C $(SRCDIR) allclean
+
 clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
+	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+
 distclean:
 	rm -f *.nc LOG.pe*
