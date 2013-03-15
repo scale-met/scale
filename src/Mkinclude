@@ -23,3 +23,9 @@ LIBNAME = libscale_$(SUFFIX).a
 
 BINNAME  = scale3_$(SUFFIX)
 INITNAME = scale3_init_$(SUFFIX)
+
+ifeq ($(RDMA),-D_USE_RDMA)
+mod_rdma := rdma.o
+else
+mod_rdma :=
+endif

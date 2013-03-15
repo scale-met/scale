@@ -8,6 +8,7 @@ TOPDIR = ..
 BUILD_DIR = ./.libs
 
 include ../sysdep/Makedef.$(SCALE_SYS)
+-include $(INDEX_DIR)/Makedef.$(SCALE_SYS)
 include ./Mkinclude
 
 VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess:user
@@ -39,6 +40,7 @@ MODS =	\
 	mod_grid_cartesian_plane.o	\
 	mod_fileio.o	\
 	mod_geometrics.o	\
+	$(mod_rdma)	\
 	mod_comm.o	\
 	mod_topography.o	\
 	mod_history.o	\
@@ -112,7 +114,8 @@ $(BUILD_DIR)/mod_random.o	: mod_random.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_specfunc.o	: mod_specfunc.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_misc.o	: mod_misc.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o mod_calendar.o
-$(BUILD_DIR)/mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_geometrics.o
+$(BUILD_DIR)/mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_geometrics.o $(mod_rdma)
+$(BUILD_DIR)/rdma.o	: rdma.c rdma.h
 
 $(BUILD_DIR)/mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_time.o
 $(BUILD_DIR)/mod_fileio.o	: mod_fileio.f90  mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian_plane.o
@@ -161,12 +164,14 @@ distclean: clean
 	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a
 
 .SUFFIXES:
-.SUFFIXES: .o .f90
+.SUFFIXES: .o .f90 .c
 
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o:
 	$(FC) $(FFLAGS_DYN) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.c
+	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 
 .PHONY : clean distclean allclean

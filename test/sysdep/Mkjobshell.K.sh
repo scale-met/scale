@@ -11,6 +11,19 @@ TPROC=${6}
 # System specific
 MPIEXEC="mpiexec"
 
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]}
+let xy="${x} * ${y}"
+
+if [ ${xy} -gt 36864 ]; then
+   rscgrp="huge"
+elif [ ${xy} -gt 384 ]; then
+   rscgrp="large"
+else
+   rscgrp="small"
+fi
+
 # Generate run.sh
 
 cat << EOF1 > ./run.sh
@@ -20,7 +33,7 @@ cat << EOF1 > ./run.sh
 # for OAKLEAF-FX
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=small"
+#PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
 #PJM --rsc-list "elapse=00:30:00"
 #PJM --stg-transfiles all
