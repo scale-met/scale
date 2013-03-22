@@ -36,7 +36,7 @@ module mod_mktopo
   !++ Public procedure
   !
   public :: MKTOPO_setup
-  public :: MKTOPO_bellshape
+  public :: MKTOPO
 
   !-----------------------------------------------------------------------------
   !
@@ -59,6 +59,7 @@ module mod_mktopo
   !++ Private procedure
   !
   private :: BELL_setup
+  private :: MKTOPO_bellshape
 
   !-----------------------------------------------------------------------------
   !
@@ -72,8 +73,7 @@ module mod_mktopo
 contains
 
   !-----------------------------------------------------------------------------
-  !> Initialize Reference state
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine MKTOPO_setup
     use mod_const, only: &
        CONST_UNDEF8
@@ -122,6 +122,41 @@ contains
 
     return
   end subroutine MKTOPO_setup
+
+  !-----------------------------------------------------------------------------
+  !> Driver
+  subroutine MKTOPO
+  use mod_topography, only: &
+     TOPO_write
+    implicit none
+
+    logical :: output_topo = .false.
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
+
+    select case(MKTOPO_TYPE)
+    case(I_OFF)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Nothing to do for topography'
+       output_topo = .false.
+    case(I_BELLSHAPE)
+       call MKTOPO_bellshape
+       output_topo = .true.
+    case default
+       write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+       call PRC_MPIstop
+    endselect
+
+    if ( output_topo ) then
+       call TOPO_write
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
+    if( IO_L ) write(IO_FID_LOG,*)
+
+    return
+  end subroutine MKTOPO
 
   !-----------------------------------------------------------------------------
   !> Initialize Reference state

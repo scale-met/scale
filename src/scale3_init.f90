@@ -46,8 +46,7 @@ program scaleinit
   use mod_comm, only: &
      COMM_setup
   use mod_topography, only: &
-     TOPO_setup, &
-     TOPO_write
+     TOPO_setup
   use mod_history, only: &
      HIST_setup, &
      HIST_write
@@ -64,38 +63,11 @@ program scaleinit
      ATMOS_vars_fillhalo, &
      ATMOS_vars_restart_write
   use mod_mktopo, only: &
-     MKTOPO_TYPE,     &
-     I_OFF,           &
-     I_BELLSHAPE,     &
      MKTOPO_setup,    &
-     MKTOPO_bellshape
+     MKTOPO
   use mod_mkinit, only: &
-     MKINIT_TYPE,     &
-     I_PLANESTATE,    &
-     I_TRACERBUBBLE,  &
-     I_COLDBUBBLE,    &
-     I_WARMBUBBLE,    &
-     I_KHWAVE,        &
-     I_TURBULENCE,    &
-     I_SUPERCELL,     &
-     I_SQUALLLINE,    &
-     I_DYCOMS2_RF01,  &
-     I_DYCOMS2_RF02,  &
-     I_RICO,  &
-     I_INTERPORATION,     &
      MKINIT_setup,        &
-     MKINIT_planestate,   &
-     MKINIT_tracerbubble, &
-     MKINIT_coldbubble,   &
-     MKINIT_warmbubble,   &
-     MKINIT_khwave,       &
-     MKINIT_turbulence,   &
-     MKINIT_supercell,    &
-     MKINIT_squallline,   &
-     MKINIT_DYCOMS2_RF01, &
-     MKINIT_DYCOMS2_RF02, &
-     MKINIT_RICO, &
-     MKINIT_INTERPORATION
+     MKINIT
   use dc_log, only: &
        LogInit
   use gtool_file, only: &
@@ -106,8 +78,6 @@ program scaleinit
   !
   !++ parameters & variables
   !
-  logical :: output_topo = .false.
-
   !=============================================================================
 
   !########## Initial setup ##########
@@ -161,77 +131,27 @@ program scaleinit
   call ATMOS_SATURATION_setup
   call ATMOS_vars_setup
 
+  ! setup mktopo
+  call MKTOPO_setup
+
+  ! setup mkinit
+  call MKINIT_setup
+
   call TIME_rapend('Initialize')
 
   !########## main ##########
 
   call TIME_rapstart('Main')
 
-  if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
+  ! execute mkinit
+  call MKTOPO
 
-  ! setup mktopo
-  call MKTOPO_setup
-
-  select case(MKTOPO_TYPE)
-  case(I_OFF)
-     if( IO_L ) write(IO_FID_LOG,*) '*** Nothing to do for topography'
-     output_topo = .false.
-  case(I_BELLSHAPE)
-     call MKTOPO_bellshape
-     output_topo = .true.
-  case default
-     write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
-     call PRC_MPIstop
-  endselect
-
-  if ( output_topo ) then
-     call TOPO_write
-  endif
-
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
-  if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
-
-  ! setup mkinit
-  call MKINIT_setup
-
-  select case(MKINIT_TYPE)
-  case(I_PLANESTATE)
-     call MKINIT_planestate
-  case(I_TRACERBUBBLE)
-     call MKINIT_tracerbubble
-  case(I_COLDBUBBLE)
-     call MKINIT_coldbubble
-  case(I_WARMBUBBLE)
-     call MKINIT_warmbubble
-  case(I_KHWAVE)
-     call MKINIT_khwave
-  case(I_TURBULENCE)
-     call MKINIT_turbulence
-  case(I_SUPERCELL)
-     call MKINIT_supercell
-  case(I_SQUALLLINE)
-     call MKINIT_squallline
-  case(I_DYCOMS2_RF01)
-     call MKINIT_DYCOMS2_RF01
-  case(I_DYCOMS2_RF02)
-     call MKINIT_DYCOMS2_RF02
-  case(I_RICO)
-     call MKINIT_RICO
-  case(I_INTERPORATION)
-     call MKINIT_INTERPORATION
-  case default
-     write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
-     call PRC_MPIstop
-  endselect
+  ! execute mkinit
+  call MKINIT
 
   call ATMOS_vars_fillhalo
   ! output restart
   call ATMOS_vars_restart_write
-
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
-  if( IO_L ) write(IO_FID_LOG,*)
 
   call TIME_rapend('Main')
 
