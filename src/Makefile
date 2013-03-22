@@ -15,13 +15,13 @@ VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess:user
 INDEX_DIR = $(INCDIR)
 
 #default index & tracer set
-index     = 206x24x24
-tracer    = kessler
-precision = real8
-sfcflx    = louis
-radiation = mstrnX
+index      = 206x24x24
+precision  = real8
+tracer     = kessler
+sfcflx     = louis
+radiation  = dummy
 turbulence = smg
-postfix   = 
+postfix    = 
 
 PRJ1 = scale3
 PRJ2 = scale3_init
