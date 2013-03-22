@@ -12,7 +12,7 @@ precision  = real8
 tracer     = dry
 sfcflx     = const
 radiation  = dummy
-turbulence = dummy
+turbulence = smg
 postfix    = 
 
 # for run

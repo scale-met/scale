@@ -7,16 +7,18 @@ include $(TOPDIR)/src/Mkinclude
 VPATH = $(BUILD_DIR)
 
 # for build
-index     = 050m230x64x64
-tracer    = dry
-radiation = mstrnX
-sfcflx    = const
-precision = real8
-postfix   = 
+index      = 050m230x64x64
+precision  = real8
+tracer     = ndw6
+sfcflx     = const
+radiation  = dummy
+turbulence = dummy
+postfix    = 
 
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
+TPROC     = 150
 
 all: makedir build
 
@@ -24,10 +26,18 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 build: makedir
-	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
+	$(MAKE) -C $(SRCDIR) INDEX_DIR=$(shell pwd)   \
+                        BUILD_DIR=$(BUILD_DIR)   \
+                        index=$(index)           \
+                        precision=$(precision)   \
+                        tracer=$(tracer)         \
+                        sfcflx=$(sfcflx)         \
+                        radiation=$(radiation)   \
+                        turbulence=$(turbulence) \
+                        postfix=$(postfix)
 
 jobshell: build
-	sh $(SCRDIR)/Mkjobshell.sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) 6
+	sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC)
 
 run: jobshell
 	$(JOBSUB) run.sh
@@ -35,11 +45,13 @@ run: jobshell
 check:
 # to be add program to check result
 
-.PHONY: clean distclean
+.PHONY: allclean clean distclean
 
-allclean:
+allclean: clean
 	$(MAKE) -C $(SRCDIR) allclean
+
 clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
+	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+
 distclean:
 	rm -f *.nc LOG.pe*
