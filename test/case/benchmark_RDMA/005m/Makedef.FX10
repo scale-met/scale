@@ -4,7 +4,7 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2,dynamic_iteration \
+FFLAGS_FAST  = -Kfast,parallel,auto,ocl,openmp,preex,array_private,noalias=s,mfunc=2,dynamic_iteration \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp \
                -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd
 

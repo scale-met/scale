@@ -13,7 +13,7 @@ MPIEXEC="mpiexec"
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
-y=${array[1]}
+y=${array[1]:-1}
 let xy="${x} * ${y}"
 
 if [ ${xy} -gt 36864 ]; then
@@ -30,12 +30,12 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for OAKLEAF-FX
+# for K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:30:00"
+#PJM --rsc-list "elapse=02:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
@@ -52,8 +52,9 @@ cat << EOF1 > ./run.sh
 export PARALLEL=8
 export OMP_NUM_THREADS=8
 
-fprof="fipp -C -Srange -Ihwm -d prof"
-rm -rf ./prof
+fprof=""
+#fprof="fipp -C -Srange -Ihwm -d prof"
+#rm -rf ./prof
 
 # run
           ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit

@@ -35,11 +35,9 @@ module mod_atmos_dyn
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
-#ifdef _FPCOLL_
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-#endif
   !-----------------------------------------------------------------------------
   implicit none
   private

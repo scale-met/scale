@@ -13,7 +13,7 @@ MPIEXEC="mpiexec"
 
 array=( `echo ${TPROC} | tr -s 'x' ' '`)
 x=${array[0]}
-y=${array[1]}
+y=${array[1]:-1}
 let xy="${x} * ${y}"
 
 if [ ${xy} -gt 480 ]; then
@@ -39,7 +39,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:30:00"
+#PJM --rsc-list "elapse=02:00:00"
 #PJM -j
 #PJM -s
 export PARALLEL=8
@@ -49,9 +49,10 @@ export fu08bf=10
 ln -sv ${BINDIR}/${INITNAME} .
 ln -sv ${BINDIR}/${BINNAME}  .
 
-fprof="fipp -C -Srange -Ihwm -d prof"
-rm -rf ./prof
-mkdir -p ./prof
+fprof=""
+#fprof="fipp -C -Srange -Ihwm -d prof"
+#rm -rf ./prof
+#mkdir -p ./prof
 
 # run
           ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit

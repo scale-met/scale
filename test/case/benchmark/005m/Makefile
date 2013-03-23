@@ -10,9 +10,9 @@ VPATH = $(BUILD_DIR)
 index      = 005m1256x32x32
 precision  = real8
 tracer     = ndw6
-sfcflx     = const
+sfcflx     = louis
 radiation  = dummy
-turbulence = dummy
+turbulence = smg
 postfix    = 
 
 # for run

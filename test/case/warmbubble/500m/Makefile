@@ -7,16 +7,18 @@ include $(TOPDIR)/src/Mkinclude
 VPATH = $(BUILD_DIR)
 
 # for build
-index     = 500m40x40x40
-tracer    = kessler
-radiation = mstrnX
-sfcflx    = const
-precision = real8
-postfix   = 
+index      = 500m40x40x40
+precision  = real8
+tracer     = kessler
+sfcflx     = const
+radiation  = dummy
+turbulence = dummy
+postfix    = 
 
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
+TPROC     = 6
 
 all: makedir build
 
@@ -24,10 +26,18 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 build: makedir
-	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
+	$(MAKE) -C $(SRCDIR) INDEX_DIR=$(shell pwd)   \
+                        BUILD_DIR=$(BUILD_DIR)   \
+                        index=$(index)           \
+                        precision=$(precision)   \
+                        tracer=$(tracer)         \
+                        sfcflx=$(sfcflx)         \
+                        radiation=$(radiation)   \
+                        turbulence=$(turbulence) \
+                        postfix=$(postfix)
 
 jobshell: build
-	sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) 6
+	sh $(TESTDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC)
 
 run: jobshell
 	$(JOBSUB) run.sh
