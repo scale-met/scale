@@ -16,16 +16,12 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-if [ ${xy} -gt 480 ]; then
-   rscgrp="x-large"
-elif [ ${xy} -gt 372 ]; then
+if [ ${xy} -gt 36864 ]; then
+   rscgrp="huge"
+elif [ ${xy} -gt 384 ]; then
    rscgrp="large"
-elif [ ${xy} -gt 216 ]; then
-   rscgrp="medium"
-elif [ ${xy} -gt 12 ]; then
-   rscgrp="small"
 else
-   rscgrp="short"
+   rscgrp="small"
 fi
 
 # Generate run.sh
@@ -34,24 +30,33 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for OAKLEAF-FX
+# for K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=00:30:00"
+#PJM --stg-transfiles all
+#PJM --mpi "use-rankdir"
+#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
+#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
+#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
+#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+#PJM --stgout "rank=* %r:./*      ./"
+#PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
 #PJM -s
+#
+. /work/system/Env_base
+#
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-export fu08bf=10
 
-ln -sv ${BINDIR}/${INITNAME} .
-ln -sv ${BINDIR}/${BINNAME}  .
+rm -rf ./prof
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+                              ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
+fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

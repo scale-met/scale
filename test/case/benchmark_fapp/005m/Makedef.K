@@ -1,5 +1,5 @@
 #
-# ------ FOR OAKLEAF-FX -----
+# ------ FOR K computer -----
 #
 
 ##### for computation
@@ -18,9 +18,9 @@ FFLAGS_DEBUG = -O0 \
 # disable
 #PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_
 # fipp
-PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
+#PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
 # fapp
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
+PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
 
 # RDMA
 # disable
@@ -42,8 +42,8 @@ CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
-NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdf
+NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
+NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 
 ##### for frontend
 AR      = ar

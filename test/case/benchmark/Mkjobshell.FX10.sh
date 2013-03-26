@@ -39,19 +39,21 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=00:30:00"
 #PJM -j
 #PJM -s
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-export fu08bf=10
 
 ln -sv ${BINDIR}/${INITNAME} .
 ln -sv ${BINDIR}/${BINNAME}  .
 
+rm -rf ./prof
+mkdir -p ./prof
+
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+                              ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
+fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

@@ -18,9 +18,9 @@ FFLAGS_DEBUG = -O0 \
 # disable
 #PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_
 # fipp
-PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
+#PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
 # fapp
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
+PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
 
 # RDMA
 # disable

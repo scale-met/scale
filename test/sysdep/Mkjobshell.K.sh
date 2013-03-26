@@ -43,7 +43,6 @@ cat << EOF1 > ./run.sh
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
 #PJM --stgout "rank=* %r:./*      ./"
-#PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
 #PJM -s
 #
@@ -52,13 +51,9 @@ cat << EOF1 > ./run.sh
 export PARALLEL=8
 export OMP_NUM_THREADS=8
 
-fprof=""
-#fprof="fipp -C -Srange -Ihwm -d prof"
-#rm -rf ./prof
-
 # run
-          ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-\${fprof} ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1
