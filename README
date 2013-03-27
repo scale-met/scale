@@ -1,9 +1,9 @@
 SCALE-LES
 =========
 
-Large-Eddy Simulation model for weather and climate
+SCALE-LES is a large-Eddy Simulation (LES) model for weather and climate
 with Scalable Computing for Advanced Library and Environment (SCALE).
-(http://ranchu.aics.riken.jp)
+(http://scale.aics.riken.jp/)
 
 Contributing
 ------------
