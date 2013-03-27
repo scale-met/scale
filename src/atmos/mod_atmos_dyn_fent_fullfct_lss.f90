@@ -517,8 +517,8 @@ contains
           MOMZ_LS_DZ(:,:) = 0.0_RP
           MOMZ_LS_FLG( : ) = 0.0_RP
           QV_LS(:,:) = 0.0_RP
-          V_GEOS(k) = 0.0_RP
-          U_GEOS(k) = 0.0_RP
+          V_GEOS(:) = 0.0_RP
+          U_GEOS(:) = 0.0_RP
 
     elseif( ATMOS_DYN_LS_FLG == 1 ) then ! DYCOMS
 
@@ -2959,8 +2959,8 @@ call TIME_rapend     ('DYN-fct')
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
           ! k = KE
           qflx_hi(KE-1,i,j,ZDIR) = &
-               ( 0.5_RP * MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
-               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
+             ( 0.5_RP * MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
+             + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
        enddo
        enddo
 #ifdef DEBUG
