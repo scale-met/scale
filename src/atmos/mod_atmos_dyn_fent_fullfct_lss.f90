@@ -24,6 +24,7 @@
 !! @li      2012-07-27 (Y.Miyamoto)  [mod] divegence damping option
 !! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
 !! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
+!! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and corioli forcing
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -82,6 +83,8 @@ module mod_atmos_dyn
   integer, private, parameter :: I_MOMY = 4
   integer, private, parameter :: I_RHOT = 5
 
+  integer, private, parameter :: I_QTRC = 6
+
   integer, private, parameter :: ZDIR = 1
   integer, private, parameter :: XDIR = 2
   integer, private, parameter :: YDIR = 3
@@ -138,8 +141,15 @@ module mod_atmos_dyn
   real(RP), private, save :: CNDY(3,JA)
   real(RP), private, save :: CNMY(3,JA)
 
+  !--- for LS forcing
   real(RP), private, save :: MOMZ_LS(KA,2)
   real(RP), private, save :: MOMZ_LS_DZ(KA,2)
+  real(RP), private, save :: QV_LS(KA,2)
+  real(RP), private, save :: MOMZ_LS_FLG(6)
+  real(RP), private, save :: V_GEOS(KA), U_GEOS(KA)
+  !--- FLG of LS forcing
+  integer,  private, save :: ATMOS_DYN_LS_FLG = 0 !-- 0->no force, 1->dycoms, 2->rico
+  real(RP), private, save :: FLAG_F_force = 0.0_RP
   !-----------------------------------------------------------------------------
 contains
 
@@ -188,7 +198,8 @@ contains
        ATMOS_DYN_LSsink_bottom,     &
        ATMOS_DYN_FLAG_FCT_rho,      &
        ATMOS_DYN_FLAG_FCT_momentum, &
-       ATMOS_DYN_FLAG_FCT_T
+       ATMOS_DYN_FLAG_FCT_T,        &
+       ATMOS_DYN_LS_FLG
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -298,7 +309,8 @@ contains
     real(RP), intent(in)  :: LSsink_bottom
     logical , intent(in)  :: enable_coriolis
 
-    real(RP) :: zovzb
+    real(RP) :: zovzb, d2r
+    real(RP) :: cr, xi, ar, yc, xz
     integer :: i, j, k
 
 #ifdef DEBUG
@@ -312,20 +324,40 @@ contains
 #endif
 
     ! coriolis parameter
-    if ( enable_coriolis ) then
+    if( ATMOS_DYN_LS_FLG == 0 ) then  ! default
+     if ( enable_coriolis ) then
+       d2r = PI / 180.0_RP
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
           corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) )
        enddo
        enddo
-    else
+     else
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
           corioli(1,i,j) = 0.0_RP
        enddo
        enddo
+     endif
+       FLAG_F_force = 0.0_RP
+    elseif( ATMOS_DYN_LS_FLG == 1 ) then ! DYCOMS
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+          corioli(1,i,j) = 7.6E-5_RP
+       enddo
+       enddo
+       FLAG_F_force = 1.0_RP
+    elseif( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+          corioli(1,i,j) = 4.5E-5_RP
+       enddo
+       enddo
+       FLAG_F_force = 1.0_RP
     endif
 
 
@@ -477,7 +509,20 @@ contains
        CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
     end if
 
-    do k = KS, KE
+
+    !--- For LS sink
+    if( ATMOS_DYN_LS_FLG == 0 ) then  ! default
+
+          MOMZ_LS(:,:) = 0.0_RP
+          MOMZ_LS_DZ(:,:) = 0.0_RP
+          MOMZ_LS_FLG( : ) = 0.0_RP
+          QV_LS(:,:) = 0.0_RP
+          V_GEOS(k) = 0.0_RP
+          U_GEOS(k) = 0.0_RP
+
+    elseif( ATMOS_DYN_LS_FLG == 1 ) then ! DYCOMS
+
+     do k = KS, KE
        if ( CZ(k) < 0.0_RP ) then
           MOMZ_LS(k,1) = 0.0_RP
           MOMZ_LS_DZ(k,1) = 0.0_RP
@@ -491,8 +536,8 @@ contains
           MOMZ_LS(k,1) = - LSsink_D * ( CZ(k) - LSsink_bottom * 0.5_RP )
           MOMZ_LS_DZ(k,1) = - LSsink_D
       end if
-    enddo
-    do k = KS-1, KE
+     enddo
+     do k = KS-1, KE
        if ( FZ(k) < 0.0_RP ) then
           MOMZ_LS(k,2) = 0.0_RP
           MOMZ_LS_DZ(k,2) = 0.0_RP
@@ -506,7 +551,80 @@ contains
           MOMZ_LS(k,2) = - LSsink_D * ( FZ(k) - LSsink_bottom * 0.5_RP )
           MOMZ_LS_DZ(k,2) = - LSsink_D
       end if
-    enddo
+     enddo
+
+     do k = KS-1, KE
+       V_GEOS(k) = -5.5_RP
+       U_GEOS(k) = -7.0_RP
+     enddo
+
+     MOMZ_LS_FLG( : ) = 1.0_RP
+     QV_LS(:,:) = 0.0_RP
+
+    elseif( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
+
+     do k = KS, KE
+      if ( CZ(k) < 0.0_RP ) then
+          MOMZ_LS(k,1) = 0.0_RP
+          MOMZ_LS_DZ(k,1) = 0.0_RP
+      else if( CZ(k) < 2000.0_RP ) then
+          MOMZ_LS(k,1) = - 5.0E-3_RP / 2260.0_RP * ( CZ(k) - LSsink_bottom * 0.5_RP )
+          MOMZ_LS_DZ(k,1) = - 5.0E-3_RP / 2260.0_RP 
+       !--- fitted by circle 
+      else if( CZ(k) < 2520.0_RP ) then
+          xi   = 2260.0_RP
+          ar   = -5.0E-3_RP/xi
+          cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
+          xz   = CZ(k) - LSsink_bottom * 0.5_RP
+          yc   = ar * xi + cr 
+          MOMZ_LS(k,1) = ar * xi + cr  &
+                       - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
+          MOMZ_LS_DZ(k,1) = - ( xz - 2520._RP )/( MOMZ_LS(k,1) - yc )
+      else
+          MOMZ_LS(k,1) = - 5.0E-3_RP
+          MOMZ_LS_DZ(k,1) = 0.0_RP
+      end if
+
+      if( CZ(k) < 2980.0_RP ) then
+        QV_LS(k,1) = ( -1.0_RP + 1.3456_RP / 2980.0_RP  &
+                   * ( CZ(k) - LSsink_bottom *0.5_RP ) ) * 1.E-3_RP / 86400.0_RP  !--- [kg/kg/s]
+      else
+        QV_LS(k,1) = 4.0_RP * 1.E-6_RP * 1.E-3_RP !--- [kg/kg/s]
+      endif
+     enddo
+
+     do k = KS-1, KE
+      if ( FZ(k) < 0.0_RP ) then
+          MOMZ_LS(k,2) = 0.0_RP
+          MOMZ_LS_DZ(k,2) = 0.0_RP
+      else if( FZ(k) < 2000.0_RP ) then
+          MOMZ_LS(k,2) = - 5.0E-3_RP / 2260.0_RP * ( FZ(k) - LSsink_bottom * 0.5_RP )
+          MOMZ_LS_DZ(k,2) = - 5.0E-3_RP / 2260.0_RP 
+      else if( FZ(k) < 2520.0_RP ) then
+          xi   = 2260.0_RP
+          ar   = -5.0E-3_RP/xi
+          cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
+          xz   = FZ(k) - LSsink_bottom * 0.5_RP
+          yc   = ar * xi + cr 
+          MOMZ_LS(k,2) = ar * xi + cr  &
+                       - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
+          MOMZ_LS_DZ(k,2) = - ( xz - 2520._RP )/( MOMZ_LS(k,2) - yc )
+      else
+          MOMZ_LS(k,2) = - 5.0E-3_RP 
+          MOMZ_LS_DZ(k,2) = 0.0_RP
+      end if
+     enddo
+
+     do k = KS-1, KE
+       V_GEOS(k) = -3.8_RP
+       U_GEOS(k) = -9.9_RP + 2.0E-3_RP * CZ(k)
+     enddo
+   
+     MOMZ_LS_FLG( : ) = 0.0_RP
+     MOMZ_LS_FLG( I_RHOT ) = 1.0_RP
+     MOMZ_LS_FLG( I_QTRC ) = 1.0_RP
+
+    endif
 
     return
   end subroutine ATMOS_DYN_init
@@ -1719,13 +1837,13 @@ call TIME_rapstart   ('DYN-fct')
                                  + qflx_sgs_qtrc(KE-1,i,j,iq,ZDIR)
 
           qflx_lo(KE  ,i,j,ZDIR) = &
-               ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * QTRC(KE,i,j,iq)
+               ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * QTRC(KE,i,j,iq) * MOMZ_LS_FLG( I_QTRC )
 
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                  + qflx_sgs_qtrc(KE-1,i,j,iq,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = &
-               0.5_RP * MOMZ_LS(KE-1,2) * ( QTRC(KE,i,j,iq) + QTRC(KE-1,i,j,iq) ) &
-             + MOMZ_LS_DZ(KE,1) * CDZ(KE) * QTRC(KE,i,j,iq)
+               0.5_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_QTRC )* ( QTRC(KE,i,j,iq) + QTRC(KE-1,i,j,iq) ) &
+             + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_QTRC )* CDZ(KE) * QTRC(KE,i,j,iq)
        enddo
        enddo
 #ifdef DEBUG
@@ -1807,7 +1925,11 @@ call TIME_rapstart   ('DYN-fct')
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
-          fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * QTRC(k,i,j,iq) ! part of large scale sinking
+          if( QTRC(k,i,j,iq) > 1.0E-5_RP ) then
+           fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC )* QTRC(k,i,j,iq) + QV_LS(k,1)  ! part of large scale sinking
+          else
+           fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC )* QTRC(k,i,j,iq)
+          endif
        enddo
        enddo
        enddo
@@ -2683,7 +2805,7 @@ call TIME_rapend     ('DYN-fct')
              call CHECK( __LINE__, VELZ(k  ,i,j) )
 #endif
              vel = ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
-                   + MOMZ_LS(k,1)
+                   + MOMZ_LS(k,1) * MOMZ_LS_FLG( I_MOMZ )
              qflx_lo(k-1,i,j,ZDIR) = 0.5_RP * ( &
                        ( vel ) * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
                   - abs( vel ) * ( VELZ(k,i,j)-VELZ(k-1,i,j) ) ) &
@@ -2701,8 +2823,8 @@ call TIME_rapend     ('DYN-fct')
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMZ(i,j)
              ! k = KE
              qflx_lo(KE-1,i,j,ZDIR) = &
-               + MOMZ_LS(KE-1,1) * VELZ(KE-1,i,j) &
-               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+               + MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * VELZ(KE-1,i,j) &
+               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) )
              ! k = KE+1
              qflx_lo(KE,i,j,ZDIR) = 0.0_RP
           enddo
@@ -2789,7 +2911,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMZ,ZDIR) )
 #endif
           vel = ( ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
-                  + MOMZ_LS(k,1) & ! part of large scale sinking
+                  + MOMZ_LS(k,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(k,i,j)
           qflx_hi(k-1,i,j,ZDIR) = 0.5_RP * vel  &
                               * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
@@ -2821,7 +2943,7 @@ call TIME_rapend     ('DYN-fct')
           qflx_hi(KS-1,i,j,ZDIR) = SFLX_MOMZ(i,j) ! surface flux
           ! k = KS+1
           vel = ( ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) * 0.5_RP &
-                  + MOMZ_LS(KS+1,1) & ! part of large scale sinking
+                  + MOMZ_LS(KS+1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KS+1,i,j)
           qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
@@ -2829,7 +2951,7 @@ call TIME_rapend     ('DYN-fct')
                               + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
           ! k = KE-1
           vel = ( ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) * 0.5_RP &
-                  + MOMZ_LS(KE-1,1) & ! part of large scale sinking
+                  + MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KE-1,i,j)
           qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel &
                               * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
@@ -2837,8 +2959,8 @@ call TIME_rapend     ('DYN-fct')
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
           ! k = KE
           qflx_hi(KE-1,i,j,ZDIR) = &
-               ( 0.5_RP * MOMZ_LS(KE-1,1) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
-               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
+               ( 0.5_RP * MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
+               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
        enddo
        enddo
 #ifdef DEBUG
@@ -2922,7 +3044,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k+1,i,j) )
           call CHECK( __LINE__, DENS(k  ,i,j) )
 #endif
-          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,2) * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) ) ! part of large scale sinking
+          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,2) * MOMZ_LS_FLG( I_MOMZ ) * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) ) ! part of large scale sinking
        enddo
        enddo
        enddo
@@ -3073,7 +3195,7 @@ call TIME_rapend     ('DYN-fct')
              call CHECK( __LINE__, VELX(k+1,i,j) )
 #endif
              vel = 0.5_RP * ( MOMZ(k,i+1,j) + MOMZ(k,i,j) ) &
-                 + MOMZ_LS(k,2) ! large scale sinking
+                 + MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMX ) ! large scale sinking
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
                   ( vel ) * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
               -abs( vel ) * ( VELX(k+1,i,j)-VELX(k,i,j) ) ) &
@@ -3089,8 +3211,8 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j)
              qflx_lo(KE,i,j,ZDIR) = &
-                  + MOMZ_LS(KE-1,2) * VELX(KE,i,j) &
-                  + 2.0_RP * MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) )
+                  + MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMX ) * VELX(KE,i,j) &
+                  + 2.0_RP * MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_MOMX ) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) )
           enddo
           enddo
 #ifdef DEBUG
@@ -3161,7 +3283,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMX,ZDIR) )
 #endif
           vel = 0.5_RP * ( VELZ(k,i+1,j) + VELZ(k,i,j) ) &
-              + 4.0_RP * MOMZ_LS(k,2) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMX ) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
           qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
                               * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
                                 + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
@@ -3198,21 +3320,21 @@ call TIME_rapend     ('DYN-fct')
 #endif
           qflx_hi(KS-1,i,j,ZDIR) = SFLX_MOMX(i,j)
           vel = 0.5_RP * ( VELZ(KS,i+1,j) + VELZ(KS,i,j) ) &
-              + 4.0_RP * MOMZ_LS(KS,2) / ( DENS(KS+1,i+1,j)+DENS(KS+1,i,j)+DENS(KS,i+1,j)+DENS(KS,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(KS,2) * MOMZ_LS_FLG( I_MOMX ) / ( DENS(KS+1,i+1,j)+DENS(KS+1,i,j)+DENS(KS,i+1,j)+DENS(KS,i,j) ) ! large scale sinking
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
                                  + qflx_sgs_momx(KS  ,i,j,ZDIR) &
                                  + num_diff(KS  ,i,j,I_MOMX,ZDIR)
           vel = 0.5_RP * ( VELZ(KE-1,i+1,j) + VELZ(KE-1,i,j) ) &
-              + 4.0_RP * MOMZ_LS(KE-1,2) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMX ) / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) ! large scale sinking
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
                                  + qflx_sgs_momx(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_MOMX,ZDIR)
           qflx_hi(KE,i,j,ZDIR) = 2.0_RP &
-               * ( MOMZ_LS(KE-1,2) * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
+               * ( MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMX ) * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
                    / ( DENS(KE,i+1,j)+DENS(KE,i,j)+DENS(KE-1,i+1,j)+DENS(KE-1,i,j) ) &
-                 + MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) ) )
+                 + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_MOMX ) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) ) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3279,7 +3401,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k,i  ,j) )
           call CHECK( __LINE__, DENS(k,i+1,j) )
 #endif
-          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,1) * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! part of large scale sinking
+          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_MOMX ) * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! part of large scale sinking
        enddo
        enddo
        enddo
@@ -3320,6 +3442,7 @@ call TIME_rapend     ('DYN-fct')
                                      - ( PRES(k,i+1,j)-PRES(k,i,j) ) * RFDX(i)                     & ! pressure gradient force
                                      + 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) )              &
                                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) & ! coriolis force
+                                     - 0.5_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) * V_GEOS(k) * FLAG_F_force &
                                      + divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
                                      + fct_dt(k,i,j)                                               &
                                      + ray_damp(k,i,j,I_BND_VELX)                                  ) ! additional damping
@@ -3424,7 +3547,7 @@ call TIME_rapend     ('DYN-fct')
              call CHECK( __LINE__, VELY(k  ,i,j) )
 #endif
              vel = 0.5_RP * ( MOMZ(k,i,j+1) + MOMZ(k,i,j) ) &
-                 + MOMZ_LS(k,2) ! large scale sinking
+                 + MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMY ) ! large scale sinking
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
                   ( vel ) * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
               -abs( vel ) * ( VELY(k+1,i,j)-VELY(k,i,j) ) ) &
@@ -3440,8 +3563,8 @@ call TIME_rapend     ('DYN-fct')
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = &
-                  + MOMZ_LS(KE-1,2) * VELY(KE,i,j) &
-                  + 2.0_RP * MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMY(KE,i,j) / ( DENS(KE,i,j+1)+DENS(KE,i,j) )
+                  + MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMY ) * VELY(KE,i,j) &
+                  + 2.0_RP * MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_MOMY ) * CDZ(KE) * MOMY(KE,i,j) / ( DENS(KE,i,j+1)+DENS(KE,i,j) )
           enddo
           enddo
 #ifdef DEBUG
@@ -3513,7 +3636,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMY,ZDIR) )
 #endif
           vel = 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
-              + 4.0_RP * MOMZ_LS(k,2) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMY ) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
           qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
                               * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
                                 + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
@@ -3550,21 +3673,21 @@ call TIME_rapend     ('DYN-fct')
 #endif
           qflx_hi(KS-1,i,j,ZDIR) = SFLX_MOMY(i,j)
           vel = 0.5_RP * ( VELZ(KS,i,j+1) + VELZ(KS,i,j) ) &
-              + 4.0_RP * MOMZ_LS(KS,2) / ( DENS(KS+1,i,j+1)+DENS(KS+1,i,j)+DENS(KS,i,j+1)+DENS(KS,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(KS,2) * MOMZ_LS_FLG( I_MOMY ) / ( DENS(KS+1,i,j+1)+DENS(KS+1,i,j)+DENS(KS,i,j+1)+DENS(KS,i,j) ) ! large scale sinking
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * vel & ! just above the bottom boundary
                                  * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )              &
                                  + qflx_sgs_momy(KS  ,i,j,ZDIR) &
                                  + num_diff(KS  ,i,j,I_MOMY,ZDIR)
           vel = 0.5_RP * ( VELZ(KE-1,i,j+1) + VELZ(KE-1,i,j) ) &
-              + 4.0_RP * MOMZ_LS(KE-1,2) / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) ! large scale sinking
+              + 4.0_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMY ) / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) ! large scale sinking
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * vel & ! just below the top boundary
                                  * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )              &
                                  + qflx_sgs_momy(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_MOMY,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = 2.0_RP &
-               * ( MOMZ_LS(KE-1,2) * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) ) &
+               * ( MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMY ) * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) ) &
                / ( DENS(KE,i,j+1)+DENS(KE,i,j)+DENS(KE-1,i,j+1)+DENS(KE-1,i,j) ) &
-                 + MOMZ_LS_DZ(KE,1) * CDZ(KE) * MOMY(KE,i,j) / ( DENS(KE,i,j+1)+DENS(KE,i,j) ) )
+                 + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_MOMY ) * CDZ(KE) * MOMY(KE,i,j) / ( DENS(KE,i,j+1)+DENS(KE,i,j) ) )
        enddo
        enddo
 #ifdef DEBUG
@@ -3631,7 +3754,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, DENS(k,i,j  ) )
           call CHECK( __LINE__, DENS(k,i,j+1) )
 #endif
-          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,1) * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) ) ! part of large scale sinking
+          fct_dt(k,i,j) = 2.0_RP * MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_MOMY ) * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) ) ! part of large scale sinking
        enddo
        enddo
        enddo
@@ -3672,6 +3795,7 @@ call TIME_rapend     ('DYN-fct')
                                      - ( PRES(k,i,j+1)-PRES(k,i,j) ) * RFDY(j)                     & ! pressure gradient force
                                      - 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) )              &
                                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) ) & ! coriolis force
+                                     + 0.5_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) ) * U_GEOS(k) * FLAG_F_force &
                                      + divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
                                      + fct_dt(k,i,j)                                               &
                                      + ray_damp(k,i,j,I_BND_VELY)                                  ) ! additional damping
@@ -3799,7 +3923,7 @@ call TIME_rapend     ('DYN-fct')
              qflx_lo(KS-1,i,j,ZDIR) = mflx_hi(KS-1,i,j,ZDIR) & ! = 0 if LSsink_D == 0
                                     + SFLX_POTT(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = &
-                  ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * POTT(KE,i,j)
+                  ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * POTT(KE,i,j) * MOMZ_LS_FLG( I_RHOT ) 
           enddo
           enddo
 
@@ -3896,8 +4020,8 @@ call TIME_rapend     ('DYN-fct')
                                  + qflx_sgs_rhot(KE-1,i,j,ZDIR) &
                                  + num_diff(KE-1,i,j,I_RHOT,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = &
-             + 0.5_RP * MOMZ_LS(KE-1,2) * ( POTT(KE,i,j) + POTT(KE-1,i,j) ) &
-             + MOMZ_LS_DZ(KE,1) * CDZ(KE) * POTT(KE,i,j)
+             + 0.5_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_RHOT ) * ( POTT(KE,i,j) + POTT(KE-1,i,j) ) &
+             + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_RHOT ) * CDZ(KE) * POTT(KE,i,j)
        enddo
        enddo
 #ifdef DEBUG
@@ -3959,7 +4083,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(k,i,j) )
 #endif
-          fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * POTT(k,i,j) ! part of large scale sinking
+          fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_RHOT ) * POTT(k,i,j) ! part of large scale sinking
        enddo
        enddo
        enddo

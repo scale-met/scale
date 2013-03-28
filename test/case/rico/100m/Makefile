@@ -8,11 +8,10 @@ include $(TOPDIR)/src/Mkinclude
 VPATH = $(BUILD_DIR)
 
 # for build
-#index     = 200x8x8
-index     = 276x8x8
+index     = 100x16x16
 tracer    = ndw6
-radiation = dycoms2
-sfcflx    = const
+radiation = rico
+sfcflx    = rico
 precision = real8
 postfix   = 
 
@@ -24,11 +23,17 @@ all: makedir build
 
 makedir:
 
-$(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90: $(CODE_DIR)/mod_atmos_phy_rd_dycoms2.f90
+$(BUILD_DIR)/mod_atmos_phy_sf_rico.f90: $(CODE_DIR)/mod_atmos_phy_sf_rico.f90
+	mkdir -p $(BUILD_DIR)
+	cp -f $< $@
+$(BUILD_DIR)/mod_atmos_phy_rd_rico.f90: $(CODE_DIR)/mod_atmos_phy_rd_rico.f90
+	mkdir -p $(BUILD_DIR)
+	cp -f $< $@
+$(BUILD_DIR)/mod_mkinit.f90: $(CODE_DIR)/mod_mkinit_rico.f90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 
-build: $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 
+build: $(BUILD_DIR)/mod_atmos_phy_sf_rico.f90 $(BUILD_DIR)/mod_atmos_phy_rd_rico.f90 $(BUILD_DIR)/mod_mkinit.f90 
 	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
 
 jobshell: build
@@ -42,8 +47,8 @@ check:
 
 .PHONY: clean distclean
 
-allclean:
-	$(MAKE) -C $(SRCDIR) allclean
+#allclean:
+#	$(MAKE) -C $(SRCDIR) allclean
 clean:
 	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
 distclean:
