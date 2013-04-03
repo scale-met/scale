@@ -555,7 +555,7 @@ contains
 
      do k = KS-1, KE
        V_GEOS(k) = -5.5_RP
-       U_GEOS(k) = -7.0_RP
+       U_GEOS(k) =  7.0_RP
      enddo
 
      MOMZ_LS_FLG( : ) = 1.0_RP
