@@ -25,6 +25,7 @@
 !! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
 !! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
 !! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and corioli forcing
+!! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing 
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -568,14 +569,14 @@ contains
           MOMZ_LS(k,1) = 0.0_RP
           MOMZ_LS_DZ(k,1) = 0.0_RP
       else if( CZ(k) < 2000.0_RP ) then
-          MOMZ_LS(k,1) = - 5.0E-3_RP / 2260.0_RP * ( CZ(k) - LSsink_bottom * 0.5_RP )
+          MOMZ_LS(k,1) = - 5.0E-3_RP / 2260.0_RP * CZ(k)
           MOMZ_LS_DZ(k,1) = - 5.0E-3_RP / 2260.0_RP 
        !--- fitted by circle 
       else if( CZ(k) < 2520.0_RP ) then
           xi   = 2260.0_RP
           ar   = -5.0E-3_RP/xi
           cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
-          xz   = CZ(k) - LSsink_bottom * 0.5_RP
+          xz   = CZ(k) 
           yc   = ar * xi + cr 
           MOMZ_LS(k,1) = ar * xi + cr  &
                        - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
@@ -587,7 +588,7 @@ contains
 
       if( CZ(k) < 2980.0_RP ) then
         QV_LS(k,1) = ( -1.0_RP + 1.3456_RP / 2980.0_RP  &
-                   * ( CZ(k) - LSsink_bottom *0.5_RP ) ) * 1.E-3_RP / 86400.0_RP  !--- [kg/kg/s]
+                   * CZ(k) ) * 1.E-3_RP / 86400.0_RP  !--- [kg/kg/s]
       else
         QV_LS(k,1) = 4.0_RP * 1.E-6_RP * 1.E-3_RP !--- [kg/kg/s]
       endif
@@ -598,13 +599,13 @@ contains
           MOMZ_LS(k,2) = 0.0_RP
           MOMZ_LS_DZ(k,2) = 0.0_RP
       else if( FZ(k) < 2000.0_RP ) then
-          MOMZ_LS(k,2) = - 5.0E-3_RP / 2260.0_RP * ( FZ(k) - LSsink_bottom * 0.5_RP )
+          MOMZ_LS(k,2) = - 5.0E-3_RP / 2260.0_RP * FZ(k)
           MOMZ_LS_DZ(k,2) = - 5.0E-3_RP / 2260.0_RP 
       else if( FZ(k) < 2520.0_RP ) then
           xi   = 2260.0_RP
           ar   = -5.0E-3_RP/xi
           cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
-          xz   = FZ(k) - LSsink_bottom * 0.5_RP
+          xz   = FZ(k)
           yc   = ar * xi + cr 
           MOMZ_LS(k,2) = ar * xi + cr  &
                        - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
@@ -867,6 +868,7 @@ contains
 
     real(RP) :: dtrk
     integer :: i, j, k, iq, rko, step
+    real(RP) :: Q_rate( KA,IA,JA,QA ), ratesum
 
 
 #ifdef DEBUG
@@ -1774,6 +1776,31 @@ call TIME_rapstart   ('DYN-fct')
 
 
     !##### advection of scalar quantity #####
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+       do k = KS, KE
+         ratesum = 0.0_RP
+         do iq = 1, QQA
+           ratesum = ratesum + QTRC(k,i,j,iq)
+         enddo
+         do iq = 1, QQA
+            Q_rate( k,i,j,iq ) = QTRC(k,i,j,iq) / ratesum
+         enddo  
+         do iq = QQA+1, QA
+            Q_rate( k,i,j,iq ) = 0.0_RP
+         enddo
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+          
     do iq = 1, QA
 
     do JJS = JS, JE, JBLOCK
@@ -1925,11 +1952,8 @@ call TIME_rapstart   ('DYN-fct')
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
-          if( QTRC(k,i,j,iq) > 1.0E-5_RP ) then
-           fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC )* QTRC(k,i,j,iq) + QV_LS(k,1)  ! part of large scale sinking
-          else
-           fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC )* QTRC(k,i,j,iq)
-          endif
+           fct_dt(k,i,j) = MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC ) * QTRC(k,i,j,iq) &
+                         + QV_LS(k,1) * Q_rate( k,i,j,iq ) ! part of large scale sinking
        enddo
        enddo
        enddo
@@ -2959,8 +2983,8 @@ call TIME_rapend     ('DYN-fct')
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
           ! k = KE
           qflx_hi(KE-1,i,j,ZDIR) = &
-             ( 0.5_RP * MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
-             + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
+               ( 0.5_RP * MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) &
+               + 2.0_RP * MOMZ_LS_DZ(KE-1,2) * MOMZ_LS_FLG( I_MOMZ ) * FDZ(KE-1) * MOMZ(KE-1,i,j) / ( DENS(KE,i,j)+DENS(KE-1,i,j) ) )
        enddo
        enddo
 #ifdef DEBUG
