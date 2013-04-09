@@ -1,1 +1,1 @@
-  character(:), parameter :: VERSION = VERSION_MACRO
+  character(len=*), parameter :: VERSION = VERSION_MACRO
