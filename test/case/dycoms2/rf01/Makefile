@@ -8,8 +8,7 @@ include $(TOPDIR)/src/Mkinclude
 VPATH = $(BUILD_DIR)
 
 # for build
-#index     = 200x8x8
-index     = 276x8x8
+index     = 200x8x8
 tracer    = ndw6
 radiation = dycoms2
 sfcflx    = const
@@ -20,7 +19,7 @@ postfix   =
 INITCONF  = init.conf
 RUNCONF   = run.conf
 
-all: makedir build
+all: makedir build analy
 
 makedir:
 
@@ -37,6 +36,8 @@ jobshell: build
 run: jobshell
 	$(JOBSUB) run.sh
 
+analy: 
+	$(FC) $(FFLAGS) -L$(NETCDF_LIBS) -lnetcdff -lnetcdf -I$(NETCDF_INCLUDE) -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90
 check:
 # to be add program to check result
 
@@ -45,6 +46,6 @@ check:
 allclean:
 	$(MAKE) -C $(SRCDIR) allclean
 clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
+	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~ $(BUILD_DIR)/profile_maker
 distclean:
 	rm -f *.nc LOG.pe*

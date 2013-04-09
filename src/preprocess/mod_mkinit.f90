@@ -1541,33 +1541,47 @@ contains
                          qv_sfc  (:,:,:), & ! [IN]
                          qc_sfc  (:,:,:)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    if( .not. flg_bin ) then
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
-       if( .not. flg_bin ) then
-          do iq = 2, QA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-       else
-          do iq = 2, QQA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-          !--- for aerosol
-          do iq = QQA+1, QA
-            QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-          enddo
-       endif
+       do iq = 2, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
 
        ! make warm bubble
        RHOT(k,i,j) = DENS(k,i,j) * ( pott(k,i,j) + BBL_THETA * bubble(k,i,j) )
-    enddo
-    enddo
-    enddo
+     enddo
+     enddo
+     enddo
+    elseif ( flg_bin ) then
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+       do iq = 2, QQA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+       !--- for aerosol
+       do iq = QQA+1, QA
+         QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
+       enddo
+
+       ! make warm bubble
+       RHOT(k,i,j) = DENS(k,i,j) * ( pott(k,i,j) + BBL_THETA * bubble(k,i,j) )
+     enddo
+     enddo
+     enddo
+    endif
 
     return
   end subroutine MKINIT_supercell
@@ -1720,9 +1734,10 @@ contains
 
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    if( .not. flg_bin ) then
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
@@ -1730,23 +1745,36 @@ contains
        RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
-       if( .not. flg_bin ) then 
-          do iq = 2, QA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-       else
-          do iq = 2, QQA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-          !--- for aerosol
-          do iq = QQA+1, QA
-            QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-          enddo
-       endif
+       do iq = 2, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
 
-    enddo
-    enddo
-    enddo
+     enddo
+     enddo
+     enddo
+    else if ( flg_bin ) then
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
+       MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
+       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
+
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
+       do iq = 2, QQA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+       !--- for aerosol
+       do iq = QQA+1, QA
+         QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
+       enddo
+
+     enddo
+     enddo
+     enddo
+    endif
 
     return
   end subroutine MKINIT_squallline
@@ -1895,29 +1923,40 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    if( .not. flg_bin ) then
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
 
        QTRC(k,i,j,I_QV) = qv(k,i,j)
 
-       if( .not. flg_bin ) then 
-          if ( CZ(k) >= ENV_CL_ZBOTTOM .and. CZ(k) <= ENV_CL_ZTOP ) then
-             QTRC(k,i,j,I_QC) = ENV_CL_QC
-             QTRC(k,i,j,I_NC) = ENV_CL_NC / DENS(k,i,j)
-          endif
-       elseif( flg_bin ) then
-          do iq = 2, QQA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-          !--- for aerosol
-          do iq = QQA+1, QA
-            QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-          enddo
+       if ( CZ(k) >= ENV_CL_ZBOTTOM .and. CZ(k) <= ENV_CL_ZTOP ) then
+         QTRC(k,i,j,I_QC) = ENV_CL_QC
+         QTRC(k,i,j,I_NC) = ENV_CL_NC / DENS(k,i,j)
        endif
-    enddo
-    enddo
-    enddo
+
+     enddo
+     enddo
+     enddo
+    else if ( flg_bin ) then
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+
+        QTRC(k,i,j,I_QV) = qv(k,i,j)
+
+        do iq = 1, QQA
+          QTRC(k,i,j,iq) = 0.0_RP
+        enddo
+        !--- for aerosol
+        do iq = QQA+1, QA
+          QTRC(k,i,j,iq) = gan( iq-QQA )/DENS(k,i,j)
+        enddo
+
+      enddo
+      enddo
+      enddo
+    endif
 
     return
   end subroutine MKINIT_stratocumulus
