@@ -30,6 +30,7 @@ module mod_fileio
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include "inc_precision.h"
   include "inc_index.h"
 
@@ -65,7 +66,7 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: FILEIO_H_SOURCE    = 'SCALE-LES ver.3' !< for header
+  character(len=IO_SYSCHR), private :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
   character(len=IO_SYSCHR), private :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
 
   character(len=1), parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property

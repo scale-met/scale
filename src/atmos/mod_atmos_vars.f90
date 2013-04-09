@@ -44,6 +44,7 @@ module mod_atmos_vars
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
@@ -148,7 +149,7 @@ module mod_atmos_vars
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
   character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE3 PROGNOSTIC VARS.'
-  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_SOURCE       = 'SCALE-LES ver. 3'
+  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_SOURCE       = 'SCALE-LES ver. '//VERSION
   character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_INSTITUTE    = 'AICS/RIKEN'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 

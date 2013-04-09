@@ -41,6 +41,7 @@ module mod_history
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include "inc_precision.h"
   include "inc_index.h"
 
@@ -86,7 +87,7 @@ module mod_history
   !++ Private parameters & variables
   !
   character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE3 HISTORY OUTPUT' !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver.3'       !< for header
+  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION       !< for header
   character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'            !< for header
 
   character(len=1), parameter :: HISTORY_dim_name (3) = (/'x','y','z'/)              !< for axis property
@@ -319,18 +320,16 @@ contains
 
     character(len=*), intent(in), optional :: zdim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: zd
     integer          :: itemid
     !---------------------------------------------------------------------------
 
     xd = ''
-    yd = ''
-    zd = ''
     if( present(zdim) ) zd = zdim
 
-    call HIST_reg( itemid,                       & ! [OUT]
-                   item, desc, unit, 1,          & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_reg( itemid,              & ! [OUT]
+                   item, desc, unit, 1, & ! [IN]
+                   xdim = xd            ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
 
@@ -358,19 +357,18 @@ contains
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: xd, yd
     integer          :: itemid
     !---------------------------------------------------------------------------
 
     xd = ''
     yd = ''
-    zd = ''
     if( present(xdim) ) xd = xdim
     if( present(ydim) ) yd = ydim
 
-    call HIST_reg( itemid,                       & ! [OUT]
-                   item, desc, unit, 2,          & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_reg( itemid,              & ! [OUT]
+                   item, desc, unit, 2, & ! [IN]
+                   xdim = xd, ydim = yd ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
 
@@ -400,7 +398,7 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: xd, yd, zd
     integer          :: itemid
     !---------------------------------------------------------------------------
 

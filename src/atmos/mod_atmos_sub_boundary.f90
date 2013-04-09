@@ -46,6 +46,7 @@ module mod_atmos_boundary
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include "inc_precision.h"
   include 'inc_index.h'
   include 'inc_tracer.h'
@@ -75,7 +76,7 @@ module mod_atmos_boundary
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
   character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE3 BOUNDARY CONDITION'
-  character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_SOURCE    = 'SCALE-LES ver. 3'
+  character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_SOURCE    = 'SCALE-LES ver. '//VERSION
   character(len=FILE_HLONG), private :: ATMOS_BOUNDARY_OUT_INSTITUTE = 'AICS/RIKEN'
   logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?
   logical,                   private :: ATMOS_BOUNDARY_USE_VELX      = .false. ! read from file?
