@@ -27,7 +27,7 @@ module mod_process
   !
   !++ included parameters
   !
-  include "scale-les.h"
+#include "scale-les.h"
   include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------

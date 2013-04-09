@@ -23,6 +23,14 @@ radiation  = dummy
 turbulence = smg
 postfix    = 
 
+
+VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
+ifeq ($(VERSION),)
+  VERSION = $(shell cat VERSION)
+else
+  VERSION := $(VERSION)
+endif
+
 PRJ1 = scale3
 PRJ2 = scale3_init
 
@@ -167,9 +175,9 @@ distclean: clean
 .SUFFIXES: .o .f90 .c
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o:
-	$(FC) $(FFLAGS_DYN) -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DYN) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
