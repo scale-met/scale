@@ -320,18 +320,16 @@ contains
 
     character(len=*), intent(in), optional :: zdim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: zd
     integer          :: itemid
     !---------------------------------------------------------------------------
 
     xd = ''
-    yd = ''
-    zd = ''
     if( present(zdim) ) zd = zdim
 
-    call HIST_reg( itemid,                       & ! [OUT]
-                   item, desc, unit, 1,          & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_reg( itemid,              & ! [OUT]
+                   item, desc, unit, 1, & ! [IN]
+                   xdim = xd            ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
 
@@ -359,19 +357,18 @@ contains
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: xd, yd
     integer          :: itemid
     !---------------------------------------------------------------------------
 
     xd = ''
     yd = ''
-    zd = ''
     if( present(xdim) ) xd = xdim
     if( present(ydim) ) yd = ydim
 
-    call HIST_reg( itemid,                       & ! [OUT]
-                   item, desc, unit, 2,          & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_reg( itemid,              & ! [OUT]
+                   item, desc, unit, 2, & ! [IN]
+                   xdim = xd, ydim = yd ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
 
@@ -401,7 +398,7 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    character(len=2) :: xd, yd, zd
+    character(len=4) :: xd, yd, zd
     integer          :: itemid
     !---------------------------------------------------------------------------
 
