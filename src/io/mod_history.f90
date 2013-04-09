@@ -329,7 +329,7 @@ contains
 
     call HIST_reg( itemid,              & ! [OUT]
                    item, desc, unit, 1, & ! [IN]
-                   xdim = xd            ) ! [IN]
+                   zdim = zd            ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
 
