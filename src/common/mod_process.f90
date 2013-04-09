@@ -27,6 +27,7 @@ module mod_process
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
@@ -126,7 +127,7 @@ contains
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+ SCALE-LES ver. '//VERSION//' : LES-scale Numerical weather model   +'
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start MPI'
@@ -196,7 +197,7 @@ contains
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+ SCALE-LES ver. '//VERSION//' : LES-scale Numerical weather model   +'
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'

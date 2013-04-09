@@ -41,6 +41,7 @@ module mod_history
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include "inc_precision.h"
   include "inc_index.h"
 
@@ -86,7 +87,7 @@ module mod_history
   !++ Private parameters & variables
   !
   character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE3 HISTORY OUTPUT' !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver.3'       !< for header
+  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION       !< for header
   character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'            !< for header
 
   character(len=1), parameter :: HISTORY_dim_name (3) = (/'x','y','z'/)              !< for axis property

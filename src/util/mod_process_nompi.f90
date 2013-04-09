@@ -35,6 +35,8 @@ module mod_process
   !
   !++ Public parameters & variables
   !
+  include "scale-les.h"
+
   integer, public,         parameter :: PRC_master = 0   !< master node
 
   integer, public,              save :: PRC_myrank = 0   !< my node ID
@@ -113,7 +115,7 @@ contains
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ SCALE-LES ver.3 (SCALE3): LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+ SCALE-LES ver. '//VERSION//' : LES-scale Numerical weather model   +'
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'
