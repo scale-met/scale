@@ -25,7 +25,7 @@
 !! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
 !! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
 !! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and corioli forcing
-!! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing 
+!! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -304,7 +304,7 @@ contains
     real(RP), intent(in)  :: CDY(JA)
     real(RP), intent(in)  :: CZ(KA)
     real(RP), intent(in)  :: FZ(0:KA)
-    real(RP), intent(in)  :: lat(1,IA,JA) 
+    real(RP), intent(in)  :: lat(1,IA,JA)
     real(RP), intent(in)  :: numerical_diff
     real(RP), intent(in)  :: dt_dyn
     real(RP), intent(in)  :: LSsink_D
@@ -405,9 +405,9 @@ contains
        CNMZ(1,KE+2:KA  ) = CNMZ(1,KE+1)
 
        do k = KS-1, KE+1
-          CNMZ(2,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &   
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &  
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) 
+          CNMZ(2,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
        enddo
        CNMZ(2,   1:KS-2) = CNMZ(2,KS-1)
        CNMZ(2,KE+2:KA  ) = CNMZ(2,KE+1)
@@ -450,16 +450,16 @@ contains
        CNMX(1,   1:IS-2) = CNMX(1,IS-2)
 
        do i = IS-1, IE+1
-          CNMX(2,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) & 
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) & 
+          CNMX(2,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                    + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
                     + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
        enddo
        CNMX(2,   1:IS-2) = CNMX(2,IS-1)
        CNMX(2,IE+2:IA  ) = CNMX(2,IE+1)
 
        do i = IS-1, IE+1
-          CNMX(3,i) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) & 
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) & 
+          CNMX(3,i) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
                     + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
        enddo
        CNMX(3,   1:IS-2) = CNMX(3,IS-1)
@@ -495,9 +495,9 @@ contains
        CNMY(1,JE+2:JA  ) = CNMY(1,JE+1)
 
        do j = JS-1, JE+1
-          CNMY(2,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &   
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &  
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) 
+          CNMY(2,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                    + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
        enddo
        CNMY(2,   1:JS-2) = CNMY(2,JS-1)
        CNMY(2,JE+2:JA  ) = CNMY(2,JE+1)
@@ -573,14 +573,14 @@ contains
           MOMZ_LS_DZ(k,1) = 0.0_RP
       else if( CZ(k) < 2000.0_RP ) then
           MOMZ_LS(k,1) = - 5.0E-3_RP / 2260.0_RP * CZ(k)
-          MOMZ_LS_DZ(k,1) = - 5.0E-3_RP / 2260.0_RP 
-       !--- fitted by circle 
+          MOMZ_LS_DZ(k,1) = - 5.0E-3_RP / 2260.0_RP
+       !--- fitted by circle
       else if( CZ(k) < 2520.0_RP ) then
           xi   = 2260.0_RP
           ar   = -5.0E-3_RP/xi
           cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
-          xz   = CZ(k) 
-          yc   = ar * xi + cr 
+          xz   = CZ(k)
+          yc   = ar * xi + cr
           MOMZ_LS(k,1) = ar * xi + cr  &
                        - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
           MOMZ_LS_DZ(k,1) = - ( xz - 2520._RP )/( MOMZ_LS(k,1) - yc )
@@ -603,18 +603,18 @@ contains
           MOMZ_LS_DZ(k,2) = 0.0_RP
       else if( FZ(k) < 2000.0_RP ) then
           MOMZ_LS(k,2) = - 5.0E-3_RP / 2260.0_RP * FZ(k)
-          MOMZ_LS_DZ(k,2) = - 5.0E-3_RP / 2260.0_RP 
+          MOMZ_LS_DZ(k,2) = - 5.0E-3_RP / 2260.0_RP
       else if( FZ(k) < 2520.0_RP ) then
           xi   = 2260.0_RP
           ar   = -5.0E-3_RP/xi
           cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
           xz   = FZ(k)
-          yc   = ar * xi + cr 
+          yc   = ar * xi + cr
           MOMZ_LS(k,2) = ar * xi + cr  &
                        - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
           MOMZ_LS_DZ(k,2) = - ( xz - 2520._RP )/( MOMZ_LS(k,2) - yc )
       else
-          MOMZ_LS(k,2) = - 5.0E-3_RP 
+          MOMZ_LS(k,2) = - 5.0E-3_RP
           MOMZ_LS_DZ(k,2) = 0.0_RP
       end if
      enddo
@@ -623,7 +623,7 @@ contains
        V_GEOS(k) = -3.8_RP
        U_GEOS(k) = -9.9_RP + 2.0E-3_RP * CZ(k)
      enddo
-   
+
      MOMZ_LS_FLG( : ) = 0.0_RP
      MOMZ_LS_FLG( I_RHOT ) = 1.0_RP
      MOMZ_LS_FLG( I_QTRC ) = 1.0_RP
@@ -1796,7 +1796,7 @@ call TIME_rapstart   ('DYN-fct')
          enddo
          do iq = 1, QQA
             Q_rate( k,i,j,iq ) = QTRC(k,i,j,iq) / ratesum
-         enddo  
+         enddo
          do iq = QQA+1, QA
             Q_rate( k,i,j,iq ) = 0.0_RP
          enddo
@@ -1808,7 +1808,7 @@ call TIME_rapstart   ('DYN-fct')
     enddo
 
     endif
-            
+
     do iq = 1, QA
 
     do JJS = JS, JE, JBLOCK
@@ -3955,7 +3955,7 @@ call TIME_rapend     ('DYN-fct')
              qflx_lo(KS-1,i,j,ZDIR) = mflx_hi(KS-1,i,j,ZDIR) & ! = 0 if LSsink_D == 0
                                     + SFLX_POTT(i,j)
              qflx_lo(KE  ,i,j,ZDIR) = &
-                  ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * POTT(KE,i,j) * MOMZ_LS_FLG( I_RHOT ) 
+                  ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * POTT(KE,i,j) * MOMZ_LS_FLG( I_RHOT )
           enddo
           enddo
 
