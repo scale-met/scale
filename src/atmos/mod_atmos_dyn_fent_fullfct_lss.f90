@@ -151,6 +151,7 @@ module mod_atmos_dyn
   !--- FLG of LS forcing
   integer,  private, save :: ATMOS_DYN_LS_FLG = 0 !-- 0->no force, 1->dycoms, 2->rico
   real(RP), private, save :: FLAG_F_force = 0.0_RP
+  real(RP), private, save :: Q_rate( KA,IA,JA,QA )
   !-----------------------------------------------------------------------------
 contains
 
@@ -518,6 +519,7 @@ contains
           MOMZ_LS_DZ(:,:) = 0.0_RP
           MOMZ_LS_FLG( : ) = 0.0_RP
           QV_LS(:,:) = 0.0_RP
+          Q_rate( :,:,:,: ) = 0.0_RP
           V_GEOS(:) = 0.0_RP
           U_GEOS(:) = 0.0_RP
 
@@ -561,6 +563,7 @@ contains
 
      MOMZ_LS_FLG( : ) = 1.0_RP
      QV_LS(:,:) = 0.0_RP
+     Q_rate( :,:,:,: ) = 0.0_RP
 
     elseif( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
 
@@ -624,6 +627,7 @@ contains
      MOMZ_LS_FLG( : ) = 0.0_RP
      MOMZ_LS_FLG( I_RHOT ) = 1.0_RP
      MOMZ_LS_FLG( I_QTRC ) = 1.0_RP
+     Q_rate( :,:,:,: ) = 0.0_RP
 
     endif
 
@@ -868,7 +872,7 @@ contains
 
     real(RP) :: dtrk
     integer :: i, j, k, iq, rko, step
-    real(RP) :: Q_rate( KA,IA,JA,QA ), ratesum
+    real(RP) :: ratesum
 
 
 #ifdef DEBUG
@@ -1776,6 +1780,8 @@ call TIME_rapstart   ('DYN-fct')
 
 
     !##### advection of scalar quantity #####
+    if( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -1800,7 +1806,9 @@ call TIME_rapstart   ('DYN-fct')
 
     enddo
     enddo
-          
+
+    endif
+            
     do iq = 1, QA
 
     do JJS = JS, JE, JBLOCK
