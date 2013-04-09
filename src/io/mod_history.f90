@@ -324,7 +324,7 @@ contains
     integer          :: itemid
     !---------------------------------------------------------------------------
 
-    xd = ''
+    zd = ''
     if( present(zdim) ) zd = zdim
 
     call HIST_reg( itemid,              & ! [OUT]
