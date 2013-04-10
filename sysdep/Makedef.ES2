@@ -6,16 +6,15 @@
 
 FFLAGS_FAST  = -C hopt                    \
                -Ep -f2003 -dW             \
-               -Wf"-L fmtlist transform”  \
-               -Wf"-pvctl chgpwr fullmsg” \
-               -Wf"-O extendreorder”
+               -Wf"-L fmtlist transform"  \
+               -Wf"-pvctl chgpwr fullmsg" \
+               -Wf"-O extendreorder"
 
-FFLAGS_DEBUG = -C vopt                    \
+FFLAGS_DEBUG = -C debug                   \
                -Ep -f2003 -dW             \
-               -Wf"-L fmtlist transform”  \
-               -Wf"-pvctl fullmsg”        \
+               -Wf"-L fmtlist transform"  \
+               -Wf"-pvctl fullmsg"        \
                -Wf"-init heap=nan stack=nan"
-
 #               -DDEBUG
 
 # Performance monitor

@@ -16,16 +16,27 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-if [ ${xy} -gt 480 ]; then
-   rscgrp="x-large"
-elif [ ${xy} -gt 372 ]; then
+# for Oakleaf-FX
+# if [ ${xy} -gt 480 ]; then
+#    rscgrp="x-large"
+# elif [ ${xy} -gt 372 ]; then
+#    rscgrp="large"
+# elif [ ${xy} -gt 216 ]; then
+#    rscgrp="medium"
+# elif [ ${xy} -gt 12 ]; then
+#    rscgrp="small"
+# else
+#    rscgrp="short"
+# fi
+
+# for AICS-FX10
+if [ ${xy} -gt 96 ]; then
+   rscgrp="huge"
+elif [ ${xy} -gt 24 ]; then
    rscgrp="large"
-elif [ ${xy} -gt 216 ]; then
-   rscgrp="medium"
-elif [ ${xy} -gt 12 ]; then
-   rscgrp="small"
 else
-   rscgrp="short"
+#   rscgrp="interact"
+   rscgrp="large"
 fi
 
 # Generate run.sh
@@ -34,7 +45,7 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for OAKLEAF-FX
+# for FX10
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
@@ -44,7 +55,6 @@ cat << EOF1 > ./run.sh
 #PJM -s
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-export fu08bf=10
 
 ln -sv ${BINDIR}/${INITNAME} .
 ln -sv ${BINDIR}/${BINNAME}  .
