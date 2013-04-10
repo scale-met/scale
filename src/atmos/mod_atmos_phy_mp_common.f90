@@ -520,16 +520,16 @@ contains
 
     do iq = 1, QA
        call COMM_vars8( vterm(:,:,:,iq), iq )
-    end do
+    enddo
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), QA+iq )
-    end do
+    enddo
     do iq = 1, QA
        call COMM_wait( vterm(:,:,:,iq), iq )
-    end do
+    enddo
     do iq = 1, QA
        call COMM_wait( QTRC(:,:,:,iq), QA+iq )
-    end do
+    enddo
 
     flux_rain(:,:,:) = 0.0_RP
     flux_snow(:,:,:) = 0.0_RP
@@ -541,34 +541,13 @@ contains
 
        eflx(KE) = 0.0_RP
 
-       !--- mass flux for each mass tracer, upwind with vel < 0
-       do iq = 1, QA
-       do k  = KS-1, KE
-          rhoq(k,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
-       enddo
-       enddo
-       do iq = I_QC, QA
+       do iq = I_QC, QQE
+
+          !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
-             qflx(k,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,iq)
+             qflx(k,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq)
           enddo
           qflx(KE,iq) = 0.0_RP
-       enddo
-
-       !--- lowermost flux is saved for land process
-       do k  = KS-1, KE
-          if ( QWS > 0 ) then
-             do iq = QWS, QWE
-                flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,iq)
-             enddo
-          endif
-          if ( QIS > 0 ) then
-             do iq = QIS, QIE
-                flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
-             enddo
-          endif
-       enddo
-
-       do iq = I_QC, QQE ! mass tracer only
 
           !--- internal energy
           do k  = KS-1, KE-1
@@ -617,22 +596,60 @@ contains
              MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
           enddo
 
-          !--- update total density
+       enddo ! mass tracer loop
+
+    enddo ! I loop
+    enddo ! J loop
+
+    do j  = JS, JE
+    do i  = IS, IE
+
+       ! save previous value
+       do iq = 1, QA
+       do k  = KS-1, KE
+          rhoq(k,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+       enddo
+       enddo
+
+       !--- mass flux for each tracer, upwind with vel < 0
+       do iq = I_QC, QA
+          do k  = KS-1, KE-1
+             qflx(k,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,iq)
+          enddo
+          qflx(KE,iq) = 0.0_RP
+       enddo
+
+       !--- update total density
+       do iq = I_QC, QQE
           do k  = KS, KE
              DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k)
           enddo
-
        enddo ! mass tracer loop
 
-       !--- update tracer
+       !--- update falling tracer
+       do iq = I_QC, QA
+       do k  = KS, KE
+          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) ) / DENS(k,i,j)
+       enddo
+       enddo
+
+       !--- update no-falling tracer
        do k = KS, KE
           QTRC(k,i,j,I_QV) = rhoq(k,I_QV) / DENS(k,i,j)
        enddo
-       do iq = I_QC, QA
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) ) &
-                         / DENS(k,i,j)
-       enddo 
+
+       !--- lowermost flux is saved for land process
+       do k  = KS-1, KE
+          if ( QWS > 0 ) then
+             do iq = QWS, QWE
+                flux_rain(k,i,j) = flux_rain(k,i,j) - qflx(k,iq)
+             enddo
+          endif
+          if ( QIS > 0 ) then
+             do iq = QIS, QIE
+                flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
+             enddo
+          endif
        enddo
 
     enddo ! I loop

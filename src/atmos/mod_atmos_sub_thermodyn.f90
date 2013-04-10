@@ -56,6 +56,7 @@ module mod_atmos_thermodyn
   public :: ATMOS_THERMODYN_rhoe
   public :: ATMOS_THERMODYN_rhot
   public :: ATMOS_THERMODYN_temp_pres
+  public :: ATMOS_THERMODYN_temp_pres_E
 
   interface ATMOS_THERMODYN_qd
      module procedure ATMOS_THERMODYN_qd_0D
@@ -86,6 +87,11 @@ module mod_atmos_thermodyn
      module procedure ATMOS_THERMODYN_temp_pres_0D
      module procedure ATMOS_THERMODYN_temp_pres_3D
   end interface ATMOS_THERMODYN_temp_pres
+
+  interface ATMOS_THERMODYN_temp_pres_E
+     module procedure ATMOS_THERMODYN_temp_pres_E_0D
+     module procedure ATMOS_THERMODYN_temp_pres_E_3D
+  end interface ATMOS_THERMODYN_temp_pres_E
 
   public :: ATMOS_THERMODYN_tempre
   public :: ATMOS_THERMODYN_tempre2
@@ -542,6 +548,86 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (0D)
+  subroutine ATMOS_THERMODYN_temp_pres_E_0D( &
+       temp, &
+       pres, &
+       dens, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp  !< temperature               [K]
+    real(RP), intent(out) :: pres  !< pressure                  [Pa]
+    real(RP), intent(in)  :: dens  !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe  !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: q(QA) !< mass concentration        [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CPtot
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    qdry  = 1.0_RP
+    CPtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+    enddo
+    CPtot = CPdry * qdry + CPtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+
+    temp = rhoe / ( CPtot - Rtot )
+    pres = dens * Rtot * temp
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_E_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (3D)
+  subroutine ATMOS_THERMODYN_temp_pres_E_3D( &
+       temp, &
+       pres, &
+       dens, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp(KA,IA,JA)    !< temperature               [K]
+    real(RP), intent(out) :: pres(KA,IA,JA)    !< pressure                  [Pa]
+    real(RP), intent(in)  :: dens(KA,IA,JA)    !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe(KA,IA,JA)    !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration        [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CPtot
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       qdry  = 1.0_RP
+       CPtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+       enddo
+       CPtot = CPdry * qdry + CPtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+
+       temp(k,i,j) = rhoe(k,i,j) / ( CPtot - Rtot )
+       pres(k,i,j) = dens(k,i,j) * Rtot * temp(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_E_3D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre( &
