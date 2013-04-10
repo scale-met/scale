@@ -17,7 +17,7 @@ SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
 
 TESTDIR = $(TOPDIR)/test
 
-SUFFIX = $(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix)
+SUFFIX = $(index)_$(precision)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
 
 LIBNAME = libscale_$(SUFFIX).a
 
