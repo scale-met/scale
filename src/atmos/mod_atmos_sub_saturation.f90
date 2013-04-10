@@ -115,6 +115,7 @@ module mod_atmos_saturation
   interface ATMOS_SATURATION_dens2qsat_ice
      module procedure ATMOS_SATURATION_dens2qsat_ice_0D
      module procedure ATMOS_SATURATION_dens2qsat_ice_1D
+     module procedure ATMOS_SATURATION_dens2qsat_ice_3D
   end interface ATMOS_SATURATION_dens2qsat_ice
 
   interface ATMOS_SATURATION_dalphadT
@@ -813,6 +814,38 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_dens2qsat_ice_1D
+
+  !-----------------------------------------------------------------------------
+  ! Saturation vapor pressure from Clausius-Clapeyron equation, based on CPV, CI
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_SATURATION_dens2qsat_ice_3D( &
+       qsat, &
+       temp, &
+       dens  )
+    implicit none
+
+    real(RP), intent(out) :: qsat(KA,IA,JA)
+    real(RP), intent(in)  :: temp(KA,IA,JA)
+    real(RP), intent(in)  :: dens(KA,IA,JA)
+    
+    real(RP) :: psat
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       psat = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_ice     &
+            * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
+
+       qsat(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dens2qsat_ice_3D
 
   !-----------------------------------------------------------------------------
   ! d(alpha)/d(temp)
