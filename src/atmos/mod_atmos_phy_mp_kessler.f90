@@ -47,7 +47,7 @@ module mod_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
-  real(RP), public,  save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+  real(RP), public, save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -231,11 +231,10 @@ contains
        call HIST_in( QTRC_t(:,:,:,I_QV), 'QV_t_mp', 'tendency of QV in mp', 'kg/kg/s', dt )
        call HIST_in( QTRC_t(:,:,:,I_QC), 'QC_t_mp', 'tendency of QC in mp', 'kg/kg/s', dt )
        call HIST_in( QTRC_t(:,:,:,I_QR), 'QR_t_mp', 'tendency of QR in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QI), 'QI_t_mp', 'tendency of QI in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QS), 'QS_t_mp', 'tendency of QS in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QG), 'QG_t_mp', 'tendency of QG in mp', 'kg/kg/s', dt )
 
        call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
+
+       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
     endif
 
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
@@ -329,7 +328,7 @@ contains
        ! Evaporation (QR->QV)
        vent_factor = 1.6_RP + 124.9_RP * ( dens*q(I_QR) )**0.2046_RP
 
-       dq_evap = ( min(Sliq,1.0_RP)-1.0_RP ) / dens * vent_factor  &
+       dq_evap = ( 1.0_RP-min(Sliq,1.0_RP) ) / dens * vent_factor  &
                * ( dens * q(I_QR) )**0.525_RP / ( 5.4E5_RP + 2.55E8_RP / ( pres*QSATL(k,i,j) ) )
 
        ! limiter
@@ -371,13 +370,15 @@ contains
   !-----------------------------------------------------------------------------
   subroutine MP_kessler_vterm( &
        vterm, &
-       DENS,  &
-       QTRC   )
+       DENS0, &
+       QTRC0  )
     implicit none
 
     real(RP), intent(inout) :: vterm(KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS (KA,IA,JA)
-    real(RP), intent(in)    :: QTRC (KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS0(KA,IA,JA)
+    real(RP), intent(in)    :: QTRC0(KA,IA,JA,QA)
+
+    real(RP) :: zerosw
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -386,7 +387,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       vterm(k,i,j,I_QR) = - 36.34_RP * ( DENS(k,i,j) * QTRC(k,i,j,I_QR) )**0.1364_RP * factor_vterm(k)
+       zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
+       vterm(k,i,j,I_QR) = - 36.34_RP * ( DENS0(k,i,j) * ( QTRC0(k,i,j,I_QR) + zerosw ) )**0.1364_RP &
+                         * factor_vterm(k) * ( 1.0_RP - zerosw )
     enddo
     enddo
     enddo
