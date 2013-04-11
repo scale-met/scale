@@ -13,6 +13,7 @@ index   = 10x10x2
 tracer  = kessler
 radiation = mstrnX
 sfcflx  = const
+turbulence = smg
 precision = real8
 postfix = debug
 
@@ -26,11 +27,10 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
+	cd $(SRCDIR) && $(MAKE) INDEX_DIR=$(shell pwd) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
 
 makeinclude:
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
-	cp $(INCDIR)/inc_index_$(index).f90         $(BUILD_DIR)/inc_index.h
 	cp $(INCDIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
 
 makebin: $(BUILD_DIR)/$(PROJ_EXE)
