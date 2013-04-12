@@ -386,12 +386,12 @@ contains
     call HIST_reg( ATMOS_HIST_id(I_ENGK),  'ENGK',  'kinetic energy',        'J/m3',   ndim=3 )
     call HIST_reg( ATMOS_HIST_id(I_ENGI),  'ENGI',  'internal energy',       'J/m3',   ndim=3 )
 
-    call MONIT_reg( ATMOS_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3 )
+    call MONIT_reg( ATMOS_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3 )
+    call MONIT_reg( ATMOS_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3 )
     call MONIT_reg( ATMOS_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3 )
-    call MONIT_reg( ATMOS_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3 )
 
     if ( ATMOS_HIST_id(I_VELZ) > 0 ) then
        ATMOS_PREP_sw(I_VELZ) = 1
@@ -644,62 +644,62 @@ contains
        call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-          QDRY (k,i,j) = 1.0_RP
-          CPTOT(k,i,j) = 0.0_RP
-          do iq = QQS, QQE
-             QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
-             CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-          enddo
-          RTOT  (k,i,j) = Rdry *QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-          CPTOT (k,i,j) = CPdry*QDRY(k,i,j) + CPTOT(k,i,j)
-          CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
+       QDRY (k,i,j) = 1.0_RP
+       CPTOT(k,i,j) = 0.0_RP
+       do iq = QQS, QQE
+          QDRY (k,i,j) = QDRY (k,i,j) - QTRC(k,i,j,iq)
+          CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
+       enddo
+       RTOT  (k,i,j) = Rdry *QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       CPTOT (k,i,j) = CPdry*QDRY(k,i,j) + CPTOT(k,i,j)
+       CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
 
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+       PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
+       TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
 
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                              + VELX(k,i,j)**2 &
-                                              + VELY(k,i,j)**2 )
-          ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-          do iq = QQS, QQE
-             ENGI(k,i,j) = ENGI(k,i,j) &
-                         + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
-          enddo
-          ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
+                                           + VELX(k,i,j)**2 &
+                                           + VELY(k,i,j)**2 )
+       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       do iq = QQS, QQE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
        enddo
-       enddo
-       enddo
+       ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
+    enddo
+    enddo
+    enddo
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
-       enddo
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+    enddo
+    enddo
+    enddo
+    call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+    enddo
+    enddo
+    enddo
     call MONIT_put( ATMOS_MONIT_id(I_QTOT), RHOQ(:,:,:) )
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
-       enddo
-       enddo
-       enddo
-    call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+    call MONIT_put( ATMOS_MONIT_id(I_ENGT), ENGT(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGK), ENGK(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGI), ENGI(:,:,:) )
-    call MONIT_put( ATMOS_MONIT_id(I_ENGT), ENGT(:,:,:) )
 
     call MONIT_write('MAIN')
 
@@ -1409,10 +1409,21 @@ contains
     call HIST_put( ATMOS_HIST_id(I_VOR),   VOR (:,:,:),  TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_DIV),   DIV (:,:,:),  TIME_DTSEC )
 
+    call HIST_put( ATMOS_HIST_id(I_ENGT), ENGT(:,:,:), TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_ENGP), ENGP(:,:,:), TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_ENGK), ENGK(:,:,:), TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
-    call HIST_put( ATMOS_HIST_id(I_ENGT), ENGT(:,:,:), TIME_DTSEC )
+
+    if (ATMOS_MONIT_id(I_QDRY) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
+       enddo
+       enddo
+       enddo
+       call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+    endif
 
     if (ATMOS_MONIT_id(I_QTOT) > 0 ) then
        do j = JS, JE
@@ -1424,71 +1435,11 @@ contains
        enddo
        call MONIT_put( ATMOS_MONIT_id(I_QTOT), RHOQ(:,:,:) )
     endif
-    if (ATMOS_MONIT_id(I_QDRY) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
-       enddo
-       enddo
-       enddo
-       call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
-    endif
+
+    call MONIT_put( ATMOS_MONIT_id(I_ENGT), ENGT(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGK), ENGK(:,:,:) )
     call MONIT_put( ATMOS_MONIT_id(I_ENGI), ENGI(:,:,:) )
-    call MONIT_put( ATMOS_MONIT_id(I_ENGT), ENGT(:,:,:) )
-
-!    call COMM_horizontal_mean( mean1d(:), DENS(:,:,:) )
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       DENS_v(k,i,j) = DENS(k,i,j) - mean1d(k)
-!    enddo
-!    enddo
-!    enddo
-!
-!    call COMM_horizontal_mean( mean1d(:), VELZ(:,:,:) )
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       VELZ_v(k,i,j) = VELZ(k,i,j) - mean1d(k)
-!    enddo
-!    enddo
-!    enddo
-!
-!    call COMM_horizontal_mean( mean1d(:), VELX(:,:,:) )
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       VELX_v(k,i,j) = VELX(k,i,j) - mean1d(k)
-!    enddo
-!    enddo
-!    enddo
-!
-!    call COMM_horizontal_mean( mean1d(:), VELY(:,:,:) )
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       VELY_v(k,i,j) = VELY(k,i,j) - mean1d(k)
-!    enddo
-!    enddo
-!    enddo
-!
-!    call COMM_horizontal_mean( mean1d(:), POTT(:,:,:) )
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       POTT_v(k,i,j) = POTT(k,i,j) - mean1d(k)
-!    enddo
-!    enddo
-!    enddo
-!
-!    call HIST_in( DENS_v(:,:,:), 'DENS_v', 'Variance of rho', 'kg/m3', TIME_DTSEC )
-!    call HIST_in( VELZ_v(:,:,:), 'W_v',    'Variance of W',   'm/s',   TIME_DTSEC )
-!    call HIST_in( VELX_v(:,:,:), 'U_v',    'Variance of U',   'm/s',   TIME_DTSEC )
-!    call HIST_in( VELY_v(:,:,:), 'V_v',    'Variance of V',   'm/s',   TIME_DTSEC )
-!    call HIST_in( POTT_v(:,:,:), 'PT_v',   'Variance of PT',  'K',     TIME_DTSEC )
 
     return
   end subroutine ATMOS_vars_history
