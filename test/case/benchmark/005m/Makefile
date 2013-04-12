@@ -9,7 +9,7 @@ VPATH = $(BUILD_DIR)
 # for build
 index      = 005m1256x32x32
 precision  = real8
-tracer     = ndw6
+tracer     = sn13
 sfcflx     = louis
 radiation  = dummy
 turbulence = smg

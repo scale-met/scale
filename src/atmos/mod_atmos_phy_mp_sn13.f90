@@ -8,7 +8,7 @@ module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
   !++ Description: 
-  !       This module contains subroutines for the ndw6 parametrization.
+  !       This module contains subroutines for the sn13 parametrization.
   !
   !       
   !++ Current Corresponding Author : T.Seiki
@@ -117,10 +117,10 @@ module mod_atmos_phy_mp
   !
   !++ Private procedure
   !
-  private :: mp_ndw6_init
-  private :: mp_ndw6
+  private :: mp_sn13_init
+  private :: mp_sn13
   private :: MP_terminal_velocity
-  private :: mp_ndw6_effective_radius
+  private :: mp_sn13_effective_radius
 
   !-----------------------------------------------------------------------------
   !
@@ -427,7 +427,7 @@ contains
     WLABEL(10) = "SNOW_NUM"
     WLABEL(11) = "GRAUPEL_NUM"
 
-    call mp_ndw6_init( IA, JA )
+    call mp_sn13_init( IA, JA )
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
@@ -468,7 +468,7 @@ contains
     call MP_negativefilter
     call TIME_rapend  ('MP0 Setup')
 
-    call mp_ndw6
+    call mp_sn13
 
     call TIME_rapstart('MP6 Filter')
     call MP_negativefilter
@@ -482,7 +482,7 @@ contains
   end subroutine ATMOS_PHY_MP
 
   !-----------------------------------------------------------------------------
-  subroutine mp_ndw6_init ( IAA, JA )
+  subroutine mp_sn13_init ( IAA, JA )
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -503,7 +503,7 @@ contains
     integer :: iw, ia, ib
     integer :: n
     !
-    namelist /nm_mp_ndw6_init/       &
+    namelist /nm_mp_sn13_init/       &
          opt_debug,                  &
          opt_debug_tem,              &
          opt_debug_inc,              &
@@ -514,7 +514,7 @@ contains
          ntmax_collection,           &
          ntmax_sedimentation
     !
-    namelist /nm_mp_ndw6_particles/ &
+    namelist /nm_mp_sn13_particles/ &
          a_m, b_m, alpha_v, beta_v, gamma_v, &
          alpha_vn, beta_vn,    &
          a_area, b_area, cap,  &
@@ -586,15 +586,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_ndw6_init,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn13_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_ndw6_init. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_ndw6_init)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13_init)
 
     !
     ! default setting
@@ -685,15 +685,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_ndw6_particles,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn13_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_ndw6_particles. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_ndw6_particles)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -1107,9 +1107,9 @@ contains
     nc_uplim_d(:,:,:) = 150.d6
 
     return
-  end subroutine mp_ndw6_init
+  end subroutine mp_sn13_init
   !-----------------------------------------------------------------------------
-  subroutine mp_ndw6
+  subroutine mp_sn13
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_grid, only: &
@@ -2065,7 +2065,7 @@ contains
     call TIME_rapend  ('MP5 Sedimentation')
 
     return
-  end subroutine mp_ndw6
+  end subroutine mp_sn13
 
   !-----------------------------------------------------------------------------
   subroutine debug_tem_kij( &
@@ -2105,7 +2105,7 @@ contains
   end subroutine debug_tem_kij
 
   ! this is called from external procedure
-  subroutine mp_ndw6_effective_radius(&
+  subroutine mp_sn13_effective_radius(&
        IJA, KA, KS, KE,&
        rho,                &
        nc, nr, ni, ns, ng, &
@@ -2189,7 +2189,7 @@ contains
          rec, rer, rei, res, reg       )
     !
     return
-  end subroutine mp_ndw6_effective_radius
+  end subroutine mp_sn13_effective_radius
   !
   subroutine calc_effective_radius( &
        IJA, KA, KS, KE,     &
@@ -2432,7 +2432,7 @@ contains
     logical, save :: nucl_twomey = .false.
     logical, save :: inucl_w     = .false.
     !
-    namelist /nm_mp_ndw6_nucleation/ &
+    namelist /nm_mp_sn13_nucleation/ &
          in_max,                     & !
          c_ccn, kappa,               & ! cloud nucleation
          nm_M92, am_M92, bm_M92,     & ! ice nucleation
@@ -2495,8 +2495,8 @@ contains
     !
     if( flag_first )then
        rewind(IO_FID_CONF)
-       read(IO_FID_CONF, nml=nm_mp_ndw6_nucleation, end=100)
-100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_ndw6_nucleation)
+       read(IO_FID_CONF, nml=nm_mp_sn13_nucleation, end=100)
+100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn13_nucleation)
        flag_first=.false.
     endif
     !
@@ -3029,7 +3029,7 @@ contains
     real(RP), parameter :: d_dec = 4.5185E-5_RP
     !
     logical, save :: flag_first = .true.
-    namelist /nm_mp_ndw6_collection/ &
+    namelist /nm_mp_sn13_collection/ &
          dc0, dc1, di0, ds0, dg0,    &
          sigma_c, sigma_r, sigma_i, sigma_s, sigma_g, &
          opt_stick_KS96,   &
@@ -3098,8 +3098,8 @@ contains
     !
     if( flag_first )then
        rewind( IO_FID_CONF )
-       read( IO_FID_CONF, nml=nm_mp_ndw6_collection, end=100 )
-100    if( IO_L ) write( IO_FID_LOG, nml=nm_mp_ndw6_collection )
+       read( IO_FID_CONF, nml=nm_mp_sn13_collection, end=100 )
+100    if( IO_L ) write( IO_FID_LOG, nml=nm_mp_sn13_collection )
        flag_first = .false.
     end if
     !
@@ -4341,7 +4341,7 @@ contains
     logical, save :: opt_fix_taucnd_c=.false.
     logical, save :: flag_first      =.true.
     !
-    namelist /nm_mp_ndw6_condensation/ &
+    namelist /nm_mp_sn13_condensation/ &
          opt_fix_taucnd_c, fac_cndc
 
     real(RP) :: fac_cndc_wrk
@@ -4357,8 +4357,8 @@ contains
     if( flag_first )then
        flag_first = .false.
        rewind(IO_FID_CONF)
-       read  (IO_FID_CONF,nml=nm_mp_ndw6_condensation, end=100)
-100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_ndw6_condensation)
+       read  (IO_FID_CONF,nml=nm_mp_sn13_condensation, end=100)
+100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_sn13_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax

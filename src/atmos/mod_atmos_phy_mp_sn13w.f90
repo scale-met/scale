@@ -7,7 +7,7 @@ module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
   !++ Description: 
-  !       This module contains subroutines for the ndw2 parametrization.
+  !       This module contains subroutines for the sn13w parametrization.
   !
   !       
   !++ Current Corresponding Author : T.Seiki
@@ -120,8 +120,8 @@ module mod_atmos_phy_mp
   !
   !++ Private procedure
   !
-  private :: mp_ndw2_init
-  private :: mp_ndw2
+  private :: mp_sn13w_init
+  private :: mp_sn13w
   private :: MP_terminal_velocity
 
   !-----------------------------------------------------------------------------
@@ -405,7 +405,7 @@ contains
     WLABEL( 4) = "CLOUD_NUM"
     WLABEL( 5) = "RAIN_NUM"
 
-    call mp_ndw2_init( IA, JA )
+    call mp_sn13w_init( IA, JA )
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=8)
@@ -446,7 +446,7 @@ contains
     call MP_negativefilter
     call TIME_rapend  ('MP0 Setup')
 
-    call mp_ndw2
+    call mp_sn13w
 
     call TIME_rapstart('MP6 Filter')
     call MP_negativefilter
@@ -460,7 +460,7 @@ contains
   end subroutine ATMOS_PHY_MP
 
   !-----------------------------------------------------------------------------
-  subroutine mp_ndw2_init ( IAA, JA )
+  subroutine mp_sn13w_init ( IAA, JA )
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -479,7 +479,7 @@ contains
     integer :: iw, ia, ib
     integer :: n
     !
-    namelist /nm_mp_ndw2_init/       &
+    namelist /nm_mp_sn13w_init/       &
          opt_debug,                  &
          opt_debug_tem,              &
          opt_debug_inc,              &
@@ -490,7 +490,7 @@ contains
          ntmax_collection,           &
          ntmax_sedimentation
     !
-    namelist /nm_mp_ndw2_particles/ &
+    namelist /nm_mp_sn13w_particles/ &
          a_m, b_m, alpha_v, beta_v, gamma_v, &
          alpha_vn, beta_vn,    &
          a_area, b_area, cap,  &
@@ -562,15 +562,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_ndw2_init,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn13w_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_ndw2_init. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13w_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_ndw2_init)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13w_init)
 
     !
     ! default setting
@@ -631,15 +631,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_ndw2_particles,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn13w_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_ndw2_particles. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13w_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_ndw2_particles)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13w_particles)
 
     !
     ! area-diameter relation => area-mass relation
@@ -988,9 +988,9 @@ contains
     nc_uplim_d(:,:,:) = 150.d6
 
     return
-  end subroutine mp_ndw2_init
+  end subroutine mp_sn13w_init
   !-----------------------------------------------------------------------------
-  subroutine mp_ndw2
+  subroutine mp_sn13w
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP, &
        ct => TIME_NOWDAYSEC
@@ -1698,7 +1698,7 @@ contains
     call TIME_rapend  ('MP5 Sedimentation')
 
     return
-  end subroutine mp_ndw2
+  end subroutine mp_sn13w
 
   !-----------------------------------------------------------------------------
   subroutine debug_tem_kij( &
@@ -1805,7 +1805,7 @@ contains
     real(RP), save :: qke_min = 0.03_RP ! sigma=0.1[m/s], 09/08/18 T.Mitsui
     real(RP), save :: tem_ccn_low=233.150_RP  ! = -40 degC  ! [Add] 10/08/03 T.Mitsui
     !
-    namelist /nm_mp_ndw2_nucleation/ &
+    namelist /nm_mp_sn13w_nucleation/ &
          c_ccn, kappa,               & ! cloud nucleation
          xc_ccn,                     &
          tem_ccn_low,                & ! [Add] 10/08/03 T.Mitsui
@@ -1857,8 +1857,8 @@ contains
     !
     if( flag_first )then
        rewind(IO_FID_CONF)
-       read(IO_FID_CONF, nml=nm_mp_ndw2_nucleation, end=100)
-100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_ndw2_nucleation)
+       read(IO_FID_CONF, nml=nm_mp_sn13w_nucleation, end=100)
+100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn13w_nucleation)
        flag_first=.false.
     endif
     !

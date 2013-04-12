@@ -2152,7 +2152,7 @@ contains
     enddo
 
 
-    if( .not. flg_bin ) then !--- for ndw6
+    if( .not. flg_bin ) then !--- for sn13
      do j = JS, JE
      do i = IS, IE
      do k = KS, KE

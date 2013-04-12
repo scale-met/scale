@@ -8,7 +8,7 @@ VPATH = $(BUILD_DIR)
 
 # for build
 index     = 100m80x15x15
-tracer    = ndw6
+tracer    = sn13
 radiation = mstrnX
 sfcflx    = const
 precision = real8

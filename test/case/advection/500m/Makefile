@@ -9,7 +9,7 @@ VPATH = $(BUILD_DIR)
 # for build
 index      = 500m40x40x40
 precision  = real8
-tracer     = ndw6
+tracer     = sn13
 sfcflx     = const
 radiation  = dummy
 turbulence = dummy
