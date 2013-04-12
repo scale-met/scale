@@ -53,10 +53,6 @@ module mod_grid
   integer,  public, save :: JSG              !< start of the inner domain: y, global
   integer,  public, save :: JEG              !< end   of the inner domain: y, global
 
-  integer,  public, save :: GRID_IJS         !< start of the inner domain
-  integer,  public, save :: GRID_IJE         !< end   of the inner domain
-  integer,  public, save :: GRID_IJA         !< # of x*y
-
   real(RP), public, save :: GRID_CZ(KA)      !< center coordinate [m]: z, local=global
   real(RP), public, save :: GRID_CX(IA)      !< center coordinate [m]: x, local
   real(RP), public, save :: GRID_CY(JA)      !< center coordinate [m]: y, local
@@ -132,8 +128,15 @@ contains
     namelist / PARAM_GRID / &
        GRID_IN_BASENAME,  &
        GRID_OUT_BASENAME, &
-       GRID_OFFSET_X, &
-       GRID_OFFSET_Y
+       GRID_OFFSET_X,     &
+       GRID_OFFSET_Y,     &
+       DX,                &
+       DY,                &
+       DZ,                &
+       BUFFER_DZ,         &
+       BUFFER_DX,         &
+       BUFFER_DY,         &
+       BUFFFACT
 
     integer :: ierr
     !---------------------------------------------------------------------------
