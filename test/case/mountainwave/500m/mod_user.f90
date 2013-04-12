@@ -4,7 +4,7 @@
 !! @par Description
 !!          User defined module
 !!
-!! @author H.Tomita and SCALE developers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-26 (H.Yashiro)   [new]

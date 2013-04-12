@@ -5,7 +5,7 @@
 !!          Cold pool forcing
 !!          Redelsperger et al. (2000) Q.J.R.Meteorol.Soc., 126, pp.823-863
 !!
-!! @author H.Tomita and SCALE developers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-12-26 (H.Yashiro)   [new]
