@@ -4,25 +4,24 @@
 #
 ################################################################################
 
-TOPDIR = ..
-BUILD_DIR = ./.libs
+TOPDIR      = ..
+BUILD_DIR   = ./.libs
+INDEX_DIR   = ./include
+SYSDEP_DIR  = ../sysdep
 
-include ../sysdep/Makedef.$(SCALE_SYS)
--include $(INDEX_DIR)/Makedef.$(SCALE_SYS)
-include ./Mkinclude
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/src/Mkinclude
 
-VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess:user
-INDEX_DIR = $(INCDIR)
-
-#default index & tracer set
-index      = 206x24x24
+# for build
+index      = 500m40x40x40
 precision  = real8
 tracer     = kessler
 sfcflx     = louis
-radiation  = dummy
 turbulence = smg
+radiation  = dummy
 postfix    = 
 
+VPATH = $(BUILD_DIR):include:common:io:grid:atmos:ocean:preprocess:user
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -30,6 +29,8 @@ ifeq ($(VERSION),)
 else
   VERSION := $(VERSION)
 endif
+
+
 
 PRJ1 = scale3
 PRJ2 = scale3_init

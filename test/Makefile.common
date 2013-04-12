@@ -1,0 +1,39 @@
+################################################################################
+#
+# Common Makefile for each test (Please include this file)
+#
+################################################################################
+
+build: makedir
+	$(MAKE) -C $(SRCDIR) BUILD_DIR=$(BUILD_DIR)   \
+                        INDEX_DIR=$(INDEX_DIR)   \
+                        SYSDEP_DIR=$(SYSDEP_DIR) \
+                        index=$(index)           \
+                        precision=$(precision)   \
+                        tracer=$(tracer)         \
+                        sfcflx=$(sfcflx)         \
+                        turbulence=$(turbulence) \
+                        radiation=$(radiation)   \
+                        postfix=$(postfix)
+
+makedir:
+	mkdir -p $(BUILD_DIR)
+
+run: jobshell
+	$(JOBSUB) run.sh
+
+jobshell:
+	sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC)
+
+
+
+.PHONY: allclean clean distclean
+
+allclean: clean
+	$(MAKE) -C $(SRCDIR) allclean
+
+clean:
+	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+
+distclean:
+	rm -f *.nc LOG.pe*

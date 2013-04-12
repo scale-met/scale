@@ -6,16 +6,10 @@ ifeq ($(origin LIBDIR), undefined)
    LIBDIR = $(TOPDIR)/lib
 endif
 
-SRCDIR = $(TOPDIR)/src
-INCDIR = $(SRCDIR)/include
-
 GTOOLDIR   = $(TOPDIR)/gtool
 DCUTILSDIR = $(TOPDIR)/dc_utils
-
-RUNDIR = $(TOPDIR)/run
-SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
-
-TESTDIR = $(TOPDIR)/test
+SRCDIR     = $(TOPDIR)/src
+INCDIR     = $(TOPDIR)/src/include
 
 SUFFIX = $(index)_$(precision)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
 
@@ -29,3 +23,5 @@ mod_rdma := rdma.o
 else
 mod_rdma :=
 endif
+
+TESTDIR = $(TOPDIR)/test
