@@ -12,11 +12,11 @@ module mod_atmos_phy_mp
   !       
   !++ Current Corresponding Author : T.Seiki
   ! 
-  !++ History: NDW6
+  !++ History: SN13
   !      Version   Date       Comment 
   !      -----------------------------------------------------------------------
   !        0.00   11/10/24 T.Seiki, import from NICAM(11/08/30 ver.)
-  !        0.01   12/11/09 Y.Sato,  arrange for NDW2 version(warm rain only)      
+  !        0.01   12/11/09 Y.Sato,  arrange for SN13W version(warm rain only)      
   !      -----------------------------------------------------------------------
   !      Reference:  -- Journals 
   !                   Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66
@@ -380,10 +380,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for NDW6'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN13'
 
-    if ( ATMOS_TYPE_PHY_MP /= 'NDW3' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not NDW6. Check!'
+    if ( ATMOS_TYPE_PHY_MP /= 'SN13W' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not SN13. Check!'
        call PRC_MPIstop
     endif
 
@@ -558,7 +558,7 @@ contains
     !
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NDW6]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SN13]/Categ[ATMOS]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
