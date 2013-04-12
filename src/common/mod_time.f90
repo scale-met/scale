@@ -136,26 +136,33 @@ contains
        CALENDAR_unit2sec
     implicit none
 
-    real(DP)                 :: TIME_DURATION              = 60.0E0_DP
-    character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "MIN"
-    real(DP)                 :: TIME_DT                    =  0.6E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_DYN          =  0.03E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_SF       =  0.6E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_TB       =  0.6E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_MP       =  0.6E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_RD       =  0.6E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_RESTART      = 60.0E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "SEC"
-    real(DP)                 :: TIME_DT_OCEAN              = 60.0E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "MIN"
-    real(DP)                 :: TIME_DT_OCEAN_RESTART      = 60.0E0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "SEC"
+    real(DP)                 :: TIME_DURATION              = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "DAY"
+    real(DP)                 :: TIME_DT                    = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "DAY"
+
+    real(DP)                 :: TIME_DT_ATMOS_DYN          = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_SF       = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_TB       = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_MP       = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_RD       = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_RESTART      = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "DAY"
+
+    real(DP)                 :: TIME_DT_OCEAN              = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "DAY"
+    real(DP)                 :: TIME_DT_OCEAN_RESTART      = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "DAY"
+
+    real(DP)                 :: TIME_DT_LAND               = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_LAND_UNIT          = "DAY"
+    real(DP)                 :: TIME_DT_LAND_RESTART       = 10.0_DP
+    character(len=IO_SYSCHR) :: TIME_DT_LAND_RESTART_UNIT  = "DAY"
 
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
