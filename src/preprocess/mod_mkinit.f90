@@ -4,7 +4,7 @@
 !! @par Description
 !!          subroutines for preparing initial data
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new] Imported from SCALE-LES ver.2

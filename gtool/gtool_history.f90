@@ -4,7 +4,7 @@
 !! @par Description
 !!          module library for history output 
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-06-11 (S.Nishizawa)  [new] imported from SCALE-LES
