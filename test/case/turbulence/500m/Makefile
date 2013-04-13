@@ -13,7 +13,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
 # for build
-index      = 500m40x40x40
+index      = 500m20x20x20
 precision  = real8
 tracer     = dry
 sfcflx     = const

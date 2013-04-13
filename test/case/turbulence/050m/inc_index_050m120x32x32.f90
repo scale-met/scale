@@ -1,12 +1,12 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters ( 50m res., 10km isotropic, 18km model top)
+  !++ scale3 grid parameters ( 50m res.,  6km isotropic,  6km model top)
   !
   !-----------------------------------------------------------------------------
-  integer,  private, parameter :: KMAX =  230 ! # of computational cells: z
-  integer,  private, parameter :: IMAX =   64 ! # of computational cells: x
-  integer,  private, parameter :: JMAX =   64 ! # of computational cells: y
+  integer,  private, parameter :: KMAX =  120 ! # of computational cells: z
+  integer,  private, parameter :: IMAX =   32 ! # of computational cells: x
+  integer,  private, parameter :: JMAX =   32 ! # of computational cells: y
 
   integer,  private, parameter :: IBLOCK =  8 ! block size for cache blocking: x
   integer,  private, parameter :: JBLOCK =  8 ! block size for cache blocking: y
@@ -15,9 +15,9 @@
   real(RP), private, save      :: DX        =   50.0_RP ! length in the main region [m]: x
   real(RP), private, save      :: DY        =   50.0_RP ! length in the main region [m]: y
 
-  real(RP), private, save      :: BUFFER_DZ = 8000.0_RP ! thickness of buffer region [m]: z
+  real(RP), private, save      :: BUFFER_DZ =    0.0_RP ! thickness of buffer region [m]: z
   real(RP), private, save      :: BUFFER_DX =    0.0_RP ! thickness of buffer region [m]: x
   real(RP), private, save      :: BUFFER_DY =    0.0_RP ! thickness of buffer region [m]: y
-  real(RP), private, save      :: BUFFFACT  =    1.1_RP ! strech factor for dx/dy/dz of buffer region
+  real(RP), private, save      :: BUFFFACT  =    1.0_RP ! strech factor for dx/dy/dz of buffer region
 
   include 'inc_index_all.h'
