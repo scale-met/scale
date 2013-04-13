@@ -676,6 +676,7 @@ contains
     real(RP) :: criteria
 
     integer, parameter :: itelim = 100
+    logical :: fail
 
     integer :: k, ite
     !---------------------------------------------------------------------------
@@ -714,10 +715,16 @@ contains
 
           dens(k) = dens_s - dhyd/dgrd
 
+          if ( dens(k)*0.0_RP /= 0.0_RP ) then
+             fail = .true.
+             exit
+          endif
        enddo
 
-       if ( ite > itelim ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rtot, FDZ(k-1)
+       if( ite > itelim ) fail = .true.
+
+       if ( fail ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx iteration not converged!', k, ite, dens(k), dens_s, dhyd, dgrd, Rtot(k), FDZ(k-1)
        endif
     enddo
 
