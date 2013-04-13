@@ -1025,192 +1025,48 @@ contains
        MOMX(k,i,j) = 0.0_RP
        MOMY(k,i,j) = 0.0_RP
 
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
-
        ! make warm bubble
        RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + BBL_THETA * bubble(k,i,j) )
+
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
     enddo
     enddo
     enddo
 
     if ( flg_bin ) then
+       do iq = 2,  QQA
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          do iq = 2, QQA
              QTRC(k,i,j,iq) = 0.0_RP
           enddo
-          !--- for aerosol
-          do iq = QQA+1, QA
-             QTRC( k,i,j,iq ) = gan( iq-QQA ) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+
+       do iq = QQA+1, QA
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
        enddo
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          do iq = 2, QA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
+       do iq = 2,  QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+          QTRC(k,i,j,iq) = 0.0_RP
        enddo
-       enddo
-       enddo
+    enddo
+    enddo
+    enddo
     endif
 
     return
   end subroutine MKINIT_warmbubble
-
-  !-----------------------------------------------------------------------------
-  !> Make initial state for Kelvin Helmholtz experiment
-  !-----------------------------------------------------------------------------
-  subroutine MKINIT_khwave
-    implicit none
-
-    ! Surface state
-    real(RP) :: SFC_THETA                  ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                   ! surface pressure [Pa]
-    real(RP) :: SFC_RH         =    0.0_RP ! surface relative humidity [%]
-    ! Environment state
-    real(RP) :: ENV_L1_ZTOP    = 1900.0_RP ! top    height of the layer1 (low  THETA) [m]
-    real(RP) :: ENV_L3_ZBOTTOM = 2100.0_RP ! bottom height of the layer3 (high THETA) [m]
-    real(RP) :: ENV_L1_THETA   =  300.0_RP ! THETA in the layer1 (low  THETA) [K]
-    real(RP) :: ENV_L3_THETA   =  301.0_RP ! THETA in the layer3 (high THETA) [K]
-    real(RP) :: ENV_L1_U       =    0.0_RP ! velocity u in the layer1 (low  THETA) [K]
-    real(RP) :: ENV_L3_U       =   20.0_RP ! velocity u in the layer3 (high THETA) [K]
-    real(RP) :: ENV_L1_RH      =    0.0_RP ! Relative Humidity in the layer1 (low  THETA) [%]
-    real(RP) :: ENV_L3_RH      =    0.0_RP ! Relative Humidity in the layer3 (high THETA) [%]
-
-    NAMELIST / PARAM_MKINIT_KHWAVE / &
-       SFC_THETA,      &
-       SFC_PRES,       &
-       ENV_L1_ZTOP,    &
-       ENV_L3_ZBOTTOM, &
-       ENV_L1_THETA,   &
-       ENV_L3_THETA,   &
-       ENV_L1_U,       &
-       ENV_L3_U,       &
-       ENV_L1_RH,      &
-       ENV_L3_RH
-
-    real(RP) :: fact
-    
-    integer :: ierr
-    integer :: k, i, j, iq
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[KH wave]/Categ[MKINIT]'
-
-    SFC_THETA = THETAstd
-    SFC_PRES  = Pstd
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_KHWAVE,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_KHWAVE)
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       if ( CZ(k) <= ENV_L1_ZTOP ) then      ! Layer 1
-          pott(k,1,1) = ENV_L1_THETA
-       elseif( CZ(k) > ENV_L3_ZBOTTOM ) then ! Layer 3
-          pott(k,1,1) = ENV_L3_THETA
-       else                                  ! Layer 2
-          fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
-
-          pott(k,1,1) = ENV_L1_THETA * ( 1.0_RP - fact ) &
-                      + ENV_L3_THETA * (          fact )
-       endif
-       qv(k,1,1) = 0.0_RP
-       qc(k,1,1) = 0.0_RP
-    enddo
-
-    ! make density & pressure profile in dry condition
-    call hydro_buildrho_1d( DENS    (:,1,1), & ! [OUT]
-                            temp    (:,1,1), & ! [OUT]
-                            pres    (:,1,1), & ! [OUT]
-                            pott    (:,1,1), & ! [IN]
-                            qv      (:,1,1), & ! [IN]
-                            qc      (:,1,1), & ! [IN]
-                            temp_sfc(1,1,1), & ! [OUT]
-                            pres_sfc(1,1,1), & ! [IN]
-                            pott_sfc(1,1,1), & ! [IN]
-                            qv_sfc  (1,1,1), & ! [IN]
-                            qc_sfc  (1,1,1)  ) ! [IN]
-
-    ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
-    qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
-    do k = KS, KE
-       if ( CZ(k) <= ENV_L1_ZTOP ) then    ! Layer 1
-          qv(k,1,1) = ENV_L1_RH * 1.E-2_RP * qsat(k,1,1)
-       elseif( CZ(k) > ENV_L3_ZBOTTOM ) then ! Layer 3
-          qv(k,1,1) = ENV_L3_RH * 1.E-2_RP * qsat(k,1,1)
-       else                                ! Layer 2
-          fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
-
-          qv(k,1,1) = ( ENV_L1_RH * ( 1.0_RP - fact ) &
-                      + ENV_L3_RH * (          fact ) ) * 1.E-2_RP * qsat(k,1,1)
-       endif
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call hydro_buildrho_1d( DENS    (:,1,1), & ! [OUT]
-                            temp    (:,1,1), & ! [OUT]
-                            pres    (:,1,1), & ! [OUT]
-                            pott    (:,1,1), & ! [IN]
-                            qv      (:,1,1), & ! [IN]
-                            qc      (:,1,1), & ! [IN]
-                            temp_sfc(1,1,1), & ! [OUT]
-                            pres_sfc(1,1,1), & ! [IN]
-                            pott_sfc(1,1,1), & ! [IN]
-                            qv_sfc  (1,1,1), & ! [IN]
-                            qc_sfc  (1,1,1)  ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
-       MOMZ(k,i,j) = 0.0_RP
-       MOMY(k,i,j) = 0.0_RP
-       RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
-
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
-       do iq = 2, QA
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-
-       fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
-
-       MOMX(k,i,j) = ( ENV_L1_U * ( 1.0_RP - fact ) &
-                     + ENV_L3_U * (          fact ) ) * DENS(k,1,1)
-    enddo
-    enddo
-    enddo
-
-    if( flg_bin ) then
-       write(*,*) 'xxx SBM cannot be used on khwave. Check!'
-       call PRC_MPIstop
-    endif
-
-    return
-  end subroutine MKINIT_khwave
 
   !-----------------------------------------------------------------------------
   !> Make initial state for turbulence experiment
@@ -1406,6 +1262,131 @@ contains
 
     return
   end subroutine MKINIT_turbulence
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for Kelvin-Helmholtz wave experiment
+  subroutine MKINIT_khwave
+    implicit none
+
+    ! Surface state
+    real(RP) :: SFC_THETA                  ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                   ! surface pressure [Pa]
+    ! Environment state
+    real(RP) :: ENV_L1_ZTOP    = 1900.0_RP ! top    height of the layer1 (low  THETA) [m]
+    real(RP) :: ENV_L3_ZBOTTOM = 2100.0_RP ! bottom height of the layer3 (high THETA) [m]
+    real(RP) :: ENV_L1_THETA   =  300.0_RP ! THETA in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_L3_THETA   =  301.0_RP ! THETA in the layer3 (high THETA) [K]
+    real(RP) :: ENV_L1_U       =    0.0_RP ! velocity u in the layer1 (low  THETA) [K]
+    real(RP) :: ENV_L3_U       =   20.0_RP ! velocity u in the layer3 (high THETA) [K]
+    ! Disturbance
+    real(RP) :: RANDOM_U       =    0.0_RP ! amplitude of random disturbance u
+
+    NAMELIST / PARAM_MKINIT_KHWAVE / &
+       SFC_THETA,      &
+       SFC_PRES,       &
+       ENV_L1_ZTOP,    &
+       ENV_L3_ZBOTTOM, &
+       ENV_L1_THETA,   &
+       ENV_L3_THETA,   &
+       ENV_L1_U,       &
+       ENV_L3_U,       &
+       RANDOM_U
+
+    real(RP) :: fact
+    
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[KH wave]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_KHWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_KHWAVE)
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
+       fact = max( min( fact, 1.0_RP ), 0.0_RP )
+
+       pott(k,1,1) = ENV_L1_THETA * ( 1.0_RP - fact ) &
+                   + ENV_L3_THETA * (          fact )
+
+       qv(k,1,1) = 0.0_RP
+       qc(k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call hydro_buildrho_1d( DENS    (:,1,1), & ! [OUT]
+                            temp    (:,1,1), & ! [OUT]
+                            pres    (:,1,1), & ! [OUT]
+                            pott    (:,1,1), & ! [IN]
+                            qv      (:,1,1), & ! [IN]
+                            qc      (:,1,1), & ! [IN]
+                            temp_sfc(1,1,1), & ! [OUT]
+                            pres_sfc(1,1,1), & ! [IN]
+                            pott_sfc(1,1,1), & ! [IN]
+                            qv_sfc  (1,1,1), & ! [IN]
+                            qc_sfc  (1,1,1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
+       RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
+       fact = max( min( fact, 1.0_RP ), 0.0_RP )
+
+       MOMX(k,i,j) = ( ENV_L1_U * ( 1.0_RP - fact )                 &
+                     + ENV_L3_U * (          fact )                 &
+                     + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U &
+                     ) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    if ( flg_bin ) then
+       write(*,*) 'xxx SBM cannot be used on khwave. Check!'
+       call PRC_MPIstop
+    endif
+
+    return
+  end subroutine MKINIT_khwave
 
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment

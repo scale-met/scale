@@ -13,7 +13,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
 # for build
-index      = 500m20x20x20
+index      = 050m120x32x32
 precision  = real8
 tracer     = dry
 sfcflx     = const
@@ -24,7 +24,7 @@ postfix    =
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 6
+TPROC     = 150
 
 
 
