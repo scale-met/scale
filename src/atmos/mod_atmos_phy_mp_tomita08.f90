@@ -113,8 +113,8 @@ module mod_atmos_phy_mp
   real(RP), private, save      :: Nc_ocn     =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
   real(RP), private, save      :: Nc_def(IA,JA)          !< number concentration of cloud water         [1/cc]
 
-  real(RP), private, save      :: beta_saut  =  1.E-3_RP  !< auto-conversion factor beta  for ice
-  real(RP), private, save      :: gamma_saut = 25.E-3_RP  !< auto-conversion factor gamma for ice
+  real(RP), private, save      :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
+  real(RP), private, save      :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
   real(RP), private, save      :: beta_gaut  =  1.E-3_RP  !< auto-conversion factor beta  for snow
   real(RP), private, save      :: gamma_gaut = 90.E-3_RP  !< auto-conversion factor gamma for snow
   real(RP), private, save      :: qicrt_saut =  0.0_RP    !< mixing ratio threshold for Psaut [kg/kg]
