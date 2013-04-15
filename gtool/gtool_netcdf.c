@@ -105,7 +105,11 @@ int32_t file_open( int32_t *fid,     // (out)
     CHECK_ERROR( nc_open(_fname, NC_NOWRITE, &ncid) );
     break;
   case File_FWRITE:
+#ifdef NETCDF3
+    CHECK_ERROR( nc_create(_fname, NC_CLOBBER, &ncid) );
+#else
     CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_NETCDF4, &ncid) );
+#endif
     break;
   case File_FAPPEND:
     CHECK_ERROR( nc_open(_fname, NC_WRITE, &ncid) );
@@ -325,6 +329,10 @@ int32_t file_put_axis( int32_t fid,        // (in)
   ncid = files[fid]->ncid;
   CHECK_ERROR( nc_inq_varid(ncid, dim_name, &varid) );
 
+#ifdef NETCDF3
+    CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
   switch (precision) {
   case 8:
     CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
@@ -359,6 +367,10 @@ int32_t file_put_additional_axis( int32_t fid,        // (in)
   if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
     return ALREADY_EXISTED_CODE;
 
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
+
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
     CHECK_ERROR( nc_def_dim(ncid, dim_name, size, &dimid) );
 
@@ -366,6 +378,11 @@ int32_t file_put_additional_axis( int32_t fid,        // (in)
   CHECK_ERROR( nc_def_var(ncid, name, xtype, 1, &dimid, &varid) );
   CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
   CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
   switch ( precision ) {
   case 8:
     CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
@@ -417,6 +434,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->t = NULL;
   vars[nvar]->start = NULL;
   vars[nvar]->count = NULL;
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
 
   // get time variable
   if ( tint > 0.0 ) {
@@ -496,11 +517,17 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   }
   if ( tint > 0.0 ) vars[nvar]->count[0] = 1;
 
+#ifndef NETCDF3
   // set chunk size and deflate level
   if ( files[fid]->deflate_level > 0 ) {
     CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) );
     CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) );
   }
+#endif
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
 
   vars[nvar]->varid = varid;
   *vid = nvar;
