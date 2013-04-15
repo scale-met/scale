@@ -30,6 +30,10 @@ ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
 endif
 
+ifneq ($(USE_NETCDF3),)
+      FFLAGS += -DNETCDF3
+endif
+
 FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -module
