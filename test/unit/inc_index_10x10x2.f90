@@ -8,14 +8,14 @@
   integer, private, parameter :: IHALO = 2 ! # of halo cells: x
   integer, private, parameter :: JHALO = 2 ! # of halo cells: y
 
-  real(RP), private, parameter :: DX  = 200.0_RP ! length in the main region [m]: x
-  real(RP), private, parameter :: DY  = 200.0_RP ! length in the main region [m]: y
-  real(RP), private, parameter :: DZ  =  10.0_RP ! length in the main region [m]: z
+  real(RP), private, save :: DX  = 200.0_RP ! length in the main region [m]: x
+  real(RP), private, save :: DY  = 200.0_RP ! length in the main region [m]: y
+  real(RP), private, save :: DZ  =  10.0_RP ! length in the main region [m]: z
 
-  real(RP), private, parameter :: BUFFER_DZ =  50.E0_RP ! thickness of buffer region [m]: z
-  real(RP), private, parameter :: BUFFER_DX =  0.0E0_RP ! thickness of buffer region [m]: x
-  real(RP), private, parameter :: BUFFER_DY =  0.0E0_RP ! thickness of buffer region [m]: y
-  real(RP), private, parameter :: BUFFFACT  =  1.2E0_RP ! strech factor for dx/dy/dz of buffer region
+  real(RP), private, save :: BUFFER_DZ =  50.E0_RP ! thickness of buffer region [m]: z
+  real(RP), private, save :: BUFFER_DX =  0.0E0_RP ! thickness of buffer region [m]: x
+  real(RP), private, save :: BUFFER_DY =  0.0E0_RP ! thickness of buffer region [m]: y
+  real(RP), private, save :: BUFFFACT  =  1.2E0_RP ! strech factor for dx/dy/dz of buffer region
 
   integer, private, parameter :: KMAX =  10 ! # of computational cells: z
   integer, private, parameter :: IMAX =  10 ! # of computational cells: x
