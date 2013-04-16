@@ -331,6 +331,11 @@ int32_t file_put_axis( int32_t fid,        // (in)
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+#ifdef NETCDF3
+    CHECK_ERROR( nc_redef(ncid) );
+#endif
+
   CHECK_ERROR( nc_inq_varid(ncid, dim_name, &varid) );
 
 #ifdef NETCDF3
