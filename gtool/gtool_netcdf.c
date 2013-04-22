@@ -319,6 +319,10 @@ int32_t file_set_dim_info( int32_t  fid,       // (in)
     CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(dim_units[i]), dim_units[i]) );
   }
 
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
   return SUCCESS_CODE;
 }
 
@@ -333,16 +337,16 @@ int32_t file_put_axis( int32_t fid,        // (in)
   ncid = files[fid]->ncid;
 
 #ifdef NETCDF3
-    CHECK_ERROR( nc_redef(ncid) );
+  CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   CHECK_ERROR( nc_inq_varid(ncid, dim_name, &varid) );
 
 #ifdef NETCDF3
-    CHECK_ERROR( nc_enddef(ncid) );
+  CHECK_ERROR( nc_enddef(ncid) );
 #endif
 
-  switch (precision) {
+  switch ( precision ) {
   case 8:
     CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
     break;
