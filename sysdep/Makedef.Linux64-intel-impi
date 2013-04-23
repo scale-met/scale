@@ -37,6 +37,10 @@ MODDIROPT ?= -module
 CC     = mpiicc
 CFLAGS = -O3 -xHost -ip -ftz
 
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
