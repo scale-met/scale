@@ -649,7 +649,7 @@ contains
        CX_mask => GRID_CX_mask, &
        CY_mask => GRID_CX_mask
     use mod_comm, only: &
-       COMM_vars, &
+       COMM_vars8, &
        COMM_wait
     implicit none
 
@@ -712,7 +712,7 @@ contains
 
     ! fill IHALO & JHALO
     do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+       call COMM_vars8( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
     enddo
 
     do iv = I_BND_VELZ, I_BND_QV
