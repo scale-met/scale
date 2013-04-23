@@ -24,7 +24,7 @@ postfix    =
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 2x3
+TPROC     = 6
 
 
 

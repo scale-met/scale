@@ -25,10 +25,13 @@ do
 
    sed -e "s/PRC_NUM_X=2/PRC_NUM_X=${x}/g" ./005m/init.conf | \
    sed -e "s/PRC_NUM_Y=3/PRC_NUM_Y=${y}/g"                  > ./${expdir}/init.conf
+
    sed -e "s/PRC_NUM_X=2/PRC_NUM_X=${x}/g" ./005m/run.conf  | \
    sed -e "s/PRC_NUM_Y=3/PRC_NUM_Y=${y}/g"                  > ./${expdir}/run.conf
-   sed -e "s/= 2x3/= ${x}x${y}/g"          ./005m/Makefile  | \
-   sed -e "s/short/${rscgrp}/g"                             > ./${expdir}/Makefile
+
+   sed -e "s/TPROC     = 6/TPROC     = ${x}x${y}/g" ./005m/Makefile  | \
+   sed -e "s/short/${rscgrp}/g"                                      > ./${expdir}/Makefile
+
    cp ./005m/inc_index_005m1256x32x32.f90 ./${expdir}/inc_index_005m1256x32x32.f90
 
    #echo "\t\$(MAKE) run -C ./005m_${x}x${y}" >> Makedef

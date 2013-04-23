@@ -19,9 +19,9 @@ FFLAGS_DEBUG = -C debug                   \
 
 # Performance monitor
 # disable
-PERF_MONIT = -Nftrace
+#PERF_MONIT = -Nftrace
 # ftrace
-#PERF_MONIT = -ftrace
+PERF_MONIT = -ftrace
 
 FC     = sxmpif90
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) -D__ES2
