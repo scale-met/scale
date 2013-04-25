@@ -1,5 +1,5 @@
 #
-# ------ FOR Linux 64bit & intel fortran&C & intel mpi -----
+# ------ FOR Linux 64bit & intel fortran&C & mpich2 -----
 #
 
 ##### for computation
@@ -16,7 +16,7 @@ FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -mkl=sequential
 #               -DDEBUG
 
-FC     = mpiifort
+FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
@@ -32,7 +32,7 @@ FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -module
 
-CC     = mpiicc
+CC     = mpicc
 CFLAGS = -O3 -xHost -ip -ftz
 
 ifneq ($(USE_NETCDF3),)

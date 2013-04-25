@@ -1,4 +1,5 @@
-# ------ FOR MacOSX & ifort & MPICH2 -----
+#
+# ------ FOR Linux 64bit & gfortran & mpich2 -----
 #
 
 ##### for computation

@@ -24,13 +24,6 @@ FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 FFLAGS += -x f95-cpp-input -I/usr/lib64/mpi/gcc/openmpi/lib64
 
-
-
-
-
-
-
-
 FFLAGS_DYN = $(FFLAGS)
 
 # if gcc < 4.5: -M, else if gcc >= 4.6: -J 
