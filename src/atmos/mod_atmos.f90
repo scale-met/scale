@@ -53,6 +53,8 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
+    use mod_atmos_hydrostatic, only: &
+       ATMOS_HYDROSTATIC_setup
     use mod_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
     use mod_atmos_saturation, only: &
@@ -85,8 +87,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! setup common tools
+    call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
-
     call ATMOS_SATURATION_setup
 
     ! setup variable container

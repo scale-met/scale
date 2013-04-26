@@ -121,6 +121,9 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[THERMODYN]/Categ[ATMOS]'
+
     AQ_CP(I_QV) = CPvap
     AQ_CV(I_QV) = CVvap
 

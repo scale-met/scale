@@ -202,7 +202,7 @@ contains
     use mod_atmos_profile, only: &
        PROFILE_isa => ATMOS_PROFILE_isa
     use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
@@ -214,64 +214,64 @@ contains
     real(RP) :: qv  (KA)
     real(RP) :: qc  (KA)
 
-    real(RP) :: temp_sfc(1)
-    real(RP) :: pres_sfc(1)
-    real(RP) :: pott_sfc(1)
-    real(RP) :: qv_sfc  (1)
-    real(RP) :: qc_sfc  (1)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc
+    real(RP) :: qc_sfc
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc(1)
+    real(RP) :: qsat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
 
-    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
-    pres_sfc(1) = Pstd
+    pott_sfc = ATMOS_REFSTATE_TEMP_SFC
+    pres_sfc = Pstd
 
-    call PROFILE_isa( pott(:),     & ! [OUT]
-                      pott_sfc(1), & ! [IN]
-                      pres_sfc(1)  ) ! [IN]
+    call PROFILE_isa( pott(:),  & ! [OUT]
+                      pott_sfc, & ! [IN]
+                      pres_sfc  ) ! [IN]
 
-    qv      (:) = 0.0_RP
-    qc      (:) = 0.0_RP
-    qv_sfc  (1) = 0.0_RP
-    qc_sfc  (1) = 0.0_RP
+    qv(:)  = 0.0_RP
+    qc(:)  = 0.0_RP
+    qv_sfc = 0.0_RP
+    qc_sfc = 0.0_RP
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
+    call SATURATION_pres2qsat_liq( qsat_sfc, temp_sfc, pres_sfc )
     call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
 
-    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -295,7 +295,7 @@ contains
     use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
@@ -307,22 +307,22 @@ contains
     real(RP) :: qv  (KA)
     real(RP) :: qc  (KA)
 
-    real(RP) :: temp_sfc(1)
-    real(RP) :: pres_sfc(1)
-    real(RP) :: pott_sfc(1)
-    real(RP) :: qv_sfc  (1)
-    real(RP) :: qc_sfc  (1)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc  
+    real(RP) :: qc_sfc  
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc(1)
+    real(RP) :: qsat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
 
-    pres_sfc(1) = Pstd
-    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
-    qv_sfc  (1) = 0.0_RP
-    qc_sfc  (1) = 0.0_RP
+    pres_sfc = Pstd
+    pott_sfc = ATMOS_REFSTATE_TEMP_SFC
+    qv_sfc   = 0.0_RP
+    qc_sfc   = 0.0_RP
 
     do k = KS, KE
        pott(k) = ATMOS_REFSTATE_POTT_UNIFORM
@@ -331,39 +331,39 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
+    call SATURATION_pres2qsat_liq( qsat_sfc, temp_sfc, pres_sfc )
     call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
 
-    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -393,8 +393,6 @@ contains
        COMM_horizontal_mean
     use mod_atmos_thermodyn, only: &
        CPw => AQ_CP
-    use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
     use mod_atmos_vars, only: &
        DENS_3d => DENS, &
        RHOT_3d => RHOT, &

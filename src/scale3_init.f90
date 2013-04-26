@@ -54,6 +54,8 @@ program scaleinit
      MONIT_setup, &
      MONIT_write, &
      MONIT_finalize
+  use mod_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
   use mod_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
   use mod_atmos_saturation, only: &
@@ -127,6 +129,7 @@ program scaleinit
   call MONIT_setup
 
   ! setup atmos
+  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
   call ATMOS_vars_setup
