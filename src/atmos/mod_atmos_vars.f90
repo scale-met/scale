@@ -23,6 +23,9 @@ module mod_atmos_vars
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   use gtool_file_h, only: &
      File_HLONG
   !-----------------------------------------------------------------------------
@@ -907,6 +910,8 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('Debug')
+
     write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
     datacheck = .true.
@@ -1007,6 +1012,8 @@ contains
        write(*,*) 'Data Check Failed.'
     endif
 
+    call TIME_rapend('Debug')
+
     return
   end subroutine ATMOS_vars_restart_check
 
@@ -1064,6 +1071,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('Debug')
     if ( ATMOS_VARS_CHECKRANGE ) then
        call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(1) )
        call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(2) )
@@ -1071,6 +1079,7 @@ contains
        call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(4) )
        call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(5) )
     endif
+    call TIME_rapend  ('Debug')
 
     call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
     call HIST_put( AP_HIST_id(I_MOMZ), MOMZ(:,:,:), TIME_DTSEC )
