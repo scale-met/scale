@@ -485,21 +485,21 @@ contains
     real(RP), intent(in)  :: q(QA) !< mass concentration              [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot, CPovCV
+    real(RP) :: Rtot, CVtot, CPovCV
 
     integer :: iqw
     !---------------------------------------------------------------------------
 
     qdry  = 1.0_RP
-    CPtot = 0.0_RP
+    CVtot = 0.0_RP
     do iqw = QQS, QQE
        qdry  = qdry  - q(iqw)
-       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
     enddo
-    CPtot = CPdry * qdry + CPtot
+    CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
 
-    CPovCV = CPtot / ( CPtot - Rtot )
+    CPovCV = ( CVtot + Rtot ) / CVtot
 
     pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
     temp = pres / ( dens * Rtot )
@@ -524,7 +524,7 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot, CPovCV
+    real(RP) :: Rtot, CVtot, CPovCV
 
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
@@ -533,15 +533,15 @@ contains
     do i = 1, IA
     do k = 1, KA
        qdry  = 1.0_RP
-       CPtot = 0.0_RP
+       CVtot = 0.0_RP
        do iqw = QQS, QQE
           qdry  = qdry  - q(k,i,j,iqw)
-          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
        enddo
-       CPtot = CPdry * qdry + CPtot
+       CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
 
-       CPovCV = CPtot / ( CPtot - Rtot )
+       CPovCV = ( CVtot + Rtot ) / CVtot
 
        pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
@@ -569,21 +569,21 @@ contains
     real(RP), intent(in)  :: q(QA) !< mass concentration        [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot
+    real(RP) :: Rtot, CVtot
 
     integer :: iqw
     !---------------------------------------------------------------------------
 
     qdry  = 1.0_RP
-    CPtot = 0.0_RP
+    CVtot = 0.0_RP
     do iqw = QQS, QQE
        qdry  = qdry  - q(iqw)
-       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
     enddo
-    CPtot = CPdry * qdry + CPtot
+    CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
 
-    temp = rhoe / ( CPtot - Rtot )
+    temp = rhoe / ( dens * CVtot )
     pres = dens * Rtot * temp
 
     return
@@ -606,7 +606,7 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration        [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot
+    real(RP) :: Rtot, CVtot
 
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
@@ -615,15 +615,15 @@ contains
     do i = 1, IA
     do k = 1, KA
        qdry  = 1.0_RP
-       CPtot = 0.0_RP
+       CVtot = 0.0_RP
        do iqw = QQS, QQE
           qdry  = qdry  - q(k,i,j,iqw)
-          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
        enddo
-       CPtot = CPdry * qdry + CPtot
+       CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
 
-       temp(k,i,j) = rhoe(k,i,j) / ( CPtot - Rtot )
+       temp(k,i,j) = rhoe(k,i,j) / ( dens(k,i,j) * CVtot )
        pres(k,i,j) = dens(k,i,j) * Rtot * temp(k,i,j)
     enddo
     enddo
