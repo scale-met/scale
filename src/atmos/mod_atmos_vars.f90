@@ -165,9 +165,9 @@ module mod_atmos_vars
   integer, private, save      :: AP_HIST_id(5)
   integer, private, save      :: AQ_HIST_id(QA)
 
-  integer, private, save      :: ATMOS_HIST_id (20)
-  integer, private, save      :: ATMOS_PREP_sw (20)
-  integer, private, save      :: ATMOS_MONIT_id(20)
+  integer, private, save      :: ATMOS_HIST_id (21)
+  integer, private, save      :: ATMOS_PREP_sw (21)
+  integer, private, save      :: ATMOS_MONIT_id(21)
 
   integer, private, parameter :: I_VELZ  =  1
   integer, private, parameter :: I_VELX  =  2
@@ -185,14 +185,15 @@ module mod_atmos_vars
   integer, private, parameter :: I_PRES =  12
   integer, private, parameter :: I_TEMP =  13
   integer, private, parameter :: I_RH   =  14
+  integer, private, parameter :: I_RHI  =  15
 
-  integer, private, parameter :: I_VOR  =  15
-  integer, private, parameter :: I_DIV  =  16
+  integer, private, parameter :: I_VOR  =  16
+  integer, private, parameter :: I_DIV  =  17
 
-  integer, private, parameter :: I_ENGP =  17
-  integer, private, parameter :: I_ENGK =  18
-  integer, private, parameter :: I_ENGI =  19
-  integer, private, parameter :: I_ENGT =  20
+  integer, private, parameter :: I_ENGP =  18
+  integer, private, parameter :: I_ENGK =  19
+  integer, private, parameter :: I_ENGI =  20
+  integer, private, parameter :: I_ENGT =  21
   !-----------------------------------------------------------------------------
 contains
 
@@ -382,6 +383,7 @@ contains
     call HIST_reg( ATMOS_HIST_id(I_PRES),  'PRES',  'pressure',              'Pa',     ndim=3 )
     call HIST_reg( ATMOS_HIST_id(I_TEMP),  'T',     'temperature',           'K',      ndim=3 )
     call HIST_reg( ATMOS_HIST_id(I_RH  ),  'RH',    'relative humidity',     '%',      ndim=3 )
+    call HIST_reg( ATMOS_HIST_id(I_RHI ),  'RHI',   'relative humidity(ice)','%',      ndim=3 )
     call HIST_reg( ATMOS_HIST_id(I_VOR ),  'VOR',   'vertical vorticity',    '1/s',    ndim=3 )
     call HIST_reg( ATMOS_HIST_id(I_DIV ),  'DIV',   'horizontal divergence', '1/s',    ndim=3 )
 
@@ -448,13 +450,13 @@ contains
        ATMOS_PREP_sw(I_PRES)  = 1
        ATMOS_PREP_sw(I_TEMP)  = 1
     endif
-    if ( ATMOS_HIST_id(I_RH) > 0 ) then
+    if (      ATMOS_HIST_id(I_RH)  > 0 &
+         .OR. ATMOS_HIST_id(I_RHI) > 0 ) then
        ATMOS_PREP_sw(I_QDRY)  = 1
        ATMOS_PREP_sw(I_RTOT)  = 1
        ATMOS_PREP_sw(I_CPTOT) = 1
        ATMOS_PREP_sw(I_PRES)  = 1
        ATMOS_PREP_sw(I_TEMP)  = 1
-       ATMOS_PREP_sw(I_RH  )  = 1
     endif
     if ( ATMOS_HIST_id (I_VOR) > 0 ) then
        ATMOS_PREP_sw(I_VOR) = 1
@@ -601,6 +603,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
+    call TIME_rapstart('FILE I NetCDF')
+
     bname = ATMOS_RESTART_IN_BASENAME
 
     call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
@@ -618,6 +622,8 @@ contains
        call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
+
+    call TIME_rapend  ('FILE I NetCDF')
 
     call ATMOS_vars_fillhalo
 
@@ -774,6 +780,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
+    call TIME_rapstart('FILE O NetCDF')
+
     bname = ''
     write(bname(1:15), '(F15.3)') NOWSEC
     do n = 1, 15
@@ -879,6 +887,8 @@ contains
     enddo
 
     call FileClose( fid )
+
+    call TIME_rapend  ('FILE O NetCDF')
 
     call ATMOS_vars_total
 
@@ -1049,12 +1059,15 @@ contains
        CPw => AQ_CP, &
        CVw => AQ_CV
     use mod_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
+       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
+       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
     implicit none
 
     real(RP) :: RHOQ  (KA,IA,JA)
-    real(RP) :: QSAT  (KA,IA,JA)
+    real(RP) :: QSATL (KA,IA,JA)
+    real(RP) :: QSATI (KA,IA,JA)
     real(RP) :: RH    (KA,IA,JA)
+    real(RP) :: RHI   (KA,IA,JA)
     real(RP) :: VELXH (KA,IA,JA)
     real(RP) :: VELYH (KA,IA,JA)
     real(RP) :: VOR   (KA,IA,JA)
@@ -1071,7 +1084,6 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
     if ( ATMOS_VARS_CHECKRANGE ) then
        call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(1) )
        call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(2) )
@@ -1079,7 +1091,6 @@ contains
        call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(4) )
        call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(5) )
     endif
-    call TIME_rapend  ('Debug')
 
     call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
     call HIST_put( AP_HIST_id(I_MOMZ), MOMZ(:,:,:), TIME_DTSEC )
@@ -1268,14 +1279,28 @@ contains
     endif
 
     if ( ATMOS_HIST_id(I_RH) > 0 ) then
-       call SATURATION_dens2qsat_liq( QSAT(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      DENS(:,:,:)  ) ! [IN]
+       call SATURATION_dens2qsat_liq( QSATL(:,:,:), & ! [OUT]
+                                      TEMP (:,:,:), & ! [IN]
+                                      DENS (:,:,:)  ) ! [IN]
 
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSATL(k,i,j) * 1.0E2_RP
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( ATMOS_HIST_id(I_RHI) > 0 ) then
+       call SATURATION_dens2qsat_ice( QSATI(:,:,:), & ! [OUT]
+                                      TEMP (:,:,:), & ! [IN]
+                                      DENS (:,:,:)  ) ! [IN]
+
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSATI(k,i,j) * 1.0E2_RP
        enddo
        enddo
        enddo
@@ -1415,6 +1440,7 @@ contains
     call HIST_put( ATMOS_HIST_id(I_PRES),  PRES(:,:,:),  TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_TEMP),  TEMP(:,:,:),  TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_RH  ),  RH  (:,:,:),  TIME_DTSEC )
+    call HIST_put( ATMOS_HIST_id(I_RHI ),  RHI (:,:,:),  TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_VOR),   VOR (:,:,:),  TIME_DTSEC )
     call HIST_put( ATMOS_HIST_id(I_DIV),   DIV (:,:,:),  TIME_DTSEC )
 
