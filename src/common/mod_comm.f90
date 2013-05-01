@@ -161,6 +161,8 @@ contains
     call TIME_rapend  ('COMM wait MPI')
     call TIME_rapstart('COMM Bcast MPI')
     call TIME_rapend  ('COMM Bcast MPI')
+    call TIME_rapstart('COMM Allreduce MPI')
+    call TIME_rapend  ('COMM Allreduce MPI')
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -1893,6 +1895,7 @@ contains
     enddo
 
     ! MPI broadcast
+    call TIME_rapstart('COMM Bcast MPI')
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,1,p),       &
                        vsize*2,              &
@@ -1907,6 +1910,7 @@ contains
                        MPI_COMM_WORLD,       &
                        ierr                  )
     enddo
+    call TIME_rapend  ('COMM Bcast MPI')
 
     do v = 1, vsize
        allstatval(v,1)   = maxval(statval(v,1,:))
@@ -1984,7 +1988,7 @@ contains
     endif
 
     if ( COMM_total_globalsum ) then
-       call TIME_rapstart('COMM MPIAllreduce')
+       call TIME_rapstart('COMM Allreduce MPI')
        ! All reduce
        call MPI_Allreduce( statval,              &
                            allstatval,           &
@@ -1994,7 +1998,7 @@ contains
                            MPI_COMM_WORLD,       &
                            ierr                  )
 
-       call TIME_rapend  ('COMM MPIAllreduce')
+       call TIME_rapend  ('COMM Allreduce MPI')
 
        ! statistics over the all node
        if ( varname /= "" ) then ! if varname is empty, suppress output
@@ -2045,7 +2049,7 @@ contains
     enddo
 
     ! [NOTE] always communicate globally
-    call TIME_rapstart('COMM MPIAllreduce')
+    call TIME_rapstart('COMM Allreduce MPI')
     ! All reduce
     call MPI_Allreduce( statval(1),           &
                         allstatval(1),        &
@@ -2055,7 +2059,7 @@ contains
                         MPI_COMM_WORLD,       &
                         ierr                  )
 
-    call TIME_rapend  ('COMM MPIAllreduce')
+    call TIME_rapend  ('COMM Allreduce MPI')
 
     do k = KS, KE
        varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP) 

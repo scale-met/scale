@@ -148,46 +148,46 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
-    call TIME_rapstart('Dynamics')
+    call TIME_rapstart('ATM Dynamics')
     if ( sw_dyn .AND. do_dyn ) then
        call ATMOS_DYN
     endif
-    call TIME_rapend  ('Dynamics')
+    call TIME_rapend  ('ATM Dynamics')
 
     !########## Surface Flux ##########
 
-    call TIME_rapstart('SurfaceFlux')
+    call TIME_rapstart('ATM SurfaceFlux')
     if ( sw_phy_sf .AND. do_phy_sf ) then
        call ATMOS_PHY_SF
     endif
-    call TIME_rapend  ('SurfaceFlux')
+    call TIME_rapend  ('ATM SurfaceFlux')
 
     !########## Turbulence ##########
 
-    call TIME_rapstart('Turbulence')
+    call TIME_rapstart('ATM Turbulence')
     if ( sw_phy_tb .AND. do_phy_tb ) then
        call ATMOS_PHY_TB
     endif
-    call TIME_rapend  ('Turbulence')
+    call TIME_rapend  ('ATM Turbulence')
 
     !########## Microphysics ##########
-    call TIME_rapstart('Microphysics')
+    call TIME_rapstart('ATM Microphysics')
     if ( sw_phy_mp .AND. do_phy_mp ) then
        call ATMOS_PHY_MP
     endif
-    call TIME_rapend  ('Microphysics')
+    call TIME_rapend  ('ATM Microphysics')
 
     !########## Radiation ##########
-    call TIME_rapstart('Radiation')
+    call TIME_rapstart('ATM Radiation')
     if ( sw_phy_rd .AND. do_phy_rd ) then
        call ATMOS_PHY_RD
     endif
-    call TIME_rapend  ('Radiation')
+    call TIME_rapend  ('ATM Radiation')
 
     !########## History&Monitor ##########
-    call TIME_rapstart('History')
+    call TIME_rapstart('ATM History Vars')
        call ATMOS_vars_history
-    call TIME_rapend  ('History')
+    call TIME_rapend  ('ATM History Vars')
 
     return
   end subroutine ATMOS_step

@@ -118,6 +118,8 @@ contains
 
     criteria = CONST_EPS * 5
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria:', criteria
+
     return
   end subroutine ATMOS_HYDROSTATIC_setup
 

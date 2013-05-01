@@ -19,6 +19,9 @@ module mod_misc
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -74,6 +77,8 @@ contains
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('Debug')
+
     kstr = lbound( var(:), 1 )
     kend = ubound( var(:), 1 ) 
 
@@ -92,6 +97,8 @@ contains
                                       '(', k, ')=', var(k)
        call PRC_MPIstop
     endif
+
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_1D
@@ -117,6 +124,8 @@ contains
     integer :: i, istr, iend
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('Debug')
+
     kstr = lbound( var(:,:), 1 )
     kend = ubound( var(:,:), 1 ) 
 
@@ -140,6 +149,8 @@ contains
                                       '(', k, ',', i, ')=', var(k,i)
        call PRC_MPIstop
     endif
+
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_2D
@@ -165,6 +176,8 @@ contains
     integer :: i, istr, iend
     integer :: j, jstr, jend
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('Debug')
 
     kstr = lbound( var(:,:,:), 1 )
     kend = ubound( var(:,:,:), 1 ) 
@@ -194,6 +207,8 @@ contains
                                       '(', k, ',', i, ',', j, ')=', var(k,i,j)
        call PRC_MPIstop
     endif
+
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_3D

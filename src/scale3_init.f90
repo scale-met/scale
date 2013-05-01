@@ -105,6 +105,8 @@ program scaleinit
   ! setup time
   call TIME_setup
 
+  call TIME_rapstart('Debug')
+  call TIME_rapend  ('Debug')
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
@@ -147,10 +149,14 @@ program scaleinit
   call TIME_rapstart('Main')
 
   ! execute mkinit
+  call TIME_rapstart('MkTopo')
   call MKTOPO
+  call TIME_rapend  ('MkTopo')
 
   ! execute mkinit
+  call TIME_rapstart('MkInit')
   call MKINIT
+  call TIME_rapend  ('MkInit')
 
   call ATMOS_vars_fillhalo
   ! output restart
