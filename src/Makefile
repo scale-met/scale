@@ -42,10 +42,11 @@ MODS =	\
 	mod_process.o	\
 	mod_const.o	\
 	mod_calendar.o	\
-	mod_misc.o	\
 	mod_random.o	\
 	mod_specfunc.o	\
 	mod_time.o	\
+	mod_papi.o	\
+	mod_misc.o	\
 	mod_grid_cartesian_plane.o	\
 	mod_fileio.o	\
 	mod_geometrics.o	\
@@ -99,10 +100,10 @@ makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ2) $(BINDIR)/$(INITNAME)
 
 $(BUILD_DIR)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(LIBDIR)/$(LIBNAME)
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(LIBDIR)/$(LIBNAME)
@@ -121,9 +122,10 @@ $(BUILD_DIR)/mod_const.o	: mod_const.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_calendar.o	: mod_calendar.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_random.o	: mod_random.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_specfunc.o	: mod_specfunc.f90 mod_stdio.o mod_process.o
-$(BUILD_DIR)/mod_misc.o	: mod_misc.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o mod_calendar.o
-$(BUILD_DIR)/mod_comm.o	: mod_comm.f90 mod_stdio.o mod_time.o mod_process.o mod_const.o mod_geometrics.o $(mod_rdma)
+$(BUILD_DIR)/mod_papi.o	: mod_papi.f90 mod_stdio.o mod_process.o
+$(BUILD_DIR)/mod_misc.o	: mod_misc.f90 mod_stdio.o mod_process.o mod_time.o
+$(BUILD_DIR)/mod_comm.o	: mod_comm.f90 mod_stdio.o mod_process.o mod_time.o mod_const.o mod_geometrics.o $(mod_rdma)
 $(BUILD_DIR)/rdma.o	: rdma.c rdma.h
 
 $(BUILD_DIR)/mod_grid_cartesian_plane.o	: mod_grid_cartesian_plane.f90 mod_stdio.o mod_process.o mod_time.o
@@ -176,9 +178,9 @@ distclean: clean
 .SUFFIXES: .o .f90 .c
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -I$(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o:
-	$(FC) $(FFLAGS_DYN) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DYN) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(INCDIR) -I$(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 

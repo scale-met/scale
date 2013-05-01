@@ -84,6 +84,12 @@ program scaleles3
   use mod_user, only: &
      USER_setup, &
      USER_step
+#ifdef _PAPI_
+  use mod_papi, only: &
+     PAPI_rapstart, &
+     PAPI_rapstop,  &
+     PAPI_rapreport
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -115,6 +121,8 @@ program scaleles3
   ! setup time
   call TIME_setup
 
+  call TIME_rapstart('Debug')
+  call TIME_rapend  ('Debug')
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
@@ -152,7 +160,10 @@ program scaleles3
   !########## main ##########
 
 #ifdef _FIPP_
-  call fipp_start()
+  call fipp_start
+#endif
+#ifdef _PAPI_
+  call PAPI_rapstart
 #endif
 
   if( IO_L ) write(IO_FID_LOG,*)
@@ -191,7 +202,10 @@ program scaleles3
   if( IO_L ) write(IO_FID_LOG,*)
 
 #ifdef _FIPP_
-  call fipp_stop()
+  call fipp_stop
+#endif
+#ifdef _PAPI_
+  call PAPI_rapstop
 #endif
 
   !########## Finalize ##########
@@ -200,6 +214,9 @@ program scaleles3
   if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
   call TIME_rapreport
+#ifdef _PAPI_
+  call PAPI_rapreport
+#endif
 
   call FileCloseAll
 
