@@ -148,6 +148,7 @@ module mod_mkinit
 
   real(RP), private :: rndm  (KA,IA,JA) ! random number (0-1)
   real(RP), private :: bubble(KA,IA,JA) ! bubble factor (0-1)
+
   real(RP), private, allocatable :: gan(:) ! bubble factor (0-1)
   logical,  private :: flg_bin = .false.
 
@@ -164,7 +165,7 @@ contains
        CONST_UNDEF8
     implicit none
 
-    character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
+    character(len=IO_SYSCHR) :: MKINIT_initname = 'NOT SPECIFIED'
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
@@ -1778,8 +1779,6 @@ contains
     dummy(:,:,:) = 0.0_RP
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
-    call RANDOM_get(rndm) ! make random
-
     ! calc in dry condition
     do j = JS, JE
     do i = IS, IE
@@ -1790,20 +1789,17 @@ contains
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
+          velx(k,i,j) =   7.0_RP
+          vely(k,i,j) =  -5.5_RP
+
           if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
-             velx(k,i,j) =   7.0_RP
-             vely(k,i,j) =  -5.5_RP
              potl(k,i,j) = 289.0_RP
-          else if ( CZ(k) <= 860.0_RP ) then
-             sint = sin( pi2 * ( CZ(k) - 840.0_RP ) / 20.0_RP )
-             velx(k,i,j) =   7.0_RP
-             vely(k,i,j) =  -5.5_RP
-             potl(k,i,j) = 289.0_RP                                                            * (1.0_RP-sint)*0.5_RP &
-                        + (297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP)) * (1.0_RP+sint)*0.5_RP
+          elseif( CZ(k) <= 860.0_RP ) then
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             potl(k,i,j) = 289.0_RP                                                             * (0.5_RP-sint) &
+                         + (297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP)) * (0.5_RP+sint)
           else
-             velx(k,i,j) =   7.0_RP
-             vely(k,i,j) =  -5.5_RP
-             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) ! [K]
+             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP)
           endif
 
           qv(k,i,j) = 0.0_RP
@@ -1829,36 +1825,35 @@ contains
     ! calc in moist condition
     do j = JS, JE
     do i = IS, IE
-    
-
        qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
-
-          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
-             qall(k,i,j) = 9.0E-3_RP ! [kg/kg]
-          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
-             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
-             qall(k,i,j) = 9.0E-3_RP * (1.0_RP-sint)*0.5_RP + 1.5E-3_RP * (1.0_RP+sint)*0.5_RP
+          if    ( CZ(k) <   820.0_RP ) then ! below initial cloud top
+             qall(k,i,j) = 9.0E-3_RP
+          elseif( CZ(k) <=  860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             qall(k,i,j) = 9.0E-3_RP * (0.5_RP-sint) &
+                         + 1.5E-3_RP * (0.5_RP+sint)
           elseif( CZ(k) <= 5000.0_RP ) then
-             qall(k,i,j) = 1.5E-3_RP ! [kg/kg]
+             qall(k,i,j) = 1.5E-3_RP
           else
              qall(k,i,j) = 0.0_RP
           endif
 
-          if ( CZ(k) <=  600.0_RP ) then
+          if    ( CZ(k) <=  600.0_RP ) then
              qc(k,i,j) = 0.0_RP
-          elseif ( CZ(k) < 820.0_RP ) then ! in the cloud
+          elseif( CZ(k) < 820.0_RP ) then ! in the cloud
              fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
              qc(k,i,j) = 0.45E-3_RP * fact
-          elseif ( CZ(k) <= 860.0_RP ) then ! boundary
-             sint = sin( pi2 * (CZ(k) - 840.0_RP)/20.0_RP )
+          elseif( CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
              fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
-             qc(k,i,j) = 0.45E-3_RP * fact * (1.0_RP-sint)*0.5_RP ! + 0.0_RP * (1.0_RP+sint)*0.5_RP
+             qc(k,i,j) = 0.45E-3_RP * fact * (0.5_RP-sint)
           else
              qc(k,i,j) = 0.0_RP
           endif
+
           qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
        enddo
 
@@ -1901,17 +1896,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                     * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
-     else
-       MOMZ(k,i,j) = 0.0_RP
-     endif
-     if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP ) * DENS(k,i,j)
-     else
-       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
-     endif
+       if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
+       else
+          MOMZ(k,i,j) = 0.0_RP
+       endif
     enddo
     enddo
     enddo
@@ -1920,12 +1910,12 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-     else
-       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-     endif
+       if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       else
+          MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       endif
     enddo
     enddo
     enddo
@@ -1934,57 +1924,80 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-     if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50 ) * PERTURB_AMP ) &
-                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-     else
-       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-     endif
+       if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       else
+          MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * DENS(k,i,j)
+       else
+          RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+       endif
     enddo
     enddo
     enddo
 
     do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
        QTRC(k,i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
     enddo
 
+    if ( flg_bin ) then
 
-    if( .not. flg_bin ) then !--- for sn13
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
+          do iq = 2, QQA
+             QTRC(k,i,j,iq) = 0.0_RP
+          enddo
+          !--- for aerosol
+          do iq = QQA+1, QA
+             QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
 
-        QTRC(k,i,j,I_QV) = qv(k,i,j)
-        QTRC(k,i,j,I_QC) = qc(k,i,j)
+    else
 
-        if ( qc(k,i,j) > 0.0_RP ) then
-           QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
-        endif
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
 
-     enddo
-     enddo
-     enddo
-    elseif( flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) !--- Super saturated air at initial
-        do iq = 2, QQA
-           QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-        !--- for aerosol
-        do iq = QQA+1, QA
-          QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-        enddo
-     enddo
-     enddo
-     enddo
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+
     endif
 
     return
