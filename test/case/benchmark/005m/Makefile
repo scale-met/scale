@@ -15,7 +15,9 @@ include $(TOPDIR)/src/Mkinclude
 # for build
 index      = 005m1256x32x32
 precision  = real8
-tracer     = sn13
+#tracer     = kessler
+tracer     = tomita08
+#tracer     = sn13
 sfcflx     = louis
 turbulence = smg
 radiation  = dummy

@@ -20,7 +20,6 @@ cat << EOF1 > ./run.sh
 # ------ FOR Linux64 & intel C&fortran & intel mpi -----
 #
 ################################################################################
-export OMP_NUM_THREADS=1
 export FORT_FMT_RECL=400
 
 

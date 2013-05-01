@@ -28,11 +28,11 @@ endif
 ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
 endif
-ifneq ($(ENABLE_PAPI),)
+#ifneq ($(ENABLE_PAPI),)
       FFLAGS += -D_PAPI_
       PAPI_INCLUDE = -I$(PAPI)/include
       PAPI_LIBS    = -L$(PAPI)/lib -lpapi
-endif
+#endif
 
 MODDIROPT ?= -module
 

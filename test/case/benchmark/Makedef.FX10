@@ -4,14 +4,14 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -Kfast,parallel,auto,ocl,openmp,preex,array_private,noalias=s,mfunc=2,dynamic_iteration \
-               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp \
+FFLAGS_FAST  = -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Kparallel_iteration=8,instance=8,dynamic_iteration                   \
+               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                               \
                -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd
 
 FFLAGS_DEBUG = -O0 \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
                -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
-
 #               -DDEBUG
 
 # Performance monitor
@@ -42,8 +42,8 @@ CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
-NETCDF_INCLUDE ?=
-NETCDF_LIBS    ?= -lnetcdf
+NETCDF_INCLUDE ?= -I/data/yashiro/tool/cross-K/include
+NETCDF_LIBS    ?= -L/data/yashiro/tool/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 
 ##### for frontend
 AR      = ar

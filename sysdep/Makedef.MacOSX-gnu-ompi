@@ -20,8 +20,8 @@ FFLAGS_DEBUG = -cpp -O0 -Wuninitialized -m64                     \
 #               -DDEBUG
 
 FC     = openmpif90
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
+#FFLAGS = $(FFLAGS_FAST)
+FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN = $(FFLAGS)
 

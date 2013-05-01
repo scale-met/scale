@@ -17,11 +17,17 @@ FFLAGS_DEBUG = -O0 -m64                                                     \
 #               -DDEBUG
 
 FC     = mpif90
-#FFLAGS = $(FFLAGS_FAST)
-FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
 FFLAGS += -I/usr/lib64/mpi/gcc/openmpi/lib64 -x f95-cpp-input
 
 FFLAGS_DYN = $(FFLAGS)
+
+#ifneq ($(ENABLE_PAPI),)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+#endif
 
 # if gcc < 4.5: -M, else if gcc >= 4.6: -J 
 MODDIROPT ?= -M

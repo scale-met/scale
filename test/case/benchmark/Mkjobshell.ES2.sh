@@ -9,7 +9,7 @@ RUNCONF=${5}
 TPROC=${6}
 
 # System specific
-MPIEXEC="mpirun -nnp ${TPROC}"
+MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
 
 RUNDIR=`pwd`
 
@@ -30,10 +30,11 @@ cat << EOF1 > ./run.sh
 
 #PBS -v F_RECLUNIT=byte
 #PBS -v F_ERRCNT=0
-#PBS -v F_FTRACE=FMT1
+##PBS -v F_FTRACE=FMT1
 #PBS -v F_PROGINF=DETAIL
 #PBS -v MPIPROGINF=ALL_DETAIL
 #PBS -v F_SETBUF=102400
+#PBS -v MPISEPSELECT=3
 
 #PBS -I "${BINDIR}/${INITNAME},ALL:./"
 #PBS -I "${BINDIR}/${BINNAME},ALL:./"

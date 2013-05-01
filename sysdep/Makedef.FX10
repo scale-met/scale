@@ -4,9 +4,9 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
-               -Kparallel_iteration=8,instance=8 \
-               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp \
+FFLAGS_FAST  = -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Kparallel_iteration=8,instance=8,dynamic_iteration                   \
+               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                               \
                -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd
 
 FFLAGS_DEBUG = -O0 \
