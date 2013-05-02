@@ -26,6 +26,9 @@ module mod_ocean_vars
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -59,7 +62,7 @@ module mod_ocean_vars
   data OP_UNIT / 'K' /
 
   character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE = 'OFF' !< Ocean type
-  logical,                   public, save :: OCEAN_sw_sst       !< do SST update?
+  logical,                   public, save :: OCEAN_sw_phy       !< do SST update?
   logical,                   public, save :: OCEAN_sw_restart   !< output restart?
 
   character(len=IO_FILECHR), public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
@@ -119,10 +122,10 @@ contains
 
     if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : ON'
-       OCEAN_sw_sst = .true.
+       OCEAN_sw_phy = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : OFF'
-       OCEAN_sw_sst = .false.
+       OCEAN_sw_phy = .false.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -175,6 +178,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
 
+    call TIME_rapstart('FILE I NetCDF')
+
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
 
        call FILEIO_read( SST(1,:,:),                                    & ! [OUT]
@@ -188,6 +193,8 @@ contains
 
        SST(:,:,:) = CONST_Tstd
     endif
+
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine OCEAN_vars_restart_read
@@ -206,6 +213,8 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('FILE O NetCDF')
+
     if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
@@ -222,6 +231,8 @@ contains
                           OP_NAME(1), OP_DESC(1), OP_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
+
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine OCEAN_vars_restart_write

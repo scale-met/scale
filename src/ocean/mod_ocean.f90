@@ -51,12 +51,11 @@ contains
   !> Setup
   subroutine OCEAN_setup
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup, &
-       OCEAN_vars_restart_read
-    use mod_ocean_sf, only: &
-       OCEAN_SST_setup
-    use mod_ocean_vars, only: &
-       sw_sst => OCEAN_sw_sst
+       OCEAN_vars_setup,        &
+       OCEAN_vars_restart_read, &
+       OCEAN_sw_phy
+    use mod_ocean_phy, only: &
+       OCEAN_PHY_SST_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -64,7 +63,7 @@ contains
 
     call OCEAN_vars_restart_read
 
-    if ( sw_sst ) call OCEAN_SST_setup
+    if ( OCEAN_sw_phy ) call OCEAN_PHY_SST_setup
 
     return
   end subroutine OCEAN_setup
@@ -72,18 +71,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Ocean step
   subroutine OCEAN_step
+    use mod_ocean_phy, only: &
+       OCEAN_PHY_SST
     use mod_ocean_vars, only: &
-       sw_sst => OCEAN_sw_sst
-    use mod_ocean_sf, only: &
-       OCEAN_SST
+!       OCEAN_vars_history, &
+       OCEAN_sw_phy
     implicit none
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Ocean')
-    if ( sw_sst ) then
-       call OCEAN_SST
+    call TIME_rapstart('OCN Physics')
+    if ( OCEAN_sw_phy ) then
+       call OCEAN_PHY_SST
     endif
-    call TIME_rapend  ('Ocean')
+    call TIME_rapend  ('OCN Physics')
 
     return
   end subroutine OCEAN_step

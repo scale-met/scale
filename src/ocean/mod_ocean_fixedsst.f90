@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_ocean_sf
+module mod_ocean_phy
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -33,8 +33,8 @@ module mod_ocean_sf
   !
   !++ Public procedure
   !
-  public :: OCEAN_SST_setup
-  public :: OCEAN_SST
+  public :: OCEAN_PHY_SST_setup
+  public :: OCEAN_PHY_SST
 
   !-----------------------------------------------------------------------------
   !
@@ -54,7 +54,7 @@ module mod_ocean_sf
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_SST_setup
+  subroutine OCEAN_PHY_SST_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -116,11 +116,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** change rate [K/s]:', OCEAN_FIXEDSST_RATE
 
     return
-  end subroutine OCEAN_SST_setup
+  end subroutine OCEAN_PHY_SST_setup
 
   !-----------------------------------------------------------------------------
   !> SST change
-  subroutine OCEAN_SST
+  subroutine OCEAN_PHY_SST
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN
     use mod_history, only: &
@@ -146,6 +146,6 @@ contains
     call HIST_in( SST(1,:,:), 'SST', OP_DESC(1), OP_UNIT(1), dt )
 
     return
-  end subroutine OCEAN_SST
+  end subroutine OCEAN_PHY_SST
 
-end module mod_ocean_sf
+end module mod_ocean_phy
