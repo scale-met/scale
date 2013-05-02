@@ -133,16 +133,16 @@ contains
     iend = ubound( var(:,:), 2 ) 
 
     invalid_value = .false.
-    do i = istr, iend
-    do k = kstr, kend
-       if (      var(k,i)*0.0_RP /= 0.0_RP &
-            .OR. var(k,i)        <  valmin &
-            .OR. var(k,i)        >  valmax ) then
-           invalid_value = .true.
-           exit
-       endif
-    enddo
-    enddo
+    outer:do i = istr, iend
+          do k = kstr, kend
+             if (      var(k,i)*0.0_RP /= 0.0_RP &
+                  .OR. var(k,i)        <  valmin &
+                  .OR. var(k,i)        >  valmax ) then
+                 invalid_value = .true.
+                 exit outer
+             endif
+          enddo
+          enddo outer
 
     if ( invalid_value ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
@@ -189,18 +189,18 @@ contains
     jend = ubound( var(:,:,:), 3 ) 
 
     invalid_value = .false.
-    do j = jstr, jend
-    do i = istr, iend
-    do k = kstr, kend
-       if (      var(k,i,j)*0.0_RP /= 0.0_RP &
-            .OR. var(k,i,j)        <  valmin &
-            .OR. var(k,i,j)        >  valmax ) then
-           invalid_value = .true.
-           exit
-       endif
-    enddo
-    enddo
-    enddo
+    outer:do j = jstr, jend
+          do i = istr, iend
+          do k = kstr, kend
+             if (      var(k,i,j)*0.0_RP /= 0.0_RP &
+                  .OR. var(k,i,j)        <  valmin &
+                  .OR. var(k,i,j)        >  valmax ) then
+                 invalid_value = .true.
+                 exit outer
+             endif
+          enddo
+          enddo
+          enddo outer
 
     if ( invalid_value ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
