@@ -324,6 +324,8 @@ contains
              write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Write monitor'
        endif
 
     endif

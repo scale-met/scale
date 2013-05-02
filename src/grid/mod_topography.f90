@@ -267,7 +267,6 @@ contains
     enddo
     enddo
 
-
     do j = JS, JE
     do i = 1,  IA
     do k = 1,  KA

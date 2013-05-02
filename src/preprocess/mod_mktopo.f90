@@ -126,8 +126,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
-  use mod_topography, only: &
-     TOPO_write
+    use mod_topography, only: &
+       TOPO_write
     implicit none
 
     logical :: output_topo = .false.
