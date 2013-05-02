@@ -47,17 +47,19 @@ module mod_time
   !
   !++ Public parameters & variables
   !
-  real(DP), public, save :: TIME_DTSEC                !< time interval of model        [sec]
+  real(DP), public, save :: TIME_DTSEC                !< time interval of model              [sec]
 
-  real(DP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics     [sec]
-  integer,  public, save :: TIME_NSTEP_ATMOS_DYN = 20 !< small step of dynamics
-  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_SF   !< time interval of surface flux [sec]
-  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence   [sec]
-  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics [sec]
-  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation    [sec]
-  real(DP), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of restart      [sec]
-  real(DP), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean        [sec]
-  real(DP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of restart      [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_DYN      !< time interval of dynamics           [sec]
+  integer,  public, save :: TIME_NSTEP_ATMOS_DYN      !< small step of dynamics
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_SF   !< time interval of surface flux       [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence         [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics       [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation          [sec]
+  real(DP), public, save :: TIME_DTSEC_ATMOS_RESTART  !< time interval of atmosphere restart [sec]
+  real(DP), public, save :: TIME_DTSEC_OCEAN          !< time interval of ocean step         [sec]
+  real(DP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart      [sec]
+  real(DP), public, save :: TIME_DTSEC_LAND           !< time interval of land  step         [sec]
+  real(DP), public, save :: TIME_DTSEC_LAND_RESTART   !< time interval of land  restart      [sec]
 
   integer,  public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
   real(DP), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
@@ -72,9 +74,11 @@ module mod_time
   logical,  public, save :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
   logical,  public, save :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
   logical,  public, save :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
-  logical,  public, save :: TIME_DOATMOS_restart      !< execute restart output?
+  logical,  public, save :: TIME_DOATMOS_restart      !< execute atmosphere restart output?
   logical,  public, save :: TIME_DOOCEAN_step         !< execute ocean component in this step?
-  logical,  public, save :: TIME_DOOCEAN_restart      !< execute restart output?
+  logical,  public, save :: TIME_DOOCEAN_restart      !< execute ocean restart output?
+  logical,  public, save :: TIME_DOLAND_step          !< execute land  component in this step?
+  logical,  public, save :: TIME_DOLAND_restart       !< execute land  restart output?
   logical,  public, save :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -107,6 +111,8 @@ module mod_time
   real(DP), private, save :: TIME_RES_ATMOS_RESTART = 0.0_DP
   real(DP), private, save :: TIME_RES_OCEAN         = 0.0_DP
   real(DP), private, save :: TIME_RES_OCEAN_RESTART = 0.0_DP
+  real(DP), private, save :: TIME_RES_LAND          = 0.0_DP
+  real(DP), private, save :: TIME_RES_LAND_RESTART  = 0.0_DP
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
@@ -186,7 +192,11 @@ contains
        TIME_DT_OCEAN,              &
        TIME_DT_OCEAN_UNIT,         &
        TIME_DT_OCEAN_RESTART,      &
-       TIME_DT_OCEAN_RESTART_UNIT
+       TIME_DT_OCEAN_RESTART_UNIT, &
+       TIME_DT_LAND,               &
+       TIME_DT_LAND_UNIT,          &
+       TIME_DT_LAND_RESTART,       &
+       TIME_DT_LAND_RESTART_UNIT
 
     real(DP) :: TIME_DURATIONSEC
 
@@ -235,8 +245,8 @@ contains
 
     call CALENDAR_unit2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
 
-    TIME_NSTEP      = int( TIME_DURATIONSEC / TIME_DTSEC )
-    TIME_NOWSTEP    = 1
+    TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
+    TIME_NOWSTEP = 1
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
                TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ', &
@@ -249,7 +259,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** now:', TIME_NOWDAYSEC, TIME_NOWDAY, TIME_NOWSEC
+    !if( IO_L ) write(IO_FID_LOG,*) '*** now:', TIME_NOWDAYSEC, TIME_NOWDAY, TIME_NOWSEC
 
     if ( TIME_DTSEC <= 0.0_DP ) then
        write(*,*) ' xxx Delta t <= 0.E0_DP is not accepted. Check!'
@@ -265,6 +275,8 @@ contains
     call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
     call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
     call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
+    call CALENDAR_unit2sec( TIME_DTSEC_LAND,          TIME_DT_LAND,          TIME_DT_LAND_UNIT          )
+    call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
 
     TIME_NSTEP_ATMOS_DYN = int( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN )
 
@@ -276,20 +288,25 @@ contains
     TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
     TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+    TIME_DTSEC_LAND          = max( TIME_DTSEC_LAND,          TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+    TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)                  :', TIME_DTSEC_ATMOS_DYN
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)                  :', TIME_NSTEP_ATMOS_DYN
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Surface Flux            :', TIME_DTSEC_ATMOS_PHY_SF
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence              :', TIME_DTSEC_ATMOS_PHY_TB
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics      :', TIME_DTSEC_ATMOS_PHY_MP
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation               :', TIME_DTSEC_ATMOS_PHY_RD
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)             : ', TIME_DTSEC_ATMOS_DYN
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)             : ', TIME_NSTEP_ATMOS_DYN
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Surface Flux       : ', TIME_DTSEC_ATMOS_PHY_SF
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics : ', TIME_DTSEC_ATMOS_PHY_MP
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation          : ', TIME_DTSEC_ATMOS_PHY_RD
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for ocean process (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** SST update                       :', TIME_DTSEC_OCEAN
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean update                : ', TIME_DTSEC_OCEAN
+    if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for land  process (sec.)'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  update                : ', TIME_DTSEC_LAND
     if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Prognostic Variables, Atmosphere :', TIME_DTSEC_ATMOS_RESTART
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables                  :', TIME_DTSEC_OCEAN_RESTART
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  Variables             : ', TIME_DTSEC_LAND_RESTART
 
     return
   end subroutine TIME_setup
@@ -307,6 +324,7 @@ contains
     TIME_DOATMOS_PHY_MP = .false.
     TIME_DOATMOS_PHY_RD = .false.
     TIME_DOOCEAN_step   = .false.
+    TIME_DOLAND_step    = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + TIME_DTSEC
     TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF + TIME_DTSEC
@@ -314,6 +332,7 @@ contains
     TIME_RES_ATMOS_PHY_MP = TIME_RES_ATMOS_PHY_MP + TIME_DTSEC
     TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + TIME_DTSEC
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
+    TIME_RES_LAND         = TIME_RES_LAND         + TIME_DTSEC
  
     if ( TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN > -eps ) then
        TIME_DOATMOS_step  = .true.
@@ -345,12 +364,17 @@ contains
        TIME_DOOCEAN_step = .true.
        TIME_RES_OCEAN    = TIME_RES_OCEAN - TIME_DTSEC_OCEAN
     endif
+    if ( TIME_RES_LAND  - TIME_DTSEC_LAND  > -eps ) then
+       TIME_DOLAND_step  = .true.
+       TIME_RES_LAND     = TIME_RES_LAND  - TIME_DTSEC_LAND
+    endif
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
                '*** TIME: ', TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
                              TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
                              TIME_NOWMS,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
 
+    return
   end subroutine TIME_checkstate
 
   !-----------------------------------------------------------------------------
@@ -397,9 +421,11 @@ contains
 
     TIME_DOATMOS_restart = .false.
     TIME_DOOCEAN_restart = .false.
+    TIME_DOLAND_restart  = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + TIME_DTSEC
     TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + TIME_DTSEC
+    TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  + TIME_DTSEC
 
     if ( TIME_RES_ATMOS_RESTART - TIME_DTSEC_ATMOS_RESTART > -eps ) then
        TIME_DOATMOS_restart   = .true.
@@ -415,6 +441,14 @@ contains
        TIME_DOOCEAN_restart   = .true.
     endif
 
+    if ( TIME_RES_LAND_RESTART  - TIME_DTSEC_LAND_RESTART  > -eps ) then
+       TIME_DOLAND_restart    = .true.
+       TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  - TIME_DTSEC_LAND_RESTART
+    elseif( TIME_DOend ) then
+       TIME_DOLAND_restart    = .true.
+    endif
+
+    return
   end subroutine TIME_advance
 
   !-----------------------------------------------------------------------------

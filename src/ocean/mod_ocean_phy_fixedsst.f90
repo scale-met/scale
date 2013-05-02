@@ -1,13 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN / Fixed SST
+!> module OCEAN / Physics Fixed-SST
 !!
 !! @par Description
-!!          SST control module (tentative)
+!!          ocean physics module, fixed SST
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-03-27 (H.Yashiro)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -19,6 +16,9 @@ module mod_ocean_phy
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -33,8 +33,8 @@ module mod_ocean_phy
   !
   !++ Public procedure
   !
-  public :: OCEAN_PHY_SST_setup
-  public :: OCEAN_PHY_SST
+  public :: OCEAN_PHY_setup
+  public :: OCEAN_PHY
 
   !-----------------------------------------------------------------------------
   !
@@ -54,18 +54,18 @@ module mod_ocean_phy
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_PHY_SST_setup
+  subroutine OCEAN_PHY_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &
        OCEAN_RESTART_IN_BASENAME, &
-       OCEAN_TYPE, &
+       OCEAN_TYPE_PHY, &
        SST
     implicit none
 
-    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP !< SST for initial state
+    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.0_RP !< SST for initial state
     logical  :: OCEAN_FIXEDSST_RESET    = .false.   !< reset SST?
 
     NAMELIST / PARAM_OCEAN_FIXEDSST / &
@@ -80,8 +80,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIXEDSST]/Categ[OCEAN]'
 
-    if ( OCEAN_TYPE /= 'FIXEDSST' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not FIXEDSST. Check!'
+    if ( OCEAN_TYPE_PHY /= 'FIXEDSST' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE_PHY is not FIXEDSST. Check!'
        call PRC_MPIstop
     endif
 
@@ -116,18 +116,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** change rate [K/s]:', OCEAN_FIXEDSST_RATE
 
     return
-  end subroutine OCEAN_PHY_SST_setup
+  end subroutine OCEAN_PHY_setup
 
   !-----------------------------------------------------------------------------
-  !> SST change
-  subroutine OCEAN_PHY_SST
+  !> Physical processes for ocean submodel
+  subroutine OCEAN_PHY
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN
-    use mod_history, only: &
-       HIST_in
     use mod_ocean_vars, only: &
-       OP_DESC, &
-       OP_UNIT, &
        SST
     implicit none
 
@@ -143,9 +139,7 @@ contains
     enddo
     enddo
 
-    call HIST_in( SST(1,:,:), 'SST', OP_DESC(1), OP_UNIT(1), dt )
-
     return
-  end subroutine OCEAN_PHY_SST
+  end subroutine OCEAN_PHY
 
 end module mod_ocean_phy

@@ -184,7 +184,7 @@ contains
     endif
     call TIME_rapend  ('ATM Radiation')
 
-    !########## History&Monitor ##########
+    !########## History & Monitor ##########
     call TIME_rapstart('ATM History Vars')
        call ATMOS_vars_history
     call TIME_rapend  ('ATM History Vars')

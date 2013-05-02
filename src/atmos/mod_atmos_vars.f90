@@ -130,8 +130,6 @@ module mod_atmos_vars
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
 
-  logical,                   public, save :: ATMOS_USE_AVERAGE = .false.
-
   logical,                   public, save :: ATMOS_sw_dyn
   logical,                   public, save :: ATMOS_sw_phy_sf
   logical,                   public, save :: ATMOS_sw_phy_tb
@@ -139,6 +137,8 @@ module mod_atmos_vars
   logical,                   public, save :: ATMOS_sw_phy_rd
   logical,                   public, save :: ATMOS_sw_restart
   logical,                   public, save :: ATMOS_sw_check
+
+  logical,                   public, save :: ATMOS_USE_AVERAGE = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -208,8 +208,7 @@ contains
     use mod_const, only: &
        CPvap => CONST_CPvap, &
        CL    => CONST_CL,    &
-       CI    => CONST_CI,    &
-       CONST_UNDEF8
+       CI    => CONST_CI
     use mod_history, only: &
        HIST_reg
     use mod_monitor, only: &
@@ -238,7 +237,7 @@ contains
        ATMOS_VARS_CHECKRANGE
 
     integer :: ierr
-    integer :: iq
+    integer :: ip, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -317,29 +316,24 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,5(A))') '***       |',' VARNAME','|', &
-    'DESCRIPTION                                                     ','[', 'UNIT            ',']'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',1,'|',trim(AP_NAME(I_DENS)),'|', AP_DESC(I_DENS),'[', AP_UNIT(I_DENS),']'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',2,'|',trim(AP_NAME(I_MOMZ)),'|', AP_DESC(I_MOMZ),'[', AP_UNIT(I_MOMZ),']'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',3,'|',trim(AP_NAME(I_MOMX)),'|', AP_DESC(I_MOMX),'[', AP_UNIT(I_MOMX),']'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',4,'|',trim(AP_NAME(I_MOMY)),'|', AP_DESC(I_MOMY),'[', AP_UNIT(I_MOMY),']'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))') &
-    '*** NO.',5,'|',trim(AP_NAME(I_RHOT)),'|', AP_DESC(I_RHOT),'[', AP_UNIT(I_RHOT),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
+               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, 5
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(AP_NAME(ip)),'|', AP_DESC(ip),'[', AP_UNIT(ip),']'
+    enddo
     do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,5(A))')  &
-       '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
+                  '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
     enddo
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) 'Output...'
     if ( ATMOS_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output : YES'
+       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : YES'
        ATMOS_sw_restart = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : NO'
        ATMOS_sw_restart = .false.
     endif
     if ( ATMOS_RESTART_CHECK ) then
@@ -635,12 +629,13 @@ contains
     MOMY_av(:,:,:) = MOMY(:,:,:)
     RHOT_av(:,:,:) = RHOT(:,:,:)
     QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+
     ! first monitor
-    call MONIT_in( DENS(:,:,:), AP_NAME(1), AP_DESC(1), AP_UNIT(1), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), AP_NAME(2), AP_DESC(2), AP_UNIT(2), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), AP_NAME(3), AP_DESC(3), AP_UNIT(3), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), AP_NAME(4), AP_DESC(4), AP_UNIT(4), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), AP_NAME(5), AP_DESC(5), AP_UNIT(5), ndim=3 )
+    call MONIT_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
@@ -1028,8 +1023,7 @@ contains
   end subroutine ATMOS_vars_restart_check
 
   !-----------------------------------------------------------------------------
-  !> History output set for prognostic variables
-  !-----------------------------------------------------------------------------
+  !> History output set for atmospheric variables
   subroutine ATMOS_vars_history
     use mod_const, only: &
        GRAV   => CONST_GRAV,   &
@@ -1050,8 +1044,7 @@ contains
     use mod_comm, only: &
        COMM_horizontal_mean
     use mod_history, only: &
-       HIST_put, &
-       HIST_in
+       HIST_put
     use mod_monitor, only: &
        MONIT_put, &
        MONIT_in
@@ -1085,11 +1078,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_VARS_CHECKRANGE ) then
-       call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(1) )
-       call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(2) )
-       call MISC_valcheck( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(3) )
-       call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(4) )
-       call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(5) )
+       call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(I_DENS) )
+       call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMZ) )
+       call MISC_valcheck( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMX) )
+       call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMY) )
+       call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(I_RHOT) )
     endif
 
     call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
@@ -1101,11 +1094,11 @@ contains
        call HIST_put( AQ_HIST_id(iq), QTRC(:,:,:,iq), TIME_DTSEC )
     enddo
 
-    call MONIT_in( DENS(:,:,:), AP_NAME(1), AP_DESC(1), AP_UNIT(1), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), AP_NAME(2), AP_DESC(2), AP_UNIT(2), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), AP_NAME(3), AP_DESC(3), AP_UNIT(3), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), AP_NAME(4), AP_DESC(4), AP_UNIT(4), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), AP_NAME(5), AP_DESC(5), AP_UNIT(5), ndim=3 )
+    call MONIT_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
@@ -1480,8 +1473,7 @@ contains
   end subroutine ATMOS_vars_history
 
   !-----------------------------------------------------------------------------
-  !> Budget monitor of atmosphere
-  !-----------------------------------------------------------------------------
+  !> Budget monitor for atmosphere
   subroutine ATMOS_vars_total
     use mod_const, only: &
        GRAV   => CONST_GRAV,   &
