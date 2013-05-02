@@ -27,7 +27,7 @@ FFLAGS_DYN = $(FFLAGS)
 MODDIROPT ?= -M
 
 CC     = mpicc
-CFLAGS = -O3
+CFLAGS = -O3 -m64 -mcmodel=medium
 
 LD     = $(FC)
 # to avoid "-x f95-cpp-input" option
