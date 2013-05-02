@@ -204,7 +204,7 @@ contains
     use mod_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     real(RP) :: temp(KA)
@@ -252,8 +252,8 @@ contains
                                qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc, temp_sfc, pres_sfc )
-    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
+    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
     qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE
@@ -297,7 +297,7 @@ contains
     use mod_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     real(RP) :: temp(KA)
@@ -344,8 +344,8 @@ contains
                                qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc, temp_sfc, pres_sfc )
-    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
+    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
     qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE

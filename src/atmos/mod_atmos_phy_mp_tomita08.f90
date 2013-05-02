@@ -20,6 +20,9 @@ module mod_atmos_phy_mp
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,7 +58,7 @@ module mod_atmos_phy_mp
   !++ Private parameters & variables
   !
   logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
-  logical, private, save  :: MP_donegative_fixer  = .true.  ! apply negative fixer?
+  logical, private, save  :: MP_donegative_fixer  = .true. ! apply negative fixer?
 
   real(RP), private, save      :: dens00 = 1.28_RP !< standard density [kg/m3]
 
@@ -149,53 +152,53 @@ module mod_atmos_phy_mp
   real(RP), private, save      :: Ri50  = 5.E-5_RP    !< radius            of a 50 micron ice crystal [m]
 
   integer, private, parameter :: w_nmax = 42
-  integer, private, parameter :: I_dqv_dt  =  1 ! 21
-  integer, private, parameter :: I_dqc_dt  =  2 !  7
-  integer, private, parameter :: I_dqr_dt  =  3 !  8
-  integer, private, parameter :: I_dqi_dt  =  4 ! 22
-  integer, private, parameter :: I_dqs_dt  =  5 !  9
-  integer, private, parameter :: I_dqg_dt  =  6 ! 10
+  integer, private, parameter :: I_dqv_dt  =  1 !
+  integer, private, parameter :: I_dqc_dt  =  2 !
+  integer, private, parameter :: I_dqr_dt  =  3 !
+  integer, private, parameter :: I_dqi_dt  =  4 !
+  integer, private, parameter :: I_dqs_dt  =  5 !
+  integer, private, parameter :: I_dqg_dt  =  6 !
   integer, private, parameter :: I_delta1  =  7 ! separation switch for r->s,g
   integer, private, parameter :: I_delta2  =  8 ! separation switch for s->g
   integer, private, parameter :: I_delta3  =  9 ! separation switch for ice sublimation
-  integer, private, parameter :: I_Praut   = 10 !  1 c->r
-  integer, private, parameter :: I_Pracw   = 11 !  3 c->r
-  integer, private, parameter :: I_Psacw   = 12 !  4 c->s
-  integer, private, parameter :: I_Psfw    = 13 ! 11 c->s
-  integer, private, parameter :: I_Pgacw   = 14 !  5 c->g
-  integer, private, parameter :: I_Prevp   = 15 !  2 r->v
-  integer, private, parameter :: I_Piacr   = 16 !  3
-  integer, private, parameter :: I_Piacr_s = 17 !  3 r->s
-  integer, private, parameter :: I_Piacr_g = 18 !  2 r->g
-  integer, private, parameter :: I_Psacr   = 19 !  2
-  integer, private, parameter :: I_Psacr_s = 20 !  8 r->s
-  integer, private, parameter :: I_Psacr_g = 21 !  7 r->g
-  integer, private, parameter :: I_Pgacr   = 22 ! 18 r->g
-  integer, private, parameter :: I_Pgfrz   = 23 ! 16 r->g
-  integer, private, parameter :: I_Psaut   = 24 ! 10 i->s
-  integer, private, parameter :: I_Praci   = 25 !  0
-  integer, private, parameter :: I_Praci_s = 26 !  5 i->s
-  integer, private, parameter :: I_Praci_g = 27 !  4 i->g
-  integer, private, parameter :: I_Psaci   = 28 !  9 i->s
-  integer, private, parameter :: I_Psfi    = 29 ! 12 i->s
-  integer, private, parameter :: I_Pgaci   = 30 ! 17 i->g
-  integer, private, parameter :: I_Psdep   = 31 ! 13 v->s
-  integer, private, parameter :: I_Pssub   = 32 ! 14 s->v
-  integer, private, parameter :: I_Psmlt   = 33 ! 14 s->v
-  integer, private, parameter :: I_Pgaut   = 34 ! 15 s->g
-  integer, private, parameter :: I_Pracs   = 35 !  6 s->g
-  integer, private, parameter :: I_Pgacs   = 36 !  6 s->g
-  integer, private, parameter :: I_Pgdep   = 37 ! 19 v->g
-  integer, private, parameter :: I_Pgsub   = 38 ! 20 g->v
-  integer, private, parameter :: I_Pgmlt   = 39 ! 20 g->v
-  integer, private, parameter :: I_RLMDr   = 40
-  integer, private, parameter :: I_RLMDs   = 41
-  integer, private, parameter :: I_RLMDg   = 42
+  integer, private, parameter :: I_RLMDr   = 10
+  integer, private, parameter :: I_RLMDs   = 11
+  integer, private, parameter :: I_RLMDg   = 12
+  integer, private, parameter :: I_Piacr   = 13 ! r->s,g
+  integer, private, parameter :: I_Psacr   = 14 ! r->s,g
+  integer, private, parameter :: I_Praci   = 15 ! i->s,g
+  integer, private, parameter :: I_Psmlt   = 16 ! s->r
+  integer, private, parameter :: I_Pgmlt   = 17 ! g->r
+  integer, private, parameter :: I_Praut   = 18 ! c->r
+  integer, private, parameter :: I_Pracw   = 19 ! c->r
+  integer, private, parameter :: I_Psacw   = 20 ! c->s
+  integer, private, parameter :: I_Psfw    = 21 ! c->s
+  integer, private, parameter :: I_Pgacw   = 22 ! c->g
+  integer, private, parameter :: I_Prevp   = 23 ! r->v
+  integer, private, parameter :: I_Piacr_s = 24 ! r->s
+  integer, private, parameter :: I_Psacr_s = 25 ! r->s
+  integer, private, parameter :: I_Piacr_g = 26 ! r->g
+  integer, private, parameter :: I_Psacr_g = 27 ! r->g
+  integer, private, parameter :: I_Pgacr   = 28 ! r->g
+  integer, private, parameter :: I_Pgfrz   = 29 ! r->g
+  integer, private, parameter :: I_Psaut   = 30 ! i->s
+  integer, private, parameter :: I_Praci_s = 31 ! i->s
+  integer, private, parameter :: I_Psaci   = 32 ! i->s
+  integer, private, parameter :: I_Psfi    = 33 ! i->s
+  integer, private, parameter :: I_Praci_g = 34 ! i->g
+  integer, private, parameter :: I_Pgaci   = 35 ! i->g
+  integer, private, parameter :: I_Psdep   = 36 ! v->s
+  integer, private, parameter :: I_Pssub   = 37 ! s->v
+  integer, private, parameter :: I_Pgaut   = 38 ! s->g
+  integer, private, parameter :: I_Pracs   = 39 ! s->g
+  integer, private, parameter :: I_Pgacs   = 40 ! s->g
+  integer, private, parameter :: I_Pgdep   = 41 ! v->g
+  integer, private, parameter :: I_Pgsub   = 42 ! g->v
 
   real(RP),          private, save :: w       (w_nmax,KMAX*IMAX*JMAX) ! working array
   integer,           private, save :: w_histid(w_nmax)
   character(len=16), private, save :: w_name  (w_nmax)
-  character(len=64), private, save :: w_desc  (w_nmax)
+  character(len=64), private, save :: w_desc  (w_nmax) = ''
   character(len=16), private, save :: w_unit  (w_nmax) = 'kg/kg/s'
 
   data w_name / 'dqv_dt ', &
@@ -207,39 +210,39 @@ module mod_atmos_phy_mp
                 'delta1 ', &
                 'delta2 ', &
                 'delta3 ', &
+                'RLMDr  ', &
+                'RLMDs  ', &
+                'RLMDg  ', &
+                'Piacr  ', &
+                'Psacr  ', &
+                'Praci  ', &
+                'Psmlt  ', &
+                'Pgmlt  ', &
                 'Praut  ', &
                 'Pracw  ', &
                 'Psacw  ', &
                 'Psfw   ', &
                 'Pgacw  ', &
                 'Prevp  ', &
-                'Piacr  ', &
                 'Piacr_s', &
-                'Piacr_g', &
-                'Psacr  ', &
                 'Psacr_s', &
+                'Piacr_g', &
                 'Psacr_g', &
                 'Pgacr  ', &
                 'Pgfrz  ', &
                 'Psaut  ', &
-                'Praci  ', &
                 'Praci_s', &
-                'Praci_g', &
                 'Psaci  ', &
                 'Psfi   ', &
+                'Praci_g', &
                 'Pgaci  ', &
                 'Psdep  ', &
                 'Pssub  ', &
-                'Psmlt  ', &
                 'Pgaut  ', &
                 'Pracs  ', &
                 'Pgacs  ', &
                 'Pgdep  ', &
-                'Pgsub  ', &
-                'Pgmlt  ', &
-                'RLMDr  ', &
-                'RLMDs  ', &
-                'RLMDg  '  /
+                'Pgsub  '  /
 
   real(RP), private, save :: work3D(KA,IA,JA) !< for history output
 
@@ -285,7 +288,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type parametarization'
+    if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
     if ( ATMOS_TYPE_PHY_MP /= 'TOMITA08' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not TOMITA08. Check!'
@@ -420,24 +423,19 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** before MP_tomita08'
-    call ATMOS_vars_total
-
     call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
                          RHOT(:,:,:),  & ! [IN]
                          QTRC(:,:,:,:) ) ! [IN]
+
+    !##### MP Main #####
+    RHOE_t(:,:,:)   = 0.0_RP
+    QTRC_t(:,:,:,:) = 0.0_RP
 
     call MP_tomita08( RHOE_t(:,:,:),   & ! [OUT]
                       QTRC_t(:,:,:,:), & ! [OUT]
                       RHOE  (:,:,:),   & ! [INOUT]
                       QTRC  (:,:,:,:), & ! [INOUT]
                       DENS  (:,:,:)    ) ! [IN]
-
-    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
-    if( IO_L ) write(IO_FID_LOG,*) '*** after MP_tomita08'
-    call ATMOS_vars_total
 
     call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
                             DENS (:,:,:),   & ! [IN]
@@ -460,28 +458,11 @@ contains
                            vterm(:,:,:,:),   & ! [IN]
                            temp (:,:,:)      ) ! [IN]
 
-    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** after MP_precipitation'
-    call ATMOS_vars_total
-
-    call MP_saturation_adjustment( RHOT(:,:,:),   & ! [INOUT]
-                                   QTRC(:,:,:,:), & ! [INOUT]
-                                   DENS(:,:,:)    ) ! [IN]
-
-    if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
-                               RHOT(:,:,:),  & ! [INOUT]
-                               QTRC(:,:,:,:) ) ! [INOUT]
-    endif
-
-    ! fill halo
-    call ATMOS_vars_fillhalo
-
-    ! log report total (optional)
-    call ATMOS_vars_total
+    call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
+                                   QTRC_t(:,:,:,:), & ! [INOUT]
+                                   RHOE(:,:,:),     & ! [INOUT]
+                                   QTRC(:,:,:,:),   & ! [INOUT]
+                                   DENS(:,:,:)      ) ! [IN]
 
     if ( MP_doreport_tendency ) then
        call HIST_in( QTRC_t(:,:,:,I_QV), 'QV_t_mp', 'tendency of QV in mp', 'kg/kg/s', dt )
@@ -498,6 +479,24 @@ contains
        call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s', dt )
        call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s', dt )
     endif
+
+    !##### END MP Main #####
+
+    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
+                         RHOE(:,:,:),  & ! [IN]
+                         QTRC(:,:,:,:) ) ! [IN]
+
+    if ( MP_donegative_fixer ) then
+       call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
+                               RHOT(:,:,:),  & ! [INOUT]
+                               QTRC(:,:,:,:) ) ! [INOUT]
+    endif
+
+    ! fill halo
+    call ATMOS_vars_fillhalo
+
+    ! log report total (optional)
+    call ATMOS_vars_total
 
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
     call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
@@ -534,16 +533,14 @@ contains
        HIST_put, &
        HIST_in
     use mod_atmos_thermodyn, only: &
-       THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
-       THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
     implicit none
 
-    real(RP), intent(out)   :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
-    real(RP), intent(out)   :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
+    real(RP), intent(inout) :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
+    real(RP), intent(inout) :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
     real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
@@ -610,6 +607,8 @@ contains
     integer :: k, i, j, iq, ijk, indirect, ip
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('MP_tomita08')
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -639,6 +638,7 @@ contains
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
 
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -657,8 +657,8 @@ contains
        enddo
 
        ! saturation ratio S
-       Sliq = q(I_QV) / QSATL(k,i,j)
-       Sice = q(I_QV) / QSATI(k,i,j)
+       Sliq = q(I_QV) / max( QSATL(k,i,j), EPS )
+       Sice = q(I_QV) / max( QSATI(k,i,j), EPS )
 
        Rdens    = 1.0_RP / dens
        rho_fact = sqrt( dens00 * Rdens )
@@ -811,8 +811,8 @@ contains
 
        tmp = 2.0_RP * PI * Rdens * N0s * ( Sice-1.0_RP ) * Giv * vents
 
-       w(I_Psdep,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice < 1
-       w(I_Pssub,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice > 1
+       w(I_Psdep,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice < 1
+       w(I_Pssub,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice > 1
 
        ! [Psmlt] melting rate of snow
        w(I_Psmlt,ijk) = 2.0_RP * PI * Rdens * N0s * Gil * vents &
@@ -823,8 +823,8 @@ contains
 
        tmp = 2.0_RP * PI * Rdens * N0g * ( Sice-1.0_RP ) * Giv * ventg
 
-       w(I_Pgdep,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice < 1
-       w(I_Pgsub,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice > 1
+       w(I_Pgdep,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice < 1
+       w(I_Pgsub,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice > 1
 
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt,ijk) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
@@ -849,6 +849,7 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", maxval(w(ip,:)), minval(w(ip,:))
 !    enddo
 
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP,SIMD
     do ijk = 1, KMAX*IMAX*JMAX
        w(I_Psdep,ijk) = min( w(I_Psdep,ijk), w(I_dqv_dt,ijk) )
        w(I_Pgdep,ijk) = min( w(I_Pgdep,ijk), w(I_dqv_dt,ijk) )
@@ -913,6 +914,7 @@ contains
 !    if( IO_L ) write(IO_FID_LOG,*) "ijk_warm/cold:", ijk_warm, ijk_cold
 
     !---< Solve tendencies (Warm Rain) >---
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_warm
        ijk = index_warm(indirect)
 
@@ -982,8 +984,13 @@ contains
        net = &                ! [prod]
            - w(I_Psmlt,ijk) & ! [loss] s->r
            - w(I_Pgacs,ijk)   ! [loss] s->g
+    enddo
 
 
+
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
+    do indirect = 1, ijk_warm
+       ijk = index_warm(indirect)
 
        ! re-calc net production & loss
        tend(I_QC,ijk) = &                ! [prod]
@@ -1019,6 +1026,7 @@ contains
     enddo
 
     !---< Solve tendencies (Cold Rain) >---
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_cold
        ijk = index_cold(indirect)
 
@@ -1112,7 +1120,7 @@ contains
            + w(I_Psfw   ,ijk) & ! [prod] c->s
            + w(I_Piacr_s,ijk) & ! [prod] r->s
            + w(I_Psacr_s,ijk) & ! [prod] r->s
-           + w(I_Psaut  ,ijk) & ! [loss] i->s
+           + w(I_Psaut  ,ijk) & ! [prod] i->s
            + w(I_Praci_s,ijk) & ! [prod] i->s
            + w(I_Psaci  ,ijk) & ! [prod] i->s
            + w(I_Psfi   ,ijk) & ! [prod] i->s
@@ -1169,8 +1177,13 @@ contains
        w(I_Pracs  ,ijk) = w(I_Pracs  ,ijk) * fac
        w(I_Pgacs  ,ijk) = w(I_Pgacs  ,ijk) * fac
        w(I_Pgsub  ,ijk) = w(I_Pgsub  ,ijk) * fac
+    enddo
 
 
+
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
+    do indirect = 1, ijk_cold
+       ijk = index_cold(indirect)
 
        ! re-calc net production & loss
        tend(I_QC,ijk) = &                  ! [prod]
@@ -1200,7 +1213,7 @@ contains
                       + w(I_Psfw   ,ijk) & ! [prod] c->s
                       + w(I_Piacr_s,ijk) & ! [prod] r->s
                       + w(I_Psacr_s,ijk) & ! [prod] r->s
-                      + w(I_Psaut  ,ijk) & ! [loss] i->s
+                      + w(I_Psaut  ,ijk) & ! [prod] i->s
                       + w(I_Psaci  ,ijk) & ! [prod] i->s
                       + w(I_Praci_s,ijk) & ! [prod] i->s
                       + w(I_Psfi   ,ijk) & ! [prod] i->s
@@ -1235,6 +1248,7 @@ contains
     enddo
 
     ! mass & energy update
+!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1243,17 +1257,17 @@ contains
            + ( k - KS )               &
            + 1
 
-       QTRC_t(k,i,j,I_QV) = tend(I_QV,ijk)
-       QTRC_t(k,i,j,I_QC) = tend(I_QC,ijk)
-       QTRC_t(k,i,j,I_QR) = tend(I_QR,ijk)
-       QTRC_t(k,i,j,I_QI) = tend(I_QI,ijk)
-       QTRC_t(k,i,j,I_QS) = tend(I_QS,ijk)
-       QTRC_t(k,i,j,I_QG) = tend(I_QG,ijk)
+       QTRC_t(k,i,j,I_QV) = QTRC_t(k,i,j,I_QV) + tend(I_QV,ijk)
+       QTRC_t(k,i,j,I_QC) = QTRC_t(k,i,j,I_QC) + tend(I_QC,ijk)
+       QTRC_t(k,i,j,I_QR) = QTRC_t(k,i,j,I_QR) + tend(I_QR,ijk)
+       QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + tend(I_QI,ijk)
+       QTRC_t(k,i,j,I_QS) = QTRC_t(k,i,j,I_QS) + tend(I_QS,ijk)
+       QTRC_t(k,i,j,I_QG) = QTRC_t(k,i,j,I_QG) + tend(I_QG,ijk)
 
-       RHOE_t(k,i,j) = -DENS0(k,i,j) * ( LHV00 * tend(I_QV,ijk) &
-                                       - LHF00 * tend(I_QI,ijk) &
-                                       - LHF00 * tend(I_QS,ijk) &
-                                       - LHF00 * tend(I_QG,ijk) )
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV00 * tend(I_QV,ijk) &
+                                                      - LHF00 * tend(I_QI,ijk) &
+                                                      - LHF00 * tend(I_QS,ijk) &
+                                                      - LHF00 * tend(I_QG,ijk) )
 
        QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
        QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt
@@ -1312,6 +1326,8 @@ contains
 
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE0  MAX/MIN:", maxval(RHOE0(:,:,:)), minval(RHOE0(:,:,:))
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE_t MAX/MIN:", maxval(RHOE_t(:,:,:)), minval(RHOE_t(:,:,:))
+
+    call TIME_rapend  ('MP_tomita08')
 
     return
   end subroutine MP_tomita08

@@ -67,7 +67,7 @@ module mod_mkinit
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
   use mod_atmos_saturation, only: &
-     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+     SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -266,22 +266,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKINIT
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
-       CONST_UNDEF8
-    implicit none
-
-    character(len=IO_SYSCHR) :: MKINIT_initname = 'COLDBUBBLE'
-
-    NAMELIST / PARAM_MKINIT / &
-       MKINIT_initname, &
-       flg_bin
-
-    integer :: ierr
-    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -404,7 +390,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
-  !-----------------------------------------------------------------------------
   subroutine SBMAERO_setup
     use mod_const, only : &
        PI => CONST_PI
@@ -422,9 +407,6 @@ contains
     integer  :: nccn_i       = 20
     integer  :: nbin_i       = 33
 
-    integer :: ierr
-    integer :: k, i, j, iq
-
     NAMELIST / PARAM_SBMAERO / &
        F0_AERO,      &
        R0_AERO,      &
@@ -434,7 +416,10 @@ contains
        rhoa,         &
        nccn_i,       &
        nbin_i
-  !----------------------------------------------------
+
+    integer :: ierr
+    integer :: iq
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AEROBIN]/Categ[MKINIT]'
@@ -474,6 +459,24 @@ contains
 
     return
   end subroutine SBMAERO_setup
+
+  !-----------------------------------------------------------------------------
+  function faero( f0,r0,x,alpha,rhoa )
+    use mod_const, only : &
+       pi => CONST_PI
+    implicit none
+
+    real(RP), intent(in) ::  x, f0, r0, alpha, rhoa
+    real(RP) :: faero
+    real(RP) :: rad
+    !---------------------------------------------------------------------------
+
+    rad = ( exp(x) * 3.0_RP / 4.0_RP / pi / rhoa )**(1.0_RP/3.0_RP)
+
+    faero = f0 * (rad/r0)**(-alpha)
+
+    return
+  end function faero
 
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + random disturbance )
@@ -571,8 +574,8 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -977,8 +980,8 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
@@ -1139,8 +1142,8 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -1319,8 +1322,8 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_liq( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
     do j = JS, JE
     do i = IS, IE
@@ -1740,28 +1743,29 @@ contains
   subroutine MKINIT_DYCOMS2_RF01
     implicit none
 
-    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(RP) :: qall(KA,IA,JA) ! QV+QC
-    real(RP) :: fact
-
-    real(RP) :: pi2 
-    real(RP) :: sint
     real(RP) :: PERTURB_AMP = 0.0_RP
-
     integer  :: RANDOM_LIMIT = 5
     integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
                                  ! 1 -> petrurbation for pt
                                  ! 2 -> perturbation for u, v, w
-    real(RP) :: dummy(KA,IA,JA)
 
     NAMELIST / PARAM_MKINIT_RF01 / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG
 
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+    real(RP) :: pi2 
+    real(RP) :: sint
+
     integer :: ierr
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF01)]/Categ[MKINIT]'
@@ -1775,9 +1779,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
-
-    dummy(:,:,:) = 0.0_RP
-    pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
     ! calc in dry condition
     do j = JS, JE
@@ -1830,15 +1831,15 @@ contains
 
        do k = KS, KE
           if    ( CZ(k) <   820.0_RP ) then ! below initial cloud top
-             qall(k,i,j) = 9.0E-3_RP
+             qall = 9.0E-3_RP
           elseif( CZ(k) <=  860.0_RP ) then ! boundary
              sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-             qall(k,i,j) = 9.0E-3_RP * (0.5_RP-sint) &
+             qall = 9.0E-3_RP * (0.5_RP-sint) &
                          + 1.5E-3_RP * (0.5_RP+sint)
           elseif( CZ(k) <= 5000.0_RP ) then
-             qall(k,i,j) = 1.5E-3_RP
+             qall = 1.5E-3_RP
           else
-             qall(k,i,j) = 0.0_RP
+             qall = 0.0_RP
           endif
 
           if    ( CZ(k) <=  600.0_RP ) then
@@ -1854,7 +1855,7 @@ contains
              qc(k,i,j) = 0.0_RP
           endif
 
-          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
+          qv(k,i,j) = qall - qc(k,i,j)
        enddo
 
     enddo
@@ -1959,24 +1960,19 @@ contains
     enddo
 
     if ( flg_bin ) then
-
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
-          do iq = 2, QQA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
+
           !--- for aerosol
           do iq = QQA+1, QA
-             QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
+             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
        enddo
        enddo
        enddo
-
     else
-
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1997,38 +1993,36 @@ contains
           enddo
           enddo
        endif
-
     endif
 
     return
   end subroutine MKINIT_DYCOMS2_RF01
 
   !-----------------------------------------------------------------------------
-  !> Make initial state for strato cumulus
-  !-----------------------------------------------------------------------------
+  !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
     implicit none
 
-    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(RP) :: qall(KA,IA,JA) ! QV+QC
-    real(RP) :: qc  (KA,IA,JA) ! QC
-    real(RP) :: fact !, disturb
-   
-    real(RP) :: pi2, sint
-
-    integer :: ierr
-    integer :: k, i, j, iq
-    real(RP) :: PERTURB_AMP = 0.0_RP
-    integer :: RANDOM_LIMIT = 5
-    integer :: RANDOM_FLAG = 0  !0 -> no perturbation
-                                !1 -> perturbation for PT  
-                                !2 -> perturbation for u,v,w
+    real(RP) :: PERTURB_AMP  = 0.0_RP
+    integer  :: RANDOM_LIMIT = 5
+    integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
+                                 ! 1 -> perturbation for PT  
+                                 ! 2 -> perturbation for u,v,w
 
     NAMELIST / PARAM_MKINIT_RF02 / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG
 
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+    real(RP) :: pi2
+    real(RP) :: sint
+
+    integer :: ierr
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
@@ -2061,16 +2055,16 @@ contains
 
           if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 288.3_RP ! [K]
-             qall(k,i,j) = 9.45E-3_RP ! [kg/kg]
+             qall = 9.45E-3_RP ! [kg/kg]
           else if ( CZ(k) <= 815.0_RP ) then
              sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
                    ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP 
-             qall(k,i,j) = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
+             qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
                    ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
              potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
-             qall(k,i,j) = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
 
           if( CZ(k) < 400.0_RP ) then
@@ -2085,7 +2079,7 @@ contains
           else
              qc(k,i,j) = 0.0_RP
           endif
-          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
+          qv(k,i,j) = qall - qc(k,i,j)
 
        enddo
     enddo
@@ -2146,12 +2140,6 @@ contains
      else
        MOMZ(k,i,j) = 0.0_RP
      endif
-     if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
-                   * DENS(k,i,j)
-     else
-       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
-     endif
     enddo
     enddo
     enddo
@@ -2184,6 +2172,20 @@ contains
     enddo
     enddo
 
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * DENS(k,i,j)
+     else
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
+    enddo
+    enddo
+    enddo
+
     do iq = 1, QA
     do j = JS, JE
     do i = IS, IE
@@ -2194,57 +2196,254 @@ contains
     enddo
     enddo
 
-    if( .not. flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
+    if ( flg_bin ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
 
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-       QTRC(k,i,j,I_QC) = qc(k,i,j)
+          !--- for aerosol
+          do iq = QQA+1, QA
+             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
 
-       if ( qc(k,i,j) > 0.0_RP ) then
-          QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j)
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
        endif
-
-     enddo
-     enddo
-     enddo
-    elseif( flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) !--- Super saturated air at initial
-        do iq = 2, QQA
-           QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-        !--- for aerosol
-        do iq = QQA+1, QA
-          QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-        enddo
-     enddo
-     enddo
-     enddo
     endif
 
     return
   end subroutine MKINIT_DYCOMS2_RF02
 
-  function faero( f0,r0,x,alpha,rhoa )
+  !-----------------------------------------------------------------------------
+  !> Make initial state for RICO inter comparison
+  subroutine MKINIT_RICO
+    implicit none
 
-  use mod_const, only : &
-     pi    => CONST_PI
-  real(RP), intent(in) ::  x, f0, r0, alpha, rhoa
-  real(RP) :: faero
-  real(RP) :: rad
+    real(RP):: PERTURB_AMP_PT = 0.1_RP
+    real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
 
-  rad = ( exp( x )*3.0_RP/4.0_RP/pi/rhoa )**( 1.0_RP/3.0_RP )
+    NAMELIST / PARAM_MKINIT_RICO / &
+       PERTURB_AMP_PT, &
+       PERTURB_AMP_QV
 
-  faero = f0*( rad/r0 )**( -alpha )
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
 
-  return
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
 
-  end function faero
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RICO]/Categ[MKINIT]'
 
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RICO,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RICO)
+
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
+       pott_sfc(1,i,j) = 297.9_RP
+       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          !--- potential temperature
+          if ( CZ(k) < 740.0_RP ) then ! below initial cloud top
+             pott(k,i,j) = 297.9_RP
+          else
+             fact = ( CZ(k)-740.0_RP ) * ( 317.0_RP-297.9_RP ) / ( 4000.0_RP-740.0_RP )
+             pott(k,i,j) = 297.9_RP + fact
+          endif
+
+          !--- horizontal wind velocity
+          if ( CZ(k) <= 4000.0_RP ) then ! below initial cloud top
+             fact = ( CZ(k)-0.0_RP ) * ( -1.9_RP+9.9_RP ) / ( 4000.0_RP-0.0_RP )
+             velx(k,i,j) =  -9.9_RP + fact
+             vely(k,i,j) =  -3.8_RP
+          else
+             velx(k,i,j) =  -1.9_RP
+             vely(k,i,j) =  -3.8_RP
+          endif
+
+          !--- mixing ratio of vapor
+          if ( CZ(k) <= 740.0_RP ) then ! below initial cloud top
+             fact = ( CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
+             qall = 16.0E-3_RP + fact
+          elseif ( CZ(k) <= 3260.0_RP ) then ! boundary
+             fact = ( CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
+             qall = 13.8E-3_RP + fact
+          elseif( CZ(k) <= 4000.0_RP ) then
+             fact = ( CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
+             qall = 2.4E-3_RP + fact
+          else
+             qall = 0.0_RP
+          endif
+
+          qc(k,i,j) = 0.0_RP
+          qv(k,i,j) = qall - qc(k,i,j)
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = pott(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMZ(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    if ( flg_bin ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
+                           + qc(k,i,j)
+
+          do iq = 2, QQA
+             QTRC(k,i,j,iq) = 0.0_RP
+          enddo
+          !--- for aerosol
+          do iq = QQA+1, QA
+             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+    endif
+
+    return
+  end subroutine MKINIT_RICO
+
+  !-----------------------------------------------------------------------------
   subroutine MKINIT_interporation
     use gtool_file, only: &
        FileGetShape, &
@@ -2627,6 +2826,7 @@ contains
     return
   end subroutine MKINIT_interporation
 
+  !-----------------------------------------------------------------------------
   subroutine interporation_fact( &
        fact0, fact1, &
        idx0, idx1,   &
@@ -2684,201 +2884,8 @@ contains
        end do
     end if
 
-  end subroutine interporation_fact
-
-  !-----------------------------------------------------------------------------
-  !> Make initial state for RICO inter comparison
-  !-----------------------------------------------------------------------------
-  subroutine MKINIT_RICO
-    implicit none
-
-    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
-    real(RP) :: qall(KA,IA,JA) ! QV+QC
-    real(RP) :: qc  (KA,IA,JA) ! QC
-    real(RP) :: fact !, disturb
-
-    real(RP) :: pi2, sint
-
-    integer :: ierr
-    integer :: k, i, j, iq
-    real(RP):: PERTURB_AMP_PT = 0.1_RP
-    real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
-
-    NAMELIST / PARAM_MKINIT_RICO / &
-       PERTURB_AMP_PT, &
-       PERTURB_AMP_QV
-
-    !---------------------------------------------------------------------------
-    pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RICO]/Categ[MKINIT]'
-
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_RICO,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RICO)
-
-    ! calc in moist condition
-    do j = JS, JE
-    do i = IS, IE
-
-       pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
-       pott_sfc(1,i,j) = 297.9_RP
-       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
-       qc_sfc  (1,i,j) = 0.0_RP
-
-       do k = KS, KE
-          !--- potential temperature
-          if ( CZ(k) < 740.0_RP ) then ! below initial cloud top
-             pott(k,i,j) = 297.9_RP
-          else
-             fact = ( CZ(k)-740.0_RP ) * ( 317.0_RP-297.9_RP ) / ( 4000.0_RP-740.0_RP )
-             pott(k,i,j) = 297.9_RP + fact
-          endif
-
-          !--- horizontal wind velocity
-          if ( CZ(k) <= 4000.0_RP ) then ! below initial cloud top
-             fact = ( CZ(k)-0.0_RP ) * ( -1.9_RP+9.9_RP ) / ( 4000.0_RP-0.0_RP )
-             velx(k,i,j) =   -9.9_RP + fact
-             vely(k,i,j) =  -3.8_RP
-          else
-             velx(k,i,j) =  -1.9_RP
-             vely(k,i,j) =  -3.8_RP
-          endif
-
-          !--- mixing ratio of vapor
-          if ( CZ(k) <= 740.0_RP ) then ! below initial cloud top
-             fact = ( CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
-             qall(k,i,j) = 16.0E-3_RP + fact
-          elseif ( CZ(k) <= 3260.0_RP ) then ! boundary
-             fact = ( CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
-             qall(k,i,j) = 13.8E-3_RP + fact
-          elseif( CZ(k) <= 4000.0_RP ) then
-             fact = ( CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
-             qall(k,i,j) = 2.4E-3_RP + fact
-          else
-             qall(k,i,j) = 0.0_RP
-          endif
-
-          qc(k,i,j) = 0.0_RP
-          qv(k,i,j) = qall(k,i,j) - qc(k,i,j)
-       enddo
-
-    enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       pott(k,i,j) = pott(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
-    enddo
-    enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMZ(k,i,j) = 0.0_RP
-       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
-
-    call RANDOM_get(rndm) ! make random
-    if( .not. flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-
-        QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
-        QTRC(k,i,j,I_QC) = qc(k,i,j)
-
-        if ( qc(k,i,j) > 0.0_RP ) then
-           QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
-        endif
-
-     enddo
-     enddo
-     enddo
-    else if ( flg_bin ) then !--- for HUCM
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-
-        QTRC(k,i,j,I_QV) = qv(k,i,j)+qc(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV !--- Super saturated air at initial
-        do iq = 2, QQA
-           QTRC(k,i,j,iq) = 0.0_RP
-        enddo
-        !--- for aerosol
-        do iq = QQA+1, QA
-          QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
-        enddo
-     enddo
-     enddo
-     enddo
-    end if
-
     return
-  end subroutine MKINIT_RICO
+  end subroutine interporation_fact
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------

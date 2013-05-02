@@ -23,6 +23,9 @@ module mod_atmos_phy_mp
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -58,7 +61,7 @@ module mod_atmos_phy_mp
   !++ Private parameters & variables
   !
   logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
-  logical, private, save  :: MP_donegative_fixer  = .true.  ! apply negative fixer?
+  logical, private, save  :: MP_donegative_fixer  = .true. ! apply negative fixer?
 
   real(RP), private, save :: factor_vterm(KA) ! collection factor for terminal velocity of QR
 
@@ -91,7 +94,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type parametarization'
+    if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
 
     if ( ATMOS_TYPE_PHY_MP /= 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
@@ -180,8 +183,12 @@ contains
                          RHOT(:,:,:),  & ! [IN]
                          QTRC(:,:,:,:) ) ! [IN]
 
-    call MP_kessler( RHOE_t(:,:,:),   & ! [OUT]
-                     QTRC_t(:,:,:,:), & ! [OUT]
+    !##### MP Main #####
+    RHOE_t(:,:,:)   = 0.0_RP
+    QTRC_t(:,:,:,:) = 0.0_RP
+
+    call MP_kessler( RHOE_t(:,:,:),   & ! [INOUT]
+                     QTRC_t(:,:,:,:), & ! [INOUT]
                      RHOE  (:,:,:),   & ! [INOUT]
                      QTRC  (:,:,:,:), & ! [INOUT]
                      DENS  (:,:,:)    ) ! [IN]
@@ -207,13 +214,27 @@ contains
                            vterm(:,:,:,:),   & ! [IN]
                            temp (:,:,:)      ) ! [IN]
 
+    call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
+                                   QTRC_t(:,:,:,:), & ! [INOUT]
+                                   RHOE  (:,:,:),   & ! [INOUT]
+                                   QTRC  (:,:,:,:), & ! [INOUT]
+                                   DENS  (:,:,:)    ) ! [IN]
+
+    if ( MP_doreport_tendency ) then
+       call HIST_in( QTRC_t(:,:,:,I_QV), 'QV_t_mp', 'tendency of QV in mp', 'kg/kg/s', dt )
+       call HIST_in( QTRC_t(:,:,:,I_QC), 'QC_t_mp', 'tendency of QC in mp', 'kg/kg/s', dt )
+       call HIST_in( QTRC_t(:,:,:,I_QR), 'QR_t_mp', 'tendency of QR in mp', 'kg/kg/s', dt )
+
+       call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
+
+       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
+    endif
+
+    !##### END MP Main #####
+
     call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
                          RHOE(:,:,:),  & ! [IN]
                          QTRC(:,:,:,:) ) ! [IN]
-
-    call MP_saturation_adjustment( RHOT(:,:,:),   & ! [INOUT]
-                                   QTRC(:,:,:,:), & ! [INOUT]
-                                   DENS(:,:,:)    ) ! [IN]
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
@@ -226,16 +247,6 @@ contains
 
     ! log report total (optional)
     call ATMOS_vars_total
-
-    if ( MP_doreport_tendency ) then
-       call HIST_in( QTRC_t(:,:,:,I_QV), 'QV_t_mp', 'tendency of QV in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QC), 'QC_t_mp', 'tendency of QC in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QR), 'QR_t_mp', 'tendency of QR in mp', 'kg/kg/s', dt )
-
-       call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
-
-       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
-    endif
 
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
     call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
@@ -264,34 +275,40 @@ contains
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     implicit none
 
-    real(RP), intent(out)   :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
-    real(RP), intent(out)   :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
+    real(RP), intent(inout) :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
+    real(RP), intent(inout) :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
     real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
 
     ! working
-    real(RP) :: QSATL(KA,IA,JA) ! saturated water vapor [kg/kg]
+    real(RP) :: QSAT (KA,IA,JA) ! saturated water vapor [kg/kg]
     real(RP) :: TEMP0(KA,IA,JA) ! temperature           [K]
     real(RP) :: PRES0(KA,IA,JA) ! pressure              [Pa]
 
-    real(RP) :: dens
-    real(RP) :: rhoe
-    real(RP) :: temp
-    real(RP) :: pres
-    real(RP) :: q(QA)
+    real(RP) :: dens (KA)
+    real(RP) :: rhoe (KA)
+    real(RP) :: temp (KA)
+    real(RP) :: pres (KA)
+    real(RP) :: qv   (KA)
+    real(RP) :: qc   (KA)
+    real(RP) :: qr   (KA)
+    real(RP) :: qsatl(KA)
+    real(RP) :: Sliq (KA)
 
     ! tendency
-    real(RP) :: dq_evap ! tendency q (evaporation)
-    real(RP) :: dq_auto ! tendency q (autoconversion)
-    real(RP) :: dq_accr ! tendency q (accretion)
-    real(RP) :: dqv, dqc, dqr
-    real(RP) :: vent_factor, Sliq
+    real(RP) :: dq_evap(KA) ! tendency q (evaporation)
+    real(RP) :: dq_auto(KA) ! tendency q (autoconversion)
+    real(RP) :: dq_accr(KA) ! tendency q (accretion)
 
+    real(RP) :: dqv, dqc, dqr
+    real(RP) :: vent_factor
     real(RP) :: rdt
 
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('MP_kessler')
 
     rdt = 1.D0 / dt
 
@@ -301,66 +318,80 @@ contains
                                 RHOE0(:,:,:),  & ! [IN]
                                 QTRC0(:,:,:,:) ) ! [IN]
 
-    call SATURATION_dens2qsat_liq( QSATL(:,:,:), & ! [OUT]
+    call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
                                    DENS0(:,:,:)  ) ! [IN]
 
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       ! store to work
-       dens = DENS0(k,i,j)
-       rhoe = RHOE0(k,i,j)
-       temp = TEMP0(k,i,j)
-       pres = PRES0(k,i,j)
-       do iq = I_QV, I_QR
-          q(iq) = QTRC0(k,i,j,iq)
-       enddo
 
-       Sliq = q(I_QV) / QSATL(k,i,j)
+       ! store to work
+       dens (KS:KE) = DENS0(KS:KE,i,j)
+       rhoe (KS:KE) = RHOE0(KS:KE,i,j)
+       temp (KS:KE) = TEMP0(KS:KE,i,j)
+       pres (KS:KE) = PRES0(KS:KE,i,j)
+       qv   (KS:KE) = QTRC0(KS:KE,i,j,I_QV)
+       qc   (KS:KE) = QTRC0(KS:KE,i,j,I_QC)
+       qr   (KS:KE) = QTRC0(KS:KE,i,j,I_QR)
+       qsatl(KS:KE) = QSAT (KS:KE,i,j)
+       Sliq (KS:KE) = qv(KS:KE) / qsatl(KS:KE)
 
        ! Auto-conversion (QC->QR)
-       dq_auto = 1.E-3_RP * max( q(I_QC)-1.E-3_RP, 0.0_RP )
+       do k = KS, KE
+          dq_auto(k) = 1.E-3_RP * max( qc(k)-1.E-3_RP, 0.0_RP )
+       enddo
 
        ! Accretion (QC->QR)
-       dq_accr = 2.2_RP * q(I_QC) * q(I_QR)**0.875_RP
+       do k = KS, KE
+          dq_accr(k) = 2.2_RP * qc(k) * qr(k)**0.875_RP
+       enddo
 
        ! Evaporation (QR->QV)
-       vent_factor = 1.6_RP + 124.9_RP * ( dens*q(I_QR) )**0.2046_RP
+       do k = KS, KE
+          vent_factor = 1.6_RP + 124.9_RP * ( dens(k)*qr(k) )**0.2046_RP
 
-       dq_evap = ( 1.0_RP-min(Sliq,1.0_RP) ) / dens * vent_factor  &
-               * ( dens * q(I_QR) )**0.525_RP / ( 5.4E5_RP + 2.55E8_RP / ( pres*QSATL(k,i,j) ) )
+          dq_evap(k) = ( 1.0_RP-min(Sliq(k),1.0_RP) ) / dens(k) * vent_factor  &
+                     * ( dens(k)*qr(k) )**0.525_RP / ( 5.4E5_RP + 2.55E8_RP / ( pres(k)*qsatl(k) ) )
+       enddo
 
        ! limiter
-       dqc = ( -dq_auto-dq_accr         )
-       dqr = (  dq_auto+dq_accr-dq_evap )
+       do k = KS, KE
+          dqc = (-dq_auto(k)-dq_accr(k)            )
 
-       ! tendency
-       QTRC_t(k,i,j,I_QC) = max( dqc, -q(I_QC)*rdt )
-       QTRC_t(k,i,j,I_QR) = max( dqr, -q(I_QR)*rdt )
+          QTRC_t(k,i,j,I_QC) = QTRC_t(k,i,j,I_QC) + max( dqc, -qc(k)*rdt )
+       enddo
 
-       dqv = - ( QTRC_t(k,i,j,I_QC) &
-               + QTRC_t(k,i,j,I_QR) )
+       do k = KS, KE
+          dqr = ( dq_auto(k)+dq_accr(k)-dq_evap(k) )
 
-       QTRC_t(k,i,j,I_QV) = max( dqv, -q(I_QV)*rdt )
+          QTRC_t(k,i,j,I_QR) = QTRC_t(k,i,j,I_QR) + max( dqr, -qr(k)*rdt )
+       enddo
 
-       RHOE_t(k,i,j) = -dens * ( LHV00 * QTRC_t(k,i,j,I_QV) )
-    enddo
+       do k = KS, KE
+          dqv = - ( QTRC_t(k,i,j,I_QC) &
+                  + QTRC_t(k,i,j,I_QR) )
+
+          QTRC_t(k,i,j,I_QV) = QTRC_t(k,i,j,I_QV) + max( dqv, -qv(k)*rdt )
+       enddo
+
+       do k = KS, KE
+          RHOE_t(k,i,j) = RHOE_t(k,i,j) - dens(k) * ( LHV00 * QTRC_t(k,i,j,I_QV) )
+       enddo
     enddo
     enddo
 
     ! mass & energy update
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
-       QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt
-       QTRC0(k,i,j,I_QR) = QTRC0(k,i,j,I_QR) + QTRC_t(k,i,j,I_QR) * dt
+       QTRC0(KS:KE,i,j,I_QV) = QTRC0(KS:KE,i,j,I_QV) + QTRC_t(KS:KE,i,j,I_QV) * dt
+       QTRC0(KS:KE,i,j,I_QC) = QTRC0(KS:KE,i,j,I_QC) + QTRC_t(KS:KE,i,j,I_QC) * dt
+       QTRC0(KS:KE,i,j,I_QR) = QTRC0(KS:KE,i,j,I_QR) + QTRC_t(KS:KE,i,j,I_QR) * dt
 
-       RHOE0(k,i,j) = RHOE0(k,i,j) + RHOE_t(k,i,j) * dt
+       RHOE0(KS:KE,i,j) = RHOE0(KS:KE,i,j) + RHOE_t(KS:KE,i,j) * dt
     enddo
     enddo
-    enddo
+
+    call TIME_rapend  ('MP_kessler')
 
     return
   end subroutine MP_kessler

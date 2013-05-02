@@ -78,6 +78,8 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
+    call TIME_rapstart('Debug')
+
     do j = 1, JA
     do i = 1, IA
        diffq(:) = 0.0_RP
@@ -115,6 +117,8 @@ contains
     enddo
     enddo
 
+    call TIME_rapend  ('Debug')
+
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
 
@@ -122,150 +126,185 @@ contains
   !> Saturation adjustment
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_saturation_adjustment( &
-       RHOT0, &
-       QTRC0, &
-       DENS0  )
+       RHOE_t, &
+       QTRC_t, &
+       RHOE0,  &
+       QTRC0,  &
+       DENS0   )
     use mod_const, only: &
        LHV00  => CONST_LH00, &
        LHF00  => CONST_LHF00
+    use mod_time, only: &
+       dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
+       THERMODYN_cv          => ATMOS_THERMODYN_cv,         &
+       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
     implicit none
 
-    real(RP), intent(inout) :: RHOT0(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC0(KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS0(KA,IA,JA)
+    real(RP), intent(inout) :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
+    real(RP), intent(inout) :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
+    real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
+    real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
+    real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
 
     ! working
-    real(RP) :: dens      ! density [kg/m3]
-    real(RP) :: rhot      ! density * potential temperature [K*kg/m3]
-    real(RP) :: q(QA)     ! tracer Q [kg/kg]
-    real(RP) :: temp      ! temperature [K]
-    real(RP) :: pres      ! pressure [Pa]
-    real(RP) :: rhoe      ! internal energy
+    real(RP) :: TEMP0 (KA,IA,JA)
+    real(RP) :: PRES0 (KA,IA,JA)
+    real(RP) :: QDRY0 (KA,IA,JA)
+    real(RP) :: CVtot (KA,IA,JA)
 
-    real(RP) :: qsum      ! QV+QC+QI
-    real(RP) :: qdry
-    real(RP) :: ein_moist ! moist internal energy
+    real(RP) :: Emoist(KA,IA,JA) ! moist internal energy
+    real(RP) :: QSUM1 (KA,IA,JA) ! QV+QC+QI
+    real(RP) :: TEMP1 (KA,IA,JA)
 
-    real(RP) :: qsat      ! saturated water vapor
-    real(RP) :: CVtot
-
-    integer :: conversion_count
+    real(RP) :: RHOE1 (KA,IA,JA)
+    real(RP) :: QTRC1 (KA,IA,JA,QA)
+    real(RP) :: rdt
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('MP_saturation_adjustment')
 
-    conversion_count = 0
+    rdt = 1.D0 / dt
+
+    do iq = QQS, QQE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC1(k,i,j,iq) = QTRC0(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    call THERMODYN_temp_pres_E( TEMP0(:,:,:),  & ! [OUT]
+                                PRES0(:,:,:),  & ! [OUT]
+                                DENS0(:,:,:),  & ! [IN]
+                                RHOE0(:,:,:),  & ! [IN]
+                                QTRC0(:,:,:,:) ) ! [IN]
+
+    ! qdry dont change through the process
+    call THERMODYN_qd( QDRY0(:,:,:),   & ! [OUT]
+                       QTRC0(:,:,:,:)  ) ! [IN]
+
+    call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                       QTRC0(:,:,:,:), & ! [IN]
+                       QDRY0(:,:,:)    ) ! [IN]
+
+    if ( I_QI <= 0 ) then ! warm rain
+
+       ! Turn QC into QV with consistency of moist internal energy
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
+                        + QTRC1(k,i,j,I_QV) * LHV00
+
+          QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
+                       + QTRC1(k,i,j,I_QC)
+
+          QTRC1(k,i,j,I_QV) = QSUM1(k,i,j)
+          QTRC1(k,i,j,I_QC) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
+       call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                          QTRC1(:,:,:,:), & ! [IN]
+                          QDRY0(:,:,:)    ) ! [IN]
+
+       ! new temperature (after QC evaporation)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call moist_conversion_liq( TEMP1 (:,:,:),   & ! [INOUT]
+                                  QTRC1 (:,:,:,:), & ! [INOUT]
+                                  DENS0 (:,:,:),   & ! [IN]
+                                  QSUM1 (:,:,:),   & ! [IN]
+                                  QDRY0 (:,:,:),   & ! [IN]
+                                  Emoist(:,:,:)    ) ! [IN]
+
+    else ! cold rain
+
+       ! Turn QC & QI into QV with consistency of moist internal energy
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
+                        + QTRC1(k,i,j,I_QV) * LHV00   &
+                        - QTRC1(k,i,j,I_QI) * LHF00
+
+          QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
+                       + QTRC1(k,i,j,I_QC) &
+                       + QTRC1(k,i,j,I_QI)
+
+          QTRC1(k,i,j,I_QV) = QSUM1(k,i,j)
+          QTRC1(k,i,j,I_QC) = 0.0_RP
+          QTRC1(k,i,j,I_QI) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
+       call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                          QTRC1(:,:,:,:), & ! [IN]
+                          QDRY0(:,:,:)    ) ! [IN]
+
+       ! new temperature (after QC & QI evaporation)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call moist_conversion_all( TEMP1 (:,:,:),   & ! [INOUT]
+                                  QTRC1 (:,:,:,:), & ! [INOUT]
+                                  DENS0 (:,:,:),   & ! [IN]
+                                  QSUM1 (:,:,:),   & ! [IN]
+                                  QDRY0 (:,:,:),   & ! [IN]
+                                  Emoist(:,:,:)    ) ! [IN]
+
+    endif
+
+    call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                       QTRC1(:,:,:,:), & ! [IN]
+                       QDRY0(:,:,:)    ) ! [IN]
+
+    ! mass & energy update
+    do iq = QQS, QQE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + ( QTRC1(k,i,j,iq) - QTRC0(k,i,j,iq) ) * rdt
+
+       QTRC0(k,i,j,iq) = QTRC1(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       RHOE1(k,i,j) = DENS0(k,i,j) * TEMP1(k,i,j) * CVtot(k,i,j)
 
-       ! store to 1D work
-       dens = DENS0(k,i,j)
-       rhot = RHOT0(k,i,j)
-       do iq = QQS, QQE
-          q(iq) = QTRC0(k,i,j,iq)
-       enddo
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) + ( RHOE1(k,i,j) - RHOE0(k,i,j) ) * rdt
 
-       call THERMODYN_temp_pres( temp, & ! [OUT]
-                                 pres, & ! [OUT]
-                                 dens, & ! [IN]
-                                 rhot, & ! [IN]
-                                 q(:)  ) ! [IN]
-
-
-       !##### Start Main #####
-
-       ! Turn QC & QI into QV with consistency of moist internal energy
-       call THERMODYN_qd( qdry,  q(:) ) ! qdry dont change through the process
-       call THERMODYN_cv( CVtot, q(:), qdry )
-
-       if ( I_QI <= 0 ) then ! warm rain
-
-          ein_moist = temp * CVtot + q(I_QV) * LHV00
-          qsum    = q(I_QV) + q(I_QC)
-          q(I_QV) = qsum
-          q(I_QC) = 0.0_RP
-
-          call THERMODYN_cv( CVtot, q(:), qdry )
-
-          ! new temperature (after QC evaporation)
-          temp = ( ein_moist - qsum * LHV00 ) / CVtot
-
-          call SATURATION_dens2qsat_liq( qsat, temp, dens )
-
-          ! saturation adjustment
-          if ( qsum > qsat ) then
-             conversion_count = conversion_count + 1
-
-             call moist_conversion_liq( temp,     & ! [INOUT]
-                                        q(:),     & ! [INOUT]
-                                        dens,     & ! [IN]
-                                        qsum,     & ! [IN]
-                                        qdry,     & ! [IN]
-                                        ein_moist ) ! [IN]
-          endif
-
-       else ! cold rain
-
-          ein_moist = temp * CVtot + q(I_QV) * LHV00 - q(I_QI) * LHF00
-          qsum    = q(I_QV) + q(I_QC) + q(I_QI)
-          q(I_QV) = qsum
-          q(I_QC) = 0.0_RP
-          q(I_QI) = 0.0_RP
-
-          call THERMODYN_cv( CVtot, q(:), qdry )
-
-          ! new temperature (after QC & QI evaporation)
-          temp = ( ein_moist - qsum * LHV00 ) / CVtot
-
-          call SATURATION_dens2qsat_all( qsat, temp, dens )
-
-          ! saturation adjustment
-          if ( qsum > qsat ) then
-             conversion_count = conversion_count + 1
-
-             call moist_conversion_all( temp,     & ! [INOUT]
-                                        q(:),     & ! [INOUT]
-                                        dens,     & ! [IN]
-                                        qsum,     & ! [IN]
-                                        qdry,     & ! [IN]
-                                        ein_moist ) ! [IN]
-          endif
-
-       endif
-
-       call THERMODYN_cv( CVtot, q(:), qdry )
-
-       rhoe = dens * temp * CVtot
-
-       !##### End Main #####
-
-
-       call THERMODYN_rhot( rhot, & ! [OUT]
-                            rhoe, & ! [IN]
-                            q(:)  ) ! [IN]
-
-       RHOT0(k,i,j) = rhot
-       do iq = QQS, QQE
-          QTRC0(k,i,j,iq) = q(iq)
-       enddo
-
+       RHOE0(k,i,j) = RHOE1(k,i,j)
     enddo
     enddo
     enddo
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of conversion point = ', conversion_count
 
     call TIME_rapend  ('MP_saturation_adjustment')
 
@@ -276,12 +315,12 @@ contains
   !> Iterative moist conversion for warm rain
   !-----------------------------------------------------------------------------
   subroutine moist_conversion_liq( &
-       temp,      &
-       q,         &
-       dens,      &
-       qsum,      &
-       qdry,      &
-       ein_moist0 )
+       TEMP1, &
+       QTRC1, &
+       DENS0, &
+       QSUM1, &
+       QDRY0, &
+       Emoist )
     use mod_const, only: &
        LHV00  => CONST_LH00
     use mod_process, only: &
@@ -291,71 +330,120 @@ contains
        CVw => AQ_CV
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_alpha         => ATMOS_SATURATION_alpha,         &
-       SATURATION_dalphadT      => ATMOS_SATURATION_dalphadT,      &
        CVovR_liq, &
        LovR_liq
     implicit none
 
-    real(RP), intent(inout) :: temp
-    real(RP), intent(inout) :: q(QA)
-    real(RP), intent(in)    :: dens
-    real(RP), intent(in)    :: qsum
-    real(RP), intent(in)    :: qdry
-    real(RP), intent(in)    :: ein_moist0
+    real(RP), intent(inout) :: TEMP1 (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC1 (KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS0 (KA,IA,JA)
+    real(RP), intent(in)    :: QSUM1 (KA,IA,JA)
+    real(RP), intent(in)    :: QDRY0 (KA,IA,JA)
+    real(RP), intent(in)    :: Emoist(KA,IA,JA)
+
+    real(RP) :: QSAT(KA,IA,JA) ! saturated water vapor
 
     ! working
-    real(RP) :: dtemp
-
-    real(RP) :: qsatl
+    real(RP) :: temp
+    real(RP) :: q(QA)
     real(RP) :: CVtot
-    real(RP) :: ein_moist ! moist internal energy
+    real(RP) :: qsatl_new
+    real(RP) :: Emoist_new ! moist internal energy
 
     ! d(X)/dT
     real(RP) :: dqsatl_dT
     real(RP) :: dqc_dT
     real(RP) :: dCVtot_dT
-    real(RP) :: dein_moist_dT
+    real(RP) :: dEmoist_dT
+    real(RP) :: dtemp
 
-    integer  :: itelim = 10
-    real(RP) :: dtemp_criteria = 1.E-6_RP
+    integer  :: ijk_sat
+    integer  :: index_sat(KA*IA*JA,3) ! list vector
 
-    integer :: ite
+    integer,  parameter :: itelim = 30
+    real(RP), parameter :: dtemp_criteria = 1.E-6_RP
+
+    logical :: converged
+    integer :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
 
-    do ite = 1, itelim
+    call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
+                                   TEMP1(:,:,:), & ! [IN]
+                                   DENS0(:,:,:)  ) ! [IN]
 
-       call SATURATION_dens2qsat_liq( qsatl, temp, dens )
-
-       ! Separation
-       q(I_QV) = qsatl
-       q(I_QC) = qsum-qsatl
-
-       call THERMODYN_cv( CVtot, q(:), qdry )
-
-       ein_moist = temp * CVtot + qsatl * LHV00
-
-       ! dX/dT
-       dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl
-
-       dqc_dT = - dqsatl_dT
-
-       dCVtot_dT = dqsatl_dT * CVw(I_QV) &
-                 + dqc_dT    * CVw(I_QC)
-
-       dein_moist_dT = temp * dCVtot_dT + CVtot + dqsatl_dT * LHV00
-
-       dtemp = ( ein_moist - ein_moist0 ) / dein_moist_dT
-       temp  = temp - dtemp
-
-       if ( abs(dtemp) < dtemp_criteria ) exit
-
+    ijk_sat = 0
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
+          ijk_sat = ijk_sat + 1
+          index_sat(ijk_sat,1) = k
+          index_sat(ijk_sat,2) = i
+          index_sat(ijk_sat,3) = j
+       endif
+    enddo
+    enddo
     enddo
 
-    if ( ite > itelim ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp
-       call PRC_MPIstop
-    endif
+    do ijk = 1, ijk_sat
+       k = index_sat(ijk,1)
+       i = index_sat(ijk,2)
+       j = index_sat(ijk,3)
+
+       ! store to work
+       temp = TEMP1(k,i,j)
+       do iq = QQS, QQE
+          q(iq) = QTRC1(k,i,j,iq)
+       enddo
+
+       converged = .false.
+       do ite = 1, itelim
+
+          call SATURATION_dens2qsat_liq( qsatl_new,   & ! [OUT]
+                                         temp,        & ! [IN]
+                                         DENS0(k,i,j) ) ! [IN]
+
+          ! Separation
+          q(I_QV) = qsatl_new
+          q(I_QC) = QSUM1(k,i,j) - qsatl_new
+
+          call THERMODYN_cv( CVtot,       & ! [OUT]
+                             q(:),        & ! [IN]
+                             QDRY0(k,i,j) ) ! [IN]
+
+          Emoist_new = temp * CVtot + qsatl_new * LHV00
+
+          ! dX/dT
+          dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
+
+          dqc_dT = - dqsatl_dT
+
+          dCVtot_dT = dqsatl_dT * CVw(I_QV) &
+                    + dqc_dT    * CVw(I_QC)
+
+          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV00
+
+          dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
+          temp  = temp - dtemp
+
+          if ( abs(dtemp) < dtemp_criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          if( temp*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp,k,i,j,ite
+          call PRC_MPIstop
+       endif
+
+       TEMP1(k,i,j) = temp
+       do iq = QQS, QQE
+          QTRC1(k,i,j,iq) = q(iq)
+       enddo
+    enddo
 
     return
   end subroutine moist_conversion_liq
@@ -364,12 +452,12 @@ contains
   !> Iterative moist conversion (liquid/ice mixture)
   !-----------------------------------------------------------------------------
   subroutine moist_conversion_all( &
-       temp,      &
-       q,         &
-       dens,      &
-       qsum,      &
-       qdry,      &
-       ein_moist0 )
+       TEMP1, &
+       QTRC1, &
+       DENS0, &
+       QSUM1, &
+       QDRY0, &
+       Emoist )
     use mod_const, only: &
        LHV00  => CONST_LH00,  &
        LHF00  => CONST_LHF00
@@ -390,80 +478,130 @@ contains
        LovR_ice
     implicit none
 
-    real(RP), intent(inout) :: temp
-    real(RP), intent(inout) :: q(QA)
-    real(RP), intent(in)    :: dens
-    real(RP), intent(in)    :: qsum
-    real(RP), intent(in)    :: qdry
-    real(RP), intent(in)    :: ein_moist0
+    real(RP), intent(inout) :: TEMP1 (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC1 (KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS0 (KA,IA,JA)
+    real(RP), intent(in)    :: QSUM1 (KA,IA,JA)
+    real(RP), intent(in)    :: QDRY0 (KA,IA,JA)
+    real(RP), intent(in)    :: Emoist(KA,IA,JA)
 
-    real(RP) :: alpha
-    real(RP) :: qsat, qsatl, qsati
+    real(RP) :: QSAT(KA,IA,JA) ! saturated water vapor
+
+    ! working
+    real(RP) :: temp
+    real(RP) :: q(QA)
     real(RP) :: CVtot
-    real(RP) :: ein_moist ! moist internal energy
+    real(RP) :: alpha
+    real(RP) :: qsat_new, qsatl_new, qsati_new
+    real(RP) :: Emoist_new ! moist internal energy
 
-    ! d(X)/d(T)
+    ! d(X)/dT
     real(RP) :: dalpha_dT
     real(RP) :: dqsat_dT, dqsatl_dT, dqsati_dT
-    real(RP) :: dCVtot_dT
-    real(RP) :: dein_moist_dT
-
     real(RP) :: dqc_dT, dqi_dT
+    real(RP) :: dCVtot_dT
+    real(RP) :: dEmoist_dT
     real(RP) :: dtemp
 
-    integer  :: itelim = 10
-    real(RP) :: dtemp_criteria = 1.E-6_RP
+    integer  :: ijk_sat
+    integer  :: index_sat(KA*IA*JA,3) ! list vector
 
-    integer :: ite
+    integer,  parameter :: itelim = 30
+    real(RP), parameter :: dtemp_criteria = 1.E-6_RP
+
+    logical :: converged
+    integer :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
 
-    do ite = 1, itelim
+    call SATURATION_dens2qsat_all( QSAT (:,:,:), & ! [OUT]
+                                   TEMP1(:,:,:), & ! [IN]
+                                   DENS0(:,:,:)  ) ! [IN]
 
-       ! liquid/ice separation factor
-       call SATURATION_alpha( alpha, temp )
-       ! Saturation
-       call SATURATION_dens2qsat_all( qsat,  temp, dens )
-       call SATURATION_dens2qsat_liq( qsatl, temp, dens )
-       call SATURATION_dens2qsat_ice( qsati, temp, dens )
-
-       ! Separation
-       q(I_QV) = qsat
-       q(I_QC) = ( qsum-qsat ) * (        alpha )
-       q(I_QI) = ( qsum-qsat ) * ( 1.0_RP-alpha )
-
-       call THERMODYN_cv( CVtot, q(:), qdry )
-
-       ein_moist = temp * CVtot + qsat * LHV00 - q(I_QI) * LHF00
-
-       ! dX/dT
-       call SATURATION_dalphadT( dalpha_dT, temp )
-
-       dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl
-       dqsati_dT = ( LovR_ice / ( temp*temp ) + CVovR_ice / temp ) * qsati
-
-       dqsat_dT  = qsatl * dalpha_dT + dqsatl_dT * (        alpha ) &
-                 - qsati * dalpha_dT + dqsati_dT * ( 1.0_RP-alpha )
-
-       dqc_dT =  ( qsum-qsat ) * dalpha_dT - dqsat_dT * (        alpha )
-       dqi_dT = -( qsum-qsat ) * dalpha_dT - dqsat_dT * ( 1.0_RP-alpha )
-
-       dCVtot_dT = dqsat_dT * CVw(I_QV) &
-                 + dqc_dT   * CVw(I_QC) &
-                 + dqi_dT   * CVw(I_QI)
-
-       dein_moist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV00 - dqi_dT * LHF00
-
-       dtemp = ( ein_moist - ein_moist0 ) / dein_moist_dT
-       temp  = temp - dtemp
-
-       if ( abs(dtemp) < dtemp_criteria ) exit
-
+    ijk_sat = 0
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
+          ijk_sat = ijk_sat + 1
+          index_sat(ijk_sat,1) = k
+          index_sat(ijk_sat,2) = i
+          index_sat(ijk_sat,3) = j
+       endif
+    enddo
+    enddo
     enddo
 
-    if ( ite > itelim ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp
-       call PRC_MPIstop
-    endif
+    do ijk = 1, ijk_sat
+       k = index_sat(ijk,1)
+       i = index_sat(ijk,2)
+       j = index_sat(ijk,3)
+
+       ! store to work
+       temp = TEMP1(k,i,j)
+       do iq = QQS, QQE
+          q(iq) = QTRC1(k,i,j,iq)
+       enddo
+
+       converged = .false.
+       do ite = 1, itelim
+
+          ! liquid/ice separation factor
+          call SATURATION_alpha( alpha, temp )
+          ! Saturation
+          call SATURATION_dens2qsat_all( qsat_new,  temp, DENS0(k,i,j) )
+          call SATURATION_dens2qsat_liq( qsatl_new, temp, DENS0(k,i,j) )
+          call SATURATION_dens2qsat_ice( qsati_new, temp, DENS0(k,i,j) )
+
+          ! Separation
+          q(I_QV) = qsat_new
+          q(I_QC) = ( QSUM1(k,i,j)-qsat_new ) * (        alpha )
+          q(I_QI) = ( QSUM1(k,i,j)-qsat_new ) * ( 1.0_RP-alpha )
+
+          call THERMODYN_cv( CVtot,       & ! [OUT]
+                             q(:),        & ! [IN]
+                             QDRY0(k,i,j) ) ! [IN]
+
+          Emoist_new = temp * CVtot + qsat_new * LHV00 - q(I_QI) * LHF00
+
+          ! dX/dT
+          call SATURATION_dalphadT( dalpha_dT, temp )
+
+          dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
+          dqsati_dT = ( LovR_ice / ( temp*temp ) + CVovR_ice / temp ) * qsati_new
+
+          dqsat_dT  = qsatl_new * dalpha_dT + dqsatl_dT * (        alpha ) &
+                    - qsati_new * dalpha_dT + dqsati_dT * ( 1.0_RP-alpha )
+
+          dqc_dT =  ( QSUM1(k,i,j)-qsat_new ) * dalpha_dT - dqsat_dT * (        alpha )
+          dqi_dT = -( QSUM1(k,i,j)-qsat_new ) * dalpha_dT - dqsat_dT * ( 1.0_RP-alpha )
+
+          dCVtot_dT = dqsat_dT * CVw(I_QV) &
+                    + dqc_dT   * CVw(I_QC) &
+                    + dqi_dT   * CVw(I_QI)
+
+          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV00 - dqi_dT * LHF00
+
+          dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
+          temp  = temp - dtemp
+
+          if ( abs(dtemp) < dtemp_criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          if( temp*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
+          call PRC_MPIstop
+       endif
+
+       TEMP1(k,i,j) = temp
+       do iq = QQS, QQE
+          QTRC1(k,i,j,iq) = q(iq)
+       enddo
+    enddo
 
     return
   end subroutine moist_conversion_all
