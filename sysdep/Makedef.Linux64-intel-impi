@@ -4,15 +4,17 @@
 
 ##### for computation
 
-FFLAGS_FAST = -fpp3 -O3 -xHost -ip          \
-              -ftz -fp-model precise -pc 80 \
-              -mcmodel=medium -shared-intel \
+FFLAGS_FAST = -fpp3 -O3 -xHost -ip                 \
+              -assume byterecl -convert big_endian \
+              -ftz -fp-model precise -pc 80        \
+              -mcmodel=medium -shared-intel        \
               -heap-arrays -fno-alias
 
-FFLAGS_DEBUG = -fpp3 -O0 -m64                     \
-               -fp-model precise -pc 80           \
-               -check all -warn all -g -traceback \
-               -mcmodel=medium -shared-intel      \
+FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
+               -assume byterecl -convert big_endian \
+               -fp-model precise -pc 80             \
+               -check all -warn all -g -traceback   \
+               -mcmodel=medium -shared-intel        \
                -heap-arrays -fno-alias
 #               -DDEBUG
 
@@ -51,6 +53,7 @@ NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 
 ##### for frontend
+INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib

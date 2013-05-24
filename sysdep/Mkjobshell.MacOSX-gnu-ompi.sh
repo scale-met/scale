@@ -20,7 +20,6 @@ cat << EOF1 > ./run.sh
 # ------ FOR MacOSX & gfortran4.6 & OpenMPI1.6 -----
 #
 ################################################################################
-export OMP_NUM_THREADS=1
 export FORT_FMT_RECL=400
 export GFORTRAN_UNBUFFERED_ALL=Y
 

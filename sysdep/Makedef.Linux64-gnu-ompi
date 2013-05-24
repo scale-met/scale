@@ -4,7 +4,7 @@
 
 ##### for computation
 
-FFLAGS_FAST = -O3 -m64 $(OPT)                                              \
+FFLAGS_FAST = -O3 -m64                                                     \
               -std=f2003 -pedantic-errors -fimplicit-none -fmodule-private \
               -mcmodel=medium -fconvert=big-endian -frecord-marker=4
 
@@ -39,6 +39,7 @@ NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 
 ##### for frontend
+INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib

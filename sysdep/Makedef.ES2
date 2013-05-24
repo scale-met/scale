@@ -45,6 +45,7 @@ NETCDF_INCLUDE ?= -I/SX/usr/include
 NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
 
 ##### for frontend
+INSTALL = install
 AR      = sxar
 ARFLAGS = r
 RANLIB  = touch

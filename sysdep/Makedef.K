@@ -46,6 +46,7 @@ NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
 NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 
 ##### for frontend
+INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
