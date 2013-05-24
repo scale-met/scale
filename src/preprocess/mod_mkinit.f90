@@ -1552,23 +1552,23 @@ contains
   subroutine MKINIT_squallline
     implicit none
 
-    real(RP) :: SHIFT_X = 12.0_RP
-    real(RP) :: SHIFT_Y = -2.0_RP
-    real(RP) :: RANDOM_THETA = 0.01_RP
-
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
 
+    real(RP) :: RANDOM_THETA =  0.01_RP
+    real(RP) :: OFFSET_velx  = 12.0_RP
+    real(RP) :: OFFSET_vely  = -2.0_RP
+
     NAMELIST / PARAM_MKINIT_SQUALLLINE / &
-       SHIFT_X, &
-       SHIFT_Y, &
-       RANDOM_THETA, &
-       ENV_IN_SOUNDING_file
+       ENV_IN_SOUNDING_file, &
+       RANDOM_THETA,         &
+       OFFSET_velx,          &
+       OFFSET_vely
 
     integer, parameter :: EXP_klim = 100
     integer            :: EXP_kmax
 
     real(RP) :: SFC_THETA          ! surface potential temperature [K]
-    real(RP) :: SFC_PRES           ! surface pressure [Pa]
+    real(RP) :: SFC_PRES           ! surface pressure [hPa]
     real(RP) :: SFC_QV             ! surface watervapor [g/kg]
 
     real(RP) :: EXP_z   (EXP_klim) ! height      [m]
@@ -1626,57 +1626,49 @@ contains
        EXP_kmax = k - 1
     close(fid)
 
-    EXP_z   (1) = 0.0_RP
-    EXP_pott(1) = SFC_THETA
-    EXP_qv  (1) = SFC_QV
-    EXP_u   (1) = EXP_u(2)
-    EXP_v   (1) = EXP_v(2)
-    do k = 1, EXP_kmax
-       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ![g/kg] -> [kg/kg]
+    ! Boundary
+    EXP_z   (1)          = 0.0_RP
+    EXP_pott(1)          = SFC_THETA
+    EXP_qv  (1)          = SFC_QV
+    EXP_u   (1)          = EXP_u   (2)
+    EXP_v   (1)          = EXP_v   (2)
+    EXP_z   (EXP_kmax+1) = 100.E3_RP
+    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
+    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
+    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
+    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
+
+    do k = 1, EXP_kmax+1
+       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
     enddo
 
-    pres_sfc(1,1,1) = SFC_PRES
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
     pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = SFC_QV
+    qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
     qc_sfc  (1,1,1) = 0.0_RP
 
     !--- linear interpolate to model grid
     do k = KS, KE
        qc(k,1,1) = 0.0_RP
 
-       do kref = 2, EXP_kmax
+       do kref = 2, EXP_kmax+1
           if (       CZ(k) >  EXP_z(kref-1) &
-               .AND. CZ(k) <= EXP_z(kref)   ) then
+               .AND. CZ(k) <= EXP_z(kref  ) ) then
 
              fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
              fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
              pott(k,1,1) = EXP_pott(kref-1) * fact1 &
-                         + EXP_pott(kref)   * fact2
-             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
-                         + EXP_u   (kref)   * fact2
-             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
-                         + EXP_v   (kref)   * fact2
+                         + EXP_pott(kref  ) * fact2
              qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
-                         + EXP_qv  (kref)   * fact2
-             exit
+                         + EXP_qv  (kref  ) * fact2
+             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
+                         + EXP_u   (kref  ) * fact2
+             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
+                         + EXP_v   (kref  ) * fact2
           endif
        enddo
-       if ( CZ(k) > EXP_z(EXP_kmax) ) then
-          kref = EXP_kmax
-          fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
-          fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-
-          pott(k,1,1) = EXP_pott(kref-1) * fact1 &
-                      + EXP_pott(kref)   * fact2
-          velx(k,1,1) = EXP_u   (kref-1) * fact1 &
-                      + EXP_u   (kref)   * fact2
-          vely(k,1,1) = EXP_v   (kref-1) * fact1 &
-                      + EXP_v   (kref)   * fact2
-          qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
-                      + EXP_qv  (kref)   * fact2
-       end if
-
     enddo
 
     ! make density & pressure profile in moist condition
@@ -1693,46 +1685,50 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     call RANDOM_get(rndm) ! make random
-    if ( .not. flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
-       MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
+       MOMX(k,i,j) = ( velx(k,1,1) - OFFSET_velx ) * DENS(k,1,1)
+       MOMY(k,i,j) = ( vely(k,1,1) - OFFSET_vely ) * DENS(k,1,1)
        RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
-       do iq = 2, QA
+    enddo
+    enddo
+    enddo
+
+    if ( flg_bin ) then
+       do iq = 2,  QQA
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
           QTRC(k,i,j,iq) = 0.0_RP
        enddo
-
-     enddo
-     enddo
-     enddo
-    else if ( flg_bin ) then
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
-       MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = ( velx(k,1,1) - SHIFT_X ) * DENS(k,1,1)
-       MOMY(k,i,j) = ( vely(k,1,1) - SHIFT_Y ) * DENS(k,1,1)
-       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
-
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
-       do iq = 2, QQA
-          QTRC(k,i,j,iq) = 0.0_RP
        enddo
-       !--- for aerosol
+       enddo
+       enddo
+
        do iq = QQA+1, QA
-         QTRC( k,i,j,iq ) = gan( iq-QQA )/DENS(k,i,j)
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
        enddo
-
-     enddo
-     enddo
-     enddo
+       enddo
+       enddo
+       enddo
+    else
+       do iq = 2,  QA
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+       enddo
+       enddo
+       enddo
     endif
 
     return
