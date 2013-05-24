@@ -799,7 +799,7 @@ contains
 
        Glv  = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
        Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / ( LHF0/(Da*max(temc,0.0_RP)) )
+       Gil  = 1.0_RP / LHF0 * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
@@ -875,9 +875,11 @@ contains
        w(I_Pgaut,ijk) = min( w(I_Pgaut,ijk), w(I_dqs_dt,ijk) )
        w(I_Pracs,ijk) = min( w(I_Pracs,ijk), w(I_dqs_dt,ijk) )
        w(I_Pgacs,ijk) = min( w(I_Pgacs,ijk), w(I_dqs_dt,ijk) )
+       w(I_Psmlt,ijk) = max( w(I_Psmlt,ijk), 0.0_RP          )
        w(I_Psmlt,ijk) = min( w(I_Psmlt,ijk), w(I_dqs_dt,ijk) )
        w(I_Pssub,ijk) = min( w(I_Pssub,ijk), w(I_dqs_dt,ijk) )
 
+       w(I_Pgmlt,ijk) = max( w(I_Pgmlt,ijk), 0.0_RP          )
        w(I_Pgmlt,ijk) = min( w(I_Pgmlt,ijk), w(I_dqg_dt,ijk) )
        w(I_Pgsub,ijk) = min( w(I_Pgsub,ijk), w(I_dqg_dt,ijk) )
 

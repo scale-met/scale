@@ -1380,7 +1380,7 @@ contains
     integer            :: EXP_kmax
 
     real(RP) :: SFC_THETA          ! surface potential temperature [K]
-    real(RP) :: SFC_PRES           ! surface pressure [Pa]
+    real(RP) :: SFC_PRES           ! surface pressure [hPa]
     real(RP) :: SFC_QV             ! surface watervapor [g/kg]
 
     real(RP) :: EXP_z   (EXP_klim) ! height      [m]
@@ -1455,7 +1455,7 @@ contains
     enddo
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
+    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
     pott_sfc(1,1,1) = SFC_THETA
     qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
     qc_sfc  (1,1,1) = 0.0_RP
