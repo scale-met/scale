@@ -1952,9 +1952,9 @@ contains
        vol  => GEOMETRICS_vol
     implicit none
 
-    real(RP),         intent(out) :: allstatval    !< volume/area-weighted total
-    real(RP),         intent(in)  :: var(KA,IA,JA) !< 3D value
-    character(len=*), intent(in)  :: varname       !< name of item
+    real(RP),         intent(out) :: allstatval !< volume/area-weighted total
+    real(RP),         intent(in)  :: var(:,:,:) !< 3D value
+    character(len=*), intent(in)  :: varname    !< name of item
 
     real(RP) :: statval
     integer  :: ksize
