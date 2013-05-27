@@ -53,6 +53,9 @@ cat << EOF1 > ./run.sh
 #PJM --rsc-list "elapse=01:00:00"
 #PJM -j
 #PJM -s
+#
+. /work/system/Env_base
+#
 export PARALLEL=8
 export OMP_NUM_THREADS=8
 
