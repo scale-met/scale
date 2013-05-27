@@ -212,6 +212,8 @@ contains
 
     call TIME_rapstart('FILE O NetCDF')
 
+    if ( itemid < 0 ) return
+
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
     enddo
@@ -239,6 +241,8 @@ contains
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('FILE O NetCDF')
+
+    if ( itemid < 0 ) return
 
     do j = 1, JMAX
     do i = 1, IMAX
@@ -272,6 +276,8 @@ contains
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('FILE O NetCDF')
+
+    if ( itemid < 0 ) return
 
     s = shape(var)
     if ( s(1) == 1 ) then
