@@ -1,45 +1,35 @@
-TOPDIR = ../../../..
-BUILD_DIR := $(shell pwd)/.libs
+################################################################################
+#
+# Makefile for each test program
+#
+################################################################################
 
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+TOPDIR      = ../../../..
+BUILD_DIR  := $(shell pwd)/.libs
+INDEX_DIR  := $(shell pwd)
+SYSDEP_DIR := $(shell pwd)/$(TOPDIR)/sysdep
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
-VPATH = $(BUILD_DIR)
-
 # for build
-index     = 500m40x40x40
-tracer    = kessler
-radiation = mstrnX
-sfcflx    = const
-precision = real8
-postfix   = 
+index      = 500m40x40x40
+precision  = real8
+tracer     = kessler
+sfcflx     = const
+turbulence = dummy
+radiation  = mstrnX
+postfix    = 
 
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
+TPROC     = 6
 
-all: makedir build
 
-makedir:
-	mkdir -p $(BUILD_DIR)
 
-build: makedir
-	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
+all: build
 
-jobshell: build
-	sh $(SCRDIR)/Mkjobshell.sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) 6
+# build, makedir, run, jobshell, allclean, clean is inside of common Makefile
+include $(TESTDIR)/Makefile.common
 
-run: jobshell
-	$(JOBSUB) run.sh
-
-check:
-# to be add program to check result
-
-.PHONY: clean distclean
-
-allclean:
-	$(MAKE) -C $(SRCDIR) allclean
-clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~
-distclean:
-	rm -f *.nc LOG.pe*
