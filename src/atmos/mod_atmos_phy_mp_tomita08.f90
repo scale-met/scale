@@ -804,7 +804,7 @@ contains
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
 
-       tmp = 2.0_RP * PI * Rdens * N0r * ( 1.0_RP-min(Sliq,1.0_RP) ) * Glv * ventr
+       w(I_Prevp,ijk) = 2.0_RP * PI * Rdens * N0r * ( 1.0_RP-min(Sliq,1.0_RP) ) * Glv * ventr
 
        ! [Psdep,Pssub] deposition/sublimation rate for snow
        vents = f1s * GAM_2 * RLMDs_2 + f2s * sqrt( Cs * rho_fact / NU * RLMDs_5ds ) * GAM_5ds_h
