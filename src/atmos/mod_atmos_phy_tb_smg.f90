@@ -1803,7 +1803,7 @@ contains
           else if ( Ri(k,i,j) < RiC ) then ! weakly stable
              Pr(k,i,j) = PrN / ( 1.0_RP - PrNovRiC * Ri(k,i,j) )
           else ! strongly stable
-             Pr(k,i,j) = 0.0_RP
+             Pr(k,i,j) = 1.0_RP
           endif
        enddo
        enddo
