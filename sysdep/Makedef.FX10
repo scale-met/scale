@@ -1,36 +1,47 @@
-# ------ FOR K -----
+#
+# ------ FOR OAKLEAF-FX -----
+#
+
+##### for computation
+
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
+               -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+               -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
+
+FFLAGS_DEBUG = -O0 \
+               -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+               -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
+
+#               -DDEBUG
+
+# Performance monitor
+# disabled
+PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_
+# fipp
+#PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
+# fapp
+#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
 
 FC     = mpifrtpx
-# new setting 20120214
-FFLAGS = -Kfast,parallel,auto,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-         -Ntl_trt -Qt -V -Cpp -Ksimd \
-         -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx \
-         -Kprefetch_cache_level=all,prefetch_iteration_L2=50
+FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT)
+#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT)
 
-FFLAGS_DYN = -Kfast,parallel,auto,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-             -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
-             -Ntl_trt -Qt -V -Cpp -Ksimd=2
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll -Ksimd=2
 
-# old setting 20120104
-#FFLAGS = -Kvisimpact,ocl,ilfunc,preex,array_private,prefetch_cache_level=all,auto,mfunc=2,noalias=s,instance=8,prefetch_iteration_L2=50 \
-#         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
-#         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
+MODDIROPT ?= -M
 
-CC     = mpifccpx
-CFLAGS = -Kfast,parallel,array_private,ilfunc,ocl,mfunc,preex,restp=all -Ntl_trt -Qt -V -Ksimd
+
+CC     = fccpx
+CFLAGS = -Kfast,parallel,array_private,ilfunc,ocl,mfunc,preex,restp=all -Qt -Ksimd $(PERF_MONIT)
 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
-# for frontend
-FRONT_CC     = fccpx
-FRONT_CFLAGS = -Kfast,parallel
+NETCDF_LIBS    ?= -L/home/c18001/lib -lnetcdf -L/home/c18001/lib -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_INCLUDE ?= -I//home/c18001/include
 
-FRONT_F90    = frtpx
-FRONT_FFLAGS = -Kfast,parallel
-
-FRONT_LD     = $(FRONT_F90)
-FRONT_LFLAGS = $(FRONT_FFLAGS)
-
-AR     = ar r
-RANLIB = ranlib
+##### for frontend
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = pjsub

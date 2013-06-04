@@ -9,8 +9,13 @@ endif
 SRCDIR = $(TOPDIR)/src
 INCDIR = $(SRCDIR)/include
 
+GTOOLDIR   = $(TOPDIR)/gtool
+DCUTILSDIR = $(TOPDIR)/dc_utils
+
 RUNDIR = $(TOPDIR)/run
 SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
+
+TESTDIR = $(TOPDIR)/test
 
 SUFFIX = $(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix)
 
@@ -18,3 +23,9 @@ LIBNAME = libscale_$(SUFFIX).a
 
 BINNAME  = scale3_$(SUFFIX)
 INITNAME = scale3_init_$(SUFFIX)
+
+ifeq ($(RDMA),-D_USE_RDMA)
+mod_rdma := rdma.o
+else
+mod_rdma :=
+endif

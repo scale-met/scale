@@ -4,7 +4,7 @@
 !! @par Description
 !!          Grid module for plane cartesian coordinate
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)   [new]
@@ -20,22 +20,15 @@ module mod_grid
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FILECHR, &
      IO_FID_LOG, &
-     IO_L
+     IO_L,       &
+     IO_FILECHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public procedure
-  !
-  public :: GRID_allocate
-  public :: GRID_setup
-  public :: GRID_read
-  public :: GRID_write
-  public :: GRID_generate
-
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -45,63 +38,86 @@ module mod_grid
 
   !-----------------------------------------------------------------------------
   !
+  !++ Public procedure
+  !
+  public :: GRID_allocate
+  public :: GRID_setup
+  public :: GRID_generate
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public parameters & variables
   !
+  integer,  public, save :: ISG              !< start of the inner domain: x, global
+  integer,  public, save :: IEG              !< end   of the inner domain: x, global
+  integer,  public, save :: JSG              !< start of the inner domain: y, global
+  integer,  public, save :: JEG              !< end   of the inner domain: y, global
 
-  integer, public, save :: ISG, IEG ! start/end of inner domain: x, global
-  integer, public, save :: JSG, JEG ! start/end of inner domain: y, global
+  integer,  public, save :: GRID_IJS         !< start of the inner domain
+  integer,  public, save :: GRID_IJE         !< end   of the inner domain
+  integer,  public, save :: GRID_IJA         !< # of x*y
 
-  integer, public, save :: GRID_IJA           ! # of x*y
-  integer, public, save :: GRID_IJS, GRID_IJE ! start/end of inner domain
+  real(RP), public, save :: GRID_CZ(KA)      !< center coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_CX(IA)      !< center coordinate [m]: x, local
+  real(RP), public, save :: GRID_CY(JA)      !< center coordinate [m]: y, local
+  real(RP), public, save :: GRID_CDZ(KA)     !< z-length of control volume [m]
+  real(RP), public, save :: GRID_CDX(IA)     !< x-length of control volume [m]
+  real(RP), public, save :: GRID_CDY(JA)     !< y-length of control volume [m]
+  real(RP), public, save :: GRID_RCDZ(KA)    !< reciprocal of center-dz
+  real(RP), public, save :: GRID_RCDX(IA)    !< reciprocal of center-dx
+  real(RP), public, save :: GRID_RCDY(JA)    !< reciprocal of center-dy
 
-  real(RP), public, allocatable, save :: GRID_CZ(:)      ! center coordinate [m]: z, local=global
-  real(RP), public, allocatable, save :: GRID_CX(:)      ! center coordinate [m]: x, local
-  real(RP), public, allocatable, save :: GRID_CY(:)      ! center coordinate [m]: y, local
-  real(RP), public, allocatable, save :: GRID_CDZ(:)     ! z-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_CDX(:)     ! x-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_CDY(:)     ! y-length of control volume [m]
-  real(RP), public, allocatable, save :: GRID_RCDZ(:)    ! reciprocal of center-dz
-  real(RP), public, allocatable, save :: GRID_RCDX(:)    ! reciprocal of center-dx
-  real(RP), public, allocatable, save :: GRID_RCDY(:)    ! reciprocal of center-dy
+  real(RP), public, save :: GRID_FZ(0:KA)    !< face   coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_FX(0:IA)    !< face   coordinate [m]: x, local
+  real(RP), public, save :: GRID_FY(0:JA)    !< face   coordinate [m]: y, local
+  real(RP), public, save :: GRID_FDZ(KA-1)   !< z-length of grid(k)-to-grid(k-1) [m]
+  real(RP), public, save :: GRID_FDX(IA-1)   !< x-length of grid(i)-to-grid(i-1) [m]
+  real(RP), public, save :: GRID_FDY(JA-1)   !< y-length of grid(j)-to-grid(j-1) [m]
+  real(RP), public, save :: GRID_RFDZ(KA-1)  !< reciprocal of face-dz
+  real(RP), public, save :: GRID_RFDX(IA-1)  !< reciprocal of face-dx
+  real(RP), public, save :: GRID_RFDY(JA-1)  !< reciprocal of face-dy
 
-  real(RP), public, allocatable, save :: GRID_FZ(:)      ! face   coordinate [m]: z, local=global
-  real(RP), public, allocatable, save :: GRID_FX(:)      ! face   coordinate [m]: x, local
-  real(RP), public, allocatable, save :: GRID_FY(:)      ! face   coordinate [m]: y, local
-  real(RP), public, allocatable, save :: GRID_FDZ(:)     ! z-length of grid(k)-to-grid(k-1) [m]
-  real(RP), public, allocatable, save :: GRID_FDX(:)     ! x-length of grid(i)-to-grid(i-1) [m]
-  real(RP), public, allocatable, save :: GRID_FDY(:)     ! y-length of grid(j)-to-grid(j-1) [m]
-  real(RP), public, allocatable, save :: GRID_RFDZ(:)    ! reciprocal of face-dz
-  real(RP), public, allocatable, save :: GRID_RFDX(:)    ! reciprocal of face-dx
-  real(RP), public, allocatable, save :: GRID_RFDY(:)    ! reciprocal of face-dy
+  logical,  public, save :: GRID_CZ_mask(KA) !< main/buffer region mask: z
+  logical,  public, save :: GRID_CX_mask(IA) !< main/buffer region mask: x
+  logical,  public, save :: GRID_CY_mask(JA) !< main/buffer region mask: y
 
-  logical, public, allocatable, save :: GRID_CZ_mask(:) ! main/buffer region mask: z
-  logical, public, allocatable, save :: GRID_CX_mask(:) ! main/buffer region mask: x
-  logical, public, allocatable, save :: GRID_CY_mask(:) ! main/buffer region mask: y
+  real(RP), public, save :: GRID_CBFZ(KA)    !< center buffer factor [0-1]: z
+  real(RP), public, save :: GRID_CBFX(IA)    !< center buffer factor [0-1]: x
+  real(RP), public, save :: GRID_CBFY(JA)    !< center buffer factor [0-1]: y
+  real(RP), public, save :: GRID_FBFZ(KA)    !< face   buffer factor [0-1]: z
+  real(RP), public, save :: GRID_FBFX(IA)    !< face   buffer factor [0-1]: x
+  real(RP), public, save :: GRID_FBFY(JA)    !< face   buffer factor [0-1]: y
 
-  real(RP), public, allocatable, save :: GRID_CBFZ(:)    ! center buffer factor [0-1]: z
-  real(RP), public, allocatable, save :: GRID_CBFX(:)    ! center buffer factor [0-1]: x
-  real(RP), public, allocatable, save :: GRID_CBFY(:)    ! center buffer factor [0-1]: y
-  real(RP), public, allocatable, save :: GRID_FBFZ(:)    ! face   buffer factor [0-1]: z
-  real(RP), public, allocatable, save :: GRID_FBFX(:)    ! face   buffer factor [0-1]: x
-  real(RP), public, allocatable, save :: GRID_FBFY(:)    ! face   buffer factor [0-1]: y
+  real(RP), public, allocatable, save :: GRID_FXG(:)      !< face   coordinate [m]: x, global
+  real(RP), public, allocatable, save :: GRID_FYG(:)      !< face   coordinate [m]: y, global
+  real(RP), public, allocatable, save :: GRID_CXG(:)      !< center coordinate [m]: x, global
+  real(RP), public, allocatable, save :: GRID_CYG(:)      !< center coordinate [m]: y, global
+  real(RP), public, allocatable, save :: GRID_FBFXG(:)    !< face   buffer factor [0-1]: x, global
+  real(RP), public, allocatable, save :: GRID_FBFYG(:)    !< face   buffer factor [0-1]: y, global
+  real(RP), public, allocatable, save :: GRID_CBFXG(:)    !< center buffer factor [0-1]: x, global
+  real(RP), public, allocatable, save :: GRID_CBFYG(:)    !< center buffer factor [0-1]: y, global
+  logical,  public, allocatable, save :: GRID_CXG_mask(:) !< main/buffer region mask: x, global
+  logical,  public, allocatable, save :: GRID_CYG_mask(:) !< main/buffer region mask: y, global
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  public :: GRID_read
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   character(len=IO_FILECHR), private :: GRID_IN_BASENAME  = ''
   character(len=IO_FILECHR), private :: GRID_OUT_BASENAME = ''
+  real(RP)                 , private :: GRID_OFFSET_X = 0.0_RP
+  real(RP)                 , private :: GRID_OFFSET_Y = 0.0_RP
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup horizontal&vertical grid
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine GRID_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -111,13 +127,13 @@ contains
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y
-    use mod_fileio, only: &
-       FIO_setgridinfo
     implicit none
 
     namelist / PARAM_GRID / &
        GRID_IN_BASENAME,  &
-       GRID_OUT_BASENAME
+       GRID_OUT_BASENAME, &
+       GRID_OFFSET_X, &
+       GRID_OFFSET_Y
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -150,8 +166,6 @@ contains
                                                        KMAX,           ' x ',                      &
                                                        IMAX*PRC_NUM_X, ' x ',                      &
                                                        JMAX*PRC_NUM_Y
-
-
     call GRID_allocate
 
     if ( GRID_IN_BASENAME /= '' ) then
@@ -161,12 +175,6 @@ contains
        
        call GRID_generate
     endif
-
-    if ( GRID_OUT_BASENAME /= '' ) then
-       call GRID_write
-    endif
-
-    call FIO_setgridinfo( DZ, IMAX, JMAX )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** No. of Grid (including HALO,1node) :', &
@@ -192,49 +200,40 @@ contains
   end subroutine GRID_setup
 
   !-----------------------------------------------------------------------------
-  !> Allocate Arrays
-  !-----------------------------------------------------------------------------
+  !> Allocate arrays
   subroutine GRID_allocate
+    use mod_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    implicit none
 
-    allocate( GRID_FZ  (0:KA) )
-    allocate( GRID_FX  (0:IA) )
-    allocate( GRID_FY  (0:JA) )
-    allocate( GRID_FDZ (KA-1) )
-    allocate( GRID_FDX (IA-1) )
-    allocate( GRID_FDY (JA-1) )
-    allocate( GRID_RFDZ(KA-1) )
-    allocate( GRID_RFDX(IA-1) )
-    allocate( GRID_RFDY(JA-1) )
+    integer :: IAG, JAG
+    !---------------------------------------------------------------------------
 
-    allocate( GRID_CZ  (KA) )
-    allocate( GRID_CX  (IA) )
-    allocate( GRID_CY  (JA) )
-    allocate( GRID_CDZ (KA) )
-    allocate( GRID_CDX (IA) )
-    allocate( GRID_CDY (JA) )
-    allocate( GRID_RCDZ(KA) )
-    allocate( GRID_RCDX(IA) )
-    allocate( GRID_RCDY(JA) )
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
-    allocate( GRID_CZ_mask(KA) )
-    allocate( GRID_CX_mask(IA) )
-    allocate( GRID_CY_mask(JA) )
-
-    allocate( GRID_CBFZ(KA) )
-    allocate( GRID_CBFX(IA) )
-    allocate( GRID_CBFY(JA) )
-    allocate( GRID_FBFZ(KA) )
-    allocate( GRID_FBFX(IA) )
-    allocate( GRID_FBFY(JA) )
+    allocate( GRID_FXG     (0:IAG) )
+    allocate( GRID_FYG     (0:JAG) )
+    allocate( GRID_CXG     (  IAG) )
+    allocate( GRID_CYG     (  JAG) )
+    allocate( GRID_CBFXG   (  IAG) )
+    allocate( GRID_CBFYG   (  JAG) )
+    allocate( GRID_FBFXG   (  IAG) )
+    allocate( GRID_FBFYG   (  JAG) )
+    allocate( GRID_CXG_mask(  IAG) )
+    allocate( GRID_CYG_mask(  JAG) )
 
   end subroutine GRID_allocate
 
   !-----------------------------------------------------------------------------
   !> Read horizontal&vertical grid
-  !-----------------------------------------------------------------------------
   subroutine GRID_read
-    use mod_fileio, only: &
-       FIO_input_1D
+    use gtool_file, only: &
+       FileRead
+    use mod_process, only: &
+       PRC_myrank
     implicit none
 
     character(len=IO_FILECHR) :: bname
@@ -247,19 +246,19 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(GRID_IN_BASENAME)
 
-    call FIO_input_1D( GRID_CZ(:), bname, 'CZ', 'Z1D', 1, KA,   1, .false. )
-    call FIO_input_1D( GRID_CX(:), bname, 'CX', 'Z1D', 1, IA,   1, .false. )
-    call FIO_input_1D( GRID_CY(:), bname, 'CY', 'Z1D', 1, JA,   1, .false. )
-    call FIO_input_1D( GRID_FZ(:), bname, 'FZ', 'Z1D', 1, KA+1, 1, .false. )
-    call FIO_input_1D( GRID_FX(:), bname, 'FX', 'Z1D', 1, IA+1, 1, .false. )
-    call FIO_input_1D( GRID_FY(:), bname, 'FY', 'Z1D', 1, JA+1, 1, .false. )
+    call FileRead( GRID_CZ(:), bname, 'CZ', 1, PRC_myrank )
+    call FileRead( GRID_CX(:), bname, 'CX', 1, PRC_myrank )
+    call FileRead( GRID_CY(:), bname, 'CY', 1, PRC_myrank )
+    call FileRead( GRID_FZ(:), bname, 'FZ', 1, PRC_myrank )
+    call FileRead( GRID_FX(:), bname, 'FX', 1, PRC_myrank )
+    call FileRead( GRID_FY(:), bname, 'FY', 1, PRC_myrank )
 
-    call FIO_input_1D( GRID_CDZ(:), bname, 'CDZ', 'Z1D', 1, KA,   1, .false. )
-    call FIO_input_1D( GRID_CDX(:), bname, 'CDX', 'Z1D', 1, IA,   1, .false. )
-    call FIO_input_1D( GRID_CDY(:), bname, 'CDY', 'Z1D', 1, JA,   1, .false. )
-    call FIO_input_1D( GRID_FDZ(:), bname, 'FDZ', 'Z1D', 1, KA-1, 1, .false. )
-    call FIO_input_1D( GRID_FDX(:), bname, 'FDX', 'Z1D', 1, IA-1, 1, .false. )
-    call FIO_input_1D( GRID_FDY(:), bname, 'FDY', 'Z1D', 1, JA-1, 1, .false. )
+    call FileRead( GRID_CDZ(:), bname, 'CDZ', 1, PRC_myrank )
+    call FileRead( GRID_CDX(:), bname, 'CDX', 1, PRC_myrank )
+    call FileRead( GRID_CDY(:), bname, 'CDY', 1, PRC_myrank )
+    call FileRead( GRID_FDZ(:), bname, 'FDZ', 1, PRC_myrank )
+    call FileRead( GRID_FDX(:), bname, 'FDX', 1, PRC_myrank )
+    call FileRead( GRID_FDY(:), bname, 'FDY', 1, PRC_myrank )
 
     GRID_RCDZ(:) = 1.0_RP / GRID_CDZ(:)
     GRID_RCDX(:) = 1.0_RP / GRID_CDX(:)
@@ -268,12 +267,12 @@ contains
     GRID_RFDX(:) = 1.0_RP / GRID_FDX(:)
     GRID_RFDY(:) = 1.0_RP / GRID_FDY(:)
 
-    call FIO_input_1D( GRID_CBFZ(:), bname, 'CBFZ', 'Z1D', 1, KA, 1, .false. )
-    call FIO_input_1D( GRID_CBFX(:), bname, 'CBFX', 'Z1D', 1, IA, 1, .false. )
-    call FIO_input_1D( GRID_CBFY(:), bname, 'CBFY', 'Z1D', 1, JA, 1, .false. )
-    call FIO_input_1D( GRID_FBFZ(:), bname, 'FBFZ', 'Z1D', 1, KA, 1, .false. )
-    call FIO_input_1D( GRID_FBFX(:), bname, 'FBFX', 'Z1D', 1, IA, 1, .false. )
-    call FIO_input_1D( GRID_FBFY(:), bname, 'FBFY', 'Z1D', 1, JA, 1, .false. )
+    call FileRead( GRID_CBFZ(:), bname, 'CBFZ', 1, PRC_myrank )
+    call FileRead( GRID_CBFX(:), bname, 'CBFX', 1, PRC_myrank )
+    call FileRead( GRID_CBFY(:), bname, 'CBFY', 1, PRC_myrank )
+    call FileRead( GRID_FBFZ(:), bname, 'FBFZ', 1, PRC_myrank )
+    call FileRead( GRID_FBFX(:), bname, 'FBFX', 1, PRC_myrank )
+    call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
 
     do k = 1, KA
        if ( GRID_CBFZ(k) == 0.0_RP ) then
@@ -303,102 +302,7 @@ contains
   end subroutine GRID_read
 
   !-----------------------------------------------------------------------------
-  !> Write horizontal&vertical grid
-  !-----------------------------------------------------------------------------
-  subroutine GRID_write
-    use mod_fileio_h, only: &
-       FIO_HMID, &
-       FIO_REAL8, &
-       FIO_REAL4
-    use mod_fileio, only: &
-       FIO_output_1D
-    use mod_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    integer :: PREC
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output grid file ***'
-
-    write(bname,'(A,A,F15.3)') trim(GRID_OUT_BASENAME)
-    desc  = 'SCALE3 GRID VARS.'
-
-    if ( RP == 8 ) then
-       PREC = FIO_REAL8
-    else if ( RP == 4 ) then
-       PREC = FIO_REAL4
-    else
-       write(*,*) 'xxx Not supported real precision xxx'
-       call PRC_MPIstop
-    end if
-
-    call FIO_output_1D( GRID_CZ(:), bname, desc, '',                   &
-                       'CZ', 'Grid Center Position Z', '', 'm',        &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CX(:), bname, desc, '',                   &
-                       'CX', 'Grid Center Position X', '', 'm',        &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CY(:), bname, desc, '',                   &
-                       'CY', 'Grid Center Position Y', '', 'm',        &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FZ(:), bname, desc, '',                     &
-                       'FZ', 'Grid Face Position Z', '', 'm',            &
-                       PREC, 'Z1D', 1, KA+1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FX(:), bname, desc, '',                     &
-                       'FX', 'Grid Face Position X', '', 'm',            &
-                       PREC, 'Z1D', 1, IA+1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FY(:), bname, desc, '',                     &
-                       'FY', 'Grid Face Position Y', '', 'm',            &
-                       PREC, 'Z1D', 1, JA+1, 1, 0.0_RP, 0.0_RP, .false. )
-
-    call FIO_output_1D( GRID_CDZ(:), bname, desc, '',                  &
-                       'CDZ', 'Grid Cell length Z', '', 'm',           &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CDX(:), bname, desc, '',                  &
-                       'CDX', 'Grid Cell length X', '', 'm',           &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CDY(:), bname, desc, '',                  &
-                       'CDY', 'Grid Cell length Y', '', 'm',           &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDZ(:), bname, desc, '',                    &
-                       'FDZ', 'Grid distance Z', '', 'm',                &
-                       PREC, 'Z1D', 1, KA-1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDX(:), bname, desc, '',                    &
-                       'FDX', 'Grid distance X', '', 'm',                &
-                       PREC, 'Z1D', 1, IA-1, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FDY(:), bname, desc, '',                    &
-                       'FDY', 'Grid distance Y', '', 'm',                &
-                       PREC, 'Z1D', 1, JA-1, 1, 0.0_RP, 0.0_RP, .false. )
-
-    call FIO_output_1D( GRID_CBFZ(:), bname, desc, '',                 &
-                       'CBFZ', 'Boundary factor Center Z', '', '0-1',  &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CBFX(:), bname, desc, '',                 &
-                       'CBFX', 'Boundary factor Center X', '', '0-1',  &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_CBFY(:), bname, desc, '',                 &
-                       'CBFY', 'Boundary factor Center Y', '', '0-1',  &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFZ(:), bname, desc, '',                 &
-                       'FBFZ', 'Boundary factor Face Z', '', '0-1',    &
-                       PREC, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFX(:), bname, desc, '',                 &
-                       'FBFX', 'Boundary factor Face X', '', '0-1',    &
-                       PREC, 'Z1D', 1, IA, 1, 0.0_RP, 0.0_RP, .false. )
-    call FIO_output_1D( GRID_FBFY(:), bname, desc, '',                 &
-                       'FBFY', 'Boundary factor Face Y', '', '0-1',    &
-                       PREC, 'Z1D', 1, JA, 1, 0.0_RP, 0.0_RP, .false. )
-
-    return
-  end subroutine GRID_write
-
-  !-----------------------------------------------------------------------------
   !> Generate horizontal&vertical grid
-  !-----------------------------------------------------------------------------
   subroutine GRID_generate
     use mod_process, only: &
        PRC_MPIstop, &
@@ -410,17 +314,6 @@ contains
 
     integer :: IAG ! # of x whole cells (global, with HALO)
     integer :: JAG ! # of y whole cells (global, with HALO)
-
-    real(RP), allocatable :: GRID_FXG(:)      ! face   coordinate [m]: x, global
-    real(RP), allocatable :: GRID_FYG(:)      ! face   coordinate [m]: y, global
-    real(RP), allocatable :: GRID_CXG(:)      ! center coordinate [m]: x, global
-    real(RP), allocatable :: GRID_CYG(:)      ! center coordinate [m]: y, global
-    real(RP), allocatable :: GRID_FBFXG(:)    ! face   buffer factor [0-1]: x, global
-    real(RP), allocatable :: GRID_FBFYG(:)    ! face   buffer factor [0-1]: y, global
-    real(RP), allocatable :: GRID_CBFXG(:)    ! center buffer factor [0-1]: x, global
-    real(RP), allocatable :: GRID_CBFYG(:)    ! center buffer factor [0-1]: y, global
-    logical, allocatable :: GRID_CXG_mask(:)
-    logical, allocatable :: GRID_CYG_mask(:)
 
     real(RP), allocatable :: buffz(:), buffx(:), buffy(:)
     real(RP)              :: bufftotz, bufftotx, bufftoty
@@ -436,17 +329,6 @@ contains
     ! array size (global domain)
     IAG = IHALO + IMAX*PRC_NUM_X + IHALO
     JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
-
-    allocate( GRID_FXG     (0:IAG) )
-    allocate( GRID_FYG     (0:JAG) )
-    allocate( GRID_CXG     (  IAG) )
-    allocate( GRID_CYG     (  JAG) )
-    allocate( GRID_CBFXG   (  IAG) )
-    allocate( GRID_CBFYG   (  JAG) )
-    allocate( GRID_FBFXG   (  IAG) )
-    allocate( GRID_FBFYG   (  JAG) )
-    allocate( GRID_CXG_mask(  IAG) )
-    allocate( GRID_CYG_mask(  JAG) )
 
     allocate( buffx(0:IAG) )
     allocate( buffy(0:JAG) )
@@ -471,7 +353,7 @@ contains
     endif
 
     ! horizontal coordinate (global domaim)
-    GRID_FXG(IHALO) = 0.0_RP
+    GRID_FXG(IHALO) = GRID_OFFSET_X
     do i = IHALO-1, 0, -1
        GRID_FXG(i) = GRID_FXG(i+1) - buffx(ibuff)
     enddo
@@ -519,8 +401,8 @@ contains
 
     if ( ibuff > 0 ) then
        do i = IHALO+1, IHALO+ibuff
-          GRID_CBFXG(i) = (bufftotx-GRID_CXG(i)) / bufftotx
-          GRID_FBFXG(i) = (bufftotx-GRID_FXG(i)) / bufftotx
+          GRID_CBFXG(i) = (bufftotx+GRID_FXG(IHALO)-GRID_CXG(i)) / bufftotx
+          GRID_FBFXG(i) = (bufftotx+GRID_FXG(IHALO)-GRID_FXG(i)) / bufftotx
        enddo
 
        do i = IHALO+ibuff+imain+1, IHALO+ibuff+imain+ibuff
@@ -557,7 +439,7 @@ contains
     endif
 
     ! horizontal coordinate (global domaim)
-    GRID_FYG(JHALO) = 0.0_RP
+    GRID_FYG(JHALO) = GRID_OFFSET_Y
     do j = JHALO-1, 0, -1
        GRID_FYG(j) = GRID_FYG(j+1) - buffy(jbuff)
     enddo
@@ -605,8 +487,8 @@ contains
 
     if ( jbuff > 0 ) then
        do j = JHALO+1, JHALO+jbuff
-          GRID_CBFYG(j) = (bufftoty-GRID_CYG(j)) / bufftoty
-          GRID_FBFYG(j) = (bufftoty-GRID_FYG(j)) / bufftoty
+          GRID_CBFYG(j) = (bufftoty+GRID_FYG(JHALO)-GRID_CYG(j)) / bufftoty
+          GRID_FBFYG(j) = (bufftoty+GRID_FYG(JHALO)-GRID_FYG(j)) / bufftoty
        enddo
 
        do j = JHALO+jbuff+jmain+1, JHALO+jbuff+jmain+jbuff
@@ -641,7 +523,7 @@ contains
        bufftotz = bufftotz + buffz(k)
     enddo
     kbuff = k - 1
-    kmain = KA - kbuff - 2*KHALO
+    kmain = KE - KS + 1 - kbuff
 
     if ( kmain < 1 ) then
        write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
@@ -649,31 +531,31 @@ contains
     endif
 
     ! vartical coordinate (local=global domaim)
-    GRID_FZ(KHALO) = 0.0_RP
-    do k = KHALO-1, 0, -1
+    GRID_FZ(KS-1) = 0.0_RP
+    do k = KS-2, 0, -1
        GRID_FZ(k) = GRID_FZ(k+1) - DZ
     enddo
 
-    do k = 1, KHALO
+    do k = 1, KS-1
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo
 
-    do k = KHALO+1, KHALO+kmain
+    do k = KS, KS+kmain-1
        GRID_FZ     (k) = GRID_FZ(k-1) + DZ
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .true.
     enddo
 
     if ( kbuff > 0 ) then
-       do k = KHALO+kmain+1, KHALO+kmain+kbuff
-          GRID_FZ     (k) = GRID_FZ(k-1) + buffz(k-KHALO-kmain)
+       do k = KS+kmain, KE
+          GRID_FZ     (k) = GRID_FZ(k-1) + buffz(k-KS-kmain+1)
           GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
           GRID_CZ_mask(k) = .false.
        enddo
     endif
 
-    do k = KHALO+kmain+kbuff+1, KHALO+kmain+kbuff+KHALO
+    do k = KE+1, KA
        GRID_FZ     (k) = GRID_FZ(k-1) + buffz(kbuff)
        GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        GRID_CZ_mask(k) = .false.
@@ -683,13 +565,13 @@ contains
     GRID_CBFZ(:) = 0.0_RP
     GRID_FBFZ(:) = 0.0_RP
     if ( kbuff > 0 ) then
-       do k = KHALO+kmain+1, KHALO+kmain+kbuff
+       do k = KS+kmain, KE
           GRID_CBFZ(k) = (bufftotz-GRID_FZ(KE)+GRID_CZ(k)) / bufftotz
           GRID_FBFZ(k) = (bufftotz-GRID_FZ(KE)+GRID_FZ(k)) / bufftotz
        enddo
     endif
 
-    do k = KHALO+kmain+kbuff+1, KHALO+kmain+kbuff+KHALO
+    do k = KE+1, KA
        GRID_CBFZ(k) = 1.0_RP
        GRID_FBFZ(k) = 1.0_RP
     enddo
@@ -826,17 +708,6 @@ contains
 !    j = JA
 !    if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j), GRID_CY_mask(j)
 !    if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j)
-
-    deallocate( GRID_FXG      )
-    deallocate( GRID_FYG      )
-    deallocate( GRID_CXG      )
-    deallocate( GRID_CYG      )
-    deallocate( GRID_FBFXG    )
-    deallocate( GRID_FBFYG    )
-    deallocate( GRID_CBFXG    )
-    deallocate( GRID_CBFYG    )
-    deallocate( GRID_CXG_mask )
-    deallocate( GRID_CYG_mask )
 
     return
   end subroutine GRID_generate

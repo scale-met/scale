@@ -1,16 +1,15 @@
 !-------------------------------------------------------------------------------
-!> module random
+!> module RANDOM
 !!
 !! @par Description
 !!          random number generation module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-28 (H.Yashiro)  [new]
 !!
 !<
-!-------------------------------------------------------------------------------
 module mod_random
   !-----------------------------------------------------------------------------
   !
@@ -24,15 +23,17 @@ module mod_random
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: RANDOM_setup
   public :: RANDOM_get
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -42,16 +43,18 @@ module mod_random
   !++ Private procedure
   !
   private :: RANDOM_reset
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   integer, private, allocatable, save :: RANDOM_seedvar(:)
   integer, private,              save :: RANDOM_count
-  !-----------------------------------------------------------------------------
-contains
 
   !-----------------------------------------------------------------------------
+contains
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine RANDOM_setup
     implicit none
 
@@ -74,22 +77,29 @@ contains
   end subroutine RANDOM_setup
 
   !-----------------------------------------------------------------------------
+  !> Reset random seed
   subroutine RANDOM_reset
     use mod_process, only: &
        PRC_myrank
     implicit none
 
-    integer :: time
-
-    integer :: time1
+    integer :: time1(8)
     real(RP) :: time2
     !---------------------------------------------------------------------------
 
-    time1 = time()
+    call date_and_time(values=time1)
     call cpu_time(time2)
     RANDOM_count = RANDOM_count + 1
 
-    RANDOM_seedvar(:) = time1 + int(time2*1.D6) + PRC_myrank
+    RANDOM_seedvar(:) = &
+         + ( time1(1) - 1970 ) * 32140800 &
+         + time1(2) * 2678400 &
+         + time1(3) * 86400 &
+         + time1(4) * 60 &
+         + time1(5) * 3600 &
+         + time1(6) * 60 &
+         + time1(7) &
+         + int(time2*1.D6) + PRC_myrank
 
     call random_seed(put=RANDOM_seedvar)
 
@@ -97,6 +107,7 @@ contains
   end subroutine RANDOM_reset
 
   !-----------------------------------------------------------------------------
+  !> Get random number
   subroutine RANDOM_get( var )
     implicit none
 
@@ -110,3 +121,4 @@ contains
   end subroutine RANDOM_get
 
 end module mod_random
+!-------------------------------------------------------------------------------

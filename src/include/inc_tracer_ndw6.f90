@@ -1,7 +1,6 @@
-
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters
+  !++ scale3 tracer parameters (2-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 11
@@ -21,6 +20,11 @@
   integer, private, parameter :: QQA =  6 ! mass tracer (water)
   integer, private, parameter :: QQS =  1 ! start index for mass tracer
   integer, private, parameter :: QQE =  6 ! end   index for mass tracer
+
+  integer, private, parameter :: QWS =  2 ! start index for water tracer
+  integer, private, parameter :: QWE =  3 ! end   index for water tracer
+  integer, private, parameter :: QIS =  4 ! start index for ice tracer
+  integer, private, parameter :: QIE =  6 ! end   index for ice tracer
 
   character(len=16), private, save :: AQ_NAME(QA)
   character(len=64), private, save :: AQ_DESC(QA)

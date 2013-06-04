@@ -1,18 +1,20 @@
 !-------------------------------------------------------------------------------
-!> module Thermodynamics
+!> module ATMOSPHERE / Thermodynamics
 !!
 !! @par Description
 !!          Thermodynamics module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
-!! @li      2011-10-24 (T.Seiki)    [new] Import from NICAM
-!! @li      2012-02-10 (H.Yashiro)  [mod] Reconstruction
-!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2011-10-24 (T.Seiki)     [new] Import from NICAM
+!! @li      2012-02-10 (H.Yashiro)   [mod] Reconstruction
+!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
+!! @li      2012-12-22 (S.Nishizawa) [mod] Use thermodyn macro set
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "macro_thermodyn.h"
 module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
   !
@@ -21,34 +23,19 @@ module mod_atmos_thermodyn
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
-  use mod_const, only : &
+  use mod_const, only: &
      Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
      CVdry => CONST_CVdry, &
-     RovCP => CONST_RovCP, &
-     PRE00 => CONST_PRE00, &
      Rvap  => CONST_Rvap,  &
      CPvap => CONST_CPvap, &
      CVvap => CONST_CVvap, &
      CL    => CONST_CL,    &
-     CI    => CONST_CI
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+     CI    => CONST_CI,    &
+     PRE00 => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public procedure
-  !
-  public :: ATMOS_THERMODYN_setup
-  public :: ATMOS_THERMODYN_qd
-  public :: ATMOS_THERMODYN_cv
-  public :: ATMOS_THERMODYN_cp
-  public :: ATMOS_THERMODYN_tempre
-  public :: ATMOS_THERMODYN_tempre2
-
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -59,10 +46,56 @@ module mod_atmos_thermodyn
 
   !-----------------------------------------------------------------------------
   !
+  !++ Public procedure
+  !
+  public :: ATMOS_THERMODYN_setup
+
+  public :: ATMOS_THERMODYN_qd
+  public :: ATMOS_THERMODYN_cv
+  public :: ATMOS_THERMODYN_cp
+  public :: ATMOS_THERMODYN_rhoe
+  public :: ATMOS_THERMODYN_rhot
+  public :: ATMOS_THERMODYN_temp_pres
+
+  interface ATMOS_THERMODYN_qd
+     module procedure ATMOS_THERMODYN_qd_0D
+     module procedure ATMOS_THERMODYN_qd_3D
+  end interface ATMOS_THERMODYN_qd
+
+  interface ATMOS_THERMODYN_cp
+     module procedure ATMOS_THERMODYN_cp_0D
+     module procedure ATMOS_THERMODYN_cp_3D
+  end interface ATMOS_THERMODYN_cp
+
+  interface ATMOS_THERMODYN_cv
+     module procedure ATMOS_THERMODYN_cv_0D
+     module procedure ATMOS_THERMODYN_cv_3D
+  end interface ATMOS_THERMODYN_cv
+
+  interface ATMOS_THERMODYN_rhoe
+     module procedure ATMOS_THERMODYN_rhoe_0D
+     module procedure ATMOS_THERMODYN_rhoe_3D
+  end interface ATMOS_THERMODYN_rhoe
+
+  interface ATMOS_THERMODYN_rhot
+     module procedure ATMOS_THERMODYN_rhot_0D
+     module procedure ATMOS_THERMODYN_rhot_3D
+  end interface ATMOS_THERMODYN_rhot
+
+  interface ATMOS_THERMODYN_temp_pres
+     module procedure ATMOS_THERMODYN_temp_pres_0D
+     module procedure ATMOS_THERMODYN_temp_pres_3D
+  end interface ATMOS_THERMODYN_temp_pres
+
+  public :: ATMOS_THERMODYN_tempre
+  public :: ATMOS_THERMODYN_tempre2
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public parameters & variables
   !
-  real(RP), public,      save :: AQ_CP(QQA) ! CP for each hydrometeors
-  real(RP), public,      save :: AQ_CV(QQA) ! CV for each hydrometeors
+  real(RP), public, save :: AQ_CP(QQA) !< CP for each hydrometeors [J/kg/K]
+  real(RP), public, save :: AQ_CV(QQA) !< CV for each hydrometeors [J/kg/K]
 
   !-----------------------------------------------------------------------------
   !
@@ -75,176 +108,440 @@ module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_THERMODYN_setup
     implicit none
+  
+    integer :: n
     !---------------------------------------------------------------------------
 
     AQ_CP(I_QV) = CPvap
     AQ_CV(I_QV) = CVvap
 
-    if ( I_QC > 0 ) then
-       AQ_CP(I_QC) = CL
-       AQ_CV(I_QC) = CL
+    if ( QWS /= 0 ) then
+       do n = QWS, QWE
+          AQ_CP(n) = CL
+          AQ_CV(n) = CL
+       enddo
     endif
-    if ( I_QR > 0 ) then
-       AQ_CP(I_QR) = CL
-       AQ_CV(I_QR) = CL
-    endif
-    if ( I_QI > 0 ) then
-       AQ_CP(I_QI) = CI
-       AQ_CV(I_QI) = CI
-    endif
-    if ( I_QS > 0 ) then
-       AQ_CP(I_QS) = CI
-       AQ_CV(I_QS) = CI
-    endif
-    if ( I_QG > 0 ) then
-       AQ_CP(I_QG) = CI
-       AQ_CV(I_QG) = CI
+
+    if ( QIS /= 0 ) then
+       do n = QIS, QIE
+          AQ_CP(n) = CI
+          AQ_CV(n) = CI
+       enddo
     endif
 
     return
   end subroutine ATMOS_THERMODYN_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THERMODYN_qd( qdry, q )
+  !> calc dry air mass (0D)
+  subroutine ATMOS_THERMODYN_qd_0D( &
+       qdry, &
+       q     )
     implicit none
 
-    real(RP), intent(out) :: qdry(IJA,KA)    ! dry mass concentration
-    real(RP), intent(in)  :: q   (IJA,KA,QA) ! mass concentration
+    real(RP), intent(out) :: qdry  !< dry mass concentration [kg/kg]
+    real(RP), intent(in)  :: q(QA) !< mass concentration     [kg/kg]
 
-    integer :: ij, k, iqw
+    integer :: iqw
     !-----------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
-    do k  = 1, KA
-    do ij = 1, IJA
-
-       qdry(ij,k) = 1.0_RP
-
-       do iqw = QQS, QQE
-          qdry(ij,k) = qdry(ij,k) - q(ij,k,iqw)
-       enddo
-
+    qdry = 1.0_RP
+    do iqw = QQS, QQE
+       qdry = qdry - q(iqw)
     enddo
-    enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THERMODYN_qd
+  end subroutine ATMOS_THERMODYN_qd_0D
+
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THERMODYN_qd_kij( qdry, q )
+  !> calc dry air mass (3D)
+  subroutine ATMOS_THERMODYN_qd_3D( &
+       qdry, &
+       q     )
     implicit none
 
-    real(RP), intent(out) :: qdry(KA,IA,JA)    ! dry mass concentration
-    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration
+    real(RP), intent(out) :: qdry(KA,IA,JA)    !< dry mass concentration [kg/kg]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration     [kg/kg]
 
-    integer :: i,j, k, iqw
+    integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
 
     do j = 1, JA
     do i = 1, IA
-    do k  = 1, KA
-       qdry(k,i,j) = 1.0_RP
-       do iqw = QQS, QQE
-          qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw)
-       enddo
+    do k = 1, KA
+
+!       qdry(k,i,j) = 1.0_RP
+!       do iqw = QQS, QQE
+!          qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw)
+!       enddo
+       CALC_QDRY( qdry(k,i,j), q, k, i, j, iqw )
 
     enddo
     enddo
     enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THERMODYN_qd_kij
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_THERMODYN_cp( cptot, q, qdry )
-    implicit none
-
-    real(RP), intent(out) :: cptot(IJA,KA)    ! total specific heat
-    real(RP), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
-    real(RP), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
-
-    integer :: ij, k, iqw
-    !---------------------------------------------------------------------------
-
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
-    do k  = 1, KA
-    do ij = 1, IJA
-
-       cptot(ij,k) = qdry(ij,k) * CPdry
-
-       do iqw = QQS, QQE
-          cptot(ij,k) = cptot(ij,k) + q(ij,k,iqw) * AQ_CP(iqw)
-       enddo
-
-    enddo
-    enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
-
-    return
-  end subroutine ATMOS_THERMODYN_cp
+  end subroutine ATMOS_THERMODYN_qd_3D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_THERMODYN_cv( cvtot, q, qdry )
+  !> calc total specific heat (CP,0D)
+  subroutine ATMOS_THERMODYN_cp_0D( &
+       CPtot, &
+       q,     &
+       qdry   )
     implicit none
 
-    real(RP), intent(out) :: cvtot(IJA,KA)    ! total specific heat
-    real(RP), intent(in)  :: q    (IJA,KA,QA) ! mass concentration
-    real(RP), intent(in)  :: qdry (IJA,KA)    ! dry mass concentration
+    real(RP), intent(out) :: CPtot !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q(QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: qdry  !< dry mass concentration [kg/kg]
 
-    integer :: ij, k, iqw
+    integer :: iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
-
-    do k  = 1, KA
-    do ij = 1, IJA
-
-       cvtot(ij,k) = qdry(ij,k) * CVdry
-
-       do iqw = QQS, QQE
-          cvtot(ij,k) = cvtot(ij,k) + q(ij,k,iqw) * AQ_CV(iqw)
-       enddo
-
+    CPtot = qdry * CPdry
+    do iqw = QQS, QQE
+       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
     enddo
-    enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
 
     return
-  end subroutine ATMOS_THERMODYN_cv
+  end subroutine ATMOS_THERMODYN_cp_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc total specific heat (CP,3D)
+  subroutine ATMOS_THERMODYN_cp_3D( &
+       CPtot, &
+       q,     &
+       qdry   )
+    implicit none
+
+    real(RP), intent(out) :: CPtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q    (KA,IA,JA,QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: qdry (KA,IA,JA)    !< dry mass concentration [kg/kg]
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+
+!       CPtot(k,i,j) = qdry(k,i,j) * CPdry
+!       do iqw = QQS, QQE
+!          CPtot(k,i,j) = CPtot(k,i,j) + q(k,i,j,iqw) * AQ_CP(iqw)
+!       enddo
+
+       CALC_CP(cptot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP)
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_cp_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc total specific heat (CV,0D)
+  subroutine ATMOS_THERMODYN_cv_0D( &
+       CVtot, &
+       q,     &
+       qdry   )
+    implicit none
+
+    real(RP), intent(out) :: CVtot !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q(QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: qdry  !< dry mass concentration [kg/kg]
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    CVtot = qdry * CVdry
+    do iqw = QQS, QQE
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_cv_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc total specific heat (CV,3D)
+  subroutine ATMOS_THERMODYN_cv_3D( &
+       CVtot, &
+       q,     &
+       qdry   )
+    implicit none
+ 
+    real(RP), intent(out) :: CVtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
+    real(RP), intent(in)  :: q    (KA,IA,JA,QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: qdry (KA,IA,JA)    !< dry mass concentration [kg/kg]
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+
+!       CVtot(k,i,j) = qdry(k,i,j) * CVdry
+!       do iqw = QQS, QQE
+!          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * AQ_CV(iqw)
+!       enddo
+
+       CALC_CV(cvtot(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV)
+
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_cv_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * pott -> rho * ein (0D)
+  subroutine ATMOS_THERMODYN_rhoe_0D( &
+       rhoe, &
+       rhot, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: rhoe  !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: rhot  !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q(QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: pres
+    real(RP) :: Rtot, CVtot, CPovCV
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    qdry  = 1.0_RP
+    CVtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
+    enddo
+    CVtot = CVdry * qdry + CVtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+
+    CPovCV = ( CVtot + Rtot ) / CVtot
+
+    pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
+
+    rhoe = pres / Rtot * CVtot
+
+    return
+  end subroutine ATMOS_THERMODYN_rhoe_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * pott -> rho * ein (3D)
+  subroutine ATMOS_THERMODYN_rhoe_3D( &
+       rhoe, &
+       rhot, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: rhoe(KA,IA,JA)    !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: rhot(KA,IA,JA)    !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: pres
+    real(RP) :: Rtot, CVtot, CPovCV
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       qdry  = 1.0_RP
+       CVtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+
+       CPovCV = ( CVtot + Rtot ) / CVtot
+
+       pres = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
+
+       rhoe(k,i,j) = pres / Rtot * CVtot
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_rhoe_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * ein -> rho * pott (0D)
+  subroutine ATMOS_THERMODYN_rhot_0D( &
+       rhot, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: rhot  !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: rhoe  !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: q(QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: pres
+    real(RP) :: Rtot, CVtot, RovCP
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    qdry  = 1.0_RP
+    CVtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
+    enddo
+    CVtot = CVdry * qdry + CVtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+
+    RovCP  = Rtot / ( CVtot + Rtot )
+
+    pres = rhoe * Rtot / CVtot
+
+    rhot = rhoe / CVtot * ( PRE00 / pres )**RovCP
+
+    return
+  end subroutine ATMOS_THERMODYN_rhot_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * ein -> rho * pott (3D)
+  subroutine ATMOS_THERMODYN_rhot_3D( &
+       rhot, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: rhot(KA,IA,JA)    !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: rhoe(KA,IA,JA)    !< density * internal energy       [J/m3]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: pres
+    real(RP) :: Rtot, CVtot, RovCP
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+
+       qdry  = 1.0_RP
+       CVtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+
+       RovCP  = Rtot / ( CVtot + Rtot )
+
+       pres = rhoe(k,i,j) * Rtot / CVtot
+
+       rhot(k,i,j) = rhoe(k,i,j) / CVtot * ( PRE00 / pres )**RovCP
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_rhot_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (0D)
+  subroutine ATMOS_THERMODYN_temp_pres_0D( &
+       temp, &
+       pres, &
+       dens, &
+       rhot, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp  !< temperature                     [K]
+    real(RP), intent(out) :: pres  !< pressure                        [Pa]
+    real(RP), intent(in)  :: dens  !< density                         [kg/m3]
+    real(RP), intent(in)  :: rhot  !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q(QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CPtot, CPovCV
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    qdry  = 1.0_RP
+    CPtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+    enddo
+    CPtot = CPdry * qdry + CPtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+
+    CPovCV = CPtot / ( CPtot - Rtot )
+
+    pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
+    temp = pres / ( dens * Rtot )
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (3D)
+  subroutine ATMOS_THERMODYN_temp_pres_3D( &
+       temp, &
+       pres, &
+       dens, &
+       rhot, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp(KA,IA,JA)    !< temperature                     [K]
+    real(RP), intent(out) :: pres(KA,IA,JA)    !< pressure                        [Pa]
+    real(RP), intent(in)  :: dens(KA,IA,JA)    !< density                         [kg/m3]
+    real(RP), intent(in)  :: rhot(KA,IA,JA)    !< density * potential temperature [kg/m3*K]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CPtot, CPovCV
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       qdry  = 1.0_RP
+       CPtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+       enddo
+       CPtot = CPdry * qdry + CPtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+
+       CPovCV = CPtot / ( CPtot - Rtot )
+
+       pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_3D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre( &
@@ -252,43 +549,32 @@ call STOP_COLLECTION('SUB_thermodyn')
       Ein,  dens, qdry, q )
     implicit none
 
-    real(RP), intent(out) :: temp(IJA,KA)    ! temperature
-    real(RP), intent(out) :: pres(IJA,KA)    ! pressure
-    real(RP), intent(in)  :: Ein (IJA,KA)    ! internal energy
-    real(RP), intent(in)  :: dens(IJA,KA)    ! density
-    real(RP), intent(in)  :: qdry(IJA,KA)    ! dry concentration
-    real(RP), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+    real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
+    real(RP), intent(out) :: pres(KA,IA,JA)    ! pressure
+    real(RP), intent(in)  :: Ein (KA,IA,JA)    ! internal energy
+    real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
+    real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
 
     real(RP) :: cv, Rmoist
 
-    integer :: ij, k, iqw
+    integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
 
-    do k  = 1, KA
-    do ij = 1, IJA
+       CALC_CV(cv, qdry(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV)
+       CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
 
-       cv = qdry(ij,k) * CVdry
-       do iqw = QQS, QQE
-          cv = cv + q(ij,k,iqw) * AQ_CV(iqw)
-       enddo
-       Rmoist = qdry(ij,k)*Rdry + q(ij,k,I_QV)*Rvap
+       temp(k,i,j) = Ein(k,i,j) / cv
 
-       temp(ij,k) = Ein(ij,k) / cv
-
-       pres(ij,k) = dens(ij,k) * Rmoist * temp(ij,k)
+       pres(k,i,j) = dens(k,i,j) * Rmoist * temp(k,i,j)
 
     enddo
     enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
+    enddo
 
     return
   end subroutine ATMOS_THERMODYN_tempre
@@ -299,42 +585,33 @@ call STOP_COLLECTION('SUB_thermodyn')
       dens, pott, qdry, q )
     implicit none
 
-    real(RP), intent(out) :: temp(IJA,KA)    ! temperature
-    real(RP), intent(out) :: pres(IJA,KA)    ! pressure
-    real(RP), intent(in)  :: dens(IJA,KA)    ! density
-    real(RP), intent(in)  :: pott(IJA,KA)    ! potential temperature
-    real(RP), intent(in)  :: qdry(IJA,KA)    ! dry concentration
-    real(RP), intent(in)  :: q   (IJA,KA,QA) ! water concentration 
+    real(RP), intent(out) :: temp(KA,IA,JA)    ! temperature
+    real(RP), intent(out) :: pres(KA,IA,JA)    ! pressure
+    real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
+    real(RP), intent(in)  :: pott(KA,IA,JA)    ! potential temperature
+    real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
 
-    real(RP) :: RPRE00, WKAPPA, rhoRmoist
+    real(RP) :: Rmoist, cp
 
-    integer :: ij, k
+    integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('SUB_thermodyn')
-#ifdef _FPCOLL_
-call START_COLLECTION('SUB_thermodyn')
-#endif
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
 
-    RPRE00   = 1.0_RP / PRE00
-    WKAPPA   = 1.0_RP / ( 1.0_RP - RovCP )
+       CALC_CP(cp, qdry(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP)
+       CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
+       CALC_PRE(pres(k,i,j), dens(k,i,j), pott(k,i,j), Rmoist, cp, PRE00)
 
-    do k  = 1, KA
-    do ij = 1, IJA
-       rhoRmoist = dens(ij,k) * ( qdry(ij,k)*Rdry + q(ij,k,I_QV)*Rvap )
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rmoist )
 
-       temp(ij,k) = ( pott(ij,k) * ( rhoRmoist * RPRE00 )**RovCP )**WKAPPA
-       pres(ij,k) = rhoRmoist * temp(ij,k)
     enddo
     enddo
-
-#ifdef _FPCOLL_
-call STOP_COLLECTION('SUB_thermodyn')
-#endif
-    call TIME_rapend  ('SUB_thermodyn')
+    enddo
 
     return
   end subroutine ATMOS_THERMODYN_tempre2
 
 end module mod_atmos_thermodyn
-

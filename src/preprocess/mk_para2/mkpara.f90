@@ -11,10 +11,13 @@
 !-----------------------------------------------------------------------------------------
 program mkpara
 
+
 implicit none
 
-  integer, parameter :: nspc = 7
-  integer, parameter :: nbin = 30, ncld = 10, ndrz = 20 
+  include 'setup.h'
+
+!  integer, parameter :: nspc = 7
+!  integer, parameter :: nbin = 30, ncld = 10, ndrz = 20 
   integer, parameter :: ndat = 33, icemax = 3, kdeg = 4, ldeg = 4
 
   real(8) :: xmss( nspc,ndat ), zcap( nspc,ndat ), vtrm( nspc,ndat )
@@ -44,7 +47,7 @@ implicit none
 
   integer :: i, j
   !===== Y.SATO add 2007/10/19 =======================================
-  integer, parameter :: kphase = 2
+!  integer, parameter :: kphase = 2
      !	( Hydro-dynamic = 0, Long = 1, Golovin = 2 )
   !===================================================================
 !-----------------------------------------------------------------------------------------
@@ -509,6 +512,14 @@ contains
     write( 21,* ) myu, n, br( myu,n )
   end do
   end do
+
+  if( kphase == 0 ) then
+    write( 21,* ) "use hydrodynamic kernel"
+  elseif( kphase == 1 ) then
+    write( 21,* ) "use LONG's kernel"
+  elseif( kphase == 2 ) then
+    write( 21,* ) "use GOLOVIN's kernel"
+  endif
 
   close ( 21 )
 

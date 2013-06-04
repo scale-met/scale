@@ -6,7 +6,7 @@ module test_atmos_dyn_fent_fct
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-    use mod_grid, only : &
+  use mod_grid, only : &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
@@ -21,6 +21,8 @@ module test_atmos_dyn_fent_fct
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+  use dc_types, only : &
+       DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -39,12 +41,31 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT(KA,IA,JA)
   real(RP) :: QTRC(KA,IA,JA,QA)
 
+  real(RP) :: DENS_av(KA,IA,JA)
+  real(RP) :: MOMZ_av(KA,IA,JA)
+  real(RP) :: MOMX_av(KA,IA,JA)
+  real(RP) :: MOMY_av(KA,IA,JA)
+  real(RP) :: RHOT_av(KA,IA,JA)
+  real(RP) :: QTRC_av(KA,IA,JA,QA)
+
   real(RP) :: DENS_o(KA,IA,JA)
   real(RP) :: MOMZ_o(KA,IA,JA)
   real(RP) :: MOMX_o(KA,IA,JA)
   real(RP) :: MOMY_o(KA,IA,JA)
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
+
+  real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
+  real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+
+  real(RP) :: SFLX_MOMZ(IA,JA)
+  real(RP) :: SFLX_MOMX(IA,JA)
+  real(RP) :: SFLX_MOMY(IA,JA)
+  real(RP) :: SFLX_POTT(IA,JA)
+  real(RP) :: SFLX_QV(IA,JA)
 
   real(RP) :: QDRY(KA,IA,JA)
   real(RP) :: DDIV(KA,IA,JA)
@@ -65,12 +86,17 @@ module test_atmos_dyn_fent_fct
   real(RP) :: CNMY(3,JA)
 
   real(RP) :: CORIOLI(1,IA,JA)
+  real(RP) :: MOMZ_LS(KA,IA,JA,2)
+  real(RP) :: MOMZ_LS_DZ(KA,IA,JA,2)
 
-  real(RP) :: DIFF4, DIFF2
+  real(RP) :: AQ_CV(QA)
+
+  real(RP) :: DIFF4
   real(RP) :: divdmp_coef, LSsink_D
 
-  logical  :: flag_fct_momentum = .false.
-  logical  :: flag_fct_t        = .false.
+  logical  :: flag_fct_rho      = .true.
+  logical  :: flag_fct_momentum = .true.
+  logical  :: flag_fct_t        = .true.
 
   real(RP), save :: ZERO(KA,IA,JA)
 
@@ -109,11 +135,13 @@ contains
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
-  call ATMOS_DYN_init( DIFF4, DIFF2, CORIOLI,               & ! (out)
-                       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
-                       CDZ, CDX, CDY,                       & ! (in)
-                       lat,                                 & ! (in)
-                       0.0_RP, .false.                      ) ! (in)
+  call ATMOS_DYN_init( DIFF4,CORIOLI,                      & ! (out)
+                       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, & ! (out)
+                       MOMZ_LS, MOMZ_LS_DZ,                & ! (out)
+                       CDZ, CDX, CDY, CZ, FZ,              & ! (in)
+                       lat,                                & ! (in)
+                       0.0_RP, 1.0_RP,                     & ! (in)
+                       0.0_RP, 0.0_RP, .false.     ) ! (in)
 
 
   do k = KS+1, KE
@@ -125,8 +153,22 @@ contains
 
   MOMZ(KE,:,:) = 0.0_RP
 
+  AQ_CV(:) = 1.0_RP
+
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
+
+  qflx_sgs_momz(:,:,:,:) = 0.0_RP
+  qflx_sgs_momx(:,:,:,:) = 0.0_RP
+  qflx_sgs_momy(:,:,:,:) = 0.0_RP
+  qflx_sgs_rhot(:,:,:,:) = 0.0_RP
+  qflx_sgs_qtrc(:,:,:,:,:) = 0.0_RP
+
+  SFLX_MOMZ(:,:) = 0.0_RP
+  SFLX_MOMX(:,:) = 0.0_RP
+  SFLX_MOMY(:,:) = 0.0_RP
+  SFLX_POTT(:,:) = 0.0_RP
+  SFLX_QV(:,:) = 0.0_RP
 
   !########## test ##########
 
@@ -174,16 +216,24 @@ subroutine test_undef
 
   do i = 1, 2
      call ATMOS_DYN_main( &
-          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-          QDRY, DDIV,                           & ! (out)
-          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-          CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-          REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-          CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-          divdmp_coef, LSsink_D,                & ! (in)
-          flag_fct_momentum, flag_fct_t,        & ! (in)
-          1.0_RP, 1                             ) ! (in)
+          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
+          QDRY, DDIV,                                  & ! (out)
+          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
+          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+          SFLX_POTT, SFLX_QV,                          & ! (in)
+          AQ_CV,                                       & ! (in)
+          REF_dens, REF_pott, DIFF4,                   & ! (in)
+          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+          divdmp_coef,                                 & ! (in)
+          MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
+          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+          .false.,                                     & ! (in)
+          1.0_DP, 1.0_DP, 1                            ) ! (in)
   end do
 
   call AssertLessThan("MOMZ", BIG(KS:KE,IS:IE,JS:JE), MOMZ(KS:KE,IS:IE,JS:JE))
@@ -217,16 +267,24 @@ subroutine test_const
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
   call ATMOS_DYN_main( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-       QDRY, DDIV,                           & ! (out)
-       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-       CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-       REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-       CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-       divdmp_coef, LSsink_D,                & ! (in)
-       flag_fct_momentum, flag_fct_t,        & ! (in)
-       1.0_RP, 1                             ) ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
+       QDRY, DDIV,                                  & ! (out)
+       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
+       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+       SFLX_POTT, SFLX_QV,                          & ! (in)
+       AQ_CV,                                       & ! (in)
+       REF_dens, REF_pott, DIFF4,                   & ! (in)
+       CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+       divdmp_coef,                                 & ! (in)
+       MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
+       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       .false.,                                     & ! (in)
+       1.0_DP, 1.0_DP, 1                            ) ! (in)
 
   do k = KS, KE
      answer(k,:,:) = MOMZ(k,IS,JS)
@@ -293,16 +351,24 @@ subroutine test_conserve
   call copy
 
   call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,   & ! (inout)
-         QDRY, DDIV,                           & ! (out)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,   & ! (in)
-         CZ, FZ, CDZ, CDX, CDY, FDZ, FDX, FDY, & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,   & ! (in)
-         REF_dens, REF_pott, DIFF4, DIFF2,     & ! (in)
-         CORIOLI, DAMP_var, DAMP_alpha,        & ! (in)
-         divdmp_coef, LSsink_D,                & ! (in)
-         flag_fct_momentum, flag_fct_t,        & ! (in)
-         1.0_RP, 1                             ) ! (in)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (out)
+         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
+         QDRY, DDIV,                                  & ! (out)
+         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+         CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+         qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
+         qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
+         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
+         SFLX_POTT, SFLX_QV,                          & ! (in)
+         AQ_CV,                                       & ! (in)
+         REF_dens, REF_pott, DIFF4,                   & ! (in)
+         CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+         divdmp_coef,                                 & ! (in)
+         MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
+         flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+         .true.,                                      & ! (in)
+         1.0_RP, 1.0_DP, 1                            ) ! (in)
 
   total_o = 0.0_RP
   total = 0.0_RP

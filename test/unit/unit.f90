@@ -5,7 +5,7 @@ program unit
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
-     PRC_MPIstop
+     PRC_MPIfinish
   use mod_const, only: &
      CONST_setup
   use mod_comm, only: &
@@ -43,6 +43,6 @@ program unit
   write(*,*) "test_atmos_dyn_fent_fct_run"
   call test_atmos_dyn_fent_fct_run
 
-  call PRC_MPIstop
+  call PRC_MPIfinish
 
 end program unit

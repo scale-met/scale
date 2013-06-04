@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN Surface
+!> module OCEAN / Fixed SST
 !!
 !! @par Description
 !!          SST control module (tentative)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-03-27 (H.Yashiro)  [new]
@@ -24,17 +24,17 @@ module mod_ocean_sf
   private
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
-  !
-  public :: OCEAN_FIXEDSST_setup
-  public :: OCEAN_FIXEDSST
-
-  !-----------------------------------------------------------------------------
-  !
   !++ included parameters
   !
   include "inc_precision.h"
   include 'inc_index.h'
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: OCEAN_SST_setup
+  public :: OCEAN_SST
 
   !-----------------------------------------------------------------------------
   !
@@ -48,26 +48,25 @@ module mod_ocean_sf
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: OCEAN_FIXEDSST_RATE = 2.E-5_RP ! SST change rate
+  real(RP), private, save :: OCEAN_FIXEDSST_RATE = 2.E-5_RP !< SST change rate
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup FIXEDSST
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_FIXEDSST_setup
+  !> Setup
+  subroutine OCEAN_SST_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &
        OCEAN_RESTART_IN_BASENAME, &
+       OCEAN_TYPE, &
        SST
     implicit none
 
-    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP  ! SST for initial state
-    logical :: OCEAN_FIXEDSST_RESET    = .false. ! reset SST?
+    real(RP) :: OCEAN_FIXEDSST_STARTSST = 290.E0_RP !< SST for initial state
+    logical  :: OCEAN_FIXEDSST_RESET    = .false.   !< reset SST?
 
     NAMELIST / PARAM_OCEAN_FIXEDSST / &
        OCEAN_FIXEDSST_STARTSST, &
@@ -75,11 +74,16 @@ contains
        OCEAN_FIXEDSST_RATE
 
     integer :: ierr
-    integer :: i,j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIXEDSST]/Categ[OCEAN]'
+
+    if ( OCEAN_TYPE /= 'FIXEDSST' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not FIXEDSST. Check!'
+       call PRC_MPIstop
+    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,12 +116,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** change rate [K/s]:', OCEAN_FIXEDSST_RATE
 
     return
-  end subroutine OCEAN_FIXEDSST_setup
+  end subroutine OCEAN_SST_setup
 
   !-----------------------------------------------------------------------------
   !> SST change
-  !-----------------------------------------------------------------------------
-  subroutine OCEAN_FIXEDSST
+  subroutine OCEAN_SST
     use mod_time, only: &
        dt => TIME_DTSEC_OCEAN
     use mod_history, only: &
@@ -140,9 +143,9 @@ contains
     enddo
     enddo
 
-    call HIST_in( SST(:,:,:), 'SST', OP_DESC(1), OP_UNIT(1), '2D', dt )
+    call HIST_in( SST(1,:,:), 'SST', OP_DESC(1), OP_UNIT(1), dt )
 
     return
-  end subroutine OCEAN_FIXEDSST
+  end subroutine OCEAN_SST
 
 end module mod_ocean_sf

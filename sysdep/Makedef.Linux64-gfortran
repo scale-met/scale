@@ -5,23 +5,31 @@
 
 FC     = mpif90
 FFLAGS = -O3 -cpp
+FFLAGS_DYN ?= $(FFLAGS)
+
+FFLAGS_DEBUG ?= -cpp -O0 -g \
+                -fcheck=all -Wall -pedantic \
+                -fbounds-check -Wuninitialized \
+                -ffpe-trap=invalid,overflow,zero -finit-real=snan \
+                -fbacktrace \
+                -DDEBUG
+
+MODDIROPT ?= -J
 
 
-FFLAGS_DYN = $(FFLAGS)
-
-CC     = mpicc
+CC     = gcc
 CFLAGS = -O3
 
 LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
-#FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG
-FFLAGS_DEBUG = -cpp -O0 -g -fcheck=all -Wall -DDEBUG -ffpe-trap=invalid,overflow,zero -finit-real=nan
 
 ##### for frontend
 
-NETCDF_LIBS = -lnetcdf
-NETCDF_INCLUDE = 
+NETCDF_LIBS ?= -lnetcdf
+NETCDF_INCLUDE ?=
 
-AR     = ar r
-RANLIB = ranlib
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh

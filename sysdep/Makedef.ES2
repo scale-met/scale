@@ -1,0 +1,48 @@
+#
+# ------ FOR Earth Simulator 2 -----
+#
+
+##### for computation
+
+FFLAGS_FAST  = -C hopt                    \
+               -Ep -f2003 -dW             \
+               -Wf"-L fmtlist transform”  \
+               -Wf"-pvctl chgpwr fullmsg” \
+               -Wf"-O extendreorder”
+
+FFLAGS_DEBUG = -C vopt                    \
+               -Ep -f2003 -dW             \
+               -Wf"-L fmtlist transform”  \
+               -Wf"-pvctl fullmsg”        \
+               -Wf"-init heap=nan stack=nan"
+
+#               -DDEBUG
+
+# Performance monitor
+# disable
+PERF_MONIT = -Nftrace
+# ftrace
+#PERF_MONIT = -ftrace
+
+FC     = sxmpif90
+FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT)
+#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT)
+
+FFLAGS_DYN ?= $(FFLAGS)
+
+MODDIROPT ?= -to
+
+CC     = sxmpic++
+CFLAGS = -C vsafe
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+NETCDF_INCLUDE ?=
+NETCDF_LIBS    ?= -lnetcdf
+
+##### for frontend
+AR      = sxar
+ARFLAGS = r
+RANLIB  = touch
+JOBSUB  = qsub

@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Physics Radiation
+!> module ATMOSPHERE / Physics Radiation
 !!
 !! @par Description
 !!          Atmospheric radiation transfer process
 !!          mstrnX
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-26 (H.Yashiro) [new]
@@ -55,8 +55,23 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_setup
+!    use mod_stdio, only: &
+!       IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_RD
     implicit none
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
+
+    if ( ATMOS_TYPE_PHY_RD /= 'MSTRNX' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not MSTRNX. Check!'
+       call PRC_MPIstop
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_setup

@@ -1,14 +1,15 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / reference state
+!> module ATMOSPHERE / Reference state
 !!
 !! @par Description
 !!          Reference state of Atmosphere
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2013-02-25 (H.Yashiro)  [mod] Separate ISA profile to mod_atmos_sub_profile
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -17,6 +18,8 @@ module mod_atmos_refstate
   !
   !++ used modules
   !
+  use gtool_file_h, only: &
+     File_HLONG
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -27,47 +30,53 @@ module mod_atmos_refstate
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: ATMOS_REFSTATE_setup
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
-  public :: ATMOS_REFSTATE_generate
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: ATMOS_REFSTATE_dens(KA) ! refernce density [kg/m3]
-  real(RP), public, save :: ATMOS_REFSTATE_pott(KA) ! refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_dens(KA) !< refernce density [kg/m3]
+  real(RP), public, save :: ATMOS_REFSTATE_pott(KA) !< refernce potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  public :: ATMOS_REFSTATE_generate_isa
+  public :: ATMOS_REFSTATE_generate_uniform
+  public :: ATMOS_REFSTATE_generate_frominit
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''
-  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE         = 'ISA'
-  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP ! surface temperature
-  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP ! uniform potential temperature
+  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_IN_BASENAME  = ''                !< basename of the input  file
+  character(len=IO_FILECHR), private :: ATMOS_REFSTATE_OUT_BASENAME = ''                !< basename of the output file
+  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE3 Refstate' !< title    of the output file
+  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'         !< REAL4 or REAL8
+
+  character(len=IO_SYSCHR),  private :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'         !< profile type
+  real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP          !< surface temperature           [K]
+  real(RP),                  private :: ATMOS_REFSTATE_RH           =   0.0_RP          !< surface & environment RH      [%]
+  real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP          !< uniform potential temperature [K]
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Initialize Reference state
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_REFSTATE_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -78,9 +87,12 @@ contains
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
        ATMOS_REFSTATE_OUT_BASENAME, &
+       ATMOS_REFSTATE_OUT_TITLE,    &
+       ATMOS_REFSTATE_OUT_DTYPE,    &
        ATMOS_REFSTATE_TYPE,         &
        ATMOS_REFSTATE_POTT_UNIFORM, &
-       ATMOS_REFSTATE_TEMP_SFC
+       ATMOS_REFSTATE_TEMP_SFC,     &
+       ATMOS_REFSTATE_RH
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -100,222 +112,172 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_REFSTATE)
 
+
+    ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
        call ATMOS_REFSTATE_read
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found reference state file. Generate!'
 
-       if ( trim(ATMOS_REFSTATE_TYPE) == 'ISA' ) then
+       if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
-       elseif ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
+          call ATMOS_REFSTATE_generate_isa
+       elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
+          call ATMOS_REFSTATE_generate_uniform
+       elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
+          call ATMOS_REFSTATE_generate_frominit
        else
           write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
           call PRC_MPIstop
        endif
-    
-       call ATMOS_REFSTATE_generate
     endif
 
-    if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
-       call ATMOS_REFSTATE_write
-    endif
+    ! output reference profile
+    call ATMOS_REFSTATE_write
 
     return
   end subroutine ATMOS_REFSTATE_setup
 
   !-----------------------------------------------------------------------------
-  !> Read Reference state
-  !-----------------------------------------------------------------------------
+  !> Read reference state profile
   subroutine ATMOS_REFSTATE_read
     use mod_fileio, only: &
-       FIO_input_1D
+       FILEIO_read
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
-
-    character(len=IO_FILECHR) :: bname
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input Refstate file ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input reference state profile ***'
 
-    write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_IN_BASENAME)
+    if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
-    call FIO_input_1D( ATMOS_REFSTATE_dens(:), bname, 'DENS', 'Z1D', 1, KA, 1, .true. )
-    call FIO_input_1D( ATMOS_REFSTATE_pott(:), bname, 'POTT', 'Z1D', 1, KA, 1, .true. )
+       call FILEIO_read( ATMOS_REFSTATE_dens(:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_pott(:),                             & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
+
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** refstate file is not specified.'
+       call PRC_MPIstop
+    endif
 
     return
   end subroutine ATMOS_REFSTATE_read
 
   !-----------------------------------------------------------------------------
-  !> Write Reference state
-  !-----------------------------------------------------------------------------
+  !> Write reference state profile
   subroutine ATMOS_REFSTATE_write
-    use mod_process, only: &
-       PRC_myrank, &
-       PRC_master
-    use mod_fileio_h, only: &
-       FIO_HMID, &
-       FIO_REAL8
     use mod_fileio, only: &
-       FIO_output_1D
+       FILEIO_write
     implicit none
-
-    character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output grid file ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Only at Master node ***'
+    if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
 
-    if ( PRC_myrank == PRC_master ) then
-       write(bname,'(A,A,F15.3)') trim(ATMOS_REFSTATE_OUT_BASENAME)
-       desc  = 'SCALE3 Refstate'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
 
-       call FIO_output_1D( ATMOS_REFSTATE_dens(:), bname, desc, '',       &
-                          'DENS', 'Reference state of rho', '', 'kg/m3', &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
-       call FIO_output_1D( ATMOS_REFSTATE_pott(:), bname, desc, '',       &
-                          'POTT', 'Reference state of theta', '', 'K',   &
-                          FIO_REAL8, 'Z1D', 1, KA, 1, 0.0_RP, 0.0_RP, .true. )
+       call FILEIO_write( ATMOS_REFSTATE_dens(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'DENS_ref', 'Reference profile of rho', 'kg/m3', 'Z', ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
+       call FILEIO_write( ATMOS_REFSTATE_pott(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'POTT_ref', 'Reference profile of theta', 'K', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
     endif
 
     return
   end subroutine ATMOS_REFSTATE_write
 
   !-----------------------------------------------------------------------------
-  !> Generate Reference state (International Standard Atmosphere)
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_REFSTATE_generate
-    use mod_const, only : &
-       GRAV   => CONST_GRAV,  &
-       Rdry   => CONST_Rdry,  &
-       RovCP  => CONST_RovCP, &
-       Pstd   => CONST_Pstd,  &
-       P00    => CONST_PRE00
-    use mod_grid, only : &
-       CZ   => GRID_CZ
+  !> Generate reference state profile (International Standard Atmosphere)
+  subroutine ATMOS_REFSTATE_generate_isa
+    use mod_const, only: &
+       Pstd => CONST_Pstd
+    use mod_grid, only: &
+       CZ => GRID_CZ
+    use mod_atmos_profile, only: &
+       PROFILE_isa => ATMOS_PROFILE_isa
     use mod_atmos_hydrostatic, only: &
        hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+    use mod_atmos_saturation, only: &
+       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
-
-    integer, parameter :: nref = 8
-    real(RP), parameter :: CZ_isa(nref) = (/     0.0_RP,  &
-                                            11000.0_RP,  &
-                                            20000.0_RP,  &
-                                            32000.0_RP,  &
-                                            47000.0_RP,  &
-                                            51000.0_RP,  &
-                                            71000.0_RP,  &
-                                            84852.0_RP   /)
-    real(RP), parameter :: GAMMA(nref)  = (/    -6.5E-3_RP, &
-                                                0.0_RP , &
-                                                1.0E-3_RP, &
-                                                2.8E-3_RP, &
-                                                0.0E-3_RP, &
-                                               -2.8E-3_RP, &
-                                               -2.0E-3_RP, &
-                                                0.0_RP   /)
-    real(RP) :: temp_isa(nref)
-    real(RP) :: pres_isa(nref)
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
     real(RP) :: dens(KA)
     real(RP) :: pott(KA)
+    real(RP) :: qv  (KA)
+    real(RP) :: qc  (KA)
 
-    real(RP) :: qv(KA) = 0.0_RP
-    real(RP) :: qc(KA) = 0.0_RP
-    real(RP) :: temp_sfc
-    real(RP) :: qv_sfc = 0.0_RP
-    real(RP) :: qc_sfc = 0.0_RP
+    real(RP) :: temp_sfc(1)
+    real(RP) :: pres_sfc(1)
+    real(RP) :: pott_sfc(1)
+    real(RP) :: qv_sfc  (1)
+    real(RP) :: qc_sfc  (1)
 
-    real(RP) :: gmr !! grav / Rdry
-    integer :: i, k
+    real(RP) :: qsat(KA)
+    real(RP) :: qsat_sfc(1)
+
+    integer  :: k
     !---------------------------------------------------------------------------
 
-    gmr      = GRAV / Rdry
+    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
+    pres_sfc(1) = Pstd
 
-    !--- ISA profile
-    temp_isa(1) = ATMOS_REFSTATE_TEMP_SFC
-    pres_isa(1) = Pstd
+    call PROFILE_isa( pott(:),     & ! [OUT]
+                      pott_sfc(1), & ! [IN]
+                      pres_sfc(1)  ) ! [IN]
 
-    do i = 2, nref
-       temp_isa(i) = temp_isa(i-1) + GAMMA(i-1) * ( CZ_isa(i)-CZ_isa(i-1) )
+    qv      (:) = 0.0_RP
+    qc      (:) = 0.0_RP
+    qv_sfc  (1) = 0.0_RP
+    qc_sfc  (1) = 0.0_RP
 
-       if ( GAMMA(i-1) == 0.0_RP ) then
-          pres_isa(i) = pres_isa(i-1) * exp( -gmr / temp_isa(i) * ( CZ_isa(i)-CZ_isa(i-1) ) )
-       else
-          pres_isa(i) = pres_isa(i-1) * ( temp_isa(i)/temp_isa(i-1) ) ** ( -gmr/GAMMA(i-1) )
-       endif
-    enddo
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '###### ICAO International Standard Atmosphere ######'
-    if( IO_L ) write(IO_FID_LOG,*) '      height:  lapse rate:    pressure: temperature'
-    do i = 1, nref
-       if( IO_L ) write(IO_FID_LOG,'(4(f13.5))') CZ_isa(i), GAMMA(i), pres_isa(i), temp_isa(i)
-    enddo
-    if( IO_L ) write(IO_FID_LOG,*) '####################################################'
-
-    !--- make reference state
-    do k = KS, KE
-       do i = 2, nref
-          if ( CZ(k) > CZ_isa(i-1) .AND. CZ(k) <= CZ_isa(i) ) then
-
-             temp(k) = temp_isa(i-1) + GAMMA(i-1) * ( CZ(k)-CZ_isa(i-1) )
-             if ( GAMMA(i-1) == 0.0_RP ) then
-                pres(k) = pres_isa(i-1) * exp( -gmr/temp_isa(i-1) * ( CZ(k)-CZ_isa(i-1) ) )
-             else
-                pres(k) = pres_isa(i-1) * ( temp(k)/temp_isa(i-1) ) ** ( -gmr/GAMMA(i-1) )
-             endif
-
-          elseif ( CZ(k) <= CZ_isa(1)    ) then
-
-             temp(k) = temp_isa(1) + GAMMA(1) * ( CZ(k)-CZ_isa(1) )
-             pres(k) = pres_isa(1) * ( temp(k)/temp_isa(1) ) ** ( -gmr/GAMMA(1) )
-
-          elseif ( CZ(k)  > CZ_isa(nref) ) then
-
-             temp(k) = temp(k-1)
-             pres(k) = pres_isa(i-1) * exp( -gmr/temp_isa(i-1) * ( CZ(k)-CZ_isa(i-1) ) )
-
-          endif
-       enddo
-
-!       dens(k) = pres(k) / ( temp(k) * Rdry )
-       pott(k) = temp(k) * ( P00/pres(k) )**RovCP
-    enddo
-
-!    dens(   1:KS-1) = dens(KS)
-!    dens(KE+1:KA  ) = dens(KE)
-    pott(   1:KS-1) = pott(KS)
-    pott(KE+1:KA  ) = pott(KE)
-
-    if ( trim(ATMOS_REFSTATE_TYPE) == 'UNIFORM' ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** pot.temp. is overwrited by uniform value:', ATMOS_REFSTATE_POTT_UNIFORM
-       pott(:) = ATMOS_REFSTATE_POTT_UNIFORM
-    endif
-
-    ! make density & pressure profile 
+    ! make density & pressure profile in dry condition
     call hydro_buildrho_1d( dens    (:), & ! [OUT]
                             temp    (:), & ! [OUT]
                             pres    (:), & ! [OUT]
-                            pott    (:), &
-                            qv      (:), &
-                            qc      (:), &
-                            temp_sfc,    & ! [OUT]
-                            pres_isa(1), &
-                            temp_isa(1), &
-                            qv_sfc,      &
-                            qc_sfc       )
+                            pott    (:), & ! [IN]
+                            qv      (:), & ! [IN]
+                            qc      (:), & ! [IN]
+                            temp_sfc(1), & ! [OUT]
+                            pres_sfc(1), & ! [IN]
+                            pott_sfc(1), & ! [IN]
+                            qv_sfc  (1), & ! [IN]
+                            qc_sfc  (1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
+    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+
+    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    do k = KS, KE
+       qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho_1d( dens    (:), & ! [OUT]
+                            temp    (:), & ! [OUT]
+                            pres    (:), & ! [OUT]
+                            pott    (:), & ! [IN]
+                            qv      (:), & ! [IN]
+                            qc      (:), & ! [IN]
+                            temp_sfc(1), & ! [OUT]
+                            pres_sfc(1), & ! [IN]
+                            pott_sfc(1), & ! [IN]
+                            qv_sfc  (1), & ! [IN]
+                            qc_sfc  (1)  ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
-    if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.'
+    if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
     do k = KS, KE
-       if( IO_L ) write(IO_FID_LOG,'(5(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k)
+       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k), qv(k)
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
@@ -323,6 +285,177 @@ contains
     ATMOS_REFSTATE_pott(:) = pott(:)
 
     return
-  end subroutine ATMOS_REFSTATE_generate
+  end subroutine ATMOS_REFSTATE_generate_isa
+
+  !-----------------------------------------------------------------------------
+  !> Generate reference state profile (Uniform Potential Temperature)
+  subroutine ATMOS_REFSTATE_generate_uniform
+    use mod_const, only: &
+       Pstd   => CONST_Pstd
+    use mod_grid, only: &
+       CZ   => GRID_CZ
+    use mod_atmos_hydrostatic, only: &
+       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+    use mod_atmos_saturation, only: &
+       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+    implicit none
+
+    real(RP) :: temp(KA)
+    real(RP) :: pres(KA)
+    real(RP) :: dens(KA)
+    real(RP) :: pott(KA)
+    real(RP) :: qv  (KA)
+    real(RP) :: qc  (KA)
+
+    real(RP) :: temp_sfc(1)
+    real(RP) :: pres_sfc(1)
+    real(RP) :: pott_sfc(1)
+    real(RP) :: qv_sfc  (1)
+    real(RP) :: qc_sfc  (1)
+
+    real(RP) :: qsat(KA)
+    real(RP) :: qsat_sfc(1)
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    pres_sfc(1) = Pstd
+    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
+    qv_sfc  (1) = 0.0_RP
+    qc_sfc  (1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k) = ATMOS_REFSTATE_POTT_UNIFORM
+       qv  (k) = 0.0_RP
+       qc  (k) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call hydro_buildrho_1d( dens    (:), & ! [OUT]
+                            temp    (:), & ! [OUT]
+                            pres    (:), & ! [OUT]
+                            pott    (:), & ! [IN]
+                            qv      (:), & ! [IN]
+                            qc      (:), & ! [IN]
+                            temp_sfc(1), & ! [OUT]
+                            pres_sfc(1), & ! [IN]
+                            pott_sfc(1), & ! [IN]
+                            qv_sfc  (1), & ! [IN]
+                            qc_sfc  (1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
+    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+
+    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    do k = KS, KE
+       qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call hydro_buildrho_1d( dens    (:), & ! [OUT]
+                            temp    (:), & ! [OUT]
+                            pres    (:), & ! [OUT]
+                            pott    (:), & ! [IN]
+                            qv      (:), & ! [IN]
+                            qc      (:), & ! [IN]
+                            temp_sfc(1), & ! [OUT]
+                            pres_sfc(1), & ! [IN]
+                            pott_sfc(1), & ! [IN]
+                            qv_sfc  (1), & ! [IN]
+                            qc_sfc  (1)  ) ! [IN]
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
+    if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
+    do k = KS, KE
+       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k), qv(k)
+    enddo
+    if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+
+    ATMOS_REFSTATE_dens(:) = dens(:)
+    ATMOS_REFSTATE_pott(:) = pott(:)
+
+    return
+  end subroutine ATMOS_REFSTATE_generate_uniform
+
+  !-----------------------------------------------------------------------------
+  !> Generate reference state profile (Horizontal average from initial data)
+  subroutine ATMOS_REFSTATE_generate_frominit
+    use mod_const, only: &
+       Rdry   => CONST_Rdry,   &
+       CPdry  => CONST_CPdry,  &
+       Rvap   => CONST_Rvap,   &
+       P00    => CONST_PRE00
+    use mod_grid, only: &
+       CZ   => GRID_CZ
+    use mod_comm, only: &
+       COMM_horizontal_mean
+    use mod_atmos_thermodyn, only: &
+       CPw => AQ_CP
+    use mod_atmos_hydrostatic, only: &
+       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+    use mod_atmos_vars, only: &
+       DENS_3d => DENS, &
+       RHOT_3d => RHOT, &
+       QTRC_3d => QTRC
+    implicit none
+
+    real(RP) :: PRES_3d(KA,IA,JA)
+    real(RP) :: TEMP_3d(KA,IA,JA)
+    real(RP) :: POTT_3d(KA,IA,JA)
+
+    real(RP) :: temp(KA)
+    real(RP) :: pres(KA)
+    real(RP) :: dens(KA)
+    real(RP) :: pott(KA)
+    real(RP) :: qv  (KA)
+
+    real(RP) :: QDRY, RTOT, CPTOT, CPovCV
+
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       POTT_3d(k,i,j) = RHOT_3d(k,i,j) / DENS_3d(k,i,j)
+
+       QDRY  = 1.0_RP
+       CPTOT = 0.0_RP
+       do iq = QQS, QQE
+          QDRY  = QDRY  - QTRC_3d(k,i,j,iq)
+          CPTOT = CPTOT + QTRC_3d(k,i,j,iq) * CPw(iq)
+       enddo
+       RTOT   = Rdry *QDRY + Rvap*QTRC_3d(k,i,j,I_QV)
+       CPTOT  = CPdry*QDRY + CPTOT
+       CPovCV = CPTOT / ( CPTOT - RTOT )
+
+       PRES_3d(k,i,j) = P00 * ( RHOT_3d(k,i,j) * RTOT / P00 )**CPovCV
+       TEMP_3d(k,i,j) = PRES_3d(k,i,j) / ( DENS_3d(k,i,j) * RTOT )
+    enddo
+    enddo
+    enddo
+
+    call COMM_horizontal_mean( pres(:), PRES_3d(:,:,:) )
+    call COMM_horizontal_mean( temp(:), TEMP_3d(:,:,:) )
+    call COMM_horizontal_mean( dens(:), DENS_3d(:,:,:) )
+    call COMM_horizontal_mean( pott(:), POTT_3d(:,:,:) )
+
+    call COMM_horizontal_mean( qv(:), QTRC_3d(:,:,:,I_QV) )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
+    if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
+    do k = KS, KE
+       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k), qv(k)
+    enddo
+    if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+
+    ATMOS_REFSTATE_dens(:) = dens(:)
+    ATMOS_REFSTATE_pott(:) = pott(:)
+
+    return
+  end subroutine ATMOS_REFSTATE_generate_frominit
 
 end module mod_atmos_refstate

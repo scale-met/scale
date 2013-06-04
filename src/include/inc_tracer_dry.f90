@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters
+  !++ scale3 tracer parameters (vapor only)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 1
@@ -20,6 +20,11 @@
   integer, private, parameter :: QQA =  1 ! mass tracer (water)
   integer, private, parameter :: QQS =  1 ! start index for mass tracer
   integer, private, parameter :: QQE =  1 ! end   index for mass tracer
+
+  integer, private, parameter :: QWS =  0 ! start index for water tracer
+  integer, private, parameter :: QWE =  0 ! end   index for water tracer
+  integer, private, parameter :: QIS =  0 ! start index for ice tracer
+  integer, private, parameter :: QIE =  0 ! end   index for ice tracer
 
   character(len=16), private, save :: AQ_NAME(QA)
   character(len=64), private, save :: AQ_DESC(QA)

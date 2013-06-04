@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN
+!> module OCEAN driver
 !!
 !! @par Description
 !!          Ocean module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
@@ -32,6 +32,7 @@ module mod_ocean
   !
   public :: OCEAN_setup
   public :: OCEAN_step
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -46,16 +47,16 @@ module mod_ocean
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup ocean
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine OCEAN_setup
     use mod_ocean_vars, only: &
        OCEAN_vars_setup, &
        OCEAN_vars_restart_read
     use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST_setup
+       OCEAN_SST_setup
+    use mod_ocean_vars, only: &
+       sw_sst => OCEAN_sw_sst
     implicit none
     !---------------------------------------------------------------------------
 
@@ -63,25 +64,24 @@ contains
 
     call OCEAN_vars_restart_read
 
-    call OCEAN_FIXEDSST_setup
+    if ( sw_sst ) call OCEAN_SST_setup
 
     return
   end subroutine OCEAN_setup
 
   !-----------------------------------------------------------------------------
-  !> advance ocean state
-  !-----------------------------------------------------------------------------
+  !> Ocean step
   subroutine OCEAN_step
     use mod_ocean_vars, only: &
-       sw_sf => OCEAN_sw_sf
+       sw_sst => OCEAN_sw_sst
     use mod_ocean_sf, only: &
-       OCEAN_FIXEDSST
+       OCEAN_SST
     implicit none
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('Ocean')
-    if ( sw_sf ) then
-       call OCEAN_FIXEDSST
+    if ( sw_sst ) then
+       call OCEAN_SST
     endif
     call TIME_rapend  ('Ocean')
 

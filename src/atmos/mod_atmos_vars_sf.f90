@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module Atmospheric Surface Variables
+!> module ATMOSPHERIC Surface Variables
 !!
 !! @par Description
 !!          Container for atmospheric surface variables
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-03-27 (H.Yashiro)  [new]
@@ -21,9 +21,10 @@ module mod_atmos_vars_sf
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID
+  use gtool_file_h, only: &
+     File_HSHORT, &
+     File_HMID,   &
+     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -39,6 +40,7 @@ module mod_atmos_vars_sf
   !
   !++ included parameters
   !
+  include "scale-les.h"
   include "inc_precision.h"
   include 'inc_index.h'
 
@@ -59,9 +61,12 @@ module mod_atmos_vars_sf
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: ATMOS_SF_RESTART_OUTPUT       = .false.
-  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_IN_BASENAME  = 'restart_in'
-  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_OUT_BASENAME = 'restart_out'
+  logical,                   private, save :: ATMOS_SF_RESTART_OUTPUT        = .false.
+  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_IN_BASENAME   = 'restart_in'
+  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_OUT_BASENAME  = 'restart_out'
+  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_TITLE     = 'SCALE3 PROGNOSTIC VARS.'
+  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_SOURCE    = 'SCALE-LES ver. '//VERSION
+  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_INSTITUTE = 'AICS/RIKEN'
 
   !-----------------------------------------------------------------------------
 contains
@@ -99,6 +104,12 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SF_VARS)
 
+    SFLX_MOMZ(:,:) = 0.0_RP
+    SFLX_MOMX(:,:) = 0.0_RP
+    SFLX_MOMY(:,:) = 0.0_RP
+    SFLX_POTT(:,:) = 0.0_RP
+    SFLX_QV(:,:)   = 0.0_RP
+
     return
   end subroutine ATMOS_vars_sf_setup
 
@@ -109,8 +120,8 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_fileio, only: &
-       FIO_input
+    use gtool_file, only: &
+       FileRead
     implicit none
 
 !    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -127,7 +138,7 @@ contains
 !    bname = ATMOS_SF_RESTART_IN_BASENAME
 !    write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
-!    call FIO_input( restart_atmos(:,:,:), bname, 'DENS', lname, 1, KMAX, 1 )
+!    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
 !    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     ! fill IHALO & JHALO
@@ -141,27 +152,33 @@ contains
   !> Write restart of atmospheric surface variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_sf_restart_write
-    use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
-    use mod_fileio_h, only: &
-       FIO_REAL8
-    use mod_fileio, only: &
-       FIO_output
+!    use mod_time, only: &
+!       NOWSEC => TIME_NOWDAYSEC
+!    use gtool_file_h, only: &
+!       File_REAL4, &
+!       File_REAL8
+!    use gtool_file, only: &
+!       FileCreate, &
+!       FileAddVariable, &
+!       FilePutAxis, &
+!       FileWrite, &
+!       FielClose
     implicit none
 
 !    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
 !    character(len=IO_FILECHR) :: bname
-!    character(len=FIO_HMID)   :: desc
-!    character(len=8)          :: lname
+!    integer :: n
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
-!    write(bname,'(A,A,F15.3)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', NOWSEC
-!    desc  = 'SCALE3 PROGNOSTIC VARS.'
-!    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+!    write(bname(1:15), '(F15.3)') NOWSEC
+!    do n = 1, 15
+!      if ( bname(n:n) == ' ' ) bname(n:n) = '0'
+!    end do
+!    write(bname,'(A,A,A)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', basename
 
     return
   end subroutine ATMOS_vars_sf_restart_write

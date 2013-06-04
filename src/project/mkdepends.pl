@@ -55,8 +55,6 @@ foreach $dir (@dirs) {
       $dirname  = $dir;
       $modname  = '';
       $usedmods = '';
-      #print $dirname ,"/",$filename," : ",$modname ,"\n";
-      #print $usedmods,"\n";
 
       # read all lines in the file
       while ( defined($line = <FILE>) ) {
@@ -72,12 +70,15 @@ foreach $dir (@dirs) {
         };
         # file contains module?
         if ( $line =~ /^\s*module/i ) {
+        if ( $line =~ /^\s*module procedure/i ) {
+        }else{
           $s = $line;
           $s =~ s/^\s*module//i;
           $s =~ s/!.*//;
           $s2 = trim($s);
 
           $modname = $s2;
+        };
         };
 
         # store all dependency
@@ -100,9 +101,11 @@ foreach $dir (@dirs) {
           };
         };
       };
+      #print $dirname ,"/",$filename," : ",$modname ,"\n";
+      #print $usedmods,"\n";
 
       # special treatment for c file (fileio)
-      if ( $modname eq "mod_fileio" ) {
+      if ( $modname eq "mod_fileio_c" ) {
         $usedmods = $usedmods.'fio&fiof&';
       };
 

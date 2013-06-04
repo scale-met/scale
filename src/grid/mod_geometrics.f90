@@ -1,11 +1,11 @@
 !-------------------------------------------------------------------------------
-!> module Geometrics
+!> module GEOMETRICS
 !!
 !! @par Description
 !!          Geometrical convert from plane cartesian coordinate
-!!          to earths sphere
+!!          to planet sphere
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-03-22 (H.Yashiro)  [new]
@@ -20,10 +20,21 @@ module mod_geometrics
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
-     IO_FILECHR
+     IO_FILECHR, &
+     IO_SYSCHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include "inc_precision.h"
+  include "inc_index.h"
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -35,22 +46,16 @@ module mod_geometrics
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: GEOMETRICS_lon (1,IA,JA)
-  real(RP), public, save :: GEOMETRICS_lat (1,IA,JA)
+  real(RP), public, save :: GEOMETRICS_lon (1,IA,JA)  !< longitude [rad,0-2pi]
+  real(RP), public, save :: GEOMETRICS_lat (1,IA,JA)  !< latitude  [rad,-pi,pi]
 
-  real(RP), public, save :: GEOMETRICS_area(1,IA,JA)
-  real(RP), public, save :: GEOMETRICS_vol (KA,IA,JA)
-  real(RP), public, save :: GEOMETRICS_totarea ! total area   (local)
-  real(RP), public, save :: GEOMETRICS_totvol  ! total volume (local)
+  real(RP), public, save :: GEOMETRICS_area(1,IA,JA)  !< cell horizontal area [m2]
+  real(RP), public, save :: GEOMETRICS_vol (KA,IA,JA) !< cell volume          [m3]
+
+  real(RP), public, save :: GEOMETRICS_totarea        !< total area   (local) [m2]
+  real(RP), public, save :: GEOMETRICS_totvol         !< total volume (local) [m3]
 
   !-----------------------------------------------------------------------------
   !
@@ -60,17 +65,17 @@ module mod_geometrics
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: GEOMETRICS_startlonlat(2) = (/ 135.2E0_RP, 34.7E0_RP /)
-  real(RP), private :: GEOMETRICS_rotation       = 0.E0_RP
+  real(RP), private :: GEOMETRICS_startlonlat(2) = (/ 135.2_RP, 34.7_RP /) !< lon&lat at north-west corner
+  real(RP), private :: GEOMETRICS_rotation       = 0.0_RP                  !< rotation angle
 
-  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''
+  character(len=IO_FILECHR), private :: GEOMETRICS_OUT_BASENAME = ''                  !< basename of the output file
+  character(len=IO_SYSCHR),  private :: GEOMETRICS_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title    of the output file
+  character(len=IO_SYSCHR),  private :: GEOMETRICS_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup Geometrics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine GEOMETRICS_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -79,9 +84,10 @@ contains
     implicit none
 
     namelist / PARAM_GEOMETRICS / &
-       GEOMETRICS_startlonlat, &
-       GEOMETRICS_rotation,    &
-       GEOMETRICS_OUT_BASENAME
+       GEOMETRICS_startlonlat,  &
+       GEOMETRICS_rotation,     &
+       GEOMETRICS_OUT_BASENAME, &
+       GEOMETRICS_OUT_DTYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -101,71 +107,48 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_GEOMETRICS)
 
+    ! calc metrics
+    call GEOMETRICS_makearea
     call GEOMETRICS_makelonlat
 
-    call GEOMETRICS_makearea
-
-    if ( GEOMETRICS_OUT_BASENAME /= '' ) then
-       call GEOMETRICS_write
-    endif
+    ! write to file
+    call GEOMETRICS_write
 
     return
   end subroutine GEOMETRICS_setup
 
   !-----------------------------------------------------------------------------
   !> Write lon&lat, control area/volume
-  !-----------------------------------------------------------------------------
   subroutine GEOMETRICS_write
-    use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
-    use mod_fileio_h, only: &
-       FIO_HMID,   &
-       FIO_REAL8
     use mod_fileio, only: &
-       FIO_output
+       FILEIO_write
     implicit none
-
-    real(RP) :: sfc(1,IMAX,JMAX)
-    real(RP) :: var(KMAX,IMAX,JMAX)
-
-    character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
-    character(len=8)          :: lname
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output geometrics file ***'
+    if ( GEOMETRICS_OUT_BASENAME /= '' ) then
 
-    bname = trim(GEOMETRICS_OUT_BASENAME)
-    desc  = 'SCALE3 GEOMETRICS'
-    write(lname,'(A,I4.4)') 'ZDEF', KMAX
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output geometrics file ***'
 
-    sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lon(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'LON', 'Longitude', '', 'degree',          &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+       call FILEIO_write( GEOMETRICS_lon(1,:,:),  GEOMETRICS_OUT_BASENAME, GEOMETRICS_OUT_TITLE, &
+                          'lon', 'Longitude', 'degrees_east', 'XY',        GEOMETRICS_OUT_DTYPE  )
 
-    sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_lat(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'LAT', 'Latitude', '', 'degree',           &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+       call FILEIO_write( GEOMETRICS_lat(1,:,:),  GEOMETRICS_OUT_BASENAME, GEOMETRICS_OUT_TITLE, &
+                          'lat', 'Latitude', 'degrees_north', 'XY',        GEOMETRICS_OUT_DTYPE  )
 
-    sfc(1,1:IMAX,1:JMAX) = GEOMETRICS_area(1,IS:IE,JS:JE)
-    call FIO_output( sfc(:,:,:), bname, desc, '',               &
-                     'AREA', 'Control Area', '', 'm2',          &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+       call FILEIO_write( GEOMETRICS_area(1,:,:), GEOMETRICS_OUT_BASENAME, GEOMETRICS_OUT_TITLE, &
+                          'area', 'Control Area', 'm2', 'XY',              GEOMETRICS_OUT_DTYPE  )
 
-    var(1:KMAX,1:IMAX,1:JMAX) = GEOMETRICS_vol(KS:KE,IS:IE,JS:JE)
-    call FIO_output( var(:,:,:), bname, desc, '',                 &
-                     'VOL', 'Control Volume', '', 'm3',           &
-                     FIO_REAL8, lname, 1, KMAX, 1, NOWSEC, NOWSEC )
+       call FILEIO_write( GEOMETRICS_vol(:,:,:),  GEOMETRICS_OUT_BASENAME, GEOMETRICS_OUT_TITLE, &
+                          'vol', 'Control Volume', 'm3', 'ZXY',            GEOMETRICS_OUT_DTYPE  )
+
+    endif
 
     return
   end subroutine GEOMETRICS_write
 
   !-----------------------------------------------------------------------------
-  !> Generate control area/volume
-  !-----------------------------------------------------------------------------
+  !> Calc control area/volume
   subroutine GEOMETRICS_makearea
     use mod_grid, only: &
        CDZ => GRID_CDZ, &
@@ -202,12 +185,11 @@ contains
   end subroutine GEOMETRICS_makearea
 
   !-----------------------------------------------------------------------------
-  !> Generate lon/lat
-  !-----------------------------------------------------------------------------
+  !> Calc lon/lat
   subroutine GEOMETRICS_makelonlat
     use mod_const, only: &
-       PI      => CONST_PI,     &
-       ERADIUS => CONST_ERADIUS
+       RADIUS => CONST_RADIUS, &
+       D2R    => CONST_D2R
     use mod_grid, only: &
        CX => GRID_CX, &
        CY => GRID_CY
@@ -215,7 +197,7 @@ contains
 
     real(RP) :: GRID_rotX(1,IA,JA)
     real(RP) :: GRID_rotY(1,IA,JA)
-    real(RP) :: d2r, r2d, theta
+    real(RP) :: theta
 
     real(RP) :: c(2)
     real(RP) :: gno(2)
@@ -225,12 +207,10 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    d2r   = PI / 180.0_RP
-    r2d   = 180.0_RP / PI
-    theta = GEOMETRICS_rotation * d2r
+    theta = GEOMETRICS_rotation * D2R
 
-    c(1) = GEOMETRICS_startlonlat(1) * d2r
-    c(2) = GEOMETRICS_startlonlat(2) * d2r
+    c(1) = GEOMETRICS_startlonlat(1) * D2R
+    c(2) = GEOMETRICS_startlonlat(2) * D2R
 
     do j = JS, JE
     do i = IS, IE
@@ -241,8 +221,8 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       gno(1) =  GRID_rotX(1,i,j) / ERADIUS ! angle from north-west corner (0,0)[m]
-       gno(2) = -GRID_rotY(1,i,j) / ERADIUS ! direction is north->south
+       gno(1) =  GRID_rotX(1,i,j) / RADIUS ! angle from north-west corner (0,0)[m]
+       gno(2) = -GRID_rotY(1,i,j) / RADIUS ! direction is north->south
 
        rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
        gmm = atan( rho )
@@ -258,20 +238,20 @@ contains
                        + gno(2)*cos(c(2))*sin(gmm) / rho )
        endif
 
-       GEOMETRICS_lon(1,i,j) = sph(1) * r2d
-       GEOMETRICS_lat(1,i,j) = sph(2) * r2d
+       GEOMETRICS_lon(1,i,j) = sph(1)
+       GEOMETRICS_lat(1,i,j) = sph(2)
     enddo
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*) ' *** Position on the earth (Local)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
-                                'NW(',GEOMETRICS_lon(1,IS,JS),',',GEOMETRICS_lat(1,IS,JS),')-', &
-                                'NE(',GEOMETRICS_lon(1,IS,JE),',',GEOMETRICS_lat(1,IS,JE),')'
+                                'NW(',GEOMETRICS_lon(1,IS,JS)/D2R,',',GEOMETRICS_lat(1,IS,JS)/D2R,')-', &
+                                'NE(',GEOMETRICS_lon(1,IS,JE)/D2R,',',GEOMETRICS_lat(1,IS,JE)/D2R,')'
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
                                 '            |                       |'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
-                                'SW(',GEOMETRICS_lon(1,IE,JS),',',GEOMETRICS_lat(1,IE,JS),')-', &
-                                'SE(',GEOMETRICS_lon(1,IE,JE),',',GEOMETRICS_lat(1,IE,JE),')'
+                                'SW(',GEOMETRICS_lon(1,IE,JS)/D2R,',',GEOMETRICS_lat(1,IE,JS)/D2R,')-', &
+                                'SE(',GEOMETRICS_lon(1,IE,JE)/D2R,',',GEOMETRICS_lat(1,IE,JE)/D2R,')'
 
     return
   end subroutine GEOMETRICS_makelonlat

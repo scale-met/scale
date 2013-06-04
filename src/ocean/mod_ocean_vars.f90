@@ -1,10 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module OCEAN VARIABLES
+!> module OCEAN Variables
 !!
 !! @par Description
 !!          Container for oceanic variables
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-12-11 (H.Yashiro)  [new]
@@ -17,17 +17,25 @@ module mod_ocean_vars
   !
   !++ used modules
   !
+  use gtool_file_h, only: &
+     File_HSHORT, &
+     File_HMID,   &
+     File_HLONG
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
-  use mod_fileio_h, only: &
-     FIO_HSHORT, &
-     FIO_HMID
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  include "inc_precision.h"
+  include 'inc_index.h'
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -38,29 +46,23 @@ module mod_ocean_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: SST(1,IA,JA) ! sea surface prognostics container (with HALO)
+  real(RP), public, save :: SST(1,IA,JA) !< sea surface prognostics container (with HALO)
 
-  character(len=FIO_HSHORT), public, save :: OP_NAME(1)
-  character(len=FIO_HMID),   public, save :: OP_DESC(1)
-  character(len=FIO_HSHORT), public, save :: OP_UNIT(1)
+  character(len=File_HSHORT), public, save :: OP_NAME(1) !< name  of the ocean variables
+  character(len=File_HMID),   public, save :: OP_DESC(1) !< desc. of the ocean variables
+  character(len=File_HSHORT), public, save :: OP_UNIT(1) !< unit  of the ocean variables
 
   data OP_NAME / 'SST' /
   data OP_DESC / 'sea surface temp.' /
   data OP_UNIT / 'K' /
 
-  character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE    = 'NONE'
+  character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE = 'OFF' !< Ocean type
+  logical,                   public, save :: OCEAN_sw_sst       !< do SST update?
+  logical,                   public, save :: OCEAN_sw_restart   !< output restart?
 
-  logical,                   public, save :: OCEAN_sw_sf
-  logical,                   public, save :: OCEAN_sw_restart
+  character(len=IO_FILECHR), public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
 
   !-----------------------------------------------------------------------------
   !
@@ -70,16 +72,15 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.
-  character(len=IO_FILECHR), public,  save :: OCEAN_RESTART_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'
+  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
+  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE3 OCEANIC VARS.' !< title    of the output file
+  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup oceanpheric variables
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine OCEAN_vars_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -90,10 +91,11 @@ contains
     NAMELIST / PARAM_OCEAN / &
        OCEAN_TYPE
 
-    NAMELIST / PARAM_OCEAN_VARS / &
-       OCEAN_RESTART_IN_BASENAME, &
-       OCEAN_RESTART_OUTPUT,      &
-       OCEAN_RESTART_OUT_BASENAME
+    NAMELIST / PARAM_OCEAN_VARS /  &
+       OCEAN_RESTART_IN_BASENAME,  &
+       OCEAN_RESTART_OUTPUT,       &
+       OCEAN_RESTART_OUT_BASENAME, &
+       OCEAN_RESTART_OUT_TITLE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -115,12 +117,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
 
-    if ( OCEAN_TYPE == 'FIXEDSST' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : Fixed SST'
-       OCEAN_sw_sf = .true.
+    if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : ON'
+       OCEAN_sw_sst = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : NONE'
-       OCEAN_sw_sf = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Ocn-Atm Interface : OFF'
+       OCEAN_sw_sst = .false.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -158,71 +160,68 @@ contains
   end subroutine OCEAN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Read restart of oceanpheric variables
-  !-----------------------------------------------------------------------------
+  !> Read ocean restart
   subroutine OCEAN_vars_restart_read
+    use mod_fileio, only: &
+       FILEIO_read
+    use mod_const, only: &
+       CONST_Tstd
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_fileio, only: &
-       FIO_input
     implicit none
-
-    real(RP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
-
-    character(len=IO_FILECHR) :: bname
-
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
 
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
-       bname = OCEAN_RESTART_IN_BASENAME
 
-       call FIO_input( restart_ocean(:,:,:), bname, 'SST', 'ZSFC', 1, 1, 1 )
-
-       SST(1,IS:IE,JS:JE) = restart_ocean(1,1:IMAX,1:JMAX)
+       call FILEIO_read( SST(1,:,:),                                    & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, 'SST', 'XY', step=1 ) ! [IN]
 
        ! fill IHALO & JHALO
-       call COMM_vars8( SST(:,:,:), 1 )
-       call COMM_wait ( SST(:,:,:), 1 )
+       call COMM_vars8( SST(1,:,:), 1 )
+       call COMM_wait ( SST(1,:,:), 1 )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
+
+       SST(:,:,:) = CONST_Tstd
     endif
 
     return
   end subroutine OCEAN_vars_restart_read
 
   !-----------------------------------------------------------------------------
-  !> Read restart of oceanpheric variables
-  !-----------------------------------------------------------------------------
+  !> Write ocean restart
   subroutine OCEAN_vars_restart_write
     use mod_time, only: &
-       NOWSEC => TIME_NOWSEC
-    use mod_fileio_h, only: &
-       FIO_REAL8
+       NOWSEC => TIME_NOWDAYSEC
     use mod_fileio, only: &
-       FIO_output
+       FILEIO_write
     implicit none
 
-    real(RP) :: restart_ocean(1,IMAX,JMAX) !> restart file (no HALO)
-
     character(len=IO_FILECHR) :: bname
-    character(len=FIO_HMID)   :: desc
+
+    integer :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ocean) ***'
+    if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
-    write(bname,'(A,A,F15.3)') trim(OCEAN_RESTART_OUT_BASENAME), '_', NOWSEC
-    desc = 'SCALE3 OCEANIC VARS.'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ocean) ***'
 
-    restart_ocean(1,1:IMAX,1:JMAX) = SST(1,IS:IE,JS:JE)
+       bname = ''
+       write(bname(1:15), '(F15.3)') NOWSEC
+       do n = 1, 15
+          if ( bname(n:n) == ' ' ) bname(n:n) = '0'
+       end do
+       write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
 
-    call FIO_output( restart_ocean(:,:,:), bname, desc, '',     &
-                     'SST', OP_DESC(1), '', OP_UNIT(1),         &
-                     FIO_REAL8, 'ZSFC', 1, 1, 1, NOWSEC, NOWSEC )
+       call FILEIO_write( SST(1,:,:), bname,                        OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          OP_NAME(1), OP_DESC(1), OP_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
+
+    endif
 
     return
   end subroutine OCEAN_vars_restart_write

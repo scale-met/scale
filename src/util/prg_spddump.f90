@@ -5,7 +5,7 @@
 !!          SCALE: Scalable Computing by Advanced Library and Environment
 !!          header/data veiwer for formatted data
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro) [new]
@@ -17,7 +17,7 @@ program spddump
   !
   !++ Used modules
   !
-  use mod_fileio_h, only : &
+  use mod_fileio_c_h, only: &
     FIO_HLONG,         &
     FIO_LITTLE_ENDIAN, &
     FIO_BIG_ENDIAN,    &
