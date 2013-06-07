@@ -89,6 +89,13 @@ module mod_atmos_phy_sf
   real(RP), private, parameter :: U_maxH  =  100.0_RP  !                   T
   real(RP), private, parameter :: U_maxE  =  100.0_RP  !                   q
 
+  ! surface flux
+  real(RP), private, save :: SFLX_MOMZ(IA,JA)
+  real(RP), private, save :: SFLX_MOMX(IA,JA)
+  real(RP), private, save :: SFLX_MOMY(IA,JA)
+  real(RP), private, save :: SFLX_POTT(IA,JA)
+  real(RP), private, save :: SFLX_QV(IA,JA)
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -102,26 +109,6 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_SF
-    use mod_grid, only: &
-       CZ => GRID_CZ
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
-    use mod_ocean_vars, only: &
-       SST
-    use mod_atmos_vars_sf, only: &
-       SFLX_MOMZ, &
-       SFLX_MOMX, &
-       SFLX_MOMY, &
-       SFLX_POTT, &
-       SFLX_QV
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
@@ -217,55 +204,35 @@ contains
     ZeS    = ATMOS_PHY_SF_ZeS
     ThS    = ATMOS_PHY_SF_ThS
 
-    call ATMOS_PHY_SF_main( &
-         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
-         CZ                                                   ) ! (in)
-
-    call COMM_vars8( SFLX_MOMZ(:,:), 1 )
-    call COMM_vars8( SFLX_MOMX(:,:), 2 )
-    call COMM_vars8( SFLX_MOMY(:,:), 3 )
-    call COMM_vars8( SFLX_POTT(:,:), 4 )
-    call COMM_vars8( SFLX_QV  (:,:), 5 )
-
-    call COMM_wait ( SFLX_MOMZ(:,:), 1 )
-    call COMM_wait ( SFLX_MOMX(:,:), 2 )
-    call COMM_wait ( SFLX_MOMY(:,:), 3 )
-    call COMM_wait ( SFLX_POTT(:,:), 4 )
-    call COMM_wait ( SFLX_QV  (:,:), 5 )
-
     return
   end subroutine ATMOS_PHY_SF_setup
 
-  subroutine ATMOS_PHY_SF
+  subroutine ATMOS_PHY_SF( update_flag )
     use mod_const, only: &
        CPdry  => CONST_CPdry, &
        LH0    => CONST_LH0
     use mod_time, only: &
        dtsf => TIME_DTSEC_ATMOS_PHY_SF
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use mod_history, only: &
        HIST_in
     use mod_grid, only: &
-       CZ => GRID_CZ
+       CZ => GRID_CZ, &
+       RCDZ => GRID_RCDZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC
+       QTRC, &
+       DENS_tp, &
+       RHOT_tp, &
+       QTRC_tp
     use mod_ocean_vars, only: &
        SST
-    use mod_atmos_vars_sf, only: &
-       SFLX_MOMZ, &
-       SFLX_MOMX, &
-       SFLX_MOMY, &
-       SFLX_POTT, &
-       SFLX_QV
     implicit none
+
+    logical, intent(in) :: update_flag
 
     ! monitor
     real(RP) :: SHFLX(IA,JA) ! sensible heat flux [W/m2]
@@ -273,32 +240,34 @@ contains
 
     integer :: i, j
 
-    call ATMOS_PHY_SF_main( &
-         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
-         CZ                                                   ) ! (in)
+    if ( update_flag ) then
+       call ATMOS_PHY_SF_main( &
+            SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+            CZ                                                   ) ! (in)
+       do j = JS, JE
+       do i = IS, IE
+          SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
+          LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       end do
+       end do
 
-    call COMM_vars8( SFLX_MOMZ(:,:), 1 )
-    call COMM_vars8( SFLX_MOMX(:,:), 2 )
-    call COMM_vars8( SFLX_MOMY(:,:), 3 )
-    call COMM_vars8( SFLX_POTT(:,:), 4 )
-    call COMM_vars8( SFLX_QV  (:,:), 5 )
+       call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+       call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+    end if
 
     do j = JS, JE
     do i = IS, IE
-       SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+            + ( SFLX_POTT(i,j) &
+              + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+              ) * RCDZ(KS)
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+            + SFLX_QV(i,j) * RCDZ(KS)
+       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+            + SFLX_QV(i,j) * RCDZ(KS)
     enddo
     enddo
-
-    call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-    call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
-
-    call COMM_wait ( SFLX_MOMZ(:,:), 1 )
-    call COMM_wait ( SFLX_MOMX(:,:), 2 )
-    call COMM_wait ( SFLX_MOMY(:,:), 3 )
-    call COMM_wait ( SFLX_POTT(:,:), 4 )
-    call COMM_wait ( SFLX_QV  (:,:), 5 )
 
   end subroutine ATMOS_PHY_SF
   !-----------------------------------------------------------------------------

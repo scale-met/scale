@@ -48,24 +48,19 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT_av(KA,IA,JA)
   real(RP) :: QTRC_av(KA,IA,JA,QA)
 
+  real(RP) :: DENS_tp(KA,IA,JA)
+  real(RP) :: MOMZ_tp(KA,IA,JA)
+  real(RP) :: MOMX_tp(KA,IA,JA)
+  real(RP) :: MOMY_tp(KA,IA,JA)
+  real(RP) :: RHOT_tp(KA,IA,JA)
+  real(RP) :: QTRC_tp(KA,IA,JA,QA)
+
   real(RP) :: DENS_o(KA,IA,JA)
   real(RP) :: MOMZ_o(KA,IA,JA)
   real(RP) :: MOMX_o(KA,IA,JA)
   real(RP) :: MOMY_o(KA,IA,JA)
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
-
-  real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
-
-  real(RP) :: SFLX_MOMZ(IA,JA)
-  real(RP) :: SFLX_MOMX(IA,JA)
-  real(RP) :: SFLX_MOMY(IA,JA)
-  real(RP) :: SFLX_POTT(IA,JA)
-  real(RP) :: SFLX_QV(IA,JA)
 
   real(RP) :: QDRY(KA,IA,JA)
   real(RP) :: DDIV(KA,IA,JA)
@@ -158,17 +153,12 @@ contains
   divdmp_coef = 0.0_RP
   LSsink_D    = 0.0_RP
 
-  qflx_sgs_momz(:,:,:,:) = 0.0_RP
-  qflx_sgs_momx(:,:,:,:) = 0.0_RP
-  qflx_sgs_momy(:,:,:,:) = 0.0_RP
-  qflx_sgs_rhot(:,:,:,:) = 0.0_RP
-  qflx_sgs_qtrc(:,:,:,:,:) = 0.0_RP
-
-  SFLX_MOMZ(:,:) = 0.0_RP
-  SFLX_MOMX(:,:) = 0.0_RP
-  SFLX_MOMY(:,:) = 0.0_RP
-  SFLX_POTT(:,:) = 0.0_RP
-  SFLX_QV(:,:) = 0.0_RP
+  DENS_tp(:,:,:) = 0.0_RP
+  MOMZ_tp(:,:,:) = 0.0_RP
+  MOMX_tp(:,:,:) = 0.0_RP
+  MOMY_tp(:,:,:) = 0.0_RP
+  RHOT_tp(:,:,:) = 0.0_RP
+  QTRC_tp(:,:,:,:) = 0.0_RP
 
   !########## test ##########
 
@@ -219,13 +209,10 @@ subroutine test_undef
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           QDRY, DDIV,                                  & ! (out)
+          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
           CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-          qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
-          qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
-          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-          SFLX_POTT, SFLX_QV,                          & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, DIFF4,                   & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
@@ -270,13 +257,10 @@ subroutine test_const
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        QDRY, DDIV,                                  & ! (out)
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
-       SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-       SFLX_POTT, SFLX_QV,                          & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, DIFF4,                   & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
@@ -354,13 +338,10 @@ subroutine test_conserve
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (out)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          QDRY, DDIV,                                  & ! (out)
+         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-         qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (in)
-         qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (in)
-         SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY,             & ! (in)
-         SFLX_POTT, SFLX_QV,                          & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, DIFF4,                   & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
