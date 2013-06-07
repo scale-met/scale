@@ -66,6 +66,12 @@ module mod_atmos_phy_tb
   integer,  private, parameter :: IUNDEF = -99999
 #endif
 
+  real(RP), private,      save :: MOMZ_t(KA,IA,JA)
+  real(RP), private,      save :: MOMX_t(KA,IA,JA)
+  real(RP), private,      save :: MOMY_t(KA,IA,JA)
+  real(RP), private,      save :: RHOT_t(KA,IA,JA)
+  real(RP), private,      save :: QTRC_t(KA,IA,JA,QA)
+
   real(RP), private,      save :: nu_factC (KA,IA,JA) ! (Cs*Delta)^2 (cell center)
   real(RP), private,      save :: nu_factXY(KA,IA,JA) !              (x-y plane)
   real(RP), private,      save :: nu_factYZ(KA,IA,JA) !              (y-z plane)
@@ -104,11 +110,7 @@ contains
   end subroutine CHECK
 #endif
 
-  subroutine ATMOS_PHY_TB_setup( &
-#ifdef DEBUG
-    do_calc &
-#endif
-    )
+  subroutine ATMOS_PHY_TB_setup
     use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -120,34 +122,9 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_TB
-    use mod_atmos_vars, only: &
-       DENS_av, &
-       MOMZ_av, &
-       MOMX_av, &
-       MOMY_av, &
-       RHOT_av, &
-       QTRC_av, &
-       qflx_sgs_momz, &
-       qflx_sgs_momx, &
-       qflx_sgs_momy, &
-       qflx_sgs_rhot, &
-       qflx_sgs_qtrc
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
-#ifdef DEBUG
-    logical, intent(in), optional :: do_calc
-#endif
-
-    ! diagnostic variables
-    real(RP) :: tke(KA,IA,JA) ! TKE
-    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
-    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
-    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
-
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -243,54 +220,6 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-#ifdef DEBUG
-    if ( present(do_calc) ) then
-       if ( .not. do_calc ) return
-    endif
-#endif
-
-    call ATMOS_PHY_TB_main( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
-       )
-
-    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-
     return
   end subroutine ATMOS_PHY_TB_setup
 
@@ -302,11 +231,18 @@ contains
   !>  4, heat flux is not accurate yet. (i.e. energy is not conserved, see *1)
   !>  5, stratification effect is not considered.
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB
+  subroutine ATMOS_PHY_TB( update_flag )
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_history, only: &
        HIST_in
+    use mod_grid, only: &
+       RCDZ => GRID_RCDZ, &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY, &
+       RFDZ => GRID_RFDZ, &
+       RFDX => GRID_RFDX, &
+       RFDY => GRID_RFDY
     use mod_atmos_vars, only: &
        DENS_av, &
        MOMZ_av, &
@@ -314,15 +250,21 @@ contains
        MOMY_av, &
        RHOT_av, &
        QTRC_av, &
-       qflx_sgs_momz, &
-       qflx_sgs_momx, &
-       qflx_sgs_momy, &
-       qflx_sgs_rhot, &
-       qflx_sgs_qtrc
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp
     implicit none
+
+    logical, intent(in) :: update_flag
+
+    ! eddy viscosity/diffusion flux
+    real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
 
     ! diagnostic variables
     real(RP) :: tke(KA,IA,JA) ! TKE
@@ -330,88 +272,144 @@ contains
     real(RP) :: Ri (KA,IA,JA) ! Richardoson number
     real(RP) :: Pr (KA,IA,JA) ! Prandtle number
 
-    integer :: iq
+    integer :: k, i, j, iq
+    integer :: IIS, IIE, JJS, JJE
 
-    call ATMOS_PHY_TB_main( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
-       )
+    if ( update_flag ) then
+       call ATMOS_PHY_TB_main( &
+            qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+            qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+            tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
+            MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
+            )
 
-    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+             MOMZ_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momz(k+1,i,j,ZDIR) - qflx_sgs_momz(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                  + ( qflx_sgs_momz(k  ,i,j,XDIR) - qflx_sgs_momz(k,i-1,j  ,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_momz(k  ,i,j,YDIR) - qflx_sgs_momz(k,i  ,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMX_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momx(k,i  ,j,ZDIR) - qflx_sgs_momx(k-1,i,j  ,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_momx(k,i+1,j,XDIR) - qflx_sgs_momx(k  ,i,j  ,XDIR) ) * RFDX(i) &
+                  + ( qflx_sgs_momx(k,i  ,j,YDIR) - qflx_sgs_momx(k  ,i,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMY_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momy(k,i,j  ,ZDIR) - qflx_sgs_momy(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_momy(k,i,j  ,XDIR) - qflx_sgs_momy(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_momy(k,i,j+1,YDIR) - qflx_sgs_momy(k  ,i  ,j,YDIR) ) * RFDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             RHOT_t(k,i,j) = - ( &
+                  + ( qflx_sgs_rhot(k,i,j,ZDIR) - qflx_sgs_rhot(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_rhot(k,i,j,XDIR) - qflx_sgs_rhot(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_rhot(k,i,j,YDIR) - qflx_sgs_rhot(k  ,i  ,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do iq = 1, QA
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             QTRC_t(k,i,j,iq) = - ( &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,ZDIR) - qflx_sgs_qtrc(k-1,i  ,j  ,iq,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,XDIR) - qflx_sgs_qtrc(k  ,i-1,j  ,iq,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,YDIR) - qflx_sgs_qtrc(k  ,i  ,j-1,iq,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          end do
+       end do
+       end do
+
+       call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
+       call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
+       call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
+       call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
+
+       call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
+       call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
+       call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
+
+       call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
+       call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
+       call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
+
+       call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
+       call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
+       call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
+
+       call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
+       call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
+       call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
+
+       if ( I_QV > 0 ) then
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
+       endif
+
+       if ( I_QC > 0 ) then
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
+       endif
+
+       if ( I_QR > 0 ) then
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
+          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
+       endif
+
+    end if
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, IE-1
+       MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) + MOMZ_t(k,i,j)
     end do
-    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, IE
+       MOMX_tp(k,i,j) = MOMX_tp(k,i,j) + MOMX_t(k,i,j)
+       MOMY_tp(k,i,j) = MOMY_tp(k,i,j) + MOMY_t(k,i,j)
+       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
+    end do
+    end do
     end do
 
-    call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
-    call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
-    call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
-    call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
-
-    call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
-    call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
-    call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
-
-    if ( I_QV > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
-    endif
-
-    if ( I_QC > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
-    endif
-
-    if ( I_QR > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
-    endif
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, IE
+       QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) + QTRC_t(k,i,j,iq)
+    end do
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_TB

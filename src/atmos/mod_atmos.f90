@@ -34,6 +34,10 @@ module mod_atmos
   public :: ATMOS_setup
   public :: ATMOS_step
 
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -128,6 +132,12 @@ contains
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp, &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
@@ -147,27 +157,29 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Dynamics ##########
-    call TIME_rapstart('ATM Dynamics')
-    if ( sw_dyn .AND. do_dyn ) then
-       call ATMOS_DYN
-    endif
-    call TIME_rapend  ('ATM Dynamics')
+!OCL XFILL
+    DENS_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMZ_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    RHOT_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    QTRC_tp(:,:,:,:) = 0.0_RP
 
     !########## Surface Flux ##########
 
     call TIME_rapstart('ATM SurfaceFlux')
-    if ( sw_phy_sf .AND. do_phy_sf ) then
-       call ATMOS_PHY_SF
-    endif
+    call ATMOS_PHY_SF( sw_phy_sf .AND. do_phy_sf )
     call TIME_rapend  ('ATM SurfaceFlux')
 
     !########## Turbulence ##########
 
     call TIME_rapstart('ATM Turbulence')
-    if ( sw_phy_tb .AND. do_phy_tb ) then
-       call ATMOS_PHY_TB
-    endif
+    call ATMOS_PHY_TB( sw_phy_tb .AND. do_phy_tb )
     call TIME_rapend  ('ATM Turbulence')
 
     !########## Microphysics ##########
@@ -183,6 +195,13 @@ contains
        call ATMOS_PHY_RD
     endif
     call TIME_rapend  ('ATM Radiation')
+
+    !########## Dynamics ##########
+    call TIME_rapstart('ATM Dynamics')
+    if ( sw_dyn .AND. do_dyn ) then
+       call ATMOS_DYN
+    endif
+    call TIME_rapend  ('ATM Dynamics')
 
     !########## History & Monitor ##########
     call TIME_rapstart('ATM History Vars')

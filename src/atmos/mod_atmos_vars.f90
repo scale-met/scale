@@ -56,12 +56,21 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
+  ! prognostic variables
   real(RP), public, save :: DENS(KA,IA,JA)    ! Density    [kg/m3]
   real(RP), public, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
   real(RP), public, save :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
   real(RP), public, save :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
   real(RP), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-  real(RP), public, save :: QTRC(KA,IA,JA,QA) ! tracer mixing ratio [kg/kg]
+  real(RP), public, save :: QTRC(KA,IA,JA,QA) ! ratio of mass of tracer to total mass[kg/kg]
+
+  ! tendency by physical processes
+  real(RP), public, save :: DENS_tp(KA,IA,JA)
+  real(RP), public, save :: MOMZ_tp(KA,IA,JA)
+  real(RP), public, save :: MOMX_tp(KA,IA,JA)
+  real(RP), public, save :: MOMY_tp(KA,IA,JA)
+  real(RP), public, save :: RHOT_tp(KA,IA,JA)
+  real(RP), public, save :: QTRC_tp(KA,IA,JA,QA)
 
   real(RP), public, save :: DENS_av(KA,IA,JA)
   real(RP), public, save :: MOMZ_av(KA,IA,JA)
@@ -69,12 +78,6 @@ module mod_atmos_vars
   real(RP), public, save :: MOMY_av(KA,IA,JA)
   real(RP), public, save :: RHOT_av(KA,IA,JA)
   real(RP), public, save :: QTRC_av(KA,IA,JA,QA)
-
-  real(RP), public, save :: qflx_sgs_momz(KA,IA,JA,3)
-  real(RP), public, save :: qflx_sgs_momx(KA,IA,JA,3)
-  real(RP), public, save :: qflx_sgs_momy(KA,IA,JA,3)
-  real(RP), public, save :: qflx_sgs_rhot(KA,IA,JA,3)
-  real(RP), public, save :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
 
   ! diagnostic variables, defined at the cell center
   real(RP), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
@@ -491,12 +494,6 @@ contains
        ATMOS_PREP_sw(I_ENGI)  = 1
        ATMOS_PREP_sw(I_ENGT)  = 1
     endif
-
-    qflx_sgs_momz(:,:,:,:) = 0.0_RP
-    qflx_sgs_momx(:,:,:,:) = 0.0_RP
-    qflx_sgs_momy(:,:,:,:) = 0.0_RP
-    qflx_sgs_rhot(:,:,:,:) = 0.0_RP
-    qflx_sgs_qtrc(:,:,:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_vars_setup
