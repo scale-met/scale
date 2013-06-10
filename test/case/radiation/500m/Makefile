@@ -15,7 +15,7 @@ include $(TOPDIR)/src/Mkinclude
 # for build
 index      = 500m40x40x40
 precision  = real8
-tracer     = kessler
+tracer     = sn13
 sfcflx     = const
 turbulence = dummy
 radiation  = mstrnX

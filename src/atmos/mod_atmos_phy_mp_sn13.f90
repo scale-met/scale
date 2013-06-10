@@ -115,6 +115,8 @@ module mod_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
+  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -381,6 +383,9 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only: &
+       CONST_DWATR, &
+       CONST_DICE
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     use mod_atmos_vars, only: &
@@ -416,11 +421,11 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
-    MP_DENS(I_mp_QC) = dens_w
-    MP_DENS(I_mp_QR) = dens_w
-    MP_DENS(I_mp_QI) = dens_i
-    MP_DENS(I_mp_QS) = dens_s
-    MP_DENS(I_mp_QG) = dens_g
+    MP_DENS(I_mp_QC) = CONST_DWATR
+    MP_DENS(I_mp_QR) = CONST_DWATR
+    MP_DENS(I_mp_QI) = CONST_DICE
+    MP_DENS(I_mp_QS) = CONST_DICE
+    MP_DENS(I_mp_QG) = CONST_DICE
 
     WLABEL( 1) = "VAPOR"
     WLABEL( 2) = "CLOUD"
