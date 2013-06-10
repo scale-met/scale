@@ -210,9 +210,9 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
-
     if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
@@ -240,9 +240,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
-
     if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     do j = 1, JMAX
     do i = 1, IMAX
@@ -275,9 +275,9 @@ contains
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
-
     if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     s = shape(var)
     if ( s(1) == 1 ) then
