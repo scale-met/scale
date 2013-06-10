@@ -32,8 +32,8 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
-  public :: MP_tomita08
-  public :: MP_tomita08_vterm
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
 
   !-----------------------------------------------------------------------------
   !
@@ -47,12 +47,18 @@ module mod_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
-  real(RP), public,  save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+  real(RP), public, save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+
+  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: MP_tomita08
+  private :: MP_tomita08_vterm
+  private :: MP_tomita08_BergeronParam
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -261,7 +267,8 @@ contains
     use mod_const, only: &
        PI     => CONST_PI,    &
        GRAV   => CONST_GRAV,  &
-       dens_w => CONST_DWATR
+       dens_w => CONST_DWATR,  &
+       dens_i => CONST_DICE
     use mod_specfunc, only: &
        SF_gamma
     use mod_comm, only: &
@@ -335,6 +342,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     vterm(:,:,:,:) = 0.0_RP
+
+    MP_DENS(I_mp_QC) = dens_w
+    MP_DENS(I_mp_QR) = dens_w
+    MP_DENS(I_mp_QI) = dens_i
+    MP_DENS(I_mp_QS) = dens_s
+    MP_DENS(I_mp_QG) = dens_g
 
     do j = JS, JE
     do i = IS, IE
@@ -1343,29 +1356,25 @@ contains
     real(RP) :: dens
     real(RP) :: q(QA)
 
-    real(RP) :: Rdens
     real(RP) :: rho_fact ! density factor
 
     real(RP) :: RLMDr, RLMDs, RLMDg
     real(RP) :: RLMDr_dr, RLMDs_ds, RLMDg_dg
 
     real(RP) :: zerosw
-
-    integer :: k, i, j, iq
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-
        ! store to work
        dens = DENS0(k,i,j)
        do iq = I_QV, I_QG
           q(iq) = QTRC0(k,i,j,iq)
        enddo
 
-       Rdens    = 1.0_RP / dens
-       rho_fact = sqrt( dens00 * Rdens )
+       rho_fact = sqrt( dens00 / dens )
 
        ! slope parameter lambda
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
@@ -1457,6 +1466,90 @@ contains
 
     return
   end subroutine MP_tomita08_BergeronParam
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  subroutine ATMOS_PHY_MP_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do iq = 1, MP_QA
+          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_CloudFraction
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+
+    real(RP) :: dens
+    real(RP) :: q(QA)
+    real(RP) :: RLMDr, RLMDs, RLMDg
+
+    real(RP) :: zerosw
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    Re(:,:,:,I_mp_QC) =   8.E-6_RP
+    Re(:,:,:,I_mp_QI) =  20.E-6_RP
+
+    ! Effective radius is defined by r3m/r2m=1.5/lambda.
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       ! store to work
+       dens = DENS0(k,i,j)
+       do iq = I_QV, I_QG
+          q(iq) = QTRC0(k,i,j,iq)
+       enddo
+
+       ! slope parameter lambda
+       zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
+       RLMDr = sqrt(sqrt( dens * q(I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP - zerosw )
+
+       zerosw = 0.5_RP - sign(0.5_RP, q(I_QS) - 1.E-12_RP )
+       RLMDs = sqrt(sqrt( dens * q(I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP - zerosw )
+
+       zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
+       RLMDg = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
+
+       Re(k,i,j,I_mp_QR) = RLMDr * 1.5_RP
+       Re(k,i,j,I_mp_QS) = RLMDs * 1.5_RP
+       Re(k,i,j,I_mp_QG) = RLMDg * 1.5_RP
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_EffectiveRadius
 
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------

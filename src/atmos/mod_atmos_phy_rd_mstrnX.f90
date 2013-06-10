@@ -235,12 +235,6 @@ contains
        RD_PROFILE_setup            => ATMOS_PHY_RD_PROFILE_setup,            &
        RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
        RD_PROFILE_read_climatorogy => ATMOS_PHY_RD_PROFILE_read_climatology
-    use mod_atmos_phy_mpsub, only: &
-       MPsub_MP2RD => ATMOS_PHY_MPsub_MP2RD, &
-       MP_QA
-    use mod_atmos_phy_aesub, only: &
-       AEsub_AE2RD => ATMOS_PHY_AEsub_AE2RD, &
-       AE_QA
     implicit none
 
     integer                   :: ATMOS_PHY_RD_MSTRN_KADD
@@ -256,12 +250,8 @@ contains
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
        ATMOS_PHY_RD_MSTRN_nband
 
-    integer :: I_MP2RD(MP_QA)
-    integer :: I_AE2RD(AE_QA)
-
     integer :: ngas, ncfc
-    integer :: iaero
-
+    integer :: ihydro, iaero
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -335,13 +325,10 @@ contains
     allocate( I_MPAE2RD(RD_naero) )
 
     ! make look-up table between hydrometeor tracer and mstrn particle type
-    call MPsub_MP2RD( I_MP2RD(:) )
-    ! make look-up table between aerosol     tracer and mstrn particle type
-    call AEsub_AE2RD( I_AE2RD(:) )
-
-    do iaero = 1, MP_QA
-       I_MPAE2RD(iaero) = I_MP2RD(iaero)
+    do ihydro = 1, MP_QA
+       I_MPAE2RD(ihydro) = I_MP2RD(ihydro)
     enddo
+    ! make look-up table between aerosol     tracer and mstrn particle type
     do iaero = 1, AE_QA
        I_MPAE2RD(MP_QA+iaero) = I_AE2RD(iaero)
     enddo
@@ -408,16 +395,12 @@ contains
        dt => TIME_DTSEC_ATMOS_PHY_RD
     use mod_atmos_solarins, only: &
        ATMOS_SOLARINS_insolation
-    use mod_atmos_phy_mpsub, only: &
-       MPsub_EffectiveRadius => ATMOS_PHY_MPsub_EffectiveRadius, &
-       MPsub_CloudFraction   => ATMOS_PHY_MPsub_CloudFraction,   &
-       MP_QA,                                                    &
-       I_MP2ALL,                                                 &
+    use mod_atmos_phy_mp, only: &
+       MP_EffectiveRadius => ATMOS_PHY_MP_EffectiveRadius, &
+       MP_CloudFraction   => ATMOS_PHY_MP_CloudFraction,   &
        MP_DENS
-    use mod_atmos_phy_aesub, only: &
-       AEsub_EffectiveRadius => ATMOS_PHY_AEsub_EffectiveRadius, &
-       AE_QA,                                                    &
-       I_AE2ALL,                                                 &
+    use mod_atmos_phy_ae, only: &
+       AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS
     use mod_atmos_phy_rd_common, only: &
        RD_heating => ATMOS_PHY_RD_heating
@@ -464,7 +447,8 @@ contains
     ! output
     real(RP) :: flux_rad_merge(RD_KMAX+1,2,2)
 
-    integer :: RD_k, k, i, j, iaero
+    integer :: ihydro, iaero
+    integer :: RD_k, k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
@@ -487,15 +471,16 @@ contains
     enddo
     enddo
 
-    call MPsub_CloudFraction( cldfrac(:,:,:), & ! [OUT]
-                              QTRC(:,:,:,:)   ) ! [IN]
+    call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
+                           QTRC(:,:,:,:)   ) ! [IN]
 
-    call MPsub_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
-                                QTRC(:,:,:,:)   ) ! [IN]
+    call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
+                             QTRC(:,:,:,:),  & ! [IN]
+                             DENS(:,:,:)     ) ! [IN]
 
-    call AEsub_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
-                                QTRC(:,:,:,:),  & ! [OUT]
-                                rh  (:,:,:)     ) ! [IN]
+    call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
+                             QTRC(:,:,:,:),  & ! [IN]
+                             rh  (:,:,:)     ) ! [IN]
 
     do j = JS, JE
     do i = IS, IE
@@ -536,24 +521,30 @@ contains
           gas_merge  (RD_k,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM ! [PPM]
        enddo
 
-       do iaero = 1,  MP_QA
-       do k     = KS, KE
+       do k = KS, KE
           RD_k = RD_KMAX - ( k - KS ) ! reverse axis
 
-          aerosol_conc_merge(RD_k,iaero) = QTRC(k,i,j,I_MP2ALL(iaero))        &
-                                         / MP_DENS(iaero) * DENS(k,i,j) / PPM ! [PPM]
-          aerosol_radi_merge(RD_k,iaero) = MP_Re(k,i,j,iaero)
-
-          cldfrac_merge     (RD_k)       = 0.5_RP + sign( 0.5_RP, cldfrac(k,i,j)-min_cldfrac )
+          cldfrac_merge(RD_k) = 0.5_RP + sign( 0.5_RP, cldfrac(k,i,j)-min_cldfrac )
        enddo
+
+       do ihydro = 1,  MP_QA
+          if ( I_MP2ALL(ihydro) > 0 ) then
+             do k = KS, KE
+                RD_k = RD_KMAX - ( k - KS ) ! reverse axis
+
+                aerosol_conc_merge(RD_k,ihydro) = QTRC(k,i,j,I_MP2ALL(ihydro)) &
+                                                / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
+                aerosol_radi_merge(RD_k,ihydro) = MP_Re(k,i,j,ihydro)
+             enddo
+          endif
        enddo
 
        do iaero = 1,  AE_QA
           if ( I_AE2ALL(iaero) > 0 ) then
-             do k     = KS, KE
+             do k = KS, KE
                 RD_k = RD_KMAX - ( k - KS ) ! reverse axis
 
-                aerosol_conc_merge(RD_k,MP_QA+iaero) = QTRC(k,i,j,I_AE2ALL(iaero))        &
+                aerosol_conc_merge(RD_k,MP_QA+iaero) = QTRC(k,i,j,I_AE2ALL(iaero)) &
                                                      / AE_DENS(iaero) * DENS(k,i,j) / PPM ! [PPM]
                 aerosol_radi_merge(RD_k,MP_QA+iaero) = AE_Re(k,i,j,iaero)
              enddo

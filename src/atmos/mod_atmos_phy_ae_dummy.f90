@@ -1,9 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Aerosol Microphysics Subset
+!> module ATMOSPHERE / Physics Aerosol Microphysics
 !!
 !! @par Description
-!!          Subsets for Aerosol
-!!          OFFLINE scheme
+!!          dummy code
 !!
 !! @author Team SCALE
 !!
@@ -12,17 +11,26 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_aesub
+module mod_atmos_phy_ae
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_FID_LOG, &
+     IO_FID_LOG,  &
      IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: ATMOS_PHY_AE_setup
+  public :: ATMOS_PHY_AE
+
+  public :: ATMOS_PHY_AE_EffectiveRadius
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -33,28 +41,9 @@ module mod_atmos_phy_aesub
 
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
-  !
-  public :: ATMOS_PHY_AEsub_setup
-  public :: ATMOS_PHY_AEsub_AE2RD
-  public :: ATMOS_PHY_AEsub_EffectiveRadius
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
-  integer,  public, parameter :: AE_QA = 1
-
-  integer,  public, parameter :: I_ae_seasalt = 1
-  !integer,  public, parameter :: I_ae_dust    = 2
-  !integer,  public, parameter :: I_ae_bc      = 3
-  !integer,  public, parameter :: I_ae_oc      = 4
-  !integer,  public, parameter :: I_ae_sulfate = 5
-
-  integer,  public, save :: I_AE2ALL(AE_QA)
-  data I_AE2ALL / -999 /
-
-  real(RP), public, save :: AE_DENS(AE_QA) ! aerosol density [kg/m3]=[g/L]
+  real(RP), public, save :: AE_DENS(AE_QA) = 0.0_RP ! aerosol density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -67,41 +56,41 @@ module mod_atmos_phy_aesub
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> setup
-  subroutine ATMOS_PHY_AEsub_setup
+  !> Setup
+  subroutine ATMOS_PHY_AE_setup
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_PHY_AE
     implicit none
+
     !---------------------------------------------------------------------------
 
-    AE_DENS(I_ae_seasalt) = 2200.0_RP
-!    AE_DENS(I_ae_dust   ) = 2500.0_RP
-!    AE_DENS(I_ae_bc     ) = 1250.0_RP
-!    AE_DENS(I_ae_oc     ) = 1500.0_RP
-!    AE_DENS(I_ae_sulfate) = 1770.0_RP
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
+
+    if ( ATMOS_TYPE_PHY_AE /= 'NONE' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_AE is not NONE. Check!'
+       call PRC_MPIstop
+    endif
 
     return
-  end subroutine ATMOS_PHY_AEsub_setup
+  end subroutine ATMOS_PHY_AE_setup
 
   !-----------------------------------------------------------------------------
-  !> Make look-up table between hydrometeor tracer and particle type in radiation scheme
-  subroutine ATMOS_PHY_AEsub_AE2RD( &
-       I_AE2RD )
+  !> Aerosol Microphysics
+  subroutine ATMOS_PHY_AE
     implicit none
 
-    integer, intent(out) :: I_AE2RD(AE_QA)
-    !---------------------------------------------------------------------------
-
-    I_AE2RD(I_ae_seasalt) = 8
-!    I_AE2RD(I_ae_dust   ) = 3
-!    I_AE2RD(I_ae_bc     ) = 4
-!    I_AE2RD(I_ae_oc     ) = 8
-!    I_AE2RD(I_ae_sulfate) = 8
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
 
     return
-  end subroutine ATMOS_PHY_AEsub_AE2RD
+  end subroutine ATMOS_PHY_AE
 
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_AEsub_EffectiveRadius( &
+  subroutine ATMOS_PHY_AE_EffectiveRadius( &
        Re,   &
        QTRC, &
        RH    )
@@ -116,13 +105,13 @@ contains
 
     Re(:,:,:,:) = UNDEF
 
-    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
+!    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
 !    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP
 !    Re(:,:,:,I_ae_bc     ) = 4.D-8_RP
 !    Re(:,:,:,I_ae_oc     ) = RH(:,:,:)
 !    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
 
     return
-  end subroutine ATMOS_PHY_AEsub_EffectiveRadius
+  end subroutine ATMOS_PHY_AE_EffectiveRadius
 
-end module mod_atmos_phy_aesub 
+end module mod_atmos_phy_ae 

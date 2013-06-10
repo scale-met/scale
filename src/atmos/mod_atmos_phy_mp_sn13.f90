@@ -101,6 +101,8 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
 
   !-----------------------------------------------------------------------------
   !
@@ -120,7 +122,6 @@ module mod_atmos_phy_mp
   private :: mp_sn13_init
   private :: mp_sn13
   private :: MP_terminal_velocity
-  private :: mp_sn13_effective_radius
 
   !-----------------------------------------------------------------------------
   !
@@ -414,6 +415,12 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+
+    MP_DENS(I_mp_QC) = dens_w
+    MP_DENS(I_mp_QR) = dens_w
+    MP_DENS(I_mp_QI) = dens_i
+    MP_DENS(I_mp_QS) = dens_s
+    MP_DENS(I_mp_QG) = dens_g
 
     WLABEL( 1) = "VAPOR"
     WLABEL( 2) = "CLOUD"
@@ -2104,258 +2111,6 @@ contains
     return
   end subroutine debug_tem_kij
 
-  ! this is called from external procedure
-  subroutine mp_sn13_effective_radius(&
-       IJA, KA, KS, KE,&
-       rho,                &
-       nc, nr, ni, ns, ng, &
-       qc, qr, qi, qs, qg, &
-       rec, rer, rei, res, reg )
-    implicit none
-    !
-    integer, intent(in) :: IJA
-    integer, intent(in) :: KA
-    integer, intent(in) :: KS
-    integer, intent(in) :: KE
-    ! atmospheric condition
-    real(RP), intent(in) :: rho(IJA,KA) ! air density[kg/m3]
-    ! number concentration[/m3]
-    real(RP), intent(in) :: nc(IJA,KA)
-    real(RP), intent(in) :: nr(IJA,KA)
-    real(RP), intent(in) :: ni(IJA,KA)
-    real(RP), intent(in) :: ns(IJA,KA)
-    real(RP), intent(in) :: ng(IJA,KA)
-    ! mixing ratio[kg/kg]
-    real(RP), intent(in) :: qc(IJA,KA)
-    real(RP), intent(in) :: qr(IJA,KA)
-    real(RP), intent(in) :: qi(IJA,KA)
-    real(RP), intent(in) :: qs(IJA,KA)
-    real(RP), intent(in) :: qg(IJA,KA)
-    ! effective radius [m]
-    real(RP), intent(out) :: rec(IJA,KA)
-    real(RP), intent(out) :: rer(IJA,KA)
-    real(RP), intent(out) :: rei(IJA,KA)
-    real(RP), intent(out) :: res(IJA,KA)
-    real(RP), intent(out) :: reg(IJA,KA)
-    !
-    ! mass concentration[kg/m3] and mean particle mass[kg]
-    real(RP) :: lc(IJA,KA), xc(IJA,KA)
-    real(RP) :: lr(IJA,KA), xr(IJA,KA)
-    real(RP) :: li(IJA,KA), xi(IJA,KA)
-    real(RP) :: ls(IJA,KA), xs(IJA,KA)
-    real(RP) :: lg(IJA,KA), xg(IJA,KA)
-    ! mean diameter[m]
-    real(RP) :: dc_xa(IJA,KA)     !
-    real(RP) :: dr_xa(IJA,KA)     !
-!    real(RP) :: di_xa(IJA,KA)     !
-!    real(RP) :: ds_xa(IJA,KA)     !
-!    real(RP) :: dg_xa(IJA,KA)     !
-    !
-    real(RP), parameter :: eps=1.E-30_RP
-    !
-    integer :: ij, k
-    !
-    ! Preparation
-    do k=1, KA
-       do ij=1, IJA
-          ! Mass concentration [kg/m3]
-          lc(ij,k)     = rho(ij,k)*qc(ij,k)
-          lr(ij,k)     = rho(ij,k)*qr(ij,k)
-          li(ij,k)     = rho(ij,k)*qi(ij,k)
-          ls(ij,k)     = rho(ij,k)*qs(ij,k)
-          lg(ij,k)     = rho(ij,k)*qg(ij,k)
-          ! mean particle mass[kg]
-          xc(ij,k)     = min(xc_max, max(xc_min, lc(ij,k)/(nc(ij,k)+nc_min) ))
-          xr(ij,k)     = min(xr_max, max(xr_min, lr(ij,k)/(nr(ij,k)+nr_min) ))
-          xi(ij,k)     = min(xi_max, max(xi_min, li(ij,k)/(ni(ij,k)+ni_min) ))
-          xs(ij,k)     = min(xs_max, max(xs_min, ls(ij,k)/(ns(ij,k)+ns_min) ))
-          xg(ij,k)     = min(xg_max, max(xg_min, lg(ij,k)/(ng(ij,k)+ng_min) ))
-          ! diamter of average mass  SB06(32)
-          dc_xa(ij,k)  = a_m(I_QC)*xc(ij,k)**b_m(I_QC)
-          dr_xa(ij,k)  = a_m(I_QR)*xr(ij,k)**b_m(I_QR)
-!          di_xa(ij,k)  = a_m(I_QI)*xi(ij,k)**b_m(I_QI)
-!          ds_xa(ij,k)  = a_m(I_QS)*xs(ij,k)**b_m(I_QS)
-!          dg_xa(ij,k)  = a_m(I_QG)*xg(ij,k)**b_m(I_QG)
-          !
-       end do
-    end do
-    !
-    call calc_effective_radius(        &
-         IJA, KA, KS, KE,      & ! in
-         nc, nr, ni, ns, ng,           & ! in
-         xi, xs, xg,                   & ! in ! [Add] 09/09/03 T.Mitsui
-         dc_xa, dr_xa,                 &
-!         di_xa, ds_xa, dg_xa,         &
-         rec, rer, rei, res, reg       )
-    !
-    return
-  end subroutine mp_sn13_effective_radius
-  !
-  subroutine calc_effective_radius( &
-       IJA, KA, KS, KE,     &
-       NC, NR, NI, NS, NG,          &
-       xi, xs, xg,                  & ! in ! [Add] 09/09/03 T.Mitsui
-       dc_ave, dr_ave,              &
-!       di_ave, ds_ave, dg_ave,     &
-       re_qc, re_qr, re_qi, re_qs, re_qg )
-    implicit none
-
-    ! index
-    integer, intent(in) :: IJA
-    integer, intent(in) :: KA
-    integer, intent(in) :: KS
-    integer, intent(in) :: KE
-    ! number concentration[/m3]
-    real(RP), intent(in) :: NC(IJA,KA)
-    real(RP), intent(in) :: NR(IJA,KA)
-    real(RP), intent(in) :: NI(IJA,KA)
-    real(RP), intent(in) :: NS(IJA,KA)
-    real(RP), intent(in) :: NG(IJA,KA)
-    !
-    real(RP), intent(in) :: xi(IJA,KA)
-    real(RP), intent(in) :: xs(IJA,KA)
-    real(RP), intent(in) :: xg(IJA,KA)
-    ! diameter of average mass[kg/m3]
-    real(RP), intent(in) :: dc_ave(IJA,KA)
-    real(RP), intent(in) :: dr_ave(IJA,KA)
-!    real(RP), intent(in) :: di_ave(IJA,KA)
-!    real(RP), intent(in) :: ds_ave(IJA,KA)
-!    real(RP), intent(in) :: dg_ave(IJA,KA)
-    ! effective radius[m] of each hydrometeors
-!!$    real(RP), intent(out):: re_liq(IJA,KA) ! liquid all
-!!$    real(RP), intent(out):: re_sol(IJA,KA) ! solid all
-    !
-    real(RP), intent(out):: re_qc(IJA,KA)  ! cloud only
-    real(RP), intent(out):: re_qr(IJA,KA)  ! rain only
-    real(RP), intent(out):: re_qi(IJA,KA)  ! ice only
-    real(RP), intent(out):: re_qs(IJA,KA)  ! snow only
-    real(RP), intent(out):: re_qg(IJA,KA)  ! graupel only
-    !
-    ! radius of average mass
-    real(RP) :: rc,rc2,rc3
-    real(RP) :: rr,rr2,rr3
-    ! 2nd. and 3rd. order moment of DSD
-!    real(RP) :: rc2m, rc3m
-!    real(RP) :: rr2m, rr3m
-    real(RP) :: ri2m(IJA,KA), ri3m(IJA,KA)
-    real(RP) :: rs2m(IJA,KA), rs3m(IJA,KA)
-    real(RP) :: rg2m(IJA,KA), rg3m(IJA,KA)
-    !
-!    real(RP) :: r2m_solid
-!    real(RP) :: r3m_solid
-    ! work variables
-!    logical :: flag_rel(IJA,KA) ! liquic
-!    logical :: flag_rei(IJA,KA) ! ice
-    !
-    real(RP) :: coef_Fuetal1998=0.0_RP
-    !
-    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
-    real(RP), parameter :: r2m_min=1.E-12_RP
-    integer :: ij,k
-    !
-    re_qc(:,:)  = UNDEF8
-    re_qr(:,:)  = UNDEF8
-    re_qi(:,:)  = UNDEF8
-    re_qs(:,:)  = UNDEF8
-    re_qg(:,:)  = UNDEF8
-    !
-!!$    re_liq(:,:) = UNDEF8
-!!$    re_sol(:,:) = UNDEF8
-    !
-    ri2m(:,:) = 0.0_RP
-    ri3m(:,:) = 0.0_RP
-    rs2m(:,:) = 0.0_RP
-    rs3m(:,:) = 0.0_RP
-    rg2m(:,:) = 0.0_RP
-    rg3m(:,:) = 0.0_RP
-    !
-!    flag_rel(:,:)= .false.
-!    flag_rei(:,:)= .false.
-    !
-    !
-    ! cloud, rain
-    do k=KS,KE
-       do ij=1, IJA
-          rc   = (0.5_RP*dc_ave(ij,k))
-          rr   = (0.5_RP*dr_ave(ij,k))
-          !
-!          rc2  = rc*rc
-!          rr2  = rr*rr
-!          rc3  = rc*rc2
-!          rr3  = rr*rr2
-          !
-!          rc2m = coef_r2(I_QC)*rc2*NC(ij,k)
-!          rc3m = coef_r3(I_QC)*rc3*NC(ij,k)
-!          rr2m = coef_r2(I_QR)*rr2*NR(ij,k)
-!          rr3m = coef_r3(I_QR)*rr3*NR(ij,k)
-          ! cloud effective radius
-          if( rc >= rmin_re )then
-             re_qc(ij,k)  = coef_re(I_QC)*rc
-          end if
-          ! rain effective radius
-          if( rr >= rmin_re )then
-             re_qr(ij,k)  = coef_re(I_QR)*rr
-          end if
-!!$          ! cloud + rain effective radius
-!!$          if( rc2m+rr2m > r2m_min )then
-!!$             re_liq(ij,k) = (rc3m+rr3m)/(rc2m+rr2m)
-!!$             flag_rel(ij,k)=.true.
-!!$          end if
-       end do
-    end do
-    !
-    ! Ac = pi*r*r
-    do k=KS,KE
-       do ij=1, IJA
-          ri2m(ij,k)  = PI*coef_rea2(I_QI)*NI(ij,k)*a_rea2(I_QI)*xi(ij,k)**b_rea2(I_QI)
-          rs2m(ij,k)  = PI*coef_rea2(I_QS)*NS(ij,k)*a_rea2(I_QS)*xs(ij,k)**b_rea2(I_QS)
-          rg2m(ij,k)  = PI*coef_rea2(I_QG)*NG(ij,k)*a_rea2(I_QG)*xg(ij,k)**b_rea2(I_QG)
-       end do
-    end do
-    !
-    ! Fu(1996), eq.(3.11) or Fu etal.(1998), (2.5)
-    coef_Fuetal1998 = 3.0_RP/(4.0_RP*rhoi)
-    ri3m(:,:) = coef_Fuetal1998 * NI(:,:) * xi(:,:)
-    rs3m(:,:) = coef_Fuetal1998 * NS(:,:) * xs(:,:)
-    rg3m(:,:) = coef_Fuetal1998 * NG(:,:) * xg(:,:)
-    !
-    do k=KS, KE
-       do ij=1, IJA
-          ! ice particles
-          if( ri2m(ij,k) > r2m_min )then
-             re_qi(ij,k) = ri3m(ij,k)/ri2m(ij,k)
-          else
-             re_qi(ij,k) = UNDEF8
-          end if
-          ! snow particles
-          if( rs2m(ij,k) > r2m_min )then
-             re_qs(ij,k) = rs3m(ij,k)/rs2m(ij,k)
-          else
-             re_qs(ij,k) = UNDEF8
-          end if
-          ! graupel particles
-          if( rg2m(ij,k) > r2m_min )then
-             re_qg(ij,k) = rg3m(ij,k)/rg2m(ij,k)
-          else
-             re_qg(ij,k) = UNDEF8
-          end if
-          ! total solid particles
-!          r2m_solid = ri2m(ij,k)+rs2m(ij,k)+rg2m(ij,k)
-!          r3m_solid = ri3m(ij,k)+rs3m(ij,k)+rg3m(ij,k)
-!!$          if( r2m_solid > r2m_min )then
-!!$             re_sol(ij,k) = r3m_solid/r2m_solid
-!!$             flag_rei(ij,k) = .true.
-!!$          else
-!!$             re_sol(ij,k) = UNDEF8
-!!$             flag_rei(ij,k) = .false.
-!!$          end if
-          !
-       end do
-    end do
-    !
-    return
-  end subroutine calc_effective_radius
-  !
   subroutine nucleation_kij( &
        IA, JA, KA,      &
        IS, IE,       &
@@ -4809,5 +4564,173 @@ contains
     return
   end subroutine MP_negativefilter
   !-------------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  subroutine ATMOS_PHY_MP_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do iq = 1, MP_QA
+          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_CloudFraction
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+
+    ! mass concentration[kg/m3] and mean particle mass[kg]
+    real(RP) :: xc(KA,IA,JA)
+    real(RP) :: xr(KA,IA,JA)
+    real(RP) :: xi(KA,IA,JA)
+    real(RP) :: xs(KA,IA,JA)
+    real(RP) :: xg(KA,IA,JA)
+    ! diameter of average mass[kg/m3]
+    real(RP) :: dc_ave(KA,IA,JA)
+    real(RP) :: dr_ave(KA,IA,JA)
+    ! radius of average mass
+    real(RP) :: rc, rr
+    ! 2nd. and 3rd. order moment of DSD
+    real(RP) :: ri2m(KA,IA,JA), ri3m(KA,IA,JA)
+    real(RP) :: rs2m(KA,IA,JA), rs3m(KA,IA,JA)
+    real(RP) :: rg2m(KA,IA,JA), rg3m(KA,IA,JA)
+
+    real(RP) :: coef_Fuetal1998
+    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
+    real(RP), parameter :: r2m_min=1.E-12_RP
+
+    real(RP) :: limitsw, zerosw
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    ! mean particle mass[kg]
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       xc(k,i,j) = min( xc_max, max( xc_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QC)/(QTRC0(k,i,j,I_NC)+nc_min) ) )
+       xr(k,i,j) = min( xr_max, max( xr_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QR)/(QTRC0(k,i,j,I_NR)+nr_min) ) )
+       xi(k,i,j) = min( xi_max, max( xi_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QI)/(QTRC0(k,i,j,I_NI)+ni_min) ) )
+       xs(k,i,j) = min( xs_max, max( xs_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QS)/(QTRC0(k,i,j,I_NS)+ns_min) ) )
+       xg(k,i,j) = min( xg_max, max( xg_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QG)/(QTRC0(k,i,j,I_NG)+ng_min) ) )
+    enddo
+    enddo
+    enddo
+
+    ! diameter of average mass : SB06 eq.(32)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       dc_ave(k,i,j) = a_m(I_QC) * xc(k,i,j)**b_m(I_QC)
+       dr_ave(k,i,j) = a_m(I_QR) * xr(k,i,j)**b_m(I_QR)
+    enddo
+    enddo
+    enddo
+
+    ! cloud effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rc = 0.5_RP * dc_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rc-rmin_re )
+       Re(k,i,j,I_mp_QC) = coef_re(I_QC) * rc * limitsw
+    enddo
+    enddo
+    enddo
+
+    ! rain effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rr = 0.5_RP * dr_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rr-rmin_re )
+       Re(k,i,j,I_mp_QR) = coef_re(I_QR) * rr * limitsw
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ri2m(k,i,j) = PI * coef_rea2(I_QI) * QTRC0(k,i,j,I_NI) * a_rea2(I_QI) * xi(k,i,j)**b_rea2(I_QI)
+       rs2m(k,i,j) = PI * coef_rea2(I_QS) * QTRC0(k,i,j,I_NS) * a_rea2(I_QS) * xs(k,i,j)**b_rea2(I_QS)
+       rg2m(k,i,j) = PI * coef_rea2(I_QG) * QTRC0(k,i,j,I_NG) * a_rea2(I_QG) * xg(k,i,j)**b_rea2(I_QG)
+    enddo
+    enddo
+    enddo
+
+    ! Fu(1996), eq.(3.11) or Fu et al.(1998), eq.(2.5)
+    coef_Fuetal1998 = 3.0_RP / (4.0_RP*rhoi)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ri3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NI) * xi(k,i,j)
+       rs3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NS) * xs(k,i,j)
+       rg3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NG) * xg(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    ! ice effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, ri2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_mp_QI) = ri3m(k,i,j) / ( ri2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+    enddo
+    enddo
+    enddo
+
+    ! snow effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, rs2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_mp_QS) = rs3m(k,i,j) / ( rs2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+    enddo
+    enddo
+    enddo
+
+    ! graupel effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, rg2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_mp_QG) = rg3m(k,i,j) / ( rg2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_EffectiveRadius
+
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------

@@ -36,8 +36,8 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
-  public :: MP_kessler
-  public :: MP_kessler_vterm
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
 
   !-----------------------------------------------------------------------------
   !
@@ -53,10 +53,15 @@ module mod_atmos_phy_mp
   !
   real(RP), public, save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
 
+  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: MP_kessler
+  private :: MP_kessler_vterm
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -77,11 +82,11 @@ contains
        PRC_MPIstop
     use mod_comm, only: &
        COMM_horizontal_mean
+    use mod_const, only: &
+       CONST_DWATR
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_MP, &
        DENS
-    use mod_atmos_phy_mpsub, only: &
-       ATMOS_PHY_MPsub_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -132,7 +137,8 @@ contains
 
     vterm(:,:,:,:) = 0.0_RP
 
-    call ATMOS_PHY_MPsub_setup
+    MP_DENS(I_mp_QC) = CONST_DWATR
+    MP_DENS(I_mp_QR) = CONST_DWATR
 
     return
   end subroutine ATMOS_PHY_MP_setup
@@ -434,5 +440,55 @@ contains
 
     return
   end subroutine MP_kessler_vterm
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  subroutine ATMOS_PHY_MP_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do iq = 1, MP_QA
+          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_CloudFraction
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    !---------------------------------------------------------------------------
+
+    Re(:,:,:,I_mp_QC) =   8.E-6_RP
+    Re(:,:,:,I_mp_QR) = 100.E-6_RP
+
+    return
+  end subroutine ATMOS_PHY_MP_EffectiveRadius
 
 end module mod_atmos_phy_mp 
