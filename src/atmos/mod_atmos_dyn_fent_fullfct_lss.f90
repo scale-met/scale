@@ -135,12 +135,12 @@ module mod_atmos_dyn
   real(RP), private, save :: rjpls  (KA,IA,JA)    ! correction factor for incoming antidiffusive flux
   real(RP), private, save :: rjmns  (KA,IA,JA)    ! correction factor for outgoing antidiffusive flux
 
-  real(RP), private, save :: CNDZ(3,KA)
-  real(RP), private, save :: CNMZ(3,KA)
-  real(RP), private, save :: CNDX(3,IA)
-  real(RP), private, save :: CNMX(3,IA)
-  real(RP), private, save :: CNDY(3,JA)
-  real(RP), private, save :: CNMY(3,JA)
+  real(RP), private, save :: CNZ3(3,KA,2)
+  real(RP), private, save :: CNX3(3,IA,2)
+  real(RP), private, save :: CNY3(3,JA,2)
+  real(RP), private, save :: CNZ4(4,KA,2)
+  real(RP), private, save :: CNX4(4,IA,2)
+  real(RP), private, save :: CNY4(4,JA,2)
 
   !--- for LS forcing
   real(RP), private, save :: MOMZ_LS(KA,2)
@@ -237,7 +237,7 @@ contains
     endif
 
     call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
-                         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
+                         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,  & ! (out)
                          MOMZ_LS, MOMZ_LS_DZ,                 & ! (in)
                          CDZ, CDX, CDY, CZ, FZ,               & ! (in)
                          lat,                                 & ! (in)
@@ -278,7 +278,7 @@ contains
   end subroutine ATMOS_DYN_setup
 
   subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
-                             CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, &
+                             CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
                              MOMZ_LS, MOMZ_LS_DZ,                &
                              CDZ, CDX, CDY, CZ, FZ, lat,         &
                              numerical_diff, dt_dyn,             &
@@ -291,12 +291,12 @@ contains
     implicit none
     real(RP), intent(out) :: DIFF4
     real(RP), intent(out) :: corioli(1,IA,JA)
-    real(RP), intent(out) :: CNDZ(3,KA)
-    real(RP), intent(out) :: CNMZ(3,KA)
-    real(RP), intent(out) :: CNDX(3,IA)
-    real(RP), intent(out) :: CNMX(3,IA)
-    real(RP), intent(out) :: CNDY(3,JA)
-    real(RP), intent(out) :: CNMY(3,JA)
+    real(RP), intent(out) :: CNZ3(3,KA,2)
+    real(RP), intent(out) :: CNX3(3,IA,2)
+    real(RP), intent(out) :: CNY3(3,JA,2)
+    real(RP), intent(out) :: CNZ4(4,KA,2)
+    real(RP), intent(out) :: CNX4(4,IA,2)
+    real(RP), intent(out) :: CNY4(4,JA,2)
     real(RP), intent(out) :: MOMZ_LS(KA,2)
     real(RP), intent(out) :: MOMZ_LS_DZ(KA,2)
     real(RP), intent(in)  :: CDZ(KA)
@@ -316,12 +316,12 @@ contains
     integer :: i, j, k
 
 #ifdef DEBUG
-    CNDZ(:,:) = UNDEF
-    CNMZ(:,:) = UNDEF
-    CNDX(:,:) = UNDEF
-    CNMX(:,:) = UNDEF
-    CNDY(:,:) = UNDEF
-    CNMY(:,:) = UNDEF
+    CNZ3(:,:,:) = UNDEF
+    CNX3(:,:,:) = UNDEF
+    CNY3(:,:,:) = UNDEF
+    CNZ4(:,:,:) = UNDEF
+    CNX4(:,:,:) = UNDEF
+    CNY4(:,:,:) = UNDEF
     corioli(:,:,:) = UNDEF
 #endif
 
@@ -366,149 +366,150 @@ contains
     ! numerical diffusion
     if ( numerical_diff == 0.0_RP ) then
        DIFF4 = 0.0_RP
-       CNDZ(:,:) = 0.0_RP
-       CNMZ(:,:) = 0.0_RP
-       CNDX(:,:) = 0.0_RP
-       CNMX(:,:) = 0.0_RP
-       CNDY(:,:) = 0.0_RP
-       CNMY(:,:) = 0.0_RP
+       CNZ3(:,:,:) = 0.0_RP
+       CNX3(:,:,:) = 0.0_RP
+       CNY3(:,:,:) = 0.0_RP
+       CNZ4(:,:,:) = 0.0_RP
+       CNX4(:,:,:) = 0.0_RP
+       CNY4(:,:,:) = 0.0_RP
     else
        DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 ) / dt_dyn
 
        ! z direction
        do k = KS-1, KE+1
-          CNDZ(1,k) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+          CNZ3(1,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
        enddo
-       CNDZ(1,   1:KS-2) = CNDZ(1,KS-1)
-       CNDZ(1,KE+2:KA  ) = CNDZ(1,KE+1)
+!       CNZ3(1,KS-2,1) = CNZ3(1,KS-1,1)
+!       CNZ3(1,KE+2,1) = CNZ3(1,KE+1,1)
+
+       do k = KS, KE+1
+          CNZ3(2,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+       enddo
+!       CNZ3(2,   1:KS-2,1) = CNZ3(2,KS-1,1)
+!       CNZ3(2,KE+2:KA  ,1) = CNZ3(2,KE+1,1)
+
+       do k = KS, KE+1
+          CNZ3(3,k,1) = 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5_RP )
+       enddo
+!       CNZ3(3,1   :KS-1,1) = CNZ3(3,KS  ,1)
+!       CNZ3(3,KE+2:KA  ,1) = CNZ3(3,KE+2,1)
 
        do k = KS-1, KE+1
-          CNDZ(2,k) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+          CNZ3(1,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) )
        enddo
-       CNDZ(2,   1:KS-2) = CNDZ(2,KS-1)
-       CNDZ(2,KE+2:KA  ) = CNDZ(2,KE+1)
-
-       do k = KS, KE+2
-          CNDZ(3,k) = 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5_RP )
-       enddo
-       CNDZ(3,1   :KS-1) = CNDZ(3,KS  )
-       CNDZ(3,KE+2:KA  ) = CNDZ(3,KE+2)
-
-       do k = KS-2, KE+1
-          CNMZ(1,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) )
-       enddo
-       CNMZ(1,   1:KS-2) = CNMZ(1,KS-2)
-       CNMZ(1,KE+2:KA  ) = CNMZ(1,KE+1)
+!       CNZ3(1,   1:KS-2,2) = CNZ3(1,KS-1,2)
+!       CNZ3(1,KE+2:KA  ,2) = CNZ3(1,KE+1,2)
 
        do k = KS-1, KE+1
-          CNMZ(2,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
+          CNZ3(2,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
        enddo
-       CNMZ(2,   1:KS-2) = CNMZ(2,KS-1)
-       CNMZ(2,KE+2:KA  ) = CNMZ(2,KE+1)
+!       CNZ3(2,   1:KS-2,2) = CNZ3(2,KS-1,2)
+!       CNZ3(2,KE+2:KA  ,2) = CNZ3(2,KE+1,2)
 
        do k = KS-1, KE+1
-          CNMZ(3,k) = 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) )
+          CNZ3(3,k,2) = 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) )
        enddo
-       CNMZ(3,   1:KS-2) = CNMZ(3,KS-1)
-       CNMZ(3,KE+2:KA  ) = CNMZ(3,KE+1)
+!       CNZ3(3,   1:KS-2,2) = CNZ3(3,KS-1,2)
+!       CNZ3(3,KE+2:KA  ,2) = CNZ3(3,KE+1,2)
 
        ! x direction
        do i = IS-1, IE+1
-          CNDX(1,i) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+          CNX3(1,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
        enddo
-       CNDX(1,   1:IS-2) = CNDX(1,IS-1)
-       CNDX(1,IE+2:IA  ) = CNDX(1,IE+1)
+!       CNX3(1,   1:IS-2,1) = CNX3(1,IS-1,1)
+!       CNX3(1,IE+2:IA  ,1) = CNX3(1,IE+1,1)
+
+       do i = IS, IE+1
+          CNX3(2,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+       enddo
+!       CNX3(2,   1:IS-2,1) = CNX3(2,IS-1,1)
+!       CNX3(2,IE+2:IA  ,1) = CNX3(2,IE+1,1)
+
+       do i = IS, IE+1
+          CNX3(3,i,1) = 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
+       enddo
+!       CNX3(3,   1:IS-1,1) = CNX3(3,IS  ,1)
+!       CNX3(3,IE+2:IA  ,1) = CNX3(3,IE+2,1)
 
        do i = IS-1, IE+1
-          CNDX(2,i) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+          CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) )
        enddo
-       CNDX(2,   1:IS-2) = CNDX(2,IS-1)
-       CNDX(2,IE+2:IA  ) = CNDX(2,IE+1)
+!       CNX3(1,IE+2:IA  ,2) = CNX3(1,IE+1,2)
+!       CNX3(1,   1:IS-2,2) = CNX3(1,IS-2,2)
 
-       do i = IS, IE+2
-          CNDX(3,i) = 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
+       do i = IS-1, IE
+          CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
        enddo
-       CNDX(3,   1:IS-1) = CNDX(3,IS  )
-       CNDX(3,IE+2:IA  ) = CNDX(3,IE+2)
+!       CNX3(2,   1:IS-2,2) = CNX3(2,IS-1,2)
+!       CNX3(2,IE+2:IA  ,2) = CNX3(2,IE+1,2)
 
-       do i = IS-2, IE+1
-          CNMX(1,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) )
+       do i = IS-1, IE
+          CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
        enddo
-       CNMX(1,IE+2:IA  ) = CNMX(1,IE+1)
-       CNMX(1,   1:IS-2) = CNMX(1,IS-2)
-
-       do i = IS-1, IE+1
-          CNMX(2,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
-       enddo
-       CNMX(2,   1:IS-2) = CNMX(2,IS-1)
-       CNMX(2,IE+2:IA  ) = CNMX(2,IE+1)
-
-       do i = IS-1, IE+1
-          CNMX(3,i) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
-       enddo
-       CNMX(3,   1:IS-2) = CNMX(3,IS-1)
-       CNMX(3,IE+2:IA  ) = CNMX(3,IE+1)
+!       CNX3(3,   1:IS-2,2) = CNX3(3,IS-1,2)
+!       CNX3(3,IE+2:IA  ,2) = CNX3(3,IE+1,2)
 
        ! y direction
        do j = JS-1, JE+1
-          CNDY(1,j) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+          CNY3(1,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
        enddo
-       CNDY(1,   1:JS-2) = CNDY(1,JS-1)
-       CNDY(1,JE+2:JA  ) = CNDY(1,JE+1)
+!       CNY3(1,   1:JS-2,1) = CNY3(1,JS-1,1)
+!       CNY3(1,JE+2:JA  ,1) = CNY3(1,JE+1,1)
+
+       do j = JS, JE+1
+          CNY3(2,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+       enddo
+!       CNY3(2,   1:JS-2,1) = CNY3(2,JS-1,1)
+!       CNY3(2,JE+2:JA  ,1) = CNY3(2,JE+1,1)
+
+       do j = JS, JE+1
+          CNY3(3,j,1) = 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
+       enddo
+!       CNY3(3,   1:JS-1,1) = CNY3(3,JS  ,1)
+!       CNY3(3,JE+2:JA  ,1) = CNY3(3,JE+2,1)
 
        do j = JS-1, JE+1
-          CNDY(2,j) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+          CNY3(1,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) )
        enddo
-       CNDY(2,   1:JS-2) = CNDY(2,JS-1)
-       CNDY(2,JE+2:JA  ) = CNDY(2,JE+1)
+!       CNY3(1,   1:JS-2,2) = CNY3(1,JS-2,2)
+!       CNY3(1,JE+2:JA  ,2) = CNY3(1,JE+1,2)
 
-       do j = JS, JE+2
-          CNDY(3,j) = 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
+       do j = JS-1, JE
+          CNY3(2,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
        enddo
-       CNDY(3,   1:JS-1) = CNDY(3,JS  )
-       CNDY(3,JE+2:JA  ) = CNDY(3,JE+2)
+!       CNY3(2,   1:JS-2,2) = CNY3(2,JS-1,2)
+!       CNY3(2,JE+2:JA  ,2) = CNY3(2,JE+1,2)
 
-       do j = JS-2, JE+1
-          CNMY(1,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) )
+       do j = JS-1, JE
+          CNY3(3,j,2) = 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
        enddo
-       CNMY(1,   1:JS-2) = CNMY(1,JS-2)
-       CNMY(1,JE+2:JA  ) = CNMY(1,JE+1)
+!       CNY3(3,   1:JS-2,2) = CNMY(3,JS-1,2)
+!       CNY3(3,JE+2:JA  ,2) = CNMY(3,JE+1,2)
 
-       do j = JS-1, JE+1
-          CNMY(2,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
-       enddo
-       CNMY(2,   1:JS-2) = CNMY(2,JS-1)
-       CNMY(2,JE+2:JA  ) = CNMY(2,JE+1)
-
-       do j = JS-1, JE+1
-          CNMY(3,j) = 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
-       enddo
-       CNMY(3,   1:JS-2) = CNMY(3,JS-1)
-       CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
     end if
 
 
@@ -709,7 +710,7 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,        & ! (in)
+         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,        & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,              & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          AQ_CV,                                     & ! (in)
@@ -736,7 +737,7 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                  & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
@@ -790,12 +791,12 @@ contains
     real(RP), intent(in) :: RHOT_tp(KA,IA,JA)
     real(RP), intent(in) :: QTRC_tp(KA,IA,JA,QA)
 
-    real(RP), intent(in)    :: CNDZ(3,KA)
-    real(RP), intent(in)    :: CNMZ(3,KA)
-    real(RP), intent(in)    :: CNDX(3,IA)
-    real(RP), intent(in)    :: CNMX(3,IA)
-    real(RP), intent(in)    :: CNDY(3,JA)
-    real(RP), intent(in)    :: CNMY(3,JA)
+    real(RP), intent(in)    :: CNZ3(3,KA,2)
+    real(RP), intent(in)    :: CNX3(3,IA,2)
+    real(RP), intent(in)    :: CNY3(3,JA,2)
+    real(RP), intent(in)    :: CNZ4(4,KA,2)
+    real(RP), intent(in)    :: CNX4(4,IA,2)
+    real(RP), intent(in)    :: CNY4(4,JA,2)
 
     real(RP), intent(in)    :: CDZ(KA)
     real(RP), intent(in)    :: CDX(IA)
@@ -1185,10 +1186,18 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
 
+    end do
+    end do
 
 
-       !--- prepare numerical diffusion coefficient
-       if ( DIFF4 /= 0.0_RP ) then
+    !--- prepare numerical diffusion coefficient
+    if ( DIFF4 /= 0.0_RP ) then
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j  = JJS-2, JJE+2
           do i  = IIS-2, IIE+2
@@ -1204,10 +1213,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * dens_diff(k+2,i,j) &
-                                           - CNDZ(2,k+1) * dens_diff(k+1,i,j) &
-                                           + CNDZ(3,k+1) * dens_diff(k  ,i,j) &
-                                           - CNDZ(1,k  ) * dens_diff(k-1,i,j) )
+                  * ( CNZ3(1,k+1,1) * dens_diff(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * dens_diff(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * dens_diff(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * dens_diff(k-1,i,j) )
           enddo
           enddo
           enddo
@@ -1215,16 +1224,26 @@ call TIME_rapstart   ('DYN-set')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS)**4 &
-                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * dens_diff(KS  ,i,j) )
+             num_diff(KS-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                  * ( CNZ3(1,KS  ,1) * dens_diff(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * dens_diff(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * dens_diff(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * dens_diff(KS  ,i,j) )
+             num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                  * ( CNZ3(1,KS+1,1) * dens_diff(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * dens_diff(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * dens_diff(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * dens_diff(KS  ,i,j) )
              num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
+                  * ( CNZ3(1,KE  ,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * dens_diff(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * dens_diff(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * dens_diff(KE-2,i,j) )
+             num_diff(KE  ,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                  * ( CNZ3(1,KE+1,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * dens_diff(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * dens_diff(KE-1,i,j) )
 !             num_diff(KS,i,j,I_DENS,ZDIR) = num_diff(KS+1,i,j,I_DENS,ZDIR)
 !             num_diff(KE-1,i,j,I_DENS,ZDIR) = num_diff(KE-2,i,j,I_DENS,ZDIR)
           enddo
@@ -1235,10 +1254,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS-1, IIE
           do k = KS, KE
              num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
-                                           - CNDX(2,i+1) * dens_diff(k,i+1,j) &
-                                           + CNDX(3,i+1) * dens_diff(k,i  ,j) &
-                                           - CNDX(1,i  ) * dens_diff(k,i-1,j) )
+                  * ( CNX3(1,i+1,1) * dens_diff(k,i+2,j) &
+                    - CNX3(2,i+1,1) * dens_diff(k,i+1,j) &
+                    + CNX3(3,i+1,1) * dens_diff(k,i  ,j) &
+                    - CNX3(1,i  ,1) * dens_diff(k,i-1,j) )
           enddo
           enddo
           enddo
@@ -1248,10 +1267,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS, KE
              num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
-                                           - CNDY(2,j+1) * dens_diff(k,i,j+1) &
-                                           + CNDY(3,j+1) * dens_diff(k,i,j  ) &
-                                           - CNDY(1,j  ) * dens_diff(k,i,j-1) )
+                  * ( CNY3(1,j+1,1) * dens_diff(k,i,j+2) &
+                    - CNY3(2,j+1,1) * dens_diff(k,i,j+1) &
+                    + CNY3(3,j+1,1) * dens_diff(k,i,j  ) &
+                    - CNY3(1,j  ,1) * dens_diff(k,i,j-1) )
           enddo
           enddo
           enddo
@@ -1262,25 +1281,32 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+2, KE-2
              num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**4 &
-                                         * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
-                                           - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
-                                           + CNMZ(3,k  ) * MOMZ(k-1,i,j) &
-                                           - CNMZ(1,k-1) * MOMZ(k-2,i,j) )
+                  * ( CNZ3(1,k  ,2) * MOMZ(k+1,i,j) &
+                    - CNZ3(2,k  ,2) * MOMZ(k  ,i,j) &
+                    + CNZ3(3,k  ,2) * MOMZ(k-1,i,j) &
+                    - CNZ3(1,k-1,2) * MOMZ(k-2,i,j) )
           enddo
           enddo
           enddo
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
+             num_diff(KS  ,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+1)+CDZ(KS  )) )**4 &
+                  * ( CNZ3(1,KS  ,2) * MOMZ(KS+1,i,j) &
+                    - CNZ3(2,KS  ,2) * MOMZ(KS  ,i,j) )
              num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+2)+CDZ(KS+1)) )**4 &
-                                         * ( CNMZ(1,KS+1) * MOMZ(KS+2,i,j) &
-                                           - CNMZ(2,KS+1) * MOMZ(KS+1,i,j) &
-                                           + CNMZ(3,KS+1) * MOMZ(KS,i,j) )
+                  * ( CNZ3(1,KS+1,2) * MOMZ(KS+2,i,j) &
+                    - CNZ3(2,KS+1,2) * MOMZ(KS+1,i,j) &
+                    + CNZ3(3,KS+1,2) * MOMZ(KS,i,j) )
              num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE)+CDZ(KE-1)) )**4 &
-                                         * ( &
-                                           - CNMZ(2,KE-1) * MOMZ(KE-1,i,j) &
-                                           + CNMZ(3,KE-1) * MOMZ(KE-2,i,j) &
-                                           - CNMZ(1,KE-2) * MOMZ(KE-3,i,j) )
+                  * ( &
+                    - CNZ3(2,KE-1,2) * MOMZ(KE-1,i,j) &
+                    + CNZ3(3,KE-1,2) * MOMZ(KE-2,i,j) &
+                    - CNZ3(1,KE-2,2) * MOMZ(KE-3,i,j) )
+             num_diff(KE  ,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE+1)+CDZ(KE)) )**4 &
+                  * ( &
+                    + CNZ3(3,KE  ,2) * MOMZ(KE-1,i,j) &
+                    - CNZ3(1,KE-1,2) * MOMZ(KE-2,i,j) )
           enddo
           enddo
 
@@ -1289,10 +1315,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS-1, IIE
           do k = KS, KE-1
              num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * MOMZ(k,i+2,j) &
-                                           - CNDX(2,i+1) * MOMZ(k,i+1,j) &
-                                           + CNDX(3,i+1) * MOMZ(k,i  ,j) &
-                                           - CNDX(1,i  ) * MOMZ(k,i-1,j) )
+                  * ( CNX3(1,i+1,1) * MOMZ(k,i+2,j) &
+                    - CNX3(2,i+1,1) * MOMZ(k,i+1,j) &
+                    + CNX3(3,i+1,1) * MOMZ(k,i  ,j) &
+                    - CNX3(1,i  ,1) * MOMZ(k,i-1,j) )
           enddo
           enddo
           enddo
@@ -1302,10 +1328,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS, KE-1
              num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * MOMZ(k,i,j+2) &
-                                           - CNDY(2,j+1) * MOMZ(k,i,j+1) &
-                                           + CNDY(3,j+1) * MOMZ(k,i,j  ) &
-                                           - CNDY(1,j  ) * MOMZ(k,i,j-1) )
+                  * ( CNY3(1,j+1,1) * MOMZ(k,i,j+2) &
+                    - CNY3(2,j+1,1) * MOMZ(k,i,j+1) &
+                    + CNY3(3,j+1,1) * MOMZ(k,i,j  ) &
+                    - CNY3(1,j  ,1) * MOMZ(k,i,j-1) )
           enddo
           enddo
           enddo
@@ -1316,25 +1342,35 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
-                                           - CNDZ(2,k+1) * MOMX(k+1,i,j) &
-                                           + CNDZ(3,k+1) * MOMX(k  ,i,j) &
-                                           - CNDZ(1,k  ) * MOMX(k-1,i,j) )
+                  * ( CNZ3(1,k+1,1) * MOMX(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * MOMX(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * MOMX(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * MOMX(k-1,i,j) )
           enddo
           enddo
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
+             num_diff(KS-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                  * ( CNZ3(1,KS  ,1) * MOMX(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * MOMX(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * MOMX(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * MOMX(KS  ,i,j) )
              num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
+                  * ( CNZ3(1,KS+1,1) * MOMX(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * MOMX(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * MOMX(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * MOMX(KS  ,i,j) )
              num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
+                  * ( CNZ3(1,KE  ,1) * MOMX(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * MOMX(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * MOMX(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * MOMX(KE-2,i,j) )
+             num_diff(KE  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                  * ( CNZ3(1,KE+1,1) * MOMX(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * MOMX(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * MOMX(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * MOMX(KE-1,i,j) )
 !             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
 !             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
           enddo
@@ -1345,10 +1381,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE+1
           do k = KS, KE
              num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5_RP*(CDX(i+1)+CDX(i)) )**4 &
-                                         * ( CNMX(1,i  ) * MOMX(k,i+1,j) &
-                                           - CNMX(2,i  ) * MOMX(k,i  ,j) &
-                                           + CNMX(3,i  ) * MOMX(k,i-1,j) &
-                                           - CNMX(1,i-1) * MOMX(k,i-2,j) )
+                  * ( CNX3(1,i  ,2) * MOMX(k,i+1,j) &
+                    - CNX3(2,i  ,2) * MOMX(k,i  ,j) &
+                    + CNX3(3,i  ,2) * MOMX(k,i-1,j) &
+                    - CNX3(1,i-1,2) * MOMX(k,i-2,j) )
           enddo
           enddo
           enddo
@@ -1358,10 +1394,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS, KE
              num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * MOMX(k,i,j+2) &
-                                           - CNDY(2,j+1) * MOMX(k,i,j+1) &
-                                           + CNDY(3,j+1) * MOMX(k,i,j  ) &
-                                           - CNDY(1,j  ) * MOMX(k,i,j-1) )
+                  * ( CNY3(1,j+1,1) * MOMX(k,i,j+2) &
+                    - CNY3(2,j+1,1) * MOMX(k,i,j+1) &
+                    + CNY3(3,j+1,1) * MOMX(k,i,j  ) &
+                    - CNY3(1,j  ,1) * MOMX(k,i,j-1) )
           enddo
           enddo
           enddo
@@ -1372,25 +1408,35 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * MOMY(k+2,i,j) &
-                                           - CNDZ(2,k+1) * MOMY(k+1,i,j) &
-                                           + CNDZ(3,k+1) * MOMY(k  ,i,j) &
-                                           - CNDZ(1,k  ) * MOMY(k-1,i,j) )
+                  * ( CNZ3(1,k+1,1) * MOMY(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * MOMY(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * MOMY(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * MOMY(k-1,i,j) )
           enddo
           enddo
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
+             num_diff(KS-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                  * ( CNZ3(1,KS  ,1) * MOMY(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * MOMY(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * MOMY(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * MOMY(KS  ,i,j) )
              num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
+                  * ( CNZ3(1,KS+1,1) * MOMY(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * MOMY(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * MOMY(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * MOMY(KS  ,i,j) )
              num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
+                  * ( CNZ3(1,KE  ,1) * MOMY(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * MOMY(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * MOMY(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * MOMY(KE-2,i,j) )
+             num_diff(KE  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                  * ( CNZ3(1,KE+1,1) * MOMY(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * MOMY(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * MOMY(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * MOMY(KE-1,i,j) )
 !             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
 !             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
           enddo
@@ -1401,10 +1447,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS-1, IIE
           do k = KS, KE
              num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * MOMY(k,i+2,j) &
-                                           - CNDX(2,i+1) * MOMY(k,i+1,j) &
-                                           + CNDX(3,i+1) * MOMY(k,i  ,j) &
-                                           - CNDX(1,i  ) * MOMY(k,i-1,j) )
+                  * ( CNX3(1,i+1,1) * MOMY(k,i+2,j) &
+                    - CNX3(2,i+1,1) * MOMY(k,i+1,j) &
+                    + CNX3(3,i+1,1) * MOMY(k,i  ,j) &
+                    - CNX3(1,i  ,1) * MOMY(k,i-1,j) )
           enddo
           enddo
           enddo
@@ -1414,10 +1460,10 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS, IIE
           do k = KS, KE
              num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5_RP*(CDY(j+1)+CDY(j)) )**4 &
-                                         * ( CNMY(1,j  ) * MOMY(k,i,j+1) &
-                                           - CNMY(2,j  ) * MOMY(k,i,j  ) &
-                                           + CNMY(3,j  ) * MOMY(k,i,j-1) &
-                                           - CNMY(1,j-1) * MOMY(k,i,j-2) )
+                  * ( CNY3(1,j  ,2) * MOMY(k,i,j+1) &
+                    - CNY3(2,j  ,2) * MOMY(k,i,j  ) &
+                    + CNY3(3,j  ,2) * MOMY(k,i,j-1) &
+                    - CNY3(1,j-1,2) * MOMY(k,i,j-2) )
           enddo
           enddo
           enddo
@@ -1428,12 +1474,12 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * pott_diff(k+2,i,j)   &
-                                           - CNDZ(2,k+1) * pott_diff(k+1,i,j)   &
-                                           + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
-                                           - CNDZ(1,k  ) * pott_diff(k-1,i,j) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
-                                                    + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+                  * ( CNZ3(1,k+1,1) * pott_diff(k+2,i,j)   &
+                    - CNZ3(2,k+1,1) * pott_diff(k+1,i,j)   &
+                    + CNZ3(3,k+1,1) * pott_diff(k  ,i,j)   &
+                    - CNZ3(1,k  ,1) * pott_diff(k-1,i,j) ) &
+                  * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
+                             + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
           enddo
           enddo
           enddo
@@ -1441,18 +1487,30 @@ call TIME_rapstart   ('DYN-set')
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS,   JJE
           do i = IIS,   IIE
-             num_diff(KS,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS)**4 &
-                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
-                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
-                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
-                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
-                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+             num_diff(KS-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                  * ( CNZ3(1,KS  ,1) * pott_diff(KS+1,i,j)   &
+                    - CNZ3(2,KS  ,1) * pott_diff(KS  ,i,j)   &
+                    + CNZ3(3,KS  ,1) * pott_diff(KS  ,i,j)   &
+                    - CNZ3(1,KS-1,1) * pott_diff(KS  ,i,j) ) &
+                  * DENS(KS,i,j)
+             num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                  * ( CNZ3(1,KS+1,1) * pott_diff(KS+2,i,j)   &
+                    - CNZ3(2,KS+1,1) * pott_diff(KS+1,i,j)   &
+                    + CNZ3(3,KS+1,1) * pott_diff(KS  ,i,j)   &
+                    - CNZ3(1,KS  ,1) * pott_diff(KS  ,i,j) ) &
+                  * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
              num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
-                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
-                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
-                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
-                                         * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+                  * ( CNZ3(1,KE  ,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(2,KE  ,1) * pott_diff(KE  ,i,j)   &
+                    + CNZ3(3,KE  ,1) * pott_diff(KE-1,i,j)   &
+                    - CNZ3(1,KE-1,1) * pott_diff(KE-2,i,j) ) &
+                  * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+             num_diff(KE  ,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                  * ( CNZ3(1,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(2,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    + CNZ3(3,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(1,KE  ,1) * pott_diff(KE-1,i,j) ) &
+                  * DENS(KE,i,j)
 !             num_diff(KS  ,i,j,I_RHOT,ZDIR) = num_diff(KS+1,i,j,I_RHOT,ZDIR)
 !             num_diff(KE-1,i,j,I_RHOT,ZDIR) = num_diff(KE-2,i,j,I_RHOT,ZDIR)
           enddo
@@ -1463,12 +1521,12 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS-1, IIE
           do k = KS, KE
              num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * pott_diff(k,i+2,j)   &
-                                           - CNDX(2,i+1) * pott_diff(k,i+1,j)   &
-                                           + CNDX(3,i+1) * pott_diff(k,i  ,j)   &
-                                           - CNDX(1,i  ) * pott_diff(k,i-1,j) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k,i+1,j)+DENS(k,i  ,j) ) &
-                                                    + FACT_F * ( DENS(k,i+2,j)+DENS(k,i-1,j) ) )
+                  * ( CNX3(1,i+1,1) * pott_diff(k,i+2,j)   &
+                    - CNX3(2,i+1,1) * pott_diff(k,i+1,j)   &
+                    + CNX3(3,i+1,1) * pott_diff(k,i  ,j)   &
+                    - CNX3(1,i  ,1) * pott_diff(k,i-1,j) ) &
+                  * 0.5_RP * ( FACT_N * ( DENS(k,i+1,j)+DENS(k,i  ,j) ) &
+                             + FACT_F * ( DENS(k,i+2,j)+DENS(k,i-1,j) ) )
           enddo
           enddo
           enddo
@@ -1478,72 +1536,77 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS, KE
              num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * pott_diff(k,i,j+2)   &
-                                           - CNDY(2,j+1) * pott_diff(k,i,j+1)   &
-                                           + CNDY(3,j+1) * pott_diff(k,i,j  )   &
-                                           - CNDY(1,j  ) * pott_diff(k,i,j-1) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k,i,j+1)+DENS(k,i,j  ) ) &
-                                                    + FACT_F * ( DENS(k,i,j+2)+DENS(k,i,j-1) ) )
+                  * ( CNY3(1,j+1,1) * pott_diff(k,i,j+2)   &
+                    - CNY3(2,j+1,1) * pott_diff(k,i,j+1)   &
+                    + CNY3(3,j+1,1) * pott_diff(k,i,j  )   &
+                    - CNY3(1,j  ,1) * pott_diff(k,i,j-1) ) &
+                  * 0.5_RP * ( FACT_N * ( DENS(k,i,j+1)+DENS(k,i,j  ) ) &
+                             + FACT_F * ( DENS(k,i,j+2)+DENS(k,i,j-1) ) )
           enddo
           enddo
           enddo
 
-       else
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS-1, IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS  , IIE+1
-          do k = KS   , KE
-             num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE+1
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-       end if
+       enddo
+       enddo ! end tile
 
-    enddo
-    enddo ! end tile
 
+    else
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS-1, IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE+1
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS-1, JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE+1
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    end if
 
     call COMM_vars8( DENS_t(:,:,:), 1 )
     call COMM_vars8( MOMZ_t(:,:,:), 2 )
