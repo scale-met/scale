@@ -684,7 +684,8 @@ contains
        AQ_CV
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott
+       REF_pott => ATMOS_REFSTATE_pott, &
+       REF_qv   => ATMOS_REFSTATE_qv
     use mod_atmos_boundary, only: &
        DAMP_var   => ATMOS_BOUNDARY_var,   &
        DAMP_alpha => ATMOS_BOUNDARY_alpha
@@ -714,7 +715,7 @@ contains
          CDZ, CDX, CDY, FDZ, FDX, FDY,              & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          AQ_CV,                                     & ! (in)
-         REF_dens, REF_pott, DIFF4,                 & ! (in)
+         REF_dens, REF_pott, REF_qv, DIFF4,         & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
          MOMZ_LS, MOMZ_LS_DZ,                       & ! (in)
@@ -741,7 +742,7 @@ contains
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, DIFF4,                   & ! (in)
+         REF_dens, REF_pott, REF_qv, DIFF4,           & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef, MOMZ_LS, MOMZ_LS_DZ,            & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
@@ -815,6 +816,7 @@ contains
 
     real(RP), intent(in)    :: REF_dens(KA)
     real(RP), intent(in)    :: REF_pott(KA)
+    real(RP), intent(in)    :: REF_qv  (KA)
     real(RP), intent(in)    :: DIFF4
     real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
@@ -843,6 +845,7 @@ contains
     ! rayleigh damping, numerical diffusion
     real(RP) :: dens_diff(KA,IA,JA)     ! anomary of density
     real(RP) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
+    real(RP) :: qv_diff  (KA,IA,JA)     ! anomary of rho * pott
     real(RP) :: num_diff (KA,IA,JA,5,3)
 
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
@@ -889,6 +892,7 @@ contains
     dens_s   (:,:,:)     = UNDEF
     dens_diff(:,:,:)     = UNDEF
     pott_diff(:,:,:)     = UNDEF
+    qv_diff(:,:,:)     = UNDEF
     num_diff (:,:,:,:,:) = UNDEF
 
     mflx_hi  (:,:,:,:)   = UNDEF
@@ -1204,6 +1208,7 @@ call TIME_rapstart   ('DYN-set')
           do k = KS, KE
              dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
              pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
+             qv_diff  (k,i,j) = QTRC(k,i,j,I_QV)          - REF_qv  (k)
           enddo
           enddo
           enddo
@@ -1560,6 +1565,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+
 
        enddo
        enddo ! end tile
@@ -1920,6 +1926,167 @@ call TIME_rapstart   ('DYN-fct')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
+       if ( DIFF4 .ne. 0.0_RP ) then
+          if ( iq == I_QV ) then
+             ! qv
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+             do k = KS+1, KE-2
+                num_diff(k,i,j,1,ZDIR) = DIFF4 * CDZ(k)**4 &
+                     * ( CNZ3(1,k+1,1) * qv_diff(k+2,i,j)   &
+                       - CNZ3(2,k+1,1) * qv_diff(k+1,i,j)   &
+                       + CNZ3(3,k+1,1) * qv_diff(k  ,i,j)   &
+                       - CNZ3(1,k  ,1) * qv_diff(k-1,i,j) ) &
+                     * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
+                                + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+                num_diff(KS-1,i,j,1,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                     * ( CNZ3(1,KS  ,1) * qv_diff(KS+1,i,j)   &
+                       - CNZ3(2,KS  ,1) * qv_diff(KS  ,i,j)   &
+                       + CNZ3(3,KS  ,1) * qv_diff(KS  ,i,j)   &
+                       - CNZ3(1,KS-1,1) * qv_diff(KS  ,i,j) ) &
+                     * DENS(KS,i,j)
+                num_diff(KS  ,i,j,1,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                     * ( CNZ3(1,KS+1,1) * qv_diff(KS+2,i,j)   &
+                       - CNZ3(2,KS+1,1) * qv_diff(KS+1,i,j)   &
+                       + CNZ3(3,KS+1,1) * qv_diff(KS  ,i,j)   &
+                       - CNZ3(1,KS  ,1) * qv_diff(KS  ,i,j) ) &
+                     * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+                num_diff(KE-1,i,j,1,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                     * ( CNZ3(1,KE  ,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(2,KE  ,1) * qv_diff(KE  ,i,j)   &
+                       + CNZ3(3,KE  ,1) * qv_diff(KE-1,i,j)   &
+                       - CNZ3(1,KE-1,1) * qv_diff(KE-2,i,j) ) &
+                     * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+                num_diff(KE  ,i,j,1,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                     * ( CNZ3(1,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(2,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       + CNZ3(3,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(1,KE  ,1) * qv_diff(KE-1,i,j) ) &
+                     * DENS(KE,i,j)
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS-1, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,XDIR) = DIFF4 * CDX(i)**4 &
+                     * ( CNX3(1,i+1,1) * qv_diff(k,i+2,j)   &
+                       - CNX3(2,i+1,1) * qv_diff(k,i+1,j)   &
+                       + CNX3(3,i+1,1) * qv_diff(k,i  ,j)   &
+                       - CNX3(1,i  ,1) * qv_diff(k,i-1,j) ) &
+                     * 0.5_RP * ( FACT_N * ( DENS(k,i+1,j)+DENS(k,i  ,j) ) &
+                                + FACT_F * ( DENS(k,i+2,j)+DENS(k,i-1,j) ) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS-1, JJE
+             do i = IIS,   IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,YDIR) = DIFF4 * CDY(j)**4 &
+                     * ( CNY3(1,j+1,1) * qv_diff(k,i,j+2)   &
+                       - CNY3(2,j+1,1) * qv_diff(k,i,j+1)   &
+                       + CNY3(3,j+1,1) * qv_diff(k,i,j  )   &
+                       - CNY3(1,j  ,1) * qv_diff(k,i,j-1) ) &
+                    * 0.5_RP * ( FACT_N * ( DENS(k,i,j+1)+DENS(k,i,j  ) ) &
+                               + FACT_F * ( DENS(k,i,j+2)+DENS(k,i,j-1) ) )
+             enddo
+             enddo
+             enddo
+
+          else
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+             do k = KS+1, KE-2
+                num_diff(k,i,j,1,ZDIR) = DIFF4 * CDZ(k)**4 &
+                     * ( CNZ3(1,k+1,1) * QTRC(k+2,i,j,iq)   &
+                       - CNZ3(2,k+1,1) * QTRC(k+1,i,j,iq)   &
+                       + CNZ3(3,k+1,1) * QTRC(k  ,i,j,iq)   &
+                       - CNZ3(1,k  ,1) * QTRC(k-1,i,j,iq) ) &
+                     * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
+                                + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+                num_diff(KS-1,i,j,1,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
+                     * ( CNZ3(1,KS  ,1) * QTRC(KS+1,i,j,iq)   &
+                       - CNZ3(2,KS  ,1) * QTRC(KS  ,i,j,iq)   &
+                       + CNZ3(3,KS  ,1) * QTRC(KS  ,i,j,iq)   &
+                       - CNZ3(1,KS-1,1) * QTRC(KS  ,i,j,iq) ) &
+                     * DENS(KS,i,j)
+                num_diff(KS  ,i,j,1,ZDIR) = DIFF4 * CDZ(KS  )**4 &
+                     * ( CNZ3(1,KS+1,1) * QTRC(KS+2,i,j,iq)   &
+                       - CNZ3(2,KS+1,1) * QTRC(KS+1,i,j,iq)   &
+                       + CNZ3(3,KS+1,1) * QTRC(KS  ,i,j,iq)   &
+                       - CNZ3(1,KS  ,1) * QTRC(KS  ,i,j,iq) ) &
+                     * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
+                num_diff(KE-1,i,j,1,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
+                     * ( CNZ3(1,KE  ,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(2,KE  ,1) * QTRC(KE  ,i,j,iq)   &
+                       + CNZ3(3,KE  ,1) * QTRC(KE-1,i,j,iq)   &
+                       - CNZ3(1,KE-1,1) * QTRC(KE-2,i,j,iq) ) &
+                     * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
+                num_diff(KE  ,i,j,1,ZDIR) = DIFF4 * CDZ(KE  )**4 &
+                     * ( CNZ3(1,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(2,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       + CNZ3(3,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(1,KE  ,1) * QTRC(KE-1,i,j,iq) ) &
+                     * DENS(KE,i,j)
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS-1, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,XDIR) = DIFF4 * CDX(i)**4 &
+                     * ( CNX3(1,i+1,1) * QTRC(k,i+2,j,iq)   &
+                       - CNX3(2,i+1,1) * QTRC(k,i+1,j,iq)   &
+                       + CNX3(3,i+1,1) * QTRC(k,i  ,j,iq)   &
+                       - CNX3(1,i  ,1) * QTRC(k,i-1,j,iq) ) &
+                     * 0.5_RP * ( FACT_N * ( DENS(k,i+1,j)+DENS(k,i  ,j) ) &
+                                + FACT_F * ( DENS(k,i+2,j)+DENS(k,i-1,j) ) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS-1, JJE
+             do i = IIS,   IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,YDIR) = DIFF4 * CDY(j)**4 &
+                     * ( CNY3(1,j+1,1) * QTRC(k,i,j+2,iq)   &
+                       - CNY3(2,j+1,1) * QTRC(k,i,j+1,iq)   &
+                       + CNY3(3,j+1,1) * QTRC(k,i,j  ,iq)   &
+                       - CNY3(1,j  ,1) * QTRC(k,i,j-1,iq) ) &
+                    * 0.5_RP * ( FACT_N * ( DENS(k,i,j+1)+DENS(k,i,j  ) ) &
+                               + FACT_F * ( DENS(k,i,j+2)+DENS(k,i,j-1) ) )
+             enddo
+             enddo
+             enddo
+
+
+          end if ! iq == I_QV
+
+       end if ! DIFF4 .eq. 0.0
+
+
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
@@ -1929,7 +2096,8 @@ call TIME_rapstart   ('DYN-fct')
 
           qflx_hi(k,i,j,ZDIR) = 0.5_RP * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
+                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+                              + num_diff(k,i,j,1,ZDIR)
        enddo
        enddo
        enddo
@@ -1944,7 +2112,8 @@ call TIME_rapstart   ('DYN-fct')
           qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                             - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+                                 + num_diff(KS,i,j,1,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -1961,7 +2130,8 @@ call TIME_rapstart   ('DYN-fct')
           qflx_lo(KE  ,i,j,ZDIR) = &
                ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * QTRC(KE,i,j,iq) * MOMZ_LS_FLG( I_QTRC )
 
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+                                 + num_diff(KE-1,i,j,1,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = &
                0.5_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_QTRC )* ( QTRC(KE,i,j,iq) + QTRC(KE-1,i,j,iq) ) &
              + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_QTRC )* CDZ(KE) * QTRC(KE,i,j,iq)
@@ -1990,7 +2160,8 @@ call TIME_rapstart   ('DYN-fct')
        do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5_RP * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
+                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+                              + num_diff(k,i,j,1,XDIR)
        enddo
        enddo
        enddo
@@ -2017,7 +2188,8 @@ call TIME_rapstart   ('DYN-fct')
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5_RP * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
+                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+                              + num_diff(k,i,j,1,YDIR)
        enddo
        enddo
        enddo

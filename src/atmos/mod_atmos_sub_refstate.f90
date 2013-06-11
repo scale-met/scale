@@ -50,6 +50,7 @@ module mod_atmos_refstate
   !
   real(RP), public, save :: ATMOS_REFSTATE_dens(KA) !< refernce density [kg/m3]
   real(RP), public, save :: ATMOS_REFSTATE_pott(KA) !< refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_qv  (KA) !< refernce vapor [kg/kg]
 
   !-----------------------------------------------------------------------------
   !
@@ -159,6 +160,8 @@ contains
                          ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_REFSTATE_pott(:),                             & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_qv(:),                               & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** refstate file is not specified.'
@@ -186,6 +189,9 @@ contains
 
        call FILEIO_write( ATMOS_REFSTATE_pott(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'POTT_ref', 'Reference profile of theta', 'K', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
+       call FILEIO_write( ATMOS_REFSTATE_qv(:),   ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -283,6 +289,7 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
+    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_isa
@@ -375,6 +382,7 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
+    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
@@ -452,6 +460,7 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
+    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
