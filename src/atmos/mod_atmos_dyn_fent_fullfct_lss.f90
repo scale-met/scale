@@ -1281,10 +1281,11 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+2, KE-2
              num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**4 &
-                  * ( CNZ3(1,k  ,2) * MOMZ(k+1,i,j) &
-                    - CNZ3(2,k  ,2) * MOMZ(k  ,i,j) &
-                    + CNZ3(3,k  ,2) * MOMZ(k-1,i,j) &
-                    - CNZ3(1,k-1,2) * MOMZ(k-2,i,j) )
+                  * ( CNZ3(1,k  ,2) * MOMZ(k+1,i,j) / (REF_dens(k+2)+REF_dens(k+1)) &
+                    - CNZ3(2,k  ,2) * MOMZ(k  ,i,j) / (REF_dens(k+1)+REF_dens(k  )) &
+                    + CNZ3(3,k  ,2) * MOMZ(k-1,i,j) / (REF_dens(k  )+REF_dens(k-1)) &
+                    - CNZ3(1,k-1,2) * MOMZ(k-2,i,j) / (REF_dens(k+1)+REF_dens(k-2)) ) &
+                  * REF_dens(k) * 2.0_RP
           enddo
           enddo
           enddo
@@ -1292,21 +1293,25 @@ call TIME_rapstart   ('DYN-set')
           do j = JJS,   JJE
           do i = IIS,   IIE
              num_diff(KS  ,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+1)+CDZ(KS  )) )**4 &
-                  * ( CNZ3(1,KS  ,2) * MOMZ(KS+1,i,j) &
-                    - CNZ3(2,KS  ,2) * MOMZ(KS  ,i,j) )
+                  * ( CNZ3(1,KS  ,2) * MOMZ(KS+1,i,j) / (REF_dens(KS+2)+REF_dens(KS+1)) &
+                    - CNZ3(2,KS  ,2) * MOMZ(KS  ,i,j) / (REF_dens(KS+1)+REF_dens(KS  )) ) &
+                  * REF_dens(KS) * 2.0_RP
              num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+2)+CDZ(KS+1)) )**4 &
-                  * ( CNZ3(1,KS+1,2) * MOMZ(KS+2,i,j) &
-                    - CNZ3(2,KS+1,2) * MOMZ(KS+1,i,j) &
-                    + CNZ3(3,KS+1,2) * MOMZ(KS,i,j) )
+                  * ( CNZ3(1,KS+1,2) * MOMZ(KS+2,i,j) / (REF_dens(KS+3)+REF_dens(KS+2)) &
+                    - CNZ3(2,KS+1,2) * MOMZ(KS+1,i,j) / (REF_dens(KS+2)+REF_dens(KS+1)) &
+                    + CNZ3(3,KS+1,2) * MOMZ(KS  ,i,j) / (REF_dens(KS+1)+REF_dens(KS  )) ) &
+                  * REF_dens(KS+1) * 2.0_RP
              num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE)+CDZ(KE-1)) )**4 &
                   * ( &
-                    - CNZ3(2,KE-1,2) * MOMZ(KE-1,i,j) &
-                    + CNZ3(3,KE-1,2) * MOMZ(KE-2,i,j) &
-                    - CNZ3(1,KE-2,2) * MOMZ(KE-3,i,j) )
+                    - CNZ3(2,KE-1,2) * MOMZ(KE-1,i,j) / (REF_dens(KE  )+REF_dens(KE-1)) &
+                    + CNZ3(3,KE-1,2) * MOMZ(KE-2,i,j) / (REF_dens(KE-1)+REF_dens(KE-2)) &
+                    - CNZ3(1,KE-2,2) * MOMZ(KE-3,i,j) / (REF_dens(KE-2)+REF_dens(KE-3)) ) &
+                  * REF_dens(KE-1) * 2.0_RP
              num_diff(KE  ,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE+1)+CDZ(KE)) )**4 &
                   * ( &
-                    + CNZ3(3,KE  ,2) * MOMZ(KE-1,i,j) &
-                    - CNZ3(1,KE-1,2) * MOMZ(KE-2,i,j) )
+                    + CNZ3(3,KE  ,2) * MOMZ(KE-1,i,j) / (REF_dens(KE  )+REF_dens(KE-1)) &
+                    - CNZ3(1,KE-1,2) * MOMZ(KE-2,i,j) / (REF_dens(KE-1)+REF_dens(KE-2)) ) &
+                  * REF_dens(KE) * 2.0_RP
           enddo
           enddo
 
@@ -1342,35 +1347,40 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
-                  * ( CNZ3(1,k+1,1) * MOMX(k+2,i,j) &
-                    - CNZ3(2,k+1,1) * MOMX(k+1,i,j) &
-                    + CNZ3(3,k+1,1) * MOMX(k  ,i,j) &
-                    - CNZ3(1,k  ,1) * MOMX(k-1,i,j) )
+                  * ( CNZ3(1,k+1,1) * MOMX(k+2,i,j) / REF_dens(k+2) &
+                    - CNZ3(2,k+1,1) * MOMX(k+1,i,j) / REF_dens(k+1) &
+                    + CNZ3(3,k+1,1) * MOMX(k  ,i,j) / REF_dens(k  ) &
+                    - CNZ3(1,k  ,1) * MOMX(k-1,i,j) / REF_dens(k-1) ) &
+                  * (REF_dens(k+1)+REF_dens(k)) * 0.5_RP
           enddo
           enddo
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
              num_diff(KS-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
-                  * ( CNZ3(1,KS  ,1) * MOMX(KS+1,i,j) &
-                    - CNZ3(2,KS  ,1) * MOMX(KS  ,i,j) &
-                    + CNZ3(3,KS  ,1) * MOMX(KS  ,i,j) &
-                    - CNZ3(1,KS-1,1) * MOMX(KS  ,i,j) )
+                  * ( CNZ3(1,KS  ,1) * MOMX(KS+1,i,j) / REF_dens(KS+1) &
+                    - CNZ3(2,KS  ,1) * MOMX(KS  ,i,j) / REF_dens(KS  ) &
+                    + CNZ3(3,KS  ,1) * MOMX(KS  ,i,j) / REF_dens(KS  ) &
+                    - CNZ3(1,KS-1,1) * MOMX(KS  ,i,j) / REF_dens(KS  ) ) &
+                  * (REF_dens(KS+1)+REF_dens(KS)) * 0.5_RP
              num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                  * ( CNZ3(1,KS+1,1) * MOMX(KS+2,i,j) &
-                    - CNZ3(2,KS+1,1) * MOMX(KS+1,i,j) &
-                    + CNZ3(3,KS+1,1) * MOMX(KS  ,i,j) &
-                    - CNZ3(1,KS  ,1) * MOMX(KS  ,i,j) )
+                  * ( CNZ3(1,KS+1,1) * MOMX(KS+2,i,j) / REF_dens(KS+2) &
+                    - CNZ3(2,KS+1,1) * MOMX(KS+1,i,j) / REF_dens(KS+1) &
+                    + CNZ3(3,KS+1,1) * MOMX(KS  ,i,j) / REF_dens(KS  ) &
+                    - CNZ3(1,KS  ,1) * MOMX(KS  ,i,j) / REF_dens(KS  ) ) &
+                  * (REF_dens(KS+1)+REF_dens(KS)) * 0.5_RP
              num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                  * ( CNZ3(1,KE  ,1) * MOMX(KE  ,i,j) &
-                    - CNZ3(2,KE  ,1) * MOMX(KE  ,i,j) &
-                    + CNZ3(3,KE  ,1) * MOMX(KE-1,i,j) &
-                    - CNZ3(1,KE-1,1) * MOMX(KE-2,i,j) )
+                  * ( CNZ3(1,KE  ,1) * MOMX(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(2,KE  ,1) * MOMX(KE  ,i,j) / REF_dens(KE  ) &
+                    + CNZ3(3,KE  ,1) * MOMX(KE-1,i,j) / REF_dens(KE-1) &
+                    - CNZ3(1,KE-1,1) * MOMX(KE-2,i,j) / REF_dens(KE-2) ) &
+                  * (REF_dens(KE)+REF_dens(KE-1)) * 0.5_RP
              num_diff(KE  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE  )**4 &
-                  * ( CNZ3(1,KE+1,1) * MOMX(KE  ,i,j) &
-                    - CNZ3(2,KE+1,1) * MOMX(KE  ,i,j) &
-                    + CNZ3(3,KE+1,1) * MOMX(KE  ,i,j) &
-                    - CNZ3(1,KE  ,1) * MOMX(KE-1,i,j) )
+                  * ( CNZ3(1,KE+1,1) * MOMX(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(2,KE+1,1) * MOMX(KE  ,i,j) / REF_dens(KE  ) &
+                    + CNZ3(3,KE+1,1) * MOMX(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(1,KE  ,1) * MOMX(KE-1,i,j) / REF_dens(KE-1) ) &
+                  * REF_dens(KE)
 !             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
 !             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
           enddo
@@ -1408,35 +1418,40 @@ call TIME_rapstart   ('DYN-set')
           do i = IIS,   IIE
           do k = KS+1, KE-2
              num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
-                  * ( CNZ3(1,k+1,1) * MOMY(k+2,i,j) &
-                    - CNZ3(2,k+1,1) * MOMY(k+1,i,j) &
-                    + CNZ3(3,k+1,1) * MOMY(k  ,i,j) &
-                    - CNZ3(1,k  ,1) * MOMY(k-1,i,j) )
+                  * ( CNZ3(1,k+1,1) * MOMY(k+2,i,j) / REF_dens(k+2) &
+                    - CNZ3(2,k+1,1) * MOMY(k+1,i,j) / REF_dens(k+1) &
+                    + CNZ3(3,k+1,1) * MOMY(k  ,i,j) / REF_dens(k  ) &
+                    - CNZ3(1,k  ,1) * MOMY(k-1,i,j) / REF_dens(k-1) ) &
+                  * (REF_dens(k+1)+REF_dens(k)) * 0.5_RP
           enddo
           enddo
           enddo
           do j = JJS,   JJE
           do i = IIS,   IIE
              num_diff(KS-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS-1)**4 &
-                  * ( CNZ3(1,KS  ,1) * MOMY(KS+1,i,j) &
-                    - CNZ3(2,KS  ,1) * MOMY(KS  ,i,j) &
-                    + CNZ3(3,KS  ,1) * MOMY(KS  ,i,j) &
-                    - CNZ3(1,KS-1,1) * MOMY(KS  ,i,j) )
+                  * ( CNZ3(1,KS  ,1) * MOMY(KS+1,i,j) / REF_dens(KS+1) &
+                    - CNZ3(2,KS  ,1) * MOMY(KS  ,i,j) / REF_dens(KS  ) &
+                    + CNZ3(3,KS  ,1) * MOMY(KS  ,i,j) / REF_dens(KS  ) &
+                    - CNZ3(1,KS-1,1) * MOMY(KS  ,i,j) / REF_dens(KS  ) ) &
+                  * (REF_dens(KS+1)+REF_dens(KS)) * 0.5_RP
              num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                  * ( CNZ3(1,KS+1,1) * MOMY(KS+2,i,j) &
-                    - CNZ3(2,KS+1,1) * MOMY(KS+1,i,j) &
-                    + CNZ3(3,KS+1,1) * MOMY(KS  ,i,j) &
-                    - CNZ3(1,KS  ,1) * MOMY(KS  ,i,j) )
+                  * ( CNZ3(1,KS+1,1) * MOMY(KS+2,i,j) / REF_dens(KS+2) &
+                    - CNZ3(2,KS+1,1) * MOMY(KS+1,i,j) / REF_dens(KS+1) &
+                    + CNZ3(3,KS+1,1) * MOMY(KS  ,i,j) / REF_dens(KS  ) &
+                    - CNZ3(1,KS  ,1) * MOMY(KS  ,i,j) / REF_dens(KS  ) ) &
+                  * (REF_dens(KS+1)+REF_dens(KS)) * 0.5_RP
              num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                  * ( CNZ3(1,KE  ,1) * MOMY(KE  ,i,j) &
-                    - CNZ3(2,KE  ,1) * MOMY(KE  ,i,j) &
-                    + CNZ3(3,KE  ,1) * MOMY(KE-1,i,j) &
-                    - CNZ3(1,KE-1,1) * MOMY(KE-2,i,j) )
+                  * ( CNZ3(1,KE  ,1) * MOMY(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(2,KE  ,1) * MOMY(KE  ,i,j) / REF_dens(KE  ) &
+                    + CNZ3(3,KE  ,1) * MOMY(KE-1,i,j) / REF_dens(KE-1) &
+                    - CNZ3(1,KE-1,1) * MOMY(KE-2,i,j) / REF_dens(KE-2) ) &
+                  * (REF_dens(KE)+REF_dens(KE-1)) * 0.5_RP
              num_diff(KE  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE  )**4 &
-                  * ( CNZ3(1,KE+1,1) * MOMY(KE  ,i,j) &
-                    - CNZ3(2,KE+1,1) * MOMY(KE  ,i,j) &
-                    + CNZ3(3,KE+1,1) * MOMY(KE  ,i,j) &
-                    - CNZ3(1,KE  ,1) * MOMY(KE-1,i,j) )
+                  * ( CNZ3(1,KE+1,1) * MOMY(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(2,KE+1,1) * MOMY(KE  ,i,j) / REF_dens(KE  ) &
+                    + CNZ3(3,KE+1,1) * MOMY(KE  ,i,j) / REF_dens(KE  ) &
+                    - CNZ3(1,KE  ,1) * MOMY(KE-1,i,j) / REF_dens(KE-1) ) &
+                  * REF_dens(KE)
 !             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
 !             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
           enddo
