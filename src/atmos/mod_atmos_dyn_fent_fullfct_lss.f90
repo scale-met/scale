@@ -99,8 +99,9 @@ module mod_atmos_dyn
   real(RP), parameter :: EPSILON = 1.0E-30_RP
 
   ! numerical filter settings
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff = 1.0E-2_RP ! nondimensional numerical diffusion
-  real(RP), private, save      :: DIFF4 ! for 4th order numerical filter
+  integer,  private, save      :: ATMOS_DYN_numerical_diff_order = 1
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef = 1.0E-2_RP ! nondimensional numerical diffusion
+  real(RP), private, save      :: DIFF4 ! for numerical filter
 
   ! coriolis force
   logical, private, save       :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
@@ -135,12 +136,12 @@ module mod_atmos_dyn
   real(RP), private, save :: rjpls  (KA,IA,JA)    ! correction factor for incoming antidiffusive flux
   real(RP), private, save :: rjmns  (KA,IA,JA)    ! correction factor for outgoing antidiffusive flux
 
-  real(RP), private, save :: CNDZ(3,KA)
-  real(RP), private, save :: CNMZ(3,KA)
-  real(RP), private, save :: CNDX(3,IA)
-  real(RP), private, save :: CNMX(3,IA)
-  real(RP), private, save :: CNDY(3,JA)
-  real(RP), private, save :: CNMY(3,JA)
+  real(RP), private, save :: CNZ3(3,KA,2)
+  real(RP), private, save :: CNX3(3,IA,2)
+  real(RP), private, save :: CNY3(3,JA,2)
+  real(RP), private, save :: CNZ4(4,KA,2)
+  real(RP), private, save :: CNX4(4,IA,2)
+  real(RP), private, save :: CNY4(4,JA,2)
 
   !--- for LS forcing
   real(RP), private, save :: MOMZ_LS(KA,2)
@@ -159,7 +160,7 @@ contains
   subroutine CHECK( line, v )
     integer,  intent(in) :: line
     real(RP), intent(in) :: v
-    if ( .not. v .gt. UNDEF ) then
+    if ( abs(v) .ge. abs(UNDEF) ) then
        write(*,*) "use uninitialized value at line ", line
        call abort
     end if
@@ -193,7 +194,8 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN /    &
-       ATMOS_DYN_numerical_diff,    &
+       ATMOS_DYN_numerical_diff_order, &
+       ATMOS_DYN_numerical_diff_coef, &
        ATMOS_DYN_enable_coriolis,   &
        ATMOS_DYN_divdmp_coef,       &
        ATMOS_DYN_LSsink_D,          &
@@ -237,11 +239,12 @@ contains
     endif
 
     call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
-                         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,  & ! (out)
+                         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,  & ! (out)
                          MOMZ_LS, MOMZ_LS_DZ,                 & ! (in)
                          CDZ, CDX, CDY, CZ, FZ,               & ! (in)
                          lat,                                 & ! (in)
-                         ATMOS_DYN_numerical_diff,            & ! (in)
+                         ATMOS_DYN_numerical_diff_order,      & ! (in)
+                         ATMOS_DYN_numerical_diff_coef,       & ! (in)
                          DTSEC_ATMOS_DYN,                     & ! (in)
                          ATMOS_DYN_LSsink_D,                  & ! (in)
                          ATMOS_DYN_LSsink_bottom,             & ! (in)
@@ -278,10 +281,11 @@ contains
   end subroutine ATMOS_DYN_setup
 
   subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
-                             CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, &
+                             CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
                              MOMZ_LS, MOMZ_LS_DZ,                &
                              CDZ, CDX, CDY, CZ, FZ, lat,         &
-                             numerical_diff, dt_dyn,             &
+                             numdiff_order, numdiff_coef,        &
+                             dt_dyn,                             &
                              LSsink_D,                           &
                              LSsink_bottom,                      &
                              enable_coriolis                     )
@@ -291,12 +295,12 @@ contains
     implicit none
     real(RP), intent(out) :: DIFF4
     real(RP), intent(out) :: corioli(1,IA,JA)
-    real(RP), intent(out) :: CNDZ(3,KA)
-    real(RP), intent(out) :: CNMZ(3,KA)
-    real(RP), intent(out) :: CNDX(3,IA)
-    real(RP), intent(out) :: CNMX(3,IA)
-    real(RP), intent(out) :: CNDY(3,JA)
-    real(RP), intent(out) :: CNMY(3,JA)
+    real(RP), intent(out) :: CNZ3(3,KA,2)
+    real(RP), intent(out) :: CNX3(3,IA,2)
+    real(RP), intent(out) :: CNY3(3,JA,2)
+    real(RP), intent(out) :: CNZ4(4,KA,2)
+    real(RP), intent(out) :: CNX4(4,IA,2)
+    real(RP), intent(out) :: CNY4(4,JA,2)
     real(RP), intent(out) :: MOMZ_LS(KA,2)
     real(RP), intent(out) :: MOMZ_LS_DZ(KA,2)
     real(RP), intent(in)  :: CDZ(KA)
@@ -305,7 +309,8 @@ contains
     real(RP), intent(in)  :: CZ(KA)
     real(RP), intent(in)  :: FZ(0:KA)
     real(RP), intent(in)  :: lat(1,IA,JA)
-    real(RP), intent(in)  :: numerical_diff
+    integer,  intent(in)  :: numdiff_order
+    real(RP), intent(in)  :: numdiff_coef
     real(RP), intent(in)  :: dt_dyn
     real(RP), intent(in)  :: LSsink_D
     real(RP), intent(in)  :: LSsink_bottom
@@ -316,12 +321,12 @@ contains
     integer :: i, j, k
 
 #ifdef DEBUG
-    CNDZ(:,:) = UNDEF
-    CNMZ(:,:) = UNDEF
-    CNDX(:,:) = UNDEF
-    CNMX(:,:) = UNDEF
-    CNDY(:,:) = UNDEF
-    CNMY(:,:) = UNDEF
+    CNZ3(:,:,:) = UNDEF
+    CNX3(:,:,:) = UNDEF
+    CNY3(:,:,:) = UNDEF
+    CNZ4(:,:,:) = UNDEF
+    CNX4(:,:,:) = UNDEF
+    CNY4(:,:,:) = UNDEF
     corioli(:,:,:) = UNDEF
 #endif
 
@@ -364,151 +369,145 @@ contains
 
 
     ! numerical diffusion
-    if ( numerical_diff == 0.0_RP ) then
+    if ( numdiff_coef == 0.0_RP ) then
        DIFF4 = 0.0_RP
-       CNDZ(:,:) = 0.0_RP
-       CNMZ(:,:) = 0.0_RP
-       CNDX(:,:) = 0.0_RP
-       CNMX(:,:) = 0.0_RP
-       CNDY(:,:) = 0.0_RP
-       CNMY(:,:) = 0.0_RP
+       CNZ3(:,:,:) = 0.0_RP
+       CNX3(:,:,:) = 0.0_RP
+       CNY3(:,:,:) = 0.0_RP
+       CNZ4(:,:,:) = 0.0_RP
+       CNX4(:,:,:) = 0.0_RP
+       CNY4(:,:,:) = 0.0_RP
     else
-       DIFF4 = - numerical_diff * (-1.0_RP)**( 4/2+1 ) / dt_dyn
+       DIFF4 = numdiff_coef / ( PI**(4*numdiff_order) * dt_dyn )
 
        ! z direction
        do k = KS-1, KE+1
-          CNDZ(1,k) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+          CNZ3(1,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
        enddo
-       CNDZ(1,   1:KS-2) = CNDZ(1,KS-1)
-       CNDZ(1,KE+2:KA  ) = CNDZ(1,KE+1)
+       do k = KS-1, KE+1
+          CNZ3(2,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+       end do
+       do k = KS, KE+1
+          CNZ3(3,k,1) = 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5_RP )
+       enddo
+       CNZ3(3,KS-1,1) = 1.0_RP / ( (CDZ(KS-1)+CDZ(KS-2)) * 0.5_RP * CDZ(KS-1) * (CDZ(KS-1)+CDZ(KS-2)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(KS-1)+CDZ(KS-2)) * 0.5_RP * CDZ(KS-2) * (CDZ(KS-1)+CDZ(KS-2)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDZ(KS-1)+CDZ(KS-2)) * 0.5_RP * CDZ(KS-2) *  CDZ(KS-2)                     )
+       do k = KS-2, KE
+          CNZ4(1,k,1) = CNZ3(1,k+1,1) / CDZ(k)
+       end do
+       do k = KS-1, KE
+          CNZ4(2,k,1) = ( CNZ3(2,k+1,1) + CNZ3(1,k,1) ) / CDZ(k)
+          CNZ4(3,k,1) = ( CNZ3(3,k+1,1) + CNZ3(2,k,1) ) / CDZ(k)
+          CNZ4(4,k,1) = ( CNZ3(1,k  ,1) + CNZ3(3,k,1) ) / CDZ(k)
+       end do
 
        do k = KS-1, KE+1
-          CNDZ(2,k) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
+          CNZ3(1,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) )
+       end do
+       do k = KS, KE+1
+          CNZ3(2,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
+          CNZ3(3,k,2) = 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) )
        enddo
-       CNDZ(2,   1:KS-2) = CNDZ(2,KS-1)
-       CNDZ(2,KE+2:KA  ) = CNDZ(2,KE+1)
-
-       do k = KS, KE+2
-          CNDZ(3,k) = 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5_RP )
-       enddo
-       CNDZ(3,1   :KS-1) = CNDZ(3,KS  )
-       CNDZ(3,KE+2:KA  ) = CNDZ(3,KE+2)
-
-       do k = KS-2, KE+1
-          CNMZ(1,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) )
-       enddo
-       CNMZ(1,   1:KS-2) = CNMZ(1,KS-2)
-       CNMZ(1,KE+2:KA  ) = CNMZ(1,KE+1)
-
-       do k = KS-1, KE+1
-          CNMZ(2,k) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
-       enddo
-       CNMZ(2,   1:KS-2) = CNMZ(2,KS-1)
-       CNMZ(2,KE+2:KA  ) = CNMZ(2,KE+1)
-
-       do k = KS-1, KE+1
-          CNMZ(3,k) = 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) &
-                    + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) )
-       enddo
-       CNMZ(3,   1:KS-2) = CNMZ(3,KS-1)
-       CNMZ(3,KE+2:KA  ) = CNMZ(3,KE+1)
+       do k = KS-1, KE
+          CNZ4(1,k,2) = CNZ3(1,k+1,2) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
+       end do
+       do k = KS, KE
+          CNZ4(2,k,2) = ( CNZ3(2,k+1,2) + CNZ3(1,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
+          CNZ4(3,k,2) = ( CNZ3(3,k+1,2) + CNZ3(2,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
+          CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
+       end do
 
        ! x direction
        do i = IS-1, IE+1
-          CNDX(1,i) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+          CNX3(1,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
        enddo
-       CNDX(1,   1:IS-2) = CNDX(1,IS-1)
-       CNDX(1,IE+2:IA  ) = CNDX(1,IE+1)
+       do i = IS, IE+1
+          CNX3(2,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+          CNX3(3,i,1) = 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
+       enddo
+       do i = IS-1, IE
+          CNX4(1,i,1) = CNX3(1,i+1,1) / CDX(i)
+       end do
+       do i = IS, IE
+          CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
+          CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
+          CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
+       end do
 
        do i = IS-1, IE+1
-          CNDX(2,i) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
+          CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) )
        enddo
-       CNDX(2,   1:IS-2) = CNDX(2,IS-1)
-       CNDX(2,IE+2:IA  ) = CNDX(2,IE+1)
-
-       do i = IS, IE+2
-          CNDX(3,i) = 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
-       enddo
-       CNDX(3,   1:IS-1) = CNDX(3,IS  )
-       CNDX(3,IE+2:IA  ) = CNDX(3,IE+2)
-
-       do i = IS-2, IE+1
-          CNMX(1,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) )
-       enddo
-       CNMX(1,IE+2:IA  ) = CNMX(1,IE+1)
-       CNMX(1,   1:IS-2) = CNMX(1,IS-2)
-
        do i = IS-1, IE+1
-          CNMX(2,i) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
+          CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
+          CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
        enddo
-       CNMX(2,   1:IS-2) = CNMX(2,IS-1)
-       CNMX(2,IE+2:IA  ) = CNMX(2,IE+1)
-
-       do i = IS-1, IE+1
-          CNMX(3,i) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
-                    + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
-       enddo
-       CNMX(3,   1:IS-2) = CNMX(3,IS-1)
-       CNMX(3,IE+2:IA  ) = CNMX(3,IE+1)
+       do i = IS-1, IE
+          CNX4(1,i,2) = CNX3(1,i+1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
+       end do
+       do i = IS, IE
+          CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
+          CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
+          CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
+       end do
 
        ! y direction
        do j = JS-1, JE+1
-          CNDY(1,j) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+          CNY3(1,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
        enddo
-       CNDY(1,   1:JS-2) = CNDY(1,JS-1)
-       CNDY(1,JE+2:JA  ) = CNDY(1,JE+1)
+       do j = JS, JE+1
+          CNY3(2,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+          CNY3(3,j,1) = 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
+                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
+       enddo
+       do j = JS-1, JE
+          CNY4(1,j,1) = CNY3(1,j+1,1) / CDY(j)
+       end do
+       do j = JS, JE
+          CNY4(2,j,1) = ( CNY3(2,j+1,1) + CNY3(1,j,1) ) / CDY(j)
+          CNY4(3,j,1) = ( CNY3(3,j+1,1) + CNY3(2,j,1) ) / CDY(j)
+          CNY4(4,j,1) = ( CNY3(1,j  ,1) + CNY3(3,j,1) ) / CDY(j)
+       end do
 
        do j = JS-1, JE+1
-          CNDY(2,j) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
+          CNY3(1,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) )
        enddo
-       CNDY(2,   1:JS-2) = CNDY(2,JS-1)
-       CNDY(2,JE+2:JA  ) = CNDY(2,JE+1)
-
-       do j = JS, JE+2
-          CNDY(3,j) = 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
-       enddo
-       CNDY(3,   1:JS-1) = CNDY(3,JS  )
-       CNDY(3,JE+2:JA  ) = CNDY(3,JE+2)
-
-       do j = JS-2, JE+1
-          CNMY(1,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) )
-       enddo
-       CNMY(1,   1:JS-2) = CNMY(1,JS-2)
-       CNMY(1,JE+2:JA  ) = CNMY(1,JE+1)
-
        do j = JS-1, JE+1
-          CNMY(2,j) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
+          CNY3(2,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
+          CNY3(3,j,2) = 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
        enddo
-       CNMY(2,   1:JS-2) = CNMY(2,JS-1)
-       CNMY(2,JE+2:JA  ) = CNMY(2,JE+1)
+       do j = JS-1, JE
+          CNY4(1,j,2) = CNY3(1,j+1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
+       end do
+       do j = JS, JE
+          CNY4(2,j,2) = ( CNY3(2,j+1,2) + CNY3(1,j,2) ) / ( CDY(j+1) + CDY(j) )
+          CNY4(3,j,2) = ( CNY3(3,j+1,2) + CNY3(2,j,2) ) / ( CDY(j+1) + CDY(j) )
+          CNY4(4,j,2) = ( CNY3(1,j  ,2) + CNY3(3,j,2) ) / ( CDY(j+1) + CDY(j) )
+       end do
 
-       do j = JS-1, JE+1
-          CNMY(3,j) = 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
-                    + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
-       enddo
-       CNMY(3,   1:JS-2) = CNMY(3,JS-1)
-       CNMY(3,JE+2:JA  ) = CNMY(3,JE+1)
     end if
 
 
@@ -683,7 +682,8 @@ contains
        AQ_CV
     use mod_atmos_refstate, only: &
        REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott
+       REF_pott => ATMOS_REFSTATE_pott, &
+       REF_qv   => ATMOS_REFSTATE_qv
     use mod_atmos_boundary, only: &
        DAMP_var   => ATMOS_BOUNDARY_var,   &
        DAMP_alpha => ATMOS_BOUNDARY_alpha
@@ -709,11 +709,12 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,        & ! (in)
+         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,        & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,              & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
          AQ_CV,                                     & ! (in)
-         REF_dens, REF_pott, DIFF4,                 & ! (in)
+         REF_dens, REF_pott, REF_qv,                & ! (in)
+         DIFF4, ATMOS_DYN_numerical_diff_order,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
          MOMZ_LS, MOMZ_LS_DZ,                       & ! (in)
@@ -736,11 +737,11 @@ contains
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
          QDRY, DDIV,                                  & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, DIFF4,                   & ! (in)
+         REF_dens, REF_pott, REF_qv, DIFF4, ND_ORDER, & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef, MOMZ_LS, MOMZ_LS_DZ,            & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
@@ -790,12 +791,12 @@ contains
     real(RP), intent(in) :: RHOT_tp(KA,IA,JA)
     real(RP), intent(in) :: QTRC_tp(KA,IA,JA,QA)
 
-    real(RP), intent(in)    :: CNDZ(3,KA)
-    real(RP), intent(in)    :: CNMZ(3,KA)
-    real(RP), intent(in)    :: CNDX(3,IA)
-    real(RP), intent(in)    :: CNMX(3,IA)
-    real(RP), intent(in)    :: CNDY(3,JA)
-    real(RP), intent(in)    :: CNMY(3,JA)
+    real(RP), intent(in)    :: CNZ3(3,KA,2)
+    real(RP), intent(in)    :: CNX3(3,IA,2)
+    real(RP), intent(in)    :: CNY3(3,JA,2)
+    real(RP), intent(in)    :: CNZ4(4,KA,2)
+    real(RP), intent(in)    :: CNX4(4,IA,2)
+    real(RP), intent(in)    :: CNY4(4,JA,2)
 
     real(RP), intent(in)    :: CDZ(KA)
     real(RP), intent(in)    :: CDX(IA)
@@ -814,7 +815,9 @@ contains
 
     real(RP), intent(in)    :: REF_dens(KA)
     real(RP), intent(in)    :: REF_pott(KA)
+    real(RP), intent(in)    :: REF_qv  (KA)
     real(RP), intent(in)    :: DIFF4
+    integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
@@ -842,7 +845,8 @@ contains
     ! rayleigh damping, numerical diffusion
     real(RP) :: dens_diff(KA,IA,JA)     ! anomary of density
     real(RP) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
-    real(RP) :: num_diff (KA,IA,JA,5,3)
+    real(RP) :: qv_diff  (KA,IA,JA)     ! anomary of vapor
+    real(RP), target :: num_diff (KA,IA,JA,5,3)
 
     real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
 
@@ -859,10 +863,18 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
     real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
 
+    ! For numerical diffusion
+    real(RP), target  :: num_diff_work(KA,IA,JA,5,3)
+    real(RP), pointer :: num_diff_pt0(:,:,:,:,:)
+    real(RP), pointer :: num_diff_pt1(:,:,:,:,:)
+    real(RP), pointer :: tmp_pt(:,:,:,:,:)
+
+
     integer :: IIS, IIE
     integer :: JJS, JJE
 
     real(RP) :: dtrk
+    integer :: nd_order4, no
     integer :: i, j, k, iq, rko, step
     real(RP) :: ratesum
 
@@ -888,6 +900,7 @@ contains
     dens_s   (:,:,:)     = UNDEF
     dens_diff(:,:,:)     = UNDEF
     pott_diff(:,:,:)     = UNDEF
+    qv_diff(:,:,:)     = UNDEF
     num_diff (:,:,:,:,:) = UNDEF
 
     mflx_hi  (:,:,:,:)   = UNDEF
@@ -1185,365 +1198,1095 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
 
+    end do
+    end do
 
 
-       !--- prepare numerical diffusion coefficient
-       if ( DIFF4 /= 0.0_RP ) then
+    !--- prepare numerical diffusion coefficient
+    if ( DIFF4 /= 0.0_RP ) then
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j  = JJS-2, JJE+2
           do i  = IIS-2, IIE+2
           do k = KS, KE
              dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
              pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
+             qv_diff  (k,i,j) = QTRC(k,i,j,I_QV)          - REF_qv  (k)
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
+          do j = JJS-2, JJE+2
+          do i = IIS-2, IIE+2
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMZ(k,i,j) )
+             call CHECK( __LINE__, DENS(k  ,i,j) )
+             call CHECK( __LINE__, DENS(k+1,i,j) )
+#endif
+             VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS-2, JJE+2
+          do i = IIS-2, IIE+1
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMX(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i  ,j) )
+             call CHECK( __LINE__, DENS(k,i+1,j) )
+#endif
+             VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS-2, JJE+1
+          do i = IIS-2, IIE+2
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMY(k,i,j) )
+             call CHECK( __LINE__, DENS(k,i,j  ) )
+             call CHECK( __LINE__, DENS(k,i,j+1) )
+#endif
+             VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS+1, KE-2
-             num_diff(k,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * dens_diff(k+2,i,j) &
-                                           - CNDZ(2,k+1) * dens_diff(k+1,i,j) &
-                                           + CNDZ(3,k+1) * dens_diff(k  ,i,j) &
-                                           - CNDZ(1,k  ) * dens_diff(k-1,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,k+1,1) )
+          call CHECK( __LINE__, CNZ3(2,k+1,1) )
+          call CHECK( __LINE__, CNZ3(3,k+1,1) )
+          call CHECK( __LINE__, CNZ3(1,k,1) )
+          call CHECK( __LINE__, dens_diff(k+2,i,j) )
+          call CHECK( __LINE__, dens_diff(k+1,i,j) )
+          call CHECK( __LINE__, dens_diff(k  ,i,j) )
+          call CHECK( __LINE__, dens_diff(k-1,i,j) )
+#endif
+             num_diff(k,i,j,I_DENS,ZDIR) = &
+                    ( CNZ3(1,k+1,1) * dens_diff(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * dens_diff(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * dens_diff(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * dens_diff(k-1,i,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
-             num_diff(KS,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KS)**4 &
-                                         * ( CNDZ(1,KS+1) * dens_diff(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * dens_diff(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * dens_diff(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * dens_diff(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * dens_diff(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * dens_diff(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * dens_diff(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * dens_diff(KE-2,i,j) )
-!             num_diff(KS,i,j,I_DENS,ZDIR) = num_diff(KS+1,i,j,I_DENS,ZDIR)
-!             num_diff(KE-1,i,j,I_DENS,ZDIR) = num_diff(KE-2,i,j,I_DENS,ZDIR)
+          do j = JJS, JJE
+          do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS,1) )
+          call CHECK( __LINE__, CNZ3(2,KS,1) )
+          call CHECK( __LINE__, CNZ3(3,KS,1) )
+          call CHECK( __LINE__, CNZ3(1,KS-1,1) )
+          call CHECK( __LINE__, dens_diff(KS+1,i,j) )
+          call CHECK( __LINE__, dens_diff(KS,i,j) )
+#endif
+             num_diff(KS-1,i,j,I_DENS,ZDIR) = &
+                    ( CNZ3(1,KS  ,1) * dens_diff(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * dens_diff(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * dens_diff(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * dens_diff(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KS,1) )
+          call CHECK( __LINE__, dens_diff(KS+2,i,j) )
+          call CHECK( __LINE__, dens_diff(KS+1,i,j) )
+          call CHECK( __LINE__, dens_diff(KS,i,j) )
+#endif
+             num_diff(KS  ,i,j,I_DENS,ZDIR) = &
+                    ( CNZ3(1,KS+1,1) * dens_diff(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * dens_diff(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * dens_diff(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * dens_diff(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE,1) )
+          call CHECK( __LINE__, CNZ3(2,KE,1) )
+          call CHECK( __LINE__, CNZ3(3,KE,1) )
+          call CHECK( __LINE__, CNZ3(1,KE-1,1) )
+          call CHECK( __LINE__, dens_diff(KE,i,j) )
+          call CHECK( __LINE__, dens_diff(KE-1,i,j) )
+          call CHECK( __LINE__, dens_diff(KE-2,i,j) )
+#endif
+             num_diff(KE-1,i,j,I_DENS,ZDIR) = &
+                    ( CNZ3(1,KE  ,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * dens_diff(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * dens_diff(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * dens_diff(KE-2,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KE,1) )
+          call CHECK( __LINE__, dens_diff(KE,i,j) )
+          call CHECK( __LINE__, dens_diff(KE-1,i,j) )
+#endif
+             num_diff(KE  ,i,j,I_DENS,ZDIR) = &
+                    ( CNZ3(1,KE+1,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * dens_diff(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * dens_diff(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * dens_diff(KE-1,i,j) )
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_DENS,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * dens_diff(k,i+2,j) &
-                                           - CNDX(2,i+1) * dens_diff(k,i+1,j) &
-                                           + CNDX(3,i+1) * dens_diff(k,i  ,j) &
-                                           - CNDX(1,i  ) * dens_diff(k,i-1,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNX3(1,i+1,1) )
+          call CHECK( __LINE__, CNX3(2,i+1,1) )
+          call CHECK( __LINE__, CNX3(3,i+1,1) )
+          call CHECK( __LINE__, CNX3(1,i,1) )
+          call CHECK( __LINE__, dens_diff(k,i+2,j) )
+          call CHECK( __LINE__, dens_diff(k,i+1,j) )
+          call CHECK( __LINE__, dens_diff(k,i  ,j) )
+          call CHECK( __LINE__, dens_diff(k,i-1,j) )
+#endif
+             num_diff(k,i,j,I_DENS,XDIR) = &
+                    ( CNX3(1,i+1,1) * dens_diff(k,i+2,j) &
+                    - CNX3(2,i+1,1) * dens_diff(k,i+1,j) &
+                    + CNX3(3,i+1,1) * dens_diff(k,i  ,j) &
+                    - CNX3(1,i  ,1) * dens_diff(k,i-1,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_DENS,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * dens_diff(k,i,j+2) &
-                                           - CNDY(2,j+1) * dens_diff(k,i,j+1) &
-                                           + CNDY(3,j+1) * dens_diff(k,i,j  ) &
-                                           - CNDY(1,j  ) * dens_diff(k,i,j-1) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNY3(1,j+1,1) )
+          call CHECK( __LINE__, CNY3(2,j+1,1) )
+          call CHECK( __LINE__, CNY3(3,j+1,1) )
+          call CHECK( __LINE__, CNY3(1,j,1) )
+          call CHECK( __LINE__, dens_diff(k,i,j+2) )
+          call CHECK( __LINE__, dens_diff(k,i,j+1) )
+          call CHECK( __LINE__, dens_diff(k,i,j  ) )
+          call CHECK( __LINE__, dens_diff(k,i,j-1) )
+#endif
+             num_diff(k,i,j,I_DENS,YDIR) = &
+                    ( CNY3(1,j+1,1) * dens_diff(k,i,j+2) &
+                    - CNY3(2,j+1,1) * dens_diff(k,i,j+1) &
+                    + CNY3(3,j+1,1) * dens_diff(k,i,j  ) &
+                    - CNY3(1,j  ,1) * dens_diff(k,i,j-1) )
           enddo
           enddo
           enddo
 
           ! z-momentum
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS+2, KE-2
-             num_diff(k,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**4 &
-                                         * ( CNMZ(1,k  ) * MOMZ(k+1,i,j) &
-                                           - CNMZ(2,k  ) * MOMZ(k  ,i,j) &
-                                           + CNMZ(3,k  ) * MOMZ(k-1,i,j) &
-                                           - CNMZ(1,k-1) * MOMZ(k-2,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,k,2) )
+          call CHECK( __LINE__, CNZ3(2,k,2) )
+          call CHECK( __LINE__, CNZ3(3,k,2) )
+          call CHECK( __LINE__, CNZ3(1,k-1,2) )
+          call CHECK( __LINE__, VELZ(k+1,i,j) )
+          call CHECK( __LINE__, VELZ(k  ,i,j) )
+          call CHECK( __LINE__, VELZ(k-1,i,j) )
+          call CHECK( __LINE__, VELZ(k-2,i,j) )
+#endif
+             num_diff(k,i,j,I_MOMZ,ZDIR) = &
+                    ( CNZ3(1,k  ,2) * VELZ(k+1,i,j) &
+                    - CNZ3(2,k  ,2) * VELZ(k  ,i,j) &
+                    + CNZ3(3,k  ,2) * VELZ(k-1,i,j) &
+                    - CNZ3(1,k-1,2) * VELZ(k-2,i,j) )
           enddo
           enddo
           enddo
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
-             num_diff(KS+1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KS+2)+CDZ(KS+1)) )**4 &
-                                         * ( CNMZ(1,KS+1) * MOMZ(KS+2,i,j) &
-                                           - CNMZ(2,KS+1) * MOMZ(KS+1,i,j) &
-                                           + CNMZ(3,KS+1) * MOMZ(KS,i,j) )
-             num_diff(KE-1,i,j,I_MOMZ,ZDIR) = DIFF4 * ( 0.5_RP*(CDZ(KE)+CDZ(KE-1)) )**4 &
-                                         * ( &
-                                           - CNMZ(2,KE-1) * MOMZ(KE-1,i,j) &
-                                           + CNMZ(3,KE-1) * MOMZ(KE-2,i,j) &
-                                           - CNMZ(1,KE-2) * MOMZ(KE-3,i,j) )
+          do j = JJS, JJE
+          do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS,2) )
+          call CHECK( __LINE__, CNZ3(2,KS,2) )
+          call CHECK( __LINE__, VELZ(KS+1,i,j) )
+          call CHECK( __LINE__, VELZ(KS  ,i,j) )
+#endif
+             num_diff(KS  ,i,j,I_MOMZ,ZDIR) = &
+                    ( CNZ3(1,KS  ,2) * VELZ(KS+1,i,j) &
+                    - CNZ3(2,KS  ,2) * VELZ(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS+1,2) )
+          call CHECK( __LINE__, CNZ3(2,KS+1,2) )
+          call CHECK( __LINE__, CNZ3(3,KS+1,2) )
+          call CHECK( __LINE__, VELZ(KS+2,i,j) )
+          call CHECK( __LINE__, VELZ(KS+1,i,j) )
+          call CHECK( __LINE__, VELZ(KS  ,i,j) )
+#endif
+             num_diff(KS+1,i,j,I_MOMZ,ZDIR) = &
+                    ( CNZ3(1,KS+1,2) * VELZ(KS+2,i,j) &
+                    - CNZ3(2,KS+1,2) * VELZ(KS+1,i,j) &
+                    + CNZ3(3,KS+1,2) * VELZ(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(2,KE-1,2) )
+          call CHECK( __LINE__, CNZ3(3,KE-1,2) )
+          call CHECK( __LINE__, CNZ3(1,KE-2,2) )
+          call CHECK( __LINE__, VELZ(KE-1,i,j) )
+          call CHECK( __LINE__, VELZ(KE-2,i,j) )
+          call CHECK( __LINE__, VELZ(KE-3,i,j) )
+#endif
+             num_diff(KE-1,i,j,I_MOMZ,ZDIR) = &
+                    ( &
+                    - CNZ3(2,KE-1,2) * VELZ(KE-1,i,j) &
+                    + CNZ3(3,KE-1,2) * VELZ(KE-2,i,j) &
+                    - CNZ3(1,KE-2,2) * VELZ(KE-3,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(3,KE,2) )
+          call CHECK( __LINE__, CNZ3(1,KE-1,2) )
+          call CHECK( __LINE__, VELZ(KE-1,i,j) )
+          call CHECK( __LINE__, VELZ(KE-2,i,j) )
+#endif
+             num_diff(KE  ,i,j,I_MOMZ,ZDIR) = &
+                    ( &
+                    + CNZ3(3,KE  ,2) * VELZ(KE-1,i,j) &
+                    - CNZ3(1,KE-1,2) * VELZ(KE-2,i,j) )
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE-1
-             num_diff(k,i,j,I_MOMZ,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * MOMZ(k,i+2,j) &
-                                           - CNDX(2,i+1) * MOMZ(k,i+1,j) &
-                                           + CNDX(3,i+1) * MOMZ(k,i  ,j) &
-                                           - CNDX(1,i  ) * MOMZ(k,i-1,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNX3(1,i+1,1) )
+          call CHECK( __LINE__, CNX3(2,i+1,1) )
+          call CHECK( __LINE__, CNX3(3,i+1,1) )
+          call CHECK( __LINE__, CNX3(1,i  ,1) )
+          call CHECK( __LINE__, VELZ(k,i+2,j) )
+          call CHECK( __LINE__, VELZ(k,i+1,j) )
+          call CHECK( __LINE__, VELZ(k,i  ,j) )
+          call CHECK( __LINE__, VELZ(k,i-1,j) )
+#endif
+             num_diff(k,i,j,I_MOMZ,XDIR) = &
+                    ( CNX3(1,i+1,1) * VELZ(k,i+2,j) &
+                    - CNX3(2,i+1,1) * VELZ(k,i+1,j) &
+                    + CNX3(3,i+1,1) * VELZ(k,i  ,j) &
+                    - CNX3(1,i  ,1) * VELZ(k,i-1,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE-1
-             num_diff(k,i,j,I_MOMZ,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * MOMZ(k,i,j+2) &
-                                           - CNDY(2,j+1) * MOMZ(k,i,j+1) &
-                                           + CNDY(3,j+1) * MOMZ(k,i,j  ) &
-                                           - CNDY(1,j  ) * MOMZ(k,i,j-1) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNY3(1,j+1,1) )
+          call CHECK( __LINE__, CNY3(2,j+1,1) )
+          call CHECK( __LINE__, CNY3(3,j+1,1) )
+          call CHECK( __LINE__, CNY3(1,j  ,1) )
+          call CHECK( __LINE__, VELZ(k,i,j+2) )
+          call CHECK( __LINE__, VELZ(k,i,j+1) )
+          call CHECK( __LINE__, VELZ(k,i,j  ) )
+          call CHECK( __LINE__, VELZ(k,i,j-1) )
+#endif
+             num_diff(k,i,j,I_MOMZ,YDIR) = &
+                    ( CNY3(1,j+1,1) * VELZ(k,i,j+2) &
+                    - CNY3(2,j+1,1) * VELZ(k,i,j+1) &
+                    + CNY3(3,j+1,1) * VELZ(k,i,j  ) &
+                    - CNY3(1,j  ,1) * VELZ(k,i,j-1) )
           enddo
           enddo
           enddo
 
           ! x-momentum
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
+          do j = JJS,  JJE
+          do i = IIS,  IIE
           do k = KS+1, KE-2
-             num_diff(k,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * MOMX(k+2,i,j) &
-                                           - CNDZ(2,k+1) * MOMX(k+1,i,j) &
-                                           + CNDZ(3,k+1) * MOMX(k  ,i,j) &
-                                           - CNDZ(1,k  ) * MOMX(k-1,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,k+1,1) )
+          call CHECK( __LINE__, CNZ3(2,k+1,1) )
+          call CHECK( __LINE__, CNZ3(3,k+1,1) )
+          call CHECK( __LINE__, CNZ3(1,k  ,1) )
+          call CHECK( __LINE__, VELX(k+2,i,j) )
+          call CHECK( __LINE__, VELX(k+1,i,j) )
+          call CHECK( __LINE__, VELX(k  ,i,j) )
+          call CHECK( __LINE__, VELX(k-1,i,j) )
+#endif
+             num_diff(k,i,j,I_MOMX,ZDIR) = &
+                    ( CNZ3(1,k+1,1) * VELX(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * VELX(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * VELX(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * VELX(k-1,i,j) )
           enddo
           enddo
           enddo
-          do j = JJS,   JJE
-          do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMX(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMX(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMX(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMX(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_MOMX,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMX(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMX(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMX(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMX(KE-2,i,j) )
-!             num_diff(KS  ,i,j,I_MOMX,ZDIR) = num_diff(KS+1,i,j,I_MOMX,ZDIR)
-!             num_diff(KE-1,i,j,I_MOMX,ZDIR) = num_diff(KE-2,i,j,I_MOMX,ZDIR)
+          do j = JJS, JJE
+          do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS  ,1) )
+          call CHECK( __LINE__, CNZ3(2,KS  ,1) )
+          call CHECK( __LINE__, CNZ3(3,KS  ,1) )
+          call CHECK( __LINE__, CNZ3(1,KS-1,1) )
+          call CHECK( __LINE__, VELX(KS+1,i,j) )
+          call CHECK( __LINE__, VELX(KS  ,i,j) )
+#endif
+             num_diff(KS-1,i,j,I_MOMX,ZDIR) = &
+                    ( CNZ3(1,KS  ,1) * VELX(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * VELX(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * VELX(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * VELX(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KS  ,1) )
+          call CHECK( __LINE__, VELX(KS+2,i,j) )
+          call CHECK( __LINE__, VELX(KS+1,i,j) )
+          call CHECK( __LINE__, VELX(KS  ,i,j) )
+#endif
+             num_diff(KS  ,i,j,I_MOMX,ZDIR) = &
+                    ( CNZ3(1,KS+1,1) * VELX(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * VELX(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * VELX(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * VELX(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE  ,1) )
+          call CHECK( __LINE__, CNZ3(2,KE  ,1) )
+          call CHECK( __LINE__, CNZ3(3,KE  ,1) )
+          call CHECK( __LINE__, CNZ3(1,KE-1,1) )
+          call CHECK( __LINE__, VELX(KE  ,i,j) )
+          call CHECK( __LINE__, VELX(KE-1,i,j) )
+          call CHECK( __LINE__, VELX(KE-2,i,j) )
+#endif
+             num_diff(KE-1,i,j,I_MOMX,ZDIR) = &
+                    ( CNZ3(1,KE  ,1) * VELX(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * VELX(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * VELX(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * VELX(KE-2,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KE  ,1) )
+          call CHECK( __LINE__, VELX(KE  ,i,j) )
+          call CHECK( __LINE__, VELX(KE-1,i,j) )
+#endif
+             num_diff(KE  ,i,j,I_MOMX,ZDIR) = &
+                    ( CNZ3(1,KE+1,1) * VELX(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * VELX(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * VELX(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * VELX(KE-1,i,j) )
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE+1
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_MOMX,XDIR) = DIFF4 * ( 0.5_RP*(CDX(i+1)+CDX(i)) )**4 &
-                                         * ( CNMX(1,i  ) * MOMX(k,i+1,j) &
-                                           - CNMX(2,i  ) * MOMX(k,i  ,j) &
-                                           + CNMX(3,i  ) * MOMX(k,i-1,j) &
-                                           - CNMX(1,i-1) * MOMX(k,i-2,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNX3(1,i,2) )
+          call CHECK( __LINE__, CNX3(2,i,2) )
+          call CHECK( __LINE__, CNX3(3,i,2) )
+          call CHECK( __LINE__, CNX3(1,i-1,2) )
+          call CHECK( __LINE__, VELX(k,i+1,j) )
+          call CHECK( __LINE__, VELX(k,i  ,j) )
+          call CHECK( __LINE__, VELX(k,i-1,j) )
+          call CHECK( __LINE__, VELX(k,i-2,j) )
+#endif
+             num_diff(k,i,j,I_MOMX,XDIR) = &
+                    ( CNX3(1,i  ,2) * VELX(k,i+1,j) &
+                    - CNX3(2,i  ,2) * VELX(k,i  ,j) &
+                    + CNX3(3,i  ,2) * VELX(k,i-1,j) &
+                    - CNX3(1,i-1,2) * VELX(k,i-2,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_MOMX,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * MOMX(k,i,j+2) &
-                                           - CNDY(2,j+1) * MOMX(k,i,j+1) &
-                                           + CNDY(3,j+1) * MOMX(k,i,j  ) &
-                                           - CNDY(1,j  ) * MOMX(k,i,j-1) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNY3(1,j+1,1) )
+          call CHECK( __LINE__, CNY3(2,j+1,1) )
+          call CHECK( __LINE__, CNY3(3,j+1,1) )
+          call CHECK( __LINE__, CNY3(1,j  ,1) )
+          call CHECK( __LINE__, VELX(k,i,j+2) )
+          call CHECK( __LINE__, VELX(k,i,j+1) )
+          call CHECK( __LINE__, VELX(k,i,j) )
+          call CHECK( __LINE__, VELX(k,i,j-1) )
+#endif
+             num_diff(k,i,j,I_MOMX,YDIR) = &
+                    ( CNY3(1,j+1,1) * VELX(k,i,j+2) &
+                    - CNY3(2,j+1,1) * VELX(k,i,j+1) &
+                    + CNY3(3,j+1,1) * VELX(k,i,j  ) &
+                    - CNY3(1,j  ,1) * VELX(k,i,j-1) )
           enddo
           enddo
           enddo
 
           ! y-momentum
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS+1, KE-2
-             num_diff(k,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * MOMY(k+2,i,j) &
-                                           - CNDZ(2,k+1) * MOMY(k+1,i,j) &
-                                           + CNDZ(3,k+1) * MOMY(k  ,i,j) &
-                                           - CNDZ(1,k  ) * MOMY(k-1,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,k+1,1) )
+          call CHECK( __LINE__, CNZ3(2,k+1,1) )
+          call CHECK( __LINE__, CNZ3(3,k+1,1) )
+          call CHECK( __LINE__, CNZ3(1,k  ,1) )
+          call CHECK( __LINE__, VELY(k+2,i,j) )
+          call CHECK( __LINE__, VELY(k+1,i,j) )
+          call CHECK( __LINE__, VELY(k  ,i,j) )
+          call CHECK( __LINE__, VELY(k-1,i,j) )
+#endif
+             num_diff(k,i,j,I_MOMY,ZDIR) = &
+                    ( CNZ3(1,k+1,1) * VELY(k+2,i,j) &
+                    - CNZ3(2,k+1,1) * VELY(k+1,i,j) &
+                    + CNZ3(3,k+1,1) * VELY(k  ,i,j) &
+                    - CNZ3(1,k  ,1) * VELY(k-1,i,j) )
           enddo
           enddo
           enddo
-          do j = JJS,   JJE
-          do i = IIS,   IIE
-             num_diff(KS  ,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KS  )**4 &
-                                         * ( CNDZ(1,KS+1) * MOMY(KS+2,i,j) &
-                                           - CNDZ(2,KS+1) * MOMY(KS+1,i,j) &
-                                           + CNDZ(3,KS+1) * MOMY(KS  ,i,j) &
-                                           - CNDZ(1,KS  ) * MOMY(KS  ,i,j) )
-             num_diff(KE-1,i,j,I_MOMY,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * MOMY(KE  ,i,j) &
-                                           - CNDZ(2,KE  ) * MOMY(KE  ,i,j) &
-                                           + CNDZ(3,KE  ) * MOMY(KE-1,i,j) &
-                                           - CNDZ(1,KE-1) * MOMY(KE-2,i,j) )
-!             num_diff(KS  ,i,j,I_MOMY,ZDIR) = num_diff(KS+1,i,j,I_MOMY,ZDIR)
-!             num_diff(KE-1,i,j,I_MOMY,ZDIR) = num_diff(KE-2,i,j,I_MOMY,ZDIR)
+          do j = JJS, JJE
+          do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS,1) )
+          call CHECK( __LINE__, CNZ3(2,KS,1) )
+          call CHECK( __LINE__, CNZ3(3,KS,1) )
+          call CHECK( __LINE__, CNZ3(1,KS-1,1) )
+          call CHECK( __LINE__, VELY(KS+1,i,j) )
+          call CHECK( __LINE__, VELY(KS,i,j) )
+#endif
+             num_diff(KS-1,i,j,I_MOMY,ZDIR) = &
+                    ( CNZ3(1,KS  ,1) * VELY(KS+1,i,j) &
+                    - CNZ3(2,KS  ,1) * VELY(KS  ,i,j) &
+                    + CNZ3(3,KS  ,1) * VELY(KS  ,i,j) &
+                    - CNZ3(1,KS-1,1) * VELY(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KS  ,1) )
+          call CHECK( __LINE__, VELY(KS+2,i,j) )
+          call CHECK( __LINE__, VELY(KS+1,i,j) )
+          call CHECK( __LINE__, VELY(KS,i,j) )
+#endif
+             num_diff(KS  ,i,j,I_MOMY,ZDIR) = &
+                    ( CNZ3(1,KS+1,1) * VELY(KS+2,i,j) &
+                    - CNZ3(2,KS+1,1) * VELY(KS+1,i,j) &
+                    + CNZ3(3,KS+1,1) * VELY(KS  ,i,j) &
+                    - CNZ3(1,KS  ,1) * VELY(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE,1) )
+          call CHECK( __LINE__, CNZ3(2,KE,1) )
+          call CHECK( __LINE__, CNZ3(3,KE,1) )
+          call CHECK( __LINE__, CNZ3(1,KE-1,1) )
+          call CHECK( __LINE__, VELY(KE,i,j) )
+          call CHECK( __LINE__, VELY(KE-1,i,j) )
+          call CHECK( __LINE__, VELY(KE-2,i,j) )
+#endif
+             num_diff(KE-1,i,j,I_MOMY,ZDIR) = &
+                    ( CNZ3(1,KE  ,1) * VELY(KE  ,i,j) &
+                    - CNZ3(2,KE  ,1) * VELY(KE  ,i,j) &
+                    + CNZ3(3,KE  ,1) * VELY(KE-1,i,j) &
+                    - CNZ3(1,KE-1,1) * VELY(KE-2,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KE  ,1) )
+          call CHECK( __LINE__, VELY(KE,i,j) )
+          call CHECK( __LINE__, VELY(KE-1,i,j) )
+#endif
+             num_diff(KE  ,i,j,I_MOMY,ZDIR) = &
+                    ( CNZ3(1,KE+1,1) * VELY(KE  ,i,j) &
+                    - CNZ3(2,KE+1,1) * VELY(KE  ,i,j) &
+                    + CNZ3(3,KE+1,1) * VELY(KE  ,i,j) &
+                    - CNZ3(1,KE  ,1) * VELY(KE-1,i,j) )
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
-          do k = KS, KE
-             num_diff(k,i,j,I_MOMY,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * MOMY(k,i+2,j) &
-                                           - CNDX(2,i+1) * MOMY(k,i+1,j) &
-                                           + CNDX(3,i+1) * MOMY(k,i  ,j) &
-                                           - CNDX(1,i  ) * MOMY(k,i-1,j) )
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE+1
+          do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_MOMY,YDIR) = DIFF4 * ( 0.5_RP*(CDY(j+1)+CDY(j)) )**4 &
-                                         * ( CNMY(1,j  ) * MOMY(k,i,j+1) &
-                                           - CNMY(2,j  ) * MOMY(k,i,j  ) &
-                                           + CNMY(3,j  ) * MOMY(k,i,j-1) &
-                                           - CNMY(1,j-1) * MOMY(k,i,j-2) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNX3(1,i+1,1) )
+          call CHECK( __LINE__, CNX3(2,i+1,1) )
+          call CHECK( __LINE__, CNX3(3,i+1,1) )
+          call CHECK( __LINE__, CNX3(1,i  ,1) )
+          call CHECK( __LINE__, VELY(k,i+2,j) )
+          call CHECK( __LINE__, VELY(k,i+1,j) )
+          call CHECK( __LINE__, VELY(k,i  ,j) )
+          call CHECK( __LINE__, VELY(k,i-1,j) )
+#endif
+             num_diff(k,i,j,I_MOMY,XDIR) = &
+                    ( CNX3(1,i+1,1) * VELY(k,i+2,j) &
+                    - CNX3(2,i+1,1) * VELY(k,i+1,j) &
+                    + CNX3(3,i+1,1) * VELY(k,i  ,j) &
+                    - CNX3(1,i  ,1) * VELY(k,i-1,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNY3(1,j  ,2) )
+          call CHECK( __LINE__, CNY3(2,j  ,2) )
+          call CHECK( __LINE__, CNY3(3,j  ,2) )
+          call CHECK( __LINE__, CNY3(1,j-1,2) )
+          call CHECK( __LINE__, VELY(k,i,j+1) )
+          call CHECK( __LINE__, VELY(k,i,j  ) )
+          call CHECK( __LINE__, VELY(k,i,j-1) )
+          call CHECK( __LINE__, VELY(k,i,j-2) )
+#endif
+             num_diff(k,i,j,I_MOMY,YDIR) = &
+                    ( CNY3(1,j  ,2) * VELY(k,i,j+1) &
+                    - CNY3(2,j  ,2) * VELY(k,i,j  ) &
+                    + CNY3(3,j  ,2) * VELY(k,i,j-1) &
+                    - CNY3(1,j-1,2) * VELY(k,i,j-2) )
           enddo
           enddo
           enddo
 
           ! rho * theta
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS+1, KE-2
-             num_diff(k,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(k)**4 &
-                                         * ( CNDZ(1,k+1) * pott_diff(k+2,i,j)   &
-                                           - CNDZ(2,k+1) * pott_diff(k+1,i,j)   &
-                                           + CNDZ(3,k+1) * pott_diff(k  ,i,j)   &
-                                           - CNDZ(1,k  ) * pott_diff(k-1,i,j) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k+1,i,j)+DENS(k  ,i,j) ) &
-                                                    + FACT_F * ( DENS(k+2,i,j)+DENS(k-1,i,j) ) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,k+1,1) )
+          call CHECK( __LINE__, CNZ3(2,k+1,1) )
+          call CHECK( __LINE__, CNZ3(3,k+1,1) )
+          call CHECK( __LINE__, CNZ3(1,k  ,1) )
+          call CHECK( __LINE__, pott_diff(k+2,i,j) )
+          call CHECK( __LINE__, pott_diff(k+1,i,j) )
+          call CHECK( __LINE__, pott_diff(k  ,i,j) )
+          call CHECK( __LINE__, pott_diff(k-1,i,j) )
+#endif
+             num_diff(k,i,j,I_RHOT,ZDIR) = &
+                    ( CNZ3(1,k+1,1) * pott_diff(k+2,i,j)   &
+                    - CNZ3(2,k+1,1) * pott_diff(k+1,i,j)   &
+                    + CNZ3(3,k+1,1) * pott_diff(k  ,i,j)   &
+                    - CNZ3(1,k  ,1) * pott_diff(k-1,i,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS,   IIE
-             num_diff(KS,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KS)**4 &
-                                         * ( CNDZ(1,KS+1) * pott_diff(KS+2,i,j)   &
-                                           - CNDZ(2,KS+1) * pott_diff(KS+1,i,j)   &
-                                           + CNDZ(3,KS+1) * pott_diff(KS  ,i,j)   &
-                                           - CNDZ(1,KS  ) * pott_diff(KS  ,i,j) ) &
-                                         * 0.5_RP * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
-             num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF4 * CDZ(KE-1)**4 &
-                                         * ( CNDZ(1,KE  ) * pott_diff(KE  ,i,j)   &
-                                           - CNDZ(2,KE  ) * pott_diff(KE  ,i,j)   &
-                                           + CNDZ(3,KE  ) * pott_diff(KE-1,i,j)   &
-                                           - CNDZ(1,KE-1) * pott_diff(KE-2,i,j) ) &
-                                         * 0.5_RP * ( DENS(KE,i,j)+DENS(KE-1,i,j) )
-!             num_diff(KS  ,i,j,I_RHOT,ZDIR) = num_diff(KS+1,i,j,I_RHOT,ZDIR)
-!             num_diff(KE-1,i,j,I_RHOT,ZDIR) = num_diff(KE-2,i,j,I_RHOT,ZDIR)
+          do j = JJS, JJE
+          do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS,1) )
+          call CHECK( __LINE__, CNZ3(2,KS,1) )
+          call CHECK( __LINE__, CNZ3(3,KS,1) )
+          call CHECK( __LINE__, CNZ3(1,KS-1,1) )
+          call CHECK( __LINE__, pott_diff(KS+1,i,j) )
+          call CHECK( __LINE__, pott_diff(KS,i,j) )
+#endif
+             num_diff(KS-1,i,j,I_RHOT,ZDIR) = &
+                    ( CNZ3(1,KS  ,1) * pott_diff(KS+1,i,j)   &
+                    - CNZ3(2,KS  ,1) * pott_diff(KS  ,i,j)   &
+                    + CNZ3(3,KS  ,1) * pott_diff(KS  ,i,j)   &
+                    - CNZ3(1,KS-1,1) * pott_diff(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KS+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KS,1) )
+          call CHECK( __LINE__, pott_diff(KS+2,i,j) )
+          call CHECK( __LINE__, pott_diff(KS+1,i,j) )
+          call CHECK( __LINE__, pott_diff(KS,i,j) )
+#endif
+             num_diff(KS  ,i,j,I_RHOT,ZDIR) = &
+                    ( CNZ3(1,KS+1,1) * pott_diff(KS+2,i,j)   &
+                    - CNZ3(2,KS+1,1) * pott_diff(KS+1,i,j)   &
+                    + CNZ3(3,KS+1,1) * pott_diff(KS  ,i,j)   &
+                    - CNZ3(1,KS  ,1) * pott_diff(KS  ,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE,1) )
+          call CHECK( __LINE__, CNZ3(2,KE,1) )
+          call CHECK( __LINE__, CNZ3(3,KE,1) )
+          call CHECK( __LINE__, CNZ3(1,KE-1,1) )
+          call CHECK( __LINE__, pott_diff(KE,i,j) )
+          call CHECK( __LINE__, pott_diff(KE-1,i,j) )
+          call CHECK( __LINE__, pott_diff(KE-2,i,j) )
+#endif
+             num_diff(KE-1,i,j,I_RHOT,ZDIR) = &
+                    ( CNZ3(1,KE  ,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(2,KE  ,1) * pott_diff(KE  ,i,j)   &
+                    + CNZ3(3,KE  ,1) * pott_diff(KE-1,i,j)   &
+                    - CNZ3(1,KE-1,1) * pott_diff(KE-2,i,j) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNZ3(1,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(2,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(3,KE+1,1) )
+          call CHECK( __LINE__, CNZ3(1,KE  ,1) )
+          call CHECK( __LINE__, pott_diff(KE,i,j) )
+          call CHECK( __LINE__, pott_diff(KE-1,i,j) )
+#endif
+             num_diff(KE  ,i,j,I_RHOT,ZDIR) = &
+                    ( CNZ3(1,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(2,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    + CNZ3(3,KE+1,1) * pott_diff(KE  ,i,j)   &
+                    - CNZ3(1,KE  ,1) * pott_diff(KE-1,i,j) )
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_RHOT,XDIR) = DIFF4 * CDX(i)**4 &
-                                         * ( CNDX(1,i+1) * pott_diff(k,i+2,j)   &
-                                           - CNDX(2,i+1) * pott_diff(k,i+1,j)   &
-                                           + CNDX(3,i+1) * pott_diff(k,i  ,j)   &
-                                           - CNDX(1,i  ) * pott_diff(k,i-1,j) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k,i+1,j)+DENS(k,i  ,j) ) &
-                                                    + FACT_F * ( DENS(k,i+2,j)+DENS(k,i-1,j) ) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNX3(1,i+1,1) )
+          call CHECK( __LINE__, CNX3(2,i+1,1) )
+          call CHECK( __LINE__, CNX3(3,i+1,1) )
+          call CHECK( __LINE__, CNX3(1,i  ,1) )
+          call CHECK( __LINE__, pott_diff(k,i+2,j) )
+          call CHECK( __LINE__, pott_diff(k,i+1,j) )
+          call CHECK( __LINE__, pott_diff(k,i  ,j) )
+          call CHECK( __LINE__, pott_diff(k,i-1,j) )
+#endif
+             num_diff(k,i,j,I_RHOT,XDIR) = &
+                    ( CNX3(1,i+1,1) * pott_diff(k,i+2,j)   &
+                    - CNX3(2,i+1,1) * pott_diff(k,i+1,j)   &
+                    + CNX3(3,i+1,1) * pott_diff(k,i  ,j)   &
+                    - CNX3(1,i  ,1) * pott_diff(k,i-1,j) )
           enddo
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
-             num_diff(k,i,j,I_RHOT,YDIR) = DIFF4 * CDY(j)**4 &
-                                         * ( CNDY(1,j+1) * pott_diff(k,i,j+2)   &
-                                           - CNDY(2,j+1) * pott_diff(k,i,j+1)   &
-                                           + CNDY(3,j+1) * pott_diff(k,i,j  )   &
-                                           - CNDY(1,j  ) * pott_diff(k,i,j-1) ) &
-                                         * 0.5_RP * ( FACT_N * ( DENS(k,i,j+1)+DENS(k,i,j  ) ) &
-                                                    + FACT_F * ( DENS(k,i,j+2)+DENS(k,i,j-1) ) )
+#ifdef DEBUG
+          call CHECK( __LINE__, CNY3(1,j+1,1) )
+          call CHECK( __LINE__, CNY3(2,j+1,1) )
+          call CHECK( __LINE__, CNY3(3,j+1,1) )
+          call CHECK( __LINE__, CNY3(1,j  ,1) )
+          call CHECK( __LINE__, pott_diff(k,i,j+2) )
+          call CHECK( __LINE__, pott_diff(k,i,j+1) )
+          call CHECK( __LINE__, pott_diff(k,i,j  ) )
+          call CHECK( __LINE__, pott_diff(k,i,j-1) )
+#endif
+             num_diff(k,i,j,I_RHOT,YDIR) = &
+                    ( CNY3(1,j+1,1) * pott_diff(k,i,j+2)   &
+                    - CNY3(2,j+1,1) * pott_diff(k,i,j+1)   &
+                    + CNY3(3,j+1,1) * pott_diff(k,i,j  )   &
+                    - CNY3(1,j  ,1) * pott_diff(k,i,j-1) )
           enddo
           enddo
           enddo
 
-       else
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS-1, IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE
-          do i = IIS  , IIE+1
-          do k = KS   , KE
-             num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
-             num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS  , JJE+1
-          do i = IIS  , IIE
-          do k = KS   , KE
-             num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
-          enddo
-          enddo
-          enddo
-       end if
 
-    enddo
-    enddo ! end tile
+       enddo
+       enddo ! end tile
 
+
+       num_diff_pt0 => num_diff
+       num_diff_pt1 => num_diff_work
+
+       do no = 2, nd_order
+
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,ZDIR), 1 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,XDIR), 2 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,YDIR), 3 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,ZDIR), 4 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,XDIR), 5 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,YDIR), 6 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,ZDIR), 7 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,XDIR), 8 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,YDIR), 9 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,ZDIR), 10 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,XDIR), 11 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,YDIR), 12 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_RHOT,ZDIR), 13 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_RHOT,XDIR), 14 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_RHOT,YDIR), 15 )
+
+          call COMM_wait( num_diff_pt0(:,:,:,I_DENS,ZDIR), 1 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_DENS,XDIR), 2 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_DENS,YDIR), 3 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,ZDIR), 4 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,XDIR), 5 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,YDIR), 6 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,ZDIR), 7 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,XDIR), 8 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,YDIR), 9 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,ZDIR), 10 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,XDIR), 11 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,YDIR), 12 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,ZDIR), 13 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,XDIR), 14 )
+          call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,YDIR), 15 )
+
+
+
+          do JJS = JS, JE, JBLOCK
+          JJE = JJS+JBLOCK-1
+          do IIS = IS, IE, IBLOCK
+          IIE = IIS+IBLOCK-1
+
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,1),       & ! (in)
+                  CNX4(:,:,1),       & ! (in)
+                  CNY4(:,:,1),       & ! (in)
+                  I_DENS,            & ! (in)
+                  KS-1, KE,          & ! (in)
+                  IIS, IIE, JJS, JJE ) ! (in)
+
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,2),       & ! (in)
+                  CNX4(:,:,1),       & ! (in)
+                  CNY4(:,:,1),       & ! (in)
+                  I_MOMZ,            & ! (in)
+                  KS, KE-1,          & ! (in)
+                  IIS, IIE, JJS, JJE ) ! (in)
+
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,1),       & ! (in)
+                  CNX4(:,:,2),       & ! (in)
+                  CNY4(:,:,1),       & ! (in)
+                  I_MOMX,            & ! (in)
+                  KS-1, KE,          & ! (in)
+                  IIS, IIE, JJS, JJE ) ! (in)
+
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,1),       & ! (in)
+                  CNX4(:,:,1),       & ! (in)
+                  CNY4(:,:,2),       & ! (in)
+                  I_MOMY,            & ! (in)
+                  KS-1, KE,          & ! (in)
+                  IIS, IIE, JJS, JJE ) ! (in)
+
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,1),       & ! (in)
+                  CNX4(:,:,1),       & ! (in)
+                  CNY4(:,:,1),       & ! (in)
+                  I_RHOT,            & ! (in)
+                  KS-1, KE,          & ! (in)
+                  IIS, IIE, JJS, JJE ) ! (in)
+
+          end do
+          end do
+
+          ! swap pointer target
+          tmp_pt => num_diff_pt1
+          num_diff_pt1 => num_diff_pt0
+          num_diff_pt0 => tmp_pt
+
+
+       end do
+
+
+       nd_order4 = nd_order * 4
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS-1, KE
+             num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) &
+                  * DIFF4 * CDZ(k)**nd_order4
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) &
+                  * DIFF4 * CDX(i)**nd_order4
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) &
+                  * DIFF4 * CDY(j)**nd_order4
+          enddo
+          enddo
+          enddo
+
+          ! z-momentum
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS+1,  KE-1
+             num_diff(k,i,j,I_MOMZ,ZDIR) = num_diff_pt0(k,i,j,I_MOMZ,ZDIR) &
+                  * DIFF4 * ( 0.5_RP*(CDZ(k+1)+CDZ(k)) )**nd_order4 &
+                  * DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+             num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) &
+                  * DIFF4 * CDX(i)**nd_order4 &
+                  * 0.25_RP * ( DENS(k+1,i+1,j) + DENS(k+1,i,j) + DENS(k,i+1,j) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+             num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) &
+                  * DIFF4 * CDY(j)**nd_order4 &
+                  * 0.25_RP * ( DENS(k+1,i,j+1) + DENS(k+1,i,j) + DENS(k,i,j+1) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          ! x-momentum
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS,    KE-1
+             num_diff(k,i,j,I_MOMX,ZDIR) = num_diff_pt0(k,i,j,I_MOMX,ZDIR) &
+                  * DIFF4 * CDZ(k)**nd_order4 &
+                  * 0.25_RP * ( DENS(k+1,i+1,j) + DENS(k+1,i,j) + DENS(k,i+1,j) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) &
+                  * DIFF4 * ( 0.5_RP*(CDX(i+1)+CDX(i)) )**nd_order4 &
+                  * DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) &
+                  * DIFF4 * CDY(j)**nd_order4 &
+                  * 0.25_RP * ( DENS(k,i+1,j+1) + DENS(k,i+1,j) + DENS(k,i,j+1) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          ! y-momentum
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS,  KE-1
+             num_diff(k,i,j,I_MOMY,ZDIR) = num_diff_pt0(k,i,j,I_MOMY,ZDIR) &
+                  * DIFF4 * CDZ(k)**nd_order4 &
+                  * 0.25_RP * ( DENS(k+1,i,j+1) + DENS(k+1,i,j) + DENS(k,i,j+1) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) &
+                  * DIFF4 * CDX(i)**nd_order4 &
+                  * 0.25_RP * ( DENS(k,i+1,j+1) + DENS(k,i,j+1) + DENS(k,i+1,j) + DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) &
+                  * DIFF4 * ( 0.5_RP*(CDY(j+1)+CDY(j)) )**nd_order4 &
+                  * DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          ! rho * theta
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS  , KE-1
+             num_diff(k,i,j,I_RHOT,ZDIR) = num_diff_pt0(k,i,j,I_RHOT,ZDIR) &
+                  * DIFF4 * CDZ(k)**nd_order4 &
+                  * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS-1,i,j,I_RHOT,ZDIR) = num_diff_pt0(KS-1,i,j,I_RHOT,ZDIR) &
+                  * DIFF4 * CDZ(KS-1)**nd_order4 &
+                  * DENS(KS,i,j)
+             num_diff(KE  ,i,j,I_RHOT,ZDIR) = num_diff_pt0(KE  ,i,j,I_RHOT,ZDIR) &
+                  * DIFF4 * CDZ(KE  )**nd_order4 &
+                  * DENS(KE,i,j)
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) &
+                  * DIFF4 * CDX(i)**nd_order4 &
+                  * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) &
+                  * DIFF4 * CDY(j)**nd_order4 &
+                  * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+          enddo
+          enddo
+          enddo
+
+       end do
+       end do
+
+       call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR), 1 )
+       call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR), 2 )
+       call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR), 3 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR), 4 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), 5 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), 6 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR), 7 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), 8 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), 9 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), 11 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), 12 )
+       call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
+       call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), 14 )
+       call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), 15 )
+
+       call COMM_wait( num_diff(:,:,:,I_DENS,ZDIR), 1 )
+       call COMM_wait( num_diff(:,:,:,I_DENS,XDIR), 2 )
+       call COMM_wait( num_diff(:,:,:,I_DENS,YDIR), 3 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,ZDIR), 4 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,XDIR), 5 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,YDIR), 6 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,ZDIR), 7 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,XDIR), 8 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,YDIR), 9 )
+       call COMM_wait( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
+       call COMM_wait( num_diff(:,:,:,I_MOMY,XDIR), 11 )
+       call COMM_wait( num_diff(:,:,:,I_MOMY,YDIR), 12 )
+       call COMM_wait( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
+       call COMM_wait( num_diff(:,:,:,I_RHOT,XDIR), 14 )
+       call COMM_wait( num_diff(:,:,:,I_RHOT,YDIR), 15 )
+
+
+
+    else
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS-1, IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE+1
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS-1, JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE+1
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    end if
 
     call COMM_vars8( DENS_t(:,:,:), 1 )
     call COMM_vars8( MOMZ_t(:,:,:), 2 )
@@ -1837,6 +2580,292 @@ call TIME_rapstart   ('DYN-fct')
 
     do iq = 1, QA
 
+       if ( DIFF4 .ne. 0.0_RP ) then
+
+          do JJS = JS, JE, JBLOCK
+          JJE = JJS+JBLOCK-1
+          do IIS = IS, IE, IBLOCK
+          IIE = IIS+IBLOCK-1
+
+
+          if ( iq == I_QV ) then
+             ! qv
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+             do k = KS+1, KE-2
+                num_diff(k,i,j,1,ZDIR) = &
+                       ( CNZ3(1,k+1,1) * qv_diff(k+2,i,j)   &
+                       - CNZ3(2,k+1,1) * qv_diff(k+1,i,j)   &
+                       + CNZ3(3,k+1,1) * qv_diff(k  ,i,j)   &
+                       - CNZ3(1,k  ,1) * qv_diff(k-1,i,j) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+                num_diff(KS-1,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KS  ,1) * qv_diff(KS+1,i,j)   &
+                       - CNZ3(2,KS  ,1) * qv_diff(KS  ,i,j)   &
+                       + CNZ3(3,KS  ,1) * qv_diff(KS  ,i,j)   &
+                       - CNZ3(1,KS-1,1) * qv_diff(KS  ,i,j) )
+                num_diff(KS  ,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KS+1,1) * qv_diff(KS+2,i,j)   &
+                       - CNZ3(2,KS+1,1) * qv_diff(KS+1,i,j)   &
+                       + CNZ3(3,KS+1,1) * qv_diff(KS  ,i,j)   &
+                       - CNZ3(1,KS  ,1) * qv_diff(KS  ,i,j) )
+                num_diff(KE-1,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KE  ,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(2,KE  ,1) * qv_diff(KE  ,i,j)   &
+                       + CNZ3(3,KE  ,1) * qv_diff(KE-1,i,j)   &
+                       - CNZ3(1,KE-1,1) * qv_diff(KE-2,i,j) )
+                num_diff(KE  ,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(2,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       + CNZ3(3,KE+1,1) * qv_diff(KE  ,i,j)   &
+                       - CNZ3(1,KE  ,1) * qv_diff(KE-1,i,j) )
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS-1, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,XDIR) = &
+                       ( CNX3(1,i+1,1) * qv_diff(k,i+2,j)   &
+                       - CNX3(2,i+1,1) * qv_diff(k,i+1,j)   &
+                       + CNX3(3,i+1,1) * qv_diff(k,i  ,j)   &
+                       - CNX3(1,i  ,1) * qv_diff(k,i-1,j) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS-1, JJE
+             do i = IIS,   IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,YDIR) = &
+                       ( CNY3(1,j+1,1) * qv_diff(k,i,j+2)   &
+                       - CNY3(2,j+1,1) * qv_diff(k,i,j+1)   &
+                       + CNY3(3,j+1,1) * qv_diff(k,i,j  )   &
+                       - CNY3(1,j  ,1) * qv_diff(k,i,j-1) )
+             enddo
+             enddo
+             enddo
+
+          else
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+             do k = KS+1, KE-2
+                num_diff(k,i,j,1,ZDIR) = &
+                       ( CNZ3(1,k+1,1) * QTRC(k+2,i,j,iq)   &
+                       - CNZ3(2,k+1,1) * QTRC(k+1,i,j,iq)   &
+                       + CNZ3(3,k+1,1) * QTRC(k  ,i,j,iq)   &
+                       - CNZ3(1,k  ,1) * QTRC(k-1,i,j,iq) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS,   IIE
+#ifdef DEBUG
+                call CHECK( __LINE__, CNZ3(1,KS,1) )
+                call CHECK( __LINE__, CNZ3(2,KS,1) )
+                call CHECK( __LINE__, CNZ3(3,KS,1) )
+                call CHECK( __LINE__, CNZ3(1,KS-1,1) )
+                call CHECK( __LINE__, QTRC(KS+1,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KS,i,j,iq) )
+#endif
+                num_diff(KS-1,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KS  ,1) * QTRC(KS+1,i,j,iq)   &
+                       - CNZ3(2,KS  ,1) * QTRC(KS  ,i,j,iq)   &
+                       + CNZ3(3,KS  ,1) * QTRC(KS  ,i,j,iq)   &
+                       - CNZ3(1,KS-1,1) * QTRC(KS  ,i,j,iq) )
+#ifdef DEBUG
+                call CHECK( __LINE__, CNZ3(1,KS+1,1) )
+                call CHECK( __LINE__, CNZ3(2,KS+1,1) )
+                call CHECK( __LINE__, CNZ3(3,KS+1,1) )
+                call CHECK( __LINE__, CNZ3(1,KS,1) )
+                call CHECK( __LINE__, QTRC(KS+2,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KS+1,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KS,i,j,iq) )
+#endif
+                num_diff(KS  ,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KS+1,1) * QTRC(KS+2,i,j,iq)   &
+                       - CNZ3(2,KS+1,1) * QTRC(KS+1,i,j,iq)   &
+                       + CNZ3(3,KS+1,1) * QTRC(KS  ,i,j,iq)   &
+                       - CNZ3(1,KS  ,1) * QTRC(KS  ,i,j,iq) )
+#ifdef DEBUG
+                call CHECK( __LINE__, CNZ3(1,KE,1) )
+                call CHECK( __LINE__, CNZ3(2,KE,1) )
+                call CHECK( __LINE__, CNZ3(3,KE,1) )
+                call CHECK( __LINE__, CNZ3(1,KE-1,1) )
+                call CHECK( __LINE__, QTRC(KE,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KE-1,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KE-2,i,j,iq) )
+#endif
+                num_diff(KE-1,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KE  ,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(2,KE  ,1) * QTRC(KE  ,i,j,iq)   &
+                       + CNZ3(3,KE  ,1) * QTRC(KE-1,i,j,iq)   &
+                       - CNZ3(1,KE-1,1) * QTRC(KE-2,i,j,iq) )
+#ifdef DEBUG
+                call CHECK( __LINE__, CNZ3(1,KE+1,1) )
+                call CHECK( __LINE__, CNZ3(2,KE+1,1) )
+                call CHECK( __LINE__, CNZ3(3,KE+1,1) )
+                call CHECK( __LINE__, CNZ3(1,KE,1) )
+                call CHECK( __LINE__, QTRC(KE,i,j,iq) )
+                call CHECK( __LINE__, QTRC(KE-1,i,j,iq) )
+#endif
+                num_diff(KE  ,i,j,1,ZDIR) = &
+                       ( CNZ3(1,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(2,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       + CNZ3(3,KE+1,1) * QTRC(KE  ,i,j,iq)   &
+                       - CNZ3(1,KE  ,1) * QTRC(KE-1,i,j,iq) )
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS,   JJE
+             do i = IIS-1, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,XDIR) = &
+                       ( CNX3(1,i+1,1) * QTRC(k,i+2,j,iq)   &
+                       - CNX3(2,i+1,1) * QTRC(k,i+1,j,iq)   &
+                       + CNX3(3,i+1,1) * QTRC(k,i  ,j,iq)   &
+                       - CNX3(1,i  ,1) * QTRC(k,i-1,j,iq) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS-1, JJE
+             do i = IIS,   IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,YDIR) = &
+                       ( CNY3(1,j+1,1) * QTRC(k,i,j+2,iq)   &
+                       - CNY3(2,j+1,1) * QTRC(k,i,j+1,iq)   &
+                       + CNY3(3,j+1,1) * QTRC(k,i,j  ,iq)   &
+                       - CNY3(1,j  ,1) * QTRC(k,i,j-1,iq) )
+             enddo
+             enddo
+             enddo
+
+          end if ! iq == I_QV
+
+          enddo
+          enddo
+
+
+          num_diff_pt0 => num_diff
+          num_diff_pt1 => num_diff_work
+
+          do no = 2, nd_order
+
+             call COMM_vars8( num_diff_pt0(:,:,:,1,ZDIR), 1 )
+             call COMM_vars8( num_diff_pt0(:,:,:,1,XDIR), 2 )
+             call COMM_vars8( num_diff_pt0(:,:,:,1,YDIR), 3 )
+
+             call COMM_wait( num_diff_pt0(:,:,:,1,ZDIR), 1 )
+             call COMM_wait( num_diff_pt0(:,:,:,1,XDIR), 2 )
+             call COMM_wait( num_diff_pt0(:,:,:,1,YDIR), 3 )
+
+             do JJS = JS, JE, JBLOCK
+             JJE = JJS+JBLOCK-1
+             do IIS = IS, IE, IBLOCK
+             IIE = IIS+IBLOCK-1
+
+                call calc_numdiff4(     &
+                     num_diff_pt1,      & ! (out)
+                     num_diff_pt0,      & ! (in)
+                     CNZ4(:,:,1),       & ! (in)
+                     CNX4(:,:,1),       & ! (in)
+                     CNY4(:,:,1),       & ! (in)
+                     1,                 & ! (in)
+                     KS-1, KE,          & ! (in)
+                     IIS, IIE, JJS, JJE ) ! (in)
+
+             end do
+             end do
+
+             ! swap pointer target
+             tmp_pt => num_diff_pt1
+             num_diff_pt1 => num_diff_pt0
+             num_diff_pt0 => tmp_pt
+
+          end do ! no
+
+          do JJS = JS, JE, JBLOCK
+          JJE = JJS+JBLOCK-1
+          do IIS = IS, IE, IBLOCK
+          IIE = IIS+IBLOCK-1
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS  , KE-1
+                num_diff(k,i,j,1,ZDIR) = num_diff_pt0(k,i,j,1,ZDIR) &
+                     * DIFF4 * CDZ(k)**nd_order4 &
+                     * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+                num_diff(KS-1,i,j,1,ZDIR) = num_diff_pt0(KS-1,i,j,1,ZDIR) &
+                     * DIFF4 * CDZ(KS-1)**nd_order4 &
+                     * DENS(KS,i,j)
+                num_diff(KE  ,i,j,1,ZDIR) = num_diff_pt0(KE  ,i,j,1,ZDIR) &
+                     * DIFF4 * CDZ(KE  )**nd_order4 &
+                     * DENS(KE,i,j)
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,XDIR) = num_diff_pt0(k,i,j,1,XDIR) &
+                     * DIFF4 * CDX(i)**nd_order4 &
+                     * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+             enddo
+             enddo
+             enddo
+
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                num_diff(k,i,j,1,YDIR) = num_diff_pt0(k,i,j,1,YDIR) &
+                     * DIFF4 * CDY(j)**nd_order4 &
+                     * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+             enddo
+             enddo
+             enddo
+
+          enddo
+          enddo
+
+          call COMM_vars8( num_diff(:,:,:,1,ZDIR), 1 )
+          call COMM_vars8( num_diff(:,:,:,1,XDIR), 2 )
+          call COMM_vars8( num_diff(:,:,:,1,YDIR), 3 )
+
+          call COMM_wait( num_diff(:,:,:,1,ZDIR), 1 )
+          call COMM_wait( num_diff(:,:,:,1,XDIR), 2 )
+          call COMM_wait( num_diff(:,:,:,1,YDIR), 3 )
+
+
+
+       end if ! DIFF4 .eq. 0.0
+
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -1851,7 +2880,8 @@ call TIME_rapstart   ('DYN-fct')
 
           qflx_hi(k,i,j,ZDIR) = 0.5_RP * mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) )
+                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+                              + num_diff(k,i,j,1,ZDIR)
        enddo
        enddo
        enddo
@@ -1866,7 +2896,8 @@ call TIME_rapstart   ('DYN-fct')
           qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                             - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
-          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
+          qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+                                 + num_diff(KS,i,j,1,ZDIR)
        enddo
        enddo
 #ifdef DEBUG
@@ -1883,7 +2914,8 @@ call TIME_rapstart   ('DYN-fct')
           qflx_lo(KE  ,i,j,ZDIR) = &
                ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * QTRC(KE,i,j,iq) * MOMZ_LS_FLG( I_QTRC )
 
-          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
+          qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+                                 + num_diff(KE-1,i,j,1,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = &
                0.5_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_QTRC )* ( QTRC(KE,i,j,iq) + QTRC(KE-1,i,j,iq) ) &
              + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_QTRC )* CDZ(KE) * QTRC(KE,i,j,iq)
@@ -1912,7 +2944,8 @@ call TIME_rapstart   ('DYN-fct')
        do k = KS, KE
           qflx_hi(k,i,j,XDIR) = 0.5_RP * mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) )
+                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+                              + num_diff(k,i,j,1,XDIR)
        enddo
        enddo
        enddo
@@ -1939,7 +2972,8 @@ call TIME_rapstart   ('DYN-fct')
        do k = KS, KE
           qflx_hi(k,i,j,YDIR) = 0.5_RP * mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) )
+                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+                              + num_diff(k,i,j,1,YDIR)
        enddo
        enddo
        enddo
@@ -2411,23 +3445,27 @@ call TIME_rapend     ('DYN-fct')
     IIE = IIS+IBLOCK-1
        ! pressure, pott. temp.
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS, JJE+1
+       do i = IIS, IIE+1
+       do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, RHOT(k,i,j) )
+          call CHECK( __LINE__, Rtot(k,i,j) )
+          call CHECK( __LINE__, CVtot(k,i,j) )
+#endif
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
+       enddo
+       enddo
+       enddo
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-          do k = KS, KE
-#ifdef DEBUG
-             call CHECK( __LINE__, RHOT(k,i,j) )
-             call CHECK( __LINE__, Rtot(k,i,j) )
-             call CHECK( __LINE__, CVtot(k,i,j) )
-#endif
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
-          enddo
-          do k = KS, KE
+       do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, RHOT(k,i,j) )
           call CHECK( __LINE__, DENS(k,i,j) )
 #endif
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-          enddo
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       enddo
        enddo
        enddo
 #ifdef DEBUG
@@ -3364,6 +4402,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
 
     enddo
     enddo
@@ -4518,4 +5557,184 @@ call TIME_rapend     ('DYN-fct')
 
     return
   end subroutine fct
+
+
+  subroutine calc_numdiff4( &
+       num_diff_pt1, & ! (out)
+       num_diff_pt0, & ! (in)
+       CNZ4,         & ! (in)
+       CNX4,         & ! (in)
+       CNY4,         & ! (in)
+       I_val,        & ! (in)
+       k0, k1,       & ! (in)
+       iis, iie, jjs, jje) ! (in)
+
+    real(RP), intent(out) :: num_diff_pt1(KA,IA,JA,5,3)
+    real(RP), intent(in)  :: num_diff_pt0(KA,IA,JA,5,3)
+    real(RP), intent(in)  :: CNZ4(4,KA)
+    real(RP), intent(in)  :: CNX4(4,IA)
+    real(RP), intent(in)  :: CNY4(4,JA)
+    integer,  intent(in)  :: I_val
+    integer,  intent(in)  :: k0
+    integer,  intent(in)  :: k1
+    integer,  intent(in)  :: iis
+    integer,  intent(in)  :: iie
+    integer,  intent(in)  :: jjs
+    integer,  intent(in)  :: jje
+
+    integer :: i, j, k
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+    do k = k0+2, KE-2
+#ifdef DEBUG
+       call CHECK( __LINE__, CNZ4(1,k  ) )
+       call CHECK( __LINE__, CNZ4(2,k  ) )
+       call CHECK( __LINE__, CNZ4(3,k  ) )
+       call CHECK( __LINE__, CNZ4(4,k  ) )
+       call CHECK( __LINE__, CNZ4(1,k-1) )
+       call CHECK( __LINE__, num_diff_pt0(k+2,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k+1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k  ,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k-1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k-2,i,j,I_val,ZDIR) )
+#endif
+       num_diff_pt1(k,i,j,I_val,ZDIR) = &
+                     ( CNZ4(1,k  ) * num_diff_pt0(k+2,i,j,I_val,ZDIR) &
+                     - CNZ4(2,k  ) * num_diff_pt0(k+1,i,j,I_val,ZDIR) &
+                     + CNZ4(3,k  ) * num_diff_pt0(k  ,i,j,I_val,ZDIR) &
+                     - CNZ4(4,k  ) * num_diff_pt0(k-1,i,j,I_val,ZDIR) &
+                     + CNZ4(1,k-1) * num_diff_pt0(k-2,i,j,I_val,ZDIR) )
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+#ifdef DEBUG
+       call CHECK( __LINE__, CNZ4(1,k0  ) )
+       call CHECK( __LINE__, CNZ4(2,k0  ) )
+       call CHECK( __LINE__, CNZ4(3,k0  ) )
+       call CHECK( __LINE__, CNZ4(4,k0  ) )
+       call CHECK( __LINE__, CNZ4(1,k0-1) )
+       call CHECK( __LINE__, num_diff_pt0(k0+2,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k0+1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k0  ,i,j,I_val,ZDIR) )
+#endif
+       num_diff_pt1(k0  ,i,j,I_val,ZDIR) = &
+                     ( CNZ4(1,k0  ) * num_diff_pt0(k0+2,i,j,I_val,ZDIR) &
+                     - CNZ4(2,k0  ) * num_diff_pt0(k0+1,i,j,I_val,ZDIR) &
+                     + CNZ4(3,k0  ) * num_diff_pt0(k0  ,i,j,I_val,ZDIR) &
+                     - CNZ4(4,k0  ) * num_diff_pt0(k0  ,i,j,I_val,ZDIR) &
+                     + CNZ4(1,k0-1) * num_diff_pt0(k0  ,i,j,I_val,ZDIR) )
+#ifdef DEBUG
+       call CHECK( __LINE__, CNZ4(1,k0+1) )
+       call CHECK( __LINE__, CNZ4(2,k0+1) )
+       call CHECK( __LINE__, CNZ4(3,k0+1) )
+       call CHECK( __LINE__, CNZ4(4,k0+1) )
+       call CHECK( __LINE__, CNZ4(1,k0  ) )
+       call CHECK( __LINE__, num_diff_pt0(k0+3,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k0+2,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k0+1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k0  ,i,j,I_val,ZDIR) )
+#endif
+       num_diff_pt1(k0+1,i,j,I_val,ZDIR) = &
+                     ( CNZ4(1,k0+1) * num_diff_pt0(k0+3,i,j,I_val,ZDIR) &
+                     - CNZ4(2,k0+1) * num_diff_pt0(k0+2,i,j,I_val,ZDIR) &
+                     + CNZ4(3,k0+1) * num_diff_pt0(k0+1,i,j,I_val,ZDIR) &
+                     - CNZ4(4,k0+1) * num_diff_pt0(k0  ,i,j,I_val,ZDIR) &
+                     + CNZ4(1,k0  ) * num_diff_pt0(k0  ,i,j,I_val,ZDIR) )
+#ifdef DEBUG
+       call CHECK( __LINE__, CNZ4(1,kE-1) )
+       call CHECK( __LINE__, CNZ4(2,kE-1) )
+       call CHECK( __LINE__, CNZ4(3,kE-1) )
+       call CHECK( __LINE__, CNZ4(4,kE-1) )
+       call CHECK( __LINE__, CNZ4(1,kE-2) )
+       call CHECK( __LINE__, num_diff_pt0(KE  ,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(KE-1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(KE-2,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(KE-3,i,j,I_val,ZDIR) )
+#endif
+       num_diff_pt1(KE-1,i,j,I_val,ZDIR) = &
+                     ( CNZ4(1,KE-1) * num_diff_pt0(KE  ,i,j,I_val,ZDIR) &
+                     - CNZ4(2,KE-1) * num_diff_pt0(KE  ,i,j,I_val,ZDIR) &
+                     + CNZ4(3,KE-1) * num_diff_pt0(KE-1,i,j,I_val,ZDIR) &
+                     - CNZ4(4,KE-1) * num_diff_pt0(KE-2,i,j,I_val,ZDIR) &
+                     + CNZ4(1,KE-2) * num_diff_pt0(KE-3,i,j,I_val,ZDIR) )
+#ifdef DEBUG
+       call CHECK( __LINE__, CNZ4(1,kE  ) )
+       call CHECK( __LINE__, CNZ4(2,kE  ) )
+       call CHECK( __LINE__, CNZ4(3,kE  ) )
+       call CHECK( __LINE__, CNZ4(4,kE  ) )
+       call CHECK( __LINE__, CNZ4(1,kE-1) )
+       call CHECK( __LINE__, num_diff_pt0(KE  ,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(KE-1,i,j,I_val,ZDIR) )
+       call CHECK( __LINE__, num_diff_pt0(KE-2,i,j,I_val,ZDIR) )
+#endif
+       num_diff_pt1(KE  ,i,j,I_val,ZDIR) = &
+                     ( CNZ4(1,KE  ) * num_diff_pt0(KE  ,i,j,I_val,ZDIR) &
+                     - CNZ4(2,KE  ) * num_diff_pt0(KE  ,i,j,I_val,ZDIR) &
+                     + CNZ4(3,KE  ) * num_diff_pt0(KE  ,i,j,I_val,ZDIR) &
+                     - CNZ4(4,KE  ) * num_diff_pt0(KE-1,i,j,I_val,ZDIR) &
+                     + CNZ4(1,KE-1) * num_diff_pt0(KE-2,i,j,I_val,ZDIR) )
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+    do k = KS, K1
+#ifdef DEBUG
+       call CHECK( __LINE__, CNX4(1,i  ) )
+       call CHECK( __LINE__, CNX4(2,i  ) )
+       call CHECK( __LINE__, CNX4(3,i  ) )
+       call CHECK( __LINE__, CNX4(4,i  ) )
+       call CHECK( __LINE__, CNX4(1,i-1) )
+       call CHECK( __LINE__, num_diff_pt0(k,i-2,j,I_val,XDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i+1,j,I_val,XDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i  ,j,I_val,XDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i-1,j,I_val,XDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i-2,j,I_val,XDIR) )
+#endif
+       num_diff_pt1(k,i,j,I_val,XDIR) = &
+                    ( CNX4(1,i  ) * num_diff_pt0(k,i+2,j,I_val,XDIR) &
+                    - CNX4(2,i  ) * num_diff_pt0(k,i+1,j,I_val,XDIR) &
+                    + CNX4(3,i  ) * num_diff_pt0(k,i  ,j,I_val,XDIR) &
+                    - CNX4(4,i  ) * num_diff_pt0(k,i-1,j,I_val,XDIR) &
+                    + CNX4(1,i-1) * num_diff_pt0(k,i-2,j,I_val,XDIR) )
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+    do k = KS, K1
+#ifdef DEBUG
+       call CHECK( __LINE__, CNY4(1,j  ) )
+       call CHECK( __LINE__, CNY4(2,j  ) )
+       call CHECK( __LINE__, CNY4(3,j  ) )
+       call CHECK( __LINE__, CNY4(4,j  ) )
+       call CHECK( __LINE__, CNY4(1,j-1) )
+       call CHECK( __LINE__, num_diff_pt0(k,i,j-2,I_val,YDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i,j+1,I_val,YDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i,j  ,I_val,YDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i,j-1,I_val,YDIR) )
+       call CHECK( __LINE__, num_diff_pt0(k,i,j-2,I_val,YDIR) )
+#endif
+       num_diff_pt1(k,i,j,I_val,YDIR) = &
+                    ( CNY4(1,j  ) * num_diff_pt0(k,i,j+2,I_val,YDIR) &
+                    - CNY4(2,j  ) * num_diff_pt0(k,i,j+1,I_val,YDIR) &
+                    + CNY4(3,j  ) * num_diff_pt0(k,i,j  ,I_val,YDIR) &
+                    - CNY4(4,j  ) * num_diff_pt0(k,i,j-1,I_val,YDIR) &
+                    + CNY4(1,j-1) * num_diff_pt0(k,i,j-2,I_val,YDIR) )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine calc_numdiff4
+
 end module mod_atmos_dyn

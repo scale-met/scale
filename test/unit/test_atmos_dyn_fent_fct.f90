@@ -69,16 +69,17 @@ module test_atmos_dyn_fent_fct
 
   real(RP) :: REF_dens(KA)
   real(RP) :: REF_pott(KA)
+  real(RP) :: REF_qv  (KA)
 
   real(RP) :: DAMP_var(KA,IA,JA,5)
   real(RP) :: DAMP_alpha(KA,IA,JA,5)
 
-  real(RP) :: CNDZ(3,KA)
-  real(RP) :: CNMZ(3,KA)
-  real(RP) :: CNDX(3,IA)
-  real(RP) :: CNMX(3,IA)
-  real(RP) :: CNDY(3,JA)
-  real(RP) :: CNMY(3,JA)
+  real(RP) :: CNZ3(3,KA,2)
+  real(RP) :: CNX3(3,IA,2)
+  real(RP) :: CNY3(3,JA,2)
+  real(RP) :: CNZ4(4,KA,2)
+  real(RP) :: CNX4(4,IA,2)
+  real(RP) :: CNY4(4,JA,2)
 
   real(RP) :: CORIOLI(1,IA,JA)
   real(RP) :: MOMZ_LS(KA,IA,JA,2)
@@ -87,6 +88,8 @@ module test_atmos_dyn_fent_fct
   real(RP) :: AQ_CV(QA)
 
   real(RP) :: DIFF4
+  integer  :: nd_order
+  real(RP) :: nd_coef
   real(RP) :: divdmp_coef, LSsink_D
 
   logical  :: flag_fct_rho      = .true.
@@ -127,15 +130,17 @@ contains
   !########## Initial setup ##########
   ZERO(:,:,:) = 0.0_RP
 
+  nd_order = 2
+  nd_coef = 0.01_RP
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
   call ATMOS_DYN_init( DIFF4,CORIOLI,                      & ! (out)
-                       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY, & ! (out)
+                       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
                        MOMZ_LS, MOMZ_LS_DZ,                & ! (out)
                        CDZ, CDX, CDY, CZ, FZ,              & ! (in)
                        lat,                                & ! (in)
-                       0.0_RP, 1.0_RP,                     & ! (in)
+                       nd_order, nd_coef, 1.0_RP,          & ! (in)
                        0.0_RP, 0.0_RP, .false.     ) ! (in)
 
 
@@ -199,6 +204,7 @@ subroutine test_undef
   do k = 1, KA
      REF_dens(k) = KA - k + 1
      REF_pott(k) = k
+     REF_qv  (k) = KA - k + 1
   end do
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
@@ -210,11 +216,11 @@ subroutine test_undef
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           QDRY, DDIV,                                  & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-          CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNZ4,          & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           AQ_CV,                                       & ! (in)
-          REF_dens, REF_pott, DIFF4,                   & ! (in)
+          REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
           MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
@@ -249,6 +255,7 @@ subroutine test_const
 
   REF_dens(:) = 1.0_RP
   REF_pott(:) = 300.0_RP
+  REF_qv(:)   = 0.001_RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -258,11 +265,11 @@ subroutine test_const
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        QDRY, DDIV,                                  & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-       CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNZ4,          & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        AQ_CV,                                       & ! (in)
-       REF_dens, REF_pott, DIFF4,                   & ! (in)
+       REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
        MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
@@ -326,6 +333,7 @@ subroutine test_conserve
 
   REF_dens(:) = 1.0_RP
   REF_pott(:) = 1.0_RP
+  REF_qv(:)   = 1.0_RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -339,11 +347,11 @@ subroutine test_conserve
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          QDRY, DDIV,                                  & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNDZ, CNMZ, CNDX, CNMX, CNDY, CNMY,          & ! (in)
+         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNZ4,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, DIFF4,                   & ! (in)
+         REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
          MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
