@@ -69,6 +69,7 @@ module test_atmos_dyn_fent_fct
 
   real(RP) :: REF_dens(KA)
   real(RP) :: REF_pott(KA)
+  real(RP) :: REF_qv  (KA)
 
   real(RP) :: DAMP_var(KA,IA,JA,5)
   real(RP) :: DAMP_alpha(KA,IA,JA,5)
@@ -87,6 +88,8 @@ module test_atmos_dyn_fent_fct
   real(RP) :: AQ_CV(QA)
 
   real(RP) :: DIFF4
+  integer  :: nd_order
+  real(RP) :: nd_coef
   real(RP) :: divdmp_coef, LSsink_D
 
   logical  :: flag_fct_rho      = .true.
@@ -127,6 +130,8 @@ contains
   !########## Initial setup ##########
   ZERO(:,:,:) = 0.0_RP
 
+  nd_order = 2
+  nd_coef = 0.01_RP
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
@@ -135,7 +140,7 @@ contains
                        MOMZ_LS, MOMZ_LS_DZ,                & ! (out)
                        CDZ, CDX, CDY, CZ, FZ,              & ! (in)
                        lat,                                & ! (in)
-                       0.0_RP, 1.0_RP,                     & ! (in)
+                       nd_order, nd_coef, 1.0_RP,          & ! (in)
                        0.0_RP, 0.0_RP, .false.     ) ! (in)
 
 
@@ -199,6 +204,7 @@ subroutine test_undef
   do k = 1, KA
      REF_dens(k) = KA - k + 1
      REF_pott(k) = k
+     REF_qv  (k) = KA - k + 1
   end do
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
@@ -214,7 +220,7 @@ subroutine test_undef
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           AQ_CV,                                       & ! (in)
-          REF_dens, REF_pott, DIFF4,                   & ! (in)
+          REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
           MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
@@ -249,6 +255,7 @@ subroutine test_const
 
   REF_dens(:) = 1.0_RP
   REF_pott(:) = 300.0_RP
+  REF_qv(:)   = 0.001_RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -262,7 +269,7 @@ subroutine test_const
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        AQ_CV,                                       & ! (in)
-       REF_dens, REF_pott, DIFF4,                   & ! (in)
+       REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
        MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
@@ -326,6 +333,7 @@ subroutine test_conserve
 
   REF_dens(:) = 1.0_RP
   REF_pott(:) = 1.0_RP
+  REF_qv(:)   = 1.0_RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -343,7 +351,7 @@ subroutine test_conserve
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, DIFF4,                   & ! (in)
+         REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
          MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
