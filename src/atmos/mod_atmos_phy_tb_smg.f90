@@ -14,11 +14,15 @@
 !! @li      2012-03-27 (H.Yashiro)   [mod] reconstruction
 !! @li      2012-07-02 (S.Nishizawa) [mod] reconstruction with Brown et al. (1994)
 !! @li      2012-10-26 (S.Nishizawa) [mod] remove surface flux
+!! @li      2013-06-13 (S.Nishizawa) [mod] change mixing length by Brown et al. (1994) and Scotti et al. (1993)
 !!
 !! - Reference
 !!  - Brown et al., 1994:
 !!    Large-eddy simulaition of stable atmospheric boundary layers with a revised stochastic subgrid model.
 !!    Roy. Meteor. Soc., 120, 1485-1512
+!!  - Scotti et al., 1993:
+!!    Generalized Smagorinsky model for anisotropic grids.
+!!    Phys. Fluids A, 5, 2306-2308
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -80,7 +84,8 @@ module mod_atmos_phy_tb
   real(RP), private,      save :: nu_factX (KA,IA,JA) !              (x edge)
   real(RP), private,      save :: nu_factY (KA,IA,JA) !              (y edge)
 
-  real(RP), private, parameter :: Cs  = 0.18_RP ! (Sullivan et al.1994, Nakanishi and Niino)
+  real(RP), private, parameter :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
   real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
   real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
   real(RP), private, parameter :: FmC = 16.0_RP ! fum = sqrt(1 - c*Ri)
@@ -103,7 +108,7 @@ contains
   subroutine CHECK( line, v )
     integer,  intent(in) :: line
     real(RP), intent(in) :: v
-    if ( v == UNDEF ) then
+    if ( abs(v) .ge. abs(UNDEF) ) then
        write(*,*) "use uninitialized value at line ", line
        stop
     endif
@@ -117,7 +122,9 @@ contains
        CDY => GRID_CDY, &
        FDZ => GRID_FDZ, &
        FDX => GRID_FDX, &
-       FDY => GRID_FDY
+       FDY => GRID_FDY, &
+       CZ  => GRID_CZ, &
+       FZ  => GRID_FZ
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &
@@ -152,7 +159,7 @@ contains
     do j = JS, JE+1
     do i = IS, IE+1
     do k = KS, KE
-       nu_factC (k,i,j) = ( Cs * ( CDZ(k) * CDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k)) )**2
     enddo
     enddo
     enddo
@@ -162,7 +169,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       nu_factXY(k,i,j) = ( Cs * ( FDZ(k) * CDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k)) )**2
     enddo
     enddo
     enddo
@@ -172,7 +179,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS, KE
-       nu_factYZ(k,i,j) = ( Cs * ( CDZ(k) * FDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k)) )**2
     enddo
     enddo
     enddo
@@ -182,7 +189,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factZX(k,i,j) = ( Cs * ( CDZ(k) * CDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k)) )**2
     enddo
     enddo
     enddo
@@ -192,7 +199,7 @@ contains
     do j = JS-1, JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factZ(k,i,j) = ( Cs * ( CDZ(k) * FDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k) ) )**2
     enddo
     enddo
     enddo
@@ -202,7 +209,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factX(k,i,j) = ( Cs * ( FDZ(k) * CDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k)) )**2
     enddo
     enddo
     enddo
@@ -212,7 +219,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factY(k,i,j) = ( Cs * ( FDZ(k) * FDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k)) )**2
     enddo
     enddo
     enddo
@@ -1674,7 +1681,7 @@ contains
 
 
        ! nu_SGS = (Cs * Delta)^2 * |S|, |S|^2 = 2*Sij*Sij
-       ! tke = (Cs * Delta)^2 * |S|^2
+       ! tke = ( nu / ( Ck*Delta ) )^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
@@ -1773,15 +1780,15 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       ! tke = 1/2 (tau_11 + tau_22 + tau_33) = (Cs * Delta)^2 * |S|^2
+       ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
+       call CHECK( __LINE__, nu_C(k,i,j) )
        call CHECK( __LINE__, nu_factC(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          tke(k,i,j) = nu_factC(k,i,j) * S2(k,i,j)
+          tke(k,i,j) = ( nu_C(k,i,j) * Cs / Ck )**2 / nu_factC(k,i,j)
        enddo
        enddo
        enddo
@@ -3535,5 +3542,79 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_main
+
+
+  function mixlen(dz, dx, dy, z)
+  use mod_const, only: &
+     KARMAN  => CONST_KARMAN
+    implicit none
+    real(RP), intent(in) :: dz
+    real(RP), intent(in) :: dx
+    real(RP), intent(in) :: dy
+    real(RP), intent(in) :: z
+    real(RP) :: mixlen ! (out)
+
+    real(RP) :: d0
+
+    d0 = fact(dz, dx, dy) * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
+    mixlen = sqrt( 1.0_RP / ( 1.0_RP/d0**2 + 1.0_RP/(KARMAN*z)**2 ) ) ! Brown et al. (1994)
+
+    return
+  end function mixlen
+
+  function fact(dz, dx, dy)
+    real(RP), intent(in) :: dz
+    real(RP), intent(in) :: dx
+    real(RP), intent(in) :: dy
+    real(RP) :: fact ! (out)
+
+    real(RP), parameter :: oot = -1.0_RP/3.0_RP
+    real(RP), parameter :: fot =  5.0_RP/3.0_RP
+    real(RP), parameter :: eot = 11.0_RP/3.0_RP
+    real(RP), parameter :: tof = -3.0_RP/4.0_RP
+    real(RP) :: a1, a2, b1, b2, dmax
+
+
+    dmax = max(dz, dx, dy)
+    if ( dz .eq. dmax ) then
+       a1 = dx / dmax
+       a2 = dy / dmax
+    else if ( dx .eq. dmax ) then
+       a1 = dz / dmax
+       a2 = dy / dmax
+    else ! dy .eq. dmax
+       a1 = dz / dmax
+       a2 = dx / dmax
+    end if
+    b1 = atan( a1/a2 )
+    b2 = atan( a2/a1 )
+
+   fact = 1.736_RP * (a1*a2)**oot &
+         * ( 4.0_RP*p1(b1)*a1**oot + 0.222_RP*p2(b1)*a1**fot + 0.077*p3(b1)*a1**eot - 3.0_RP*b1 &
+           + 4.0_RP*p1(b2)*a2**oot + 0.222_RP*p2(b2)*a2**fot + 0.077*p3(b2)*a2**eot - 3.0_RP*b2 &
+           )**tof
+   return
+  end function fact
+  function p1(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p1 ! (out)
+
+    p1 = 2.5_RP * p2(z) - 1.5_RP * sin(z) * cos(z)**TwoOverThree
+    return
+  end function p1
+  function p2(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p2 ! (out)
+
+    p2 = 0.986_RP * z + 0.073_RP * z**2 - 0.418_RP * z**3 + 0.120_RP * z**4
+    return
+  end function p2
+  function p3(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p3 ! (out)
+
+    p3 = 0.976_RP * z + 0.188_RP * z**2 - 1.169_RP * z**3 + 0.755_RP * z**4 - 0.151_RP * z**5
+    return
+  end function p3
 
 end module mod_atmos_phy_tb
