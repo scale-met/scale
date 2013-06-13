@@ -85,6 +85,7 @@ module mod_atmos_phy_tb
   real(RP), private,      save :: nu_factY (KA,IA,JA) !              (y edge)
 
   real(RP), private, parameter :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
   real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
   real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
   real(RP), private, parameter :: FmC = 16.0_RP ! fum = sqrt(1 - c*Ri)
@@ -1680,7 +1681,7 @@ contains
 
 
        ! nu_SGS = (Cs * Delta)^2 * |S|, |S|^2 = 2*Sij*Sij
-       ! tke = (Cs * Delta)^2 * |S|^2
+       ! tke = ( nu / ( Ck*Delta ) )^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
@@ -1779,15 +1780,15 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       ! tke = 1/2 (tau_11 + tau_22 + tau_33) = (Cs * Delta)^2 * |S|^2
+       ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
+       call CHECK( __LINE__, nu_C(k,i,j) )
        call CHECK( __LINE__, nu_factC(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          tke(k,i,j) = nu_factC(k,i,j) * S2(k,i,j)
+          tke(k,i,j) = ( nu_C(k,i,j) * Cs / Ck )**2 / nu_factC(k,i,j)
        enddo
        enddo
        enddo
