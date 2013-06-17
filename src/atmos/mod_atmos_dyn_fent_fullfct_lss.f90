@@ -982,6 +982,7 @@ contains
     enddo
     enddo
 
+#ifndef DRY
 !OCL XFILL
     do iq = 1, QA
     do j = 1, JA
@@ -992,6 +993,7 @@ contains
     enddo
     enddo
     enddo
+#endif
 
     end if
 
@@ -1031,6 +1033,7 @@ contains
     enddo
     enddo
 
+#ifndef DRY
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -1061,6 +1064,7 @@ contains
     enddo
     enddo
     enddo
+#endif
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -1069,6 +1073,7 @@ contains
     enddo
     enddo
     enddo
+#ifndef DRY
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -1080,6 +1085,7 @@ contains
     enddo
     enddo
     enddo
+#endif
 
 
     do step = 1, NSTEP_ATMOS_DYN
@@ -1093,6 +1099,7 @@ call TIME_rapstart   ('DYN-set')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
+#ifndef DRY
        ! Gas constant
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
@@ -1106,6 +1113,7 @@ call TIME_rapstart   ('DYN-set')
           QDRY(KS,i,j) = 1.0_RP
        enddo
        enddo
+
        !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(3)
        do iq = QQS, QQE
        do j = JJS-2, JJE+2
@@ -1134,6 +1142,7 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
        enddo
+#endif
 
 !OCL XFILL
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -1177,6 +1186,7 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
 
+#ifndef DRY
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
@@ -1197,6 +1207,7 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
        enddo
+#endif
 
     end do
     end do
@@ -1216,7 +1227,9 @@ call TIME_rapstart   ('DYN-set')
           do k = KS, KE
              dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
              pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
+#ifndef DRY
              qv_diff  (k,i,j) = QTRC(k,i,j,I_QV)          - REF_qv  (k)
+#endif
           enddo
           enddo
           enddo
@@ -2293,17 +2306,21 @@ call TIME_rapstart   ('DYN-set')
     call COMM_vars8( MOMX_t(:,:,:), 3 )
     call COMM_vars8( MOMY_t(:,:,:), 4 )
     call COMM_vars8( RHOT_t(:,:,:), 5 )
+#ifndef DRY
     do iq = 1, QA
        call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
     end do
+#endif
     call COMM_wait ( DENS_t(:,:,:), 1 )
     call COMM_wait ( MOMZ_t(:,:,:), 2 )
     call COMM_wait ( MOMX_t(:,:,:), 3 )
     call COMM_wait ( MOMY_t(:,:,:), 4 )
     call COMM_wait ( RHOT_t(:,:,:), 5 )
+#ifndef DRY
     do iq = 1, QA
        call COMM_wait( QTRC_t(:,:,:,iq), 5+iq )
     end do
+#endif
 
 
 #ifdef _FAPP_
@@ -2548,6 +2565,7 @@ call TIME_rapstart   ('DYN-fct')
 
 
 
+#ifndef DRY
     !##### advection of scalar quantity #####
     if( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
 
@@ -3081,6 +3099,11 @@ call TIME_rapstart   ('DYN-fct')
     enddo
 #endif
 
+
+
+#endif
+
+
 #ifdef _FAPP_
 call TIME_rapend     ('DYN-fct')
 #endif
@@ -3103,6 +3126,7 @@ call TIME_rapend     ('DYN-fct')
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+#ifndef DRY
 !OCL XFILL
     do iq = 1, QA
     do j  = JS, JE
@@ -3114,6 +3138,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF; iq = IUNDEF
+#endif
 #endif
 
     if ( USE_AVERAGE ) then
@@ -3212,6 +3237,7 @@ call TIME_rapend     ('DYN-fct')
 
     endif
 
+#ifndef DRY
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
     do iq = 1, QA
     do j = 1, JA
@@ -3222,6 +3248,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
     enddo
+#endif
 
     return
   end subroutine ATMOS_DYN_main
@@ -3243,8 +3270,10 @@ call TIME_rapend     ('DYN-fct')
                      VELZ, VELX, VELY, PRES, POTT,                &
                      qflx_hi, qflx_lo, qflx_anti, rjpls, rjmns    )
     use mod_const, only : &
-       GRAV   => CONST_GRAV,   &
-       P00    => CONST_PRE00
+       GRAV   => CONST_GRAV,  &
+       P00    => CONST_PRE00, &
+       Rdry   => CONST_Rdry,  &
+       CVdry  => CONST_CVdry
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -3453,7 +3482,11 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, Rtot(k,i,j) )
           call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
+#ifdef DRY
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**((CVdry+Rdry)/CVdry)
+#else
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
+#endif
        enddo
        enddo
        enddo
