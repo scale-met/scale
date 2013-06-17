@@ -158,9 +158,11 @@ contains
     !-----------------------------------------------------------------------------
 
     qdry = 1.0_RP
+#ifndef DRY
     do iqw = QQS, QQE
        qdry = qdry - q(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_qd_0D
@@ -211,9 +213,11 @@ contains
     !---------------------------------------------------------------------------
 
     CPtot = qdry * CPdry
+#ifndef DRY
     do iqw = QQS, QQE
        CPtot = CPtot + q(iqw) * AQ_CP(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_cp_0D
@@ -267,9 +271,11 @@ contains
     !---------------------------------------------------------------------------
 
     CVtot = qdry * CVdry
+#ifndef DRY
     do iqw = QQS, QQE
        CVtot = CVtot + q(iqw) * AQ_CV(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_cv_0D
@@ -326,6 +332,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -334,6 +344,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -366,6 +377,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -374,6 +389,8 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
+
 
        CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -406,6 +423,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -414,6 +435,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     RovCP  = Rtot / ( CVtot + Rtot )
 
@@ -447,6 +469,10 @@ contains
     do i = 1, IA
     do k = 1, KA
 
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rtot
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -455,6 +481,7 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
 
        RovCP  = Rtot / ( CVtot + Rtot )
 
@@ -490,6 +517,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -498,6 +529,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -532,6 +564,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -540,6 +576,7 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
 
        CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -574,6 +611,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -582,6 +623,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     temp = rhoe / ( dens * CVtot )
     pres = dens * Rtot * temp
@@ -614,6 +656,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -622,6 +668,7 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
 
        temp(k,i,j) = rhoe(k,i,j) / ( dens(k,i,j) * CVtot )
        pres(k,i,j) = dens(k,i,j) * Rtot * temp(k,i,j)
