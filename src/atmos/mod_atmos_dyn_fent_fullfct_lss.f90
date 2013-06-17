@@ -3958,15 +3958,17 @@ call TIME_rapend     ('DYN-fct')
           vel = ( ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) * 0.5_RP &
                   + MOMZ_LS(KS+1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KS+1,i,j)
-          qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel &
-                              * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
+          qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel  &
+                              * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
+                                + FACT_F * ( MOMZ(KS+2,i,j)            ) ) &
                               + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
           ! k = KE-1
           vel = ( ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) * 0.5_RP &
                   + MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KE-1,i,j)
-          qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel &
-                              * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
+          qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel  &
+                              * ( FACT_N * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
+                                + FACT_F * (                MOMZ(KE-3,i,j) ) ) &
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
           ! k = KE
           qflx_hi(KE-1,i,j,ZDIR) = &
