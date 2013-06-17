@@ -21,6 +21,8 @@ turbulence = dummy
 radiation  = dummy
 postfix    = 
 
+ADDITIONAL_FFLAGS = -DDRY
+
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
