@@ -29,7 +29,7 @@ TPROC     = 6
 
 
 
-all: buildlocal build analy
+all: buildlocal build 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
