@@ -726,7 +726,9 @@ contains
 
     call ATMOS_vars_total
 
+#ifndef DRY
     call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', DTSEC )
+#endif
     call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   DTSEC )
     return
 
@@ -781,7 +783,11 @@ contains
     real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
     real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
 
+#ifdef DRY
+    real(RP), intent(inout)   :: QDRY(KA,IA,JA) ! not used
+#else
     real(RP), intent(out)   :: QDRY(KA,IA,JA)
+#endif
     real(RP), intent(out)   :: DDIV(KA,IA,JA)
 
     real(RP), intent(in) :: DENS_tp(KA,IA,JA)
