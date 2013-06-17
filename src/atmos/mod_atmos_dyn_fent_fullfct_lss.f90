@@ -94,8 +94,8 @@ module mod_atmos_dyn
   integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! advection settings
-  real(RP), private, parameter :: FACT_N =   7.0_RP / 6.0_RP !  7/6: fourth, 1: second
-  real(RP), private, parameter :: FACT_F = - 1.0_RP / 6.0_RP ! -1/6: fourth, 0: second
+  real(RP), private, parameter :: FACT_N =   7.0_RP / 12.0_RP !  7/12: fourth, 1: second
+  real(RP), private, parameter :: FACT_F = - 1.0_RP / 12.0_RP ! -1/12: fourth, 0: second
   real(RP), parameter :: EPSILON = 1.0E-30_RP
 
   ! numerical filter settings
@@ -2878,7 +2878,7 @@ call TIME_rapstart   ('DYN-fct')
           qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                          - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_hi(k,i,j,ZDIR) = 0.5_RP * mflx_hi(k,i,j,ZDIR) &
+          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                 + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
                               + num_diff(k,i,j,1,ZDIR)
@@ -2942,7 +2942,7 @@ call TIME_rapstart   ('DYN-fct')
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = 0.5_RP * mflx_hi(k,i,j,XDIR) &
+          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                 + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
                               + num_diff(k,i,j,1,XDIR)
@@ -2970,7 +2970,7 @@ call TIME_rapstart   ('DYN-fct')
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = 0.5_RP * mflx_hi(k,i,j,YDIR) &
+          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                 + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
                               + num_diff(k,i,j,1,YDIR)
@@ -3929,7 +3929,7 @@ call TIME_rapend     ('DYN-fct')
           vel = ( ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP &
                   + MOMZ_LS(k,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(k,i,j)
-          qflx_hi(k-1,i,j,ZDIR) = 0.5_RP * vel  &
+          qflx_hi(k-1,i,j,ZDIR) = vel  &
                               * ( FACT_N * ( MOMZ(k  ,i,j)+MOMZ(k-1,i,j) ) &
                                 + FACT_F * ( MOMZ(k+1,i,j)+MOMZ(k-2,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMZ,ZDIR)
@@ -3958,7 +3958,7 @@ call TIME_rapend     ('DYN-fct')
           vel = ( ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) * 0.5_RP &
                   + MOMZ_LS(KS+1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KS+1,i,j)
-          qflx_hi(KS,i,j,ZDIR) = 0.5_RP * vel  &
+          qflx_hi(KS,i,j,ZDIR) = vel  &
                               * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
                                 + FACT_F * ( MOMZ(KS+2,i,j)            ) ) &
                               + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
@@ -3966,7 +3966,7 @@ call TIME_rapend     ('DYN-fct')
           vel = ( ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) * 0.5_RP &
                   + MOMZ_LS(KE-1,1) * MOMZ_LS_FLG( I_MOMZ ) & ! part of large scale sinking
                 ) / DENS(KE-1,i,j)
-          qflx_hi(KE-2,i,j,ZDIR) = 0.5_RP * vel  &
+          qflx_hi(KE-2,i,j,ZDIR) = vel  &
                               * ( FACT_N * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
                                 + FACT_F * (                MOMZ(KE-3,i,j) ) ) &
                               + num_diff(KE-1,i,j,I_MOMZ,ZDIR)
@@ -3993,7 +3993,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(k,i+2,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMZ,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = 0.25_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
+          qflx_hi(k,i,j,XDIR) = 0.5_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
                               * ( FACT_N * ( MOMZ(k,i+1,j)+MOMZ(k,i  ,j) ) &
                                 + FACT_F * ( MOMZ(k,i+2,j)+MOMZ(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_MOMZ,XDIR)
@@ -4026,7 +4026,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMZ(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMZ,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = 0.25_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
+          qflx_hi(k,i,j,YDIR) = 0.5_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
                               * ( FACT_N * ( MOMZ(k,i,j+1)+MOMZ(k,i,j  ) ) &
                                 + FACT_F * ( MOMZ(k,i,j+2)+MOMZ(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_MOMZ,YDIR)
@@ -4262,7 +4262,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
           vel = 0.5_RP * ( VELZ(k,i+1,j) + VELZ(k,i,j) ) &
               + 4.0_RP * MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMX ) / ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) ) ! large scale sinking
-          qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
+          qflx_hi(k,i,j,ZDIR) = vel &
                               * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
                                 + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMX,ZDIR)
@@ -4329,7 +4329,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMX(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMX,XDIR) )
 #endif
-          qflx_hi(k,i-1,j,XDIR) = 0.25_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
+          qflx_hi(k,i-1,j,XDIR) = 0.5_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
                               * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
                                 + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
                               + num_diff(k,i,j,I_MOMX,XDIR)
@@ -4353,7 +4353,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMX(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMX,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = 0.25_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
+          qflx_hi(k,i,j,YDIR) = 0.5_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
                               * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
                                 + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_MOMX,YDIR)
@@ -4585,7 +4585,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
           vel = 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
               + 4.0_RP * MOMZ_LS(k,2) * MOMZ_LS_FLG( I_MOMY ) / ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) ) ! large scale sinking
-          qflx_hi(k,i,j,ZDIR) = 0.5_RP * vel &
+          qflx_hi(k,i,j,ZDIR) = vel &
                               * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
                                 + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_MOMY,ZDIR)
@@ -4651,7 +4651,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMY(k,i+2,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMY,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = 0.25_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
+          qflx_hi(k,i,j,XDIR) = 0.5_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
                               * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
                                 + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_MOMY,XDIR)
@@ -4676,7 +4676,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, MOMY(k,i,j+1) )
           call CHECK( __LINE__, num_diff(k,i,j,I_MOMY,YDIR) )
 #endif
-          qflx_hi(k,i,j-1,YDIR) = 0.25_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
+          qflx_hi(k,i,j-1,YDIR) = 0.5_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
                               * ( FACT_N * ( MOMY(k,i,j  )+MOMY(k,i,j-1) ) &
                                 + FACT_F * ( MOMY(k,i,j+1)+MOMY(k,i,j-2) ) ) &
                               + num_diff(k,i,j,I_MOMY,YDIR)
@@ -4903,7 +4903,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, POTT(k+2,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,ZDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = 0.5_RP * mflx_hi(k,i,j,ZDIR) &
+          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) &
                               + num_diff(k,i,j,I_RHOT,ZDIR)
@@ -4953,7 +4953,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = 0.5_RP * mflx_hi(k,i,j,XDIR) &
+          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
                               + num_diff(k,i,j,I_RHOT,XDIR)
@@ -4976,7 +4976,7 @@ call TIME_rapend     ('DYN-fct')
           call CHECK( __LINE__, POTT(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = 0.5_RP * mflx_hi(k,i,j,YDIR) &
+          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
                               + num_diff(k,i,j,I_RHOT,YDIR)
