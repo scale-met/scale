@@ -34,6 +34,13 @@ module mod_atmos_phy_tb
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+#ifdef DEBUG
+  use mod_debug, only: &
+     CHECK
+  use mod_const, only: &
+     UNDEF => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -65,11 +72,6 @@ module mod_atmos_phy_tb
   !
   !++ Private parameters & variables
   !
-#ifdef DEBUG
-  real(RP), private, parameter :: UNDEF = -9.999E30_RP
-  integer,  private, parameter :: IUNDEF = -99999
-#endif
-
   real(RP), private,      save :: MOMZ_t(KA,IA,JA)
   real(RP), private,      save :: MOMX_t(KA,IA,JA)
   real(RP), private,      save :: MOMY_t(KA,IA,JA)
@@ -103,17 +105,6 @@ module mod_atmos_phy_tb
 
   !-----------------------------------------------------------------------------
 contains
-
-#ifdef DEBUG
-  subroutine CHECK( line, v )
-    integer,  intent(in) :: line
-    real(RP), intent(in) :: v
-    if ( abs(v) .ge. abs(UNDEF) ) then
-       write(*,*) "use uninitialized value at line ", line
-       stop
-    endif
-  end subroutine CHECK
-#endif
 
   subroutine ATMOS_PHY_TB_setup
     use mod_grid, only: &
