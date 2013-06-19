@@ -360,7 +360,7 @@ contains
        CNX4(:,:,:) = 0.0_RP
        CNY4(:,:,:) = 0.0_RP
     else
-       DIFF4 = numdiff_coef / ( PI**(4*numdiff_order) * dt_dyn )
+       DIFF4 = numdiff_coef / ( 2**(4*numdiff_order) * dt_dyn )
 
        ! z direction
        do k = KS-1, KE+1
