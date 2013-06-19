@@ -108,10 +108,10 @@ makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ2) $(BINDIR)/$(INITNAME)
 
 $(BUILD_DIR)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(LIBDIR)/$(LIBNAME)
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(LIBDIR)/$(LIBNAME)
@@ -159,7 +159,7 @@ $(BUILD_DIR)/mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o m
 $(BUILD_DIR)/mod_atmos_sub_precipitation.o	: mod_atmos_sub_precipitation.f90 mod_stdio.o mod_time.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_thermodyn.o
 
 $(BUILD_DIR)/mod_atmos_dyn_common.o	: mod_atmos_dyn_common.f90 mod_comm.o mod_debug.o
-$(BUILD_DIR)/mod_atmos_dyn_$(dynamics).o	: mod_atmos_dyn_$(dynamics).f90 mod_comm.o mod_const.o mod_debug.o mod_atmos_dyn_common.o
+$(BUILD_DIR)/mod_atmos_dyn_$(dynamics).o	: mod_atmos_dyn_$(dynamics).f90 mod_comm.o mod_const.o mod_debug.o mod_atmos_dyn_common.o mod_atmos_vars.o mod_process.o
 $(BUILD_DIR)/mod_atmos_dyn.o	: mod_atmos_dyn.f90 mod_atmos_dyn_$(dynamics).o mod_atmos_dyn_common.o mod_stdio.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_geometrics.o mod_atmos_vars.o mod_comm.o mod_const.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_phy_sf_$(sfcflx).o	: mod_atmos_phy_sf_$(sfcflx).f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_atmos_vars.o mod_ocean_vars.o 
 $(BUILD_DIR)/mod_atmos_phy_tb_$(turbulence).o	: mod_atmos_phy_tb_$(turbulence).f90 mod_stdio.o mod_grid_cartesian_plane.o mod_process.o mod_atmos_vars.o mod_comm.o mod_time.o mod_history.o mod_const.o mod_debug.o

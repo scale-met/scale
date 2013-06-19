@@ -28,6 +28,7 @@ module mod_atmos_dyn_rk
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_rk_setup
   public :: ATMOS_DYN_rk
 
   !-----------------------------------------------------------------------------
@@ -50,10 +51,41 @@ module mod_atmos_dyn_rk
   !
   !++ Private parameters & variables
   !
+  real(RP) :: kappa
   !-----------------------------------------------------------------------------
 
 
 contains
+
+  subroutine ATMOS_DYN_rk_setup
+    use mod_stdio, only: &
+       IO_FID_LOG,  &
+       IO_L
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_atmos_vars, only: &
+       ATMOS_TYPE_DYN
+#ifdef DRY
+    use mod_const, only : &
+       CVdry  => CONST_CVdry,  &
+       CPdry  => CONST_CPdry
+#endif
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
+
+    if ( ATMOS_TYPE_DYN .ne. 'HEVE' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not HEVE. Check!'
+       call PRC_MPIstop
+    end if
+
+#ifdef DRY
+    kappa = CPdry / CVdry
+#endif
+
+    return
+  end subroutine ATMOS_DYN_rk_setup
+
+
   subroutine ATMOS_DYN_rk( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
     DDIV,                                        &
@@ -74,8 +106,7 @@ contains
        IUNDEF => CONST_UNDEF2, &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00,  &
-       Rdry   => CONST_Rdry,   &
-       CVdry  => CONST_CVdry
+       Rdry   => CONST_Rdry
     use mod_comm, only: &
 #ifdef _USE_RDMA
        COMM_rdma_vars8, &
@@ -293,7 +324,7 @@ contains
           call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
 #ifdef DRY
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**((CVdry+Rdry)/CVdry)
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**kappa
 #else
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
 #endif

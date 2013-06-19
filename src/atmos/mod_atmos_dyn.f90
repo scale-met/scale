@@ -173,8 +173,8 @@ contains
        FZ  => GRID_FZ
     use mod_geometrics, only : &
        lat => GEOMETRICS_lat
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_DYN
+    use mod_atmos_dyn_rk, only: &
+       ATMOS_DYN_rk_setup
 #ifdef _USE_RDMA
     use mod_comm, only: &
        COMM_set_rdma_variable
@@ -198,12 +198,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** FENT + FCT'
-
-    if ( ATMOS_TYPE_DYN .ne. 'FENT-FCT' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not FENT-FCT. Check!'
-       call PRC_MPIstop
-    end if
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -260,6 +254,9 @@ contains
     call COMM_set_rdma_variable( VELX   (:,:,:),      5+QA+17)
     call COMM_set_rdma_variable( VELY   (:,:,:),      5+QA+18)
 #endif
+
+
+    call ATMOS_DYN_rk_setup
 
     return
 
