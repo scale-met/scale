@@ -35,10 +35,10 @@ where
   \frac{\rho_k^{n+1}-\rho_k^n}{\Delta t}
   &= -\frac{M_{k+1/2}^{n+1}-M_{k-1/2}^{n+1}}{\Delta z_k} + S_\rho, \\
   \frac{(\rho w)_{k+1/2}^{n+1}-(\rho w)_{k+1/2}^n}{\Delta t}
-  &= -\frac{p_{k+1}^{n+1}-P_k^{n+1}}{\Delta z_k} -g\frac{\rho_{k+1}^{n+1}+\rho_k^{n+1}}{2} + S_{\rho w}, \\
+  &= -\frac{p_{k+1}^{n+1}-p_k^{n+1}}{\Delta z_{k+1/2}} -g\frac{\rho_{k+1}^{n+1}+\rho_k^{n+1}}{2} + S_{\rho w}, \\
   \frac{(\rho\theta)_k^{n+1}-(\rho\theta)_k^n}{\Delta t}
-  &= -\frac{M_{k+1/2}^{n+1}\hat{\theta}_{k+1/2}^n-M_{k-1/2}^{n+1}\hat{\theta}_{k-1/2}} + + S_{\rho\theta}, \\
-  p_k^{n+1} &\sim p_k^n + \frac{c_pp_k^n}{c_v}\frac{(\rho\theta)_k^{n+1}-(\rho\theta)_k^n}{(\rho\theta)_k^n},
+  &= -\frac{M_{k+1/2}^{n+1}\hat{\theta}_{k+1/2}^n-M_{k-1/2}^{n+1}\hat{\theta}_{k-1/2}}{\Delta z_k} + S_{\rho\theta}, \\
+  p_k^{n+1} &\sim p_k^n + \frac{c_{p k}^np_k^n}{c_{v k}^n}\frac{(\rho\theta)_k^{n+1}-(\rho\theta)_k^n}{(\rho\theta)_k^n},
 \end{align}
 where
 \begin{align}
@@ -51,11 +51,11 @@ where
 Then we obtain the equation for $\rho w$:
 \begin{align}
   & (\rho w)_{k+1/2}^n + C_n \\
-  &= \left\{A^1\hat\theta_{k+3/2}^n + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+5/2}^{n+1} \nonumber \\
-  &- \left\{A^1(8\hat\theta_{k+3/2}^n+\hat\theta_{k+1/2}^n) + A^0\hat\theta_{k+1/2}^n\ + B\left(\frac{9}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right)\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
-  &+ \left\{A^1(\hat\theta_{k+3/2}^n+8\hat\theta_{k+1/2}^n) + A^0(8\hat\theta_{k+1/2}^n+\hat\theta_{k-1/2}^n) + 9B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
-  &- \left\{A^1\hat\theta_{k+1/2}^n + A^0(\hat\theta_{k+1/2}^n+8\hat\theta_{k-1/2}^n) + B\left(\frac{1}{\Delta z_{k+1}}-\frac{9}{\Delta z_k}\right)\right\} (\rho w)_{k-1/2}^{n+1} \nonumber \\
-  &+ \left\{A^0\hat\theta_{k-1/2}^n - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-3/2}^{n+1},
+  &= \left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_k} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+5/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{k+1}(8\hat\theta_{k+3/2}^n+\hat\theta_{k+1/2}^n)}{\Delta z_k} + \frac{A_{k}\hat\theta_{k+1/2}^n}{\Delta z_k} + B\left(\frac{9}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right)\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_{k+1}(\hat\theta_{k+3/2}^n+8\hat\theta_{k+1/2}^n)}{\Delta z_k} + \frac{A_k(8\hat\theta_{k+1/2}^n+\hat\theta_{k-1/2}^n)}{\Delta z_k} + 9B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{k+1}\hat\theta_{k+1/2}^n}{\Delta z_k} + \frac{A_k(\hat\theta_{k+1/2}^n+8\hat\theta_{k-1/2}^n)}{\Delta z_k} + B\left(\frac{1}{\Delta z_{k+1}}-\frac{9}{\Delta z_k}\right)\right\} (\rho w)_{k-1/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_k} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-3/2}^{n+1},
 \end{align}
 where
 \begin{align}
@@ -64,9 +64,9 @@ where
     p_{k+1}^n\left\{1+\frac{c_p\Delta t}{c_v}\frac{S_{\rho\theta k+1}}{(\rho\theta)_{k+1}^n}\right\}
   - p_k^n   \left\{1+\frac{c_p\Delta t}{c_v}\frac{S_{\rho\theta k}  }{(\rho\theta)_k^n   }\right\}
     \right] \nonumber \\
-  &-\frac{g\Delta t}{2}\{\rho_{k+1}^n+\rho_k^n+\Delta t(S_{\rho k+1}+S_{\rho k})\}, \\
-  A^1 &= \frac{c_p\Delta t^2 p_{k+1}^n}{6c_v\Delta z_{k+1}\Delta z_k(\rho\theta)_{k+1}^n}, \\
-  A^0 &= \frac{c_p\Delta t^2 p_k^n   }{6c_v\Delta z_k^2           (\rho\theta)_k^n}, \\
+  &-\frac{g\Delta t}{2}\{\rho_{k+1}^n+\rho_k^n+\Delta t(S_{\rho k+1}+S_{\rho k})\}
+  + \Delta t S_{\rho w}, \\
+  A_k &= \frac{c_{p k}^n\Delta t^2 p_k^n   }{6c_{v k}^n\Delta z_{k+1/2} (\rho\theta)_k^n}, \\
   B &= \frac{g\Delta t^2}{12}.
 \end{align}
 At the top and bottom boundaries,
@@ -79,9 +79,9 @@ and
 Then
 \begin{align}
   (\rho w)_{k+1/2}^n + C_n =
-  &- 6\left\{A^1\hat\theta_{k+3/2}^n + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
-  &+ 6\left\{(A^1+A^0)\hat\theta_{k+1/2}^n + B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
-  &- 6\left\{A^0\hat\theta_{k-1/2}^n - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-1/2}^{n+1}.
+  &- 6\left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_k} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
+  &+ \left\{6\frac{(A_{k+1}+A_k)\hat\theta_{k+1/2}^n}{\Delta z_k} + 6B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
+  &- 6\left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_k} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-1/2}^{n+1}.
 \end{align}
 
 

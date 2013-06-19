@@ -15,6 +15,7 @@ include $(TOPDIR)/src/Mkinclude
 # for build
 index      = 500m40x40x40
 precision  = real8
+dynamics   = heve
 tracer     = kessler
 sfcflx     = louis
 turbulence = smg
@@ -52,6 +53,7 @@ MODS =	\
 	mod_geometrics.o	\
 	$(mod_rdma)	\
 	mod_comm.o	\
+	mod_debug.o	\
 	mod_topography.o	\
 	mod_landuse.o	\
 	mod_history.o	\
@@ -67,7 +69,9 @@ MODS =	\
 	mod_atmos_sub_refstate.o	\
 	mod_atmos_sub_boundary.o	\
 	mod_atmos_sub_precipitation.o	\
-	mod_atmos_dyn_fent_fullfct_lss.o	\
+	mod_atmos_dyn_common.o	\
+	mod_atmos_dyn_$(dynamics).o	\
+	mod_atmos_dyn.o	\
 	mod_atmos_phy_sf_$(sfcflx).o	\
 	mod_atmos_phy_tb_$(turbulence).o	\
 	mod_atmos_phy_mp_common.o \
@@ -104,10 +108,10 @@ makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ2) $(BINDIR)/$(INITNAME)
 
 $(BUILD_DIR)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(PAPI_LIBS)
+	$(FC) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(LIBDIR)/$(LIBNAME)
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(LIBDIR)/$(LIBNAME)
@@ -125,6 +129,7 @@ $(BUILD_DIR)/mod_process.o	: mod_process.f90 mod_stdio.o
 $(BUILD_DIR)/mod_const.o	: mod_const.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_calendar.o	: mod_calendar.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_random.o	: mod_random.f90 mod_stdio.o mod_process.o
+$(BUILD_DIR)/mod_debug.o	: mod_debug.f90 mod_const.o
 $(BUILD_DIR)/mod_specfunc.o	: mod_specfunc.f90 mod_stdio.o mod_process.o
 $(BUILD_DIR)/mod_time.o	: mod_time.f90 mod_stdio.o mod_process.o mod_calendar.o
 $(BUILD_DIR)/mod_papi.o	: mod_papi.f90 mod_stdio.o mod_process.o
@@ -142,7 +147,7 @@ $(BUILD_DIR)/mod_history.o	: mod_history.f90 mod_stdio.o mod_process.o mod_time.
 $(BUILD_DIR)/mod_monitor.o	: mod_monitor.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o
 
 $(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_time.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
-                             mod_atmos_dyn_fent_fullfct_lss.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(tracer).o mod_atmos_phy_rd_$(radiation).o
+                             mod_atmos_dyn.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(tracer).o mod_atmos_phy_rd_$(radiation).o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_history.o mod_monitor.o mod_comm.o mod_grid_cartesian_plane.o mod_atmos_sub_thermodyn.o mod_time.o mod_misc.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90 mod_stdio.o mod_process.o mod_comm.o
 $(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90 mod_stdio.o mod_const.o mod_grid_cartesian_plane.o
@@ -153,9 +158,11 @@ $(BUILD_DIR)/mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_stdio.o m
 $(BUILD_DIR)/mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian_plane.o mod_comm.o mod_time.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_sub_precipitation.o	: mod_atmos_sub_precipitation.f90 mod_stdio.o mod_time.o mod_const.o mod_grid_cartesian_plane.o mod_atmos_vars.o mod_atmos_sub_thermodyn.o
 
-$(BUILD_DIR)/mod_atmos_dyn_fent_fullfct_lss.o	: mod_atmos_dyn_fent_fullfct_lss.f90 mod_stdio.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_geometrics.o mod_atmos_vars.o mod_comm.o mod_const.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o
+$(BUILD_DIR)/mod_atmos_dyn_common.o	: mod_atmos_dyn_common.f90 mod_comm.o mod_debug.o
+$(BUILD_DIR)/mod_atmos_dyn_$(dynamics).o	: mod_atmos_dyn_$(dynamics).f90 mod_comm.o mod_const.o mod_debug.o mod_atmos_dyn_common.o mod_atmos_vars.o mod_process.o
+$(BUILD_DIR)/mod_atmos_dyn.o	: mod_atmos_dyn.f90 mod_atmos_dyn_$(dynamics).o mod_atmos_dyn_common.o mod_stdio.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_geometrics.o mod_atmos_vars.o mod_comm.o mod_const.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_phy_sf_$(sfcflx).o	: mod_atmos_phy_sf_$(sfcflx).f90 mod_stdio.o mod_process.o mod_grid_cartesian_plane.o mod_const.o mod_atmos_vars.o mod_ocean_vars.o 
-$(BUILD_DIR)/mod_atmos_phy_tb_$(turbulence).o	: mod_atmos_phy_tb_$(turbulence).f90 mod_stdio.o mod_grid_cartesian_plane.o mod_process.o mod_atmos_vars.o mod_comm.o mod_time.o mod_history.o mod_const.o
+$(BUILD_DIR)/mod_atmos_phy_tb_$(turbulence).o	: mod_atmos_phy_tb_$(turbulence).f90 mod_stdio.o mod_grid_cartesian_plane.o mod_process.o mod_atmos_vars.o mod_comm.o mod_time.o mod_history.o mod_const.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_phy_mp_common.o		: mod_atmos_phy_mp_common.f90 mod_stdio.o mod_const.o mod_process.o mod_time.o mod_grid_cartesian_plane.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_phy_mp_$(tracer).o	: mod_atmos_phy_mp_$(tracer).f90 mod_stdio.o mod_const.o mod_time.o mod_process.o mod_grid_cartesian_plane.o mod_history.o mod_specfunc.o mod_atmos_vars.o mod_atmos_phy_mp_common.o mod_atmos_sub_precipitation.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_phy_rd_$(radiation).o	: mod_atmos_phy_rd_$(radiation).f90 mod_stdio.o mod_process.o mod_comm.o mod_const.o mod_time.o mod_grid_cartesian_plane.o mod_history.o mod_atmos_vars.o 

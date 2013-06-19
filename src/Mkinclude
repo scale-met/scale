@@ -11,7 +11,7 @@ DCUTILSDIR = $(TOPDIR)/dc_utils
 SRCDIR     = $(TOPDIR)/src
 INCDIR     = $(TOPDIR)/src/include
 
-SUFFIX = $(index)_$(precision)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
+SUFFIX = $(index)_$(precision)_$(dynamics)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
 
 LIBNAME = libscale_$(SUFFIX).a
 
