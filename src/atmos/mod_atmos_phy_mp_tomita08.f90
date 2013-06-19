@@ -507,7 +507,7 @@ contains
   end subroutine ATMOS_PHY_MP
 
   !-----------------------------------------------------------------------------
-  !> Kessler-type warm rain microphysics
+  !> Lin-type cold rain microphysics
   !-----------------------------------------------------------------------------
   subroutine MP_tomita08( &
        RHOE_t, &
@@ -638,7 +638,6 @@ contains
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
 
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -849,7 +848,6 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", maxval(w(ip,:)), minval(w(ip,:))
 !    enddo
 
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP,SIMD
     do ijk = 1, KMAX*IMAX*JMAX
        w(I_Psdep,ijk) = min( w(I_Psdep,ijk), w(I_dqv_dt,ijk) )
        w(I_Pgdep,ijk) = min( w(I_Pgdep,ijk), w(I_dqv_dt,ijk) )
@@ -916,7 +914,6 @@ contains
 !    if( IO_L ) write(IO_FID_LOG,*) "ijk_warm/cold:", ijk_warm, ijk_cold
 
     !---< Solve tendencies (Warm Rain) >---
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_warm
        ijk = index_warm(indirect)
 
@@ -990,7 +987,6 @@ contains
 
 
 
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_warm
        ijk = index_warm(indirect)
 
@@ -1028,7 +1024,6 @@ contains
     enddo
 
     !---< Solve tendencies (Cold Rain) >---
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_cold
        ijk = index_cold(indirect)
 
@@ -1183,7 +1178,6 @@ contains
 
 
 
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do indirect = 1, ijk_cold
        ijk = index_cold(indirect)
 
@@ -1250,7 +1244,6 @@ contains
     enddo
 
     ! mass & energy update
-!OCL NORECURRENCE,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1335,7 +1328,7 @@ contains
   end subroutine MP_tomita08
 
   !-----------------------------------------------------------------------------
-  !> Kessler-type warm rain microphysics (terminal velocity)
+  !> Lin-type cold rain microphysics (terminal velocity)
   !-----------------------------------------------------------------------------
   subroutine MP_tomita08_vterm( &
        vterm, &
