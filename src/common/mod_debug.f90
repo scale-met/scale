@@ -4,13 +4,15 @@ module mod_debug
        UNDEF => CONST_UNDEF
   include 'inc_precision.h'
 
+  public :: CHECK
+
 
 contains
 
   subroutine CHECK( line, v )
     integer,  intent(in) :: line
     real(RP), intent(in) :: v
-    if ( abs(v) .ge. abs(UNDEF) ) then
+    if ( .not. abs(v) .lt. abs(UNDEF) ) then
        write(*,*) "use uninitialized value at line ", line
        call abort
     end if

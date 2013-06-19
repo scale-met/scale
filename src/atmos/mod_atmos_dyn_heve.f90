@@ -292,6 +292,12 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+       do j = JJS, JJE
+       do i = IIS, IIE
+          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+       enddo
+       enddo
+
     enddo
     enddo
 
@@ -392,6 +398,7 @@ contains
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
+             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KE,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -1060,6 +1067,7 @@ contains
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
+             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KE,i,j,ZDIR) = &
                   + MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_MOMX ) * VELX(KE,i,j) &
                   + 2.0_RP * MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_MOMX ) * CDZ(KE) * MOMX(KE,i,j) / ( DENS(KE,i+1,j)+DENS(KE,i,j) )

@@ -31,8 +31,8 @@ CFLAGS = -O3 -m64
 
 LD     = $(FC)
 # to avoid "-x f95-cpp-input" option
-LFLAGS = $(FFLAGS_FAST)
-#LFLAGS = $(FFLAGS_DEBUG)
+#LFLAGS = $(FFLAGS_FAST)
+LFLAGS = $(FFLAGS_DEBUG)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
