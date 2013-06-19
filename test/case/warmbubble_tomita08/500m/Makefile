@@ -15,6 +15,7 @@ include $(TOPDIR)/src/Mkinclude
 # for build
 index      = 500m40x40x40
 precision  = real8
+dynamics   = heve
 tracer     = tomita08
 sfcflx     = const
 turbulence = dummy

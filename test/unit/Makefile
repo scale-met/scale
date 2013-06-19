@@ -10,6 +10,7 @@ PROJ_EXE = unit
 
 #default index & tracer set
 index   = 10x10x2
+dynamics = heve
 tracer  = kessler
 radiation = mstrnX
 sfcflx  = const
