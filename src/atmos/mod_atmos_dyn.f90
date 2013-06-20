@@ -158,9 +158,7 @@ contains
     use mod_grid, only : &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
-       CDY => GRID_CDY, &
-       CZ  => GRID_CZ,  &
-       FZ  => GRID_FZ
+       CDY => GRID_CDY
     use mod_geometrics, only : &
        lat => GEOMETRICS_lat
     use mod_atmos_dyn_rk, only: &
@@ -209,7 +207,7 @@ contains
 
     call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
                          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,  & ! (out)
-                         CDZ, CDX, CDY, CZ, FZ,               & ! (in)
+                         CDZ, CDX, CDY,                       & ! (in)
                          lat,                                 & ! (in)
                          ATMOS_DYN_numerical_diff_order,      & ! (in)
                          ATMOS_DYN_numerical_diff_coef,       & ! (in)
@@ -248,7 +246,7 @@ contains
 
   subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
                              CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
-                             CDZ, CDX, CDY, CZ, FZ, lat,         &
+                             CDZ, CDX, CDY, lat,                 &
                              numdiff_order, numdiff_coef,        &
                              dt_dyn,                             &
                              enable_coriolis                     )
@@ -267,8 +265,6 @@ contains
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
-    real(RP), intent(in)  :: CZ(KA)
-    real(RP), intent(in)  :: FZ(0:KA)
     real(RP), intent(in)  :: lat(1,IA,JA)
     integer,  intent(in)  :: numdiff_order
     real(RP), intent(in)  :: numdiff_coef
@@ -2089,7 +2085,7 @@ call TIME_rapstart   ('DYN-rk3')
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 FDZ, FDX, FDY,                                     & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
@@ -2121,7 +2117,7 @@ call TIME_rapstart   ('DYN-rk3')
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 FDZ, FDX, FDY,                                     & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
@@ -2153,7 +2149,7 @@ call TIME_rapstart   ('DYN-rk3')
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
+                 FDZ, FDX, FDY,                                     & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
@@ -2761,7 +2757,6 @@ call TIME_rapstart   ('DYN-fct')
 
     call ATMOS_DYN_fct(qflx_anti,               & ! (out)
                        RHOQ, qflx_hi, qflx_lo,  & ! (in)
-                       QTRC_t(:,:,:,iq),        & ! (in)
                        RCDZ, RCDX, RCDY, DTSEC  ) ! (in)
 #ifdef DEBUG
        qflx_lo  (KS:,:,:,:) = UNDEF

@@ -214,10 +214,6 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
-       CPvap => CONST_CPvap, &
-       CL    => CONST_CL,    &
-       CI    => CONST_CI
     use mod_history, only: &
        HIST_reg
     use mod_monitor, only: &
@@ -1480,8 +1476,7 @@ contains
   subroutine ATMOS_vars_total
     use mod_const, only: &
        GRAV   => CONST_GRAV,   &
-       CVdry  => CONST_CVdry,  &
-       Rvap   => CONST_Rvap
+       CVdry  => CONST_CVdry
     use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_comm, only: &

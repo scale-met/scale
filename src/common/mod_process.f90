@@ -214,8 +214,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Abort MPI
   subroutine PRC_MPIstop
-    use mod_stdio, only: &
-       IO_SYSCHR
     implicit none
 
     integer :: ierr

@@ -59,7 +59,6 @@ contains
   subroutine ATMOS_DYN_fct(      &
        qflx_anti,                &
        phi_in, qflx_hi, qflx_lo, &
-       fct_dt,                   &
        rdz, rdx, rdy, dtrk       )
     use mod_const, only: &
        UNDEF => CONST_UNDEF, &
@@ -79,8 +78,6 @@ contains
     real(RP), intent(in) :: phi_in(KA,IA,JA) ! physical quantity
     real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
-
-    real(RP), intent(in) :: fct_dt(KA,IA,JA)
 
     real(RP), intent(in) :: RDZ(:)
     real(RP), intent(in) :: RDX(:)
@@ -189,13 +186,11 @@ contains
           call CHECK( __LINE__, qflx_lo(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, fct_dt(k,i,j) )
 #endif
           phi_lo(k,i,j) = phi_in(k,i,j) &
                + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                             + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
                             + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
-!                          + fct_dt(k,i,j) )
        enddo
        enddo
        enddo

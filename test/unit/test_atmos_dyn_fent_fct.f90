@@ -135,7 +135,7 @@ contains
   end do
   call ATMOS_DYN_init( DIFF4,CORIOLI,                      & ! (out)
                        CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
-                       CDZ, CDX, CDY, CZ, FZ,              & ! (in)
+                       CDZ, CDX, CDY,                      & ! (in)
                        lat,                                & ! (in)
                        nd_order, nd_coef, 1.0_RP, .false.  ) ! (in)
 

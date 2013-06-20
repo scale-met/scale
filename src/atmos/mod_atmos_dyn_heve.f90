@@ -96,7 +96,7 @@ contains
     Rtot, CVtot, CORIOLI,                        &
     num_diff, divdmp_coef,                       &
     FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
-    CDZ, FDZ, FDX, FDY,                          &
+    FDZ, FDX, FDY,                               &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     dtrk, rk, rko,                               &
     VELZ, VELX, VELY, PRES, POTT                 )
@@ -120,8 +120,7 @@ contains
        I_MOMZ, &
        I_MOMX, &
        I_MOMY, &
-       I_RHOT, &
-       I_QTRC
+       I_RHOT
     use mod_atmos_dyn_common, only: &
        FACT_N, &
        FACT_F, &
@@ -166,7 +165,6 @@ contains
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
 
-    real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: FDZ(KA-1)
     real(RP), intent(in) :: FDX(IA-1)
     real(RP), intent(in) :: FDY(JA-1)
@@ -550,7 +548,6 @@ contains
        call ATMOS_DYN_fct( &
             qflx_anti,          & ! (out)
             org, mflx_hi, qflx_lo,  & ! (in)
-            DENS_t,                 & ! (in)
             RCDZ, RCDX, RCDY, dtrk  ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
@@ -941,7 +938,6 @@ contains
        call ATMOS_DYN_fct( &
             qflx_anti,              & ! (out)
             org, qflx_hi, qflx_lo,  & ! (in)
-            MOMZ_t,                 & ! (in)
             RFDZ, RCDX, RCDY, dtrk  ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
@@ -1254,7 +1250,6 @@ contains
        call ATMOS_DYN_fct( &
             qflx_anti,              & ! (out)
             org, qflx_hi, qflx_lo,  & ! (in)
-            MOMX_t,                 & ! (in)
             RCDZ, RFDX, RCDY, dtrk  ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
@@ -1565,7 +1560,6 @@ contains
        call ATMOS_DYN_fct( &
             qflx_anti,              & ! (out)
             org, qflx_hi, qflx_lo,  & ! (in)
-            MOMY_t,                 & ! (in)
             RCDZ, RCDX, RFDY, dtrk  ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
@@ -1843,7 +1837,6 @@ contains
        call ATMOS_DYN_fct( &
             qflx_anti,              & ! (out)
             org, qflx_hi, qflx_lo,  & ! (in)
-            RHOT_t,                 & ! (in)
             RCDZ, RCDX, RCDY, dtrk  ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
