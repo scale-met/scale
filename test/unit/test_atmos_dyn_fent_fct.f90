@@ -82,15 +82,13 @@ module test_atmos_dyn_fent_fct
   real(RP) :: CNY4(4,JA,2)
 
   real(RP) :: CORIOLI(1,IA,JA)
-  real(RP) :: MOMZ_LS(KA,IA,JA,2)
-  real(RP) :: MOMZ_LS_DZ(KA,IA,JA,2)
 
   real(RP) :: AQ_CV(QA)
 
   real(RP) :: DIFF4
   integer  :: nd_order
   real(RP) :: nd_coef
-  real(RP) :: divdmp_coef, LSsink_D
+  real(RP) :: divdmp_coef
 
   logical  :: flag_fct_rho      = .true.
   logical  :: flag_fct_momentum = .true.
@@ -137,11 +135,9 @@ contains
   end do
   call ATMOS_DYN_init( DIFF4,CORIOLI,                      & ! (out)
                        CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
-                       MOMZ_LS, MOMZ_LS_DZ,                & ! (out)
                        CDZ, CDX, CDY, CZ, FZ,              & ! (in)
                        lat,                                & ! (in)
-                       nd_order, nd_coef, 1.0_RP,          & ! (in)
-                       0.0_RP, 0.0_RP, .false.     ) ! (in)
+                       nd_order, nd_coef, 1.0_RP, .false.  ) ! (in)
 
 
   do k = KS+1, KE
@@ -156,7 +152,6 @@ contains
   AQ_CV(:) = 1.0_RP
 
   divdmp_coef = 0.0_RP
-  LSsink_D    = 0.0_RP
 
   DENS_tp(:,:,:) = 0.0_RP
   MOMZ_tp(:,:,:) = 0.0_RP
@@ -223,7 +218,6 @@ subroutine test_undef
           REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
-          MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
           .false.,                                     & ! (in)
           1.0_DP, 1.0_DP, 1                            ) ! (in)
@@ -272,7 +266,6 @@ subroutine test_const
        REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
-       MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
        .false.,                                     & ! (in)
        1.0_DP, 1.0_DP, 1                            ) ! (in)
@@ -354,7 +347,6 @@ subroutine test_conserve
          REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
-         MOMZ_LS, MOMZ_LS_DZ,                         & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
          .true.,                                      & ! (in)
          1.0_RP, 1.0_DP, 1                            ) ! (in)

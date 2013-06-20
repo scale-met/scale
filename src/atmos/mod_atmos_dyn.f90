@@ -28,6 +28,7 @@
 !! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing
 !! @li      2013-06-14 (S.Nishizawa) [mod] enable to change order of numerical diffusion
 !! @li      2013-06-18 (S.Nishizawa) [mod] split part of RK to other files
+!! @li      2013-06-20 (S.Nishizawa) [mod] split large scale sining to other file
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ module mod_atmos_dyn
      UNDEF => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
-  use mod_atmos_dyn_common, only: &
+  use mod_atmos_vars, only: &
      ZDIR, &
      XDIR, &
      YDIR, &
@@ -58,7 +59,8 @@ module mod_atmos_dyn
      I_MOMX, &
      I_MOMY, &
      I_RHOT, &
-     I_QTRC, &
+     I_QTRC
+  use mod_atmos_dyn_common, only: &
      FACT_N, &
      FACT_F
 
@@ -108,10 +110,8 @@ module mod_atmos_dyn
   logical, private, save       :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
   real(RP), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
 
-  ! large scale sinking current (option)
-  real(RP), private, save      :: ATMOS_DYN_LSsink_D = 0.0_RP         ! large scale sinking parameter [1/s]
-  real(RP), private, save      :: ATMOS_DYN_LSsink_bottom = 0.0_RP    ! large scale sinking parameter [m]
   real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP        ! Divergence dumping coef
+
   ! fct
   logical, private, save       :: ATMOS_DYN_FLAG_FCT_rho      = .false.
   logical, private, save       :: ATMOS_DYN_FLAG_FCT_momentum = .false.
@@ -142,16 +142,6 @@ module mod_atmos_dyn
   real(RP), private, save :: CNX4(4,IA,2)
   real(RP), private, save :: CNY4(4,JA,2)
 
-  !--- for LS forcing
-  real(RP), private, save :: MOMZ_LS(KA,2)
-  real(RP), private, save :: MOMZ_LS_DZ(KA,2)
-  real(RP), private, save :: QV_LS(KA,2)
-  real(RP), private, save :: MOMZ_LS_FLG(6)
-  real(RP), private, save :: V_GEOS(KA), U_GEOS(KA)
-  !--- FLG of LS forcing
-  integer,  private, save :: ATMOS_DYN_LS_FLG = 0 !-- 0->no force, 1->dycoms, 2->rico
-  real(RP), private, save :: FLAG_F_force = 0.0_RP
-  real(RP), private, save :: Q_rate( KA,IA,JA,QA )
   !-----------------------------------------------------------------------------
 contains
 
@@ -186,12 +176,9 @@ contains
        ATMOS_DYN_numerical_diff_coef, &
        ATMOS_DYN_enable_coriolis,   &
        ATMOS_DYN_divdmp_coef,       &
-       ATMOS_DYN_LSsink_D,          &
-       ATMOS_DYN_LSsink_bottom,     &
        ATMOS_DYN_FLAG_FCT_rho,      &
        ATMOS_DYN_FLAG_FCT_momentum, &
-       ATMOS_DYN_FLAG_FCT_T,        &
-       ATMOS_DYN_LS_FLG
+       ATMOS_DYN_FLAG_FCT_T
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -222,14 +209,11 @@ contains
 
     call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
                          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,  & ! (out)
-                         MOMZ_LS, MOMZ_LS_DZ,                 & ! (in)
                          CDZ, CDX, CDY, CZ, FZ,               & ! (in)
                          lat,                                 & ! (in)
                          ATMOS_DYN_numerical_diff_order,      & ! (in)
                          ATMOS_DYN_numerical_diff_coef,       & ! (in)
                          DTSEC_ATMOS_DYN,                     & ! (in)
-                         ATMOS_DYN_LSsink_D,                  & ! (in)
-                         ATMOS_DYN_LSsink_bottom,             & ! (in)
                          ATMOS_DYN_enable_coriolis            ) ! (in)
 
 #ifdef _USE_RDMA
@@ -264,12 +248,9 @@ contains
 
   subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
                              CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
-                             MOMZ_LS, MOMZ_LS_DZ,                &
                              CDZ, CDX, CDY, CZ, FZ, lat,         &
                              numdiff_order, numdiff_coef,        &
                              dt_dyn,                             &
-                             LSsink_D,                           &
-                             LSsink_bottom,                      &
                              enable_coriolis                     )
     use mod_const, only: &
        PI  => CONST_PI, &
@@ -283,8 +264,6 @@ contains
     real(RP), intent(out) :: CNZ4(4,KA,2)
     real(RP), intent(out) :: CNX4(4,IA,2)
     real(RP), intent(out) :: CNY4(4,JA,2)
-    real(RP), intent(out) :: MOMZ_LS(KA,2)
-    real(RP), intent(out) :: MOMZ_LS_DZ(KA,2)
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
@@ -294,12 +273,9 @@ contains
     integer,  intent(in)  :: numdiff_order
     real(RP), intent(in)  :: numdiff_coef
     real(RP), intent(in)  :: dt_dyn
-    real(RP), intent(in)  :: LSsink_D
-    real(RP), intent(in)  :: LSsink_bottom
     logical , intent(in)  :: enable_coriolis
 
-    real(RP) :: zovzb, d2r
-    real(RP) :: cr, xi, ar, yc, xz
+    real(RP) :: d2r
     integer :: i, j, k
 
 #ifdef DEBUG
@@ -313,8 +289,7 @@ contains
 #endif
 
     ! coriolis parameter
-    if( ATMOS_DYN_LS_FLG == 0 ) then  ! default
-     if ( enable_coriolis ) then
+    if ( enable_coriolis ) then
        d2r = PI / 180.0_RP
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
@@ -322,31 +297,13 @@ contains
           corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) )
        enddo
        enddo
-     else
+    else
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = 1, JA
        do i = 1, IA
           corioli(1,i,j) = 0.0_RP
        enddo
        enddo
-     endif
-       FLAG_F_force = 0.0_RP
-    elseif( ATMOS_DYN_LS_FLG == 1 ) then ! DYCOMS
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = 1, JA
-       do i = 1, IA
-          corioli(1,i,j) = 7.6E-5_RP
-       enddo
-       enddo
-       FLAG_F_force = 1.0_RP
-    elseif( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = 1, JA
-       do i = 1, IA
-          corioli(1,i,j) = 4.5E-5_RP
-       enddo
-       enddo
-       FLAG_F_force = 1.0_RP
     endif
 
 
@@ -492,126 +449,6 @@ contains
 
     end if
 
-
-    !--- For LS sink
-    if( ATMOS_DYN_LS_FLG == 0 ) then  ! default
-
-          MOMZ_LS(:,:) = 0.0_RP
-          MOMZ_LS_DZ(:,:) = 0.0_RP
-          MOMZ_LS_FLG( : ) = 0.0_RP
-          QV_LS(:,:) = 0.0_RP
-          Q_rate( :,:,:,: ) = 0.0_RP
-          V_GEOS(:) = 0.0_RP
-          U_GEOS(:) = 0.0_RP
-
-    elseif( ATMOS_DYN_LS_FLG == 1 ) then ! DYCOMS
-
-     do k = KS, KE
-       if ( CZ(k) < 0.0_RP ) then
-          MOMZ_LS(k,1) = 0.0_RP
-          MOMZ_LS_DZ(k,1) = 0.0_RP
-       else if ( CZ(k) < LSsink_bottom ) then
-          zovzb = CZ(k) / LSsink_bottom
-          MOMZ_LS(k,1) = - 0.5_RP * LSsink_D * LSsink_bottom &
-               * ( zovzb - sin(PI*zovzb)/PI )
-          MOMZ_LS_DZ(k,1) = - 0.5_RP * LSsink_d &
-               * ( 1.0_RP - cos(PI*zovzb) )
-       else
-          MOMZ_LS(k,1) = - LSsink_D * ( CZ(k) - LSsink_bottom * 0.5_RP )
-          MOMZ_LS_DZ(k,1) = - LSsink_D
-      end if
-     enddo
-     do k = KS-1, KE
-       if ( FZ(k) < 0.0_RP ) then
-          MOMZ_LS(k,2) = 0.0_RP
-          MOMZ_LS_DZ(k,2) = 0.0_RP
-       else if ( FZ(k) < LSsink_bottom ) then
-          zovzb = FZ(k) / LSsink_bottom
-          MOMZ_LS(k,2) = - 0.5_RP * LSsink_D * LSsink_bottom &
-               * ( zovzb - sin(PI*zovzb)/PI )
-          MOMZ_LS_DZ(k,2) = - 0.5_RP * LSsink_d &
-               * ( 1.0_RP - cos(PI*zovzb) )
-       else
-          MOMZ_LS(k,2) = - LSsink_D * ( FZ(k) - LSsink_bottom * 0.5_RP )
-          MOMZ_LS_DZ(k,2) = - LSsink_D
-      end if
-     enddo
-
-     do k = KS-1, KE
-       V_GEOS(k) = -5.5_RP
-       U_GEOS(k) =  7.0_RP
-     enddo
-
-     MOMZ_LS_FLG( : ) = 1.0_RP
-     QV_LS(:,:) = 0.0_RP
-     Q_rate( :,:,:,: ) = 0.0_RP
-
-    elseif( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
-
-     do k = KS, KE
-      if ( CZ(k) < 0.0_RP ) then
-          MOMZ_LS(k,1) = 0.0_RP
-          MOMZ_LS_DZ(k,1) = 0.0_RP
-      else if( CZ(k) < 2000.0_RP ) then
-          MOMZ_LS(k,1) = - 5.0E-3_RP / 2260.0_RP * CZ(k)
-          MOMZ_LS_DZ(k,1) = - 5.0E-3_RP / 2260.0_RP
-       !--- fitted by circle
-      else if( CZ(k) < 2520.0_RP ) then
-          xi   = 2260.0_RP
-          ar   = -5.0E-3_RP/xi
-          cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
-          xz   = CZ(k)
-          yc   = ar * xi + cr
-          MOMZ_LS(k,1) = ar * xi + cr  &
-                       - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
-          MOMZ_LS_DZ(k,1) = - ( xz - 2520._RP )/( MOMZ_LS(k,1) - yc )
-      else
-          MOMZ_LS(k,1) = - 5.0E-3_RP
-          MOMZ_LS_DZ(k,1) = 0.0_RP
-      end if
-
-      if( CZ(k) < 2980.0_RP ) then
-        QV_LS(k,1) = ( -1.0_RP + 1.3456_RP / 2980.0_RP  &
-                   * CZ(k) ) * 1.E-3_RP / 86400.0_RP  !--- [kg/kg/s]
-      else
-        QV_LS(k,1) = 4.0_RP * 1.E-6_RP * 1.E-3_RP !--- [kg/kg/s]
-      endif
-     enddo
-
-     do k = KS-1, KE
-      if ( FZ(k) < 0.0_RP ) then
-          MOMZ_LS(k,2) = 0.0_RP
-          MOMZ_LS_DZ(k,2) = 0.0_RP
-      else if( FZ(k) < 2000.0_RP ) then
-          MOMZ_LS(k,2) = - 5.0E-3_RP / 2260.0_RP * FZ(k)
-          MOMZ_LS_DZ(k,2) = - 5.0E-3_RP / 2260.0_RP
-      else if( FZ(k) < 2520.0_RP ) then
-          xi   = 2260.0_RP
-          ar   = -5.0E-3_RP/xi
-          cr   = ar* ( 2520.0_RP-xi )/( 1.0_RP - sqrt( 1.0_RP + ar*ar ) )
-          xz   = FZ(k)
-          yc   = ar * xi + cr
-          MOMZ_LS(k,2) = ar * xi + cr  &
-                       - sqrt( cr*cr - ( xz - xi - cr / ar * ( 1.0_RP - sqrt( 1.0_RP + ar*ar ) ) )**2.0_RP )
-          MOMZ_LS_DZ(k,2) = - ( xz - 2520._RP )/( MOMZ_LS(k,2) - yc )
-      else
-          MOMZ_LS(k,2) = - 5.0E-3_RP
-          MOMZ_LS_DZ(k,2) = 0.0_RP
-      end if
-     enddo
-
-     do k = KS-1, KE
-       V_GEOS(k) = -3.8_RP
-       U_GEOS(k) = -9.9_RP + 2.0E-3_RP * CZ(k)
-     enddo
-
-     MOMZ_LS_FLG( : ) = 0.0_RP
-     MOMZ_LS_FLG( I_RHOT ) = 1.0_RP
-     MOMZ_LS_FLG( I_QTRC ) = 1.0_RP
-     Q_rate( :,:,:,: ) = 0.0_RP
-
-    endif
-
     return
   end subroutine ATMOS_DYN_init
 
@@ -699,7 +536,6 @@ contains
          DIFF4, ATMOS_DYN_numerical_diff_order,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
-         MOMZ_LS, MOMZ_LS_DZ,                       & ! (in)
          ATMOS_DYN_FLAG_FCT_rho,                    & ! (in)
          ATMOS_DYN_FLAG_FCT_momentum,               & ! (in)
          ATMOS_DYN_FLAG_FCT_T,                      & ! (in)
@@ -727,7 +563,7 @@ contains
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv, DIFF4, ND_ORDER, & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
-         divdmp_coef, MOMZ_LS, MOMZ_LS_DZ,            & ! (in)
+         divdmp_coef,                                 & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
          USE_AVERAGE,                                 & ! (in)
          DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
@@ -814,8 +650,6 @@ contains
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
     real(RP), intent(in)    :: divdmp_coef
-    real(RP), intent(in)    :: MOMZ_LS(KA,2)
-    real(RP), intent(in)    :: MOMZ_LS_DZ(KA,2)
 
     logical,  intent(in)    :: FLAG_FCT_RHO
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
@@ -868,7 +702,6 @@ contains
     real(RP) :: dtrk
     integer :: nd_order4, no
     integer :: i, j, k, iq, rko, step
-    real(RP) :: ratesum
 
 
 #ifdef DEBUG
@@ -1150,34 +983,28 @@ call TIME_rapstart   ('DYN-set')
        end do
        end do
 
-       !--- prepare rayleigh damping coefficient and large scale sinking
+       !--- prepare rayleigh damping coefficient
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           do k = KS, KE-1
              MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) &
-               + 2.0_RP * MOMZ_LS_DZ(k,2) * MOMZ_LS_FLG( I_MOMZ ) * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) ) &  ! part of large scale sinking
                - DAMP_alpha(k,i,j,I_BND_VELZ) &
                  * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )             ! rayleigh damping
           enddo
           MOMZ_t(KE,i,j) = 0.0_RP
           do k = KS, KE
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) &
-               - 0.5_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) * V_GEOS(k) * FLAG_F_force &
-               + 2.0_RP * MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_MOMX ) * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) ) & ! part of large scale sinking
              - DAMP_alpha(k,i,j,I_BND_VELX) &
                   * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )         ! rayleigh damping
           enddo
           do k = KS, KE
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) &
-               + 0.5_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i,j+1) ) * U_GEOS(k) * FLAG_F_force &
-               + 2.0_RP * MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_MOMY ) * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) ) & ! part of large scale sinking
                - DAMP_alpha(k,i,j,I_BND_VELY) &
                   * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )           ! rayleigh damping
           enddo
           do k = KS, KE
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) &
-               + MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_RHOT ) * POTT(k,i,j) & ! part of large scale sinking
                - DAMP_alpha(k,i,j,I_BND_POTT) &
                   * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) ) ! rayleigh damping
           enddo
@@ -2261,7 +2088,6 @@ call TIME_rapstart   ('DYN-rk3')
                  DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
-                 MOMZ_LS, MOMZ_LS_DZ, MOMZ_LS_FLG,                  & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CDZ, FDZ, FDX, FDY,                                & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
@@ -2294,7 +2120,6 @@ call TIME_rapstart   ('DYN-rk3')
                  DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
-                 MOMZ_LS, MOMZ_LS_DZ, MOMZ_LS_FLG,                  & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CDZ, FDZ, FDX, FDY,                                & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
@@ -2327,7 +2152,6 @@ call TIME_rapstart   ('DYN-rk3')
                  DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
                  Rtot, CVtot, CORIOLI,                              & ! (in)
                  num_diff, divdmp_coef,                             & ! (in)
-                 MOMZ_LS, MOMZ_LS_DZ, MOMZ_LS_FLG,                  & ! (in)
                  FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
                  CDZ, FDZ, FDX, FDY,                                & ! (in)
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
@@ -2484,35 +2308,6 @@ call TIME_rapstart   ('DYN-fct')
 
 
 #ifndef DRY
-    !##### advection of scalar quantity #####
-    if( ATMOS_DYN_LS_FLG == 2 ) then ! RICO
-
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-         ratesum = 0.0_RP
-         do iq = 1, QQA
-           ratesum = ratesum + QTRC(k,i,j,iq)
-         enddo
-         do iq = 1, QQA
-            Q_rate( k,i,j,iq ) = QTRC(k,i,j,iq) / ratesum
-         enddo
-         do iq = QQA+1, QA
-            Q_rate( k,i,j,iq ) = 0.0_RP
-         enddo
-       enddo
-       enddo
-       enddo
-
-    enddo
-    enddo
-
-    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -2882,15 +2677,11 @@ call TIME_rapstart   ('DYN-fct')
           ! just below the top boundary
           qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                             - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
-
-          qflx_lo(KE  ,i,j,ZDIR) = &
-               ( MOMZ_LS(KE-1,2) + MOMZ_LS_DZ(KE,1) * CDZ(KE) ) * QTRC(KE,i,j,iq) * MOMZ_LS_FLG( I_QTRC )
+          qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
 
           qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                  + num_diff(KE-1,i,j,1,ZDIR)
-          qflx_hi(KE  ,i,j,ZDIR) = &
-               0.5_RP * MOMZ_LS(KE-1,2) * MOMZ_LS_FLG( I_QTRC )* ( QTRC(KE,i,j,iq) + QTRC(KE-1,i,j,iq) ) &
-             + MOMZ_LS_DZ(KE,1) * MOMZ_LS_FLG( I_QTRC )* CDZ(KE) * QTRC(KE,i,j,iq)
+          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -2958,19 +2749,6 @@ call TIME_rapstart   ('DYN-fct')
        do i = IIS-1, IIE+1
        do k = KS, KE
           RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-           QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) &
-                + MOMZ_LS_DZ(k,1) * MOMZ_LS_FLG( I_QTRC ) * QTRC(k,i,j,iq) &
-                         + QV_LS(k,1) * Q_rate( k,i,j,iq ) ! part of large scale sinking
        enddo
        enddo
        enddo
