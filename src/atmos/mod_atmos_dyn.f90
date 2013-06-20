@@ -923,7 +923,6 @@ contains
     enddo
 
 
-
     if ( USE_AVERAGE ) then
 
 !OCL XFILL
@@ -1013,6 +1012,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -1023,58 +1023,111 @@ contains
     enddo
 
 #ifndef DRY
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * dens_s(k,i,j)
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          QDRY(k,i,j) = 1.0_RP
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+       do iq = QQS, QQE
+          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-2, JJE+2
+       do i = IIS-2, IIE+2
+       do k = KS, KE
+          CVtot(k,i,j) = CVdry*QDRY(k,i,j)
+          do iq = QQS, QQE
+             CVtot(k,i,j) = CVtot(k,i,j) + AQ_CV(iq)*QTRC(k,i,j,iq)
+          enddo
+       enddo
+       enddo
+       enddo
+
     enddo
     enddo
-    enddo
-#ifdef DEBUG
-    k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE
-       QDRY(k,i,j) = 1.0_RP
-    enddo
-    enddo
-    enddo
-    !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE
-    do iq = QQS, QQE
-       QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-    enddo
-    enddo
-    enddo
-    enddo
-#endif
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE
-       Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-    enddo
-    enddo
-    enddo
-#ifndef DRY
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS+1, KE
-       CVtot(k,i,j) = CVdry*QDRY(k,i,j)
-       do iq = QQS, QQE
-          CVtot(k,i,j) = CVtot(k,i,j) + AQ_CV(iq)*QTRC(k,i,j,iq)
+    if ( DIFF4 == 0.0_RP ) then
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
        enddo
-    enddo
-    enddo
-    enddo
-#endif
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS-1, IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE
+       do i = IS  , IE+1
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS-1, JE
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
+          num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JS  , JE+1
+       do i = IS  , IE
+       do k = KS  , KE
+          num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    end if
+
 
 
     do step = 1, NSTEP_ATMOS_DYN
@@ -1088,52 +1141,6 @@ call TIME_rapstart   ('DYN-set')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-#ifndef DRY
-       ! Gas constant
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          QTRC(KS,i,j,I_QV) = RHOQ(KS,i,j) / DENS(KS,i,j)
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          QDRY(KS,i,j) = 1.0_RP
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(3)
-       do iq = QQS, QQE
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          QDRY(KS,i,j) = QDRY(KS,i,j) - QTRC(KS,i,j,iq)
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          Rtot(KS,i,j) = Rdry*QDRY(KS,i,j) + Rvap*QTRC(KS,i,j,I_QV)
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          CVtot(KS,i,j) = CVdry*QDRY(KS,i,j)
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-       do iq = QQS, QQE
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          CVtot(KS,i,j) = CVtot(KS,i,j) + AQ_CV(iq)*QTRC(KS,i,j,iq)
-       enddo
-       enddo
-       enddo
-#endif
-
-!OCL XFILL
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1177,28 +1184,6 @@ call TIME_rapstart   ('DYN-set')
        enddo
        enddo
 
-#ifndef DRY
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
-          QTRC_t(k,i,j,I_QV) = QTRC_tp(k,i,j,I_QV) &
-               - DAMP_alpha(k,i,j,I_BND_QV) &
-               * ( QTRC(k,i,j,I_QV) - DAMP_var(k,i,j,I_BND_QV) ) * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       do iq = I_QV+1, QA
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          QTRC_t(k,i,j,iq) = QTRC_tp(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-#endif
 
     end do
     end do
@@ -2232,65 +2217,7 @@ call TIME_rapstart   ('DYN-set')
        call COMM_wait( num_diff(:,:,:,I_RHOT,XDIR), 14 )
        call COMM_wait( num_diff(:,:,:,I_RHOT,YDIR), 15 )
 
-
-
-    else
-!OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JS  , JE
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JS  , JE
-       do i = IS-1, IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JS  , JE
-       do i = IS  , IE+1
-       do k = KS  , KE
-          num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JS-1, JE
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JS  , JE+1
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-    end if
+    end if ! DIFF4 /= 0.0_RP
 
     call COMM_vars8( DENS_t(:,:,:), 1 )
     call COMM_vars8( MOMZ_t(:,:,:), 2 )
@@ -2587,6 +2514,35 @@ call TIME_rapstart   ('DYN-fct')
 
     endif
 
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+       do k = KS, KE
+          QTRC_t(k,i,j,I_QV) = QTRC_tp(k,i,j,I_QV) &
+               - DAMP_alpha(k,i,j,I_BND_QV) &
+               * ( QTRC(k,i,j,I_QV) - DAMP_var(k,i,j,I_BND_QV) ) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       do iq = I_QV+1, QA
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          QTRC_t(k,i,j,iq) = QTRC_tp(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
+
+    enddo
+    enddo
+
+
     do iq = 1, QA
 
        if ( DIFF4 .ne. 0.0_RP ) then
@@ -2598,7 +2554,14 @@ call TIME_rapstart   ('DYN-fct')
 
 
           if ( iq == I_QV ) then
-             ! qv
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j  = JJS-2, JJE+2
+             do i  = IIS-2, IIE+2
+             do k = KS, KE
+                qv_diff(k,i,j) = QTRC(k,i,j,I_QV) - REF_qv  (k)
+             enddo
+             enddo
+             enddo
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
@@ -2990,19 +2953,17 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       if (iq .ne. I_QV) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS, KE
-             RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
-          enddo
-          enddo
-          enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+       do k = KS, KE
+          RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
+       enddo
+       enddo
+       enddo
 #ifdef DEBUG
-          k = IUNDEF; i = IUNDEF; j = IUNDEF
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       end if
 
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
@@ -3037,35 +2998,18 @@ call TIME_rapstart   ('DYN-fct')
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          RHOQ(k,i,j) = RHOQ(k,i,j) &
+          QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
               + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
                               - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                             + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
                               - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                             + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
-                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                          + QTRC_t(k,i,j,iq) &
+                        ) ) / DENS(k,i,j)
        end do
        end do
        end do
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOQ(k,i,j) = RHOQ(k,i,j) + QTRC_t(k,i,j,iq) * DTSEC
-       end do
-       end do
-       end do
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          QTRC(k,i,j,iq) = RHOQ(k,i,j) / DENS(k,i,j)
-       end do
-       end do
-       end do
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
 
     enddo
     enddo
