@@ -201,8 +201,8 @@ contains
           phi_lo(k,i,j) = phi_in(k,i,j) &
                + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                             + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                            + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) &
-                          + fct_dt(k,i,j) )
+                            + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
+!                          + fct_dt(k,i,j) )
        enddo
        enddo
        enddo
