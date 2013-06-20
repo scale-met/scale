@@ -102,11 +102,17 @@ module mod_atmos_vars
   real(RP), public, save :: ENGK(KA,IA,JA)    ! kinetic   energy [J/m3]
   real(RP), public, save :: ENGI(KA,IA,JA)    ! internal  energy [J/m3]
 
-  integer,           public, save :: I_DENS = 1
-  integer,           public, save :: I_MOMZ = 2
-  integer,           public, save :: I_MOMX = 3
-  integer,           public, save :: I_MOMY = 4
-  integer,           public, save :: I_RHOT = 5
+  integer, public, parameter :: ZDIR = 1
+  integer, public, parameter :: XDIR = 2
+  integer, public, parameter :: YDIR = 3
+
+  integer, public, parameter :: I_DENS = 1
+  integer, public, parameter :: I_MOMZ = 2
+  integer, public, parameter :: I_MOMX = 3
+  integer, public, parameter :: I_MOMY = 4
+  integer, public, parameter :: I_RHOT = 5
+  integer, public, parameter :: I_QTRC = 6
+
   character(len=16), public, save :: AP_NAME(5)
   character(len=64), public, save :: AP_DESC(5)
   character(len=16), public, save :: AP_UNIT(5)

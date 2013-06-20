@@ -42,17 +42,6 @@ module mod_atmos_dyn_common
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer, public, parameter :: ZDIR = 1
-  integer, public, parameter :: XDIR = 2
-  integer, public, parameter :: YDIR = 3
-
-  integer, public, parameter :: I_DENS = 1
-  integer, public, parameter :: I_MOMZ = 2
-  integer, public, parameter :: I_MOMX = 3
-  integer, public, parameter :: I_MOMY = 4
-  integer, public, parameter :: I_RHOT = 5
-  integer, public, parameter :: I_QTRC = 6
-
   ! advection settings
   real(RP), public, parameter :: FACT_N =   7.0_RP / 12.0_RP !  7/12: fourth, 1: second
   real(RP), public, parameter :: FACT_F = - 1.0_RP / 12.0_RP ! -1/12: fourth, 0: second
@@ -79,6 +68,10 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use mod_atmos_vars, only: &
+       ZDIR, &
+       XDIR, &
+       YDIR
     implicit none
 
     real(RP), intent(out) :: qflx_anti(KA,IA,JA,3)

@@ -16,6 +16,7 @@ include $(TOPDIR)/src/Mkinclude
 # for build
 index      = 200x8x8
 precision  = real8
+dynamics   = heve
 tracer     = sn13
 sfcflx     = const
 turbulence = smg
@@ -27,7 +28,8 @@ INITCONF  = init.conf
 RUNCONF   = run.conf
 TPROC     = 6
 
-
+# src files
+ORG_SRCS = mod_atmos_phy_rd_dycoms2.f90 mod_user.f90
 
 all: buildlocal build 
 
@@ -36,10 +38,7 @@ include $(TESTDIR)/Makefile.common
 
 
 
-buildlocal: makedir $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90
-
-$(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90: $(CODE_DIR)/mod_atmos_phy_rd_dycoms2.f90
-	cp -f $< $@
+buildlocal: makedir
 
 analy: 
 	$(FC) $(FFLAGS) -L$(NETCDF_LIBS) -lnetcdff -lnetcdf -I$(NETCDF_INCLUDE) -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90
