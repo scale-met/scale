@@ -104,6 +104,7 @@ module mod_mkinit
   integer, public, parameter :: I_INTERPORATION       = 11
   integer, public, parameter :: I_RICO                = 12
 
+  integer  :: nccn_i       = 20
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -404,7 +405,6 @@ contains
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
     real(RP) :: rhoa         = 2.25E+03_RP
-    integer  :: nccn_i       = 20
     integer  :: nbin_i       = 33
 
     NAMELIST / PARAM_SBMAERO / &
