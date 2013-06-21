@@ -2893,55 +2893,6 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    else
-
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       DENS_av(k,i,j) = DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMZ_av(k,i,j) = MOMZ(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMX_av(k,i,j) = MOMX(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMY_av(k,i,j) = MOMY(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       RHOT_av(k,i,j) = RHOT(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    endif
-
 #ifndef DRY
     !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
     do iq = 1, QA
@@ -2954,6 +2905,8 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 #endif
+
+    endif
 
     return
   end subroutine ATMOS_DYN_main

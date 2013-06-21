@@ -57,12 +57,26 @@ module mod_atmos_vars
   !++ Public parameters & variables
   !
   ! prognostic variables
-  real(RP), public, save :: DENS(KA,IA,JA)    ! Density    [kg/m3]
-  real(RP), public, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
-  real(RP), public, save :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
-  real(RP), public, save :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
-  real(RP), public, save :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-  real(RP), public, save :: QTRC(KA,IA,JA,QA) ! ratio of mass of tracer to total mass[kg/kg]
+  real(RP), public, target :: DENS(KA,IA,JA)    ! Density    [kg/m3]
+  real(RP), public, target :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
+  real(RP), public, target :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
+  real(RP), public, target :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
+  real(RP), public, target :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
+  real(RP), public, target :: QTRC(KA,IA,JA,QA) ! ratio of mass of tracer to total mass[kg/kg]
+
+  real(RP), public, target :: DENS_avw(KA,IA,JA)
+  real(RP), public, target :: MOMZ_avw(KA,IA,JA)
+  real(RP), public, target :: MOMX_avw(KA,IA,JA)
+  real(RP), public, target :: MOMY_avw(KA,IA,JA)
+  real(RP), public, target :: RHOT_avw(KA,IA,JA)
+  real(RP), public, target :: QTRC_avw(KA,IA,JA,QA)
+
+  real(RP), public, pointer :: DENS_av(:,:,:)
+  real(RP), public, pointer :: MOMZ_av(:,:,:)
+  real(RP), public, pointer :: MOMX_av(:,:,:)
+  real(RP), public, pointer :: MOMY_av(:,:,:)
+  real(RP), public, pointer :: RHOT_av(:,:,:)
+  real(RP), public, pointer :: QTRC_av(:,:,:,:)
 
   ! tendency by physical processes
   real(RP), public, save :: DENS_tp(KA,IA,JA)
@@ -71,13 +85,6 @@ module mod_atmos_vars
   real(RP), public, save :: MOMY_tp(KA,IA,JA)
   real(RP), public, save :: RHOT_tp(KA,IA,JA)
   real(RP), public, save :: QTRC_tp(KA,IA,JA,QA)
-
-  real(RP), public, save :: DENS_av(KA,IA,JA)
-  real(RP), public, save :: MOMZ_av(KA,IA,JA)
-  real(RP), public, save :: MOMX_av(KA,IA,JA)
-  real(RP), public, save :: MOMY_av(KA,IA,JA)
-  real(RP), public, save :: RHOT_av(KA,IA,JA)
-  real(RP), public, save :: QTRC_av(KA,IA,JA,QA)
 
   ! diagnostic variables, defined at the cell center
   real(RP), public, save :: VELZ(KA,IA,JA)    ! velocity w [m/s]
@@ -349,6 +356,27 @@ contains
        ATMOS_sw_check = .false.
     endif
     if( IO_L ) write(IO_FID_LOG,*)
+
+
+    if ( ATMOS_USE_AVERAGE ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : YES'
+       DENS_av => DENS_avw
+       MOMZ_av => MOMZ_avw
+       MOMX_av => MOMX_avw
+       MOMY_av => MOMY_avw
+       RHOT_av => RHOT_avw
+       QTRC_av => QTRC_avw
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : NO'
+       DENS_av => DENS
+       MOMZ_av => MOMZ
+       MOMX_av => MOMX
+       MOMY_av => MOMY
+       RHOT_av => RHOT
+       QTRC_av => QTRC
+    end if
+
+
 
     AP_HIST_id    (:) = -1
     AQ_HIST_id    (:) = -1
@@ -622,12 +650,20 @@ contains
 
     call ATMOS_vars_total
 
-    DENS_av(:,:,:) = DENS(:,:,:)
-    MOMZ_av(:,:,:) = MOMZ(:,:,:)
-    MOMX_av(:,:,:) = MOMX(:,:,:)
-    MOMY_av(:,:,:) = MOMY(:,:,:)
-    RHOT_av(:,:,:) = RHOT(:,:,:)
-    QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+    if ( ATMOS_USE_AVERAGE ) then
+!OCL XFILL
+       DENS_av(:,:,:) = DENS(:,:,:)
+!OCL XFILL
+       MOMZ_av(:,:,:) = MOMZ(:,:,:)
+!OCL XFILL
+       MOMX_av(:,:,:) = MOMX(:,:,:)
+!OCL XFILL
+       MOMY_av(:,:,:) = MOMY(:,:,:)
+!OCL XFILL
+       RHOT_av(:,:,:) = RHOT(:,:,:)
+!OCL XFILL
+       QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+    end if
 
     ! first monitor
     call MONIT_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
