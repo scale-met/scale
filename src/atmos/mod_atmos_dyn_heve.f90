@@ -1851,10 +1851,10 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-#ifndef NO_FCT_DYN
     enddo
     enddo
 
+#ifndef NO_FCT_DYN
     if ( FLAG_FCT_T ) then
        call ATMOS_DYN_fct( &
             qflx_anti,              & ! (out)
