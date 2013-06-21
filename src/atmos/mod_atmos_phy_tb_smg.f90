@@ -86,7 +86,7 @@ module mod_atmos_phy_tb
   real(RP), private,      save :: nu_factX (KA,IA,JA) !              (x edge)
   real(RP), private,      save :: nu_factY (KA,IA,JA) !              (y edge)
 
-  real(RP), private, parameter :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, save      :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
   real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
   real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
   real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
@@ -107,6 +107,8 @@ module mod_atmos_phy_tb
 contains
 
   subroutine ATMOS_PHY_TB_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
     use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -122,7 +124,13 @@ contains
        ATMOS_TYPE_PHY_TB
     implicit none
 
+    real(RP) :: ATMOS_PHY_TB_SMG_Cs
+
+    NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
+         ATMOS_PHY_TB_SMG_Cs
+
     integer :: k, i, j
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -133,6 +141,22 @@ contains
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
        call PRC_MPIstop
     endif
+
+    ATMOS_PHY_TB_SMG_Cs = Cs
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_SMG)
+
+    Cs = ATMOS_PHY_TB_SMG_Cs
+
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
