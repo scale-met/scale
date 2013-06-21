@@ -190,8 +190,10 @@ contains
     real(RP) :: qflx_lo  (KA,IA,JA,3)
     real(RP) :: qflx_anti(KA,IA,JA,3)
 
+#ifndef NO_FCT_DYN
     real(RP), pointer :: org(:,:,:)
     real(RP), target  :: work(KA,IA,JA)
+#endif
 
     real(RP) :: vel
     integer :: IIS, IIE, JJS, JJE
@@ -210,9 +212,12 @@ contains
     qflx_lo(KS:,:,:,:) = UNDEF
     qflx_hi(KS:,:,:,:) = UNDEF
 
+#ifndef NO_FCT_DYN
     work(:,:,:) = UNDEF
 #endif
+#endif
 
+#ifndef NO_FCT_DYN
     if ( FLAG_FCT_RHO ) then
        if ( rko == RK ) then
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -229,6 +234,7 @@ contains
           org => DENS0
        end if
     end if
+#endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -293,6 +299,8 @@ contains
        enddo
        enddo
 
+#ifndef NO_FCT_DYN
+
     enddo
     enddo
 
@@ -314,6 +322,7 @@ contains
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
+#endif
        ! pressure, pott. temp.
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE+1
@@ -372,6 +381,7 @@ contains
 
        !##### continuity equation #####
 
+#ifndef NO_FCT_DYN
        ! monotonic flux
        if ( FLAG_FCT_RHO ) then
           ! at (x, y, interface)
@@ -436,6 +446,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        endif
+#endif
 
        ! at (x, y, interface)
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -541,6 +552,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+#ifndef NO_FCT_DYN
     enddo
     enddo
 
@@ -766,6 +778,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        end if
+#endif
 
        ! high order flux
        ! at (x, y, layer)
@@ -931,6 +944,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+#ifndef NO_FCT_DYN
     enddo
     enddo
 
@@ -1085,6 +1099,8 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        end if
+#endif
+
        ! high order flux
        ! at (u, y, interface)
        !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
@@ -1243,6 +1259,7 @@ contains
 #endif
 
 
+#ifndef NO_FCT_DYN
     enddo
     enddo
 
@@ -1394,6 +1411,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        end if
+#endif
 
        ! high order flux
        ! at (x, v, interface)
@@ -1553,6 +1571,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+#ifndef NO_FCT_DYN
     enddo
     enddo
 
@@ -1708,6 +1727,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        end if
+#endif
 
        ! at (x, y, interface)
        !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
@@ -1830,6 +1850,8 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
+#ifndef NO_FCT_DYN
     enddo
     enddo
 
@@ -1878,6 +1900,7 @@ contains
        qflx_anti(:,:,:,:) = UNDEF
 #endif
     end if
+#endif
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
 #endif
