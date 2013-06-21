@@ -661,7 +661,7 @@ contains
        enddo
        enddo
 
-       if( nccn /= 0 ) then
+       if( nccn_i /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1036,7 +1036,7 @@ contains
        enddo
        enddo
 
-       if( nccn /= 0 ) then
+       if( nccn_i /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1527,7 +1527,7 @@ contains
        enddo
        enddo
 
-       if( nccn /= 0 ) then
+       if( nccn_i /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1716,7 +1716,7 @@ contains
        enddo
        enddo
 
-       if( nccn /= 0 ) then
+       if( nccn_i /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1970,7 +1970,7 @@ contains
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
 
          !--- for aerosol
-         if( nccn /= 0 ) then
+         if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
@@ -2210,7 +2210,7 @@ contains
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
 
           !--- for aerosol
-         if( nccn /= 0 ) then
+         if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
@@ -2419,7 +2419,7 @@ contains
              QTRC(k,i,j,iq) = 0.0_RP
           enddo
           !--- for aerosol
-          if( nccn /= 0 ) then
+          if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
