@@ -408,14 +408,14 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-    do k = KS, IE-1
+    do k = KS, KE-1
        MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) + MOMZ_t(k,i,j)
     end do
     end do
     end do
     do j = JS, JE
     do i = IS, IE
-    do k = KS, IE
+    do k = KS, KE
        MOMX_tp(k,i,j) = MOMX_tp(k,i,j) + MOMX_t(k,i,j)
        MOMY_tp(k,i,j) = MOMY_tp(k,i,j) + MOMY_t(k,i,j)
        RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
@@ -426,7 +426,7 @@ contains
     do iq = 1, QA
     do j = JS, JE
     do i = IS, IE
-    do k = KS, IE
+    do k = KS, KE
        QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) + QTRC_t(k,i,j,iq)
     end do
     end do
