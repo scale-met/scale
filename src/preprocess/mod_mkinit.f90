@@ -104,7 +104,6 @@ module mod_mkinit
   integer, public, parameter :: I_INTERPORATION       = 11
   integer, public, parameter :: I_RICO                = 12
 
-  integer  :: nccn_i       = 20
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -173,7 +172,7 @@ contains
        flg_bin
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -191,10 +190,20 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
-  
+ 
+    !--- Initiate QTRC 
+    do iq = 2,  QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       QTRC(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
     if ( flg_bin ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
-
        call SBMAERO_setup
     endif
 
@@ -406,6 +415,7 @@ contains
     real(RP) :: A_ALPHA      = 3.0_RP
     real(RP) :: rhoa         = 2.25E+03_RP
     integer  :: nbin_i       = 33
+    integer  :: nccn_i       = 20
 
     NAMELIST / PARAM_SBMAERO / &
        F0_AERO,      &
@@ -418,7 +428,7 @@ contains
        nbin_i
 
     integer :: ierr
-    integer :: iq
+    integer :: iq, i, j, k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -453,6 +463,30 @@ contains
     do iq = 1, nccn_i
       gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, rhoa )*exp( xactr(iq) )
     enddo
+
+    !--- Hydrometeor is zero at initial time for Bin method
+    do iq = 2,  QQA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+        QTRC(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+    !-- Aerosol distribution
+    if( nccn_i /= 0 ) then
+     do iq = QQA+1, QA
+     do j  = JS, JE
+     do i  = IS, IE
+     do k  = KS, KE
+       QTRC(k,i,j,iq) = gan(iq-QQA) !/ DENS(k,i,j)
+     enddo
+     enddo
+     enddo
+     enddo
+    endif
 
     deallocate( xactr )
     deallocate( xabnd )
@@ -649,42 +683,6 @@ contains
     enddo
     enddo
     enddo
-
-    if ( flg_bin ) then
-       do iq = 2,  QQA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-
-       if( nccn_i /= 0 ) then
-       do iq = QQA+1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       enddo
-       endif
-    else
-       if ( QA >= 2 .AND. QA <= 11 ) then
-          do iq = 2,  QA
-          do j  = JS, JE
-          do i  = IS, IE
-          do k  = KS, KE
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-          enddo
-          enddo
-          enddo
-       endif
-    endif
 
     return
   end subroutine MKINIT_planestate
@@ -1024,40 +1022,6 @@ contains
     enddo
     enddo
     enddo
-
-    if ( flg_bin ) then
-       do iq = 2,  QQA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-
-       if( nccn_i /= 0 ) then
-       do iq = QQA+1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       enddo
-       endif
-    else
-       do iq = 2,  QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
 
     return
   end subroutine MKINIT_warmbubble
@@ -1516,40 +1480,6 @@ contains
     enddo
     enddo
 
-    if ( flg_bin ) then
-       do iq = 2,  QQA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-
-       if( nccn_i /= 0 ) then
-       do iq = QQA+1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       enddo
-       endif
-    else
-       do iq = 2,  QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
-
     return
   end subroutine MKINIT_supercell
 
@@ -1704,40 +1634,6 @@ contains
     enddo
     enddo
     enddo
-
-    if ( flg_bin ) then
-       do iq = 2,  QQA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-
-       if( nccn_i /= 0 ) then
-       do iq = QQA+1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       enddo
-       endif
-    else
-       do iq = 2,  QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC(k,i,j,iq) = 0.0_RP
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
 
     return
   end subroutine MKINIT_squallline
@@ -1953,28 +1849,14 @@ contains
     enddo
     enddo
 
-    do iq = 1, QA
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
     if ( flg_bin ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
-
-         !--- for aerosol
-         if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
-             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
           enddo
-         endif
        enddo
        enddo
        enddo
@@ -2192,29 +2074,15 @@ contains
     enddo
     enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
     if ( flg_bin ) then
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
-
-          !--- for aerosol
-         if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
-             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
           enddo
-         endif
        enddo
        enddo
        enddo
@@ -2396,16 +2264,6 @@ contains
     enddo
     enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
     call RANDOM_get(rndm) ! make random
     if ( flg_bin ) then
        do j = JS, JE
@@ -2414,16 +2272,9 @@ contains
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
                            + qc(k,i,j)
-
-          do iq = 2, QQA
-             QTRC(k,i,j,iq) = 0.0_RP
-          enddo
-          !--- for aerosol
-          if( nccn_i /= 0 ) then
           do iq = QQA+1, QA
-             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
           enddo
-          endif
        enddo
        enddo
        enddo
