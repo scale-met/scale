@@ -661,6 +661,7 @@ contains
        enddo
        enddo
 
+       if( nccn /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -670,6 +671,7 @@ contains
        enddo
        enddo
        enddo
+       endif
     else
        if ( QA >= 2 .AND. QA <= 11 ) then
           do iq = 2,  QA
@@ -1034,6 +1036,7 @@ contains
        enddo
        enddo
 
+       if( nccn /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1043,6 +1046,7 @@ contains
        enddo
        enddo
        enddo
+       endif
     else
        do iq = 2,  QA
        do j  = JS, JE
@@ -1523,6 +1527,7 @@ contains
        enddo
        enddo
 
+       if( nccn /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1532,6 +1537,7 @@ contains
        enddo
        enddo
        enddo
+       endif
     else
        do iq = 2,  QA
        do j  = JS, JE
@@ -1710,6 +1716,7 @@ contains
        enddo
        enddo
 
+       if( nccn /= 0 ) then
        do iq = QQA+1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -1719,6 +1726,7 @@ contains
        enddo
        enddo
        enddo
+       endif
     else
        do iq = 2,  QA
        do j  = JS, JE
@@ -1961,10 +1969,12 @@ contains
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
 
-          !--- for aerosol
+         !--- for aerosol
+         if( nccn /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
+         endif
        enddo
        enddo
        enddo
@@ -2200,9 +2210,11 @@ contains
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
 
           !--- for aerosol
+         if( nccn /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
+         endif
        enddo
        enddo
        enddo
@@ -2407,9 +2419,11 @@ contains
              QTRC(k,i,j,iq) = 0.0_RP
           enddo
           !--- for aerosol
+          if( nccn /= 0 ) then
           do iq = QQA+1, QA
              QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
           enddo
+          endif
        enddo
        enddo
        enddo

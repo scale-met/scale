@@ -5,9 +5,9 @@
    !
    !------------------------------------------------------------
   integer, private, parameter :: nbin =  33
-  integer, private, parameter :: nccn =  20
+  integer, private, parameter :: nccn =  0
   integer, private, parameter :: nspc =   7
-  integer, private, parameter :: QA   = 252
+  integer, private, parameter :: QA   = 232
 
   integer, private, parameter :: I_QV =  1
   integer, private, parameter :: I_QC =  2
@@ -266,26 +266,6 @@
   data AQ_NAME(230)  / 'Qh31' /
   data AQ_NAME(231)  / 'Qh32' /
   data AQ_NAME(232)  / 'Qh33' /
-  data AQ_NAME(233)  / 'Qa1' /
-  data AQ_NAME(234)  / 'Qa2' /
-  data AQ_NAME(235)  / 'Qa3' /
-  data AQ_NAME(236)  / 'Qa4' /
-  data AQ_NAME(237)  / 'Qa5' /
-  data AQ_NAME(238)  / 'Qa6' /
-  data AQ_NAME(239)  / 'Qa7' /
-  data AQ_NAME(240)  / 'Qa8' /
-  data AQ_NAME(241)  / 'Qa9' /
-  data AQ_NAME(242)  / 'Qa10' /
-  data AQ_NAME(243)  / 'Qa11' /
-  data AQ_NAME(244)  / 'Qa12' /
-  data AQ_NAME(245)  / 'Qa13' /
-  data AQ_NAME(246)  / 'Qa14' /
-  data AQ_NAME(247)  / 'Qa15' /
-  data AQ_NAME(248)  / 'Qa16' /
-  data AQ_NAME(249)  / 'Qa17' /
-  data AQ_NAME(250)  / 'Qa18' /
-  data AQ_NAME(251)  / 'Qa19' /
-  data AQ_NAME(252)  / 'Qa20' /
 
   data AQ_DESC(  1)  / 'Water Vapor mixing ratio' /
   data AQ_DESC(  2)  / 'Mixing ratio of cloud bin1' /
@@ -519,26 +499,6 @@
   data AQ_DESC(230)  / 'Mixing ratio of hail  bin31' /
   data AQ_DESC(231)  / 'Mixing ratio of hail  bin32' /
   data AQ_DESC(232)  / 'Mixing ratio of hail  bin33' /
-  data AQ_DESC(233)  / 'Mixing ratio of aerosol bin1' /
-  data AQ_DESC(234)  / 'Mixing ratio of aerosol bin2' /
-  data AQ_DESC(235)  / 'Mixing ratio of aerosol bin3' /
-  data AQ_DESC(236)  / 'Mixing ratio of aerosol bin4' /
-  data AQ_DESC(237)  / 'Mixing ratio of aerosol bin5' /
-  data AQ_DESC(238)  / 'Mixing ratio of aerosol bin6' /
-  data AQ_DESC(239)  / 'Mixing ratio of aerosol bin7' /
-  data AQ_DESC(240)  / 'Mixing ratio of aerosol bin8' /
-  data AQ_DESC(241)  / 'Mixing ratio of aerosol bin9' /
-  data AQ_DESC(242)  / 'Mixing ratio of aerosol bin10' /
-  data AQ_DESC(243)  / 'Mixing ratio of aerosol bin11' /
-  data AQ_DESC(244)  / 'Mixing ratio of aerosol bin12' /
-  data AQ_DESC(245)  / 'Mixing ratio of aerosol bin13' /
-  data AQ_DESC(246)  / 'Mixing ratio of aerosol bin14' /
-  data AQ_DESC(247)  / 'Mixing ratio of aerosol bin15' /
-  data AQ_DESC(248)  / 'Mixing ratio of aerosol bin16' /
-  data AQ_DESC(249)  / 'Mixing ratio of aerosol bin17' /
-  data AQ_DESC(250)  / 'Mixing ratio of aerosol bin18' /
-  data AQ_DESC(251)  / 'Mixing ratio of aerosol bin19' /
-  data AQ_DESC(252)  / 'Mixing ratio of aerosol bin20' /
 
   data AQ_UNIT(  1)  / 'kg/kg' /
   data AQ_UNIT(  2)  / 'kg/kg/unit logr' /
@@ -772,23 +732,3 @@
   data AQ_UNIT(230)  / 'kg/kg/unit logr' /
   data AQ_UNIT(231)  / 'kg/kg/unit logr' /
   data AQ_UNIT(232)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(233)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(234)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(235)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(236)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(237)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(238)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(239)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(240)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(241)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(242)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(243)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(244)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(245)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(246)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(247)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(248)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(249)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(250)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(251)  / 'kg/kg/unit logr' /
-  data AQ_UNIT(252)  / 'kg/kg/unit logr' /
