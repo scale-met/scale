@@ -134,6 +134,8 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_const, only: &
+       UNDEF => CONST_UNDEF
     use mod_calendar, only: &
        CALENDAR_date2daysec,    &
        CALENDAR_daysec2date,    &
@@ -142,33 +144,33 @@ contains
        CALENDAR_unit2sec
     implicit none
 
-    real(DP)                 :: TIME_DURATION              = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "DAY"
-    real(DP)                 :: TIME_DT                    = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "DAY"
+    real(DP)                 :: TIME_DURATION
+    character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "SEC"
+    real(DP)                 :: TIME_DT
+    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
 
-    real(DP)                 :: TIME_DT_ATMOS_DYN          = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "DAY"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_SF       = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = "DAY"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_TB       = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = "DAY"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_MP       = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = "DAY"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_RD       = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = "DAY"
-    real(DP)                 :: TIME_DT_ATMOS_RESTART      = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = "DAY"
+    real(DP)                 :: TIME_DT_ATMOS_DYN
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
+    real(DP)                 :: TIME_DT_ATMOS_PHY_SF
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = ""
+    real(DP)                 :: TIME_DT_ATMOS_PHY_TB
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = ""
+    real(DP)                 :: TIME_DT_ATMOS_PHY_MP
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
+    real(DP)                 :: TIME_DT_ATMOS_PHY_RD
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
+    real(DP)                 :: TIME_DT_ATMOS_RESTART
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = ""
 
-    real(DP)                 :: TIME_DT_OCEAN              = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = "DAY"
-    real(DP)                 :: TIME_DT_OCEAN_RESTART      = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = "DAY"
+    real(DP)                 :: TIME_DT_OCEAN
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = ""
+    real(DP)                 :: TIME_DT_OCEAN_RESTART
+    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = ""
 
-    real(DP)                 :: TIME_DT_LAND               = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_LAND_UNIT          = "DAY"
-    real(DP)                 :: TIME_DT_LAND_RESTART       = 10.0_DP
-    character(len=IO_SYSCHR) :: TIME_DT_LAND_RESTART_UNIT  = "DAY"
+    real(DP)                 :: TIME_DT_LAND
+    character(len=IO_SYSCHR) :: TIME_DT_LAND_UNIT          = ""
+    real(DP)                 :: TIME_DT_LAND_RESTART
+    character(len=IO_SYSCHR) :: TIME_DT_LAND_RESTART_UNIT  = ""
 
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
@@ -206,6 +208,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TIME]/Categ[COMMON]'
 
+    TIME_DURATION         = UNDEF
+    TIME_DT               = UNDEF
+    TIME_DT_ATMOS_DYN     = UNDEF
+    TIME_DT_ATMOS_PHY_SF  = UNDEF
+    TIME_DT_ATMOS_PHY_TB  = UNDEF
+    TIME_DT_ATMOS_PHY_MP  = UNDEF
+    TIME_DT_ATMOS_PHY_RD  = UNDEF
+    TIME_DT_ATMOS_RESTART = UNDEF
+    TIME_DT_OCEAN_RESTART = UNDEF
+    TIME_DT_LAND_RESTART  = UNDEF
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TIME,iostat=ierr)
@@ -217,6 +230,102 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TIME)
+
+    ! check time setting
+    if ( TIME_DURATION == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DURATION.'
+    end if
+    if ( TIME_DT == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT.'
+    end if
+    ! DYN
+    if ( TIME_DT_ATMOS_DYN == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
+       TIME_DT_ATMOS_DYN = TIME_DT
+    end if
+    if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
+    end if
+    ! PHY_SF
+    if ( TIME_DT_ATMOS_PHY_SF == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF. TIME_DT is used.'
+       TIME_DT_ATMOS_PHY_SF = TIME_DT
+    end if
+    if ( TIME_DT_ATMOS_PHY_SF_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
+    end if
+    ! PHY_TB
+    if ( TIME_DT_ATMOS_PHY_TB == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB. TIME_DT is used.'
+       TIME_DT_ATMOS_PHY_TB = TIME_DT
+    end if
+    if ( TIME_DT_ATMOS_PHY_TB_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
+    end if
+    ! PHY_MP
+    if ( TIME_DT_ATMOS_PHY_MP == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP. TIME_DT is used.'
+       TIME_DT_ATMOS_PHY_MP = TIME_DT
+    end if
+    if ( TIME_DT_ATMOS_PHY_MP_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
+    end if
+    ! PHY_RD
+    if ( TIME_DT_ATMOS_PHY_RD == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD. TIME_DT is used.'
+       TIME_DT_ATMOS_PHY_RD = TIME_DT
+    end if
+    if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
+    end if
+    ! ATMOS RESTART
+    if ( TIME_DT_ATMOS_RESTART == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART. TIME_DURATION is used.'
+       TIME_DT_ATMOS_RESTART = TIME_DURATION
+    end if
+    if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+       TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
+    end if
+    ! OCEAN
+    if ( TIME_DT_OCEAN == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN. TIME_DT is used.'
+       TIME_DT_OCEAN = TIME_DT
+    end if
+    if ( TIME_DT_OCEAN_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
+    end if
+    if ( TIME_DT_OCEAN_RESTART == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART. TIME_DURATION is used.'
+       TIME_DT_OCEAN_RESTART = TIME_DURATION
+    end if
+    if ( TIME_DT_OCEAN_RESTART_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+       TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
+    end if
+    ! LAND
+    if ( TIME_DT_LAND == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND. TIME_DT is used.'
+       TIME_DT_LAND = TIME_DT
+    end if
+    if ( TIME_DT_LAND_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_UNIT. TIME_DT_UNIT is used.'
+       TIME_DT_LAND_UNIT = TIME_DT_UNIT
+    end if
+    if ( TIME_DT_LAND_RESTART == UNDEF ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART. TIME_DURATION is used.'
+       TIME_DT_LAND_RESTART = TIME_DURATION
+    end if
+    if ( TIME_DT_LAND_RESTART_UNIT == '' ) then
+       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+       TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
+    end if
 
     !--- calculate time
     TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
@@ -260,11 +369,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
     !if( IO_L ) write(IO_FID_LOG,*) '*** now:', TIME_NOWDAYSEC, TIME_NOWDAY, TIME_NOWSEC
-
-    if ( TIME_DTSEC <= 0.0_DP ) then
-       write(*,*) ' xxx Delta t <= 0.E0_DP is not accepted. Check!'
-       call PRC_MPIstop
-    endif
 
     !--- calculate intervals for atmosphere
     call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
