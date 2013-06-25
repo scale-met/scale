@@ -853,6 +853,7 @@ contains
 
 
           call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
+          ! C is (\rho w)^{n+1}
 #ifdef DEBUG
           if ( INFO .ne. 0 ) then
              write(*,*) "DGBSV was failed", info
@@ -860,39 +861,40 @@ contains
           end if
 #endif
 
-          ! z-momentum
-          do k = KS, KE-1
-             MOMZ_RK(k,i,j) = C(k-KS+1)
-          end do
-
           ! z momentum flux
           do k = KS+1, KE-2
-             mflx_hi(k,i,j,ZDIR) = ( - MOMZ_RK(k+1,i,j) + 8.0_RP * MOMZ_RK(k,i,j) - MOMZ_RK(k-1,i,j) ) / 6.0_RP
+             mflx_hi(k,i,j,ZDIR) = ( - C(k-KS+2) + 8.0_RP * C(k-KS+1) - C(k-KS) ) / 6.0_RP
           end do
-          mflx_hi(KS,i,j,ZDIR) = MOMZ_RK(KS,i,j)
-          mflx_hi(KE-1,i,j,ZDIR) = MOMZ_RK(KE-1,i,j)
+          mflx_hi(KS,i,j,ZDIR) = C(1)
+          mflx_hi(KE-1,i,j,ZDIR) = C(KE-KS)
+
+          ! z-momentum
+          do k = KS, KE-1
+             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                  + ( C(k-KS+1) - MOMZ(k,i,j) )
+          end do
 
           ! density
           do k = KS+1, KE-1
-             DENS_RK(k,i,j) = DENS(k,i,j) &
+             DENS_RK(k,i,j) = DENS0(k,i,j) &
                   + dtrk * ( - ( mflx_hi(k,i,j,ZDIR) - mflx_hi(k-1,i,j,ZDIR) ) * RCDZ(k) &
                              + Sr(k,i,j) )
           end do
-          DENS_RK(KS,i,j) = DENS(KS,i,j) &
+          DENS_RK(KS,i,j) = DENS0(KS,i,j) &
                   + dtrk * ( - mflx_hi(KS,i,j,ZDIR) * RCDZ(KS) + Sr(KS,i,j) )
-          DENS_RK(KE,i,j) = DENS(KE,i,j) &
+          DENS_RK(KE,i,j) = DENS0(KE,i,j) &
                   + dtrk * ( mflx_hi(KE-1,i,j,ZDIR) * RCDZ(KE) + Sr(KE,i,j) )
 
           ! rho*theta
           do k = KS+1, KE-1
-             RHOT_RK(k,i,j) = RHOT(k,i,j) &
+             RHOT_RK(k,i,j) = RHOT0(k,i,j) &
                   + dtrk * ( - ( mflx_hi(k,i,j,ZDIR) * PT(k) - mflx_hi(k-1,i,j,ZDIR) * PT(k-1) ) * RCDZ(k) &
                              + St(k,i,j) )
           end do
-          RHOT_RK(KS,i,j) = RHOT(KS,i,j) &
+          RHOT_RK(KS,i,j) = RHOT0(KS,i,j) &
                   + dtrk * ( - mflx_hi(KS,i,j,ZDIR) * PT(KS) * RCDZ(KS) &
                              + St(KS,i,j) )
-          RHOT_RK(KE,i,j) = RHOT(KE,i,j) &
+          RHOT_RK(KE,i,j) = RHOT0(KE,i,j) &
                   + dtrk * ( mflx_hi(KE-1,i,j,ZDIR) * PT(KE-1) * RCDZ(KE) &
                              + St(KE,i,j) )
 
