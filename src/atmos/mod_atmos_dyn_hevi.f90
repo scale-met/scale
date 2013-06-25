@@ -686,7 +686,7 @@ contains
                       - RFDZ(k) * ( &
 #ifdef DRY
                           PRES(k+1,i,j)*( 1.0_RP + dtrk*kappa*St(k+1,i,j)/RHOT(k+1,i,j) ) &
-                        - PRES(k  ,i,j)*( 1.0_RP + dtrk*kappa*St(k  ,i,j)/RHOT(k  ,i,j)) ) )  &
+                        - PRES(k  ,i,j)*( 1.0_RP + dtrk*kappa*St(k  ,i,j)/RHOT(k  ,i,j) ) )  &
 #else
                           PRES(k+1,i,j)*( 1.0_RP + dtrk*CPtot(k+1,i,j)*St(k+1,i,j)/(CVtot(k+1,i,j)*RHOT(k+1,i,j)) ) &
                         - PRES(k  ,i,j)*( 1.0_RP + dtrk*CPtot(k  ,i,j)*St(k  ,i,j)/(CVtot(k  ,i,j)*RHOT(k  ,i,j)) ) )  &
@@ -851,7 +851,6 @@ contains
           end if
 #endif
 
-
           call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
           ! C is (\rho w)^{n+1}
 #ifdef DEBUG
@@ -899,21 +898,21 @@ contains
                              + St(KE,i,j) )
 
 
+#ifdef DEBUG
+       call check_equation( &
+            C, &
+            DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), PRES(:,i,j), &
+            Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
+#ifdef DRY
+            kappa, &
+#else
+            CPtot(:,i,j), CVtot(:,i,j), &
+#endif
+            dtrk, i, j )
+#endif
        end do
        end do
 
-#ifdef DEBUG
-       call check_equation( &
-            DENS_RK, MOMZ_RK, RHOT_RK, &
-            DENS, MOMZ, RHOT, PRES, &
-            Sr, Sw, St, &
-#ifdef DRY
-       kappa, &
-#else
-       CPtot, CVtot, &
-#endif
-       dtrk )
-#endif
 
 
        !##### momentum equation (x) #####
@@ -1243,7 +1242,7 @@ contains
 
 
   subroutine check_equation( &
-       DENS_RK, MOMZ_RK, RHOT_RK, &
+       VECT, &
        DENS, MOMZ, RHOT, PRES, &
        Sr, Sw, St, &
 #ifdef DRY
@@ -1251,7 +1250,7 @@ contains
 #else
        CPtot, CVtot, &
 #endif
-       dt )
+       dt, i, j )
     use mod_const, only: &
          EPS => CONST_EPS, &
          GRAV => CONST_GRAV
@@ -1261,107 +1260,155 @@ contains
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
     implicit none
-    real(RP), intent(in) :: DENS_RK(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ_RK(KA,IA,JA)
-    real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: PRES(KA,IA,JA)
-    real(RP), intent(in) :: Sr(KA,IA,JA)
-    real(RP), intent(in) :: Sw(KA,IA,JA)
-    real(RP), intent(in) :: St(KA,IA,JA)
+    real(RP), intent(in) :: VECT(KMAX-1)
+    real(RP), intent(in) :: DENS(KA)
+    real(RP), intent(in) :: MOMZ(KA)
+    real(RP), intent(in) :: RHOT(KA)
+    real(RP), intent(in) :: PRES(KA)
+    real(RP), intent(in) :: Sr(KA)
+    real(RP), intent(in) :: Sw(KA)
+    real(RP), intent(in) :: St(KA)
 #ifdef DRY
     real(RP), intent(in) :: kappa
 #else
-    real(RP), intent(in) :: CPtot(KA,IA,JA)
-    real(RP), intent(in) :: CVtot(KA,IA,JA)
+    real(RP), intent(in) :: CPtot(KA)
+    real(RP), intent(in) :: CVtot(KA)
 #endif
     real(RP), intent(in) :: dt
+    integer , intent(in) :: i
+    integer , intent(in) :: j
 
-    real(RP), parameter :: small = 1e-5_RP
+    real(RP), parameter :: small = 1e-2_RP
 
-    real(RP) :: PT(KS,IA,JA)
-    real(RP) :: mflx(KA,IA,JA)
-    real(RP) :: theta(KA,IA,JA)
-    real(RP) :: pres_rk(KA,IA,JA)
+    real(RP) :: MOMZ_N(KA)
+    real(RP) :: DENS_N(KA)
+    real(RP) :: RHOT_N(KA)
+    real(RP) :: PRES_N(KA)
 
-    real(RP) :: error
-    integer :: k, i, j
+    real(RP) :: mflx(KA)
+    real(RP) :: POTT(KS)
+    real(RP) :: PT(KA)
 
-    do j = JS, JE
-    do i = IS, IE
-
-       do k = KS+1, KE-2
-          mflx(k,i,j) = ( - MOMZ_RK(k+1,i,j) + 8.0_RP*MOMZ_RK(k,i,j) - MOMZ_RK(k-1,i,j) ) / 6.0_RP
-       end do
-       mflx(KS-1,i,j) = 0.0_RP
-       mflx(KS,  i,j) = MOMZ_RK(KS,i,j)
-       mflx(KE-1,i,j) = MOMZ_RK(KE-1,i,j)
-       mflx(KE  ,i,j) = 0.0_RP
-
-       do k = KS, KE
-          PT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       end do
-       do k = KS+1, KE-2
-          theta(k,i,j) = ( 7.0_RP * ( PT(k+1,i,j) + PT(k  ,i,j) ) &
-                           -        ( PT(k+2,i,j) + PT(k-1,i,j) ) ) / 12.0_RP
-       end do
-       theta(KS-1,i,j) = 0.0_RP
-       theta(KS  ,i,j) = ( PT(KS+1,i,j) + PT(KS  ,i,j) ) * 0.5_RP
-       theta(KE-1,i,j) = ( PT(KE  ,i,j) + PT(KE-1,i,j) ) * 0.5_RP
-       theta(KE  ,i,j) = 0.0_RP
-
-
-       do k = KS, KE
-          pres_rk(k,i,j) = PRES(k,i,j) * ( 1.0_RP + &
-#ifdef DRY
-               kappa &
-#else
-               CPtot(k,i,j) / Cvtot(k,i,j) &
+#ifndef DRY
+    real(RP) :: kappa
 #endif
-               * ( RHOT_RK(k,i,j) - RHOT(k,i,j) ) / RHOT(k,i,j) )
-       end do
 
-       do k = KS, KE
-          error =  DENS(k,i,j) &
-               - ( DENS_RK(k,i,j) &
-                 - ( - ( mflx(k,i,j) - mflx(k-1,i,j) ) * RCDZ(k) - Sr(k,i,j) ) * dt )
-          error = error / DENS(k,i,j)
-          if ( abs(error) > small ) then
-             write(*,*)"HEVI: DENS error", k, i, j, error
-             write(*,*)eps
-             call PRC_MPIstop
-          end if
-       end do
+    real(RP) :: error, lhs, rhs
+    real(RP) :: a0, a1, b
+    integer :: k
 
-       do k = KS, KE-1
-          error = MOMZ(k,i,j) &
-               - ( MOMZ_RK(k,i,j) &
-                 - ( - ( pres_rk(k+1,i,j) - pres_rk(k,i,j) ) * RFDZ(k) &
-                     - GRAV * ( DENS_RK(k+1,i,j) + DENS_RK(k,i,j) ) * 0.5_RP &
-                     + Sw(k,i,j) ) * dt )
-          if ( (MOMZ(k,i,j).lt.small .and. abs(error) > small ) &
-           .or.(MOMZ(k,i,j).ge.small .and. abs(error/MOMZ(k,i,j)) > small ) ) then
-             write(*,*)"HEVI: MOMZ error", k, i, j, error
-             write(*,*)momz_rk(k,i,j),momz(k,i,j),dt,(pres_rk(k+1,i,j)-pres_rk(k,i,j))*rfdz(k),grav*(dens_rk(k+1,i,j)+dens_rk(k,i,j))*0.5_RP,sw(k,i,j)
-             call PRC_MPIstop
-          end if
-       end do
 
-       do k = KS, KE
-          error = RHOT(k,i,j) &
-               - ( RHOT_RK(k,i,j) &
-                 - ( - ( mflx(k,i,j)*theta(k,i,j) - mflx(k-1,i,j)*theta(k-1,i,j) ) * RCDZ(k) &
-                     + St(k,i,j) ) * dt )
-          error = error / RHOT(k,i,j)
-          if ( abs(error) > small ) then
-             write(*,*)"HEVI: RHOT error", k, i, j, error
-             call PRC_MPIstop
-          end if
-       end do
-
+    do k = KS, KE-1
+       MOMZ_N(k) = VECT(k-KS+1)
     end do
+
+    ! z momentum flux
+    do k = KS+1, KE-2
+       mflx(k) = ( - MOMZ_N(k+1) + 8.0_RP * MOMZ_N(k) - MOMZ_N(k-1) ) / 6.0_RP
+    end do
+    mflx(KS-1) = 0.0_RP
+    mflx(KS  ) = MOMZ_N(KS)
+    mflx(KE-1) = MOMZ_N(KE-1)
+    mflx(KE  ) = 0.0_RP
+
+    ! density
+    do k = KS+1, KE-1
+       DENS_N(k) = DENS(k) &
+            + dt * ( - ( mflx(k) - mflx(k-1) ) * RCDZ(k) + Sr(k) )
+    end do
+    DENS_N(KS) = DENS(KS) &
+         + dt * ( - mflx(KS) * RCDZ(KS) + Sr(KS) )
+    DENS_N(KE) = DENS(KE) &
+         + dt * ( mflx(KE-1) * RCDZ(KE) + Sr(KE) )
+
+    ! rho*theta
+    do k = KS, KE
+       POTT(k) = RHOT(k) / DENS(k)
+    end do
+    do k = KS+1, KE-2
+       PT(k) = ( 7.0_RP * ( POTT(k+1) + POTT(k  ) ) &
+                 -        ( POTT(k+2) + POTT(k-1) ) ) / 12.0_RP
+    end do
+    PT(KS-1) = 0.0_RP
+    PT(KS  ) = ( POTT(KS+1) + POTT(KS  ) ) * 0.5_RP
+    PT(KE-1) = ( POTT(KE  ) + POTT(KE-1) ) * 0.5_RP
+    PT(KE  ) = 0.0_RP
+    do k = KS+1, KE-1
+       RHOT_N(k) = RHOT(k) &
+            + dt * ( - ( mflx(k)*PT(k) - mflx(k-1)*PT(k-1) ) * RCDZ(k) &
+                     + St(k) )
+    end do
+    RHOT_N(KS) = RHOT(KS) &
+         + dt * ( - mflx(KS)*PT(KS) * RCDZ(KS) + St(KS) )
+    RHOT_N(KE) = RHOT(KE) &
+         + dt * ( mflx(KE-1)*PT(KE-1) * RCDZ(KE) + St(KE) )
+
+
+    do k = KS, KE
+#ifndef DRY
+       kappa = CPtot(k) / CVtot(k)
+#endif
+       PRES_N(k) = PRES(k) * ( 1.0_RP + kappa * ( RHOT_N(k) - RHOT(k) ) / RHOT(k) )
+    end do
+
+    do k = KS, KE
+       lhs = ( DENS_N(k) - DENS(k) ) / dt
+       rhs = - ( mflx(k) - mflx(k-1) ) * RCDZ(k) + Sr(k)
+       if ( abs(lhs) < small ) then
+          error = rhs
+       else
+          error = ( lhs - rhs ) / lhs
+       end if
+       if ( abs(error) > small ) then
+          write(*,*)"HEVI: DENS error", k, i, j, error, lhs, rhs
+          write(*,*)eps
+          call PRC_MPIstop
+       end if
+    end do
+
+    do k = KS, KE-1
+       lhs = ( MOMZ_N(k) - MOMZ(k) ) / dt
+       rhs = - ( PRES_N(k+1) - PRES_N(k) ) * RFDZ(k) &
+             - GRAV * ( DENS_N(k+1) + DENS_N(k) ) * 0.5_RP &
+             + Sw(k)
+       if ( abs(lhs) < small ) then
+          error = rhs
+       else
+          error = ( lhs - rhs ) / lhs
+       end if
+       if ( abs(error) > small ) then
+          write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
+          write(*,*) MOMZ_N(k), MOMZ(k), dt
+          write(*,*) (PRES_N(k+1)-PRES_N(k))*RFDZ(k), GRAV*(DENS_N(k+1)+DENS_N(k))*0.5_RP, Sw(k)
+          lhs = MOMZ(k) - dt*RFDZ(k)*( PRES(k+1)*(1.0_RP+kappa*dt*St(k+1)/RHOT(k+1)) &
+                                      -PRES(k  )*(1.0_RP+kappa*dt*St(k  )/RHOT(k  ))) &
+                        - dt*GRAV*0.5_RP*( DENS(k+1)+DENS(k) + dt*(Sr(k+1)+Sr(k)) ) &
+                        + dt*Sw(k)
+          a1 = kappa * dt**2 * PRES(k+1) * RCDZ(k+1) / ( 6.0_RP * RHOT(k+1) )
+          a0 = kappa * dt**2 * PRES(k  ) * RCDZ(k  ) / ( 6.0_RP * RHOT(k  ) )
+          b = GRAV * dt**2 / 12.0_RP
+          rhs = ( a1*PT(k+1)*RFDZ(k) + B*RFDZ(k+1) ) * MOMZ_N(k+2) &
+              - ( (A1*(8.0_RP*PT(k+1)+PT(k))+A0*PT(k))*RFDZ(k) + B*(9.0_RP*RCDZ(k+1)-RCDZ(k)) ) * MOMZ_N(k+1) &
+              + ( (A1*(PT(k+1)+8.0_RP*PT(k))+A0*(8.0_RP*PT(k)+PT(k-1)))*RFDZ(k) + 9.0_RP*B*(RCDZ(k+1)-RCDZ(k)) + 1.0_RP ) * MOMZ_N(k) &
+              - ( (A1*PT(k)+A0*(PT(k)+8.0_RP*PT(k-1)))*RFDZ(k) + B*(RFDZ(k+1)-9.0_RP*RFDZ(k)) ) * MOMZ_N(k-1) &
+              + ( A0*PT(k-1)*RFDZ(k) - B*RFDZ(k) ) * MOMZ_N(k-2)
+          write(*,*) lhs, rhs
+          call PRC_MPIstop
+       end if
+    end do
+
+    do k = KS, KE
+       lhs = ( RHOT_N(k) - RHOT(k) ) / dt
+       rhs = - ( mflx(k)*PT(k) - mflx(k-1)*PT(k-1) ) * RCDZ(k) + St(k)
+       if ( abs(lhs) < small ) then
+          error = rhs
+       else
+          error = ( lhs - rhs ) / lhs
+       end if
+       if ( abs(error) > small ) then
+          write(*,*)"HEVI: RHOT error", k, i, j, error, lhs, rhs
+          call PRC_MPIstop
+       end if
     end do
 
     return
