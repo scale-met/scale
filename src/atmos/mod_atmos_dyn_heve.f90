@@ -96,7 +96,7 @@ contains
     Rtot, CVtot, CORIOLI,                        &
     num_diff, divdmp_coef,                       &
     FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
-    FDZ, FDX, FDY,                               &
+    CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     dtrk, rk, rko,                               &
     VELZ, VELX, VELY, PRES, POTT                 )
@@ -165,6 +165,7 @@ contains
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
 
+    real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: FDZ(KA-1)
     real(RP), intent(in) :: FDX(IA-1)
     real(RP), intent(in) :: FDY(JA-1)

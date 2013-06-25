@@ -42,46 +42,61 @@ where
 \end{align}
 where
 \begin{align}
+  M_{KS-1/2}^{n+1} &= 0, \\
+  M_{KE+1/2}^{n+1} &= 0, \\
+  M_{KS+1/2}^{n+1} &= (\rho w)_{KS+1/2}^{n+1}, \\
+  M_{KE-1/2}^{n+1} &= (\rho w)_{KE-1/2}^{n+1}, \\
+  \hat\theta_{KS+1/2}^n &= \frac{1}{2}(\theta_{KS+1}^n+\theta_{KS}^n), \\
+  \hat\theta_{KE-1/2}^n &= \frac{1}{2}(\theta_{KE}^n+\theta_{KE-1}^n),
+\end{align}
+and
+\begin{align}
   M_{k+1/2}^{n+1}
   &= \frac{1}{6}\left\{-(\rho w)_{k+3/2}^{n+1}+8(\rho w)_{k+1/2}^{n+1}-(\rho w)_{k-1/2}^{n+1}\right\}, \\
   \hat{\theta}_{k+1/2}^n
-  &= \frac{1}{12}(-\theta_{k+2}^n+7\theta_{k+1}^n+7\theta_k^n-\theta_{k-1}^n).
+  &= \frac{1}{12}(-\theta_{k+2}^n+7\theta_{k+1}^n+7\theta_k^n-\theta_{k-1}^n),
 \end{align}
+for other $k$.
 
-Then we obtain the equation for $\rho w$:
+We obtain the equation for $\rho w$:
 \begin{align}
-  & (\rho w)_{k+1/2}^n + C_n \\
-  &= \left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_k} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+5/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{k+1}(8\hat\theta_{k+3/2}^n+\hat\theta_{k+1/2}^n)}{\Delta z_k} + \frac{A_{k}\hat\theta_{k+1/2}^n}{\Delta z_k} + B\left(\frac{9}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right)\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_{k+1}(\hat\theta_{k+3/2}^n+8\hat\theta_{k+1/2}^n)}{\Delta z_k} + \frac{A_k(8\hat\theta_{k+1/2}^n+\hat\theta_{k-1/2}^n)}{\Delta z_k} + 9B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{k+1}\hat\theta_{k+1/2}^n}{\Delta z_k} + \frac{A_k(\hat\theta_{k+1/2}^n+8\hat\theta_{k-1/2}^n)}{\Delta z_k} + B\left(\frac{1}{\Delta z_{k+1}}-\frac{9}{\Delta z_k}\right)\right\} (\rho w)_{k-1/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_k} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-3/2}^{n+1},
+  & (\rho w)_{KS+1/2}^n + C_{KS} \nonumber \\
+  &= \left\{\frac{A_{KS+1}\hat\theta_{KS+3/3}^n}{\Delta z_{KS+1/2}} + \frac{B}{\Delta z_{KS+1}}\right\} (\rho w)_{KS+5/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{KS+1}\hat\theta_{KS+3/2}^n}{\Delta z_{KS+1/2}} + \frac{8B}{\Delta z_{KS+1}}\right\} (\rho w)_{KS+3/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_{KS+1}(\hat\theta_{KS+3/2}^2+6\hat\theta_{KS+1/2}) + 6A_{KS}\hat\theta_{KS+1/2}}{\Delta z_{KS+1/2}} + B\left(\frac{7}{\Delta z_{KS+1}}-\frac{6}{\Delta z_{KS}}\right) + 1\right\} (\rho w)_{KS+1/2}^{n+1}, \\
+  & (\rho w)_{KS+3/2}^n + C_{KS+1} \nonumber \\
+  &= \left\{\frac{A_{KS+2}\hat\theta_{KS+5/2}^n}{\Delta z_{KS+3/2}} + \frac{B}{\Delta z_{KS+2}}\right\} (\rho w)_{KS+7/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{KS+2}(8\hat\theta_{KS+5/2}+\hat\theta_{KS+3/2})+A_{KS+1}\hat\theta_{KS+3/2}}{\Delta z_{KS+3/2}} + \left(\frac{9}{\Delta z_{KS+2}}-\frac{1}{\Delta_{KS+1}}\right)\right\} (\rho w)_{KS+5/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_{KS+2}(\hat\theta_{KS+5/2}+8\hat\theta_{KS+3/2})+8A_{KS+1}\hat\theta_{KS+3/2}}{\Delta z_{KS+3/2}} + \left(\frac{9}{\Delta z_{KS+2}}-\frac{8}{\Delta z_{KS+1}}\right) + 1\right\} (\rho w)_{KS+3/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{KS+2}\hat\theta_{KS+3/2}+A_{KS+1}(\hat\theta_{KS+3/2}+6\hat\theta_{KS+1/2})}{\Delta z_{KS+3/2}} + B \left(\frac{1}{\Delta z_{KS+2}}+\frac{7}{\Delta z_{KS+1}}\right)\right\} (\rho w)_{KS+1/2}^{n+1}, \\
+  & (\rho w)_{KE-3/2}^n + C_{KE-1} \nonumber \\
+  &= - \left\{\frac{A_{KE-1}(6\hat\theta_{KE-1/2}+\hat\theta_{KE-3/2})+A_{KE-2}\hat\theta_{KS-3/2}}{\Delta z_{KE-3/2}} + B\left(\frac{7}{\Delta_{KE-1}}-\frac{1}{\Delta z_{KE-2}}\right)\right\} (\rho w)_{KE-1/2}^{n+1} \nonumber \\
+  &  + \left\{\frac{8A_{KE-1}\hat\theta_{KE-3/2}+A_{KE-2}(8\hat\theta_{KE-3/2}+\hat\theta_{KE-5/2})}{\Delta z_{KE-3/2}} + B\left(\frac{8}{\Delta z_{KE-1}}-\frac{9}{\Delta z_{KE-2}}\right) + 1 \right\} (\rho w)_{KE-3/2}^{n+1} \nonumber \\
+  &  - \left\{\frac{A_{KE-1}\hat\theta_{KE-3/2}+A_{KE-2}(\hat\theta_{KE-3/2}+8\hat\theta_{KE-5/2})}{\Delta z_{KE-3/2}} + B\left(\frac{1}{\Delta z_{KE-1}}-\frac{9}{\Delta z_{KE-2}}\right)\right\} (\rho w)_{KE-5/2}^{n+1} \nonumber \\
+  &  + \left\{\frac{A_{KE-2}\hat\theta_{KE-5/3}}{\Delta z_{KE-3/2}} + \frac{B}{\Delta z_{KE-2}}\right\} (\rho w)_{KE-7/2}^{n+1}, \\
+  & (\rho w)_{KE-1/2}^n + C_{KE} \nonumber \\
+  &= \left\{\frac{6A_{KE}\hat\theta_{KE-1/2} + A_{KE-1}(6\hat\theta_{KE-1/2}+\hat\theta_{KE-3/2})}{\Delta z_{KE-1/2}} + B\left(\frac{6}{\Delta z_{KE}}-\frac{7}{\Delta z_{KE-1}}\right) + 1\right\} (\rho w)_{KE-1/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{KE-1}\hat\theta_{KE-3/2}}{\Delta z_{KE-1/2}} - \frac{8B}{\Delta z_{KE-1}}\right\} (\rho w)_{KE-3/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_{KE-1}\hat\theta_{KE-3/2}}{\Delta z_{KE-1/2}} + \frac{B}{\Delta z_{KE-1}}\right\} (\rho w)_{KE-5/2}^{n+1},
+\end{align}
+and, for other $k$,
+\begin{align}
+  & (\rho w)_{k+1/2}^n + C_k \\
+  &= \left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_{k+1/2}} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+5/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{k+1}(8\hat\theta_{k+3/2}^n+\hat\theta_{k+1/2}^n) + A_{k}\hat\theta_{k+1/2}^n}{\Delta z_{k+1/2}} + B\left(\frac{9}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right)\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_{k+1}(\hat\theta_{k+3/2}^n+8\hat\theta_{k+1/2}^n) + A_k(8\hat\theta_{k+1/2}^n+\hat\theta_{k-1/2}^n)}{\Delta z_{k+1/2}} + 9B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
+  &- \left\{\frac{A_{k+1}\hat\theta_{k+1/2}^n + A_k(\hat\theta_{k+1/2}^n+8\hat\theta_{k-1/2}^n)}{\Delta z_{k+1/2}} + B\left(\frac{1}{\Delta z_{k+1}}-\frac{9}{\Delta z_k}\right)\right\} (\rho w)_{k-1/2}^{n+1} \nonumber \\
+  &+ \left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_{k+1/2}} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-3/2}^{n+1},
 \end{align}
 where
 \begin{align}
-  C_n
-  &= -\frac{\Delta t}{\Delta z_k}\left[
-    p_{k+1}^n\left\{1+\frac{c_p\Delta t}{c_v}\frac{S_{\rho\theta k+1}}{(\rho\theta)_{k+1}^n}\right\}
-  - p_k^n   \left\{1+\frac{c_p\Delta t}{c_v}\frac{S_{\rho\theta k}  }{(\rho\theta)_k^n   }\right\}
+  C_k
+  &= -\frac{\Delta t}{\Delta z_{k+1/2}}\left[
+    p_{k+1}^n\left\{1+\frac{c_{p k+1}\Delta t}{c_{v k+1}}\frac{S_{\rho\theta k+1}}{(\rho\theta)_{k+1}^n}\right\}
+  - p_k^n   \left\{1+\frac{c_{p k}\Delta t}{c_{v k}}\frac{S_{\rho\theta k}  }{(\rho\theta)_k^n   }\right\}
     \right] \nonumber \\
-  &-\frac{g\Delta t}{2}\{\rho_{k+1}^n+\rho_k^n+\Delta t(S_{\rho k+1}+S_{\rho k})\}
-  + \Delta t S_{\rho w}, \\
-  A_k &= \frac{c_{p k}^n\Delta t^2 p_k^n   }{6c_{v k}^n\Delta z_{k+1/2} (\rho\theta)_k^n}, \\
+  & - \frac{g\Delta t}{2}\{\rho_{k+1}^n+\rho_k^n+\Delta t(S_{\rho k+1}+S_{\rho k})\}
+  + \Delta t S_{\rho w k}, \\
+  A_k &= \frac{c_{p k}^n\Delta t^2 p_k^n   }{6c_{v k}^n\Delta z_{k} (\rho\theta)_k^n}, \\
   B &= \frac{g\Delta t^2}{12}.
 \end{align}
-At the top and bottom boundaries,
-we use the second order scheme,
-and
-\begin{align}
-  M_{k+1/2}^{n+1} &= (\rho w)_{k+1/2}^{n+1}, \\
-  \hat\theta_{k+1/2}^n &= \frac{1}{2}(\theta_{k+1}^n+\theta_k^n).
-\end{align}
-Then
-\begin{align}
-  (\rho w)_{k+1/2}^n + C_n =
-  &- 6\left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_k} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
-  &+ \left\{6\frac{(A_{k+1}+A_k)\hat\theta_{k+1/2}^n}{\Delta z_k} + 6B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
-  &- 6\left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_k} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-1/2}^{n+1}.
-\end{align}
-
-
