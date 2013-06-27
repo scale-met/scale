@@ -222,6 +222,7 @@ contains
     if ( PRC_mpi_alive ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
+       if( IO_L ) close(IO_FID_LOG)
        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
     endif
 
