@@ -154,6 +154,8 @@ contains
        ATMOS_PHY_MP
     use mod_atmos_phy_rd, only: &
        ATMOS_PHY_RD
+    use mod_atmos_refstate, only: &
+       ATMOS_REFSTATE_update
     implicit none
     !---------------------------------------------------------------------------
 
@@ -169,6 +171,9 @@ contains
     RHOT_tp(:,:,:) = 0.0_RP
 !OCL XFILL
     QTRC_tp(:,:,:,:) = 0.0_RP
+
+    !########## Reference State ###########
+    call ATMOS_REFSTATE_update
 
     !########## Surface Flux ##########
 

@@ -43,6 +43,7 @@ module mod_atmos_refstate
   public :: ATMOS_REFSTATE_setup
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
+  public :: ATMOS_REFSTATE_update
 
   !-----------------------------------------------------------------------------
   !
@@ -56,9 +57,9 @@ module mod_atmos_refstate
   !
   !++ Private procedure
   !
-  public :: ATMOS_REFSTATE_generate_isa
-  public :: ATMOS_REFSTATE_generate_uniform
-  public :: ATMOS_REFSTATE_generate_frominit
+  private :: ATMOS_REFSTATE_generate_isa
+  private :: ATMOS_REFSTATE_generate_uniform
+  private :: ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
   !
@@ -73,6 +74,7 @@ module mod_atmos_refstate
   real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP          !< surface temperature           [K]
   real(RP),                  private :: ATMOS_REFSTATE_RH           =   0.0_RP          !< surface & environment RH      [%]
   real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP          !< uniform potential temperature [K]
+  logical,                   private :: ATMOS_REFSTATE_UPDATE_FLAG  = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -93,7 +95,8 @@ contains
        ATMOS_REFSTATE_TYPE,         &
        ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_TEMP_SFC,     &
-       ATMOS_REFSTATE_RH
+       ATMOS_REFSTATE_RH,           &
+       ATMOS_REFSTATE_UPDATE_FLAG
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -123,9 +126,11 @@ contains
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
           call ATMOS_REFSTATE_generate_isa
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
           call ATMOS_REFSTATE_generate_uniform
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
           call ATMOS_REFSTATE_generate_frominit
@@ -464,5 +469,42 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
+
+  !-----------------------------------------------------------------------------
+  !> Update reference state profile (Horizontal average)
+  subroutine ATMOS_REFSTATE_update
+    use mod_grid, only: &
+       CZ   => GRID_CZ
+    use mod_comm, only: &
+       COMM_horizontal_mean
+    use mod_atmos_vars, only: &
+       DENS, &
+       RHOT, &
+       QTRC
+    implicit none
+
+    real(RP) :: POTT(KA,IA,JA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       call COMM_horizontal_mean( ATMOS_REFSTATE_dens(:), DENS(:,:,:) )
+       call COMM_horizontal_mean( ATMOS_REFSTATE_pott(:), POTT(:,:,:) )
+       call COMM_horizontal_mean( ATMOS_REFSTATE_qv(:), QTRC(:,:,:,I_QV) )
+
+    end if
+
+    return
+  end subroutine ATMOS_REFSTATE_update
 
 end module mod_atmos_refstate
