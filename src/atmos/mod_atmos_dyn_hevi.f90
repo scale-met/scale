@@ -838,100 +838,7 @@ contains
 
 
 #ifdef DEBUG
-          k = KS
-#ifdef __BOUND
-          k = KS
-          if ( M(NB+3,k-2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)))*rfdz(k) + B*(9.0_RP*rcdz(k+1)-8.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k,0
-          end if
-#else
-          if ( M(NB+1,3) .ne. A(k+1)*pt(k+1)*rfdz(k) + B*rcdz(k+1) ) then
-             write(*,*)k, -2
-          end if
-          if ( M(NB+2,2) .ne. -A(k+1)*pt(k+1)*rfdz(k) -8.0_RP*B*rcdz(k+1) ) then
-             write(*,*)k, -1
-          end if
-          if ( M(NB+3,1) .ne. (A(k+1)*(pt(k+1)+6.0_RP*pt(k))+6.0_RP*A(k)*pt(k))*rfdz(k) + B*(7.0_RP*rcdz(k+1)-6.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k, 0
-          end if
-          k = KS+1
-          if ( M(NB+1,4) .ne. A(k+1)*pt(k+1)*rfdz(k) + B*rcdz(k+1) ) then
-             write(*,*)k, -2
-          end if
-          if ( M(NB+2,3) .ne. -(A(k+1)*(8.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k) -B*(9.0_RP*rcdz(k+1)-rcdz(k)) ) then
-             write(*,*)k, -1
-          end if
-          if ( M(NB+3,2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+8.0_RP*A(k)*pt(k))*rfdz(k) + B*(9.0_RP*rcdz(k+1)-8.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k, 0
-          end if
-          if ( M(NB+4,1) .ne. -(A(k+1)*pt(k)+A(k)*(pt(k)+6.0_RP*pt(k-1)))*rfdz(k) - B*(rcdz(k+1)-7.0_RP*rcdz(k)) ) then
-             write(*,*)k, 1
-          end if
-#endif
-
-#if __BOUND
-          do k = KS, KE-1
-#else
-          do k = KS+2, KE-3
-#endif
-             if ( k <= KE-3 ) then
-                if( M(NB+1,k+2-2) .ne. A(k+1)*pt(k+1)*rfdz(k) + B *rcdz(k+1) ) then
-                   write(*,*)k,-2
-                end if
-             end if
-             if ( k <= KE-2 ) then
-                if( M(NB+2,k+1-2) .ne. -(A(k+1)*(8.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k)-B*(9.0_RP*rcdz(k+1)-rcdz(k)) ) then
-                   write(*,*)k,-1
-                end if
-             end if
-             if ( k >= KS+1 .and. k <= KE-2 ) then
-                if ( M(NB+3,k-2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + 9.0_RP*B*(rcdz(k+1)-rcdz(k))+1.0_RP ) then
-                   write(*,*)k,0
-                end if
-             end if
-             if ( k >= KS+1 ) then
-                if ( M(NB+4,k-1-2) .ne. -(A(k+1)*pt(k)+a(k)*(pt(k)+8.0_RP*pt(k-1)))*rfdz(k) -B*(rcdz(k+1)-9.0_RP*rcdz(k)) ) then
-                   write(*,*)k,1
-                end if
-             end if
-             if ( k >= KS+2 ) then
-                if (M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k)-B*rcdz(k) ) then
-                   write(*,*)k,2
-                end if
-             end if
-          enddo
-
-#ifdef __BOUND
-          k = KE-1
-          if ( M(NB+3,k-2) .ne. (A(k+1)*(8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(8.0_RP*rcdz(k+1)-9.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k,0
-          end if
-#else
-          k = KE-2
-          if ( M(NB+2,k+1-2) .ne. -(A(k+1)*(6.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k) -B*(7.0_RP*rcdz(k+1)-rcdz(k)) ) then
-             write(*,*)k, -1
-          end if
-          if ( M(NB+3,k-2) .ne. (8.0_RP*A(k+1)*pt(k)+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(8.0_RP*rcdz(k+1)-9.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k, 0
-          end if
-          if ( M(NB+4,k-1-2) .ne. -(A(k+1)*pt(k)+A(k)*(pt(k)+8.0_RP*pt(k-1)))*rfdz(k) - B*(rcdz(k+1)-9.0_RP*rcdz(k)) ) then
-             write(*,*)k,1
-          end if
-          if ( M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k) - B*rcdz(k) ) then
-             write(*,*)k,2
-          end if
-
-          k = KE-1
-          if ( M(NB+3,k-2) .ne. (6.0_RP*A(k+1)*pt(k)+A(k)*(6.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(6.0_RP*rcdz(k+1)-7.0_RP*rcdz(k))+1.0_RP ) then
-             write(*,*)k, 0
-          end if
-          if ( M(NB+4,k-1-2) .ne. -A(k)*pt(k-1)*rfdz(k) + 8.0_RP*B*rcdz(k) ) then
-             write(*,*)k, 1
-          end if
-          if ( M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k) - B*rcdz(k) ) then
-             write(*,*)k, 2
-          end if
-#endif
+          call check_matrix(M, A, B, PT)
 
           M2(:,:) = 0.0_RP
           do k = 1, KMAX-1
@@ -1350,6 +1257,112 @@ contains
 
   end subroutine ATMOS_DYN_rk
 
+  subroutine check_matrix( M, A, B, PT )
+    use mod_grid, only: &
+         RCDZ => GRID_RCDZ, &
+         RFDZ => GRID_RFDZ
+    implicit none
+    real(RP), intent(in) :: M(NB*3+1,KMAX-1)
+    real(RP), intent(in) :: A(KA)
+    real(RP), intent(in) :: B
+    real(RP), intent(in) :: PT(KA)
+
+    integer :: k
+
+#ifdef __BOUND
+    k = KS
+    if ( M(NB+3,k-2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)))*rfdz(k) + B*(9.0_RP*rcdz(k+1)-8.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k,0
+    end if
+#else
+    if ( M(NB+1,3) .ne. A(k+1)*pt(k+1)*rfdz(k) + B*rcdz(k+1) ) then
+       write(*,*)k, -2
+    end if
+    if ( M(NB+2,2) .ne. -A(k+1)*pt(k+1)*rfdz(k) -8.0_RP*B*rcdz(k+1) ) then
+       write(*,*)k, -1
+    end if
+    if ( M(NB+3,1) .ne. (A(k+1)*(pt(k+1)+6.0_RP*pt(k))+6.0_RP*A(k)*pt(k))*rfdz(k) + B*(7.0_RP*rcdz(k+1)-6.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k, 0
+    end if
+    k = KS+1
+    if ( M(NB+1,4) .ne. A(k+1)*pt(k+1)*rfdz(k) + B*rcdz(k+1) ) then
+       write(*,*)k, -2
+    end if
+    if ( M(NB+2,3) .ne. -(A(k+1)*(8.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k) -B*(9.0_RP*rcdz(k+1)-rcdz(k)) ) then
+       write(*,*)k, -1
+    end if
+    if ( M(NB+3,2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+8.0_RP*A(k)*pt(k))*rfdz(k) + B*(9.0_RP*rcdz(k+1)-8.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k, 0
+    end if
+    if ( M(NB+4,1) .ne. -(A(k+1)*pt(k)+A(k)*(pt(k)+6.0_RP*pt(k-1)))*rfdz(k) - B*(rcdz(k+1)-7.0_RP*rcdz(k)) ) then
+       write(*,*)k, 1
+    end if
+#endif
+
+#if __BOUND
+    do k = KS, KE-1
+#else
+    do k = KS+2, KE-3
+#endif
+       if ( k <= KE-3 ) then
+          if( M(NB+1,k+2-2) .ne. A(k+1)*pt(k+1)*rfdz(k) + B *rcdz(k+1) ) then
+             write(*,*)k,-2
+          end if
+       end if
+       if ( k <= KE-2 ) then
+          if( M(NB+2,k+1-2) .ne. -(A(k+1)*(8.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k)-B*(9.0_RP*rcdz(k+1)-rcdz(k)) ) then
+             write(*,*)k,-1
+          end if
+       end if
+       if ( k >= KS+1 .and. k <= KE-2 ) then
+          if ( M(NB+3,k-2) .ne. (A(k+1)*(pt(k+1)+8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + 9.0_RP*B*(rcdz(k+1)-rcdz(k))+1.0_RP ) then
+             write(*,*)k,0
+          end if
+       end if
+       if ( k >= KS+1 ) then
+          if ( M(NB+4,k-1-2) .ne. -(A(k+1)*pt(k)+a(k)*(pt(k)+8.0_RP*pt(k-1)))*rfdz(k) -B*(rcdz(k+1)-9.0_RP*rcdz(k)) ) then
+             write(*,*)k,1
+          end if
+       end if
+       if ( k >= KS+2 ) then
+          if (M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k)-B*rcdz(k) ) then
+             write(*,*)k,2
+          end if
+       end if
+    enddo
+
+#ifdef __BOUND
+    k = KE-1
+    if ( M(NB+3,k-2) .ne. (A(k+1)*(8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(8.0_RP*rcdz(k+1)-9.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k,0
+    end if
+#else
+    k = KE-2
+    if ( M(NB+2,k+1-2) .ne. -(A(k+1)*(6.0_RP*pt(k+1)+pt(k))+A(k)*pt(k))*rfdz(k) -B*(7.0_RP*rcdz(k+1)-rcdz(k)) ) then
+       write(*,*)k, -1
+    end if
+    if ( M(NB+3,k-2) .ne. (8.0_RP*A(k+1)*pt(k)+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(8.0_RP*rcdz(k+1)-9.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k, 0
+    end if
+    if ( M(NB+4,k-1-2) .ne. -(A(k+1)*pt(k)+A(k)*(pt(k)+8.0_RP*pt(k-1)))*rfdz(k) - B*(rcdz(k+1)-9.0_RP*rcdz(k)) ) then
+       write(*,*)k,1
+    end if
+    if ( M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k) - B*rcdz(k) ) then
+       write(*,*)k,2
+    end if
+
+    k = KE-1
+    if ( M(NB+3,k-2) .ne. (6.0_RP*A(k+1)*pt(k)+A(k)*(6.0_RP*pt(k)+pt(k-1)))*rfdz(k) + B*(6.0_RP*rcdz(k+1)-7.0_RP*rcdz(k))+1.0_RP ) then
+       write(*,*)k, 0
+    end if
+    if ( M(NB+4,k-1-2) .ne. -A(k)*pt(k-1)*rfdz(k) + 8.0_RP*B*rcdz(k) ) then
+       write(*,*)k, 1
+    end if
+    if ( M(NB+5,k-2-2) .ne. A(k)*pt(k-1)*rfdz(k) - B*rcdz(k) ) then
+       write(*,*)k, 2
+    end if
+#endif
+  end subroutine check_matrix
 
   subroutine check_equation( &
        VECT, &
