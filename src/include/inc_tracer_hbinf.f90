@@ -792,3 +792,63 @@
   data AQ_UNIT(250)  / 'kg/kg/unit logr' /
   data AQ_UNIT(251)  / 'kg/kg/unit logr' /
   data AQ_UNIT(252)  / 'kg/kg/unit logr' /
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ tracer index & relationship (MP_sn13+AE_dummy+RD_mstrnX)
+  !
+  !-----------------------------------------------------------------------------
+
+  integer, private, parameter :: MP_QA = 7 ! number of hydrometeor tracer
+  integer, private, parameter :: I_mp_QC = 1
+  integer, private, parameter :: I_mp_QP = 2
+  integer, private, parameter :: I_mp_QCL= 3
+  integer, private, parameter :: I_mp_QD = 4
+  integer, private, parameter :: I_mp_QS = 5
+  integer, private, parameter :: I_mp_QG = 6
+  integer, private, parameter :: I_mp_QH = 7
+
+  integer, private, save :: I_MP2ALL(MP_QA)
+  data I_MP2ALL / 2,    & ! start of Cloud bin
+                  35,   & ! start of plate bin
+                  68,   & ! start of columner bin
+                  101,  & ! start of dendrite bin
+                  134,  & ! start of snow bin
+                  167,  & ! start of graupel bin
+                  200   / ! start of hail bin
+!  data I_MP2ALL / I_QV+(I_mp_QC-1)*nbin+1,  & ! start of Cloud bin
+!                  I_QV+(I_mp_QP-1)*nbin+1,  & ! start of plate bin
+!                  I_QV+(I_mp_QCL-1)*nbin+1, & ! start of columner bin
+!                  I_QV+(I_mp_QD-1)*nbin+1,  & ! start of dendrite bin
+!                  I_QV+(I_mp_QS-1)*nbin+1,  & ! start of snow bin
+!                  I_QV+(I_mp_QG-1)*nbin+1,  & ! start of graupel bin
+!                  I_QV+(I_mp_QH-1)*nbin+1   / ! start of hail bin
+
+  integer, private, save :: I_MP2RD(MP_QA)
+  data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
+                  2,    & ! I_mp_QP => MSTRN_nptype=2: ice cloud (plate)
+                  2,    & ! I_mp_QCL=> MSTRN_nptype=2: ice cloud (columner)
+                  2,    & ! I_mp_QD => MSTRN_nptype=2: ice cloud (dendrite)
+                  2,    & ! I_mp_QS => MSTRN_nptype=2: ice cloud (snow)
+                  2,    & ! I_mp_QG => MSTRN_nptype=2: ice cloud (graupel)
+                  2     / ! I_mp_QH => MSTRN_nptype=2: ice cloud (hail)
+  
+  integer, private, save :: I_MP_BIN_NUM(MP_QA) !-- bin number 
+  data I_MP_BIN_NUM        &
+                / nbin,    & 
+                  nbin,    & 
+                  nbin,    & 
+                  nbin,    & 
+                  nbin,    & 
+                  nbin,    & 
+                  nbin     / 
+
+  integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
+  integer, private, parameter :: I_ae_dummy = 1
+
+  integer, private, save :: I_AE2ALL(AE_QA)
+  data I_AE2ALL / -999 / ! dummy
+
+  integer, private, save :: I_AE2RD(AE_QA)
+  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
+

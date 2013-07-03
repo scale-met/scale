@@ -93,6 +93,15 @@
                   2,    & ! I_mp_QS => MSTRN_nptype=2: ice cloud
                   2     / ! I_mp_QG => MSTRN_nptype=2: ice cloud
 
+  
+  integer, private, save :: I_MP_BIN_NUM(MP_QA) !-- bin number 
+  data I_MP_BIN_NUM     &
+                / 1,    & 
+                  1,    & 
+                  1,    & 
+                  1,    & 
+                  1     / 
+
   integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, private, parameter :: I_ae_dummy = 1
 

@@ -449,6 +449,9 @@ contains
 
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j
+
+    real(RP) :: QTRC_tmp
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
@@ -531,9 +534,14 @@ contains
           if ( I_MP2ALL(ihydro) > 0 ) then
              do k = KS, KE
                 RD_k = RD_KMAX - ( k - KS ) ! reverse axis
-
-                aerosol_conc_merge(RD_k,ihydro) = QTRC(k,i,j,I_MP2ALL(ihydro)) &
+                QTRC_tmp = 0.0_RP
+                do iq = I_MP2ALL(ihydro), I_MP2ALL(ihydro)+I_MP_BIN_NUM(ihydro)-1
+                 QTRC_tmp = QTRC_tmp + QTRC(k,i,j,iq)
+                enddo
+                aerosol_conc_merge(RD_k,ihydro) = QTRC_tmp &
                                                 / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
+!                aerosol_conc_merge(RD_k,ihydro) = QTRC(k,i,j,I_MP2ALL(ihydro)) &
+!                                                / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
                 aerosol_radi_merge(RD_k,ihydro) = MP_Re(k,i,j,ihydro)
              enddo
           endif
