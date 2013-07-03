@@ -181,7 +181,7 @@ contains
        HIST_in
     use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ, &
+       RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
