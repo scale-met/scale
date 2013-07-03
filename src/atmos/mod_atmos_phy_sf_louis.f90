@@ -217,7 +217,8 @@ contains
        HIST_in
     use mod_grid, only: &
        CZ => GRID_CZ, &
-       RCDZ => GRID_RCDZ
+       RCDZ => GRID_RCDZ, &
+       RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -226,6 +227,9 @@ contains
        RHOT, &
        QTRC, &
        DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
     use mod_ocean_vars, only: &
@@ -264,6 +268,12 @@ contains
               ) * RCDZ(KS)
        DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
             + SFLX_QV(i,j) * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+            + SFLX_MOMZ(i,j) * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+            + SFLX_MOMX(i,j) * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+            + SFLX_MOMY(i,j) * RCDZ(KS)
        QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
             + SFLX_QV(i,j) * RCDZ(KS)
     enddo

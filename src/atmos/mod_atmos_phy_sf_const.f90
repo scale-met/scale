@@ -180,7 +180,8 @@ contains
     use mod_history, only: &
        HIST_in
     use mod_grid, only: &
-       RCDZ => GRID_RCDZ
+       RCDZ => GRID_RCDZ, &
+       RFDZ => GRID_RFDZ, &
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -188,6 +189,9 @@ contains
        MOMY, &
        RHOT, &
        DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
     implicit none
@@ -225,8 +229,14 @@ contains
             + ( SFLX_POTT(i,j) &
               + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
               ) * RCDZ(KS)
-       DENS_tp(KS,i,j) = DENS_tp(KS,i,j)&
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
             + SFLX_QV(i,j) * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+            + SFLX_MOMZ(i,j) * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+            + SFLX_MOMX(i,j) * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+            + SFLX_MOMY(i,j) * RCDZ(KS)
        QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
             + SFLX_QV(i,j) * RCDZ(KS)
     enddo
