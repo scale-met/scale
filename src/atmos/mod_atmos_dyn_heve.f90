@@ -823,12 +823,22 @@ contains
           call CHECK( __LINE__, MOMZ(KE-1,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMZ,ZDIR) )
 #endif
-          ! k = KS+1
+          ! k = KS+1 if (w>0) max(-w/dt,f), else min(-w/dt,-f)
           vel = 0.5_RP * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) / DENS(KS+1,i,j)
-          qflx_hi(KS,i,j,ZDIR) = vel  &
-                              * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
-                                + FACT_F * ( MOMZ(KS+2,i,j)            ) ) &
-                              + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
+          qflx_hi(KS,i,j,ZDIR) = &
+               sign( &
+                     max( abs(MOMZ(KS,i,j)) / dtrk, &
+                          sign( &
+                                vel * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
+                                      + FACT_F * ( MOMZ(KS+2,i,j)              ) ), &
+                                MOMZ(KS,i,j) ) &
+                         ), &
+                     MOMZ(KS,i,j) ) &
+              + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
+!          qflx_hi(KS,i,j,ZDIR) = vel  &
+!                              * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
+!                                + FACT_F * ( MOMZ(KS+2,i,j)            ) ) &
+!                              + num_diff(KS+1,i,j,I_MOMZ,ZDIR)
           ! k = KE-1
           vel = 0.5_RP * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j)
           qflx_hi(KE-2,i,j,ZDIR) = vel  &
