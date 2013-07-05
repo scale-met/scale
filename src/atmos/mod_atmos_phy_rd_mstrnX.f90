@@ -398,6 +398,7 @@ contains
     use mod_atmos_phy_mp, only: &
        MP_EffectiveRadius => ATMOS_PHY_MP_EffectiveRadius, &
        MP_CloudFraction   => ATMOS_PHY_MP_CloudFraction,   &
+       MP_Mixingratio     => ATMOS_PHY_MP_Mixingratio,   &
        MP_DENS
     use mod_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
@@ -412,6 +413,7 @@ contains
     real(RP) :: rh     (KA,IA,JA)
     real(RP) :: cldfrac(KA,IA,JA)
     real(RP) :: MP_Re  (KA,IA,JA,MP_QA)
+    real(RP) :: MP_Qe  (KA,IA,JA,MP_QA)
     real(RP) :: AE_Re  (KA,IA,JA,AE_QA)
 
     real(RP) :: RHOE    (KA,IA,JA)
@@ -450,8 +452,6 @@ contains
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j
 
-    real(RP) :: QTRC_tmp
-    integer :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
@@ -484,6 +484,10 @@ contains
     call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
                              QTRC(:,:,:,:),  & ! [IN]
                              rh  (:,:,:)     ) ! [IN]
+
+    call MP_Mixingratio( MP_Qe(:,:,:,:),    &  ! [OUT]
+                         QTRC(:,:,:,:)      )  ! [IN]
+
 
     do j = JS, JE
     do i = IS, IE
@@ -531,20 +535,14 @@ contains
        enddo
 
        do ihydro = 1,  MP_QA
-          if ( I_MP2ALL(ihydro) > 0 ) then
+!          if ( I_MP2ALL(ihydro) > 0 ) then
              do k = KS, KE
                 RD_k = RD_KMAX - ( k - KS ) ! reverse axis
-                QTRC_tmp = 0.0_RP
-                do iq = I_MP2ALL(ihydro), I_MP2ALL(ihydro)+I_MP_BIN_NUM(ihydro)-1
-                 QTRC_tmp = QTRC_tmp + QTRC(k,i,j,iq)
-                enddo
-                aerosol_conc_merge(RD_k,ihydro) = QTRC_tmp &
+                aerosol_conc_merge(RD_k,ihydro) = MP_Qe(k,i,j,ihydro) &
                                                 / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
-!                aerosol_conc_merge(RD_k,ihydro) = QTRC(k,i,j,I_MP2ALL(ihydro)) &
-!                                                / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
                 aerosol_radi_merge(RD_k,ihydro) = MP_Re(k,i,j,ihydro)
              enddo
-          endif
+!          endif
        enddo
 
        do iaero = 1,  AE_QA

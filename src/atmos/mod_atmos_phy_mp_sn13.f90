@@ -103,6 +103,7 @@ module mod_atmos_phy_mp
   public :: ATMOS_PHY_MP
   public :: ATMOS_PHY_MP_CloudFraction
   public :: ATMOS_PHY_MP_EffectiveRadius
+  public :: ATMOS_PHY_MP_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
@@ -4736,6 +4737,27 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_EffectiveRadius
+  !-----------------------------------------------------------------------------
+  !> Calculate mixing ratio of each category
+  subroutine ATMOS_PHY_MP_Mixingratio( &
+       Qe,    &
+       QTRC0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
 
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+
+    integer  :: ihydro
+    !---------------------------------------------------------------------------
+
+    do ihydro = 1, MP_QA
+       Qe(:,:,:,ihydro) = QTRC0(:,:,:,I_MP2ALL(ihydro))
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_Mixingratio
+  !-----------------------------------------------------------------------------
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------

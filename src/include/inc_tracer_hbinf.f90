@@ -795,7 +795,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_sn13+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_hbinf+AE_dummy+RD_mstrnX)
   !
   !-----------------------------------------------------------------------------
 
@@ -808,21 +808,14 @@
   integer, private, parameter :: I_mp_QG = 6
   integer, private, parameter :: I_mp_QH = 7
 
-  integer, private, save :: I_MP2ALL(MP_QA)
-  data I_MP2ALL / 2,    & ! start of Cloud bin
-                  35,   & ! start of plate bin
-                  68,   & ! start of columner bin
-                  101,  & ! start of dendrite bin
-                  134,  & ! start of snow bin
-                  167,  & ! start of graupel bin
-                  200   / ! start of hail bin
-!  data I_MP2ALL / I_QV+(I_mp_QC-1)*nbin+1,  & ! start of Cloud bin
-!                  I_QV+(I_mp_QP-1)*nbin+1,  & ! start of plate bin
-!                  I_QV+(I_mp_QCL-1)*nbin+1, & ! start of columner bin
-!                  I_QV+(I_mp_QD-1)*nbin+1,  & ! start of dendrite bin
-!                  I_QV+(I_mp_QS-1)*nbin+1,  & ! start of snow bin
-!                  I_QV+(I_mp_QG-1)*nbin+1,  & ! start of graupel bin
-!                  I_QV+(I_mp_QH-1)*nbin+1   / ! start of hail bin
+  integer, private, save :: I_MP2ALL(MP_QA)  !--- dummy for Bin model
+  data I_MP2ALL / I_mp_QC,   & ! start of Cloud bin
+                  I_mp_QP,   & ! start of plate bin
+                  I_mp_QCL,  & ! start of columner bin
+                  I_mp_QD,   & ! start of dendrite bin
+                  I_mp_QS,   & ! start of snow bin
+                  I_mp_QG,   & ! start of graupel bin
+                  I_mp_QH    / ! start of hail bin
 
   integer, private, save :: I_MP2RD(MP_QA)
   data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
@@ -833,16 +826,6 @@
                   2,    & ! I_mp_QG => MSTRN_nptype=2: ice cloud (graupel)
                   2     / ! I_mp_QH => MSTRN_nptype=2: ice cloud (hail)
   
-  integer, private, save :: I_MP_BIN_NUM(MP_QA) !-- bin number 
-  data I_MP_BIN_NUM        &
-                / nbin,    & 
-                  nbin,    & 
-                  nbin,    & 
-                  nbin,    & 
-                  nbin,    & 
-                  nbin,    & 
-                  nbin     / 
-
   integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, private, parameter :: I_ae_dummy = 1
 

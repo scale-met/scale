@@ -58,6 +58,9 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
+  public :: ATMOS_PHY_MP_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
@@ -71,6 +74,7 @@ module mod_atmos_phy_mp
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
   !
   !++ Private procedure
   !
@@ -253,6 +257,8 @@ contains
     enddo
 
     close ( fid_micpara )
+
+    MP_DENS(I_mp_QC)  = CONST_DWATR
 
     !--- random number setup for stochastic method
     if( rndm_flgp > 0 ) then
@@ -1387,6 +1393,121 @@ call STOP_COLLECTION("MICROPHYSICS")
   return
   !
   end subroutine r_collcoag
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_MP_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do ihydro = 1, MP_QA
+        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+          qhydro = qhydro + QTRC(k,i,j,iq)
+        enddo
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_CloudFraction
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+
+    real(RP) :: sum2(KA,IA,JA,MP_QA), sum3(KA,IA,JA,MP_QA)
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    sum2(:,:,:,:) = 0.0_RP
+    sum3(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, MP_QA
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, JE
+      do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+         sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
+                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                            / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
+                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**3.0_RP )
+         sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
+                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                            / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
+                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
+      enddo
+      sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro-EPS))
+      sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro-EPS))
+    
+      if( sum2(k,i,j,ihydro) /= 0.0_RP ) then 
+       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)  
+      else 
+       Re(k,i,j,ihydro) = 0.0_RP
+      endif
+    enddo 
+    enddo 
+    enddo 
+    enddo 
+ 
+    return
+  end subroutine ATMOS_PHY_MP_EffectiveRadius
+  !-----------------------------------------------------------------------------
+  !> Calculate mixing ratio of each category
+  subroutine ATMOS_PHY_MP_Mixingratio( &
+       Qe,    &
+       QTRC0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+
+    real(RP) :: sum2
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+      do ihydro = 1, MP_QA
+        sum2 = 0.0_RP
+        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
+          sum2 = sum2 + QTRC0(k,i,j,iq)
+        enddo
+        Qe(k,i,j,ihydro) = sum2
+      enddo
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_Mixingratio
  !-------------------------------------------------------------------------------
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------
