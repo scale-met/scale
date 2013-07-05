@@ -827,9 +827,9 @@ contains
           ! if w>0 min(f,w*dz/dt), else max(f,w*dz/dt) = -min(-f,|w|*dz/dt)
           vel = 0.5_RP * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) / DENS(KS+1,i,j)
           qflx_hi(KS,i,j,ZDIR) = &
-               sign( 1.0, MOMZ(KS,i,j) ) &
+               sign( 1.0_RP, MOMZ(KS,i,j) ) &
                * min( &
-                       sign( 1.0, MOMZ(KS,i,j) ) &
+                       sign( 1.0_RP, MOMZ(KS,i,j) ) &
                        * ( vel * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS,i,j) ) &
                                  + FACT_F * ( MOMZ(KS+2,i,j)              ) ) &
                          + num_diff(KS+1,i,j,I_MOMZ,ZDIR) ), &
