@@ -103,7 +103,8 @@ module mod_atmos_dyn
 
   ! numerical filter settings
   integer,  private, save      :: ATMOS_DYN_numerical_diff_order = 1
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef = 1.0E-2_RP ! nondimensional numerical diffusion
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact = 1.0_RP
   real(RP), private, save      :: DIFF4 ! for numerical filter
 
   ! coriolis force
@@ -172,6 +173,7 @@ contains
     NAMELIST / PARAM_ATMOS_DYN /    &
        ATMOS_DYN_numerical_diff_order, &
        ATMOS_DYN_numerical_diff_coef, &
+       ATMOS_DYN_numerical_diff_sfc_fact, &
        ATMOS_DYN_enable_coriolis,   &
        ATMOS_DYN_divdmp_coef,       &
        ATMOS_DYN_FLAG_FCT_rho,      &
@@ -530,6 +532,7 @@ contains
          AQ_CV,                                     & ! (in)
          REF_dens, REF_pott, REF_qv,                & ! (in)
          DIFF4, ATMOS_DYN_numerical_diff_order,     & ! (in)
+         ATMOS_DYN_numerical_diff_sfc_fact,         & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
          ATMOS_DYN_FLAG_FCT_rho,                    & ! (in)
@@ -557,7 +560,8 @@ contains
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, REF_qv, DIFF4, ND_ORDER, & ! (in)
+         REF_dens, REF_pott, REF_qv,                  & ! (in)
+         DIFF4, ND_ORDER, ND_SFC_FACT,                & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
@@ -642,6 +646,7 @@ contains
     real(RP), intent(in)    :: REF_qv  (KA)
     real(RP), intent(in)    :: DIFF4
     integer,  intent(in)    :: ND_ORDER
+    real(RP), intent(in)    :: ND_SFC_FACT
     real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
@@ -1846,6 +1851,15 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_DENS,XDIR) = num_DIFF(KS,i,j,I_DENS,XDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_DENS,XDIR) = num_DIFF(KS+1,i,j,I_DENS,XDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          enddo
+          enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -1854,6 +1868,15 @@ call TIME_rapstart   ('DYN-set')
              num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) &
                   * DIFF4 * CDY(j)**nd_order4
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_DENS,YDIR) = num_DIFF(KS,i,j,I_DENS,YDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_DENS,YDIR) = num_DIFF(KS+1,i,j,I_DENS,YDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
           enddo
           enddo
 
@@ -1879,6 +1902,15 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMZ,XDIR) = num_DIFF(KS,i,j,I_MOMZ,XDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_DIFF(KS+1,i,j,I_MOMZ,XDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          enddo
+          enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -1888,6 +1920,15 @@ call TIME_rapstart   ('DYN-set')
                   * DIFF4 * CDY(j)**nd_order4 &
                   * 0.25_RP * ( DENS(k+1,i,j+1) + DENS(k+1,i,j) + DENS(k,i,j+1) + DENS(k,i,j) )
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMZ,YDIR) = num_DIFF(KS,i,j,I_MOMZ,YDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMZ,YDIR) = num_DIFF(KS+1,i,j,I_MOMZ,YDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
           enddo
           enddo
 
@@ -1913,6 +1954,15 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMX,XDIR) = num_DIFF(KS,i,j,I_MOMX,XDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMX,XDIR) = num_DIFF(KS+1,i,j,I_MOMX,XDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          enddo
+          enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -1922,6 +1972,15 @@ call TIME_rapstart   ('DYN-set')
                   * DIFF4 * CDY(j)**nd_order4 &
                   * 0.25_RP * ( DENS(k,i+1,j+1) + DENS(k,i+1,j) + DENS(k,i,j+1) + DENS(k,i,j) )
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMX,YDIR) = num_DIFF(KS,i,j,I_MOMX,YDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMX,YDIR) = num_DIFF(KS+1,i,j,I_MOMX,YDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
           enddo
           enddo
 
@@ -1947,6 +2006,15 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMY,XDIR) = num_DIFF(KS,i,j,I_MOMY,XDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMY,XDIR) = num_DIFF(KS+1,i,j,I_MOMY,XDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          enddo
+          enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -1956,6 +2024,15 @@ call TIME_rapstart   ('DYN-set')
                   * DIFF4 * ( 0.5_RP*(CDY(j+1)+CDY(j)) )**nd_order4 &
                   * DENS(k,i,j)
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_MOMY,YDIR) = num_DIFF(KS,i,j,I_MOMY,YDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_MOMY,YDIR) = num_DIFF(KS+1,i,j,I_MOMY,YDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
           enddo
           enddo
 
@@ -1993,6 +2070,15 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_RHOT,XDIR) = num_DIFF(KS,i,j,I_RHOT,XDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_RHOT,XDIR) = num_DIFF(KS+1,i,j,I_RHOT,XDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          enddo
+          enddo
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS, JJE
@@ -2002,6 +2088,15 @@ call TIME_rapstart   ('DYN-set')
                   * DIFF4 * CDY(j)**nd_order4 &
                   * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
           enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+             num_diff(KS,i,j,I_RHOT,YDIR) = num_DIFF(KS,i,j,I_RHOT,YDIR) &
+                  * ND_SFC_FACT
+             num_diff(KS+1,i,j,I_RHOT,YDIR) = num_DIFF(KS+1,i,j,I_RHOT,YDIR) &
+                  * (1.0_RP + ND_SFC_FACT) * 0.5_RP
           enddo
           enddo
 
