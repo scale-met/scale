@@ -25,6 +25,8 @@ module mod_atmos_refstate
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
+  use dc_types, only: &
+     DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -75,6 +77,9 @@ module mod_atmos_refstate
   real(RP),                  private :: ATMOS_REFSTATE_RH           =   0.0_RP          !< surface & environment RH      [%]
   real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP          !< uniform potential temperature [K]
   logical,                   private :: ATMOS_REFSTATE_UPDATE_FLAG  = .false.
+  real(DP),                  private :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
+
+  real(DP) :: last_updated
 
   !-----------------------------------------------------------------------------
 contains
@@ -96,7 +101,8 @@ contains
        ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_TEMP_SFC,     &
        ATMOS_REFSTATE_RH,           &
-       ATMOS_REFSTATE_UPDATE_FLAG
+       ATMOS_REFSTATE_UPDATE_FLAG,  &
+       ATMOS_REFSTATE_UPDATE_DT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -418,9 +424,6 @@ contains
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
-    real(RP) :: dens(KA)
-    real(RP) :: pott(KA)
-    real(RP) :: qv  (KA)
 
     real(RP) :: QDRY, RTOT, CPTOT, CPovCV
 
@@ -450,22 +453,24 @@ contains
 
     call COMM_horizontal_mean( pres(:), PRES_3d(:,:,:) )
     call COMM_horizontal_mean( temp(:), TEMP_3d(:,:,:) )
-    call COMM_horizontal_mean( dens(:), DENS_3d(:,:,:) )
-    call COMM_horizontal_mean( pott(:), POTT_3d(:,:,:) )
 
-    call COMM_horizontal_mean( qv(:), QTRC_3d(:,:,:,I_QV) )
+
+       call calc_refstate( &
+            ATMOS_REFSTATE_dens(:), &
+            ATMOS_REFSTATE_pott(:), &
+            ATMOS_REFSTATE_qv  (:), &
+            DENS_3d(:,:,:), &
+            POTT_3d(:,:,:), &
+            QTRC_3d(:,:,:,I_QV) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
     if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
     do k = KS, KE
-       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k), qv(k)
+       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), &
+            ATMOS_REFSTATE_dens(k), ATMOS_REFSTATE_pott(k), ATMOS_REFSTATE_qv(k)
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
-
-    ATMOS_REFSTATE_dens(:) = dens(:)
-    ATMOS_REFSTATE_pott(:) = pott(:)
-    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
@@ -473,10 +478,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update
+    use mod_time, only: &
+       NOWSEC => TIME_NOWSEC
     use mod_grid, only: &
        CZ   => GRID_CZ
-    use mod_comm, only: &
-       COMM_horizontal_mean
     use mod_atmos_vars, only: &
        DENS, &
        RHOT, &
@@ -489,22 +494,135 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       if ( NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REFSTATE]/Categ[ATMOS]'
+          if( IO_L ) write(IO_FID_LOG,*) '*** update reference state'
 
-       call COMM_horizontal_mean( ATMOS_REFSTATE_dens(:), DENS(:,:,:) )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_pott(:), POTT(:,:,:) )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_qv(:), QTRC(:,:,:,I_QV) )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+          enddo
+          enddo
+          enddo
 
+          call calc_refstate( &
+               ATMOS_REFSTATE_dens(:), &
+               ATMOS_REFSTATE_pott(:), &
+               ATMOS_REFSTATE_qv  (:), &
+               DENS(:,:,:), &
+               POTT(:,:,:), &
+               QTRC(:,:,:,I_QV) )
+
+       end if
     end if
 
     return
   end subroutine ATMOS_REFSTATE_update
+
+  subroutine calc_refstate( &
+       refstate_dens, refstate_pott, refstate_qv, &
+       dens, pott, qv )
+    use mod_time, only: &
+       TIME_NOWSEC
+    use mod_comm, only: &
+       COMM_horizontal_mean
+    implicit none
+    real(RP), intent(out) :: refstate_dens(KA)
+    real(RP), intent(out) :: refstate_pott(KA)
+    real(RP), intent(out) :: refstate_qv  (KA)
+    real(RP), intent(in)  :: dens(KA,IA,JA)
+    real(RP), intent(in)  :: pott(KA,IA,JA)
+    real(RP), intent(in)  :: qv  (KA,IA,JA)
+
+    call COMM_horizontal_mean( REFSTATE_dens(:), DENS(:,:,:) )
+    call COMM_horizontal_mean( REFSTATE_pott(:), POTT(:,:,:) )
+    call COMM_horizontal_mean( REFSTATE_qv  (:), qv(:,:,:) )
+
+    call smoothing( REFSTATE_dens )
+    call smoothing( REFSTATE_pott )
+    call smoothing( REFSTATE_qv )
+
+    last_updated = TIME_NOWSEC
+
+    return
+  end subroutine calc_refstate
+
+  subroutine smoothing( &
+       phi )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    use mod_grid, only : &
+         FDZ => GRID_FDZ, &
+         RCDZ => GRID_RCDZ
+    use mod_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(RP), intent(inout) :: phi(KA)
+
+    integer, parameter :: iter_max = 100
+    real(RP) :: dev(KA)
+    real(RP) :: flux(KA)
+    real(RP) :: fact(KA)
+    real(RP) :: zerosw
+    logical :: updated
+    integer :: k, iter
+
+    dev(KS) = 0.0_RP
+    dev(KE) = 0.0_RP
+
+    flux(KS  ) = 0.0_RP
+    flux(KS+1) = 0.0_RP
+    flux(KE-1) = 0.0_RP
+    flux(KE  ) = 0.0_RP
+
+    fact(KS  ) = 0.0_RP
+    fact(KS+1) = 0.0_RP
+    fact(KE-1) = 0.0_RP
+    fact(KE  ) = 0.0_RP
+
+    do iter = 1, iter_max
+       updated = .false.
+
+       do k = KS+1, KE-1
+          dev(k) = phi(k) &
+                 - ( FDZ(k-1) * phi(k+1) + FDZ(k) * phi(k-1) ) / ( FDZ(k) + FDZ(k-1) )
+       end do
+
+       do k = KS+2, KE-2
+          if ( dev(k)*dev(k+1) < -EPS .and. dev(k)*dev(k-1) < -EPS ) then
+             flux(k) = dev(k) &
+                  / ( 2.0_RP*RCDZ(k) + (FDZ(k-1)*RCDZ(k+1)+FDZ(k)*RCDZ(k-1))/(FDZ(k)+FDZ(k-1)) )
+             updated = .true.
+          else
+             flux(k) = 0.0_RP
+          end if
+       end do
+       if ( .not. updated ) exit
+
+       do k = KS+2, KE-2
+          ! if flux(k)==0 then fact(k) = 0.0
+          zerosw = 0.5_RP - sign( 0.5_RP, abs(flux(k))-EPS )
+          fact(k) = flux(k) / ( flux(k) - flux(k+1) - flux(k-1) + zerosw )
+       end do
+
+       do k = KS+1, KE-1
+          phi(k) = phi(k) &
+                 + ( flux(k+1) * fact(k+1) &
+                   - flux(k  ) * fact(k  ) * 2.0_RP &
+                   + flux(k-1) * fact(k-1) &
+                   ) * RCDZ(k)
+       end do
+
+       if ( iter == iter_max ) then
+          if (IO_L) write(IO_FID_LOG,*) "xxx [refstate smoothing] iteration not converged!", phi
+          call PRC_MPIstop
+       end if
+    end do
+
+    return
+  end subroutine smoothing
 
 end module mod_atmos_refstate

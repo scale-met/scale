@@ -105,6 +105,7 @@ module mod_atmos_dyn
   integer,  private, save      :: ATMOS_DYN_numerical_diff_order = 1
   real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef = 1.0E-4_RP ! nondimensional numerical diffusion
   real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact = 1.0_RP
+  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
   real(RP), private, save      :: DIFF4 ! for numerical filter
 
   ! coriolis force
@@ -174,6 +175,7 @@ contains
        ATMOS_DYN_numerical_diff_order, &
        ATMOS_DYN_numerical_diff_coef, &
        ATMOS_DYN_numerical_diff_sfc_fact, &
+       ATMOS_DYN_numerical_diff_use_refstate, &
        ATMOS_DYN_enable_coriolis,   &
        ATMOS_DYN_divdmp_coef,       &
        ATMOS_DYN_FLAG_FCT_rho,      &
@@ -578,6 +580,7 @@ contains
          REF_dens, REF_pott, REF_qv,                & ! (in)
          DIFF4, ATMOS_DYN_numerical_diff_order,     & ! (in)
          ATMOS_DYN_numerical_diff_sfc_fact,         & ! (in)
+         ATMOS_DYN_numerical_diff_use_refstate,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
          ATMOS_DYN_divdmp_coef,                     & ! (in)
          ATMOS_DYN_FLAG_FCT_rho,                    & ! (in)
@@ -606,7 +609,7 @@ contains
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv,                  & ! (in)
-         DIFF4, ND_ORDER, ND_SFC_FACT,                & ! (in)
+         DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,     & ! (in)
          corioli, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
          FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
@@ -692,6 +695,7 @@ contains
     real(RP), intent(in)    :: DIFF4
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
+    logical,  intent(in)    :: ND_USE_RS
     real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
@@ -1074,14 +1078,64 @@ call TIME_rapstart   ('DYN-set')
           do j  = JJS-2, JJE+2
           do i  = IIS-2, IIE+2
           do k = KS, KE
-             dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
-             pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
-#ifndef DRY
-             qv_diff  (k,i,j) = QTRC(k,i,j,I_QV)          - REF_qv  (k)
-#endif
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           enddo
           enddo
           enddo
+
+          if ( ND_USE_RS ) then
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j  = JJS, JJE
+             do i  = IIS, IIE
+             do k = KS, KE
+                dens_diff(k,i,j) = DENS(k,i,j)               - REF_dens(k)
+                pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
+             enddo
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             do j  = JJS, JJE
+             do i  = IIS, IIE
+             do k = KS+1, KE-1
+                dens_diff(k,i,j) = ( DENS(k,i,j) * 3.0_RP &
+                     + ( DENS(k,i+1,j) + DENS(k,i-1,j) + DENS(k,i,j+1) + DENS(k,i,j-1) ) * 2.0_RP &
+                     + ( DENS(k,i+2,j) + DENS(k,i-2,j) + DENS(k,i,j+2) + DENS(k,i,j-2) ) &
+                     + ( DENS(k+1,i,j) + DENS(k-1,i,j) ) * 2.0_RP &
+                     ) / 19.0_RP
+                pott_diff(k,i,j) = ( POTT(k,i,j) * 3.0_RP &
+                     + ( POTT(k,i+1,j) + POTT(k,i-1,j) + POTT(k,i,j+1) + POTT(k,i,j-1) ) * 2.0_RP &
+                     + ( POTT(k,i+2,j) + POTT(k,i-2,j) + POTT(k,i,j+2) + POTT(k,i,j-2) ) &
+                     + ( POTT(k+1,i,j) + POTT(k-1,i,j) ) * 2.0_RP &
+                     ) / 19.0_RP
+             enddo
+             enddo
+             enddo
+             do j  = JJS, JJE
+             do i  = IIS, IIE
+                dens_diff(KS,i,j) = ( DENS(KS,i,j) * 3.0_RP &
+                     + ( DENS(KS,i+1,j) + DENS(KS,i-1,j) + DENS(KS,i,j+1) + DENS(KS,i,j-1) ) * 2.0_RP &
+                     + ( DENS(KS,i+2,j) + DENS(KS,i-2,j) + DENS(KS,i,j+2) + DENS(KS,i,j-2) ) &
+                     + ( DENS(KS+1,i,j) ) * 2.0_RP &
+                     ) / 17.0_RP
+                dens_diff(KE,i,j) = ( DENS(KE,i,j) * 3.0_RP &
+                     + ( DENS(KE,i+1,j) + DENS(KE,i-1,j) + DENS(KE,i,j+1) + DENS(KE,i,j-1) ) * 2.0_RP &
+                     + ( DENS(KE,i+2,j) + DENS(KE,i-2,j) + DENS(KE,i,j+2) + DENS(KE,i,j-2) ) &
+                     + ( DENS(KE-1,i,j) ) * 2.0_RP &
+                     ) / 17.0_RP
+                pott_diff(KS,i,j) = ( POTT(KS,i,j) * 3.0_RP &
+                     + ( POTT(KS,i+1,j) + POTT(KS,i-1,j) + POTT(KS,i,j+1) + POTT(KS,i,j-1) ) * 2.0_RP &
+                     + ( POTT(KS,i+2,j) + POTT(KS,i-2,j) + POTT(KS,i,j+2) + POTT(KS,i,j-2) ) &
+                     + ( POTT(KS+1,i,j) ) * 2.0_RP &
+                     ) / 17.0_RP
+                pott_diff(KE,i,j) = ( POTT(KE,i,j) * 3.0_RP &
+                     + ( POTT(KE,i+1,j) + POTT(KE,i-1,j) + POTT(KE,i,j+1) + POTT(KE,i,j-1) ) * 2.0_RP &
+                     + ( POTT(KE,i+2,j) + POTT(KE,i-2,j) + POTT(KE,i,j+2) + POTT(KE,i,j-2) ) &
+                     + ( POTT(KE-1,i,j) ) * 2.0_RP &
+                     ) / 19.0_RP
+             enddo
+             enddo
+          end if
 
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           do j = JJS-2, JJE+2
@@ -1195,16 +1249,16 @@ call TIME_rapstart   ('DYN-set')
           call CHECK( __LINE__, CNX3(2,i+1,1) )
           call CHECK( __LINE__, CNX3(3,i+1,1) )
           call CHECK( __LINE__, CNX3(1,i,1) )
-          call CHECK( __LINE__, dens_diff(k,i+2,j) )
-          call CHECK( __LINE__, dens_diff(k,i+1,j) )
-          call CHECK( __LINE__, dens_diff(k,i  ,j) )
-          call CHECK( __LINE__, dens_diff(k,i-1,j) )
+          call CHECK( __LINE__, dens(k,i+2,j) )
+          call CHECK( __LINE__, dens(k,i+1,j) )
+          call CHECK( __LINE__, dens(k,i  ,j) )
+          call CHECK( __LINE__, dens(k,i-1,j) )
 #endif
              num_diff(k,i,j,I_DENS,XDIR) = &
-                    ( CNX3(1,i+1,1) * dens_diff(k,i+2,j) &
-                    - CNX3(2,i+1,1) * dens_diff(k,i+1,j) &
-                    + CNX3(3,i+1,1) * dens_diff(k,i  ,j) &
-                    - CNX3(1,i  ,1) * dens_diff(k,i-1,j) )
+                    ( CNX3(1,i+1,1) * DENS(k,i+2,j) &
+                    - CNX3(2,i+1,1) * DENS(k,i+1,j) &
+                    + CNX3(3,i+1,1) * DENS(k,i  ,j) &
+                    - CNX3(1,i  ,1) * DENS(k,i-1,j) )
           enddo
           enddo
           enddo
@@ -1218,16 +1272,16 @@ call TIME_rapstart   ('DYN-set')
           call CHECK( __LINE__, CNY3(2,j+1,1) )
           call CHECK( __LINE__, CNY3(3,j+1,1) )
           call CHECK( __LINE__, CNY3(1,j,1) )
-          call CHECK( __LINE__, dens_diff(k,i,j+2) )
-          call CHECK( __LINE__, dens_diff(k,i,j+1) )
-          call CHECK( __LINE__, dens_diff(k,i,j  ) )
-          call CHECK( __LINE__, dens_diff(k,i,j-1) )
+          call CHECK( __LINE__, dens(k,i,j+2) )
+          call CHECK( __LINE__, dens(k,i,j+1) )
+          call CHECK( __LINE__, dens(k,i,j  ) )
+          call CHECK( __LINE__, dens(k,i,j-1) )
 #endif
              num_diff(k,i,j,I_DENS,YDIR) = &
-                    ( CNY3(1,j+1,1) * dens_diff(k,i,j+2) &
-                    - CNY3(2,j+1,1) * dens_diff(k,i,j+1) &
-                    + CNY3(3,j+1,1) * dens_diff(k,i,j  ) &
-                    - CNY3(1,j  ,1) * dens_diff(k,i,j-1) )
+                    ( CNY3(1,j+1,1) * DENS(k,i,j+2) &
+                    - CNY3(2,j+1,1) * DENS(k,i,j+1) &
+                    + CNY3(3,j+1,1) * DENS(k,i,j  ) &
+                    - CNY3(1,j  ,1) * DENS(k,i,j-1) )
           enddo
           enddo
           enddo
@@ -1639,16 +1693,16 @@ call TIME_rapstart   ('DYN-set')
           call CHECK( __LINE__, CNX3(2,i+1,1) )
           call CHECK( __LINE__, CNX3(3,i+1,1) )
           call CHECK( __LINE__, CNX3(1,i  ,1) )
-          call CHECK( __LINE__, pott_diff(k,i+2,j) )
-          call CHECK( __LINE__, pott_diff(k,i+1,j) )
-          call CHECK( __LINE__, pott_diff(k,i  ,j) )
-          call CHECK( __LINE__, pott_diff(k,i-1,j) )
+          call CHECK( __LINE__, pott(k,i+2,j) )
+          call CHECK( __LINE__, pott(k,i+1,j) )
+          call CHECK( __LINE__, pott(k,i  ,j) )
+          call CHECK( __LINE__, pott(k,i-1,j) )
 #endif
              num_diff(k,i,j,I_RHOT,XDIR) = &
-                    ( CNX3(1,i+1,1) * pott_diff(k,i+2,j)   &
-                    - CNX3(2,i+1,1) * pott_diff(k,i+1,j)   &
-                    + CNX3(3,i+1,1) * pott_diff(k,i  ,j)   &
-                    - CNX3(1,i  ,1) * pott_diff(k,i-1,j) )
+                    ( CNX3(1,i+1,1) * POTT(k,i+2,j)   &
+                    - CNX3(2,i+1,1) * POTT(k,i+1,j)   &
+                    + CNX3(3,i+1,1) * POTT(k,i  ,j)   &
+                    - CNX3(1,i  ,1) * POTT(k,i-1,j) )
           enddo
           enddo
           enddo
@@ -1662,16 +1716,16 @@ call TIME_rapstart   ('DYN-set')
           call CHECK( __LINE__, CNY3(2,j+1,1) )
           call CHECK( __LINE__, CNY3(3,j+1,1) )
           call CHECK( __LINE__, CNY3(1,j  ,1) )
-          call CHECK( __LINE__, pott_diff(k,i,j+2) )
-          call CHECK( __LINE__, pott_diff(k,i,j+1) )
-          call CHECK( __LINE__, pott_diff(k,i,j  ) )
-          call CHECK( __LINE__, pott_diff(k,i,j-1) )
+          call CHECK( __LINE__, pott(k,i,j+2) )
+          call CHECK( __LINE__, pott(k,i,j+1) )
+          call CHECK( __LINE__, pott(k,i,j  ) )
+          call CHECK( __LINE__, pott(k,i,j-1) )
 #endif
              num_diff(k,i,j,I_RHOT,YDIR) = &
-                    ( CNY3(1,j+1,1) * pott_diff(k,i,j+2)   &
-                    - CNY3(2,j+1,1) * pott_diff(k,i,j+1)   &
-                    + CNY3(3,j+1,1) * pott_diff(k,i,j  )   &
-                    - CNY3(1,j  ,1) * pott_diff(k,i,j-1) )
+                    ( CNY3(1,j+1,1) * POTT(k,i,j+2)   &
+                    - CNY3(2,j+1,1) * POTT(k,i,j+1)   &
+                    + CNY3(3,j+1,1) * POTT(k,i,j  )   &
+                    - CNY3(1,j  ,1) * POTT(k,i,j-1) )
           enddo
           enddo
           enddo
@@ -2402,14 +2456,43 @@ call TIME_rapstart   ('DYN-fct')
 
 
           if ( iq == I_QV ) then
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-             do j  = JJS-2, JJE+2
-             do i  = IIS-2, IIE+2
-             do k = KS, KE
-                qv_diff(k,i,j) = QTRC(k,i,j,I_QV) - REF_qv  (k)
-             enddo
-             enddo
-             enddo
+             if ( ND_USE_RS ) then
+                !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+                do j  = JJS, JJE
+                do i  = IIS, IIE
+                do k = KS, KE
+                   qv_diff(k,i,j) = QTRC(k,i,j,I_QV) - REF_qv  (k)
+                enddo
+                enddo
+                enddo
+             else
+                !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+                do j  = JJS, JJE
+                do i  = IIS, IIE
+                do k = KS+1, KE-1
+                   qv_diff(k,i,j) = ( QTRC(k,i,j,I_QV) * 3.0_RP &
+                        + ( QTRC(k,i+1,j,I_QV) + QTRC(k,i-1,j,I_QV) + QTRC(k,i,j+1,I_QV) + QTRC(k,i,j-1,I_QV) ) * 2.0_RP &
+                        +   QTRC(k,i+2,j,I_QV) + QTRC(k,i-2,j,I_QV) + QTRC(k,i,j+2,I_QV) + QTRC(k,i,j-2,I_QV) &
+                        + ( QTRC(k+1,i,j,I_QV) + QTRC(k-1,i,j,I_QV) ) * 2.0_RP &
+                        ) / 19.0_RP
+                enddo
+                enddo
+                enddo
+                do j  = JJS, JJE
+                do i  = IIS, IIE
+                   qv_diff(KS,i,j) = ( QTRC(KS,i,j,I_QV) * 3.0_RP &
+                        + ( QTRC(KS,i+1,j,I_QV) + QTRC(KS,i-1,j,I_QV) + QTRC(KS,i,j+1,I_QV) + QTRC(KS,i,j-1,I_QV) ) * 2.0_RP &
+                        +   QTRC(KS,i+2,j,I_QV) + QTRC(KS,i-2,j,I_QV) + QTRC(KS,i,j+2,I_QV) + QTRC(KS,i,j-2,I_QV) &
+                        +   QTRC(KS+1,i,j,I_QV) * 2.0_RP &
+                   ) / 17.0_RP
+                   qv_diff(KE,i,j) = ( QTRC(KE,i,j,I_QV) * 3.0_RP &
+                        + ( QTRC(KE,i+1,j,I_QV) + QTRC(KE,i-1,j,I_QV) + QTRC(KE,i,j+1,I_QV) + QTRC(KE,i,j-1,I_QV) ) * 2.0_RP &
+                        +   QTRC(KE,i+2,j,I_QV) + QTRC(KE,i-2,j,I_QV) + QTRC(KE,i,j+2,I_QV) + QTRC(KE,i,j-2,I_QV) &
+                        +   QTRC(KE-1,i,j,I_QV) * 2.0_RP &
+                   ) / 17.0_RP
+                enddo
+                enddo
+             end if
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
