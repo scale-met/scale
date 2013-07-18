@@ -2545,19 +2545,6 @@ call TIME_rapstart   ('DYN-fct')
              do j = JJS,   JJE
              do i = IIS,   IIE
 #ifdef DEBUG
-                call CHECK( __LINE__, CNZ3(1,KS,1) )
-                call CHECK( __LINE__, CNZ3(2,KS,1) )
-                call CHECK( __LINE__, CNZ3(3,KS,1) )
-                call CHECK( __LINE__, CNZ3(1,KS-1,1) )
-                call CHECK( __LINE__, QTRC(KS+1,i,j,iq) )
-                call CHECK( __LINE__, QTRC(KS,i,j,iq) )
-#endif
-                num_diff(KS-1,i,j,1,ZDIR) = &
-                       ( CNZ3(1,KS  ,1) * QTRC(KS+1,i,j,iq)   &
-                       - CNZ3(2,KS  ,1) * QTRC(KS  ,i,j,iq)   &
-                       + CNZ3(3,KS  ,1) * QTRC(KS  ,i,j,iq)   &
-                       - CNZ3(1,KS-1,1) * QTRC(KS  ,i,j,iq) )
-#ifdef DEBUG
                 call CHECK( __LINE__, CNZ3(1,KS+1,1) )
                 call CHECK( __LINE__, CNZ3(2,KS+1,1) )
                 call CHECK( __LINE__, CNZ3(3,KS+1,1) )
@@ -2570,7 +2557,9 @@ call TIME_rapstart   ('DYN-fct')
                        ( CNZ3(1,KS+1,1) * QTRC(KS+2,i,j,iq)   &
                        - CNZ3(2,KS+1,1) * QTRC(KS+1,i,j,iq)   &
                        + CNZ3(3,KS+1,1) * QTRC(KS  ,i,j,iq)   &
-                       - CNZ3(1,KS  ,1) * QTRC(KS  ,i,j,iq) )
+                       - CNZ3(1,KS  ,1) * QTRC(KS+1,i,j,iq) )
+                num_diff(KS-1,i,j,1,ZDIR) = - num_diff(KS  ,i,j,1,ZDIR)
+                num_diff(KS-2,i,j,1,ZDIR) = - num_diff(KS+1,i,j,1,ZDIR)
 #ifdef DEBUG
                 call CHECK( __LINE__, CNZ3(1,KE,1) )
                 call CHECK( __LINE__, CNZ3(2,KE,1) )
@@ -2585,19 +2574,8 @@ call TIME_rapstart   ('DYN-fct')
                        - CNZ3(2,KE  ,1) * QTRC(KE  ,i,j,iq)   &
                        + CNZ3(3,KE  ,1) * QTRC(KE-1,i,j,iq)   &
                        - CNZ3(1,KE-1,1) * QTRC(KE-2,i,j,iq) )
-#ifdef DEBUG
-                call CHECK( __LINE__, CNZ3(1,KE+1,1) )
-                call CHECK( __LINE__, CNZ3(2,KE+1,1) )
-                call CHECK( __LINE__, CNZ3(3,KE+1,1) )
-                call CHECK( __LINE__, CNZ3(1,KE,1) )
-                call CHECK( __LINE__, QTRC(KE,i,j,iq) )
-                call CHECK( __LINE__, QTRC(KE-1,i,j,iq) )
-#endif
-                num_diff(KE  ,i,j,1,ZDIR) = &
-                       ( CNZ3(1,KE+1,1) * QTRC(KE  ,i,j,iq)   &
-                       - CNZ3(2,KE+1,1) * QTRC(KE  ,i,j,iq)   &
-                       + CNZ3(3,KE+1,1) * QTRC(KE  ,i,j,iq)   &
-                       - CNZ3(1,KE  ,1) * QTRC(KE-1,i,j,iq) )
+                num_diff(KE  ,i,j,1,ZDIR) = - num_diff(KE-1,i,j,1,ZDIR)
+                num_diff(KE+1,i,j,1,ZDIR) = - num_diff(KE-2,i,j,1,ZDIR)
              enddo
              enddo
 
