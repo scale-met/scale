@@ -215,7 +215,7 @@ contains
                          lat,                                 & ! (in)
                          ATMOS_DYN_numerical_diff_order,      & ! (in)
                          ATMOS_DYN_numerical_diff_coef,       & ! (in)
-                         DTSEC_ATMOS_DYN,                     & ! (in)
+                         Real(DTSEC_ATMOS_DYN,kind=RP),       & ! (in)
                          ATMOS_DYN_enable_coriolis            ) ! (in)
 
 #ifdef _USE_RDMA
@@ -2843,7 +2843,7 @@ call TIME_rapstart   ('DYN-fct')
 
     call ATMOS_DYN_fct(qflx_anti,               & ! (out)
                        RHOQ, qflx_hi, qflx_lo,  & ! (in)
-                       RCDZ, RCDX, RCDY, DTSEC  ) ! (in)
+                       RCDZ, RCDX, RCDY, Real(DTSEC,kind=RP)  ) ! (in)
 #ifdef DEBUG
        qflx_lo  (KS:,:,:,:) = UNDEF
 #endif
