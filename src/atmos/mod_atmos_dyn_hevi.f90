@@ -22,6 +22,8 @@ module mod_atmos_dyn_rk
   use mod_debug, only: &
        CHECK
 #endif
+  use dc_types, only: &
+       DP
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -52,7 +54,6 @@ module mod_atmos_dyn_rk
   !++ Private parameters & variables
   !
   integer, private, parameter :: NB = 2
-  real(RP) :: M(NB*3+1,KMAX-1)
   real(RP), private :: kappa
   !-----------------------------------------------------------------------------
 
@@ -80,8 +81,11 @@ contains
        call PRC_MPIstop
     end if
 
-!OCL XFILL
-    M(:,:) = 0.0_RP
+#ifdef HEVI_BICGSTAB
+    if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+#else
+    if ( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
+#endif
 
 #ifdef DRY
     kappa = CPdry / CVdry
@@ -204,8 +208,6 @@ contains
     real(RP) :: St(KA,IA,JA)
     real(RP) :: CPtot(KA,IA,JA)
     real(RP) :: C(KMAX-1)
-    integer  :: IPIV(KMAX-1)
-    integer  :: INFO
 
     real(RP) :: qflx_hi(KA,IA,JA,3)
     real(RP) :: vel
@@ -213,10 +215,6 @@ contains
     integer :: k, i, j
 
 #ifdef DEBUG
-    real(RP) :: M2(KMAX-1,KMAX-1)
-    real(RP) :: C2(KMAX-1)
-    real(RP) :: sum
-
     PRES(:,:,:) = UNDEF
     VELZ(:,:,:) = UNDEF
     VELX(:,:,:) = UNDEF
@@ -701,175 +699,14 @@ contains
                       + Sw(k,i,j) )
           end do
 
-          ! band matrix
-#ifdef __BOUND
-          do k = KS+2, KE-3
+#ifdef HEVI_BICGSTAB
+          call solve_bicgstab( &
+               C,         & ! (out)
+               PT, A, B ) ! (in)
 #else
-          do k = KS+3, KE-4
-#endif
-             M(NB+1,k-KS+1) =   A(k-1) * PT(k-1) * RFDZ(k-2) &
-                              + B * RCDZ(k-1)
-             M(NB+2,k-KS+1) = - ( A(k  ) * ( 8.0_RP*PT(k) + PT(k-1) ) &
-                                + A(k-1) *   PT(k-1)                  ) * RFDZ(k-1) &
-                              - B * ( 9.0_RP*RCDZ(k) - RCDZ(k-1) )
-             M(NB+3,k-KS+1) =   ( A(k+1) * ( PT(k+1) + 8.0_RP*PT(k) ) &
-                                + A(k  ) * ( 8.0_RP*PT(k) + PT(k-1) ) ) * RFDZ(k  ) &
-                              + 9.0_RP * B * ( RCDZ(k+1) - RCDZ(k) ) &
-                              + 1.0_RP
-             M(NB+4,k-KS+1) = - ( A(k+2) *   PT(k+1) &
-                                + A(k+1) * ( PT(k+1) + 8.0_RP*PT(k) ) ) * RFDZ(k+1) &
-                              - B * ( RCDZ(k+2) - 9.0_RP * RCDZ(k+1) )
-             M(NB+5,k-KS+1) =   A(k+2) * PT(k+1) * RFDZ(k+2) &
-                              - B * RCDZ(k+2)
-          end do
-#ifdef __BOUND
-          M(NB+3,1) =   ( A(KS+1) * ( PT(KS+1) + 8.0_RP*PT(KS) ) &
-                        + A(KS  ) *   8.0_RP*PT(KS)              ) * RFDZ(KS  ) &
-                      + B * ( 9.0_RP*RCDZ(KS+1) - 8.0_RP*RCDZ(KS) ) &
-                      + 1.0_RP
-          M(NB+4,1) = - ( A(KS+2) *   PT(KS+1) &
-                        + A(KS+1) * ( PT(KS+1) + 8.0_RP*PT(KS) ) ) * RFDZ(KS+1) &
-                      - B * ( RCDZ(KS+2) - 9.0_RP * RCDZ(KS+1) )
-          M(NB+5,1) =   A(KS+2) * PT(KS+1) * RFDZ(KS+2) &
-                      - B * RCDZ(KS+2)
-          M(NB+2,2) = - ( A(KS+1) * ( 8.0_RP*PT(KS+1) + PT(KS) ) &
-                        + A(KS  ) *   PT(KS)                     ) * RFDZ(KS) &
-                      - B * ( 9.0_RP*RCDZ(KS+1) - RCDZ(KS) )
-          M(NB+3,2) =   ( A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) &
-                        + A(KS+1) * ( 8.0_RP*PT(KS+1) + PT(KS  ) ) ) * RFDZ(KS+1) &
-                      + 9.0_RP * B * ( RCDZ(KS+2) - RCDZ(KS+1) ) &
-                      + 1.0_RP
-          M(NB+4,2) = - ( A(KS+3) *   PT(KS+2) &
-                        + A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) ) * RFDZ(KS+2) &
-                      - B * ( RCDZ(KS+3) - 9.0_RP * RCDZ(KS+3) )
-          M(NB+5,2) =   A(KS+3) * PT(KS+2) * RFDZ(KS+3) &
-                      - B * RCDZ(KS+3)
-          M(NB+1,KE-KS-1) =   A(KE-3) * PT(KE-3) * RFDZ(KE-4) &
-                            + B * RCDZ(KE-3)
-          M(NB+2,KE-KS-1) = - ( A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) &
-                              + A(KE-3) *   PT(KE-3)                   ) * RFDZ(KE-3) &
-                            - B * ( 9.0_RP*RCDZ(KE-2) - RCDZ(KE-3) )
-          M(NB+3,KE-KS-1) =   ( A(KE-1) * ( PT(KE-1) + 8.0_RP*PT(KE-2) ) &
-                              + A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) ) * RFDZ(KE-2) &
-                            + 9.0_RP * B * ( RCDZ(KE-1) - RCDZ(KE-2) ) &
-                            + 1.0_RP
-          M(NB+4,KE-KS-1) = - ( A(KE  ) *   PT(KE-1) &
-                              + A(KE-1) * ( PT(KE-1) + 8.0_RP*PT(KE-2) ) ) * RFDZ(KE-1) &
-                            - B * ( RCDZ(KE) - 9.0_RP * RCDZ(KE-1) )
-          M(NB+1,KE-KS) =   A(KE-2) * PT(KE-2) * RFDZ(KE-3) &
-                          + B * RCDZ(KE-2)
-          M(NB+2,KE-KS) = - ( A(KE-1) * ( 8.0_RP*PT(KE-1) + PT(KE-2) ) &
-                            + A(KE-2) *   PT(KE-2)                   ) * RFDZ(KE-2) &
-                          - B * ( 9.0_RP*RCDZ(KE-1) - RCDZ(KE-2) )
-          M(NB+3,KE-KS) =   ( A(KE  ) * (              8.0_RP*PT(KE-1) ) &
-                            + A(KE-1) * ( 8.0_RP*PT(KE-1) + PT(KE-2) ) ) * RFDZ(KE-1) &
-                          + B * ( 8.0_RP*RCDZ(KE) - 9.0_RP*RCDZ(KE-1) ) &
-                          + 1.0_RP
-#else
-          M(NB+3,1) =   ( A(KS+1) * ( PT(KS+1) + 6.0_RP*PT(KS) ) &
-                        + 6.0_RP * A(KS) * PT(KS)              ) * RFDZ(KS) &
-                      + B * ( 7.0_RP*RCDZ(KS+1) - 6.0_RP*RCDZ(KS) ) &
-                      + 1.0_RP
-          M(NB+4,1) = - ( A(KS+2) *   PT(KS+1) &
-                        + A(KS+1) * ( PT(KS+1) + 6.0_RP*PT(KS) ) ) * RFDZ(KS+1) &
-                      - B * ( RCDZ(KS+2) - 7.0_RP*RCDZ(KS+1) )
-          M(NB+5,1) =   A(KS+2) * PT(KS+1) * RFDZ(KS+2) &
-                      - B * RCDZ(KS+2)
-          M(NB+2,2) = - A(KS+1) * PT(KS+1) * RFDZ(KS) &
-                      - 8.0_RP * B * RCDZ(KS+1)
-          M(NB+3,2) =   ( A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) &
-                        + 8.0_RP*A(KS+1) * PT(KS+1)              ) * RFDZ(KS+1) &
-                      + B * ( 9.0_RP*RCDZ(KS+2) - 8.0_RP*RCDZ(KS+1) ) &
-                      + 1.0_RP
-          M(NB+4,2) = - ( A(KS+3) *   PT(KS+2) &
-                        + A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) ) * RFDZ(KS+2) &
-                      - B * ( RCDZ(KS+3) - 9.0_RP * RCDZ(KS+2) )
-          M(NB+5,2) =   A(KS+3) * PT(KS+2) * RFDZ(KS+3) &
-                      - B * RCDZ(KS+3)
-          M(NB+1,3) =   A(KS+1) * PT(KS+1) *RFDZ(KS) &
-                      + B * RCDZ(KS+1)
-          M(NB+2,3) = - ( A(KS+2) * ( 8.0_RP*PT(KS+2) + PT(KS+1) ) &
-                        + A(KS+1) *   PT(KS+1)                     ) * RFDZ(KS+1) &
-                      - B * ( 9.0_RP*RCDZ(KS+2) - RCDZ(KS+1) )
-          M(NB+3,3) =   ( A(KS+3) * ( PT(KS+3) + 8.0_RP*PT(KS+2) ) &
-                        + A(KS+2) * ( 8.0_RP*PT(KS+2) + PT(KS+1) ) ) * RFDZ(KS+2) &
-                      + 9.0_RP * B * ( RCDZ(KS+3) - RCDZ(KS+2) ) &
-                      + 1.0_RP
-          M(NB+4,3) = - ( A(KS+4) *   PT(KS+3) &
-                        + A(KS+3) * ( PT(KS+3) + 8.0_RP*PT(KS+2) ) ) * RFDZ(KS+3) &
-                      - B * ( RCDZ(KS+4) - 9.0_RP * RCDZ(KS+3) )
-          M(NB+5,3) =   A(KS+4) * PT(KS+3) * RFDZ(KS+4) &
-                      - B * RCDZ(KS+4)
-          M(NB+1,KE-KS-2) =   A(KE-4) * PT(KE-4) * RFDZ(KE-5) &
-                            + B * RCDZ(KE-4)
-          M(NB+2,KE-KS-2) = - ( A(KE-3) * ( 8.0_RP*PT(KE-3) + PT(KE-4) ) &
-                              + A(KE-4) *   PT(KE-4)                     ) * RFDZ(KE-4) &
-                            - B * ( 9.0_RP*RCDZ(KE-3) - RCDZ(KE-4) )
-          M(NB+3,KE-KS-2) =   ( A(KE-2) * ( PT(KE-2) + 8.0_RP*PT(KE-3) ) &
-                              + A(KE-3) * ( 8.0_RP*PT(KE-3) + PT(KE-4) ) ) * RFDZ(KE-3) &
-                            + 9.0_RP * B * ( RCDZ(KE-2) - RCDZ(KE-3) ) &
-                            + 1.0_RP
-          M(NB+4,KE-KS-2) = - ( A(KE-1) *   PT(KE-2) &
-                              + A(KE-2) * ( PT(KE-2) + 8.0_RP*PT(KE-3) ) ) * RFDZ(KE-2) &
-                            - B * ( RCDZ(KE-1) - 9.0_RP * RCDZ(KE-2) )
-          M(NB+5,KE-KS-2) =   A(KE-1) * PT(KE-2) * RFDZ(KE-1) &
-                            - B * RCDZ(KE-1)
-          M(NB+1,KE-KS-1) =   A(KE-3) * PT(KE-3) * RFDZ(KE-4) &
-                            + B * RCDZ(KE-3)
-          M(NB+2,KE-KS-1) = - ( A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) &
-                              + A(KE-3) *   PT(KE-3)                     ) * RFDZ(KE-3) &
-                            - B * ( 9.0_RP*RCDZ(KE-2) - RCDZ(KE-3) )
-          M(NB+3,KE-KS-1) =   ( 8.0_RP * A(KE-1) * PT(KE-2) &
-                              + A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) ) * RFDZ(KE-2) &
-                            + B * ( 8.0_RP*RCDZ(KE-1) - 9.0_RP*RCDZ(KE-2) ) &
-                            + 1.0_RP
-          M(NB+4,KE-KS-1) = - A(KE-1) * PT(KE-2) * RFDZ(KE-1) &
-                            + 8.0_RP * B * RCDZ(KE-1)
-          M(NB+1,KE-KS  ) =   A(KE-2) * PT(KE-2) * RFDZ(KE-3) &
-                            + B * RCDZ(KE-2)
-          M(NB+2,KE-KS  ) = - ( A(KE-1) * ( 6.0_RP*PT(KE-1) + PT(KE-2) ) &
-                              + A(KE-2) *   PT(KE-2)                     ) * RFDZ(KE-2) &
-                            - B * ( 7.0_RP*RCDZ(KE-1) - RCDZ(KE-2) )
-          M(NB+3,KE-KS  ) =   ( 6.0_RP * A(KE) * PT(KE-1) &
-                              + A(KE-1) * ( 6.0_RP*PT(KE-1) + PT(KE-2) ) ) * RFDZ(KE-1) &
-                            + B * ( 6.0_RP*RCDZ(KE) - 7.0_RP*RCDZ(KE-1) ) &
-                            + 1.0_RP
-#endif
-
-
-#ifdef DEBUG
-          call check_matrix(M, A, B, PT)
-
-          M2(:,:) = 0.0_RP
-          do k = 1, KMAX-1
-             if (k>2) M2(k-2,k) = M(NB+5,k-2)
-             if (k>1) M2(k-1,k) = M(NB+4,k-1)
-             M2(k,k) = M(NB+3,k)
-             if (k<kmax-1) M2(k+1,k) = M(NB+2,k+1)
-             if (k<kmax-2) M2(k+2,k) = M(NB+1,k+2)
-             C2(k) = C(k)
-          end do
-#endif
-
-          call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
-          ! C is (\rho w)^{n+1}
-#ifdef DEBUG
-          if ( INFO .ne. 0 ) then
-             write(*,*) "DGBSV was failed", info
-             call abort
-          end if
-
-          do k = 1, KMAX-1
-             sum = 0.0_RP
-             if (k>2) sum = sum + M2(k-2,k)*c(k-2)
-             if (k>1) sum = sum + M2(k-1,k)*c(k-1)
-             sum = sum + M2(k,k)*c(k)
-             if (k<kmax-1) sum = sum + M2(k+1,k)*c(k+1)
-             if (k<kmax-2) sum = sum + M2(k+2,k)*c(k+2)
-             if ( abs(sum-c2(k)) > 1E-10_RP ) then
-                write(*,*) k+2, i, j, sum, c2(k)
-             end if
-          end do
+          call solve_lapack( &
+               C,         & ! (out)
+               PT, A, B ) ! (in)
 #endif
 
           ! z momentum flux
@@ -1257,6 +1094,429 @@ contains
 
   end subroutine ATMOS_DYN_rk
 
+#ifdef HEVI_BICGSTAB
+  subroutine solve_bicgstab( &
+       C,       & ! (inout)
+       PT, A, B ) ! (in)
+    use mod_stdio, only: &
+       IO_FID_LOG,  &
+       IO_L
+    use mod_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(RP), intent(inout) :: C(KMAX-1)
+    real(RP), intent(in)    :: PT(KA)
+    real(RP), intent(in)    :: A(KA)
+    real(RP), intent(in)    :: B
+
+    real(RP) :: r0(KMAX-1)
+
+    real(RP) :: M(5,KMAX-1)
+    real(RP) :: p(KMAX-1)
+    real(RP) :: ap(KMAX-1)
+    real(RP) :: s(KMAX-1)
+    real(RP) :: as(KMAX-1)
+    real(RP) :: al, be, w
+
+    real(RP), pointer :: r(:)
+    real(RP), pointer :: rn(:)
+    real(RP), pointer :: swap(:)
+    real(RP), target :: v0(KMAX-1)
+    real(RP), target :: v1(KMAX-1)
+    real(RP) :: r0r
+    real(RP) :: norm, error, epsilon
+
+    integer :: k, iter
+
+    epsilon = 0.1_RP**(RP+2)
+
+    call make_matrix(M, PT, A, B)
+
+    norm = 0.0_RP
+    do k = 1, KMAX-1
+       norm = norm + C(k)**2
+    end do
+
+    r  => v0
+    rn => v1
+
+    call mul_matrix( v1, M, C )
+
+    do k = 1, KMAX-1
+       r(k) = C(k) - v1(k)
+       r0(k) = r(k)
+       p(k) = r(k)
+    end do
+
+    r0r = sum(r0(:)*r(:))
+    do iter = 1, KMAX-1
+       error = 0.0_RP
+       do k = 1, KMAX-1
+          error = error + r(k)**2
+       end do
+
+!       if ( error < epsilon .or. error / norm < epsilon ) then
+       if ( error/norm < epsilon ) then
+#ifdef DEBUG
+          write(*,*) "Bi-CGSTAB converged:", iter
+#endif
+          exit
+       end if
+
+       r0r = sum(r0(:)*r(:))
+       call mul_matrix( ap, M, p )
+       al = r0r / sum(r0(:)*ap(:))
+       s(:) = r(:) - al*ap(:)
+       call mul_matrix( as, M, s )
+       w = sum(as(:)*s(:)) / sum(as(:)*as(:))
+
+       c(:) = c(:) + al*p(:) + w*s(:)
+       rn(:) = s(:) - w*as(:)
+       be = al/w / r0r
+       r0r = sum(r0(:)*rn(:))
+       be = be * r0r
+       p(:) = rn(:) + be * ( p(:) - w*ap(:) )
+
+       swap => rn
+       rn => r
+       r => swap
+    end do
+
+    if ( iter >= KMAX-1 ) then
+       write(*,*) 'xxx [atmos_dyn_hevi] Bi-CGSTAB'
+       write(*,*) 'xxx not converged', error, norm
+       call PRC_MPIstop
+    end if
+
+    return
+  end subroutine solve_bicgstab
+
+  subroutine make_matrix(M, PT, A, B)
+    use mod_grid, only: &
+         RCDZ => GRID_RCDZ, &
+         RFDZ => GRID_RFDZ
+    implicit none
+    real(RP), intent(out) :: M(5, KMAX-1)
+    real(RP), intent(in)  :: PT(KA)
+    real(RP), intent(in)  :: A(KA)
+    real(RP), intent(in)  :: B
+
+    integer :: k
+
+#ifdef __BOUND
+    ! k = KS
+    M(5,KS-2) = A(KS+1)*pt(KS+1)*rfdz(KS) + B *rcdz(KS+1)
+    M(4,KS-2) = -(A(KS+1)*(8.0_RP*pt(KS+1)+pt(KS))+A(KS)*pt(KS))*rfdz(KS)-B*(9.0_RP*rcdz(KS+1)-rcdz(KS))
+    M(3,KS-2) = (A(KS+1)*(pt(KS+1)+8.0_RP*pt(KS))+A(KS)*(8.0_RP*pt(KS)))*rfdz(KS) + B*(9.0_RP*rcdz(KS+1)-8.0_RP*rcdz(KS)) + 1.0_RP
+    ! k = KS+1
+    M(5,KS-1) = A(KS+2)*pt(KS+2)*rfdz(KS+1) + B *rcdz(KS+2)
+    M(4,KS-1) = -(A(KS+2)*(8.0_RP*pt(KS+2)+pt(KS+1))+A(KS+1)*pt(KS+1))*rfdz(KS+1)-B*(9.0_RP*rcdz(KS+2)-rcdz(KS+1))
+    M(3,KS-1) = (A(KS+2)*(pt(KS+2)+8.0_RP*pt(KS+1))+A(KS+1)*(8.0_RP*pt(KS+1)+pt(KS)))*rfdz(KS+1) &
+         + 9.0_RP*B*(rcdz(KS+2)-rcdz(KS+1)) + 1.0_RP
+    M(2,KS-1) = -(A(KS+2)*pt(KS+1)+a(KS+1)*(pt(KS+1)+8.0_RP*pt(KS)))*rfdz(KS+1) -B*(rcdz(KS+2)-9.0_RP*rcdz(KS+1))
+#else
+    ! k = KS
+    M(5,KS-2) =  A(KS+1)* pt(KS+1)                                    *rfdz(KS) &
+         + B        *rcdz(KS+1)
+    M(4,KS-2) = -A(KS+1)* pt(KS+1)                                    *rfdz(KS) &
+         - B* 8.0_RP*rcdz(KS+1)
+    M(3,KS-2) = (A(KS+1)*(pt(KS+1)+6.0_RP*pt(KS))+6.0_RP*A(KS)*pt(KS))*rfdz(KS) &
+         + B*(7.0_RP*rcdz(KS+1)-6.0_RP*rcdz(KS)) + 1.0_RP
+    ! k = KS+1
+    M(5,KS-1) =   A(KS+2)*        pt(KS+2)                                   *rfdz(KS+1) &
+         + B*rcdz(KS+2)
+    M(4,KS-1) = -(A(KS+2)*(8.0_RP*pt(KS+2)+pt(KS+1))+       A(KS+1)*pt(KS+1)                )*rfdz(KS+1) &
+         - B*(9.0_RP*rcdz(KS+2)-       rcdz(KS+1))
+    M(3,KS-1) =  (A(KS+2)*(pt(KS+2)+8.0_RP*pt(KS+1))+8.0_RP*A(KS+1)*pt(KS+1)                )*rfdz(KS+1) &
+         + B*(9.0_RP*rcdz(KS+2)-8.0_RP*rcdz(KS+1)) + 1.0_RP
+    M(2,KS-1) = -(A(KS+2)* pt(KS+1)                 +       A(KS+1)*(pt(KS+1)+6.0_RP*pt(KS)))*rfdz(KS+1) &
+         - B*(       rcdz(KS+2)-7.0_RP*rcdz(KS+1))
+    end if
+#endif
+    do k = KS+2, KE-3
+       M(5,k-2) =   A(k+1)*        pt(k+1)                                           *rfdz(k) &
+            + B*        rcdz(k+1)
+       M(4,k-2) = -(A(k+1)*(8.0_RP*pt(k+1)+       pt(k))+A(k)        *pt(k)         )*rfdz(k) &
+            - B*(9.0_RP*rcdz(k+1)-rcdz(k))
+       M(3,k-2) =  (A(k+1)*(       pt(k+1)+8.0_RP*pt(k))+A(k)*(8.0_RP*pt(k)+pt(k-1)))*rfdz(k) &
+            + B*9.0_RP*(rcdz(k+1)-rcdz(k)) + 1.0_RP
+       M(2,k-2) = -(A(k+1)*        pt(k)                +A(k)*(pt(k)+8.0_RP*pt(k-1)))*rfdz(k) &
+            - B*       (rcdz(k+1)-9.0_RP*rcdz(k))
+       M(1,k-2) =                                        A(k)*pt(k-1)                *rfdz(k) &
+            - B*                         rcdz(k)
+    enddo
+#ifdef __BOUND
+    ! k = KE-2
+    M(4,KE-4) = -(A(KE-1)*(8.0_RP*pt(KE-1)+pt(KE-2))+A(KE-2)*        pt(KE-2)          )*rfdz(KE-2) &
+         - B*(9.0_RP*rcdz(KE-1)-rcdz(KE-2))
+    M(3,KE-4) =  (A(KE-1)*(pt(KE-1)+8.0_RP*pt(KE-2))+A(KE-2)*(8.0_RP*pt(KE-2)+pt(KE-3)))*rfdz(KE-2) &
+         + B*9.0_RP*(rcdz(KE-1)-rcdz(KE-2)) + 1.0_RP
+    M(2,KE-4) = -(A(KE-1)*pt(KE-2)                  +A(KE-2)*(pt(KE-2)+8.0_RP*pt(KE-3)))*rfdz(KE-2) &
+         - B*       (rcdz(KE-1)-9.0_RP*rcdz(KE-2))
+    M(1,KE-4) =                                      A(KE-2)*                 pt(KE-3  )*rfdz(KE-2) &
+         - B*                          rcdz(KE-2)
+    ! k = KE-1
+    M(3,KE-3) =  (A(KE)*(8.0_RP*pt(KE-1))+A(KE-1)*(8.0_RP*pt(KE-1)+pt(KE-2)))*rfdz(KE-1) &
+           + B*(8.0_RP*rcdz(KE)-9.0_RP*rcdz(KE-1)) + 1.0_RP
+    M(2,KE-3) = -(A(KE)*pt(KE-1)         +A(KE-1)*(pt(KE-1)+8.0_RP*pt(KE-2)))*rfdz(KE-1) &
+           - B*(       rcdz(KE)-9.0_RP*rcdz(KE-1))
+    M(1,KE-3) =                           A(KE-1)*                 pt(KE-2)  *rfdz(KE-1) &
+           - B*                        rcdz(KE-1)
+#else
+    ! k = KE-2
+    M(4,KE-2) = -(A(KE-1)*(6.0_RP*pt(KE-1)+pt(KE-2))+A(KE-2)*        pt(KE-2)          )*rfdz(KE-2) &
+         - B*(7.0_RP*rcdz(KE-1)       -rcdz(KE-2))
+    M(3,KE-2) =  (A(KE-1)* 8.0_RP*pt(KE-2)          +A(KE-2)*(8.0_RP*pt(KE-2)+pt(KE-3)))*rfdz(KE-2) &
+         + B*(8.0_RP*rcdz(KE-1)-9.0_RP*rcdz(KE-2)) + 1.0_RP
+    M(2,KE-2) = -(A(KE-1)*        pt(KE-2)          +A(KE-2)*(pt(KE-2)+8.0_RP*pt(KE-3)))*rfdz(KE-2) &
+         - B*(       rcdz(KE-1)-9.0_RP*rcdz(KE-2))
+    M(1,KE-2) =                                      A(KE-2)*                 pt(KE-3)  *rfdz(KE-2) &
+         - B*                          rcdz(KE-2)
+    ! k = KE-1
+    M(3,KE-3) = (6.0_RP*A(KE)*pt(KE-1)+A(KE-1)*(6.0_RP*pt(KE-1)+pt(KE-2)))*rfdz(KE-1) &
+         + B*(6.0_RP*rcdz(KE)-7.0_RP*rcdz(KE-1)) + 1.0_RP
+    M(2,KE-3) = -                      A(KE-1)*                 pt(KE-2)  *rfdz(KE-1) &
+         + B*                 8.0_RP*rcdz(KE-1)
+    M(1,KE-3) =                        A(KE-1)*                 pt(KE-2)  *rfdz(KE-1) &
+         - B*                        rcdz(KE-1)
+#endif
+
+    return
+  end subroutine make_matrix
+
+  subroutine mul_matrix(V, M, C)
+    implicit none
+    real(RP), intent(out) :: V(KMAX-1)
+    real(RP), intent(in)  :: M(5, KMAX-1)
+    real(RP), intent(in)  :: C(KMAX-1)
+
+    integer :: k
+
+    V(1) = M(5,1)*C(3) + M(4,1)*C(2) + M(3,1)*C(1)
+    V(2) = M(5,2)*C(4) + M(4,2)*C(3) + M(3,2)*C(2) + M(2,2)*C(1)
+    do k = 3, KMAX-3
+       V(k) = M(5,k)*C(k+2) + M(4,k)*C(k+1) + M(3,k)*C(k) + M(2,k)*C(k-1) + M(1,k)*C(k-2)
+    enddo
+    ! k = KE-2
+    V(KMAX-2) = M(4,KMAX-2)*C(KMAX-1) + M(3,KMAX-2)*C(KMAX-2) + M(2,KMAX-2)*C(KMAX-3) + M(1,KMAX-2)*C(KMAX-4)
+    ! k = KE-1
+    V(KMAX-1) = M(3,KMAX-1)*C(KMAX-1) + M(2,KMAX-1)*C(KMAX-2) + M(1,KMAX-1)*C(KMAX-3)
+
+    return
+  end subroutine mul_matrix
+
+#else
+
+  subroutine solve_lapack( &
+       C,       & ! (inout)
+       PT, A, B ) ! (in)
+    use mod_grid, only: &
+         RCDZ => GRID_RCDZ, &
+         RFDZ => GRID_RFDZ
+    implicit none
+
+    real(RP), intent(inout) :: C(KMAX-1)
+    real(RP), intent(in)    :: PT(KA)
+    real(RP), intent(in)    :: A(KA)
+    real(RP), intent(in)    :: B
+
+    real(RP) :: M(NB*3+1,KMAX-1)
+    integer  :: IPIV(KMAX-1)
+    integer  :: INFO
+
+    integer :: k
+
+#ifdef DEBUG
+    real(RP) :: M2(KMAX-1,KMAX-1)
+    real(RP) :: C2(KMAX-1)
+    real(RP) :: sum
+#endif
+
+
+    M(NB+1,1) = 0.0_RP
+    M(NB+2,1) = 0.0_RP
+    M(NB+1,2) = 0.0_RP
+    M(NB*2  ,KMAX-2) = 0.0_RP
+    M(NB*2+1,KMAX-1) = 0.0_RP
+    M(NB*2+1,KMAX-1) = 0.0_RP
+
+
+          ! band matrix
+#ifdef __BOUND
+          do k = KS+2, KE-3
+#else
+          do k = KS+3, KE-4
+#endif
+             M(NB+1,k-KS+1) =   A(k-1) * PT(k-1) * RFDZ(k-2) &
+                              + B * RCDZ(k-1)
+             M(NB+2,k-KS+1) = - ( A(k  ) * ( 8.0_RP*PT(k) + PT(k-1) ) &
+                                + A(k-1) *   PT(k-1)                  ) * RFDZ(k-1) &
+                              - B * ( 9.0_RP*RCDZ(k) - RCDZ(k-1) )
+             M(NB+3,k-KS+1) =   ( A(k+1) * ( PT(k+1) + 8.0_RP*PT(k) ) &
+                                + A(k  ) * ( 8.0_RP*PT(k) + PT(k-1) ) ) * RFDZ(k  ) &
+                              + 9.0_RP * B * ( RCDZ(k+1) - RCDZ(k) ) &
+                              + 1.0_RP
+             M(NB+4,k-KS+1) = - ( A(k+2) *   PT(k+1) &
+                                + A(k+1) * ( PT(k+1) + 8.0_RP*PT(k) ) ) * RFDZ(k+1) &
+                              - B * ( RCDZ(k+2) - 9.0_RP * RCDZ(k+1) )
+             M(NB+5,k-KS+1) =   A(k+2) * PT(k+1) * RFDZ(k+2) &
+                              - B * RCDZ(k+2)
+          end do
+#ifdef __BOUND
+          M(NB+3,1) =   ( A(KS+1) * ( PT(KS+1) + 8.0_RP*PT(KS) ) &
+                        + A(KS  ) *   8.0_RP*PT(KS)              ) * RFDZ(KS  ) &
+                      + B * ( 9.0_RP*RCDZ(KS+1) - 8.0_RP*RCDZ(KS) ) &
+                      + 1.0_RP
+          M(NB+4,1) = - ( A(KS+2) *   PT(KS+1) &
+                        + A(KS+1) * ( PT(KS+1) + 8.0_RP*PT(KS) ) ) * RFDZ(KS+1) &
+                      - B * ( RCDZ(KS+2) - 9.0_RP * RCDZ(KS+1) )
+          M(NB+5,1) =   A(KS+2) * PT(KS+1) * RFDZ(KS+2) &
+                      - B * RCDZ(KS+2)
+          M(NB+2,2) = - ( A(KS+1) * ( 8.0_RP*PT(KS+1) + PT(KS) ) &
+                        + A(KS  ) *   PT(KS)                     ) * RFDZ(KS) &
+                      - B * ( 9.0_RP*RCDZ(KS+1) - RCDZ(KS) )
+          M(NB+3,2) =   ( A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) &
+                        + A(KS+1) * ( 8.0_RP*PT(KS+1) + PT(KS  ) ) ) * RFDZ(KS+1) &
+                      + 9.0_RP * B * ( RCDZ(KS+2) - RCDZ(KS+1) ) &
+                      + 1.0_RP
+          M(NB+4,2) = - ( A(KS+3) *   PT(KS+2) &
+                        + A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) ) * RFDZ(KS+2) &
+                      - B * ( RCDZ(KS+3) - 9.0_RP * RCDZ(KS+3) )
+          M(NB+5,2) =   A(KS+3) * PT(KS+2) * RFDZ(KS+3) &
+                      - B * RCDZ(KS+3)
+          M(NB+1,KE-KS-1) =   A(KE-3) * PT(KE-3) * RFDZ(KE-4) &
+                            + B * RCDZ(KE-3)
+          M(NB+2,KE-KS-1) = - ( A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) &
+                              + A(KE-3) *   PT(KE-3)                   ) * RFDZ(KE-3) &
+                            - B * ( 9.0_RP*RCDZ(KE-2) - RCDZ(KE-3) )
+          M(NB+3,KE-KS-1) =   ( A(KE-1) * ( PT(KE-1) + 8.0_RP*PT(KE-2) ) &
+                              + A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) ) * RFDZ(KE-2) &
+                            + 9.0_RP * B * ( RCDZ(KE-1) - RCDZ(KE-2) ) &
+                            + 1.0_RP
+          M(NB+4,KE-KS-1) = - ( A(KE  ) *   PT(KE-1) &
+                              + A(KE-1) * ( PT(KE-1) + 8.0_RP*PT(KE-2) ) ) * RFDZ(KE-1) &
+                            - B * ( RCDZ(KE) - 9.0_RP * RCDZ(KE-1) )
+          M(NB+1,KE-KS) =   A(KE-2) * PT(KE-2) * RFDZ(KE-3) &
+                          + B * RCDZ(KE-2)
+          M(NB+2,KE-KS) = - ( A(KE-1) * ( 8.0_RP*PT(KE-1) + PT(KE-2) ) &
+                            + A(KE-2) *   PT(KE-2)                   ) * RFDZ(KE-2) &
+                          - B * ( 9.0_RP*RCDZ(KE-1) - RCDZ(KE-2) )
+          M(NB+3,KE-KS) =   ( A(KE  ) * (              8.0_RP*PT(KE-1) ) &
+                            + A(KE-1) * ( 8.0_RP*PT(KE-1) + PT(KE-2) ) ) * RFDZ(KE-1) &
+                          + B * ( 8.0_RP*RCDZ(KE) - 9.0_RP*RCDZ(KE-1) ) &
+                          + 1.0_RP
+#else
+          M(NB+3,1) =   ( A(KS+1) * ( PT(KS+1) + 6.0_RP*PT(KS) ) &
+                        + 6.0_RP * A(KS) * PT(KS)              ) * RFDZ(KS) &
+                      + B * ( 7.0_RP*RCDZ(KS+1) - 6.0_RP*RCDZ(KS) ) &
+                      + 1.0_RP
+          M(NB+4,1) = - ( A(KS+2) *   PT(KS+1) &
+                        + A(KS+1) * ( PT(KS+1) + 6.0_RP*PT(KS) ) ) * RFDZ(KS+1) &
+                      - B * ( RCDZ(KS+2) - 7.0_RP*RCDZ(KS+1) )
+          M(NB+5,1) =   A(KS+2) * PT(KS+1) * RFDZ(KS+2) &
+                      - B * RCDZ(KS+2)
+          M(NB+2,2) = - A(KS+1) * PT(KS+1) * RFDZ(KS) &
+                      - 8.0_RP * B * RCDZ(KS+1)
+          M(NB+3,2) =   ( A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) &
+                        + 8.0_RP*A(KS+1) * PT(KS+1)              ) * RFDZ(KS+1) &
+                      + B * ( 9.0_RP*RCDZ(KS+2) - 8.0_RP*RCDZ(KS+1) ) &
+                      + 1.0_RP
+          M(NB+4,2) = - ( A(KS+3) *   PT(KS+2) &
+                        + A(KS+2) * ( PT(KS+2) + 8.0_RP*PT(KS+1) ) ) * RFDZ(KS+2) &
+                      - B * ( RCDZ(KS+3) - 9.0_RP * RCDZ(KS+2) )
+          M(NB+5,2) =   A(KS+3) * PT(KS+2) * RFDZ(KS+3) &
+                      - B * RCDZ(KS+3)
+          M(NB+1,3) =   A(KS+1) * PT(KS+1) *RFDZ(KS) &
+                      + B * RCDZ(KS+1)
+          M(NB+2,3) = - ( A(KS+2) * ( 8.0_RP*PT(KS+2) + PT(KS+1) ) &
+                        + A(KS+1) *   PT(KS+1)                     ) * RFDZ(KS+1) &
+                      - B * ( 9.0_RP*RCDZ(KS+2) - RCDZ(KS+1) )
+          M(NB+3,3) =   ( A(KS+3) * ( PT(KS+3) + 8.0_RP*PT(KS+2) ) &
+                        + A(KS+2) * ( 8.0_RP*PT(KS+2) + PT(KS+1) ) ) * RFDZ(KS+2) &
+                      + 9.0_RP * B * ( RCDZ(KS+3) - RCDZ(KS+2) ) &
+                      + 1.0_RP
+          M(NB+4,3) = - ( A(KS+4) *   PT(KS+3) &
+                        + A(KS+3) * ( PT(KS+3) + 8.0_RP*PT(KS+2) ) ) * RFDZ(KS+3) &
+                      - B * ( RCDZ(KS+4) - 9.0_RP * RCDZ(KS+3) )
+          M(NB+5,3) =   A(KS+4) * PT(KS+3) * RFDZ(KS+4) &
+                      - B * RCDZ(KS+4)
+          M(NB+1,KE-KS-2) =   A(KE-4) * PT(KE-4) * RFDZ(KE-5) &
+                            + B * RCDZ(KE-4)
+          M(NB+2,KE-KS-2) = - ( A(KE-3) * ( 8.0_RP*PT(KE-3) + PT(KE-4) ) &
+                              + A(KE-4) *   PT(KE-4)                     ) * RFDZ(KE-4) &
+                            - B * ( 9.0_RP*RCDZ(KE-3) - RCDZ(KE-4) )
+          M(NB+3,KE-KS-2) =   ( A(KE-2) * ( PT(KE-2) + 8.0_RP*PT(KE-3) ) &
+                              + A(KE-3) * ( 8.0_RP*PT(KE-3) + PT(KE-4) ) ) * RFDZ(KE-3) &
+                            + 9.0_RP * B * ( RCDZ(KE-2) - RCDZ(KE-3) ) &
+                            + 1.0_RP
+          M(NB+4,KE-KS-2) = - ( A(KE-1) *   PT(KE-2) &
+                              + A(KE-2) * ( PT(KE-2) + 8.0_RP*PT(KE-3) ) ) * RFDZ(KE-2) &
+                            - B * ( RCDZ(KE-1) - 9.0_RP * RCDZ(KE-2) )
+          M(NB+5,KE-KS-2) =   A(KE-1) * PT(KE-2) * RFDZ(KE-1) &
+                            - B * RCDZ(KE-1)
+          M(NB+1,KE-KS-1) =   A(KE-3) * PT(KE-3) * RFDZ(KE-4) &
+                            + B * RCDZ(KE-3)
+          M(NB+2,KE-KS-1) = - ( A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) &
+                              + A(KE-3) *   PT(KE-3)                     ) * RFDZ(KE-3) &
+                            - B * ( 9.0_RP*RCDZ(KE-2) - RCDZ(KE-3) )
+          M(NB+3,KE-KS-1) =   ( 8.0_RP * A(KE-1) * PT(KE-2) &
+                              + A(KE-2) * ( 8.0_RP*PT(KE-2) + PT(KE-3) ) ) * RFDZ(KE-2) &
+                            + B * ( 8.0_RP*RCDZ(KE-1) - 9.0_RP*RCDZ(KE-2) ) &
+                            + 1.0_RP
+          M(NB+4,KE-KS-1) = - A(KE-1) * PT(KE-2) * RFDZ(KE-1) &
+                            + 8.0_RP * B * RCDZ(KE-1)
+          M(NB+1,KE-KS  ) =   A(KE-2) * PT(KE-2) * RFDZ(KE-3) &
+                            + B * RCDZ(KE-2)
+          M(NB+2,KE-KS  ) = - ( A(KE-1) * ( 6.0_RP*PT(KE-1) + PT(KE-2) ) &
+                              + A(KE-2) *   PT(KE-2)                     ) * RFDZ(KE-2) &
+                            - B * ( 7.0_RP*RCDZ(KE-1) - RCDZ(KE-2) )
+          M(NB+3,KE-KS  ) =   ( 6.0_RP * A(KE) * PT(KE-1) &
+                              + A(KE-1) * ( 6.0_RP*PT(KE-1) + PT(KE-2) ) ) * RFDZ(KE-1) &
+                            + B * ( 6.0_RP*RCDZ(KE) - 7.0_RP*RCDZ(KE-1) ) &
+                            + 1.0_RP
+#endif
+
+
+#ifdef DEBUG
+          call check_matrix(M, A, B, PT)
+
+          M2(:,:) = 0.0_RP
+          do k = 1, KMAX-1
+             if (k>2) M2(k-2,k) = M(NB+5,k-2)
+             if (k>1) M2(k-1,k) = M(NB+4,k-1)
+             M2(k,k) = M(NB+3,k)
+             if (k<kmax-1) M2(k+1,k) = M(NB+2,k+1)
+             if (k<kmax-2) M2(k+2,k) = M(NB+1,k+2)
+             C2(k) = C(k)
+          end do
+#endif
+
+          if ( RP == DP ) then
+             call DGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
+          else
+             call SGBSV( KMAX-1, NB, NB, 1, M, NB*3+1, IPIV, C, KMAX-1, INFO)
+          end if
+          ! C is (\rho w)^{n+1}
+#ifdef DEBUG
+          if ( INFO .ne. 0 ) then
+             write(*,*) "DGBSV was failed", info
+             call abort
+          end if
+
+          do k = 1, KMAX-1
+             sum = 0.0_RP
+             if (k>2) sum = sum + M2(k-2,k)*c(k-2)
+             if (k>1) sum = sum + M2(k-1,k)*c(k-1)
+             sum = sum + M2(k,k)*c(k)
+             if (k<kmax-1) sum = sum + M2(k+1,k)*c(k+1)
+             if (k<kmax-2) sum = sum + M2(k+2,k)*c(k+2)
+             if ( abs(sum-c2(k)) > 1E-10_RP ) then
+                write(*,*) k+2, i, j, sum, c2(k)
+             end if
+          end do
+#endif
+  end subroutine solve_lapack
+
   subroutine check_matrix( M, A, B, PT )
     use mod_grid, only: &
          RCDZ => GRID_RCDZ, &
@@ -1363,6 +1623,7 @@ contains
     end if
 #endif
   end subroutine check_matrix
+#endif
 
   subroutine check_equation( &
        VECT, &
@@ -1409,7 +1670,7 @@ contains
     real(RP) :: PRES_N(KA)
 
     real(RP) :: mflx(KA)
-    real(RP) :: POTT(KS)
+    real(RP) :: POTT(KA)
     real(RP) :: PT(KA)
 
 #ifndef DRY
@@ -1424,6 +1685,8 @@ contains
     do k = KS, KE-1
        MOMZ_N(k) = VECT(k-KS+1)
     end do
+    MOMZ_N(:KS-1) = 0.0_RP
+    MOMZ_N(KE-2:) = 0.0_RP
 
     ! z momentum flux
     do k = KS+1, KE-2
