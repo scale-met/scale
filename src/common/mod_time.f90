@@ -216,7 +216,9 @@ contains
     TIME_DT_ATMOS_PHY_MP  = UNDEF
     TIME_DT_ATMOS_PHY_RD  = UNDEF
     TIME_DT_ATMOS_RESTART = UNDEF
+    TIME_DT_OCEAN         = UNDEF
     TIME_DT_OCEAN_RESTART = UNDEF
+    TIME_DT_LAND          = UNDEF
     TIME_DT_LAND_RESTART  = UNDEF
 
     !--- read namelist
