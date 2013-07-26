@@ -361,11 +361,13 @@ contains
     integer  :: index_sat(KA*IA*JA,3) ! list vector
 
     integer,  parameter :: itelim = 30
-    real(RP), parameter :: dtemp_criteria = 1.E-6_RP
+    real(RP) :: dtemp_criteria
 
     logical :: converged
     integer :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
+
+    dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
                                    TEMP1(:,:,:), & ! [IN]
@@ -435,7 +437,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp,k,i,j,ite
+          write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp,k,i,j,ite
           call PRC_MPIstop
        endif
 
