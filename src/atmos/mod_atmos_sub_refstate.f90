@@ -573,15 +573,11 @@ contains
     dev(KS) = 0.0_RP
     dev(KE) = 0.0_RP
 
-    flux(KS  ) = 0.0_RP
-    flux(KS+1) = 0.0_RP
-    flux(KE-1) = 0.0_RP
-    flux(KE  ) = 0.0_RP
+    flux(KS-1:KS+1) = 0.0_RP
+    flux(KE-1:KE+1) = 0.0_RP
 
-    fact(KS  ) = 0.0_RP
-    fact(KS+1) = 0.0_RP
-    fact(KE-1) = 0.0_RP
-    fact(KE  ) = 0.0_RP
+    fact(KS-1:KS+1) = 0.0_RP
+    fact(KE-1:KE+1) = 0.0_RP
 
     do iter = 1, iter_max
        updated = .false.
