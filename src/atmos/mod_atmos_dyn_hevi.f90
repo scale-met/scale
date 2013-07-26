@@ -1128,7 +1128,7 @@ contains
 
     integer :: k, iter
 
-    epsilon = 0.1_RP**(RP+2)
+    epsilon = 0.1_RP**(RP-1)
 
     call make_matrix(M, PT, A, B)
 
