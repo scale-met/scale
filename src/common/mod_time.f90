@@ -129,7 +129,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine TIME_setup
+  subroutine TIME_setup( &
+       flg_init ) ! (in)
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -143,6 +144,9 @@ contains
        CALENDAR_combine_daysec, &
        CALENDAR_unit2sec
     implicit none
+
+    logical, intent(in), optional :: flg_init
+    logical :: flgi = .false.
 
     real(DP)                 :: TIME_DURATION
     character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "SEC"
@@ -205,6 +209,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if ( present(flg_init) ) flgi = flg_init
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TIME]/Categ[COMMON]'
 
@@ -233,100 +239,109 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TIME)
 
-    ! check time setting
-    if ( TIME_DURATION == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DURATION.'
-    end if
-    if ( TIME_DT == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT.'
-    end if
-    ! DYN
-    if ( TIME_DT_ATMOS_DYN == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
-       TIME_DT_ATMOS_DYN = TIME_DT
-    end if
-    if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
-    end if
-    ! PHY_SF
-    if ( TIME_DT_ATMOS_PHY_SF == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF. TIME_DT is used.'
-       TIME_DT_ATMOS_PHY_SF = TIME_DT
-    end if
-    if ( TIME_DT_ATMOS_PHY_SF_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
-    end if
-    ! PHY_TB
-    if ( TIME_DT_ATMOS_PHY_TB == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB. TIME_DT is used.'
-       TIME_DT_ATMOS_PHY_TB = TIME_DT
-    end if
-    if ( TIME_DT_ATMOS_PHY_TB_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
-    end if
-    ! PHY_MP
-    if ( TIME_DT_ATMOS_PHY_MP == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP. TIME_DT is used.'
-       TIME_DT_ATMOS_PHY_MP = TIME_DT
-    end if
-    if ( TIME_DT_ATMOS_PHY_MP_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
-    end if
-    ! PHY_RD
-    if ( TIME_DT_ATMOS_PHY_RD == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD. TIME_DT is used.'
-       TIME_DT_ATMOS_PHY_RD = TIME_DT
-    end if
-    if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
-    end if
-    ! ATMOS RESTART
-    if ( TIME_DT_ATMOS_RESTART == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART. TIME_DURATION is used.'
-       TIME_DT_ATMOS_RESTART = TIME_DURATION
-    end if
-    if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
-       TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
-    end if
-    ! OCEAN
-    if ( TIME_DT_OCEAN == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN. TIME_DT is used.'
-       TIME_DT_OCEAN = TIME_DT
-    end if
-    if ( TIME_DT_OCEAN_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
-    end if
-    if ( TIME_DT_OCEAN_RESTART == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART. TIME_DURATION is used.'
-       TIME_DT_OCEAN_RESTART = TIME_DURATION
-    end if
-    if ( TIME_DT_OCEAN_RESTART_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
-       TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
-    end if
-    ! LAND
-    if ( TIME_DT_LAND == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND. TIME_DT is used.'
-       TIME_DT_LAND = TIME_DT
-    end if
-    if ( TIME_DT_LAND_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_UNIT. TIME_DT_UNIT is used.'
-       TIME_DT_LAND_UNIT = TIME_DT_UNIT
-    end if
-    if ( TIME_DT_LAND_RESTART == UNDEF ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART. TIME_DURATION is used.'
-       TIME_DT_LAND_RESTART = TIME_DURATION
-    end if
-    if ( TIME_DT_LAND_RESTART_UNIT == '' ) then
-       if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART_UNIT. TIME_DURATION_UNIT is used.'
-       TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
+
+    if ( .not. flgi ) then
+
+       ! check time setting
+       if ( TIME_DT == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) 'xxx Not found TIME_DT.'
+          call PRC_MPIstop
+       end if
+
+       if ( TIME_DURATION == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) 'xxx Not found TIME_DURATION.'
+          call PRC_MPIstop
+       end if
+
+       ! DYN
+       if ( TIME_DT_ATMOS_DYN == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
+          TIME_DT_ATMOS_DYN = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
+       end if
+       ! PHY_SF
+       if ( TIME_DT_ATMOS_PHY_SF == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF. TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_SF = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_PHY_SF_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
+       end if
+       ! PHY_TB
+       if ( TIME_DT_ATMOS_PHY_TB == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB. TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_TB = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_PHY_TB_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
+       end if
+       ! PHY_MP
+       if ( TIME_DT_ATMOS_PHY_MP == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP. TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_MP = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_PHY_MP_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
+       end if
+       ! PHY_RD
+       if ( TIME_DT_ATMOS_PHY_RD == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD. TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_RD = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
+       end if
+       ! ATMOS RESTART
+       if ( TIME_DT_ATMOS_RESTART == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART. TIME_DURATION is used.'
+          TIME_DT_ATMOS_RESTART = TIME_DURATION
+       end if
+       if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
+       end if
+       ! OCEAN
+       if ( TIME_DT_OCEAN == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN. TIME_DT is used.'
+          TIME_DT_OCEAN = TIME_DT
+       end if
+       if ( TIME_DT_OCEAN_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
+       end if
+       if ( TIME_DT_OCEAN_RESTART == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART. TIME_DURATION is used.'
+          TIME_DT_OCEAN_RESTART = TIME_DURATION
+       end if
+       if ( TIME_DT_OCEAN_RESTART_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
+       end if
+       ! LAND
+       if ( TIME_DT_LAND == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND. TIME_DT is used.'
+          TIME_DT_LAND = TIME_DT
+       end if
+       if ( TIME_DT_LAND_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_LAND_UNIT = TIME_DT_UNIT
+       end if
+       if ( TIME_DT_LAND_RESTART == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART. TIME_DURATION is used.'
+          TIME_DT_LAND_RESTART = TIME_DURATION
+       end if
+       if ( TIME_DT_LAND_RESTART_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART_UNIT. TIME_DURATION_UNIT is used.'
+          TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
+       end if
+
     end if
 
     !--- calculate time
@@ -342,10 +357,14 @@ contains
     TIME_NOWSEC     = TIME_STARTSEC
     TIME_NOWDAYSEC  = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
 
-    call CALENDAR_unit2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
-
     TIME_ENDDAY = TIME_STARTDAY
-    TIME_ENDSEC = TIME_STARTSEC + TIME_DURATIONSEC
+
+    if ( flgi ) then
+       TIME_ENDSEC = TIME_STARTSEC
+    else
+       call CALENDAR_unit2sec( TIME_DURATIONSEC, TIME_DURATION, TIME_DURATION_UNIT )
+       TIME_ENDSEC = TIME_STARTSEC + TIME_DURATIONSEC
+    end if
 
     call CALENDAR_adjust_daysec( TIME_ENDDAY, TIME_ENDSEC ) ! [INOUT]
 
@@ -354,65 +373,69 @@ contains
                                TIME_ENDDAY,     & ! [IN]
                                TIME_ENDSEC      ) ! [IN]
 
-    call CALENDAR_unit2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
+    if ( .not. flgi ) then
 
-    TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
-    TIME_NOWSTEP = 1
+       call CALENDAR_unit2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
-               TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ', &
-               TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
-               TIME_STARTMS
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
-               TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ', &
-               TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
-               TIME_ENDMS
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
-    if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
+       TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
+       TIME_NOWSTEP = 1
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
+            TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ', &
+            TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
+            TIME_STARTMS
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
+            TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ', &
+            TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
+            TIME_ENDMS
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
+       if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
 
     !if( IO_L ) write(IO_FID_LOG,*) '*** now:', TIME_NOWDAYSEC, TIME_NOWDAY, TIME_NOWSEC
 
-    !--- calculate intervals for atmosphere
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
-    call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
-    call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
-    call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
-    call CALENDAR_unit2sec( TIME_DTSEC_LAND,          TIME_DT_LAND,          TIME_DT_LAND_UNIT          )
-    call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
+       !--- calculate intervals for atmosphere
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
+       call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
+       call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
+       call CALENDAR_unit2sec( TIME_DTSEC_LAND,          TIME_DT_LAND,          TIME_DT_LAND_UNIT          )
+       call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
 
-    TIME_NSTEP_ATMOS_DYN = max( int( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
+       TIME_NSTEP_ATMOS_DYN = max( int( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
 
-    TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_ATMOS_PHY_SF  = max( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_ATMOS_PHY_MP  = max( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_LAND          = max( TIME_DTSEC_LAND,          TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-    TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_DYN     = max( TIME_DTSEC_ATMOS_DYN,     TIME_DTSEC          /TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_SF  = max( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_MP  = max( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_LAND          = max( TIME_DTSEC_LAND,          TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)             : ', TIME_DTSEC_ATMOS_DYN
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)             : ', TIME_NSTEP_ATMOS_DYN
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Surface Flux       : ', TIME_DTSEC_ATMOS_PHY_SF
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics : ', TIME_DTSEC_ATMOS_PHY_MP
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation          : ', TIME_DTSEC_ATMOS_PHY_RD
-    if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for ocean process (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean update                : ', TIME_DTSEC_OCEAN
-    if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for land  process (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  update                : ', TIME_DTSEC_LAND
-    if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  Variables             : ', TIME_DTSEC_LAND_RESTART
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Dynamics (time)             : ', TIME_DTSEC_ATMOS_DYN
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)')    '***          (step)             : ', TIME_NSTEP_ATMOS_DYN
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Surface Flux       : ', TIME_DTSEC_ATMOS_PHY_SF
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics : ', TIME_DTSEC_ATMOS_PHY_MP
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation          : ', TIME_DTSEC_ATMOS_PHY_RD
+       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for ocean process (sec.)'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean update                : ', TIME_DTSEC_OCEAN
+       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for land  process (sec.)'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  update                : ', TIME_DTSEC_LAND
+       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  Variables             : ', TIME_DTSEC_LAND_RESTART
+
+    end if
 
     return
   end subroutine TIME_setup

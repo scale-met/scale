@@ -103,7 +103,7 @@ program scaleinit
   call RANDOM_setup
 
   ! setup time
-  call TIME_setup
+  call TIME_setup( .true. )
 
   call TIME_rapstart('Debug')
   call TIME_rapend  ('Debug')
