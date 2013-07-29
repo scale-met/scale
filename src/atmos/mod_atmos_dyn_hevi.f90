@@ -285,11 +285,11 @@ contains
 #endif
 
 #ifndef DRY
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
        ! pressure, pott. temp.
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
           CPtot(k,i,j) = CVtot(k,i,j) + Rtot(k,i,j)
        enddo
        enddo
@@ -299,6 +299,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -315,6 +316,7 @@ contains
        enddo
        enddo
        enddo
+       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -663,6 +665,7 @@ contains
 
        ! implicit solver
        B = GRAV * dtrk**2 / 12.0_RP
+       !$omp parallel do private(i,j,k,pt,a,c) schedule(static,1) collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 
