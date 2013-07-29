@@ -1151,7 +1151,10 @@ contains
        p(k) = r(k)
     end do
 
-    r0r = sum(r0(:)*r(:))
+    r0r = r0(1) * r(1)
+    do k = 2, KMAX-1
+       r0r = r0r + r0(k)*r(k)
+    enddo
     do iter = 1, KMAX-1
        error = 0.0_RP
        do k = 1, KMAX-1
@@ -1166,18 +1169,30 @@ contains
           exit
        end if
 
-       r0r = sum(r0(:)*r(:))
        call mul_matrix( ap, M, p )
-       al = r0r / sum(r0(:)*ap(:))
+       al = r0(1) * ap(1)
+       do k = 2, KMAX-1
+          al = al + r0(k)*ap(k)
+       end do
+       al = r0r / al ! (r0,r) / (r0,Mp)
        s(:) = r(:) - al*ap(:)
        call mul_matrix( as, M, s )
-       w = sum(as(:)*s(:)) / sum(as(:)*as(:))
+       be = as(1) * s(1)  ! be is used as just work variable here
+       w =  as(1) * as(1)
+       do k = 2, KMAX-1
+          be = be + as(k)*s(k)
+          w  = w  + as(k)*as(k)
+       end do
+       w = be / w ! (as,s) / (as,as)
 
        c(:) = c(:) + al*p(:) + w*s(:)
        rn(:) = s(:) - w*as(:)
        be = al/w / r0r
-       r0r = sum(r0(:)*rn(:))
-       be = be * r0r
+       r0r = r0(1) * rn(1)
+       do k = 2, KMAX-1
+          r0r = r0r + r0(k)*rn(k)
+       end do
+       be = be * r0r ! al/w * (r0,rn)/(r0,r)
        p(:) = rn(:) + be * ( p(:) - w*ap(:) )
 
        swap => rn
@@ -1783,7 +1798,8 @@ contains
           b = GRAV * dt**2 / 12.0_RP
           rhs = ( a1*PT(k+1)*RFDZ(k) + B*RFDZ(k+1) ) * MOMZ_N(k+2) &
               - ( (A1*(8.0_RP*PT(k+1)+PT(k))+A0*PT(k))*RFDZ(k) + B*(9.0_RP*RCDZ(k+1)-RCDZ(k)) ) * MOMZ_N(k+1) &
-              + ( (A1*(PT(k+1)+8.0_RP*PT(k))+A0*(8.0_RP*PT(k)+PT(k-1)))*RFDZ(k) + 9.0_RP*B*(RCDZ(k+1)-RCDZ(k)) + 1.0_RP ) * MOMZ_N(k) &
+              + ( (A1*(PT(k+1)+8.0_RP*PT(k))+A0*(8.0_RP*PT(k)+PT(k-1)))*RFDZ(k) + 9.0_RP*B*(RCDZ(k+1)-RCDZ(k)) &
+                 + 1.0_RP ) * MOMZ_N(k) &
               - ( (A1*PT(k)+A0*(PT(k)+8.0_RP*PT(k-1)))*RFDZ(k) + B*(RFDZ(k+1)-9.0_RP*RFDZ(k)) ) * MOMZ_N(k-1) &
               + ( A0*PT(k-1)*RFDZ(k) - B*RFDZ(k) ) * MOMZ_N(k-2)
           write(*,*) lhs, rhs
