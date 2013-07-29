@@ -51,6 +51,7 @@ module mod_atmos
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  logical, save :: first = .true.
 contains
 
   !-----------------------------------------------------------------------------
@@ -176,42 +177,46 @@ contains
     call ATMOS_REFSTATE_update
 
     !########## Surface Flux ##########
-
-    call TIME_rapstart('ATM SurfaceFlux')
-    call ATMOS_PHY_SF( sw_phy_sf .AND. do_phy_sf )
-    call TIME_rapend  ('ATM SurfaceFlux')
+    if ( sw_phy_sf ) then
+       call TIME_rapstart('ATM SurfaceFlux')
+       call ATMOS_PHY_SF( do_phy_sf .or. first )
+       call TIME_rapend  ('ATM SurfaceFlux')
+    end if
 
     !########## Turbulence ##########
-
-    call TIME_rapstart('ATM Turbulence')
-    call ATMOS_PHY_TB( sw_phy_tb .AND. do_phy_tb )
-    call TIME_rapend  ('ATM Turbulence')
+    if ( sw_phy_tb ) then
+       call TIME_rapstart('ATM Turbulence')
+       call ATMOS_PHY_TB( do_phy_tb .or. first )
+       call TIME_rapend  ('ATM Turbulence')
+    end if
 
     !########## Microphysics ##########
-    call TIME_rapstart('ATM Microphysics')
-    if ( sw_phy_mp .AND. do_phy_mp ) then
-       call ATMOS_PHY_MP
+    if ( sw_phy_mp ) then
+       call TIME_rapstart('ATM Microphysics')
+       if ( do_phy_mp ) call ATMOS_PHY_MP
+       call TIME_rapend  ('ATM Microphysics')
     endif
-    call TIME_rapend  ('ATM Microphysics')
 
     !########## Radiation ##########
-    call TIME_rapstart('ATM Radiation')
-    if ( sw_phy_rd .AND. do_phy_rd ) then
-       call ATMOS_PHY_RD
+    if ( sw_phy_rd ) then
+       call TIME_rapstart('ATM Radiation')
+       if ( do_phy_rd ) call ATMOS_PHY_RD
+       call TIME_rapend  ('ATM Radiation')
     endif
-    call TIME_rapend  ('ATM Radiation')
 
     !########## Dynamics ##########
-    call TIME_rapstart('ATM Dynamics')
-    if ( sw_dyn .AND. do_dyn ) then
-       call ATMOS_DYN
+    if ( sw_dyn ) then
+       call TIME_rapstart('ATM Dynamics')
+       if ( do_dyn ) call ATMOS_DYN
+       call TIME_rapend  ('ATM Dynamics')
     endif
-    call TIME_rapend  ('ATM Dynamics')
 
     !########## History & Monitor ##########
     call TIME_rapstart('ATM History Vars')
        call ATMOS_vars_history
     call TIME_rapend  ('ATM History Vars')
+
+    first = .false.
 
     return
   end subroutine ATMOS_step
