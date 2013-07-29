@@ -88,6 +88,9 @@ module test_atmos_dyn_fent_fct
   real(RP) :: DIFF4
   integer  :: nd_order
   real(RP) :: nd_coef
+  real(RP) :: nd_sfc_fact
+  logical  :: nd_use_rs
+
   real(RP) :: divdmp_coef
 
   logical  :: flag_fct_rho      = .true.
@@ -130,6 +133,8 @@ contains
 
   nd_order = 2
   nd_coef = 0.01_RP
+  nd_sfc_fact = 1.0_RP
+  nd_use_rs = .true.
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
@@ -215,7 +220,8 @@ subroutine test_undef
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           AQ_CV,                                       & ! (in)
-          REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
+          REF_dens, REF_pott, REF_qv,                  & ! (in)
+          DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
@@ -263,7 +269,8 @@ subroutine test_const
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        AQ_CV,                                       & ! (in)
-       REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
+       REF_dens, REF_pott, REF_qv,                  & ! (in)
+       DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
@@ -344,7 +351,8 @@ subroutine test_conserve
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, REF_qv, DIFF4, nd_order, & ! (in)
+         REF_dens, REF_pott, REF_qv,                  & ! (in)
+         DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
