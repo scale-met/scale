@@ -323,7 +323,7 @@ contains
                                    TEMP0(:,:,:), & ! [IN]
                                    DENS0(:,:,:)  ) ! [IN]
 
-    !$omp parallel do private(i,j, k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,dens,rhoe,temp,pres,qv,qc,qr,qsatl,Sliq,dq_evap,dq_auto,dq_accr,vent_factor,dqc,dqr,dqv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
