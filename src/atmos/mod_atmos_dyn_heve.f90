@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#define OMP_SCHEDULE_ schedule(static)
 module mod_atmos_dyn_rk
   !-----------------------------------------------------------------------------
   !
@@ -221,7 +222,7 @@ contains
 #ifndef NO_FCT_DYN
     if ( FLAG_FCT_RHO ) then
        if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
           do j = JS-1, JE+1
           do i = IS-1, IE+1
@@ -243,7 +244,7 @@ contains
     IIE = IIS+IBLOCK-1
 
        ! momentum -> velocity
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+2
        do i = IIS-1, IIE+2
        do k = KS, KE-1
@@ -260,7 +261,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+2
        do i = IIS-2, IIE+1
        do k = KS, KE
@@ -277,7 +278,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+1
        do i = IIS-1, IIE+2
        do k = KS, KE
@@ -325,7 +326,7 @@ contains
     IIE = IIS+IBLOCK-1
 #endif
        ! pressure, pott. temp.
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -358,7 +359,7 @@ contains
 #endif
 
        ! 3D divergence for damping
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -386,7 +387,7 @@ contains
        ! monotonic flux
        if ( FLAG_FCT_RHO ) then
           ! at (x, y, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -401,7 +402,7 @@ contains
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
@@ -409,7 +410,7 @@ contains
           enddo
           enddo
           ! at (u, y, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
@@ -428,7 +429,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (x, v, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -450,7 +451,7 @@ contains
 #endif
 
        ! at (x, y, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -469,7 +470,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -487,7 +488,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, y, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -507,7 +508,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (x, v, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE
@@ -528,7 +529,7 @@ contains
 #endif
 
        !--- update density
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -572,7 +573,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update rho
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -597,7 +598,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           !--- update mflx_hi
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -615,7 +616,7 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE
        do i = IS-1, IE
        do k = KS, KE
@@ -631,7 +632,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS  , IE
        do k = KS, KE
@@ -661,7 +662,7 @@ contains
 #endif
     if ( FLAG_FCT_MOMENTUM ) then
        if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
           do j = JS-1, JE+1
           do i = IS-1, IE+1
@@ -689,7 +690,7 @@ contains
           ! monotonic flux
           ! at (x, y, layer)
           ! note than z-index is added by -1
-          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-1
@@ -709,7 +710,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              ! k = KE
@@ -721,7 +722,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (u, y, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE-1
@@ -740,7 +741,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
              qflx_lo(KE,i,j,XDIR) = 0.0_RP
@@ -750,7 +751,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (x, v, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -769,7 +770,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE,i,j,YDIR) = 0.0_RP
@@ -784,7 +785,7 @@ contains
        ! high order flux
        ! at (x, y, layer)
        ! note than z-index is added by -1
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+2, KE-2
@@ -808,7 +809,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -852,7 +853,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, y, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -875,7 +876,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
           qflx_hi(KE,i,j,XDIR) = 0.0_RP
@@ -885,7 +886,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (x, v, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -908,7 +909,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS  , IIE
           qflx_hi(KE,i,j,YDIR) = 0.0_RP
@@ -919,7 +920,7 @@ contains
 #endif
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -973,7 +974,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update momentum(z)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -1011,7 +1012,7 @@ contains
     if ( FLAG_FCT_MOMENTUM ) then
 
        if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
           do j = JS-1, JE+1
           do i = IS-1, IE+1
@@ -1036,7 +1037,7 @@ contains
        ! monotonic flux
        if ( FLAG_FCT_MOMENTUM ) then
           ! at (u, y, interface)
-          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -1056,7 +1057,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
@@ -1068,7 +1069,7 @@ contains
 #endif
           ! at (x, y, layer)
           ! note that x-index is added by -1
-          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+2
           do k = KS, KE
@@ -1089,7 +1090,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (u, v, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -1113,7 +1114,7 @@ contains
 
        ! high order flux
        ! at (u, y, interface)
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
@@ -1141,7 +1142,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -1180,7 +1181,7 @@ contains
 #endif
        ! at (x, y, layer)
        ! note that x-index is added by -1
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -1204,7 +1205,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, v, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -1229,7 +1230,7 @@ contains
 #endif
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1288,7 +1289,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update momentum(x)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1325,7 +1326,7 @@ contains
     if ( FLAG_FCT_MOMENTUM ) then
 
        if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
           do j = JS-1, JE+1
           do i = IS-1, IE+1
@@ -1349,7 +1350,7 @@ contains
        ! monotonic flux
        if ( FLAG_FCT_MOMENTUM ) then
           ! at (x, v, interface)
-          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -1369,7 +1370,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
@@ -1379,7 +1380,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (u, v, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
@@ -1400,7 +1401,7 @@ contains
 #endif
           ! at (x, y, layer)
           ! note that y-index is added by -1
-          !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+2
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -1425,7 +1426,7 @@ contains
 
        ! high order flux
        ! at (x, v, interface)
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
@@ -1453,7 +1454,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k,vel) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -1491,7 +1492,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, v, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1516,7 +1517,7 @@ contains
 #endif
        ! at (x, y, layer)
        ! note that y-index is added by -1
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
@@ -1541,7 +1542,7 @@ contains
 #endif
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1600,7 +1601,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update momentum(y)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1648,7 +1649,7 @@ contains
        call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
 #endif
        if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
           do j = JS-1, JE+1
           do i = IS-1, IE+1
@@ -1673,7 +1674,7 @@ contains
        ! monotonic flux
        if ( FLAG_FCT_T ) then
           ! at (x, y, interface)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -1688,7 +1689,7 @@ contains
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
@@ -1699,7 +1700,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (u, y, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
@@ -1718,7 +1719,7 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
           ! at (x, v, layer)
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -1740,7 +1741,7 @@ contains
 #endif
 
        ! at (x, y, interface)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS,   IIE
        do k = KS+1, KE-2
@@ -1762,7 +1763,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -1788,7 +1789,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, y, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1811,7 +1812,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (x, v, layer)
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -1835,7 +1836,7 @@ contains
 #endif
 
        !--- update rho*theta
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1880,7 +1881,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update rho*theta
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE

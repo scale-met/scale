@@ -13,6 +13,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#define OMP_SCHEDULE_ schedule(static)
 module mod_atmos_vars
   !-----------------------------------------------------------------------------
   !
@@ -541,6 +542,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill KHALO
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -555,6 +557,7 @@ contains
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+    !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE
@@ -672,6 +675,7 @@ contains
     call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
     call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -683,6 +687,7 @@ contains
        call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -717,6 +722,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -726,6 +732,7 @@ contains
     enddo
     call MONIT_put( ATMOS_MONIT_id(I_QDRY), RHOQ(:,:,:) )
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1135,6 +1142,7 @@ contains
     call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
     call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1147,6 +1155,7 @@ contains
     enddo
 
     if ( ATMOS_PREP_sw(I_VELZ) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1157,6 +1166,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_VELX) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1167,6 +1177,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_VELY) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1177,6 +1188,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_POTT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1187,6 +1199,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_QDRY) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1195,6 +1208,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
        do j  = JS, JE
        do i  = IS, IE
@@ -1207,6 +1221,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_QTOT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1215,6 +1230,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
        do j  = JS, JE
        do i  = IS, IE
@@ -1249,6 +1265,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_RTOT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1259,6 +1276,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_CPTOT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1267,6 +1285,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
        do j  = JS, JE
        do i  = IS, IE
@@ -1277,6 +1296,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1287,6 +1307,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_PRES) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1297,6 +1318,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_TEMP) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1311,6 +1333,7 @@ contains
                                       TEMP (:,:,:), & ! [IN]
                                       DENS (:,:,:)  ) ! [IN]
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1325,6 +1348,7 @@ contains
                                       TEMP (:,:,:), & ! [IN]
                                       DENS (:,:,:)  ) ! [IN]
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1336,6 +1360,7 @@ contains
 
     if ( ATMOS_PREP_sw(I_VOR) > 0 ) then
        ! at u, v, layer
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
@@ -1346,6 +1371,7 @@ contains
        enddo
 
        ! at u, v, layer
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
@@ -1355,6 +1381,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1369,6 +1396,7 @@ contains
 
     if ( ATMOS_PREP_sw(I_DIV) > 0 ) then
        ! at u, v, layer
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
@@ -1379,6 +1407,7 @@ contains
        enddo
 
        ! at u, v, layer
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
@@ -1388,6 +1417,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1400,6 +1430,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_ENGP) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1410,6 +1441,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_ENGK) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1422,6 +1454,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_ENGI) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1430,6 +1463,7 @@ contains
        enddo
        enddo
 
+       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
        do j  = JS, JE
        do i  = IS, IE
@@ -1443,6 +1477,7 @@ contains
     endif
 
     if ( ATMOS_PREP_sw(I_ENGT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1478,6 +1513,7 @@ contains
     call HIST_put( ATMOS_HIST_id(I_ENGI), ENGI(:,:,:), TIME_DTSEC )
 
     if (ATMOS_MONIT_id(I_QDRY) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1489,6 +1525,7 @@ contains
     endif
 
     if (ATMOS_MONIT_id(I_QTOT) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1538,6 +1575,7 @@ contains
        call COMM_total( total, MOMY(:,:,:), AP_NAME(I_MOMY) )
        call COMM_total( total, RHOT(:,:,:), AP_NAME(I_RHOT) )
        do iq = 1, QA
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1558,6 +1596,7 @@ contains
                                  RHOT(:,:,:),  & ! [IN]
                                  QTRC(:,:,:,:) ) ! [IN]
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1567,6 +1606,7 @@ contains
        enddo
        call COMM_total( total, RHOQ(:,:,:), 'Qtotal  ' )
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1576,6 +1616,7 @@ contains
        enddo
        call COMM_total( total, RHOQ(:,:,:), 'Qdry    ' )
 
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

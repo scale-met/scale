@@ -32,6 +32,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#define OMP_SCHEDULE_ schedule(static)
 module mod_atmos_dyn
   !-----------------------------------------------------------------------------
   !
@@ -291,14 +292,14 @@ contains
     ! coriolis parameter
     if ( enable_coriolis ) then
        d2r = PI / 180.0_RP
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
        do i = 1, IA
           corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) )
        enddo
        enddo
     else
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
        do i = 1, IA
           corioli(1,i,j) = 0.0_RP
@@ -786,6 +787,7 @@ contains
 #endif
 
 !OCL XFILL
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
        MOMZ_RK1( 1:KS-1,i,j) = 0.0_RP
@@ -797,6 +799,7 @@ contains
 
     ! bottom boundary
 !OCL XFILL
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
        qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -809,6 +812,7 @@ contains
     if ( USE_AVERAGE ) then
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -818,6 +822,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -827,6 +832,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -836,6 +842,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -845,6 +852,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -855,6 +863,7 @@ contains
 
 #ifndef DRY
 !OCL XFILL
+    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = 1, QA
     do j = 1, JA
     do i = 1, IA
@@ -869,6 +878,7 @@ contains
     end if
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -878,6 +888,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -887,6 +898,7 @@ contains
     enddo
 
 !OCL XFILL
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -896,7 +908,7 @@ contains
     enddo
 
 !OCL XFILL
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -911,7 +923,7 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -919,7 +931,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -929,7 +941,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -937,7 +949,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -955,7 +967,7 @@ contains
 
     if ( DIFF4 == 0.0_RP ) then
 !OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE
        do i = IS  , IE
        do k = KS  , KE
@@ -968,7 +980,7 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE
        do i = IS-1, IE
        do k = KS  , KE
@@ -980,7 +992,7 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE
        do i = IS  , IE+1
        do k = KS  , KE
@@ -989,7 +1001,7 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE
        do i = IS  , IE
        do k = KS  , KE
@@ -1001,7 +1013,7 @@ contains
        enddo
        enddo
 !OCL XFILL
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE+1
        do i = IS  , IE
        do k = KS  , KE
@@ -1024,7 +1036,7 @@ call TIME_rapstart   ('DYN-set')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1034,7 +1046,7 @@ call TIME_rapstart   ('DYN-set')
        end do
 
        !--- prepare rayleigh damping coefficient
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           do k = KS, KE-1
@@ -1074,7 +1086,7 @@ call TIME_rapstart   ('DYN-set')
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j  = JJS-2, JJE+2
           do i  = IIS-2, IIE+2
           do k = KS, KE
@@ -1084,7 +1096,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           if ( ND_USE_RS ) then
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j  = JJS, JJE
              do i  = IIS, IIE
              do k = KS, KE
@@ -1094,7 +1106,7 @@ call TIME_rapstart   ('DYN-set')
              enddo
              enddo
           else
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j  = JJS, JJE
              do i  = IIS, IIE
              do k = KS+1, KE-1
@@ -1137,7 +1149,7 @@ call TIME_rapstart   ('DYN-set')
              enddo
           end if
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+2
           do i = IIS-2, IIE+2
           do k = KS, KE-1
@@ -1151,7 +1163,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+2
           do i = IIS-2, IIE+1
           do k = KS, KE
@@ -1165,7 +1177,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-2, IIE+2
           do k = KS, KE
@@ -1179,7 +1191,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1, KE-2
@@ -1202,7 +1214,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
 #ifdef DEBUG
@@ -1240,7 +1252,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1263,7 +1275,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1287,7 +1299,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! z-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+2, KE-2
@@ -1309,7 +1321,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
 #ifdef DEBUG
@@ -1364,7 +1376,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -1387,7 +1399,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -1411,7 +1423,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! x-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS,  JJE
           do i = IIS,  IIE
           do k = KS+1, KE-2
@@ -1433,6 +1445,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
 #ifdef DEBUG
@@ -1470,7 +1483,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1493,7 +1506,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1517,7 +1530,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! y-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1, KE-2
@@ -1539,6 +1552,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
+          !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
 #ifdef DEBUG
@@ -1576,7 +1590,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1599,7 +1613,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1623,7 +1637,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! rho * theta
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1, KE-2
@@ -1646,7 +1660,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
 #ifdef DEBUG
@@ -1684,7 +1698,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1707,7 +1721,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1848,7 +1862,7 @@ call TIME_rapstart   ('DYN-set')
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS-1, KE
@@ -1858,7 +1872,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1867,7 +1881,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_DENS,XDIR) = num_DIFF(KS,i,j,I_DENS,XDIR) &
@@ -1877,7 +1891,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1886,7 +1900,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_DENS,YDIR) = num_DIFF(KS,i,j,I_DENS,YDIR) &
@@ -1897,7 +1911,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! z-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1,  KE-1
@@ -1908,7 +1922,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -1918,7 +1932,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMZ,XDIR) = num_DIFF(KS,i,j,I_MOMZ,XDIR) &
@@ -1928,7 +1942,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -1938,7 +1952,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMZ,YDIR) = num_DIFF(KS,i,j,I_MOMZ,YDIR) &
@@ -1949,7 +1963,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! x-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS,    KE-1
@@ -1960,7 +1974,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1970,7 +1984,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMX,XDIR) = num_DIFF(KS,i,j,I_MOMX,XDIR) &
@@ -1980,7 +1994,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1990,7 +2004,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMX,YDIR) = num_DIFF(KS,i,j,I_MOMX,YDIR) &
@@ -2001,7 +2015,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! y-momentum
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS,  KE-1
@@ -2012,7 +2026,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -2022,7 +2036,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMY,XDIR) = num_DIFF(KS,i,j,I_MOMY,XDIR) &
@@ -2032,7 +2046,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -2042,7 +2056,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_MOMY,YDIR) = num_DIFF(KS,i,j,I_MOMY,YDIR) &
@@ -2053,7 +2067,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
 
           ! rho * theta
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS  , KE-1
@@ -2064,7 +2078,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS-1,i,j,I_RHOT,ZDIR) = num_diff_pt0(KS-1,i,j,I_RHOT,ZDIR) &
@@ -2076,7 +2090,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -2086,7 +2100,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_RHOT,XDIR) = num_DIFF(KS,i,j,I_RHOT,XDIR) &
@@ -2096,7 +2110,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -2106,7 +2120,7 @@ call TIME_rapstart   ('DYN-set')
           enddo
           enddo
           enddo
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              num_diff(KS,i,j,I_RHOT,YDIR) = num_DIFF(KS,i,j,I_RHOT,YDIR) &
@@ -2281,7 +2295,7 @@ call TIME_rapstart   ('DYN-rk3')
 
     if ( USE_AVERAGE ) then
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -2290,7 +2304,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -2299,7 +2313,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -2308,7 +2322,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -2317,7 +2331,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -2333,7 +2347,7 @@ call TIME_rapstart   ('DYN-rk3')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2342,7 +2356,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2351,7 +2365,7 @@ call TIME_rapstart   ('DYN-rk3')
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2373,7 +2387,7 @@ call TIME_rapend     ('DYN-rk3')
 call TIME_rapstart   ('DYN-fct')
 #endif
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2382,7 +2396,7 @@ call TIME_rapstart   ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2391,7 +2405,7 @@ call TIME_rapstart   ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2420,7 +2434,7 @@ call TIME_rapstart   ('DYN-fct')
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -2457,7 +2471,7 @@ call TIME_rapstart   ('DYN-fct')
 
           if ( iq == I_QV ) then
              if ( ND_USE_RS ) then
-                !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
                 do j  = JJS, JJE
                 do i  = IIS, IIE
                 do k = KS, KE
@@ -2466,7 +2480,7 @@ call TIME_rapstart   ('DYN-fct')
                 enddo
                 enddo
              else
-                !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
                 do j  = JJS, JJE
                 do i  = IIS, IIE
                 do k = KS+1, KE-1
@@ -2493,7 +2507,7 @@ call TIME_rapstart   ('DYN-fct')
                 enddo
                 enddo
              end if
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
              do k = KS+1, KE-2
@@ -2506,7 +2520,7 @@ call TIME_rapstart   ('DYN-fct')
              enddo
              enddo
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
                 num_diff(KS  ,i,j,1,ZDIR) = &
@@ -2528,7 +2542,7 @@ call TIME_rapstart   ('DYN-fct')
 
           else
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
              do k = KS+1, KE-2
@@ -2541,7 +2555,7 @@ call TIME_rapstart   ('DYN-fct')
              enddo
              enddo
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
 #ifdef DEBUG
@@ -2581,7 +2595,7 @@ call TIME_rapstart   ('DYN-fct')
 
           end if ! iq == I_QV
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS,   JJE
           do i = IIS-1, IIE
           do k = KS, KE
@@ -2594,7 +2608,7 @@ call TIME_rapstart   ('DYN-fct')
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE
           do i = IIS,   IIE
           do k = KS, KE
@@ -2654,7 +2668,7 @@ call TIME_rapstart   ('DYN-fct')
           do IIS = IS, IE, IBLOCK
           IIE = IIS+IBLOCK-1
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS  , KE-1
@@ -2665,7 +2679,7 @@ call TIME_rapstart   ('DYN-fct')
              enddo
              enddo
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
                 num_diff(KS-1,i,j,1,ZDIR) = num_diff_pt0(KS-1,i,j,1,ZDIR) &
@@ -2677,7 +2691,7 @@ call TIME_rapstart   ('DYN-fct')
              enddo
              enddo
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
@@ -2688,7 +2702,7 @@ call TIME_rapstart   ('DYN-fct')
              enddo
              enddo
 
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
@@ -2720,7 +2734,7 @@ call TIME_rapstart   ('DYN-fct')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-2
@@ -2738,7 +2752,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           ! just above the bottom boundary
@@ -2753,7 +2767,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           ! just below the top boundary
@@ -2770,7 +2784,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-2, IIE+1
        do k = KS, KE
@@ -2783,7 +2797,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -2798,7 +2812,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -2811,7 +2825,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -2826,7 +2840,7 @@ call TIME_rapstart   ('DYN-fct')
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -2853,7 +2867,7 @@ call TIME_rapstart   ('DYN-fct')
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -2934,7 +2948,7 @@ call TIME_rapend     ('DYN-fct')
 
     if ( USE_AVERAGE ) then
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -2943,7 +2957,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -2952,7 +2966,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -2961,7 +2975,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -2970,7 +2984,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(3)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -2980,7 +2994,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
 
 #ifndef DRY
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(4)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(4)
     do iq = 1, QA
     do j = 1, JA
     do i = 1, IA
@@ -3021,7 +3035,7 @@ call TIME_rapend     ('DYN-fct')
 
     integer :: i, j, k
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -3047,7 +3061,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
        num_diff_pt1(KS-1,i,j,I_val,ZDIR) = - num_diff_pt1(KS  ,i,j,I_val,ZDIR)
@@ -3057,7 +3071,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, K1
@@ -3083,7 +3097,7 @@ call TIME_rapend     ('DYN-fct')
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, K1

@@ -15,6 +15,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
+#define OMP_SCHEDULE_ schedule(static)
 module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
   !
@@ -180,6 +181,7 @@ contains
     integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -237,6 +239,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -295,6 +298,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -374,6 +378,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -465,6 +470,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -561,6 +567,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -653,6 +660,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -697,6 +705,7 @@ contains
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -733,6 +742,7 @@ contains
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA

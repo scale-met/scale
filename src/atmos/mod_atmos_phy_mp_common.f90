@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#define OMP_SCHEDULE_ schedule(static)
 module mod_atmos_phy_mp_common
   !-----------------------------------------------------------------------------
   !
@@ -80,6 +81,7 @@ contains
 
     call TIME_rapstart('Debug')
 
+    !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
        diffq(:) = 0.0_RP
@@ -172,6 +174,7 @@ contains
 
     rdt = 1.D0 / dt
 
+    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = QQS, QQE
     do j = JS, JE
     do i = IS, IE
@@ -199,6 +202,7 @@ contains
     if ( I_QI <= 0 ) then ! warm rain
 
        ! Turn QC into QV with consistency of moist internal energy
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -219,6 +223,7 @@ contains
                           QDRY0(:,:,:)    ) ! [IN]
 
        ! new temperature (after QC evaporation)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -237,6 +242,7 @@ contains
     else ! cold rain
 
        ! Turn QC & QI into QV with consistency of moist internal energy
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -260,6 +266,7 @@ contains
                           QDRY0(:,:,:)    ) ! [IN]
 
        ! new temperature (after QC & QI evaporation)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -282,6 +289,7 @@ contains
                        QDRY0(:,:,:)    ) ! [IN]
 
     ! mass & energy update
+    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = QQS, QQE
     do j = JS, JE
     do i = IS, IE
@@ -294,6 +302,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -676,6 +685,7 @@ contains
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
+    !$omp parallel do private(i,j,k,iq,eflx,qflx) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
 
@@ -741,6 +751,7 @@ contains
     enddo ! I loop
     enddo ! J loop
 
+    !$omp parallel do private(i,j,k,iq,rhoq,qflx) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
 
