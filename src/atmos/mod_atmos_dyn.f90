@@ -32,7 +32,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#define OMP_SCHEDULE_ schedule(static)
+#include "inc_openmp.h"
 module mod_atmos_dyn
   !-----------------------------------------------------------------------------
   !
@@ -1123,6 +1123,7 @@ call TIME_rapstart   ('DYN-set')
              enddo
              enddo
              enddo
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j  = JJS, JJE
              do i  = IIS, IIE
                 dens_diff(KS,i,j) = ( DENS(KS,i,j) * 3.0_RP &
@@ -2445,6 +2446,7 @@ call TIME_rapstart   ('DYN-fct')
        enddo
        enddo
 
+       !$omp parallel do private(iq,i,j,k) OMP_SCHEDULE_ collapse(3)
        do iq = I_QV+1, QA
        do j = JJS, JJE
        do i = IIS, IIE
@@ -2492,6 +2494,7 @@ call TIME_rapstart   ('DYN-fct')
                 enddo
                 enddo
                 enddo
+                !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
                 do j  = JJS, JJE
                 do i  = IIS, IIE
                    qv_diff(KS,i,j) = ( QTRC(KS,i,j,I_QV) * 3.0_RP &
@@ -2914,6 +2917,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
 
 !OCL XFILL
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -2933,6 +2937,7 @@ call TIME_rapend     ('DYN-fct')
 #endif
 #ifndef DRY
 !OCL XFILL
+    !$omp parallel do private(iq,i,j) OMP_SCHEDULE_ collapse(3)
     do iq = 1, QA
     do j  = JS, JE
     do i  = IS, IE

@@ -12,6 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_saturation
   !-----------------------------------------------------------------------------
   !
@@ -264,6 +265,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -351,6 +353,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,alpha,psatl,psati) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -425,6 +428,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -488,6 +492,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -586,6 +591,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -678,6 +684,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -758,6 +765,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -858,6 +866,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -950,6 +959,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1030,6 +1040,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1111,6 +1122,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,lim1,lim2) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1150,6 +1162,7 @@ contains
     CPovR = ( CPvap - CL ) / Rvap
     LovR = LHV00 / Rvap
 
+    !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -1196,6 +1209,7 @@ contains
     CPovR = ( CPvap - CI ) / Rvap
     LovR = LHS00 / Rvap
 
+    !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -1244,6 +1258,7 @@ contains
     CPovR = ( CPvap - CL ) / Rvap
     LovR = LHV00 / Rvap
 
+    !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -1297,6 +1312,7 @@ contains
     CPovR = ( CPvap - CI ) / Rvap
     LovR = LHS00 / Rvap
 
+    !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 

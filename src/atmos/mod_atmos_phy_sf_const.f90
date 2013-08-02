@@ -16,7 +16,7 @@
 !! @li      2012-09-12 (Y.Sato)    [renew] constant FLUX version
 !<
 !-------------------------------------------------------------------------------
-#define OMP_SCHEDULE_ schedule(static)
+#include "inc_openmp.h"
 module mod_atmos_phy_sf
   !-----------------------------------------------------------------------------
   !
