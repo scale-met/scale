@@ -1208,8 +1208,8 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1230,8 +1230,8 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1285,8 +1285,8 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -1463,8 +1463,8 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
        do iq = QQS, QQE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE

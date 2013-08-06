@@ -17,6 +17,7 @@
 !! @li      2012-03-27 (H.Yashiro)  [mod] Area/volume weighted total value report
 !!
 !<
+#include "inc_openmp.h"
 module mod_comm
   !-----------------------------------------------------------------------------
   !
@@ -274,6 +275,7 @@ contains
        ireq = ireq + 1
 
        ! packing packet to W HALO
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
        do k = 1, KA
@@ -285,6 +287,7 @@ contains
        enddo
        enddo
        ! packing packet to E HALO
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE-IHALO+1, IE
        do k = 1, KA
@@ -344,6 +347,7 @@ contains
 
        ! packing packet to W HALO
        if ( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
           do k = 1, KA
@@ -357,6 +361,7 @@ contains
        endif
        ! packing packet to E HALO
        if ( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
           do k = 1, KA
@@ -495,6 +500,7 @@ contains
        ireq = ireq + 1
 
        !--- packing packets to West
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
        do k = 1, KA
@@ -506,6 +512,7 @@ contains
        enddo
        enddo
        !--- packing packets to East
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE-IHALO+1, IE
        do k = 1, KA
@@ -657,6 +664,7 @@ contains
 
        if ( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
           !--- packing packets to West
+          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
           do k = 1, KA
@@ -670,6 +678,7 @@ contains
        endif
        if ( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
           !--- packing packets to East
+          !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
           do k = 1, KA
@@ -796,6 +805,7 @@ contains
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
        !--- unpacking packets from East
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE+1, IE+IHALO
        do k = 1, KA
@@ -808,6 +818,7 @@ contains
        enddo
 
        !--- unpacking packets from West
+       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS-IHALO, IS-1
        do k = 1, KA
@@ -848,6 +859,7 @@ contains
            enddo
         else
            !--- unpacking packets from East
+           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
            do j = JS, JE
            do i = IE+1, IE+IHALO
            do k = 1, KA
@@ -869,6 +881,7 @@ contains
            enddo
         else
            !--- unpacking packets from West
+           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
            do j = JS, JE
            do i = IS-IHALO, IS-1
            do k = 1, KA
@@ -1052,6 +1065,7 @@ contains
 
         !--- To 4-Direction HALO communicate
         !--- packing packets to West
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IS, IS+IHALO-1
             n =  (j-JS) * IHALO &
@@ -1061,6 +1075,7 @@ contains
         enddo
 
         !--- packing packets to East
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IE-IHALO+1, IE
             n =  (j-JS)         * IHALO &
@@ -1290,6 +1305,7 @@ contains
 
         !--- To 8-Direction HALO communicate
         !--- packing packets to West
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IS, IS+IHALO-1
             n =  (j-JS) * IHALO &
@@ -1299,6 +1315,7 @@ contains
         enddo
 
         !--- packing packets to East
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IE-IHALO+1, IE
             n =  (j-JS)         * IHALO &
@@ -1472,6 +1489,7 @@ contains
         !--- To 8-Direction HALO communicate
         !--- packing packets to West
         if ( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IS, IS+IHALO-1
                 n =  (j-JS) * IHALO &
@@ -1483,6 +1501,7 @@ contains
 
         !--- packing packets to East
         if ( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IE-IHALO+1, IE
                 n =  (j-JS)         * IHALO &
@@ -1615,6 +1634,7 @@ contains
     if( COMM_IsAllPeriodic ) then
     !--- periodic condition
         !--- unpacking packets from East
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IE+1, IE+IHALO
            n = (j-JS)   * IHALO &
@@ -1624,6 +1644,7 @@ contains
         enddo
 
         !--- unpacking packets from West
+        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
         do j = JS, JE
         do i = IS-IHALO, IS-1
            n = (j-JS)       * IHALO &
@@ -1637,6 +1658,7 @@ contains
 
         !--- copy inner data to HALO(North)
         if( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IS, IE
                var(i,j) = var(i,JE)
@@ -1646,6 +1668,7 @@ contains
 
         !--- copy inner data to HALO(South)
         if( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-JHALO, JS-1
             do i = IS, IE
                var(i,j) = var(i,JS)
@@ -1655,6 +1678,7 @@ contains
 
         !--- unpacking packets from East / copy inner data to HALO(East)
         if( PRC_next(PRC_E) /= MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IE+1, IE+IHALO
                n = (j-JS)   * IHALO &
@@ -1663,6 +1687,7 @@ contains
             enddo
             enddo
         else
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IE+1, IE+IHALO
                var(i,j) = var(IE,j)
@@ -1672,6 +1697,7 @@ contains
 
         !--- unpacking packets from West / copy inner data to HALO(West)
         if( PRC_next(PRC_W) /= MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IS-IHALO, IS-1
                n = (j-JS)       * IHALO &
@@ -1680,6 +1706,7 @@ contains
             enddo
             enddo
         else
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS, JE
             do i = IS-IHALO, IS-1
                var(i,j) = var(IS,j)
@@ -1689,18 +1716,21 @@ contains
 
         !--- copy inner data to HALO(NorthWest)
         if( PRC_next(PRC_N) == MPI_PROC_NULL .AND. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IS-IHALO, IS-1
                var(i,j) = var(IS,JE)
             enddo
             enddo
         elseif( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IS-IHALO, IS-1
                var(i,j) = var(i,JE)
             enddo
             enddo
         elseif( PRC_next(PRC_W) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IS-IHALO, IS-1
                var(i,j) = var(IS,j)
@@ -1710,18 +1740,21 @@ contains
 
         !--- copy inner data to HALO(SouthWest)
         if( PRC_next(PRC_S) == MPI_PROC_NULL .AND. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IS-IHALO, IS-1
                var(i,j) = var(IS,JS)
             enddo
             enddo
         elseif( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IS-IHALO, IS-1
                var(i,j) = var(i,JS)
             enddo
             enddo
         elseif( PRC_next(PRC_W) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IS-IHALO, IS-1
                var(i,j) = var(IS,j)
@@ -1731,18 +1764,21 @@ contains
 
         !--- copy inner data to HALO(NorthEast)
         if( PRC_next(PRC_N) == MPI_PROC_NULL .AND. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IE+1, IE+IHALO
                var(i,j) = var(IE,JE)
             enddo
             enddo
         elseif( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IE+1, IE+IHALO
                var(i,j) = var(i,JE)
             enddo
             enddo
         elseif( PRC_next(PRC_E) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JE+1, JE+JHALO
             do i = IE+1, IE+IHALO
                var(i,j) = var(IE,j)
@@ -1752,18 +1788,21 @@ contains
 
         !--- copy inner data to HALO(SouthEast)
         if( PRC_next(PRC_S) == MPI_PROC_NULL .AND. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IE+1, IE+IHALO
                var(i,j) = var(IE,JS)
             enddo
             enddo
         elseif( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IE+1, IE+IHALO
                var(i,j) = var(i,JS)
             enddo
             enddo
         elseif( PRC_next(PRC_E) == MPI_PROC_NULL ) then
+            !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
             do j = JS-IHALO, JS-1
             do i = IE+1, IE+IHALO
                var(i,j) = var(IE,j)
@@ -1967,6 +2006,7 @@ contains
 
     statval = 0.0_RP
     if ( ksize == KA ) then ! 3D
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1975,6 +2015,7 @@ contains
        enddo
        enddo
     elseif( ksize == 1 ) then ! 2D
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
        do j = JS, JE
        do i = IS, IE
           statval = statval + var(1,i,j) * area(1,i,j)

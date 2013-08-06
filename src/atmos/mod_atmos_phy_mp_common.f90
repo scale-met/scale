@@ -532,14 +532,17 @@ contains
                                    DENS0(:,:,:)  ) ! [IN]
 
     ijk_sat = 0
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
+          !$omp critical
           ijk_sat = ijk_sat + 1
           index_sat(ijk_sat,1) = k
           index_sat(ijk_sat,2) = i
           index_sat(ijk_sat,3) = j
+          !$omp end critical
        endif
     enddo
     enddo
