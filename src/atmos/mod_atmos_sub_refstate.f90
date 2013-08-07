@@ -624,8 +624,8 @@ contains
        end do
 
        if ( iter == iter_max ) then
-          if (IO_L) write(IO_FID_LOG,*) "xxx [refstate smoothing] iteration not converged!", phi
-          call PRC_MPIstop
+          if (IO_L) write(IO_FID_LOG,*) "*** [refstate smoothing] iteration not converged!", phi
+!          call PRC_MPIstop
        end if
     end do
 
