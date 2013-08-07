@@ -41,6 +41,7 @@ module mod_comm
   !
   include "inc_precision.h"
   include "inc_index.h"
+  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -86,7 +87,7 @@ module mod_comm
   !
   !++ Private parameters & variables
   !
-  integer,  private, save :: COMM_vsize_max       = 1024       !< # limit of communication variables at once
+  integer,  private, save :: COMM_vsize_max                    !< # limit of communication variables at once
   logical,  private, save :: COMM_total_globalsum = .false.    !< calculate total with global communication?
 
   logical,  private, save :: COMM_IsAllPeriodic                !< periodic boundary condition?
@@ -141,6 +142,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[COMM]/Categ[COMMON]'
+
+    COMM_vsize_max = max( 5 + QA, 20 )
 
     !--- read namelist
     rewind(IO_FID_CONF)
