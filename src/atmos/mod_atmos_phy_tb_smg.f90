@@ -23,6 +23,9 @@
 !!  - Scotti et al., 1993:
 !!    Generalized Smagorinsky model for anisotropic grids.
 !!    Phys. Fluids A, 5, 2306-2308
+!!  - Sullivan et al., 1994:
+!!    A subgrid-scale model for large-eddy simulation of planetary boundary-layer flows.
+!!    Bound.-Layer Meteor., 71, 247-276
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -125,9 +128,11 @@ contains
     implicit none
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 1.5_RP ! Sullivan et al. (1994)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
-         ATMOS_PHY_TB_SMG_Cs
+         ATMOS_PHY_TB_SMG_Cs, &
+         ATMOS_PHY_TB_SMG_filter_fact
 
     integer :: k, i, j
     integer :: ierr
@@ -174,7 +179,7 @@ contains
     do j = JS, JE+1
     do i = IS, IE+1
     do k = KS, KE
-       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k)) )**2
+       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -184,7 +189,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k)) )**2
+       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -194,7 +199,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS, KE
-       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k)) )**2
+       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -204,7 +209,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k)) )**2
+       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -214,7 +219,7 @@ contains
     do j = JS-1, JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k) ) )**2
+       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -224,7 +229,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k)) )**2
+       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -234,7 +239,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k)) )**2
+       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
@@ -1696,7 +1701,6 @@ contains
 
 
        ! nu_SGS = (Cs * Delta)^2 * |S|, |S|^2 = 2*Sij*Sij
-       ! tke = ( nu / ( Ck*Delta ) )^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
@@ -1796,6 +1800,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
+       ! Sullivan et al. (1994)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
@@ -3559,7 +3564,7 @@ contains
   end subroutine ATMOS_PHY_TB_main
 
 
-  function mixlen(dz, dx, dy, z)
+  function mixlen(dz, dx, dy, z, filter_fact)
   use mod_const, only: &
      KARMAN  => CONST_KARMAN
     implicit none
@@ -3567,11 +3572,12 @@ contains
     real(RP), intent(in) :: dx
     real(RP), intent(in) :: dy
     real(RP), intent(in) :: z
+    real(RP), intent(in) :: filter_fact
     real(RP) :: mixlen ! (out)
 
     real(RP) :: d0
 
-    d0 = fact(dz, dx, dy) * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
+    d0 = fact(dz, dx, dy) * filter_fact * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
     mixlen = sqrt( 1.0_RP / ( 1.0_RP/d0**2 + 1.0_RP/(KARMAN*z)**2 ) ) ! Brown et al. (1994)
 
     return
