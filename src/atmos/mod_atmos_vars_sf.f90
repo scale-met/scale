@@ -48,11 +48,18 @@ module mod_atmos_vars_sf
   !
   !++ Public parameters & variables
   !
+  real(RP), public, save :: PREC(IA,JA) ! surface precipitation rate [kg/m2/s]
+  real(RP), public, save :: SWD (IA,JA) ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save :: LWD (IA,JA) ! downward long-wave radiation flux (upward positive) [W/m2]
+
   real(RP), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
   real(RP), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
   real(RP), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
-  real(RP), public, save :: SFLX_POTT(IA,JA) ! POTT [K]
-  real(RP), public, save :: SFLX_QV  (IA,JA) ! tracer mixing ratio [kg/kg]
+  real(RP), public, save :: SFLX_SWU (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_LWU (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_SH  (IA,JA) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_LH  (IA,JA) ! latent heat flux (upward positive) [W/m2]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -104,11 +111,17 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SF_VARS)
 
+    PREC(:,:) = 0.0_RP
+    SWD (:,:) = 0.0_RP
+    LWD (:,:) = 0.0_RP
+
     SFLX_MOMZ(:,:) = 0.0_RP
     SFLX_MOMX(:,:) = 0.0_RP
     SFLX_MOMY(:,:) = 0.0_RP
-    SFLX_POTT(:,:) = 0.0_RP
-    SFLX_QV(:,:)   = 0.0_RP
+    SFLX_SWU (:,:) = 0.0_RP
+    SFLX_LWU (:,:) = 0.0_RP
+    SFLX_SH  (:,:) = 0.0_RP
+    SFLX_LH  (:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_vars_sf_setup

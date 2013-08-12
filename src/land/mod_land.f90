@@ -50,7 +50,7 @@ contains
        sw_phy => LAND_sw_phy,  &
        LAND_vars_setup,        &
        LAND_vars_restart_read
-    use mod_land_phy, only: &
+    use mod_land_phy_bucket, only: &
        LAND_PHY_setup
     implicit none
     !---------------------------------------------------------------------------
@@ -68,12 +68,32 @@ contains
   !> Land step
   subroutine LAND_step
     use mod_land_vars, only: &
+       SFLX_GH,   &
+       SFLX_PREC, &
+       SFLX_QV,   &
+       TG,        &
+       QvEfc,     &
+       EMIT,      &
+       ALB, TCS, DZg, &
+       Z00, Z0R, Z0S, &
+       Zt0, ZtR, ZtS, &
+       Ze0, ZeR, ZeS, &
        sw_phy => LAND_sw_phy, &
        LAND_vars_history
-    use mod_land_phy, only: &
+    use mod_land_phy_bucket, only: &
        LAND_PHY
+    use mod_cpl_atmos_land, only: &
+       CPL_AtmLnd_putLnd,      &
+       CPL_AtmLnd_getFlx2Lnd,  &
+       CPL_AtmLnd_flushFlx2Lnd
     implicit none
+
     !---------------------------------------------------------------------------
+
+    !########## Surface Flux ##########
+    call CPL_AtmLnd_getFlx2Lnd( &
+       SFLX_GH, SFLX_PREC, SFLX_QV )
+    call CPL_AtmLnd_flushFLX2Lnd
 
     !########## Physics ##########
     call TIME_rapstart('LND Physics')
@@ -81,6 +101,11 @@ contains
        call LAND_PHY
     endif
     call TIME_rapend  ('LND Physics')
+
+    !########## for Coupler ##########
+    call CPL_AtmLnd_putLnd( &
+       TG, QvEfc, EMIT, ALB, TCS, DZg,             &
+       Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
 
     !########## History & Monitor ##########
     call TIME_rapstart('LND History')

@@ -55,6 +55,7 @@ module mod_const
   real(RP), public, save      :: CONST_OHM     = 7.2920E-5_RP        !< Angular velocity of the planet [1/s]
   real(RP), public, save      :: CONST_GRAV    = 9.80665_RP          !< gravitational constant [m/s2]
   real(RP), public, parameter :: CONST_KARMAN  = 0.4_RP              !< karman constant
+  real(RP), public, parameter :: CONST_STB     = 5.67E-8_RP          !< Stefan-Boltzman constant
 
   real(RP), public, save      :: CONST_R       = 8.3144621_RP        !< universal gas constant [J/mol/K]
 

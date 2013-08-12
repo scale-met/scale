@@ -152,6 +152,12 @@ contains
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
+       DENS,    & 
+       MOMX,    & 
+       MOMY,    & 
+       MOMZ,    & 
+       RHOT,    & 
+       QTRC,    & 
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -164,6 +170,17 @@ contains
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        ATMOS_vars_history
+    use mod_atmos_vars_sf, only: &
+       PREC,      &
+       SWD,       &
+       LWD,       &
+       SFLX_MOMX, &
+       SFLX_MOMY, &
+       SFLX_MOMZ, &
+       SFLX_SWU,  &
+       SFLX_LWU,  &
+       SFLX_SH,   &
+       SFLX_LH
     use mod_atmos_dyn, only: &
        ATMOS_DYN
     use mod_atmos_phy_sf, only: &
@@ -176,6 +193,10 @@ contains
        ATMOS_PHY_RD
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update
+    use mod_cpl_atmos_land, only: &
+       CPL_AtmLnd_putAtm,      &
+       CPL_AtmLnd_getFlx2Atm,  &
+       CPL_AtmLnd_flushFlx2Atm
     implicit none
     !---------------------------------------------------------------------------
 
@@ -188,6 +209,11 @@ contains
        call ATMOS_PHY_SF( do_phy_sf, .true. )
        call TIME_rapend  ('ATM SurfaceFlux')
     end if
+
+    call CPL_AtmLnd_getFlx2Atm( &
+       SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ,     &
+       SFLX_SWU, SFLX_LWU, SFLX_SH, SFLX_LH )
+    call CPL_AtmLnd_flushFlx2Atm
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
@@ -216,6 +242,11 @@ contains
        if ( do_dyn ) call ATMOS_DYN
        call TIME_rapend  ('ATM Dynamics')
     endif
+
+    !########## for Coupler ##########
+    call CPL_AtmLnd_putATM( &
+       DENS, MOMX, MOMY, MOMZ,    &
+       RHOT, QTRC, PREC, SWD, LWD )
 
     !########## History & Monitor ##########
     call TIME_rapstart('ATM History Vars')

@@ -51,10 +51,31 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: SkinT(1,IA,JA)       ! Ground Skin Temperature [K]
-  real(RP), public, save :: SkinW(1,IA,JA)       ! Ground Skin Water       [kg/m2]
-  real(RP), public, save :: SnowQ(1,IA,JA)       ! Ground Snow amount      [kg/m2]
-  real(RP), public, save :: SnowT(1,IA,JA)       ! Ground Snow Temperature [K]
+  real(RP), public, save :: SFLX_GH  (IA,JA) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_PREC(IA,JA) ! precipitation flux [kg/m2/s]
+  real(RP), public, save :: SFLX_QV  (IA,JA) ! moisture flux [kg/m2/s]
+
+  real(RP), public, save :: TG   (IA,JA) ! soil temperature [K]
+  real(RP), public, save :: QvEfc(IA,JA) ! efficiency of evaporation [no unit]
+  real(RP), public, save :: EMIT (IA,JA) ! emissivity in long-wave radiation [no unit]
+  real(RP), public, save :: ALB  (IA,JA) ! surface albedo in short-wave radiation [no unit]
+  real(RP), public, save :: TCS  (IA,JA) ! thermal conductivity for soil [W/m/K]
+  real(RP), public, save :: HCS  (IA,JA) ! heat capacity for soil [J/K]
+  real(RP), public, save :: DZg  (IA,JA) ! soil depth [m]
+  real(RP), public, save :: Z00  (IA,JA) ! basic factor for momemtum
+  real(RP), public, save :: Z0R  (IA,JA) ! rough factor for momemtum
+  real(RP), public, save :: Z0S  (IA,JA) ! smooth factor for momemtum
+  real(RP), public, save :: Zt0  (IA,JA) ! basic factor for heat
+  real(RP), public, save :: ZtR  (IA,JA) ! rough factor for heat
+  real(RP), public, save :: ZtS  (IA,JA) ! smooth factor for heat
+  real(RP), public, save :: Ze0  (IA,JA) ! basic factor for moisture
+  real(RP), public, save :: ZeR  (IA,JA) ! rough factor for moisture
+  real(RP), public, save :: ZeS  (IA,JA) ! smooth factor for moisture
+
+  real(RP), public, save :: SkinT(IA,JA) ! Ground Skin Temperature [K]
+  real(RP), public, save :: SkinW(IA,JA) ! Ground Skin Water       [kg/m2]
+  real(RP), public, save :: SnowQ(IA,JA) ! Ground Snow amount      [kg/m2]
+  real(RP), public, save :: SnowT(IA,JA) ! Ground Snow Temperature [K]
 
   real(RP), public, save :: SoilT(KA_soil,IA,JA) ! Soil temperature             [K]
   real(RP), public, save :: SoilW(KA_soil,IA,JA) ! Soil moisture (liquid water) [m3/m3]
@@ -198,6 +219,23 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
+    TG   (:,:) = 285.0_RP
+    QvEfc(:,:) = 1.0_RP
+    EMIT (:,:) = 0.98_RP
+    ALB  (:,:) = 0.33_RP
+    TCS  (:,:) = 1.0_RP
+    HCS  (:,:) = 2.2E6_RP
+    DZg  (:,:) = 1.0_RP
+    Z00  (:,:) = 0.0_RP
+    Z0R  (:,:) = 0.018_RP
+    Z0S  (:,:) = 0.11_RP
+    Zt0  (:,:) = 1.4E-5_RP
+    ZtR  (:,:) = 0.0_RP
+    ZtS  (:,:) = 0.4_RP
+    Ze0  (:,:) = 1.3E-4_RP
+    ZeR  (:,:) = 0.0_RP
+    ZeS  (:,:) = 0.62_RP
+
     return
   end subroutine LAND_vars_setup
 
@@ -211,21 +249,21 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    call COMM_vars8( SkinT(:,:,:), 1 )
-    call COMM_vars8( SkinW(:,:,:), 2 )
+    call COMM_vars8( SkinT(:,:), 1 )
+    call COMM_vars8( SkinW(:,:), 2 )
 
-    call COMM_vars8( SnowQ(:,:,:), 3 )
-    call COMM_vars8( SnowT(:,:,:), 4 )
+    call COMM_vars8( SnowQ(:,:), 3 )
+    call COMM_vars8( SnowT(:,:), 4 )
 
     call COMM_vars8( SoilT(:,:,:), 5 )
     call COMM_vars8( SoilW(:,:,:), 6 )
     call COMM_vars8( SoilI(:,:,:), 7 )
 
-    call COMM_wait ( SkinT(:,:,:), 1 )
-    call COMM_wait ( SkinW(:,:,:), 2 )
+    call COMM_wait ( SkinT(:,:), 1 )
+    call COMM_wait ( SkinW(:,:), 2 )
 
-    call COMM_wait ( SnowQ(:,:,:), 3 )
-    call COMM_wait ( SnowT(:,:,:), 4 )
+    call COMM_wait ( SnowQ(:,:), 3 )
+    call COMM_wait ( SnowT(:,:), 4 )
 
     call COMM_wait ( SoilT(:,:,:), 5 )
     call COMM_wait ( SoilW(:,:,:), 6 )
@@ -254,13 +292,13 @@ contains
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( SkinT(1,:,:),                                   & ! [OUT]
+       call FILEIO_read( SkinT(:,:),                                     & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'SkinT', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( SkinW(1,:,:),                                   & ! [OUT]
+       call FILEIO_read( SkinW(:,:),                                     & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'SkinW', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( SnowQ(1,:,:),                                   & ! [OUT]
+       call FILEIO_read( SnowQ(:,:),                                     & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'SnowQ', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( SnowT(1,:,:),                                   & ! [OUT]
+       call FILEIO_read( SnowT(:,:),                                     & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'SnowT', 'XY', step=1 ) ! [IN]
 
        call FILEIO_read( SoilT(:,:,:),                                    & ! [OUT]
@@ -276,10 +314,11 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
 
-       SkinT(:,:,:) = CONST_UNDEF
-       SkinW(:,:,:) = CONST_UNDEF
-       SnowQ(:,:,:) = CONST_UNDEF
-       SnowT(:,:,:) = CONST_UNDEF
+       SkinT(:,:) = CONST_UNDEF
+       SkinW(:,:) = CONST_UNDEF
+       SnowQ(:,:) = CONST_UNDEF
+       SnowT(:,:) = CONST_UNDEF
+
        SoilT(:,:,:) = CONST_UNDEF
        SoilW(:,:,:) = CONST_UNDEF
        SoilI(:,:,:) = CONST_UNDEF
@@ -318,13 +357,13 @@ contains
        enddo
        write(bname,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(bname)
 
-       call FILEIO_write( SkinT(1,:,:), bname,                      LAND_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( SkinT(:,:), bname,                        LAND_RESTART_OUT_TITLE, & ! [IN]
                           LP_NAME(1), LP_DESC(1), LP_UNIT(1), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SkinW(1,:,:), bname,                      LAND_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( SkinW(:,:), bname,                        LAND_RESTART_OUT_TITLE, & ! [IN]
                           LP_NAME(2), LP_DESC(2), LP_UNIT(2), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SnowQ(1,:,:), bname,                      LAND_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( SnowQ(:,:), bname,                        LAND_RESTART_OUT_TITLE, & ! [IN]
                           LP_NAME(3), LP_DESC(3), LP_UNIT(3), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SnowT(1,:,:), bname,                      LAND_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( SnowT(:,:), bname,                        LAND_RESTART_OUT_TITLE, & ! [IN]
                           LP_NAME(4), LP_DESC(4), LP_UNIT(4), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
 
        call FILEIO_write( SoilT(:,:,:), bname,                       LAND_RESTART_OUT_TITLE, & ! [IN]
@@ -356,19 +395,19 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call MISC_valcheck( SkinT(1,:,:),    0.0_RP, 1000.0_RP, LP_NAME(I_SkinT) )
-       call MISC_valcheck( SkinW(1,:,:),    0.0_RP, 1000.0_RP, LP_NAME(I_SkinW) )
-       call MISC_valcheck( SnowQ(1,:,:),    0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ) )
-       call MISC_valcheck( SnowT(1,:,:),    0.0_RP, 1000.0_RP, LP_NAME(I_SnowT) )
+       call MISC_valcheck( SkinT(:,:),      0.0_RP, 1000.0_RP, LP_NAME(I_SkinT) )
+       call MISC_valcheck( SkinW(:,:),      0.0_RP, 1000.0_RP, LP_NAME(I_SkinW) )
+       call MISC_valcheck( SnowQ(:,:),      0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ) )
+       call MISC_valcheck( SnowT(:,:),      0.0_RP, 1000.0_RP, LP_NAME(I_SnowT) )
        call MISC_valcheck( SoilT(:,:,:),    0.0_RP, 1000.0_RP, LP_NAME(I_SoilT) )
        call MISC_valcheck( SoilW(:,:,:),    0.0_RP,    2.0_RP, LP_NAME(I_SoilW) )
        call MISC_valcheck( SoilI(:,:,:),    0.0_RP,    2.0_RP, LP_NAME(I_SoilI) )
     endif
 
-    call HIST_in( SkinT(1,:,:), 'L_SkinT', LP_DESC(I_SkinT), LP_UNIT(I_SkinT), TIME_DTSEC_LAND )
-    call HIST_in( SkinW(1,:,:), 'L_SkinW', LP_DESC(I_SkinW), LP_UNIT(I_SkinW), TIME_DTSEC_LAND )
-    call HIST_in( SnowQ(1,:,:), 'L_SnowQ', LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), TIME_DTSEC_LAND )
-    call HIST_in( SnowT(1,:,:), 'L_SnowT', LP_DESC(I_SnowT), LP_UNIT(I_SnowT), TIME_DTSEC_LAND )
+    call HIST_in( SkinT(:,:),   'L_SkinT', LP_DESC(I_SkinT), LP_UNIT(I_SkinT), TIME_DTSEC_LAND )
+    call HIST_in( SkinW(:,:),   'L_SkinW', LP_DESC(I_SkinW), LP_UNIT(I_SkinW), TIME_DTSEC_LAND )
+    call HIST_in( SnowQ(:,:),   'L_SnowQ', LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), TIME_DTSEC_LAND )
+    call HIST_in( SnowT(:,:),   'L_SnowT', LP_DESC(I_SnowT), LP_UNIT(I_SnowT), TIME_DTSEC_LAND )
     call HIST_in( SoilT(:,:,:), 'L_SoilT', LP_DESC(I_SoilT), LP_UNIT(I_SoilT), TIME_DTSEC_LAND )
     call HIST_in( SoilW(:,:,:), 'L_SoilW', LP_DESC(I_SoilW), LP_UNIT(I_SoilW), TIME_DTSEC_LAND )
     call HIST_in( SoilI(:,:,:), 'L_SoilI', LP_DESC(I_SoilI), LP_UNIT(I_SoilI), TIME_DTSEC_LAND )
@@ -387,17 +426,17 @@ contains
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
-    if ( COMM_total_doreport ) then
-
-       call COMM_total( total, SkinT(:,:,:), LP_NAME(I_SkinT) )
-       call COMM_total( total, SkinW(:,:,:), LP_NAME(I_SkinW) )
-       call COMM_total( total, SnowQ(:,:,:), LP_NAME(I_SnowQ) )
-       call COMM_total( total, SnowT(:,:,:), LP_NAME(I_SnowT) )
-       call COMM_total( total, SoilT(:,:,:), LP_NAME(I_SoilT) )
-       call COMM_total( total, SoilW(:,:,:), LP_NAME(I_SoilW) )
-       call COMM_total( total, SoilI(:,:,:), LP_NAME(I_SoilI) )
-
-    endif
+!    if ( COMM_total_doreport ) then
+!
+!       call COMM_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
+!       call COMM_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
+!       call COMM_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
+!       call COMM_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
+!       call COMM_total( total, SoilT(:,:,:), LP_NAME(I_SoilT) )
+!       call COMM_total( total, SoilW(:,:,:), LP_NAME(I_SoilW) )
+!       call COMM_total( total, SoilI(:,:,:), LP_NAME(I_SoilI) )
+!
+!    endif
 
     return
   end subroutine LAND_vars_total
