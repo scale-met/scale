@@ -140,9 +140,9 @@ module mod_atmos_dyn
   real(RP), private, save :: CNZ3(3,KA,2)
   real(RP), private, save :: CNX3(3,IA,2)
   real(RP), private, save :: CNY3(3,JA,2)
-  real(RP), private, save :: CNZ4(4,KA,2)
-  real(RP), private, save :: CNX4(4,IA,2)
-  real(RP), private, save :: CNY4(4,JA,2)
+  real(RP), private, save :: CNZ4(5,KA,2)
+  real(RP), private, save :: CNX4(5,IA,2)
+  real(RP), private, save :: CNY4(5,JA,2)
 
   !-----------------------------------------------------------------------------
 contains
@@ -263,9 +263,9 @@ contains
     real(RP), intent(out) :: CNZ3(3,KA,2)
     real(RP), intent(out) :: CNX3(3,IA,2)
     real(RP), intent(out) :: CNY3(3,JA,2)
-    real(RP), intent(out) :: CNZ4(4,KA,2)
-    real(RP), intent(out) :: CNX4(4,IA,2)
-    real(RP), intent(out) :: CNY4(4,JA,2)
+    real(RP), intent(out) :: CNZ4(5,KA,2)
+    real(RP), intent(out) :: CNX4(5,IA,2)
+    real(RP), intent(out) :: CNY4(5,JA,2)
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
@@ -357,13 +357,10 @@ contains
                       + 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP )
        do k = KS, KE-1
           CNZ4(1,k,1) = CNZ3(1,k+1,1) / CDZ(k)
-       end do
-       CNZ4(1,KS-1,1) = CNZ3(1,KS  ,1) / CDZ(KS+1)
-       CNZ4(1,KS-2,1) = CNZ3(1,KS-1,1) / CDZ(KS+2)
-       do k = KS, KE-1
           CNZ4(2,k,1) = ( CNZ3(2,k+1,1) + CNZ3(1,k,1) ) / CDZ(k)
           CNZ4(3,k,1) = ( CNZ3(3,k+1,1) + CNZ3(2,k,1) ) / CDZ(k)
           CNZ4(4,k,1) = ( CNZ3(1,k  ,1) + CNZ3(3,k,1) ) / CDZ(k)
+          CNZ4(5,k,1) = CNZ3(1,k-1,1) / CDZ(k)
        end do
 
        do k = KS, KE-1
@@ -400,14 +397,10 @@ contains
                       + 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) )
        do k = KS, KE-1
           CNZ4(1,k,2) = CNZ3(1,k+1,2) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-       end do
-       CNZ4(1,KS-1,2) = CNZ3(1,KS  ,2) * 2.0_RP / ( CDZ(KS)+CDZ(KS+1) )
-       CNZ4(1,KS-2,2) = CNZ3(1,KS-1,2) * 2.0_RP / ( CDZ(KS+1)+CDZ(KS+2) )
-       CNZ4(1,KE  ,2) = CNZ3(1,KE+1,2) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
-       do k = KS, KE-1
           CNZ4(2,k,2) = ( CNZ3(2,k+1,2) + CNZ3(1,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
           CNZ4(3,k,2) = ( CNZ3(3,k+1,2) + CNZ3(2,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
           CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
+          CNZ4(5,k,2) = CNZ3(1,k-1,2) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
        end do
        CNZ4(2,KE,2) = ( CNZ3(2,KE+1,2) + CNZ3(1,KE,2) ) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
        CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
@@ -425,13 +418,12 @@ contains
                       + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
                       + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
        enddo
-       do i = IS-2, IE
-          CNX4(1,i,1) = CNX3(1,i+1,1) / CDX(i)
-       end do
        do i = IS, IE
+          CNX4(1,i,1) = CNX3(1,i+1,1) / CDX(i)
           CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
           CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
           CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
+          CNX4(5,i,1) = CNX3(1,i-1,1) / CDX(i)
        end do
 
        do i = IS-1, IE+1
@@ -445,13 +437,12 @@ contains
                       + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
                       + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
        enddo
-       do i = IS-2, IE
-          CNX4(1,i,2) = CNX3(1,i+1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-       end do
        do i = IS, IE
+          CNX4(1,i,2) = CNX3(1,i+1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
           CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
           CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
           CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
+          CNX4(5,i,2) = CNX3(1,i-1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
        end do
 
        ! y direction
@@ -466,13 +457,12 @@ contains
                       + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
                       + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
        enddo
-       do j = JS-2, JE
-          CNY4(1,j,1) = CNY3(1,j+1,1) / CDY(j)
-       end do
        do j = JS, JE
+          CNY4(1,j,1) = CNY3(1,j+1,1) / CDY(j)
           CNY4(2,j,1) = ( CNY3(2,j+1,1) + CNY3(1,j,1) ) / CDY(j)
           CNY4(3,j,1) = ( CNY3(3,j+1,1) + CNY3(2,j,1) ) / CDY(j)
           CNY4(4,j,1) = ( CNY3(1,j  ,1) + CNY3(3,j,1) ) / CDY(j)
+          CNY4(5,j,1) = CNY3(1,j-1,1) / CDY(j)
        end do
 
        do j = JS-1, JE+1
@@ -486,13 +476,12 @@ contains
                       + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
                       + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
        enddo
-       do j = JS-2, JE
-          CNY4(1,j,2) = CNY3(1,j+1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-       end do
        do j = JS, JE
+          CNY4(1,j,2) = CNY3(1,j+1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
           CNY4(2,j,2) = ( CNY3(2,j+1,2) + CNY3(1,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
           CNY4(3,j,2) = ( CNY3(3,j+1,2) + CNY3(2,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
           CNY4(4,j,2) = ( CNY3(1,j  ,2) + CNY3(3,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
+          CNY4(5,j,2) = CNY3(1,j-1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
        end do
 
     end if
@@ -3029,11 +3018,11 @@ call TIME_rapend     ('DYN-fct')
     do i = IIS, IIE
     do k = KS, KE-1
 #ifdef DEBUG
-       call CHECK( __LINE__, CNZ4(1,k  ) )
-       call CHECK( __LINE__, CNZ4(2,k  ) )
-       call CHECK( __LINE__, CNZ4(3,k  ) )
-       call CHECK( __LINE__, CNZ4(4,k  ) )
-       call CHECK( __LINE__, CNZ4(1,k-2) )
+       call CHECK( __LINE__, CNZ4(1,k) )
+       call CHECK( __LINE__, CNZ4(2,k) )
+       call CHECK( __LINE__, CNZ4(3,k) )
+       call CHECK( __LINE__, CNZ4(4,k) )
+       call CHECK( __LINE__, CNZ4(5,k) )
        call CHECK( __LINE__, num_diff_pt0(k+2,i,j,I_val,ZDIR) )
        call CHECK( __LINE__, num_diff_pt0(k+1,i,j,I_val,ZDIR) )
        call CHECK( __LINE__, num_diff_pt0(k  ,i,j,I_val,ZDIR) )
@@ -3041,11 +3030,11 @@ call TIME_rapend     ('DYN-fct')
        call CHECK( __LINE__, num_diff_pt0(k-2,i,j,I_val,ZDIR) )
 #endif
        num_diff_pt1(k,i,j,I_val,ZDIR) = &
-                     ( CNZ4(1,k  ) * num_diff_pt0(k+2,i,j,I_val,ZDIR) &
-                     - CNZ4(2,k  ) * num_diff_pt0(k+1,i,j,I_val,ZDIR) &
-                     + CNZ4(3,k  ) * num_diff_pt0(k  ,i,j,I_val,ZDIR) &
-                     - CNZ4(4,k  ) * num_diff_pt0(k-1,i,j,I_val,ZDIR) &
-                     + CNZ4(1,k-2) * num_diff_pt0(k-2,i,j,I_val,ZDIR) )
+                     ( CNZ4(1,k) * num_diff_pt0(k+2,i,j,I_val,ZDIR) &
+                     - CNZ4(2,k) * num_diff_pt0(k+1,i,j,I_val,ZDIR) &
+                     + CNZ4(3,k) * num_diff_pt0(k  ,i,j,I_val,ZDIR) &
+                     - CNZ4(4,k) * num_diff_pt0(k-1,i,j,I_val,ZDIR) &
+                     + CNZ4(5,k) * num_diff_pt0(k-2,i,j,I_val,ZDIR) )
     enddo
     enddo
     enddo
@@ -3065,11 +3054,11 @@ call TIME_rapend     ('DYN-fct')
     do i = IIS, IIE
     do k = KS, K1
 #ifdef DEBUG
-       call CHECK( __LINE__, CNX4(1,i  ) )
-       call CHECK( __LINE__, CNX4(2,i  ) )
-       call CHECK( __LINE__, CNX4(3,i  ) )
-       call CHECK( __LINE__, CNX4(4,i  ) )
-       call CHECK( __LINE__, CNX4(1,i-2) )
+       call CHECK( __LINE__, CNX4(1,i) )
+       call CHECK( __LINE__, CNX4(2,i) )
+       call CHECK( __LINE__, CNX4(3,i) )
+       call CHECK( __LINE__, CNX4(4,i) )
+       call CHECK( __LINE__, CNX4(5,i) )
        call CHECK( __LINE__, num_diff_pt0(k,i-2,j,I_val,XDIR) )
        call CHECK( __LINE__, num_diff_pt0(k,i+1,j,I_val,XDIR) )
        call CHECK( __LINE__, num_diff_pt0(k,i  ,j,I_val,XDIR) )
@@ -3077,11 +3066,11 @@ call TIME_rapend     ('DYN-fct')
        call CHECK( __LINE__, num_diff_pt0(k,i-2,j,I_val,XDIR) )
 #endif
        num_diff_pt1(k,i,j,I_val,XDIR) = &
-                    ( CNX4(1,i  ) * num_diff_pt0(k,i+2,j,I_val,XDIR) &
-                    - CNX4(2,i  ) * num_diff_pt0(k,i+1,j,I_val,XDIR) &
-                    + CNX4(3,i  ) * num_diff_pt0(k,i  ,j,I_val,XDIR) &
-                    - CNX4(4,i  ) * num_diff_pt0(k,i-1,j,I_val,XDIR) &
-                    + CNX4(1,i-2) * num_diff_pt0(k,i-2,j,I_val,XDIR) )
+                    ( CNX4(1,i) * num_diff_pt0(k,i+2,j,I_val,XDIR) &
+                    - CNX4(2,i) * num_diff_pt0(k,i+1,j,I_val,XDIR) &
+                    + CNX4(3,i) * num_diff_pt0(k,i  ,j,I_val,XDIR) &
+                    - CNX4(4,i) * num_diff_pt0(k,i-1,j,I_val,XDIR) &
+                    + CNX4(5,i) * num_diff_pt0(k,i-2,j,I_val,XDIR) )
     enddo
     enddo
     enddo
@@ -3091,11 +3080,11 @@ call TIME_rapend     ('DYN-fct')
     do i = IIS, IIE
     do k = KS, K1
 #ifdef DEBUG
-       call CHECK( __LINE__, CNY4(1,j  ) )
-       call CHECK( __LINE__, CNY4(2,j  ) )
-       call CHECK( __LINE__, CNY4(3,j  ) )
-       call CHECK( __LINE__, CNY4(4,j  ) )
-       call CHECK( __LINE__, CNY4(1,j-2) )
+       call CHECK( __LINE__, CNY4(1,j) )
+       call CHECK( __LINE__, CNY4(2,j) )
+       call CHECK( __LINE__, CNY4(3,j) )
+       call CHECK( __LINE__, CNY4(4,j) )
+       call CHECK( __LINE__, CNY4(5,j) )
        call CHECK( __LINE__, num_diff_pt0(k,i,j-2,I_val,YDIR) )
        call CHECK( __LINE__, num_diff_pt0(k,i,j+1,I_val,YDIR) )
        call CHECK( __LINE__, num_diff_pt0(k,i,j  ,I_val,YDIR) )
@@ -3103,11 +3092,11 @@ call TIME_rapend     ('DYN-fct')
        call CHECK( __LINE__, num_diff_pt0(k,i,j-2,I_val,YDIR) )
 #endif
        num_diff_pt1(k,i,j,I_val,YDIR) = &
-                    ( CNY4(1,j  ) * num_diff_pt0(k,i,j+2,I_val,YDIR) &
-                    - CNY4(2,j  ) * num_diff_pt0(k,i,j+1,I_val,YDIR) &
-                    + CNY4(3,j  ) * num_diff_pt0(k,i,j  ,I_val,YDIR) &
-                    - CNY4(4,j  ) * num_diff_pt0(k,i,j-1,I_val,YDIR) &
-                    + CNY4(1,j-2) * num_diff_pt0(k,i,j-2,I_val,YDIR) )
+                    ( CNY4(1,j) * num_diff_pt0(k,i,j+2,I_val,YDIR) &
+                    - CNY4(2,j) * num_diff_pt0(k,i,j+1,I_val,YDIR) &
+                    + CNY4(3,j) * num_diff_pt0(k,i,j  ,I_val,YDIR) &
+                    - CNY4(4,j) * num_diff_pt0(k,i,j-1,I_val,YDIR) &
+                    + CNY4(5,j) * num_diff_pt0(k,i,j-2,I_val,YDIR) )
     enddo
     enddo
     enddo
