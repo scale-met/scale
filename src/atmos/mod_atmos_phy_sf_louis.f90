@@ -204,10 +204,14 @@ contains
     ZeS    = ATMOS_PHY_SF_ZeS
     ThS    = ATMOS_PHY_SF_ThS
 
+    call ATMOS_PHY_SF( .true., .false. )
+
     return
   end subroutine ATMOS_PHY_SF_setup
 
-  subroutine ATMOS_PHY_SF( update_flag )
+  subroutine ATMOS_PHY_SF( &
+       update_flag, &
+       history_flag )
     use mod_const, only: &
        CPdry  => CONST_CPdry, &
        LH0    => CONST_LH0
@@ -237,6 +241,7 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
 
     ! monitor
     real(RP) :: SHFLX(IA,JA) ! sensible heat flux [W/m2]
@@ -256,8 +261,13 @@ contains
        end do
        end do
 
-       call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-       call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+       if ( present(history_flag) ) then
+       if ( history_flag ) then
+          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+       end if
+       end if
+
     end if
 
     do j = JS, JE

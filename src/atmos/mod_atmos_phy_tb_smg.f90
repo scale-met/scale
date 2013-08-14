@@ -53,7 +53,10 @@ module mod_atmos_phy_tb
   !
   public :: ATMOS_PHY_TB_setup
   public :: ATMOS_PHY_TB
+#ifdef DEBUG
+  public :: ATMOS_PHY_TB_init
   public :: ATMOS_PHY_TB_main
+#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -134,7 +137,6 @@ contains
          ATMOS_PHY_TB_SMG_Cs, &
          ATMOS_PHY_TB_SMG_filter_fact
 
-    integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -162,92 +164,14 @@ contains
 
     Cs = ATMOS_PHY_TB_SMG_Cs
 
+    call ATMOS_PHY_TB_init( &
+         Cs, ATMOS_PHY_TB_SMG_filter_fact, & ! (in)
+         CDZ, CDX, CDY, & ! (in)
+         FDZ, FDX, FDY, & ! (in)
+         CZ, FZ         ) ! (in)
 
-    RPrN     = 1.0_RP / PrN
-    RRiC     = 1.0_RP / RiC
-    PrNovRiC = (1- PrN) * RRiC
+    call ATMOS_PHY_TB( .true., history_flag = .false. )
 
-#ifdef DEBUG
-    nu_factC (:,:,:) = UNDEF
-    nu_factXY(:,:,:) = UNDEF
-    nu_factYZ(:,:,:) = UNDEF
-    nu_factZX(:,:,:) = UNDEF
-    nu_factZ (:,:,:) = UNDEF
-    nu_factX (:,:,:) = UNDEF
-    nu_factY (:,:,:) = UNDEF
-#endif
-    do j = JS, JE+1
-    do i = IS, IE+1
-    do k = KS, KE
-       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS  , JE
-    do i = IS-1, IE
-    do k = KS, KE
-       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS  , IE
-    do k = KS  , KE
-       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS-1, IE
-    do k = KS  , KE
-       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS  , IE
-    do k = KS  , KE
-       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS  , JE
-    do i = IS-1, IE
-    do k = KS  , KE
-       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-    return
   end subroutine ATMOS_PHY_TB_setup
 
   !-----------------------------------------------------------------------------
@@ -258,7 +182,7 @@ contains
   !>  4, heat flux is not accurate yet. (i.e. energy is not conserved, see *1)
   !>  5, stratification effect is not considered.
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB( update_flag )
+  subroutine ATMOS_PHY_TB( update_flag, history_flag )
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_history, only: &
@@ -285,6 +209,7 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
 
     ! eddy viscosity/diffusion flux
     real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
@@ -370,44 +295,49 @@ contains
        end do
        end do
 
-       call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
-       call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
-       call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
-       call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
+       if ( present(history_flag) ) then
+       if ( history_flag ) then
+          call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
+          call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
+          call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
+          call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
 
-       call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
-       call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
-       call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
+          call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
 
-       call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
-       call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
-       call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
+          call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
 
-       call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
-       call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
-       call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
+          call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
 
-       call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
+          call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
+          call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
+          call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
 
-       if ( I_QV > 0 ) then
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
-       endif
+          if ( I_QV > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
+          endif
 
-       if ( I_QC > 0 ) then
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
-       endif
+          if ( I_QC > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
+          endif
 
-       if ( I_QR > 0 ) then
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
-          call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
-       endif
+          if ( I_QR > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
+          endif
+
+       end if
+       end if
 
     end if
 
@@ -441,6 +371,111 @@ contains
     return
   end subroutine ATMOS_PHY_TB
 
+
+  subroutine ATMOS_PHY_TB_init( &
+       Cs, filter_fact, &
+       CDZ, CDX, CDY,   &
+       FDZ, FDX, FDY,   &
+       CZ, FZ )
+    real(RP), intent(in) :: Cs
+    real(RP), intent(in) :: filter_fact
+    real(RP), intent(in) :: CDZ(KA)
+    real(RP), intent(in) :: CDX(IA)
+    real(RP), intent(in) :: CDY(JA)
+    real(RP), intent(in) :: FDZ(KA-1)
+    real(RP), intent(in) :: FDX(IA-1)
+    real(RP), intent(in) :: FDY(JA-1)
+    real(RP), intent(in) :: CZ(KA)
+    real(RP), intent(in) :: FZ(0:KA)
+
+    integer :: k, i, j
+
+    RPrN     = 1.0_RP / PrN
+    RRiC     = 1.0_RP / RiC
+    PrNovRiC = (1- PrN) * RRiC
+
+#ifdef DEBUG
+    nu_factC (:,:,:) = UNDEF
+    nu_factXY(:,:,:) = UNDEF
+    nu_factYZ(:,:,:) = UNDEF
+    nu_factZX(:,:,:) = UNDEF
+    nu_factZ (:,:,:) = UNDEF
+    nu_factX (:,:,:) = UNDEF
+    nu_factY (:,:,:) = UNDEF
+#endif
+    do j = JS, JE+1
+    do i = IS, IE+1
+    do k = KS, KE
+       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS  , JE
+    do i = IS-1, IE
+    do k = KS, KE
+       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS-1, JE
+    do i = IS  , IE
+    do k = KS  , KE
+       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS-1, JE
+    do i = IS-1, IE
+    do k = KS  , KE
+       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS-1, JE
+    do i = IS  , IE
+    do k = KS  , KE
+       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS  , JE
+    do i = IS-1, IE
+    do k = KS  , KE
+       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k),filter_fact) )**2
+    enddo
+    enddo
+    enddo
+#ifdef DEBUG
+    i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+
+    return
+  end subroutine ATMOS_PHY_TB_init
 
   subroutine ATMOS_PHY_TB_main( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)

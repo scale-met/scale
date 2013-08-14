@@ -51,7 +51,6 @@ module mod_atmos
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  logical, save :: first = .true.
 contains
 
   !-----------------------------------------------------------------------------
@@ -179,14 +178,14 @@ contains
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
        call TIME_rapstart('ATM SurfaceFlux')
-       call ATMOS_PHY_SF( do_phy_sf .or. first )
+       call ATMOS_PHY_SF( do_phy_sf )
        call TIME_rapend  ('ATM SurfaceFlux')
     end if
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
        call TIME_rapstart('ATM Turbulence')
-       call ATMOS_PHY_TB( do_phy_tb .or. first )
+       call ATMOS_PHY_TB( do_phy_tb )
        call TIME_rapend  ('ATM Turbulence')
     end if
 
@@ -215,8 +214,6 @@ contains
     call TIME_rapstart('ATM History Vars')
        call ATMOS_vars_history
     call TIME_rapend  ('ATM History Vars')
-
-    first = .false.
 
     return
   end subroutine ATMOS_step

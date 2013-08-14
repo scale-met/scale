@@ -49,11 +49,17 @@ contains
   !
   !++ used modules
   !
-  use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_TB
   use mod_atmos_phy_tb, only: &
-     ATMOS_PHY_TB_setup
+     ATMOS_PHY_TB_init
   use mod_grid, only: &
+     CDZ => GRID_CDZ, &
+     CDX => GRID_CDX, &
+     CDY => GRID_CDX, &
+     FDZ => GRID_FDZ, &
+     FDX => GRID_FDX, &
+     FDY => GRID_FDX, &
+     CZ  => GRID_CZ, &
+     FZ  => GRID_FZ, &
      GRID_CZ_mask
 
   !-----------------------------------------------------------------------------
@@ -66,8 +72,11 @@ contains
 
 
   !########## Initial setup ##########
-  ATMOS_TYPE_PHY_TB = 'SMAGORINSKY'
-  call ATMOS_PHY_TB_setup
+  call ATMOS_PHY_TB_init( &
+       0.3_RP, 1.0_RP, & ! (in)
+       CDZ, CDX, CDY, & ! (in)
+       FDZ, FDX, FDY, & ! (in)
+       CZ, FZ         ) ! (in)
 
   ZERO(:,:,:,:) = 0.0_RP
 
