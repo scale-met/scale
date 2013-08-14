@@ -662,9 +662,9 @@ contains
     real(RP), intent(in)    :: CNZ3(3,KA,2)
     real(RP), intent(in)    :: CNX3(3,IA,2)
     real(RP), intent(in)    :: CNY3(3,JA,2)
-    real(RP), intent(in)    :: CNZ4(4,KA,2)
-    real(RP), intent(in)    :: CNX4(4,IA,2)
-    real(RP), intent(in)    :: CNY4(4,JA,2)
+    real(RP), intent(in)    :: CNZ4(5,KA,2)
+    real(RP), intent(in)    :: CNX4(5,IA,2)
+    real(RP), intent(in)    :: CNY4(5,JA,2)
 
     real(RP), intent(in)    :: CDZ(KA)
     real(RP), intent(in)    :: CDX(IA)
@@ -3001,9 +3001,9 @@ call TIME_rapend     ('DYN-fct')
 
     real(RP), intent(out) :: num_diff_pt1(KA,IA,JA,5,3)
     real(RP), intent(in)  :: num_diff_pt0(KA,IA,JA,5,3)
-    real(RP), intent(in)  :: CNZ4(4,KA)
-    real(RP), intent(in)  :: CNX4(4,IA)
-    real(RP), intent(in)  :: CNY4(4,JA)
+    real(RP), intent(in)  :: CNZ4(5,KA)
+    real(RP), intent(in)  :: CNX4(5,IA)
+    real(RP), intent(in)  :: CNY4(5,JA)
     integer,  intent(in)  :: I_val
     integer,  intent(in)  :: k1
     integer,  intent(in)  :: iis
