@@ -178,14 +178,14 @@ contains
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
        call TIME_rapstart('ATM SurfaceFlux')
-       call ATMOS_PHY_SF( do_phy_sf )
+       call ATMOS_PHY_SF( do_phy_sf, .true. )
        call TIME_rapend  ('ATM SurfaceFlux')
     end if
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
        call TIME_rapstart('ATM Turbulence')
-       call ATMOS_PHY_TB( do_phy_tb )
+       call ATMOS_PHY_TB( do_phy_tb, .true. )
        call TIME_rapend  ('ATM Turbulence')
     end if
 
