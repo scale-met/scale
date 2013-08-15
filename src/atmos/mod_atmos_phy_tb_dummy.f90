@@ -75,10 +75,11 @@ contains
   end subroutine ATMOS_PHY_TB_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB( update_flag )
+  subroutine ATMOS_PHY_TB( update_flag, history_flag )
     implicit none
 
     logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'
