@@ -48,20 +48,27 @@ module mod_topography
   !
   real(RP), public, save :: TOPO_Zsfc  (1,IA,JA)    !< absolute ground height [m]
 
-  real(RP), public, save :: TOPO_CZ    (KA,IA,JA)   !< Xi center coordinate [m]: z
-  real(RP), public, save :: TOPO_FZ    (KA,IA,JA)   !< Xi face   coordinate [m]: z
+  real(RP), public, save :: TOPO_CZ    (KA,IA,JA)   !< Z coordinate [m] (cell center)
+  real(RP), public, save :: TOPO_FZ    (KA,IA,JA)   !< Z coordinate [m] (cell face  )
 
-  real(RP), public, save :: TOPO_CGSQRT(KA,IA,JA)   !< vertical metrics {G}^1/2
-  real(RP), public, save :: TOPO_FGSQRT(KA,IA,JA)   !< vertical metrics {G}^1/2
+  real(RP), public, save :: TOPO_GSQRT (KA,IA,JA)   !< vertical metrics {G}^1/2 at (x,y,layer)
+  real(RP), public, save :: TOPO_GSQRTX(KA,IA,JA)   !< vertical metrics {G}^1/2 at (u,y,layer)
+  real(RP), public, save :: TOPO_GSQRTY(KA,IA,JA)   !< vertical metrics {G}^1/2 at (x,v,layer)
+  real(RP), public, save :: TOPO_GSQRTZ(KA,IA,JA)   !< vertical metrics {G}^1/2 at (x,y,interface)
 
-  real(RP), public, save :: TOPO_Gvec  (KA,IA,JA,2) !< horizontal metrics vector
+  real(RP), public, save :: TOPO_J13   (KA,IA,JA)   !< (1,3) element of inverse Jacobian matrix at (x,y,interface)
+  real(RP), public, save :: TOPO_J13X  (KA,IA,JA)   !< (1,3) element of inverse Jacobian matrix at (u,y,interface)
+  real(RP), public, save :: TOPO_J13Y  (KA,IA,JA)   !< (1,3) element of inverse Jacobian matrix at (x,v,interface)
+  real(RP), public, save :: TOPO_J23   (KA,IA,JA)   !< (2,3) element of inverse Jacobian matrix at (x,y,interface)
+  real(RP), public, save :: TOPO_J23X  (KA,IA,JA)   !< (2,3) element of inverse Jacobian matrix at (u,y,interface)
+  real(RP), public, save :: TOPO_J23Y  (KA,IA,JA)   !< (2,3) element of inverse Jacobian matrix at (x,v,interface)
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
   private :: TOPO_read
-  private :: TOPO_Xi
+  private :: TOPO_Xi2Z
   private :: TOPO_metrics
 
   !-----------------------------------------------------------------------------
@@ -114,7 +121,7 @@ contains
     call TOPO_read
 
     ! calc metrics
-    call TOPO_Xi
+    call TOPO_Xi2Z
     call TOPO_metrics
 
     ! write to file
@@ -176,8 +183,8 @@ contains
   end subroutine TOPO_write
 
   !-----------------------------------------------------------------------------
-  !> Convert Z to Xi coordinate
-  subroutine TOPO_Xi
+  !> Convert Xi to Z coordinate
+  subroutine TOPO_Xi2Z
     use mod_grid, only: &
        GRID_CZ, &
        GRID_FZ
@@ -185,7 +192,7 @@ contains
 
     real(RP) :: Htop
 
-    integer :: k, i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     Htop = GRID_FZ(KE) - GRID_FZ(KS-1)
@@ -193,8 +200,7 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       TOPO_CZ(k,i,j) = Htop * ( GRID_CZ(k) - TOPO_Zsfc(1,i,j) ) &
-                             / ( Htop       - TOPO_Zsfc(1,i,j) )
+       TOPO_CZ(k,i,j) = ( Htop - TOPO_Zsfc(1,i,j) ) / Htop * GRID_CZ(k) + TOPO_Zsfc(1,i,j)
     enddo
     enddo
     enddo
@@ -202,14 +208,13 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       TOPO_FZ(k,i,j) = Htop * ( GRID_FZ(k) - TOPO_Zsfc(1,i,j) ) &
-                             / ( Htop       - TOPO_Zsfc(1,i,j) )
+       TOPO_FZ(k,i,j) = ( Htop - TOPO_Zsfc(1,i,j) ) / Htop * GRID_FZ(k) + TOPO_Zsfc(1,i,j)
     enddo
     enddo
     enddo
 
     return
-  end subroutine TOPO_Xi
+  end subroutine TOPO_Xi2Z
 
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Gvector
@@ -217,6 +222,8 @@ contains
     use mod_grid, only: &
        GRID_CZ,   &
        GRID_FZ,   &
+       GRID_RCDX, &
+       GRID_RCDY, &
        GRID_RFDX, &
        GRID_RFDY
     use mod_comm, only: &
@@ -224,65 +231,112 @@ contains
        COMM_wait
     implicit none
 
-    real(RP), parameter :: FACT_N =   9.0_RP / 8.0_RP
-    real(RP), parameter :: FACT_F = - 1.0_RP / 8.0_RP / 3.0_RP
-
-    real(RP) :: grad
+    real(RP) :: TOPO_CZX (KA,IA,JA) !< Z coordinate [m] (u,y,interface)
+    real(RP) :: TOPO_CZY (KA,IA,JA) !< Z coordinate [m] (x,v,interface)
+    real(RP) :: TOPO_CZXY(KA,IA,JA) !< Z coordinate [m] (u,v,interface)
+    real(RP) :: TOPO_FZX (KA,IA,JA) !< Z coordinate [m] (u,y,interface)
+    real(RP) :: TOPO_FZY (KA,IA,JA) !< Z coordinate [m] (x,v,interface)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! G^1/2
+    ! calc Z-coordinate height at staggered position
     do j = 1, JA
-    do i = 1, IA
-       TOPO_CGSQRT(1,i,j) = ( TOPO_FZ(1,i,j) - TOPO_CZ(1,i,j) ) &
-                          / ( GRID_FZ(1)     - GRID_CZ(1)     )
-       do k = 2, KA
-          TOPO_CGSQRT(k,i,j) = ( TOPO_FZ(k,i,j) - TOPO_FZ(k-1,i,j) ) &
-                             / ( GRID_FZ(k)     - GRID_FZ(k-1)     )
-       enddo
+    do i = 1, IA-1
+       TOPO_CZX(k,i,j) = 0.5D0 * ( TOPO_CZ(k,i+1,j) + TOPO_CZ(k,i,j) )
+       TOPO_FZX(k,i,j) = 0.5D0 * ( TOPO_FZ(k,i+1,j) + TOPO_FZ(k,i,j) )
     enddo
     enddo
 
-    do j = 1, JA
+    do j = 1, JA-1
     do i = 1, IA
+       TOPO_CZY(k,i,j) = 0.5D0 * ( TOPO_CZ(k,i,j+1) + TOPO_CZ(k,i,j) )
+       TOPO_FZY(k,i,j) = 0.5D0 * ( TOPO_FZ(k,i,j+1) + TOPO_FZ(k,i,j) )
+    enddo
+    enddo
+
+    do j = 1, JA-1
+    do i = 1, IA-1
+       TOPO_CZXY(k,i,j) = 0.25D0 * ( TOPO_CZ(k,i+1,j+1) + TOPO_CZ(k,i+1,j) &
+                                   + TOPO_CZ(k,i  ,j+1) + TOPO_CZ(k,i  ,j) )
+    enddo
+    enddo
+
+    ! G^1/2
+    do j = JS, JE
+    do i = IS, IE
+       ! at (x,y,layer)
+       TOPO_GSQRT(1,i,j) = ( TOPO_FZ(1,i,j) - TOPO_CZ(1,i,j) ) &
+                         / ( GRID_FZ(1)     - GRID_CZ(1)     )
+       do k = 2, KA
+          TOPO_GSQRT(k,i,j) = ( TOPO_FZ(k,i,j) - TOPO_FZ(k-1,i,j) ) &
+                            / ( GRID_FZ(k)     - GRID_FZ(k-1)     )
+       enddo
+
+       ! at (u,y,layer)
+       TOPO_GSQRTX(1,i,j) = ( TOPO_FZX(1,i,j) - TOPO_CZX(1,i,j) ) &
+                          / ( GRID_FZ (1)     - GRID_CZ (1)     )
+       do k = 2, KA
+          TOPO_GSQRTX(k,i,j) = ( TOPO_FZX(k,i,j) - TOPO_FZX(k-1,i,j) ) &
+                             / ( GRID_FZ (k)     - GRID_FZ (k-1)     )
+       enddo
+
+       ! at (x,v,layer)
+       TOPO_GSQRTY(1,i,j) = ( TOPO_FZY(1,i,j) - TOPO_CZY(1,i,j) ) &
+                          / ( GRID_FZ (1)     - GRID_CZ (1)     )
+       do k = 2, KA
+          TOPO_GSQRTY(k,i,j) = ( TOPO_FZY(k,i,j) - TOPO_FZY(k-1,i,j) ) &
+                             / ( GRID_FZ (k)     - GRID_FZ (k-1)     )
+       enddo
+
+       ! at (x,y,interface)
        do k = 1, KA-1
-          TOPO_FGSQRT(k,i,j) = ( TOPO_CZ(k+1,i,j) - TOPO_CZ(k,i,j) ) &
+          TOPO_GSQRTZ(k,i,j) = ( TOPO_CZ(k+1,i,j) - TOPO_CZ(k,i,j) ) &
                              / ( GRID_CZ(k+1)     - GRID_CZ(k)     )
        enddo
-       TOPO_FGSQRT(KA,i,j) = ( TOPO_FZ(KA,i,j) - TOPO_CZ(KA,i,j) ) &
+       TOPO_GSQRTZ(KA,i,j) = ( TOPO_FZ(KA,i,j) - TOPO_CZ(KA,i,j) ) &
                            / ( GRID_FZ(KA)     - GRID_CZ(KA)     )
     enddo
     enddo
 
     ! Gvector
-    do j = 1,  JA
+    do j = JS, JE
     do i = IS, IE
     do k = 1,  KA
-       grad = ( FACT_N * ( TOPO_CZ(k,i+1,j)-TOPO_CZ(k,i  ,j) ) &
-              + FACT_F * ( TOPO_CZ(k,i+2,j)-TOPO_CZ(k,i-1,j) ) ) * GRID_RFDX(i)
+       TOPO_J13(k,i,j) = ( TOPO_CZX(k,i,j) - TOPO_CZX(k,i-1,j  ) ) * GRID_RCDX(i)
+       TOPO_J23(k,i,j) = ( TOPO_CZY(k,i,j) - TOPO_CZY(k,i  ,j-1) ) * GRID_RCDY(j)
 
-       TOPO_Gvec(k,i,j,XDIR) = - grad / TOPO_FGSQRT(k,i,j)
-    enddo
-    enddo
-    enddo
+       TOPO_J13X(k,i,j) = ( TOPO_CZ  (k,i+1,j) - TOPO_CZ  (k,i,j  ) ) * GRID_RFDX(i)
+       TOPO_J23X(k,i,j) = ( TOPO_CZXY(k,i  ,j) - TOPO_CZXY(k,i,j-1) ) * GRID_RCDY(j)
 
-    do j = JS, JE
-    do i = 1,  IA
-    do k = 1,  KA
-       grad = ( FACT_N * ( TOPO_CZ(k,i,j+1)-TOPO_CZ(k,i,j  ) ) &
-              + FACT_F * ( TOPO_CZ(k,i,j+2)-TOPO_CZ(k,i,j-1) ) ) * GRID_RFDY(j)
-
-       TOPO_Gvec(k,i,j,YDIR) = - grad / TOPO_FGSQRT(k,i,j)
+       TOPO_J13Y(k,i,j) = ( TOPO_CZXY(k,i,j  ) - TOPO_CZXY(k,i-1,j) ) * GRID_RFDX(i)
+       TOPO_J23Y(k,i,j) = ( TOPO_CZ  (k,i,j+1) - TOPO_CZ  (k,i  ,j) ) * GRID_RCDY(j)
     enddo
     enddo
     enddo
 
     ! fill IHALO & JHALO
-    call COMM_vars8( TOPO_Gvec(:,:,:,XDIR), 1 )
-    call COMM_vars8( TOPO_Gvec(:,:,:,YDIR), 2 )
-    call COMM_wait ( TOPO_Gvec(:,:,:,XDIR), 1 )
-    call COMM_wait ( TOPO_Gvec(:,:,:,YDIR), 2 )
+    call COMM_vars8( TOPO_GSQRT (:,:,:),  1 )
+    call COMM_vars8( TOPO_GSQRTX(:,:,:),  2 )
+    call COMM_vars8( TOPO_GSQRTY(:,:,:),  3 )
+    call COMM_vars8( TOPO_GSQRTZ(:,:,:),  4 )
+    call COMM_vars8( TOPO_J13   (:,:,:),  5 )
+    call COMM_vars8( TOPO_J23   (:,:,:),  6 )
+    call COMM_vars8( TOPO_J13X  (:,:,:),  7 )
+    call COMM_vars8( TOPO_J23X  (:,:,:),  8 )
+    call COMM_vars8( TOPO_J13Y  (:,:,:),  9 )
+    call COMM_vars8( TOPO_J23Y  (:,:,:), 10 )
+
+    call COMM_wait ( TOPO_GSQRT (:,:,:),  1 )
+    call COMM_wait ( TOPO_GSQRTX(:,:,:),  2 )
+    call COMM_wait ( TOPO_GSQRTY(:,:,:),  3 )
+    call COMM_wait ( TOPO_GSQRTZ(:,:,:),  4 )
+    call COMM_wait ( TOPO_J13   (:,:,:),  5 )
+    call COMM_wait ( TOPO_J23   (:,:,:),  6 )
+    call COMM_wait ( TOPO_J13X  (:,:,:),  7 )
+    call COMM_wait ( TOPO_J23X  (:,:,:),  8 )
+    call COMM_wait ( TOPO_J13Y  (:,:,:),  9 )
+    call COMM_wait ( TOPO_J23Y  (:,:,:), 10 )
 
     return
   end subroutine TOPO_metrics
