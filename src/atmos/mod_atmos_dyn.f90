@@ -2430,8 +2430,9 @@ call TIME_rapstart   ('DYN-fct')
     do iq = 1, QA
        call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
     end do
+
     do iq = 1, QA
-       call COMM_wait ( QTRC_t(:,:,:,iq), 5+iq )
+       call COMM_wait( QTRC_t(:,:,:,iq), 5+iq )
     end do
 #endif
 
