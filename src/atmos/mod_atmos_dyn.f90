@@ -100,57 +100,55 @@ module mod_atmos_dyn
   !++ Private parameters & variables
   !
   ! time settings
-  integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
+  integer,  private, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! numerical filter settings
-  integer,  private, save :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private, save :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private, save :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private, save :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private, save :: DIFF4                                             ! for numerical filter
+  integer,  private, save      :: ATMOS_DYN_numerical_diff_order        = 1
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
+  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  real(RP), private, save      :: DIFF4                                             ! for numerical filter
 
   ! coriolis force
-  logical, private, save  :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, save :: CORIOLI(1,IA,JA)                    ! coriolis term
+  logical,  private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  real(RP), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
 
-  real(RP), private, save :: ATMOS_DYN_divdmp_coef = 0.0_RP        ! Divergence dumping coef
+  real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP ! Divergence dumping coef
 
   ! fct
-  logical, private, save  :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical, private, save  :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical, private, save  :: ATMOS_DYN_FLAG_FCT_T        = .false.
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_rho      = .false.
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_momentum = .false.
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_T        = .false.
 
   ! work
-  real(RP), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
-  real(RP), private, save :: MOMZ_RK1(KA,IA,JA)   !
-  real(RP), private, save :: MOMX_RK1(KA,IA,JA)   !
-  real(RP), private, save :: MOMY_RK1(KA,IA,JA)   !
-  real(RP), private, save :: RHOT_RK1(KA,IA,JA)   !
-  real(RP), private, save :: DENS_RK2(KA,IA,JA)   ! prognostic variables (+2/3 step)
-  real(RP), private, save :: MOMZ_RK2(KA,IA,JA)   !
-  real(RP), private, save :: MOMX_RK2(KA,IA,JA)   !
-  real(RP), private, save :: MOMY_RK2(KA,IA,JA)   !
-  real(RP), private, save :: RHOT_RK2(KA,IA,JA)   !
+  real(RP), private, save      :: DENS_RK1(KA,IA,JA) ! prognostic variables (+1/3 step)
+  real(RP), private, save      :: MOMZ_RK1(KA,IA,JA) !
+  real(RP), private, save      :: MOMX_RK1(KA,IA,JA) !
+  real(RP), private, save      :: MOMY_RK1(KA,IA,JA) !
+  real(RP), private, save      :: RHOT_RK1(KA,IA,JA) !
+  real(RP), private, save      :: DENS_RK2(KA,IA,JA) ! prognostic variables (+2/3 step)
+  real(RP), private, save      :: MOMZ_RK2(KA,IA,JA) !
+  real(RP), private, save      :: MOMX_RK2(KA,IA,JA) !
+  real(RP), private, save      :: MOMY_RK2(KA,IA,JA) !
+  real(RP), private, save      :: RHOT_RK2(KA,IA,JA) !
 
-  real(RP), private, save :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
-  real(RP), private, save :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
-  real(RP), private, save :: VELZ   (KA,IA,JA)    ! velocity w [m/s]
-  real(RP), private, save :: VELX   (KA,IA,JA)    ! velocity u [m/s]
-  real(RP), private, save :: VELY   (KA,IA,JA)    ! velocity v [m/s]
+  real(RP), private, save      :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z) @ (u,v,w)-face high order
+  real(RP), private, save      :: mflx_av(KA,IA,JA,3) ! rho * vel(x,y,z) @ (u,v,w)-face average
+  real(RP), private, save      :: VELZ   (KA,IA,JA)   ! velocity w [m/s]
+  real(RP), private, save      :: VELX   (KA,IA,JA)   ! velocity u [m/s]
+  real(RP), private, save      :: VELY   (KA,IA,JA)   ! velocity v [m/s]
 
-  real(RP), private, save :: CNZ3(3,KA,2)
-  real(RP), private, save :: CNX3(3,IA,2)
-  real(RP), private, save :: CNY3(3,JA,2)
-  real(RP), private, save :: CNZ4(5,KA,2)
-  real(RP), private, save :: CNX4(5,IA,2)
-  real(RP), private, save :: CNY4(5,JA,2)
+  real(RP), private, save      :: CNZ3(3,KA,2)
+  real(RP), private, save      :: CNX3(3,IA,2)
+  real(RP), private, save      :: CNY3(3,JA,2)
+  real(RP), private, save      :: CNZ4(5,KA,2)
+  real(RP), private, save      :: CNX4(5,IA,2)
+  real(RP), private, save      :: CNY4(5,JA,2)
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Initialize Dynamical Process
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_DYN_setup
     use mod_stdio, only: &
        IO_FID_CONF
@@ -166,21 +164,17 @@ contains
        lat => GEOMETRICS_lat
     use mod_atmos_dyn_rk, only: &
        ATMOS_DYN_rk_setup
-#ifdef _USE_RDMA
-    use mod_comm, only: &
-       COMM_set_rdma_variable
-#endif
     implicit none
 
-    NAMELIST / PARAM_ATMOS_DYN /    &
-       ATMOS_DYN_numerical_diff_order, &
-       ATMOS_DYN_numerical_diff_coef, &
-       ATMOS_DYN_numerical_diff_sfc_fact, &
+    NAMELIST / PARAM_ATMOS_DYN / &
+       ATMOS_DYN_numerical_diff_order,        &
+       ATMOS_DYN_numerical_diff_coef,         &
+       ATMOS_DYN_numerical_diff_sfc_fact,     &
        ATMOS_DYN_numerical_diff_use_refstate, &
-       ATMOS_DYN_enable_coriolis,   &
-       ATMOS_DYN_divdmp_coef,       &
-       ATMOS_DYN_FLAG_FCT_rho,      &
-       ATMOS_DYN_FLAG_FCT_momentum, &
+       ATMOS_DYN_enable_coriolis,             &
+       ATMOS_DYN_divdmp_coef,                 &
+       ATMOS_DYN_FLAG_FCT_rho,                &
+       ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T
 
     integer :: ierr
@@ -219,46 +213,25 @@ contains
                          Real(DTSEC_ATMOS_DYN,kind=RP),       & ! (in)
                          ATMOS_DYN_enable_coriolis            ) ! (in)
 
-#ifdef _USE_RDMA
-    ! RDMA setting
-    call COMM_set_rdma_variable( DENS_RK1(:,:,:), 5+QA+ 1)
-    call COMM_set_rdma_variable( MOMZ_RK1(:,:,:), 5+QA+ 2)
-    call COMM_set_rdma_variable( MOMY_RK1(:,:,:), 5+QA+ 3)
-    call COMM_set_rdma_variable( MOMX_RK1(:,:,:), 5+QA+ 4)
-    call COMM_set_rdma_variable( RHOT_RK1(:,:,:), 5+QA+ 5)
-
-    call COMM_set_rdma_variable( DENS_RK2(:,:,:), 5+QA+ 6)
-    call COMM_set_rdma_variable( MOMZ_RK2(:,:,:), 5+QA+ 7)
-    call COMM_set_rdma_variable( MOMY_RK2(:,:,:), 5+QA+ 8)
-    call COMM_set_rdma_variable( MOMX_RK2(:,:,:), 5+QA+ 9)
-    call COMM_set_rdma_variable( RHOT_RK2(:,:,:), 5+QA+10)
-
-    call COMM_set_rdma_variable( mflx_hi(:,:,:,ZDIR), 5+QA+11)
-    call COMM_set_rdma_variable( mflx_hi(:,:,:,XDIR), 5+QA+12)
-    call COMM_set_rdma_variable( mflx_hi(:,:,:,YDIR), 5+QA+13)
-
-    call COMM_set_rdma_variable( VELZ   (:,:,:),      5+QA+16)
-    call COMM_set_rdma_variable( VELX   (:,:,:),      5+QA+17)
-    call COMM_set_rdma_variable( VELY   (:,:,:),      5+QA+18)
-#endif
-
-
     call ATMOS_DYN_rk_setup
 
     return
-
   end subroutine ATMOS_DYN_setup
 
-  subroutine ATMOS_DYN_init( DIFF4, corioli,                     &
-                             CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
-                             CDZ, CDX, CDY, lat,                 &
-                             numdiff_order, numdiff_coef,        &
-                             dt_dyn,                             &
-                             enable_coriolis                     )
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_DYN_init( &
+       DIFF4, corioli,                     &
+       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
+       CDZ, CDX, CDY, lat,                 &
+       numdiff_order, numdiff_coef,        &
+       dt_dyn,                             &
+       enable_coriolis                     )
     use mod_const, only: &
        PI  => CONST_PI, &
        OHM => CONST_OHM
     implicit none
+
     real(RP), intent(out) :: DIFF4
     real(RP), intent(out) :: corioli(1,IA,JA)
     real(RP), intent(out) :: CNZ3(3,KA,2)
@@ -278,6 +251,7 @@ contains
 
     real(RP) :: d2r
     integer :: i, j, k
+    !---------------------------------------------------------------------------
 
 #ifdef DEBUG
     CNZ3(:,:,:) = UNDEF
@@ -306,7 +280,6 @@ contains
        enddo
        enddo
     endif
-
 
     ! numerical diffusion
     if ( numdiff_coef == 0.0_RP ) then
@@ -491,8 +464,7 @@ contains
   end subroutine ATMOS_DYN_init
 
   !-----------------------------------------------------------------------------
-  !> Dynamical Process
-  !-----------------------------------------------------------------------------
+  !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN
     use mod_time, only: &
        DTSEC           => TIME_DTSEC,           &
@@ -548,7 +520,6 @@ contains
 
     real(RP) :: QDRY(KA,IA,JA)      ! dry air mixing ratio [kg/kg]
     real(RP) :: DDIV(KA,IA,JA)      ! divergence
-
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
@@ -558,12 +529,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
-
-!    call ATMOS_vars_fillhalo
-
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
-         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
+         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          QDRY, DDIV,                                & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,        & ! (in)
@@ -588,34 +556,33 @@ contains
     call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', DTSEC )
 #endif
     call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   DTSEC )
-    return
 
+    return
   end subroutine ATMOS_DYN
 
+  !-----------------------------------------------------------------------------
+  !> Dynamical Process
   subroutine ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
-         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
-         QDRY, DDIV,                                  & ! (out)
-         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
-         CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-         AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, REF_qv,                  & ! (in)
-         DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,     & ! (in)
-         corioli, DAMP_var, DAMP_alpha,               & ! (in)
-         divdmp_coef,                                 & ! (in)
-         FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
-         USE_AVERAGE,                                 & ! (in)
-         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
+       QDRY, DDIV,                                  & ! (out)
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       AQ_CV,                                       & ! (in)
+       REF_dens, REF_pott, REF_qv,                  & ! (in)
+       DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,     & ! (in)
+       corioli, DAMP_var, DAMP_alpha,               & ! (in)
+       divdmp_coef,                                 & ! (in)
+       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
+       USE_AVERAGE,                                 & ! (in)
+       DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
     use mod_const, only : &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry
     use mod_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
        COMM_vars8, &
        COMM_wait
     use mod_atmos_dyn_common, only: &
@@ -738,14 +705,13 @@ contains
     real(RP), pointer :: num_diff_pt1(:,:,:,:,:)
     real(RP), pointer :: tmp_pt(:,:,:,:,:)
 
-
     integer :: IIS, IIE
     integer :: JJS, JJE
 
     real(RP) :: dtrk
     integer :: nd_order4, no
     integer :: i, j, k, iq, rko, step
-
+    !---------------------------------------------------------------------------
 
 #ifdef DEBUG
     DENS_RK1(:,:,:) = UNDEF
@@ -768,7 +734,7 @@ contains
     dens_s   (:,:,:)     = UNDEF
     dens_diff(:,:,:)     = UNDEF
     pott_diff(:,:,:)     = UNDEF
-    qv_diff(:,:,:)     = UNDEF
+    qv_diff  (:,:,:)     = UNDEF
     num_diff (:,:,:,:,:) = UNDEF
 
     mflx_hi  (:,:,:,:)   = UNDEF
@@ -1018,10 +984,6 @@ contains
 
 
     do step = 1, NSTEP_ATMOS_DYN
-
-#ifdef _FAPP_
-call TIME_rapstart   ('DYN-set')
-#endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1747,15 +1709,15 @@ call TIME_rapstart   ('DYN-set')
 
        do no = 2, nd_order
 
-          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,ZDIR), 1 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,XDIR), 2 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,YDIR), 3 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,ZDIR), 4 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,XDIR), 5 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,YDIR), 6 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,ZDIR), 7 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,XDIR), 8 )
-          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,YDIR), 9 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,ZDIR),  1 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,XDIR),  2 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,YDIR),  3 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,ZDIR),  4 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,XDIR),  5 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMZ,YDIR),  6 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,ZDIR),  7 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,XDIR),  8 )
+          call COMM_vars8( num_diff_pt0(:,:,:,I_MOMX,YDIR),  9 )
           call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,ZDIR), 10 )
           call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,XDIR), 11 )
           call COMM_vars8( num_diff_pt0(:,:,:,I_MOMY,YDIR), 12 )
@@ -2111,15 +2073,15 @@ call TIME_rapstart   ('DYN-set')
        end do
        end do
 
-       call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR), 1 )
-       call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR), 2 )
-       call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR), 3 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR), 4 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), 5 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), 6 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR), 7 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), 8 )
-       call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), 9 )
+       call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  1 )
+       call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  2 )
+       call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  3 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR),  8 )
+       call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR),  9 )
        call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
        call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), 11 )
        call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), 12 )
@@ -2127,15 +2089,15 @@ call TIME_rapstart   ('DYN-set')
        call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), 14 )
        call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), 15 )
 
-       call COMM_wait( num_diff(:,:,:,I_DENS,ZDIR), 1 )
-       call COMM_wait( num_diff(:,:,:,I_DENS,XDIR), 2 )
-       call COMM_wait( num_diff(:,:,:,I_DENS,YDIR), 3 )
-       call COMM_wait( num_diff(:,:,:,I_MOMZ,ZDIR), 4 )
-       call COMM_wait( num_diff(:,:,:,I_MOMZ,XDIR), 5 )
-       call COMM_wait( num_diff(:,:,:,I_MOMZ,YDIR), 6 )
-       call COMM_wait( num_diff(:,:,:,I_MOMX,ZDIR), 7 )
-       call COMM_wait( num_diff(:,:,:,I_MOMX,XDIR), 8 )
-       call COMM_wait( num_diff(:,:,:,I_MOMX,YDIR), 9 )
+       call COMM_wait( num_diff(:,:,:,I_DENS,ZDIR),  1 )
+       call COMM_wait( num_diff(:,:,:,I_DENS,XDIR),  2 )
+       call COMM_wait( num_diff(:,:,:,I_DENS,YDIR),  3 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
+       call COMM_wait( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,XDIR),  8 )
+       call COMM_wait( num_diff(:,:,:,I_MOMX,YDIR),  9 )
        call COMM_wait( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
        call COMM_wait( num_diff(:,:,:,I_MOMY,XDIR), 11 )
        call COMM_wait( num_diff(:,:,:,I_MOMY,YDIR), 12 )
@@ -2156,13 +2118,7 @@ call TIME_rapstart   ('DYN-set')
     call COMM_wait ( MOMY_t(:,:,:), 4 )
     call COMM_wait ( RHOT_t(:,:,:), 5 )
 
-#ifdef _FAPP_
-call TIME_rapend     ('DYN-set')
-call TIME_rapstart   ('DYN-rk3')
-#endif
-
     !##### Start RK #####
-
 
     !##### RK1 #####
     rko = 1
@@ -2181,9 +2137,7 @@ call TIME_rapstart   ('DYN-rk3')
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+1, 5 )
-#else
+
     call COMM_vars8( DENS_RK1(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
     call COMM_vars8( MOMX_RK1(:,:,:), 3 )
@@ -2194,7 +2148,6 @@ call TIME_rapstart   ('DYN-rk3')
     call COMM_wait ( MOMX_RK1(:,:,:), 3 )
     call COMM_wait ( MOMY_RK1(:,:,:), 4 )
     call COMM_wait ( RHOT_RK1(:,:,:), 5 )
-#endif
 
     !##### RK2 #####
     rko = 2
@@ -2213,9 +2166,7 @@ call TIME_rapstart   ('DYN-rk3')
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+6, 5 )
-#else
+
     call COMM_vars8( DENS_RK2(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
     call COMM_vars8( MOMX_RK2(:,:,:), 3 )
@@ -2226,7 +2177,6 @@ call TIME_rapstart   ('DYN-rk3')
     call COMM_wait ( MOMX_RK2(:,:,:), 3 )
     call COMM_wait ( MOMY_RK2(:,:,:), 4 )
     call COMM_wait ( RHOT_RK2(:,:,:), 5 )
-#endif
 
     !##### RK3 #####
     rko = 3
@@ -2245,9 +2195,7 @@ call TIME_rapstart   ('DYN-rk3')
                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
                  dtrk, RK, rko,                                     & ! (in)
                  VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 1, 5 )
-#else
+
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
     call COMM_vars8( MOMX(:,:,:), 3 )
@@ -2258,7 +2206,6 @@ call TIME_rapstart   ('DYN-rk3')
     call COMM_wait ( MOMX(:,:,:), 3 )
     call COMM_wait ( MOMY(:,:,:), 4 )
     call COMM_wait ( RHOT(:,:,:), 5 )
-#endif
 
     if ( USE_AVERAGE ) then
 
@@ -2344,15 +2291,7 @@ call TIME_rapstart   ('DYN-rk3')
     enddo
     enddo
 
-#ifdef _FAPP_
-call TIME_rapend     ('DYN-rk3')
-#endif
-
     enddo ! dynamical steps
-
-#ifdef _FAPP_
-call TIME_rapstart   ('DYN-fct')
-#endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j = JS, JE
@@ -2381,19 +2320,12 @@ call TIME_rapstart   ('DYN-fct')
     enddo
     enddo
 
-
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
     call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
     call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
     call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
     call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
-
-
 
 #ifndef DRY
 
@@ -2862,24 +2794,13 @@ call TIME_rapstart   ('DYN-fct')
 
     enddo ! scalar quantities loop
 
-#ifdef _USE_RDMA
-    call COMM_rdma_vars8( 6, QA )
-#else
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
     do iq = 1, QA
        call COMM_wait ( QTRC(:,:,:,iq), iq )
     enddo
-#endif
 
-
-
-#endif
-
-
-#ifdef _FAPP_
-call TIME_rapend     ('DYN-fct')
 #endif
 
 !OCL XFILL
@@ -2982,6 +2903,7 @@ call TIME_rapend     ('DYN-fct')
     return
   end subroutine ATMOS_DYN_main
 
+  !-----------------------------------------------------------------------------
   subroutine calc_numdiff4( &
        num_diff_pt1, & ! (out)
        num_diff_pt0, & ! (in)
@@ -2990,6 +2912,7 @@ call TIME_rapend     ('DYN-fct')
        CNY4,         & ! (in)
        I_val,        & ! (in)
        k1            ) ! (in)
+    implicit none
 
     real(RP), intent(out) :: num_diff_pt1(KA,IA,JA,5,3)
     real(RP), intent(in)  :: num_diff_pt0(KA,IA,JA,5,3)
@@ -3001,6 +2924,7 @@ call TIME_rapend     ('DYN-fct')
 
     integer :: i, j, k
     integer :: iis, iie, jjs, jje
+    !---------------------------------------------------------------------------
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
