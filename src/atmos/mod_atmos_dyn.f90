@@ -522,22 +522,13 @@ contains
        DAMP_var   => ATMOS_BOUNDARY_var,   &
        DAMP_alpha => ATMOS_BOUNDARY_alpha
     implicit none
-
-    real(RP) :: QDRY(KA,IA,JA)      ! dry air mixing ratio [kg/kg]
-    real(RP) :: DDIV(KA,IA,JA)      ! divergence
     !---------------------------------------------------------------------------
-
-#ifdef DEBUG
-    QDRY(:,:,:) = UNDEF
-    DDIV(:,:,:) = UNDEF
-#endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
     call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-         QDRY, DDIV,                                           & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          ATMOS_DYN_CNZ3,                                       & ! (in)
          ATMOS_DYN_CNX3,                                       & ! (in)
@@ -564,11 +555,6 @@ contains
 
     call ATMOS_vars_total
 
-#ifndef DRY
-    call HIST_in( QDRY(:,:,:), 'QDRY', 'Dry Air mixng ratio', 'kg/kg', DTSEC )
-#endif
-    call HIST_in( DDIV(:,:,:), 'div',  'Divergence',          's-1',   DTSEC )
-
     return
   end subroutine ATMOS_DYN
 
@@ -577,7 +563,6 @@ contains
   subroutine ATMOS_DYN_main( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-       QDRY, DDIV,                                           &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, &
        CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,                   &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
@@ -624,13 +609,6 @@ contains
     real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
     real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
     real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
-
-#ifdef DRY
-    real(RP), intent(inout)   :: QDRY(KA,IA,JA) ! not used
-#else
-    real(RP), intent(out)   :: QDRY(KA,IA,JA)
-#endif
-    real(RP), intent(out)   :: DDIV(KA,IA,JA)
 
     real(RP), intent(in)    :: DENS_tp(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_tp(KA,IA,JA)
@@ -687,6 +665,7 @@ contains
     real(RP) :: PRES  (KA,IA,JA) ! pressure [Pa]
     real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
     real(RP) :: dens_s(KA,IA,JA) ! saved density
+    real(RP) :: QDRY(KA,IA,JA) ! not used
     real(RP) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
     real(RP) :: CVtot (KA,IA,JA) ! CV
 
@@ -715,13 +694,13 @@ contains
     real(RP), target  :: num_diff_work(KA,IA,JA,5,3)
     real(RP), pointer :: num_diff_pt0(:,:,:,:,:)
     real(RP), pointer :: num_diff_pt1(:,:,:,:,:)
-    real(RP), pointer :: tmp_pt(:,:,:,:,:)
+    real(RP), pointer :: tmp_pt      (:,:,:,:,:)
 
-    integer  :: IIS, IIE
-    integer  :: JJS, JJE
 
     real(RP) :: dtrk
     integer  :: nd_order4, no
+    integer  :: IIS, IIE
+    integer  :: JJS, JJE
     integer  :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
 
@@ -737,11 +716,11 @@ contains
     MOMY_RK2(:,:,:) = UNDEF
     RHOT_RK2(:,:,:) = UNDEF
 
-    PRES    (:,:,:) = UNDEF
     VELZ    (:,:,:) = UNDEF
     VELX    (:,:,:) = UNDEF
     VELY    (:,:,:) = UNDEF
     POTT    (:,:,:) = UNDEF
+    PRES    (:,:,:) = UNDEF
 
     dens_s   (:,:,:)     = UNDEF
     dens_diff(:,:,:)     = UNDEF
@@ -749,11 +728,10 @@ contains
     qv_diff  (:,:,:)     = UNDEF
     num_diff (:,:,:,:,:) = UNDEF
 
-    mflx_hi  (:,:,:,:)   = UNDEF
-    qflx_hi  (:,:,:,:)   = UNDEF
-    qflx_lo  (:,:,:,:)   = UNDEF
-
-    RHOQ   (:,:,:) = UNDEF
+    mflx_hi  (:,:,:,:) = UNDEF
+    qflx_hi  (:,:,:,:) = UNDEF
+    qflx_lo  (:,:,:,:) = UNDEF
+    RHOQ     (:,:,:)   = UNDEF
 #endif
 
 !OCL XFILL
@@ -1017,32 +995,38 @@ contains
        do i = IIS, IIE
           do k = KS, KE-1
              MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) &
-               - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                 * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) )             ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_VELZ) * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) &
+                                                          * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) ) ! rayleigh damping
           enddo
           MOMZ_t(KE,i,j) = 0.0_RP
+
           do k = KS, KE
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) &
-             - DAMP_alpha(k,i,j,I_BND_VELX) &
-                  * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) )         ! rayleigh damping
-          enddo
-          do k = KS, KE
+                           - DAMP_alpha(k,i,j,I_BND_VELX) * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) &
+                                                          * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) ) ! rayleigh damping
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) &
-               - DAMP_alpha(k,i,j,I_BND_VELY) &
-                  * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) )           ! rayleigh damping
-          enddo
-          do k = KS, KE
+                           - DAMP_alpha(k,i,j,I_BND_VELY) * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) &
+                                                          * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) ) ! rayleigh damping
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) &
-               - DAMP_alpha(k,i,j,I_BND_POTT) &
-                  * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) ) ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_POTT) * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) &
+                                                          * DENS(k,i,j) ) ! rayleigh damping
           enddo
        enddo
        enddo
 
-
     enddo
     enddo
 
+    call COMM_vars8( DENS_t(:,:,:), 1 )
+    call COMM_vars8( MOMZ_t(:,:,:), 2 )
+    call COMM_vars8( MOMX_t(:,:,:), 3 )
+    call COMM_vars8( MOMY_t(:,:,:), 4 )
+    call COMM_vars8( RHOT_t(:,:,:), 5 )
+    call COMM_wait ( DENS_t(:,:,:), 1 )
+    call COMM_wait ( MOMZ_t(:,:,:), 2 )
+    call COMM_wait ( MOMX_t(:,:,:), 3 )
+    call COMM_wait ( MOMY_t(:,:,:), 4 )
+    call COMM_wait ( RHOT_t(:,:,:), 5 )
 
     !--- prepare numerical diffusion coefficient
     if ( DIFF4 /= 0.0_RP ) then
@@ -1798,12 +1782,11 @@ contains
                KE                 ) ! (in)
 
           ! swap pointer target
-          tmp_pt => num_diff_pt1
+          tmp_pt       => num_diff_pt1
           num_diff_pt1 => num_diff_pt0
           num_diff_pt0 => tmp_pt
 
        enddo
-
 
        nd_order4 = nd_order * 4
 
@@ -2117,36 +2100,24 @@ contains
 
     endif ! DIFF4 /= 0.0_RP
 
-    call COMM_vars8( DENS_t(:,:,:), 1 )
-    call COMM_vars8( MOMZ_t(:,:,:), 2 )
-    call COMM_vars8( MOMX_t(:,:,:), 3 )
-    call COMM_vars8( MOMY_t(:,:,:), 4 )
-    call COMM_vars8( RHOT_t(:,:,:), 5 )
-    call COMM_wait ( DENS_t(:,:,:), 1 )
-    call COMM_wait ( MOMZ_t(:,:,:), 2 )
-    call COMM_wait ( MOMX_t(:,:,:), 3 )
-    call COMM_wait ( MOMY_t(:,:,:), 4 )
-    call COMM_wait ( RHOT_t(:,:,:), 5 )
-
     !##### Start RK #####
 
     !##### RK1 #####
-    rko = 1
-    dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call ATMOS_DYN_rk( &
-                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,  & ! (out)
-                 DDIV,                                              & ! (out)
-                 mflx_hi,                                           & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
-                 DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
-                 Rtot, CVtot, CORIOLI,                              & ! (in)
-                 num_diff, divdmp_coef,                             & ! (in)
-                 FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
-                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
-                 dtrk, RK, rko,                                     & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+    rko  = 1
+    dtrk = DTSEC_ATMOS_DYN / 3.D0
+
+    call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (inout)
+                       mflx_hi,                                          & ! (out)
+                       DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (inout)
+                       DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
+                       DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                       Rtot, CVtot, CORIOLI,                             & ! (in)
+                       num_diff, divdmp_coef,                            & ! (in)
+                       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                       CDZ, FDZ, FDX, FDY,                               & ! (in)
+                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                       dtrk, RK, rko,                                    & ! (in)
+                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
 
     call COMM_vars8( DENS_RK1(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
@@ -2160,22 +2131,21 @@ contains
     call COMM_wait ( RHOT_RK1(:,:,:), 5 )
 
     !##### RK2 #####
-    rko = 2
-    dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call ATMOS_DYN_rk( &
-                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,  & ! (out)
-                 DDIV,                                              & ! (out)
-                 mflx_hi,                                           & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
-                 DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1,  & ! (in)
-                 DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
-                 Rtot, CVtot, CORIOLI,                              & ! (in)
-                 num_diff, divdmp_coef,                             & ! (in)
-                 FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
-                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
-                 dtrk, RK, rko,                                     & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+    rko  = 2
+    dtrk = DTSEC_ATMOS_DYN / 2.D0
+
+    call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (inout)
+                       mflx_hi,                                          & ! (out)
+                       DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (inout)
+                       DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
+                       DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                       Rtot, CVtot, CORIOLI,                             & ! (in)
+                       num_diff, divdmp_coef,                            & ! (in)
+                       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                       CDZ, FDZ, FDX, FDY,                               & ! (in)
+                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                       dtrk, RK, rko,                                    & ! (in)
+                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
 
     call COMM_vars8( DENS_RK2(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
@@ -2189,22 +2159,21 @@ contains
     call COMM_wait ( RHOT_RK2(:,:,:), 5 )
 
     !##### RK3 #####
-    rko = 3
-    dtrk  = DTSEC_ATMOS_DYN / (RK - rko + 1)
-    call ATMOS_DYN_rk( &
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (out)
-                 DDIV,                                              & ! (out)
-                 mflx_hi,                                           & ! (inout)
-                 DENS,     MOMZ,     MOMX,     MOMY,     RHOT,      & ! (in)
-                 DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2,  & ! (in)
-                 DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,    & ! (in)
-                 Rtot, CVtot, CORIOLI,                              & ! (in)
-                 num_diff, divdmp_coef,                             & ! (in)
-                 FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,       & ! (in)
-                 CDZ, FDZ, FDX, FDY,                                & ! (in)
-                 RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
-                 dtrk, RK, rko,                                     & ! (in)
-                 VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+    rko  = 3
+    dtrk = DTSEC_ATMOS_DYN
+
+    call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (inout)
+                       mflx_hi,                                          & ! (out)
+                       DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (inout)
+                       DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
+                       DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                       Rtot, CVtot, CORIOLI,                             & ! (in)
+                       num_diff, divdmp_coef,                            & ! (in)
+                       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                       CDZ, FDZ, FDX, FDY,                               & ! (in)
+                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                       dtrk, RK, rko,                                    & ! (in)
+                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
@@ -2338,7 +2307,6 @@ contains
     call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
 
 #ifndef DRY
-
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -2368,25 +2336,21 @@ contains
     enddo
     enddo
 
-#ifndef DRY
     do iq = 1, QA
        call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
     enddo
-
     do iq = 1, QA
-       call COMM_wait( QTRC_t(:,:,:,iq), 5+iq )
+       call COMM_wait ( QTRC_t(:,:,:,iq), 5+iq )
     enddo
-#endif
 
     do iq = 1, QA
 
-       if ( DIFF4 .ne. 0.0_RP ) then
+       if ( DIFF4 /= 0.0_RP ) then
 
           do JJS = JS, JE, JBLOCK
           JJE = JJS+JBLOCK-1
           do IIS = IS, IE, IBLOCK
           IIE = IIS+IBLOCK-1
-
 
           if ( iq == I_QV ) then
              if ( ND_USE_RS ) then

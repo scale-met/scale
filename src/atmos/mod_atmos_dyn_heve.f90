@@ -52,12 +52,10 @@ module mod_atmos_dyn_rk
   !
   !++ Private parameters & variables
   !
-  real(RP) :: kappa
   !-----------------------------------------------------------------------------
-
-
 contains
-
+  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_DYN_rk_setup
     use mod_stdio, only: &
        IO_FID_LOG,  &
@@ -66,30 +64,23 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_DYN
-#ifdef DRY
-    use mod_const, only : &
-       CVdry  => CONST_CVdry,  &
-       CPdry  => CONST_CPdry
-#endif
+    implicit none
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
 
     if ( ATMOS_TYPE_DYN .ne. 'HEVE' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not HEVE. Check!'
        call PRC_MPIstop
-    end if
-
-#ifdef DRY
-    kappa = CPdry / CVdry
-#endif
+    endif
 
     return
   end subroutine ATMOS_DYN_rk_setup
 
-
+  !-----------------------------------------------------------------------------
+  !> Runge-Kutta loop
   subroutine ATMOS_DYN_rk( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-    DDIV,                                        &
     mflx_hi,                                     &
     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
@@ -106,17 +97,17 @@ contains
        IUNDEF => CONST_UNDEF2, &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00,  &
+#ifdef DRY
+       CPovCV => CONST_CPovCV
+#endif
        Rdry   => CONST_Rdry
     use mod_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
        COMM_vars8, &
        COMM_wait
     use mod_atmos_vars, only: &
-       ZDIR, &
-       XDIR, &
-       YDIR, &
+       ZDIR,   &
+       XDIR,   &
+       YDIR,   &
        I_DENS, &
        I_MOMZ, &
        I_MOMX, &
@@ -134,63 +125,63 @@ contains
     real(RP), intent(inout) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(inout) :: RHOT_RK(KA,IA,JA)   !
 
-    real(RP), intent(out)   :: DDIV(KA,IA,JA)      ! divergence
+    real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
 
-    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+    real(RP), intent(inout), target :: DENS0(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(inout), target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
+    real(RP), intent(inout), target :: MOMX0(KA,IA,JA)   !
+    real(RP), intent(inout), target :: MOMY0(KA,IA,JA)   !
+    real(RP), intent(inout), target :: RHOT0(KA,IA,JA)   !
 
-    real(RP), intent(inout),target :: DENS0(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(inout),target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
-    real(RP), intent(inout),target :: MOMX0(KA,IA,JA)   !
-    real(RP), intent(inout),target :: MOMY0(KA,IA,JA)   !
-    real(RP), intent(inout),target :: RHOT0(KA,IA,JA)   !
+    real(RP), intent(in)    :: DENS(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(in)    :: MOMZ(KA,IA,JA)   ! at previous RK step
+    real(RP), intent(in)    :: MOMX(KA,IA,JA)   !
+    real(RP), intent(in)    :: MOMY(KA,IA,JA)   !
+    real(RP), intent(in)    :: RHOT(KA,IA,JA)   !
 
-    real(RP), intent(in) :: DENS(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(in) :: MOMZ(KA,IA,JA)   ! at previous RK step
-    real(RP), intent(in) :: MOMX(KA,IA,JA)   !
-    real(RP), intent(in) :: MOMY(KA,IA,JA)   !
-    real(RP), intent(in) :: RHOT(KA,IA,JA)   !
+    real(RP), intent(in)    :: DENS_t(KA,IA,JA)
+    real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
+    real(RP), intent(in)    :: MOMX_t(KA,IA,JA)
+    real(RP), intent(in)    :: MOMY_t(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT_t(KA,IA,JA)
 
-    real(RP), intent(in) :: DENS_t(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ_t(KA,IA,JA)
-    real(RP), intent(in) :: MOMX_t(KA,IA,JA)
-    real(RP), intent(in) :: MOMY_t(KA,IA,JA)
-    real(RP), intent(in) :: RHOT_t(KA,IA,JA)
+    real(RP), intent(in)    :: Rtot    (KA,IA,JA) ! R for dry air + vapor
+    real(RP), intent(in)    :: CVtot   (KA,IA,JA) ! CV
+    real(RP), intent(in)    :: CORIOLI (1, IA,JA)
+    real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)    :: divdmp_coef
 
-    real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
-    real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV
-    real(RP), intent(in) :: CORIOLI(1,IA,JA)
-    real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
-    real(RP), intent(in) :: divdmp_coef
+    logical,  intent(in)    :: FLAG_FCT_RHO
+    logical,  intent(in)    :: FLAG_FCT_MOMENTUM
+    logical,  intent(in)    :: FLAG_FCT_T
 
-    logical,  intent(in) :: FLAG_FCT_RHO
-    logical,  intent(in) :: FLAG_FCT_MOMENTUM
-    logical,  intent(in) :: FLAG_FCT_T
-
-    real(RP), intent(in) :: CDZ(KA)
-    real(RP), intent(in) :: FDZ(KA-1)
-    real(RP), intent(in) :: FDX(IA-1)
-    real(RP), intent(in) :: FDY(JA-1)
-    real(RP), intent(in) :: RCDZ(KA)
-    real(RP), intent(in) :: RCDX(IA)
-    real(RP), intent(in) :: RCDY(JA)
-    real(RP), intent(in) :: RFDZ(KA-1)
-    real(RP), intent(in) :: RFDX(IA-1)
-    real(RP), intent(in) :: RFDY(JA-1)
-    real(RP), intent(in) :: dtrk
-    integer , intent(in) :: rk
-    integer , intent(in) :: rko
+    real(RP), intent(in)    :: CDZ (KA)
+    real(RP), intent(in)    :: FDZ (KA-1)
+    real(RP), intent(in)    :: FDX (IA-1)
+    real(RP), intent(in)    :: FDY (JA-1)
+    real(RP), intent(in)    :: RCDZ(KA)
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+    real(RP), intent(in)    :: RFDZ(KA-1)
+    real(RP), intent(in)    :: RFDX(IA-1)
+    real(RP), intent(in)    :: RFDY(JA-1)
+    real(RP), intent(in)    :: dtrk
+    integer , intent(in)    :: rk
+    integer , intent(in)    :: rko
 
     ! diagnostic variables (work space)
-    real(RP), intent(out) :: PRES(KA,IA,JA) ! pressure [Pa]
-    real(RP), intent(out) :: VELZ(KA,IA,JA) ! velocity w [m/s]
-    real(RP), intent(out) :: VELX(KA,IA,JA) ! velocity u [m/s]
-    real(RP), intent(out) :: VELY(KA,IA,JA) ! velocity v [m/s]
-    real(RP), intent(out) :: POTT(KA,IA,JA) ! potential temperature [K]
+    real(RP), intent(out)   :: PRES(KA,IA,JA) ! pressure [Pa]
+    real(RP), intent(out)   :: VELZ(KA,IA,JA) ! velocity w [m/s]
+    real(RP), intent(out)   :: VELX(KA,IA,JA) ! velocity u [m/s]
+    real(RP), intent(out)   :: VELY(KA,IA,JA) ! velocity v [m/s]
+    real(RP), intent(out)   :: POTT(KA,IA,JA) ! potential temperature [K]
 
     ! flux (work space)
     real(RP) :: qflx_hi  (KA,IA,JA,3)
     real(RP) :: qflx_lo  (KA,IA,JA,3)
     real(RP) :: qflx_anti(KA,IA,JA,3)
+
+    real(RP) :: DDIV(KA,IA,JA) ! divergence
 
 #ifndef NO_FCT_DYN
     real(RP), pointer :: org(:,:,:)
@@ -198,8 +189,10 @@ contains
 #endif
 
     real(RP) :: vel
-    integer :: IIS, IIE, JJS, JJE
-    integer :: k, i, j
+    integer  :: IIS, IIE
+    integer  :: JJS, JJE
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
 
 #ifdef DEBUG
     PRES(:,:,:) = UNDEF
@@ -336,13 +329,17 @@ contains
           call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
 #ifdef DRY
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**kappa
+          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
 #else
           PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
 #endif
        enddo
        enddo
        enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
        do k = KS, KE
@@ -396,19 +393,26 @@ contains
              call CHECK( __LINE__, DENS(k  ,i,j) )
              call CHECK( __LINE__, DENS(k+1,i,j) )
 #endif
-             qflx_lo(k,i,j,ZDIR) = 0.5_RP * ( &
-                  VELZ(k,i,j)  * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
-             -abs(VELZ(k,i,j)) * ( DENS(k+1,i,j)-DENS(k,i,j) ) )
+             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     VELZ(k,i,j)  * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
+                                            - abs(VELZ(k,i,j)) * ( DENS(k+1,i,j)-DENS(k,i,j) ) )
           enddo
           enddo
           enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KE,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
+#ifdef DEBUG
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
           ! at (u, y, layer)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
@@ -419,15 +423,15 @@ contains
              call CHECK( __LINE__, DENS(k,i  ,j) )
              call CHECK( __LINE__, DENS(k,i+1,j) )
 #endif
-             qflx_lo(k,i,j,XDIR) = 0.5_RP * ( &
-                  VELX(k,i,j)  * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-             -abs(VELX(k,i,j)) * ( DENS(k,i+1,j)-DENS(k,i,j) ) )
+             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     VELX(k,i,j)  * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                                            - abs(VELX(k,i,j)) * ( DENS(k,i+1,j)-DENS(k,i,j) ) )
           enddo
           enddo
           enddo
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
           ! at (x, v, layer)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
@@ -438,16 +442,16 @@ contains
              call CHECK( __LINE__, DENS(k,i,j  ) )
              call CHECK( __LINE__, DENS(k,i,j+1) )
 #endif
-             qflx_lo(k,i,j,YDIR) = 0.5_RP * ( &
-                  VELY(k,i,j)  * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-             -abs(VELY(k,i,j)) * ( DENS(k,i,j+1)-DENS(k,i,j) ) )
+             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     VELY(k,i,j)  * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
+                                            - abs(VELY(k,i,j)) * ( DENS(k,i,j+1)-DENS(k,i,j) ) )
           enddo
           enddo
           enddo
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       endif
+
+       endif ! FLAG_FCT_RHO?
 #endif
 
        ! at (x, y, interface)
@@ -544,27 +548,28 @@ contains
           call CHECK( __LINE__, DENS_t(k,i,j) )
 #endif
           DENS_RK(k,i,j) = DENS0(k,i,j) &
-               + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
-                            + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                            + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
-                          + DENS_t(k,i,j) )
+                         + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k) &
+                                      + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                                      + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) & ! divergence
+                         + DENS_t(k,i,j) )
        enddo
        enddo
        enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
 #ifndef NO_FCT_DYN
     enddo
     enddo
 
     if ( FLAG_FCT_RHO ) then
-       call ATMOS_DYN_fct( &
-            qflx_anti,          & ! (out)
-            org, mflx_hi, qflx_lo,  & ! (in)
-            RCDZ, RCDX, RCDY, dtrk  ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,             & ! (out)
+                           org, mflx_hi, qflx_lo, & ! (in)
+                           RCDZ, RCDX, RCDY, dtrk ) ! (in)
 #ifdef DEBUG
        qflx_lo(KS:,:,:,:) = UNDEF
+       work   (:,:,:)   = UNDEF
 #endif
 
        do JJS = JS, JE, JBLOCK
@@ -587,10 +592,9 @@ contains
              call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              DENS_RK(k,i,j) = DENS_RK(k,i,j) &
-                  + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                               + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                               + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
-                           
+                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
           enddo
           enddo
           enddo
@@ -645,21 +649,14 @@ contains
        enddo
        enddo
 #ifdef DEBUG
-          k = IUNDEF; i = IUNDEF; j = IUNDEF
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
-    end if
-#ifdef DEBUG
-    qflx_hi(KS:,:,:,:) = UNDEF
-#endif
+    endif
 
-
-#ifdef DEBUG
-    work(:,:,:) = UNDEF
-#endif
     if ( FLAG_FCT_MOMENTUM ) then
        if ( rko == RK ) then
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -674,9 +671,8 @@ contains
           org => work
        else
           org => MOMZ0
-       end if
-    end if
-
+       endif
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -700,10 +696,8 @@ contains
              call CHECK( __LINE__, VELZ(k-1,i,j) )
              call CHECK( __LINE__, VELZ(k  ,i,j) )
 #endif
-             vel = ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * 0.5_RP
-             qflx_lo(k-1,i,j,ZDIR) = 0.5_RP * ( &
-                       ( vel ) * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
-                  - abs( vel ) * ( VELZ(k,i,j)-VELZ(k-1,i,j) ) )
+             qflx_lo(k-1,i,j,ZDIR) = 0.25_RP * (    ( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * ( VELZ(k,i,j)+VELZ(k-1,i,j) ) &
+                                               - abs( MOMZ(k,i,j)+MOMZ(k-1,i,j) ) * ( VELZ(k,i,j)-VELZ(k-1,i,j) ) )
           enddo
           enddo
           enddo
@@ -715,12 +709,13 @@ contains
           do i = IIS-1, IIE+1
              ! k = KE
              qflx_lo(KE-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KE,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP ! k = KE+1
           enddo
           enddo
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
           ! at (u, y, interface)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
@@ -732,9 +727,8 @@ contains
              call CHECK( __LINE__, VELZ(k,i,j) )
              call CHECK( __LINE__, VELZ(k,i+1,j) )
 #endif
-             qflx_lo(k,i,j,XDIR) = 0.25_RP * ( &
-                       ( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
-                  - abs( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)-VELZ(k,i,j) ) )
+             qflx_lo(k,i,j,XDIR) = 0.25_RP * (    ( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)+VELZ(k,i,j) ) &
+                                             - abs( MOMX(k+1,i,j)+MOMX(k,i,j) ) * ( VELZ(k,i+1,j)-VELZ(k,i,j) ) )
           enddo
           enddo
           enddo
@@ -779,7 +773,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       end if
+       endif
 #endif
 
        ! high order flux
@@ -1003,7 +997,7 @@ contains
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
-    end if
+    endif
 
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
@@ -1024,8 +1018,8 @@ contains
           org => work
        else
           org => MOMX0
-       end if
-    end if
+       endif
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1061,7 +1055,7 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KE,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
 #ifdef DEBUG
@@ -1109,7 +1103,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       end if
+       endif
 #endif
 
        ! high order flux
@@ -1319,7 +1313,7 @@ contains
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
-    end if
+    endif
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
     work(:,:,:) = UNDEF
@@ -1339,8 +1333,8 @@ contains
           org => work
        else
           org => MOMY0
-       end if
-    end if
+       endif
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1422,7 +1416,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       end if
+       endif
 #endif
 
        ! high order flux
@@ -1632,7 +1626,7 @@ contains
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
-    end if
+    endif
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
     work(:,:,:) = UNDEF
@@ -1640,16 +1634,13 @@ contains
 
     if ( FLAG_FCT_T ) then
 
-#ifdef _USE_RDMA
-       call COMM_rdma_vars8( 5+QA+11, 3 )
-#else
        call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
        call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
        call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
        call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
        call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
        call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-#endif
+
        if ( rko == RK ) then
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !OCL XFILL
@@ -1663,8 +1654,8 @@ contains
           org => work
        else
           org => RHOT0
-       end if
-    end if
+       endif
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -1739,7 +1730,7 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       end if
+       endif
 #endif
 
        ! at (x, y, interface)
@@ -1912,7 +1903,7 @@ contains
 #ifdef DEBUG
        qflx_anti(:,:,:,:) = UNDEF
 #endif
-    end if
+    endif
 #endif
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
