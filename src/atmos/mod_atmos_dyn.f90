@@ -59,8 +59,7 @@ module mod_atmos_dyn
      I_MOMZ, &
      I_MOMX, &
      I_MOMY, &
-     I_RHOT, &
-     I_QTRC
+     I_RHOT
   use mod_atmos_dyn_common, only: &
      FACT_N, &
      FACT_F
@@ -99,28 +98,8 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  ! time settings
-  integer,  private, parameter :: RK = 3 ! order of Runge-Kutta scheme
-
-  ! numerical filter settings
-  integer,  private, save      :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private, save      :: DIFF4                                             ! for numerical filter
-
-  ! coriolis force
-  logical,  private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
-
-  real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP ! Divergence dumping coef
-
-  ! fct
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_T        = .false.
-
-  ! work
+  ! time integration scheme
+  integer,  private, parameter :: RK = 3             ! order of Runge-Kutta scheme
   real(RP), private, save      :: DENS_RK1(KA,IA,JA) ! prognostic variables (+1/3 step)
   real(RP), private, save      :: MOMZ_RK1(KA,IA,JA) !
   real(RP), private, save      :: MOMX_RK1(KA,IA,JA) !
@@ -132,18 +111,37 @@ module mod_atmos_dyn
   real(RP), private, save      :: MOMY_RK2(KA,IA,JA) !
   real(RP), private, save      :: RHOT_RK2(KA,IA,JA) !
 
-  real(RP), private, save      :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z) @ (u,v,w)-face high order
-  real(RP), private, save      :: mflx_av(KA,IA,JA,3) ! rho * vel(x,y,z) @ (u,v,w)-face average
-  real(RP), private, save      :: VELZ   (KA,IA,JA)   ! velocity w [m/s]
-  real(RP), private, save      :: VELX   (KA,IA,JA)   ! velocity u [m/s]
-  real(RP), private, save      :: VELY   (KA,IA,JA)   ! velocity v [m/s]
+  ! numerical filter
+  integer,  private, save      :: ATMOS_DYN_numerical_diff_order        = 1
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
+  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  real(RP), private, save      :: ATMOS_DYN_DIFF4                                   ! for numerical filter
+  real(RP), private, save      :: ATMOS_DYN_CNZ3(3,KA,2)
+  real(RP), private, save      :: ATMOS_DYN_CNX3(3,IA,2)
+  real(RP), private, save      :: ATMOS_DYN_CNY3(3,JA,2)
+  real(RP), private, save      :: ATMOS_DYN_CNZ4(5,KA,2)
+  real(RP), private, save      :: ATMOS_DYN_CNX4(5,IA,2)
+  real(RP), private, save      :: ATMOS_DYN_CNY4(5,JA,2)
 
-  real(RP), private, save      :: CNZ3(3,KA,2)
-  real(RP), private, save      :: CNX3(3,IA,2)
-  real(RP), private, save      :: CNY3(3,JA,2)
-  real(RP), private, save      :: CNZ4(5,KA,2)
-  real(RP), private, save      :: CNX4(5,IA,2)
-  real(RP), private, save      :: CNY4(5,JA,2)
+  ! Coriolis force
+  logical,  private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  real(RP), private, save      :: ATMOS_DYN_CORIOLI(IA,JA)            ! coriolis term
+
+  ! divergence damping
+  real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
+
+  ! fct
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_rho      = .false.
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_momentum = .false.
+  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_T        = .false.
+
+  ! work
+  real(RP), private, save      :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
+  real(RP), private, save      :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
+  real(RP), private, save      :: VELZ   (KA,IA,JA)    ! velocity w [m/s]
+  real(RP), private, save      :: VELX   (KA,IA,JA)    ! velocity u [m/s]
+  real(RP), private, save      :: VELY   (KA,IA,JA)    ! velocity v [m/s]
 
   !-----------------------------------------------------------------------------
 contains
@@ -155,13 +153,16 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
-       DTSEC_ATMOS_DYN => TIME_DTSEC_ATMOS_DYN
+       TIME_DTSEC_ATMOS_DYN
     use mod_grid, only : &
-       CDZ => GRID_CDZ, &
-       CDX => GRID_CDX, &
-       CDY => GRID_CDY
+       GRID_CDZ, &
+       GRID_CDX, &
+       GRID_CDY, &
+       GRID_FDZ, &
+       GRID_FDX, &
+       GRID_FDY
     use mod_geometrics, only : &
-       lat => GEOMETRICS_lat
+       GEOMETRICS_lat
     use mod_atmos_dyn_rk, only: &
        ATMOS_DYN_rk_setup
     implicit none
@@ -176,6 +177,8 @@ contains
        ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T
+
+    real(RP) :: DT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -204,14 +207,23 @@ contains
        call PRC_MPIstop
     endif
 
-    call ATMOS_DYN_init( DIFF4, CORIOLI,                      & ! (out)
-                         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,  & ! (out)
-                         CDZ, CDX, CDY,                       & ! (in)
-                         lat,                                 & ! (in)
-                         ATMOS_DYN_numerical_diff_order,      & ! (in)
-                         ATMOS_DYN_numerical_diff_coef,       & ! (in)
-                         Real(DTSEC_ATMOS_DYN,kind=RP),       & ! (in)
-                         ATMOS_DYN_enable_coriolis            ) ! (in)
+    DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
+
+    call ATMOS_DYN_init( ATMOS_DYN_DIFF4,                & ! [OUT]
+                         ATMOS_DYN_CNZ3,                 & ! [OUT]
+                         ATMOS_DYN_CNX3,                 & ! [OUT]
+                         ATMOS_DYN_CNY3,                 & ! [OUT]
+                         ATMOS_DYN_CNZ4,                 & ! [OUT]
+                         ATMOS_DYN_CNX4,                 & ! [OUT]
+                         ATMOS_DYN_CNY4,                 & ! [OUT]
+                         ATMOS_DYN_CORIOLI,              & ! [OUT]
+                         GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+                         GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+                         ATMOS_DYN_numerical_diff_order, & ! [IN]
+                         ATMOS_DYN_numerical_diff_coef,  & ! [IN]
+                         DT,                             & ! [IN]
+                         ATMOS_DYN_enable_coriolis,      & ! [IN]
+                         GEOMETRICS_lat                  ) ! [IN]
 
     call ATMOS_DYN_rk_setup
 
@@ -221,35 +233,42 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_init( &
-       DIFF4, corioli,                     &
-       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, &
-       CDZ, CDX, CDY, lat,                 &
-       numdiff_order, numdiff_coef,        &
-       dt_dyn,                             &
-       enable_coriolis                     )
+       DIFF4,            &
+       CNZ3, CNX3, CNY3, &
+       CNZ4, CNX4, CNY4, &
+       CORIOLI,          &
+       CDZ, CDX, CDY,    &
+       FDZ, FDX, FDY,    &
+       numdiff_order,    &
+       numdiff_coef,     &
+       dt_dyn,           &
+       enable_coriolis,  &
+       lat               )
     use mod_const, only: &
        PI  => CONST_PI, &
        OHM => CONST_OHM
     implicit none
 
     real(RP), intent(out) :: DIFF4
-    real(RP), intent(out) :: corioli(1,IA,JA)
     real(RP), intent(out) :: CNZ3(3,KA,2)
     real(RP), intent(out) :: CNX3(3,IA,2)
     real(RP), intent(out) :: CNY3(3,JA,2)
     real(RP), intent(out) :: CNZ4(5,KA,2)
     real(RP), intent(out) :: CNX4(5,IA,2)
     real(RP), intent(out) :: CNY4(5,JA,2)
+    real(RP), intent(out) :: CORIOLI(1,IA,JA)
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
-    real(RP), intent(in)  :: lat(1,IA,JA)
+    real(RP), intent(in)  :: FDZ(KA-1)
+    real(RP), intent(in)  :: FDX(IA-1)
+    real(RP), intent(in)  :: FDY(JA-1)
     integer,  intent(in)  :: numdiff_order
     real(RP), intent(in)  :: numdiff_coef
     real(RP), intent(in)  :: dt_dyn
     logical , intent(in)  :: enable_coriolis
+    real(RP), intent(in)  :: lat(1,IA,JA)
 
-    real(RP) :: d2r
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
@@ -263,202 +282,189 @@ contains
     corioli(:,:,:) = UNDEF
 #endif
 
-    ! coriolis parameter
-    if ( enable_coriolis ) then
-       d2r = PI / 180.0_RP
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = 1, JA
-       do i = 1, IA
-          corioli(1,i,j) = 2.0_RP * OHM * sin( lat(1,i,j) )
+    ! numerical diffusion
+    if ( numdiff_coef > 0.0_RP ) then
+       DIFF4 = numdiff_coef / ( 2**(4*numdiff_order) * dt_dyn )
+
+       ! z direction
+       do k = KS+1, KE-1
+          CNZ3(1,k,1) = 1.0_RP / ( FDZ(k) * CDZ(k) * FDZ(k-1) )
+          CNZ3(2,k,1) = 1.0_RP / ( FDZ(k  ) * CDZ(k  ) * FDZ(k-1) ) &
+                      + 1.0_RP / ( FDZ(k-1) * CDZ(k  ) * FDZ(k-1) ) &
+                      + 1.0_RP / ( FDZ(k-1) * CDZ(k-1) * FDZ(k-1) )
        enddo
+       do k = KS+2, KE
+          CNZ3(3,k,1) = 1.0_RP / ( FDZ(k-1) * CDZ(k  ) * FDZ(k-1) ) &
+                      + 1.0_RP / ( FDZ(k-1) * CDZ(k-1) * FDZ(k-1) ) &
+                      + 1.0_RP / ( FDZ(k-1) * CDZ(k-1) * FDZ(k-2) )
+       enddo
+       CNZ3(1,KS-1,1) = 1.0_RP / ( FDZ(KS  ) * CDZ(KS+1) * FDZ(KS  ) )
+       CNZ3(1,KS  ,1) = 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) )
+       CNZ3(2,KS  ,1) = 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS+1) * FDZ(KS  ) )
+       CNZ3(3,KS  ,1) = 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS+1) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS+1) * FDZ(KS+1) )
+       CNZ3(3,KS+1,1) = 1.0_RP / ( FDZ(KS  ) * CDZ(KS+1) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) ) &
+                      + 1.0_RP / ( FDZ(KS  ) * CDZ(KS  ) * FDZ(KS  ) )
+       CNZ3(1,KE  ,1) = 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) )
+       CNZ3(2,KE  ,1) = 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE-1) * FDZ(KE-1) )
+       CNZ3(1,KE+1,1) = 1.0_RP / ( FDZ(KE-2) * CDZ(KE-1) * FDZ(KE-1) )
+       CNZ3(2,KE+1,1) = 1.0_RP / ( FDZ(KE-2) * CDZ(KE-1) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE-1) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) )
+       CNZ3(3,KE+1,1) = 1.0_RP / ( FDZ(KE-1) * CDZ(KE+1) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) ) &
+                      + 1.0_RP / ( FDZ(KE-1) * CDZ(KE  ) * FDZ(KE-1) )
+
+       do k = KS, KE-1
+          CNZ4(1,k,1) = ( CNZ3(1,k+1,1)               ) / CDZ(k)
+          CNZ4(2,k,1) = ( CNZ3(2,k+1,1) + CNZ3(1,k,1) ) / CDZ(k)
+          CNZ4(3,k,1) = ( CNZ3(3,k+1,1) + CNZ3(2,k,1) ) / CDZ(k)
+          CNZ4(4,k,1) = ( CNZ3(1,k  ,1) + CNZ3(3,k,1) ) / CDZ(k)
+          CNZ4(5,k,1) = ( CNZ3(1,k-1,1)               ) / CDZ(k)
+       enddo
+
+       do k = KS+1, KE-1
+          CNZ3(1,k,2) = 1.0_RP / ( CDZ(k+1) * FDZ(k  ) * CDZ(k  ) )
+          CNZ3(2,k,2) = 1.0_RP / ( CDZ(k+1) * FDZ(k  ) * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * FDZ(k  ) * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * FDZ(k-1) * CDZ(k  ) )
+          CNZ3(3,k,2) = 1.0_RP / ( CDZ(k  ) * FDZ(k  ) * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * FDZ(k-1) * CDZ(k  ) ) &
+                      + 1.0_RP / ( CDZ(k  ) * FDZ(k-1) * CDZ(k-1) )
+       enddo
+       CNZ3(1,KS-1,2) = 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS  ) )
+       CNZ3(1,KS  ,2) = 1.0_RP / ( CDZ(KS+1) * FDZ(KS  ) * CDZ(KS  ) )
+       CNZ3(2,KS  ,2) = 1.0_RP / ( CDZ(KS+1) * FDZ(KS  ) * CDZ(KS  ) ) &
+                      + 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS  ) ) &
+                      + 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS  ) )
+       CNZ3(3,KS  ,2) = 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS  ) ) &
+                      + 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS  ) ) &
+                      + 1.0_RP / ( CDZ(KS  ) * FDZ(KS  ) * CDZ(KS+1) )
+       CNZ3(1,KE  ,2) = 1.0_RP / ( CDZ(KE-1) * FDZ(KE-1) * CDZ(KE  ) )
+       CNZ3(2,KE  ,2) = 1.0_RP / ( CDZ(KE-1) * FDZ(KE-1) * CDZ(KE  ) ) &
+                      + 1.0_RP / ( CDZ(KE  ) * FDZ(KE-1) * CDZ(KE  ) ) &
+                      + 1.0_RP / ( CDZ(KE  ) * FDZ(KE-1) * CDZ(KE  ) )
+       CNZ3(3,KE  ,2) = 1.0_RP / ( CDZ(KE  ) * FDZ(KE-1) * CDZ(KE  ) ) &
+                      + 1.0_RP / ( CDZ(KE  ) * FDZ(KE-1) * CDZ(KE  ) ) &
+                      + 1.0_RP / ( CDZ(KE  ) * FDZ(KE-1) * CDZ(KE-1) )
+       CNZ3(1,KE+1,2) = 1.0_RP / ( CDZ(KE-2) * FDZ(KE-2) * CDZ(KE-1) )
+       CNZ3(2,KE+1,2) = 1.0_RP / ( CDZ(KE-2) * FDZ(KE-2) * CDZ(KE-1) ) &
+                      + 1.0_RP / ( CDZ(KE-1) * FDZ(KE-2) * CDZ(KE-1) ) &
+                      + 1.0_RP / ( CDZ(KE-1) * FDZ(KE-1) * CDZ(KE-1) )
+       CNZ3(3,KE+1,2) = 1.0_RP / ( CDZ(KE-1) * FDZ(KE-2) * CDZ(KE-1) ) &
+                      + 1.0_RP / ( CDZ(KE-1) * FDZ(KE-1) * CDZ(KE-1) ) &
+                      + 1.0_RP / ( CDZ(KE-1) * FDZ(KE-1) * CDZ(KE  ) )
+
+       do k = KS, KE-1
+          CNZ4(1,k,2) = ( CNZ3(1,k+1,2)               ) / FDZ(k)
+          CNZ4(2,k,2) = ( CNZ3(2,k+1,2) + CNZ3(1,k,2) ) / FDZ(k)
+          CNZ4(3,k,2) = ( CNZ3(3,k+1,2) + CNZ3(2,k,2) ) / FDZ(k)
+          CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) / FDZ(k)
+          CNZ4(5,k,2) = ( CNZ3(1,k-1,2)               ) / FDZ(k)
+       enddo
+!       CNZ4(1,KE,2) = ( CNZ3(1,KE+1,2)                ) / FDZ(KE-1)
+       CNZ4(2,KE,2) = ( CNZ3(2,KE+1,2) + CNZ3(1,KE,2) ) / FDZ(KE-1)
+       CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) / FDZ(KE-1)
+       CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) / FDZ(KE-1)
+
+       ! x direction
+       CNX3(1,IS-1,1) = 1.0_RP / ( FDX(IS-1) * CDX(IS-1) * FDX(IS-2) )
+       do i = IS, IE+1
+          CNX3(1,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) )
+          CNX3(2,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) )
+          CNX3(3,i,1) = 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-2) )
+       enddo
+
+       do i = IS, IE
+          CNX4(1,i,1) = ( CNX3(1,i+1,1)               ) / CDX(i)
+          CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
+          CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
+          CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
+          CNX4(5,i,1) = ( CNX3(1,i-1,1)               ) / CDX(i)
+       enddo
+
+       do i = IS-1, IE+1
+          CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) )
+          CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) )
+          CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i-1) )
+       enddo
+
+       do i = IS, IE
+          CNX4(1,i,2) = ( CNX3(1,i+1,2)               ) / FDX(i)
+          CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) / FDX(i)
+          CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) / FDX(i)
+          CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) / FDX(i)
+          CNX4(5,i,2) = ( CNX3(1,i-1,2)               ) / FDX(i)
+       enddo
+
+       ! y direction
+       CNY3(1,JS-1,1) = 1.0_RP / ( FDY(JS-1) * CDY(JS-1) * FDY(JS-2) )
+       do j = JS, JE+1
+          CNY3(1,j,1) = 1.0_RP / ( FDY(j  ) * CDY(j  ) * FDY(j-1) )
+          CNY3(2,j,1) = 1.0_RP / ( FDY(j  ) * CDY(j  ) * FDY(j-1) ) &
+                      + 1.0_RP / ( FDY(j-1) * CDY(j  ) * FDY(j-1) ) &
+                      + 1.0_RP / ( FDY(j-1) * CDY(j-1) * FDY(j-1) )
+          CNY3(3,j,1) = 1.0_RP / ( FDY(j-1) * CDY(j  ) * FDY(j-1) ) &
+                      + 1.0_RP / ( FDY(j-1) * CDY(j-1) * FDY(j-1) ) &
+                      + 1.0_RP / ( FDY(j-1) * CDY(j-1) * FDY(j-2) )
+       enddo
+
+       do j = JS, JE
+          CNY4(1,j,1) = ( CNY3(1,j+1,1)               ) / CDY(j)
+          CNY4(2,j,1) = ( CNY3(2,j+1,1) + CNY3(1,j,1) ) / CDY(j)
+          CNY4(3,j,1) = ( CNY3(3,j+1,1) + CNY3(2,j,1) ) / CDY(j)
+          CNY4(4,j,1) = ( CNY3(1,j  ,1) + CNY3(3,j,1) ) / CDY(j)
+          CNY4(5,j,1) = ( CNY3(1,j-1,1)               ) / CDY(j)
+       enddo
+
+       do j = JS-1, JE+1
+          CNY3(1,j,2) = 1.0_RP / ( CDY(j+1) * FDY(j  ) * CDY(j  ) )
+          CNY3(2,j,2) = 1.0_RP / ( CDY(j+1) * FDY(j  ) * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * FDY(j  ) * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * FDY(j-1) * CDY(j  ) )
+          CNY3(3,j,2) = 1.0_RP / ( CDY(j  ) * FDY(j  ) * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * FDY(j-1) * CDY(j  ) ) &
+                      + 1.0_RP / ( CDY(j  ) * FDY(j-1) * CDY(j-1) )
+       enddo
+
+       do j = JS, JE
+          CNY4(1,j,2) = ( CNY3(1,j+1,2)               ) / FDY(j)
+          CNY4(2,j,2) = ( CNY3(2,j+1,2) + CNY3(1,j,2) ) / FDY(j)
+          CNY4(3,j,2) = ( CNY3(3,j+1,2) + CNY3(2,j,2) ) / FDY(j)
+          CNY4(4,j,2) = ( CNY3(1,j  ,2) + CNY3(3,j,2) ) / FDY(j)
+          CNY4(5,j,2) = ( CNY3(1,j-1,2)               ) / FDY(j)
        enddo
     else
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = 1, JA
-       do i = 1, IA
-          corioli(1,i,j) = 0.0_RP
-       enddo
-       enddo
-    endif
-
-    ! numerical diffusion
-    if ( numdiff_coef == 0.0_RP ) then
        DIFF4 = 0.0_RP
+
        CNZ3(:,:,:) = 0.0_RP
        CNX3(:,:,:) = 0.0_RP
        CNY3(:,:,:) = 0.0_RP
        CNZ4(:,:,:) = 0.0_RP
        CNX4(:,:,:) = 0.0_RP
        CNY4(:,:,:) = 0.0_RP
+    endif
+
+    ! coriolis parameter
+    if ( enable_coriolis ) then
+       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(1,:,:) )
     else
-       DIFF4 = numdiff_coef / ( 2**(4*numdiff_order) * dt_dyn )
-
-       ! z direction
-       do k = KS+1, KE-1
-          CNZ3(1,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
-       enddo
-       CNZ3(1,KS,1) = 1.0_RP / ( (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP )
-       CNZ3(1,KS-1,1) = 1.0_RP / ( (CDZ(KS)+CDZ(KS+1)) * 0.5_RP * CDZ(KS+1) * (CDZ(KS+1)+CDZ(KS)) * 0.5_RP )
-       CNZ3(1,KE,1) = 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP )
-       CNZ3(1,KE+1,1) = 1.0_RP / ( (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE)) * 0.5_RP )
-       do k = KS+1, KE-1
-          CNZ3(2,k,1) = 1.0_RP / ( (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP )
-       end do
-       CNZ3(2,KS,1) = 1.0_RP / ( (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS+1) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP )
-       CNZ3(2,KE,1) = 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP * CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP ) &
-                    + 1.0_RP / ( (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP )
-       CNZ3(2,KE+1,1) = 1.0_RP / ( (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP )
-       do k = KS+2, KE
-          CNZ3(3,k,1) = 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) * (CDZ(k-1)+CDZ(k-2)) * 0.5_RP )
-       enddo
-       CNZ3(3,KS  ,1) = 1.0_RP / ( (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS+1) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS+1) * (CDZ(KS+1)+CDZ(KS+2)) * 0.5_RP )
-       CNZ3(3,KS+1,1) = 1.0_RP / ( (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS+1) * (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) * (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP )
-       CNZ3(3,KE+1,1) = 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE+1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP )
-       do k = KS, KE-1
-          CNZ4(1,k,1) = CNZ3(1,k+1,1) / CDZ(k)
-          CNZ4(2,k,1) = ( CNZ3(2,k+1,1) + CNZ3(1,k,1) ) / CDZ(k)
-          CNZ4(3,k,1) = ( CNZ3(3,k+1,1) + CNZ3(2,k,1) ) / CDZ(k)
-          CNZ4(4,k,1) = ( CNZ3(1,k  ,1) + CNZ3(3,k,1) ) / CDZ(k)
-          CNZ4(5,k,1) = CNZ3(1,k-1,1) / CDZ(k)
-       end do
-
-       do k = KS, KE-1
-          CNZ3(1,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) )
-       end do
-       CNZ3(1,KS-1,2) = 1.0_RP / ( CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS) )
-       CNZ3(1,KE  ,2) = 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) )
-       CNZ3(1,KE+1,2) = 1.0_RP / ( CDZ(KE-2) * (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) )
-       do k = KS+1, KE-1
-          CNZ3(2,k,2) = 1.0_RP / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) )
-          CNZ3(3,k,2) = 1.0_RP / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5_RP * CDZ(k  ) ) &
-                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k  ) ) &
-                      + 1.0_RP / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5_RP * CDZ(k-1) )
-       enddo
-       CNZ3(2,KS,2) = 1.0_RP / ( CDZ(KS+1) * (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) ) &
-                    + 1.0_RP / ( CDZ(KS  ) * (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) ) &
-                    + 1.0_RP / ( CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS  ) )
-       CNZ3(3,KS,2) = 1.0_RP / ( CDZ(KS  ) * (CDZ(KS+1)+CDZ(KS  )) * 0.5_RP * CDZ(KS  ) ) &
-                    + 1.0_RP / ( CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS  ) ) &
-                    + 1.0_RP / ( CDZ(KS  ) * (CDZ(KS  )+CDZ(KS+1)) * 0.5_RP * CDZ(KS+1) )
-       CNZ3(2,KE,2) = 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) ) &
-                    + 1.0_RP / ( CDZ(KE  ) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) ) &
-                    + 1.0_RP / ( CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP * CDZ(KE  ) )
-       CNZ3(3,KE,2) = 1.0_RP / ( CDZ(KE  ) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) ) &
-                    + 1.0_RP / ( CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP * CDZ(KE  ) ) &
-                    + 1.0_RP / ( CDZ(KE  ) * (CDZ(KE  )+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) )
-       CNZ3(2,KE+1,2) = 1.0_RP / ( CDZ(KE-2) * (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) ) &
-                      + 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) ) &
-                      + 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE-1) )
-       CNZ3(3,KE+1,2) = 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-2)+CDZ(KE-1)) * 0.5_RP * CDZ(KE-1) ) &
-                      + 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE-1) ) &
-                      + 1.0_RP / ( CDZ(KE-1) * (CDZ(KE-1)+CDZ(KE  )) * 0.5_RP * CDZ(KE  ) )
-       do k = KS, KE-1
-          CNZ4(1,k,2) = CNZ3(1,k+1,2) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-          CNZ4(2,k,2) = ( CNZ3(2,k+1,2) + CNZ3(1,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-          CNZ4(3,k,2) = ( CNZ3(3,k+1,2) + CNZ3(2,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-          CNZ4(4,k,2) = ( CNZ3(1,k  ,2) + CNZ3(3,k,2) ) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-          CNZ4(5,k,2) = CNZ3(1,k-1,2) * 2.0_RP / ( CDZ(k+1)+CDZ(k) )
-       end do
-       CNZ4(2,KE,2) = ( CNZ3(2,KE+1,2) + CNZ3(1,KE,2) ) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
-       CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
-       CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) * 2.0_RP / ( CDZ(KE-1)+CDZ(KE) )
-
-       ! x direction
-       do i = IS-1, IE+1
-          CNX3(1,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
-       enddo
-       do i = IS, IE+1
-          CNX3(2,i,1) = 1.0_RP / ( (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP )
-          CNX3(3,i,1) = 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i  )+CDX(i-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) * (CDX(i-1)+CDX(i-2)) * 0.5_RP )
-       enddo
-       do i = IS, IE
-          CNX4(1,i,1) = CNX3(1,i+1,1) / CDX(i)
-          CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
-          CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
-          CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
-          CNX4(5,i,1) = CNX3(1,i-1,1) / CDX(i)
-       end do
-
-       do i = IS-1, IE+1
-          CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) )
-       enddo
-       do i = IS-1, IE+1
-          CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                      + 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) )
-          CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5_RP * CDX(i  ) ) &
-                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i  ) ) &
-                      + 1.0_RP / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5_RP * CDX(i-1) )
-       enddo
-       do i = IS, IE
-          CNX4(1,i,2) = CNX3(1,i+1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-          CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-          CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-          CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-          CNX4(5,i,2) = CNX3(1,i-1,2) * 2.0_RP / ( CDX(i+1) + CDX(i) )
-       end do
-
-       ! y direction
-       do j = JS-1, JE+1
-          CNY3(1,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
-       enddo
-       do j = JS, JE+1
-          CNY3(2,j,1) = 1.0_RP / ( (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP )
-          CNY3(3,j,1) = 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j  )+CDY(j-1)) * 0.5_RP ) &
-                      + 1.0_RP / ( (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) * (CDY(j-1)+CDY(j-2)) * 0.5_RP )
-       enddo
-       do j = JS, JE
-          CNY4(1,j,1) = CNY3(1,j+1,1) / CDY(j)
-          CNY4(2,j,1) = ( CNY3(2,j+1,1) + CNY3(1,j,1) ) / CDY(j)
-          CNY4(3,j,1) = ( CNY3(3,j+1,1) + CNY3(2,j,1) ) / CDY(j)
-          CNY4(4,j,1) = ( CNY3(1,j  ,1) + CNY3(3,j,1) ) / CDY(j)
-          CNY4(5,j,1) = CNY3(1,j-1,1) / CDY(j)
-       end do
-
-       do j = JS-1, JE+1
-          CNY3(1,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) )
-       enddo
-       do j = JS-1, JE+1
-          CNY3(2,j,2) = 1.0_RP / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                      + 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) )
-          CNY3(3,j,2) = 1.0_RP / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5_RP * CDY(j  ) ) &
-                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j  ) ) &
-                      + 1.0_RP / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5_RP * CDY(j-1) )
-       enddo
-       do j = JS, JE
-          CNY4(1,j,2) = CNY3(1,j+1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-          CNY4(2,j,2) = ( CNY3(2,j+1,2) + CNY3(1,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-          CNY4(3,j,2) = ( CNY3(3,j+1,2) + CNY3(2,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-          CNY4(4,j,2) = ( CNY3(1,j  ,2) + CNY3(3,j,2) ) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-          CNY4(5,j,2) = CNY3(1,j-1,2) * 2.0_RP / ( CDY(j+1) + CDY(j) )
-       end do
-
-    end if
+       CORIOLI(1,:,:) = 0.0_RP
+    endif
 
     return
   end subroutine ATMOS_DYN_init
@@ -487,26 +493,25 @@ contains
        HIST_in
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
-       ATMOS_vars_fillhalo, &
        ATMOS_USE_AVERAGE, &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp, &
+       DENS,    &
+       MOMZ,    &
+       MOMX,    &
+       MOMY,    &
+       RHOT,    &
+       QTRC,    &
        DENS_av, &
        MOMZ_av, &
        MOMX_av, &
        MOMY_av, &
        RHOT_av, &
-       QTRC_av
+       QTRC_av, &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp
     use mod_atmos_thermodyn, only: &
        AQ_CV
     use mod_atmos_refstate, only: &
@@ -530,25 +535,32 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
     call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,        & ! (inout)
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-         QDRY, DDIV,                                & ! (out)
+         QDRY, DDIV,                                           & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,        & ! (in)
-         CDZ, CDX, CDY, FDZ, FDX, FDY,              & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,        & ! (in)
-         AQ_CV,                                     & ! (in)
-         REF_dens, REF_pott, REF_qv,                & ! (in)
-         DIFF4, ATMOS_DYN_numerical_diff_order,     & ! (in)
-         ATMOS_DYN_numerical_diff_sfc_fact,         & ! (in)
-         ATMOS_DYN_numerical_diff_use_refstate,     & ! (in)
-         CORIOLI, DAMP_var, DAMP_alpha,             & ! (in)
-         ATMOS_DYN_divdmp_coef,                     & ! (in)
-         ATMOS_DYN_FLAG_FCT_rho,                    & ! (in)
-         ATMOS_DYN_FLAG_FCT_momentum,               & ! (in)
-         ATMOS_DYN_FLAG_FCT_T,                      & ! (in)
-         ATMOS_USE_AVERAGE,                         & ! (in)
-         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN    ) ! (in)
+         ATMOS_DYN_CNZ3,                                       & ! (in)
+         ATMOS_DYN_CNX3,                                       & ! (in)
+         ATMOS_DYN_CNY3,                                       & ! (in)
+         ATMOS_DYN_CNZ4,                                       & ! (in)
+         ATMOS_DYN_CNX4,                                       & ! (in)
+         ATMOS_DYN_CNY4,                                       & ! (in)
+         CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! (in)
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! (in)
+         AQ_CV,                                                & ! (in)
+         REF_dens, REF_pott, REF_qv,                           & ! (in)
+         ATMOS_DYN_DIFF4,                                      & ! (in)
+         ATMOS_DYN_numerical_diff_order,                       & ! (in)
+         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! (in)
+         ATMOS_DYN_numerical_diff_use_refstate,                & ! (in)
+         ATMOS_DYN_CORIOLI,                                    & ! (in)
+         DAMP_var, DAMP_alpha,                                 & ! (in)
+         ATMOS_DYN_divdmp_coef,                                & ! (in)
+         ATMOS_DYN_FLAG_FCT_rho,                               & ! (in)
+         ATMOS_DYN_FLAG_FCT_momentum,                          & ! (in)
+         ATMOS_DYN_FLAG_FCT_T,                                 & ! (in)
+         ATMOS_USE_AVERAGE,                                    & ! (in)
+         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               ) ! (in)
 
     call ATMOS_vars_total
 
@@ -563,21 +575,23 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   subroutine ATMOS_DYN_main( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
-       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-       QDRY, DDIV,                                  & ! (out)
-       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
-       CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       AQ_CV,                                       & ! (in)
-       REF_dens, REF_pott, REF_qv,                  & ! (in)
-       DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,     & ! (in)
-       corioli, DAMP_var, DAMP_alpha,               & ! (in)
-       divdmp_coef,                                 & ! (in)
-       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, & ! (in)
-       USE_AVERAGE,                                 & ! (in)
-       DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN      ) ! (in)
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   &
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
+       QDRY, DDIV,                                           &
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, &
+       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,                   &
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
+       AQ_CV,                                                &
+       REF_dens, REF_pott, REF_qv,                           &
+       DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,              &
+       corioli, DAMP_var, DAMP_alpha,                        &
+       divdmp_coef,                                          &
+       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
+       USE_AVERAGE,                                          &
+       DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               )
+    use dc_types, only: &
+       DP
     use mod_const, only : &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
@@ -595,8 +609,6 @@ contains
        I_BND_VELY,  &
        I_BND_POTT,  &
        I_BND_QV
-    use dc_types, only: &
-         DP
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -620,12 +632,12 @@ contains
 #endif
     real(RP), intent(out)   :: DDIV(KA,IA,JA)
 
-    real(RP), intent(in) :: DENS_tp(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ_tp(KA,IA,JA)
-    real(RP), intent(in) :: MOMX_tp(KA,IA,JA)
-    real(RP), intent(in) :: MOMY_tp(KA,IA,JA)
-    real(RP), intent(in) :: RHOT_tp(KA,IA,JA)
-    real(RP), intent(in) :: QTRC_tp(KA,IA,JA,QA)
+    real(RP), intent(in)    :: DENS_tp(KA,IA,JA)
+    real(RP), intent(in)    :: MOMZ_tp(KA,IA,JA)
+    real(RP), intent(in)    :: MOMX_tp(KA,IA,JA)
+    real(RP), intent(in)    :: MOMY_tp(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT_tp(KA,IA,JA)
+    real(RP), intent(in)    :: QTRC_tp(KA,IA,JA,QA)
 
     real(RP), intent(in)    :: CNZ3(3,KA,2)
     real(RP), intent(in)    :: CNX3(3,IA,2)
@@ -634,12 +646,12 @@ contains
     real(RP), intent(in)    :: CNX4(5,IA,2)
     real(RP), intent(in)    :: CNY4(5,JA,2)
 
-    real(RP), intent(in)    :: CDZ(KA)
-    real(RP), intent(in)    :: CDX(IA)
-    real(RP), intent(in)    :: CDY(JA)
-    real(RP), intent(in)    :: FDZ(KA-1)
-    real(RP), intent(in)    :: FDX(IA-1)
-    real(RP), intent(in)    :: FDY(JA-1)
+    real(RP), intent(in)    :: CDZ (KA)
+    real(RP), intent(in)    :: CDX (IA)
+    real(RP), intent(in)    :: CDY (JA)
+    real(RP), intent(in)    :: FDZ (KA-1)
+    real(RP), intent(in)    :: FDX (IA-1)
+    real(RP), intent(in)    :: FDY (JA-1)
     real(RP), intent(in)    :: RCDZ(KA)
     real(RP), intent(in)    :: RCDX(IA)
     real(RP), intent(in)    :: RCDY(JA)
@@ -705,12 +717,12 @@ contains
     real(RP), pointer :: num_diff_pt1(:,:,:,:,:)
     real(RP), pointer :: tmp_pt(:,:,:,:,:)
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
+    integer  :: IIS, IIE
+    integer  :: JJS, JJE
 
     real(RP) :: dtrk
-    integer :: nd_order4, no
-    integer :: i, j, k, iq, rko, step
+    integer  :: nd_order4, no
+    integer  :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
@@ -833,7 +845,7 @@ contains
     enddo
 #endif
 
-    end if
+    endif
 
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
@@ -979,7 +991,7 @@ contains
        enddo
        enddo
        enddo
-    end if
+    endif
 
 
 
@@ -995,9 +1007,9 @@ contains
        do i = IIS, IIE
        do k = KS, KE
           DENS_t(k,i,j) = DENS_tp(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        !--- prepare rayleigh damping coefficient
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1028,8 +1040,8 @@ contains
        enddo
 
 
-    end do
-    end do
+    enddo
+    enddo
 
 
     !--- prepare numerical diffusion coefficient
@@ -1102,7 +1114,7 @@ contains
                      ) / 17.0_RP
              enddo
              enddo
-          end if
+          endif
 
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+2
@@ -1785,14 +1797,12 @@ contains
                I_RHOT,            & ! (in)
                KE                 ) ! (in)
 
-
           ! swap pointer target
           tmp_pt => num_diff_pt1
           num_diff_pt1 => num_diff_pt0
           num_diff_pt0 => tmp_pt
 
-
-       end do
+       enddo
 
 
        nd_order4 = nd_order * 4
@@ -2070,8 +2080,8 @@ contains
           enddo
           enddo
 
-       end do
-       end do
+       enddo
+       enddo
 
        call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  1 )
        call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  2 )
@@ -2105,7 +2115,7 @@ contains
        call COMM_wait( num_diff(:,:,:,I_RHOT,XDIR), 14 )
        call COMM_wait( num_diff(:,:,:,I_RHOT,YDIR), 15 )
 
-    end if ! DIFF4 /= 0.0_RP
+    endif ! DIFF4 /= 0.0_RP
 
     call COMM_vars8( DENS_t(:,:,:), 1 )
     call COMM_vars8( MOMZ_t(:,:,:), 2 )
@@ -2254,7 +2264,7 @@ contains
        enddo
        enddo
 
-    end if
+    endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -2361,11 +2371,11 @@ contains
 #ifndef DRY
     do iq = 1, QA
        call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
-    end do
+    enddo
 
     do iq = 1, QA
        call COMM_wait( QTRC_t(:,:,:,iq), 5+iq )
-    end do
+    enddo
 #endif
 
     do iq = 1, QA
@@ -2416,7 +2426,7 @@ contains
                    ) / 17.0_RP
                 enddo
                 enddo
-             end if
+             endif
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS,   JJE
              do i = IIS,   IIE
@@ -2503,7 +2513,7 @@ contains
              enddo
              enddo
 
-          end if ! iq == I_QV
+          endif ! iq == I_QV
 
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS,   JJE
@@ -2562,7 +2572,7 @@ contains
              num_diff_pt1 => num_diff_pt0
              num_diff_pt0 => tmp_pt
 
-          end do ! no
+          enddo ! no
 
           do JJS = JS, JE, JBLOCK
           JJE = JJS+JBLOCK-1
@@ -2627,7 +2637,7 @@ contains
 
 
 
-       end if ! DIFF4 .eq. 0.0
+       endif ! DIFF4 .eq. 0.0
 
 
     do JJS = JS, JE, JBLOCK
@@ -2781,9 +2791,9 @@ contains
                               - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                           + QTRC_t(k,i,j,iq) &
                         ) ) / DENS(k,i,j)
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
     enddo
     enddo
