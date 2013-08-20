@@ -661,21 +661,7 @@ contains
     real(DP), intent(in)    :: DTSEC_ATMOS_DYN
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
-    ! diagnostic variables
-    real(RP) :: PRES  (KA,IA,JA) ! pressure [Pa]
-    real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
-    real(RP) :: dens_s(KA,IA,JA) ! saved density
-    real(RP) :: QDRY(KA,IA,JA) ! not used
-    real(RP) :: Rtot  (KA,IA,JA) ! R for dry air + vapor
-    real(RP) :: CVtot (KA,IA,JA) ! CV
-
-    ! rayleigh damping, numerical diffusion
-    real(RP) :: dens_diff(KA,IA,JA)     ! anomary of density
-    real(RP) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
-    real(RP) :: qv_diff  (KA,IA,JA)     ! anomary of vapor
-    real(RP), target :: num_diff (KA,IA,JA,5,3)
-
-    real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+    real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
 
     ! tendency
     real(RP) :: DENS_t(KA,IA,JA)
@@ -685,26 +671,40 @@ contains
     real(RP) :: RHOT_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
 
+    ! diagnostic variables
+    real(RP) :: PRES (KA,IA,JA) ! pressure [Pa]
+    real(RP) :: POTT (KA,IA,JA) ! potential temperature [K]
+    real(RP) :: QDRY (KA,IA,JA) ! dry air
+    real(RP) :: Rtot (KA,IA,JA) ! total R
+    real(RP) :: CVtot(KA,IA,JA) ! total CV
+
+    ! rayleigh damping, numerical diffusion
+    real(RP) :: dens_diff(KA,IA,JA)     ! anomary of density
+    real(RP) :: pott_diff(KA,IA,JA)     ! anomary of rho * pott
+    real(RP) :: qv_diff  (KA,IA,JA)     ! anomary of vapor
+
+    real(RP), target  :: num_diff     (KA,IA,JA,5,3)
+    real(RP), target  :: num_diff_work(KA,IA,JA,5,3)
+    real(RP), pointer :: num_diff_pt0 (:,:,:,:,:)
+    real(RP), pointer :: num_diff_pt1 (:,:,:,:,:)
+    real(RP), pointer :: tmp_pt       (:,:,:,:,:)
+
     ! For FCT
+    real(RP) :: qflx_hi  (KA,IA,JA,3)   ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
     real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
     real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
 
-    ! For numerical diffusion
-    real(RP), target  :: num_diff_work(KA,IA,JA,5,3)
-    real(RP), pointer :: num_diff_pt0(:,:,:,:,:)
-    real(RP), pointer :: num_diff_pt1(:,:,:,:,:)
-    real(RP), pointer :: tmp_pt      (:,:,:,:,:)
-
-
     real(RP) :: dtrk
     integer  :: nd_order4, no
+
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, rko, step
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
+    DENS00  (:,:,:) = UNDEF
     DENS_RK1(:,:,:) = UNDEF
     MOMZ_RK1(:,:,:) = UNDEF
     MOMX_RK1(:,:,:) = UNDEF
@@ -722,7 +722,6 @@ contains
     POTT    (:,:,:) = UNDEF
     PRES    (:,:,:) = UNDEF
 
-    dens_s   (:,:,:)     = UNDEF
     dens_diff(:,:,:)     = UNDEF
     pott_diff(:,:,:)     = UNDEF
     qv_diff  (:,:,:)     = UNDEF
@@ -733,29 +732,6 @@ contains
     qflx_lo  (:,:,:,:) = UNDEF
     RHOQ     (:,:,:)   = UNDEF
 #endif
-
-!OCL XFILL
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-       MOMZ_RK1( 1:KS-1,i,j) = 0.0_RP
-       MOMZ_RK1(KE:KA  ,i,j) = 0.0_RP
-       MOMZ_RK2( 1:KS-1,i,j) = 0.0_RP
-       MOMZ_RK2(KE:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-
-    ! bottom boundary
-!OCL XFILL
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
-       qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-       qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-       mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-    enddo
-    enddo
-
 
     if ( USE_AVERAGE ) then
 
@@ -860,7 +836,7 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       dens_s(k,i,j) = DENS(k,i,j)
+       DENS00(k,i,j) = DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -2116,8 +2092,7 @@ contains
                        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                        CDZ, FDZ, FDX, FDY,                               & ! (in)
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                       dtrk, RK, rko,                                    & ! (in)
-                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+                       dtrk, RK, rko                                     ) ! (in)
 
     call COMM_vars8( DENS_RK1(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
@@ -2144,8 +2119,7 @@ contains
                        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                        CDZ, FDZ, FDX, FDY,                               & ! (in)
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                       dtrk, RK, rko,                                    & ! (in)
-                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+                       dtrk, RK, rko                                     ) ! (in)
 
     call COMM_vars8( DENS_RK2(:,:,:), 1 )
     call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
@@ -2172,8 +2146,7 @@ contains
                        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                        CDZ, FDZ, FDX, FDY,                               & ! (in)
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                       dtrk, RK, rko,                                    & ! (in)
-                       VELZ, VELX, VELY, PRES, POTT                      ) ! (work)
+                       dtrk, RK, rko                                     ) ! (in)
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
@@ -2616,9 +2589,8 @@ contains
           qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                          - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-                              * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
+                                                      + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
                               + num_diff(k,i,j,1,ZDIR)
        enddo
        enddo
@@ -2631,9 +2603,11 @@ contains
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           ! just above the bottom boundary
+          qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                             - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
+          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                  + num_diff(KS,i,j,1,ZDIR)
        enddo
@@ -2676,9 +2650,8 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
-                              * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
+                                                      + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
                               + num_diff(k,i,j,1,XDIR)
        enddo
        enddo
@@ -2704,9 +2677,8 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
-                              * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
+                                                      + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
                               + num_diff(k,i,j,1,YDIR)
        enddo
        enddo
@@ -2719,7 +2691,7 @@ contains
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
-          RHOQ(k,i,j) = QTRC(k,i,j,iq) * dens_s(k,i,j)
+          RHOQ(k,i,j) = QTRC(k,i,j,iq) * DENS00(k,i,j)
        enddo
        enddo
        enddo
@@ -2730,12 +2702,9 @@ contains
     enddo
     enddo
 
-    call ATMOS_DYN_fct(qflx_anti,               & ! (out)
-                       RHOQ, qflx_hi, qflx_lo,  & ! (in)
-                       RCDZ, RCDX, RCDY, Real(DTSEC,kind=RP)  ) ! (in)
-#ifdef DEBUG
-       qflx_lo  (KS:,:,:,:) = UNDEF
-#endif
+    call ATMOS_DYN_fct( qflx_anti,                            & ! (out)
+                        RHOQ, qflx_hi, qflx_lo,               & ! (in)
+                        RCDZ, RCDX, RCDY, real(DTSEC,kind=RP) ) ! (in)
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -2747,22 +2716,24 @@ contains
        do i = IIS, IIE
        do k = KS, KE
           QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
-              + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
-                              - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                            + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
-                              - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                            + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
-                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                          + QTRC_t(k,i,j,iq) &
-                        ) ) / DENS(k,i,j)
+                           + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
+                                           - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                         + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
+                                           - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                         + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
+                                           - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                                       + QTRC_t(k,i,j,iq)                                                          ) &
+                           ) / DENS(k,i,j)
        enddo
        enddo
        enddo
 
     enddo
     enddo
+
 #ifdef DEBUG
-    qflx_hi  (KS:,:,:,:) = UNDEF
+    qflx_lo  (:,:,:,:) = UNDEF
+    qflx_hi  (:,:,:,:) = UNDEF
     qflx_anti(:,:,:,:) = UNDEF
 #endif
 
