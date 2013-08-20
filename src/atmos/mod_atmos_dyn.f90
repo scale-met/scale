@@ -734,217 +734,33 @@ contains
 #endif
 
     if ( USE_AVERAGE ) then
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       DENS_av(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMZ_av(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMX_av(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       MOMY_av(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       RHOT_av(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
+       DENS_av(:,:,:) = 0.0_RP
+       MOMZ_av(:,:,:) = 0.0_RP
+       MOMX_av(:,:,:) = 0.0_RP
+       MOMY_av(:,:,:) = 0.0_RP
+       RHOT_av(:,:,:) = 0.0_RP
 #ifndef DRY
-!OCL XFILL
-    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
-    do iq = 1, QA
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       QTRC_av(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
+       QTRC_av(:,:,:,:) = 0.0_RP
 #endif
-
     endif
 
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       mflx_av(k,i,j,ZDIR) = 0.0_RP
-    enddo
-    enddo
-    enddo
+    mflx_av(:,:,:,:) = 0.0_RP
 
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       mflx_av(k,i,j,XDIR) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       mflx_av(k,i,j,YDIR) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-!OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE
-       DENS00(k,i,j) = DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+    DENS00(:,:,:) = DENS(:,:,:)
 
 #ifndef DRY
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-          QDRY(k,i,j) = 1.0_RP
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-       do iq = QQS, QQE
-          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-          Rtot(k,i,j) = Rdry*QDRY(k,i,j) + Rvap*QTRC(k,i,j,I_QV)
-       enddo
-       enddo
-       enddo
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-          CVtot(k,i,j) = CVdry*QDRY(k,i,j)
-          do iq = QQS, QQE
-             CVtot(k,i,j) = CVtot(k,i,j) + AQ_CV(iq)*QTRC(k,i,j,iq)
-          enddo
-       enddo
-       enddo
-       enddo
-
+    CVtot(:,:,:) = 0.0_RP
+    QDRY (:,:,:) = 1.0_RP
+    do iq = QQS, QQE
+       CVtot(:,:,:) = CVtot(:,:,:) + AQ_CV(iq) * QTRC(:,:,:,iq)
+       QDRY (:,:,:) = QDRY (:,:,:) - QTRC(:,:,:,iq)
     enddo
-    enddo
+    CVtot(:,:,:) = CVdry * QDRY(:,:,:) + CVtot(:,:,:)
+    Rtot (:,:,:) = Rdry  * QDRY(:,:,:) + Rvap * QTRC(:,:,:,I_QV)
 #endif
 
     if ( DIFF4 == 0.0_RP ) then
-!OCL XFILL
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS  , JE
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMX,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMY,ZDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,ZDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS  , JE
-       do i = IS-1, IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMY,XDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,XDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS  , JE
-       do i = IS  , IE+1
-       do k = KS  , KE
-          num_diff(k,i,j,I_MOMX,XDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_DENS,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMZ,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_MOMX,YDIR) = 0.0_RP
-          num_diff(k,i,j,I_RHOT,YDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
-!OCL XFILL
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS  , JE+1
-       do i = IS  , IE
-       do k = KS  , KE
-          num_diff(k,i,j,I_MOMY,YDIR) = 0.0_RP
-       enddo
-       enddo
-       enddo
+       num_diff(:,:,:,:,:) = 0.0_RP
     endif
 
 
@@ -2160,117 +1976,22 @@ contains
     call COMM_wait ( RHOT(:,:,:), 5 )
 
     if ( USE_AVERAGE ) then
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
-       enddo
-       enddo
-       enddo
-
+       DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
+       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) + MOMZ(:,:,:)
+       MOMX_av(:,:,:) = MOMX_av(:,:,:) + MOMX(:,:,:)
+       MOMY_av(:,:,:) = MOMY_av(:,:,:) + MOMY(:,:,:)
+       RHOT_av(:,:,:) = RHOT_av(:,:,:) + RHOT(:,:,:)
     endif
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          mflx_av(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) + mflx_hi(k,i,j,ZDIR)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          mflx_av(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) + mflx_hi(k,i,j,XDIR)
-       enddo
-       enddo
-       enddo
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          mflx_av(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) + mflx_hi(k,i,j,YDIR)
-       enddo
-       enddo
-       enddo
-
-    enddo
-    enddo
+    mflx_av(:,:,:,ZDIR) = mflx_av(:,:,:,ZDIR) + mflx_hi(:,:,:,ZDIR)
+    mflx_av(:,:,:,XDIR) = mflx_av(:,:,:,XDIR) + mflx_hi(:,:,:,XDIR)
+    mflx_av(:,:,:,YDIR) = mflx_av(:,:,:,YDIR) + mflx_hi(:,:,:,YDIR)
 
     enddo ! dynamical steps
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       mflx_hi(k,i,j,ZDIR) = mflx_av(k,i,j,ZDIR) / NSTEP_ATMOS_DYN
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       mflx_hi(k,i,j,XDIR) = mflx_av(k,i,j,XDIR) / NSTEP_ATMOS_DYN
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       mflx_hi(k,i,j,YDIR) = mflx_av(k,i,j,YDIR) / NSTEP_ATMOS_DYN
-    enddo
-    enddo
-    enddo
+    mflx_hi(:,:,:,ZDIR) = mflx_av(:,:,:,ZDIR) / NSTEP_ATMOS_DYN
+    mflx_hi(:,:,:,XDIR) = mflx_av(:,:,:,XDIR) / NSTEP_ATMOS_DYN
+    mflx_hi(:,:,:,YDIR) = mflx_av(:,:,:,YDIR) / NSTEP_ATMOS_DYN
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
