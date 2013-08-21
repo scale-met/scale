@@ -18,11 +18,29 @@ module mod_atmos_dyn_rk
   !
   !++ used modules
   !
-  !-----------------------------------------------------------------------------
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
 #ifdef DEBUG
   use mod_debug, only: &
-       CHECK
+     CHECK
+  use mod_const, only: &
+     UNDEF  => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
 #endif
+  use mod_atmos_vars, only: &
+     ZDIR,   &
+     XDIR,   &
+     YDIR,   &
+     I_DENS, &
+     I_MOMZ, &
+     I_MOMX, &
+     I_MOMY, &
+     I_RHOT
+  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -80,20 +98,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Runge-Kutta loop
   subroutine ATMOS_DYN_rk( &
-    DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-    mflx_hi,                                     &
-    DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
-    DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
-    DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
-    Rtot, CVtot, CORIOLI,                        &
-    num_diff, divdmp_coef,                       &
-    FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
-    CDZ, FDZ, FDX, FDY,                          &
-    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-    dtrk, rk, rko                                )
+       DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+       mflx_hi,                                     &
+       DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
+       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
+       DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+       Rtot, CVtot, CORIOLI,                        &
+       num_diff, divdmp_coef,                       &
+       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
+       CDZ, FDZ, FDX, FDY,                          &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
+       dtrk                                         )
     use mod_const, only : &
-       UNDEF  => CONST_UNDEF,  &
-       IUNDEF => CONST_UNDEF2, &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00,  &
 #ifdef DRY
@@ -103,70 +119,59 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_atmos_vars, only: &
-       ZDIR,   &
-       XDIR,   &
-       YDIR,   &
-       I_DENS, &
-       I_MOMZ, &
-       I_MOMX, &
-       I_MOMY, &
-       I_RHOT
     use mod_atmos_dyn_common, only: &
        FACT_N, &
        FACT_F, &
        ATMOS_DYN_fct
     implicit none
 
-    real(RP), intent(inout) :: DENS_RK(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(inout) :: MOMZ_RK(KA,IA,JA)   !
-    real(RP), intent(inout) :: MOMX_RK(KA,IA,JA)   !
-    real(RP), intent(inout) :: MOMY_RK(KA,IA,JA)   !
-    real(RP), intent(inout) :: RHOT_RK(KA,IA,JA)   !
+    real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
+    real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
+    real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !
+    real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
+    real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-    real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+    real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
 
-    real(RP), intent(inout), target :: DENS0(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(inout), target :: MOMZ0(KA,IA,JA)   ! at previous dynamical time step
-    real(RP), intent(inout), target :: MOMX0(KA,IA,JA)   !
-    real(RP), intent(inout), target :: MOMY0(KA,IA,JA)   !
-    real(RP), intent(inout), target :: RHOT0(KA,IA,JA)   !
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)     ! prognostic variables at previous dynamical time step
+    real(RP), intent(in)  :: MOMZ0(KA,IA,JA)     !
+    real(RP), intent(in)  :: MOMX0(KA,IA,JA)     !
+    real(RP), intent(in)  :: MOMY0(KA,IA,JA)     !
+    real(RP), intent(in)  :: RHOT0(KA,IA,JA)     !
 
-    real(RP), intent(in)    :: DENS(KA,IA,JA)   ! prognostic variables
-    real(RP), intent(in)    :: MOMZ(KA,IA,JA)   ! at previous RK step
-    real(RP), intent(in)    :: MOMX(KA,IA,JA)   !
-    real(RP), intent(in)    :: MOMY(KA,IA,JA)   !
-    real(RP), intent(in)    :: RHOT(KA,IA,JA)   !
+    real(RP), intent(in)  :: DENS(KA,IA,JA)      ! prognostic variables at previous RK step
+    real(RP), intent(in)  :: MOMZ(KA,IA,JA)      !
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)      !
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)      !
+    real(RP), intent(in)  :: RHOT(KA,IA,JA)      !
 
-    real(RP), intent(in)    :: DENS_t(KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
-    real(RP), intent(in)    :: MOMX_t(KA,IA,JA)
-    real(RP), intent(in)    :: MOMY_t(KA,IA,JA)
-    real(RP), intent(in)    :: RHOT_t(KA,IA,JA)
+    real(RP), intent(in)  :: DENS_t(KA,IA,JA)    ! tendency
+    real(RP), intent(in)  :: MOMZ_t(KA,IA,JA)    !
+    real(RP), intent(in)  :: MOMX_t(KA,IA,JA)    !
+    real(RP), intent(in)  :: MOMY_t(KA,IA,JA)    !
+    real(RP), intent(in)  :: RHOT_t(KA,IA,JA)    !
 
-    real(RP), intent(in)    :: Rtot    (KA,IA,JA) ! R for dry air + vapor
-    real(RP), intent(in)    :: CVtot   (KA,IA,JA) ! CV
-    real(RP), intent(in)    :: CORIOLI (1, IA,JA)
-    real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
-    real(RP), intent(in)    :: divdmp_coef
+    real(RP), intent(in)  :: Rtot    (KA,IA,JA)  ! total R
+    real(RP), intent(in)  :: CVtot   (KA,IA,JA)  ! total CV
+    real(RP), intent(in)  :: CORIOLI (1, IA,JA)
+    real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(in)  :: divdmp_coef
 
-    logical,  intent(in)    :: FLAG_FCT_RHO
-    logical,  intent(in)    :: FLAG_FCT_MOMENTUM
-    logical,  intent(in)    :: FLAG_FCT_T
+    logical,  intent(in)  :: FLAG_FCT_RHO
+    logical,  intent(in)  :: FLAG_FCT_MOMENTUM
+    logical,  intent(in)  :: FLAG_FCT_T
 
-    real(RP), intent(in)    :: CDZ (KA)
-    real(RP), intent(in)    :: FDZ (KA-1)
-    real(RP), intent(in)    :: FDX (IA-1)
-    real(RP), intent(in)    :: FDY (JA-1)
-    real(RP), intent(in)    :: RCDZ(KA)
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
-    real(RP), intent(in)    :: RFDZ(KA-1)
-    real(RP), intent(in)    :: RFDX(IA-1)
-    real(RP), intent(in)    :: RFDY(JA-1)
-    real(RP), intent(in)    :: dtrk
-    integer , intent(in)    :: rk
-    integer , intent(in)    :: rko
+    real(RP), intent(in)  :: CDZ (KA)
+    real(RP), intent(in)  :: FDZ (KA-1)
+    real(RP), intent(in)  :: FDX (IA-1)
+    real(RP), intent(in)  :: FDY (JA-1)
+    real(RP), intent(in)  :: RCDZ(KA)
+    real(RP), intent(in)  :: RCDX(IA)
+    real(RP), intent(in)  :: RCDY(JA)
+    real(RP), intent(in)  :: RFDZ(KA-1)
+    real(RP), intent(in)  :: RFDX(IA-1)
+    real(RP), intent(in)  :: RFDY(JA-1)
+    real(RP), intent(in)  :: dtrk
 
     ! diagnostic variables
     real(RP) :: PRES(KA,IA,JA) ! pressure [Pa]
@@ -181,11 +186,6 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)
 
     real(RP) :: DDIV(KA,IA,JA) ! divergence
-
-#ifndef NO_FCT_DYN
-    real(RP), pointer :: org(:,:,:)
-    real(RP), target  :: work(KA,IA,JA)
-#endif
 
     real(RP) :: vel
     integer  :: IIS, IIE
@@ -204,7 +204,6 @@ contains
     qflx_hi(:,:,:,:) = UNDEF
 
 #ifndef NO_FCT_DYN
-    work     (:,:,:)   = UNDEF
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_anti(:,:,:,:) = UNDEF
 #endif
@@ -454,31 +453,7 @@ contains
 #endif
 
 #ifndef NO_FCT_DYN
-    enddo
-    enddo
-
-    if ( FLAG_FCT_RHO ) then
-
-       if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !OCL XFILL
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-          do k = KS, KE
-             work(k,i,j) = DENS0(k,i,j)
-          enddo
-          enddo
-          enddo
-          org => work
-       else
-          org => DENS0
-       endif
-
-       ! monotonic flux
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       if ( FLAG_FCT_RHO ) then
 
           ! at (x, y, interface)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -548,12 +523,14 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       enddo
-       enddo
+       endif
+    enddo
+    enddo
 
-       call ATMOS_DYN_fct( qflx_anti,             & ! (out)
-                           org, mflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RCDY, dtrk ) ! (in)
+    if ( FLAG_FCT_RHO ) then
+       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+                           DENS0, mflx_hi, qflx_lo, & ! (in)
+                           RCDZ, RCDX, RCDY, dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -638,7 +615,6 @@ contains
 #endif
 
 #ifdef DEBUG
-       work     (:,:,:)   = UNDEF
        qflx_lo  (:,:,:,:) = UNDEF
        qflx_anti(:,:,:,:) = UNDEF
 #endif
@@ -841,30 +817,7 @@ contains
 #endif
 
 #ifndef NO_FCT_DYN
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-
-       if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !OCL XFILL
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-          do k = KS, KE
-             work(k,i,j) = MOMZ0(k,i,j)
-          enddo
-          enddo
-          enddo
-          org => work
-       else
-          org => MOMZ0
-       endif
-
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       if ( FLAG_FCT_MOMENTUM ) then
 
           ! monotonic flux
           ! at (x, y, layer)
@@ -961,12 +914,15 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       enddo
-       enddo
+       endif
+    enddo
+    enddo
 
-       call ATMOS_DYN_fct( qflx_anti,              & ! (out)
-                           org, qflx_hi, qflx_lo,  & ! (in)
-                           RFDZ, RCDX, RCDY, dtrk  ) ! (in)
+    if ( FLAG_FCT_MOMENTUM ) then
+
+       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+                           MOMZ0, qflx_hi, qflx_lo, & ! (in)
+                           RFDZ, RCDX, RCDY, dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1002,7 +958,6 @@ contains
        enddo
 
 #ifdef DEBUG
-       work     (:,:,:)   = UNDEF
        qflx_lo  (:,:,:,:) = UNDEF
        qflx_anti(:,:,:,:) = UNDEF
 #endif
@@ -1181,31 +1136,7 @@ contains
 #endif
 
 #ifndef NO_FCT_DYN
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-
-       if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !OCL XFILL
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-          do k = KS, KE
-             work(k,i,j) = MOMX0(k,i,j)
-          enddo
-          enddo
-          enddo
-          org => work
-       else
-          org => MOMX0
-       endif
-
-       ! monotonic flux
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       if ( FLAG_FCT_MOMENTUM ) then
 
           ! at (u, y, interface)
           !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
@@ -1279,12 +1210,15 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       enddo
-       enddo
+       endif
+    enddo
+    enddo
 
-       call ATMOS_DYN_fct( qflx_anti,              & ! (out)
-                           org, qflx_hi, qflx_lo,  & ! (in)
-                           RCDZ, RFDX, RCDY, dtrk  ) ! (in)
+    if ( FLAG_FCT_MOMENTUM ) then
+
+       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+                           MOMX0, qflx_hi, qflx_lo, & ! (in)
+                           RCDZ, RFDX, RCDY, dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1320,7 +1254,6 @@ contains
        enddo
 
 #ifdef DEBUG
-       work     (:,:,:)   = UNDEF
        qflx_lo  (:,:,:,:) = UNDEF
        qflx_anti(:,:,:,:) = UNDEF
 #endif
@@ -1497,30 +1430,7 @@ contains
 #endif
 
 #ifndef NO_FCT_DYN
-    enddo
-    enddo
-
-    if ( FLAG_FCT_MOMENTUM ) then
-
-       if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !OCL XFILL
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-          do k = KS, KE
-             work(k,i,j) = MOMY0(k,i,j)
-          enddo
-          enddo
-          enddo
-          org => work
-       else
-          org => MOMY0
-       endif
-
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       if ( FLAG_FCT_MOMENTUM ) then
 
           ! monotonic flux
           ! at (x, v, interface)
@@ -1593,12 +1503,16 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       enddo
-       enddo
 
-       call ATMOS_DYN_fct( qflx_anti,              & ! (out)
-                           org, qflx_hi, qflx_lo,  & ! (in)
-                           RCDZ, RCDX, RFDY, dtrk  ) ! (in)
+       endif
+    enddo
+    enddo
+
+    if ( FLAG_FCT_MOMENTUM ) then
+
+       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+                           MOMY0, qflx_hi, qflx_lo, & ! (in)
+                           RCDZ, RCDX, RFDY, dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1634,7 +1548,6 @@ contains
        enddo
 
 #ifdef DEBUG
-       work     (:,:,:)   = UNDEF
        qflx_lo  (:,:,:,:) = UNDEF
        qflx_anti(:,:,:,:) = UNDEF
 #endif
@@ -1765,45 +1678,23 @@ contains
                          + dtrk * ( - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                       + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                         + RHOT_t(k,i,j) )
+                                    + RHOT_t(k,i,j) )
        enddo
        enddo
        enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-    enddo
-    enddo
 
 #ifndef NO_FCT_DYN
-    if ( FLAG_FCT_T ) then
+       if ( FLAG_FCT_T ) then
 
-       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
-
-       if ( rko == RK ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !OCL XFILL
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-          do k = KS, KE
-             work(k,i,j) = RHOT0(k,i,j)
-          enddo
-          enddo
-          enddo
-          org => work
-       else
-          org => RHOT0
-       endif
-
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+          call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+          call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+          call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+          call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+          call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+          call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
 
           ! monotonic flux
           ! at (x, y, interface)
@@ -1869,12 +1760,18 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       enddo
-       enddo
 
-       call ATMOS_DYN_fct( qflx_anti,              & ! (out)
-                           org, qflx_hi, qflx_lo,  & ! (in)
-                           RCDZ, RCDX, RCDY, dtrk  ) ! (in)
+       endif
+#endif
+
+    enddo
+    enddo
+
+#ifndef NO_FCT_DYN
+    if ( FLAG_FCT_T ) then
+       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+                           RHOT0, qflx_hi, qflx_lo, & ! (in)
+                           RCDZ, RCDX, RCDY, dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
