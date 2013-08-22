@@ -148,6 +148,8 @@ contains
   subroutine CPL_AtmLnd_solve
     use mod_const, only: &
       LH0 => CONST_LH0
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_cpl_vars, only: &
       LST
     implicit none
@@ -251,7 +253,7 @@ contains
     if( n > nmax ) then
       ! not converged and stop program
       if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-      stop
+      call PRC_MPIstop
     end if
 
     ! put residual in ground heat flux
