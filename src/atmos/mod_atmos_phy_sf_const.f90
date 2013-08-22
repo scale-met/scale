@@ -16,6 +16,7 @@
 !! @li      2012-09-12 (Y.Sato)    [renew] constant FLUX version
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_sf
   !-----------------------------------------------------------------------------
   !
@@ -216,6 +217,7 @@ contains
             DENS, MOMZ, MOMX, MOMY,                              & ! (in)
             NOWSEC                                               ) ! (out)
 
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
@@ -232,6 +234,7 @@ contains
 
     end if
 
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
@@ -287,6 +290,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,uabs,Cm) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 

@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_dyn_common
   !-----------------------------------------------------------------------------
   !
@@ -117,7 +118,7 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -132,7 +133,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_anti(KS-1,i,j,ZDIR) = 0.0_RP
@@ -142,7 +143,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -157,7 +158,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE
@@ -174,7 +175,7 @@ contains
 #endif
 
        !--- update monotone scheme
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -199,7 +200,7 @@ contains
 #endif
 
        !--- calc net incoming quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -222,7 +223,7 @@ contains
 #endif
 
        !--- calc net outgoing quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -245,7 +246,7 @@ contains
 #endif
 
        !--- calc allowable range or quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -301,7 +302,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -389,7 +390,7 @@ contains
 #endif
 
        !--- incoming flux limitation factor [0-1]
-       !$omp parallel do private(i,j,k,zerosw) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -408,7 +409,7 @@ contains
 #endif
 
        !--- outgoing flux limitation factor [0-1]
-       !$omp parallel do private(i,j,k,zerosw) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -440,7 +441,7 @@ contains
     IIE = IIS+IBLOCK-1
 
        !--- update high order flux with antidiffusive flux
-       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS , KE-1
@@ -463,7 +464,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
@@ -484,7 +485,7 @@ contains
        else
           ijs = IIS
        end if
-       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = ijs, IIE
        do k = KS, KE
@@ -513,7 +514,7 @@ contains
        else
           ijs = JJS
        end if
-       !$omp parallel do private(i,j,k,dirsw) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k,dirsw) OMP_SCHEDULE_ collapse(2)
        do j = ijs, JJE
        do i = IIS, IIE
        do k = KS, KE

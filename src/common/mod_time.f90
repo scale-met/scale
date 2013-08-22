@@ -603,7 +603,7 @@ contains
 
     TIME_rapnstr(id) = 0
     TIME_rapnend(id) = 0
-    TIME_rapttot(id) = 0.0_RP
+    TIME_rapttot(id) = 0.0_DP
 
   end function TIME_rapid
 

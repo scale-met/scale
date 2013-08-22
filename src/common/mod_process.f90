@@ -17,6 +17,8 @@ module mod_process
   !++ used modules
   !
   use mpi
+  use dc_types, only: &
+     DP
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -413,11 +415,11 @@ contains
   function PRC_MPItime() result(time)
     implicit none
 
-    real(RP) :: time
+    real(DP) :: time
     !---------------------------------------------------------------------------
 
     if ( PRC_mpi_alive ) then
-       time = real(MPI_WTIME(), kind=RP)
+       time = real(MPI_WTIME(), kind=DP)
     else
        call cpu_time(time)
     endif

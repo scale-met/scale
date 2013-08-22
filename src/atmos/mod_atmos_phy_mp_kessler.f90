@@ -15,6 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
@@ -322,6 +323,7 @@ contains
                                    TEMP0(:,:,:), & ! [IN]
                                    DENS0(:,:,:)  ) ! [IN]
 
+    !$omp parallel do private(i,j,k,dens,rhoe,temp,pres,qv,qc,qr,qsatl,Sliq,dq_evap,dq_auto,dq_accr,vent_factor,dqc,dqr,dqv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
 
@@ -381,6 +383,7 @@ contains
     enddo
 
     ! mass & energy update
+    !$omp parallel do private(i,j, k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        QTRC0(KS:KE,i,j,I_QV) = QTRC0(KS:KE,i,j,I_QV) + QTRC_t(KS:KE,i,j,I_QV) * dt
@@ -415,6 +418,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! only update QR
+    !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
