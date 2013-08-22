@@ -5,7 +5,7 @@
 !!          bucket-type land physics module
 !!
 !! @author Team SCALE
-!! @li      2013-07-31 (T.Yamaura)  [new]
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
 module mod_land_phy_bucket
@@ -103,7 +103,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_BUCKET)
 
     ROFF   (:,:) = 0.0_RP
-    STRG   (:,:) = 20.0_RP
+    STRG   (:,:) = 150.0_RP
     STRGMAX(:,:) = 150.0_RP
     STRGCRT(:,:) = STRGMAX * 0.75_RP
 
@@ -119,12 +119,12 @@ contains
     use mod_time, only: &
       dt => TIME_DTSEC_LAND
     use mod_land_vars, only: &
-      SFLX_GH,   &
-      SFLX_PREC, &
-      SFLX_QV,   &
-      TG,        &
-      QvEfc,     &
-      HCS,       &
+      SFLX_GH,    &
+      SFLX_PREC,  &
+      SFLX_QVLnd, &
+      TG,         &
+      QvEfc,      &
+      HCS,        &
       DZg
  
     implicit none
@@ -136,7 +136,7 @@ contains
     do i = IS, IE
 
       ! update water storage
-      STRG(i,j)  = STRG(i,j) + ( SFLX_PREC(i,j) - SFLX_QV(i,j) ) * dt
+      STRG(i,j)  = STRG(i,j) + ( SFLX_PREC(i,j) - SFLX_QVLnd(i,j) ) * dt
 
       if( STRG(i,j) > STRGMAX(i,j) ) then
         ROFF(i,j) = ROFF(i,j) + STRG(i,j) - STRGMAX(i,j)

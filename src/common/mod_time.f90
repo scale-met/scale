@@ -60,6 +60,7 @@ module mod_time
   real(DP), public, save :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart      [sec]
   real(DP), public, save :: TIME_DTSEC_LAND           !< time interval of land  step         [sec]
   real(DP), public, save :: TIME_DTSEC_LAND_RESTART   !< time interval of land  restart      [sec]
+  real(DP), public, save :: TIME_DTSEC_CPL_AtmLnd     !< time interval of coupler calc.      [sec]
 
   integer,  public, save :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
   real(DP), public, save :: TIME_NOWMS                !< subsecond part of current time [millisec]
@@ -79,6 +80,8 @@ module mod_time
   logical,  public, save :: TIME_DOOCEAN_restart      !< execute ocean restart output?
   logical,  public, save :: TIME_DOLAND_step          !< execute land  component in this step?
   logical,  public, save :: TIME_DOLAND_restart       !< execute land  restart output?
+  logical,  public, save :: TIME_DOCPL_calc           !< execute coupler component in this step?
+  logical,  public, save :: TIME_DOCPL_AtmLnd         !< execute Atoms-Land coupler?
   logical,  public, save :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -113,6 +116,7 @@ module mod_time
   real(DP), private, save :: TIME_RES_OCEAN_RESTART = 0.0_DP
   real(DP), private, save :: TIME_RES_LAND          = 0.0_DP
   real(DP), private, save :: TIME_RES_LAND_RESTART  = 0.0_DP
+  real(DP), private, save :: TIME_RES_CPL_AtmLnd    = 0.0_DP
 
   integer,                  private, parameter :: TIME_rapnlimit = 100
   integer,                  private,      save :: TIME_rapnmax   = 0
@@ -176,6 +180,9 @@ contains
     real(DP)                 :: TIME_DT_LAND_RESTART
     character(len=IO_SYSCHR) :: TIME_DT_LAND_RESTART_UNIT  = ""
 
+    real(DP)                 :: TIME_DT_CPL_AtmLnd
+    character(len=IO_SYSCHR) :: TIME_DT_CPL_AtmLnd_UNIT    = ""
+
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
        TIME_STARTMS,               &
@@ -202,7 +209,9 @@ contains
        TIME_DT_LAND,               &
        TIME_DT_LAND_UNIT,          &
        TIME_DT_LAND_RESTART,       &
-       TIME_DT_LAND_RESTART_UNIT
+       TIME_DT_LAND_RESTART_UNIT,  &
+       TIME_DT_CPL_AtmLnd,         &
+       TIME_DT_CPL_AtmLnd_UNIT
 
     real(DP) :: TIME_DURATIONSEC
 
@@ -226,6 +235,7 @@ contains
     TIME_DT_OCEAN_RESTART = UNDEF
     TIME_DT_LAND          = UNDEF
     TIME_DT_LAND_RESTART  = UNDEF
+    TIME_DT_CPL_AtmLnd    = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -341,6 +351,15 @@ contains
           if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
        end if
+       ! COUPLER
+       if ( TIME_DT_CPL_AtmLnd == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_AtmLnd. TIME_DT is used.'
+          TIME_DT_CPL_AtmLnd = TIME_DT
+       end if
+       if ( TIME_DT_CPL_AtmLnd_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_AtmLnd_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_CPL_AtmLnd_UNIT = TIME_DT_UNIT
+       end if
 
     end if
 
@@ -404,6 +423,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
        call CALENDAR_unit2sec( TIME_DTSEC_LAND,          TIME_DT_LAND,          TIME_DT_LAND_UNIT          )
        call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_CPL_AtmLnd,    TIME_DT_CPL_AtmLnd,    TIME_DT_CPL_AtmLnd_UNIT    )
 
        TIME_NSTEP_ATMOS_DYN = max( int( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
 
@@ -417,6 +437,7 @@ contains
        TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_LAND          = max( TIME_DTSEC_LAND,          TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_CPL_AtmLnd    = max( TIME_DTSEC_CPL_AtmLnd,    TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
@@ -434,6 +455,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land  Variables             : ', TIME_DTSEC_LAND_RESTART
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmos-Land Coupler interval : ', TIME_DTSEC_CPL_AtmLnd
 
     end if
 
@@ -446,14 +468,15 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    TIME_DOATMOS_step   = .false.
-    TIME_DOATMOS_DYN    = .false.
-    TIME_DOATMOS_PHY_SF = .false.
-    TIME_DOATMOS_PHY_TB = .false.
-    TIME_DOATMOS_PHY_MP = .false.
-    TIME_DOATMOS_PHY_RD = .false.
-    TIME_DOOCEAN_step   = .false.
-    TIME_DOLAND_step    = .false.
+    TIME_DOATMOS_step      = .false.
+    TIME_DOATMOS_DYN       = .false.
+    TIME_DOATMOS_PHY_SF    = .false.
+    TIME_DOATMOS_PHY_TB    = .false.
+    TIME_DOATMOS_PHY_MP    = .false.
+    TIME_DOATMOS_PHY_RD    = .false.
+    TIME_DOOCEAN_step      = .false.
+    TIME_DOLAND_step       = .false.
+    TIME_DOCPL_calc        = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + TIME_DTSEC
     TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF + TIME_DTSEC
@@ -462,6 +485,7 @@ contains
     TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + TIME_DTSEC
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
     TIME_RES_LAND         = TIME_RES_LAND         + TIME_DTSEC
+    TIME_RES_CPL_AtmLnd   = TIME_RES_CPL_AtmLnd   + TIME_DTSEC
  
     if ( TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN > -eps ) then
        TIME_DOATMOS_step  = .true.
@@ -496,6 +520,12 @@ contains
     if ( TIME_RES_LAND  - TIME_DTSEC_LAND  > -eps ) then
        TIME_DOLAND_step  = .true.
        TIME_RES_LAND     = TIME_RES_LAND  - TIME_DTSEC_LAND
+    endif
+
+    if ( TIME_RES_CPL_AtmLnd - TIME_DTSEC_CPL_AtmLnd > -eps ) then
+       TIME_DOCPL_calc   = .true.
+       TIME_DOCPL_AtmLnd = .true.
+       TIME_RES_CPL_AtmLnd    = TIME_RES_CPL_AtmLnd - TIME_DTSEC_CPL_AtmLnd
     endif
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &

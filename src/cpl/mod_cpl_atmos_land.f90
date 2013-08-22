@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-07-31 (T.Yamaura)  [new]
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
 module mod_cpl_atmos_land
@@ -26,13 +26,14 @@ module mod_cpl_atmos_land
   !++ Public procedure
   !
   public :: CPL_AtmLnd_setup
-  public :: CPL_AtmLnd_calc
+  public :: CPL_AtmLnd_solve
+  public :: CPL_AtmLnd_unsolve
   public :: CPL_AtmLnd_putAtm
   public :: CPL_AtmLnd_putLnd
-  public :: CPL_AtmLnd_getFlx2Atm
-  public :: CPL_AtmLnd_getFlx2Lnd
-  public :: CPL_AtmLnd_flushFlx2Atm
-  public :: CPL_AtmLnd_flushFlx2Lnd
+  public :: CPL_AtmLnd_getDat2Atm
+  public :: CPL_AtmLnd_getDat2Lnd
+  public :: CPL_AtmLnd_flushDat2Atm
+  public :: CPL_AtmLnd_flushDat2Lnd
 
   !-----------------------------------------------------------------------------
   !
@@ -59,17 +60,18 @@ module mod_cpl_atmos_land
   !++ Private parameters & variables
   !
   ! surface fluxes for atmosphere
-  real(RP), private, save :: SFLX_MOMX(IA,JA) ! momentum flux for x [kg/m2/s]
-  real(RP), private, save :: SFLX_MOMY(IA,JA) ! momentum flux for y [kg/m2/s]
-  real(RP), private, save :: SFLX_MOMZ(IA,JA) ! momentum flux for z [kg/m2/s]
-  real(RP), private, save :: SFLX_SWU (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_LWU (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_SH  (IA,JA) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_LH  (IA,JA) ! latent heat flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_MOMX (IA,JA) ! momentum flux for x [kg/m2/s]
+  real(RP), private, save :: SFLX_MOMY (IA,JA) ! momentum flux for y [kg/m2/s]
+  real(RP), private, save :: SFLX_MOMZ (IA,JA) ! momentum flux for z [kg/m2/s]
+  real(RP), private, save :: SFLX_SWU  (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_LWU  (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_SH   (IA,JA) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_LH   (IA,JA) ! latent heat flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_QVAtm(IA,JA) ! moisture flux for atmosphere [kg/m2/s]
   ! surface fluxes for land
-  real(RP), private, save :: SFLX_GH  (IA,JA) ! ground heat flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_PREC(IA,JA) ! precipitation flux [kg/m2/s]
-  real(RP), private, save :: SFLX_QV  (IA,JA) ! moisture flux [kg/m2/s]
+  real(RP), private, save :: SFLX_GH   (IA,JA) ! ground heat flux (upward positive) [W/m2]
+  real(RP), private, save :: SFLX_PREC (IA,JA) ! precipitation flux [kg/m2/s]
+  real(RP), private, save :: SFLX_QVLnd(IA,JA) ! moisture flux for land [kg/m2/s]
 
   ! Atmospheric values
   real(RP), private, save :: DENS(KA,IA,JA)    ! air density [kg/m3]
@@ -99,6 +101,12 @@ module mod_cpl_atmos_land
   real(RP), private, save :: ZeR  (IA,JA) ! rough factor for moisture
   real(RP), private, save :: ZeS  (IA,JA) ! smooth factor for moisture
 
+  ! counter
+  real(RP), private, save :: CNT_putAtm     ! counter for putAtm
+  real(RP), private, save :: CNT_putLnd     ! counter for putLnd
+  real(RP), private, save :: CNT_getDat2Atm ! counter for getDat2Atm
+  real(RP), private, save :: CNT_getDat2Lnd ! counter for getDat2Lnd
+
   ! limiter
   real(RP), private, parameter :: res_min   =  1.0E-10_RP ! minimum number of residual in the Newton-Raphson Method
   real(RP), private, parameter :: Ustar_min =  1.0E-3_RP ! minimum limit of U*
@@ -107,16 +115,16 @@ module mod_cpl_atmos_land
   real(RP), private, parameter :: Zt_min =   1.0E-5_RP !                             T
   real(RP), private, parameter :: Ze_min =   1.0E-5_RP !                             q
 
-  real(RP), private, save      :: Cm_min =   1.0E-5_RP ! minimum bulk coef. of u,v,w
-  real(RP), private, save      :: Ch_min =   1.0E-5_RP !                       T
-  real(RP), private, save      :: Ce_min =   1.0E-5_RP !                       q
+  real(RP), private, parameter :: Cm_min =   1.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, parameter :: Ch_min =   1.0E-5_RP !                       T
+  real(RP), private, parameter :: Ce_min =   1.0E-5_RP !                       q
   real(RP), private, parameter :: Cm_max =   2.5E-3_RP ! maximum bulk coef. of u,v,w
   real(RP), private, parameter :: Ch_max =   1.0_RP    !                       T
   real(RP), private, parameter :: Ce_max =   1.0_RP    !                       q
 
-  real(RP), private, save      :: U_minM =   0.0_RP  ! minimum U_abs for u,v,w
-  real(RP), private, save      :: U_minH =   0.0_RP  !                   T
-  real(RP), private, save      :: U_minE =   0.0_RP  !                   q
+  real(RP), private, parameter :: U_minM =   0.0_RP  ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_minH =   0.0_RP  !                   T
+  real(RP), private, parameter :: U_minE =   0.0_RP  !                   q
   real(RP), private, parameter :: U_maxM = 100.0_RP  ! maximum U_abs for u,v,w
   real(RP), private, parameter :: U_maxH = 100.0_RP  !                   T
   real(RP), private, parameter :: U_maxE = 100.0_RP  !                   q
@@ -127,25 +135,22 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_setup
-    SFLX_MOMZ(:,:) = 0.0_RP
-    SFLX_MOMX(:,:) = 0.0_RP
-    SFLX_MOMY(:,:) = 0.0_RP
-    SFLX_SWU (:,:) = 0.0_RP
-    SFLX_LWU (:,:) = 0.0_RP
-    SFLX_SH  (:,:) = 0.0_RP
-    SFLX_LH  (:,:) = 0.0_RP
-    SFLX_GH  (:,:) = 0.0_RP
-    SFLX_PREC(:,:) = 0.0_RP
-    SFLX_QV  (:,:) = 0.0_RP
+    implicit none
+
+    CNT_putAtm     = 0.0_RP
+    CNT_putLnd     = 0.0_RP
+    CNT_getDat2Atm = 0.0_RP
+    CNT_getDat2Lnd = 0.0_RP
 
     return
   end subroutine CPL_AtmLnd_setup
 
-  subroutine CPL_AtmLnd_calc
+  subroutine CPL_AtmLnd_solve
     use mod_const, only: &
       LH0 => CONST_LH0
     use mod_cpl_vars, only: &
-      SkinT
+      LST
+    implicit none
 
     ! parameters
     integer,  parameter :: nmax     = 1000      ! maximum iteration number
@@ -157,8 +162,8 @@ contains
     ! works
     integer :: i, j, n
 
-    real(RP) :: RES    (IA,JA)
-    real(RP) :: DRES   (IA,JA)
+    real(RP) :: RES  (IA,JA)
+    real(RP) :: DRES (IA,JA)
     real(RP) :: pMOMX(IA,JA)
     real(RP) :: pMOMY(IA,JA)
     real(RP) :: pMOMZ(IA,JA)
@@ -171,15 +176,43 @@ contains
     real(RP) :: oldRES (IA,JA) ! RES in previous step
     real(RP) :: redf ! reduced factor
 
+    ! average putAtm
+    DENS(:,:,:)   = DENS(:,:,:)   / CNT_putAtm
+    MOMX(:,:,:)   = MOMX(:,:,:)   / CNT_putAtm
+    MOMY(:,:,:)   = MOMY(:,:,:)   / CNT_putAtm
+    MOMZ(:,:,:)   = MOMZ(:,:,:)   / CNT_putAtm
+    RHOT(:,:,:)   = RHOT(:,:,:)   / CNT_putAtm
+    QTRC(:,:,:,:) = QTRC(:,:,:,:) / CNT_putAtm
+    PREC(:,:)     = PREC(:,:)     / CNT_putAtm
+    SWD(:,:)      = SWD(:,:)      / CNT_putAtm
+    LWD(:,:)      = LWD(:,:)      / CNT_putAtm
+
+    ! average putLnd
+    TG   (:,:)    = TG   (:,:)    / CNT_putLnd
+    QvEfc(:,:)    = QvEfc(:,:)    / CNT_putLnd
+    EMIT (:,:)    = EMIT (:,:)    / CNT_putLnd
+    ALB  (:,:)    = ALB  (:,:)    / CNT_putLnd
+    TCS  (:,:)    = TCS  (:,:)    / CNT_putLnd
+    DZg  (:,:)    = DZg  (:,:)    / CNT_putLnd
+    Z00  (:,:)    = Z00  (:,:)    / CNT_putLnd
+    Z0R  (:,:)    = Z0R  (:,:)    / CNT_putLnd
+    Z0S  (:,:)    = Z0S  (:,:)    / CNT_putLnd
+    Zt0  (:,:)    = Zt0  (:,:)    / CNT_putLnd
+    ZtR  (:,:)    = ZtR  (:,:)    / CNT_putLnd
+    ZtS  (:,:)    = ZtS  (:,:)    / CNT_putLnd
+    Ze0  (:,:)    = Ze0  (:,:)    / CNT_putLnd
+    ZeR  (:,:)    = ZeR  (:,:)    / CNT_putLnd
+    ZeS  (:,:)    = ZeS  (:,:)    / CNT_putLnd
+
     redf        = 1.0_RP
     oldRES(:,:) = 1.0E+5_RP
 
     do n = 1, nmax
 
       call ts_residual( &
-        RES, DRES,                 & ! (out)
+        RES, DRES,           & ! (out)
         pMOMX, pMOMY, pMOMZ, & ! (out)
-        pSWU, pLWU,            & ! (out)
+        pSWU, pLWU,          & ! (out)
         pSH, pLH, pGH        ) ! (out)
 
       do j = JS, JE
@@ -200,7 +233,7 @@ contains
         end if
 
         ! update surface temperature
-        SkinT(i,j) = SkinT(i,j) - redf * RES(i,j)/DRES(i,j)
+        LST(i,j) = LST(i,j) - redf * RES(i,j)/DRES(i,j)
 
         ! save residual in this step
         oldRES(i,j) = RES(i,j)
@@ -224,27 +257,39 @@ contains
     ! put residual in ground heat flux
     pGH(:,:) = pGH(:,:) - RES(:,:)
 
-    ! save each surface flux
-    SFLX_MOMX(:,:) = SFLX_MOMX(:,:) + pMOMX(:,:)
-    SFLX_MOMY(:,:) = SFLX_MOMY(:,:) + pMOMY(:,:)
-    SFLX_MOMZ(:,:) = SFLX_MOMZ(:,:) + pMOMZ(:,:)
-    SFLX_SWU (:,:) = SFLX_SWU (:,:) + pSWU (:,:)
-    SFLX_LWU (:,:) = SFLX_LWU (:,:) + pLWU (:,:)
-    SFLX_SH  (:,:) = SFLX_SH  (:,:) + pSH  (:,:)
-    SFLX_LH  (:,:) = SFLX_LH  (:,:) + pLH  (:,:)
-    SFLX_GH  (:,:) = SFLX_GH  (:,:) + pGH  (:,:)
+    ! save flux
+    SFLX_MOMX (:,:) = SFLX_MOMX (:,:) + pMOMX(:,:)
+    SFLX_MOMY (:,:) = SFLX_MOMY (:,:) + pMOMY(:,:)
+    SFLX_MOMZ (:,:) = SFLX_MOMZ (:,:) + pMOMZ(:,:)
+    SFLX_SWU  (:,:) = SFLX_SWU  (:,:) + pSWU (:,:)
+    SFLX_LWU  (:,:) = SFLX_LWU  (:,:) + pLWU (:,:)
+    SFLX_SH   (:,:) = SFLX_SH   (:,:) + pSH  (:,:)
+    SFLX_LH   (:,:) = SFLX_LH   (:,:) + pLH  (:,:)
+    SFLX_QVAtm(:,:) = SFLX_QVAtm(:,:) + pLH  (:,:)/LH0
 
-    ! precipitation flux
-    SFLX_PREC(:,:) = SFLX_PREC(:,:) + PREC   (:,:)
-    ! moisture flux
-    SFLX_QV  (:,:) = SFLX_QV  (:,:) + pLH  (:,:)/LH0
+    SFLX_GH   (:,:) = SFLX_GH   (:,:) + pGH  (:,:)
+    SFLX_PREC (:,:) = SFLX_PREC (:,:) + PREC (:,:)
+    SFLX_QVLnd(:,:) = SFLX_QVLnd(:,:) + pLH  (:,:)/LH0
+
+    ! counter
+    CNT_putAtm     = 0.0_RP
+    CNT_putLnd     = 0.0_RP
+    CNT_getDat2Atm = CNT_getDat2Atm + 1.0_RP
+    CNT_getDat2Lnd = CNT_getDat2Lnd + 1.0_RP
 
     return
-  end subroutine CPL_AtmLnd_calc
+  end subroutine CPL_AtmLnd_solve
+
+  subroutine CPL_AtmLnd_unsolve
+    implicit none
+
+    return
+  end subroutine CPL_AtmLnd_unsolve
 
   subroutine CPL_AtmLnd_putAtm( &
         pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (in)
         pQTRC, pPREC, pSWD, pLWD     ) ! (in)
+    implicit none
 
     real(RP), intent(in) :: pDENS  (KA,IA,JA)
     real(RP), intent(in) :: pMOMX  (KA,IA,JA)
@@ -256,15 +301,17 @@ contains
     real(RP), intent(in) :: pSWD(IA,JA)
     real(RP), intent(in) :: pLWD(IA,JA)
 
-    DENS(:,:,:)   = pDENS  (:,:,:)
-    MOMX(:,:,:)   = pMOMX  (:,:,:)
-    MOMY(:,:,:)   = pMOMY  (:,:,:)
-    MOMZ(:,:,:)   = pMOMZ  (:,:,:)
-    RHOT(:,:,:)   = pRHOT  (:,:,:)
-    QTRC(:,:,:,:) = pQTRC  (:,:,:,:)
-    PREC(:,:)     = pPREC  (:,:)
-    SWD (:,:)     = pSWD(:,:)
-    LWD (:,:)     = pLWD(:,:)
+    DENS(:,:,:)   = DENS(:,:,:)   + pDENS  (:,:,:)
+    MOMX(:,:,:)   = MOMX(:,:,:)   + pMOMX  (:,:,:)
+    MOMY(:,:,:)   = MOMY(:,:,:)   + pMOMY  (:,:,:)
+    MOMZ(:,:,:)   = MOMZ(:,:,:)   + pMOMZ  (:,:,:)
+    RHOT(:,:,:)   = RHOT(:,:,:)   + pRHOT  (:,:,:)
+    QTRC(:,:,:,:) = QTRC(:,:,:,:) + pQTRC  (:,:,:,:)
+    PREC(:,:)     = PREC(:,:)     + pPREC  (:,:)
+    SWD (:,:)     = SWD (:,:)     + pSWD(:,:)
+    LWD (:,:)     = LWD (:,:)     + pLWD(:,:)
+
+    CNT_putAtm = CNT_putAtm + 1.0_RP
     
     return
   end subroutine CPL_AtmLnd_putAtm
@@ -272,6 +319,7 @@ contains
   subroutine CPL_AtmLnd_putLnd( &
       pTG, pQvEfc, pEMIT, pALB, pTCS, pDZg,                & ! (in)
       pZ00, pZ0R, pZ0S, pZt0, pZtR, pZtS, pZe0, pZeR, pZeS ) ! (in)
+    implicit none
 
     real(RP), intent(in) :: pTG   (IA,JA)
     real(RP), intent(in) :: pQvEfc(IA,JA)
@@ -289,81 +337,122 @@ contains
     real(RP), intent(in) :: pZeR  (IA,JA)
     real(RP), intent(in) :: pZeS  (IA,JA)
 
-    TG   (:,:) = pTG   (:,:)
-    QvEfc(:,:) = pQvEfc(:,:)
-    EMIT (:,:) = pEMIT (:,:)
-    ALB  (:,:) = pALB  (:,:)
-    TCS  (:,:) = pTCS  (:,:)
-    DZg  (:,:) = pDZg  (:,:)
-    Z00  (:,:) = pZ00  (:,:)
-    Z0R  (:,:) = pZ0R  (:,:)
-    Z0S  (:,:) = pZ0S  (:,:)
-    Zt0  (:,:) = pZt0  (:,:)
-    ZtR  (:,:) = pZtR  (:,:)
-    ZtS  (:,:) = pZtS  (:,:)
-    Ze0  (:,:) = pZe0  (:,:)
-    ZeR  (:,:) = pZeR  (:,:)
-    ZeS  (:,:) = pZeS  (:,:)
+    TG   (:,:) = TG   (:,:) + pTG   (:,:)
+    QvEfc(:,:) = QvEfc(:,:) + pQvEfc(:,:)
+    EMIT (:,:) = EMIT (:,:) + pEMIT (:,:)
+    ALB  (:,:) = ALB  (:,:) + pALB  (:,:)
+    TCS  (:,:) = TCS  (:,:) + pTCS  (:,:)
+    DZg  (:,:) = DZg  (:,:) + pDZg  (:,:)
+    Z00  (:,:) = Z00  (:,:) + pZ00  (:,:)
+    Z0R  (:,:) = Z0R  (:,:) + pZ0R  (:,:)
+    Z0S  (:,:) = Z0S  (:,:) + pZ0S  (:,:)
+    Zt0  (:,:) = Zt0  (:,:) + pZt0  (:,:)
+    ZtR  (:,:) = ZtR  (:,:) + pZtR  (:,:)
+    ZtS  (:,:) = ZtS  (:,:) + pZtS  (:,:)
+    Ze0  (:,:) = Ze0  (:,:) + pZe0  (:,:)
+    ZeR  (:,:) = ZeR  (:,:) + pZeR  (:,:)
+    ZeS  (:,:) = ZeS  (:,:) + pZeS  (:,:)
+
+    CNT_putLnd = CNT_putLnd + 1.0_RP
 
     return
   end subroutine CPL_AtmLnd_putLnd
 
-  subroutine CPL_AtmLnd_getFlx2Atm( &
-      pSFLX_MOMX, pSFLX_MOMY, pSFLX_MOMZ,      & ! (out)
-      pSFLX_SWU, pSFLX_LWU, pSFLX_SH, pSFLX_LH ) ! (out)
+  subroutine CPL_AtmLnd_getDat2Atm( &
+      pSFLX_MOMX, pSFLX_MOMY, pSFLX_MOMZ, pSFLX_SWU, pSFLX_LWU, & ! (out)
+      pSFLX_SH, pSFLX_LH, pSFLX_QVAtm                           ) ! (out)
+    implicit none
 
-    real(RP), intent(out) :: pSFLX_MOMX(IA,JA)
-    real(RP), intent(out) :: pSFLX_MOMY(IA,JA)
-    real(RP), intent(out) :: pSFLX_MOMZ(IA,JA)
-    real(RP), intent(out) :: pSFLX_SWU (IA,JA)
-    real(RP), intent(out) :: pSFLX_LWU (IA,JA)
-    real(RP), intent(out) :: pSFLX_SH  (IA,JA)
-    real(RP), intent(out) :: pSFLX_LH  (IA,JA)
+    real(RP), intent(out) :: pSFLX_MOMX (IA,JA)
+    real(RP), intent(out) :: pSFLX_MOMY (IA,JA)
+    real(RP), intent(out) :: pSFLX_MOMZ (IA,JA)
+    real(RP), intent(out) :: pSFLX_SWU  (IA,JA)
+    real(RP), intent(out) :: pSFLX_LWU  (IA,JA)
+    real(RP), intent(out) :: pSFLX_SH   (IA,JA)
+    real(RP), intent(out) :: pSFLX_LH   (IA,JA)
+    real(RP), intent(out) :: pSFLX_QVAtm(IA,JA)
 
-    pSFLX_MOMX(:,:) = SFLX_MOMX(:,:)
-    pSFLX_MOMY(:,:) = SFLX_MOMY(:,:)
-    pSFLX_MOMZ(:,:) = SFLX_MOMZ(:,:)
-    pSFLX_SWU (:,:) = SFLX_SWU (:,:)
-    pSFLX_LWU (:,:) = SFLX_LWU (:,:)
-    pSFLX_SH  (:,:) = SFLX_SH  (:,:)
-    pSFLX_LH  (:,:) = SFLX_LH  (:,:)
-
-    return
-  end subroutine CPL_AtmLnd_getFlx2Atm
-
-  subroutine CPL_AtmLnd_getFlx2Lnd( &
-      pSFLX_GH, pSFLX_PREC, pSFLX_QV ) ! (out)
-
-    real(RP), intent(out) :: pSFLX_GH  (IA,JA)
-    real(RP), intent(out) :: pSFLX_PREC(IA,JA)
-    real(RP), intent(out) :: pSFLX_QV  (IA,JA)
-
-    pSFLX_GH  (:,:) = SFLX_GH  (:,:)
-    pSFLX_PREC(:,:) = SFLX_PREC(:,:)
-    pSFLX_QV  (:,:) = SFLX_QV  (:,:)
+    pSFLX_MOMX (:,:) = SFLX_MOMX (:,:) / CNT_getDat2Atm
+    pSFLX_MOMY (:,:) = SFLX_MOMY (:,:) / CNT_getDat2Atm
+    pSFLX_MOMZ (:,:) = SFLX_MOMZ (:,:) / CNT_getDat2Atm
+    pSFLX_SWU  (:,:) = SFLX_SWU  (:,:) / CNT_getDat2Atm
+    pSFLX_LWU  (:,:) = SFLX_LWU  (:,:) / CNT_getDat2Atm
+    pSFLX_SH   (:,:) = SFLX_SH   (:,:) / CNT_getDat2Atm
+    pSFLX_LH   (:,:) = SFLX_LH   (:,:) / CNT_getDat2Atm
+    pSFLX_QVAtm(:,:) = SFLX_QVAtm(:,:) / CNT_getDat2Atm
 
     return
-  end subroutine CPL_AtmLnd_getFlx2Lnd
+  end subroutine CPL_AtmLnd_getDat2Atm
 
-  subroutine CPL_AtmLnd_flushFlx2Atm
-    SFLX_MOMX(:,:) = 0.0_RP
-    SFLX_MOMY(:,:) = 0.0_RP
-    SFLX_MOMZ(:,:) = 0.0_RP
-    SFLX_SWU (:,:) = 0.0_RP
-    SFLX_LWU (:,:) = 0.0_RP
-    SFLX_SH  (:,:) = 0.0_RP
-    SFLX_LH  (:,:) = 0.0_RP
+  subroutine CPL_AtmLnd_getDat2Lnd( &
+      pSFLX_GH, pSFLX_PREC, pSFLX_QVLnd ) ! (out)
+    implicit none
 
-    return
-  end subroutine CPL_AtmLnd_flushFlx2Atm
+    real(RP), intent(out) :: pSFLX_GH   (IA,JA)
+    real(RP), intent(out) :: pSFLX_PREC (IA,JA)
+    real(RP), intent(out) :: pSFLX_QVLnd(IA,JA)
 
-  subroutine CPL_AtmLnd_flushFlx2Lnd
-    SFLX_GH  (:,:) = 0.0_RP
-    SFLX_PREC(:,:) = 0.0_RP
-    SFLX_QV  (:,:) = 0.0_RP
+    pSFLX_GH   (:,:) = SFLX_GH   (:,:) / CNT_getDat2Lnd
+    pSFLX_PREC (:,:) = SFLX_PREC (:,:) / CNT_getDat2Lnd
+    pSFLX_QVLnd(:,:) = SFLX_QVLnd(:,:) / CNT_getDat2Lnd
 
     return
-  end subroutine CPL_AtmLnd_flushFlx2Lnd
+  end subroutine CPL_AtmLnd_getDat2Lnd
+
+  subroutine CPL_AtmLnd_flushDat2Atm
+    implicit none
+
+    DENS(:,:,:)    = 0.0_RP
+    MOMX(:,:,:)    = 0.0_RP
+    MOMY(:,:,:)    = 0.0_RP
+    MOMZ(:,:,:)    = 0.0_RP
+    RHOT(:,:,:)    = 0.0_RP
+    QTRC(:,:,:,:)  = 0.0_RP
+    PREC(:,:)      = 0.0_RP
+    SWD (:,:)      = 0.0_RP
+    LWD (:,:)      = 0.0_RP
+
+    SFLX_MOMX (:,:) = 0.0_RP
+    SFLX_MOMY (:,:) = 0.0_RP
+    SFLX_MOMZ (:,:) = 0.0_RP
+    SFLX_SWU  (:,:) = 0.0_RP
+    SFLX_LWU  (:,:) = 0.0_RP
+    SFLX_SH   (:,:) = 0.0_RP
+    SFLX_LH   (:,:) = 0.0_RP
+    SFLX_QVAtm(:,:) = 0.0_RP
+
+    CNT_getDat2Atm = 0.0_RP
+
+    return
+  end subroutine CPL_AtmLnd_flushDat2Atm
+
+  subroutine CPL_AtmLnd_flushDat2Lnd
+    implicit none
+
+    TG   (:,:) = 0.0_RP
+    QvEfc(:,:) = 0.0_RP
+    EMIT (:,:) = 0.0_RP
+    ALB  (:,:) = 0.0_RP
+    TCS  (:,:) = 0.0_RP
+    DZg  (:,:) = 0.0_RP
+    Z00  (:,:) = 0.0_RP
+    Z0R  (:,:) = 0.0_RP
+    Z0S  (:,:) = 0.0_RP
+    Zt0  (:,:) = 0.0_RP
+    ZtR  (:,:) = 0.0_RP
+    ZtS  (:,:) = 0.0_RP
+    Ze0  (:,:) = 0.0_RP
+    ZeR  (:,:) = 0.0_RP
+    ZeS  (:,:) = 0.0_RP
+
+    SFLX_GH   (:,:) = 0.0_RP
+    SFLX_PREC (:,:) = 0.0_RP
+    SFLX_QVLnd(:,:) = 0.0_RP
+
+    CNT_getDat2Lnd = 0.0_RP
+
+    return
+  end subroutine CPL_AtmLnd_flushDat2Lnd
 
 ! --- Private procedure
 
@@ -380,7 +469,8 @@ contains
     use mod_grid, only: &
       CZ => GRID_CZ
     use mod_cpl_vars, only: &
-      SkinT
+      LST
+    implicit none
 
     real(RP), intent(out) :: RES  (IA,JA)
     real(RP), intent(out) :: DRES (IA,JA)
@@ -407,7 +497,7 @@ contains
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
     real(RP) :: dCm, dCh, dCe
 
-    real(RP) :: dSkinT
+    real(RP) :: dLST
     real(RP) :: SatQvs, dSatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dpLWU, dpGH, dpSH1, dpSH2, dpLH1, dpLH2
 
@@ -437,10 +527,10 @@ contains
       Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,                             & ! (out)
-          ( pta(i,j)   + pta(i+1,j)   ) * 0.5_RP, & ! (in)
-          ( SkinT(i,j) + SkinT(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze                ) ! (in)
+          Cm, Ch, Ce,                         & ! (out)
+          ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
+          ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
+          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
 
@@ -457,10 +547,10 @@ contains
       Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,                             & ! (out)
-          ( pta(i,j)   + pta(i,j+1)   ) * 0.5_RP, & ! (in)
-          ( SkinT(i,j) + SkinT(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze                ) ! (in)
+          Cm, Ch, Ce,                         & ! (out)
+          ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
+          ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
+          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
 
@@ -478,39 +568,39 @@ contains
 
       call bulkcoef_uno( &
           Cm, Ch, Ce,              & ! (out)
-          pta(i,j), SkinT(i,j),    & ! (in)
+          pta(i,j), LST(i,j),      & ! (in)
           Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
 
       ! saturation at surface
-      SatQvs = satmixr( SkinT(i,j) )
+      SatQvs = satmixr( LST(i,j) )
 
       pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
 
-      pSH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( SkinT(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+      pSH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
       pLH(i,j) = LH0   * Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( SatQvs - QTRC(KS,i,j,I_QV) ) * QvEfc(i,j)
-      pGH(i,j) = - 2.0_RP * TCS(i,j) * ( SkinT(i,j) - TG(i,j) ) / DZg(i,j)
+      pGH(i,j) = - 2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j) ) / DZg(i,j)
 
       pSWU(i,j) = - ALB(i,j) * SWD(i,j)
-      pLWU(i,j) =   EMIT(i,j) * STB * SkinT(i,j)**4
+      pLWU(i,j) =   EMIT(i,j) * STB * LST(i,j)**4
 
       ! calculation for residual
       RES(i,j) = - ( SWD(i,j) + pSWU(i,j) + LWD(i,j) + pLWU(i,j) ) &
                  - pSH(i,j) - pLH(i,j) + pGH(i,j)
 
-      dSkinT  = SkinT(i,j) + dTs
-      dSatQvs = dSatQvs * LH0 / ( Rvap * SkinT(i,j)**2 )
+      dLST  = LST(i,j) + dTs
+      dSatQvs = dSatQvs * LH0 / ( Rvap * LST(i,j)**2 )
 
       call bulkcoef_uno( &
           dCm, dCh, dCe,           & ! (out)
-          pta(i,j), dSkinT,        & ! (in)
+          pta(i,j), dLST,          & ! (in)
           Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
 
-      dpSH1 = CPdry * (dCh-Ch)/dTs * min(max(Uabs,U_minH),U_maxH) * ( SkinT(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+      dpSH1 = CPdry * (dCh-Ch)/dTs * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
       dpSH2 = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * DENS(KS,i,j)
       dpLH1 = LH0 * (dCe-Ce)/dTs * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( SatQvs - QTRC(KS,i,j,I_QV) ) * QvEfc(i,j)
       dpLH2 = LH0 * Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * dSatQvs * QvEfc(i,j)
 
-      dpLWU = 4.0_RP * EMIT(i,j) * STB * SkinT(i,j)**3
+      dpLWU = 4.0_RP * EMIT(i,j) * STB * LST(i,j)**3
       dpGH  = - 2.0_RP * TCS(i,j) / DZg(i,j)
 
       ! calculation for d(residual)/dTs
@@ -528,6 +618,7 @@ contains
     use mod_const, only : &
       GRAV   => CONST_GRAV,  &
       KARMAN => CONST_KARMAN
+    implicit none
 
     ! argument
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
@@ -609,7 +700,7 @@ contains
     end do
 
     if( n > 3 .and. n > nmax ) then
-      write(*,*) 'Error: reach maximum iteration.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration.'
     end if
 
     Cm = C0 * fm
@@ -628,6 +719,7 @@ contains
     use mod_const, only : &
       P00    => CONST_PRE00, &
       EPSvap => CONST_EPSvap
+    implicit none
 
     ! argument
     real(8), intent(in) :: temp ! temperature [K]
@@ -646,6 +738,7 @@ contains
       LH0   => CONST_LH0,   &
       Rvap  => CONST_Rvap,  &
       PSAT0 => CONST_PSAT0
+    implicit none
 
     ! argument
     real(8), intent(in) :: temp ! temperature [K]

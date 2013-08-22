@@ -38,6 +38,7 @@ program scaleles3
      TIME_DOATMOS_step,    &
      TIME_DOLAND_step,     &
      TIME_DOOCEAN_step,    &
+     TIME_DOCPL_calc,      &
      TIME_DOATMOS_restart, &
      TIME_DOLAND_restart,  &
      TIME_DOOCEAN_restart, &
@@ -86,6 +87,9 @@ program scaleles3
   use mod_ocean_vars, only: &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
+  use mod_cpl, only: &
+     CPL_setup, &
+     CPL_calc
   use mod_user, only: &
      USER_setup, &
      USER_step
@@ -95,6 +99,8 @@ program scaleles3
      PAPI_rapstop,  &
      PAPI_rapreport
 #endif
+!!!debug
+  use mod_temp
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -157,14 +163,17 @@ program scaleles3
   ! setup monitor I/O
   call MONIT_setup
 
+  ! setup atmosphere
+  call ATMOS_setup
+
   ! setup land
   call LAND_setup
 
   ! setup ocean
   call OCEAN_setup
 
-  ! setup atmosphere
-  call ATMOS_setup
+  ! setup coupler
+  call CPL_setup
 
   ! setup user-defined procedure
   call USER_setup
@@ -196,6 +205,7 @@ program scaleles3
     if ( TIME_DOATMOS_step ) call ATMOS_step
     if ( TIME_DOLAND_step  ) call LAND_step
     if ( TIME_DOOCEAN_step ) call OCEAN_step
+    if ( TIME_DOCPL_calc   ) call CPL_calc
 
     ! time advance
     call TIME_advance
@@ -203,6 +213,8 @@ program scaleles3
     ! history&monitor file output
     call HIST_write
     call MONIT_write('MAIN')
+!!!debug
+call TEMPLOG
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write

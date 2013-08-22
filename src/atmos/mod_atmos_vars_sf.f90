@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2012-03-27 (H.Yashiro)  [new]
+!! @li      2013-08-31 (T.Yamaura)  [mod]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -52,13 +53,14 @@ module mod_atmos_vars_sf
   real(RP), public, save :: SWD (IA,JA) ! downward short-wave radiation flux (upward positive) [W/m2]
   real(RP), public, save :: LWD (IA,JA) ! downward long-wave radiation flux (upward positive) [W/m2]
 
-  real(RP), public, save :: SFLX_MOMZ(IA,JA) ! momentum z [kg/s/m2]
-  real(RP), public, save :: SFLX_MOMX(IA,JA) ! momentum x [kg/s/m2]
-  real(RP), public, save :: SFLX_MOMY(IA,JA) ! momentum y [kg/s/m2]
-  real(RP), public, save :: SFLX_SWU (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_LWU (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_SH  (IA,JA) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_LH  (IA,JA) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_MOMZ (IA,JA) ! momentum z [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMX (IA,JA) ! momentum x [kg/s/m2]
+  real(RP), public, save :: SFLX_MOMY (IA,JA) ! momentum y [kg/s/m2]
+  real(RP), public, save :: SFLX_SWU  (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_LWU  (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_SH   (IA,JA) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_LH   (IA,JA) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_QVAtm(IA,JA) ! moisture flux for atmosphere [kg/m2/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -115,13 +117,14 @@ contains
     SWD (:,:) = 0.0_RP
     LWD (:,:) = 0.0_RP
 
-    SFLX_MOMZ(:,:) = 0.0_RP
-    SFLX_MOMX(:,:) = 0.0_RP
-    SFLX_MOMY(:,:) = 0.0_RP
-    SFLX_SWU (:,:) = 0.0_RP
-    SFLX_LWU (:,:) = 0.0_RP
-    SFLX_SH  (:,:) = 0.0_RP
-    SFLX_LH  (:,:) = 0.0_RP
+    SFLX_MOMZ (:,:) = 0.0_RP
+    SFLX_MOMX (:,:) = 0.0_RP
+    SFLX_MOMY (:,:) = 0.0_RP
+    SFLX_SWU  (:,:) = 0.0_RP
+    SFLX_LWU  (:,:) = 0.0_RP
+    SFLX_SH   (:,:) = 0.0_RP
+    SFLX_LH   (:,:) = 0.0_RP
+    SFLX_QVAtm(:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_vars_sf_setup

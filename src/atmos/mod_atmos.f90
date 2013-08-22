@@ -10,6 +10,7 @@
 !! @li      2011-11-11 (H.Yashiro) [new]
 !! @li      2012-02-15 (H.Yashiro) [add] Microphysics
 !! @li      2012-03-23 (H.Yashiro) [mod] Cleaning
+!! @li      2013-08-31 (T.Yamaura) [add] Coupler
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -139,6 +140,7 @@ contains
     QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
+
   end subroutine ATMOS_setup
 
   !-----------------------------------------------------------------------------
@@ -146,11 +148,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_step
     use mod_time, only: &
-       do_dyn    => TIME_DOATMOS_DYN,    &
-       do_phy_sf => TIME_DOATMOS_PHY_SF, &
-       do_phy_tb => TIME_DOATMOS_PHY_TB, &
-       do_phy_mp => TIME_DOATMOS_PHY_MP, &
-       do_phy_rd => TIME_DOATMOS_PHY_RD
+       do_dyn        => TIME_DOATMOS_DYN,    &
+       do_phy_sf     => TIME_DOATMOS_PHY_SF, &
+       do_phy_tb     => TIME_DOATMOS_PHY_TB, &
+       do_phy_mp     => TIME_DOATMOS_PHY_MP, &
+       do_phy_rd     => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
        DENS,    & 
        MOMX,    & 
@@ -164,23 +166,24 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp, &
-       sw_dyn    => ATMOS_sw_dyn,    &
-       sw_phy_sf => ATMOS_sw_phy_sf, &
-       sw_phy_tb => ATMOS_sw_phy_tb, &
-       sw_phy_mp => ATMOS_sw_phy_mp, &
-       sw_phy_rd => ATMOS_sw_phy_rd, &
+       sw_dyn        => ATMOS_sw_dyn,        &
+       sw_phy_sf     => ATMOS_sw_phy_sf,     &
+       sw_phy_tb     => ATMOS_sw_phy_tb,     &
+       sw_phy_mp     => ATMOS_sw_phy_mp,     &
+       sw_phy_rd     => ATMOS_sw_phy_rd,     &
        ATMOS_vars_history
     use mod_atmos_vars_sf, only: &
-       PREC,      &
-       SWD,       &
-       LWD,       &
-       SFLX_MOMX, &
-       SFLX_MOMY, &
-       SFLX_MOMZ, &
-       SFLX_SWU,  &
-       SFLX_LWU,  &
-       SFLX_SH,   &
-       SFLX_LH
+       PREC,       &
+       SWD,        &
+       LWD,        &
+       SFLX_MOMX,  &
+       SFLX_MOMY,  &
+       SFLX_MOMZ,  &
+       SFLX_SWU,   &
+       SFLX_LWU,   &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_QVAtm
     use mod_atmos_dyn, only: &
        ATMOS_DYN
     use mod_atmos_phy_sf, only: &
@@ -193,15 +196,25 @@ contains
        ATMOS_PHY_RD
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update
+    use mod_cpl_vars, only: &
+       sw_AtmLnd => CPL_sw_AtmLnd
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_putAtm,      &
-       CPL_AtmLnd_getFlx2Atm,  &
-       CPL_AtmLnd_flushFlx2Atm
+       CPL_AtmLnd_getDat2Atm,  &
+       CPL_AtmLnd_flushDat2Atm
     implicit none
     !---------------------------------------------------------------------------
 
     !########## Reference State ###########
     call ATMOS_REFSTATE_update
+
+    !########## from Coupler ##########
+    if ( sw_AtmLnd ) then
+       call CPL_AtmLnd_getDat2Atm( &
+          SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, SFLX_SWU, SFLX_LWU, &
+          SFLX_SH, SFLX_LH, SFLX_QVAtm                         )
+       call CPL_AtmLnd_flushDat2Atm
+    end if
 
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
@@ -209,11 +222,6 @@ contains
        call ATMOS_PHY_SF( do_phy_sf, .true. )
        call TIME_rapend  ('ATM SurfaceFlux')
     end if
-
-    call CPL_AtmLnd_getFlx2Atm( &
-       SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ,     &
-       SFLX_SWU, SFLX_LWU, SFLX_SH, SFLX_LH )
-    call CPL_AtmLnd_flushFlx2Atm
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
@@ -243,10 +251,12 @@ contains
        call TIME_rapend  ('ATM Dynamics')
     endif
 
-    !########## for Coupler ##########
-    call CPL_AtmLnd_putATM( &
-       DENS, MOMX, MOMY, MOMZ,    &
-       RHOT, QTRC, PREC, SWD, LWD )
+    !########## to Coupler ##########
+    if ( sw_AtmLnd ) then
+       call CPL_AtmLnd_putATM( &
+          DENS, MOMX, MOMY, MOMZ,    &
+          RHOT, QTRC, PREC, SWD, LWD )
+    endif
 
     !########## History & Monitor ##########
     call TIME_rapstart('ATM History Vars')

@@ -58,6 +58,9 @@ contains
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_RD
+    use mod_atmos_vars_sf, only: &
+       SWD, &
+       LWD
     implicit none
     !---------------------------------------------------------------------------
 
@@ -70,15 +73,33 @@ contains
        call PRC_MPIstop
     endif
 
+    SWD(:,:) = -300.0_RP
+    LWD(:,:) = -300.0_RP
+
     return
   end subroutine ATMOS_PHY_RD_setup
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD
+    use mod_const, only: &
+       PI => CONST_PI
+    use mod_time, only: &
+       dt   => TIME_DTSEC_ATMOS_PHY_RD, &
+       step => TIME_NOWSTEP
+    use mod_atmos_vars_sf, only: &
+       SWD, &
+       LWD
     implicit none
+
+    real(RP) :: factor
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(dummy)'
+
+    factor = ( 1.0_RP - cos ( dble(step)*dt/86400.0_RP * 2.0_RP*PI ) ) * 0.5_RP
+    SWD(:,:) = - 900.0_RP * factor
+    LWD(:,:) = - 400 - 10.0_RP * factor
 
     return
   end subroutine ATMOS_PHY_RD

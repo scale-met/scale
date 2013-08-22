@@ -5,6 +5,7 @@
 !!          Container for land variables
 !!
 !! @author Team SCALE
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -51,9 +52,9 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: SFLX_GH  (IA,JA) ! ground heat flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_PREC(IA,JA) ! precipitation flux [kg/m2/s]
-  real(RP), public, save :: SFLX_QV  (IA,JA) ! moisture flux [kg/m2/s]
+  real(RP), public, save :: SFLX_GH  ( IA,JA) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, save :: SFLX_PREC (IA,JA) ! precipitation flux [kg/m2/s]
+  real(RP), public, save :: SFLX_QVLnd(IA,JA) ! moisture flux [kg/m2/s]
 
   real(RP), public, save :: TG   (IA,JA) ! soil temperature [K]
   real(RP), public, save :: QvEfc(IA,JA) ! efficiency of evaporation [no unit]
@@ -219,7 +220,11 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
-    TG   (:,:) = 285.0_RP
+    SFLX_GH   (:,:) = 0.0_RP
+    SFLX_PREC (:,:) = 0.0_RP
+    SFLX_QVLnd(:,:) = 0.0_RP
+
+    TG   (:,:) = 300.0_RP
     QvEfc(:,:) = 1.0_RP
     EMIT (:,:) = 0.98_RP
     ALB  (:,:) = 0.33_RP

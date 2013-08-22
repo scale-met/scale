@@ -5,6 +5,7 @@
 !!          Container for coupler variables
 !!
 !! @author Team SCALE
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -46,6 +47,9 @@ module mod_cpl_vars
   !
   !++ Public parameters & variables
   !
+  real(RP), public, save :: LST  (IA,JA) ! Land Surface Temperature [K]
+  real(RP), public, save :: SST  (IA,JA) ! Sea Surface Temperature [K]
+
   real(RP), public, save :: SkinT(IA,JA) ! Ground Skin Temperature [K]
   real(RP), public, save :: SkinW(IA,JA) ! Ground Skin Water       [kg/m2]
   real(RP), public, save :: SnowQ(IA,JA) ! Ground Snow amount      [kg/m2]
@@ -72,7 +76,9 @@ module mod_cpl_vars
                  'kg/m2', &
                  'K'      /
 
-  logical,                   public, save :: CPL_sw_restart       !< output restart?
+  character(len=IO_SYSCHR),  public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
+  logical,                   public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
+  logical,                   public, save :: CPL_sw_AtmLnd_restart   !< output atmos-land coupler restart?
 
   character(len=IO_FILECHR), public, save :: CPL_RESTART_IN_BASENAME = '' !< basename of the input file
 
@@ -86,7 +92,7 @@ module mod_cpl_vars
   !
   logical,                   private, save :: CPL_RESTART_OUTPUT       = .false.             !< output restart file?
   character(len=IO_FILECHR), private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'       !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE3 LAND VARS.' !< title    of the output file
+  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE3 CPL VARS.'  !< title    of the output file
   character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   logical,                   private, save :: CPL_VARS_CHECKRANGE      = .false.
@@ -102,9 +108,43 @@ contains
        PRC_MPIstop
     implicit none
 
+    NAMELIST / PARAM_CPL / &
+       CPL_TYPE_AtmLnd
+
     integer :: ierr
     integer :: ip
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL)
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] selected components'
+
+    if ( CPL_TYPE_AtmLnd /= 'OFF' .AND. CPL_TYPE_AtmLnd /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : ON'
+       CPL_sw_AtmLnd = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : OFF'
+       CPL_sw_AtmLnd = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
+
+    LST  (:,:) = 300.0_RP
+    SST  (:,:) = 300.0_RP
 
     SkinT(:,:) = 300.0_RP
     SkinW(:,:) = 0.0_RP
