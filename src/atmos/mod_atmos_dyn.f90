@@ -1766,78 +1766,63 @@ call TIME_rapstart   ('DYN-set')
           call COMM_wait( num_diff_pt0(:,:,:,I_DENS,ZDIR), 1 )
           call COMM_wait( num_diff_pt0(:,:,:,I_DENS,XDIR), 2 )
           call COMM_wait( num_diff_pt0(:,:,:,I_DENS,YDIR), 3 )
+          call calc_numdiff4(     &
+               num_diff_pt1,      & ! (out)
+               num_diff_pt0,      & ! (in)
+               CNZ4(:,:,1),       & ! (in)
+               CNX4(:,:,1),       & ! (in)
+               CNY4(:,:,1),       & ! (in)
+               I_DENS,            & ! (in)
+               KE                 ) ! (in)
+
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,ZDIR), 4 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,XDIR), 5 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMZ,YDIR), 6 )
+          call calc_numdiff4(     &
+               num_diff_pt1,      & ! (out)
+               num_diff_pt0,      & ! (in)
+               CNZ4(:,:,2),       & ! (in)
+               CNX4(:,:,1),       & ! (in)
+               CNY4(:,:,1),       & ! (in)
+               I_MOMZ,            & ! (in)
+               KE-1               ) ! (in)
+
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,ZDIR), 7 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,XDIR), 8 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMX,YDIR), 9 )
+          call calc_numdiff4(     &
+               num_diff_pt1,      & ! (out)
+               num_diff_pt0,      & ! (in)
+               CNZ4(:,:,1),       & ! (in)
+               CNX4(:,:,2),       & ! (in)
+               CNY4(:,:,1),       & ! (in)
+               I_MOMX,            & ! (in)
+               KE                 ) ! (in)
+
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,ZDIR), 10 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,XDIR), 11 )
           call COMM_wait( num_diff_pt0(:,:,:,I_MOMY,YDIR), 12 )
+          call calc_numdiff4(     &
+               num_diff_pt1,      & ! (out)
+               num_diff_pt0,      & ! (in)
+               CNZ4(:,:,1),       & ! (in)
+               CNX4(:,:,1),       & ! (in)
+               CNY4(:,:,2),       & ! (in)
+               I_MOMY,            & ! (in)
+               KE                 ) ! (in)
+
           call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,ZDIR), 13 )
           call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,XDIR), 14 )
           call COMM_wait( num_diff_pt0(:,:,:,I_RHOT,YDIR), 15 )
+          call calc_numdiff4(     &
+               num_diff_pt1,      & ! (out)
+               num_diff_pt0,      & ! (in)
+               CNZ4(:,:,1),       & ! (in)
+               CNX4(:,:,1),       & ! (in)
+               CNY4(:,:,1),       & ! (in)
+               I_RHOT,            & ! (in)
+               KE                 ) ! (in)
 
-
-
-          do JJS = JS, JE, JBLOCK
-          JJE = JJS+JBLOCK-1
-          do IIS = IS, IE, IBLOCK
-          IIE = IIS+IBLOCK-1
-
-             call calc_numdiff4(     &
-                  num_diff_pt1,      & ! (out)
-                  num_diff_pt0,      & ! (in)
-                  CNZ4(:,:,1),       & ! (in)
-                  CNX4(:,:,1),       & ! (in)
-                  CNY4(:,:,1),       & ! (in)
-                  I_DENS,            & ! (in)
-                  KE,                & ! (in)
-                  IIS, IIE, JJS, JJE ) ! (in)
-
-             call calc_numdiff4(     &
-                  num_diff_pt1,      & ! (out)
-                  num_diff_pt0,      & ! (in)
-                  CNZ4(:,:,2),       & ! (in)
-                  CNX4(:,:,1),       & ! (in)
-                  CNY4(:,:,1),       & ! (in)
-                  I_MOMZ,            & ! (in)
-                  KE-1,              & ! (in)
-                  IIS, IIE, JJS, JJE ) ! (in)
-
-             call calc_numdiff4(     &
-                  num_diff_pt1,      & ! (out)
-                  num_diff_pt0,      & ! (in)
-                  CNZ4(:,:,1),       & ! (in)
-                  CNX4(:,:,2),       & ! (in)
-                  CNY4(:,:,1),       & ! (in)
-                  I_MOMX,            & ! (in)
-                  KE,                & ! (in)
-                  IIS, IIE, JJS, JJE ) ! (in)
-
-             call calc_numdiff4(     &
-                  num_diff_pt1,      & ! (out)
-                  num_diff_pt0,      & ! (in)
-                  CNZ4(:,:,1),       & ! (in)
-                  CNX4(:,:,1),       & ! (in)
-                  CNY4(:,:,2),       & ! (in)
-                  I_MOMY,            & ! (in)
-                  KE,                & ! (in)
-                  IIS, IIE, JJS, JJE ) ! (in)
-
-             call calc_numdiff4(     &
-                  num_diff_pt1,      & ! (out)
-                  num_diff_pt0,      & ! (in)
-                  CNZ4(:,:,1),       & ! (in)
-                  CNX4(:,:,1),       & ! (in)
-                  CNY4(:,:,1),       & ! (in)
-                  I_RHOT,            & ! (in)
-                  KE,                & ! (in)
-                  IIS, IIE, JJS, JJE ) ! (in)
-
-          end do
-          end do
 
           ! swap pointer target
           tmp_pt => num_diff_pt1
@@ -2633,23 +2618,14 @@ call TIME_rapstart   ('DYN-fct')
              call COMM_wait( num_diff_pt0(:,:,:,1,XDIR), 2 )
              call COMM_wait( num_diff_pt0(:,:,:,1,YDIR), 3 )
 
-             do JJS = JS, JE, JBLOCK
-             JJE = JJS+JBLOCK-1
-             do IIS = IS, IE, IBLOCK
-             IIE = IIS+IBLOCK-1
-
-                call calc_numdiff4(     &
-                     num_diff_pt1,      & ! (out)
-                     num_diff_pt0,      & ! (in)
-                     CNZ4(:,:,1),       & ! (in)
-                     CNX4(:,:,1),       & ! (in)
-                     CNY4(:,:,1),       & ! (in)
-                     1,                 & ! (in)
-                     KE,                & ! (in)
-                     IIS, IIE, JJS, JJE ) ! (in)
-
-             end do
-             end do
+             call calc_numdiff4(     &
+                  num_diff_pt1,      & ! (out)
+                  num_diff_pt0,      & ! (in)
+                  CNZ4(:,:,1),       & ! (in)
+                  CNX4(:,:,1),       & ! (in)
+                  CNY4(:,:,1),       & ! (in)
+                  1,                 & ! (in)
+                  KE                 ) ! (in)
 
              ! swap pointer target
              tmp_pt => num_diff_pt1
@@ -3015,8 +2991,7 @@ call TIME_rapend     ('DYN-fct')
        CNX4,         & ! (in)
        CNY4,         & ! (in)
        I_val,        & ! (in)
-       k1,           & ! (in)
-       iis, iie, jjs, jje) ! (in)
+       k1            ) ! (in)
 
     real(RP), intent(out) :: num_diff_pt1(KA,IA,JA,5,3)
     real(RP), intent(in)  :: num_diff_pt0(KA,IA,JA,5,3)
@@ -3025,12 +3000,15 @@ call TIME_rapend     ('DYN-fct')
     real(RP), intent(in)  :: CNY4(5,JA)
     integer,  intent(in)  :: I_val
     integer,  intent(in)  :: k1
-    integer,  intent(in)  :: iis
-    integer,  intent(in)  :: iie
-    integer,  intent(in)  :: jjs
-    integer,  intent(in)  :: jje
 
     integer :: i, j, k
+    integer :: iis, iie, jjs, jje
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
@@ -3117,6 +3095,10 @@ call TIME_rapend     ('DYN-fct')
                     - CNY4(4,j) * num_diff_pt0(k,i,j-1,I_val,YDIR) &
                     + CNY4(5,j) * num_diff_pt0(k,i,j-2,I_val,YDIR) )
     enddo
+    enddo
+    enddo
+
+
     enddo
     enddo
 
