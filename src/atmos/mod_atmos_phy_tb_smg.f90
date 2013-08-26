@@ -132,7 +132,7 @@ contains
     implicit none
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
-    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 1.5_RP ! Sullivan et al. (1994)
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
          ATMOS_PHY_TB_SMG_Cs, &
