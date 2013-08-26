@@ -109,6 +109,7 @@ module mod_atmos_phy_tb
   integer, private, parameter :: XDIR = 2
   integer, private, parameter :: YDIR = 3
 
+  logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .true.
   !-----------------------------------------------------------------------------
 contains
 
@@ -135,7 +136,8 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
          ATMOS_PHY_TB_SMG_Cs, &
-         ATMOS_PHY_TB_SMG_filter_fact
+         ATMOS_PHY_TB_SMG_filter_fact, &
+         ATMOS_PHY_TB_SMG_bottom
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3613,7 +3615,11 @@ contains
     real(RP) :: d0
 
     d0 = fact(dz, dx, dy) * filter_fact * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
-    mixlen = sqrt( 1.0_RP / ( 1.0_RP/d0**2 + 1.0_RP/(KARMAN*z)**2 ) ) ! Brown et al. (1994)
+    if ( ATMOS_PHY_TB_SMG_bottom ) then
+       mixlen = sqrt( 1.0_RP / ( 1.0_RP/d0**2 + 1.0_RP/(KARMAN*z)**2 ) ) ! Brown et al. (1994)
+    else
+       mixlen = d0
+    end if
 
     return
   end function mixlen
