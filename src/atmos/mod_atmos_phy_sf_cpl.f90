@@ -67,23 +67,15 @@ contains
   ! calculation flux
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF
-    use mod_time, only: &
-       dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
-       NOWSEC => TIME_NOWDAYSEC
     use mod_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
-    use mod_history, only: &
-       HIST_in
     use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
+       DENS,    &
+       RHOT,    &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -100,6 +92,8 @@ contains
     implicit none
 
     integer :: i, j
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
     do j = JS, JE
     do i = IS, IE

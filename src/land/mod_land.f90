@@ -80,6 +80,7 @@ contains
        Zt0, ZtR, ZtS, &
        Ze0, ZeR, ZeS, &
        sw_phy => LAND_sw_phy, &
+       LAND_vars_fillhalo,    &
        LAND_vars_history
     use mod_land_phy_bucket, only: &
        LAND_PHY
@@ -90,7 +91,7 @@ contains
        CPL_AtmLnd_getDat2Lnd,  &
        CPL_AtmLnd_flushDat2Lnd
     implicit none
-
+integer::i,j
     !---------------------------------------------------------------------------
 
     !########## Surface Flux ##########
@@ -113,6 +114,19 @@ contains
           TG, QvEfc, EMIT, ALB, TCS, DZg,             &
           Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
     endif
+
+do j=1,12
+do i=1,12
+write(IO_FID_LOG,*) 'A',i,j,TCS(i,j)
+enddo
+enddo
+    !########## Fill HALO ##########
+    call LAND_vars_fillhalo
+do j=1,12
+do i=1,12
+write(IO_FID_LOG,*) 'B',i,j,TCS(i,j)
+enddo
+enddo
 
     !########## History & Monitor ##########
     call TIME_rapstart('LND History')

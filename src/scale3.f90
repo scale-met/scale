@@ -99,8 +99,6 @@ program scaleles3
      PAPI_rapstop,  &
      PAPI_rapreport
 #endif
-!!!debug
-  use mod_temp
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -213,8 +211,6 @@ program scaleles3
     ! history&monitor file output
     call HIST_write
     call MONIT_write('MAIN')
-!!!debug
-call TEMPLOG
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write

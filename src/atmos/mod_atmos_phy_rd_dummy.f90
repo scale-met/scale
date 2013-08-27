@@ -73,8 +73,8 @@ contains
        call PRC_MPIstop
     endif
 
-    SWD(:,:) = -300.0_RP
-    LWD(:,:) = -300.0_RP
+    SWD(:,:) = 0.0_RP
+    LWD(:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_RD_setup
@@ -97,9 +97,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(dummy)'
 
-    factor = ( 1.0_RP - cos ( dble(step)*dt/86400.0_RP * 2.0_RP*PI ) ) * 0.5_RP
-    SWD(:,:) = - 900.0_RP * factor
-    LWD(:,:) = - 400 - 10.0_RP * factor
+!    factor = ( 1.0_RP - cos ( dble(step)*dt/86400.0_RP * 2.0_RP*PI ) ) * 0.5_RP
+!    SWD(:,:) = - 900.0_RP * factor
+!    LWD(:,:) = - 400 - 10.0_RP * factor
+    SWD(:,:) = - 300.0_RP
+    LWD(:,:) = - 200
 
     return
   end subroutine ATMOS_PHY_RD

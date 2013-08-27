@@ -68,7 +68,8 @@ contains
        Ze0, ZeR, ZeS
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
-       CPL_vars_setup
+       CPL_vars_setup, &
+       CPL_vars_restart_read
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_setup,  &
        CPL_AtmLnd_solve,  &
@@ -78,6 +79,8 @@ contains
     !---------------------------------------------------------------------------
 
     call CPL_vars_setup
+
+    call CPL_vars_restart_read
 
     call CPL_AtmLnd_setup
 
@@ -102,11 +105,11 @@ contains
     use mod_time, only: &
        do_AtmLnd => TIME_DOCPL_AtmLnd
     use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd
+       sw_AtmLnd => CPL_sw_AtmLnd, &
+       CPL_vars_fillhalo
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_solve
     implicit none
-
     !---------------------------------------------------------------------------
 
     !########## Coupler Atoms-Land ##########
@@ -115,6 +118,9 @@ contains
        if( do_AtmLnd ) call CPL_AtmLnd_solve
     endif
     call TIME_rapend  ('CPL Atmos-Land')
+
+    !########## Fill HALO ##########
+    call CPL_vars_fillhalo
 
     return
   end subroutine CPL_calc

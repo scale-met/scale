@@ -135,23 +135,53 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_cpl_vars, only: &
+       CPL_RESTART_IN_BASENAME
     implicit none
+
+    logical  :: dummy
+
+    NAMELIST / PARAM_CPL_AtmLnd / &
+       dummy
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AtmLnd]/Categ[CPL]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_AtmLnd,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_AtmLnd. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_AtmLnd)
 
     CNT_putAtm     = 0.0_RP
     CNT_putLnd     = 0.0_RP
-    CNT_getDat2Atm = 0.0_RP
-    CNT_getDat2Lnd = 0.0_RP
+
+    call CPL_AtmLnd_flushDat2Atm
+    call CPL_AtmLnd_flushDat2Lnd
 
     return
   end subroutine CPL_AtmLnd_setup
 
   subroutine CPL_AtmLnd_solve
     use mod_const, only: &
-      LH0 => CONST_LH0
+       LH0 => CONST_LH0
     use mod_process, only: &
        PRC_MPIstop
     use mod_cpl_vars, only: &
-      LST
+       LST
     implicit none
 
     ! parameters
@@ -178,7 +208,14 @@ contains
     real(RP) :: oldRES (IA,JA) ! RES in previous step
     real(RP) :: redf ! reduced factor
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** CPL solve: Atmos-Land'
+
     ! average putAtm
+    if( int( CNT_putAtm ) == 0 ) then
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: divided by zero (CNT_putAtm)'
+      call PRC_MPIstop
+    end if
+
     DENS(:,:,:)   = DENS(:,:,:)   / CNT_putAtm
     MOMX(:,:,:)   = MOMX(:,:,:)   / CNT_putAtm
     MOMY(:,:,:)   = MOMY(:,:,:)   / CNT_putAtm
@@ -190,6 +227,11 @@ contains
     LWD(:,:)      = LWD(:,:)      / CNT_putAtm
 
     ! average putLnd
+    if( int( CNT_putLnd ) == 0 ) then
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: divided by zero (CNT_putLnd)'
+      call PRC_MPIstop
+    end if
+
     TG   (:,:)    = TG   (:,:)    / CNT_putLnd
     QvEfc(:,:)    = QvEfc(:,:)    / CNT_putLnd
     EMIT (:,:)    = EMIT (:,:)    / CNT_putLnd
@@ -217,8 +259,8 @@ contains
         pSWU, pLWU,          & ! (out)
         pSH, pLH, pGH        ) ! (out)
 
-      do j = JS, JE
-      do i = IS, IE
+      do j = JS, JE+1
+      do i = IS, IE+1
 
         if( redf < 0.0_RP ) then
           redf = 1.0_RP
@@ -253,6 +295,17 @@ contains
     if( n > nmax ) then
       ! not converged and stop program
       if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
+      if( IO_L ) write(IO_FID_LOG,*) 'LST  :',minval(LST  (:,:)),maxval(LST  (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'RES  :',minval(RES  (:,:)),maxval(RES  (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'DRES :',minval(DRES (:,:)),maxval(DRES (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pMOMX:',minval(pMOMX(:,:)),maxval(pMOMX(:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pMOMY:',minval(pMOMY(:,:)),maxval(pMOMY(:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pMOMZ:',minval(pMOMZ(:,:)),maxval(pMOMZ(:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pSWU :',minval(pSWU (:,:)),maxval(pSWU (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pLWU :',minval(pLWU (:,:)),maxval(pLWU (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pSH  :',minval(pSH  (:,:)),maxval(pSH  (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pLH  :',minval(pLH  (:,:)),maxval(pLH  (:,:))
+      if( IO_L ) write(IO_FID_LOG,*) 'pGH  :',minval(pGH  (:,:)),maxval(pGH  (:,:))
       call PRC_MPIstop
     end if
 
@@ -284,6 +337,8 @@ contains
 
   subroutine CPL_AtmLnd_unsolve
     implicit none
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** CPL unsolve: Atmos-Land'
 
     return
   end subroutine CPL_AtmLnd_unsolve
@@ -515,7 +570,6 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-
       ! at (u, y, layer)
       Uabs = sqrt( &
              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i+1,j)                                     ) )**2 &
@@ -536,6 +590,11 @@ contains
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
 
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
       ! at (x, v, layer)
       Uabs = sqrt( &
              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i,j+1)                                     ) )**2 &
@@ -556,6 +615,11 @@ contains
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
 
+    enddo
+    enddo
+
+    do j = JS, JE+1
+    do i = IS, IE+1
       ! at cell center
       Uabs = sqrt( &
              ( MOMZ(KS,i,j)                  )**2 &
