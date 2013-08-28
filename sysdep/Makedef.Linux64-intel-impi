@@ -15,8 +15,8 @@ FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -fp-model precise -pc 80             \
                -check all -warn all -g -traceback   \
                -mcmodel=medium -shared-intel        \
-               -heap-arrays -fno-alias
-#               -DDEBUG
+               -heap-arrays -fno-alias              \
+               -DDEBUG
 
 FC     = mpiifort
 FFLAGS = $(FFLAGS_FAST)

@@ -184,13 +184,13 @@ program scaleles3
     ! report current time
     call TIME_checkstate
 
+    ! user-defined procedure
+    call USER_step
+
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_step
     if ( TIME_DOLAND_step  ) call LAND_step
     if ( TIME_DOOCEAN_step ) call OCEAN_step
-
-    ! user-defined procedure
-    call USER_step
 
     ! time advance
     call TIME_advance

@@ -64,6 +64,12 @@ contains
     use mod_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_vars, only: &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp, &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
@@ -118,6 +124,20 @@ contains
 
     if ( sw_phy_rd ) call ATMOS_PHY_RD_setup
 
+    !########## initialize tendencies ##########
+!OCL XFILL
+    DENS_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMZ_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    RHOT_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    QTRC_tp(:,:,:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_setup
 
@@ -158,19 +178,6 @@ contains
        ATMOS_REFSTATE_update
     implicit none
     !---------------------------------------------------------------------------
-
-!OCL XFILL
-    DENS_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMZ_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMX_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMY_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    RHOT_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    QTRC_tp(:,:,:,:) = 0.0_RP
 
     !########## Reference State ###########
     call ATMOS_REFSTATE_update
