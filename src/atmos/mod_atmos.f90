@@ -222,6 +222,20 @@ contains
        call ATMOS_vars_history
     call TIME_rapend  ('ATM History Vars')
 
+    !########## reset tendencies ##########
+!OCL XFILL
+    DENS_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMZ_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    RHOT_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    QTRC_tp(:,:,:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_step
 
