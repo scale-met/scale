@@ -30,6 +30,9 @@ module mod_land
   public :: LAND_setup
   public :: LAND_step
 
+  !
+  !++ included parameters
+  !
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -91,7 +94,6 @@ contains
        CPL_AtmLnd_getDat2Lnd,  &
        CPL_AtmLnd_flushDat2Lnd
     implicit none
-integer::i,j
     !---------------------------------------------------------------------------
 
     !########## Surface Flux ##########
@@ -115,18 +117,8 @@ integer::i,j
           Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
     endif
 
-do j=1,12
-do i=1,12
-write(IO_FID_LOG,*) 'A',i,j,TCS(i,j)
-enddo
-enddo
     !########## Fill HALO ##########
     call LAND_vars_fillhalo
-do j=1,12
-do i=1,12
-write(IO_FID_LOG,*) 'B',i,j,TCS(i,j)
-enddo
-enddo
 
     !########## History & Monitor ##########
     call TIME_rapstart('LND History')

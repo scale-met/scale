@@ -100,8 +100,8 @@ contains
 !    factor = ( 1.0_RP - cos ( dble(step)*dt/86400.0_RP * 2.0_RP*PI ) ) * 0.5_RP
 !    SWD(:,:) = - 900.0_RP * factor
 !    LWD(:,:) = - 400 - 10.0_RP * factor
-    SWD(:,:) = - 300.0_RP
-    LWD(:,:) = - 200
+    SWD(:,:) = 400.0_RP
+    LWD(:,:) = 400.0_RP
 
     return
   end subroutine ATMOS_PHY_RD

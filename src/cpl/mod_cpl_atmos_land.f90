@@ -185,7 +185,7 @@ contains
     implicit none
 
     ! parameters
-    integer,  parameter :: nmax     = 1000      ! maximum iteration number
+    integer,  parameter :: nmax     = 100       ! maximum iteration number
     real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
     real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
     real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
@@ -205,8 +205,8 @@ contains
     real(RP) :: pLH  (IA,JA)
     real(RP) :: pGH  (IA,JA)
 
-    real(RP) :: oldRES (IA,JA) ! RES in previous step
-    real(RP) :: redf ! reduced factor
+    real(RP) :: oldRES(IA,JA) ! RES in previous step
+    real(RP) :: redf  (IA,JA) ! reduced factor
 
     if( IO_L ) write(IO_FID_LOG,*) '*** CPL solve: Atmos-Land'
 
@@ -248,7 +248,7 @@ contains
     ZeR  (:,:)    = ZeR  (:,:)    / CNT_putLnd
     ZeS  (:,:)    = ZeS  (:,:)    / CNT_putLnd
 
-    redf        = 1.0_RP
+    redf  (:,:) = 1.0_RP
     oldRES(:,:) = 1.0E+5_RP
 
     do n = 1, nmax
@@ -262,22 +262,22 @@ contains
       do j = JS, JE+1
       do i = IS, IE+1
 
-        if( redf < 0.0_RP ) then
-          redf = 1.0_RP
+        if( redf(i,j) < 0.0_RP ) then
+          redf(i,j) = 1.0_RP
         end if
 
         if( abs(RES(i,j)) > abs(oldRES(i,j)) ) then
-          redf = max( TFa*redf, redf_min )
+          redf(i,j) = max( TFa*redf(i,j), redf_min )
         else
-          redf = min( TFb*redf, redf_max )
+          redf(i,j) = min( TFb*redf(i,j), redf_max )
         end if
 
         if( DRES(i,j) > 0.0_RP ) then
-          redf = -1.0_RP
+          redf(i,j) = -1.0_RP
         end if
 
         ! update surface temperature
-        LST(i,j) = LST(i,j) - redf * RES(i,j)/DRES(i,j)
+        LST(i,j) = LST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
 
         ! save residual in this step
         oldRES(i,j) = RES(i,j)
@@ -637,24 +637,23 @@ contains
           pta(i,j), LST(i,j),      & ! (in)
           Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
 
+      pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
+
       ! saturation at surface
       SatQvs = satmixr( LST(i,j) )
 
-      pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
-
       pSH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
       pLH(i,j) = LH0   * Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( SatQvs - QTRC(KS,i,j,I_QV) ) * QvEfc(i,j)
-      pGH(i,j) = - 2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j) ) / DZg(i,j)
+      pGH(i,j) = 2.0_RP * TCS(i,j) * ( TG(i,j) - LST(i,j) ) / DZg(i,j)
 
-      pSWU(i,j) = - ALB(i,j) * SWD(i,j)
-      pLWU(i,j) =   EMIT(i,j) * STB * LST(i,j)**4
+      pSWU(i,j) = ALB(i,j) * SWD(i,j)
+      pLWU(i,j) = EMIT(i,j) * STB * LST(i,j)**4
 
       ! calculation for residual
-      RES(i,j) = - ( SWD(i,j) + pSWU(i,j) + LWD(i,j) + pLWU(i,j) ) &
-                 - pSH(i,j) - pLH(i,j) + pGH(i,j)
+      RES(i,j) = SWD(i,j) - pSWU(i,j) + LWD(i,j) - pLWU(i,j) - pSH(i,j) - pLH(i,j) + pGH(i,j)
 
       dLST  = LST(i,j) + dTs
-      dSatQvs = dSatQvs * LH0 / ( Rvap * LST(i,j)**2 )
+      dSatQvs = SatQvs * LH0 / ( Rvap * LST(i,j)**2 )
 
       call bulkcoef_uno( &
           dCm, dCh, dCe,           & ! (out)
@@ -670,7 +669,7 @@ contains
       dpGH  = - 2.0_RP * TCS(i,j) / DZg(i,j)
 
       ! calculation for d(residual)/dTs
-      DRES(i,j) = - dpLWU + dpGH - dpSH1 - dpSH2 - dpLH1 - dpLH2
+      DRES(i,j) = - dpLWU - dpSH1 - dpSH2 - dpLH1 - dpLH2 + dpGH
 
     enddo
     enddo

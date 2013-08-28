@@ -35,7 +35,7 @@ module mod_land_vars
   !
   include "inc_precision.h"
   include 'inc_index.h'
-  include 'inc_land.h'
+!  include 'inc_land.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -73,9 +73,9 @@ module mod_land_vars
   real(RP), public, save :: ZeR  (IA,JA) ! rough factor for moisture
   real(RP), public, save :: ZeS  (IA,JA) ! smooth factor for moisture
 
-  real(RP), public, save :: SoilT(KA_soil,IA,JA) ! Soil temperature             [K]
-  real(RP), public, save :: SoilW(KA_soil,IA,JA) ! Soil moisture (liquid water) [m3/m3]
-  real(RP), public, save :: SoilI(KA_soil,IA,JA) ! Soil ice      (ice    water) [m3/m3]
+!  real(RP), public, save :: SoilT(KA_soil,IA,JA) ! Soil temperature             [K]
+!  real(RP), public, save :: SoilW(KA_soil,IA,JA) ! Soil moisture (liquid water) [m3/m3]
+!  real(RP), public, save :: SoilI(KA_soil,IA,JA) ! Soil ice      (ice    water) [m3/m3]
 
   integer,                    public, save :: I_TG    = 1
   integer,                    public, save :: I_QvEfc = 2
@@ -276,84 +276,48 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-!    call COMM_vars8( TG   (:,:),   1  )
-!    call COMM_vars8( QvEfc(:,:),   2  )
-!    call COMM_vars8( EMIT (:,:),   3  )
-!    call COMM_vars8( ALB  (:,:),   4  )
-!    call COMM_vars8( TCS  (:,:),   5  )
-!    call COMM_vars8( HCS  (:,:),   6  )
-!    call COMM_vars8( DZg  (:,:),   7  )
-!    call COMM_vars8( Z00  (:,:),   8  )
-!    call COMM_vars8( Z0R  (:,:),   9  )
-!    call COMM_vars8( Z0S  (:,:),   10 )
-!    call COMM_vars8( Zt0  (:,:),   11 )
-!    call COMM_vars8( ZtR  (:,:),   12 )
-!    call COMM_vars8( ZtS  (:,:),   13 )
-!    call COMM_vars8( Ze0  (:,:),   14 )
-!    call COMM_vars8( ZeR  (:,:),   15 )
-!    call COMM_vars8( ZeS  (:,:),   16 )
-!    call COMM_vars8( SoilT(:,:,:), 17 )
-!    call COMM_vars8( SoilW(:,:,:), 18 )
-!    call COMM_vars8( SoilI(:,:,:), 19 )
-!
-!    call COMM_wait ( TG   (:,:),   1  )
-!    call COMM_wait ( QvEfc(:,:),   2  )
-!    call COMM_wait ( EMIT (:,:),   3  )
-!    call COMM_wait ( ALB  (:,:),   4  )
-!    call COMM_wait ( TCS  (:,:),   5  )
-!    call COMM_wait ( HCS  (:,:),   6  )
-!    call COMM_wait ( DZg  (:,:),   7  )
-!    call COMM_wait ( Z00  (:,:),   8  )
-!    call COMM_wait ( Z0R  (:,:),   9  )
-!    call COMM_wait ( Z0S  (:,:),   10 )
-!    call COMM_wait ( Zt0  (:,:),   11 )
-!    call COMM_wait ( ZtR  (:,:),   12 )
-!    call COMM_wait ( ZtS  (:,:),   13 )
-!    call COMM_wait ( Ze0  (:,:),   14 )
-!    call COMM_wait ( ZeR  (:,:),   15 )
-!    call COMM_wait ( ZeS  (:,:),   16 )
-!    call COMM_wait ( SoilT(:,:,:), 17 )
-!    call COMM_wait ( SoilW(:,:,:), 18 )
-!    call COMM_wait ( SoilI(:,:,:), 19 )
-
     call COMM_vars8( TG   (:,:),   1  )
-    call COMM_wait ( TG   (:,:),   1  )
     call COMM_vars8( QvEfc(:,:),   2  )
-    call COMM_wait ( QvEfc(:,:),   2  )
     call COMM_vars8( EMIT (:,:),   3  )
-    call COMM_wait ( EMIT (:,:),   3  )
     call COMM_vars8( ALB  (:,:),   4  )
-    call COMM_wait ( ALB  (:,:),   4  )
     call COMM_vars8( TCS  (:,:),   5  )
-    call COMM_wait ( TCS  (:,:),   5  )
     call COMM_vars8( HCS  (:,:),   6  )
-    call COMM_wait ( HCS  (:,:),   6  )
     call COMM_vars8( DZg  (:,:),   7  )
-    call COMM_wait ( DZg  (:,:),   7  )
     call COMM_vars8( Z00  (:,:),   8  )
-    call COMM_wait ( Z00  (:,:),   8  )
     call COMM_vars8( Z0R  (:,:),   9  )
-    call COMM_wait ( Z0R  (:,:),   9  )
     call COMM_vars8( Z0S  (:,:),   10 )
-    call COMM_wait ( Z0S  (:,:),   10 )
     call COMM_vars8( Zt0  (:,:),   11 )
-    call COMM_wait ( Zt0  (:,:),   11 )
     call COMM_vars8( ZtR  (:,:),   12 )
-    call COMM_wait ( ZtR  (:,:),   12 )
     call COMM_vars8( ZtS  (:,:),   13 )
-    call COMM_wait ( ZtS  (:,:),   13 )
     call COMM_vars8( Ze0  (:,:),   14 )
-    call COMM_wait ( Ze0  (:,:),   14 )
     call COMM_vars8( ZeR  (:,:),   15 )
-    call COMM_wait ( ZeR  (:,:),   15 )
     call COMM_vars8( ZeS  (:,:),   16 )
+
+    call COMM_wait ( TG   (:,:),   1  )
+    call COMM_wait ( QvEfc(:,:),   2  )
+    call COMM_wait ( EMIT (:,:),   3  )
+    call COMM_wait ( ALB  (:,:),   4  )
+    call COMM_wait ( TCS  (:,:),   5  )
+    call COMM_wait ( HCS  (:,:),   6  )
+    call COMM_wait ( DZg  (:,:),   7  )
+    call COMM_wait ( Z00  (:,:),   8  )
+    call COMM_wait ( Z0R  (:,:),   9  )
+    call COMM_wait ( Z0S  (:,:),   10 )
+    call COMM_wait ( Zt0  (:,:),   11 )
+    call COMM_wait ( ZtR  (:,:),   12 )
+    call COMM_wait ( ZtS  (:,:),   13 )
+    call COMM_wait ( Ze0  (:,:),   14 )
+    call COMM_wait ( ZeR  (:,:),   15 )
     call COMM_wait ( ZeS  (:,:),   16 )
-    call COMM_vars8( SoilT(:,:,:), 17 )
-    call COMM_wait ( SoilT(:,:,:), 17 )
-    call COMM_vars8( SoilW(:,:,:), 18 )
-    call COMM_wait ( SoilW(:,:,:), 18 )
-    call COMM_vars8( SoilI(:,:,:), 19 )
-    call COMM_wait ( SoilI(:,:,:), 19 )
+
+!    call COMM_vars8( SoilT(:,:,:), 1 )
+!    call COMM_vars8( SoilW(:,:,:), 2 )
+!    call COMM_vars8( SoilI(:,:,:), 3 )
+
+!    call COMM_wait ( SoilT(:,:,:), 1 )
+!    call COMM_wait ( SoilW(:,:,:), 2 )
+!    call COMM_wait ( SoilI(:,:,:), 3 )
+
     return
   end subroutine LAND_vars_fillhalo
 
@@ -410,12 +374,12 @@ contains
        call FILEIO_read( ZeS(:,:),                                        & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'ZeS', 'XY', step=1    ) ! [IN]
 
-       call FILEIO_read( SoilT(:,:,:),                                    & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'SoilT', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( SoilW(:,:,:),                                    & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'SoilW', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( SoilI(:,:,:),                                    & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'SoilI', 'ZXY', step=1 ) ! [IN]
+!       call FILEIO_read( SoilT(:,:,:),                                    & ! [OUT]
+!                         LAND_RESTART_IN_BASENAME, 'SoilT', 'ZXY', step=1 ) ! [IN]
+!       call FILEIO_read( SoilW(:,:,:),                                    & ! [OUT]
+!                         LAND_RESTART_IN_BASENAME, 'SoilW', 'ZXY', step=1 ) ! [IN]
+!       call FILEIO_read( SoilI(:,:,:),                                    & ! [OUT]
+!                         LAND_RESTART_IN_BASENAME, 'SoilI', 'ZXY', step=1 ) ! [IN]
 
        call LAND_vars_fillhalo
 
@@ -459,9 +423,9 @@ contains
        ZeR  (:,:) = 0.0_RP
        ZeS  (:,:) = 0.62_RP
 
-       SoilT(:,:,:) = CONST_UNDEF
-       SoilW(:,:,:) = CONST_UNDEF
-       SoilI(:,:,:) = CONST_UNDEF
+!       SoilT(:,:,:) = CONST_UNDEF
+!       SoilW(:,:,:) = CONST_UNDEF
+!       SoilI(:,:,:) = CONST_UNDEF
 
     endif
 
@@ -531,12 +495,12 @@ contains
        call FILEIO_write( ZeS(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
                           LP_NAME(I_ZeS),   LP_DESC(I_ZeS),   LP_UNIT(I_ZeS),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
 
-       call FILEIO_write( SoilT(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
-                          LP_NAME(I_SoilT), LP_DESC(I_SoilT), LP_UNIT(I_SoilT), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SoilW(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
-                          LP_NAME(I_SoilW), LP_DESC(I_SoilW), LP_UNIT(I_SoilW), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SoilI(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
-                          LP_NAME(I_SoilI), LP_DESC(I_SoilI), LP_UNIT(I_SoilI), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+!       call FILEIO_write( SoilT(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
+!                          LP_NAME(I_SoilT), LP_DESC(I_SoilT), LP_UNIT(I_SoilT), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+!       call FILEIO_write( SoilW(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
+!                          LP_NAME(I_SoilW), LP_DESC(I_SoilW), LP_UNIT(I_SoilW), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+!       call FILEIO_write( SoilI(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
+!                          LP_NAME(I_SoilI), LP_DESC(I_SoilI), LP_UNIT(I_SoilI), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -576,9 +540,9 @@ contains
        call MISC_valcheck( Ze0  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Ze0)   )
        call MISC_valcheck( ZeR  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZeR)   )
        call MISC_valcheck( ZeS  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZeS)   )
-       call MISC_valcheck( SoilT(:,:,:),    0.0_RP, 1000.0_RP,  LP_NAME(I_SoilT) )
-       call MISC_valcheck( SoilW(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilW) )
-       call MISC_valcheck( SoilI(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilI) )
+!       call MISC_valcheck( SoilT(:,:,:),    0.0_RP, 1000.0_RP,  LP_NAME(I_SoilT) )
+!       call MISC_valcheck( SoilW(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilW) )
+!       call MISC_valcheck( SoilI(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilI) )
     endif
 
     call HIST_in( TG   (:,:),   'L_TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )
@@ -597,9 +561,9 @@ contains
     call HIST_in( Ze0  (:,:),   'L_Ze0',   LP_DESC(I_Ze0),   LP_UNIT(I_Ze0),   TIME_DTSEC_LAND )
     call HIST_in( ZeR  (:,:),   'L_ZeR',   LP_DESC(I_ZeR),   LP_UNIT(I_ZeR),   TIME_DTSEC_LAND )
     call HIST_in( ZeS  (:,:),   'L_ZeS',   LP_DESC(I_ZeS),   LP_UNIT(I_ZeS),   TIME_DTSEC_LAND )
-    call HIST_in( SoilT(:,:,:), 'L_SoilT', LP_DESC(I_SoilT), LP_UNIT(I_SoilT), TIME_DTSEC_LAND )
-    call HIST_in( SoilW(:,:,:), 'L_SoilW', LP_DESC(I_SoilW), LP_UNIT(I_SoilW), TIME_DTSEC_LAND )
-    call HIST_in( SoilI(:,:,:), 'L_SoilI', LP_DESC(I_SoilI), LP_UNIT(I_SoilI), TIME_DTSEC_LAND )
+!    call HIST_in( SoilT(:,:,:), 'L_SoilT', LP_DESC(I_SoilT), LP_UNIT(I_SoilT), TIME_DTSEC_LAND )
+!    call HIST_in( SoilW(:,:,:), 'L_SoilW', LP_DESC(I_SoilW), LP_UNIT(I_SoilW), TIME_DTSEC_LAND )
+!    call HIST_in( SoilI(:,:,:), 'L_SoilI', LP_DESC(I_SoilI), LP_UNIT(I_SoilI), TIME_DTSEC_LAND )
 
     return
   end subroutine LAND_vars_history
