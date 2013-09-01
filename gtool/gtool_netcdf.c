@@ -1,7 +1,7 @@
 #include "netcdf.h"
 #include "gtool_file.h"
 
-#define RMISS -9.999e-30
+#define RMISS -9.9999e+30
 #define EPS 1e-10
 
 #define CHECK_ERROR(status)					\

@@ -271,22 +271,28 @@ contains
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN
     use mod_time, only: &
-       DTSEC           => TIME_DTSEC,           &
-       DTSEC_ATMOS_DYN => TIME_DTSEC_ATMOS_DYN, &
-       NSTEP_ATMOS_DYN => TIME_NSTEP_ATMOS_DYN
+       TIME_DTSEC,           &
+       TIME_DTSEC_ATMOS_DYN, &
+       TIME_NSTEP_ATMOS_DYN
     use mod_grid, only : &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+       GRID_CDZ,  &
+       GRID_CDX,  &
+       GRID_CDY,  &
+       GRID_FDZ,  &
+       GRID_FDX,  &
+       GRID_FDY,  &
+       GRID_RCDZ, &
+       GRID_RCDX, &
+       GRID_RCDY, &
+       GRID_RFDZ, &
+       GRID_RFDX, &
+       GRID_RFDY
+    use mod_topography, only : &
+       TOPO_PHI,        &
+       TRANSGRID_GSQRT, &
+       TRANSGRID_J13G,  &
+       TRANSGRID_J23G,  &
+       TRANSGRID_J33G
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -313,43 +319,52 @@ contains
     use mod_atmos_thermodyn, only: &
        AQ_CV
     use mod_atmos_refstate, only: &
-       REF_dens => ATMOS_REFSTATE_dens, &
-       REF_pott => ATMOS_REFSTATE_pott, &
-       REF_qv   => ATMOS_REFSTATE_qv
+       ATMOS_REFSTATE_dens, &
+       ATMOS_REFSTATE_pott, &
+       ATMOS_REFSTATE_qv
     use mod_atmos_boundary, only: &
-       DAMP_var   => ATMOS_BOUNDARY_var,   &
-       DAMP_alpha => ATMOS_BOUNDARY_alpha
+       ATMOS_BOUNDARY_var,   &
+       ATMOS_BOUNDARY_alpha
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
-    call ATMOS_DYN_main( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! (inout)
-         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         ATMOS_DYN_CNZ3,                                       & ! (in)
-         ATMOS_DYN_CNX3,                                       & ! (in)
-         ATMOS_DYN_CNY3,                                       & ! (in)
-         ATMOS_DYN_CNZ4,                                       & ! (in)
-         ATMOS_DYN_CNX4,                                       & ! (in)
-         ATMOS_DYN_CNY4,                                       & ! (in)
-         CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! (in)
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! (in)
-         AQ_CV,                                                & ! (in)
-         REF_dens, REF_pott, REF_qv,                           & ! (in)
-         ATMOS_DYN_DIFF4,                                      & ! (in)
-         ATMOS_DYN_numerical_diff_order,                       & ! (in)
-         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! (in)
-         ATMOS_DYN_numerical_diff_use_refstate,                & ! (in)
-         ATMOS_DYN_CORIOLI,                                    & ! (in)
-         DAMP_var, DAMP_alpha,                                 & ! (in)
-         ATMOS_DYN_divdmp_coef,                                & ! (in)
-         ATMOS_DYN_FLAG_FCT_rho,                               & ! (in)
-         ATMOS_DYN_FLAG_FCT_momentum,                          & ! (in)
-         ATMOS_DYN_FLAG_FCT_T,                                 & ! (in)
-         ATMOS_USE_AVERAGE,                                    & ! (in)
-         DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               ) ! (in)
+    call ATMOS_DYN_main( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
+                         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
+                         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
+                         ATMOS_DYN_CNZ3,                                       & ! [IN]
+                         ATMOS_DYN_CNX3,                                       & ! [IN]
+                         ATMOS_DYN_CNY3,                                       & ! [IN]
+                         ATMOS_DYN_CNZ4,                                       & ! [IN]
+                         ATMOS_DYN_CNX4,                                       & ! [IN]
+                         ATMOS_DYN_CNY4,                                       & ! [IN]
+                         GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
+                         GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
+                         GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
+                         GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
+                         TOPO_PHI,                                             & ! [IN]
+                         TRANSGRID_GSQRT,                                      & ! [IN]
+                         TRANSGRID_J13G, TRANSGRID_J23G, TRANSGRID_J33G,       & ! [IN]
+                         AQ_CV,                                                & ! [IN]
+                         ATMOS_REFSTATE_dens,                                  & ! [IN]
+                         ATMOS_REFSTATE_pott,                                  & ! [IN]
+                         ATMOS_REFSTATE_qv,                                    & ! [IN]
+                         ATMOS_DYN_DIFF4,                                      & ! [IN]
+                         ATMOS_DYN_numerical_diff_order,                       & ! [IN]
+                         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
+                         ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
+                         ATMOS_DYN_CORIOLI,                                    & ! [IN]
+                         ATMOS_BOUNDARY_var,                                   & ! [IN]
+                         ATMOS_BOUNDARY_alpha,                                 & ! [IN]
+                         ATMOS_DYN_divdmp_coef,                                & ! [IN]
+                         ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
+                         ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
+                         ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
+                         ATMOS_USE_AVERAGE,                                    & ! [IN]
+                         TIME_DTSEC,                                           & ! [IN]
+                         TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
+                         TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
 
     call ATMOS_vars_total
 
@@ -365,6 +380,8 @@ contains
        CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,                   &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
+       PHI, GSQRT,                                           &
+       J13G, J23G, J33G,                                     &
        AQ_CV,                                                &
        REF_dens, REF_pott, REF_qv,                           &
        DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,              &
@@ -439,6 +456,12 @@ contains
     real(RP), intent(in)    :: RFDX(IA-1)
     real(RP), intent(in)    :: RFDY(JA-1)
 
+    real(RP), intent(in)    :: PHI  (KA,IA,JA)   !< geopotential
+    real(RP), intent(in)    :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)    :: J13G (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
+
     real(RP), intent(in)    :: AQ_CV(QQA)
 
     real(RP), intent(in)    :: REF_dens(KA)
@@ -489,11 +512,6 @@ contains
     real(RP) :: RHOT_t(KA,IA,JA)
 
     ! diagnostic variables
-    real(RP) :: VELZ (KA,IA,JA) ! velocity w [m/s]
-    real(RP) :: VELX (KA,IA,JA) ! velocity u [m/s]
-    real(RP) :: VELY (KA,IA,JA) ! velocity v [m/s]
-    real(RP) :: POTT (KA,IA,JA) ! potential temperature [K]
-    real(RP) :: PRES (KA,IA,JA) ! pressure [Pa]
     real(RP) :: QDRY (KA,IA,JA) ! dry air
     real(RP) :: Rtot (KA,IA,JA) ! total R
     real(RP) :: CVtot(KA,IA,JA) ! total CV
@@ -514,7 +532,7 @@ contains
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
-    integer  :: i, j, k, iq, rko, step
+    integer  :: i, j, k, iq, step
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
@@ -535,11 +553,6 @@ contains
     MOMY_RK2(:,:,:) = UNDEF
     RHOT_RK2(:,:,:) = UNDEF
 
-    VELZ    (:,:,:) = UNDEF
-    VELX    (:,:,:) = UNDEF
-    VELY    (:,:,:) = UNDEF
-    POTT    (:,:,:) = UNDEF
-    PRES    (:,:,:) = UNDEF
     RHOQ    (:,:,:) = UNDEF
 
     num_diff (:,:,:,:,:) = UNDEF
@@ -650,8 +663,8 @@ contains
        RHOT0(:,:,:) = RHOT(:,:,:)
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
-       rko = 1
-       dt  = real(DTSEC_ATMOS_DYN,kind=RP) / 3.D0
+
+       dt = real(DTSEC_ATMOS_DYN,kind=RP) !/ 3.D0
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -663,6 +676,7 @@ contains
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           dt                                                ) ! (in)
 
        call COMM_vars8( DENS_RK1(:,:,:), 1 )
@@ -677,10 +691,10 @@ contains
        call COMM_wait ( RHOT_RK1(:,:,:), 5 )
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
-       rko = 2
-       dt  = real(DTSEC_ATMOS_DYN,kind=RP) / 2.D0
 
-       call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (inout)
+       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 2.D0
+
+       call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
                           mflx_hi,                                          & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
@@ -690,6 +704,7 @@ contains
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           dt                                                ) ! (in)
 
        call COMM_vars8( DENS_RK2(:,:,:), 1 )
@@ -704,10 +719,10 @@ contains
        call COMM_wait ( RHOT_RK2(:,:,:), 5 )
    
        !##### RK3 : PROG0,PROG_RK3->PROG #####
-       rko = 3
-       dt  = real(DTSEC_ATMOS_DYN,kind=RP)
-   
-       call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (inout)
+
+       dt = real(DTSEC_ATMOS_DYN,kind=RP)
+
+       call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
                           mflx_hi,                                          & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
@@ -717,8 +732,24 @@ contains
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           dt                                                ) ! (in)
-   
+
+       do j  = JS, JE
+       do i  = IS, IE
+          DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+          MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+          MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+          MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+          RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+          DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+          MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+          MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+          MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+          RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+       enddo
+       enddo
+
        call COMM_vars8( DENS(:,:,:), 1 )
        call COMM_vars8( MOMZ(:,:,:), 2 )
        call COMM_vars8( MOMX(:,:,:), 3 )
@@ -744,27 +775,12 @@ contains
 
     enddo ! dynamical steps
 
-    do j  = JS, JE
-    do i  = IS, IE
-       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
-       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-    enddo
-    enddo
-
     if ( USE_AVERAGE ) then
-       DENS_av(:,:,:) = DENS_av(:,:,:) / NSTEP_ATMOS_DYN
-       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) / NSTEP_ATMOS_DYN
-       MOMX_av(:,:,:) = MOMX_av(:,:,:) / NSTEP_ATMOS_DYN
-       MOMY_av(:,:,:) = MOMY_av(:,:,:) / NSTEP_ATMOS_DYN
-       RHOT_av(:,:,:) = RHOT_av(:,:,:) / NSTEP_ATMOS_DYN
+       DENS_av(:,:,:) = DENS_av(:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
+       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
+       MOMX_av(:,:,:) = MOMX_av(:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
+       MOMY_av(:,:,:) = MOMY_av(:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
+       RHOT_av(:,:,:) = RHOT_av(:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
     endif
 
 #ifndef DRY
@@ -772,9 +788,9 @@ contains
     ! Update Tracers
     !###########################################################################
 
-    dt = DTSEC
+    dt = real(DTSEC,kind=RP)
 
-    mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / NSTEP_ATMOS_DYN
+    mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
@@ -796,7 +812,7 @@ contains
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-   
+
           if ( iq == I_QV ) then
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS-1, JJE+1
