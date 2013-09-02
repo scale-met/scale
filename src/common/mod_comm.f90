@@ -144,7 +144,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[COMM]/Categ[COMMON]'
 
-    COMM_vsize_max = max( 5 + QA, 20 )
+    COMM_vsize_max = 2 * max( 5 + QA, 20 )
 
     !--- read namelist
     rewind(IO_FID_CONF)

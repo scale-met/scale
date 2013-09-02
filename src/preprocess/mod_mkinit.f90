@@ -1934,8 +1934,8 @@ contains
 
        pres_sfc(1,i,j) = 1017.8E2_RP   ! [Pa]
        pott_sfc(1,i,j) = 288.3_RP      ! [K]
-       qv_sfc  (1,i,j) = 9.45E-3_RP
-       qc_sfc  (1,i,j) = 0.0_RP
+       qv_sfc(1,i,j) = 0.0_RP
+       qc_sfc(1,i,j) = 0.0_RP
 
        do k = KS, KE
           velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
@@ -1943,15 +1943,47 @@ contains
 
           if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 288.3_RP ! [K]
-             qall = 9.45E-3_RP ! [kg/kg]
           else if ( CZ(k) <= 815.0_RP ) then
              sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
                    ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP 
+          else
+             potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+          endif
+ 
+          qv(k,i,j) = 0.0_RP
+          qc(k,i,j) = 0.0_RP
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! calc in moist condition
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 9.45E-3_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
+             qall = 9.45E-3_RP ! [kg/kg]
+          else if ( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
                    ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
-             potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
              qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
 
@@ -1968,44 +2000,31 @@ contains
              qc(k,i,j) = 0.0_RP
           endif
           qv(k,i,j) = qall - qc(k,i,j)
-
        enddo
-    enddo
-    enddo
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    enddo
+    enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
+                                      pott    (:,:,:), & ! [OUT]
+                                      pres    (:,:,:), & ! [OUT]
+                                      temp    (:,:,:), & ! [IN]
+                                      qv      (:,:,:), & ! [IN]
+                                      qc      (:,:,:), & ! [IN]
+                                      pott_sfc(:,:,:), & ! [OUT]
+                                      pres_sfc(:,:,:), & ! [IN]
+                                      temp_sfc(:,:,:), & ! [IN]
+                                      qv_sfc  (:,:,:), & ! [IN]
+                                      qc_sfc  (:,:,:)  ) ! [IN]
 
     ! fill KHALO
     do j  = JS, JE
@@ -2124,6 +2143,7 @@ contains
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
 
@@ -2150,16 +2170,16 @@ contains
 
        pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
        pott_sfc(1,i,j) = 297.9_RP
-       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
+       qv_sfc  (1,i,j) = 0.0_RP   
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
           !--- potential temperature
           if ( CZ(k) < 740.0_RP ) then ! below initial cloud top
-             pott(k,i,j) = 297.9_RP
+             potl(k,i,j) = 297.9_RP
           else
              fact = ( CZ(k)-740.0_RP ) * ( 317.0_RP-297.9_RP ) / ( 4000.0_RP-740.0_RP )
-             pott(k,i,j) = 297.9_RP + fact
+             potl(k,i,j) = 297.9_RP + fact
           endif
 
           !--- horizontal wind velocity
@@ -2172,6 +2192,34 @@ contains
              vely(k,i,j) =  -3.8_RP
           endif
 
+          qv(k,i,j) = 0.0_RP
+          qc(k,i,j) = 0.0_RP
+
+       enddo
+
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
           !--- mixing ratio of vapor
           if ( CZ(k) <= 740.0_RP ) then ! below initial cloud top
              fact = ( CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
@@ -2193,40 +2241,34 @@ contains
     enddo
     enddo
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = pott(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j) 
     enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
+                                      pott    (:,:,:), & ! [OUT]
+                                      pres    (:,:,:), & ! [OUT]
+                                      temp    (:,:,:), & ! [IN]
+                                      qv      (:,:,:), & ! [IN]
+                                      qc      (:,:,:), & ! [IN]
+                                      pott_sfc(:,:,:), & ! [OUT]
+                                      pres_sfc(:,:,:), & ! [IN]
+                                      temp_sfc(:,:,:), & ! [IN]
+                                      qv_sfc  (:,:,:), & ! [IN]
+                                      qc_sfc  (:,:,:)  ) ! [IN]
 
+    ! fill KHALO
+    do j = JS, JE
+    do i = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
+    enddo
+    enddo
     ! fill IHALO & JHALO
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
