@@ -246,7 +246,7 @@ contains
 
     call TIME_rapend  ('SUB_precipitation')
 
-    call HIST_in( flux_rain(:,:,:), 'RFLX', 'precipitation flux', 'kg/m2/s', dt)
+    call HIST_in( flux_rain(:,:,:), 'PFLX', 'precipitation flux', 'kg/m2/s', dt)
     call HIST_in( flux_snow(:,:,:), 'SFLX', 'precipitation flux', 'kg/m2/s', dt)
     call HIST_in( eflx_out(:,:,:), 'EFLX', 'energy flux', 'J/kg/s', dt)
 
