@@ -15,6 +15,7 @@ include $(TOPDIR)/src/Mkinclude
 
 # for build
 index      = 200x11x11
+dynamics   = heve
 precision  = real8
 tracer     = sn13
 sfcflx     = const
@@ -36,10 +37,11 @@ include $(TESTDIR)/Makefile.common
 
 
 
-buildlocal: makedir $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 $(BUILD_DIR)/mod_user.f90
+buildlocal: makedir $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 $(BUILD_DIR)/mod_user.f90 $(BUILD_DIR)/mod_atmos_sub_precipitation.f90
 
 $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90: $(CODE_DIR)/mod_atmos_phy_rd_dycoms2.f90
-$(BUILD_DIR)/mod_user.90: $(CODE_DIR)/mod_user.f90
+$(BUILD_DIR)/mod_user.f90: $(CODE_DIR)/mod_user.f90
+$(BUILD_DIR)/mod_atmos_sub_precipitation.f90: $(CODE_DIR)/mod_atmos_sub_precipitation.f90
 	cp -f $< $@
 
 analy: 
