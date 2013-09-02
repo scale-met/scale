@@ -109,7 +109,7 @@ module mod_atmos_phy_tb
   integer, private, parameter :: XDIR = 2
   integer, private, parameter :: YDIR = 3
 
-  logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .true.
+  logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .false.
   !-----------------------------------------------------------------------------
 contains
 
