@@ -320,8 +320,11 @@ contains
           do i = IIS, IIE
           do k = KS, KE-1
              MOMX_tp(k,i,j) = MOMX_tp(k,i,j) &
-                  - CORIOLI * V_GEOS(k) &
-                  + CORIOLI * VELY(k,i,j) &
+                  + 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                  * ( - CORIOLI * V_GEOS(k) &
+                      + CORIOLI * 0.25_RP &
+                      * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) &
+                    ) &
                   - MOMZ_LS(k,1) * ( WORK(k+1,i,j) - WORK(k,i,j) ) * RFDZ(k)
           enddo
           enddo
@@ -330,8 +333,11 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
              MOMX_tp(KE,i,j) = MOMX_tp(KE,i,j) &
-                  - CORIOLI * V_GEOS(KE) &
-                  + CORIOLI * VELY(KE,i,j) &
+                  + 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                  *  ( - CORIOLI * V_GEOS(KE) &
+                       + CORIOLI * 0.25_RP &
+                       * ( VELY(KE,i,j)+VELY(KE,i+1,j)+VELY(KE,i,j-1)+VELY(KE,i+1,j-1) ) &
+                     ) &
                   - MOMZ_LS(KE,1) * ( WORK(KE,i,j) - WORK(KE-1,i,j) ) * RFDZ(KE-1)
           enddo
           enddo
@@ -359,8 +365,11 @@ contains
           do i = IIS, IIE
           do k = KS, KE-1
              MOMY_tp(k,i,j) = MOMY_tp(k,i,j) &
-                  + CORIOLI * U_GEOS(k) &
-                  - CORIOLI * VELX(k,i,j) &
+                  + 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )  &
+                  * ( + CORIOLI * U_GEOS(k) &
+                      - CORIOLI * 0.25_RP &
+                      * ( VELX(k,i,j)+VELX(k,i,j+1)+VELX(k,i-1,j)+VELX(k,i-1,j+1) ) &
+                    ) &
                   - MOMZ_LS(k,1) * ( WORK(k+1,i,j) - WORK(k,i,j) ) * RFDZ(k)
           enddo
           enddo
@@ -369,8 +378,11 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
              MOMY_tp(KE,i,j) = MOMY_tp(KE,i,j) &
-                  + CORIOLI * U_GEOS(KE) &
-                  - CORIOLI * VELX(KE,i,j) &
+                  + 0.5_RP * ( DENS(KE,i,j+1)+DENS(KE,i,j) ) &
+                  * ( + CORIOLI * U_GEOS(KE) &
+                      - CORIOLI * 0.25_RP  & 
+                      * ( VELX(KE,i,j)+VELX(KE,i,j+1)+VELX(KE,i-1,j)+VELX(KE,i-1,j+1) ) &
+                    ) &
                   - MOMZ_LS(KE,1) * ( WORK(KE,i,j) - WORK(KE-1,i,j) ) * RFDZ(KE-1)
           enddo
           enddo
