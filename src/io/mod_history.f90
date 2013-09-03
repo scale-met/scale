@@ -294,8 +294,10 @@ contains
        call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
 
     else
+       call TIME_rapstart('FILE O Interpolation')
        call INTERP_vertical( var  (:,:,:), & ! [IN]
                              var_Z(:,:,:)  ) ! [OUT]
+       call TIME_rapend  ('FILE O Interpolation')
 
        do k = 1, KMAX
        do j = 1, JMAX

@@ -75,9 +75,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_rk_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &
@@ -490,10 +487,6 @@ contains
        enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-
-#ifdef DEBUG
-       qflx_hi(:,:,:,:) = UNDEF
 #endif
 
 #ifndef NO_FCT_DYN
@@ -1082,6 +1075,10 @@ contains
     IIE = IIS+IBLOCK-1
 #endif
 
+#ifdef DEBUG
+    qflx_hi(:,:,:,:) = UNDEF
+#endif
+
        !########################################################################
        ! momentum equation (x)
        !########################################################################
@@ -1489,6 +1486,7 @@ contains
 #ifdef DEBUG
     qflx_hi(:,:,:,:) = UNDEF
 #endif
+
        !########################################################################
        ! momentum equation (y)
        !########################################################################
@@ -1899,6 +1897,7 @@ contains
 #ifdef DEBUG
     qflx_hi(KS:,:,:,:) = UNDEF
 #endif
+
        !########################################################################
        ! Thermodynamic equation
        !########################################################################
