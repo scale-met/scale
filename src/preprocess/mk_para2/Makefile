@@ -11,25 +11,6 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 FC1 = $(FC)
 FC2 = $(FC)
-#FC1 = f90
-#FC2 = f77
-#FC1 = gfortran-mp-4.7
-#FC2 = gfortran-mp-4.7
-
-# No Option
-#FFLAGS =
-
-# IBM fortran on Mac Quad
-# FFLAGS = -O5
-
-# Absoft fortran on Mac
-# FFLAGS = -O
-
-# Dec fortran on alpha
-# FFLAGS = -fast -tune host -O4 -assume byterecl -convert big_endian
-
-# gfortran on Mac
-#FFLAGS = -O3 -fconvert=big-endian
 
 TARGET = mkpara
 OBJS =  mkpara.o        \
