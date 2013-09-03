@@ -1137,7 +1137,7 @@ call TIME_rapstart   ('DYN-set')
                      + ( POTT(KE,i+1,j) + POTT(KE,i-1,j) + POTT(KE,i,j+1) + POTT(KE,i,j-1) ) * 2.0_RP &
                      + ( POTT(KE,i+2,j) + POTT(KE,i-2,j) + POTT(KE,i,j+2) + POTT(KE,i,j-2) ) &
                      + ( POTT(KE-1,i,j) ) * 2.0_RP &
-                     ) / 19.0_RP
+                     ) / 17.0_RP
              enddo
              enddo
           end if
@@ -2150,22 +2150,11 @@ call TIME_rapstart   ('DYN-set')
     call COMM_vars8( MOMX_t(:,:,:), 3 )
     call COMM_vars8( MOMY_t(:,:,:), 4 )
     call COMM_vars8( RHOT_t(:,:,:), 5 )
-#ifndef DRY
-    do iq = 1, QA
-       call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
-    end do
-#endif
     call COMM_wait ( DENS_t(:,:,:), 1 )
     call COMM_wait ( MOMZ_t(:,:,:), 2 )
     call COMM_wait ( MOMX_t(:,:,:), 3 )
     call COMM_wait ( MOMY_t(:,:,:), 4 )
     call COMM_wait ( RHOT_t(:,:,:), 5 )
-#ifndef DRY
-    do iq = 1, QA
-       call COMM_wait( QTRC_t(:,:,:,iq), 5+iq )
-    end do
-#endif
-
 
 #ifdef _FAPP_
 call TIME_rapend     ('DYN-set')
@@ -2437,6 +2426,14 @@ call TIME_rapstart   ('DYN-fct')
     enddo
     enddo
 
+#ifndef DRY
+    do iq = 1, QA
+       call COMM_vars8( QTRC_t(:,:,:,iq), 5+iq )
+    end do
+    do iq = 1, QA
+       call COMM_wait ( QTRC_t(:,:,:,iq), 5+iq )
+    end do
+#endif
 
     do iq = 1, QA
 
