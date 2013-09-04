@@ -40,7 +40,7 @@ cat << EOF1 > ./run.sh
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
 #PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=* ../input_sounding.txt %r:./"
+#PJM --stgin  "rank=* input_sounding.txt    %r:./"
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
 #PJM --stgout "rank=* %r:./*      ./"

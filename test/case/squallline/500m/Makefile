@@ -36,9 +36,6 @@ include $(TESTDIR)/Makefile.common
 
 
 
-jobshell:
-	sh  $(TOPDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC)
-
 buildlocal: makedir $(BUILD_DIR)/mod_user.f90
 
 $(BUILD_DIR)/mod_user.f90: ../mod_user.f90

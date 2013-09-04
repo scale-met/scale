@@ -16,27 +16,12 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-# for Oakleaf-FX
-# if [ ${xy} -gt 480 ]; then
-#    rscgrp="x-large"
-# elif [ ${xy} -gt 372 ]; then
-#    rscgrp="large"
-# elif [ ${xy} -gt 216 ]; then
-#    rscgrp="medium"
-# elif [ ${xy} -gt 12 ]; then
-#    rscgrp="small"
-# else
-#    rscgrp="short"
-# fi
-
-# for AICS-FX10
-if [ ${xy} -gt 96 ]; then
+if [ ${xy} -gt 36864 ]; then
    rscgrp="huge"
-elif [ ${xy} -gt 24 ]; then
+elif [ ${xy} -gt 384 ]; then
    rscgrp="large"
 else
-#   rscgrp="interact"
-   rscgrp="large"
+   rscgrp="small"
 fi
 
 # Generate run.sh
@@ -45,12 +30,20 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# for FX10
+# for K computer
 #
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
 #PJM --rsc-list "elapse=02:00:00"
+#PJM --stg-transfiles all
+#PJM --mpi "use-rankdir"
+#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
+#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
+#PJM --stgin  "rank=* input_sounding.txt    %r:./"
+#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
+#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+#PJM --stgout "rank=* %r:./*      ./"
 #PJM -j
 #PJM -s
 #
@@ -58,10 +51,6 @@ cat << EOF1 > ./run.sh
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-
-ln -sv ${BINDIR}/${INITNAME} .
-ln -sv ${BINDIR}/${BINNAME}  .
-ln -sv ../input_sounding.txt .
 
 # run
 ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
