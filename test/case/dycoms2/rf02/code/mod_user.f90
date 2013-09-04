@@ -308,8 +308,8 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
+          do j = JJS-1, JJE
+          do i = IIS,   IIE+1
           do k = KS, KE
              VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
           enddo
@@ -353,8 +353,8 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
+          do j = JJS,   JJE+1
+          do i = IIS-1, IIE
           do k = KS, KE
              VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i+1,j)+DENS(k,i,j) )
           enddo
@@ -375,8 +375,8 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
+          do j = JJS,   JJE+1
+          do i = IIS-1, IIE
              MOMY_tp(KE,i,j) = MOMY_tp(KE,i,j) &
                   + 0.5_RP * ( DENS(KE,i,j+1)+DENS(KE,i,j) ) &
                   * ( + CORIOLI * U_GEOS(KE) &
