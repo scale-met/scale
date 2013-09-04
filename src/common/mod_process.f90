@@ -221,6 +221,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    ! flush 1kbyte
+    if( IO_L ) write(IO_FID_LOG,'(32A32)') '                                '
+
     if ( PRC_mpi_alive ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
@@ -228,6 +231,7 @@ contains
        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
     endif
 
+    stop
   end subroutine PRC_MPIstop
 
   !-----------------------------------------------------------------------------
