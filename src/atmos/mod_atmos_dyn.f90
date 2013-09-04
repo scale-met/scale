@@ -103,22 +103,22 @@ module mod_atmos_dyn
   integer, private, parameter :: RK = 3 ! order of Runge-Kutta scheme
 
   ! numerical filter settings
-  integer,  private, save      :: ATMOS_DYN_numerical_diff_order = 1
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact = 1.0_RP
-  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private, save      :: DIFF4 ! for numerical filter
+  integer,  private, save :: ATMOS_DYN_numerical_diff_order        = 1
+  real(RP), private, save :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private, save :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
+  logical , private, save :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  real(RP), private, save :: DIFF4                                             ! for numerical filter
 
   ! coriolis force
-  logical, private, save       :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, save      :: CORIOLI(1,IA,JA)                    ! coriolis term
+  logical, private, save  :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  real(RP), private, save :: CORIOLI(1,IA,JA)                    ! coriolis term
 
-  real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP        ! Divergence dumping coef
+  real(RP), private, save :: ATMOS_DYN_divdmp_coef = 0.0_RP        ! Divergence dumping coef
 
   ! fct
-  logical, private, save       :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical, private, save       :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical, private, save       :: ATMOS_DYN_FLAG_FCT_T        = .false.
+  logical, private, save  :: ATMOS_DYN_FLAG_FCT_rho      = .false.
+  logical, private, save  :: ATMOS_DYN_FLAG_FCT_momentum = .false.
+  logical, private, save  :: ATMOS_DYN_FLAG_FCT_T        = .false.
 
   ! work
   real(RP), private, save :: DENS_RK1(KA,IA,JA)   ! prognostic variables (+1/3 step)
