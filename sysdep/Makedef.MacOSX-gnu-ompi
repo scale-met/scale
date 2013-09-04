@@ -34,6 +34,9 @@ LFLAGS = $(FFLAGS)
 NETCDF_INCLUDE ?= -I/opt/local/include
 NETCDF_LIBS    ?= -L/opt/local/lib -lnetcdff -lnetcdf
 
+###### Lapack
+LAPACK_LIBS    ?= -L/opt/local/lib -llapack -lf77blas -latlas
+
 ##### for frontend
 INSTALL = install
 AR      = ar
