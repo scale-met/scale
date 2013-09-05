@@ -16,7 +16,7 @@ include $(TOPDIR)/src/Mkinclude
 index      = 050m230x64x64
 precision  = real8
 dynamics   = heve
-tracer     = sn13
+tracer     = kessler
 sfcflx     = const
 turbulence = dummy
 radiation  = dummy
