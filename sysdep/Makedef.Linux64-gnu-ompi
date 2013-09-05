@@ -27,6 +27,12 @@ FFLAGS += -I/usr/lib64/mpi/gcc/openmpi/lib64 -x f95-cpp-input
 
 FFLAGS_DYN = $(FFLAGS)
 
+ifneq ($(ENABLE_PAPI),)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
 # if gcc <= 4.3: -M, else if gcc >= 4.4: -J
 MODDIROPT ?= -J
 
