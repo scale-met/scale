@@ -39,7 +39,9 @@ module mod_mkinit
      PRC_MPIstop
   use mod_const, only : &
      PI    => CONST_PI,    &
+     GRAV  => CONST_GRAV,  &
      Pstd  => CONST_Pstd,  &
+     Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
      RovCP => CONST_RovCP, &
      LH0   => CONST_LH0,   &
@@ -91,18 +93,23 @@ module mod_mkinit
   !++ Public parameters & variables
   !
   integer, public, save      :: MKINIT_TYPE           = -1
+
   integer, public, parameter :: I_PLANESTATE          =  1
   integer, public, parameter :: I_TRACERBUBBLE        =  2
   integer, public, parameter :: I_COLDBUBBLE          =  3
-  integer, public, parameter :: I_WARMBUBBLE          =  4
-  integer, public, parameter :: I_KHWAVE              =  5
-  integer, public, parameter :: I_TURBULENCE          =  6
-  integer, public, parameter :: I_SUPERCELL           =  7
-  integer, public, parameter :: I_SQUALLLINE          =  8
-  integer, public, parameter :: I_DYCOMS2_RF01        =  9
-  integer, public, parameter :: I_DYCOMS2_RF02        = 10
-  integer, public, parameter :: I_INTERPORATION       = 11
-  integer, public, parameter :: I_RICO                = 12
+  integer, public, parameter :: I_LAMBWAVE            =  4
+  integer, public, parameter :: I_GRAVITYWAVE         =  5
+  integer, public, parameter :: I_KHWAVE              =  6
+  integer, public, parameter :: I_TURBULENCE          =  7
+
+  integer, public, parameter :: I_WARMBUBBLE          =  8
+  integer, public, parameter :: I_SUPERCELL           =  9
+  integer, public, parameter :: I_SQUALLLINE          = 10
+  integer, public, parameter :: I_DYCOMS2_RF01        = 11
+  integer, public, parameter :: I_DYCOMS2_RF02        = 12
+  integer, public, parameter :: I_RICO                = 13
+
+  integer, public, parameter :: I_INTERPORATION       = 14
 
   !-----------------------------------------------------------------------------
   !
@@ -114,15 +121,19 @@ module mod_mkinit
   private :: MKINIT_planestate
   private :: MKINIT_tracerbubble
   private :: MKINIT_coldbubble
-  private :: MKINIT_warmbubble
+  private :: MKINIT_lambwave
+  private :: MKINIT_gravitywave
   private :: MKINIT_khwave
   private :: MKINIT_turbulence
+
+  private :: MKINIT_warmbubble
   private :: MKINIT_supercell
   private :: MKINIT_squallline
   private :: MKINIT_DYCOMS2_RF01
   private :: MKINIT_DYCOMS2_RF02
-  private :: MKINIT_interporation
   private :: MKINIT_RICO
+
+  private :: MKINIT_interporation
 
   !-----------------------------------------------------------------------------
   !
@@ -245,13 +256,19 @@ contains
     case('COLDBUBBLE')
        MKINIT_TYPE = I_COLDBUBBLE
        call BUBBLE_setup
-    case('WARMBUBBLE')
-       MKINIT_TYPE = I_WARMBUBBLE
+    case('LAMBWAVE')
+       MKINIT_TYPE = I_LAMBWAVE
+       call BUBBLE_setup
+    case('GRAVITYWAVE')
+       MKINIT_TYPE = I_GRAVITYWAVE
        call BUBBLE_setup
     case('KHWAVE')
        MKINIT_TYPE = I_KHWAVE
     case('TURBULENCE')
        MKINIT_TYPE = I_TURBULENCE
+    case('WARMBUBBLE')
+       MKINIT_TYPE = I_WARMBUBBLE
+       call BUBBLE_setup
     case('SUPERCELL')
        MKINIT_TYPE = I_SUPERCELL
        call BUBBLE_setup
@@ -290,12 +307,16 @@ contains
        call MKINIT_tracerbubble
     case(I_COLDBUBBLE)
        call MKINIT_coldbubble
-    case(I_WARMBUBBLE)
-       call MKINIT_warmbubble
+    case(I_LAMBWAVE)
+       call MKINIT_lambwave
+    case(I_GRAVITYWAVE)
+       call MKINIT_gravitywave
     case(I_KHWAVE)
        call MKINIT_khwave
     case(I_TURBULENCE)
        call MKINIT_turbulence
+    case(I_WARMBUBBLE)
+       call MKINIT_warmbubble
     case(I_SUPERCELL)
        call MKINIT_supercell
     case(I_SQUALLLINE)
@@ -1025,6 +1046,173 @@ contains
 
     return
   end subroutine MKINIT_warmbubble
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for cold bubble experiment
+  subroutine MKINIT_lambwave
+    implicit none
+
+    ! Surface state
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    ! Environment state
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_TEMP     = 300.0_RP ! temperature of environment [K]
+    ! Bubble
+    real(RP) :: BBL_PRES     =  100._RP ! extremum of pressure in bubble [Pa]
+
+    NAMELIST / PARAM_MKINIT_LAMBWAVE / &
+       SFC_PRES,  &
+       ENV_U,     &
+       ENV_V,     &
+       ENV_TEMP,  &
+       BBL_PRES
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAMBWAVE]/Categ[MKINIT]'
+
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_LAMBWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAMBWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAMBWAVE)
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = SFC_PRES/(Rdry*ENV_TEMP) * exp( - GRAV/(Rdry*ENV_TEMP) * CZ(k) )
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U * DENS(k,i,j)
+       MOMY(k,i,j) = ENV_V * DENS(k,i,j)
+
+       ! make pressure bubble
+       pres(k,i,j) = DENS(k,i,j) * ENV_TEMP * Rdry + BBL_PRES * bubble(k,i,j)
+
+       RHOT(k,i,j) = DENS(k,i,j) * ENV_TEMP * ( P00/pres(k,i,j) )**RovCP
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+    enddo
+    enddo
+    enddo
+
+    if ( flg_bin ) then
+       write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
+       call PRC_MPIstop
+    endif
+
+    return
+  end subroutine MKINIT_lambwave
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for gravity wave experiment
+  !! Default values are following by Skamarock and Klemp (1994)
+  subroutine MKINIT_gravitywave
+    implicit none
+
+    ! Surface state
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    ! Environment state
+    real(RP) :: ENV_U        =  20.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_BVF      =  0.01_RP ! Brunt Vaisala frequencies of environment [1/s]
+    ! Bubble
+    real(RP) :: BBL_THETA    =  0.01_RP ! extremum of potential temperature in bubble [K]
+
+    NAMELIST / PARAM_MKINIT_GRAVITYWAVE / &
+       SFC_THETA, &
+       SFC_PRES,  &
+       ENV_U,     &
+       ENV_V,     &
+       ENV_BVF,   &
+       BBL_THETA
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GRAVITYWAVE]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_GRAVITYWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAVITYWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAVITYWAVE)
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = SFC_THETA * exp( ENV_BVF*ENV_BVF / GRAV * CZ(k) )
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U * DENS(k,1,1)
+       MOMY(k,i,j) = ENV_V * DENS(k,1,1)
+
+       ! make warm bubble
+       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + BBL_THETA * bubble(k,i,j) )
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+    enddo
+    enddo
+    enddo
+
+    if ( flg_bin ) then
+       write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
+       call PRC_MPIstop
+    endif
+
+    return
+  end subroutine MKINIT_gravitywave
 
   !-----------------------------------------------------------------------------
   !> Make initial state for turbulence experiment
