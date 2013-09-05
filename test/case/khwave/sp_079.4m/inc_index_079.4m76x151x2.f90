@@ -5,11 +5,11 @@
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =   76 ! # of computational cells: z
-  integer,  private, parameter :: IMAX =   51 ! # of computational cells: x
-  integer,  private, parameter :: JMAX =   51 ! # of computational cells: y
+  integer,  private, parameter :: IMAX =  151 ! # of computational cells: x
+  integer,  private, parameter :: JMAX =    2 ! # of computational cells: y
 
-  integer,  private, parameter :: IBLOCK = 51 ! block size for cache blocking: x
-  integer,  private, parameter :: JBLOCK = 51 ! block size for cache blocking: y
+  integer,  private, parameter :: IBLOCK = IMAX ! block size for cache blocking: x
+  integer,  private, parameter :: JBLOCK = JMAX ! block size for cache blocking: y
 
   real(RP), private, save      :: DZ        =   79.4_RP ! length in the main region [m]: z
   real(RP), private, save      :: DX        =   39.7_RP ! length in the main region [m]: x
