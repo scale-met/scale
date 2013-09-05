@@ -114,8 +114,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SF_VARS)
 
     PREC(:,:) = 0.0_RP
-    SWD (:,:) = 0.0_RP
-    LWD (:,:) = 0.0_RP
+    SWD (:,:) = 200.0_RP
+    LWD (:,:) = 300.0_RP
 
     SFLX_MOMZ (:,:) = 0.0_RP
     SFLX_MOMX (:,:) = 0.0_RP

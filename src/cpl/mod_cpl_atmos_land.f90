@@ -259,8 +259,8 @@ contains
         pSWU, pLWU,          & ! (out)
         pSH, pLH, pGH        ) ! (out)
 
-      do j = JS, JE+1
-      do i = IS, IE+1
+      do j = JS-1, JE+1
+      do i = IS-1, IE+1
 
         if( redf(i,j) < 0.0_RP ) then
           redf(i,j) = 1.0_RP
@@ -285,7 +285,7 @@ contains
       end do
       end do
 
-      if( maxval(abs(RES(IS:IE,JS:JE))) < res_min ) then
+      if( maxval(abs(RES(IS-1:IE+1,JS-1:JE+1))) < res_min ) then
         ! iteration converged
         exit
       end if
@@ -295,17 +295,6 @@ contains
     if( n > nmax ) then
       ! not converged and stop program
       if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-      if( IO_L ) write(IO_FID_LOG,*) 'LST  :',minval(LST  (:,:)),maxval(LST  (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'RES  :',minval(RES  (:,:)),maxval(RES  (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'DRES :',minval(DRES (:,:)),maxval(DRES (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pMOMX:',minval(pMOMX(:,:)),maxval(pMOMX(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pMOMY:',minval(pMOMY(:,:)),maxval(pMOMY(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pMOMZ:',minval(pMOMZ(:,:)),maxval(pMOMZ(:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pSWU :',minval(pSWU (:,:)),maxval(pSWU (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pLWU :',minval(pLWU (:,:)),maxval(pLWU (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pSH  :',minval(pSH  (:,:)),maxval(pSH  (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pLH  :',minval(pLH  (:,:)),maxval(pLH  (:,:))
-      if( IO_L ) write(IO_FID_LOG,*) 'pGH  :',minval(pGH  (:,:)),maxval(pGH  (:,:))
       call PRC_MPIstop
     end if
 
@@ -347,7 +336,6 @@ contains
         pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (in)
         pQTRC, pPREC, pSWD, pLWD     ) ! (in)
     implicit none
-
     real(RP), intent(in) :: pDENS  (KA,IA,JA)
     real(RP), intent(in) :: pMOMX  (KA,IA,JA)
     real(RP), intent(in) :: pMOMY  (KA,IA,JA)
@@ -369,7 +357,7 @@ contains
     LWD (:,:)     = LWD (:,:)     + pLWD(:,:)
 
     CNT_putAtm = CNT_putAtm + 1.0_RP
-    
+
     return
   end subroutine CPL_AtmLnd_putAtm
 
@@ -558,19 +546,19 @@ contains
     real(RP) :: SatQvs, dSatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dpLWU, dpGH, dpSH1, dpSH2, dpLH1, dpLH2
 
-    integer :: i, j, iw
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     ! rho*theta -> potential temperature at cell centor
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
       pta(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
     end do
     end do
 
+    ! at (u, y, layer)
     do j = JS, JE
     do i = IS, IE
-      ! at (u, y, layer)
       Uabs = sqrt( &
              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i+1,j)                                     ) )**2 &
            + ( 2.0_RP *   MOMX(KS,i,j)                                                        )**2 &
@@ -589,13 +577,12 @@ contains
           Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
-
     enddo
     enddo
 
+    ! at (x, v, layer)
     do j = JS, JE
     do i = IS, IE
-      ! at (x, v, layer)
       Uabs = sqrt( &
              ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i,j+1)                                     ) )**2 &
            + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
@@ -614,13 +601,12 @@ contains
           Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
-
     enddo
     enddo
 
-    do j = JS, JE+1
-    do i = IS, IE+1
-      ! at cell center
+    ! at cell center
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
       Uabs = sqrt( &
              ( MOMZ(KS,i,j)                  )**2 &
            + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
@@ -670,7 +656,6 @@ contains
 
       ! calculation for d(residual)/dTs
       DRES(i,j) = - dpLWU - dpSH1 - dpSH2 - dpLH1 - dpLH2 + dpGH
-
     enddo
     enddo
 
@@ -683,6 +668,8 @@ contains
     use mod_const, only : &
       GRAV   => CONST_GRAV,  &
       KARMAN => CONST_KARMAN
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     ! argument
@@ -703,11 +690,11 @@ contains
 
     ! parameters of bulk transfer coefficient
     real(RP), parameter :: dRiB = 1.0E-10_RP ! delta RiB [no unit]
-    real(RP), parameter :: tPrn = 0.74E0_RP  ! turbulent Prandtl number (Businger et al. 1971)
-    real(RP), parameter :: LFb  = 9.4E0_RP   ! Louis factor b (Louis 1979)
-    real(RP), parameter :: LFbp = 4.7E0_RP   ! Louis factor b' (Louis 1979)
-    real(RP), parameter :: LFdm = 7.4E0_RP   ! Louis factor d for momemtum (Louis 1979)
-    real(RP), parameter :: LFdh = 5.3E0_RP   ! Louis factor d for heat (Louis 1979)
+    real(RP), parameter :: tPrn = 0.74_RP    ! turbulent Prandtl number (Businger et al. 1971)
+    real(RP), parameter :: LFb  = 9.4_RP     ! Louis factor b (Louis 1979)
+    real(RP), parameter :: LFbp = 4.7_RP     ! Louis factor b' (Louis 1979)
+    real(RP), parameter :: LFdm = 7.4_RP     ! Louis factor d for momemtum (Louis 1979)
+    real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
 
     ! variables
     integer :: n
@@ -733,8 +720,8 @@ contains
         fh = 1.0_RP - ( LFb * RiB0 ) / ( 1.0_RP + LFch * sqrt( abs( RiB0 ) ) )
       else
         ! stable condition
-        fm = 1.0_RP / ( 1.0_RP + LFbp * RiB0 ) ** 2
-        fh = 1.0_RP / ( 1.0_RP + LFbp * RiB0 ) ** 2
+        fm = 1.0_RP / ( 1.0_RP + LFbp * RiB0 )**2
+        fh = 1.0_RP / ( 1.0_RP + LFbp * RiB0 )**2
       end if
       psi  = tPrn * log( za/z0 ) * sqrt( fm ) / fh
 
@@ -746,8 +733,8 @@ contains
         dfh = 1.0_RP - ( LFb * dRiB0 ) / ( 1.0_RP + LFch * sqrt( abs( dRiB0 ) ) )
       else
         ! stable condition
-        dfm = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 ) ** 2
-        dfh = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 ) ** 2
+        dfm = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 )**2
+        dfh = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 )**2
       end if
       dpsi = ( tPrn * log( za/z0 ) * sqrt( dfm ) / dfh - psi ) / dRiB
 
@@ -765,7 +752,8 @@ contains
     end do
 
     if( n > 3 .and. n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration in the function of bulkcoef_uno.'
+      call PRC_MPIstop
     end if
 
     Cm = C0 * fm
@@ -811,7 +799,7 @@ contains
     real(8) :: satvapor ! saturated water vapor pressure [Pa]
 
     ! Tetens (1930)
-    satvapor = PSAT0 * exp( LH0/Rvap * ( 1.0d0/T00 - 1.0d0/temp ) )
+    satvapor = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/temp ) )
 
   end function satvapor
 

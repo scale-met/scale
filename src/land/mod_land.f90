@@ -33,6 +33,8 @@ module mod_land
   !
   !++ included parameters
   !
+include "inc_precision.h"
+include "inc_index.h"
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -94,6 +96,7 @@ contains
        CPL_AtmLnd_getDat2Lnd,  &
        CPL_AtmLnd_flushDat2Lnd
     implicit none
+integer::i,j
     !---------------------------------------------------------------------------
 
     !########## Surface Flux ##########
@@ -110,13 +113,6 @@ contains
     endif
     call TIME_rapend  ('LND Physics')
 
-    !########## for Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_putLnd( &
-          TG, QvEfc, EMIT, ALB, TCS, DZg,             &
-          Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
-    endif
-
     !########## Fill HALO ##########
     call LAND_vars_fillhalo
 
@@ -124,6 +120,13 @@ contains
     call TIME_rapstart('LND History')
        call LAND_vars_history
     call TIME_rapend  ('LND History')
+
+    !########## for Coupler ##########
+    if ( sw_AtmLnd ) then
+       call CPL_AtmLnd_putLnd( &
+          TG, QvEfc, EMIT, ALB, TCS, DZg,             &
+          Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
+    endif
 
     return
   end subroutine LAND_step

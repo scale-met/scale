@@ -28,7 +28,7 @@ module mod_land_phy_bucket
   !
   include "inc_precision.h"
   include 'inc_index.h'
-  include 'inc_land.h'
+!  include 'inc_land.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -41,11 +41,6 @@ module mod_land_phy_bucket
   !
   !++ Public parameters & variables
   !
-
-  real(RP), public, save :: ROFF   (IA,JA) ! run-off water [kg/m2]
-  real(RP), public, save :: STRG   (IA,JA) ! water storage [kg/m2]
-  real(RP), public, save :: STRGMAX(IA,JA) ! maximum water storage [kg/m2]
-  real(RP), public, save :: STRGCRT(IA,JA) ! critical water storage [kg/m2]
 
   !-----------------------------------------------------------------------------
   !
@@ -102,11 +97,6 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_BUCKET)
 
-    ROFF   (:,:) = 0.0_RP
-    STRG   (:,:) = 150.0_RP
-    STRGMAX(:,:) = 150.0_RP
-    STRGCRT(:,:) = STRGMAX * 0.75_RP
-
     return
   end subroutine LAND_PHY_setup
 
@@ -124,6 +114,10 @@ contains
       SFLX_QVLnd, &
       TG,         &
       QvEfc,      &
+      ROFF,       &
+      STRG,       &
+      STRGMAX,    &
+      STRGCRT,    &
       HCS,        &
       DZg
  
@@ -150,7 +144,9 @@ contains
       endif
 
       ! update ground temperature
-      TG(i,j) = TG(i,j) - 2.0_RP * SFLX_GH(i,j) / ( ( 1.0_RP - STRGMAX(i,j) * 1.0E-3_RP ) * HCS(i,j) + STRG(i,j) * 1.0E-3_RP * DWATR * CL * DZg(i,j) ) * dt
+      TG(i,j) = TG(i,j) - 2.0_RP * SFLX_GH(i,j) &
+              / ( ( 1.0_RP - STRGMAX(i,j) * 1.0E-3_RP ) * HCS(i,j) &
+                + STRG(i,j) * 1.0E-3_RP * DWATR * CL * DZg(i,j) ) * dt
 
     end do
     end do

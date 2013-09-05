@@ -58,20 +58,25 @@ module mod_land_vars
 
   real(RP), public, save :: TG   (IA,JA) ! soil temperature [K]
   real(RP), public, save :: QvEfc(IA,JA) ! efficiency of evaporation [no unit]
-  real(RP), public, save :: EMIT (IA,JA) ! emissivity in long-wave radiation [no unit]
-  real(RP), public, save :: ALB  (IA,JA) ! surface albedo in short-wave radiation [no unit]
-  real(RP), public, save :: TCS  (IA,JA) ! thermal conductivity for soil [W/m/K]
-  real(RP), public, save :: HCS  (IA,JA) ! heat capacity for soil [J/K]
-  real(RP), public, save :: DZg  (IA,JA) ! soil depth [m]
-  real(RP), public, save :: Z00  (IA,JA) ! basic factor for momemtum
-  real(RP), public, save :: Z0R  (IA,JA) ! rough factor for momemtum
-  real(RP), public, save :: Z0S  (IA,JA) ! smooth factor for momemtum
-  real(RP), public, save :: Zt0  (IA,JA) ! basic factor for heat
-  real(RP), public, save :: ZtR  (IA,JA) ! rough factor for heat
-  real(RP), public, save :: ZtS  (IA,JA) ! smooth factor for heat
-  real(RP), public, save :: Ze0  (IA,JA) ! basic factor for moisture
-  real(RP), public, save :: ZeR  (IA,JA) ! rough factor for moisture
-  real(RP), public, save :: ZeS  (IA,JA) ! smooth factor for moisture
+  real(RP), public, save :: ROFF (IA,JA) ! run-off water [kg/m2]
+  real(RP), public, save :: STRG (IA,JA) ! water storage [kg/m2]
+
+  real(RP), public, save :: STRGMAX(IA,JA) ! maximum water storage [kg/m2]
+  real(RP), public, save :: STRGCRT(IA,JA) ! critical water storage [kg/m2]
+  real(RP), public, save :: EMIT   (IA,JA) ! emissivity in long-wave radiation [no unit]
+  real(RP), public, save :: ALB    (IA,JA) ! surface albedo in short-wave radiation [no unit]
+  real(RP), public, save :: TCS    (IA,JA) ! thermal conductivity for soil [W/m/K]
+  real(RP), public, save :: HCS    (IA,JA) ! heat capacity for soil [J/K]
+  real(RP), public, save :: DZg    (IA,JA) ! soil depth [m]
+  real(RP), public, save :: Z00    (IA,JA) ! basic factor for momemtum
+  real(RP), public, save :: Z0R    (IA,JA) ! rough factor for momemtum
+  real(RP), public, save :: Z0S    (IA,JA) ! smooth factor for momemtum
+  real(RP), public, save :: Zt0    (IA,JA) ! basic factor for heat
+  real(RP), public, save :: ZtR    (IA,JA) ! rough factor for heat
+  real(RP), public, save :: ZtS    (IA,JA) ! smooth factor for heat
+  real(RP), public, save :: Ze0    (IA,JA) ! basic factor for moisture
+  real(RP), public, save :: ZeR    (IA,JA) ! rough factor for moisture
+  real(RP), public, save :: ZeS    (IA,JA) ! smooth factor for moisture
 
 !  real(RP), public, save :: SoilT(KA_soil,IA,JA) ! Soil temperature             [K]
 !  real(RP), public, save :: SoilW(KA_soil,IA,JA) ! Soil moisture (liquid water) [m3/m3]
@@ -79,81 +84,33 @@ module mod_land_vars
 
   integer,                    public, save :: I_TG    = 1
   integer,                    public, save :: I_QvEfc = 2
-  integer,                    public, save :: I_EMIT  = 3
-  integer,                    public, save :: I_ALB   = 4
-  integer,                    public, save :: I_TCS   = 5
-  integer,                    public, save :: I_HCS   = 6
-  integer,                    public, save :: I_DZg   = 7
-  integer,                    public, save :: I_Z00   = 8
-  integer,                    public, save :: I_Z0R   = 9
-  integer,                    public, save :: I_Z0S   = 10
-  integer,                    public, save :: I_Zt0   = 11
-  integer,                    public, save :: I_ZtR   = 12
-  integer,                    public, save :: I_ZtS   = 13
-  integer,                    public, save :: I_Ze0   = 14
-  integer,                    public, save :: I_ZeR   = 15
-  integer,                    public, save :: I_ZeS   = 16
-  integer,                    public, save :: I_SoilT = 17
-  integer,                    public, save :: I_SoilW = 18
-  integer,                    public, save :: I_SoilI = 19
-  character(len=File_HSHORT), public, save :: LP_NAME(19) !< name  of the land variables
-  character(len=File_HMID),   public, save :: LP_DESC(19) !< desc. of the land variables
-  character(len=File_HSHORT), public, save :: LP_UNIT(19) !< unit  of the land variables
+  integer,                    public, save :: I_ROFF  = 3
+  integer,                    public, save :: I_STRG  = 4
+  integer,                    public, save :: I_SoilT = 5
+  integer,                    public, save :: I_SoilW = 6
+  integer,                    public, save :: I_SoilI = 7
+  character(len=File_HSHORT), public, save :: LP_NAME(7) !< name  of the land variables
+  character(len=File_HMID),   public, save :: LP_DESC(7) !< desc. of the land variables
+  character(len=File_HSHORT), public, save :: LP_UNIT(7) !< unit  of the land variables
 
   data LP_NAME / 'TG',    &
                  'QvEfc', &
-                 'EMIT',  &
-                 'ALB',   &
-                 'TCS',   &
-                 'HCS',   &
-                 'DZg',   &
-                 'Z00',   &
-                 'Z0R',   &
-                 'Z0S',   &
-                 'Zt0',   &
-                 'ZtR',   &
-                 'ZtS',   &
-                 'Ze0',   &
-                 'ZeR',   &
-                 'ZeS',   &
+                 'ROFF',  &
+                 'STRG',  &
                  'SoilT', &
                  'SoilW', &
                  'SoilI'  /
   data LP_DESC / 'soil temperature',                       &
                  'efficiency of evaporation',              &
-                 'emissivity in long-wave radiation',      &
-                 'surface albedo in short-wave radiation', &
-                 'thermal conductivity for soil',          &
-                 'heat capacity for soil',                 &
-                 'soil depth',                             &
-                 'basic factor for momemtum',              &
-                 'rough factor for momemtum',              &
-                 'smooth factor for momemtum',             &
-                 'basic factor for heat',                  &
-                 'rough factor for heat',                  &
-                 'smooth factor for heat',                 &
-                 'basic factor for moisture',              &
-                 'rough factor for moisture',              &
-                 'smooth factor for moisture',             &
+                 'run-off water',                          &
+                 'water storage',                          &
                  'soil temperature',                       &
                  'soil moisture',                          &
                  'soil ice'                                /
   data LP_UNIT / 'K',       &
                  'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'W/m/K',   &
-                 'J/K',     &
-                 'm',       &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
-                 'no-unit', &
+                 'kg/m2',   &
+                 'kg/m2',   &
                  'K',       &
                  'm3/m3',   &
                  'm3/m3'    /
@@ -278,37 +235,13 @@ contains
     ! fill IHALO & JHALO
     call COMM_vars8( TG   (:,:),   1  )
     call COMM_vars8( QvEfc(:,:),   2  )
-    call COMM_vars8( EMIT (:,:),   3  )
-    call COMM_vars8( ALB  (:,:),   4  )
-    call COMM_vars8( TCS  (:,:),   5  )
-    call COMM_vars8( HCS  (:,:),   6  )
-    call COMM_vars8( DZg  (:,:),   7  )
-    call COMM_vars8( Z00  (:,:),   8  )
-    call COMM_vars8( Z0R  (:,:),   9  )
-    call COMM_vars8( Z0S  (:,:),   10 )
-    call COMM_vars8( Zt0  (:,:),   11 )
-    call COMM_vars8( ZtR  (:,:),   12 )
-    call COMM_vars8( ZtS  (:,:),   13 )
-    call COMM_vars8( Ze0  (:,:),   14 )
-    call COMM_vars8( ZeR  (:,:),   15 )
-    call COMM_vars8( ZeS  (:,:),   16 )
+    call COMM_vars8( ROFF (:,:),   3  )
+    call COMM_vars8( STRG (:,:),   4  )
 
     call COMM_wait ( TG   (:,:),   1  )
     call COMM_wait ( QvEfc(:,:),   2  )
-    call COMM_wait ( EMIT (:,:),   3  )
-    call COMM_wait ( ALB  (:,:),   4  )
-    call COMM_wait ( TCS  (:,:),   5  )
-    call COMM_wait ( HCS  (:,:),   6  )
-    call COMM_wait ( DZg  (:,:),   7  )
-    call COMM_wait ( Z00  (:,:),   8  )
-    call COMM_wait ( Z0R  (:,:),   9  )
-    call COMM_wait ( Z0S  (:,:),   10 )
-    call COMM_wait ( Zt0  (:,:),   11 )
-    call COMM_wait ( ZtR  (:,:),   12 )
-    call COMM_wait ( ZtS  (:,:),   13 )
-    call COMM_wait ( Ze0  (:,:),   14 )
-    call COMM_wait ( ZeR  (:,:),   15 )
-    call COMM_wait ( ZeS  (:,:),   16 )
+    call COMM_wait ( ROFF (:,:),   3  )
+    call COMM_wait ( STRG (:,:),   4  )
 
 !    call COMM_vars8( SoilT(:,:,:), 1 )
 !    call COMM_vars8( SoilW(:,:,:), 2 )
@@ -345,34 +278,10 @@ contains
                          LAND_RESTART_IN_BASENAME, 'TG', 'XY', step=1     ) ! [IN]
        call FILEIO_read( QvEfc(:,:),                                      & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'QvEfc', 'XY', step=1  ) ! [IN]
-       call FILEIO_read( EMIT(:,:),                                       & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'EMIT', 'XY', step=1   ) ! [IN]
-       call FILEIO_read( ALB(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ALB', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( TCS(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'TCS', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( HCS(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'HCS', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( DZg(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'DZg', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( Z00(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'Z00', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( Z0R(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'Z0R', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( Z0S(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'Z0S', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( Zt0(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'Zt0', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( ZtR(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ZtR', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( ZtS(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ZtS', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( Ze0(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'Ze0', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( ZeR(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ZeR', 'XY', step=1    ) ! [IN]
-       call FILEIO_read( ZeS(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ZeS', 'XY', step=1    ) ! [IN]
+       call FILEIO_read( ROFF(:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY', step=1   ) ! [IN]
+       call FILEIO_read( STRG(:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'STRG', 'XY', step=1   ) ! [IN]
 
 !       call FILEIO_read( SoilT(:,:,:),                                    & ! [OUT]
 !                         LAND_RESTART_IN_BASENAME, 'SoilT', 'ZXY', step=1 ) ! [IN]
@@ -389,39 +298,49 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
 
-!       TG   (:,:) = CONST_UNDEF
-!       QvEfc(:,:) = CONST_UNDEF
-!       EMIT (:,:) = CONST_UNDEF
-!       ALB  (:,:) = CONST_UNDEF
-!       TCS  (:,:) = CONST_UNDEF
-!       HCS  (:,:) = CONST_UNDEF
-!       DZg  (:,:) = CONST_UNDEF
-!       Z00  (:,:) = CONST_UNDEF
-!       Z0R  (:,:) = CONST_UNDEF
-!       Z0S  (:,:) = CONST_UNDEF
-!       Zt0  (:,:) = CONST_UNDEF
-!       ZtR  (:,:) = CONST_UNDEF
-!       ZtS  (:,:) = CONST_UNDEF
-!       Ze0  (:,:) = CONST_UNDEF
-!       ZeR  (:,:) = CONST_UNDEF
-!       ZeS  (:,:) = CONST_UNDEF
+!       TG     (:,:) = CONST_UNDEF
+!       QvEfc  (:,:) = CONST_UNDEF
+!       ROFF   (:,:) = CONST_UNDEF
+!       STRG   (:,:) = CONST_UNDEF
 
-       TG   (:,:) = 300.0_RP
-       QvEfc(:,:) = 1.0_RP
-       EMIT (:,:) = 0.98_RP
-       ALB  (:,:) = 0.33_RP
-       TCS  (:,:) = 1.0_RP
-       HCS  (:,:) = 2.2E+6_RP
-       DZg  (:,:) = 1.0_RP
-       Z00  (:,:) = 0.0_RP
-       Z0R  (:,:) = 0.018_RP
-       Z0S  (:,:) = 0.11_RP
-       Zt0  (:,:) = 1.4E-5_RP
-       ZtR  (:,:) = 0.0_RP
-       ZtS  (:,:) = 0.4_RP
-       Ze0  (:,:) = 1.3E-4_RP
-       ZeR  (:,:) = 0.0_RP
-       ZeS  (:,:) = 0.62_RP
+!       STRGMAX(:,:) = CONST_UNDEF
+!       STRGCRT(:,:) = CONST_UNDEF
+!       EMIT   (:,:) = CONST_UNDEF
+!       ALB    (:,:) = CONST_UNDEF
+!       TCS    (:,:) = CONST_UNDEF
+!       HCS    (:,:) = CONST_UNDEF
+!       DZg    (:,:) = CONST_UNDEF
+!       Z00    (:,:) = CONST_UNDEF
+!       Z0R    (:,:) = CONST_UNDEF
+!       Z0S    (:,:) = CONST_UNDEF
+!       Zt0    (:,:) = CONST_UNDEF
+!       ZtR    (:,:) = CONST_UNDEF
+!       ZtS    (:,:) = CONST_UNDEF
+!       Ze0    (:,:) = CONST_UNDEF
+!       ZeR    (:,:) = CONST_UNDEF
+!       ZeS    (:,:) = CONST_UNDEF
+
+       TG     (:,:) = 300.0_RP
+       QvEfc  (:,:) = 1.0_RP
+       ROFF   (:,:) = 0.0_RP
+       STRG   (:,:) = 100.0_RP
+
+       STRGMAX(:,:) = 150.0_RP
+       STRGCRT(:,:) = STRGMAX * 0.75_RP
+       EMIT (:,:)   = 0.98_RP
+       ALB  (:,:)   = 0.33_RP
+       TCS  (:,:)   = 1.0_RP
+       HCS  (:,:)   = 2.2E+6_RP
+       DZg  (:,:)   = 1.0_RP
+       Z00  (:,:)   = 0.0_RP
+       Z0R  (:,:)   = 0.018_RP
+       Z0S  (:,:)   = 0.11_RP
+       Zt0  (:,:)   = 1.4E-5_RP
+       ZtR  (:,:)   = 0.0_RP
+       ZtS  (:,:)   = 0.4_RP
+       Ze0  (:,:)   = 1.3E-4_RP
+       ZeR  (:,:)   = 0.0_RP
+       ZeS  (:,:)   = 0.62_RP
 
 !       SoilT(:,:,:) = CONST_UNDEF
 !       SoilW(:,:,:) = CONST_UNDEF
@@ -466,34 +385,10 @@ contains
                           LP_NAME(I_TG),    LP_DESC(I_TG),    LP_UNIT(I_TG),    'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
        call FILEIO_write( QvEfc(:,:), bname, LAND_RESTART_OUT_TITLE,                                           & ! [IN]
                           LP_NAME(I_QvEfc), LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), 'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( EMIT(:,:), bname, LAND_RESTART_OUT_TITLE,                                            & ! [IN]
-                          LP_NAME(I_EMIT),  LP_DESC(I_EMIT),  LP_UNIT(I_EMIT),  'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( ALB(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_ALB),   LP_DESC(I_ALB),   LP_UNIT(I_ALB),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( TCS(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_TCS),   LP_DESC(I_TCS),   LP_UNIT(I_TCS),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( HCS(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_HCS),   LP_DESC(I_HCS),   LP_UNIT(I_HCS),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( DZg(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_DZg),   LP_DESC(I_DZg),   LP_UNIT(I_DZg),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( Z00(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_Z00),   LP_DESC(I_Z00),   LP_UNIT(I_Z00),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( Z0R(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_Z0R),   LP_DESC(I_Z0R),   LP_UNIT(I_Z0R),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( Z0S(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_Z0S),   LP_DESC(I_Z0S),   LP_UNIT(I_Z0S),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( Zt0(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_Zt0),   LP_DESC(I_Zt0),   LP_UNIT(I_Zt0),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( ZtR(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_ZtR),   LP_DESC(I_ZtR),   LP_UNIT(I_ZtR),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( ZtS(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_ZtS),   LP_DESC(I_ZtS),   LP_UNIT(I_ZtS),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( Ze0(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_Ze0),   LP_DESC(I_Ze0),   LP_UNIT(I_Ze0),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( ZeR(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_ZeR),   LP_DESC(I_ZeR),   LP_UNIT(I_ZeR),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILEIO_write( ZeS(:,:), bname, LAND_RESTART_OUT_TITLE,                                             & ! [IN]
-                          LP_NAME(I_ZeS),   LP_DESC(I_ZeS),   LP_UNIT(I_ZeS),   'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
+       call FILEIO_write( ROFF(:,:), bname, LAND_RESTART_OUT_TITLE,                                            & ! [IN]
+                          LP_NAME(I_ROFF),  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
+       call FILEIO_write( STRG(:,:), bname, LAND_RESTART_OUT_TITLE,                                            & ! [IN]
+                          LP_NAME(I_STRG),  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  'XY', LAND_RESTART_OUT_DTYPE   ) ! [IN]
 
 !       call FILEIO_write( SoilT(:,:,:), bname, LAND_RESTART_OUT_TITLE,                                         & ! [IN]
 !                          LP_NAME(I_SoilT), LP_DESC(I_SoilT), LP_UNIT(I_SoilT), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
@@ -526,20 +421,8 @@ contains
     if ( LAND_VARS_CHECKRANGE ) then
        call MISC_valcheck( TG   (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_TG)    )
        call MISC_valcheck( QvEfc(:,:),      0.0_RP,    2.0_RP,  LP_NAME(I_QvEfc) )
-       call MISC_valcheck( EMIT (:,:),      0.0_RP,    2.0_RP,  LP_NAME(I_EMIT)  )
-       call MISC_valcheck( ALB  (:,:),      0.0_RP,    2.0_RP,  LP_NAME(I_ALB)   )
-       call MISC_valcheck( TCS  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_TCS)   )
-       call MISC_valcheck( HCS  (:,:),      0.0_RP, 1.0E+10_RP, LP_NAME(I_HCS)   )
-       call MISC_valcheck( DZg  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_DZg)   )
-       call MISC_valcheck( Z00  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Z00)   )
-       call MISC_valcheck( Z0R  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Z0R)   )
-       call MISC_valcheck( Z0S  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Z0S)   )
-       call MISC_valcheck( Zt0  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Zt0)   )
-       call MISC_valcheck( ZtR  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZtR)   )
-       call MISC_valcheck( ZtS  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZtS)   )
-       call MISC_valcheck( Ze0  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_Ze0)   )
-       call MISC_valcheck( ZeR  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZeR)   )
-       call MISC_valcheck( ZeS  (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ZeS)   )
+       call MISC_valcheck( ROFF (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_ROFF)  )
+       call MISC_valcheck( STRG (:,:),      0.0_RP, 1000.0_RP,  LP_NAME(I_STRG)  )
 !       call MISC_valcheck( SoilT(:,:,:),    0.0_RP, 1000.0_RP,  LP_NAME(I_SoilT) )
 !       call MISC_valcheck( SoilW(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilW) )
 !       call MISC_valcheck( SoilI(:,:,:),    0.0_RP,    2.0_RP,  LP_NAME(I_SoilI) )
@@ -547,20 +430,8 @@ contains
 
     call HIST_in( TG   (:,:),   'L_TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )
     call HIST_in( QvEfc(:,:),   'L_QvEfc', LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), TIME_DTSEC_LAND )
-    call HIST_in( EMIT (:,:),   'L_EMIT',  LP_DESC(I_EMIT),  LP_UNIT(I_EMIT),  TIME_DTSEC_LAND )
-    call HIST_in( ALB  (:,:),   'L_ALB',   LP_DESC(I_ALB),   LP_UNIT(I_ALB),   TIME_DTSEC_LAND )
-    call HIST_in( TCS  (:,:),   'L_TCS',   LP_DESC(I_TCS),   LP_UNIT(I_TCS),   TIME_DTSEC_LAND )
-    call HIST_in( HCS  (:,:),   'L_HCS',   LP_DESC(I_HCS),   LP_UNIT(I_HCS),   TIME_DTSEC_LAND )
-    call HIST_in( DZg  (:,:),   'L_DZg',   LP_DESC(I_DZg),   LP_UNIT(I_DZg),   TIME_DTSEC_LAND )
-    call HIST_in( Z00  (:,:),   'L_Z00',   LP_DESC(I_Z00),   LP_UNIT(I_Z00),   TIME_DTSEC_LAND )
-    call HIST_in( Z0R  (:,:),   'L_Z0R',   LP_DESC(I_Z0R),   LP_UNIT(I_Z0R),   TIME_DTSEC_LAND )
-    call HIST_in( Z0S  (:,:),   'L_Z0S',   LP_DESC(I_Z0S),   LP_UNIT(I_Z0S),   TIME_DTSEC_LAND )
-    call HIST_in( Zt0  (:,:),   'L_Zt0',   LP_DESC(I_Zt0),   LP_UNIT(I_Zt0),   TIME_DTSEC_LAND )
-    call HIST_in( ZtR  (:,:),   'L_ZtR',   LP_DESC(I_ZtR),   LP_UNIT(I_ZtR),   TIME_DTSEC_LAND )
-    call HIST_in( ZtS  (:,:),   'L_ZtS',   LP_DESC(I_ZtS),   LP_UNIT(I_ZtS),   TIME_DTSEC_LAND )
-    call HIST_in( Ze0  (:,:),   'L_Ze0',   LP_DESC(I_Ze0),   LP_UNIT(I_Ze0),   TIME_DTSEC_LAND )
-    call HIST_in( ZeR  (:,:),   'L_ZeR',   LP_DESC(I_ZeR),   LP_UNIT(I_ZeR),   TIME_DTSEC_LAND )
-    call HIST_in( ZeS  (:,:),   'L_ZeS',   LP_DESC(I_ZeS),   LP_UNIT(I_ZeS),   TIME_DTSEC_LAND )
+    call HIST_in( ROFF (:,:),   'L_ROFF',  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  TIME_DTSEC_LAND )
+    call HIST_in( STRG  (:,:),  'L_STRG',  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  TIME_DTSEC_LAND )
 !    call HIST_in( SoilT(:,:,:), 'L_SoilT', LP_DESC(I_SoilT), LP_UNIT(I_SoilT), TIME_DTSEC_LAND )
 !    call HIST_in( SoilW(:,:,:), 'L_SoilW', LP_DESC(I_SoilW), LP_UNIT(I_SoilW), TIME_DTSEC_LAND )
 !    call HIST_in( SoilI(:,:,:), 'L_SoilI', LP_DESC(I_SoilI), LP_UNIT(I_SoilI), TIME_DTSEC_LAND )

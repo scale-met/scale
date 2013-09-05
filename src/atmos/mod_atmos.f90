@@ -251,6 +251,11 @@ contains
        call TIME_rapend  ('ATM Dynamics')
     endif
 
+    !########## History & Monitor ##########
+    call TIME_rapstart('ATM History Vars')
+       call ATMOS_vars_history
+    call TIME_rapend  ('ATM History Vars')
+
     !########## to Coupler ##########
     if ( sw_AtmLnd ) then
        call CPL_AtmLnd_putATM( &
