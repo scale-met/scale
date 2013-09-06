@@ -137,3 +137,28 @@
   data AQ_UNIT(32)  / 'kg/kg/unit logr' /
   data AQ_UNIT(33)  / 'kg/kg/unit logr' /
   data AQ_UNIT(34)  / 'kg/kg/unit logr' /
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ tracer index & relationship (MP_binw+AE_dummy+RD_mstrnX)
+  !
+  !-----------------------------------------------------------------------------
+  integer, private, parameter :: MP_QA = 1 ! number of hydrometeor tracer
+  integer, private, parameter :: I_mp_QC = 1
+
+  integer, private, save :: I_MP2ALL(MP_QA)
+  data I_MP2ALL / I_mp_QC / ! dummy (meaningless) for bin model
+
+  integer, private, save :: I_MP2RD(MP_QA)
+  data I_MP2RD  / 1    / ! I_mp_QC => MSTRN_nptype=1: water cloud
+
+  integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
+  integer, private, parameter :: I_ae_dummy = 1
+
+  integer, private, save :: I_AE2ALL(AE_QA)
+  data I_AE2ALL / -999 / ! dummy
+
+  integer, private, save :: I_AE2RD(AE_QA)
+  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
+
+

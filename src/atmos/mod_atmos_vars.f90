@@ -146,12 +146,16 @@ module mod_atmos_vars
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
   character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
+  character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
+  character(len=IO_SYSCHR),  public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
 
   logical,                   public, save :: ATMOS_sw_dyn
   logical,                   public, save :: ATMOS_sw_phy_sf
   logical,                   public, save :: ATMOS_sw_phy_tb
   logical,                   public, save :: ATMOS_sw_phy_mp
   logical,                   public, save :: ATMOS_sw_phy_rd
+  logical,                   public, save :: ATMOS_sw_phy_ae
+  logical,                   public, save :: ATMOS_sw_phy_ch
   logical,                   public, save :: ATMOS_sw_restart
   logical,                   public, save :: ATMOS_sw_check
 
@@ -234,6 +238,8 @@ contains
        ATMOS_TYPE_PHY_TB, &
        ATMOS_TYPE_PHY_MP, &
        ATMOS_TYPE_PHY_RD, &
+       ATMOS_TYPE_PHY_AE, &
+       ATMOS_TYPE_PHY_CH, &
        ATMOS_USE_AVERAGE
 
     NAMELIST / PARAM_ATMOS_VARS / &
