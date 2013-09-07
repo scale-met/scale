@@ -664,7 +664,7 @@ contains
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP) !/ 3.D0
+       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 3.D0
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -814,7 +814,7 @@ contains
        IIE = IIS+IBLOCK-1
 
           if ( iq == I_QV ) then
-             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              do j = JJS-1, JJE+1
              do i = IIS-1, IIE+1
              do k = KS, KE
@@ -825,7 +825,7 @@ contains
              enddo
              enddo
           else
-             !$omp parallel do private(i,j,k,iq) schedule(static,1) collapse(2)
+             !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
@@ -857,7 +857,7 @@ contains
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-2
@@ -871,7 +871,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
@@ -884,7 +884,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
@@ -897,7 +897,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
@@ -907,7 +907,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS,   JJE
           do i = IIS-1, IIE
           do k = KS, KE
@@ -918,7 +918,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
@@ -928,7 +928,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE
           do i = IIS,   IIE
           do k = KS, KE
@@ -942,7 +942,7 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE

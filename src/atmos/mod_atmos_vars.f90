@@ -62,6 +62,8 @@ module mod_atmos_vars
   character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
   character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
   character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
 
   logical,                  public, save :: ATMOS_sw_dyn
   logical,                  public, save :: ATMOS_sw_phy_sf

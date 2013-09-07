@@ -1007,7 +1007,6 @@ contains
 
           ! at (x, v, interface)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
->>>>>>> Modify arguments of ATMOS_DYN_rk: localize scope of mflx_hi, VELX-POTT
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE-1
@@ -1633,7 +1632,6 @@ contains
        ! at (u, v, z)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
->>>>>>> Complete terrain-following coordinate translation for HEVE scheme
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
