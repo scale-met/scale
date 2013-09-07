@@ -2027,7 +2027,7 @@ contains
     endif
 
     if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+       write(*,*) 'xxx [COMM_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
        call PRC_MPIstop
     endif
 

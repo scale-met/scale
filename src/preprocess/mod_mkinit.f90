@@ -97,19 +97,21 @@ module mod_mkinit
   integer, public, parameter :: I_PLANESTATE          =  1
   integer, public, parameter :: I_TRACERBUBBLE        =  2
   integer, public, parameter :: I_COLDBUBBLE          =  3
+
   integer, public, parameter :: I_LAMBWAVE            =  4
   integer, public, parameter :: I_GRAVITYWAVE         =  5
   integer, public, parameter :: I_KHWAVE              =  6
   integer, public, parameter :: I_TURBULENCE          =  7
+  integer, public, parameter :: I_MOUNTAINWAVE        =  8
 
-  integer, public, parameter :: I_WARMBUBBLE          =  8
-  integer, public, parameter :: I_SUPERCELL           =  9
-  integer, public, parameter :: I_SQUALLLINE          = 10
-  integer, public, parameter :: I_DYCOMS2_RF01        = 11
-  integer, public, parameter :: I_DYCOMS2_RF02        = 12
-  integer, public, parameter :: I_RICO                = 13
+  integer, public, parameter :: I_WARMBUBBLE          =  9
+  integer, public, parameter :: I_SUPERCELL           = 10
+  integer, public, parameter :: I_SQUALLLINE          = 11
+  integer, public, parameter :: I_DYCOMS2_RF01        = 12
+  integer, public, parameter :: I_DYCOMS2_RF02        = 13
+  integer, public, parameter :: I_RICO                = 14
 
-  integer, public, parameter :: I_INTERPORATION       = 14
+  integer, public, parameter :: I_INTERPORATION       = 15
 
   !-----------------------------------------------------------------------------
   !
@@ -129,6 +131,7 @@ module mod_mkinit
   private :: MKINIT_warmbubble
   private :: MKINIT_supercell
   private :: MKINIT_squallline
+  private :: MKINIT_mountainwave
   private :: MKINIT_DYCOMS2_RF01
   private :: MKINIT_DYCOMS2_RF02
   private :: MKINIT_RICO
@@ -274,6 +277,8 @@ contains
        call BUBBLE_setup
     case('SQUALLLINE')
        MKINIT_TYPE = I_SQUALLLINE
+    case('MOUNTAINWAVE')
+       MKINIT_TYPE = I_MOUNTAINWAVE
     case('DYCOMS2_RF01')
        MKINIT_TYPE = I_DYCOMS2_RF01
     case('DYCOMS2_RF02')
@@ -321,6 +326,8 @@ contains
        call MKINIT_supercell
     case(I_SQUALLLINE)
        call MKINIT_squallline
+    case(I_MOUNTAINWAVE)
+       call MKINIT_mountainwave
     case(I_DYCOMS2_RF01)
        call MKINIT_DYCOMS2_RF01
     case(I_DYCOMS2_RF02)
@@ -1825,6 +1832,101 @@ contains
 
     return
   end subroutine MKINIT_squallline
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( horizontally uniform )
+  subroutine MKINIT_mountainwave
+    implicit none
+
+    ! Surface state
+    real(RP) :: SFC_THETA      ! surface potential temperature [K]
+    real(RP) :: SFC_PRES       ! surface pressure [Pa]
+    ! Environment state
+    real(RP) :: ENV_U = 0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V = 0.0_RP ! velocity v of environment [m/s]
+
+    real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter [m]
+
+    NAMELIST / PARAM_MKINIT_MOUNTAINWAVE / &
+       SFC_THETA, &
+       SFC_PRES,  &
+       ENV_U,     &
+       ENV_V,     &
+       SCORER
+
+    real(RP) :: pott_prof(KA)
+    real(RP) :: Ustar2, N2
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Mountainwave]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_MOUNTAINWAVE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_MOUNTAINWAVE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_MOUNTAINWAVE)
+
+    do k = KS, KE
+       Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
+       N2     = Ustar2 * (SCORER*SCORER)
+
+       pott_prof(k) = SFC_THETA * exp( N2 / GRAV * CZ(k) )
+    enddo
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA 
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = pott_prof(k)
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U       * DENS(k,i,j)
+       MOMY(k,i,j) = ENV_V       * DENS(k,i,j)
+       RHOT(k,i,j) = pott(k,1,1) * DENS(k,i,j)
+
+       QTRC(k,i,j,:) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_mountainwave
 
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus

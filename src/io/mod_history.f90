@@ -262,6 +262,8 @@ contains
       itemid, &
       var,    &
       dt      )
+    use mod_interpolation, only: &
+       INTERP_vertical
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
@@ -271,7 +273,9 @@ contains
     intrinsic shape
     integer :: s(3)
 
-    real(RP) :: var2(IMAX*JMAX*KMAX)
+    real(RP) :: var_Z(KA,IA,JA)
+    real(RP) :: var2 (KMAX*IMAX*JMAX)
+
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
@@ -290,11 +294,15 @@ contains
        call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
 
     else
+       call TIME_rapstart('FILE O Interpolation')
+       call INTERP_vertical( var  (:,:,:), & ! [IN]
+                             var_Z(:,:,:)  ) ! [OUT]
+       call TIME_rapend  ('FILE O Interpolation')
 
        do k = 1, KMAX
        do j = 1, JMAX
        do i = 1, IMAX
-          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
        enddo
        enddo
        enddo

@@ -116,6 +116,8 @@ contains
     call TIME_rapend  ('FILE I ASCII')
     call TIME_rapstart('FILE O ASCII')
     call TIME_rapend  ('FILE O ASCII')
+    call TIME_rapstart('FILE O Interpolation')
+    call TIME_rapend  ('FILE O Interpolation')
 
     return
   end subroutine FILEIO_setup

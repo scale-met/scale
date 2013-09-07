@@ -55,6 +55,8 @@ program scaleles3
      COMM_setup
   use mod_topography, only: &
      TOPO_setup
+  use mod_interpolation, only: &
+     INTERP_setup
   use mod_landuse, only: &
      LANDUSE_setup
   use mod_history, only: &
@@ -142,6 +144,9 @@ program scaleles3
 
   ! setup topography
   call TOPO_setup
+
+  ! setup xi2z interpolation
+  call INTERP_setup
 
   ! setup land use category index/fraction
   call LANDUSE_setup
