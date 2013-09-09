@@ -66,14 +66,14 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=IO_SYSCHR), private :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
+  character(len=IO_SYSCHR), private, save :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
+  character(len=IO_SYSCHR), private, save :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
 
-  character(len=1), parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property
-  integer,          parameter :: FILEIO_dim_size (3) = (/KMAX,IMAX,JMAX/)     !< for axis property
-  character(len=1), parameter :: FILEIO_dim_desc (3) = (/'Z','X','Y'/)        !< for axis property
-  character(len=1), parameter :: FILEIO_dim_unit (3) = (/'m','m','m'/)        !< for axis property
-  integer,               save :: FILEIO_dim_dtype(3)                          !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property
+  integer,          private, parameter :: FILEIO_dim_size (3) = (/KMAX,IMAX,JMAX/)     !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_desc (3) = (/'Z','X','Y'/)        !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_unit (3) = (/'m','m','m'/)        !< for axis property
+  integer,          private, save      :: FILEIO_dim_dtype(3)                          !< for axis property
 
   !-----------------------------------------------------------------------------
 contains

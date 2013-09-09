@@ -147,9 +147,6 @@ module mod_atmos_vars
   logical,                   private, save :: ATMOS_RESTART_OUTPUT           = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
   character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
-  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE3 PROGNOSTIC VARS.'
-  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_SOURCE       = 'SCALE-LES ver. '//VERSION
-  character(len=File_HLONG), private, save :: ATMOS_RESTART_OUT_INSTITUTE    = 'AICS/RIKEN'
   logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
   logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
@@ -228,9 +225,6 @@ contains
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
        ATMOS_RESTART_OUTPUT,           &
        ATMOS_RESTART_OUT_BASENAME,     &
-       ATMOS_RESTART_OUT_TITLE,        &
-       ATMOS_RESTART_OUT_SOURCE,       &
-       ATMOS_RESTART_OUT_INSTITUTE,    &
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION,  &
@@ -617,7 +611,7 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
+    character(len=IO_FILECHR) :: basename
 
     real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
     real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
@@ -642,21 +636,21 @@ contains
 
     call TIME_rapstart('FILE I NetCDF')
 
-    bname = ATMOS_RESTART_IN_BASENAME
+    basename = ATMOS_RESTART_IN_BASENAME
 
-    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'DENS', 1, PRC_myrank )
     DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMZ', 1, PRC_myrank )
     MOMZ(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMX', 1, PRC_myrank )
     MOMX(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMY', 1, PRC_myrank )
     MOMY(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'RHOT', 1, PRC_myrank )
     RHOT(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
+       call FileRead( restart_atmos(:,:,:), basename, AQ_NAME(iq), 1, PRC_myrank )
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
@@ -790,13 +784,23 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
+    character(len=IO_FILECHR) :: basename
 
     integer :: fid, ap_vid(5), aq_vid(QA)
     logical :: fileexisted
     integer :: dtype
     integer :: iq
     integer :: n
+
+    character(len=IO_SYSCHR) :: H_TITLE     = 'SCALE3 PROGNOSTIC VARS.'
+    character(len=IO_SYSCHR) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
+    character(len=IO_SYSCHR) :: H_INSTITUTE = 'AICS/RIKEN'
+
+    character(len=1), parameter :: dim_name (3) = (/'z','x','y'/)    !< for axis property
+    integer,          parameter :: dim_size (3) = (/KMAX,IMAX,JMAX/) !< for axis property
+    character(len=1), parameter :: dim_desc (3) = (/'Z','X','Y'/)    !< for axis property
+    character(len=1), parameter :: dim_unit (3) = (/'m','m','m'/)    !< for axis property
+    integer                     :: dim_dtype(3)                      !< for axis property
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -806,88 +810,96 @@ contains
 
     call TIME_rapstart('FILE O NetCDF')
 
-    bname = ''
-    write(bname(1:15), '(F15.3)') NOWSEC
+    basename = ''
+    write(basename(1:15), '(F15.3)') NOWSEC
     do n = 1, 15
-       if ( bname(n:n) == ' ' ) bname(n:n) = '0'
+       if ( basename(n:n) == ' ' ) basename(n:n) = '0'
     end do
-    bname = trim(ATMOS_RESTART_OUT_BASENAME) // '_' // trim(bname)
+    basename = trim(ATMOS_RESTART_OUT_BASENAME) // '_' // trim(basename)
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     if ( RP == 8 ) then
        dtype = File_REAL8
     else if ( RP == 4 ) then
        dtype = File_REAL4
     endif
+    dim_dtype(:) = dtype
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
-    call FileCreate( fid, fileexisted,                          & ! (out)
-         bname,                                                 & ! (in)
-         ATMOS_RESTART_OUT_TITLE,                               & ! (in)
-         ATMOS_RESTART_OUT_SOURCE,                              & ! (in)
-         ATMOS_RESTART_OUT_INSTITUTE,                           & ! (in)
-         (/'z','x','y'/), (/KMAX,IMAX,JMAX/), (/'Z','X','Y'/),  & ! (in)
-         (/'m','m','m'/), (/dtype,dtype,dtype/),                & ! (in)
-         PRC_master, PRC_myrank, rankidx                        ) ! (in)
+    call FileCreate( fid,         & ! (out)
+                     fileexisted, & ! (out)
+                     basename,    & ! (in)
+                     H_TITLE,     & ! (in)
+                     H_SOURCE,    & ! (in)
+                     H_INSTITUTE, & ! (in)
+                     dim_name,    & ! (in)
+                     dim_size,    & ! (in)
+                     dim_desc,    & ! (in)
+                     dim_unit,    & ! (in)
+                     dim_dtype,   & ! (in)
+                     PRC_master,  & ! (in)
+                     PRC_myrank,  & ! (in)
+                     rankidx      ) ! (in)
 
-    call FilePutAxis(fid, 'z', GRID_CZ(KS:KE))
-    call FilePutAxis(fid, 'x', GRID_CX(IS:IE))
-    call FilePutAxis(fid, 'y', GRID_CY(JS:JE))
+    call FilePutAxis( fid, 'z', GRID_CZ(KS:KE) )
+    call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
+    call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
 
-    call FilePutAdditionalAxis(fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE))
-    call FilePutAdditionalAxis(fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE))
-    call FilePutAdditionalAxis(fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE))
+    call FilePutAdditionalAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
+    call FilePutAdditionalAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
+    call FilePutAdditionalAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
 
-    call FilePutAdditionalAxis(fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ)
-    call FilePutAdditionalAxis(fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX)
-    call FilePutAdditionalAxis(fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY)
-    call FilePutAdditionalAxis(fid, 'FZ', 'Grid Face Position Z', 'm', 'FZ', dtype, GRID_FZ)
-    call FilePutAdditionalAxis(fid, 'FX', 'Grid Face Position X', 'm', 'FX', dtype, GRID_FX)
-    call FilePutAdditionalAxis(fid, 'FY', 'Grid Face Position Y', 'm', 'FY', dtype, GRID_FY)
+    call FilePutAdditionalAxis( fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ )
+    call FilePutAdditionalAxis( fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX )
+    call FilePutAdditionalAxis( fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY )
+    call FilePutAdditionalAxis( fid, 'FZ', 'Grid Face Position Z',   'm', 'FZ', dtype, GRID_FZ )
+    call FilePutAdditionalAxis( fid, 'FX', 'Grid Face Position X',   'm', 'FX', dtype, GRID_FX )
+    call FilePutAdditionalAxis( fid, 'FY', 'Grid Face Position Y',   'm', 'FY', dtype, GRID_FY )
 
-    call FilePutAdditionalAxis(fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ', dtype, GRID_CDZ)
-    call FilePutAdditionalAxis(fid, 'CDX', 'Grid Cell length X', 'm', 'CX', dtype, GRID_CDX)
-    call FilePutAdditionalAxis(fid, 'CDY', 'Grid Cell length Y', 'm', 'CY', dtype, GRID_CDY)
-    call FilePutAdditionalAxis(fid, 'FDZ', 'Grid distance Z', 'm', 'FDZ', dtype, GRID_FDZ)
-    call FilePutAdditionalAxis(fid, 'FDX', 'Grid distance X', 'm', 'FDX', dtype, GRID_FDX)
-    call FilePutAdditionalAxis(fid, 'FDY', 'Grid distance Y', 'm', 'FDY', dtype, GRID_FDY)
+    call FilePutAdditionalAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    call FilePutAdditionalAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
+    call FilePutAdditionalAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
+    call FilePutAdditionalAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    call FilePutAdditionalAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
+    call FilePutAdditionalAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
 
-    call FilePutAdditionalAxis(fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ)
-    call FilePutAdditionalAxis(fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX)
-    call FilePutAdditionalAxis(fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY)
-    call FilePutAdditionalAxis(fid, 'FBFZ', 'Boundary factor Face Z', '1', 'CZ', dtype, GRID_FBFZ)
-    call FilePutAdditionalAxis(fid, 'FBFX', 'Boundary factor Face X', '1', 'CX', dtype, GRID_FBFX)
-    call FilePutAdditionalAxis(fid, 'FBFY', 'Boundary factor Face Y', '1', 'CY', dtype, GRID_FBFY)
+    call FilePutAdditionalAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    call FilePutAdditionalAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
+    call FilePutAdditionalAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
+    call FilePutAdditionalAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    call FilePutAdditionalAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
+    call FilePutAdditionalAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
 
-    call FilePutAdditionalAxis(fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG)
-    call FilePutAdditionalAxis(fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG)
-    call FilePutAdditionalAxis(fid, 'FXG', 'Grid Face Position X (global)', 'm', 'FXG', dtype, GRID_FXG)
-    call FilePutAdditionalAxis(fid, 'FYG', 'Grid Face Position Y (global)', 'm', 'FYG', dtype, GRID_FYG)
+    call FilePutAdditionalAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
+    call FilePutAdditionalAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
+    call FilePutAdditionalAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
+    call FilePutAdditionalAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
 
-    call FilePutAdditionalAxis(fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG)
-    call FilePutAdditionalAxis(fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG)
-    call FilePutAdditionalAxis(fid, 'FBFXG', 'Boundary factor Face X (global)', '1', 'CXG', dtype, GRID_FBFXG)
-    call FilePutAdditionalAxis(fid, 'FBFYG', 'Boundary factor Face Y (global)', '1', 'CYG', dtype, GRID_FBFYG)
+    call FilePutAdditionalAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
+    call FilePutAdditionalAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
+    call FilePutAdditionalAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
+    call FilePutAdditionalAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
 
-    call FileAddVariable( ap_vid(I_DENS),                        & ! (out)
-         fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
-         (/'z','x','y'/), dtype                                  ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMZ),                        & ! (out)
-         fid, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), & ! (in)
-         (/'zh','x ','y '/), dtype                               ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMX),                        & ! (out)
-         fid, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), & ! (in)
-         (/'z ','xh','y '/), dtype                               ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMY),                        & ! (out)
-         fid, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), & ! (in)
-         (/'z ','x ','yh'/), dtype                               ) ! (in)
-    call FileAddVariable( ap_vid(I_RHOT),                        & ! (out)
-         fid, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), & ! (in)
-         (/'z','x','y'/), dtype                                  ) ! (in)
+    call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)
+                          fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
+                          dim_name, dtype                                         ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMZ),                                         & ! (out)
+                          fid, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), & ! (in)
+                          (/'zh','x ','y '/), dtype                               ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMX),                                         & ! (out)
+                          fid, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), & ! (in)
+                          (/'z ','xh','y '/), dtype                               ) ! (in)
+    call FileAddVariable( ap_vid(I_MOMY),                                         & ! (out)
+                          fid, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), & ! (in)
+                          (/'z ','x ','yh'/), dtype                               ) ! (in)
+    call FileAddVariable( ap_vid(I_RHOT),                                         & ! (out)
+                          fid, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), & ! (in)
+                          dim_name, dtype                                         ) ! (in)
     do iq = 1, QA
-       call FileAddVariable( aq_vid(iq),                & ! (out)
-            fid, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), & ! (in)
-            (/'z','x','y'/), dtype                      ) ! (in)
+       call FileAddVariable( aq_vid(iq),                                 & ! (out)
+                             fid, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), & ! (in)
+                             dim_name, dtype                             ) ! (in)
     end do
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = DENS(KS:KE,IS:IE,JS:JE)
@@ -937,7 +949,7 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
+    character(len=IO_FILECHR) :: basename
 
     logical :: datacheck
     integer :: k, i, j, iq
@@ -949,9 +961,9 @@ contains
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
     datacheck = .true.
 
-    bname = ATMOS_RESTART_CHECK_BASENAME
+    basename = ATMOS_RESTART_CHECK_BASENAME
 
-    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'DENS', 1, PRC_myrank )
     DENS_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -965,7 +977,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMZ', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMZ', 1, PRC_myrank )
     MOMZ_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -979,7 +991,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMX', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMX', 1, PRC_myrank )
     MOMX_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -993,7 +1005,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'MOMY', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'MOMY', 1, PRC_myrank )
     MOMY_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -1007,7 +1019,7 @@ contains
     enddo
     enddo
 
-    call FileRead( restart_atmos(:,:,:), bname, 'RHOT', 1, PRC_myrank )
+    call FileRead( restart_atmos(:,:,:), basename, 'RHOT', 1, PRC_myrank )
     RHOT_check(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     do k = KS, KE
     do j = JS, JE
@@ -1022,7 +1034,7 @@ contains
     enddo
 
     do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
+       call FileRead( restart_atmos(:,:,:), basename, AQ_NAME(iq), 1, PRC_myrank )
        QTRC_check(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
        do k = KS, KE
        do j = JS, JE
