@@ -41,4 +41,4 @@ include $(TESTDIR)/Makefile.common
 buildlocal: makedir
 
 analy: 
-	$(FC) $(FFLAGS) $(NETCDF_LIBS) -lnetcdff -lnetcdf $(NETCDF_INCLUDE) -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90
+	$(FC) $(FFLAGS) -L$(NETCDF4)/lib -lnetcdff -lnetcdf -I$(NETCDF)/include -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90
