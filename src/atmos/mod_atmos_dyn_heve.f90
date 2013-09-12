@@ -1068,14 +1068,14 @@ contains
 
     endif ! FLAG_FCT_MOMENTUM
 
+#ifdef DEBUG
+    qflx_hi(:,:,:,:) = UNDEF
+#endif
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-#endif
-
-#ifdef DEBUG
-    qflx_hi(:,:,:,:) = UNDEF
 #endif
 
        !########################################################################
@@ -1476,14 +1476,14 @@ contains
 
     endif ! FLAG_FCT_MOMENTUM
 
+#ifdef DEBUG
+    qflx_hi(:,:,:,:) = UNDEF
+#endif
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-#endif
-
-#ifdef DEBUG
-    qflx_hi(:,:,:,:) = UNDEF
 #endif
 
        !########################################################################
@@ -1789,6 +1789,7 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
+             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -1886,14 +1887,14 @@ contains
 #endif
     endif ! FLAG_FCT_MOMENTUM
 
+#ifdef DEBUG
+    qflx_hi(KS:,:,:,:) = UNDEF
+#endif
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-#endif
-
-#ifdef DEBUG
-    qflx_hi(KS:,:,:,:) = UNDEF
 #endif
 
        !########################################################################
@@ -2061,6 +2062,7 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
+             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo

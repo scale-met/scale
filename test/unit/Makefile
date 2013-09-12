@@ -6,6 +6,8 @@ include $(TOPDIR)/src/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
+LDFLAGS = $(FFLAGS_DEBUG)
+
 PROJ_EXE = unit
 
 #default index & tracer set
@@ -40,7 +42,7 @@ run:
 	$(BUILD_DIR)/$(PROJ_EXE) dummy.conf
 
 $(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LFLAGS) -o $@ $^ $(NETCDF_LIBS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS)
 
 $(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
 

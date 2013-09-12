@@ -14,8 +14,8 @@ CC     = mpiicc
 CFLAGS = -O3 -ftz -mmic -g -O3 -parallel -openmp 
 
 # linker
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
 # for frontend
 

@@ -39,8 +39,8 @@ MODDIROPT ?= -M
 CC     = mpifccpx
 CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
 NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
 NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz

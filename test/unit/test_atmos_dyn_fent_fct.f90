@@ -62,11 +62,6 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
 
-  real(RP) :: QDRY(KA,IA,JA)
-  real(RP) :: DDIV(KA,IA,JA)
-  real(RP) :: SINK(KA,IA,JA,5+QA)
-
-
   real(RP) :: REF_dens(KA)
   real(RP) :: REF_pott(KA)
   real(RP) :: REF_qv  (KA)
@@ -77,11 +72,17 @@ module test_atmos_dyn_fent_fct
   real(RP) :: CNZ3(3,KA,2)
   real(RP) :: CNX3(3,IA,2)
   real(RP) :: CNY3(3,JA,2)
-  real(RP) :: CNZ4(4,KA,2)
-  real(RP) :: CNX4(4,IA,2)
-  real(RP) :: CNY4(4,JA,2)
+  real(RP) :: CNZ4(5,KA,2)
+  real(RP) :: CNX4(5,IA,2)
+  real(RP) :: CNY4(5,JA,2)
 
   real(RP) :: CORIOLI(1,IA,JA)
+
+  real(RP) :: PHI(KA,IA,JA)
+  real(RP) :: GSQRT(KA,IA,JA,7)
+  real(RP) :: J13G(KA,IA,JA,4)
+  real(RP) :: J23G(KA,IA,JA,4)
+  real(RP) :: J33G
 
   real(RP) :: AQ_CV(QA)
 
@@ -115,6 +116,10 @@ contains
      ATMOS_DYN_init
   use mod_grid, only: &
      GRID_CZ_mask
+  use mod_const, only: &
+     GRAV => CONST_GRAV
+  use mod_atmos_vars, only: &
+     ATMOS_TYPE_DYN
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -127,7 +132,6 @@ contains
   integer :: j
   !=============================================================================
 
-
   !########## Initial setup ##########
   ZERO(:,:,:) = 0.0_RP
 
@@ -138,12 +142,15 @@ contains
   do j = 1, JA
      lat(1,:,j) = real(j, RP)
   end do
-  call ATMOS_DYN_init( DIFF4,CORIOLI,                      & ! (out)
-                       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
-                       CDZ, CDX, CDY,                      & ! (in)
-                       lat,                                & ! (in)
-                       nd_order, nd_coef, 1.0_RP, .false.  ) ! (in)
 
+  ATMOS_TYPE_DYN = "HEVE"
+
+  call ATMOS_DYN_init( DIFF4,                              & ! (out)
+                       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
+                       CORIOLI,                            & ! (out)
+                       CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
+                       nd_order, nd_coef, 1.0_RP,          & ! (in)
+                       .false., lat                        ) ! (in)
 
   do k = KS+1, KE
      if ( .not. GRID_CZ_mask(k) ) then
@@ -155,6 +162,16 @@ contains
   MOMZ(KE,:,:) = 0.0_RP
 
   AQ_CV(:) = 1.0_RP
+
+  do j = 1, JA
+  do i = 1, IA
+     PHI(:,i,j) = CZ(:) * GRAV
+  end do
+  end do
+  GSQRT(:,:,:,:) = 1.0_RP
+  J13G(:,:,:,:) = 0.0_RP
+  J23G(:,:,:,:) = 0.0_RP
+  J33G          = 0.0_RP
 
   divdmp_coef = 0.0_RP
 
@@ -214,11 +231,11 @@ subroutine test_undef
      call ATMOS_DYN_main( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
-          QDRY, DDIV,                                  & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
           CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+          PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, REF_qv,                  & ! (in)
           DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
@@ -263,11 +280,11 @@ subroutine test_const
   call ATMOS_DYN_main( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
-       QDRY, DDIV,                                  & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv,                  & ! (in)
        DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
@@ -345,11 +362,11 @@ subroutine test_conserve
   call ATMOS_DYN_main( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (out)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-         QDRY, DDIV,                                  & ! (out)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+         PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv,                  & ! (in)
          DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)

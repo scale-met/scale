@@ -27,8 +27,8 @@ MODDIROPT ?= -J
 CC     = openmpicc
 CFLAGS = -O3 -m64 -g
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/opt/local/include
