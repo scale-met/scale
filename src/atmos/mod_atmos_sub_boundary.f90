@@ -168,9 +168,11 @@ contains
        elseif( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
           write(*,*) 'xxx [obsolete] use ATMOS_BOUNDARY_TYPE'
           call ATMOS_BOUNDARY_generate
+          call ATMOS_BOUNDARY_setalpha
        endif
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
        call ATMOS_BOUNDARY_setinitval
+       call ATMOS_BOUNDARY_setalpha
     elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
           call ATMOS_BOUNDARY_read
@@ -180,6 +182,7 @@ contains
        endif
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
        call ATMOS_BOUNDARY_generate
+       call ATMOS_BOUNDARY_setalpha
     else
        write(*,*) 'xxx ATMOS_BOUNDARY_TYPE is invalid'
        call PRC_MPIstop
@@ -188,8 +191,6 @@ contains
     if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
     endif
-
-    call ATMOS_BOUNDARY_setalpha
 
     call COMM_vars8( ATMOS_BOUNDARY_var  (:,:,:,I_BND_QV), 1 )
     call COMM_vars8( ATMOS_BOUNDARY_alpha(:,:,:,i_BND_QV), 2 )
@@ -400,7 +401,7 @@ contains
     use mod_grid, only: &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask, &
-       CY_mask => GRID_CX_mask
+       CY_mask => GRID_CY_mask
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -493,34 +494,46 @@ contains
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELZ', 1, PRC_myrank )
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELX', 1, PRC_myrank )
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELY', 1, PRC_myrank )
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
        call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_POTT', 1, PRC_myrank )
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV ) then
        call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_QV', 1, PRC_myrank )
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     ! fill IHALO & JHALO
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+       call COMM_vars( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
     enddo
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+       call COMM_wait( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
     enddo
 
     ! fill KHALO
@@ -529,6 +542,8 @@ contains
     do i  = 1, IA
        ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
        ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
+       ATMOS_BOUNDARY_alpha(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_alpha(KS,i,j,iv)
+       ATMOS_BOUNDARY_alpha(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_alpha(KE,i,j,iv)
     enddo
     enddo
     enddo
@@ -550,12 +565,20 @@ contains
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
+                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
+                          ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX),                  &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
+                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
+                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -564,6 +587,10 @@ contains
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
+                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
+                          ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
@@ -571,12 +598,20 @@ contains
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'POTT', 'Reference PT', 'K', 'ZXY',                    &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
+                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
+                          ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV ) then
        call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
+                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
+                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
