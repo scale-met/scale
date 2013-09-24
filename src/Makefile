@@ -113,6 +113,7 @@ makeinclude:
 	cp $(INDEX_DIR)/inc_index_$(index).f90      $(BUILD_DIR)/inc_index.h
 	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
 	cp $(INCDIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
+	cp $(INCDIR)/inc_land.f90                   $(BUILD_DIR)/inc_land.h
 
 makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ1) $(BINDIR)/$(BINNAME)

@@ -35,7 +35,7 @@ module mod_land_vars
   !
   include "inc_precision.h"
   include 'inc_index.h'
-!  include 'inc_land.h'
+  include 'inc_land.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -61,6 +61,7 @@ module mod_land_vars
   real(RP), public, save :: ROFF (IA,JA) ! run-off water [kg/m2]
   real(RP), public, save :: STRG (IA,JA) ! water storage [kg/m2]
 
+  real(RP), public, save :: LNDType(IA,JA) ! type of land surface [no unit]
   real(RP), public, save :: STRGMAX(IA,JA) ! maximum water storage [kg/m2]
   real(RP), public, save :: STRGCRT(IA,JA) ! critical water storage [kg/m2]
   real(RP), public, save :: EMIT   (IA,JA) ! emissivity in long-wave radiation [no unit]
@@ -119,12 +120,15 @@ module mod_land_vars
   logical,                   public, save :: LAND_sw_phy           !< do land physics update?
   logical,                   public, save :: LAND_sw_restart       !< output restart?
 
-  character(len=IO_FILECHR), public, save :: LAND_RESTART_IN_BASENAME = '' !< basename of the input file
+  character(len=IO_FILECHR), public, save :: LAND_RESTART_IN_BASENAME  = '' !< basename of the restart file
+  character(len=IO_FILECHR), public, save :: LAND_BOUNDARY_IN_BASENAME = '' !< basename of the boundary file
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: param_land_get
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -135,6 +139,23 @@ module mod_land_vars
   character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
   logical,                   private, save :: LAND_VARS_CHECKRANGE      = .false.
+
+  real(RP),                  private, save :: IDX_STRGMAX(LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_STRGCRT(LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_EMIT   (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_ALB    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_TCS    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_HCS    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_DZg    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z00    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z0R    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z0S    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Zt0    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_ZtR    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_ZtS    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Ze0    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_ZeR    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_ZeS    (LAND_NUM_IDX)
 
   !-----------------------------------------------------------------------------
 contains
@@ -152,6 +173,7 @@ contains
 
     NAMELIST / PARAM_LAND_VARS /  &
        LAND_RESTART_IN_BASENAME,  &
+       LAND_BOUNDARY_IN_BASENAME, &
        LAND_RESTART_OUTPUT,       &
        LAND_RESTART_OUT_BASENAME, &
        LAND_RESTART_OUT_TITLE,    &
@@ -201,11 +223,29 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
 
+    !--- read land indices 
+    call param_land_get( IDX_STRGMAX(:), 'STRGMAX' )
+    call param_land_get( IDX_STRGCRT(:), 'STRGCRT' )
+    call param_land_get( IDX_EMIT   (:), 'EMIT'    )
+    call param_land_get( IDX_ALB    (:), 'ALB'     )
+    call param_land_get( IDX_TCS    (:), 'TCS'     )
+    call param_land_get( IDX_HCS    (:), 'HCS'     )
+    call param_land_get( IDX_DZg    (:), 'DZg'     )
+    call param_land_get( IDX_Z00    (:), 'Z00'     )
+    call param_land_get( IDX_Z0R    (:), 'Z0R'     )
+    call param_land_get( IDX_Z0S    (:), 'Z0S'     )
+    call param_land_get( IDX_Zt0    (:), 'Zt0'     )
+    call param_land_get( IDX_ZtR    (:), 'ZtR'     )
+    call param_land_get( IDX_ZtS    (:), 'ZtS'     )
+    call param_land_get( IDX_Ze0    (:), 'Ze0'     )
+    call param_land_get( IDX_ZeR    (:), 'ZeR'     )
+    call param_land_get( IDX_ZeS    (:), 'ZeS'     )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
                '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 19
+    do ip = 1, 7
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
                   '*** NO.',ip,'|',trim(LP_NAME(ip)),'|', LP_DESC(ip),'[', LP_UNIT(ip),']'
     enddo
@@ -265,6 +305,8 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -274,14 +316,14 @@ contains
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( TG(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'TG', 'XY', step=1     ) ! [IN]
-       call FILEIO_read( QvEfc(:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'QvEfc', 'XY', step=1  ) ! [IN]
-       call FILEIO_read( ROFF(:,:),                                       & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY', step=1   ) ! [IN]
-       call FILEIO_read( STRG(:,:),                                       & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'STRG', 'XY', step=1   ) ! [IN]
+       call FILEIO_read( TG(:,:),                                        & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'TG', 'XY', step=1    ) ! [IN]
+       call FILEIO_read( QvEfc(:,:),                                     & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'QvEfc', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ROFF(:,:),                                      & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY', step=1  ) ! [IN]
+       call FILEIO_read( STRG(:,:),                                      & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'STRG', 'XY', step=1  ) ! [IN]
 
 !       call FILEIO_read( SoilT(:,:,:),                                    & ! [OUT]
 !                         LAND_RESTART_IN_BASENAME, 'SoilT', 'ZXY', step=1 ) ! [IN]
@@ -303,48 +345,99 @@ contains
 !       ROFF   (:,:) = CONST_UNDEF
 !       STRG   (:,:) = CONST_UNDEF
 
-!       STRGMAX(:,:) = CONST_UNDEF
-!       STRGCRT(:,:) = CONST_UNDEF
-!       EMIT   (:,:) = CONST_UNDEF
-!       ALB    (:,:) = CONST_UNDEF
-!       TCS    (:,:) = CONST_UNDEF
-!       HCS    (:,:) = CONST_UNDEF
-!       DZg    (:,:) = CONST_UNDEF
-!       Z00    (:,:) = CONST_UNDEF
-!       Z0R    (:,:) = CONST_UNDEF
-!       Z0S    (:,:) = CONST_UNDEF
-!       Zt0    (:,:) = CONST_UNDEF
-!       ZtR    (:,:) = CONST_UNDEF
-!       ZtS    (:,:) = CONST_UNDEF
-!       Ze0    (:,:) = CONST_UNDEF
-!       ZeR    (:,:) = CONST_UNDEF
-!       ZeS    (:,:) = CONST_UNDEF
-
        TG     (:,:) = 300.0_RP
        QvEfc  (:,:) = 1.0_RP
        ROFF   (:,:) = 0.0_RP
        STRG   (:,:) = 100.0_RP
 
-       STRGMAX(:,:) = 150.0_RP
-       STRGCRT(:,:) = STRGMAX * 0.75_RP
-       EMIT (:,:)   = 0.98_RP
-       ALB  (:,:)   = 0.33_RP
-       TCS  (:,:)   = 1.0_RP
-       HCS  (:,:)   = 2.2E+6_RP
-       DZg  (:,:)   = 1.0_RP
-       Z00  (:,:)   = 0.0_RP
-       Z0R  (:,:)   = 0.018_RP
-       Z0S  (:,:)   = 0.11_RP
-       Zt0  (:,:)   = 1.4E-5_RP
-       ZtR  (:,:)   = 0.0_RP
-       ZtS  (:,:)   = 0.4_RP
-       Ze0  (:,:)   = 1.3E-4_RP
-       ZeR  (:,:)   = 0.0_RP
-       ZeS  (:,:)   = 0.62_RP
-
 !       SoilT(:,:,:) = CONST_UNDEF
 !       SoilW(:,:,:) = CONST_UNDEF
 !       SoilI(:,:,:) = CONST_UNDEF
+
+    endif
+
+    if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
+
+LNDType(:,:) = 1
+!       call FILEIO_read( LNDType(:,:),                                      & ! [OUT]
+!                         LAND_BOUNDARY_IN_BASENAME, 'LNDType', 'XY', step=1 ) ! [IN]
+
+       do j = JS, JE
+       do i = IS, IE
+          STRGMAX(i,j) = IDX_STRGMAX( LNDType(i,j) )
+          STRGCRT(i,j) = IDX_STRGCRT( LNDType(i,j) )
+          EMIT   (i,j) = IDX_EMIT   ( LNDType(i,j) )
+          ALB    (i,j) = IDX_ALB    ( LNDType(i,j) )
+          TCS    (i,j) = IDX_TCS    ( LNDType(i,j) )
+          HCS    (i,j) = IDX_HCS    ( LNDType(i,j) )
+          DZg    (i,j) = IDX_DZg    ( LNDType(i,j) )
+          Z00    (i,j) = IDX_Z00    ( LNDType(i,j) )
+          Z0R    (i,j) = IDX_Z0R    ( LNDType(i,j) )
+          Z0S    (i,j) = IDX_Z0S    ( LNDType(i,j) )
+          Zt0    (i,j) = IDX_Zt0    ( LNDType(i,j) )
+          ZtR    (i,j) = IDX_ZtR    ( LNDType(i,j) )
+          ZtS    (i,j) = IDX_ZtS    ( LNDType(i,j) )
+          Ze0    (i,j) = IDX_Ze0    ( LNDType(i,j) )
+          ZeR    (i,j) = IDX_ZeR    ( LNDType(i,j) )
+          ZeS    (i,j) = IDX_ZeS    ( LNDType(i,j) )
+       end do
+       end do
+
+       call COMM_vars8( STRGMAX(:,:),   1  )
+       call COMM_vars8( STRGCRT(:,:),   2  )
+       call COMM_vars8( EMIT   (:,:),   3  )
+       call COMM_vars8( ALB    (:,:),   4  )
+       call COMM_vars8( TCS    (:,:),   5  )
+       call COMM_vars8( HCS    (:,:),   6  )
+       call COMM_vars8( DZg    (:,:),   7  )
+       call COMM_vars8( Z00    (:,:),   8  )
+       call COMM_vars8( Z0R    (:,:),   9  )
+       call COMM_vars8( Z0S    (:,:),   10 )
+       call COMM_vars8( Zt0    (:,:),   11 )
+       call COMM_vars8( ZtR    (:,:),   12 )
+       call COMM_vars8( ZtS    (:,:),   13 )
+       call COMM_vars8( Ze0    (:,:),   14 )
+       call COMM_vars8( ZeR    (:,:),   15 )
+       call COMM_vars8( ZeS    (:,:),   16 )
+
+       call COMM_wait ( STRGMAX(:,:),   1  )
+       call COMM_wait ( STRGCRT(:,:),   2  )
+       call COMM_wait ( EMIT   (:,:),   3  )
+       call COMM_wait ( ALB    (:,:),   4  )
+       call COMM_wait ( TCS    (:,:),   5  )
+       call COMM_wait ( HCS    (:,:),   6  )
+       call COMM_wait ( DZg    (:,:),   7  )
+       call COMM_wait ( Z00    (:,:),   8  )
+       call COMM_wait ( Z0R    (:,:),   9  )
+       call COMM_wait ( Z0S    (:,:),   10 )
+       call COMM_wait ( Zt0    (:,:),   11 )
+       call COMM_wait ( ZtR    (:,:),   12 )
+       call COMM_wait ( ZtS    (:,:),   13 )
+       call COMM_wait ( Ze0    (:,:),   14 )
+       call COMM_wait ( ZeR    (:,:),   15 )
+       call COMM_wait ( ZeS    (:,:),   16 )
+
+if( IO_L ) write(IO_FID_LOG,*) IDX_ALB(:)
+    else
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
+
+       STRGMAX(:,:) = CONST_UNDEF
+       STRGCRT(:,:) = CONST_UNDEF
+       EMIT (:,:)   = CONST_UNDEF
+       ALB  (:,:)   = CONST_UNDEF
+       TCS  (:,:)   = CONST_UNDEF
+       HCS  (:,:)   = CONST_UNDEF
+       DZg  (:,:)   = CONST_UNDEF
+       Z00  (:,:)   = CONST_UNDEF
+       Z0R  (:,:)   = CONST_UNDEF
+       Z0S  (:,:)   = CONST_UNDEF
+       Zt0  (:,:)   = CONST_UNDEF
+       ZtR  (:,:)   = CONST_UNDEF
+       ZtS  (:,:)   = CONST_UNDEF
+       Ze0  (:,:)   = CONST_UNDEF
+       ZeR  (:,:)   = CONST_UNDEF
+       ZeS  (:,:)   = CONST_UNDEF
 
     endif
 
@@ -460,5 +553,47 @@ contains
 
     return
   end subroutine LAND_vars_total
+
+!---------- Private Procedure ----------
+
+  subroutine param_land_get( &
+       DAT,   & ! out
+       RNAME  & ! in
+    )
+    use mod_const, only: &
+       UNDEF => CONST_UNDEF
+    use mod_stdio, only: &
+       IO_FID_CONF
+    implicit none
+
+    real(RP),         intent(out) :: DAT(LAND_NUM_IDX)
+    character(len=*), intent(in)  :: RNAME
+
+    integer                  :: IDX
+    character(len=IO_SYSCHR) :: VNAME
+    real(RP)                 :: VAL
+
+    NAMELIST / PARAM_LAND_DATA / &
+       IDX,   &
+       VNAME, &
+       VAL
+
+    integer :: ierr
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+
+    do
+      VAL = UNDEF
+      read(IO_FID_CONF,nml=PARAM_LAND_DATA,iostat=ierr)
+      if( ierr /= 0 ) exit
+
+      if( VNAME == RNAME ) then
+        if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_DATA)
+        DAT(IDX) = VAL
+      end if
+    end do
+
+  end subroutine param_land_get
 
 end module mod_land_vars

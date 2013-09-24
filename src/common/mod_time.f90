@@ -477,6 +477,7 @@ contains
     TIME_DOOCEAN_step      = .false.
     TIME_DOLAND_step       = .false.
     TIME_DOCPL_calc        = .false.
+    TIME_DOCPL_AtmLnd      = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + TIME_DTSEC
     TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF + TIME_DTSEC
@@ -523,9 +524,9 @@ contains
     endif
 
     if ( TIME_RES_CPL_AtmLnd - TIME_DTSEC_CPL_AtmLnd > -eps ) then
-       TIME_DOCPL_calc   = .true.
-       TIME_DOCPL_AtmLnd = .true.
-       TIME_RES_CPL_AtmLnd    = TIME_RES_CPL_AtmLnd - TIME_DTSEC_CPL_AtmLnd
+       TIME_DOCPL_calc     = .true.
+       TIME_DOCPL_AtmLnd   = .true.
+       TIME_RES_CPL_AtmLnd = TIME_RES_CPL_AtmLnd - TIME_DTSEC_CPL_AtmLnd
     endif
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &

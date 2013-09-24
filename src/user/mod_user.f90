@@ -116,6 +116,10 @@ contains
        SFLX_QVLnd,    &
        TG,            &
        QvEfc,         &
+       ROFF,          &
+       STRG,          &
+       STRGMAX,       &
+       STRGCRT,       &
        EMIT,          &
        ALB, TCS, DZg, &
        Z00, Z0R, Z0S, &
@@ -124,6 +128,8 @@ contains
     use mod_cpl_vars, only: &
        LST
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
@@ -150,21 +156,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) 'SFLX_LH    :',minval(SFLX_LH   (:,:)),           maxval(SFLX_LH   (:,:))
     if( IO_L ) write(IO_FID_LOG,*) 'SFLX_QVAtm :',minval(SFLX_QVAtm(:,:)),           maxval(SFLX_QVAtm(:,:))
   
-    if( IO_L ) write(IO_FID_LOG,*) 'TG         :',minval(TG   (:,:)),                maxval(TG   (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'QvEfc      :',minval(QvEfc(:,:)),                maxval(QvEfc(:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'EMIT       :',minval(EMIT (:,:)),                maxval(EMIT (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'ALB        :',minval(ALB  (:,:)),                maxval(ALB  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'TCS        :',minval(TCS  (:,:)),                maxval(TCS  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'DZg        :',minval(DZg  (:,:)),                maxval(DZg  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'Z00        :',minval(Z00  (:,:)),                maxval(Z00  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'Z0R        :',minval(Z0R  (:,:)),                maxval(Z0R  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'Z0S        :',minval(Z0S  (:,:)),                maxval(Z0S  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'Zt0        :',minval(Zt0  (:,:)),                maxval(Zt0  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'ZtR        :',minval(ZtR  (:,:)),                maxval(ZtR  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'ZtS        :',minval(ZtS  (:,:)),                maxval(ZtS  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'Ze0        :',minval(Ze0  (:,:)),                maxval(Ze0  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'ZeR        :',minval(ZeR  (:,:)),                maxval(ZeR  (:,:))
-    if( IO_L ) write(IO_FID_LOG,*) 'ZeS        :',minval(ZeS  (:,:)),                maxval(ZeS  (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'TG         :',minval(TG     (:,:)),              maxval(TG     (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'QvEfc      :',minval(QvEfc  (:,:)),              maxval(QvEfc  (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ROFF       :',minval(ROFF   (:,:)),              maxval(ROFF   (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'STRG       :',minval(STRG   (:,:)),              maxval(STRG   (:,:))
+
+    if( IO_L ) write(IO_FID_LOG,*) 'STRGMAX    :',minval(STRGMAX(:,:)),              maxval(STRGMAX(:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'STRGCRT    :',minval(STRGCRT(:,:)),              maxval(STRGCRT(:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'EMIT       :',minval(EMIT   (:,:)),              maxval(EMIT   (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ALB        :',minval(ALB    (:,:)),              maxval(ALB    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'TCS        :',minval(TCS    (:,:)),              maxval(TCS    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'DZg        :',minval(DZg    (:,:)),              maxval(DZg    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'Z00        :',minval(Z00    (:,:)),              maxval(Z00    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'Z0R        :',minval(Z0R    (:,:)),              maxval(Z0R    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'Z0S        :',minval(Z0S    (:,:)),              maxval(Z0S    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'Zt0        :',minval(Zt0    (:,:)),              maxval(Zt0    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ZtR        :',minval(ZtR    (:,:)),              maxval(ZtR    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ZtS        :',minval(ZtS    (:,:)),              maxval(ZtS    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'Ze0        :',minval(Ze0    (:,:)),              maxval(Ze0    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ZeR        :',minval(ZeR    (:,:)),              maxval(ZeR    (:,:))
+    if( IO_L ) write(IO_FID_LOG,*) 'ZeS        :',minval(ZeS    (:,:)),              maxval(ZeS    (:,:))
   
     if( IO_L ) write(IO_FID_LOG,*) 'SFLX_GH    :',minval(SFLX_GH   (:,:)),           maxval(SFLX_GH   (:,:))
     if( IO_L ) write(IO_FID_LOG,*) 'SFLX_PREC  :',minval(SFLX_PREC (:,:)),           maxval(SFLX_PREC (:,:))

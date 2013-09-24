@@ -227,18 +227,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
 
 !       LST  (:,:) = CONST_UNDEF
-!       SST  (:,:) = CONST_UNDEF
-!       SkinT(:,:) = CONST_UNDEF
-!       SkinW(:,:) = CONST_UNDEF
-!       SnowQ(:,:) = CONST_UNDEF
-!       SnowT(:,:) = CONST_UNDEF
-
        LST  (:,:) = 300.0_RP
-       SST  (:,:) = 300.0_RP
-       SkinT(:,:) = 300.0_RP
-       SkinW(:,:) = 0.0_RP
-       SnowQ(:,:) = 0.0_RP
-       SnowT(:,:) = 0.0_RP
+       SST  (:,:) = CONST_UNDEF
+       SkinT(:,:) = CONST_UNDEF
+       SkinW(:,:) = CONST_UNDEF
+       SnowQ(:,:) = CONST_UNDEF
+       SnowT(:,:) = CONST_UNDEF
 
     endif
 

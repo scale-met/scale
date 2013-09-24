@@ -32,6 +32,14 @@ module mod_cpl
 
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
+  include 'inc_index.h'
+  include 'inc_tracer.h'
+
+  !-----------------------------------------------------------------------------
+  !
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
@@ -68,13 +76,13 @@ contains
        Ze0, ZeR, ZeS
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
-       CPL_vars_setup, &
-       CPL_vars_restart_read, &
+       CPL_vars_setup,             &
+       CPL_vars_restart_read,      &
        CPL_vars_fillhalo
     use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_setup,  &
-       CPL_AtmLnd_solve,  &
-       CPL_AtmLnd_putAtm, &
+       CPL_AtmLnd_setup,   &
+       CPL_AtmLnd_unsolve, &
+       CPL_AtmLnd_putAtm,  &
        CPL_AtmLnd_putLnd
     implicit none
     !---------------------------------------------------------------------------
@@ -92,10 +100,8 @@ contains
        call CPL_AtmLnd_putLnd( &
           TG, QvEfc, EMIT, ALB, TCS, DZg,             &
           Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
-       call CPL_AtmLnd_solve
+       call CPL_AtmLnd_unsolve
     endif
-!if文でrestartに対応させる
-!    call CPL_AtmLnd_unsolve
 
     call CPL_vars_fillhalo
 
@@ -109,9 +115,11 @@ contains
        do_AtmLnd => TIME_DOCPL_AtmLnd
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
+       CPL_TYPE_AtmLnd, &
        CPL_vars_fillhalo
     use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_solve
+       CPL_AtmLnd_solve,   &
+       CPL_AtmLnd_unsolve
     implicit none
     !---------------------------------------------------------------------------
 

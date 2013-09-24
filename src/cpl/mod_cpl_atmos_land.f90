@@ -325,9 +325,86 @@ contains
   end subroutine CPL_AtmLnd_solve
 
   subroutine CPL_AtmLnd_unsolve
+    use mod_const, only: &
+       LH0 => CONST_LH0
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
+    ! works
+    real(RP) :: pMOMX(IA,JA)
+    real(RP) :: pMOMY(IA,JA)
+    real(RP) :: pMOMZ(IA,JA)
+    real(RP) :: pSWU (IA,JA)
+    real(RP) :: pLWU (IA,JA)
+    real(RP) :: pSH  (IA,JA)
+    real(RP) :: pLH  (IA,JA)
+    real(RP) :: pGH  (IA,JA)
+
     if( IO_L ) write(IO_FID_LOG,*) '*** CPL unsolve: Atmos-Land'
+
+    ! average putAtm
+    if( int( CNT_putAtm ) == 0 ) then
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: divided by zero (CNT_putAtm)'
+      call PRC_MPIstop
+    end if
+
+    DENS(:,:,:)   = DENS(:,:,:)   / CNT_putAtm
+    MOMX(:,:,:)   = MOMX(:,:,:)   / CNT_putAtm
+    MOMY(:,:,:)   = MOMY(:,:,:)   / CNT_putAtm
+    MOMZ(:,:,:)   = MOMZ(:,:,:)   / CNT_putAtm
+    RHOT(:,:,:)   = RHOT(:,:,:)   / CNT_putAtm
+    QTRC(:,:,:,:) = QTRC(:,:,:,:) / CNT_putAtm
+    PREC(:,:)     = PREC(:,:)     / CNT_putAtm
+    SWD(:,:)      = SWD(:,:)      / CNT_putAtm
+    LWD(:,:)      = LWD(:,:)      / CNT_putAtm
+
+    ! average putLnd
+    if( int( CNT_putLnd ) == 0 ) then
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: divided by zero (CNT_putLnd)'
+      call PRC_MPIstop
+    end if
+
+    TG   (:,:)    = TG   (:,:)    / CNT_putLnd
+    QvEfc(:,:)    = QvEfc(:,:)    / CNT_putLnd
+    EMIT (:,:)    = EMIT (:,:)    / CNT_putLnd
+    ALB  (:,:)    = ALB  (:,:)    / CNT_putLnd
+    TCS  (:,:)    = TCS  (:,:)    / CNT_putLnd
+    DZg  (:,:)    = DZg  (:,:)    / CNT_putLnd
+    Z00  (:,:)    = Z00  (:,:)    / CNT_putLnd
+    Z0R  (:,:)    = Z0R  (:,:)    / CNT_putLnd
+    Z0S  (:,:)    = Z0S  (:,:)    / CNT_putLnd
+    Zt0  (:,:)    = Zt0  (:,:)    / CNT_putLnd
+    ZtR  (:,:)    = ZtR  (:,:)    / CNT_putLnd
+    ZtS  (:,:)    = ZtS  (:,:)    / CNT_putLnd
+    Ze0  (:,:)    = Ze0  (:,:)    / CNT_putLnd
+    ZeR  (:,:)    = ZeR  (:,:)    / CNT_putLnd
+    ZeS  (:,:)    = ZeS  (:,:)    / CNT_putLnd
+
+    call ts_known( &
+      pMOMX, pMOMY, pMOMZ, & ! (out)
+      pSWU, pLWU,          & ! (out)
+      pSH, pLH, pGH        ) ! (out)
+
+    ! save flux
+    SFLX_MOMX (:,:) = SFLX_MOMX (:,:) + pMOMX(:,:)
+    SFLX_MOMY (:,:) = SFLX_MOMY (:,:) + pMOMY(:,:)
+    SFLX_MOMZ (:,:) = SFLX_MOMZ (:,:) + pMOMZ(:,:)
+    SFLX_SWU  (:,:) = SFLX_SWU  (:,:) + pSWU (:,:)
+    SFLX_LWU  (:,:) = SFLX_LWU  (:,:) + pLWU (:,:)
+    SFLX_SH   (:,:) = SFLX_SH   (:,:) + pSH  (:,:)
+    SFLX_LH   (:,:) = SFLX_LH   (:,:) + pLH  (:,:)
+    SFLX_QVAtm(:,:) = SFLX_QVAtm(:,:) + pLH  (:,:)/LH0
+
+    SFLX_GH   (:,:) = SFLX_GH   (:,:) + pGH  (:,:)
+    SFLX_PREC (:,:) = SFLX_PREC (:,:) + PREC (:,:)
+    SFLX_QVLnd(:,:) = SFLX_QVLnd(:,:) + pLH  (:,:)/LH0
+
+    ! counter
+    CNT_putAtm     = 0.0_RP
+    CNT_putLnd     = 0.0_RP
+    CNT_getDat2Atm = CNT_getDat2Atm + 1.0_RP
+    CNT_getDat2Lnd = CNT_getDat2Lnd + 1.0_RP
 
     return
   end subroutine CPL_AtmLnd_unsolve
@@ -661,6 +738,138 @@ contains
 
     return
   end subroutine ts_residual
+
+  subroutine ts_known( &
+      pMOMX, pMOMY, pMOMZ,      & ! (out)
+      pSWU, pLWU, pSH, pLH, pGH ) ! (out)
+    use mod_const, only: &
+      GRAV   => CONST_GRAV,  &
+      CPdry  => CONST_CPdry, &
+      Rvap   => CONST_Rvap,  &
+      STB    => CONST_STB,   &
+      LH0    => CONST_LH0
+    use mod_grid, only: &
+      CZ => GRID_CZ
+    use mod_cpl_vars, only: &
+      LST
+    implicit none
+
+    real(RP), intent(out) :: pMOMZ(IA,JA)
+    real(RP), intent(out) :: pMOMX(IA,JA)
+    real(RP), intent(out) :: pMOMY(IA,JA)
+    real(RP), intent(out) :: pSWU (IA,JA)
+    real(RP), intent(out) :: pLWU (IA,JA)
+    real(RP), intent(out) :: pSH  (IA,JA)
+    real(RP), intent(out) :: pLH  (IA,JA)
+    real(RP), intent(out) :: pGH  (IA,JA)
+    
+    real(RP), parameter :: Cm0   = 1.0E-3_RP  ! bulk coef. for U*
+    real(RP), parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
+
+    ! work
+    real(RP) :: pta(IA,JA)
+
+    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Ustar ! friction velocity [m/s]
+
+    real(RP) :: Z0, Zt, Ze ! roughness length (momentum,heat,tracer) [m]
+    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+
+    real(RP) :: SatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    ! rho*theta -> potential temperature at cell centor
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+      pta(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
+    end do
+    end do
+
+    ! at (u, y, layer)
+    do j = JS, JE
+    do i = IS, IE
+      Uabs = sqrt( &
+             ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i+1,j)                                     ) )**2 &
+           + ( 2.0_RP *   MOMX(KS,i,j)                                                        )**2 &
+           + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
+           ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
+      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
+      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
+
+      call bulkcoef_uno( &
+          Cm, Ch, Ce,                         & ! (out)
+          ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
+          ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
+          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+
+      pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
+    enddo
+    enddo
+
+    ! at (x, v, layer)
+    do j = JS, JE
+    do i = IS, IE
+      Uabs = sqrt( &
+             ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i,j+1)                                     ) )**2 &
+           + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
+           + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
+           ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
+      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
+      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
+
+      call bulkcoef_uno( &
+          Cm, Ch, Ce,                         & ! (out)
+          ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
+          ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
+          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+
+      pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
+    enddo
+    enddo
+
+    ! at cell center
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+      Uabs = sqrt( &
+             ( MOMZ(KS,i,j)                  )**2 &
+           + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
+           + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
+           ) / DENS(KS,i,j) * 0.5_RP
+      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
+      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
+      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
+
+      call bulkcoef_uno( &
+          Cm, Ch, Ce,              & ! (out)
+          pta(i,j), LST(i,j),      & ! (in)
+          Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
+
+      pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
+
+      ! saturation at surface
+      SatQvs = satmixr( LST(i,j) )
+
+      pSH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+      pLH(i,j) = LH0   * Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( SatQvs - QTRC(KS,i,j,I_QV) ) * QvEfc(i,j)
+      pGH(i,j) = 2.0_RP * TCS(i,j) * ( TG(i,j) - LST(i,j) ) / DZg(i,j)
+
+      pSWU(i,j) = ALB(i,j) * SWD(i,j)
+      pLWU(i,j) = EMIT(i,j) * STB * LST(i,j)**4
+    enddo
+    enddo
+
+    return
+  end subroutine ts_known
 
   subroutine bulkcoef_uno( &
       Cm, Ch, Ce,                    & ! (out)
