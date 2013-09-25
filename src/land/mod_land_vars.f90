@@ -69,15 +69,9 @@ module mod_land_vars
   real(RP), public, save :: TCS    (IA,JA) ! thermal conductivity for soil [W/m/K]
   real(RP), public, save :: HCS    (IA,JA) ! heat capacity for soil [J/K]
   real(RP), public, save :: DZg    (IA,JA) ! soil depth [m]
-  real(RP), public, save :: Z00    (IA,JA) ! basic factor for momemtum
-  real(RP), public, save :: Z0R    (IA,JA) ! rough factor for momemtum
-  real(RP), public, save :: Z0S    (IA,JA) ! smooth factor for momemtum
-  real(RP), public, save :: Zt0    (IA,JA) ! basic factor for heat
-  real(RP), public, save :: ZtR    (IA,JA) ! rough factor for heat
-  real(RP), public, save :: ZtS    (IA,JA) ! smooth factor for heat
-  real(RP), public, save :: Ze0    (IA,JA) ! basic factor for moisture
-  real(RP), public, save :: ZeR    (IA,JA) ! rough factor for moisture
-  real(RP), public, save :: ZeS    (IA,JA) ! smooth factor for moisture
+  real(RP), public, save :: Z0M    (IA,JA) ! roughness length for momemtum [m]
+  real(RP), public, save :: Z0H    (IA,JA) ! roughness length for heat [m]
+  real(RP), public, save :: Z0E    (IA,JA) ! roughness length for moisture [m]
 
 !  real(RP), public, save :: SoilT(KA_soil,IA,JA) ! Soil temperature             [K]
 !  real(RP), public, save :: SoilW(KA_soil,IA,JA) ! Soil moisture (liquid water) [m3/m3]
@@ -147,15 +141,9 @@ module mod_land_vars
   real(RP),                  private, save :: IDX_TCS    (LAND_NUM_IDX)
   real(RP),                  private, save :: IDX_HCS    (LAND_NUM_IDX)
   real(RP),                  private, save :: IDX_DZg    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_Z00    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_Z0R    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_Z0S    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_Zt0    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_ZtR    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_ZtS    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_Ze0    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_ZeR    (LAND_NUM_IDX)
-  real(RP),                  private, save :: IDX_ZeS    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z0M    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z0H    (LAND_NUM_IDX)
+  real(RP),                  private, save :: IDX_Z0E    (LAND_NUM_IDX)
 
   !-----------------------------------------------------------------------------
 contains
@@ -231,15 +219,9 @@ contains
     call param_land_get( IDX_TCS    (:), 'TCS'     )
     call param_land_get( IDX_HCS    (:), 'HCS'     )
     call param_land_get( IDX_DZg    (:), 'DZg'     )
-    call param_land_get( IDX_Z00    (:), 'Z00'     )
-    call param_land_get( IDX_Z0R    (:), 'Z0R'     )
-    call param_land_get( IDX_Z0S    (:), 'Z0S'     )
-    call param_land_get( IDX_Zt0    (:), 'Zt0'     )
-    call param_land_get( IDX_ZtR    (:), 'ZtR'     )
-    call param_land_get( IDX_ZtS    (:), 'ZtS'     )
-    call param_land_get( IDX_Ze0    (:), 'Ze0'     )
-    call param_land_get( IDX_ZeR    (:), 'ZeR'     )
-    call param_land_get( IDX_ZeS    (:), 'ZeS'     )
+    call param_land_get( IDX_Z0M    (:), 'Z0M'     )
+    call param_land_get( IDX_Z0H    (:), 'Z0H'     )
+    call param_land_get( IDX_Z0E    (:), 'Z0E'     )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] prognostic variables'
@@ -358,7 +340,9 @@ contains
 
     if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
 
-LNDType(:,:) = 1
+LNDType(IS:IE,JS  :JS+1) = 1
+LNDType(IS:IE,JS+2:JE-2) = 2
+LNDType(IS:IE,JE-1:JE  ) = 1
 !       call FILEIO_read( LNDType(:,:),                                      & ! [OUT]
 !                         LAND_BOUNDARY_IN_BASENAME, 'LNDType', 'XY', step=1 ) ! [IN]
 
@@ -371,15 +355,9 @@ LNDType(:,:) = 1
           TCS    (i,j) = IDX_TCS    ( LNDType(i,j) )
           HCS    (i,j) = IDX_HCS    ( LNDType(i,j) )
           DZg    (i,j) = IDX_DZg    ( LNDType(i,j) )
-          Z00    (i,j) = IDX_Z00    ( LNDType(i,j) )
-          Z0R    (i,j) = IDX_Z0R    ( LNDType(i,j) )
-          Z0S    (i,j) = IDX_Z0S    ( LNDType(i,j) )
-          Zt0    (i,j) = IDX_Zt0    ( LNDType(i,j) )
-          ZtR    (i,j) = IDX_ZtR    ( LNDType(i,j) )
-          ZtS    (i,j) = IDX_ZtS    ( LNDType(i,j) )
-          Ze0    (i,j) = IDX_Ze0    ( LNDType(i,j) )
-          ZeR    (i,j) = IDX_ZeR    ( LNDType(i,j) )
-          ZeS    (i,j) = IDX_ZeS    ( LNDType(i,j) )
+          Z0M    (i,j) = IDX_Z0M    ( LNDType(i,j) )
+          Z0H    (i,j) = IDX_Z0H    ( LNDType(i,j) )
+          Z0E    (i,j) = IDX_Z0E    ( LNDType(i,j) )
        end do
        end do
 
@@ -390,15 +368,9 @@ LNDType(:,:) = 1
        call COMM_vars8( TCS    (:,:),   5  )
        call COMM_vars8( HCS    (:,:),   6  )
        call COMM_vars8( DZg    (:,:),   7  )
-       call COMM_vars8( Z00    (:,:),   8  )
-       call COMM_vars8( Z0R    (:,:),   9  )
-       call COMM_vars8( Z0S    (:,:),   10 )
-       call COMM_vars8( Zt0    (:,:),   11 )
-       call COMM_vars8( ZtR    (:,:),   12 )
-       call COMM_vars8( ZtS    (:,:),   13 )
-       call COMM_vars8( Ze0    (:,:),   14 )
-       call COMM_vars8( ZeR    (:,:),   15 )
-       call COMM_vars8( ZeS    (:,:),   16 )
+       call COMM_vars8( Z0M    (:,:),   8  )
+       call COMM_vars8( Z0H    (:,:),   9  )
+       call COMM_vars8( Z0E    (:,:),   10 )
 
        call COMM_wait ( STRGMAX(:,:),   1  )
        call COMM_wait ( STRGCRT(:,:),   2  )
@@ -407,17 +379,10 @@ LNDType(:,:) = 1
        call COMM_wait ( TCS    (:,:),   5  )
        call COMM_wait ( HCS    (:,:),   6  )
        call COMM_wait ( DZg    (:,:),   7  )
-       call COMM_wait ( Z00    (:,:),   8  )
-       call COMM_wait ( Z0R    (:,:),   9  )
-       call COMM_wait ( Z0S    (:,:),   10 )
-       call COMM_wait ( Zt0    (:,:),   11 )
-       call COMM_wait ( ZtR    (:,:),   12 )
-       call COMM_wait ( ZtS    (:,:),   13 )
-       call COMM_wait ( Ze0    (:,:),   14 )
-       call COMM_wait ( ZeR    (:,:),   15 )
-       call COMM_wait ( ZeS    (:,:),   16 )
+       call COMM_wait ( Z0M    (:,:),   8  )
+       call COMM_wait ( Z0H    (:,:),   9  )
+       call COMM_wait ( Z0E    (:,:),   10 )
 
-if( IO_L ) write(IO_FID_LOG,*) IDX_ALB(:)
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
@@ -429,15 +394,9 @@ if( IO_L ) write(IO_FID_LOG,*) IDX_ALB(:)
        TCS  (:,:)   = CONST_UNDEF
        HCS  (:,:)   = CONST_UNDEF
        DZg  (:,:)   = CONST_UNDEF
-       Z00  (:,:)   = CONST_UNDEF
-       Z0R  (:,:)   = CONST_UNDEF
-       Z0S  (:,:)   = CONST_UNDEF
-       Zt0  (:,:)   = CONST_UNDEF
-       ZtR  (:,:)   = CONST_UNDEF
-       ZtS  (:,:)   = CONST_UNDEF
-       Ze0  (:,:)   = CONST_UNDEF
-       ZeR  (:,:)   = CONST_UNDEF
-       ZeS  (:,:)   = CONST_UNDEF
+       Z0M  (:,:)   = CONST_UNDEF
+       Z0H  (:,:)   = CONST_UNDEF
+       Z0E  (:,:)   = CONST_UNDEF
 
     endif
 

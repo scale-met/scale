@@ -81,9 +81,7 @@ contains
        QvEfc,         &
        EMIT,          &
        ALB, TCS, DZg, &
-       Z00, Z0R, Z0S, &
-       Zt0, ZtR, ZtS, &
-       Ze0, ZeR, ZeS, &
+       Z0M, Z0H, Z0E, &
        sw_phy => LAND_sw_phy, &
        LAND_vars_fillhalo,    &
        LAND_vars_history
@@ -124,8 +122,9 @@ integer::i,j
     !########## for Coupler ##########
     if ( sw_AtmLnd ) then
        call CPL_AtmLnd_putLnd( &
-          TG, QvEfc, EMIT, ALB, TCS, DZg,             &
-          Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
+          TG, QvEfc, EMIT, &
+          ALB, TCS, DZg,   &
+          Z0M, Z0H, Z0E    )
     endif
 
     return

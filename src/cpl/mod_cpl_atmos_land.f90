@@ -91,15 +91,9 @@ module mod_cpl_atmos_land
   real(RP), private, save :: ALB  (IA,JA) ! surface albedo in short-wave radiation [no unit]
   real(RP), private, save :: TCS  (IA,JA) ! thermal conductivity for soil [W/m/K]
   real(RP), private, save :: DZg  (IA,JA) ! soil depth [m]
-  real(RP), private, save :: Z00  (IA,JA) ! basic factor for momemtum
-  real(RP), private, save :: Z0R  (IA,JA) ! rough factor for momemtum
-  real(RP), private, save :: Z0S  (IA,JA) ! smooth factor for momemtum
-  real(RP), private, save :: Zt0  (IA,JA) ! basic factor for heat
-  real(RP), private, save :: ZtR  (IA,JA) ! rough factor for heat
-  real(RP), private, save :: ZtS  (IA,JA) ! smooth factor for heat
-  real(RP), private, save :: Ze0  (IA,JA) ! basic factor for moisture
-  real(RP), private, save :: ZeR  (IA,JA) ! rough factor for moisture
-  real(RP), private, save :: ZeS  (IA,JA) ! smooth factor for moisture
+  real(RP), private, save :: Z0M  (IA,JA) ! roughness length for momemtum [m]
+  real(RP), private, save :: Z0H  (IA,JA) ! roughness length for heat [m]
+  real(RP), private, save :: Z0E  (IA,JA) ! roughness length for moisture [m]
 
   ! counter
   real(RP), private, save :: CNT_putAtm     ! counter for putAtm
@@ -110,10 +104,6 @@ module mod_cpl_atmos_land
   ! limiter
   real(RP), private, parameter :: res_min   =  1.0E-10_RP ! minimum number of residual in the Newton-Raphson Method
   real(RP), private, parameter :: Ustar_min =  1.0E-3_RP ! minimum limit of U*
-
-  real(RP), private, parameter :: Z0_min =   1.0E-5_RP ! minimum roughness length of u,v,w
-  real(RP), private, parameter :: Zt_min =   1.0E-5_RP !                             T
-  real(RP), private, parameter :: Ze_min =   1.0E-5_RP !                             q
 
   real(RP), private, parameter :: Cm_min =   1.0E-5_RP ! minimum bulk coef. of u,v,w
   real(RP), private, parameter :: Ch_min =   1.0E-5_RP !                       T
@@ -238,15 +228,9 @@ contains
     ALB  (:,:)    = ALB  (:,:)    / CNT_putLnd
     TCS  (:,:)    = TCS  (:,:)    / CNT_putLnd
     DZg  (:,:)    = DZg  (:,:)    / CNT_putLnd
-    Z00  (:,:)    = Z00  (:,:)    / CNT_putLnd
-    Z0R  (:,:)    = Z0R  (:,:)    / CNT_putLnd
-    Z0S  (:,:)    = Z0S  (:,:)    / CNT_putLnd
-    Zt0  (:,:)    = Zt0  (:,:)    / CNT_putLnd
-    ZtR  (:,:)    = ZtR  (:,:)    / CNT_putLnd
-    ZtS  (:,:)    = ZtS  (:,:)    / CNT_putLnd
-    Ze0  (:,:)    = Ze0  (:,:)    / CNT_putLnd
-    ZeR  (:,:)    = ZeR  (:,:)    / CNT_putLnd
-    ZeS  (:,:)    = ZeS  (:,:)    / CNT_putLnd
+    Z0M  (:,:)    = Z0M  (:,:)    / CNT_putLnd
+    Z0H  (:,:)    = Z0H  (:,:)    / CNT_putLnd
+    Z0E  (:,:)    = Z0E  (:,:)    / CNT_putLnd
 
     redf  (:,:) = 1.0_RP
     oldRES(:,:) = 1.0E+5_RP
@@ -371,15 +355,9 @@ contains
     ALB  (:,:)    = ALB  (:,:)    / CNT_putLnd
     TCS  (:,:)    = TCS  (:,:)    / CNT_putLnd
     DZg  (:,:)    = DZg  (:,:)    / CNT_putLnd
-    Z00  (:,:)    = Z00  (:,:)    / CNT_putLnd
-    Z0R  (:,:)    = Z0R  (:,:)    / CNT_putLnd
-    Z0S  (:,:)    = Z0S  (:,:)    / CNT_putLnd
-    Zt0  (:,:)    = Zt0  (:,:)    / CNT_putLnd
-    ZtR  (:,:)    = ZtR  (:,:)    / CNT_putLnd
-    ZtS  (:,:)    = ZtS  (:,:)    / CNT_putLnd
-    Ze0  (:,:)    = Ze0  (:,:)    / CNT_putLnd
-    ZeR  (:,:)    = ZeR  (:,:)    / CNT_putLnd
-    ZeS  (:,:)    = ZeS  (:,:)    / CNT_putLnd
+    Z0M  (:,:)    = Z0M  (:,:)    / CNT_putLnd
+    Z0H  (:,:)    = Z0H  (:,:)    / CNT_putLnd
+    Z0E  (:,:)    = Z0E  (:,:)    / CNT_putLnd
 
     call ts_known( &
       pMOMX, pMOMY, pMOMZ, & ! (out)
@@ -439,8 +417,9 @@ contains
   end subroutine CPL_AtmLnd_putAtm
 
   subroutine CPL_AtmLnd_putLnd( &
-      pTG, pQvEfc, pEMIT, pALB, pTCS, pDZg,                & ! (in)
-      pZ00, pZ0R, pZ0S, pZt0, pZtR, pZtS, pZe0, pZeR, pZeS ) ! (in)
+      pTG, pQvEfc, pEMIT, & ! (in)
+      pALB, pTCS, pDZg,   & ! (in)
+      pZ0M, pZ0H, pZ0E    ) ! (in)
     implicit none
 
     real(RP), intent(in) :: pTG   (IA,JA)
@@ -449,15 +428,9 @@ contains
     real(RP), intent(in) :: pALB  (IA,JA)
     real(RP), intent(in) :: pTCS  (IA,JA)
     real(RP), intent(in) :: pDZg  (IA,JA)
-    real(RP), intent(in) :: pZ00  (IA,JA)
-    real(RP), intent(in) :: pZ0R  (IA,JA)
-    real(RP), intent(in) :: pZ0S  (IA,JA)
-    real(RP), intent(in) :: pZt0  (IA,JA)
-    real(RP), intent(in) :: pZtR  (IA,JA)
-    real(RP), intent(in) :: pZtS  (IA,JA)
-    real(RP), intent(in) :: pZe0  (IA,JA)
-    real(RP), intent(in) :: pZeR  (IA,JA)
-    real(RP), intent(in) :: pZeS  (IA,JA)
+    real(RP), intent(in) :: pZ0M  (IA,JA)
+    real(RP), intent(in) :: pZ0H  (IA,JA)
+    real(RP), intent(in) :: pZ0E  (IA,JA)
 
     TG   (:,:) = TG   (:,:) + pTG   (:,:)
     QvEfc(:,:) = QvEfc(:,:) + pQvEfc(:,:)
@@ -465,15 +438,9 @@ contains
     ALB  (:,:) = ALB  (:,:) + pALB  (:,:)
     TCS  (:,:) = TCS  (:,:) + pTCS  (:,:)
     DZg  (:,:) = DZg  (:,:) + pDZg  (:,:)
-    Z00  (:,:) = Z00  (:,:) + pZ00  (:,:)
-    Z0R  (:,:) = Z0R  (:,:) + pZ0R  (:,:)
-    Z0S  (:,:) = Z0S  (:,:) + pZ0S  (:,:)
-    Zt0  (:,:) = Zt0  (:,:) + pZt0  (:,:)
-    ZtR  (:,:) = ZtR  (:,:) + pZtR  (:,:)
-    ZtS  (:,:) = ZtS  (:,:) + pZtS  (:,:)
-    Ze0  (:,:) = Ze0  (:,:) + pZe0  (:,:)
-    ZeR  (:,:) = ZeR  (:,:) + pZeR  (:,:)
-    ZeS  (:,:) = ZeS  (:,:) + pZeS  (:,:)
+    Z0M  (:,:) = Z0M  (:,:) + pZ0M  (:,:)
+    Z0H  (:,:) = Z0H  (:,:) + pZ0H  (:,:)
+    Z0E  (:,:) = Z0E  (:,:) + pZ0E  (:,:)
 
     CNT_putLnd = CNT_putLnd + 1.0_RP
 
@@ -557,15 +524,9 @@ contains
     ALB  (:,:) = 0.0_RP
     TCS  (:,:) = 0.0_RP
     DZg  (:,:) = 0.0_RP
-    Z00  (:,:) = 0.0_RP
-    Z0R  (:,:) = 0.0_RP
-    Z0S  (:,:) = 0.0_RP
-    Zt0  (:,:) = 0.0_RP
-    ZtR  (:,:) = 0.0_RP
-    ZtS  (:,:) = 0.0_RP
-    Ze0  (:,:) = 0.0_RP
-    ZeR  (:,:) = 0.0_RP
-    ZeS  (:,:) = 0.0_RP
+    Z0M  (:,:) = 0.0_RP
+    Z0H  (:,:) = 0.0_RP
+    Z0E  (:,:) = 0.0_RP
 
     SFLX_GH   (:,:) = 0.0_RP
     SFLX_PREC (:,:) = 0.0_RP
@@ -606,17 +567,14 @@ contains
     real(RP), intent(out) :: pGH  (IA,JA)
     
     real(RP), parameter :: dTs   = 1.0E-10_RP ! delta skin temperature
-    real(RP), parameter :: Cm0   = 1.0E-3_RP  ! bulk coef. for U*
-    real(RP), parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
 
     ! work
     real(RP) :: pta(IA,JA)
 
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
-    real(RP) :: Ustar ! friction velocity [m/s]
 
-    real(RP) :: Z0, Zt, Ze ! roughness length (momentum,heat,tracer) [m]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: Z0M, Z0H, Z0E ! roughness length (momentum,heat,tracer) [m]
+    real(RP) :: Cm, Ch, Ce    ! bulk transfer coeff. [no unit]
     real(RP) :: dCm, dCh, dCe
 
     real(RP) :: dLST
@@ -641,17 +599,12 @@ contains
            + ( 2.0_RP *   MOMX(KS,i,j)                                                        )**2 &
            + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
            ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
     enddo
@@ -665,17 +618,12 @@ contains
            + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
            + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
            ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
     enddo
@@ -689,16 +637,11 @@ contains
            + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
            + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
            ) / DENS(KS,i,j) * 0.5_RP
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,              & ! (out)
-          pta(i,j), LST(i,j),      & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
+          Cm, Ch, Ce,                 & ! (out)
+          pta(i,j), LST(i,j),         & ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
 
       pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
 
@@ -719,9 +662,9 @@ contains
       dSatQvs = SatQvs * LH0 / ( Rvap * LST(i,j)**2 )
 
       call bulkcoef_uno( &
-          dCm, dCh, dCe,           & ! (out)
-          pta(i,j), dLST,          & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
+          dCm, dCh, dCe,              & ! (out)
+          pta(i,j), dLST,             & ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
 
       dpSH1 = CPdry * (dCh-Ch)/dTs * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
       dpSH2 = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * DENS(KS,i,j)
@@ -763,17 +706,13 @@ contains
     real(RP), intent(out) :: pLH  (IA,JA)
     real(RP), intent(out) :: pGH  (IA,JA)
     
-    real(RP), parameter :: Cm0   = 1.0E-3_RP  ! bulk coef. for U*
-    real(RP), parameter :: visck = 1.5E-5_RP  ! kinematic viscosity 
-
     ! work
     real(RP) :: pta(IA,JA)
 
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
-    real(RP) :: Ustar ! friction velocity [m/s]
 
-    real(RP) :: Z0, Zt, Ze ! roughness length (momentum,heat,tracer) [m]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: Z0M, Z0H, Z0E ! roughness length (momentum,heat,tracer) [m]
+    real(RP) :: Cm, Ch, Ce    ! bulk transfer coeff. [no unit]
 
     real(RP) :: SatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
 
@@ -795,17 +734,12 @@ contains
            + ( 2.0_RP *   MOMX(KS,i,j)                                                        )**2 &
            + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
            ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
     enddo
@@ -819,17 +753,12 @@ contains
            + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
            + ( 2.0_RP *   MOMY(KS,i,j)                                                        )**2 &
            ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze            ) ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
     enddo
@@ -843,16 +772,11 @@ contains
            + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
            + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
            ) / DENS(KS,i,j) * 0.5_RP
-      Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
-
-      Z0 = max( Z00(i,j) + Z0R(i,j)/GRAV * Ustar*Ustar + Z0S(i,j)*visck / Ustar, Z0_min )
-      Zt = max( Zt0(i,j) + ZtR(i,j)/GRAV * Ustar*Ustar + ZtS(i,j)*visck / Ustar, Zt_min )
-      Ze = max( Ze0(i,j) + ZeR(i,j)/GRAV * Ustar*Ustar + ZeS(i,j)*visck / Ustar, Ze_min )
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,              & ! (out)
-          pta(i,j), LST(i,j),      & ! (in)
-          Uabs, CZ(KS), Z0, Zt, Ze ) ! (in)
+          Cm, Ch, Ce,                 & ! (out)
+          pta(i,j), LST(i,j),         & ! (in)
+          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
 
       pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
 

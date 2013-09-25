@@ -5,7 +5,7 @@
   !
   !----------------------------------------------------------------------------
 
-  integer,  private, parameter :: LAND_NUM_IDX = 1 ! # of land indices
+  integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
 !  integer,  private, parameter :: KA_soil      = 5 ! # of soil layer
 !
 !  real(RP), private, save      :: SOIL_FZ(0:KA_soil)

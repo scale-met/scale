@@ -71,9 +71,7 @@ contains
        QvEfc, &
        EMIT,  &
        ALB, TCS, DZg, &
-       Z00, Z0R, Z0S, &
-       Zt0, ZtR, ZtS, &
-       Ze0, ZeR, ZeS
+       Z0M, Z0H, Z0E
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        CPL_vars_setup,             &
@@ -98,8 +96,9 @@ contains
           DENS, MOMX, MOMY, MOMZ,    &
           RHOT, QTRC, PREC, SWD, LWD )
        call CPL_AtmLnd_putLnd( &
-          TG, QvEfc, EMIT, ALB, TCS, DZg,             &
-          Z00, Z0R, Z0S, Zt0, ZtR, ZtS, Ze0, ZeR, ZeS )
+          TG, QvEfc, EMIT, &
+          ALB, TCS, DZg,   &
+          Z0M, Z0H, Z0E    )
        call CPL_AtmLnd_unsolve
     endif
 
