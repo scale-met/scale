@@ -194,7 +194,7 @@ $(BUILD_DIR)/mod_ocean_phy_fixedsst.o	: mod_ocean_phy_fixedsst.f90 mod_stdio.o m
 
 $(BUILD_DIR)/mod_cpl.o	: mod_cpl.f90 mod_stdio.o mod_time.o mod_cpl_vars.o mod_cpl_atmos_land.o
 $(BUILD_DIR)/mod_cpl_vars.o	: mod_cpl_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_comm.o mod_time.o mod_misc.o mod_fileio.o
-$(BUILD_DIR)/mod_cpl_atmos_land.o	: mod_cpl_atmos_land.f90 mod_stdio.o mod_const.o mod_grid_cartesian_plane.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_cpl_atmos_land.o	: mod_cpl_atmos_land.f90 mod_stdio.o mod_const.o mod_grid_cartesian.o mod_cpl_vars.o
 
 $(BUILD_DIR)/mod_mktopo.o	: mod_mktopo.f90 mod_stdio.o mod_process.o mod_grid_cartesian.o mod_topography.o mod_const.o
 $(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_grid_cartesian.o mod_atmos_vars.o mod_atmos_sub_profile.o mod_atmos_sub_hydrostatic.o mod_atmos_sub_saturation.o
