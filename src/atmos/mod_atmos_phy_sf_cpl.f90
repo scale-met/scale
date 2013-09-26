@@ -66,7 +66,9 @@ contains
   !-----------------------------------------------------------------------------
   ! calculation flux
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF
+  subroutine ATMOS_PHY_SF( &
+       update_flag, &
+       history_flag )
     use mod_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
@@ -90,6 +92,9 @@ contains
        SFLX_LH,   &
        SFLX_QVAtm
     implicit none
+
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
 
     integer :: i, j
 
