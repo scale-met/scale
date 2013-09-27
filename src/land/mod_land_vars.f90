@@ -61,7 +61,7 @@ module mod_land_vars
   real(RP), public, save :: ROFF (IA,JA) ! run-off water [kg/m2]
   real(RP), public, save :: STRG (IA,JA) ! water storage [kg/m2]
 
-  real(RP), public, save :: LNDType(IA,JA) ! type of land surface [no unit]
+  integer, public, save :: LNDType(IA,JA) ! type of land surface [no unit]
   real(RP), public, save :: STRGMAX(IA,JA) ! maximum water storage [kg/m2]
   real(RP), public, save :: STRGCRT(IA,JA) ! critical water storage [kg/m2]
   real(RP), public, save :: EMIT   (IA,JA) ! emissivity in long-wave radiation [no unit]
