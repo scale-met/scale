@@ -33,6 +33,7 @@ module mod_atmos_phy_mp
      pi => CONST_PI, &
      CONST_CPdry, &
      CONST_DWATR, &
+     CONST_DICE, &
      CONST_GRAV, &
      CONST_Rvap, &
      CONST_Rdry, &
@@ -54,6 +55,9 @@ module mod_atmos_phy_mp
   !
   public :: ATMOS_PHY_MP_setup
   public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
+  public :: ATMOS_PHY_MP_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
@@ -67,6 +71,7 @@ module mod_atmos_phy_mp
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
   !
   !++ Private procedure
   !
@@ -149,6 +154,9 @@ contains
       CDZ => GRID_CDZ, &
       CZ  => GRID_CZ,  &
       FZ  => GRID_FZ
+    use mod_const, only: &
+       CONST_DWATR,  &
+       CONST_DICE
     implicit none
     !---------------------------------------------------------------------------
 
@@ -296,6 +304,14 @@ contains
      xactr( n ) = ( xabnd( n )+xabnd( n+1 ) )*0.50_RP
      rada( n )  = ( exp( xactr( n ) )*ThirdovForth/pi/rhoa )**( OneovThird )
     enddo
+
+    MP_DENS(I_mp_QC)  = CONST_DWATR
+    MP_DENS(I_mp_QP)  = CONST_DICE
+    MP_DENS(I_mp_QCL) = CONST_DICE
+    MP_DENS(I_mp_QD)  = CONST_DICE
+    MP_DENS(I_mp_QS)  = CONST_DICE
+    MP_DENS(I_mp_QG)  = CONST_DICE
+    MP_DENS(I_mp_QH)  = CONST_DICE
 
     if( flg_sf_aero ) then
      if ( CZ(KS) >= 10.0_RP ) then
@@ -718,10 +734,15 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine nucleat        &
       ( dens, pres, dtime,  & !--- in
         gc, ga, qvap, temp  ) !--- inout
-  !
-  !  liquid nucleation from aerosol particle
-  !
-  !
+  use mod_const, only: &
+     cp    => CONST_CPdry, &
+     rhow  => CONST_DWATR, &
+     qlevp => CONST_LH0, &
+     rvap  => CONST_Rvap
+  use mod_atmos_saturation, only : &
+       pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
+       pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
+
   real(RP), intent(in) :: dens   !  density  [ kg/m3 ]
   real(RP), intent(in) :: pres   !  pressure [ Pa ]
   real(RP), intent(in) :: dtime
@@ -730,11 +751,6 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: ga( nccn )  !  SDF ( aerosol ) : mass
   real(RP), intent(inout) :: qvap  !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp  !  temperature [ K ]
-  !
-  real(RP), parameter :: rhow  = CONST_DWATR
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: cp    = CONST_CPdry
-  real(RP), parameter :: rvap  = CONST_Rvap
   !--- local
   real(RP) :: gan( nccn )  !  SDF ( aerosol ) : number
   real(RP) :: ssliq, ssice, delcld
@@ -1052,17 +1068,20 @@ call STOP_COLLECTION("MICROPHYSICS")
         dens, pres,     & !--- in
         gc, qvap, temp, & !--- inout
         regene_gcn      ) !--- out
-  !
+  use mod_const, only: &
+     cp    => CONST_CPdry, &
+     rhow  => CONST_DWATR, &
+     qlevp => CONST_LH0, &
+     rvap  => CONST_Rvap
+  use mod_atmos_saturation, only : &
+       pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
+       pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
+
   real(RP), intent(in) :: dtime
   integer, intent(in) :: iflg
   real(RP), intent(in) :: dens, pres
   real(RP), intent(inout) :: gc( nbin ), qvap, temp
   real(RP), intent(out) :: regene_gcn
-  !
-  real(RP), parameter :: rhow  = CONST_DWATR
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: cp    = CONST_CPdry
   !
   !--- local variables
   integer :: n, nloop, ncount
@@ -1628,13 +1647,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-------------------------------------------------------------------------------
   function fesatl( temp )
   !
+  use mod_const, only : temp0 => CONST_TEM00, &
+                        rvap  => CONST_RVAP,  &
+                        qlevp => CONST_LH0,   &
+                        esat0 => CONST_PSAT0
+  !
   real(RP), intent(in) :: temp
   real(RP) :: fesatl
-  !
-  real(RP), parameter :: qlevp = CONST_LH0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: esat0 = CONST_PSAT0
-  real(RP), parameter :: temp0 = CONST_TEM00
   !
   fesatl = esat0*exp( qlevp/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !
@@ -1644,13 +1663,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-----------------------------------------------------------------------
   function fesati( temp )
   !
+  use mod_const, only : temp0 => CONST_TEM00, &
+                        rvap  => CONST_RVAP,  &
+                        qlsbl => CONST_LHS0,  &
+                        esat0 => CONST_PSAT0
+  !
   real(RP), intent(in) :: temp
   real(RP) :: fesati
-  !
-  real(RP), parameter :: qlsbl = CONST_LHS0
-  real(RP), parameter :: rvap  = CONST_Rvap
-  real(RP), parameter :: esat0 = CONST_PSAT0
-  real(RP), parameter :: temp0 = CONST_TEM00
   !
   fesati = esat0*exp( qlsbl/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !
@@ -2253,6 +2272,121 @@ call STOP_COLLECTION("MICROPHYSICS")
   return
   !
   end subroutine getrule
- !-------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_MP_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do ihydro = 1, MP_QA
+        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro 
+          qhydro = qhydro + QTRC(k,i,j,iq)
+        enddo
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_CloudFraction
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+
+    real(RP) :: sum2(KA,IA,JA,MP_QA), sum3(KA,IA,JA,MP_QA)
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    sum2(:,:,:,:) = 0.0_RP
+    sum3(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, MP_QA
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, JE
+      do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro 
+         sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
+                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                            / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
+                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**3.0_RP )
+         sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
+                            ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                            / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
+                            * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
+      enddo
+      sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro-EPS))
+      sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro-EPS))
+
+      if( sum2(k,i,j,ihydro) /= 0.0_RP ) then
+       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)
+      else
+       Re(k,i,j,ihydro) = 0.0_RP
+      endif
+    enddo
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_EffectiveRadius
+  !-----------------------------------------------------------------------------
+  !> Calculate mixing ratio of each category
+  subroutine ATMOS_PHY_MP_Mixingratio( &
+       Qe,    &
+       QTRC0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+
+    real(RP) :: sum2
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+      do ihydro = 1, MP_QA
+        sum2 = 0.0_RP
+        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro 
+          sum2 = sum2 + QTRC0(k,i,j,iq)
+        enddo
+        Qe(k,i,j,ihydro) = sum2
+      enddo 
+    enddo 
+    enddo 
+    enddo 
+
+    return
+  end subroutine ATMOS_PHY_MP_Mixingratio
+  !-----------------------------------------------------------------------------
 end module mod_atmos_phy_mp
 !-------------------------------------------------------------------------------

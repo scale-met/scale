@@ -1,1 +1,1 @@
-character(5), parameter :: VERSION = "3.1.0"
+  character(len=*), parameter :: VERSION = VERSION_MACRO

@@ -15,6 +15,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
+#include "inc_openmp.h"
 module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
   !
@@ -56,6 +57,7 @@ module mod_atmos_thermodyn
   public :: ATMOS_THERMODYN_rhoe
   public :: ATMOS_THERMODYN_rhot
   public :: ATMOS_THERMODYN_temp_pres
+  public :: ATMOS_THERMODYN_temp_pres_E
 
   interface ATMOS_THERMODYN_qd
      module procedure ATMOS_THERMODYN_qd_0D
@@ -87,6 +89,11 @@ module mod_atmos_thermodyn
      module procedure ATMOS_THERMODYN_temp_pres_3D
   end interface ATMOS_THERMODYN_temp_pres
 
+  interface ATMOS_THERMODYN_temp_pres_E
+     module procedure ATMOS_THERMODYN_temp_pres_E_0D
+     module procedure ATMOS_THERMODYN_temp_pres_E_3D
+  end interface ATMOS_THERMODYN_temp_pres_E
+
   public :: ATMOS_THERMODYN_tempre
   public :: ATMOS_THERMODYN_tempre2
 
@@ -114,6 +121,9 @@ contains
   
     integer :: n
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[THERMODYN]/Categ[ATMOS]'
 
     AQ_CP(I_QV) = CPvap
     AQ_CV(I_QV) = CVvap
@@ -149,9 +159,11 @@ contains
     !-----------------------------------------------------------------------------
 
     qdry = 1.0_RP
+#ifndef DRY
     do iqw = QQS, QQE
        qdry = qdry - q(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_qd_0D
@@ -169,6 +181,7 @@ contains
     integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -202,9 +215,11 @@ contains
     !---------------------------------------------------------------------------
 
     CPtot = qdry * CPdry
+#ifndef DRY
     do iqw = QQS, QQE
        CPtot = CPtot + q(iqw) * AQ_CP(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_cp_0D
@@ -224,6 +239,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -258,9 +274,11 @@ contains
     !---------------------------------------------------------------------------
 
     CVtot = qdry * CVdry
+#ifndef DRY
     do iqw = QQS, QQE
        CVtot = CVtot + q(iqw) * AQ_CV(iqw)
     enddo
+#endif
 
     return
   end subroutine ATMOS_THERMODYN_cv_0D
@@ -280,6 +298,7 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -317,6 +336,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -325,6 +348,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -354,9 +378,14 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -365,6 +394,8 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
+
 
        CPovCV = ( CVtot + Rtot ) / CVtot
 
@@ -397,6 +428,10 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
     CVtot = 0.0_RP
     do iqw = QQS, QQE
@@ -405,6 +440,7 @@ contains
     enddo
     CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
     RovCP  = Rtot / ( CVtot + Rtot )
 
@@ -434,10 +470,15 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
 
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rtot
+#else
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        do iqw = QQS, QQE
@@ -446,6 +487,7 @@ contains
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
 
        RovCP  = Rtot / ( CVtot + Rtot )
 
@@ -476,21 +518,26 @@ contains
     real(RP), intent(in)  :: q(QA) !< mass concentration              [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot, CPovCV
+    real(RP) :: Rtot, CVtot, CPovCV
 
     integer :: iqw
     !---------------------------------------------------------------------------
 
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
     qdry  = 1.0_RP
-    CPtot = 0.0_RP
+    CVtot = 0.0_RP
     do iqw = QQS, QQE
        qdry  = qdry  - q(iqw)
-       CPtot = CPtot + q(iqw) * AQ_CP(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
     enddo
-    CPtot = CPdry * qdry + CPtot
+    CVtot = CVdry * qdry + CVtot
     Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
 
-    CPovCV = CPtot / ( CPtot - Rtot )
+    CPovCV = ( CVtot + Rtot ) / CVtot
 
     pres = PRE00 * ( rhot * Rtot / PRE00 )**CPovCV
     temp = pres / ( dens * Rtot )
@@ -515,24 +562,30 @@ contains
     real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
 
     real(RP) :: qdry
-    real(RP) :: Rtot, CPtot, CPovCV
+    real(RP) :: Rtot, CVtot, CPovCV
 
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
        qdry  = 1.0_RP
-       CPtot = 0.0_RP
+       CVtot = 0.0_RP
        do iqw = QQS, QQE
           qdry  = qdry  - q(k,i,j,iqw)
-          CPtot = CPtot + q(k,i,j,iqw) * AQ_CP(iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
        enddo
-       CPtot = CPdry * qdry + CPtot
+       CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
 
-       CPovCV = CPtot / ( CPtot - Rtot )
+       CPovCV = ( CVtot + Rtot ) / CVtot
 
        pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
@@ -542,6 +595,97 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (0D)
+  subroutine ATMOS_THERMODYN_temp_pres_E_0D( &
+       temp, &
+       pres, &
+       dens, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp  !< temperature               [K]
+    real(RP), intent(out) :: pres  !< pressure                  [Pa]
+    real(RP), intent(in)  :: dens  !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe  !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: q(QA) !< mass concentration        [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CVtot
+
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+#ifdef DRY
+    CVtot = CVdry
+    Rtot  = Rdry
+#else
+    qdry  = 1.0_RP
+    CVtot = 0.0_RP
+    do iqw = QQS, QQE
+       qdry  = qdry  - q(iqw)
+       CVtot = CVtot + q(iqw) * AQ_CV(iqw)
+    enddo
+    CVtot = CVdry * qdry + CVtot
+    Rtot  = Rdry  * qdry + Rvap * q(I_QV)
+#endif
+
+    temp = rhoe / ( dens * CVtot )
+    pres = dens * Rtot * temp
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_E_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho, q, rho * pott -> temp & pres (3D)
+  subroutine ATMOS_THERMODYN_temp_pres_E_3D( &
+       temp, &
+       pres, &
+       dens, &
+       rhoe, &
+       q     )
+    implicit none
+
+    real(RP), intent(out) :: temp(KA,IA,JA)    !< temperature               [K]
+    real(RP), intent(out) :: pres(KA,IA,JA)    !< pressure                  [Pa]
+    real(RP), intent(in)  :: dens(KA,IA,JA)    !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe(KA,IA,JA)    !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration        [kg/kg]
+
+    real(RP) :: qdry
+    real(RP) :: Rtot, CVtot
+
+    integer :: k, i, j, iqw
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+#ifdef DRY
+       CVtot = CVdry
+       Rtot  = Rdry
+#else
+       qdry  = 1.0_RP
+       CVtot = 0.0_RP
+       do iqw = QQS, QQE
+          qdry  = qdry  - q(k,i,j,iqw)
+          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+#endif
+
+       temp(k,i,j) = rhoe(k,i,j) / ( dens(k,i,j) * CVtot )
+       pres(k,i,j) = dens(k,i,j) * Rtot * temp(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres_E_3D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_tempre( &
@@ -561,6 +705,7 @@ contains
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -597,6 +742,7 @@ contains
     integer :: i, j, k, iqw
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA

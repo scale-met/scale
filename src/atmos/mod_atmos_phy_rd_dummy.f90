@@ -63,9 +63,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ dummy radiation process'
 
-    if ( ATMOS_TYPE_PHY_RD /= 'DUMMY' ) then
+    if ( ATMOS_TYPE_PHY_RD /= 'NONE' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not NONE. Check!'
        call PRC_MPIstop
     endif

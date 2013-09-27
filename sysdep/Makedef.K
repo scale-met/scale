@@ -1,40 +1,53 @@
-# ------ FOR K -----
+#
+# ------ FOR K computer -----
+#
+
+##### for computation
+
+FFLAGS_FAST  = -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Kparallel_iteration=8,instance=8,dynamic_iteration                   \
+               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                               \
+               -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd
+
+FFLAGS_DEBUG = -O0 \
+               -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
+#               -DDEBUG
+
+# Performance monitor
+# disable
+PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_
+# fipp
+#PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
+# fapp
+#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
+
+# RDMA
+# disable
+RDMA = -U_USE_RDMA
+# enable
+#RDMA = -D_USE_RDMA
 
 FC     = mpifrtpx
-# new setting 20120413
-FFLAGS = -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-         -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-         -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd -Kdynamic_iteration
+FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
-FFLAGS_DYN ?= -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,parallel_compress,parallel_iteration=8,instance=8 \
-             -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-             -Knoprefetch -Ksimd=2 -Kdynamic_iteration
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll -Ksimd=2
 
 MODDIROPT ?= -M
 
-# old setting 20120214
-#FFLAGS = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-#         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
-#         -Kprefetch_cache_level=all,prefetch_iteration_L2=50
+CC     = mpifccpx
+CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
 
-#FFLAGS_DYN = -Kvisimpact,auto,openmp,array_private,ilfunc,ocl,mfunc=2,preex,noalias=s,parallel_compress \
-#             -Knoprefetch,loop_nofission,loop_nofusion,nounroll \
-#             -Ntl_trt -Qt -V -Cpp -Ksimd=2 -D_FPCOLL_
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
-# old setting 20120104
-#FFLAGS = -Kvisimpact,ocl,ilfunc,preex,array_private,prefetch_cache_level=all,auto,mfunc=2,noalias=s,instance=8,prefetch_iteration_L2=50 \
-#         -Ntl_trt -Qt -V -Cpp -Ksimd -D_FPCOLL_ \
-#         -v03s -Ncompdisp,maxserious=2,nofreealloc -Kautoobjstack
-
-CC     = fccpx
-CFLAGS = -Kfast,parallel,ocl,region_extension,array_private,preex,openmp,restp=all -Koptmsg=2 -Ksimd
-
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
-
-# netcdf
-NETCDF_LIBS ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
+NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+
+##### for frontend
+INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
+JOBSUB  = pjsub

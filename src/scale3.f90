@@ -5,14 +5,7 @@
 !!          SCALE: Scalable Computing by Advanced Library and Environment
 !!          Numerical model for LES-scale weather
 !!
-!! @version 3.1
-!!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
-!! @li      2012-01-10 (H.Yashiro)  [mod] Change setup order, HISTORY module
-!! @li      2012-03-23 (H.Yashiro)  [mod] GEOMETRICS, MONITOR module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -43,8 +36,10 @@ program scaleles3
      TIME_checkstate,      &
      TIME_advance,         &
      TIME_DOATMOS_step,    &
+     TIME_DOLAND_step,     &
      TIME_DOOCEAN_step,    &
      TIME_DOATMOS_restart, &
+     TIME_DOLAND_restart,  &
      TIME_DOOCEAN_restart, &
      TIME_DOend,           &
      TIME_rapstart,        &
@@ -60,6 +55,10 @@ program scaleles3
      COMM_setup
   use mod_topography, only: &
      TOPO_setup
+  use mod_interpolation, only: &
+     INTERP_setup
+  use mod_landuse, only: &
+     LANDUSE_setup
   use mod_history, only: &
      HIST_setup, &
      HIST_write
@@ -75,6 +74,12 @@ program scaleles3
      ATMOS_vars_restart_check, &
      ATMOS_sw_restart,         &
      ATMOS_sw_check
+  use mod_land, only: &
+     LAND_setup, &
+     LAND_step
+  use mod_land_vars, only: &
+     LAND_vars_restart_write, &
+     LAND_sw_restart
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
@@ -84,6 +89,12 @@ program scaleles3
   use mod_user, only: &
      USER_setup, &
      USER_step
+#ifdef _PAPI_
+  use mod_papi, only: &
+     PAPI_rapstart, &
+     PAPI_rapstop,  &
+     PAPI_rapreport
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -115,6 +126,8 @@ program scaleles3
   ! setup time
   call TIME_setup
 
+  call TIME_rapstart('Debug')
+  call TIME_rapend  ('Debug')
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
@@ -132,11 +145,20 @@ program scaleles3
   ! setup topography
   call TOPO_setup
 
+  ! setup xi2z interpolation
+  call INTERP_setup
+
+  ! setup land use category index/fraction
+  call LANDUSE_setup
+
   ! setup history I/O
   call HIST_setup
 
   ! setup monitor I/O
   call MONIT_setup
+
+  ! setup land
+  call LAND_setup
 
   ! setup ocean
   call OCEAN_setup
@@ -152,7 +174,10 @@ program scaleles3
   !########## main ##########
 
 #ifdef _FIPP_
-  call fipp_start()
+  call fipp_start
+#endif
+#ifdef _PAPI_
+  call PAPI_rapstart
 #endif
 
   if( IO_L ) write(IO_FID_LOG,*)
@@ -164,12 +189,13 @@ program scaleles3
     ! report current time
     call TIME_checkstate
 
-    ! change to next state
-    if ( TIME_DOATMOS_step ) call ATMOS_step
-    if ( TIME_DOOCEAN_step ) call OCEAN_step
-
     ! user-defined procedure
     call USER_step
+
+    ! change to next state
+    if ( TIME_DOATMOS_step ) call ATMOS_step
+    if ( TIME_DOLAND_step  ) call LAND_step
+    if ( TIME_DOOCEAN_step ) call OCEAN_step
 
     ! time advance
     call TIME_advance
@@ -180,6 +206,7 @@ program scaleles3
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_vars_restart_write
     if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
 
     if ( TIME_DOend ) exit
@@ -191,19 +218,21 @@ program scaleles3
   if( IO_L ) write(IO_FID_LOG,*)
 
 #ifdef _FIPP_
-  call fipp_stop()
+  call fipp_stop
+#endif
+#ifdef _PAPI_
+  call PAPI_rapstop
 #endif
 
   !########## Finalize ##########
 
-  call TIME_rapstart('Checkdiff')
-
   ! check data
   if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
-  call TIME_rapend('Checkdiff')
-
   call TIME_rapreport
+#ifdef _PAPI_
+  call PAPI_rapreport
+#endif
 
   call FileCloseAll
 

@@ -223,11 +223,10 @@ contains
        enddo
 
        do k = KS, KE
-          TEMP_t(k,i,j) = &
-             - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k) !/ DENS(k,i,j)
+          TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
 
-          RHOT(k,i,j) = RHOT(k,i,j) + dtrd * ( 1.0_RP - RovCP ) &
-                      * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)!*DENS(k,i,j)
+          RHOT(k,i,j)   = RHOT(k,i,j) &
+                        + dtrd * ( 1.0_RP-RovCP ) * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)
        enddo
 
     enddo
@@ -246,9 +245,9 @@ contains
 
     call ATMOS_vars_total
 
-    call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'J/m2/s',    dtrd )
-    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K*kg/m3/s', dtrd )
-    call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',         dtrd )
+    call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'W/m2', dtrd )
+    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/s',  dtrd )
+    call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',    dtrd )
 
     return
   end subroutine ATMOS_PHY_RD

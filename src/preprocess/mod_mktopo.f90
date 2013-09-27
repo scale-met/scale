@@ -126,8 +126,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
-  use mod_topography, only: &
-     TOPO_write
+    use mod_topography, only: &
+       TOPO_write
     implicit none
 
     logical :: output_topo = .false.
@@ -259,7 +259,7 @@ contains
     ! make bell-shaped mountain
     do j = JS, JE
     do i = IS, IE
-       TOPO_Zsfc(1,i,j) = MOUNTAIN_HEIGHT * bell(1,i,j)
+       TOPO_Zsfc(i,j) = MOUNTAIN_HEIGHT * bell(1,i,j)
     enddo
     enddo
 

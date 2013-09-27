@@ -41,7 +41,7 @@ module mod_history
   !
   !++ included parameters
   !
-  include "scale-les.h"
+# include "scale-les.h"
   include "inc_precision.h"
   include "inc_index.h"
 
@@ -112,7 +112,7 @@ contains
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -130,7 +130,7 @@ contains
                       HISTORY_dim_dtype,         &
                       namelist_fid = IO_FID_CONF )
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_setup
@@ -163,7 +163,7 @@ contains
     character(len=2) :: dims(3)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     dims(1) = 'x'
     dims(2) = 'y'
@@ -189,7 +189,7 @@ contains
        call HIST_put_axes
     endif
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_reg
@@ -210,14 +210,16 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
     enddo
     call HistoryPut(itemid, var2, dt)
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_put_1D
@@ -238,7 +240,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     do j = 1, JMAX
     do i = 1, IMAX
@@ -247,7 +251,7 @@ contains
     enddo
     call HistoryPut(itemid, var2, dt)
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_put_2D
@@ -258,6 +262,8 @@ contains
       itemid, &
       var,    &
       dt      )
+    use mod_interpolation, only: &
+       INTERP_vertical
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
@@ -267,11 +273,15 @@ contains
     intrinsic shape
     integer :: s(3)
 
-    real(RP) :: var2(IMAX*JMAX*KMAX)
+    real(RP) :: var_Z(KA,IA,JA)
+    real(RP) :: var2 (KMAX*IMAX*JMAX)
+
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    if ( itemid < 0 ) return
+
+    call TIME_rapstart('FILE O NetCDF')
 
     s = shape(var)
     if ( s(1) == 1 ) then
@@ -284,11 +294,15 @@ contains
        call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
 
     else
+       call TIME_rapstart('FILE O Interpolation')
+       call INTERP_vertical( var  (:,:,:), & ! [IN]
+                             var_Z(:,:,:)  ) ! [OUT]
+       call TIME_rapend  ('FILE O Interpolation')
 
        do k = 1, KMAX
        do j = 1, JMAX
        do i = 1, IMAX
-          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
        enddo
        enddo
        enddo
@@ -296,7 +310,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_put_3D
@@ -438,7 +452,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -449,7 +463,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine HIST_get_1D
@@ -474,7 +488,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -485,7 +499,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine HIST_get_2D
@@ -510,7 +524,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -521,7 +535,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine HIST_get_3D
@@ -536,11 +550,11 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     call HistoryWriteAll( TIME_NOWDAYSEC ) ![IN]
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine HIST_write

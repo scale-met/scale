@@ -2,13 +2,9 @@
 !> module OCEAN driver
 !!
 !! @par Description
-!!          Ocean module
+!!          Ocean module driver
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-12-11 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] FIXEDSST
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -51,12 +47,11 @@ contains
   !> Setup
   subroutine OCEAN_setup
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup, &
+       sw_phy => OCEAN_sw_phy,  &
+       OCEAN_vars_setup,        &
        OCEAN_vars_restart_read
-    use mod_ocean_sf, only: &
-       OCEAN_SST_setup
-    use mod_ocean_vars, only: &
-       sw_sst => OCEAN_sw_sst
+    use mod_ocean_phy, only: &
+       OCEAN_PHY_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -64,7 +59,7 @@ contains
 
     call OCEAN_vars_restart_read
 
-    if ( sw_sst ) call OCEAN_SST_setup
+    if ( sw_phy ) call OCEAN_PHY_setup
 
     return
   end subroutine OCEAN_setup
@@ -73,17 +68,24 @@ contains
   !> Ocean step
   subroutine OCEAN_step
     use mod_ocean_vars, only: &
-       sw_sst => OCEAN_sw_sst
-    use mod_ocean_sf, only: &
-       OCEAN_SST
+       sw_phy => OCEAN_sw_phy, &
+       OCEAN_vars_history
+    use mod_ocean_phy, only: &
+       OCEAN_PHY
     implicit none
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Ocean')
-    if ( sw_sst ) then
-       call OCEAN_SST
+    !########## Physics ##########
+    call TIME_rapstart('OCN Physics')
+    if ( sw_phy ) then
+       call OCEAN_PHY
     endif
-    call TIME_rapend  ('Ocean')
+    call TIME_rapend  ('OCN Physics')
+
+    !########## History & Monitor ##########
+    call TIME_rapstart('OCN History')
+       call OCEAN_vars_history
+    call TIME_rapend  ('OCN History')
 
     return
   end subroutine OCEAN_step

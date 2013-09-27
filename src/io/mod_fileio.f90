@@ -30,7 +30,7 @@ module mod_fileio
   !
   !++ included parameters
   !
-  include "scale-les.h"
+# include "scale-les.h"
   include "inc_precision.h"
   include "inc_index.h"
 
@@ -66,14 +66,14 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=IO_SYSCHR), private :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
+  character(len=IO_SYSCHR), private, save :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
+  character(len=IO_SYSCHR), private, save :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
 
-  character(len=1), parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property
-  integer,          parameter :: FILEIO_dim_size (3) = (/KMAX,IMAX,JMAX/)     !< for axis property
-  character(len=1), parameter :: FILEIO_dim_desc (3) = (/'Z','X','Y'/)        !< for axis property
-  character(len=1), parameter :: FILEIO_dim_unit (3) = (/'m','m','m'/)        !< for axis property
-  integer,               save :: FILEIO_dim_dtype(3)                          !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property
+  integer,          private, parameter :: FILEIO_dim_size (3) = (/KMAX,IMAX,JMAX/)     !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_desc (3) = (/'Z','X','Y'/)        !< for axis property
+  character(len=1), private, parameter :: FILEIO_dim_unit (3) = (/'m','m','m'/)        !< for axis property
+  integer,          private, save      :: FILEIO_dim_dtype(3)                          !< for axis property
 
   !-----------------------------------------------------------------------------
 contains
@@ -108,11 +108,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_FILEIO)
 
-    call TIME_rapstart('FILE I')
-    call TIME_rapend  ('FILE I')
-
-    call TIME_rapstart('FILE O')
-    call TIME_rapend  ('FILE O')
+    call TIME_rapstart('FILE I NetCDF')
+    call TIME_rapend  ('FILE I NetCDF')
+    call TIME_rapstart('FILE O NetCDF')
+    call TIME_rapend  ('FILE O NetCDF')
+    call TIME_rapstart('FILE I ASCII')
+    call TIME_rapend  ('FILE I ASCII')
+    call TIME_rapstart('FILE O ASCII')
+    call TIME_rapend  ('FILE O ASCII')
+    call TIME_rapstart('FILE O Interpolation')
+    call TIME_rapend  ('FILE O Interpolation')
 
     return
   end subroutine FILEIO_setup
@@ -142,7 +147,7 @@ contains
     real(RP), allocatable :: var1D(:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     if ( axistype == 'Z' ) then
        dim1_max = KMAX
@@ -168,7 +173,7 @@ contains
 
     deallocate( var1D )
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_1D
@@ -199,7 +204,7 @@ contains
     real(RP), allocatable :: var2D(:,:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     if ( axistype == 'XY' ) then
        dim1_max = IMAX
@@ -227,7 +232,7 @@ contains
 
     deallocate( var2D )
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_2D
@@ -259,7 +264,7 @@ contains
     real(RP), allocatable :: var3D(:,:,:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I')
+    call TIME_rapstart('FILE I NetCDF')
 
     if ( axistype == 'ZXY' ) then
        dim1_max = KMAX
@@ -283,7 +288,7 @@ contains
 
     deallocate( var3D )
 
-    call TIME_rapend  ('FILE I')
+    call TIME_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_3D
@@ -339,7 +344,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -410,7 +415,7 @@ contains
 
     deallocate( var1D )
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_1D
@@ -467,7 +472,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -539,7 +544,7 @@ contains
 
     deallocate( var2D )
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_2D
@@ -597,7 +602,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O')
+    call TIME_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -664,7 +669,7 @@ contains
 
     deallocate( var3D )
 
-    call TIME_rapend  ('FILE O')
+    call TIME_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_3D

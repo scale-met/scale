@@ -19,6 +19,9 @@ module mod_misc
      IO_FID_LOG, &
      IO_L,       &
      IO_SYSCHR
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -70,23 +73,32 @@ contains
     real(RP)         :: valmax
     character(len=*) :: varname
 
+    logical :: invalid_value
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('Debug')
 
     kstr = lbound( var(:), 1 )
     kend = ubound( var(:), 1 ) 
 
+    invalid_value = .false.
     do k = kstr, kend
        if (      var(k)*0.0_RP /= 0.0_RP &
             .OR. var(k)        <  valmin &
             .OR. var(k)        >  valmax ) then
-
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value:', trim(varname), &
-                                         '(', k, ')=', var(k)
-          call PRC_MPIstop
-
+           invalid_value = .true.
+           exit
        endif
     enddo
+
+    if ( invalid_value ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value:', trim(varname), &
+                                      '(', k, ')=', var(k)
+       call PRC_MPIstop
+    endif
+
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_1D
@@ -107,9 +119,12 @@ contains
     real(RP)         :: valmax
     character(len=*) :: varname
 
+    logical :: invalid_value
     integer :: k, kstr, kend
     integer :: i, istr, iend
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('Debug')
 
     kstr = lbound( var(:,:), 1 )
     kend = ubound( var(:,:), 1 ) 
@@ -117,19 +132,25 @@ contains
     istr = lbound( var(:,:), 2 )
     iend = ubound( var(:,:), 2 ) 
 
-    do k = kstr, kend
-    do i = istr, iend
-       if (      var(k,i)*0.0_RP /= 0.0_RP &
-            .OR. var(k,i)        <  valmin &
-            .OR. var(k,i)        >  valmax ) then
+    invalid_value = .false.
+    outer:do i = istr, iend
+          do k = kstr, kend
+             if (      var(k,i)*0.0_RP /= 0.0_RP &
+                  .OR. var(k,i)        <  valmin &
+                  .OR. var(k,i)        >  valmax ) then
+                 invalid_value = .true.
+                 exit outer
+             endif
+          enddo
+          enddo outer
 
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
-                                         '(', k, ',', i, ')=', var(k,i)
-          call PRC_MPIstop
+    if ( invalid_value ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
+                                      '(', k, ',', i, ')=', var(k,i)
+       call PRC_MPIstop
+    endif
 
-       endif
-    enddo
-    enddo
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_2D
@@ -150,10 +171,13 @@ contains
     real(RP)         :: valmax
     character(len=*) :: varname
 
+    logical :: invalid_value
     integer :: k, kstr, kend
     integer :: i, istr, iend
     integer :: j, jstr, jend
     !---------------------------------------------------------------------------
+
+    call TIME_rapstart('Debug')
 
     kstr = lbound( var(:,:,:), 1 )
     kend = ubound( var(:,:,:), 1 ) 
@@ -164,21 +188,27 @@ contains
     jstr = lbound( var(:,:,:), 3 )
     jend = ubound( var(:,:,:), 3 ) 
 
-    do k = kstr, kend
-    do i = istr, iend
-    do j = jstr, jend
-       if (      var(k,i,j)*0.0_RP /= 0.0_RP &
-            .OR. var(k,i,j)        <  valmin &
-            .OR. var(k,i,j)        >  valmax ) then
+    invalid_value = .false.
+    outer:do j = jstr, jend
+          do i = istr, iend
+          do k = kstr, kend
+             if (      var(k,i,j)*0.0_RP /= 0.0_RP &
+                  .OR. var(k,i,j)        <  valmin &
+                  .OR. var(k,i,j)        >  valmax ) then
+                 invalid_value = .true.
+                 exit outer
+             endif
+          enddo
+          enddo
+          enddo outer
 
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
-                                         '(', k, ',', i, ',', j, ')=', var(k,i,j)
-          call PRC_MPIstop
+    if ( invalid_value ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx invalid value: ', trim(varname), &
+                                      '(', k, ',', i, ',', j, ')=', var(k,i,j)
+       call PRC_MPIstop
+    endif
 
-       endif
-    enddo
-    enddo
-    enddo
+    call TIME_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_3D

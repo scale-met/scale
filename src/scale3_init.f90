@@ -54,6 +54,8 @@ program scaleinit
      MONIT_setup, &
      MONIT_write, &
      MONIT_finalize
+  use mod_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
   use mod_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
   use mod_atmos_saturation, only: &
@@ -101,8 +103,10 @@ program scaleinit
   call RANDOM_setup
 
   ! setup time
-  call TIME_setup
+  call TIME_setup( .true. )
 
+  call TIME_rapstart('Debug')
+  call TIME_rapend  ('Debug')
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
@@ -127,6 +131,7 @@ program scaleinit
   call MONIT_setup
 
   ! setup atmos
+  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
   call ATMOS_vars_setup
@@ -144,10 +149,14 @@ program scaleinit
   call TIME_rapstart('Main')
 
   ! execute mkinit
+  call TIME_rapstart('MkTopo')
   call MKTOPO
+  call TIME_rapend  ('MkTopo')
 
   ! execute mkinit
+  call TIME_rapstart('MkInit')
   call MKINIT
+  call TIME_rapend  ('MkInit')
 
   call ATMOS_vars_fillhalo
   ! output restart

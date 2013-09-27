@@ -4,7 +4,7 @@
 !! @par Description
 !!          Calendar date and time module
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-07-19 (S.Nishizawa) [new] imported from SCALE mod_time

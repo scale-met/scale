@@ -16,13 +16,17 @@ module mod_monitor
   !
   !++ Used modules
   !
+  use gtool_file_h, only: &
+     File_HSHORT, &
+     File_HMID
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
      IO_FILECHR
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
+  !-----------------------------------------------------------------------------
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -305,6 +309,8 @@ contains
 
     if( MONIT_id_count == 0 ) return
 
+    call TIME_rapstart('FILE O ASCII')
+
     if (firsttime) then
        firsttime = .false.
        call MONIT_writeheader
@@ -318,9 +324,13 @@ contains
              write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Write monitor'
        endif
 
     endif
+
+    call TIME_rapend  ('FILE O ASCII')
 
     return
   end subroutine MONIT_write

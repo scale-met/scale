@@ -4,7 +4,7 @@
 !! @par Description
 !!          File I/O module (Parameter Container)
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2012-06-13 (S.Nishizawa) [new] Imported from SCALE-LES

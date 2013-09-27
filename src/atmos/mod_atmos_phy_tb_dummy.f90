@@ -52,7 +52,7 @@ module mod_atmos_phy_tb
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB_setup()
+  subroutine ATMOS_PHY_TB_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -75,11 +75,16 @@ contains
   end subroutine ATMOS_PHY_TB_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB
+  subroutine ATMOS_PHY_TB( update_flag, history_flag )
     implicit none
+
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'
+
+    ! do nothing
 
     return
   end subroutine ATMOS_PHY_TB

@@ -4,10 +4,10 @@
 #
 ################################################################################
 
+TOPDIR      = ..
+SYSDEP_DIR  = ../sysdep
 
-TOPDIR = ..
-
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
 LIBNAME = libdcutils.a
@@ -39,7 +39,7 @@ dc_calendar.o: dc_calendar.f90 dc_log.o dc_types.o
 dc_types.o: dc_types.f90
 
 dc_test.o: dc_test.f90 dc_types.o
-	$(FC) $(FFLAGS) -O0 -o $@ -c $<
+	$(FC) $(FFLAGS_DEBUG) -o $@ -c $<
 
 clean:
 	rm -f $(MODS) *.mod

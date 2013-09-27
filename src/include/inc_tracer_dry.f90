@@ -35,3 +35,27 @@
   data AQ_DESC / 'Water Vapor mixing ratio' /
 
   data AQ_UNIT / 'kg/kg' /
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ tracer index & relationship (MP_dry+AE_dummy+RD_mstrnX)
+  !
+  !-----------------------------------------------------------------------------
+
+  integer, private, parameter :: MP_QA = 1 ! number of hydrometeor tracer
+  integer, private, parameter :: I_mp_dummy = 1
+
+  integer, private, save :: I_MP2ALL(MP_QA)
+  data I_MP2ALL / -999 / ! dummy
+
+  integer, private, save :: I_MP2RD(MP_QA)
+  data I_MP2RD / 1    / ! dummy
+
+  integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
+  integer, private, parameter :: I_ae_dummy = 1
+
+  integer, private, save :: I_AE2ALL(AE_QA)
+  data I_AE2ALL / -999 / ! dummy
+
+  integer, private, save :: I_AE2RD(AE_QA)
+  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust

@@ -4,10 +4,10 @@
 #
 ################################################################################
 
+TOPDIR      = ..
+SYSDEP_DIR  = ../sysdep
 
-TOPDIR = ..
-
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
 LIBNAME = libgtool.a

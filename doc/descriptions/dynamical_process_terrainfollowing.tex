@@ -1,0 +1,228 @@
+\chapter{Terrain-following Coordinates}
+\label{chap:terrain-following}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Hisashi Yashiro\\
+\hline
+\end{tabular}
+}
+
+\section{Geometry and Definitions}
+We introduce a terrain following coordinate system with a new vertical coordinate $\xi$. 
+$\xi$-coordinate system is not deformable system. We use the relation between z and $\xi$ as
+
+\begin{eqnarray}
+ \xi = \frac{z_{toa}(z-z_{sfc})}{z_{toa}-z_{sfc}},
+\end{eqnarray}
+Where $z_{toa}$ is the top of the model domain and $z_{sfc}$ is the surface height, 
+which depends on the horizontal location.
+
+The metrics are defined as
+\begin{align}
+ G^{\frac{1}{2}} &= \frac{\partial z}{\partial \xi}, \\
+ J^{\xi}_{13} &= \left(\frac{\partial \xi}{\partial x}\right)_{z} = -\frac{J^{z}_{13}}{J^{z}_{33}},\\
+ J^{\xi}_{23} &= \left(\frac{\partial \xi}{\partial y}\right)_{z} = -\frac{J^{z}_{23}}{J^{z}_{33}},\\
+ J^{\xi}_{33} &=       \frac{\partial \xi}{\partial z}            =  \frac{1}         {J^{z}_{33}},
+\end{align}
+where
+\begin{align}
+ J^{z}_{13} &= \left(\frac{\partial z}{\partial x}\right)_{\xi},\\
+ J^{z}_{23} &= \left(\frac{\partial z}{\partial y}\right)_{\xi},\\
+ J^{z}_{33} &= -{G^{\frac{1}{2}}}
+\end{align}
+
+If we use the Eqs.(5.2)-(5.5), we obtain following equations:
+\begin{align}
+ \nabla \cdot (G^{\frac{1}{2}} \phi) &= \left(\frac{\partial G^{\frac{1}{2}} \phi}{\partial x}\right)_{\xi}
+                                      + \left(\frac{\partial G^{\frac{1}{2}} \phi}{\partial y}\right)_{\xi}
+                                      + (J^{\xi}_{13}+J^{\xi}_{23}+J^{\xi}_{33}) \frac{\partial G^{\frac{1}{2}} \phi}{\partial \xi}, \\
+ \nabla \cdot (G^{\frac{1}{2}} \bf u) &= \frac{\partial G^{\frac{1}{2}} u}{\partial x}
+                                       + \frac{\partial G^{\frac{1}{2}} v}{\partial y}
+                                       + \frac{\partial}{\partial \xi}
+                                         \left(J^{\xi}_{13} {G^{\frac{1}{2}}} u
+                                              +J^{\xi}_{23} {G^{\frac{1}{2}}} v
+                                              +J^{\xi}_{33} {G^{\frac{1}{2}}} w
+                                         \right).
+\end{align}
+
+\section{Summary of modified equations in the dynamical process}
+
+Prognostic variables by multiplying $G^{\frac{1}{2}}$ are defined as
+\begin{align}
+ (\rho Q_v)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_v)_{i,j,k},        \\
+ (\rho Q_l)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_l)_{i,j,k},        \\
+ (\rho Q_s)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_s)_{i,j,k},        \\
+ R_{i,j,k}                    &= G^{\frac{1}{2}}_{i,j,k}              \rho_{i,j,k},                \\
+ (\rho U)_{i+\frac{1}{2},j,k} &= G^{\frac{1}{2}}_{i+\frac{1}{2},j,k} (\rho u)_{i+\frac{1}{2},j,k}, \\
+ (\rho V)_{i,j+\frac{1}{2},k} &= G^{\frac{1}{2}}_{i,j+\frac{1}{2},k} (\rho v)_{i,j+\frac{1}{2},k}, \\
+ (\rho W)_{i,j,k+\frac{1}{2}} &= G^{\frac{1}{2}}_{i,j,k+\frac{1}{2}} (\rho w)_{i,j,k+\frac{1}{2}}, \\
+ (\rho \Theta)_{i,j,k}        &= G^{\frac{1}{2}}_{i,j,k}             (\rho \theta)_{i,j,k},        \\
+ P_{i,j,k}                    &= G^{\frac{1}{2}}_{i,j,k}              p_{i,j,k}
+\end{align}
+
+and Eqs.(2.67)-(2.72) are modified using Eqs.(5.2)-(5.5).
+
+\begin{align}
+ \frac{\partial \rho Q_v     }{\partial t} + \nabla \cdot \left( \rho Q_v             {\bf u}\right) &= 0 \\
+ \frac{\partial \rho Q_l     }{\partial t} + \nabla \cdot \left( \rho Q_l             {\bf u}\right) &= 0 \\
+ \frac{\partial \rho Q_s     }{\partial t} + \nabla \cdot \left( \rho Q_s             {\bf u}\right) &= 0 \\
+ \frac{\partial R            }{\partial t} + \nabla \cdot \left( R                    {\bf u}\right) &= 0 \\
+ \frac{\partial \rho {\bf U} }{\partial t} + \nabla \cdot \left( \rho {\bf U} \otimes {\bf u}\right) &= -\nabla P - Rg {\bf e_z} \\
+ \frac{\partial \rho \Theta  }{\partial t} + \nabla \cdot \left( \rho \Theta          {\bf u}\right) &= 0
+\end{align}
+
+\section{Spatial descretization}
+\subsection{Continuity equation}
+\begin{align}
+ \left(\frac{\partial R}{\partial t}\right)_{i,j,k}
+ = - &\Bigg[ \frac{ (\rho U)_{i+\frac{1}{2},j,k}
+                  - (\rho U)_{i-\frac{1}{2},j,k}
+                  } {\Delta x} \nonumber \\
+          &+ \frac{ (\rho V)_{i,j+\frac{1}{2},k}
+                  - (\rho V)_{i,j-\frac{1}{2},k}
+                  } {\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i,j,k+\frac{1}{2}} \overline{\widetilde{(\rho U)}^x}^z_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{13})_{i,j,k-\frac{1}{2}} \overline{\widetilde{(\rho U)}^x}^z_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i,j,k+\frac{1}{2}} \overline{\widetilde{(\rho V)}^x}^z_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{23})_{i,j,k-\frac{1}{2}} \overline{\widetilde{(\rho V)}^x}^z_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i,j,k+\frac{1}{2}} (\rho W)_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{33})_{i,j,k+\frac{1}{2}} (\rho W)_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \Bigg]
+\end{align}
+where
+\begin{align}
+ \overline{\widetilde{(\rho U)}^x}^z_{i,j,k+\frac{1}{2}}
+ &= G^{\frac{1}{2}}_{i,j,k+\frac{1}{2}} \frac{ \widetilde{(\rho u)}^x_{i,j,k+1}
+                                             + \widetilde{(\rho u)}^x_{i,j,k  }
+                                             } {2}, \\
+ \overline{\widetilde{(\rho V)}^x}^z_{i,j,k+\frac{1}{2}}
+ &= G^{\frac{1}{2}}_{i,j,k+\frac{1}{2}} \frac{ \widetilde{(\rho v)}^x_{i,j,k+1}
+                                             + \widetilde{(\rho v)}^x_{i,j,k  }
+                                             } {2},
+\end{align}
+$\widetilde{(\rho u)}^x_{i,j,k}$ and $\widetilde{(\rho v)}^x_{i,j,k}$ are obtained by same manner in eq.(3.20)
+
+\subsection{Momentum equations}
+\begin{align}
+ \left(\frac{\partial \rho U}{\partial t}\right)_{i+\frac{1}{2},j,k}
+ = - &\Bigg[ \frac{ \widetilde{(\rho U)}^x_{i+1,j,k} \overline{u}_{i+1,j,k}
+                  - \widetilde{(\rho U)}^x_{i  ,j,k} \overline{u}_{i  ,j,k}
+                  } {\Delta x} \nonumber \\
+          &+ \frac{ \widetilde{(\rho U)}^y_{i+\frac{1}{2},j+\frac{1}{2},k} \overline{v}_{i+\frac{1}{2},j+\frac{1}{2},k}
+                  - \widetilde{(\rho U)}^y_{i+\frac{1}{2},j-\frac{1}{2},k} \overline{v}_{i+\frac{1}{2},j-\frac{1}{2},k}
+                  } {\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i+\frac{1}{2},j,k+\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k+\frac{1}{2}} \overline{\overline{u}}^z_{i+\frac{1}{2},j,k+\frac{1}{2}}
+                  - (J^{\xi}_{13})_{i+\frac{1}{2},j,k-\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k-\frac{1}{2}} \overline{\overline{u}}^z_{i+\frac{1}{2},j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i+\frac{1}{2},j,k+\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k+\frac{1}{2}} \overline{\overline{v}^y}^{xz}_{i+\frac{1}{2},j,k+\frac{1}{2}}
+                  - (J^{\xi}_{23})_{i+\frac{1}{2},j,k-\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k-\frac{1}{2}} \overline{\overline{v}^y}^{xz}_{i+\frac{1}{2},j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i+\frac{1}{2},j,k+\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k+\frac{1}{2}} \overline{\overline{w}}^x_{i+\frac{1}{2},j,k+\frac{1}{2}}
+                  - (J^{\xi}_{33})_{i+\frac{1}{2},j,k-\frac{1}{2}} \widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k-\frac{1}{2}} \overline{\overline{w}}^x_{i+\frac{1}{2},j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ P_{i+1,j,k}-P_{i,j,k}}{\Delta x} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i+\frac{1}{2},j,k+\frac{1}{2}} \overline{P}^{xz}_{i+\frac{1}{2},j,k+\frac{1}{2}}
+                  - (J^{\xi}_{13})_{i+\frac{1}{2},j,k-\frac{1}{2}} \overline{P}^{xz}_{i+\frac{1}{2},j,k-\frac{1}{2}}
+                  } {\Delta \xi},
+\end{align}
+
+where $\widetilde{(\rho U)}^x_{i,j,k}$, $\widetilde{(\rho U)}^y_{i+\frac{1}{2},j+\frac{1}{2},k}$ 
+and $\widetilde{(\rho U)}^z_{i+\frac{1}{2},j,k+\frac{1}{2}}$ is obtained according to the method of eq(3.20)-(3.22).
+The velocities at the cell wall for the staggered control volume to x direction are defined by eq(3.23)-(3.25).
+$\overline{\overline{u}}^z$ and $\overline{\overline{v}^y}^{xz}$ are defined as
+
+\begin{align}
+ \overline{\overline{u}}^z_{i+\frac{1}{2},j,k+\frac{1}{2}}
+ &= \frac{ \overline{u}_{i+\frac{1}{2},j,k+1}
+         + \overline{u}_{i+\frac{1}{2},j,k  }
+         } {2}, \\
+ \overline{\overline{v}^y}^{xz}_{i+\frac{1}{2},j,k+\frac{1}{2}}
+ &= \frac{ \overline{v}^y_{i+1,j,k+1}
+         + \overline{v}^y_{i+1,j,k  }
+         + \overline{v}^y_{i  ,j,k+1}
+         + \overline{v}^y_{i  ,j,k  }
+         } {4}.
+\end{align}
+
+$\overline{P}^{xz}$ is defined as
+\begin{align}
+ \overline{P}^{xz}_{i+\frac{1}{2},j,k+\frac{1}{2}}
+ &=  G^{\frac{1}{2}}_{i+\frac{1}{2},j,k+\frac{1}{2}} \frac{ p_{i+1,j,k+1}
+                                                          + p_{i+1,j,k  }
+                                                          + p_{i  ,j,k+1}
+                                                          + p_{i  ,j,k  }
+                                                          } {4}.
+\end{align}
+
+The momentum equations in the $y$ and $z$ directions are descretized 
+in the same way:
+\begin{align}
+ \left(\frac{\partial \rho V}{\partial t}\right)_{i,j+\frac{1}{2},k}
+ = - &\Bigg[ \frac{ \widetilde{(\rho V)}^x_{i+\frac{1}{2},j+\frac{1}{2},k} \overline{u}_{i-\frac{1}{2},j+\frac{1}{2},k}
+                  - \widetilde{(\rho V)}^x_{i+\frac{1}{2},j+\frac{1}{2},k} \overline{u}_{i-\frac{1}{2},j+\frac{1}{2},k}
+                  } {\Delta x} \nonumber \\
+          &+ \frac{ \widetilde{(\rho V)}^y_{i,j+1,k} \overline{v}_{i,j+1,k}
+                  - \widetilde{(\rho V)}^y_{i,j  ,k} \overline{v}_{i,j  ,k}
+                  } {\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i,j+\frac{1}{2},k+\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k+\frac{1}{2}} \overline{\overline{u}^x}^{yz}_{i,j+\frac{1}{2},k+\frac{1}{2}}
+                  - (J^{\xi}_{13})_{i,j+\frac{1}{2},k-\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k-\frac{1}{2}} \overline{\overline{u}^x}^{yz}_{i,j+\frac{1}{2},k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i,j+\frac{1}{2},k+\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k+\frac{1}{2}} \overline{\overline{v}}^z_{i,j+\frac{1}{2},k+\frac{1}{2}}
+                  - (J^{\xi}_{23})_{i,j+\frac{1}{2},k-\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k-\frac{1}{2}} \overline{\overline{v}}^z_{i,j+\frac{1}{2},k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i,j+\frac{1}{2},k+\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k+\frac{1}{2}} \overline{\overline{w}}^y_{i,j+\frac{1}{2},k+\frac{1}{2}}
+                  - (J^{\xi}_{33})_{i,j+\frac{1}{2},k-\frac{1}{2}} \widetilde{(\rho V)}^z_{i,j+\frac{1}{2},k-\frac{1}{2}} \overline{\overline{w}}^y_{i,j+\frac{1}{2},k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ P_{i,j+1,k}-P_{i,j,k}}{\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i,j+\frac{1}{2},k+\frac{1}{2}} \overline{P}^{yz}_{i,j+\frac{1}{2},k+\frac{1}{2}}
+                  - (J^{\xi}_{23})_{i,j+\frac{1}{2},k-\frac{1}{2}} \overline{P}^{yz}_{i,j+\frac{1}{2},k-\frac{1}{2}}
+                  } {\Delta \xi},
+\end{align}
+
+\begin{align}
+ \left(\frac{\partial \rho W}{\partial t}\right)_{i,j,k+\frac{1}{2}}
+ = - &\Bigg[ \frac{ \widetilde{(\rho W)}^x_{i+\frac{1}{2},j,k+\frac{1}{2}} \overline{u}_{i+\frac{1}{2},j,k+\frac{1}{2}}
+                  - \widetilde{(\rho W)}^x_{i-\frac{1}{2},j,k+\frac{1}{2}} \overline{u}_{i-\frac{1}{2},j,k+\frac{1}{2}}
+                  } {\Delta x} \nonumber \\
+          &+ \frac{ \widetilde{(\rho W)}^y_{i,j+\frac{1}{2},k+\frac{1}{2}} \overline{v}_{i,j+\frac{1}{2},k+\frac{1}{2}}
+                  - \widetilde{(\rho W)}^y_{i,j-\frac{1}{2},k+\frac{1}{2}} \overline{v}_{i,j-\frac{1}{2},k+\frac{1}{2}}
+                  } {\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i,j,k+1} \widetilde{(\rho W)}^z_{i,j,k+1} \overline{u}^x_{i,j,k+1}
+                  - (J^{\xi}_{13})_{i,j,k  } \widetilde{(\rho W)}^z_{i,j,k  } \overline{u}^x_{i,j,k  }
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i,j,k+1} \widetilde{(\rho W)}^z_{i,j,k+1} \overline{v}^y_{i,j,k+1}
+                  - (J^{\xi}_{23})_{i,j,k  } \widetilde{(\rho W)}^z_{i,j,k  } \overline{v}^y_{i,j,k  }
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i,j,k+1} \widetilde{(\rho W)}^z_{i,j,k+1} \overline{w}^z_{i,j,k+1}
+                  - (J^{\xi}_{33})_{i,j,k  } \widetilde{(\rho W)}^z_{i,j,k  } \overline{w}^z_{i,j,k  }
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i,j,k+1} P_{i,j,k+1}
+                  - (J^{\xi}_{33})_{i,j,k  } P_{i,j,k  }
+                  } {\Delta \xi}
+\end{align}
+
+\subsection{Energy equation}
+
+\begin{align}
+ \left(\frac{\partial \rho \Theta}{\partial t}\right)_{i,j,k}
+ = - &\Bigg[ \frac{ (\rho U)_{i+\frac{1}{2},j,k} \overline{\theta}_{i+\frac{1}{2},j,k}
+                  - (\rho U)_{i-\frac{1}{2},j,k} \overline{\theta}_{i-\frac{1}{2},j,k}
+                  } {\Delta x} \nonumber \\
+          &+ \frac{ (\rho V)_{i,j+\frac{1}{2},k} \overline{\theta}_{i,j+\frac{1}{2},k}
+                  - (\rho V)_{i,j-\frac{1}{2},k} \overline{\theta}_{i,j-\frac{1}{2},k}
+                  } {\Delta y} \nonumber \\
+          &+ \frac{ (J^{\xi}_{13})_{i,j,k+\frac{1}{2}} \overline{\widetilde{(\rho U)}^x}^z_{i,j,k+\frac{1}{2}} \overline{\theta}_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{13})_{i,j,k-\frac{1}{2}} \overline{\widetilde{(\rho U)}^x}^z_{i,j,k-\frac{1}{2}} \overline{\theta}_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{23})_{i,j,k+\frac{1}{2}} \overline{\widetilde{(\rho V)}^x}^z_{i,j,k+\frac{1}{2}} \overline{\theta}_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{23})_{i,j,k-\frac{1}{2}} \overline{\widetilde{(\rho V)}^x}^z_{i,j,k-\frac{1}{2}} \overline{\theta}_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \nonumber \\
+          &+ \frac{ (J^{\xi}_{33})_{i,j,k+\frac{1}{2}} (\rho W)_{i,j,k+\frac{1}{2}} \overline{\theta}_{i,j,k+\frac{1}{2}}
+                  - (J^{\xi}_{33})_{i,j,k+\frac{1}{2}} (\rho W)_{i,j,k-\frac{1}{2}} \overline{\theta}_{i,j,k-\frac{1}{2}}
+                  } {\Delta \xi} \Bigg]
+\end{align}
+where $\overline{\theta}_{i+\frac{1}{2},j,k}$, $\overline{\theta}_{i,j+\frac{1}{2},k}$ and 
+$\overline{\theta}_{i,j,k+\frac{1}{2}}$ are is obtained according to the method of eq(3.29)-(3.31).

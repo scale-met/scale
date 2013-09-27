@@ -1,52 +1,48 @@
-TOPDIR = ../../../..
-BUILD_DIR := $(shell pwd)/.libs
-CODE_DIR := $(shell pwd)/code
+################################################################################
+#
+# Makefile for each test program
+#
+################################################################################
 
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+TOPDIR      = ../../../..
+BUILD_DIR  := $(shell pwd)/.libs
+CODE_DIR := $(shell pwd)/code
+INDEX_DIR  := $(shell pwd)
+SYSDEP_DIR := $(shell pwd)/$(TOPDIR)/sysdep
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
-VPATH = $(BUILD_DIR)
-
 # for build
-index     = 200x11x11
-tracer    = ndw6
-radiation = dycoms2
-sfcflx    = const
-precision = real8
-postfix   = 
+index      = 200x11x11
+dynamics   = heve
+precision  = real8
+tracer     = sn13
+sfcflx     = const
+turbulence = smg
+radiation  = dycoms2
+postfix    = 
 
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
+TPROC     = 6
 
-all: makedir build analy
 
-makedir:
-	mkdir -p $(BUILD_DIR)
+
+all: buildlocal build 
+
+# build, makedir, run, jobshell, allclean, clean is inside of common Makefile
+include $(TESTDIR)/Makefile.common
+
+
+
+buildlocal: makedir $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 $(BUILD_DIR)/mod_user.f90 $(BUILD_DIR)/mod_atmos_sub_precipitation.f90
 
 $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90: $(CODE_DIR)/mod_atmos_phy_rd_dycoms2.f90
-	mkdir -p $(BUILD_DIR)
+$(BUILD_DIR)/mod_user.f90: $(CODE_DIR)/mod_user.f90
+$(BUILD_DIR)/mod_atmos_sub_precipitation.f90: $(CODE_DIR)/mod_atmos_sub_precipitation.f90
 	cp -f $< $@
 
-build: $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 
-	$(MAKE) -C $(SRCDIR) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) BUILD_DIR=$(BUILD_DIR) INDEX_DIR=$(shell pwd)
-
-jobshell: build
-	sh $(SCRDIR)/Mkjobshell.sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) 6
-
-run: jobshell
-	$(JOBSUB) run.sh
-
 analy: 
-	$(FC) $(FFLAGS) -L$(NETCDF_LIBS) -lnetcdff -lnetcdf -I$(NETCDF_INCLUDE) -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90
-check:
-# to be add program to check result
-
-.PHONY: clean distclean
-
-allclean:
-	$(MAKE) -C $(SRCDIR) allclean
-clean:
-	rm -f $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o *~ $(BUILD_DIR)/profile_maker
-distclean:
-	rm -f *.nc LOG.pe*
+	$(FC) $(FFLAGS) $(NETCDF_LIBS) -lnetcdff -lnetcdf $(NETCDF_INCLUDE) -o $(BUILD_DIR)/profile_maker $(CODE_DIR)/make_profile_cmp_nc_each.f90

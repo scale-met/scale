@@ -1,7 +1,7 @@
 #include "netcdf.h"
 #include "gtool_file.h"
 
-#define RMISS -9.999e-30
+#define RMISS -9.9999e+30
 #define EPS 1e-10
 
 #define CHECK_ERROR(status)					\
@@ -105,7 +105,11 @@ int32_t file_open( int32_t *fid,     // (out)
     CHECK_ERROR( nc_open(_fname, NC_NOWRITE, &ncid) );
     break;
   case File_FWRITE:
+#ifdef NETCDF3
+    CHECK_ERROR( nc_create(_fname, NC_CLOBBER, &ncid) );
+#else
     CHECK_ERROR( nc_create(_fname, NC_CLOBBER|NC_NETCDF4, &ncid) );
+#endif
     break;
   case File_FAPPEND:
     CHECK_ERROR( nc_open(_fname, NC_WRITE, &ncid) );
@@ -172,7 +176,11 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   // rank
   CHECK_ERROR( nc_inq_varndims(ncid, varid, &rank) );
   CHECK_ERROR( nc_inq_vardimid(ncid, varid, dimids) );
+#ifdef NETCDF3
+  CHECK_ERROR( nc_inq_unlimdim(ncid, &n) );
+#else
   CHECK_ERROR( nc_inq_unlimdims(ncid, &n, uldims) );
+#endif
   tdim = -1;
   for ( i=0; i<n; i++ ) {
     if ( uldims[i] == dimids[0] ) {
@@ -311,6 +319,10 @@ int32_t file_set_dim_info( int32_t  fid,       // (in)
     CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(dim_units[i]), dim_units[i]) );
   }
 
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
   return SUCCESS_CODE;
 }
 
@@ -323,9 +335,18 @@ int32_t file_put_axis( int32_t fid,        // (in)
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
+
   CHECK_ERROR( nc_inq_varid(ncid, dim_name, &varid) );
 
-  switch (precision) {
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
+  switch ( precision ) {
   case 8:
     CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
     break;
@@ -359,6 +380,10 @@ int32_t file_put_additional_axis( int32_t fid,        // (in)
   if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
     return ALREADY_EXISTED_CODE;
 
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
+
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
     CHECK_ERROR( nc_def_dim(ncid, dim_name, size, &dimid) );
 
@@ -366,6 +391,11 @@ int32_t file_put_additional_axis( int32_t fid,        // (in)
   CHECK_ERROR( nc_def_var(ncid, name, xtype, 1, &dimid, &varid) );
   CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
   CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
   switch ( precision ) {
   case 8:
     CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
@@ -417,6 +447,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->t = NULL;
   vars[nvar]->start = NULL;
   vars[nvar]->count = NULL;
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
 
   // get time variable
   if ( tint > 0.0 ) {
@@ -496,11 +530,17 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   }
   if ( tint > 0.0 ) vars[nvar]->count[0] = 1;
 
+#ifndef NETCDF3
   // set chunk size and deflate level
   if ( files[fid]->deflate_level > 0 ) {
     CHECK_ERROR( nc_def_var_chunking(ncid, varid, NC_CHUNKED, vars[nvar]->count) );
     CHECK_ERROR( nc_def_var_deflate(ncid, varid, 0, 1, files[fid]->deflate_level) );
   }
+#endif
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
 
   vars[nvar]->varid = varid;
   *vid = nvar;

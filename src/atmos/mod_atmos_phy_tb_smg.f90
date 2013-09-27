@@ -14,11 +14,18 @@
 !! @li      2012-03-27 (H.Yashiro)   [mod] reconstruction
 !! @li      2012-07-02 (S.Nishizawa) [mod] reconstruction with Brown et al. (1994)
 !! @li      2012-10-26 (S.Nishizawa) [mod] remove surface flux
+!! @li      2013-06-13 (S.Nishizawa) [mod] change mixing length by Brown et al. (1994) and Scotti et al. (1993)
 !!
 !! - Reference
 !!  - Brown et al., 1994:
 !!    Large-eddy simulaition of stable atmospheric boundary layers with a revised stochastic subgrid model.
 !!    Roy. Meteor. Soc., 120, 1485-1512
+!!  - Scotti et al., 1993:
+!!    Generalized Smagorinsky model for anisotropic grids.
+!!    Phys. Fluids A, 5, 2306-2308
+!!  - Sullivan et al., 1994:
+!!    A subgrid-scale model for large-eddy simulation of planetary boundary-layer flows.
+!!    Bound.-Layer Meteor., 71, 247-276
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -30,6 +37,13 @@ module mod_atmos_phy_tb
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
+#ifdef DEBUG
+  use mod_debug, only: &
+     CHECK
+  use mod_const, only: &
+     UNDEF => CONST_UNDEF, &
+     IUNDEF => CONST_UNDEF2
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -39,7 +53,10 @@ module mod_atmos_phy_tb
   !
   public :: ATMOS_PHY_TB_setup
   public :: ATMOS_PHY_TB
+#ifdef DEBUG
+  public :: ATMOS_PHY_TB_init
   public :: ATMOS_PHY_TB_main
+#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -61,10 +78,11 @@ module mod_atmos_phy_tb
   !
   !++ Private parameters & variables
   !
-#ifdef DEBUG
-  real(RP), private, parameter :: UNDEF = -9.999E30_RP
-  integer,  private, parameter :: IUNDEF = -99999
-#endif
+  real(RP), private,      save :: MOMZ_t(KA,IA,JA)
+  real(RP), private,      save :: MOMX_t(KA,IA,JA)
+  real(RP), private,      save :: MOMY_t(KA,IA,JA)
+  real(RP), private,      save :: RHOT_t(KA,IA,JA)
+  real(RP), private,      save :: QTRC_t(KA,IA,JA,QA)
 
   real(RP), private,      save :: nu_factC (KA,IA,JA) ! (Cs*Delta)^2 (cell center)
   real(RP), private,      save :: nu_factXY(KA,IA,JA) !              (x-y plane)
@@ -74,7 +92,8 @@ module mod_atmos_phy_tb
   real(RP), private,      save :: nu_factX (KA,IA,JA) !              (x edge)
   real(RP), private,      save :: nu_factY (KA,IA,JA) !              (y edge)
 
-  real(RP), private, parameter :: Cs  = 0.18_RP ! (Sullivan et al.1994, Nakanishi and Niino)
+  real(RP), private, save      :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
   real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
   real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
   real(RP), private, parameter :: FmC = 16.0_RP ! fum = sqrt(1 - c*Ri)
@@ -90,64 +109,37 @@ module mod_atmos_phy_tb
   integer, private, parameter :: XDIR = 2
   integer, private, parameter :: YDIR = 3
 
+  logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .false.
   !-----------------------------------------------------------------------------
 contains
 
-#ifdef DEBUG
-  subroutine CHECK( line, v )
-    integer,  intent(in) :: line
-    real(RP), intent(in) :: v
-    if ( v == UNDEF ) then
-       write(*,*) "use uninitialized value at line ", line
-       stop
-    endif
-  end subroutine CHECK
-#endif
-
-  subroutine ATMOS_PHY_TB_setup( &
-#ifdef DEBUG
-    do_calc &
-#endif
-    )
+  subroutine ATMOS_PHY_TB_setup
+    use mod_stdio, only: &
+       IO_FID_CONF
     use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
        FDZ => GRID_FDZ, &
        FDX => GRID_FDX, &
-       FDY => GRID_FDY
+       FDY => GRID_FDY, &
+       CZ  => GRID_CZ, &
+       FZ  => GRID_FZ
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_TB
-    use mod_atmos_vars, only: &
-       DENS_av, &
-       MOMZ_av, &
-       MOMX_av, &
-       MOMY_av, &
-       RHOT_av, &
-       QTRC_av, &
-       qflx_sgs_momz, &
-       qflx_sgs_momx, &
-       qflx_sgs_momy, &
-       qflx_sgs_rhot, &
-       qflx_sgs_qtrc
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
-#ifdef DEBUG
-    logical, intent(in), optional :: do_calc
-#endif
+    real(RP) :: ATMOS_PHY_TB_SMG_Cs
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
 
-    ! diagnostic variables
-    real(RP) :: tke(KA,IA,JA) ! TKE
-    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
-    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
-    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
+    NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
+         ATMOS_PHY_TB_SMG_Cs, &
+         ATMOS_PHY_TB_SMG_filter_fact, &
+         ATMOS_PHY_TB_SMG_bottom
 
-    integer :: k, i, j, iq
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -158,6 +150,247 @@ contains
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_TB is not SMAGORINSKY. Check!'
        call PRC_MPIstop
     endif
+
+    ATMOS_PHY_TB_SMG_Cs = Cs
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_SMG)
+
+    Cs = ATMOS_PHY_TB_SMG_Cs
+
+    call ATMOS_PHY_TB_init( &
+         Cs, ATMOS_PHY_TB_SMG_filter_fact, & ! (in)
+         CDZ, CDX, CDY, & ! (in)
+         FDZ, FDX, FDY, & ! (in)
+         CZ, FZ         ) ! (in)
+
+    call ATMOS_PHY_TB( .true., history_flag = .false. )
+
+  end subroutine ATMOS_PHY_TB_setup
+
+  !-----------------------------------------------------------------------------
+  !> Smagorinsky-type turblence
+  !>
+  !> comment:
+  !>  1, Pr is given linearly (iga)
+  !>  4, heat flux is not accurate yet. (i.e. energy is not conserved, see *1)
+  !>  5, stratification effect is not considered.
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_TB( update_flag, history_flag )
+    use mod_time, only: &
+       dttb => TIME_DTSEC_ATMOS_PHY_TB
+    use mod_history, only: &
+       HIST_in
+    use mod_grid, only: &
+       RCDZ => GRID_RCDZ, &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY, &
+       RFDZ => GRID_RFDZ, &
+       RFDX => GRID_RFDX, &
+       RFDY => GRID_RFDY
+    use mod_atmos_vars, only: &
+       DENS_av, &
+       MOMZ_av, &
+       MOMX_av, &
+       MOMY_av, &
+       RHOT_av, &
+       QTRC_av, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp
+    implicit none
+
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
+
+    ! eddy viscosity/diffusion flux
+    real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
+    real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+
+    ! diagnostic variables
+    real(RP) :: tke(KA,IA,JA) ! TKE
+    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
+    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
+    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
+
+    integer :: k, i, j, iq
+    integer :: IIS, IIE, JJS, JJE
+
+    if ( update_flag ) then
+       call ATMOS_PHY_TB_main( &
+            qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
+            qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+            tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
+            MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
+            )
+
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+             MOMZ_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momz(k+1,i,j,ZDIR) - qflx_sgs_momz(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                  + ( qflx_sgs_momz(k  ,i,j,XDIR) - qflx_sgs_momz(k,i-1,j  ,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_momz(k  ,i,j,YDIR) - qflx_sgs_momz(k,i  ,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMX_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momx(k,i  ,j,ZDIR) - qflx_sgs_momx(k-1,i,j  ,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_momx(k,i+1,j,XDIR) - qflx_sgs_momx(k  ,i,j  ,XDIR) ) * RFDX(i) &
+                  + ( qflx_sgs_momx(k,i  ,j,YDIR) - qflx_sgs_momx(k  ,i,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMY_t(k,i,j) = - ( &
+                  + ( qflx_sgs_momy(k,i,j  ,ZDIR) - qflx_sgs_momy(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_momy(k,i,j  ,XDIR) - qflx_sgs_momy(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_momy(k,i,j+1,YDIR) - qflx_sgs_momy(k  ,i  ,j,YDIR) ) * RFDY(j) )
+          end do
+          end do
+          end do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             RHOT_t(k,i,j) = - ( &
+                  + ( qflx_sgs_rhot(k,i,j,ZDIR) - qflx_sgs_rhot(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_rhot(k,i,j,XDIR) - qflx_sgs_rhot(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_rhot(k,i,j,YDIR) - qflx_sgs_rhot(k  ,i  ,j-1,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          do iq = 1, QA
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             QTRC_t(k,i,j,iq) = - ( &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,ZDIR) - qflx_sgs_qtrc(k-1,i  ,j  ,iq,ZDIR) ) * RCDZ(k) &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,XDIR) - qflx_sgs_qtrc(k  ,i-1,j  ,iq,XDIR) ) * RCDX(i) &
+                  + ( qflx_sgs_qtrc(k,i,j,iq,YDIR) - qflx_sgs_qtrc(k  ,i  ,j-1,iq,YDIR) ) * RCDY(j) )
+          end do
+          end do
+          end do
+          end do
+       end do
+       end do
+
+       if ( present(history_flag) ) then
+       if ( history_flag ) then
+          call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
+          call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
+          call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
+          call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
+
+          call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
+
+          call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
+
+          call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
+          call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
+          call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
+
+          call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
+          call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
+          call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
+
+          if ( I_QV > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
+          endif
+
+          if ( I_QC > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
+          endif
+
+          if ( I_QR > 0 ) then
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
+             call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
+          endif
+
+       end if
+       end if
+
+    end if
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) + MOMZ_t(k,i,j)
+    end do
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX_tp(k,i,j) = MOMX_tp(k,i,j) + MOMX_t(k,i,j)
+       MOMY_tp(k,i,j) = MOMY_tp(k,i,j) + MOMY_t(k,i,j)
+       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
+    end do
+    end do
+    end do
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) + QTRC_t(k,i,j,iq)
+    end do
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_TB
+
+
+  subroutine ATMOS_PHY_TB_init( &
+       Cs, filter_fact, &
+       CDZ, CDX, CDY,   &
+       FDZ, FDX, FDY,   &
+       CZ, FZ )
+    real(RP), intent(in) :: Cs
+    real(RP), intent(in) :: filter_fact
+    real(RP), intent(in) :: CDZ(KA)
+    real(RP), intent(in) :: CDX(IA)
+    real(RP), intent(in) :: CDY(JA)
+    real(RP), intent(in) :: FDZ(KA-1)
+    real(RP), intent(in) :: FDX(IA-1)
+    real(RP), intent(in) :: FDY(JA-1)
+    real(RP), intent(in) :: CZ(KA)
+    real(RP), intent(in) :: FZ(0:KA)
+
+    integer :: k, i, j
 
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
@@ -175,7 +408,7 @@ contains
     do j = JS, JE+1
     do i = IS, IE+1
     do k = KS, KE
-       nu_factC (k,i,j) = ( Cs * ( CDZ(k) * CDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -185,7 +418,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       nu_factXY(k,i,j) = ( Cs * ( FDZ(k) * CDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -195,7 +428,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS, KE
-       nu_factYZ(k,i,j) = ( Cs * ( CDZ(k) * FDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -205,7 +438,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factZX(k,i,j) = ( Cs * ( CDZ(k) * CDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -215,7 +448,7 @@ contains
     do j = JS-1, JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factZ(k,i,j) = ( Cs * ( CDZ(k) * FDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -225,7 +458,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS  , KE
-       nu_factX(k,i,j) = ( Cs * ( FDZ(k) * CDX(i) * FDY(j) )**OneOverThree )**2
+       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -235,7 +468,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS  , KE
-       nu_factY(k,i,j) = ( Cs * ( FDZ(k) * FDX(i) * CDY(j) )**OneOverThree )**2
+       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k),filter_fact) )**2
     enddo
     enddo
     enddo
@@ -243,179 +476,8 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-#ifdef DEBUG
-    if ( present(do_calc) ) then
-       if ( .not. do_calc ) return
-    endif
-#endif
-
-    call ATMOS_PHY_TB_main( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
-       )
-
-    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-
     return
-  end subroutine ATMOS_PHY_TB_setup
-
-  !-----------------------------------------------------------------------------
-  !> Smagorinsky-type turblence
-  !>
-  !> comment:
-  !>  1, Pr is given linearly (iga)
-  !>  4, heat flux is not accurate yet. (i.e. energy is not conserved, see *1)
-  !>  5, stratification effect is not considered.
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB
-    use mod_time, only: &
-       dttb => TIME_DTSEC_ATMOS_PHY_TB
-    use mod_history, only: &
-       HIST_in
-    use mod_atmos_vars, only: &
-       DENS_av, &
-       MOMZ_av, &
-       MOMX_av, &
-       MOMY_av, &
-       RHOT_av, &
-       QTRC_av, &
-       qflx_sgs_momz, &
-       qflx_sgs_momx, &
-       qflx_sgs_momy, &
-       qflx_sgs_rhot, &
-       qflx_sgs_qtrc
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-
-    ! diagnostic variables
-    real(RP) :: tke(KA,IA,JA) ! TKE
-    real(RP) :: nu (KA,IA,JA) ! eddy diffusion
-    real(RP) :: Ri (KA,IA,JA) ! Richardoson number
-    real(RP) :: Pr (KA,IA,JA) ! Prandtle number
-
-    integer :: iq
-
-    call ATMOS_PHY_TB_main( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-       MOMZ_av, MOMX_av, MOMY_av, RHOT_av, DENS_av, QTRC_av & ! (in)
-       )
-
-    call COMM_vars8( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_vars8( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_vars8( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_vars8( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_vars8( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_vars8( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-    call COMM_wait( qflx_sgs_momz(:,:,:,ZDIR),  1 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,XDIR),  2 )
-    call COMM_wait( qflx_sgs_momz(:,:,:,YDIR),  3 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,ZDIR),  4 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,XDIR),  5 )
-    call COMM_wait( qflx_sgs_momx(:,:,:,YDIR),  6 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,ZDIR),  7 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,XDIR),  8 )
-    call COMM_wait( qflx_sgs_momy(:,:,:,YDIR),  9 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,ZDIR), 10 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,XDIR), 11 )
-    call COMM_wait( qflx_sgs_rhot(:,:,:,YDIR), 12 )
-    do iq = 1, QA
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,ZDIR), 13+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,XDIR), 14+(iq-1)*3 )
-       call COMM_wait( qflx_sgs_qtrc(:,:,:,iq,YDIR), 15+(iq-1)*3 )
-    end do
-
-    call HIST_in( tke(:,:,:), 'TKE',  'turburent kinetic energy', 'm2/s2', dttb )
-    call HIST_in( nu (:,:,:), 'NU',   'eddy viscosity',           'm2/s',  dttb )
-    call HIST_in( Pr (:,:,:), 'Pr',   'Prantle number',           'NIL',   dttb )
-    call HIST_in( Ri (:,:,:), 'Ri',   'Richardson number',        'NIL',   dttb )
-
-    call HIST_in( qflx_sgs_momz(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ',   'SGS Z FLUX of MOMZ', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momz(:,:,:,XDIR), 'SGS_XFLX_MOMZ',   'SGS X FLUX of MOMZ', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momz(:,:,:,YDIR), 'SGS_YFLX_MOMZ',   'SGS Y FLUX of MOMZ', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_momx(:,:,:,ZDIR), 'SGS_ZFLX_MOMX',   'SGS Z FLUX of MOMX', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momx(:,:,:,XDIR), 'SGS_XFLX_MOMX',   'SGS X FLUX of MOMX', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momx(:,:,:,YDIR), 'SGS_YFLX_MOMX',   'SGS Y FLUX of MOMX', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_momy(:,:,:,ZDIR), 'SGS_ZFLX_MOMY',   'SGS Z FLUX of MOMY', 'kg/m/s2', dttb, zdim='half')
-    call HIST_in( qflx_sgs_momy(:,:,:,XDIR), 'SGS_XFLX_MOMY',   'SGS X FLUX of MOMY', 'kg/m/s2', dttb, xdim='half')
-    call HIST_in( qflx_sgs_momy(:,:,:,YDIR), 'SGS_YFLX_MOMY',   'SGS Y FLUX of MOMY', 'kg/m/s2', dttb, ydim='half')
-
-    call HIST_in( qflx_sgs_rhot(:,:,:,ZDIR), 'SGS_ZFLX_RHOT',   'SGS Z FLUX of RHOT', 'kg K/m2/s', dttb, zdim='half')
-    call HIST_in( qflx_sgs_rhot(:,:,:,XDIR), 'SGS_XFLX_RHOT',   'SGS X FLUX of RHOT', 'kg K/m2/s', dttb, xdim='half')
-    call HIST_in( qflx_sgs_rhot(:,:,:,YDIR), 'SGS_YFLX_RHOT',   'SGS Y FLUX of RHOT', 'kg K/m2/s', dttb, ydim='half')
-
-    if ( I_QV > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV',   'SGS Z FLUX of QV', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV',   'SGS X FLUX of QV', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV',   'SGS Y FLUX of QV', 'kg/m2 s', dttb, ydim='half')
-    endif
-
-    if ( I_QC > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC',   'SGS Z FLUX of QC', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC',   'SGS X FLUX of QC', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC',   'SGS Y FLUX of QC', 'kg/m2 s', dttb, ydim='half')
-    endif
-
-    if ( I_QR > 0 ) then
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR',   'SGS Z FLUX of QR', 'kg/m2 s', dttb, zdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR',   'SGS X FLUX of QR', 'kg/m2 s', dttb, xdim='half')
-       call HIST_in( qflx_sgs_qtrc(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR',   'SGS Y FLUX of QR', 'kg/m2 s', dttb, ydim='half')
-    endif
-
-    return
-  end subroutine ATMOS_PHY_TB
-
+  end subroutine ATMOS_PHY_TB_init
 
   subroutine ATMOS_PHY_TB_main( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
@@ -1676,7 +1738,6 @@ contains
 
 
        ! nu_SGS = (Cs * Delta)^2 * |S|, |S|^2 = 2*Sij*Sij
-       ! tke = (Cs * Delta)^2 * |S|^2
 #ifdef DEBUG
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
@@ -1775,15 +1836,16 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       ! tke = 1/2 (tau_11 + tau_22 + tau_33) = (Cs * Delta)^2 * |S|^2
+       ! tke = (nu/(Ck * Delta))^2 = ( nu * Cs / Ck )^2 / ( Cs * Delta )^2
+       ! Sullivan et al. (1994)
        do j = JJS, JJE+1
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
+       call CHECK( __LINE__, nu_C(k,i,j) )
        call CHECK( __LINE__, nu_factC(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          tke(k,i,j) = nu_factC(k,i,j) * S2(k,i,j)
+          tke(k,i,j) = ( nu_C(k,i,j) * Cs / Ck )**2 / nu_factC(k,i,j)
        enddo
        enddo
        enddo
@@ -3537,5 +3599,84 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_main
+
+
+  function mixlen(dz, dx, dy, z, filter_fact)
+  use mod_const, only: &
+     KARMAN  => CONST_KARMAN
+    implicit none
+    real(RP), intent(in) :: dz
+    real(RP), intent(in) :: dx
+    real(RP), intent(in) :: dy
+    real(RP), intent(in) :: z
+    real(RP), intent(in) :: filter_fact
+    real(RP) :: mixlen ! (out)
+
+    real(RP) :: d0
+
+    d0 = fact(dz, dx, dy) * filter_fact * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
+    if ( ATMOS_PHY_TB_SMG_bottom ) then
+       mixlen = sqrt( 1.0_RP / ( 1.0_RP/d0**2 + 1.0_RP/(KARMAN*z)**2 ) ) ! Brown et al. (1994)
+    else
+       mixlen = d0
+    end if
+
+    return
+  end function mixlen
+
+  function fact(dz, dx, dy)
+    real(RP), intent(in) :: dz
+    real(RP), intent(in) :: dx
+    real(RP), intent(in) :: dy
+    real(RP) :: fact ! (out)
+
+    real(RP), parameter :: oot = -1.0_RP/3.0_RP
+    real(RP), parameter :: fot =  5.0_RP/3.0_RP
+    real(RP), parameter :: eot = 11.0_RP/3.0_RP
+    real(RP), parameter :: tof = -3.0_RP/4.0_RP
+    real(RP) :: a1, a2, b1, b2, dmax
+
+
+    dmax = max(dz, dx, dy)
+    if ( dz .eq. dmax ) then
+       a1 = dx / dmax
+       a2 = dy / dmax
+    else if ( dx .eq. dmax ) then
+       a1 = dz / dmax
+       a2 = dy / dmax
+    else ! dy .eq. dmax
+       a1 = dz / dmax
+       a2 = dx / dmax
+    end if
+    b1 = atan( a1/a2 )
+    b2 = atan( a2/a1 )
+
+   fact = 1.736_RP * (a1*a2)**oot &
+         * ( 4.0_RP*p1(b1)*a1**oot + 0.222_RP*p2(b1)*a1**fot + 0.077*p3(b1)*a1**eot - 3.0_RP*b1 &
+           + 4.0_RP*p1(b2)*a2**oot + 0.222_RP*p2(b2)*a2**fot + 0.077*p3(b2)*a2**eot - 3.0_RP*b2 &
+           )**tof
+   return
+  end function fact
+  function p1(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p1 ! (out)
+
+    p1 = 2.5_RP * p2(z) - 1.5_RP * sin(z) * cos(z)**TwoOverThree
+    return
+  end function p1
+  function p2(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p2 ! (out)
+
+    p2 = 0.986_RP * z + 0.073_RP * z**2 - 0.418_RP * z**3 + 0.120_RP * z**4
+    return
+  end function p2
+  function p3(z)
+    real(RP), intent(in) :: z
+    real(RP) :: p3 ! (out)
+
+    p3 = 0.976_RP * z + 0.188_RP * z**2 - 1.169_RP * z**3 + 0.755_RP * z**4 - 0.151_RP * z**5
+    return
+  end function p3
 
 end module mod_atmos_phy_tb

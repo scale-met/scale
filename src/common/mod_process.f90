@@ -17,6 +17,8 @@ module mod_process
   !++ used modules
   !
   use mpi
+  use dc_types, only: &
+     DP
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -27,7 +29,7 @@ module mod_process
   !
   !++ included parameters
   !
-  include "scale-les.h"
+#include "scale-les.h"
   include 'inc_precision.h'
 
   !-----------------------------------------------------------------------------
@@ -214,19 +216,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Abort MPI
   subroutine PRC_MPIstop
-    use mod_stdio, only: &
-       IO_SYSCHR
     implicit none
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    ! flush 1kbyte
+    if( IO_L ) write(IO_FID_LOG,'(32A32)') '                                '
+
     if ( PRC_mpi_alive ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
+       if( IO_L ) close(IO_FID_LOG)
        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
     endif
 
+    stop
   end subroutine PRC_MPIstop
 
   !-----------------------------------------------------------------------------
@@ -414,11 +419,11 @@ contains
   function PRC_MPItime() result(time)
     implicit none
 
-    real(RP) :: time
+    real(DP) :: time
     !---------------------------------------------------------------------------
 
     if ( PRC_mpi_alive ) then
-       time = real(MPI_WTIME(), kind=RP)
+       time = real(MPI_WTIME(), kind=DP)
     else
        call cpu_time(time)
     endif

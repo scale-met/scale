@@ -6,18 +6,12 @@ ifeq ($(origin LIBDIR), undefined)
    LIBDIR = $(TOPDIR)/lib
 endif
 
-SRCDIR = $(TOPDIR)/src
-INCDIR = $(SRCDIR)/include
-
 GTOOLDIR   = $(TOPDIR)/gtool
 DCUTILSDIR = $(TOPDIR)/dc_utils
+SRCDIR     = $(TOPDIR)/src
+INCDIR     = $(TOPDIR)/src/include
 
-RUNDIR = $(TOPDIR)/run
-SCRDIR = $(RUNDIR)/script/$(SCALE_SYS)
-
-TESTDIR = $(TOPDIR)/test
-
-SUFFIX = $(index)_$(tracer)_$(radiation)_$(sfcflx)_$(precision)_$(postfix)
+SUFFIX = $(index)_$(precision)_$(dynamics)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
 
 LIBNAME = libscale_$(SUFFIX).a
 
@@ -29,3 +23,5 @@ mod_rdma := rdma.o
 else
 mod_rdma :=
 endif
+
+TESTDIR = $(TOPDIR)/test

@@ -25,6 +25,8 @@ module mod_atmos_refstate
      IO_L,       &
      IO_SYSCHR,  &
      IO_FILECHR
+  use dc_types, only: &
+     DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -43,6 +45,7 @@ module mod_atmos_refstate
   public :: ATMOS_REFSTATE_setup
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
+  public :: ATMOS_REFSTATE_update
 
   !-----------------------------------------------------------------------------
   !
@@ -50,14 +53,15 @@ module mod_atmos_refstate
   !
   real(RP), public, save :: ATMOS_REFSTATE_dens(KA) !< refernce density [kg/m3]
   real(RP), public, save :: ATMOS_REFSTATE_pott(KA) !< refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_qv  (KA) !< refernce vapor [kg/kg]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  public :: ATMOS_REFSTATE_generate_isa
-  public :: ATMOS_REFSTATE_generate_uniform
-  public :: ATMOS_REFSTATE_generate_frominit
+  private :: ATMOS_REFSTATE_generate_isa
+  private :: ATMOS_REFSTATE_generate_uniform
+  private :: ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
   !
@@ -72,6 +76,10 @@ module mod_atmos_refstate
   real(RP),                  private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP          !< surface temperature           [K]
   real(RP),                  private :: ATMOS_REFSTATE_RH           =   0.0_RP          !< surface & environment RH      [%]
   real(RP),                  private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP          !< uniform potential temperature [K]
+  logical,                   private :: ATMOS_REFSTATE_UPDATE_FLAG  = .false.
+  real(DP),                  private :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
+
+  real(DP) :: last_updated
 
   !-----------------------------------------------------------------------------
 contains
@@ -92,7 +100,9 @@ contains
        ATMOS_REFSTATE_TYPE,         &
        ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_TEMP_SFC,     &
-       ATMOS_REFSTATE_RH
+       ATMOS_REFSTATE_RH,           &
+       ATMOS_REFSTATE_UPDATE_FLAG,  &
+       ATMOS_REFSTATE_UPDATE_DT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -122,9 +132,11 @@ contains
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
           call ATMOS_REFSTATE_generate_isa
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
           call ATMOS_REFSTATE_generate_uniform
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
           call ATMOS_REFSTATE_generate_frominit
@@ -159,6 +171,8 @@ contains
                          ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_REFSTATE_pott(:),                             & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_REFSTATE_qv(:),                               & ! [OUT]
+                         ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** refstate file is not specified.'
@@ -187,6 +201,9 @@ contains
        call FILEIO_write( ATMOS_REFSTATE_pott(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'POTT_ref', 'Reference profile of theta', 'K', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
+       call FILEIO_write( ATMOS_REFSTATE_qv(:),   ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+
     endif
 
     return
@@ -202,9 +219,9 @@ contains
     use mod_atmos_profile, only: &
        PROFILE_isa => ATMOS_PROFILE_isa
     use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     real(RP) :: temp(KA)
@@ -214,64 +231,64 @@ contains
     real(RP) :: qv  (KA)
     real(RP) :: qc  (KA)
 
-    real(RP) :: temp_sfc(1)
-    real(RP) :: pres_sfc(1)
-    real(RP) :: pott_sfc(1)
-    real(RP) :: qv_sfc  (1)
-    real(RP) :: qc_sfc  (1)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc
+    real(RP) :: qc_sfc
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc(1)
+    real(RP) :: qsat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
 
-    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
-    pres_sfc(1) = Pstd
+    pott_sfc = ATMOS_REFSTATE_TEMP_SFC
+    pres_sfc = Pstd
 
-    call PROFILE_isa( pott(:),     & ! [OUT]
-                      pott_sfc(1), & ! [IN]
-                      pres_sfc(1)  ) ! [IN]
+    call PROFILE_isa( pott(:),  & ! [OUT]
+                      pott_sfc, & ! [IN]
+                      pres_sfc  ) ! [IN]
 
-    qv      (:) = 0.0_RP
-    qc      (:) = 0.0_RP
-    qv_sfc  (1) = 0.0_RP
-    qc_sfc  (1) = 0.0_RP
+    qv(:)  = 0.0_RP
+    qc(:)  = 0.0_RP
+    qv_sfc = 0.0_RP
+    qc_sfc = 0.0_RP
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
-    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
+    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
-    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -283,6 +300,7 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
+    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_isa
@@ -295,9 +313,9 @@ contains
     use mod_grid, only: &
        CZ   => GRID_CZ
     use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     real(RP) :: temp(KA)
@@ -307,22 +325,22 @@ contains
     real(RP) :: qv  (KA)
     real(RP) :: qc  (KA)
 
-    real(RP) :: temp_sfc(1)
-    real(RP) :: pres_sfc(1)
-    real(RP) :: pott_sfc(1)
-    real(RP) :: qv_sfc  (1)
-    real(RP) :: qc_sfc  (1)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc  
+    real(RP) :: qc_sfc  
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc(1)
+    real(RP) :: qsat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
 
-    pres_sfc(1) = Pstd
-    pott_sfc(1) = ATMOS_REFSTATE_TEMP_SFC
-    qv_sfc  (1) = 0.0_RP
-    qc_sfc  (1) = 0.0_RP
+    pres_sfc = Pstd
+    pott_sfc = ATMOS_REFSTATE_TEMP_SFC
+    qv_sfc   = 0.0_RP
+    qc_sfc   = 0.0_RP
 
     do k = KS, KE
        pott(k) = ATMOS_REFSTATE_POTT_UNIFORM
@@ -331,39 +349,39 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_liq( qsat_sfc(1), temp_sfc(1), pres_sfc(1) )
-    call SATURATION_pres2qsat_liq( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
+    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
-    qv_sfc(1) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc(1)
+    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
 
     ! make density & pressure profile in moist condition
-    call hydro_buildrho_1d( dens    (:), & ! [OUT]
-                            temp    (:), & ! [OUT]
-                            pres    (:), & ! [OUT]
-                            pott    (:), & ! [IN]
-                            qv      (:), & ! [IN]
-                            qc      (:), & ! [IN]
-                            temp_sfc(1), & ! [OUT]
-                            pres_sfc(1), & ! [IN]
-                            pott_sfc(1), & ! [IN]
-                            qv_sfc  (1), & ! [IN]
-                            qc_sfc  (1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
+                               temp(:),  & ! [OUT]
+                               pres(:),  & ! [OUT]
+                               pott(:),  & ! [IN]
+                               qv  (:),  & ! [IN]
+                               qc  (:),  & ! [IN]
+                               temp_sfc, & ! [OUT]
+                               pres_sfc, & ! [IN]
+                               pott_sfc, & ! [IN]
+                               qv_sfc,   & ! [IN]
+                               qc_sfc    ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
@@ -375,6 +393,7 @@ contains
 
     ATMOS_REFSTATE_dens(:) = dens(:)
     ATMOS_REFSTATE_pott(:) = pott(:)
+    ATMOS_REFSTATE_qv  (:) = qv(:)
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
@@ -393,8 +412,6 @@ contains
        COMM_horizontal_mean
     use mod_atmos_thermodyn, only: &
        CPw => AQ_CP
-    use mod_atmos_hydrostatic, only: &
-       hydro_buildrho_1d => ATMOS_HYDRO_buildrho_1d
     use mod_atmos_vars, only: &
        DENS_3d => DENS, &
        RHOT_3d => RHOT, &
@@ -407,9 +424,6 @@ contains
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
-    real(RP) :: dens(KA)
-    real(RP) :: pott(KA)
-    real(RP) :: qv  (KA)
 
     real(RP) :: QDRY, RTOT, CPTOT, CPovCV
 
@@ -439,23 +453,183 @@ contains
 
     call COMM_horizontal_mean( pres(:), PRES_3d(:,:,:) )
     call COMM_horizontal_mean( temp(:), TEMP_3d(:,:,:) )
-    call COMM_horizontal_mean( dens(:), DENS_3d(:,:,:) )
-    call COMM_horizontal_mean( pott(:), POTT_3d(:,:,:) )
 
-    call COMM_horizontal_mean( qv(:), QTRC_3d(:,:,:,I_QV) )
+
+       call calc_refstate( &
+            ATMOS_REFSTATE_dens(:), &
+            ATMOS_REFSTATE_pott(:), &
+            ATMOS_REFSTATE_qv  (:), &
+            DENS_3d(:,:,:), &
+            POTT_3d(:,:,:), &
+            QTRC_3d(:,:,:,I_QV) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
     if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
     do k = KS, KE
-       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), dens(k), pott(k), qv(k)
+       if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k), pres(k), temp(k), &
+            ATMOS_REFSTATE_dens(k), ATMOS_REFSTATE_pott(k), ATMOS_REFSTATE_qv(k)
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
-    ATMOS_REFSTATE_dens(:) = dens(:)
-    ATMOS_REFSTATE_pott(:) = pott(:)
-
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
+
+  !-----------------------------------------------------------------------------
+  !> Update reference state profile (Horizontal average)
+  subroutine ATMOS_REFSTATE_update
+    use mod_time, only: &
+       NOWSEC => TIME_NOWSEC
+    use mod_grid, only: &
+       CZ   => GRID_CZ
+    use mod_atmos_vars, only: &
+       DENS, &
+       RHOT, &
+       QTRC
+    implicit none
+
+    real(RP) :: POTT(KA,IA,JA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       if ( NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
+
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REFSTATE]/Categ[ATMOS]'
+          if( IO_L ) write(IO_FID_LOG,*) '*** update reference state'
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          call calc_refstate( &
+               ATMOS_REFSTATE_dens(:), &
+               ATMOS_REFSTATE_pott(:), &
+               ATMOS_REFSTATE_qv  (:), &
+               DENS(:,:,:), &
+               POTT(:,:,:), &
+               QTRC(:,:,:,I_QV) )
+
+       end if
+    end if
+
+    return
+  end subroutine ATMOS_REFSTATE_update
+
+  subroutine calc_refstate( &
+       refstate_dens, refstate_pott, refstate_qv, &
+       dens, pott, qv )
+    use mod_time, only: &
+       TIME_NOWSEC
+    use mod_comm, only: &
+       COMM_horizontal_mean
+    implicit none
+    real(RP), intent(out) :: refstate_dens(KA)
+    real(RP), intent(out) :: refstate_pott(KA)
+    real(RP), intent(out) :: refstate_qv  (KA)
+    real(RP), intent(in)  :: dens(KA,IA,JA)
+    real(RP), intent(in)  :: pott(KA,IA,JA)
+    real(RP), intent(in)  :: qv  (KA,IA,JA)
+
+    call COMM_horizontal_mean( REFSTATE_dens(:), DENS(:,:,:) )
+    call COMM_horizontal_mean( REFSTATE_pott(:), POTT(:,:,:) )
+    call COMM_horizontal_mean( REFSTATE_qv  (:), qv(:,:,:) )
+
+    call smoothing( REFSTATE_dens )
+    call smoothing( REFSTATE_pott )
+    call smoothing( REFSTATE_qv )
+
+    last_updated = TIME_NOWSEC
+
+    return
+  end subroutine calc_refstate
+
+  subroutine smoothing( &
+       phi )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    use mod_grid, only : &
+         FDZ => GRID_FDZ, &
+         RCDZ => GRID_RCDZ
+    use mod_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(RP), intent(inout) :: phi(KA)
+
+    integer, parameter :: iter_max = 100
+    real(RP) :: dev(KA)
+    real(RP) :: flux(KA)
+    real(RP) :: fact(KA)
+    real(RP) :: sig0, sig1, zerosw
+    logical ::  updated
+    integer :: k, iter
+
+    dev(KS) = 0.0_RP
+    dev(KE) = 0.0_RP
+
+    flux(KS-1:KS+1) = 0.0_RP
+    flux(KE-1:KE+1) = 0.0_RP
+
+    fact(KS-1:KS+1) = 0.0_RP
+    fact(KE-1:KE+1) = 0.0_RP
+
+    do iter = 1, iter_max
+       updated = .false.
+
+       do k = KS+1, KE-1
+          dev(k) = phi(k) &
+                 - ( FDZ(k-1) * phi(k+1) + FDZ(k) * phi(k-1) ) / ( FDZ(k) + FDZ(k-1) )
+       end do
+
+       do k = KS+2, KE-2
+          sig0 = dev(k) * dev(k-1)
+          sig1 = dev(k) * dev(k+1)
+          ! if (sig0>0 .or. sig1>0) then flux(k) = 0.0
+          flux(k) = dev(k) &
+               / ( 2.0_RP*RCDZ(k) + (FDZ(k-1)*RCDZ(k+1)+FDZ(k)*RCDZ(k-1))/(FDZ(k)+FDZ(k-1)) ) &
+               * ( sign(0.5_RP ,sig0) + sign(0.5_RP ,sig1) ) &
+               * ( sign(0.25_RP,sig0) + sign(0.25_RP,sig1) - 0.5_RP)
+          updated = updated .or. ( sig0 < -EPS .and. sig1 < -EPS )
+       end do
+       sig1 = dev(KS+1) * dev(KS+2)
+       flux(KS+1) = dev(KS+1) &
+            / ( 2.0_RP*RCDZ(KS+1) + (FDZ(KS)*RCDZ(KS+2)+FDZ(KS+1)*RCDZ(KS))/(FDZ(KS+1)+FDZ(KS)) ) &
+            * ( 0.5_RP - sign(0.5_RP ,sig1) )
+       updated = updated .or. ( sig1 < -EPS )
+       sig0 = dev(KE-1) * dev(KE-2)
+       flux(KE-1) = dev(KE-1) &
+            / ( 2.0_RP*RCDZ(KE-1) + (FDZ(KE-2)*RCDZ(KE)+FDZ(KE-1)*RCDZ(KE-2))/(FDZ(KE-1)+FDZ(KE-2)) ) &
+            * ( 0.5_RP - sign(0.5_RP ,sig0) )
+       updated = updated .or. ( sig0 < -EPS )
+       if ( .not. updated ) exit
+
+       do k = KS+1, KE-1
+          ! if flux(k)==0 then fact(k) = 0.0
+          zerosw = 0.5_RP - sign( 0.5_RP, abs(flux(k))-EPS )
+          fact(k) = flux(k) / ( flux(k) - flux(k+1) - flux(k-1) + zerosw )
+       end do
+
+       do k = KS, KE
+          phi(k) = phi(k) &
+                 + ( flux(k+1) * fact(k+1) &
+                   - flux(k  ) * fact(k  ) * 2.0_RP &
+                   + flux(k-1) * fact(k-1) &
+                   ) * RCDZ(k)
+       end do
+
+       if ( iter == iter_max ) then
+          if (IO_L) write(IO_FID_LOG,*) "*** [refstate smoothing] iteration not converged!", phi
+!          call PRC_MPIstop
+       end if
+    end do
+
+    return
+  end subroutine smoothing
 
 end module mod_atmos_refstate

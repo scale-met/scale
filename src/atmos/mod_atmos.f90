@@ -34,6 +34,10 @@ module mod_atmos
   public :: ATMOS_setup
   public :: ATMOS_step
 
+  !
+  !++ included parameters
+  !
+  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -53,11 +57,19 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
+    use mod_atmos_hydrostatic, only: &
+       ATMOS_HYDROSTATIC_setup
     use mod_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
     use mod_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_vars, only: &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp, &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
@@ -85,8 +97,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! setup common tools
+    call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
-
     call ATMOS_SATURATION_setup
 
     ! setup variable container
@@ -112,6 +124,20 @@ contains
 
     if ( sw_phy_rd ) call ATMOS_PHY_RD_setup
 
+    !########## initialize tendencies ##########
+!OCL XFILL
+    DENS_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMZ_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    RHOT_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    QTRC_tp(:,:,:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_setup
 
@@ -126,6 +152,12 @@ contains
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_rd => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp, &
        sw_dyn    => ATMOS_sw_dyn,    &
        sw_phy_sf => ATMOS_sw_phy_sf, &
        sw_phy_tb => ATMOS_sw_phy_tb, &
@@ -142,50 +174,67 @@ contains
        ATMOS_PHY_MP
     use mod_atmos_phy_rd, only: &
        ATMOS_PHY_RD
+    use mod_atmos_refstate, only: &
+       ATMOS_REFSTATE_update
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Dynamics ##########
-    call TIME_rapstart('Dynamics')
-    if ( sw_dyn .AND. do_dyn ) then
-       call ATMOS_DYN
-    endif
-    call TIME_rapend  ('Dynamics')
+    !########## Reference State ###########
+    call ATMOS_REFSTATE_update
 
     !########## Surface Flux ##########
-
-    call TIME_rapstart('SurfaceFlux')
-    if ( sw_phy_sf .AND. do_phy_sf ) then
-       call ATMOS_PHY_SF
-    endif
-    call TIME_rapend  ('SurfaceFlux')
+    if ( sw_phy_sf ) then
+       call TIME_rapstart('ATM SurfaceFlux')
+       call ATMOS_PHY_SF( do_phy_sf, .true. )
+       call TIME_rapend  ('ATM SurfaceFlux')
+    end if
 
     !########## Turbulence ##########
-
-    call TIME_rapstart('Turbulence')
-    if ( sw_phy_tb .AND. do_phy_tb ) then
-       call ATMOS_PHY_TB
-    endif
-    call TIME_rapend  ('Turbulence')
+    if ( sw_phy_tb ) then
+       call TIME_rapstart('ATM Turbulence')
+       call ATMOS_PHY_TB( do_phy_tb, .true. )
+       call TIME_rapend  ('ATM Turbulence')
+    end if
 
     !########## Microphysics ##########
-    call TIME_rapstart('Microphysics')
-    if ( sw_phy_mp .AND. do_phy_mp ) then
-       call ATMOS_PHY_MP
+    if ( sw_phy_mp ) then
+       call TIME_rapstart('ATM Microphysics')
+       if ( do_phy_mp ) call ATMOS_PHY_MP
+       call TIME_rapend  ('ATM Microphysics')
     endif
-    call TIME_rapend  ('Microphysics')
 
     !########## Radiation ##########
-    call TIME_rapstart('Radiation')
-    if ( sw_phy_rd .AND. do_phy_rd ) then
-       call ATMOS_PHY_RD
+    if ( sw_phy_rd ) then
+       call TIME_rapstart('ATM Radiation')
+       if ( do_phy_rd ) call ATMOS_PHY_RD
+       call TIME_rapend  ('ATM Radiation')
     endif
-    call TIME_rapend  ('Radiation')
 
-    !########## History&Monitor ##########
-    call TIME_rapstart('History')
+    !########## Dynamics ##########
+    if ( sw_dyn ) then
+       call TIME_rapstart('ATM Dynamics')
+       if ( do_dyn ) call ATMOS_DYN
+       call TIME_rapend  ('ATM Dynamics')
+    endif
+
+    !########## History & Monitor ##########
+    call TIME_rapstart('ATM History Vars')
        call ATMOS_vars_history
-    call TIME_rapend  ('History')
+    call TIME_rapend  ('ATM History Vars')
+
+    !########## reset tendencies ##########
+!OCL XFILL
+    DENS_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMZ_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    RHOT_tp(:,:,:) = 0.0_RP
+!OCL XFILL
+    QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_step
