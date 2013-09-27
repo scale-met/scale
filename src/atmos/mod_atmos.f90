@@ -263,11 +263,6 @@ contains
           RHOT, QTRC, PREC, SWD, LWD )
     endif
 
-    !########## History & Monitor ##########
-    call TIME_rapstart('ATM History Vars')
-       call ATMOS_vars_history
-    call TIME_rapend  ('ATM History Vars')
-
     !########## reset tendencies ##########
 !OCL XFILL
     DENS_tp(:,:,:) = 0.0_RP
