@@ -94,7 +94,6 @@ contains
        CPL_AtmLnd_getDat2Lnd,  &
        CPL_AtmLnd_flushDat2Lnd
     implicit none
-integer::i,j
     !---------------------------------------------------------------------------
 
     !########## Surface Flux ##########
