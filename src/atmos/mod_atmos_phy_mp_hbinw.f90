@@ -4,19 +4,21 @@
 !! @par Description: 
 !!      This module contains subroutines for the Spectral Bin Model
 !!       
-!! @author : Y.Sato of RIKEN, AICS
+!! - Reference 
+!!  - Suzuki et al., 2006!!    Correlation Pattern between Effective Radius and Optical Thickness of Water Clouds Simulated by a Spectral Bin Microphysics Cloud Model
+!!    SOLA, 2: 116–119 doi:10.2151/sola.2006‒030
+!!  - Suzuki et al., 2010!!    A Study of Microphysical Mechanisms for Correlation Patterns between Droplet Radius and Optical Thickness of Warm Clouds with a Spectral Bin
+!!    J. Atmos. Sci., 67: 1126-1141
+!!  - Sato et al., 2009!!    Application of a Monte Carlo integration method to collision and coagulation growth processes of hydrometeors in a bin-type model
+!!    J. Geophy. Res., 114: D09215, doi:10.1029/2008JD011247
+!! 
+!! @author : Team SCALE
 !!
 !! @par History: Hbinw
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
 !! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)               
 !! @li  ver.0.01   2013-02-12 (Y.Sato) [mod] modified for latest version              
 !<
-!--------------------------------------------------------------------------------
-!      Reference:  -- Journals 
-!                   Suzuki et al.(2006): SOLA,vol.2,pp.116-119(original code)
-!                   Suzuki et al.(2010): J.Atmos.Sci.,vol.67,pp.1126-1141
-!                   Sato et al.  (2009): J.Geophys.Res.,vol.114,
-!                                        doi:10.1029/2008JD011247
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
 module mod_atmos_phy_mp
