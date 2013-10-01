@@ -65,7 +65,6 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_land_vars, only: &
-       LAND_RESTART_IN_BASENAME, &
        LAND_TYPE_PHY
     implicit none
 
