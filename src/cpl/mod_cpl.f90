@@ -69,9 +69,14 @@ contains
     use mod_land_vars, only: &
        TG,    &
        QvEfc, &
-       EMIT,  &
-       ALB, TCS, DZg, &
-       Z0M, Z0H, Z0E
+       I_EMIT,             &
+       I_ALB,              &
+       I_TCS,              &
+       I_DZg,              &
+       I_Z0M,              &
+       I_Z0H,              &
+       I_Z0E,              &
+       LAND_PROPERTY
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        CPL_vars_setup,             &
@@ -95,10 +100,15 @@ contains
        call CPL_AtmLnd_putATM( &
           DENS, MOMX, MOMY, MOMZ,    &
           RHOT, QTRC, PREC, SWD, LWD )
-       call CPL_AtmLnd_putLnd( &
-          TG, QvEfc, EMIT, &
-          ALB, TCS, DZg,   &
-          Z0M, Z0H, Z0E    )
+       call CPL_AtmLnd_putLnd( TG           (:,:),        & ! [IN]
+                               QvEfc        (:,:),        & ! [IN]
+                               LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
+                               LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
        call CPL_AtmLnd_unsolve
     endif
 

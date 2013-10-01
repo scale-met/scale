@@ -89,24 +89,26 @@ module mod_land_vars
                  'kg/m2', &
                  'kg/m2'  /
 
+  integer,  public, parameter :: LAND_PROPERTY_nmax = 10
+  integer,  public, parameter :: I_STRGMAX =  1             ! maximum  water storage [kg/m2]
+  integer,  public, parameter :: I_STRGCRT =  2             ! critical water storage [kg/m2]
+  integer,  public, parameter :: I_EMIT    =  3             ! surface emissivity in long-wave  radiation [0-1]
+  integer,  public, parameter :: I_ALB     =  4             ! surface albedo     in short-wave radiation [0-1]
+  integer,  public, parameter :: I_TCS     =  5             ! thermal conductivity for soil [W/m/K]
+  integer,  public, parameter :: I_HCS     =  6             ! heat capacity        for soil [J/K]
+  integer,  public, parameter :: I_DZg     =  7             ! soil depth [m]
+  integer,  public, parameter :: I_Z0M     =  8             ! roughness length for momemtum [m]
+  integer,  public, parameter :: I_Z0H     =  9             ! roughness length for heat     [m]
+  integer,  public, parameter :: I_Z0E     = 10             ! roughness length for moisture [m]
 
-  integer,  public, save :: LNDType(IA,JA) ! type of land surface [no unit]
-  real(RP), public, save :: STRGMAX(IA,JA) ! maximum water storage [kg/m2]
-  real(RP), public, save :: STRGCRT(IA,JA) ! critical water storage [kg/m2]
-  real(RP), public, save :: EMIT   (IA,JA) ! emissivity in long-wave radiation [no unit]
-  real(RP), public, save :: ALB    (IA,JA) ! surface albedo in short-wave radiation [no unit]
-  real(RP), public, save :: TCS    (IA,JA) ! thermal conductivity for soil [W/m/K]
-  real(RP), public, save :: HCS    (IA,JA) ! heat capacity for soil [J/K]
-  real(RP), public, save :: DZg    (IA,JA) ! soil depth [m]
-  real(RP), public, save :: Z0M    (IA,JA) ! roughness length for momemtum [m]
-  real(RP), public, save :: Z0H    (IA,JA) ! roughness length for heat [m]
-  real(RP), public, save :: Z0E    (IA,JA) ! roughness length for moisture [m]
+  integer,  public,      save :: LAND_Type    (IA,JA)                    ! land type index
+  real(RP), public,      save :: LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) ! land surface property
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: param_land_get
+  private :: LAND_param_read
 
   !-----------------------------------------------------------------------------
   !
@@ -122,16 +124,7 @@ module mod_land_vars
 
   logical,                   private, save :: LAND_VARS_CHECKRANGE      = .false.
 
-  real(RP), private, save :: IDX_STRGMAX(LAND_NUM_IDX)
-  real(RP), private, save :: IDX_STRGCRT(LAND_NUM_IDX)
-  real(RP), private, save :: IDX_EMIT   (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_ALB    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_TCS    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_HCS    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_DZg    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_Z0M    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_Z0H    (LAND_NUM_IDX)
-  real(RP), private, save :: IDX_Z0E    (LAND_NUM_IDX)
+  real(RP), private, save :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
 
   !-----------------------------------------------------------------------------
 contains
@@ -219,32 +212,7 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
-    !--- read land indices 
-    call param_land_get( IDX_STRGMAX(:), 'STRGMAX' )
-    call param_land_get( IDX_STRGCRT(:), 'STRGCRT' )
-    call param_land_get( IDX_EMIT   (:), 'EMIT'    )
-    call param_land_get( IDX_ALB    (:), 'ALB'     )
-    call param_land_get( IDX_TCS    (:), 'TCS'     )
-    call param_land_get( IDX_HCS    (:), 'HCS'     )
-    call param_land_get( IDX_DZg    (:), 'DZg'     )
-    call param_land_get( IDX_Z0M    (:), 'Z0M'     )
-    call param_land_get( IDX_Z0H    (:), 'Z0H'     )
-    call param_land_get( IDX_Z0E    (:), 'Z0E'     )
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] vegetation parameters'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,10(A,A))') &
-                  '***     ','   ',' ','Max Stg.',' ','CRT Stg.',' ','Emissiv.', &
-                                   ' ','  Albedo',' ','T condu.',' ','H capac.', &
-                                   ' ','   Depth',' ','   Z0(m)',' ','   Z0(h)', &
-                                   ' ','   Z0(e)'
-    do ip = 1, LAND_NUM_IDX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,5(A,F8.2),A,F8.0,4(A,F8.2))') &
-                  '*** IDX=',ip,' ',IDX_STRGMAX(ip),' ',IDX_STRGCRT(ip),' ',IDX_EMIT(ip), &
-                                ' ',IDX_ALB    (ip),' ',IDX_TCS    (ip),' ',IDX_HCS (ip), &
-                                ' ',IDX_DZg    (ip),' ',IDX_Z0M    (ip),' ',IDX_Z0H (ip), &
-                                ' ',IDX_Z0E    (ip)
-    enddo
+    call LAND_param_read
 
     return
   end subroutine LAND_vars_setup
@@ -284,7 +252,7 @@ contains
        COMM_wait
     implicit none
 
-    integer :: i, j
+    integer :: i, j, v
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -314,65 +282,32 @@ contains
        STRG (:,:) = 100.0_RP
     endif
 
+    LAND_PROPERTY(:,:,:) = CONST_UNDEF
+
     if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
 
-LNDType(IS:IE,JS  :JS+1) = 1
-LNDType(IS:IE,JS+2:JE-2) = 2
-LNDType(IS:IE,JE-1:JE  ) = 1
-!       call FILEIO_read( LNDType(:,:),                                      & ! [OUT]
-!                         LAND_BOUNDARY_IN_BASENAME, 'LNDType', 'XY', step=1 ) ! [IN]
+       LAND_Type(:,:)       = 2
+       LAND_Type(:,JS:JS+1) = 1
+       LAND_Type(:,JE-1:JE) = 1
+!       call FILEIO_read( LAND_Type(:,:),                                      & ! [OUT]
+!                         LAND_BOUNDARY_IN_BASENAME, 'LAND_Type', 'XY', step=1 ) ! [IN]
 
+       do v = 1,  LAND_PROPERTY_nmax
        do j = JS, JE
        do i = IS, IE
-          STRGMAX(i,j) = IDX_STRGMAX( LNDType(i,j) )
-          STRGCRT(i,j) = IDX_STRGCRT( LNDType(i,j) )
-          EMIT   (i,j) = IDX_EMIT   ( LNDType(i,j) )
-          ALB    (i,j) = IDX_ALB    ( LNDType(i,j) )
-          TCS    (i,j) = IDX_TCS    ( LNDType(i,j) )
-          HCS    (i,j) = IDX_HCS    ( LNDType(i,j) )
-          DZg    (i,j) = IDX_DZg    ( LNDType(i,j) )
-          Z0M    (i,j) = IDX_Z0M    ( LNDType(i,j) )
-          Z0H    (i,j) = IDX_Z0H    ( LNDType(i,j) )
-          Z0E    (i,j) = IDX_Z0E    ( LNDType(i,j) )
+          LAND_PROPERTY(i,j,v) = LAND_PROPERTY_table( LAND_Type(i,j),v )
+       enddo
        enddo
        enddo
 
-       call COMM_vars8( STRGMAX(:,:),  1 )
-       call COMM_vars8( STRGCRT(:,:),  2 )
-       call COMM_vars8( EMIT   (:,:),  3 )
-       call COMM_vars8( ALB    (:,:),  4 )
-       call COMM_vars8( TCS    (:,:),  5 )
-       call COMM_vars8( HCS    (:,:),  6 )
-       call COMM_vars8( DZg    (:,:),  7 )
-       call COMM_vars8( Z0M    (:,:),  8 )
-       call COMM_vars8( Z0H    (:,:),  9 )
-       call COMM_vars8( Z0E    (:,:), 10 )
-
-       call COMM_wait ( STRGMAX(:,:),  1 )
-       call COMM_wait ( STRGCRT(:,:),  2 )
-       call COMM_wait ( EMIT   (:,:),  3 )
-       call COMM_wait ( ALB    (:,:),  4 )
-       call COMM_wait ( TCS    (:,:),  5 )
-       call COMM_wait ( HCS    (:,:),  6 )
-       call COMM_wait ( DZg    (:,:),  7 )
-       call COMM_wait ( Z0M    (:,:),  8 )
-       call COMM_wait ( Z0H    (:,:),  9 )
-       call COMM_wait ( Z0E    (:,:), 10 )
+       do v = 1,  LAND_PROPERTY_nmax
+          call COMM_vars8( LAND_PROPERTY(:,:,v), v )
+       enddo
+       do v = 1,  LAND_PROPERTY_nmax
+          call COMM_wait ( LAND_PROPERTY(:,:,v), v )
+       enddo
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
-
-       STRGMAX(:,:) = CONST_UNDEF
-       STRGCRT(:,:) = CONST_UNDEF
-       EMIT (:,:)   = CONST_UNDEF
-       ALB  (:,:)   = CONST_UNDEF
-       TCS  (:,:)   = CONST_UNDEF
-       HCS  (:,:)   = CONST_UNDEF
-       DZg  (:,:)   = CONST_UNDEF
-       Z0M  (:,:)   = CONST_UNDEF
-       Z0H  (:,:)   = CONST_UNDEF
-       Z0E  (:,:)   = CONST_UNDEF
-
     endif
 
     call TIME_rapend  ('FILE I NetCDF')
@@ -473,9 +408,7 @@ LNDType(IS:IE,JE-1:JE  ) = 1
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
-  subroutine param_land_get( &
-       DAT,  &
-       RNAME )
+  subroutine LAND_param_read
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -484,30 +417,57 @@ LNDType(IS:IE,JE-1:JE  ) = 1
        CONST_UNDEF
     implicit none
 
-    real(RP),         intent(out) :: DAT(LAND_NUM_IDX)
-    character(len=*), intent(in)  :: RNAME
-
-    integer                  :: IDX
-    character(len=IO_SYSCHR) :: VNAME
-    real(RP)                 :: VAL
+    integer                  :: index
+    character(len=IO_SYSCHR) :: description
+    real(RP)                 :: STRGMAX
+    real(RP)                 :: STRGCRT
+    real(RP)                 :: EMIT
+    real(RP)                 :: ALB
+    real(RP)                 :: TCS
+    real(RP)                 :: HCS
+    real(RP)                 :: DZg
+    real(RP)                 :: Z0M
+    real(RP)                 :: Z0H
+    real(RP)                 :: Z0E
 
     NAMELIST / PARAM_LAND_DATA / &
-       IDX,   &
-       VNAME, &
-       VAL
+       index,       &
+       description, &
+       STRGMAX,     &
+       STRGCRT,     &
+       EMIT,        &
+       ALB,         &
+       TCS,         &
+       HCS,         &
+       DZg,         &
+       Z0M,         &
+       Z0H,         &
+       Z0E
 
-    integer :: n
+    integer :: n, v
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    rewind(IO_FID_CONF)
-    do n = 1, LAND_NUM_IDX*10
-       ! initialize
-       IDX   = -1
-       VNAME = ""
-       VAL   = CONST_UNDEF
+    LAND_PROPERTY_table(:,:) = CONST_UNDEF
 
-       !--- read namelist
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] vegetation parameters'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') &
+               '***        ',  'description ', &
+                               'Max Stg.', &
+                               'CRT Stg.', &
+                               'Emissiv.', &
+                               '  Albedo', &
+                               'T condu.', &
+                               'H capac.', &
+                               '   Depth', &
+                               '   Z0(m)', &
+                               '   Z0(h)', &
+                               '   Z0(e)'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    do n = 1, LAND_NUM_IDX
        read(IO_FID_CONF,nml=PARAM_LAND_DATA,iostat=ierr)
 
        if ( ierr < 0 ) then !--- no more data
@@ -517,14 +477,32 @@ LNDType(IS:IE,JE-1:JE  ) = 1
           call PRC_MPIstop
        endif
 
-       !--- match requested variable?
-       if ( VNAME == RNAME ) then
-          if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_DATA)
-          DAT(IDX) = VAL
-       endif
+       LAND_PROPERTY_table(index,I_STRGMAX) = STRGMAX
+       LAND_PROPERTY_table(index,I_STRGCRT) = STRGCRT
+       LAND_PROPERTY_table(index,I_EMIT   ) = EMIT
+       LAND_PROPERTY_table(index,I_ALB    ) = ALB
+       LAND_PROPERTY_table(index,I_TCS    ) = TCS
+       LAND_PROPERTY_table(index,I_HCS    ) = HCS
+       LAND_PROPERTY_table(index,I_DZg    ) = DZg
+       LAND_PROPERTY_table(index,I_Z0M    ) = Z0M
+       LAND_PROPERTY_table(index,I_Z0H    ) = Z0H
+       LAND_PROPERTY_table(index,I_Z0E    ) = Z0E
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,1x,A12,5(1x,F8.2),1x,F8.0,4(1x,F8.2))') &
+                  '*** IDX=', index, trim(description), &
+                                     STRGMAX, &
+                                     STRGCRT, &
+                                     EMIT,    &
+                                     ALB,     &
+                                     TCS,     &
+                                     HCS,     &
+                                     DZg,     &
+                                     Z0M,     &
+                                     Z0H,     &
+                                     Z0E
     enddo
 
     return
-  end subroutine param_land_get
+  end subroutine LAND_param_read
 
 end module mod_land_vars

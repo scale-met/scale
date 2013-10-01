@@ -33,8 +33,8 @@ module mod_land
   !
   !++ included parameters
   !
-include "inc_precision.h"
-include "inc_index.h"
+  include "inc_precision.h"
+  include "inc_index.h"
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -74,16 +74,21 @@ contains
   !> Land step
   subroutine LAND_step
     use mod_land_vars, only: &
-       SFLX_GH,       &
-       SFLX_PREC,     &
-       SFLX_QVLnd,    &
-       TG,            &
-       QvEfc,         &
-       EMIT,          &
-       ALB, TCS, DZg, &
-       Z0M, Z0H, Z0E, &
        sw_phy => LAND_sw_phy, &
-       LAND_vars_fillhalo,    &
+       SFLX_GH,            &
+       SFLX_PREC,          &
+       SFLX_QVLnd,         &
+       TG,                 &
+       QvEfc,              &
+       I_EMIT,             &
+       I_ALB,              &
+       I_TCS,              &
+       I_DZg,              &
+       I_Z0M,              &
+       I_Z0H,              &
+       I_Z0E,              &
+       LAND_PROPERTY,      &
+       LAND_vars_fillhalo, &
        LAND_vars_history
     use mod_land_phy_bucket, only: &
        LAND_PHY
@@ -98,8 +103,9 @@ contains
 
     !########## Surface Flux ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_getDat2Lnd( &
-          SFLX_GH, SFLX_PREC, SFLX_QVLnd )
+       call CPL_AtmLnd_getDat2Lnd( SFLX_GH   (:,:), & ! [OUT]
+                                   SFLX_PREC (:,:), & ! [OUT]
+                                   SFLX_QVLnd(:,:)  ) ! [OUT]
        call CPL_AtmLnd_flushDat2Lnd
     endif
 
@@ -120,10 +126,15 @@ contains
 
     !########## for Coupler ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_putLnd( &
-          TG, QvEfc, EMIT, &
-          ALB, TCS, DZg,   &
-          Z0M, Z0H, Z0E    )
+       call CPL_AtmLnd_putLnd( TG           (:,:),        & ! [IN]
+                               QvEfc        (:,:),        & ! [IN]
+                               LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
+                               LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
+                               LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
     endif
 
     return
