@@ -232,9 +232,9 @@ contains
     status = nf90_inquire_dimension( ncid, dimid, len=CIRA_nlat )
     !if( status /= nf90_NoErr ) call handle_err(status)
 
-    print *, "CIRA_ntime", CIRA_ntime
-    print *, "CIRA_nplev", CIRA_nplev
-    print *, "CIRA_nlat",  CIRA_nlat
+    !print *, "CIRA_ntime", CIRA_ntime
+    !print *, "CIRA_nplev", CIRA_nplev
+    !print *, "CIRA_nlat",  CIRA_nlat
 
     allocate( CIRA_nd(  0:CIRA_ntime+1) )
 
@@ -296,9 +296,9 @@ contains
     enddo
     deallocate( tmp1d )
 
-    print *, "CIRA_plog", CIRA_plog
-    print *, "CIRA_pres", exp(CIRA_plog)
-    print *, "CIRA_lat", CIRA_lat
+    !print *, "CIRA_plog", CIRA_plog
+    !print *, "CIRA_pres", exp(CIRA_plog)
+    !print *, "CIRA_lat", CIRA_lat
 
     ! read temperature [K]
     allocate( tmp3d(CIRA_nlat,CIRA_nplev,CIRA_ntime) )
@@ -328,7 +328,7 @@ contains
     enddo
     enddo
 
-    print *, "CIRA_temp", CIRA_temp
+    !print *, "CIRA_temp", CIRA_temp
 
     ! read geopotencial height [m]
     status = nf90_inq_varid( ncid, "zg", varid )

@@ -59,6 +59,8 @@ module mod_atmos_phy_rd
   !
   !++ Private parameters & variables
   !
+  real(RP), private, parameter :: RD_cosSZA_min = 0.017_RP ! minimum SZA (>89.0)
+
   integer,  private, save :: RD_KADD = 0 !< RD_KMAX = KMAX + RD_KADD
 
   integer,  private, save :: RD_KMAX      ! # of computational cells: z for radiation scheme
@@ -1310,10 +1312,10 @@ contains
                 tau_column = tau_column + tauPR(k,icloud) ! layer-total(for ocean albedo)
              enddo
 
-             if ( tau_column > 0.0_RP ) then
+             if ( tau_column > 0.0_RP .AND. iflgb(I_SWLW,iw)+1 == I_SW ) then
                 albedo_sfc(icloud,iw) = albedo_sea(cosSZA,tau_column)
              else
-                albedo_sfc(icloud,iw) = 0.1_RP
+                albedo_sfc(icloud,iw) = 0.05_RP
              endif
 
           enddo
@@ -1424,9 +1426,9 @@ contains
        flux,       &
        flux_direct )
     use mod_const, only: &
-         PI   => CONST_PI,  &
-         EPS  => CONST_EPS, &
-         EPS1 => CONST_EPS1
+       PI   => CONST_PI,  &
+       EPS  => CONST_EPS, &
+       EPS1 => CONST_EPS1
     implicit none
 
     integer,  intent(in)  :: kmax
@@ -1492,7 +1494,7 @@ contains
     integer  :: k, icloud
     !---------------------------------------------------------------------------
 
-    cosSZA = max( cosSZA0, EPS )
+    cosSZA = max( cosSZA0, RD_cosSZA_min )
 
     do icloud = 1, 2
     do k      = 1, kmax
@@ -1688,7 +1690,7 @@ contains
 
     am1 = max( min( cosSZA, 0.961_RP ), 0.0349_RP )
 
-    tr1 = max( min( cosSZA / ( 4.0_RP * tau ), 1.0_RP ), 0.05_RP )
+    tr1 = max( min( am1 / ( 4.0_RP * tau ), 1.0_RP ), 0.05_RP )
 
     s = 0.0_RP
     do i = 1, 5
