@@ -1344,7 +1344,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
        enddo
        enddo
