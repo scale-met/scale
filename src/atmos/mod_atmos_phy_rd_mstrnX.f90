@@ -425,6 +425,8 @@ contains
     real(RP) :: TEMP_t  (KA,IA,JA)
     real(RP) :: flux_rad(KA,IA,JA,2,2)
     real(RP) :: flux_net(KA,IA,JA,2)
+    real(RP) :: flux_up (KA,IA,JA,2)
+    real(RP) :: flux_dn (KA,IA,JA,2)
     real(RP) :: flux_rad_boundary(1,IA,JA,4)
 
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
@@ -606,6 +608,11 @@ contains
                                  + ( flux_rad_merge(RD_K  ,I_LW,I_up) - flux_rad_merge(RD_K  ,I_LW,I_dn) ) ) * 0.5_RP
           flux_net(k,i,j,I_SW) = ( ( flux_rad_merge(RD_K+1,I_SW,I_up) - flux_rad_merge(RD_K+1,I_SW,I_dn) ) &
                                  + ( flux_rad_merge(RD_K  ,I_SW,I_up) - flux_rad_merge(RD_K  ,I_SW,I_dn) ) ) * 0.5_RP
+
+          flux_up (k,i,j,I_LW) = ( flux_rad_merge(RD_K+1,I_LW,I_up) + flux_rad_merge(RD_K  ,I_LW,I_up) ) * 0.5_RP
+          flux_up (k,i,j,I_SW) = ( flux_rad_merge(RD_K+1,I_SW,I_up) + flux_rad_merge(RD_K  ,I_SW,I_up) ) * 0.5_RP
+          flux_dn (k,i,j,I_LW) = ( flux_rad_merge(RD_K+1,I_LW,I_dn) + flux_rad_merge(RD_K  ,I_LW,I_dn) ) * 0.5_RP
+          flux_dn (k,i,j,I_SW) = ( flux_rad_merge(RD_K+1,I_SW,I_dn) + flux_rad_merge(RD_K  ,I_SW,I_dn) ) * 0.5_RP
        enddo
        flux_rad_boundary(1,i,j,I_OLR) = flux_rad_merge(1        ,I_LW,I_up)-flux_rad_merge(1        ,I_LW,I_dn)
        flux_rad_boundary(1,i,j,I_OSR) = flux_rad_merge(1        ,I_SW,I_up)-flux_rad_merge(1        ,I_SW,I_dn)
@@ -645,6 +652,10 @@ contains
 
     call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW', 'net radiation flux(LW)', 'W/m2', dt )
     call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW', 'net radiation flux(SW)', 'W/m2', dt )
+    call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt )
+    call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt )
+    call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt )
+    call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt )
 
     call HIST_in( flux_rad_boundary(1,:,:,I_OLR), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt )
     call HIST_in( flux_rad_boundary(1,:,:,I_OSR), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt )
@@ -945,7 +956,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
-    RRHO_std = Rdry * TEM00 / (Pstd*100.0_RP) * 100.0_RP ! [cm*m2/kg]
+    RRHO_std = Rdry * TEM00 / Pstd * 100.0_RP ! [cm*m2/kg]
 
     M   (I_SW) = 1.0_RP / sqrt(3.0_RP)
     W   (I_SW) = 1.0_RP
@@ -1247,7 +1258,7 @@ contains
 
        !--- particle (Rayleigh/Cloud/Aerosol)
        do k = 1, kmax
-          dp_P = rhodz(k) * GRAV / (Pstd*100.0_RP)
+          dp_P = rhodz(k) * GRAV / Pstd
 
           ! optical thickness, phase function
           ! im=1: extinction coefficient

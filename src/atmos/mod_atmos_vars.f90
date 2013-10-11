@@ -160,7 +160,7 @@ module mod_atmos_vars
   integer, private, save      :: AQ_HIST_id(QA)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 23 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 26 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_VELZ  =  1 ! velocity w at cell center
   integer, private, parameter :: I_VELX  =  2 ! velocity u at cell center
@@ -173,23 +173,27 @@ module mod_atmos_vars
   integer, private, parameter :: I_QLIQ  =  8 ! ratio of total liquid water to total mass
   integer, private, parameter :: I_QICE  =  9 ! ratio of total ice    water to total mass
 
-  integer, private, parameter :: I_RTOT  = 10 ! total gas constant
-  integer, private, parameter :: I_CPTOT = 11 ! total heat capacity (constant pressure)
-  integer, private, parameter :: I_PRES  = 12 ! pressure
-  integer, private, parameter :: I_TEMP  = 13 ! temperature
+  integer, private, parameter :: I_LWP   = 10 ! liquid water potential temperature
+  integer, private, parameter :: I_IWP   = 11 ! relative humidity (liquid+ice)
 
-  integer, private, parameter :: I_RH    = 14 ! relative humidity (liquid+ice)
-  integer, private, parameter :: I_RHL   = 15 ! relative humidity against to liquid
-  integer, private, parameter :: I_RHI   = 16 ! relative humidity against to ice
+  integer, private, parameter :: I_RTOT  = 12 ! total gas constant
+  integer, private, parameter :: I_CPTOT = 13 ! total heat capacity (constant pressure)
+  integer, private, parameter :: I_PRES  = 14 ! pressure
+  integer, private, parameter :: I_TEMP  = 15 ! temperature
 
-  integer, private, parameter :: I_VOR   = 17 ! vertical vorticity
-  integer, private, parameter :: I_DIV   = 18 ! divergence
-  integer, private, parameter :: I_HDIV  = 19 ! horizontal divergence
+  integer, private, parameter :: I_POTL  = 16 ! liquid water potential temperature
+  integer, private, parameter :: I_RH    = 17 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_RHL   = 18 ! relative humidity against to liquid
+  integer, private, parameter :: I_RHI   = 19 ! relative humidity against to ice
 
-  integer, private, parameter :: I_ENGP  = 20 ! potential energy
-  integer, private, parameter :: I_ENGK  = 21 ! kinetic   energy
-  integer, private, parameter :: I_ENGI  = 22 ! internal  energy
-  integer, private, parameter :: I_ENGT  = 23 ! total     energy
+  integer, private, parameter :: I_VOR   = 20 ! vertical vorticity
+  integer, private, parameter :: I_DIV   = 21 ! divergence
+  integer, private, parameter :: I_HDIV  = 22 ! horizontal divergence
+
+  integer, private, parameter :: I_ENGP  = 23 ! potential energy
+  integer, private, parameter :: I_ENGK  = 24 ! kinetic   energy
+  integer, private, parameter :: I_ENGI  = 25 ! internal  energy
+  integer, private, parameter :: I_ENGT  = 26 ! total     energy
 
   integer, private, save      :: AD_HIST_id (AD_nmax)
   integer, private, save      :: AD_PREP_sw (AD_nmax)
@@ -395,11 +399,15 @@ contains
     call HIST_reg( AD_HIST_id(I_QLIQ),  'QLIQ',  'total liquid water',     'kg/kg',  ndim=3 )
     call HIST_reg( AD_HIST_id(I_QICE),  'QICE',  'total ice water',        'kg/kg',  ndim=3 )
 
+    call HIST_reg( AD_HIST_id(I_LWP),   'LWP',   'liquid water path',      'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_IWP),   'IWP',   'ice    water path',      'g/m2',   ndim=2 )
+
     call HIST_reg( AD_HIST_id(I_RTOT),  'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
     call HIST_reg( AD_HIST_id(I_CPTOT), 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
     call HIST_reg( AD_HIST_id(I_PRES),  'PRES',  'pressure',               'Pa',     ndim=3 )
     call HIST_reg( AD_HIST_id(I_TEMP),  'T',     'temperature',            'K',      ndim=3 )
 
+    call HIST_reg( AD_HIST_id(I_POTL),  'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RH),    'RH',    'relative humidity',      '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHL),   'RHL',   'relative humidity(liq)', '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHI),   'RHI',   'relative humidity(ice)', '%',      ndim=3 )
@@ -453,6 +461,15 @@ contains
        AD_PREP_sw(I_QICE) = 1
     endif
 
+    if ( AD_HIST_id(I_LWP)  > 0 ) then
+       AD_PREP_sw(I_QLIQ) = 1
+       AD_PREP_sw(I_LWP)  = 1
+    endif
+    if ( AD_HIST_id(I_IWP)  > 0 ) then
+       AD_PREP_sw(I_QICE) = 1
+       AD_PREP_sw(I_IWP)  = 1
+    endif
+
     if ( AD_HIST_id(I_RTOT) > 0 ) then
        AD_PREP_sw(I_QDRY) = 1
        AD_PREP_sw(I_RTOT) = 1
@@ -475,6 +492,15 @@ contains
        AD_PREP_sw(I_TEMP)  = 1
     endif
 
+    if ( AD_HIST_id(I_POTL) > 0 ) then
+       AD_PREP_sw(I_POTT)  = 1
+       AD_PREP_sw(I_QDRY)  = 1
+       AD_PREP_sw(I_RTOT)  = 1
+       AD_PREP_sw(I_CPTOT) = 1
+       AD_PREP_sw(I_PRES)  = 1
+       AD_PREP_sw(I_TEMP)  = 1
+       AD_PREP_sw(I_POTL)  = 1
+    endif
     if (      AD_HIST_id(I_RH)  > 0 &
          .OR. AD_HIST_id(I_RHL) > 0 &
          .OR. AD_HIST_id(I_RHI) > 0 ) then
@@ -1071,6 +1097,7 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
+       LH0   => CONST_LH0,   &
        P00   => CONST_PRE00
     use mod_misc, only: &
        MISC_valcheck
@@ -1078,6 +1105,7 @@ contains
        TIME_DTSEC
     use mod_grid, only: &
        CZ   => GRID_CZ,   &
+       CDZ  => GRID_CDZ,  &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
@@ -1109,12 +1137,16 @@ contains
     real(RP) :: QLIQ  (KA,IA,JA) ! total liquid water [kg/kg]
     real(RP) :: QICE  (KA,IA,JA) ! total ice water    [kg/kg]
 
+    real(RP) :: LWP   (IA,JA)    ! liquid water path  [g/m2]
+    real(RP) :: IWP   (IA,JA)    ! ice    water path  [g/m2]
+
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
     real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
     real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
 
+    real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
     real(RP) :: RH    (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
     real(RP) :: RHL   (KA,IA,JA) ! relative humidity against to liquid [%]
     real(RP) :: RHI   (KA,IA,JA) ! relative humidity against to ice    [%]
@@ -1257,6 +1289,28 @@ contains
        if( I_QG > 0 ) QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,I_QG)
     endif
 
+    if ( AD_PREP_sw(I_LWP) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+          LWP(i,j) = 0.0_RP
+          do k  = KS, KE
+             LWP(i,j) = LWP(i,j) + QLIQ(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+          enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_IWP) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
+          IWP(i,j) = 0.0_RP
+          do k  = KS, KE
+             IWP(i,j) = IWP(i,j) + QICE(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+          enddo
+       enddo
+       enddo
+    endif
+
     if ( AD_PREP_sw(I_RTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
@@ -1316,6 +1370,18 @@ contains
        do i = IS, IE
        do k = KS, KE
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_POTL) > 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTL(k,i,j) = POTT(k,i,j) &
+                      - LH0 / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
        enddo
        enddo
        enddo
@@ -1495,11 +1561,15 @@ contains
     call HIST_put( AD_HIST_id(I_QLIQ),  QLIQ(:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_QICE),  QICE(:,:,:),  TIME_DTSEC )
 
+    call HIST_put( AD_HIST_id(I_LWP),   LWP (:,:),    TIME_DTSEC )
+    call HIST_put( AD_HIST_id(I_IWP),   IWP (:,:),    TIME_DTSEC )
+
     call HIST_put( AD_HIST_id(I_RTOT),  RTOT(:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_CPTOT), CPTOT(:,:,:), TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_PRES),  PRES(:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_TEMP),  TEMP(:,:,:),  TIME_DTSEC )
 
+    call HIST_put( AD_HIST_id(I_POTL),  POTL(:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_RH),    RH  (:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_RHL),   RHL (:,:,:),  TIME_DTSEC )
     call HIST_put( AD_HIST_id(I_RHI),   RHI (:,:,:),  TIME_DTSEC )

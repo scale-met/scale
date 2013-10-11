@@ -94,8 +94,8 @@ module mod_const
   real(RP), public, save      :: CONST_LHF0
   real(RP), public, save      :: CONST_LHF00
   real(RP), public, parameter :: CONST_PSAT0   =  610.7_RP           !< saturate pressure of water vapor at 0C
-  real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water
-  real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice
+  real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water [kg/m3]
+  real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice   [kg/m3]
 
   real(RP), public, save      :: CONST_Pstd    = 101325.0_RP         !< standard pressure [Pa]
   real(RP), public, save      :: CONST_PRE00   = 100000.0_RP         !< pressure reference [Pa]
