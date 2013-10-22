@@ -197,11 +197,10 @@ contains
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update
     use mod_cpl_vars, only: &
+       CPL_putAtm,     &
+       CPL_getCPL2Atm, &
+       CPL_flushAtm,   &
        sw_AtmLnd => CPL_sw_AtmLnd
-    use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_putAtm,      &
-       CPL_AtmLnd_getDat2Atm,  &
-       CPL_AtmLnd_flushDat2Atm
     implicit none
     !---------------------------------------------------------------------------
 
@@ -210,10 +209,10 @@ contains
 
     !########## from Coupler ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_getDat2Atm( &
+       call CPL_getCPL2Atm( &
           SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, SFLX_SWU, SFLX_LWU, &
           SFLX_SH, SFLX_LH, SFLX_QVAtm                         )
-       call CPL_AtmLnd_flushDat2Atm
+       call CPL_flushAtm
     end if
 
     !########## Surface Flux ##########
@@ -258,7 +257,7 @@ contains
 
     !########## to Coupler ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_putATM( &
+       call CPL_putATM( &
           DENS, MOMX, MOMY, MOMZ,    &
           RHOT, QTRC, PREC, SWD, LWD )
     endif

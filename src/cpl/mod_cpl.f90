@@ -81,12 +81,12 @@ contains
        sw_AtmLnd => CPL_sw_AtmLnd, &
        CPL_vars_setup,             &
        CPL_vars_restart_read,      &
-       CPL_vars_fillhalo
+       CPL_vars_fillhalo,          &
+       CPL_putAtm,                 &
+       CPL_putLnd
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_setup,   &
-       CPL_AtmLnd_unsolve, &
-       CPL_AtmLnd_putAtm,  &
-       CPL_AtmLnd_putLnd
+       CPL_AtmLnd_unsolve
     implicit none
     !---------------------------------------------------------------------------
 
@@ -97,18 +97,18 @@ contains
     call CPL_AtmLnd_setup
 
     if( sw_AtmLnd ) then
-       call CPL_AtmLnd_putATM( &
+       call CPL_putATM( &
           DENS, MOMX, MOMY, MOMZ,    &
           RHOT, QTRC, PREC, SWD, LWD )
-       call CPL_AtmLnd_putLnd( TG           (:,:),        & ! [IN]
-                               QvEfc        (:,:),        & ! [IN]
-                               LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
-                               LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
+       call CPL_putLnd( TG           (:,:),        & ! [IN]
+                        QvEfc        (:,:),        & ! [IN]
+                        LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
+                        LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
        call CPL_AtmLnd_unsolve
     endif
 
@@ -120,12 +120,12 @@ contains
   !-----------------------------------------------------------------------------
   !> CPL calcuration
   subroutine CPL_calc
-    use mod_time, only: &
-       do_AtmLnd => TIME_DOCPL_AtmLnd
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
-       CPL_TYPE_AtmLnd, &
-       CPL_vars_fillhalo
+       CPL_TYPE_AtmLnd,   &
+       CPL_vars_fillhalo, &
+       CPL_vars_history,  &
+       CPL_vars_merge
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_solve,   &
        CPL_AtmLnd_unsolve
@@ -135,12 +135,20 @@ contains
     !########## Coupler Atoms-Land ##########
     call TIME_rapstart('CPL Atmos-Land')
     if( sw_AtmLnd ) then
-       if( do_AtmLnd ) call CPL_AtmLnd_solve
+       call CPL_AtmLnd_solve
     endif
     call TIME_rapend  ('CPL Atmos-Land')
 
+    !########## merge Land-Ocean ##########
+    call CPL_vars_merge
+
     !########## Fill HALO ##########
     call CPL_vars_fillhalo
+
+    !########## History & Monitor ##########
+    call TIME_rapstart('CPL History')
+       call CPL_vars_history
+    call TIME_rapend  ('CPL History')
 
     return
   end subroutine CPL_calc

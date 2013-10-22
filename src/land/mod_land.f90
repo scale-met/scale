@@ -93,20 +93,19 @@ contains
     use mod_land_phy_bucket, only: &
        LAND_PHY
     use mod_cpl_vars, only: &
+       CPL_putLnd,      &
+       CPL_getCPL2Lnd,  &
+       CPL_flushLnd,    &
        sw_AtmLnd => CPL_sw_AtmLnd
-    use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_putLnd,      &
-       CPL_AtmLnd_getDat2Lnd,  &
-       CPL_AtmLnd_flushDat2Lnd
     implicit none
     !---------------------------------------------------------------------------
 
     !########## Surface Flux ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_getDat2Lnd( SFLX_GH   (:,:), & ! [OUT]
-                                   SFLX_PREC (:,:), & ! [OUT]
-                                   SFLX_QVLnd(:,:)  ) ! [OUT]
-       call CPL_AtmLnd_flushDat2Lnd
+       call CPL_getCPL2Lnd( SFLX_GH   (:,:), & ! [OUT]
+                            SFLX_PREC (:,:), & ! [OUT]
+                            SFLX_QVLnd(:,:)  ) ! [OUT]
+       call CPL_flushLnd
     endif
 
     !########## Physics ##########
@@ -126,15 +125,15 @@ contains
 
     !########## for Coupler ##########
     if ( sw_AtmLnd ) then
-       call CPL_AtmLnd_putLnd( TG           (:,:),        & ! [IN]
-                               QvEfc        (:,:),        & ! [IN]
-                               LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
-                               LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
-                               LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
+       call CPL_putLnd( TG           (:,:),        & ! [IN]
+                        QvEfc        (:,:),        & ! [IN]
+                        LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
+                        LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
+                        LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
     endif
 
     return
