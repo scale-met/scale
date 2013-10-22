@@ -571,10 +571,8 @@ contains
     ! work
     real(RP) :: pta(IA,JA)
 
-    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
-
-    real(RP) :: Z0M, Z0H, Z0E ! roughness length (momentum,heat,tracer) [m]
-    real(RP) :: Cm, Ch, Ce    ! bulk transfer coeff. [no unit]
+    real(RP) :: Uabs ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
     real(RP) :: dCm, dCh, dCe
 
     real(RP) :: dLST
@@ -604,7 +602,8 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
+          Uabs, CZ(KS),                       & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)        ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
     enddo
@@ -623,7 +622,8 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
+          Uabs, CZ(KS),                       & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)        ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
     enddo
@@ -639,9 +639,10 @@ contains
            ) / DENS(KS,i,j) * 0.5_RP
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,                 & ! (out)
-          pta(i,j), LST(i,j),         & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
+          Cm, Ch, Ce,                  & ! (out)
+          pta(i,j), LST(i,j),          & ! (in)
+          Uabs, CZ(KS),                & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
 
@@ -662,9 +663,10 @@ contains
       dSatQvs = SatQvs * LH0 / ( Rvap * LST(i,j)**2 )
 
       call bulkcoef_uno( &
-          dCm, dCh, dCe,              & ! (out)
-          pta(i,j), dLST,             & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
+          dCm, dCh, dCe,               & ! (out)
+          pta(i,j), dLST,              & ! (in)
+          Uabs, CZ(KS),                & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       dpSH1 = CPdry * (dCh-Ch)/dTs * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
       dpSH2 = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * DENS(KS,i,j)
@@ -709,11 +711,8 @@ contains
     ! work
     real(RP) :: pta(IA,JA)
 
-    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
-
-    real(RP) :: Z0M, Z0H, Z0E ! roughness length (momentum,heat,tracer) [m]
-    real(RP) :: Cm, Ch, Ce    ! bulk transfer coeff. [no unit]
-
+    real(RP) :: Uabs ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
     real(RP) :: SatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j
@@ -739,7 +738,8 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
+          Uabs, CZ(KS),                       & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)        ) ! (in)
 
       pMOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(KS,i,j)
     enddo
@@ -758,7 +758,8 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E         ) ! (in)
+          Uabs, CZ(KS),                       & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)        ) ! (in)
 
       pMOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(KS,i,j)
     enddo
@@ -774,9 +775,10 @@ contains
            ) / DENS(KS,i,j) * 0.5_RP
 
       call bulkcoef_uno( &
-          Cm, Ch, Ce,                 & ! (out)
-          pta(i,j), LST(i,j),         & ! (in)
-          Uabs, CZ(KS), Z0M, Z0H, Z0E ) ! (in)
+          Cm, Ch, Ce,                  & ! (out)
+          pta(i,j), LST(i,j),          & ! (in)
+          Uabs, CZ(KS),                & ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       pMOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(KS,i,j) * 0.5_RP
 
