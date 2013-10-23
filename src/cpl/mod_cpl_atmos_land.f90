@@ -107,39 +107,12 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
     use mod_cpl_vars, only: &
        CPL_flushAtm,            &
        CPL_flushLnd,            &
-       CPL_AtmLnd_flushCPL,     &
-       CPL_RESTART_IN_BASENAME
+       CPL_AtmLnd_flushCPL
     implicit none
-
-    logical  :: dummy
-
-    NAMELIST / PARAM_CPL_AtmLnd / &
-       dummy
-
-    integer :: ierr
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AtmLnd]/Categ[CPL]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_AtmLnd,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_AtmLnd. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_AtmLnd)
 
     call CPL_flushAtm
     call CPL_flushLnd

@@ -100,7 +100,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Surface Flux ##########
+    !########## from Coupler ##########
     if ( sw_AtmLnd ) then
        call CPL_getCPL2Lnd( SFLX_GH   (:,:), & ! [OUT]
                             SFLX_PREC (:,:), & ! [OUT]
@@ -123,7 +123,7 @@ contains
        call LAND_vars_history
     call TIME_rapend  ('LND History')
 
-    !########## for Coupler ##########
+    !########## to Coupler ##########
     if ( sw_AtmLnd ) then
        call CPL_putLnd( TG           (:,:),        & ! [IN]
                         QvEfc        (:,:),        & ! [IN]
