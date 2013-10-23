@@ -65,7 +65,6 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_land_vars, only: &
-       LAND_RESTART_IN_BASENAME, &
        LAND_TYPE_PHY
     implicit none
 
@@ -104,22 +103,23 @@ contains
   !> Physical processes for land submodel
   subroutine LAND_PHY
     use mod_const, only: &
-      DWATR => CONST_DWATR, &
-      CL    => CONST_CL
+       DWATR => CONST_DWATR, &
+       CL    => CONST_CL
     use mod_time, only: &
-      dt => TIME_DTSEC_LAND
+       dt => TIME_DTSEC_LAND
     use mod_land_vars, only: &
-      SFLX_GH,    &
-      SFLX_PREC,  &
-      SFLX_QVLnd, &
-      TG,         &
-      QvEfc,      &
-      ROFF,       &
-      STRG,       &
-      STRGMAX,    &
-      STRGCRT,    &
-      HCS,        &
-      DZg
+       SFLX_GH,    &
+       SFLX_PREC,  &
+       SFLX_QVLnd, &
+       TG,         &
+       QvEfc,      &
+       ROFF,       &
+       STRG,       &
+       I_STRGMAX,  &
+       I_STRGCRT,  &
+       I_HCS,      &
+       I_DZg,      &
+       P => LAND_PROPERTY
  
     implicit none
 
@@ -130,23 +130,23 @@ contains
     do i = IS, IE
 
       ! update water storage
-      STRG(i,j)  = STRG(i,j) + ( SFLX_PREC(i,j) - SFLX_QVLnd(i,j) ) * dt
+      STRG(i,j) = STRG(i,j) + ( SFLX_PREC(i,j) - SFLX_QVLnd(i,j) ) * dt
 
-      if( STRG(i,j) > STRGMAX(i,j) ) then
-        ROFF(i,j) = ROFF(i,j) + STRG(i,j) - STRGMAX(i,j)
-        STRG(i,j) = STRGMAX(i,j)
+      if ( STRG(i,j) > P(i,j,I_STRGMAX) ) then
+         ROFF(i,j) = ROFF(i,j) + STRG(i,j) - P(i,j,I_STRGMAX)
+         STRG(i,j) = P(i,j,I_STRGMAX)
       endif
 
       ! update moisture efficiency
       QvEfc(i,j) = BETA_MAX
-      if( STRG(i,j) < STRGCRT(i,j) ) then
-        QvEfc(i,j) = max( STRG(i,j)/STRGCRT(i,j), BETA_MIN )
+      if ( STRG(i,j) < P(i,j,I_STRGCRT) ) then
+         QvEfc(i,j) = max( STRG(i,j)/P(i,j,I_STRGCRT), BETA_MIN )
       endif
 
       ! update ground temperature
       TG(i,j) = TG(i,j) - 2.0_RP * SFLX_GH(i,j) &
-              / ( ( 1.0_RP - STRGMAX(i,j) * 1.0E-3_RP ) * HCS(i,j) &
-                + STRG(i,j) * 1.0E-3_RP * DWATR * CL * DZg(i,j) ) * dt
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) &
+                + STRG(i,j) * 1.E-3_RP * DWATR * CL * P(i,j,I_DZg)    ) * dt
 
     end do
     end do

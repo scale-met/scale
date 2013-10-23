@@ -160,7 +160,7 @@ $(BUILD_DIR)/mod_history.o	: mod_history.f90 mod_stdio.o mod_process.o mod_time.
 $(BUILD_DIR)/mod_monitor.o	: mod_monitor.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o
 
 $(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_time.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
-                             mod_atmos_dyn.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(microphysics).o mod_atmos_phy_rd_$(radiation).o mod_cpl_atmos_land.o
+                             mod_atmos_dyn.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(microphysics).o mod_atmos_phy_rd_$(radiation).o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_history.o mod_monitor.o mod_comm.o mod_grid_cartesian.o mod_atmos_sub_thermodyn.o mod_time.o mod_misc.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90 mod_stdio.o mod_process.o mod_comm.o
 $(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90 mod_stdio.o mod_const.o mod_grid_cartesian.o
@@ -184,7 +184,7 @@ $(BUILD_DIR)/mod_atmos_phy_rd_common.o		: mod_atmos_phy_rd_common.f90 mod_stdio.
 $(BUILD_DIR)/mod_atmos_phy_rd_$(radiation).o	: mod_atmos_phy_rd_$(radiation).f90 mod_stdio.o mod_process.o mod_comm.o mod_const.o mod_time.o mod_grid_cartesian.o mod_history.o mod_atmos_sub_solarins.o mod_atmos_phy_rd_profile.o mod_atmos_phy_mp_$(tracer).o mod_atmos_phy_ae_$(aerosol).o mod_atmos_phy_rd_common.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_rd_profile.o	: mod_atmos_phy_rd_profile.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian.o mod_calendar.o
 
-$(BUILD_DIR)/mod_land.o	: mod_land.f90 mod_stdio.o mod_time.o mod_land_vars.o mod_land_phy_bucket.o mod_cpl_atmos_land.o
+$(BUILD_DIR)/mod_land.o	: mod_land.f90 mod_stdio.o mod_time.o mod_land_vars.o mod_land_phy_bucket.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_land_vars.o	: mod_land_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_comm.o mod_time.o mod_misc.o mod_fileio.o
 $(BUILD_DIR)/mod_land_phy_bucket.o	: mod_land_phy_bucket.f90 mod_stdio.o mod_process.o mod_time.o mod_land_vars.o
 
@@ -202,7 +202,7 @@ $(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o
 $(BUILD_DIR)/mod_user.o	: mod_user.f90 mod_stdio.o mod_process.o mod_time.o mod_history.o
 
 $(BUILD_DIR)/scale3_init.o	: scale3_init.f90 mod_stdio.o mod_process.o mod_const.o mod_random.o mod_time.o mod_grid_cartesian.o mod_geometrics.o mod_comm.o mod_topography.o mod_history.o mod_monitor.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
-$(BUILD_DIR)/scale.o	: scale.f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian.o mod_geometrics.o mod_comm.o mod_topography.o mod_history.o mod_monitor.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o
+$(BUILD_DIR)/scale.o	: scale.f90 mod_stdio.o mod_process.o mod_const.o mod_time.o mod_grid_cartesian.o mod_geometrics.o mod_comm.o mod_topography.o mod_history.o mod_monitor.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean

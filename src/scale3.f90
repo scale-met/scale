@@ -42,6 +42,7 @@ program scaleles3
      TIME_DOATMOS_restart, &
      TIME_DOLAND_restart,  &
      TIME_DOOCEAN_restart, &
+     TIME_DOCPL_restart,   &
      TIME_DOend,           &
      TIME_rapstart,        &
      TIME_rapend,          &
@@ -90,6 +91,9 @@ program scaleles3
   use mod_cpl, only: &
      CPL_setup, &
      CPL_calc
+  use mod_cpl_vars, only: &
+     CPL_vars_restart_write, &
+     CPL_sw_restart
   use mod_user, only: &
      USER_setup, &
      USER_step
@@ -214,8 +218,9 @@ program scaleles3
 
     ! restart output
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if ( LAND_sw_restart  .AND. TIME_DOLAND_restart )  call LAND_vars_restart_write
+    if ( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
     if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if ( CPL_sw_restart   .AND. TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit
 
