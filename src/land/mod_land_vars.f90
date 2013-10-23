@@ -117,7 +117,7 @@ module mod_land_vars
   character(len=IO_FILECHR), private, save :: LAND_BOUNDARY_IN_BASENAME = '' !< basename of the boundary file
 
   logical,                   private, save :: LAND_RESTART_OUTPUT       = .false.             !< output restart file?
-  character(len=IO_FILECHR), private, save :: LAND_RESTART_IN_BASENAME  = 'restart_in'        !< basename of the restart file
+  character(len=IO_FILECHR), private, save :: LAND_RESTART_IN_BASENAME  = ''                  !< basename of the restart file
   character(len=IO_FILECHR), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'       !< basename of the output file
   character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE3 LAND VARS.' !< title    of the output file
   character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
@@ -197,7 +197,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
                '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 7
+    do ip = 1, 4
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
                   '*** NO.',ip,'|',trim(LP_NAME(ip)),'|', LP_DESC(ip),'[', LP_UNIT(ip),']'
     enddo

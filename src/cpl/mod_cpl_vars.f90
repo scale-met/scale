@@ -77,8 +77,6 @@ module mod_cpl_vars
   logical,                   public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
   logical,                   public, save :: CPL_sw_restart          !< output coupler restart?
 
-  character(len=IO_FILECHR), public, save :: CPL_RESTART_IN_BASENAME = '' !< basename of the input file
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -88,6 +86,7 @@ module mod_cpl_vars
   !++ Private parameters & variables
   !
   logical,                   private, save :: CPL_RESTART_OUTPUT       = .false.             !< output restart file?
+  character(len=IO_FILECHR), private, save :: CPL_RESTART_IN_BASENAME  = ''                  !< basename of the input file
   character(len=IO_FILECHR), private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'       !< basename of the output file
   character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE3 CPL VARS.'  !< title    of the output file
   character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
@@ -242,6 +241,14 @@ contains
     NAMELIST / PARAM_CPL / &
        CPL_TYPE_AtmLnd
 
+    NAMELIST / PARAM_CPL_VARS /  &
+       CPL_RESTART_IN_BASENAME,  &
+       CPL_RESTART_OUTPUT,       &
+       CPL_RESTART_OUT_BASENAME, &
+       CPL_RESTART_OUT_TITLE,    &
+       CPL_RESTART_OUT_DTYPE,    &
+       CPL_VARS_CHECKRANGE
+
     integer :: ierr
     integer :: ip
     !---------------------------------------------------------------------------
@@ -260,6 +267,18 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL)
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] selected components'
 
