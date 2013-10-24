@@ -281,7 +281,7 @@ contains
     implicit none
 
     logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
-    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)? 
+    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)?
 
     namelist / PARAM_PRC / &
        PRC_NUM_X,      &

@@ -118,7 +118,7 @@ contains
   !> Setup
   subroutine ATMOS_THERMODYN_setup
     implicit none
-  
+
     integer :: n
     !---------------------------------------------------------------------------
 
@@ -290,7 +290,7 @@ contains
        q,     &
        qdry   )
     implicit none
- 
+
     real(RP), intent(out) :: CVtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
     real(RP), intent(in)  :: q    (KA,IA,JA,QA) !< mass concentration     [kg/kg]
     real(RP), intent(in)  :: qdry (KA,IA,JA)    !< dry mass concentration [kg/kg]
@@ -698,7 +698,7 @@ contains
     real(RP), intent(in)  :: Ein (KA,IA,JA)    ! internal energy
     real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
     real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
-    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration
 
     real(RP) :: cv, Rmoist
 
@@ -735,7 +735,7 @@ contains
     real(RP), intent(in)  :: dens(KA,IA,JA)    ! density
     real(RP), intent(in)  :: pott(KA,IA,JA)    ! potential temperature
     real(RP), intent(in)  :: qdry(KA,IA,JA)    ! dry concentration
-    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration 
+    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! water concentration
 
     real(RP) :: Rmoist, cp
 

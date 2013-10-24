@@ -53,22 +53,22 @@ module mod_grid
   integer,  public, save :: JSG              !< start of the inner domain: y, global
   integer,  public, save :: JEG              !< end   of the inner domain: y, global
 
-  real(RP), public, save :: GRID_CZ(KA)      !< center coordinate [m]: z, local=global
-  real(RP), public, save :: GRID_CX(IA)      !< center coordinate [m]: x, local
-  real(RP), public, save :: GRID_CY(JA)      !< center coordinate [m]: y, local
-  real(RP), public, save :: GRID_CDZ(KA)     !< z-length of control volume [m]
-  real(RP), public, save :: GRID_CDX(IA)     !< x-length of control volume [m]
-  real(RP), public, save :: GRID_CDY(JA)     !< y-length of control volume [m]
+  real(RP), public, save :: GRID_CZ  (KA)    !< center coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_CX  (IA)    !< center coordinate [m]: x, local
+  real(RP), public, save :: GRID_CY  (JA)    !< center coordinate [m]: y, local
+  real(RP), public, save :: GRID_CDZ (KA)    !< z-length of control volume [m]
+  real(RP), public, save :: GRID_CDX (IA)    !< x-length of control volume [m]
+  real(RP), public, save :: GRID_CDY (JA)    !< y-length of control volume [m]
   real(RP), public, save :: GRID_RCDZ(KA)    !< reciprocal of center-dz
   real(RP), public, save :: GRID_RCDX(IA)    !< reciprocal of center-dx
   real(RP), public, save :: GRID_RCDY(JA)    !< reciprocal of center-dy
 
-  real(RP), public, save :: GRID_FZ(0:KA)    !< face   coordinate [m]: z, local=global
-  real(RP), public, save :: GRID_FX(0:IA)    !< face   coordinate [m]: x, local
-  real(RP), public, save :: GRID_FY(0:JA)    !< face   coordinate [m]: y, local
-  real(RP), public, save :: GRID_FDZ(KA-1)   !< z-length of grid(k)-to-grid(k-1) [m]
-  real(RP), public, save :: GRID_FDX(IA-1)   !< x-length of grid(i)-to-grid(i-1) [m]
-  real(RP), public, save :: GRID_FDY(JA-1)   !< y-length of grid(j)-to-grid(j-1) [m]
+  real(RP), public, save :: GRID_FZ  (0:KA)  !< face   coordinate [m]: z, local=global
+  real(RP), public, save :: GRID_FX  (0:IA)  !< face   coordinate [m]: x, local
+  real(RP), public, save :: GRID_FY  (0:JA)  !< face   coordinate [m]: y, local
+  real(RP), public, save :: GRID_FDZ (KA-1)  !< z-length of grid(k)-to-grid(k-1) [m]
+  real(RP), public, save :: GRID_FDX (IA-1)  !< x-length of grid(i)-to-grid(i-1) [m]
+  real(RP), public, save :: GRID_FDY (JA-1)  !< y-length of grid(j)-to-grid(j-1) [m]
   real(RP), public, save :: GRID_RFDZ(KA-1)  !< reciprocal of face-dz
   real(RP), public, save :: GRID_RFDX(IA-1)  !< reciprocal of face-dx
   real(RP), public, save :: GRID_RFDY(JA-1)  !< reciprocal of face-dy
@@ -175,7 +175,7 @@ contains
        call GRID_read
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Generate!'
-       
+
        call GRID_generate
     endif
 

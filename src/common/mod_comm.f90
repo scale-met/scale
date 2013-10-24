@@ -2106,7 +2106,7 @@ contains
     call TIME_rapend  ('COMM Allreduce MPI')
 
     do k = KS, KE
-       varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP) 
+       varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP)
     enddo
     varmean(   1:KS-1) = 0.0_RP
     varmean(KE+1:KA  ) = 0.0_RP

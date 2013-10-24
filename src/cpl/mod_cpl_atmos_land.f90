@@ -168,7 +168,7 @@ contains
       ! calc. surface fluxes
       call ts_residual( &
         RES, DRES ) ! (out)
-        
+
       do j = JS-1, JE+1
       do i = IS-1, IE+1
 
@@ -285,7 +285,7 @@ contains
 
     real(RP), intent(out) :: RES  (IA,JA)
     real(RP), intent(out) :: DRES (IA,JA)
-    
+
     real(RP), parameter :: dTs   = 1.0E-10_RP ! delta skin temperature
 
     ! work
@@ -520,7 +520,7 @@ contains
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
-    
+
     real(RP), intent(in) :: pta  ! potential tempearature at 1st atm. layer [K]
     real(RP), intent(in) :: pts  ! skin potential temperature [K]
     real(RP), intent(in) :: za   ! height at 1st atm. layer [m]

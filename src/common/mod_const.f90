@@ -81,7 +81,7 @@ module mod_const
 
   real(RP), public, parameter :: CONST_CPvap   = 1845.60_RP          !< specific heat (water vapor, consant pressure) [J/kg/K]
   real(RP), public, save      :: CONST_CVvap                         !< specific heat (water vapor, consant volume)   [J/kg/K]
-  real(RP), public, parameter :: CONST_CL      = 4218.0_RP           !< specific heat (liquid water) 
+  real(RP), public, parameter :: CONST_CL      = 4218.0_RP           !< specific heat (liquid water)
   real(RP), public, parameter :: CONST_CI      = 2006.0_RP           !< specific heat (ice)
 
   real(RP), public, parameter :: CONST_EMELT   = 3.4E5_RP

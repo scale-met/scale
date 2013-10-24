@@ -38,7 +38,7 @@ module mod_landuse
   !
   public :: LANDUSE_setup
   public :: FRAC_OCEAN_write
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables

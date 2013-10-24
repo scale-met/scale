@@ -629,7 +629,7 @@ contains
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
     real(RP), intent(in)  :: temp !< temperature           [K]
     real(RP), intent(in)  :: pres !< pressure              [Pa]
-    
+
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
@@ -651,7 +651,7 @@ contains
     real(RP), intent(out) :: qsat(KA) !< saturation vapor mass [kg/kg]
     real(RP), intent(in)  :: temp(KA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA) !< pressure              [Pa]
-    
+
     real(RP) :: psat
 
     integer :: k
@@ -678,7 +678,7 @@ contains
     real(RP), intent(out) :: qsat(KA,IA,JA) !< saturation vapor mass [kg/kg]
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA,IA,JA) !< pressure              [Pa]
-    
+
     real(RP) :: psat
 
     integer :: k, i, j
@@ -710,7 +710,7 @@ contains
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
     real(RP), intent(in)  :: temp !< temperature           [K]
     real(RP), intent(in)  :: pres !< pressure              [Pa]
-    
+
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
@@ -732,7 +732,7 @@ contains
     real(RP), intent(out) :: qsat(KA)
     real(RP), intent(in)  :: temp(KA)
     real(RP), intent(in)  :: pres(KA)
-    
+
     real(RP) :: psat
 
     integer :: k
@@ -759,7 +759,7 @@ contains
     real(RP), intent(out) :: qsat(KA,IA,JA)
     real(RP), intent(in)  :: temp(KA,IA,JA)
     real(RP), intent(in)  :: pres(KA,IA,JA)
-    
+
     real(RP) :: psat
 
     integer :: k, i, j
@@ -904,7 +904,7 @@ contains
     real(RP), intent(out) :: qsat
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
-    
+
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
@@ -926,7 +926,7 @@ contains
     real(RP), intent(out) :: qsat(KA)
     real(RP), intent(in)  :: temp(KA)
     real(RP), intent(in)  :: dens(KA)
-    
+
     real(RP) :: psat
 
     integer :: k
@@ -953,7 +953,7 @@ contains
     real(RP), intent(out) :: qsat(KA,IA,JA)
     real(RP), intent(in)  :: temp(KA,IA,JA)
     real(RP), intent(in)  :: dens(KA,IA,JA)
-    
+
     real(RP) :: psat
 
     integer :: k, i, j
@@ -985,7 +985,7 @@ contains
     real(RP), intent(out) :: qsat
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
-    
+
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
@@ -1007,7 +1007,7 @@ contains
     real(RP), intent(out) :: qsat(KA)
     real(RP), intent(in)  :: temp(KA)
     real(RP), intent(in)  :: dens(KA)
-    
+
     real(RP) :: psat
 
     integer :: k
@@ -1034,7 +1034,7 @@ contains
     real(RP), intent(out) :: qsat(KA,IA,JA)
     real(RP), intent(in)  :: temp(KA,IA,JA)
     real(RP), intent(in)  :: dens(KA,IA,JA)
-    
+
     real(RP) :: psat
 
     integer :: k, i, j
@@ -1069,9 +1069,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! if Tup < temp, dalpha/dT = 0 (no slope)
-    lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp ) 
+    lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp )
     ! if Tdn > temp, dalpha/dT = 0 (no slope)
-    lim2 = 0.5_RP + sign( 0.5_RP, temp - ATMOS_SATURATION_LLIMIT_TEMP ) 
+    lim2 = 0.5_RP + sign( 0.5_RP, temp - ATMOS_SATURATION_LLIMIT_TEMP )
 
     dalpha_dT = dalphadT_const * lim1 * lim2
 
@@ -1096,9 +1096,9 @@ contains
     do k = KS, KE
 
        ! if Tup < temp(k), dalpha/dT = 0 (no slope)
-       lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp(k) ) 
+       lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp(k) )
        ! if Tdn > temp(k), dalpha/dT = 0 (no slope)
-       lim2 = 0.5_RP + sign( 0.5_RP, temp(k) - ATMOS_SATURATION_LLIMIT_TEMP ) 
+       lim2 = 0.5_RP + sign( 0.5_RP, temp(k) - ATMOS_SATURATION_LLIMIT_TEMP )
 
        dalpha_dT(k) = dalphadT_const * lim1 * lim2
 
@@ -1128,9 +1128,9 @@ contains
     do k = KS, KE
 
        ! if Tup < temp(k,i,j), dalpha/dT = 0 (no slope)
-       lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp(k,i,j) ) 
+       lim1 = 0.5_RP + sign( 0.5_RP, ATMOS_SATURATION_ULIMIT_TEMP - temp(k,i,j) )
        ! if Tdn > temp(k,i,j), dalpha/dT = 0 (no slope)
-       lim2 = 0.5_RP + sign( 0.5_RP, temp(k,i,j) - ATMOS_SATURATION_LLIMIT_TEMP ) 
+       lim2 = 0.5_RP + sign( 0.5_RP, temp(k,i,j) - ATMOS_SATURATION_LLIMIT_TEMP )
 
        dalpha_dT(k,i,j) = dalphadT_const * lim1 * lim2
 

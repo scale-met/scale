@@ -65,8 +65,8 @@ module mod_monitor
   integer,                    private,      save :: MONIT_FID = -1                    !< fileID for monitor output file
 
   character(len=IO_FILECHR),  private,      save :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
-  logical,                    private,      save :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step? 
-  integer,                    private,      save :: MONITOR_STEP_INTERVAL = 1         !< step interval 
+  logical,                    private,      save :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
+  integer,                    private,      save :: MONITOR_STEP_INTERVAL = 1         !< step interval
 
   integer,                    private, parameter :: MONIT_req_limit = 1000            !< number limit for item request
   integer,                    private,      save :: MONIT_req_nmax = 0                !< number of requested item
@@ -84,7 +84,7 @@ module mod_monitor
 
   real(RP), private, parameter :: eps = 1.E-10_RP !< epsilon for timesec
 
-  !-----------------------------------------------------------------------------  
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup

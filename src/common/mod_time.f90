@@ -508,7 +508,7 @@ contains
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
     TIME_RES_LAND         = TIME_RES_LAND         + TIME_DTSEC
     TIME_RES_CPL          = TIME_RES_CPL          + TIME_DTSEC
- 
+
     if ( TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN > -eps ) then
        TIME_DOATMOS_step  = .true.
        TIME_DOATMOS_DYN   = .true.

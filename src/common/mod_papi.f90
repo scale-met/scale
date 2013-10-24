@@ -49,9 +49,9 @@ module mod_papi
   !++ Private parameters & variables
   !
   integer(DP),private, save :: papi_flpops    = 0   !> total floating point operations since the first call
-  real(SP),   private, save :: papi_real_time = 0.0 !> total realtime since the first PAPI_flops() call 
-  real(SP),   private, save :: papi_proc_time = 0.0 !> total process time since the first PAPI_flops() call 
-  real(SP),   private, save :: papi_mflops    = 0.0 !> Mflop/s achieved since the previous call 
+  real(SP),   private, save :: papi_real_time = 0.0 !> total realtime since the first PAPI_flops() call
+  real(SP),   private, save :: papi_proc_time = 0.0 !> total process time since the first PAPI_flops() call
+  real(SP),   private, save :: papi_mflops    = 0.0 !> Mflop/s achieved since the previous call
   integer,    private, save :: papi_check
 
   integer,                  private, parameter :: PAPI_rapnlimit = 100

@@ -326,11 +326,11 @@ contains
        zdim  )
     implicit none
 
-    real(RP),         intent(in) :: var(:) 
-    character(len=*), intent(in) :: item   
-    character(len=*), intent(in) :: desc   
-    character(len=*), intent(in) :: unit   
-    real(DP),         intent(in) :: dt     
+    real(RP),         intent(in) :: var(:)
+    character(len=*), intent(in) :: item
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: unit
+    real(DP),         intent(in) :: dt
 
     character(len=*), intent(in), optional :: zdim
 

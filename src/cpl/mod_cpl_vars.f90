@@ -634,7 +634,7 @@ contains
 
     CNT_getCPL2Atm = CNT_getCPL2Atm + 1.0_RP
     CNT_getCPL2Lnd = CNT_getCPL2Lnd + 1.0_RP
-  
+
     return
   end subroutine CPL_AtmLnd_putCPL
 

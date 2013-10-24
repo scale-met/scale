@@ -80,7 +80,7 @@ contains
     call TIME_rapstart('Debug')
 
     kstr = lbound( var(:), 1 )
-    kend = ubound( var(:), 1 ) 
+    kend = ubound( var(:), 1 )
 
     invalid_value = .false.
     do k = kstr, kend
@@ -127,10 +127,10 @@ contains
     call TIME_rapstart('Debug')
 
     kstr = lbound( var(:,:), 1 )
-    kend = ubound( var(:,:), 1 ) 
+    kend = ubound( var(:,:), 1 )
 
     istr = lbound( var(:,:), 2 )
-    iend = ubound( var(:,:), 2 ) 
+    iend = ubound( var(:,:), 2 )
 
     invalid_value = .false.
     outer:do i = istr, iend
@@ -180,13 +180,13 @@ contains
     call TIME_rapstart('Debug')
 
     kstr = lbound( var(:,:,:), 1 )
-    kend = ubound( var(:,:,:), 1 ) 
+    kend = ubound( var(:,:,:), 1 )
 
     istr = lbound( var(:,:,:), 2 )
-    iend = ubound( var(:,:,:), 2 ) 
+    iend = ubound( var(:,:,:), 2 )
 
     jstr = lbound( var(:,:,:), 3 )
-    jend = ubound( var(:,:,:), 3 ) 
+    jend = ubound( var(:,:,:), 3 )
 
     invalid_value = .false.
     outer:do j = jstr, jend

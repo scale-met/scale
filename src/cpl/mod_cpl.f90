@@ -56,11 +56,11 @@ contains
   !> Setup
   subroutine CPL_setup
     use mod_atmos_vars, only: &
-       DENS, & 
-       MOMX, & 
-       MOMY, & 
-       MOMZ, & 
-       RHOT, & 
+       DENS, &
+       MOMX, &
+       MOMY, &
+       MOMZ, &
+       RHOT, &
        QTRC
     use mod_atmos_vars_sf, only: &
        PREC, &

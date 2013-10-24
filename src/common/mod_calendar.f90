@@ -223,7 +223,7 @@ contains
     integer :: checkday
     integer :: i, ileap
     !---------------------------------------------------------------------------
- 
+
     gyear = int( real(absday,kind=DP) / 366.0_DP ) ! first guess
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1 )
@@ -426,7 +426,7 @@ contains
                               1,               & ! [IN]
                               1                ) ! [IN]
 
-    nd = absday - absday_jan1 + 1.0_DP 
+    nd = absday - absday_jan1 + 1.0_DP
 
     return
   end subroutine CALENDAR_ymdhms2nd
