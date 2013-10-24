@@ -14,7 +14,7 @@
 !! @li      2011-02-01 (H.Yashiro)  [add] supercell test, follow the supercell test of WRF
 !! @li      2012-02-06 (Y.Miyamoto) [add] advection test
 !! @li      2012-02-16 (Y.Miyamoto) [mod] added hydrostatic balance calculation
-!! @li      2012-03-27 (H.Yashiro)  [mod] change subroutines into one module 
+!! @li      2012-03-27 (H.Yashiro)  [mod] change subroutines into one module
 !! @li      2012-04-04 (Y.Miyamoto) [new] SQUALLINE test, for GCSS model comparison (Redelsperger et al. 2000)
 !! @li      2012-04-06 (H.Yashiro)  [new] uniform state test
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
@@ -204,8 +204,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
- 
-    !--- Initiate QTRC 
+
+    !--- Initiate QTRC
     do iq = 2,  QA
     do j  = JS, JE
     do i  = IS, IE
@@ -431,13 +431,13 @@ contains
   subroutine SBMAERO_setup
     use mod_const, only : &
        PI => CONST_PI
-  
+
     implicit none
     real(RP) :: xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
 
     real(RP) :: F0_AERO      = 1.E+7_RP
-    real(RP) :: R0_AERO      = 1.E-7_RP 
+    real(RP) :: R0_AERO      = 1.E-7_RP
     real(RP) :: R_MAX        = 1.E-06_RP
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
@@ -476,8 +476,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_SBMAERO)
 
     allocate( gan( nccn_i ) )
-    allocate( xactr(nccn_i) ) 
-    allocate( xabnd(nccn_i+1) ) 
+    allocate( xactr(nccn_i) )
+    allocate( xabnd(nccn_i+1) )
 
     xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
     xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
@@ -612,7 +612,7 @@ contains
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA 
+    pott_sfc(1,1,1) = SFC_THETA
     qv_sfc  (1,1,1) = 0.0_RP
     qc_sfc  (1,1,1) = 0.0_RP
 
@@ -1281,7 +1281,7 @@ contains
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA 
+    pott_sfc(1,1,1) = SFC_THETA
     qv_sfc  (1,1,1) = 0.0_RP
     qc_sfc  (1,1,1) = 0.0_RP
 
@@ -1431,7 +1431,7 @@ contains
        RANDOM_U
 
     real(RP) :: fact
-    
+
     integer :: ierr
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1888,7 +1888,7 @@ contains
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA 
+    pott_sfc(1,1,1) = SFC_THETA
     qv_sfc  (1,1,1) = 0.0_RP
     qc_sfc  (1,1,1) = 0.0_RP
 
@@ -1935,21 +1935,24 @@ contains
 
     real(RP) :: PERTURB_AMP = 0.0_RP
     integer  :: RANDOM_LIMIT = 5
-    integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
-                                 ! 1 -> petrurbation for pt
-                                 ! 2 -> perturbation for u, v, w
+    integer  :: RANDOM_FLAG  = 0       ! 0 -> no perturbation
+                                       ! 1 -> petrurbation for pt
+                                       ! 2 -> perturbation for u, v, w
+    logical  :: USE_LWSET    = .false. ! use liq. water. static energy temp.?
 
     NAMELIST / PARAM_MKINIT_RF01 / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
-       RANDOM_FLAG
+       RANDOM_FLAG,     &
+       USE_LWSET
 
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
 
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
-    real(RP) :: pi2 
+    real(RP) :: pi2
     real(RP) :: sint
+    real(RP) :: GEOP_sw ! switch for geopotential energy correction
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -1970,6 +1973,12 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
 
+    if ( USE_LWSET ) then
+       GEOP_sw = 1.D0
+    else
+       GEOP_sw = 0.D0
+    endif
+
     ! calc in dry condition
     do j = JS, JE
     do i = IS, IE
@@ -1982,15 +1991,16 @@ contains
        do k = KS, KE
           velx(k,i,j) =   7.0_RP
           vely(k,i,j) =  -5.5_RP
-
           if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
-             potl(k,i,j) = 289.0_RP
+             potl(k,i,j) = 289.0_RP - GRAV / CPdry * CZ(k) * GEOP_sw
           elseif( CZ(k) <= 860.0_RP ) then
              sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-             potl(k,i,j) = 289.0_RP                                                             * (0.5_RP-sint) &
-                         + (297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP)) * (0.5_RP+sint)
+             potl(k,i,j) = ( 289.0_RP - GRAV / CPdry * CZ(k) * GEOP_sw                          ) * (0.5_RP-sint) &
+                         + ( 297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP) &
+                           - GRAV / CPdry * CZ(k) * GEOP_sw                                     ) * (0.5_RP+sint)
           else
-             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP)
+             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) &
+                         - GRAV / CPdry * CZ(k) * GEOP_sw
           endif
 
           qv(k,i,j) = 0.0_RP
@@ -2145,7 +2155,7 @@ contains
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
           do iq = QQA+1, QA
-            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -2184,7 +2194,7 @@ contains
     real(RP) :: PERTURB_AMP  = 0.0_RP
     integer  :: RANDOM_LIMIT = 5
     integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
-                                 ! 1 -> perturbation for PT  
+                                 ! 1 -> perturbation for PT
                                  ! 2 -> perturbation for u,v,w
 
     NAMELIST / PARAM_MKINIT_RF02 / &
@@ -2236,11 +2246,11 @@ contains
           else if ( CZ(k) <= 815.0_RP ) then
              sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
-                   ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP 
+                   ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP
           else
              potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
           endif
- 
+
           qv(k,i,j) = 0.0_RP
           qc(k,i,j) = 0.0_RP
        enddo
@@ -2390,7 +2400,7 @@ contains
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
           do iq = QQA+1, QA
-            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -2460,7 +2470,7 @@ contains
 
        pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
        pott_sfc(1,i,j) = 297.9_RP
-       qv_sfc  (1,i,j) = 0.0_RP   
+       qv_sfc  (1,i,j) = 0.0_RP
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
@@ -2534,7 +2544,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j) 
+       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -2605,7 +2615,7 @@ contains
           QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
                            + qc(k,i,j)
           do iq = QQA+1, QA
-            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j) 
+            QTRC(k,i,j,iq) = QTRC(k,i,j,iq) / DENS(k,i,j)
           enddo
        enddo
        enddo
