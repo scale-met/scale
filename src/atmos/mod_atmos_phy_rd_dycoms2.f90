@@ -54,6 +54,7 @@ module mod_atmos_phy_rd
   real(RP), private, save :: F0    = 70.00_RP  ! Upward [J/m2/s]
   real(RP), private, save :: F1    = 22.00_RP  ! [K/m**-1/3]
   real(RP), private, save :: Dval  = 3.75E-6_RP ! divergence of large scale horizontal winds [1/s]
+  real(RP), private, save :: RHOT_t  (KA,IA,JA)
   !-----------------------------------------------------------------------------
 contains
 
@@ -109,13 +110,15 @@ contains
     F1 = ATMOS_RD_F1
     Dval = ATMOS_RD_Dval
 
+    call ATMOS_PHY_RD( .true., .false. )
+
     return
   end subroutine ATMOS_PHY_RD_setup
 
   !-----------------------------------------------------------------------------
   ! Parametarized Radiative heating
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD
+  subroutine ATMOS_PHY_RD( update_flag, history_flag )
     use mod_const, only: &
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
@@ -140,8 +143,12 @@ contains
        ATMOS_vars_total,   &
        DENS, &
        RHOT, &
-       QTRC
+       QTRC, &
+       RHOT_tp
     implicit none
+
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
 
     real(RP) :: TEMP_t  (KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
     real(RP) :: EFLX_rad(KA,IA,JA) ! Radiative heating flux [J/m2/s]
@@ -160,13 +167,16 @@ contains
     integer :: k_cldtop
 
     integer :: k, k2, i, j, iq
+    real(RP) :: TEMP_t_out  (KA,IA,JA) ! tendency rho*theta     [K/day]
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation'
+    if( update_flag ) then
 
-    do j = JS, JE
-    do i = IS, IE
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation'
+
+     do j = JS, JE
+     do i = IS, IE
        do k = KS, KE
           EFLX_rad(k,i,j) = 0.0_RP
           TEMP_t  (k,i,j) = 0.0_RP
@@ -224,30 +234,45 @@ contains
 
        do k = KS, KE
           TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
+          TEMP_t_out(k,i,j) = TEMP_t(k,i,j) * 86400.0_RP / DENS(k,i,j)
 
-          RHOT(k,i,j)   = RHOT(k,i,j) &
-                        + dtrd * ( 1.0_RP-RovCP ) * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)
+          RHOT_t(k,i,j) = ( 1.0_RP - RovCP ) &
+                        * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)
        enddo
 
-    enddo
-    enddo
+     enddo
+     enddo
 
     ! fill KHALO
-    do j  = JS, JE
-    do i  = IS, IE
-       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+     do j  = JS, JE
+     do i  = IS, IE
+        RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+     enddo
+     enddo
+     ! fill IHALO & JHALO
+     call COMM_vars8( RHOT(:,:,:), 5 )
+     call COMM_wait ( RHOT(:,:,:), 5 )
+
+     call ATMOS_vars_total
+
+     if ( present(history_flag) ) then
+     if ( history_flag ) then
+       call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'W/m2', dtrd )
+       call HIST_in( TEMP_t_out  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day',  dtrd )
+       call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',    dtrd )
+     endif
+     endif
+
+    endif
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
     enddo
     enddo
-    ! fill IHALO & JHALO
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
-
-    call ATMOS_vars_total
-
-    call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'W/m2', dtrd )
-    call HIST_in( TEMP_t  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/s',  dtrd )
-    call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',    dtrd )
+    enddo
 
     return
   end subroutine ATMOS_PHY_RD

@@ -215,6 +215,7 @@ module mod_atmos_phy_rd
   real(RP), private, save :: W(2)             ! discrete quadrature w  for two-stream approximation
   real(RP), private, save :: Wmns(2), Wpls(2) ! W-, W+
   real(RP), private, save :: Wbar(2), Wscale(2)
+  real(RP), private, save :: RHOT_t  (KA,IA,JA)
 
   !-----------------------------------------------------------------------------
 contains
@@ -359,12 +360,14 @@ contains
                                       RD_aerosol_radi(:,:),    & ! [INOUT]
                                       RD_cldfrac     (:)       ) ! [INOUT]
 
+    call ATMOS_PHY_RD( .true., .false. )
+
     return
   end subroutine ATMOS_PHY_RD_setup
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD
+  subroutine ATMOS_PHY_RD( update_flag, history_flag )
     use mod_time, only: &
        TIME_NOWDATE
     use mod_const, only: &
@@ -382,7 +385,8 @@ contains
        ATMOS_vars_total,    &
        DENS, &
        RHOT, &
-       QTRC
+       QTRC, &
+       RHOT_tp
     use mod_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
        THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
@@ -408,6 +412,9 @@ contains
     use mod_atmos_phy_rd_common, only: &
        RD_heating => ATMOS_PHY_RD_heating
     implicit none
+
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
 
     real(RP) :: temp   (KA,IA,JA)
     real(RP) :: pres   (KA,IA,JA)
@@ -455,46 +462,48 @@ contains
 
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j
-
+    real(RP) :: RHOT_tmp(KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
+    if ( update_flag ) then
 
-    call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
-                              pres(:,:,:),  & ! [OUT]
-                              DENS(:,:,:),  & ! [IN]
-                              RHOT(:,:,:),  & ! [IN]
-                              QTRC(:,:,:,:) ) ! [IN]
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
 
-    call SATURATION_dens2qsat_liq( qsat(:,:,:), & ! [OUT]
-                                   TEMP(:,:,:), & ! [IN]
-                                   DENS(:,:,:)  ) ! [IN]
+     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
+                               pres(:,:,:),  & ! [OUT]
+                               DENS(:,:,:),  & ! [IN]
+                               RHOT(:,:,:),  & ! [IN]
+                               QTRC(:,:,:,:) ) ! [IN]
 
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
-    enddo
-    enddo
-    enddo
+     call SATURATION_dens2qsat_liq( qsat(:,:,:), & ! [OUT]
+                                    TEMP(:,:,:), & ! [IN]
+                                    DENS(:,:,:)  ) ! [IN]
 
-    call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
-                           QTRC(:,:,:,:)   ) ! [IN]
+     do j  = JS, JE
+     do i  = IS, IE
+     do k  = KS, KE
+        rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
+     enddo
+     enddo
+     enddo
 
-    call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
-                             QTRC(:,:,:,:),  & ! [IN]
-                             DENS(:,:,:)     ) ! [IN]
+     call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
+                            QTRC(:,:,:,:)   ) ! [IN]
 
-    call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
-                             QTRC(:,:,:,:),  & ! [IN]
-                             rh  (:,:,:)     ) ! [IN]
+     call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
+                              QTRC(:,:,:,:),  & ! [IN]
+                              DENS(:,:,:)     ) ! [IN]
 
-    call MP_Mixingratio( MP_Qe(:,:,:,:),    &  ! [OUT]
-                         QTRC(:,:,:,:)      )  ! [IN]
+     call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
+                              QTRC(:,:,:,:),  & ! [IN]
+                              rh  (:,:,:)     ) ! [IN]
+
+     call MP_Mixingratio( MP_Qe(:,:,:,:),    &  ! [OUT]
+                          QTRC(:,:,:,:)      )  ! [IN]
 
 
-    do j = JS, JE
-    do i = IS, IE
+     do j = JS, JE
+     do i = IS, IE
 
        call ATMOS_SOLARINS_insolation( solins(1,i,j),         & ! [OUT]
                                        cosSZA(1,i,j),         & ! [OUT]
@@ -619,51 +628,73 @@ contains
        flux_rad_boundary(1,i,j,I_SLR) = flux_rad_merge(RD_KMAX+1,I_LW,I_up)-flux_rad_merge(RD_KMAX+1,I_LW,I_dn)
        flux_rad_boundary(1,i,j,I_SSR) = flux_rad_merge(RD_KMAX+1,I_SW,I_up)-flux_rad_merge(RD_KMAX+1,I_SW,I_dn)
 
+     enddo
+     enddo
+
+     call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
+                          RHOT(:,:,:),  & ! [IN]
+                          QTRC(:,:,:,:) ) ! [IN]
+
+     ! apply radiative flux convergence -> heating rate
+     call RD_heating( RHOE_t  (:,:,:,:),  & ! [OUT]
+                      RHOE    (:,:,:),    & ! [INOUT]
+                      flux_rad(:,:,:,:,:) ) ! [IN]
+
+     ! update rhot
+     call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
+                          RHOE(:,:,:),    & ! [IN]
+                          QTRC(:,:,:,:)   ) ! [IN]
+
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+       RHOT_t(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt
+     enddo
+     enddo
+     enddo
+
+     ! for history
+     call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
+                        QTRC(:,:,:,:) ) ! [IN]
+     call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                        QTRC (:,:,:,:), & ! [IN]
+                        QDRY (:,:,:)    ) ! [IN]
+
+     if ( present(history_flag) ) then
+     if ( history_flag ) then
+       TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
+       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt )
+       TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
+       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt )
+       TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
+       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt )
+
+       call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW', 'net radiation flux(LW)', 'W/m2', dt )
+       call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW', 'net radiation flux(SW)', 'W/m2', dt )
+       call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt )
+       call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt )
+       call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt )
+       call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt )
+
+       call HIST_in( flux_rad_boundary(1,:,:,I_OLR), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt )
+       call HIST_in( flux_rad_boundary(1,:,:,I_OSR), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt )
+       call HIST_in( flux_rad_boundary(1,:,:,I_SLR), 'SLR', 'Surface longwave  radiation', 'W/m2', dt )
+       call HIST_in( flux_rad_boundary(1,:,:,I_SSR), 'SSR', 'Surface shortwave radiation', 'W/m2', dt )
+
+       call HIST_in( solins(1,:,:), 'SOLINS', 'solar insolation', 'W/m2', dt )
+       call HIST_in( cosSZA(1,:,:), 'COSZ', 'cos(solar zenith angle)', '0-1', dt )
+      endif
+      endif
+
+    endif
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
     enddo
     enddo
-
-    call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                         RHOT(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
-
-    ! apply radiative flux convergence -> heating rate
-    call RD_heating( RHOE_t  (:,:,:,:),  & ! [OUT]
-                     RHOE    (:,:,:),    & ! [INOUT]
-                     flux_rad(:,:,:,:,:) ) ! [IN]
-
-    ! update rhot
-    call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),  & ! [IN]
-                         QTRC(:,:,:,:) ) ! [IN]
-
-    ! for history
-    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                       QTRC(:,:,:,:) ) ! [IN]
-    call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                       QTRC (:,:,:,:), & ! [IN]
-                       QDRY (:,:,:)    ) ! [IN]
-
-    TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
-    call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt )
-    TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
-    call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt )
-    TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
-    call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt )
-
-    call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW', 'net radiation flux(LW)', 'W/m2', dt )
-    call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW', 'net radiation flux(SW)', 'W/m2', dt )
-    call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt )
-    call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt )
-    call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt )
-    call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt )
-
-    call HIST_in( flux_rad_boundary(1,:,:,I_OLR), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt )
-    call HIST_in( flux_rad_boundary(1,:,:,I_OSR), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt )
-    call HIST_in( flux_rad_boundary(1,:,:,I_SLR), 'SLR', 'Surface longwave  radiation', 'W/m2', dt )
-    call HIST_in( flux_rad_boundary(1,:,:,I_SSR), 'SSR', 'Surface shortwave radiation', 'W/m2', dt )
-
-    call HIST_in( solins(1,:,:), 'SOLINS', 'solar insolation', 'W/m2', dt )
-    call HIST_in( cosSZA(1,:,:), 'COSZ', 'cos(solar zenith angle)', '0-1', dt )
+    enddo
 
     ! fill halo
     call ATMOS_vars_fillhalo
