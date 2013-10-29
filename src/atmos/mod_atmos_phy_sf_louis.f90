@@ -490,6 +490,8 @@ contains
        Z, Z0, Zt,            &
        K, FB, FBS, FDM, FDH, &
        ThS, G                )
+    use mod_const, only: &
+       EPS    => CONST_EPS
     real(RP), intent(out) :: RiB
     real(RP), intent(out) :: Fm
     real(RP), intent(out) :: Fh
@@ -511,7 +513,7 @@ contains
     real(RP) :: tmp
 
     ! the first guess of RiB0 (= RiBt)
-    RiB = G/ThS * z * (  theta -  theta_sfc ) / u2
+    RiB = G/ThS * z * (  theta -  theta_sfc ) / ( u2+EPS )
 
     ! Fm, Fh, Psi_h/R
     if ( RiB >= 0 ) then
