@@ -37,9 +37,8 @@ include $(TESTDIR)/Makefile.common
 
 
 
-buildlocal: makedir $(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90 $(BUILD_DIR)/mod_user.f90
+buildlocal: makedir $(BUILD_DIR)/mod_user.f90
 
-$(BUILD_DIR)/mod_atmos_phy_rd_dycoms2.f90: $(CODE_DIR)/mod_atmos_phy_rd_dycoms2.f90
 $(BUILD_DIR)/mod_user.f90: $(CODE_DIR)/mod_user.f90
 	cp -f $< $@
 

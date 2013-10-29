@@ -29,7 +29,7 @@ RUNCONF   = run.conf
 TPROC     = 6
 
 # src files
-ORG_SRCS = mod_atmos_phy_rd_dycoms2.f90 mod_user.f90
+ORG_SRCS = mod_user.f90
 
 all: buildlocal build 
 
