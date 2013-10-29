@@ -74,8 +74,10 @@ contains
   end subroutine ATMOS_PHY_RD_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD
+  subroutine ATMOS_PHY_RD( update_flag, history_flag )
     implicit none
+    logical, intent(in) :: update_flag
+    logical, intent(in), optional :: history_flag
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(dummy)'
