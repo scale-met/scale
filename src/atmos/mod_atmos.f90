@@ -239,7 +239,7 @@ contains
     !########## Radiation ##########
     if ( sw_phy_rd ) then
        call TIME_rapstart('ATM Radiation')
-       call ATMOS_PHY_RD( do_phy_rb, .true. )
+       call ATMOS_PHY_RD( do_phy_rd, .true. )
        call TIME_rapend  ('ATM Radiation')
     endif
 
