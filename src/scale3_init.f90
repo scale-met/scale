@@ -58,9 +58,7 @@ program scaleinit
   use mod_atmos_saturation, only: &
      ATMOS_SATURATION_setup
   use mod_atmos_vars, only: &
-     ATMOS_vars_setup, &
-     ATMOS_vars_fillhalo, &
-     ATMOS_vars_restart_write
+     ATMOS_vars_setup
   use mod_mktopo, only: &
      MKTOPO_setup, &
      MKTOPO
@@ -153,10 +151,6 @@ program scaleinit
   call TIME_rapstart('MkInit')
   call MKINIT
   call TIME_rapend  ('MkInit')
-
-  call ATMOS_vars_fillhalo
-  ! output restart
-  call ATMOS_vars_restart_write
 
   call TIME_rapend('Main')
 

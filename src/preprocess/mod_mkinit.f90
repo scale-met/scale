@@ -29,9 +29,8 @@ module mod_mkinit
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_get_available_fid, &
-     IO_SYSCHR,            &
-     IO_FILECHR,           &
+     IO_SYSCHR,   &
+     IO_FILECHR,  &
      IO_FID_LOG,  &
      IO_FID_CONF, &
      IO_L
@@ -92,26 +91,27 @@ module mod_mkinit
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: MKINIT_TYPE           = -1
+  integer, public, save      :: MKINIT_TYPE     = -1
+  integer, public, parameter :: I_IGNORE        =  0
 
-  integer, public, parameter :: I_PLANESTATE          =  1
-  integer, public, parameter :: I_TRACERBUBBLE        =  2
-  integer, public, parameter :: I_COLDBUBBLE          =  3
+  integer, public, parameter :: I_PLANESTATE    =  1
+  integer, public, parameter :: I_TRACERBUBBLE  =  2
+  integer, public, parameter :: I_COLDBUBBLE    =  3
 
-  integer, public, parameter :: I_LAMBWAVE            =  4
-  integer, public, parameter :: I_GRAVITYWAVE         =  5
-  integer, public, parameter :: I_KHWAVE              =  6
-  integer, public, parameter :: I_TURBULENCE          =  7
-  integer, public, parameter :: I_MOUNTAINWAVE        =  8
+  integer, public, parameter :: I_LAMBWAVE      =  4
+  integer, public, parameter :: I_GRAVITYWAVE   =  5
+  integer, public, parameter :: I_KHWAVE        =  6
+  integer, public, parameter :: I_TURBULENCE    =  7
+  integer, public, parameter :: I_MOUNTAINWAVE  =  8
 
-  integer, public, parameter :: I_WARMBUBBLE          =  9
-  integer, public, parameter :: I_SUPERCELL           = 10
-  integer, public, parameter :: I_SQUALLLINE          = 11
-  integer, public, parameter :: I_DYCOMS2_RF01        = 12
-  integer, public, parameter :: I_DYCOMS2_RF02        = 13
-  integer, public, parameter :: I_RICO                = 14
+  integer, public, parameter :: I_WARMBUBBLE    =  9
+  integer, public, parameter :: I_SUPERCELL     = 10
+  integer, public, parameter :: I_SQUALLLINE    = 11
+  integer, public, parameter :: I_DYCOMS2_RF01  = 12
+  integer, public, parameter :: I_DYCOMS2_RF02  = 13
+  integer, public, parameter :: I_RICO          = 14
 
-  integer, public, parameter :: I_INTERPORATION       = 15
+  integer, public, parameter :: I_INTERPORATION = 15
 
   !-----------------------------------------------------------------------------
   !
@@ -163,7 +163,7 @@ module mod_mkinit
   real(RP), private :: rndm  (KA,IA,JA) ! random number (0-1)
   real(RP), private :: bubble(KA,IA,JA) ! bubble factor (0-1)
 
-  real(RP), private, allocatable :: gan(:) ! bubble factor (0-1)
+  real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
   logical,  private :: flg_bin = .false.
 
   !-----------------------------------------------------------------------------
@@ -171,22 +171,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MKINIT_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
-    use mod_const, only: &
-       CONST_UNDEF8
     implicit none
 
-    character(len=IO_SYSCHR) :: MKINIT_initname = 'NOT SPECIFIED'
+    character(len=IO_SYSCHR) :: MKINIT_initname = 'OFF'
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
        flg_bin
 
     integer :: ierr
-    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -205,52 +198,9 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
 
-    !--- Initiate QTRC
-    do iq = 2,  QA
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
-    if ( flg_bin ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
-       call SBMAERO_setup
-    endif
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       pres(k,i,j) = CONST_UNDEF8
-       temp(k,i,j) = CONST_UNDEF8
-       pott(k,i,j) = CONST_UNDEF8
-       qsat(k,i,j) = CONST_UNDEF8
-       qv  (k,i,j) = CONST_UNDEF8
-       qc  (k,i,j) = CONST_UNDEF8
-       velx(k,i,j) = CONST_UNDEF8
-       vely(k,i,j) = CONST_UNDEF8
-
-       rndm  (k,i,j) = CONST_UNDEF8
-       bubble(k,i,j) = CONST_UNDEF8
-    enddo
-    enddo
-    enddo
-
-    do j = 1, JA
-    do i = 1, IA
-       pres_sfc(1,i,j) = CONST_UNDEF8
-       temp_sfc(1,i,j) = CONST_UNDEF8
-       pott_sfc(1,i,j) = CONST_UNDEF8
-       qsat_sfc(1,i,j) = CONST_UNDEF8
-       qv_sfc  (1,i,j) = CONST_UNDEF8
-       qc_sfc  (1,i,j) = CONST_UNDEF8
-    enddo
-    enddo
-
     select case(trim(MKINIT_initname))
+    case('OFF')
+       MKINIT_TYPE = I_IGNORE
     case('PLANESTATE')
        MKINIT_TYPE = I_PLANESTATE
     case('TRACERBUBBLE')
@@ -298,50 +248,110 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKINIT
-    use mod_process, only: &
-       PRC_MPIstop
+    use mod_const, only: &
+       CONST_UNDEF8
+    use mod_atmos_vars, only: &
+       ATMOS_vars_fillhalo, &
+       ATMOS_vars_restart_write
+    implicit none
+
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
+    if ( MKINIT_TYPE == I_IGNORE ) then
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING INITIAL DATA ++++++'
+    else
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
 
-    select case(MKINIT_TYPE)
-    case(I_PLANESTATE)
-       call MKINIT_planestate
-    case(I_TRACERBUBBLE)
-       call MKINIT_tracerbubble
-    case(I_COLDBUBBLE)
-       call MKINIT_coldbubble
-    case(I_LAMBWAVE)
-       call MKINIT_lambwave
-    case(I_GRAVITYWAVE)
-       call MKINIT_gravitywave
-    case(I_KHWAVE)
-       call MKINIT_khwave
-    case(I_TURBULENCE)
-       call MKINIT_turbulence
-    case(I_WARMBUBBLE)
-       call MKINIT_warmbubble
-    case(I_SUPERCELL)
-       call MKINIT_supercell
-    case(I_SQUALLLINE)
-       call MKINIT_squallline
-    case(I_MOUNTAINWAVE)
-       call MKINIT_mountainwave
-    case(I_DYCOMS2_RF01)
-       call MKINIT_DYCOMS2_RF01
-    case(I_DYCOMS2_RF02)
-       call MKINIT_DYCOMS2_RF02
-    case(I_RICO)
-       call MKINIT_RICO
-    case(I_INTERPORATION)
-       call MKINIT_INTERPORATION
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
-       call PRC_MPIstop
-    endselect
+      !--- Initialize variables
+      do iq = 2,  QA
+      do j  = JS, JE
+      do i  = IS, IE
+      do k  = KS, KE
+         QTRC(k,i,j,iq) = 0.0_RP
+      enddo
+      enddo
+      enddo
+      enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+      do j = 1, JA
+      do i = 1, IA
+      do k = 1, KA
+         pres(k,i,j) = CONST_UNDEF8
+         temp(k,i,j) = CONST_UNDEF8
+         pott(k,i,j) = CONST_UNDEF8
+         qsat(k,i,j) = CONST_UNDEF8
+         qv  (k,i,j) = CONST_UNDEF8
+         qc  (k,i,j) = CONST_UNDEF8
+         velx(k,i,j) = CONST_UNDEF8
+         vely(k,i,j) = CONST_UNDEF8
+
+         rndm  (k,i,j) = CONST_UNDEF8
+         bubble(k,i,j) = CONST_UNDEF8
+      enddo
+      enddo
+      enddo
+
+      do j = 1, JA
+      do i = 1, IA
+         pres_sfc(1,i,j) = CONST_UNDEF8
+         temp_sfc(1,i,j) = CONST_UNDEF8
+         pott_sfc(1,i,j) = CONST_UNDEF8
+         qsat_sfc(1,i,j) = CONST_UNDEF8
+         qv_sfc  (1,i,j) = CONST_UNDEF8
+         qc_sfc  (1,i,j) = CONST_UNDEF8
+      enddo
+      enddo
+
+      if ( flg_bin ) then
+         if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
+         call SBMAERO_setup
+      endif
+
+      select case(MKINIT_TYPE)
+      case(I_PLANESTATE)
+         call MKINIT_planestate
+      case(I_TRACERBUBBLE)
+         call MKINIT_tracerbubble
+      case(I_COLDBUBBLE)
+         call MKINIT_coldbubble
+      case(I_LAMBWAVE)
+         call MKINIT_lambwave
+      case(I_GRAVITYWAVE)
+         call MKINIT_gravitywave
+      case(I_KHWAVE)
+         call MKINIT_khwave
+      case(I_TURBULENCE)
+         call MKINIT_turbulence
+      case(I_WARMBUBBLE)
+         call MKINIT_warmbubble
+      case(I_SUPERCELL)
+         call MKINIT_supercell
+      case(I_SQUALLLINE)
+         call MKINIT_squallline
+      case(I_MOUNTAINWAVE)
+         call MKINIT_mountainwave
+      case(I_DYCOMS2_RF01)
+         call MKINIT_DYCOMS2_RF01
+      case(I_DYCOMS2_RF02)
+         call MKINIT_DYCOMS2_RF02
+      case(I_RICO)
+         call MKINIT_RICO
+      case(I_INTERPORATION)
+         call MKINIT_INTERPORATION
+      case default
+         write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
+         call PRC_MPIstop
+      endselect
+
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      ! output restart file
+      call ATMOS_vars_fillhalo
+      call ATMOS_vars_restart_write
+    endif
 
     return
   end subroutine MKINIT
@@ -349,10 +359,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     ! Bubble
@@ -578,7 +584,7 @@ contains
     real(RP) :: pott_prof(KA)
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -955,7 +961,7 @@ contains
        BBL_THETA
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1529,6 +1535,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
+    use mod_stdio, only: &
+       IO_get_available_fid
     implicit none
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
@@ -1555,7 +1563,7 @@ contains
     real(RP) :: fact1, fact2
 
     integer :: ierr, fid
-    integer :: k, i, j, iq, kref
+    integer :: k, i, j, kref
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1681,6 +1689,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
+    use mod_stdio, only: &
+       IO_get_available_fid
     implicit none
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
@@ -1711,7 +1721,7 @@ contains
     real(RP) :: fact1, fact2
 
     integer :: ierr, fid
-    integer :: k, i, j, iq, kref
+    integer :: k, i, j, kref
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
