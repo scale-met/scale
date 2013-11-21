@@ -682,8 +682,10 @@ contains
 
     call TIME_rapend  ('FILE I NetCDF')
 
+    ! fill halo
     call ATMOS_vars_fillhalo
 
+    ! check total (optional)
     call ATMOS_vars_total
 
     if ( ATMOS_USE_AVERAGE ) then
@@ -1109,8 +1111,6 @@ contains
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
-    use mod_comm, only: &
-       COMM_horizontal_mean
     use mod_history, only: &
        HIST_put
     use mod_monitor, only: &
@@ -1623,9 +1623,9 @@ contains
        CVdry  => CONST_CVdry
     use mod_grid, only: &
        CZ   => GRID_CZ
-    use mod_comm, only: &
-       COMM_total_doreport, &
-       COMM_total
+    use mod_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use mod_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
@@ -1651,17 +1651,17 @@ contains
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if ( COMM_total_doreport ) then
+    if ( STAT_checktotal ) then
 
-       call COMM_total( total, DENS(:,:,:), AP_NAME(I_DENS) )
-       call COMM_total( total, MOMZ(:,:,:), AP_NAME(I_MOMZ) )
-       call COMM_total( total, MOMX(:,:,:), AP_NAME(I_MOMX) )
-       call COMM_total( total, MOMY(:,:,:), AP_NAME(I_MOMY) )
-       call COMM_total( total, RHOT(:,:,:), AP_NAME(I_RHOT) )
+       call STAT_total( total, DENS(:,:,:), AP_NAME(I_DENS) )
+       call STAT_total( total, MOMZ(:,:,:), AP_NAME(I_MOMZ) )
+       call STAT_total( total, MOMX(:,:,:), AP_NAME(I_MOMX) )
+       call STAT_total( total, MOMY(:,:,:), AP_NAME(I_MOMY) )
+       call STAT_total( total, RHOT(:,:,:), AP_NAME(I_RHOT) )
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 
-          call COMM_total( total, RHOQ(:,:,:), AQ_NAME(iq) )
+          call STAT_total( total, RHOQ(:,:,:), AQ_NAME(iq) )
        enddo
 
        call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
@@ -1675,11 +1675,11 @@ contains
 
        RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
 
-       call COMM_total( total, RHOQ(:,:,:), 'Qdry    ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qdry    ' )
 
        RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) ) ! Qtotal
 
-       call COMM_total( total, RHOQ(:,:,:), 'Qtotal  ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qtotal  ' )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1706,10 +1706,10 @@ contains
        enddo
        enddo
 
-       call COMM_total( total, ENGT(:,:,:), 'ENGT    ' )
-       call COMM_total( total, ENGP(:,:,:), 'ENGP    ' )
-       call COMM_total( total, ENGK(:,:,:), 'ENGK    ' )
-       call COMM_total( total, ENGI(:,:,:), 'ENGI    ' )
+       call STAT_total( total, ENGT(:,:,:), 'ENGT    ' )
+       call STAT_total( total, ENGP(:,:,:), 'ENGP    ' )
+       call STAT_total( total, ENGK(:,:,:), 'ENGK    ' )
+       call STAT_total( total, ENGI(:,:,:), 'ENGI    ' )
 
     endif
 

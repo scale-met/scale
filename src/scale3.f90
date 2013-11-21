@@ -61,6 +61,8 @@ program scaleles3
      INTERP_setup
   use mod_landuse, only: &
      LANDUSE_setup
+  use mod_stats, only: &
+     STAT_setup
   use mod_history, only: &
      HIST_setup, &
      HIST_write
@@ -159,9 +161,10 @@ program scaleles3
   ! setup land use category index/fraction
   call LANDUSE_setup
 
+  ! setup statistics
+  call STAT_setup
   ! setup history I/O
   call HIST_setup
-
   ! setup monitor I/O
   call MONIT_setup
 

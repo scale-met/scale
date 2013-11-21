@@ -1,23 +1,23 @@
 !-------------------------------------------------------------------------------
 !> Module Spectran Bin Microphysical Module in SCALE-LED ver. 3
 !!
-!! @par Description: 
+!! @par Description:
 !!      This module contains subroutines for the Spectral Bin Model
-!!       
-!! - Reference 
+!!
+!! - Reference
 !!  - Suzuki et al., 2006!!    Correlation Pattern between Effective Radius and Optical Thickness of Water Clouds Simulated by a Spectral Bin Microphysics Cloud Model
 !!    SOLA, 2: 116–119 doi:10.2151/sola.2006‒030
 !!  - Suzuki et al., 2010!!    A Study of Microphysical Mechanisms for Correlation Patterns between Droplet Radius and Optical Thickness of Warm Clouds with a Spectral Bin
 !!    J. Atmos. Sci., 67: 1126-1141
 !!  - Sato et al., 2009!!    Application of a Monte Carlo integration method to collision and coagulation growth processes of hydrometeors in a bin-type model
 !!    J. Geophy. Res., 114: D09215, doi:10.1029/2008JD011247
-!! 
+!!
 !! @author : Team SCALE
 !!
 !! @par History: Hbinw
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
-!! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)               
-!! @li  ver.0.01   2013-02-12 (Y.Sato) [mod] modified for latest version              
+!! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)
+!! @li  ver.0.01   2013-02-12 (Y.Sato) [mod] modified for latest version
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -90,7 +90,7 @@ module mod_atmos_phy_mp
   integer, parameter :: il = 1
 
   !--- bin information of hydrometeors
-  real(RP) :: xctr( nbin )         !--- log( m ) value of bin center 
+  real(RP) :: xctr( nbin )         !--- log( m ) value of bin center
   real(RP) :: xbnd( nbin+1 )       !--- log( m ) value of bin boundary
   real(RP) :: radc( nbin )         !--- radius of hydrometeor at bin center [m]
   real(RP) :: dxmic                !--- d( log(m) ) of hydrometeor bin
@@ -98,7 +98,7 @@ module mod_atmos_phy_mp
   real(RP) :: cbnd( 7,nbin+1 )     !--- capacitance of hydrometeor at bin boundary
   real(RP) :: ck( 7,7,nbin,nbin )  !-- collection kernel
   real(RP) :: vt( 7,nbin )         !--- terminal velocity of hydrometeor [m/s]
-  real(RP) :: br( 7,nbin )         !--- bulk density of hydrometeor [kg/m^3] 
+  real(RP) :: br( 7,nbin )         !--- bulk density of hydrometeor [kg/m^3]
   !--- bin information of aerosol (not supported)
   real(RP) :: xactr( nccn )        !--- log( ma ) value of bin center
   real(RP) :: xabnd( nccn+1 )      !--- log( ma ) value of bin boundary
@@ -182,8 +182,8 @@ contains
     logical :: ATMOS_PHY_MP_FLAG_ICENUCLEAT !--- flag of regeneration
     logical :: ATMOS_PHY_MP_FLAG_SFAERO  !--- flag of surface flux of aeorol
     integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
-    integer :: ATMOS_PHY_MP_RNDM_MSPC  
-    integer :: ATMOS_PHY_MP_RNDM_MBIN 
+    integer :: ATMOS_PHY_MP_RNDM_MSPC
+    integer :: ATMOS_PHY_MP_RNDM_MBIN
 
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -200,14 +200,14 @@ contains
        ATMOS_PHY_MP_RNDM_MSPC, &
        ATMOS_PHY_MP_RNDM_MBIN, &
        doautoconversion, &
-       doprecipitation, & 
-       donegative_fixer  
+       doprecipitation, &
+       donegative_fixer
 
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
 
- 
+
     ATMOS_PHY_MP_RHOA = rhoa
     ATMOS_PHY_MP_EMAER = emaer
     ATMOS_PHY_MP_RAMIN = rasta
@@ -251,8 +251,8 @@ contains
     flg_icenucl = ATMOS_PHY_MP_FLAG_ICENUCLEAT
     flg_sf_aero = ATMOS_PHY_MP_FLAG_SFAERO
     rndm_flgp = ATMOS_PHY_MP_RNDM_FLGP
-    mspc = ATMOS_PHY_MP_RNDM_MSPC 
-    mbin = ATMOS_PHY_MP_RNDM_MBIN 
+    mspc = ATMOS_PHY_MP_RNDM_MSPC
+    mbin = ATMOS_PHY_MP_RNDM_MBIN
 
     fid_micpara = IO_get_available_fid()
     !--- open parameter of cloud microphysics
@@ -282,7 +282,7 @@ contains
      end do
     end do
 
-    ! collection kernel 
+    ! collection kernel
     do myu = 1, 7
      do nyu = 1, 7
       do i = 1, nbin
@@ -361,14 +361,14 @@ contains
     velw(:,:,:,I_QV) = 0.0_RP
     velw(:,:,:,QQE+1:QA) = 0.0_RP
     mm = 0
-    do n = 1, nbin 
+    do n = 1, nbin
       velw(:,:,:,n+I_QV) = -vt( 1,n )
     enddo
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
-  
+
     return
   end subroutine ATMOS_PHY_MP_setup
 
@@ -416,9 +416,9 @@ contains
     real(RP) :: pres_mp  (KA,IA,JA)
     real(RP) :: gdgc     (KA,IA,JA,nbin) !-- SDF of hydrometeors [kg/m^3/unit ln(r)]
     real(RP) :: qv_mp    (KA,IA,JA)      !-- Qv [kg/kg]
-    real(RP) :: wfall( KA )  
+    real(RP) :: wfall( KA )
     real(RP) :: gdga     (KA,IA,JA,nccn) !-- SDF of aerosol (not supported)
-    
+
     real(RP) :: ssliq, ssice, sum1, rtotal, sum2
     integer :: n, k, i, j, iq
     logical, save :: ofirst_sdfa = .true.
@@ -521,7 +521,7 @@ call START_COLLECTION("MICROPHYSICS")
            gdga( k,i,j,n ) = &
                QTRC(k,i,j,n+nbin+I_QV)*DENS(k,i,j)/dxaer
           end do
-          !--- store initial SDF of aerosol 
+          !--- store initial SDF of aerosol
           if( ofirst_sdfa ) then
            sum2 = 0.0_RP
            do n = 1, nccn
@@ -565,7 +565,7 @@ call START_COLLECTION("MICROPHYSICS")
               gdga(k,i,j,1:nccn),              &  !--- inout  for aerosol tracer
               qv_mp(k,i,j), temp_mp(k,i,j)     )  !--- inout
       end if
-    
+
     end do
     end do
     end do
@@ -577,20 +577,20 @@ call START_COLLECTION("MICROPHYSICS")
      do i = IS-1, IE
        Uabs = sqrt(  ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50_RP )**2 &
                    + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50_RP )**2 )
-       do n = 1, nccn 
+       do n = 1, nccn
         if( rada( n ) <= 2.0E-5_RP .and. rada( n ) >= 3.0E-7_RP ) then
          bparam = ( 0.38_RP - log( rada( n ) ) )/0.65_RP
          SFLX_AERO(i,j,n) = 1.373_RP * Uabs**( 3.41_RP ) * rada( n )**( -3.0_RP ) &
                           * ( 1.0_RP + 0.057_RP * rada( n )**( 1.05_RP ) ) &
-                          * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) ) 
+                          * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) )
          ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
          SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
                           / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * exp( xactr( n ) )
          gdga(KS,i,j,n) = gdga(KS,i,j,n)+SFLX_AERO(i,j,n)/dxaer
-        end if     
-       end do     
+        end if
+       end do
      end do
-     end do    
+     end do
     end if
 
     call TIME_rapstart('MPX ijkconvert')
@@ -598,10 +598,10 @@ call START_COLLECTION("MICROPHYSICS")
     do j = JS, JE
      do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_QV) = qv_mp(k,i,j)  
+          QTRC(k,i,j,I_QV) = qv_mp(k,i,j)
           do n = 1, nbin
             QTRC(k,i,j,n+I_QV) = gdgc(k,i,j,n)/DENS(k,i,j)*dxmic
-            if( QTRC(k,i,j,n+I_QV) <= eps ) then 
+            if( QTRC(k,i,j,n+I_QV) <= eps ) then
               QTRC(k,i,j,n+I_QV) = 0.0_RP
             end if
           end do
@@ -613,7 +613,7 @@ call START_COLLECTION("MICROPHYSICS")
            q(k,i,j,n) = QTRC(k,i,j,n)
           enddo
        enddo
-          
+
        do k = KS, KE
           CALC_QDRY( qd(k,i,j), q, k, i, j, iq )
        enddo
@@ -727,6 +727,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 #endif
 
     call ATMOS_vars_total
+
     return
   end subroutine ATMOS_PHY_MP
   !-----------------------------------------------------------------------------
@@ -796,7 +797,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   return
 
-  end subroutine mp_hbinw_evolve 
+  end subroutine mp_hbinw_evolve
   !-----------------------------------------------------------------------------
   subroutine nucleat        &
       ( dens, pres, dtime,  & !--- in
@@ -1003,7 +1004,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !------- CFL condition
 !  call  getsups                &
 !          ( qvap, temp, pres,  & !--- in
-!            ssliq, ssice )       !--- out  
+!            ssliq, ssice )       !--- out
       call pres2qsat_liq( ssliq,temp,pres )
       call pres2qsat_ice( ssice,temp,pres )
       ssliq = qvap/ssliq-1.0_RP
@@ -1062,7 +1063,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     old_sum_gcn = old_sum_gcn + gcnold( n )*dxmic
     new_sum_gcn = new_sum_gcn + gcn( n )*dxmic
   end do
-     
+
   gclnew = gclnew*dxmic
   !
   !----- change of humidity and temperature
@@ -1085,7 +1086,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      temp = temp - cndmss/dens*qlevp/cp
    endif
   enddo
-  ! 
+  !
   end subroutine liqphase
   !-------------------------------------------------------------------------------
   subroutine advection  &
@@ -1097,7 +1098,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: gdq( 1:nbin ), regene
   !
   !--- local variables
-  real(RP) :: delx 
+  real(RP) :: delx
   real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
   real(RP) :: flq( 1:nbin+1 )
   integer, parameter :: ldeg = 2
@@ -1373,7 +1374,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   end do large
   end do small
-  !  
+  !
   return
   !
   end subroutine collcoag
@@ -1443,7 +1444,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   end subroutine faero
   !-------------------------------------------------------------------------------
   !
-  ! + Y. Sato added for stochastic method 
+  ! + Y. Sato added for stochastic method
   ! + Reference Sato et al. (2009) JGR, doi:10.1029/2008JD011247
   !
   !-------------------------------------------------------------------------------
@@ -1472,27 +1473,27 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-------------------------------------------------------
    allocate( blrg( mset, mbin ) )
    allocate( bsml( mset, mbin ) )
- 
+
    a = real( nbin )*real( nbin-1 )*0.50_RP
    if( a < mbin ) then
     write(*,*) "mbin should be smaller than {nbin}_C_{2}"
     call PRC_MPIstop
    end if
- 
+
    wgtbin = a/real( mbin )
    nbinr = real( nbin )
- 
+
     do p = 1, pq
       orderb( p ) = p
     end do
- 
+
     do p = 1, nbin-1
       ranstmp( (p-1)*nbin-(p*(p-1))/2+1 : p*nbin-(p*(p+1))/2 ) = p
      do q = 1, nbin-p
         ranltmp( (p-1)*nbin-(p*(p-1))/2+q ) = p+q
       end do
    end do
- 
+
     do n = 1, mset
       call RANDOM_get( randnum )
        do p = 1, pq
@@ -1502,7 +1503,7 @@ call STOP_COLLECTION("MICROPHYSICS")
         orderb( p ) = orderb( k )
         orderb( k ) = temp
        end do
- 
+
        do p = 1, mbin
         if( p <= pq ) then
          rans( p ) = ranstmp( orderb( p ) )
@@ -1520,7 +1521,7 @@ call STOP_COLLECTION("MICROPHYSICS")
          blrg( n,1:mbin ) = int( ranl( 1:mbin ) )
          bsml( n,1:mbin ) = int( rans( 1:mbin ) )
     end do
- 
+
   end subroutine random_setup
  !-------------------------------------------------------------------------------
   subroutine  r_collcoag( dtime, swgt, gc )
@@ -1645,7 +1646,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
    end do
 
-  !  
+  !
   return
   !
   end subroutine r_collcoag
@@ -1719,17 +1720,17 @@ call STOP_COLLECTION("MICROPHYSICS")
       enddo
       sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro-EPS))
       sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro-EPS))
-    
-      if( sum2(k,i,j,ihydro) /= 0.0_RP ) then 
-       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)  
-      else 
+
+      if( sum2(k,i,j,ihydro) /= 0.0_RP ) then
+       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)
+      else
        Re(k,i,j,ihydro) = 0.0_RP
       endif
-    enddo 
-    enddo 
-    enddo 
-    enddo 
- 
+    enddo
+    enddo
+    enddo
+    enddo
+
     return
   end subroutine ATMOS_PHY_MP_EffectiveRadius
   !-----------------------------------------------------------------------------

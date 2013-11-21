@@ -131,7 +131,7 @@ module mod_atmos_phy_mp
   real(RP), private, save      :: qscrt_gaut =  6.E-4_RP  !< mixing ratio threshold for Pgaut [kg/kg]
 
   ! Evaporation, Sublimation parameter
-  real(RP), private, parameter :: Da0    = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K] 
+  real(RP), private, parameter :: Da0    = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K]
   real(RP), private, parameter :: dDa_dT =  7.47E-5_RP !< Coefficient of Da depending on temperature      [J/m/s/K/K]
   real(RP), private, parameter :: Dw0    = 2.222E-5_RP !< diffusion coefficient of water vapor in the air at 0C,1atm [m2/s]
   real(RP), private, parameter :: dDw_dT =  1.37E-7_RP !< Coefficient of Dw depending on temperature                 [m2/s/K]
@@ -272,8 +272,6 @@ contains
        dens_i => CONST_DICE
     use mod_specfunc, only: &
        SF_gamma
-    use mod_comm, only: &
-       COMM_horizontal_mean
     use mod_history, only: &
        HIST_reg
     use mod_atmos_vars, only: &
@@ -460,7 +458,7 @@ contains
                                 DENS(:,:,:),  & ! [IN]
                                 RHOE(:,:,:),  & ! [IN]
                                 QTRC(:,:,:,:) ) ! [IN]
- 
+
     call MP_precipitation( flux_rain(:,:,:), & ! [OUT]
                            flux_snow(:,:,:), & ! [OUT]
                            DENS (:,:,:),     & ! [INOUT]
@@ -509,7 +507,7 @@ contains
     ! fill halo
     call ATMOS_vars_fillhalo
 
-    ! log report total (optional)
+    ! check total (optional)
     call ATMOS_vars_total
 
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)

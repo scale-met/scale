@@ -236,8 +236,8 @@ contains
   subroutine MONIT_put( &
       itemid, &
       var     )
-    use mod_comm, only: &
-       COMM_total
+    use mod_stats, only: &
+       STAT_total
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
@@ -248,7 +248,7 @@ contains
 
     if( itemid <= 0 ) return
 
-    call COMM_total( total, var(:,:,:), MONIT_item(itemid) )
+    call STAT_total( total, var(:,:,:), MONIT_item(itemid) )
 
     MONIT_var(itemid) = total ! overwrite by last put
 

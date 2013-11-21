@@ -498,22 +498,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for coupler
   subroutine CPL_vars_total
-    use mod_comm, only: &
-       COMM_total_doreport, &
-       COMM_total
+!    use mod_comm, only: &
+!       STAT_checktotal, &
+!       STAT_total
     implicit none
 
     !real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( COMM_total_doreport ) then
+!    if ( STAT_checktotal ) then
 !
-!       call COMM_total( total, LST(:,:),     LP_NAME(I_LST)   )
-!       call COMM_total( total, SST(:,:),     LP_NAME(I_SST)   )
-!       call COMM_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
-!       call COMM_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
-!       call COMM_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
-!       call COMM_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
+!       call STAT_total( total, LST(:,:),     LP_NAME(I_LST)   )
+!       call STAT_total( total, SST(:,:),     LP_NAME(I_SST)   )
+!       call STAT_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
+!       call STAT_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
+!       call STAT_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
+!       call STAT_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
 !
 !    endif
 

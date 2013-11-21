@@ -699,7 +699,7 @@ contains
     ! fill halo
     call ATMOS_vars_fillhalo
 
-    ! log report total (optional)
+    ! check total (optional)
     call ATMOS_vars_total
 
     return
@@ -1634,7 +1634,7 @@ contains
     enddo ! k loop
     enddo ! cloud loop
 
-    !---< consider partial cloud layer: semi-random over-wrapping >--- 
+    !---< consider partial cloud layer: semi-random over-wrapping >---
     tau_bar = 1.0_RP
     do k = 1, kmax
 
@@ -1694,7 +1694,7 @@ contains
        E12pls(k) = Ep(k) + T(k) / ( 1.0_RP - R12mns(k-1) * R(k) ) * ( R12mns(k-1)*Em(k) + E12pls(k-1) )
     enddo
 
-    !--- radiative flux at cell wall: 
+    !--- radiative flux at cell wall:
     ! [note] "d" means upper to lower altitude.
 
     ! TOA boundary

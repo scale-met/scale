@@ -47,13 +47,10 @@ program scaleinit
      COMM_setup
   use mod_topography, only: &
      TOPO_setup
+  use mod_stats, only: &
+     STAT_setup
   use mod_history, only: &
-     HIST_setup, &
-     HIST_write
-  use mod_monitor, only: &
-     MONIT_setup, &
-     MONIT_write, &
-     MONIT_finalize
+     HIST_setup
   use mod_atmos_hydrostatic, only: &
      ATMOS_HYDROSTATIC_setup
   use mod_atmos_thermodyn, only: &
@@ -65,15 +62,15 @@ program scaleinit
      ATMOS_vars_fillhalo, &
      ATMOS_vars_restart_write
   use mod_mktopo, only: &
-     MKTOPO_setup,    &
+     MKTOPO_setup, &
      MKTOPO
   use mod_mkinit, only: &
-     MKINIT_setup,        &
+     MKINIT_setup, &
      MKINIT
   use dc_log, only: &
-       LogInit
+     LogInit
   use gtool_file, only: &
-       FileCloseAll
+     FileCloseAll
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -124,11 +121,10 @@ program scaleinit
   ! setup topography
   call TOPO_setup
 
+  ! setup statistics
+  call STAT_setup
   ! setup history I/O
   call HIST_setup
-
-  ! setup monitor I/O
-  call MONIT_setup
 
   ! setup atmos
   call ATMOS_HYDROSTATIC_setup
@@ -148,7 +144,7 @@ program scaleinit
 
   call TIME_rapstart('Main')
 
-  ! execute mkinit
+  ! execute mktopo
   call TIME_rapstart('MkTopo')
   call MKTOPO
   call TIME_rapend  ('MkTopo')
@@ -170,7 +166,6 @@ program scaleinit
 
   call FileCloseAll
 
-  call MONIT_finalize
   ! stop MPI
   call PRC_MPIfinish
 

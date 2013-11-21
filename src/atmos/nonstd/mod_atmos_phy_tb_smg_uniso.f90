@@ -83,13 +83,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
-    
+
     do j = JS, JE+1
     do i = IS, IE+1
     do k = KS, KE
-       TB_length_x(k,i,j) = CDX(i) 
-       TB_length_y(k,i,j) = CDY(j) 
-       TB_length_z(k,i,j) = CDZ(k) 
+       TB_length_x(k,i,j) = CDX(i)
+       TB_length_y(k,i,j) = CDY(j)
+       TB_length_z(k,i,j) = CDZ(k)
     enddo
     enddo
     enddo
@@ -258,7 +258,7 @@ contains
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -444,7 +444,7 @@ contains
                                  + nu_y(k  ,i  ,j-1) + nu_y(k-1,i  ,j-1) )
           tke(k,i,j) = F1ov3 * nuc_x(k,i,j)*nuc_x(k,i,j) / ( Cs * TB_length_x(k,i,j) )**2 &
           + F1ov3 * nuc_y(k,i,j)*nuc_y(k,i,j) / ( Cs * TB_length_y(k,i,j) )**2 + &
-          + F1ov3 * nuc_z(k,i,j)*nuc_z(k,i,j) / ( Cs * TB_length_z(k,i,j) )**2 
+          + F1ov3 * nuc_z(k,i,j)*nuc_z(k,i,j) / ( Cs * TB_length_z(k,i,j) )**2
        enddo
        enddo
        enddo
@@ -769,8 +769,10 @@ contains
 
     enddo ! scalar quantities loop
 
+    ! fill halo
     call ATMOS_vars_fillhalo
 
+    ! check total (optional)
     call ATMOS_vars_total
 
     call HIST_in( MOMZ_t(:,:,:), 'MOMZ_t_tb', 'tendency of MOMZ in tb', 'kg/m2/s2',  '3D', dttb )

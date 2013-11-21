@@ -213,7 +213,7 @@ contains
                                 DENS(:,:,:),  & ! [IN]
                                 RHOE(:,:,:),  & ! [IN]
                                 QTRC(:,:,:,:) ) ! [IN]
- 
+
     call MP_precipitation( flux_rain(:,:,:), & ! [OUT]
                            flux_snow(:,:,:), & ! [OUT]
                            DENS (:,:,:),     & ! [INOUT]
@@ -256,7 +256,7 @@ contains
     ! fill halo
     call ATMOS_vars_fillhalo
 
-    ! log report total (optional)
+    ! check total (optional)
     call ATMOS_vars_total
 
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
@@ -510,4 +510,4 @@ contains
     return
   end subroutine ATMOS_PHY_MP_Mixingratio
   !-----------------------------------------------------------------------------
-end module mod_atmos_phy_mp 
+end module mod_atmos_phy_mp

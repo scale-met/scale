@@ -284,19 +284,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
   subroutine OCEAN_vars_total
-    use mod_comm, only: &
-       COMM_total_doreport, &
-       COMM_total
+!    use mod_comm, only: &
+!       STAT_checktotal, &
+!       STAT_total
     implicit none
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
-    if ( COMM_total_doreport ) then
-
-       call COMM_total( total, SST(:,:,:), OP_NAME(I_SST) )
-
-    endif
+!    if ( STAT_checktotal ) then
+!
+!       call STAT_total( total, SST(:,:,:), OP_NAME(I_SST) )
+!
+!    endif
 
     return
   end subroutine OCEAN_vars_total
