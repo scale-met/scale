@@ -523,6 +523,8 @@ contains
   subroutine CPL_vars_merge
     implicit none
 
+    if( CNT_getCPL2Atm == 0.D0 ) return
+
     ! merge Land-Ocean
     SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm
     SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) / CNT_getCPL2Atm
