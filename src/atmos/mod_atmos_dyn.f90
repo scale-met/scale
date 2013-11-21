@@ -503,7 +503,7 @@ contains
     real(RP) :: MOMX_RK2(KA,IA,JA) !
     real(RP) :: MOMY_RK2(KA,IA,JA) !
     real(RP) :: RHOT_RK2(KA,IA,JA) !
- 
+
     ! tendency
     real(RP) :: DENS_t(KA,IA,JA)
     real(RP) :: MOMZ_t(KA,IA,JA)
@@ -624,6 +624,17 @@ contains
                            - DAMP_alpha(k,i,j,I_BND_POTT) &
                            * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )                            ! rayleigh damping
           enddo
+
+          DENS_t(   1:KS-1,i,j) = 0.D0
+          MOMZ_t(   1:KS-1,i,j) = 0.D0
+          MOMX_t(   1:KS-1,i,j) = 0.D0
+          MOMY_t(   1:KS-1,i,j) = 0.D0
+          RHOT_t(   1:KS-1,i,j) = 0.D0
+          DENS_t(KE+1:KA  ,i,j) = 0.D0
+          MOMZ_t(KE+1:KA  ,i,j) = 0.D0
+          MOMX_t(KE+1:KA  ,i,j) = 0.D0
+          MOMY_t(KE+1:KA  ,i,j) = 0.D0
+          RHOT_t(KE+1:KA  ,i,j) = 0.D0
        enddo
        enddo
 
@@ -717,7 +728,7 @@ contains
        call COMM_wait ( MOMX_RK2(:,:,:), 3 )
        call COMM_wait ( MOMY_RK2(:,:,:), 4 )
        call COMM_wait ( RHOT_RK2(:,:,:), 5 )
-   
+
        !##### RK3 : PROG0,PROG_RK3->PROG #####
 
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
@@ -808,33 +819,31 @@ contains
     !------------------------------------------------------------------------
     do iq = 1, QA
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-
-          if ( iq == I_QV ) then
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JJS-1, JJE+1
-             do i = IIS-1, IIE+1
-             do k = KS, KE
-                RHOQ_t(k,i,j) = QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
-                              - DAMP_alpha(k,i,j,I_BND_QV) &
-                              * ( QTRC(k,i,j,iq) - DAMP_var(k,i,j,iq) ) * DENS(k,i,j) ! rayleigh damping
-             enddo
-             enddo
-             enddo
-          else
-             !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
-             do j = JJS, JJE
-             do i = IIS, IIE
-             do k = KS, KE
-                RHOQ_t(k,i,j) = QTRC_tp(k,i,j,iq)
-             enddo
-             enddo
-             enddo
-          endif
-
+       if ( iq == I_QV ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOQ_t(k,i,j) = QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
+                           - DAMP_alpha(k,i,j,I_BND_QV) &
+                           * ( QTRC(k,i,j,iq) - DAMP_var(k,i,j,iq) ) * DENS00(k,i,j) ! rayleigh damping
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOQ_t(k,i,j) = QTRC_tp(k,i,j,iq) * DENS00(k,i,j)
+          enddo
+          enddo
+          enddo
+       endif
+       do j = JS, JE
+       do i = IS, IE
+          RHOQ_t(   1:KS-1,i,j) = 0.D0
+          RHOQ_t(KE+1:KA  ,i,j) = 0.D0
        enddo
        enddo
 
@@ -976,7 +985,7 @@ contains
           enddo
           enddo
           enddo
-   
+
        enddo
        enddo
 

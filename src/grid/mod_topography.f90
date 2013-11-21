@@ -245,6 +245,8 @@ contains
        GRID_RFDZ, &
        GRID_RFDX, &
        GRID_RFDY
+    use mod_const, only: &
+       CONST_UNDEF
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -315,16 +317,19 @@ contains
        do k = 1, KA-1
           TRANSGRID_GSQRT(k,i,j,I_XYW) = ( TOPO_CZ(k+1,i,j) - TOPO_CZ(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       TRANSGRID_GSQRT(KA,i,j,I_XYW) = CONST_UNDEF
 
        ! at (u,y,w)
        do k = 1, KA-1
           TRANSGRID_GSQRT(k,i,j,I_UYW) = ( TOPO_CZ_U(k+1,i,j) - TOPO_CZ_U(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       TRANSGRID_GSQRT(KA,i,j,I_UYW) = CONST_UNDEF
 
        ! at (x,v,w)
        do k = 1, KA-1
           TRANSGRID_GSQRT(k,i,j,I_XVW) = ( TOPO_CZ_V(k+1,i,j) - TOPO_CZ_V(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       TRANSGRID_GSQRT(KA,i,j,I_XVW) = CONST_UNDEF
 
        ! at (u,y,z)
        do k = 1, KA

@@ -7,19 +7,19 @@
 module mod_atmos_phy_mp
   !-----------------------------------------------------------------------------
   !
-  !++ Description: 
+  !++ Description:
   !       This module contains subroutines for the sn13 parametrization.
   !
-  !       
+  !
   !++ Current Corresponding Author : T.Seiki
-  ! 
+  !
   !++ History: SN13
-  !      Version   Date       Comment 
+  !      Version   Date       Comment
   !      -----------------------------------------------------------------------
   !        0.00   11/10/24 T.Seiki, import from NICAM(11/08/30 ver.)
-  !               
+  !
   !      -----------------------------------------------------------------------
-  !      Reference:  -- Journals 
+  !      Reference:  -- Journals
   !                   Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66
   !                   Seifert and Beheng(2001)  : Atmos.Res.,vol.59-60,pp.265-281
   !                   Seifert(2008)             : J.Atmos.Sci.,vol.65,pp.3608-3619
@@ -29,8 +29,8 @@ module mod_atmos_phy_mp
   !                   Cotton etal.(1986)        : J.C.Appl.Meteor.,25,pp.1658-1680
   !                   Cotton and Field (2002)   : QJRMS.,vol.128,pp2417-pp2437
   !                   Beard(1980)               : J.Atmos.Sci.,vol.37,pp.1363-1374 [Add] 10/08/03
-  !                   Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824  
-  !                   Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831  
+  !                   Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824
+  !                   Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831
   !                   Fu(1996)                  : J.Climate, vol.9, pp.2058-2082   [Add] 10/08/03
   !                   Fu etal(1998)             : J.Climate, vol.11, pp.2223-2237  [Add] 10/08/03
   !                   Ghan etal.(1997)          : J.Geophys.Res.,vol.102,pp.21777-21794, [Add] 09/08/18
@@ -2042,17 +2042,17 @@ contains
 
     do step = 1, MP_NSTEP_SEDIMENTATION
 
-       call MP_terminal_velocity( velw(:,:,:,:), &
+       call MP_terminal_velocity( velw(:,:,:,:),    &
                                   rhogq_d(:,:,:,:), &
-                                  tem_d(:,:,:),   &
-                                  pre_d(:,:,:)    )
+                                  tem_d(:,:,:),     &
+                                  pre_d(:,:,:)      )
 
        call precipitation( wflux_rain(:,:,:),     &
                            wflux_snow(:,:,:),     &
                            velw(:,:,:,:),         &
                            rhogq_d(:,:,:,:),      &
                            rhoge_d(:,:,:),        &
-                           tem_d(:,:,:),           &
+                           tem_d(:,:,:),          &
                            MP_DTSEC_SEDIMENTATION )
 
        do j = JS, JE
@@ -2427,9 +2427,9 @@ contains
 !             PNIccn(k,i,j) = min(dni_max, c_in_map(1,i,j)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
              if( inucl_w ) then
               PNIccn(k,i,j) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
-             else 
+             else
                 PNIccn(k,i,j) = min(dni_max, max(c_in*nm_M92*exp(0.3_RP*bm_M92*(wssi-0.1_RP) )-NI(k,i,j),0.d0 )*rdt )
-             endif 
+             endif
              PLIccn(k,i,j) = min(dli_max, PNIccn(k,i,j)*xi_ccn )
              ! only for output
 !             dni_ratio(k,i,j) = dssidt_rad(k,i,j)/( w_dssidz(k,i,j)+dssidt_rad(k,i,j) )
@@ -3384,7 +3384,7 @@ contains
     real(RP), intent(out) :: PNSmlt(KA,IA,JA)  ! number
     real(RP), intent(out) :: PLGmlt(KA,IA,JA)  ! mass          for graupel
     real(RP), intent(out) :: PNGmlt(KA,IA,JA)  ! number
- 
+
     real(RP), intent(in)  :: rho(KA,IA,JA)     ! air density
     real(RP), intent(in)  :: tem(KA,IA,JA)     ! air temperature
     real(RP), intent(in)  :: pre(KA,IA,JA)     ! air pressure
@@ -3739,6 +3739,8 @@ contains
       pres  )
     use mod_atmos_vars, only: &
        DENS
+    use mod_const, only: &
+       CONST_UNDEF
     implicit none
 
     real(RP), intent(out) :: velw(KA,IA,JA,QA) ! terminal velocity of cloud mass
@@ -3871,12 +3873,15 @@ contains
 
        ! interpolated terminal velocity
        ! SB06(78) these are defined as negative value
+       velw(:,i,j,I_QV) = CONST_UNDEF
+
        do k = KS, KE
           velw(k,i,j,I_QC) = -rhofac_q(k,I_QC) * coef_vt1(I_QC,1) * xq(k,I_QC)**beta_v(I_QC,1)
           velw(k,i,j,I_NC) = -rhofac_q(k,I_QC) * coef_vt0(I_QC,1) * xq(k,I_QC)**beta_vn(I_QC,1)
        enddo
        velw(KS-1,i,j,I_QC) = velw(KS,i,j,I_QC)
        velw(KS-1,i,j,I_NC) = velw(KS,i,j,I_NC)
+
        do k = KS, KE
           velw(k,i,j,I_QR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_QR) * (          weight(k,I_QR) ) &
                                                  + velq_s(k,I_QR) * ( 1.0_RP - weight(k,I_QR) ) )
@@ -3912,6 +3917,9 @@ contains
 
     enddo
     enddo
+
+    velw(   1:KS-2,:,:,:) = CONST_UNDEF
+    velw(KE+1:KA  ,:,:,:) = CONST_UNDEF
 
     return
   end subroutine MP_terminal_velocity
@@ -4482,7 +4490,7 @@ contains
     end do
     !
     return
-  
+
   end subroutine update_by_phase_change_kij
   !-------------------------------------------------------------------------------
   subroutine MP_negativefilter
