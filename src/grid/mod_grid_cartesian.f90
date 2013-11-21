@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module GRID
+!> module GRID (cartesian)
 !!
 !! @par Description
-!!          Grid module for plane cartesian coordinate
+!!          Grid module for cartesian coordinate
 !!
 !! @author Team SCALE
 !!

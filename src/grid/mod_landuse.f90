@@ -122,9 +122,6 @@ contains
   subroutine FRAC_OCEAN_read
     use mod_fileio, only: &
        FILEIO_read
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
     !---------------------------------------------------------------------------
 
@@ -135,9 +132,6 @@ contains
 
        call FILEIO_read( LANDUSE_frac_ocean(1,:,:),                      & ! [OUT]
                          LANDUSE_IN_BASENAME, 'FRAC_OCEAN', 'XY', step=1 ) ! [IN]
-       ! fill IHALO & JHALO
-       call COMM_vars8( LANDUSE_frac_ocean(1,:,:), 1 )
-       call COMM_wait ( LANDUSE_frac_ocean(1,:,:), 1 )
 
     else
 

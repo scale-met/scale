@@ -396,7 +396,7 @@ contains
        COMM_total
     implicit none
 
-    real(RP) :: total ! dummy
+    !real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( COMM_total_doreport ) then
@@ -444,7 +444,7 @@ contains
        Z0H,         &
        Z0E
 
-    integer :: n, v
+    integer :: n
     integer :: ierr
     !---------------------------------------------------------------------------
 

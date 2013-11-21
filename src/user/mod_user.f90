@@ -36,7 +36,7 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -82,6 +82,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
 
     return
   end subroutine USER_setup

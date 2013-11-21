@@ -250,7 +250,6 @@ contains
        CPL_VARS_CHECKRANGE
 
     integer :: ierr
-    integer :: ip
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -504,7 +503,7 @@ contains
        COMM_total
     implicit none
 
-    real(RP) :: total ! dummy
+    !real(RP) :: total
     !---------------------------------------------------------------------------
 
 !    if ( COMM_total_doreport ) then
