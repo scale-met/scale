@@ -102,12 +102,9 @@ contains
        PRC_MPIstop
     use mod_comm, only: &
        COMM_datatype
-    use mod_geometrics, only: &
-       area => GEOMETRICS_area, &
-       vol  => GEOMETRICS_vol
-!    use mod_grid_real, only: &
-!       area => REAL_AREA, &
-!       vol  => REAL_VOL
+    use mod_grid_real, only: &
+       area => REAL_AREA, &
+       vol  => REAL_VOL
     implicit none
 
     real(RP),         intent(out) :: allstatval !< volume/area-weighted total
@@ -137,7 +134,7 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
        do j = JS, JE
        do i = IS, IE
-          statval = statval + var(1,i,j) * area(1,i,j)
+          statval = statval + var(1,i,j) * area(i,j)
        enddo
        enddo
     endif

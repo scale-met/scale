@@ -55,10 +55,11 @@ MODS =	\
 	mod_misc.o	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
-	mod_geometrics.o	\
 	mod_comm.o	\
 	mod_topography.o	\
 	mod_landuse.o	\
+	mod_grid_real.o	\
+	mod_gridtrans.o	\
 	mod_intepolation.o	\
 	mod_stats.o	\
 	mod_history.o	\
@@ -152,11 +153,11 @@ $(BUILD_DIR)/mod_comm.o					: mod_comm.f90					mod_stdio.o mod_process.o mod_tim
 $(BUILD_DIR)/mod_stats.o				: mod_stats.f90				mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_grid_real.o
 
 $(BUILD_DIR)/mod_grid_cartesian.o	: mod_grid_cartesian.f90	mod_stdio.o mod_process.o mod_time.o
-$(BUILD_DIR)/mod_geometrics.o	: mod_geometrics.f90 mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian.o mod_fileio.o
-$(BUILD_DIR)/mod_topography.o	: mod_topography.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o  mod_grid_cartesian.o mod_fileio.o
-$(BUILD_DIR)/mod_intepolation.o	: mod_intepolation.f90 mod_stdio.o mod_process.o mod_const.o mod_grid_cartesian.o mod_topography.o
-$(BUILD_DIR)/mod_landuse.o	: mod_landuse.f90 mod_stdio.o mod_process.o mod_time.o mod_comm.o  mod_fileio.o
-
+$(BUILD_DIR)/mod_topography.o			: mod_topography.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
+$(BUILD_DIR)/mod_landuse.o				: mod_landuse.f90			   mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
+$(BUILD_DIR)/mod_grid_real.o			: mod_grid_real.f90			mod_stdio.o mod_process.o mod_time.o mod_const.o mod_fileio.o mod_grid_cartesian.o mod_topography.o
+$(BUILD_DIR)/mod_gridtrans.o			: mod_gridtrans.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_grid_cartesian.o mod_grid_real.o
+$(BUILD_DIR)/mod_intepolation.o		: mod_intepolation.f90		mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian.o mod_grid_real.o
 
 $(BUILD_DIR)/mod_stdio.o				: mod_stdio.f90
 $(BUILD_DIR)/mod_fileio.o				: mod_fileio.f90				mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian.o
@@ -178,7 +179,7 @@ $(BUILD_DIR)/mod_atmos_sub_solarins.o	: mod_atmos_sub_solarins.f90 mod_stdio.o m
 
 $(BUILD_DIR)/mod_atmos_dyn_common.o	: mod_atmos_dyn_common.f90 mod_comm.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_dyn_$(dynamics).o	: mod_atmos_dyn_$(dynamics).f90 mod_comm.o mod_const.o mod_debug.o mod_atmos_dyn_common.o mod_atmos_vars.o mod_process.o
-$(BUILD_DIR)/mod_atmos_dyn.o	: mod_atmos_dyn.f90 mod_atmos_dyn_$(dynamics).o mod_atmos_dyn_common.o mod_stdio.o mod_time.o mod_process.o mod_grid_cartesian.o mod_geometrics.o mod_atmos_vars.o mod_comm.o mod_const.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o mod_debug.o
+$(BUILD_DIR)/mod_atmos_dyn.o	: mod_atmos_dyn.f90 mod_atmos_dyn_$(dynamics).o mod_atmos_dyn_common.o mod_stdio.o mod_time.o mod_process.o mod_grid_cartesian.o mod_grid_real.o mod_gridtrans.o mod_atmos_vars.o mod_comm.o mod_const.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_phy_sf_$(sfcflx).o	: mod_atmos_phy_sf_$(sfcflx).f90 mod_stdio.o mod_process.o mod_grid_cartesian.o mod_const.o mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_$(turbulence).o	: mod_atmos_phy_tb_$(turbulence).f90 mod_stdio.o mod_grid_cartesian.o mod_process.o mod_atmos_vars.o mod_comm.o mod_time.o mod_history.o mod_const.o mod_debug.o
 $(BUILD_DIR)/mod_atmos_phy_mp_common.o		: mod_atmos_phy_mp_common.f90 mod_stdio.o mod_const.o mod_process.o mod_time.o mod_grid_cartesian.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
@@ -205,8 +206,8 @@ $(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_stdio.o mod_process.o mod_const.o
 
 $(BUILD_DIR)/mod_user.o	: mod_user.f90 mod_stdio.o mod_process.o mod_time.o mod_history.o
 
-$(BUILD_DIR)/scale3_init.o	: scale3_init.f90	mod_stdio.o mod_process.o mod_const.o mod_random.o mod_time.o mod_fileio.o mod_grid_cartesian.o mod_comm.o mod_geometrics.o mod_topography.o mod_stats.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
-$(BUILD_DIR)/scale.o			: scale.f90			mod_stdio.o mod_process.o mod_const.o mod_random.o mod_time.o mod_fileio.o mod_grid_cartesian.o mod_comm.o mod_geometrics.o mod_topography.o mod_stats.o mod_history.o mod_monitor.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
+$(BUILD_DIR)/scale3_init.o	: scale3_init.f90	mod_stdio.o mod_process.o mod_const.o mod_random.o mod_time.o mod_fileio.o mod_grid_cartesian.o mod_comm.o mod_topography.o mod_landuse.o mod_grid_real.o mod_gridtrans.o mod_intepolation.o mod_stats.o mod_history.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
+$(BUILD_DIR)/scale.o			: scale.f90			mod_stdio.o mod_process.o mod_const.o mod_random.o mod_time.o mod_fileio.o mod_grid_cartesian.o mod_comm.o mod_topography.o mod_landuse.o mod_grid_real.o mod_gridtrans.o mod_intepolation.o mod_stats.o mod_history.o mod_monitor.o mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean

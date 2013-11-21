@@ -18,6 +18,9 @@ module mod_interpolation
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
+  use mod_time, only: &
+     TIME_rapstart, &
+     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,11 +59,10 @@ contains
   !> Setup
   subroutine INTERP_setup
     use mod_grid, only: &
-       GRID_CZ, &
-       GRID_FZ
-    use mod_topography, only: &
-       TOPO_CZ, &
-       TOPO_FZ
+       GRID_CZ
+    use mod_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
     implicit none
 
     integer :: k, i, j, kk, kp
@@ -72,7 +74,7 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       if ( GRID_CZ(k) <= TOPO_FZ(KS-1,i,j) ) then
+       if ( GRID_CZ(k) <= REAL_FZ(KS-1,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KS   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KS   ! dummmy
@@ -80,7 +82,7 @@ contains
           INTERP_xi2z_coef(k,i,j,2) = 0.D0
           INTERP_xi2z_coef(k,i,j,3) = 1.D0 ! set UNDEF
 
-       elseif( GRID_CZ(k) <= TOPO_CZ(KS,i,j) ) then
+       elseif( GRID_CZ(k) <= REAL_CZ(KS,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KS   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KS
@@ -88,7 +90,7 @@ contains
           INTERP_xi2z_coef(k,i,j,2) = 1.D0
           INTERP_xi2z_coef(k,i,j,3) = 0.D0
 
-       elseif( GRID_CZ(k) >= TOPO_CZ(KE,i,j) ) then
+       elseif( GRID_CZ(k) >= REAL_CZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
@@ -96,7 +98,7 @@ contains
           INTERP_xi2z_coef(k,i,j,2) = 0.D0
           INTERP_xi2z_coef(k,i,j,3) = 0.D0
 
-       elseif( GRID_CZ(k) >= TOPO_FZ(KE,i,j) ) then
+       elseif( GRID_CZ(k) >= REAL_FZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
@@ -108,15 +110,15 @@ contains
 
           do kk = KS+1, KE
              kp = kk
-             if( GRID_CZ(k) < TOPO_CZ(kk,i,j) ) exit
+             if( GRID_CZ(k) < REAL_CZ(kk,i,j) ) exit
           enddo
 
           INTERP_xi2z_idx (k,i,j,1) = kp - 1
           INTERP_xi2z_idx (k,i,j,2) = kp
-          INTERP_xi2z_coef(k,i,j,1) = ( TOPO_CZ(kp,i,j) - GRID_CZ(k)        ) &
-                                    / ( TOPO_CZ(kp,i,j) - TOPO_CZ(kp-1,i,j) )
-          INTERP_xi2z_coef(k,i,j,2) = ( GRID_CZ(k)      - TOPO_CZ(kp-1,i,j) ) &
-                                    / ( TOPO_CZ(kp,i,j) - TOPO_CZ(kp-1,i,j) )
+          INTERP_xi2z_coef(k,i,j,1) = ( REAL_CZ(kp,i,j) - GRID_CZ(k)        ) &
+                                    / ( REAL_CZ(kp,i,j) - REAL_CZ(kp-1,i,j) )
+          INTERP_xi2z_coef(k,i,j,2) = ( GRID_CZ(k)      - REAL_CZ(kp-1,i,j) ) &
+                                    / ( REAL_CZ(kp,i,j) - REAL_CZ(kp-1,i,j) )
           INTERP_xi2z_coef(k,i,j,3) = 0.D0
 
        endif

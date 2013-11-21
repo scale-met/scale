@@ -121,7 +121,7 @@ contains
        FACT_N, &
        FACT_F, &
        ATMOS_DYN_fct
-    use mod_topography, only: &
+    use mod_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &

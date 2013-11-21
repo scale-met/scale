@@ -140,8 +140,8 @@ contains
        GRID_FDZ, &
        GRID_FDX, &
        GRID_FDY
-    use mod_geometrics, only : &
-       GEOMETRICS_lat
+    use mod_grid_real, only : &
+       REAL_LAT
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -200,7 +200,7 @@ contains
                          ATMOS_DYN_numerical_diff_coef,  & ! [IN]
                          DT,                             & ! [IN]
                          ATMOS_DYN_enable_coriolis,      & ! [IN]
-                         GEOMETRICS_lat                  ) ! [IN]
+                         REAL_LAT                        ) ! [IN]
 
     return
   end subroutine ATMOS_DYN_setup
@@ -245,7 +245,7 @@ contains
     real(RP), intent(in)  :: ND_COEF
     real(RP), intent(in)  :: DT
     logical , intent(in)  :: enable_coriolis
-    real(RP), intent(in)  :: lat(1,IA,JA)
+    real(RP), intent(in)  :: lat(IA,JA)
     !---------------------------------------------------------------------------
 
     ! numerical diffusion
@@ -257,7 +257,7 @@ contains
 
     ! coriolis parameter
     if ( enable_coriolis ) then
-       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(1,:,:) )
+       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(:,:) )
     else
        CORIOLI(1,:,:) = 0.0_RP
     endif
@@ -287,12 +287,13 @@ contains
        GRID_RFDZ, &
        GRID_RFDX, &
        GRID_RFDY
-    use mod_topography, only : &
-       TOPO_PHI,        &
-       TRANSGRID_GSQRT, &
-       TRANSGRID_J13G,  &
-       TRANSGRID_J23G,  &
-       TRANSGRID_J33G
+    use mod_grid_real, only : &
+       REAL_PHI
+    use mod_gridtrans, only : &
+       GTRANS_GSQRT, &
+       GTRANS_J13G,  &
+       GTRANS_J23G,  &
+       GTRANS_J33G
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -343,9 +344,9 @@ contains
                          GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
                          GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
                          GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
-                         TOPO_PHI,                                             & ! [IN]
-                         TRANSGRID_GSQRT,                                      & ! [IN]
-                         TRANSGRID_J13G, TRANSGRID_J23G, TRANSGRID_J33G,       & ! [IN]
+                         REAL_PHI,                                             & ! [IN]
+                         GTRANS_GSQRT,                                         & ! [IN]
+                         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G,                & ! [IN]
                          AQ_CV,                                                & ! [IN]
                          ATMOS_REFSTATE_dens,                                  & ! [IN]
                          ATMOS_REFSTATE_pott,                                  & ! [IN]

@@ -41,12 +41,18 @@ program scaleinit
      GRID_setup
   use mod_fileio, only: &
      FILEIO_setup
-  use mod_geometrics, only: &
-     GEOMETRICS_setup
   use mod_comm, only: &
      COMM_setup
   use mod_topography, only: &
      TOPO_setup
+  use mod_landuse, only: &
+     LANDUSE_setup
+  use mod_grid_real, only: &
+     REAL_setup
+  use mod_gridtrans, only: &
+     GTRANS_setup
+  use mod_interpolation, only: &
+     INTERP_setup
   use mod_stats, only: &
      STAT_setup
   use mod_history, only: &
@@ -110,14 +116,20 @@ program scaleinit
   ! setup file I/O
   call FILEIO_setup
 
-  ! setup geometrics
-  call GEOMETRICS_setup
-
   ! setup mpi communication
   call COMM_setup
 
   ! setup topography
   call TOPO_setup
+  ! setup land use category index/fraction
+  call LANDUSE_setup
+  ! setup coordinate in real world
+  call REAL_setup
+
+  ! setup grid transfer metrics (uses in ATMOS_dynamics)
+  call GTRANS_setup
+  ! setup Z-ZS interpolation factor (uses in History)
+  call INTERP_setup
 
   ! setup statistics
   call STAT_setup

@@ -43,14 +43,14 @@ module mod_landuse
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: LANDUSE_frac_ocean(1,IA,JA) !< ocean fraction
-  real(RP), public, save :: LANDUSE_frac_river(1,IA,JA) !< river fraction
-  real(RP), public, save :: LANDUSE_frac_lake (1,IA,JA) !< lake  fraction
+  real(RP), public, save :: LANDUSE_frac_ocean(IA,JA) !< ocean fraction
+  real(RP), public, save :: LANDUSE_frac_river(IA,JA) !< river fraction
+  real(RP), public, save :: LANDUSE_frac_lake (IA,JA) !< lake  fraction
 
   integer,  public, parameter :: LUCA = 2 !< number of vegetation category
 
-  integer,  public,      save :: LANDUSE_index_vegetation(1,IA,JA,LUCA) !< index    of vegetation category
-  real(RP), public,      save :: LANDUSE_frac_vegetation (1,IA,JA,LUCA) !< fraction of vegetation category
+  integer,  public, save :: LANDUSE_index_vegetation(IA,JA,LUCA) !< index    of vegetation category
+  real(RP), public, save :: LANDUSE_frac_vegetation (IA,JA,LUCA) !< fraction of vegetation category
 
   !-----------------------------------------------------------------------------
   !
@@ -101,12 +101,12 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
 
-    LANDUSE_frac_ocean(:,:,:) = 1.0_RP
-    LANDUSE_frac_river(:,:,:) = 0.0_RP
-    LANDUSE_frac_lake (:,:,:) = 0.0_RP
+    LANDUSE_frac_ocean(:,:) = 1.0_RP
+    LANDUSE_frac_river(:,:) = 0.0_RP
+    LANDUSE_frac_lake (:,:) = 0.0_RP
 
-    LANDUSE_index_vegetation(:,:,:,:) = -999
-    LANDUSE_frac_vegetation (:,:,:,:) = 0.0_RP
+    LANDUSE_index_vegetation(:,:,:) = -999
+    LANDUSE_frac_vegetation (:,:,:) = 0.0_RP
 
     ! read from file
     call FRAC_OCEAN_read
@@ -122,6 +122,9 @@ contains
   subroutine FRAC_OCEAN_read
     use mod_fileio, only: &
        FILEIO_read
+    use mod_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
     !---------------------------------------------------------------------------
 
@@ -130,14 +133,16 @@ contains
 
     if ( LANDUSE_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( LANDUSE_frac_ocean(1,:,:),                      & ! [OUT]
+       call FILEIO_read( LANDUSE_frac_ocean(:,:),                        & ! [OUT]
                          LANDUSE_IN_BASENAME, 'FRAC_OCEAN', 'XY', step=1 ) ! [IN]
 
-    else
+       ! fill IHALO & JHALO
+       call COMM_vars8( LANDUSE_frac_ocean(:,:), 1 )
+       call COMM_wait ( LANDUSE_frac_ocean(:,:), 1 )
 
+    else
        if( IO_L ) write(IO_FID_LOG,*) '*** land-ocean fraction file is not specified.'
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
-
     endif
 
     return
@@ -156,8 +161,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output land-ocean fraction file ***'
 
-       call FILEIO_write( LANDUSE_frac_ocean(1,:,:),  LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_OCEAN', 'OCEAN fraction', '0-1', 'XY',      LANDUSE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( LANDUSE_frac_ocean(:,:),  LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_OCEAN', 'OCEAN fraction', '0-1', 'XY',    LANDUSE_OUT_DTYPE  ) ! [IN]
 
     endif
 
