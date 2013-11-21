@@ -602,10 +602,12 @@ contains
     TIME_DOATMOS_restart = .false.
     TIME_DOOCEAN_restart = .false.
     TIME_DOLAND_restart  = .false.
+    TIME_DOCPL_restart   = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + TIME_DTSEC
     TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + TIME_DTSEC
     TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  + TIME_DTSEC
+    TIME_RES_CPL_RESTART   = TIME_RES_CPL_RESTART   + TIME_DTSEC
 
     if ( TIME_RES_ATMOS_RESTART - TIME_DTSEC_ATMOS_RESTART > -eps ) then
        TIME_DOATMOS_restart   = .true.
@@ -626,6 +628,13 @@ contains
        TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  - TIME_DTSEC_LAND_RESTART
     elseif( TIME_DOend ) then
        TIME_DOLAND_restart    = .true.
+    endif
+
+    if ( TIME_RES_CPL_RESTART  - TIME_DTSEC_CPL_RESTART  > -eps ) then
+       TIME_DOCPL_restart    = .true.
+       TIME_RES_CPL_RESTART  = TIME_RES_CPL_RESTART  - TIME_DTSEC_CPL_RESTART
+    elseif( TIME_DOend ) then
+       TIME_DOCPL_restart    = .true.
     endif
 
     return
