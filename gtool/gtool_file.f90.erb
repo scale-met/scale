@@ -88,8 +88,8 @@ module gtool_file
   !
   integer,                   private, parameter :: SP = 4 ! single precision
   integer,                   private, parameter :: DP = 8 ! double precision
-  integer,                   private, parameter :: File_nfile_max = 64 ! number limit of file
-  integer,                   private, parameter :: File_nvar_max  = 128 ! number limit of variables
+  integer,                   private, parameter :: File_nfile_max = 64   ! number limit of file
+  integer,                   private, parameter :: File_nvar_max  = 512  ! number limit of variables
   integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
 
   character(LEN=File_HLONG), private,      save :: File_bname_list(File_nfile_max)
@@ -172,7 +172,7 @@ contains
          File_FWRITE, & ! (in)
          single_      & ! (in)
          )
-         
+
     if ( existed ) return
 
     !--- append package header to the file
@@ -240,7 +240,7 @@ contains
     call FileGetfid( fid,        & ! (out)
          existed,                & ! (out)
          basename, mode, single_ ) ! (in)
-         
+
     return
   end subroutine FileOpen
 
@@ -717,7 +717,7 @@ contains
     else
        call FileMakeFname(fname,trim(basename),'pe',mpi_myrank,6)
     endif
-    
+
     call file_open( fid, & ! (out)
          fname, mode,    & ! (in)
          error           ) ! (out)
@@ -729,7 +729,7 @@ contains
     call Log("I", message)
     write(message,*) '*** filename: ', trim(fname)
     call Log("I", message)
-    
+
     File_bname_list(File_fid_count) = trim(basename)
     File_fid_list  (File_fid_count) = fid
     File_fid_count                  = File_fid_count + 1
