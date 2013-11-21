@@ -154,12 +154,12 @@ contains
        do_phy_mp     => TIME_DOATMOS_PHY_MP, &
        do_phy_rd     => TIME_DOATMOS_PHY_RD
     use mod_atmos_vars, only: &
-       DENS,    & 
-       MOMX,    & 
-       MOMY,    & 
-       MOMZ,    & 
-       RHOT,    & 
-       QTRC,    & 
+       DENS,    &
+       MOMX,    &
+       MOMY,    &
+       MOMZ,    &
+       RHOT,    &
+       QTRC,    &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -195,7 +195,8 @@ contains
     use mod_atmos_phy_rd, only: &
        ATMOS_PHY_RD
     use mod_atmos_refstate, only: &
-       ATMOS_REFSTATE_update
+       ATMOS_REFSTATE_update, &
+       ATMOS_REFSTATE_UPDATE_FLAG
     use mod_cpl_vars, only: &
        CPL_putAtm,     &
        CPL_getCPL2Atm, &
@@ -205,7 +206,9 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Reference State ###########
-    call ATMOS_REFSTATE_update
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       call ATMOS_REFSTATE_update
+    endif
 
     !########## from Coupler ##########
     if ( sw_AtmLnd ) then
@@ -213,21 +216,21 @@ contains
           SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, SFLX_SWU, SFLX_LWU, &
           SFLX_SH, SFLX_LH, SFLX_QVAtm                         )
        call CPL_flushAtm
-    end if
+    endif
 
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
        call TIME_rapstart('ATM SurfaceFlux')
        call ATMOS_PHY_SF( do_phy_sf, .true. )
        call TIME_rapend  ('ATM SurfaceFlux')
-    end if
+    endif
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
        call TIME_rapstart('ATM Turbulence')
        call ATMOS_PHY_TB( do_phy_tb, .true. )
        call TIME_rapend  ('ATM Turbulence')
-    end if
+    endif
 
     !########## Microphysics ##########
     if ( sw_phy_mp ) then
