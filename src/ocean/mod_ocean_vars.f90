@@ -289,7 +289,7 @@ contains
 !       STAT_total
     implicit none
 
-    real(RP) :: total ! dummy
+!    real(RP) :: total
     !---------------------------------------------------------------------------
 
 !    if ( STAT_checktotal ) then

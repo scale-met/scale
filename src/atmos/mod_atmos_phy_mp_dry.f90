@@ -60,12 +60,8 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
-       CONST_DWATR
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_MP
     implicit none
@@ -129,4 +125,4 @@ contains
     return
   end subroutine ATMOS_PHY_MP_EffectiveRadius
 
-end module mod_atmos_phy_mp 
+end module mod_atmos_phy_mp

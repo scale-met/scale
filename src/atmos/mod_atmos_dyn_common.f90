@@ -1418,7 +1418,7 @@ contains
           enddo
           enddo
           enddo
-   
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1439,7 +1439,7 @@ contains
              num_diff(KS-2,i,j,1,ZDIR) = - num_diff(KS+1,i,j,1,ZDIR)
           enddo
           enddo
-   
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1484,7 +1484,7 @@ contains
           enddo
           enddo
           enddo
-   
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1505,7 +1505,7 @@ contains
              num_diff(KS-2,i,j,1,ZDIR) = - num_diff(KS+1,i,j,1,ZDIR)
           enddo
           enddo
-   
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE

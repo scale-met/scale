@@ -178,21 +178,21 @@ contains
     real(RP), intent(in)  :: RFDX(IA-1)
     real(RP), intent(in)  :: RFDY(JA-1)
 
-    real(RP), intent(in)  :: PHI  (KA,IA,JA)   !< geopotential
-    real(RP), intent(in)  :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)  :: J13G (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J23G (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G              !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: PHI     (KA,IA,JA)   !< geopotential
+    real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)  :: J13G    (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)  :: J23G    (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
+    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
 
     real(RP), intent(in)  :: dtrk
 
     ! diagnostic variables
-    real(RP) :: PRES(KA,IA,JA) ! pressure [Pa]
-    real(RP) :: VELZ(KA,IA,JA) ! velocity w [m/s]
-    real(RP) :: VELX(KA,IA,JA) ! velocity u [m/s]
-    real(RP) :: VELY(KA,IA,JA) ! velocity v [m/s]
-    real(RP) :: POTT(KA,IA,JA) ! potential temperature [K]
-    real(RP) :: DDIV(KA,IA,JA) ! divergence
+    real(RP) :: PRES (KA,IA,JA) ! pressure [Pa]
+    real(RP) :: VELZ (KA,IA,JA) ! velocity w [m/s]
+    real(RP) :: VELX (KA,IA,JA) ! velocity u [m/s]
+    real(RP) :: VELY (KA,IA,JA) ! velocity v [m/s]
+    real(RP) :: POTT (KA,IA,JA) ! potential temperature [K]
+    real(RP) :: DDIV (KA,IA,JA) ! divergence
 
     real(RP) :: qflx_J13(KA,IA,JA)
     real(RP) :: qflx_J23(KA,IA,JA)
@@ -678,8 +678,6 @@ contains
        do i = IIS, IIE
        do k = KS+2, KE-2
 #ifdef DEBUG
-          call CHECK( __LINE__, VELZ(k  ,i,j) )
-          call CHECK( __LINE__, VELZ(k-1,i,j) )
           call CHECK( __LINE__, MOMZ(k-2,i,j) )
           call CHECK( __LINE__, MOMZ(k-1,i,j) )
           call CHECK( __LINE__, MOMZ(k  ,i,j) )
@@ -702,13 +700,9 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
-          call CHECK( __LINE__, VELZ(KS  ,i,j) )
-          call CHECK( __LINE__, VELZ(KS+1,i,j) )
           call CHECK( __LINE__, MOMZ(KS  ,i,j) )
           call CHECK( __LINE__, MOMZ(KS+1,i,j) )
           call CHECK( __LINE__, num_diff(KS+1,i,j,I_MOMZ,ZDIR) )
-          call CHECK( __LINE__, VELZ(KE-2,i,j) )
-          call CHECK( __LINE__, VELZ(KE-1,i,j) )
           call CHECK( __LINE__, MOMZ(KE-2,i,j) )
           call CHECK( __LINE__, MOMZ(KE-1,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMZ,ZDIR) )
@@ -899,10 +893,6 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k  ,i,j) )
-          call CHECK( __LINE__, PRES(k+1,i,j) )
-          call CHECK( __LINE__, DENS(k  ,i,j) )
-          call CHECK( __LINE__, DENS(k+1,i,j) )
           call CHECK( __LINE__, DDIV(k  ,i,j) )
           call CHECK( __LINE__, DDIV(k+1,i,j) )
           call CHECK( __LINE__, MOMZ0(k,i,j) )
@@ -1093,10 +1083,6 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(k,i  ,j) )
           call CHECK( __LINE__, VELZ(k,i+1,j) )
-          call CHECK( __LINE__, DENS(k+1,i+1,j) )
-          call CHECK( __LINE__, DENS(k+1,i  ,j) )
-          call CHECK( __LINE__, DENS(k  ,i+1,j) )
-          call CHECK( __LINE__, DENS(k  ,i  ,j) )
           call CHECK( __LINE__, MOMX(k-1,i,j) )
           call CHECK( __LINE__, MOMX(k  ,i,j) )
           call CHECK( __LINE__, MOMX(k+1,i,j) )
@@ -1121,19 +1107,11 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, VELZ(KS,i  ,j) )
           call CHECK( __LINE__, VELZ(KS,i+1,j) )
-          call CHECK( __LINE__, DENS(KS+1,i+1,j) )
-          call CHECK( __LINE__, DENS(KS+1,i  ,j) )
-          call CHECK( __LINE__, DENS(KS  ,i+1,j) )
-          call CHECK( __LINE__, DENS(KS  ,i  ,j) )
           call CHECK( __LINE__, MOMX(KS+1,i,j) )
           call CHECK( __LINE__, MOMX(KS  ,i,j) )
           call CHECK( __LINE__, num_diff(KS,i,j,I_MOMX,ZDIR) )
           call CHECK( __LINE__, VELZ(KE-1,i  ,j) )
           call CHECK( __LINE__, VELZ(KE-1,i+1,j) )
-          call CHECK( __LINE__, DENS(KE  ,i+1,j) )
-          call CHECK( __LINE__, DENS(KE  ,i  ,j) )
-          call CHECK( __LINE__, DENS(KE-1,i+1,j) )
-          call CHECK( __LINE__, DENS(KE-1,i  ,j) )
           call CHECK( __LINE__, MOMX(KE-1,i,j) )
           call CHECK( __LINE__, MOMX(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMX,ZDIR) )
@@ -1324,10 +1302,6 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k,i+1,j) )
-          call CHECK( __LINE__, PRES(k,i  ,j) )
-          call CHECK( __LINE__, CORIOLI(1,i  ,j) )
-          call CHECK( __LINE__, CORIOLI(1,i+1,j) )
           call CHECK( __LINE__, VELY(k,i  ,j  ) )
           call CHECK( __LINE__, VELY(k,i+1,j  ) )
           call CHECK( __LINE__, VELY(k,i  ,j-1) )
@@ -1731,10 +1705,6 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k,i,j  ) )
-          call CHECK( __LINE__, PRES(k,i,j+1) )
-          call CHECK( __LINE__, CORIOLI(1,i,j  ) )
-          call CHECK( __LINE__, CORIOLI(1,i,j+1) )
           call CHECK( __LINE__, VELX(k,i  ,j  ) )
           call CHECK( __LINE__, VELX(k,i  ,j+1) )
           call CHECK( __LINE__, VELX(k,i-1,j  ) )

@@ -36,7 +36,7 @@ module mod_mkinit
      IO_L
   use mod_process, only: &
      PRC_MPIstop
-  use mod_const, only : &
+  use mod_const, only: &
      PI    => CONST_PI,    &
      GRAV  => CONST_GRAV,  &
      Pstd  => CONST_Pstd,  &
@@ -50,10 +50,12 @@ module mod_mkinit
   use mod_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use mod_grid, only : &
+  use mod_grid, only: &
      CZ => GRID_CZ, &
      CX => GRID_CX, &
      CY => GRID_CY
+  use mod_grid_real, only: &
+     REAL_CZ
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -267,13 +269,7 @@ contains
 
       !--- Initialize variables
       do iq = 2,  QA
-      do j  = JS, JE
-      do i  = IS, IE
-      do k  = KS, KE
-         QTRC(k,i,j,iq) = 0.0_RP
-      enddo
-      enddo
-      enddo
+         QTRC(:,:,:,iq) = 0.0_RP
       enddo
 
       do j = 1, JA
@@ -294,16 +290,12 @@ contains
       enddo
       enddo
 
-      do j = 1, JA
-      do i = 1, IA
-         pres_sfc(1,i,j) = CONST_UNDEF8
-         temp_sfc(1,i,j) = CONST_UNDEF8
-         pott_sfc(1,i,j) = CONST_UNDEF8
-         qsat_sfc(1,i,j) = CONST_UNDEF8
-         qv_sfc  (1,i,j) = CONST_UNDEF8
-         qc_sfc  (1,i,j) = CONST_UNDEF8
-      enddo
-      enddo
+      pres_sfc(:,:,:) = CONST_UNDEF8
+      temp_sfc(:,:,:) = CONST_UNDEF8
+      pott_sfc(:,:,:) = CONST_UNDEF8
+      qsat_sfc(:,:,:) = CONST_UNDEF8
+      qv_sfc  (:,:,:) = CONST_UNDEF8
+      qc_sfc  (:,:,:) = CONST_UNDEF8
 
       if ( flg_bin ) then
          if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
@@ -435,7 +427,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
-    use mod_const, only : &
+    use mod_const, only: &
        PI => CONST_PI
 
     implicit none
@@ -530,7 +522,7 @@ contains
 
   !-----------------------------------------------------------------------------
   function faero( f0,r0,x,alpha,rhoa )
-    use mod_const, only : &
+    use mod_const, only: &
        pi => CONST_PI
     implicit none
 

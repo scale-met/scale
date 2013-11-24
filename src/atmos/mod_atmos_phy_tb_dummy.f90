@@ -53,8 +53,6 @@ module mod_atmos_phy_tb
 contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &

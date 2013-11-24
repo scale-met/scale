@@ -150,7 +150,7 @@ contains
                flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
              enddo
            endif
-       enddo 
+       enddo
 
 !OCL XFILL
        do k = KS, KE

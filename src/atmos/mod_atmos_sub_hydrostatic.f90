@@ -25,6 +25,12 @@ module mod_atmos_hydrostatic
      CL      => CONST_CL,      &
      LASPdry => CONST_LASPdry, &
      P00     => CONST_PRE00
+  use mod_grid, only: &
+     CZ  => GRID_CZ, &
+     FDZ => GRID_FDZ
+  use mod_grid_real, only: &
+     REAL_CZ, &
+     REAL_FZ
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -139,8 +145,6 @@ contains
        qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       CZ  => GRID_CZ
     implicit none
 
     real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
@@ -268,8 +272,6 @@ contains
        qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       CZ  => GRID_CZ
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -414,8 +416,6 @@ contains
        qc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       FDZ => GRID_FDZ
     implicit none
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
@@ -502,8 +502,6 @@ contains
        qc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       FDZ => GRID_FDZ
     implicit none
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -607,8 +605,6 @@ contains
        qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       CZ  => GRID_CZ
     implicit none
 
     real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
@@ -716,8 +712,6 @@ contains
        qc_sfc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       CZ  => GRID_CZ
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -839,8 +833,6 @@ contains
        qc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       FDZ => GRID_FDZ
     implicit none
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
@@ -924,8 +916,6 @@ contains
        qc    )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
-       FDZ => GRID_FDZ
     implicit none
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]

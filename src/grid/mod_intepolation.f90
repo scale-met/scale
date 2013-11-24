@@ -59,7 +59,8 @@ contains
   !> Setup
   subroutine INTERP_setup
     use mod_grid, only: &
-       GRID_CZ
+       GRID_CZ, &
+       GRID_FZ
     use mod_grid_real, only: &
        REAL_CZ, &
        REAL_FZ
@@ -90,7 +91,7 @@ contains
           INTERP_xi2z_coef(k,i,j,2) = 1.D0
           INTERP_xi2z_coef(k,i,j,3) = 0.D0
 
-       elseif( GRID_CZ(k) >= REAL_CZ(KE,i,j) ) then
+       elseif( GRID_CZ(k) > REAL_CZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
@@ -98,7 +99,7 @@ contains
           INTERP_xi2z_coef(k,i,j,2) = 0.D0
           INTERP_xi2z_coef(k,i,j,3) = 0.D0
 
-       elseif( GRID_CZ(k) >= REAL_FZ(KE,i,j) ) then
+       elseif( GRID_CZ(k) > REAL_FZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
@@ -110,7 +111,7 @@ contains
 
           do kk = KS+1, KE
              kp = kk
-             if( GRID_CZ(k) < REAL_CZ(kk,i,j) ) exit
+             if( GRID_CZ(k) <= REAL_CZ(kk,i,j) ) exit
           enddo
 
           INTERP_xi2z_idx (k,i,j,1) = kp - 1
