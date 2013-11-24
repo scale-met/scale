@@ -1878,46 +1878,50 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
-    do k = KS, KE
-       Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
-       N2     = Ustar2 * (SCORER*SCORER)
-
-       pott_prof(k) = SFC_THETA * exp( N2 / GRAV * CZ(k) )
-    enddo
-
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       pott(k,1,1) = pott_prof(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
     enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
+       Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
+       N2     = Ustar2 * (SCORER*SCORER)
+
+       pott(k,i,j) = SFC_THETA * exp( N2 / GRAV * REAL_CZ(k,i,j) )
+       qv  (k,i,j) = 0.0_RP
+       qc  (k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,i,j)
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ENV_U       * DENS(k,i,j)
        MOMY(k,i,j) = ENV_V       * DENS(k,i,j)
-       RHOT(k,i,j) = pott(k,1,1) * DENS(k,i,j)
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
 
        QTRC(k,i,j,:) = 0.0_RP
     enddo

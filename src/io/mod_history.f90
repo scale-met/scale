@@ -263,7 +263,7 @@ contains
       var,    &
       dt      )
     use mod_interpolation, only: &
-       INTERP_vertical
+       INTERP_vertical_xi2z
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
@@ -295,8 +295,8 @@ contains
 
     else
        call TIME_rapstart('FILE O Interpolation')
-       call INTERP_vertical( var  (:,:,:), & ! [IN]
-                             var_Z(:,:,:)  ) ! [OUT]
+       call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
+                                  var_Z(:,:,:)  ) ! [OUT]
        call TIME_rapend  ('FILE O Interpolation')
 
        do k = 1, KMAX

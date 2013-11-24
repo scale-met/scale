@@ -159,6 +159,9 @@ program scaleinit
   call MKTOPO
   call TIME_rapend  ('MkTopo')
 
+  ! re-setup
+  call REAL_setup
+
   ! execute mkinit
   call TIME_rapstart('MkInit')
   call MKINIT

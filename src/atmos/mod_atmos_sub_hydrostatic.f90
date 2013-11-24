@@ -297,6 +297,7 @@ contains
     real(RP) :: CPovCV    (IA,JA)
 
     real(RP) :: CVovCP_sfc, CPovR, CVovCP, RovCV
+    real(RP) :: DZ
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
@@ -345,7 +346,7 @@ contains
           CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
           CVovCP = 1.D0 / CPovCV(i,j)
 
-          temp(KS,i,j) = pott_sfc(1,i,j) - LASPdry * CZ(KS) ! use dry lapse rate
+          temp(KS,i,j) = pott_sfc(1,i,j) - LASPdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
           pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR
           dens(KS,i,j) = P00 / Rtot(i,j) / pott(KS,i,j) * ( pres(KS,i,j)/P00 )**CVovCP
        enddo
@@ -356,6 +357,8 @@ contains
        do j = JS, JE
        do i = IS, IE
           RovCV = Rtot(i,j) / CVtot(i,j)
+
+          DZ = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
 
           dens_s       = 0.0_RP
           dens(KS,i,j) = dens_sfc(1,i,j) ! first guess
@@ -370,11 +373,11 @@ contains
              dens_s = dens(KS,i,j)
 
              dhyd = + ( P00 * ( dens_sfc(1,i,j) * Rtot_sfc(i,j) * pott_sfc(1,i,j) / P00 )**CPovCV_sfc(i,j) &
-                      - P00 * ( dens_s          * Rtot    (i,j) * pott   (KS,i,j) / P00 )**CPovCV    (i,j) ) / CZ(KS) & ! dp/dz
-                    - GRAV * 0.5_RP * ( dens_sfc(1,i,j) + dens_s )                                                      ! rho*g
+                      - P00 * ( dens_s          * Rtot    (i,j) * pott   (KS,i,j) / P00 )**CPovCV    (i,j) ) / DZ & ! dp/dz
+                    - GRAV * 0.5_RP * ( dens_sfc(1,i,j) + dens_s )                                                  ! rho*g
 
-             dgrd = - P00 * ( Rtot(i,j) * pott(KS,i,j) / P00 )**CPovCV(i,j) / CZ(KS) &
-                    * CPovCV(i,j) * dens_s**RovCV                                    &
+             dgrd = - P00 * ( Rtot(i,j) * pott(KS,i,j) / P00 )**CPovCV(i,j) / DZ &
+                    * CPovCV(i,j) * dens_s**RovCV                                &
                     - 0.5_RP * GRAV
 
              dens(KS,i,j) = dens_s - dhyd/dgrd
@@ -516,6 +519,7 @@ contains
     real(RP) :: CPovCV(KA,IA,JA)
 
     real(RP) :: RovCV
+    real(RP) :: DZ
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
@@ -541,6 +545,8 @@ contains
     do k = KS+1, KE
        RovCV = Rtot(k,i,j) / CVtot(k,i,j)
 
+       DZ = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j)
+
        dens_s      = 0.0_RP
        dens(k,i,j) = dens(k-1,i,j) ! first guess
 
@@ -554,11 +560,11 @@ contains
           dens_s = dens(k,i,j)
 
           dhyd = + ( P00 * ( dens(k-1,i,j) * Rtot(k-1,i,j) * pott(k-1,i,j) / P00 )**CPovCV(k-1,i,j) &
-                   - P00 * ( dens_s        * Rtot(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV(k  ,i,j) ) / FDZ(k-1) & ! dpdz
-                 - GRAV * 0.5_RP * ( dens(k-1,i,j) + dens_s )                                                      ! rho*g
+                   - P00 * ( dens_s        * Rtot(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV(k  ,i,j) ) / DZ & ! dpdz
+                 - GRAV * 0.5_RP * ( dens(k-1,i,j) + dens_s )                                                ! rho*g
 
-          dgrd = - P00 * ( Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j) / FDZ(k-1) &
-                 * CPovCV(k,i,j) * dens_s**RovCV                                       &
+          dgrd = - P00 * ( Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j) / DZ &
+                 * CPovCV(k,i,j) * dens_s**RovCV                                 &
                  - 0.5_RP * GRAV
 
           dens(k,i,j) = dens_s - dhyd/dgrd
@@ -735,6 +741,7 @@ contains
     real(RP) :: CVtot     (IA,JA)
 
     real(RP) :: RovCP_sfc
+    real(RP) :: DZ
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
@@ -776,6 +783,7 @@ contains
     ! make density at lowermost cell center
     do j = JS, JE
     do i = IS, IE
+       DZ = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
 
        dens_s       = 0.0_RP
        dens(KS,i,j) = dens_sfc(1,i,j) ! first guess
@@ -790,10 +798,10 @@ contains
           dens_s = dens(KS,i,j)
 
           dhyd = + ( dens_sfc(1,i,j) * Rtot_sfc(i,j) * temp_sfc(1,i,j) &
-                   - dens_s          * Rtot    (i,j) * temp   (KS,i,j) ) / CZ(KS) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens_sfc(1,i,j) + dens_s )                     ! rho*g
+                   - dens_s          * Rtot    (i,j) * temp   (KS,i,j) ) / DZ & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens_sfc(1,i,j) + dens_s )                 ! rho*g
 
-          dgrd = - Rtot(i,j) * temp(KS,i,j) / CZ(KS) &
+          dgrd = - Rtot(i,j) * temp(KS,i,j) / DZ &
                  - 0.5_RP * GRAV
 
           dens(KS,i,j) = dens_s - dhyd/dgrd
@@ -929,6 +937,7 @@ contains
     real(RP) :: CVtot (KA,IA,JA)
 
     real(RP) :: RovCP
+    real(RP) :: DZ
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
@@ -951,6 +960,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS+1, KE
+       DZ = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j)
 
        dens_s      = 0.0_RP
        dens(k,i,j) = dens(k-1,i,j) ! first guess
@@ -965,10 +975,10 @@ contains
           dens_s = dens(k,i,j)
 
           dhyd = + ( dens(k-1,i,j) * Rtot(k-1,i,j) * temp(k-1,i,j) &
-                   - dens_s        * Rtot(k  ,i,j) * temp(k  ,i,j) ) / FDZ(k-1) & ! dpdz
-                 - GRAV * 0.5_RP * ( dens(k-1,i,j) + dens_s )                     ! rho*g
+                   - dens_s        * Rtot(k  ,i,j) * temp(k  ,i,j) ) / DZ & ! dpdz
+                 - GRAV * 0.5_RP * ( dens(k-1,i,j) + dens_s )               ! rho*g
 
-          dgrd = - Rtot(k,i,j) * temp(k,i,j) / FDZ(k-1) &
+          dgrd = - Rtot(k,i,j) * temp(k,i,j) / DZ &
                  - 0.5_RP * GRAV
 
           dens(k,i,j) = dens_s - dhyd/dgrd

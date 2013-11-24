@@ -53,11 +53,11 @@ module mod_atmos_refstate
   !
   logical,  public, save :: ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
-  real(RP), public, save :: ATMOS_REFSTATE_pres(KA) !< refernce pressure [Pa]
-  real(RP), public, save :: ATMOS_REFSTATE_temp(KA) !< refernce temperature [K]
-  real(RP), public, save :: ATMOS_REFSTATE_dens(KA) !< refernce density [kg/m3]
-  real(RP), public, save :: ATMOS_REFSTATE_pott(KA) !< refernce potential temperature [K]
-  real(RP), public, save :: ATMOS_REFSTATE_qv  (KA) !< refernce vapor [kg/kg]
+  real(RP), public, save :: ATMOS_REFSTATE_pres(KA,IA,JA) !< refernce pressure [Pa]
+  real(RP), public, save :: ATMOS_REFSTATE_temp(KA,IA,JA) !< refernce temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_dens(KA,IA,JA) !< refernce density [kg/m3]
+  real(RP), public, save :: ATMOS_REFSTATE_pott(KA,IA,JA) !< refernce potential temperature [K]
+  real(RP), public, save :: ATMOS_REFSTATE_qv  (KA,IA,JA) !< refernce vapor [kg/kg]
 
   !-----------------------------------------------------------------------------
   !
@@ -71,6 +71,12 @@ module mod_atmos_refstate
   !
   !++ Private parameters & variables
   !
+  real(RP), private, save :: ATMOS_REFSTATE1D_pres(KA) !< 1D refernce pressure [Pa]
+  real(RP), private, save :: ATMOS_REFSTATE1D_temp(KA) !< 1D refernce temperature [K]
+  real(RP), private, save :: ATMOS_REFSTATE1D_dens(KA) !< 1D refernce density [kg/m3]
+  real(RP), private, save :: ATMOS_REFSTATE1D_pott(KA) !< 1D refernce potential temperature [K]
+  real(RP), private, save :: ATMOS_REFSTATE1D_qv  (KA) !< 1D refernce vapor [kg/kg]
+
   character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_IN_BASENAME  = ''                !< basename of the input  file
   character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_OUT_BASENAME = ''                !< basename of the output file
   character(len=IO_SYSCHR),  private, save :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE3 Refstate' !< title    of the output file
@@ -155,12 +161,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
        if( IO_L ) write(IO_FID_LOG,*) '      height:    pressure: temperature:     density:   pot.temp.: water vapor'
        do k = KS, KE
-          if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k),                  &
-                                                    ATMOS_REFSTATE_pres(k), &
-                                                    ATMOS_REFSTATE_temp(k), &
-                                                    ATMOS_REFSTATE_dens(k), &
-                                                    ATMOS_REFSTATE_pott(k), &
-                                                    ATMOS_REFSTATE_qv  (k)
+          if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k),                    &
+                                                    ATMOS_REFSTATE1D_pres(k), &
+                                                    ATMOS_REFSTATE1D_temp(k), &
+                                                    ATMOS_REFSTATE1D_dens(k), &
+                                                    ATMOS_REFSTATE1D_pott(k), &
+                                                    ATMOS_REFSTATE1D_qv  (k)
        enddo
        if( IO_L ) write(IO_FID_LOG,*) '####################################################'
     endif
@@ -186,15 +192,15 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( ATMOS_REFSTATE_pres(:),                             & ! [OUT]
+       call FILEIO_read( ATMOS_REFSTATE1D_pres(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'PRES_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_temp(:),                             & ! [OUT]
+       call FILEIO_read( ATMOS_REFSTATE1D_temp(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'TEMP_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_dens(:),                             & ! [OUT]
+       call FILEIO_read( ATMOS_REFSTATE1D_dens(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'DENS_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_pott(:),                             & ! [OUT]
+       call FILEIO_read( ATMOS_REFSTATE1D_pott(:),                           & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'POTT_ref', 'Z', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_REFSTATE_qv(:),                               & ! [OUT]
+       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),                             & ! [OUT]
                          ATMOS_REFSTATE_IN_BASENAME, 'QV_ref',   'Z', step=1 ) ! [IN]
 
     else
@@ -218,19 +224,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
 
-       call FILEIO_write( ATMOS_REFSTATE_pres(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
-                          'PRES_ref', 'Reference profile of pres.', 'Pa', 'Z',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-
-       call FILEIO_write( ATMOS_REFSTATE_temp(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
-                          'TEMP_ref', 'Reference profile of temp.', 'K', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-
-       call FILEIO_write( ATMOS_REFSTATE_dens(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
-                          'DENS_ref', 'Reference profile of rho', 'kg/m3', 'Z', ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-
-       call FILEIO_write( ATMOS_REFSTATE_pott(:), ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
-                          'POTT_ref', 'Reference profile of theta', 'K', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-
-       call FILEIO_write( ATMOS_REFSTATE_qv(:),   ATMOS_REFSTATE_OUT_BASENAME,  ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'PRES_ref', 'Reference profile of pres.', 'Pa', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE1D_temp(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'TEMP_ref', 'Reference profile of temp.', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE1D_dens(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'DENS_ref', 'Reference profile of rho', 'kg/m3', 'Z',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE1D_pott(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+                          'POTT_ref', 'Reference profile of theta', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_REFSTATE1D_qv(:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -317,11 +319,13 @@ contains
                                qv_sfc,   & ! [IN]
                                qc_sfc    ) ! [IN]
 
-    ATMOS_REFSTATE_pres(:) = pres(:)
-    ATMOS_REFSTATE_temp(:) = temp(:)
-    ATMOS_REFSTATE_dens(:) = dens(:)
-    ATMOS_REFSTATE_pott(:) = pott(:)
-    ATMOS_REFSTATE_qv  (:) = qv(:)
+    ATMOS_REFSTATE1D_pres(:) = pres(:)
+    ATMOS_REFSTATE1D_temp(:) = temp(:)
+    ATMOS_REFSTATE1D_dens(:) = dens(:)
+    ATMOS_REFSTATE1D_pott(:) = pott(:)
+    ATMOS_REFSTATE1D_qv  (:) = qv(:)
+
+    call ATMOS_REFSTATE_calc3D
 
     return
   end subroutine ATMOS_REFSTATE_generate_isa
@@ -402,11 +406,13 @@ contains
                                qv_sfc,   & ! [IN]
                                qc_sfc    ) ! [IN]
 
-    ATMOS_REFSTATE_pres(:) = pres(:)
-    ATMOS_REFSTATE_temp(:) = temp(:)
-    ATMOS_REFSTATE_dens(:) = dens(:)
-    ATMOS_REFSTATE_pott(:) = pott(:)
-    ATMOS_REFSTATE_qv  (:) = qv(:)
+    ATMOS_REFSTATE1D_pres(:) = pres(:)
+    ATMOS_REFSTATE1D_temp(:) = temp(:)
+    ATMOS_REFSTATE1D_dens(:) = dens(:)
+    ATMOS_REFSTATE1D_pott(:) = pott(:)
+    ATMOS_REFSTATE1D_qv  (:) = qv(:)
+
+    call ATMOS_REFSTATE_calc3D
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
@@ -458,25 +464,21 @@ contains
                                  RHOT(:,:,:),  & ! [IN]
                                  QTRC(:,:,:,:) ) ! [IN]
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          pott(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
+       pott(:,:,:) = RHOT(:,:,:) / DENS(:,:,:)
 
-       call COMM_horizontal_mean( ATMOS_REFSTATE_temp(:), temp(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_pres(:), pres(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_dens(:), DENS(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_pott(:), pott(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE_qv  (:), QTRC(:,:,:,I_QV) )
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), temp(:,:,:)      )
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), pres(:,:,:)      )
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), DENS(:,:,:)      )
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), pott(:,:,:)      )
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), QTRC(:,:,:,I_QV) )
 
-       call smoothing( ATMOS_REFSTATE_temp(:) )
-       call smoothing( ATMOS_REFSTATE_pres(:) )
-       call smoothing( ATMOS_REFSTATE_dens(:) )
-       call smoothing( ATMOS_REFSTATE_pott(:) )
-       call smoothing( ATMOS_REFSTATE_qv  (:) )
+       call smoothing( ATMOS_REFSTATE1D_temp(:) )
+       call smoothing( ATMOS_REFSTATE1D_pres(:) )
+       call smoothing( ATMOS_REFSTATE1D_dens(:) )
+       call smoothing( ATMOS_REFSTATE1D_pott(:) )
+       call smoothing( ATMOS_REFSTATE1D_qv  (:) )
+
+       call ATMOS_REFSTATE_calc3D
 
        last_updated = TIME_NOWSEC
 
@@ -484,6 +486,99 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_update
+
+  !-----------------------------------------------------------------------------
+  !> apply 1D reference to 3D (terrain-following)
+  subroutine ATMOS_REFSTATE_calc3D
+    use mod_const, only: &
+       Rdry  => CONST_Rdry,  &
+       RovCP => CONST_RovCP, &
+       P00   => CONST_PRE00
+    use mod_grid_real, only: &
+       PHI => REAL_PHI
+    use mod_interpolation, only: &
+       INTERP_vertical_z2xi
+    implicit none
+
+    real(RP) :: work(KA,IA,JA)
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !--- temperature
+    do j = 1, JA
+    do i = 1, IA
+       work(:,i,j) = ATMOS_REFSTATE1D_temp(:)
+    enddo
+    enddo
+
+    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
+                               ATMOS_REFSTATE_temp(:,:,:)  ) ! [OUT]
+
+    !--- pressure
+    do j = 1, JA
+    do i = 1, IA
+       work(:,i,j) = ATMOS_REFSTATE1D_pres(:)
+    enddo
+    enddo
+
+    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
+                               ATMOS_REFSTATE_pres(:,:,:)  ) ! [OUT]
+
+    !--- density
+    do j = 1, JA
+    do i = 1, IA
+       work(:,i,j) = ATMOS_REFSTATE1D_dens(:)
+    enddo
+    enddo
+
+    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
+                               ATMOS_REFSTATE_dens(:,:,:)  ) ! [OUT]
+
+    !--- potential temperature
+    do j = 1, JA
+    do i = 1, IA
+       work(:,i,j) = ATMOS_REFSTATE1D_pott(:)
+    enddo
+    enddo
+
+    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
+                               ATMOS_REFSTATE_pott(:,:,:)  ) ! [OUT]
+
+    !--- water vapor
+    do j = 1, JA
+    do i = 1, IA
+       work(:,i,j) = ATMOS_REFSTATE1D_qv(:)
+    enddo
+    enddo
+
+    call INTERP_vertical_z2xi( work             (:,:,:), & ! [IN]
+                               ATMOS_REFSTATE_qv(:,:,:)  ) ! [OUT]
+
+    ! boundary condition
+    do j = 1, JA
+    do i = 1, IA
+       ATMOS_REFSTATE_temp(KS-1,i,j) = ATMOS_REFSTATE_temp(KS,i,j)
+       ATMOS_REFSTATE_temp(KE+1,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
+
+       ATMOS_REFSTATE_pres(KS-1,i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
+                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+       ATMOS_REFSTATE_pres(KE+1,i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
+                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
+
+       ATMOS_REFSTATE_dens(KS-1,i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
+       ATMOS_REFSTATE_dens(KE+1,i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
+
+       ATMOS_REFSTATE_pott(KS-1,i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
+       ATMOS_REFSTATE_pott(KE+1,i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
+
+       ATMOS_REFSTATE_qv  (KS-1,i,j) = ATMOS_REFSTATE_qv  (KS,i,j)
+       ATMOS_REFSTATE_qv  (KE+1,i,j) = ATMOS_REFSTATE_qv  (KE,i,j)
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_REFSTATE_calc3D
 
   !-----------------------------------------------------------------------------
   subroutine smoothing( &
