@@ -106,6 +106,7 @@ contains
        CDZ, FDZ, FDX, FDY,                          &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G,                &
+       REF_pres, REF_dens,                          &
        dtrk                                         )
     use mod_const, only : &
        GRAV   => CONST_GRAV,   &
@@ -183,6 +184,8 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
+    real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
     real(RP), intent(in)  :: dtrk
 
@@ -193,10 +196,12 @@ contains
     real(RP) :: VELY (KA,IA,JA) ! velocity v [m/s]
     real(RP) :: POTT (KA,IA,JA) ! potential temperature [K]
     real(RP) :: DDIV (KA,IA,JA) ! divergence
+    real(RP) :: DPRES(KA,IA,JA) ! pressure - reference pressure
 
     real(RP) :: qflx_J13(KA,IA,JA)
     real(RP) :: qflx_J23(KA,IA,JA)
     real(RP) :: pgf     (KA,IA,JA)  ! pressure gradient force
+    real(RP) :: buoy    (KA,IA,JA)  ! buoyancy force
     real(RP) :: cor     (KA,IA,JA)  ! Coriolis force
 
     ! flux
@@ -217,6 +222,8 @@ contains
     VELX(:,:,:) = UNDEF
     VELY(:,:,:) = UNDEF
     POTT(:,:,:) = UNDEF
+
+    DPRES(:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
     qflx_hi(:,:,:,:) = UNDEF
@@ -289,31 +296,30 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
-       do k = KS, KE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, Rtot(k,i,j) )
-          call CHECK( __LINE__, CVtot(k,i,j) )
+             call CHECK( __LINE__, RHOT(k,i,j) )
+             call CHECK( __LINE__, Rtot(k,i,j) )
+             call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
 #ifdef DRY
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
+             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV &
 #else
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
+             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
 #endif
-       enddo
+          enddo
+
+          PRES(KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+          PRES(KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
+
+          do k = KS-1, KE+1
+             DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
+          enddo
        enddo
        enddo
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-          PRES(KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
-          PRES(KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-       enddo
-       enddo
 
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
@@ -873,9 +879,19 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          pgf(k,i,j) = ( J33G * PRES(k+1,i,j) & ! [x,y,z]
-                       - J33G * PRES(k  ,i,j) & ! [x,y,z]
-                       ) * RFDZ(k)
+          pgf(k,i,j) = J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) ! [x,y,z]
+       enddo
+       enddo
+       enddo
+
+       ! buoyancy force at (x, y, w)
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          buoy(k,i,j) = GRAV * 0.5_RP * ( GSQRT(k+1,i,j,I_XYZ) * ( DENS(k+1,i,j)-REF_dens(k+1,i,j) ) &
+                                        + GSQRT(k  ,i,j,I_XYZ) * ( DENS(k  ,i,j)-REF_dens(k  ,i,j) ) ) ! [x,y,z]
        enddo
        enddo
        enddo
@@ -904,8 +920,8 @@ contains
                                       + ( qflx_J23(k,i,j) - qflx_J23(k-1,i,j)             ) * RFDZ(k) &
                                       + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) & ! advection
-                                    - pgf(k,i,j)                                                        & ! pressure gradient force
-                                    - GRAV * 0.5_RP * ( GSQRT(k+1,i,j,I_XYZ)*DENS(k+1,i,j)+GSQRT(k,i,j,I_XYZ)*DENS(k,i,j) ) & ! buoyancy force
+                                    - pgf (k,i,j)                                                       & ! pressure gradient force
+                                    - buoy(k,i,j)                                                       & ! buoyancy force
                                   ) * GSQRT(k,i,j,I_XYW) &
                          + dtrk * ( divdmp_coef * dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) & ! divergence damping
                                   + MOMZ_t(k,i,j)                                               ) ! physics tendency
@@ -1261,15 +1277,15 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          pgf(k,i,j) = ( GSQRT(k,i+1,j,I_XYZ) * PRES(k,i+1,j) & ! [x,y,z]
-                       - GSQRT(k,i  ,j,I_XYZ) * PRES(k,i  ,j) & ! [x,y,z]
+          pgf(k,i,j) = ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) & ! [x,y,z]
+                       - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) & ! [x,y,z]
                        ) * RFDX(i) &
                      + ( J13G(k  ,i,j,I_UYW) &
-                       * 0.25_RP * ( PRES(k+1,i+1,j)+PRES(k,i+1,j) &
-                                   + PRES(k+1,i  ,j)+PRES(k,i  ,j) ) & ! [x,y,z->u,y,w]
+                       * 0.25_RP * ( DPRES(k+1,i+1,j)+DPRES(k,i+1,j) &
+                                   + DPRES(k+1,i  ,j)+DPRES(k,i  ,j) ) & ! [x,y,z->u,y,w]
                        - J13G(k-1,i,j,I_UYW) &
-                       * 0.25_RP * ( PRES(k,i+1,j)+PRES(k-1,i+1,j) &
-                                   + PRES(k,i  ,j)+PRES(k-1,i  ,j) ) & ! [x,y,z->u,y,w]
+                       * 0.25_RP * ( DPRES(k,i+1,j)+DPRES(k-1,i+1,j) &
+                                   + DPRES(k,i  ,j)+DPRES(k-1,i  ,j) ) & ! [x,y,z->u,y,w]
                        ) * RCDZ(k)
        enddo
        enddo
@@ -1664,15 +1680,15 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          pgf(k,i,j) = ( GSQRT(k,i,j+1,I_XYZ) * PRES(k,i,j+1) & ! [x,y,z]
-                       - GSQRT(k,i,j  ,I_XYZ) * PRES(k,i,j  ) & ! [x,y,z]
+          pgf(k,i,j) = ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) & ! [x,y,z]
+                       - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) & ! [x,y,z]
                        ) * RFDY(j) &
                      + ( J23G(k  ,i,j,I_XVW) &
-                       * 0.25_RP * ( PRES(k+1,i,j+1)+PRES(k,i,j+1) &
-                                   + PRES(k+1,i,j  )+PRES(k,i,j  ) ) & ! [x,y,z->x,v,w]
+                       * 0.25_RP * ( DPRES(k+1,i,j+1)+DPRES(k,i,j+1) &
+                                   + DPRES(k+1,i,j  )+DPRES(k,i,j  ) ) & ! [x,y,z->x,v,w]
                        - J23G(k-1,i,j,I_XVW) &
-                       * 0.25_RP * ( PRES(k,i,j+1)+PRES(k-1,i,j+1) &
-                                   + PRES(k,i,j  )+PRES(k-1,i,j  ) ) & ! [x,y,z->x,v,w]
+                       * 0.25_RP * ( DPRES(k,i,j+1)+DPRES(k-1,i,j+1) &
+                                   + DPRES(k,i,j  )+DPRES(k-1,i,j  ) ) & ! [x,y,z->x,v,w]
                        ) * RCDZ(k)
        enddo
        enddo

@@ -335,8 +335,8 @@ contains
     real(RP), intent(in)  :: FDX(IA-1)
     real(RP), intent(in)  :: FDY(JA-1)
 
-    real(RP), intent(in)  :: REF_dens(KA)
-    real(RP), intent(in)  :: REF_pott(KA)
+    real(RP), intent(in)  :: REF_dens(KA,IA,JA)
+    real(RP), intent(in)  :: REF_pott(KA,IA,JA)
 
     real(RP), intent(in)  :: DIFF4
     integer,  intent(in)  :: ND_ORDER
@@ -382,8 +382,8 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             dens_diff(k,i,j) = DENS(k,i,j) - REF_dens(k)
-             pott_diff(k,i,j) = POTT(k,i,j) - REF_pott(k)
+             dens_diff(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
+             pott_diff(k,i,j) = POTT(k,i,j) - REF_pott(k,i,j)
           enddo
           enddo
           enddo
@@ -1323,7 +1323,7 @@ contains
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
 
-    real(RP), intent(in)  :: REF_qv(KA)
+    real(RP), intent(in)  :: REF_qv(KA,IA,JA)
     integer,  intent(in)  :: iq
 
     real(RP), intent(in)  :: DIFF4
@@ -1362,7 +1362,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
-                qv_diff(k,i,j) = QTRC(k,i,j) - REF_qv(k)
+                qv_diff(k,i,j) = QTRC(k,i,j) - REF_qv(k,i,j)
              enddo
              enddo
              enddo
