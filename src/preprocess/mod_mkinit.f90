@@ -272,23 +272,16 @@ contains
          QTRC(:,:,:,iq) = 0.0_RP
       enddo
 
-      do j = 1, JA
-      do i = 1, IA
-      do k = 1, KA
-         pres(k,i,j) = CONST_UNDEF8
-         temp(k,i,j) = CONST_UNDEF8
-         pott(k,i,j) = CONST_UNDEF8
-         qsat(k,i,j) = CONST_UNDEF8
-         qv  (k,i,j) = CONST_UNDEF8
-         qc  (k,i,j) = CONST_UNDEF8
-         velx(k,i,j) = CONST_UNDEF8
-         vely(k,i,j) = CONST_UNDEF8
+      pres(:,:,:) = CONST_UNDEF8
+      temp(:,:,:) = CONST_UNDEF8
+      pott(:,:,:) = CONST_UNDEF8
+      qsat(:,:,:) = CONST_UNDEF8
+      qv  (:,:,:) = CONST_UNDEF8
+      qc  (:,:,:) = CONST_UNDEF8
+      velx(:,:,:) = CONST_UNDEF8
+      vely(:,:,:) = CONST_UNDEF8
 
-         rndm  (k,i,j) = CONST_UNDEF8
-         bubble(k,i,j) = CONST_UNDEF8
-      enddo
-      enddo
-      enddo
+      rndm  (:,:,:) = CONST_UNDEF8
 
       pres_sfc(:,:,:) = CONST_UNDEF8
       temp_sfc(:,:,:) = CONST_UNDEF8
@@ -351,6 +344,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
+    use mod_const, only: &
+       CONST_UNDEF8
     implicit none
 
     ! Bubble
@@ -395,6 +390,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_BUBBLE)
+
+    bubble(:,:,:) = CONST_UNDEF8
 
     if ( BBL_eachnode ) then
        CZ_offset = CZ(KS)
