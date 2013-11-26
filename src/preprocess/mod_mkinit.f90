@@ -257,7 +257,7 @@ contains
        ATMOS_vars_restart_write
     implicit none
 
-    integer :: k, i, j, iq
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( MKINIT_TYPE == I_IGNORE ) then
@@ -1853,7 +1853,6 @@ contains
        ENV_V,     &
        SCORER
 
-    real(RP) :: pott_prof(KA)
     real(RP) :: Ustar2, N2
 
     integer :: ierr

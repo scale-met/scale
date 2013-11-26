@@ -450,8 +450,6 @@ contains
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
     real(RP) :: pott(KA,IA,JA)
-
-    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( TIME_NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then

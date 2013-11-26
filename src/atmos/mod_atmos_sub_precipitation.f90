@@ -78,6 +78,7 @@ contains
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use mod_gridtrans, only : &
+       I_XYZ,                 &
        GSQRT => GTRANS_GSQRT, &
        J33G  => GTRANS_J33G
     use mod_atmos_vars, only: &
