@@ -75,7 +75,7 @@ module mod_mapproj
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: MPRJ_type = 'LC' !< map projection type
+  character(len=IO_SYSCHR), private :: MPRJ_type = 'NONE' !< map projection type
                                                  ! 'NONE'
                                                  ! 'LC'
                                                  ! 'PS'
@@ -91,7 +91,7 @@ module mod_mapproj
   real(RP), private, save :: MPRJ_basepoint_x   =   0.0_RP ! position of base point in the model  [m]
   real(RP), private, save :: MPRJ_basepoint_y   =   0.0_RP ! position of base point in the model  [m]
 
-  real(RP), private, save :: MPRJ_rotation                 ! rotation factor (only for 'NONE' type)
+  real(RP), private, save :: MPRJ_rotation      =   0.0_RP ! rotation factor (only for 'NONE' type)
 
   real(RP), private, save :: MPRJ_LC_lon                   ! standard longitude for LC projection
   real(RP), private, save :: MPRJ_LC_lat1 = 30.0_RP        ! standard latitude1 for LC projection
@@ -116,6 +116,7 @@ contains
 
     namelist / PARAM_MAPPROJ / &
        MPRJ_type,          &
+       MPRJ_rotation,      &
        MPRJ_basepoint_lon, &
        MPRJ_basepoint_lat, &
        MPRJ_basepoint_x,   &
@@ -336,8 +337,8 @@ contains
     real(RP) :: rho, gmm
     !---------------------------------------------------------------------------
 
-    gno(1) =  ( y * cos(MPRJ_rotation*D2R) - x * sin(MPRJ_rotation*D2R) ) / RADIUS
-    gno(2) = -( y * sin(MPRJ_rotation*D2R) + x * cos(MPRJ_rotation*D2R) ) / RADIUS
+    gno(1) = ( y * sin(MPRJ_rotation*D2R) + x * cos(MPRJ_rotation*D2R) ) / RADIUS
+    gno(2) = ( y * cos(MPRJ_rotation*D2R) - x * sin(MPRJ_rotation*D2R) ) / RADIUS
 
     rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
     gmm = atan( rho )
