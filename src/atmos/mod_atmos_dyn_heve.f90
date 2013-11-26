@@ -108,7 +108,7 @@ contains
        PHI, GSQRT, J13G, J23G, J33G,                &
        REF_pres, REF_dens,                          &
        dtrk                                         )
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00,  &
 #ifdef DRY

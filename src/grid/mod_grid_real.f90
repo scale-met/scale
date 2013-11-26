@@ -213,7 +213,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert Xi to Z coordinate
   subroutine REAL_make_Z
-    use mod_const, only : &
+    use mod_const, only: &
        CONST_GRAV
     use mod_grid, only: &
        CZ => GRID_CZ, &

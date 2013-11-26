@@ -70,7 +70,7 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_TYPE_DYN
 #ifdef DRY
-    use mod_const, only : &
+    use mod_const, only: &
        CVdry  => CONST_CVdry,  &
        CPdry  => CONST_CPdry
 #endif
@@ -112,7 +112,7 @@ contains
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     dtrk, rk, rko,                               &
     VELZ, VELX, VELY, PRES, POTT                 )
-    use mod_const, only : &
+    use mod_const, only: &
        UNDEF  => CONST_UNDEF,  &
        IUNDEF => CONST_UNDEF2, &
        GRAV   => CONST_GRAV,   &

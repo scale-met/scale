@@ -77,7 +77,7 @@ contains
        FDZ  => GRID_FDZ,   &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
-    use mod_gridtrans, only : &
+    use mod_gridtrans, only: &
        I_XYZ,                 &
        GSQRT => GTRANS_GSQRT, &
        J33G  => GTRANS_J33G

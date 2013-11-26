@@ -65,7 +65,7 @@ module mod_atmos_phy_mp
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
-  use mod_const, only : &
+  use mod_const, only: &
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
      UNDEF8 => CONST_UNDEF8,  &
@@ -1130,12 +1130,12 @@ contains
     use mod_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
-    use mod_atmos_precipitation, only : &
+    use mod_atmos_precipitation, only: &
        precipitation => ATMOS_PRECIPITATION
-    use mod_atmos_thermodyn, only : &
+    use mod_atmos_thermodyn, only: &
        AQ_CV, &
        AQ_CP
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_psat_liq      => ATMOS_SATURATION_psat_liq,   &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice
     use mod_atmos_vars, only: &
@@ -2136,7 +2136,7 @@ contains
        dt                ) ! in
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq, &
@@ -2634,7 +2634,7 @@ contains
        flag_history_in                 ) ! in [Add] 11/08/30
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
@@ -3969,10 +3969,10 @@ contains
        sl_PLRdep, sl_PNRdep ) !
     use mod_stdio, only: &
        IO_FID_CONF
-    use mod_atmos_thermodyn, only : &
+    use mod_atmos_thermodyn, only: &
        AQ_CV, &
        AQ_CP
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq,  &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,  &
        moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &

@@ -31,7 +31,7 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -188,7 +188,7 @@ contains
              enddo
              do k = KS, Ktop
                 RHOT(k,i,j) = RHOT(k,i,j) &
-                     + dt * DENS(k,i,j) * DTSEC 
+                     + dt * DENS(k,i,j) * DTSEC
                 QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
                      + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
              enddo

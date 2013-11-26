@@ -357,7 +357,7 @@ contains
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
-    use mod_grid, only : &
+    use mod_grid, only: &
        GRID_CZ,  &
        GRID_FZ,  &
        GRID_CDZ, &
@@ -742,7 +742,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      rhow  => CONST_DWATR, &
      qlevp => CONST_LH0, &
      rvap  => CONST_Rvap
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
 
@@ -1076,7 +1076,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      rhow  => CONST_DWATR, &
      qlevp => CONST_LH0, &
      rvap  => CONST_Rvap
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
 

@@ -138,16 +138,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
     use mod_stdio, only: &
-      IO_get_available_fid, &
-      IO_FID_CONF
+       IO_get_available_fid, &
+       IO_FID_CONF
     use mod_process, only: &
-      PRC_MPIstop
-    use mod_grid, only: &
-      CDZ => GRID_CDZ, &
-      CZ  => GRID_CZ,  &
-      FZ  => GRID_FZ
+       PRC_MPIstop
     use mod_atmos_vars, only: &
-      ATMOS_TYPE_PHY_MP
+       ATMOS_TYPE_PHY_MP
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
@@ -292,7 +288,7 @@ contains
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
-    use mod_grid, only : &
+    use mod_grid, only: &
        GRID_CZ,  &
        GRID_FZ,  &
        GRID_CDZ, &
@@ -308,14 +304,14 @@ contains
        MOMZ, &
        RHOT, &
        QTRC
-    use mod_atmos_thermodyn, only : &
+    use mod_atmos_thermodyn, only: &
        AQ_CV, &
        AQ_CP
-    use mod_atmos_precipitation, only : &
+    use mod_atmos_precipitation, only: &
        precipitation => ATMOS_PRECIPITATION
     use mod_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
     implicit none
@@ -653,7 +649,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      rhow  => CONST_DWATR, &
      qlevp => CONST_LH0, &
      rvap  => CONST_Rvap
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   real(RP), intent(in) :: dens   !  density  [ kg/m3 ]
@@ -754,7 +750,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      rhow  => CONST_DWATR, &
      qlevp => CONST_LH0, &
      rvap  => CONST_Rvap
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   real(RP), intent(in) :: dtime

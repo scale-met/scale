@@ -506,7 +506,7 @@ contains
   subroutine bulkcoef_uno( &
       Cm, Ch, Ce,                    & ! (out)
       pta, pts, za, uabs, z0, zt, ze ) ! (in)
-    use mod_const, only : &
+    use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       KARMAN => CONST_KARMAN
     use mod_process, only: &
@@ -610,7 +610,7 @@ contains
   end subroutine bulkcoef_uno
 
   function satmixr( temp )
-    use mod_const, only : &
+    use mod_const, only: &
       P00    => CONST_PRE00, &
       EPSvap => CONST_EPSvap
     implicit none

@@ -130,14 +130,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup
     use mod_stdio, only: &
-      IO_get_available_fid, &
-      IO_FID_CONF
+       IO_get_available_fid, &
+       IO_FID_CONF
     use mod_process, only: &
-      PRC_MPIstop
-    use mod_grid, only: &
-      CDZ => GRID_CDZ, &
-      CZ  => GRID_CZ,  &
-      FZ  => GRID_FZ
+       PRC_MPIstop
     implicit none
     !---------------------------------------------------------------------------
 
@@ -263,7 +259,7 @@ contains
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
-    use mod_grid, only : &
+    use mod_grid, only: &
        GRID_CZ,  &
        GRID_FZ,  &
        GRID_CDZ, &
@@ -279,7 +275,7 @@ contains
        MOMZ, &
        RHOT, &
        QTRC
-    use mod_atmos_saturation, only : &
+    use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
     implicit none
@@ -577,7 +573,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      rhow  => CONST_DWATR, &
      qlevp => CONST_LH0, &
      rvap  => CONST_Rvap
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   !
@@ -640,7 +636,7 @@ call STOP_COLLECTION("MICROPHYSICS")
                         tmlt  => CONST_TMELT, &
                         qlmlt => CONST_EMELT, &
                         cp    => CONST_CPdry
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   !
@@ -859,7 +855,7 @@ call STOP_COLLECTION("MICROPHYSICS")
                         qlevp => CONST_LH0, &
                         cp    => CONST_CPdry, &
                         rvap  => CONST_Rvap
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   !
@@ -970,7 +966,7 @@ call STOP_COLLECTION("MICROPHYSICS")
                         qlsbl  => CONST_LHS0, &
                         rvap   => CONST_Rvap,  &
                         cp     => CONST_CPdry
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   !
@@ -1101,7 +1097,7 @@ call STOP_COLLECTION("MICROPHYSICS")
                         qlsbl  => CONST_LHS0, &
                         rvap   => CONST_Rvap,  &
                         cp     => CONST_CPdry
-  use mod_atmos_saturation, only : &
+  use mod_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
   !

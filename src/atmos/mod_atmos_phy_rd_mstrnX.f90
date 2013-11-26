@@ -228,8 +228,8 @@ contains
        PRC_MPIstop
     use mod_time, only: &
        TIME_NOWDATE
-    use mod_geometrics, only: &
-       GEOMETRICS_lat
+    use mod_grid_real, only: &
+       REAL_lat
     use mod_atmos_vars, only: &
        ATMOS_TYPE_PHY_RD
     use mod_atmos_solarins, only: &
@@ -341,24 +341,24 @@ contains
                                  RD_zh(:), RD_z(:)  ) ! [INOUT]
 
     !--- read climatological profile
-    call RD_PROFILE_read_climatorogy( RD_KMAX,                 & ! [IN]
-                                      ngas,                    & ! [IN]
-                                      ncfc,                    & ! [IN]
-                                      RD_naero,                & ! [IN]
-                                      GEOMETRICS_lat(1,IS,JS), & ! [IN], tentative treatment
-                                      TIME_NOWDATE(:),         & ! [IN]
-                                      RD_zh          (:),      & ! [IN]
-                                      RD_z           (:),      & ! [IN]
-                                      RD_rhodz       (:),      & ! [INOUT]
-                                      RD_pres        (:),      & ! [INOUT]
-                                      RD_presh       (:),      & ! [INOUT]
-                                      RD_temp        (:),      & ! [INOUT]
-                                      RD_temph       (:),      & ! [INOUT]
-                                      RD_gas         (:,:),    & ! [INOUT]
-                                      RD_cfc         (:,:),    & ! [INOUT]
-                                      RD_aerosol_conc(:,:),    & ! [INOUT]
-                                      RD_aerosol_radi(:,:),    & ! [INOUT]
-                                      RD_cldfrac     (:)       ) ! [INOUT]
+    call RD_PROFILE_read_climatorogy( RD_KMAX,                & ! [IN]
+                                      ngas,                   & ! [IN]
+                                      ncfc,                   & ! [IN]
+                                      RD_naero,               & ! [IN]
+                                      REAL_lat       (IS,JS), & ! [IN], tentative treatment
+                                      TIME_NOWDATE   (:),     & ! [IN]
+                                      RD_zh          (:),     & ! [IN]
+                                      RD_z           (:),     & ! [IN]
+                                      RD_rhodz       (:),     & ! [INOUT]
+                                      RD_pres        (:),     & ! [INOUT]
+                                      RD_presh       (:),     & ! [INOUT]
+                                      RD_temp        (:),     & ! [INOUT]
+                                      RD_temph       (:),     & ! [INOUT]
+                                      RD_gas         (:,:),   & ! [INOUT]
+                                      RD_cfc         (:,:),   & ! [INOUT]
+                                      RD_aerosol_conc(:,:),   & ! [INOUT]
+                                      RD_aerosol_radi(:,:),   & ! [INOUT]
+                                      RD_cldfrac     (:)      ) ! [INOUT]
 
     call ATMOS_PHY_RD( .true., .false. )
 
@@ -375,11 +375,10 @@ contains
        Mvap => CONST_Mvap, &
        PPM  => CONST_PPM
     use mod_grid, only: &
-       CDZ  => GRID_CDZ, &
-       RFDZ => GRID_RFDZ
-    use mod_geometrics, only: &
-       GEOMETRICS_lat, &
-       GEOMETRICS_lon
+       CDZ  => GRID_CDZ
+    use mod_grid_real, only: &
+       REAL_lon, &
+       REAL_lat
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &
        ATMOS_vars_total,    &
@@ -505,12 +504,12 @@ contains
      do j = JS, JE
      do i = IS, IE
 
-       call ATMOS_SOLARINS_insolation( solins(1,i,j),         & ! [OUT]
-                                       cosSZA(1,i,j),         & ! [OUT]
-                                       Re_factor,             & ! [OUT]
-                                       GEOMETRICS_lon(1,i,j), & ! [IN]
-                                       GEOMETRICS_lat(1,i,j), & ! [IN]
-                                       TIME_NOWDATE(:)        ) ! [IN]
+       call ATMOS_SOLARINS_insolation( solins(1,i,j),  & ! [OUT]
+                                       cosSZA(1,i,j),  & ! [OUT]
+                                       Re_factor,      & ! [OUT]
+                                       REAL_lon(i,j),  & ! [IN]
+                                       REAL_lat(i,j),  & ! [IN]
+                                       TIME_NOWDATE(:) ) ! [IN]
 
        ! marge basic profile and value in LES domain
        rhodz_merge(:) = RD_rhodz(:)
@@ -711,14 +710,13 @@ contains
        ngas, &
        ncfc  )
     use mod_stdio, only: &
-         IO_FID_CONF, &
-         IO_get_available_fid
+       IO_FID_CONF, &
+       IO_get_available_fid
     use mod_const, only: &
-         GRAV  => CONST_GRAV,  &
-         Rdry  => CONST_Rdry,  &
-         Pstd  => CONST_Pstd,  &
-         TEM00 => CONST_TEM00, &
-         PPM   => CONST_PPM
+       GRAV  => CONST_GRAV, &
+       Rdry  => CONST_Rdry, &
+       Pstd  => CONST_Pstd, &
+       TEM00 => CONST_TEM00
     implicit none
 
     integer, intent(out) :: ngas
@@ -1469,7 +1467,6 @@ contains
        flux_direct )
     use mod_const, only: &
        PI   => CONST_PI,  &
-       EPS  => CONST_EPS, &
        EPS1 => CONST_EPS1
     implicit none
 

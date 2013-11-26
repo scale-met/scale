@@ -133,14 +133,14 @@ contains
        PRC_MPIstop
     use mod_time, only: &
        TIME_DTSEC_ATMOS_DYN
-    use mod_grid, only : &
+    use mod_grid, only: &
        GRID_CDZ, &
        GRID_CDX, &
        GRID_CDY, &
        GRID_FDZ, &
        GRID_FDX, &
        GRID_FDY
-    use mod_grid_real, only : &
+    use mod_grid_real, only: &
        REAL_LAT
     implicit none
 
@@ -274,7 +274,7 @@ contains
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
-    use mod_grid, only : &
+    use mod_grid, only: &
        GRID_CDZ,  &
        GRID_CDX,  &
        GRID_CDY,  &
@@ -287,9 +287,9 @@ contains
        GRID_RFDZ, &
        GRID_RFDX, &
        GRID_RFDY
-    use mod_grid_real, only : &
+    use mod_grid_real, only: &
        REAL_PHI
-    use mod_gridtrans, only : &
+    use mod_gridtrans, only: &
        GTRANS_GSQRT, &
        GTRANS_J13G,  &
        GTRANS_J23G,  &
@@ -395,7 +395,7 @@ contains
        DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               )
     use dc_types, only: &
        DP
-    use mod_const, only : &
+    use mod_const, only: &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry

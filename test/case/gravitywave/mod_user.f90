@@ -28,7 +28,7 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -96,7 +96,7 @@ contains
   subroutine USER_step
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV  => CONST_GRAV
     use mod_grid, only : &
        CZ => GRID_CZ

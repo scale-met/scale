@@ -71,7 +71,7 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only : &
+    use mod_const, only: &
        CONST_GRAV
     implicit none
 

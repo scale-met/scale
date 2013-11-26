@@ -6,7 +6,7 @@ module test_atmos_dyn_fent_fct
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-  use mod_grid, only : &
+  use mod_grid, only: &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
@@ -21,7 +21,7 @@ module test_atmos_dyn_fent_fct
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
-  use dc_types, only : &
+  use dc_types, only: &
        DP
   !-----------------------------------------------------------------------------
   implicit none

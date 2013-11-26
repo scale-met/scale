@@ -71,7 +71,7 @@ module mod_atmos_phy_tb
 contains
 
   subroutine ATMOS_PHY_TB_setup
-    use mod_grid, only : &
+    use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY
@@ -115,14 +115,14 @@ contains
   !>  5, stratification effect is considered.
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV => CONST_GRAV
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_grid, only : &
+    use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &

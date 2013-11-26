@@ -116,7 +116,7 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_grid, only : &
+    use mod_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY
@@ -315,7 +315,7 @@ contains
   !> Dynamical Process
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN
-    use mod_const, only : &
+    use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        Rdry   => CONST_Rdry,   &
        Rvap   => CONST_Rvap,   &
@@ -327,7 +327,7 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_grid, only : &
+    use mod_grid, only: &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
        CDY  => GRID_CDY,  &

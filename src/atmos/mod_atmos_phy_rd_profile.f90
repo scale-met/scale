@@ -943,14 +943,14 @@ contains
              fact = ( x1(1) - x2(i2) ) / ( x1(2) - x1(1) )
 
              y2(i2) = y1(1) * ( 1.0_RP-fact ) &
-                    + y1(2) * (        fact ) 
+                    + y1(2) * (        fact )
 
        elseif( x2(i2) <= x1(imax1) ) then ! extrapolation
 
              fact = ( x1(imax1) - x2(i2) ) / ( x1(imax1) - x1(imax1-1) )
 
              y2(i2) = y1(imax1-1) * (        fact ) &
-                    + y1(imax1  ) * ( 1.0_RP-fact ) 
+                    + y1(imax1  ) * ( 1.0_RP-fact )
 
        else
           do i1 = 1, imax1-1
