@@ -50,8 +50,10 @@ module mod_grid_real
   real(RP), public, save :: REAL_CZ (  KA,IA,JA)    !< geopotential height [m] (cell center)
   real(RP), public, save :: REAL_FZ (0:KA,IA,JA)    !< geopotential height [m] (cell face  )
 
-!  real(RP), public, save :: REAL_CXYZ(KA,IA,JA,3)   !< absolute position from sphere center [m] (cell center)
-!  real(RP), public, save :: REAL_FXYZ(KA,IA,JA,3,3) !< absolute position from sphere center [m] (cell face)
+  real(RP), public, save :: REAL_LONX(IA,JA)        !< longitude at staggered point (u) [rad,0-2pi]
+  real(RP), public, save :: REAL_LATY(IA,JA)        !< latitude  at staggered point (v) [rad,-pi,pi]
+  real(RP), public, save :: REAL_DLON(IA,JA)        !< delta longitude
+  real(RP), public, save :: REAL_DLAT(IA,JA)        !< delta latitude
 
   real(RP), public, save :: REAL_PHI (KA,IA,JA)     !< geopotential [m2/s2] (cell center)
 
@@ -73,11 +75,6 @@ module mod_grid_real
   !
   !++ Private parameters & variables
   !
-  real(RP), public, save :: REAL_STD_LON = 135.2_RP !< longitude at south-west corner [deg]
-  real(RP), public, save :: REAL_STD_LAT =  34.7_RP !< latitude  at south-west corner [deg]
-  real(RP), public, save :: REAL_DLON               !< delta longitude
-  real(RP), public, save :: REAL_DLAT               !< delta latitude
-
   character(len=IO_FILECHR), private :: REAL_OUT_BASENAME = ''                  !< basename of the output file
   character(len=IO_SYSCHR),  private :: REAL_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title    of the output file
   character(len=IO_SYSCHR),  private :: REAL_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
@@ -91,11 +88,11 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
+    use mod_mapproj, only: &
+       MPRJ_setup
     implicit none
 
     namelist / PARAM_REAL / &
-       REAL_STD_LON,      &
-       REAL_STD_LAT,      &
        REAL_OUT_BASENAME, &
        REAL_OUT_DTYPE
 
@@ -117,6 +114,9 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_REAL)
 
+    ! setup map projection
+    call MPRJ_setup
+
     ! calc longitude & latitude
     call REAL_make_latlon
 
@@ -135,6 +135,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write lon&lat, control area/volume
   subroutine REAL_write
+    use mod_const, only: &
+       D2R => CONST_D2R
     use mod_fileio, only: &
        FILEIO_write
     implicit none
@@ -145,10 +147,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output GEOMETRICAL PARAMETER ***'
 
-       call FILEIO_write( REAL_LON(:,:), REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
+       call FILEIO_write( REAL_LON(:,:)/D2R, REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
                           'lon', 'Longitude', 'degrees_east', 'XY', REAL_OUT_DTYPE )
 
-       call FILEIO_write( REAL_LAT(:,:), REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
+       call FILEIO_write( REAL_LAT(:,:)/D2R, REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
                           'lat', 'Latitude', 'degrees_north', 'XY', REAL_OUT_DTYPE )
 
        call FILEIO_write( REAL_AREA(:,:), REAL_OUT_BASENAME, REAL_OUT_TITLE, &
@@ -166,34 +168,33 @@ contains
   !> Calc longitude & latitude
   subroutine REAL_make_latlon
     use mod_const, only: &
-       RADIUS => CONST_RADIUS, &
        D2R    => CONST_D2R
     use mod_grid, only: &
        CX => GRID_CX, &
-       CY => GRID_CY
+       CY => GRID_CY, &
+       FX => GRID_FX, &
+       FY => GRID_FY
+    use mod_mapproj, only: &
+       MPRJ_xy2lonlat
     implicit none
-
-    real(RP) :: STD_LON, STD_LAT
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    STD_LON = REAL_STD_LON * D2R
-    STD_LAT = REAL_STD_LAT * D2R
-
-    REAL_DLON = DX / RADIUS * cos(REAL_STD_LAT)
-    REAL_DLAT = DY / RADIUS
-
-    if( IO_L ) write(IO_FID_LOG,*) ' *** reference point(south-west corner)[lon,lat]=[',REAL_STD_LON,',',REAL_STD_LAT,']'
-    if( IO_L ) write(IO_FID_LOG,*) ' *** delta(longitude)[deg] = ', REAL_DLON / D2R
-    if( IO_L ) write(IO_FID_LOG,*) ' *** delta(latitude )[deg] = ', REAL_DLAT / D2R
-
+    do j = 1, JA
     do i = 1, IA
-       REAL_LON(i,:) = STD_LON + CX(i) / RADIUS * cos(REAL_STD_LAT)
+       call MPRJ_xy2lonlat( CX(i), FY(j), REAL_LON(i,j), REAL_LATY(i,j))
+       call MPRJ_xy2lonlat( FX(i), CY(j), REAL_LONX(i,j), REAL_LAT(i,j))
+    enddo
     enddo
 
-    do j = 1, JA
-       REAL_LAT(:,j) = STD_LAT + CY(j) / RADIUS
+    REAL_DLON(:,:) = 0.0_RP
+    REAL_DLAT(:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       REAL_DLON(i,j) = REAL_LONX(i,j) - REAL_LONX(i-1,j)
+       REAL_DLAT(i,j) = REAL_LATY(i,j) - REAL_LATY(i,j-1)
+    enddo
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*) ' *** Position on the earth (Local)'
@@ -265,9 +266,9 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          REAL_AREA(i,j) = RADIUS * RADIUS * REAL_DLON &
-                         * ( sin( REAL_LAT(i,j)-0.5_RP*REAL_DLAT ) &
-                           - sin( REAL_LAT(i,j)+0.5_RP*REAL_DLAT ) )
+          REAL_AREA(i,j) = RADIUS * RADIUS * REAL_DLON(i,j) &
+                         * ( sin( REAL_LAT(i,j)-0.5_RP*REAL_DLAT(i,j) ) &
+                           - sin( REAL_LAT(i,j)+0.5_RP*REAL_DLAT(i,j) ) )
           REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
        enddo
        enddo

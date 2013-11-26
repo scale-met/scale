@@ -58,6 +58,7 @@ MODS =	\
 	mod_comm.o	\
 	mod_topography.o	\
 	mod_landuse.o	\
+	mod_mapproj.o	\
 	mod_grid_real.o	\
 	mod_gridtrans.o	\
 	mod_intepolation.o	\
@@ -155,6 +156,7 @@ $(BUILD_DIR)/mod_stats.o				: mod_stats.f90				mod_stdio.o mod_process.o mod_tim
 $(BUILD_DIR)/mod_grid_cartesian.o	: mod_grid_cartesian.f90	mod_stdio.o mod_process.o mod_time.o
 $(BUILD_DIR)/mod_topography.o			: mod_topography.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
 $(BUILD_DIR)/mod_landuse.o				: mod_landuse.f90			   mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
+$(BUILD_DIR)/mod_mapproj.o				: mod_mapproj.f90			   mod_stdio.o mod_process.o mod_time.o mod_const.o
 $(BUILD_DIR)/mod_grid_real.o			: mod_grid_real.f90			mod_stdio.o mod_process.o mod_time.o mod_const.o mod_fileio.o mod_grid_cartesian.o mod_topography.o
 $(BUILD_DIR)/mod_gridtrans.o			: mod_gridtrans.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_grid_cartesian.o mod_grid_real.o
 $(BUILD_DIR)/mod_intepolation.o		: mod_intepolation.f90		mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian.o mod_grid_real.o
