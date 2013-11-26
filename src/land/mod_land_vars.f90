@@ -391,17 +391,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-    use mod_comm, only: &
-       COMM_total_doreport, &
-       COMM_total
+!    use mod_comm, only: &
+!       STAT_checktotal, &
+!       STAT_total
     implicit none
 
-    real(RP) :: total ! dummy
+    !real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( COMM_total_doreport ) then
-
-    endif
+!    if ( STAT_checktotal ) then
+!
+!    endif
 
     return
   end subroutine LAND_vars_total
@@ -444,7 +444,7 @@ contains
        Z0H,         &
        Z0E
 
-    integer :: n, v
+    integer :: n
     integer :: ierr
     !---------------------------------------------------------------------------
 

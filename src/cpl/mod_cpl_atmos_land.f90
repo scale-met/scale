@@ -122,8 +122,6 @@ contains
   end subroutine CPL_AtmLnd_setup
 
   subroutine CPL_AtmLnd_solve
-    use mod_const, only: &
-       LH0 => CONST_LH0
     use mod_process, only: &
        PRC_MPIstop
     use mod_cpl_vars, only: &
@@ -409,7 +407,6 @@ contains
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
-      Rvap   => CONST_Rvap,  &
       STB    => CONST_STB,   &
       LH0    => CONST_LH0
     use mod_grid, only: &

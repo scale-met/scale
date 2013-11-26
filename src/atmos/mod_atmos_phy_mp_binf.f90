@@ -1,23 +1,23 @@
 !-------------------------------------------------------------------------------
 !> Module Spectran Bin Microphysical Module in SCALE-LED ver. 3
 !!
-!! @par Description: 
+!! @par Description:
 !!      This module contains subroutines for the Spectral Bin Model
 !!
-!! - Reference 
+!! - Reference
 !!  - Suzuki et al., 2006!!    Correlation Pattern between Effective Radius and Optical Thickness of Water Clouds Simulated by a Spectral Bin Microphysics Cloud Model
 !!    SOLA, 2: 116–119 doi:10.2151/sola.2006‒030
 !!  - Suzuki et al., 2010!!    A Study of Microphysical Mechanisms for Correlation Patterns between Droplet Radius and Optical Thickness of Warm Clouds with a Spectral Bin
 !!    J. Atmos. Sci., 67: 1126-1141
 !!  - Sato et al., 2009!!    Application of a Monte Carlo integration method to collision and coagulation growth processes of hydrometeors in a bin-type model
 !!    J. Geophy. Res., 114: D09215, doi:10.1029/2008JD011247
-!! 
+!!
 !! @author : Team SCALE
 !!
 !! @par History: Hbinw
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
 !! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)
-!! @li  ver.0.02   2012-10-18 (Y.Sato) [rev] extend to ice microphysics 
+!! @li  ver.0.02   2012-10-18 (Y.Sato) [rev] extend to ice microphysics
 !<
 !-------------------------------------------------------------------------------
 module mod_atmos_phy_mp
@@ -91,7 +91,7 @@ module mod_atmos_phy_mp
   integer, parameter :: ih = 7
 
   !--- bin information of hydrometeors
-  real(RP) :: xctr( nbin )         !--- log( m ) value of bin center 
+  real(RP) :: xctr( nbin )         !--- log( m ) value of bin center
   real(RP) :: xbnd( nbin+1 )       !--- log( m ) value of bin boundary
   real(RP) :: radc( nbin )         !--- radius of hydrometeor at bin center [m]
   real(RP) :: dxmic                !--- d( log(m) ) of hydrometeor bin
@@ -99,9 +99,9 @@ module mod_atmos_phy_mp
   real(RP) :: cbnd( nspc,nbin+1 )     !--- capacitance of hydrometeor at bin boundary
   real(RP) :: ck( nspc,nspc,nbin,nbin )  !-- collection kernel
   real(RP) :: vt( nspc,nbin )         !--- terminal velocity of hydrometeor [m/s]
-  real(RP) :: br( nspc,nbin )         !--- bulk density of hydrometeor [kg/m^3] 
+  real(RP) :: br( nspc,nbin )         !--- bulk density of hydrometeor [kg/m^3]
   integer  :: ifrsl( nspc,nspc )
-  real(RP) :: sfc_precp( nspc ) 
+  real(RP) :: sfc_precp( nspc )
   !--- constant for bin
   real(RP), parameter :: cldmin = 1.0E-10_RP, eps = 1.0E-30_RP
   real(RP), parameter :: OneovThird = 1.0_RP/3.0_RP, ThirdovForth = 3.0_RP/4.0_RP
@@ -143,7 +143,7 @@ contains
 
     logical :: ATMOS_PHY_MP_FLAG_NUCLEAT !--- flag of regeneration
     integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
-    integer :: ATMOS_PHY_MP_RNDM_MSPC  
+    integer :: ATMOS_PHY_MP_RNDM_MSPC
     integer :: ATMOS_PHY_MP_RNDM_MBIN
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -181,8 +181,8 @@ contains
 
     flg_nucl = ATMOS_PHY_MP_FLAG_NUCLEAT
     rndm_flgp = ATMOS_PHY_MP_RNDM_FLGP
-    mspc = ATMOS_PHY_MP_RNDM_MSPC 
-    mbin = ATMOS_PHY_MP_RNDM_MBIN 
+    mspc = ATMOS_PHY_MP_RNDM_MSPC
+    mbin = ATMOS_PHY_MP_RNDM_MBIN
 
     fid_micpara = IO_get_available_fid()
     !--- open parameter of cloud microphysics
@@ -212,7 +212,7 @@ contains
      end do
     end do
 
-    ! collection kernel 
+    ! collection kernel
     do myu = 1, nspc
      do nyu = 1, nspc
       do i = 1, nbin
@@ -294,8 +294,8 @@ contains
     real(RP) :: pres_mp  (KA,IA,JA)
     real(RP) :: gdgc     (KA,IA,JA,nspc,nbin) !-- SDF of hydrometeors [kg/m^3/unit ln(r)]
     real(RP) :: qv_mp    (KA,IA,JA)      !-- Qv [kg/kg]
-    real(RP) :: wfall( KA )  
-    
+    real(RP) :: wfall( KA )
+
     real(RP) :: ssliq, ssice, sum1, rtotal, sum2, sum3( nspc )
     integer :: m, n, k, i, j, iq, countbin
 
@@ -397,7 +397,7 @@ call START_COLLECTION("MICROPHYSICS")
               gdgc(k,i,j,1:nspc,1:nbin),       &  !--- inout
               qv_mp(k,i,j), temp_mp(k,i,j)     )  !--- inout
       end if
-    
+
     end do
     end do
     end do
@@ -429,7 +429,7 @@ call START_COLLECTION("MICROPHYSICS")
                  gdgc( 1:KA,i,j,m,n )  ) !--- inout
 !          do k = KS, KE
 !           if( gdgc(k,i,j,(m-1)*nbin+n) < 0.0_RP ) then
-!            gdgc(k,i,j,(m-1)*nbin+n) = max( gdgc(k,i,j,(m-1)*nbin+n),0.0_RP ) 
+!            gdgc(k,i,j,(m-1)*nbin+n) = max( gdgc(k,i,j,(m-1)*nbin+n),0.0_RP )
 !           end if
 !          end do
          end do
@@ -446,13 +446,13 @@ call START_COLLECTION("MICROPHYSICS")
        do k = KS, KE
           RHOT(k,i,j) = temp_mp(k,i,j)* &
             ( CONST_PRE00/pres_mp(k,i,j) )**( CONST_RovCP )*DENS(k,i,j)
-          QTRC(k,i,j,I_QV) = qv_mp(k,i,j)  
+          QTRC(k,i,j,I_QV) = qv_mp(k,i,j)
           countbin = 1
           do m = 1, nspc
           do n = 1, nbin
             countbin = countbin+1
             QTRC(k,i,j,countbin) = gdgc(k,i,j,m,n)/DENS(k,i,j)*dxmic
-            if( QTRC(k,i,j,countbin) <= eps ) then 
+            if( QTRC(k,i,j,countbin) <= eps ) then
               QTRC(k,i,j,countbin) = 0.0_RP
             end if
           end do
@@ -486,6 +486,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 #endif
 
     call ATMOS_vars_total
+
     return
   end subroutine ATMOS_PHY_MP
   !-----------------------------------------------------------------------------
@@ -566,7 +567,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   return
 
-  end subroutine mp_hbinf_evolve 
+  end subroutine mp_hbinf_evolve
   !-----------------------------------------------------------------------------
   subroutine nucleat        &
       ( dens, pres, dtime,  & !--- in
@@ -661,16 +662,16 @@ call STOP_COLLECTION("MICROPHYSICS")
   ssice = qvap/ssice-1.0_RP
 
   if( ssice <= 0.0_RP ) return
- 
+
   numin = bcoef * exp( acoef + bcoef * ssice )
   numin = numin * exp( xctr( 1 ) )/dxmic
   numin = min( numin,qvap*dens )
   !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
   if( temp <= tplatu .or. ( temp >= tcolml .and. temp < tcolmu ) ) then
-   gc( ic,1 ) = gc( ic,1 ) + numin 
+   gc( ic,1 ) = gc( ic,1 ) + numin
   !--- -14 [deg] > T >= -18 [deg] -> dendrite
   elseif( temp <= tdendu .and. temp >= tdendl ) then
-   gc( id,1 ) = gc( id,1 ) + numin 
+   gc( id,1 ) = gc( id,1 ) + numin
   !--- else -> plate
   else
    gc( ip,1 ) = gc( ip,1 ) + numin
@@ -708,7 +709,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 !  if( temp <= tthreth ) then !--- Bigg (1975)
    xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
    nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
- 
+
    tc = temp-tmlt
    rate = coefa*exp( -coefb*tc )
 
@@ -716,10 +717,10 @@ call STOP_COLLECTION("MICROPHYSICS")
    do n = 1, nbin
      dmp = rate*exp( xctr( n ) )
      frz = gc( il,n )*( 1.0_RP-exp( -dmp*dtime ) )
- 
+
      gc( il,n ) = gc( il,n ) - frz
      gc( il,n ) = max( gc( il,n ),0.0_RP )
- 
+
      if ( n >= nbound ) then
        gc( ih,n ) = gc( ih,n ) + frz
      else
@@ -940,7 +941,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     old_sum_gcn = old_sum_gcn + gcnold( n )*dxmic
     new_sum_gcn = new_sum_gcn + gcn( n )*dxmic
   end do
-     
+
   gclnew = gclnew*dxmic
   !
   !----- change of humidity and temperature
@@ -956,7 +957,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !------- number -> mass
   gc( 1:nbin ) = gcn( 1:nbin )*exp( xctr( 1:nbin ) )
-  ! 
+  !
   end subroutine liqphase
   !-------------------------------------------------------------------------------
   subroutine icephase   &
@@ -996,7 +997,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   end do
   gciold = gciold*dxmic
 
-  !----- mass -> number 
+  !----- mass -> number
   do myu = 2, nspc
     gcn( myu,1:nbin ) = gc( myu,1:nbin )/exp( xctr( 1:nbin ) )
   end do
@@ -1093,7 +1094,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine mixphase     &
       ( dtime, iflg,      & !--- in
         dens, pres,       & !--- in
-        gc, qvap, temp    )!--- inout 
+        gc, qvap, temp    )!--- inout
   !
   use mod_const, only : rhow   => CONST_DWATR,  &
                         qlevp  => CONST_LH0, &
@@ -1243,7 +1244,7 @@ call STOP_COLLECTION("MICROPHYSICS")
       gdu( 1:nbin+1 ) = cbnd( myu,1:nbin+1 )/exp( xbnd( 1:nbin+1 ) )*gtice*sicetnd
       call  advection                                    &
               ( dtcnd, gdu( 1:nbin+1 ),                  & !--- in
-                gcn( myu,1:nbin )                        ) !--- inout 
+                gcn( myu,1:nbin )                        ) !--- inout
     end if
   end do
 
@@ -1294,7 +1295,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: gdq( 1:nbin )
   !
   !--- local variables
-  real(RP) :: delx 
+  real(RP) :: delx
   real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
   real(RP) :: flq( 1:nbin+1 )
   integer, parameter :: ldeg = 2
@@ -1611,7 +1612,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   end do large
   end do small
-  !  
+  !
   return
   !
   end subroutine collcoag
@@ -1664,7 +1665,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   end subroutine  advec_1d
   !-------------------------------------------------------------------------------
   !
-  ! + Y. Sato added for stochastic method 
+  ! + Y. Sato added for stochastic method
   ! + Reference Sato et al. (2009) JGR, doi:10.1029/2008JD011247
   !
   !-------------------------------------------------------------------------------
@@ -1693,27 +1694,27 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-------------------------------------------------------
    allocate( blrg( mset, mbin ) )
    allocate( bsml( mset, mbin ) )
- 
+
    a = real( nbin )*real( nbin-1 )*0.50_RP
    if( a < mbin ) then
     write(*,*) "mbin should be smaller than {nbin}_C_{2}"
     call PRC_MPIstop
    end if
- 
+
    wgtbin = a/real( mbin )
    nbinr = real( nbin )
- 
+
     do p = 1, pq
       orderb( p ) = p
     end do
- 
+
     do p = 1, nbin-1
       ranstmp( (p-1)*nbin-(p*(p-1))/2+1 : p*nbin-(p*(p+1))/2 ) = p
      do q = 1, nbin-p
         ranltmp( (p-1)*nbin-(p*(p-1))/2+q ) = p+q
       end do
    end do
- 
+
     do n = 1, mset
       call RANDOM_get( randnum )
        do p = 1, pq
@@ -1723,7 +1724,7 @@ call STOP_COLLECTION("MICROPHYSICS")
         orderb( p ) = orderb( k )
         orderb( k ) = temp
        end do
- 
+
        do p = 1, mbin
         if( p <= pq ) then
          rans( p ) = ranstmp( orderb( p ) )
@@ -1741,7 +1742,7 @@ call STOP_COLLECTION("MICROPHYSICS")
          blrg( n,1:mbin ) = int( ranl( 1:mbin ) )
          bsml( n,1:mbin ) = int( rans( 1:mbin ) )
     end do
- 
+
   end subroutine random_setup
  !-------------------------------------------------------------------------------
   subroutine  r_collcoag( isml, ilrg, irsl, dtime, swgt, gc )
@@ -1867,7 +1868,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
    end do
 
-  !  
+  !
   return
   !
   end subroutine r_collcoag
@@ -2098,7 +2099,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     do k = KS, KE
     do j = JS, JE
     do i = IS, JE
-      do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro 
+      do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
          sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
                             ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
                             / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
@@ -2144,14 +2145,14 @@ call STOP_COLLECTION("MICROPHYSICS")
     do i = IS, IE
       do ihydro = 1, MP_QA
         sum2 = 0.0_RP
-        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro 
+        do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
           sum2 = sum2 + QTRC0(k,i,j,iq)
         enddo
         Qe(k,i,j,ihydro) = sum2
-      enddo 
-    enddo 
-    enddo 
-    enddo 
+      enddo
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_Mixingratio

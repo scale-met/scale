@@ -77,6 +77,10 @@ contains
        FDZ  => GRID_FDZ,   &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
+    use mod_gridtrans, only : &
+       I_XYZ,                 &
+       GSQRT => GTRANS_GSQRT, &
+       J33G  => GTRANS_J33G
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -135,7 +139,7 @@ contains
 !OCL XFILL
        do iq = I_QC, QA
           do k  = KS-1, KE-1
-             qflx(k,iq) = velw(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
+             qflx(k,iq) = velw(k+1,i,j,iq) * rhoq(k+1,i,j,iq) * J33G
           enddo
           qflx(KE,iq) = 0.0_RP
        enddo
@@ -150,7 +154,7 @@ contains
                flux_snow(k,i,j) = flux_snow(k,i,j) - qflx(k,iq)
              enddo
            endif
-       enddo 
+       enddo
 
 !OCL XFILL
        do k = KS, KE
@@ -165,7 +169,7 @@ contains
              eflx(k) = qflx(k,iq) * temp(k+1,i,j) * CVw(iq)
           enddo
           do k  = KS,   KE
-             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k)
           enddo
 
           !--- potential energy
@@ -174,7 +178,7 @@ contains
           enddo
           eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
           do k  = KS,   KE
-             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             rhoe_new(k) = rhoe_new(k) - dt * ( eflx(k) - eflx(k-1) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k)
           enddo
 
           !--- momentum z (half level)
@@ -184,7 +188,7 @@ contains
                                * MOMZ(k,i,j)
           enddo
           do k  = KS,  KE-1
-             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * RFDZ(k)
+             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) / GSQRT(k,i,j,I_XYZ) * RFDZ(k)
           enddo
 
           !--- momentum x
@@ -194,7 +198,7 @@ contains
                                * MOMX(k+1,i,j)
           enddo
           do k  = KS,  KE
-             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k)
           enddo
 
           !--- momentum y
@@ -204,12 +208,12 @@ contains
                                * MOMY(k+1,i,j)
           enddo
           do k  = KS,  KE
-             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k)
           enddo
 
           !--- update total density
           do k  = KS,  KE
-             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k)
+             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k)
           enddo
 
        enddo ! QC-QG loop
@@ -217,8 +221,9 @@ contains
        !--- update tracer
        do iq = I_QC, QA
        do k  = KS, KE
-          QTRC(k,i,j,iq) = ( rhoq(k,i,j,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) ) / DENS(k,i,j)
-       enddo 
+          QTRC(k,i,j,iq) = ( rhoq(k,i,j,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) / GSQRT(k,i,j,I_XYZ) * RCDZ(k) ) &
+                         / DENS(k,i,j)
+       enddo
        enddo ! QC-QG,NC-NG loop
 
        do k  = KS,  KE

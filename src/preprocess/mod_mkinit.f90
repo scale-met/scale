@@ -29,15 +29,14 @@ module mod_mkinit
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_get_available_fid, &
-     IO_SYSCHR,            &
-     IO_FILECHR,           &
+     IO_SYSCHR,   &
+     IO_FILECHR,  &
      IO_FID_LOG,  &
      IO_FID_CONF, &
      IO_L
   use mod_process, only: &
      PRC_MPIstop
-  use mod_const, only : &
+  use mod_const, only: &
      PI    => CONST_PI,    &
      GRAV  => CONST_GRAV,  &
      Pstd  => CONST_Pstd,  &
@@ -51,10 +50,12 @@ module mod_mkinit
   use mod_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use mod_grid, only : &
+  use mod_grid, only: &
      CZ => GRID_CZ, &
      CX => GRID_CX, &
      CY => GRID_CY
+  use mod_grid_real, only: &
+     REAL_CZ
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -92,26 +93,27 @@ module mod_mkinit
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: MKINIT_TYPE           = -1
+  integer, public, save      :: MKINIT_TYPE     = -1
+  integer, public, parameter :: I_IGNORE        =  0
 
-  integer, public, parameter :: I_PLANESTATE          =  1
-  integer, public, parameter :: I_TRACERBUBBLE        =  2
-  integer, public, parameter :: I_COLDBUBBLE          =  3
+  integer, public, parameter :: I_PLANESTATE    =  1
+  integer, public, parameter :: I_TRACERBUBBLE  =  2
+  integer, public, parameter :: I_COLDBUBBLE    =  3
 
-  integer, public, parameter :: I_LAMBWAVE            =  4
-  integer, public, parameter :: I_GRAVITYWAVE         =  5
-  integer, public, parameter :: I_KHWAVE              =  6
-  integer, public, parameter :: I_TURBULENCE          =  7
-  integer, public, parameter :: I_MOUNTAINWAVE        =  8
+  integer, public, parameter :: I_LAMBWAVE      =  4
+  integer, public, parameter :: I_GRAVITYWAVE   =  5
+  integer, public, parameter :: I_KHWAVE        =  6
+  integer, public, parameter :: I_TURBULENCE    =  7
+  integer, public, parameter :: I_MOUNTAINWAVE  =  8
 
-  integer, public, parameter :: I_WARMBUBBLE          =  9
-  integer, public, parameter :: I_SUPERCELL           = 10
-  integer, public, parameter :: I_SQUALLLINE          = 11
-  integer, public, parameter :: I_DYCOMS2_RF01        = 12
-  integer, public, parameter :: I_DYCOMS2_RF02        = 13
-  integer, public, parameter :: I_RICO                = 14
+  integer, public, parameter :: I_WARMBUBBLE    =  9
+  integer, public, parameter :: I_SUPERCELL     = 10
+  integer, public, parameter :: I_SQUALLLINE    = 11
+  integer, public, parameter :: I_DYCOMS2_RF01  = 12
+  integer, public, parameter :: I_DYCOMS2_RF02  = 13
+  integer, public, parameter :: I_RICO          = 14
 
-  integer, public, parameter :: I_INTERPORATION       = 15
+  integer, public, parameter :: I_INTERPORATION = 15
 
   !-----------------------------------------------------------------------------
   !
@@ -163,7 +165,7 @@ module mod_mkinit
   real(RP), private :: rndm  (KA,IA,JA) ! random number (0-1)
   real(RP), private :: bubble(KA,IA,JA) ! bubble factor (0-1)
 
-  real(RP), private, allocatable :: gan(:) ! bubble factor (0-1)
+  real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
   logical,  private :: flg_bin = .false.
 
   !-----------------------------------------------------------------------------
@@ -171,22 +173,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MKINIT_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
-    use mod_const, only: &
-       CONST_UNDEF8
     implicit none
 
-    character(len=IO_SYSCHR) :: MKINIT_initname = 'NOT SPECIFIED'
+    character(len=IO_SYSCHR) :: MKINIT_initname = 'OFF'
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
        flg_bin
 
     integer :: ierr
-    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -205,52 +200,9 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
 
-    !--- Initiate QTRC
-    do iq = 2,  QA
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       QTRC(k,i,j,iq) = 0.0_RP
-    enddo
-    enddo
-    enddo
-    enddo
-
-    if ( flg_bin ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
-       call SBMAERO_setup
-    endif
-
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       pres(k,i,j) = CONST_UNDEF8
-       temp(k,i,j) = CONST_UNDEF8
-       pott(k,i,j) = CONST_UNDEF8
-       qsat(k,i,j) = CONST_UNDEF8
-       qv  (k,i,j) = CONST_UNDEF8
-       qc  (k,i,j) = CONST_UNDEF8
-       velx(k,i,j) = CONST_UNDEF8
-       vely(k,i,j) = CONST_UNDEF8
-
-       rndm  (k,i,j) = CONST_UNDEF8
-       bubble(k,i,j) = CONST_UNDEF8
-    enddo
-    enddo
-    enddo
-
-    do j = 1, JA
-    do i = 1, IA
-       pres_sfc(1,i,j) = CONST_UNDEF8
-       temp_sfc(1,i,j) = CONST_UNDEF8
-       pott_sfc(1,i,j) = CONST_UNDEF8
-       qsat_sfc(1,i,j) = CONST_UNDEF8
-       qv_sfc  (1,i,j) = CONST_UNDEF8
-       qc_sfc  (1,i,j) = CONST_UNDEF8
-    enddo
-    enddo
-
     select case(trim(MKINIT_initname))
+    case('OFF')
+       MKINIT_TYPE = I_IGNORE
     case('PLANESTATE')
        MKINIT_TYPE = I_PLANESTATE
     case('TRACERBUBBLE')
@@ -298,50 +250,93 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKINIT
-    use mod_process, only: &
-       PRC_MPIstop
+    use mod_const, only: &
+       CONST_UNDEF8
+    use mod_atmos_vars, only: &
+       ATMOS_vars_fillhalo, &
+       ATMOS_vars_restart_write
+    implicit none
+
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
+    if ( MKINIT_TYPE == I_IGNORE ) then
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING INITIAL DATA ++++++'
+    else
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
 
-    select case(MKINIT_TYPE)
-    case(I_PLANESTATE)
-       call MKINIT_planestate
-    case(I_TRACERBUBBLE)
-       call MKINIT_tracerbubble
-    case(I_COLDBUBBLE)
-       call MKINIT_coldbubble
-    case(I_LAMBWAVE)
-       call MKINIT_lambwave
-    case(I_GRAVITYWAVE)
-       call MKINIT_gravitywave
-    case(I_KHWAVE)
-       call MKINIT_khwave
-    case(I_TURBULENCE)
-       call MKINIT_turbulence
-    case(I_WARMBUBBLE)
-       call MKINIT_warmbubble
-    case(I_SUPERCELL)
-       call MKINIT_supercell
-    case(I_SQUALLLINE)
-       call MKINIT_squallline
-    case(I_MOUNTAINWAVE)
-       call MKINIT_mountainwave
-    case(I_DYCOMS2_RF01)
-       call MKINIT_DYCOMS2_RF01
-    case(I_DYCOMS2_RF02)
-       call MKINIT_DYCOMS2_RF02
-    case(I_RICO)
-       call MKINIT_RICO
-    case(I_INTERPORATION)
-       call MKINIT_INTERPORATION
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
-       call PRC_MPIstop
-    endselect
+      !--- Initialize variables
+      do iq = 2,  QA
+         QTRC(:,:,:,iq) = 0.0_RP
+      enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+      pres(:,:,:) = CONST_UNDEF8
+      temp(:,:,:) = CONST_UNDEF8
+      pott(:,:,:) = CONST_UNDEF8
+      qsat(:,:,:) = CONST_UNDEF8
+      qv  (:,:,:) = CONST_UNDEF8
+      qc  (:,:,:) = CONST_UNDEF8
+      velx(:,:,:) = CONST_UNDEF8
+      vely(:,:,:) = CONST_UNDEF8
+
+      rndm  (:,:,:) = CONST_UNDEF8
+
+      pres_sfc(:,:,:) = CONST_UNDEF8
+      temp_sfc(:,:,:) = CONST_UNDEF8
+      pott_sfc(:,:,:) = CONST_UNDEF8
+      qsat_sfc(:,:,:) = CONST_UNDEF8
+      qv_sfc  (:,:,:) = CONST_UNDEF8
+      qc_sfc  (:,:,:) = CONST_UNDEF8
+
+      if ( flg_bin ) then
+         if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
+         call SBMAERO_setup
+      endif
+
+      select case(MKINIT_TYPE)
+      case(I_PLANESTATE)
+         call MKINIT_planestate
+      case(I_TRACERBUBBLE)
+         call MKINIT_tracerbubble
+      case(I_COLDBUBBLE)
+         call MKINIT_coldbubble
+      case(I_LAMBWAVE)
+         call MKINIT_lambwave
+      case(I_GRAVITYWAVE)
+         call MKINIT_gravitywave
+      case(I_KHWAVE)
+         call MKINIT_khwave
+      case(I_TURBULENCE)
+         call MKINIT_turbulence
+      case(I_WARMBUBBLE)
+         call MKINIT_warmbubble
+      case(I_SUPERCELL)
+         call MKINIT_supercell
+      case(I_SQUALLLINE)
+         call MKINIT_squallline
+      case(I_MOUNTAINWAVE)
+         call MKINIT_mountainwave
+      case(I_DYCOMS2_RF01)
+         call MKINIT_DYCOMS2_RF01
+      case(I_DYCOMS2_RF02)
+         call MKINIT_DYCOMS2_RF02
+      case(I_RICO)
+         call MKINIT_RICO
+      case(I_INTERPORATION)
+         call MKINIT_INTERPORATION
+      case default
+         write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
+         call PRC_MPIstop
+      endselect
+
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      ! output restart file
+      call ATMOS_vars_fillhalo
+      call ATMOS_vars_restart_write
+    endif
 
     return
   end subroutine MKINIT
@@ -349,10 +344,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop
+    use mod_const, only: &
+       CONST_UNDEF8
     implicit none
 
     ! Bubble
@@ -398,6 +391,8 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_BUBBLE)
 
+    bubble(:,:,:) = CONST_UNDEF8
+
     if ( BBL_eachnode ) then
        CZ_offset = CZ(KS)
        CX_offset = CX(IS)
@@ -429,7 +424,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
-    use mod_const, only : &
+    use mod_const, only: &
        PI => CONST_PI
 
     implicit none
@@ -524,7 +519,7 @@ contains
 
   !-----------------------------------------------------------------------------
   function faero( f0,r0,x,alpha,rhoa )
-    use mod_const, only : &
+    use mod_const, only: &
        pi => CONST_PI
     implicit none
 
@@ -578,7 +573,7 @@ contains
     real(RP) :: pott_prof(KA)
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -955,7 +950,7 @@ contains
        BBL_THETA
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1529,6 +1524,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
+    use mod_stdio, only: &
+       IO_get_available_fid
     implicit none
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
@@ -1555,7 +1552,7 @@ contains
     real(RP) :: fact1, fact2
 
     integer :: ierr, fid
-    integer :: k, i, j, iq, kref
+    integer :: k, i, j, kref
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1681,6 +1678,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
+    use mod_stdio, only: &
+       IO_get_available_fid
     implicit none
 
     character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
@@ -1711,7 +1710,7 @@ contains
     real(RP) :: fact1, fact2
 
     integer :: ierr, fid
-    integer :: k, i, j, iq, kref
+    integer :: k, i, j, kref
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1854,7 +1853,6 @@ contains
        ENV_V,     &
        SCORER
 
-    real(RP) :: pott_prof(KA)
     real(RP) :: Ustar2, N2
 
     integer :: ierr
@@ -1879,46 +1877,50 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
-    do k = KS, KE
-       Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
-       N2     = Ustar2 * (SCORER*SCORER)
-
-       pott_prof(k) = SFC_THETA * exp( N2 / GRAV * CZ(k) )
-    enddo
-
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       pott(k,1,1) = pott_prof(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
     enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
+       Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
+       N2     = Ustar2 * (SCORER*SCORER)
+
+       pott(k,i,j) = SFC_THETA * exp( N2 / GRAV * REAL_CZ(k,i,j) )
+       qv  (k,i,j) = 0.0_RP
+       qc  (k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,i,j)
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ENV_U       * DENS(k,i,j)
        MOMY(k,i,j) = ENV_V       * DENS(k,i,j)
-       RHOT(k,i,j) = pott(k,1,1) * DENS(k,i,j)
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
 
        QTRC(k,i,j,:) = 0.0_RP
     enddo

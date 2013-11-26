@@ -250,7 +250,6 @@ contains
        CPL_VARS_CHECKRANGE
 
     integer :: ierr
-    integer :: ip
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -499,22 +498,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for coupler
   subroutine CPL_vars_total
-    use mod_comm, only: &
-       COMM_total_doreport, &
-       COMM_total
+!    use mod_comm, only: &
+!       STAT_checktotal, &
+!       STAT_total
     implicit none
 
-    real(RP) :: total ! dummy
+    !real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( COMM_total_doreport ) then
+!    if ( STAT_checktotal ) then
 !
-!       call COMM_total( total, LST(:,:),     LP_NAME(I_LST)   )
-!       call COMM_total( total, SST(:,:),     LP_NAME(I_SST)   )
-!       call COMM_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
-!       call COMM_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
-!       call COMM_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
-!       call COMM_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
+!       call STAT_total( total, LST(:,:),     LP_NAME(I_LST)   )
+!       call STAT_total( total, SST(:,:),     LP_NAME(I_SST)   )
+!       call STAT_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
+!       call STAT_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
+!       call STAT_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
+!       call STAT_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
 !
 !    endif
 
@@ -523,6 +522,8 @@ contains
 
   subroutine CPL_vars_merge
     implicit none
+
+    if( CNT_getCPL2Atm == 0.D0 ) return
 
     ! merge Land-Ocean
     SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm

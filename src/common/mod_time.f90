@@ -684,6 +684,8 @@ contains
     TIME_raptstr(id) = PRC_MPItime()
     TIME_rapnstr(id) = TIME_rapnstr(id) + 1
 
+    !if( IO_L ) write(IO_FID_LOG,*) rapname, TIME_rapnstr(id)
+
 #ifdef _FAPP_
 call START_COLLECTION( rapname )
 #endif

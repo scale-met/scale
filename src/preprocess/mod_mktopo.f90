@@ -18,6 +18,7 @@ module mod_mktopo
   !
   use mod_stdio, only: &
      IO_SYSCHR,   &
+     IO_FILECHR,  &
      IO_FID_LOG,  &
      IO_FID_CONF, &
      IO_L
@@ -51,8 +52,10 @@ module mod_mktopo
   !++ Public parameters & variables
   !
   integer, public, save      :: MKTOPO_TYPE = -1
-  integer, public, parameter :: I_OFF       =  0
+  integer, public, parameter :: I_IGNORE    =  0
+
   integer, public, parameter :: I_BELLSHAPE =  1
+  integer, public, parameter :: I_GTOPO     =  2
 
   !-----------------------------------------------------------------------------
   !
@@ -60,6 +63,7 @@ module mod_mktopo
   !
   private :: BELL_setup
   private :: MKTOPO_bellshape
+  !private :: MKTOPO_gtopo
 
   !-----------------------------------------------------------------------------
   !
@@ -67,7 +71,7 @@ module mod_mktopo
   !
   real(RP), private :: z_sfc(1,IA,JA) ! ground height
 
-  real(RP), private :: bell(1,IA,JA)  ! bell factor (0-1)
+  real(RP), private :: bell (1,IA,JA) ! bell factor (0-1)
 
   !-----------------------------------------------------------------------------
 contains
@@ -75,8 +79,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MKTOPO_setup
-    use mod_const, only: &
-       CONST_UNDEF8
     implicit none
 
     character(len=IO_SYSCHR) :: MKTOPO_initname = 'OFF'
@@ -85,7 +87,6 @@ contains
        MKTOPO_initname
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -103,18 +104,14 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO)
 
-    do j = 1, JA
-    do i = 1, IA
-       z_sfc(1,i,j) = CONST_UNDEF8
-    enddo
-    enddo
-
     select case(trim(MKTOPO_initname))
     case('OFF')
-       MKTOPO_TYPE = I_OFF
+       MKTOPO_TYPE = I_IGNORE
     case('BELLSHAPE')
        MKTOPO_TYPE = I_BELLSHAPE
        call BELL_setup
+    !case('GTOPO')
+    !   MKTOPO_TYPE = I_GTOPO
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_initname)
        call PRC_MPIstop
@@ -126,34 +123,43 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
+    use mod_const, only: &
+       CONST_UNDEF8
     use mod_topography, only: &
        TOPO_write
     implicit none
 
-    logical :: output_topo = .false.
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
+    if ( MKTOPO_TYPE == I_IGNORE ) then
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING BOUNDARY DATA ++++++'
+    else
+      do j = 1, JA
+      do i = 1, IA
+         z_sfc(1,i,j) = CONST_UNDEF8
+      enddo
+      enddo
 
-    select case(MKTOPO_TYPE)
-    case(I_OFF)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Nothing to do for topography'
-       output_topo = .false.
-    case(I_BELLSHAPE)
-       call MKTOPO_bellshape
-       output_topo = .true.
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
-       call PRC_MPIstop
-    endselect
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
 
-    if ( output_topo ) then
+      select case(MKTOPO_TYPE)
+      case(I_BELLSHAPE)
+         call MKTOPO_bellshape
+      case(I_GTOPO)
+         !call MKTOPO_gtopo
+      case default
+         write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+         call PRC_MPIstop
+      endselect
+
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
+
+       ! output topography file
        call TOPO_write
     endif
-
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
-    if( IO_L ) write(IO_FID_LOG,*)
 
     return
   end subroutine MKTOPO
@@ -217,7 +223,7 @@ contains
        dist = ( (CX(i)-CX_offset-BELL_CX)/BELL_RX )**2 &
             + ( (CY(j)-CY_offset-BELL_CY)/BELL_RY )**2
 
-       bell(1,i,j) = 1.0_RP / ( 1.0_RP + dist) 
+       bell(1,i,j) = 1.0_RP / ( 1.0_RP + dist)
 
     enddo
     enddo

@@ -140,8 +140,8 @@ contains
        GRID_FDZ, &
        GRID_FDX, &
        GRID_FDY
-    use mod_geometrics, only : &
-       GEOMETRICS_lat
+    use mod_grid_real, only : &
+       REAL_LAT
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -200,7 +200,7 @@ contains
                          ATMOS_DYN_numerical_diff_coef,  & ! [IN]
                          DT,                             & ! [IN]
                          ATMOS_DYN_enable_coriolis,      & ! [IN]
-                         GEOMETRICS_lat                  ) ! [IN]
+                         REAL_LAT                        ) ! [IN]
 
     return
   end subroutine ATMOS_DYN_setup
@@ -245,7 +245,7 @@ contains
     real(RP), intent(in)  :: ND_COEF
     real(RP), intent(in)  :: DT
     logical , intent(in)  :: enable_coriolis
-    real(RP), intent(in)  :: lat(1,IA,JA)
+    real(RP), intent(in)  :: lat(IA,JA)
     !---------------------------------------------------------------------------
 
     ! numerical diffusion
@@ -257,7 +257,7 @@ contains
 
     ! coriolis parameter
     if ( enable_coriolis ) then
-       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(1,:,:) )
+       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(:,:) )
     else
        CORIOLI(1,:,:) = 0.0_RP
     endif
@@ -287,12 +287,13 @@ contains
        GRID_RFDZ, &
        GRID_RFDX, &
        GRID_RFDY
-    use mod_topography, only : &
-       TOPO_PHI,        &
-       TRANSGRID_GSQRT, &
-       TRANSGRID_J13G,  &
-       TRANSGRID_J23G,  &
-       TRANSGRID_J33G
+    use mod_grid_real, only : &
+       REAL_PHI
+    use mod_gridtrans, only : &
+       GTRANS_GSQRT, &
+       GTRANS_J13G,  &
+       GTRANS_J23G,  &
+       GTRANS_J33G
     use mod_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
@@ -321,7 +322,8 @@ contains
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_dens, &
        ATMOS_REFSTATE_pott, &
-       ATMOS_REFSTATE_qv
+       ATMOS_REFSTATE_qv,   &
+       ATMOS_REFSTATE_pres
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_var,   &
        ATMOS_BOUNDARY_alpha
@@ -343,13 +345,14 @@ contains
                          GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
                          GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
                          GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
-                         TOPO_PHI,                                             & ! [IN]
-                         TRANSGRID_GSQRT,                                      & ! [IN]
-                         TRANSGRID_J13G, TRANSGRID_J23G, TRANSGRID_J33G,       & ! [IN]
+                         REAL_PHI,                                             & ! [IN]
+                         GTRANS_GSQRT,                                         & ! [IN]
+                         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G,                & ! [IN]
                          AQ_CV,                                                & ! [IN]
                          ATMOS_REFSTATE_dens,                                  & ! [IN]
                          ATMOS_REFSTATE_pott,                                  & ! [IN]
                          ATMOS_REFSTATE_qv,                                    & ! [IN]
+                         ATMOS_REFSTATE_pres,                                  & ! [IN]
                          ATMOS_DYN_DIFF4,                                      & ! [IN]
                          ATMOS_DYN_numerical_diff_order,                       & ! [IN]
                          ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
@@ -383,7 +386,7 @@ contains
        PHI, GSQRT,                                           &
        J13G, J23G, J33G,                                     &
        AQ_CV,                                                &
-       REF_dens, REF_pott, REF_qv,                           &
+       REF_dens, REF_pott, REF_qv, REF_pres,                 &
        DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,              &
        corioli, DAMP_var, DAMP_alpha,                        &
        divdmp_coef,                                          &
@@ -464,9 +467,10 @@ contains
 
     real(RP), intent(in)    :: AQ_CV(QQA)
 
-    real(RP), intent(in)    :: REF_dens(KA)
-    real(RP), intent(in)    :: REF_pott(KA)
-    real(RP), intent(in)    :: REF_qv  (KA)
+    real(RP), intent(in)    :: REF_dens(KA,IA,JA)
+    real(RP), intent(in)    :: REF_pott(KA,IA,JA)
+    real(RP), intent(in)    :: REF_qv  (KA,IA,JA)
+    real(RP), intent(in)    :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)    :: DIFF4
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
@@ -688,6 +692,7 @@ contains
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          REF_pres, REF_dens,                               & ! (in)
                           dt                                                ) ! (in)
 
        call COMM_vars8( DENS_RK1(:,:,:), 1 )
@@ -716,6 +721,7 @@ contains
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          REF_pres, REF_dens,                               & ! (in)
                           dt                                                ) ! (in)
 
        call COMM_vars8( DENS_RK2(:,:,:), 1 )
@@ -744,6 +750,7 @@ contains
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          REF_pres, REF_dens,                               & ! (in)
                           dt                                                ) ! (in)
 
        do j  = JS, JE

@@ -50,7 +50,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=02:00:00"
+#PJM --rsc-list "elapse=12:00:00"
 #PJM -j
 #PJM -s
 #

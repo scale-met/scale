@@ -204,9 +204,9 @@ contains
     CNMZ(1,KE+2:KA  ) = CNMZ(1,KE+1)
 
     do k = KS-1, KE+1
-       CNMZ(2,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &   
-                 + 1.D0 / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &  
-                 + 1.D0 / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) ) 
+       CNMZ(2,k) = 1.D0 / ( CDZ(k+1) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+                 + 1.D0 / ( CDZ(k  ) * (CDZ(k+1)+CDZ(k  )) * 0.5D0 * CDZ(k  ) ) &
+                 + 1.D0 / ( CDZ(k  ) * (CDZ(k  )+CDZ(k-1)) * 0.5D0 * CDZ(k  ) )
     enddo
     CNMZ(2,   1:KS-2) = CNMZ(2,KS-1)
     CNMZ(2,KE+2:KA  ) = CNMZ(2,KE+1)
@@ -249,16 +249,16 @@ contains
     CNMX(1,   1:IS-2) = CNMX(1,IS-2)
 
     do i = IS-1, IE+1
-       CNMX(2,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) & 
-                 + 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) & 
+       CNMX(2,i) = 1.D0 / ( CDX(i+1) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+                 + 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
                  + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) )
     enddo
     CNMX(2,   1:IS-2) = CNMX(2,IS-1)
     CNMX(2,IE+2:IA  ) = CNMX(2,IE+1)
 
     do i = IS-1, IE+1
-       CNMX(3,i) = 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) & 
-                 + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) ) & 
+       CNMX(3,i) = 1.D0 / ( CDX(i  ) * (CDX(i+1)+CDX(i  )) * 0.5D0 * CDX(i  ) ) &
+                 + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i  ) ) &
                  + 1.D0 / ( CDX(i  ) * (CDX(i  )+CDX(i-1)) * 0.5D0 * CDX(i-1) )
     enddo
     CNMX(3,   1:IS-2) = CNMX(3,IS-1)
@@ -294,9 +294,9 @@ contains
     CNMY(1,JE+2:JA  ) = CNMY(1,JE+1)
 
     do j = JS-1, JE+1
-       CNMY(2,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &   
-                 + 1.D0 / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &  
-                 + 1.D0 / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) ) 
+       CNMY(2,j) = 1.D0 / ( CDY(j+1) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+                 + 1.D0 / ( CDY(j  ) * (CDY(j+1)+CDY(j  )) * 0.5D0 * CDY(j  ) ) &
+                 + 1.D0 / ( CDY(j  ) * (CDY(j  )+CDY(j-1)) * 0.5D0 * CDY(j  ) )
     enddo
     CNMY(2,   1:JS-2) = CNMY(2,JS-1)
     CNMY(2,JE+2:JA  ) = CNMY(2,JE+1)
@@ -326,8 +326,7 @@ contains
        TIME_NSTEP_ATMOS_DYN
     use mod_comm, only: &
        COMM_vars8, &
-       COMM_wait,  &
-       COMM_total
+       COMM_wait
     use mod_grid, only : &
        CDZ  => GRID_CDZ,  &
        CDX  => GRID_CDX,  &
@@ -483,7 +482,7 @@ call START_COLLECTION("SET")
                                     * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5D0 * ( DENS(k,i,j+1)+DENS(k,i,j) ) )
              ray_damp(k,i,j,I_RHOT) = - DAMP_alpha(k,i,j,I_BND_POTT) &
                                     * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )
-          enddo 
+          enddo
        enddo
        enddo
 
@@ -496,7 +495,7 @@ call START_COLLECTION("SET")
              pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k)
           enddo
           !OCL XFILL
-          do k = 1, KS-1 
+          do k = 1, KS-1
              dens_diff(k,i,j) = dens_diff(KS,i,j)
              pott_diff(k,i,j) = pott_diff(KS,i,j)
           enddo
@@ -523,7 +522,7 @@ call START_COLLECTION("SET")
        do j = JJS,   JJE
        do i = IIS,   IIE
           num_diff(KS  ,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KS) &
-                                         * 4.0D0 * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) ) 
+                                         * 4.0D0 * ( dens_diff(KS+1,i,j)-dens_diff(KS,i,j) )
           num_diff(KE-1,i,j,I_DENS,ZDIR) = DIFF2 * CDZ(KE-1) &
                                          * 4.0D0 * ( dens_diff(KE,i,j)-dens_diff(KE-1,i,j) )
        enddo
@@ -681,7 +680,7 @@ call START_COLLECTION("SET")
 
        do j = JJS,   JJE
        do i = IIS,   IIE
-          num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) & 
+          num_diff(KS  ,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KS) &
                                          * 4.0D0 * ( pott_diff(KS+1,i,j)-pott_diff(KS,i,j) ) &
                                          * 0.5D0 * ( DENS(KS+1,i,j)+DENS(KS,i,j) )
           num_diff(KE-1,i,j,I_RHOT,ZDIR) = DIFF2 * CDZ(KE-1) &
@@ -786,7 +785,7 @@ call START_COLLECTION("RK3")
              PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
           enddo
           do k = KS, KE
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) 
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           enddo
        enddo
        enddo
@@ -1123,7 +1122,7 @@ call START_COLLECTION("RK3")
              PRES(k,i,j) = P00 * ( RHOT_RK1(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
           enddo
           do k = KS, KE
-             POTT(k,i,j) = RHOT_RK1(k,i,j) / DENS_RK1(k,i,j) 
+             POTT(k,i,j) = RHOT_RK1(k,i,j) / DENS_RK1(k,i,j)
           enddo
        enddo
        enddo
@@ -1460,7 +1459,7 @@ call START_COLLECTION("RK3")
              PRES(k,i,j) = P00 * ( RHOT_RK2(k,i,j) * Rtot(k,i,j) / P00 )**CPovCV
           enddo
           do k = KS, KE
-             POTT(k,i,j) = RHOT_RK2(k,i,j) / DENS_RK2(k,i,j) 
+             POTT(k,i,j) = RHOT_RK2(k,i,j) / DENS_RK2(k,i,j)
           enddo
        enddo
        enddo
@@ -1792,10 +1791,10 @@ call START_COLLECTION("FCT")
                                            - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
           qflx_lo(KE  ,i,j,ZDIR) = 0.D0                                                                          ! top boundary
 
-          qflx_hi(KS-1,i,j,ZDIR) = 0.D0 
+          qflx_hi(KS-1,i,j,ZDIR) = 0.D0
           qflx_hi(KS  ,i,j,ZDIR) = 0.5D0 * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) )
           qflx_hi(KE-1,i,j,ZDIR) = 0.5D0 * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) )
-          qflx_hi(KE  ,i,j,ZDIR) = 0.D0 
+          qflx_hi(KE  ,i,j,ZDIR) = 0.D0
 
           qflx_anti(KS-1,i,j,ZDIR) = 0.D0
           qflx_anti(KS  ,i,j,ZDIR) = qflx_hi(KS  ,i,j,ZDIR) - qflx_lo(KS  ,i,j,ZDIR)
