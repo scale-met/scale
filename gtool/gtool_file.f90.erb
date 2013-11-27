@@ -119,8 +119,8 @@ contains
        myrank,      & ! (in)
        rankidx,     & ! (in)
        single,      & ! (in) optional
-       time_units   & ! (in) optional
-       )
+       time_units,  & ! (in) optional
+       append       ) ! (in) optional
     implicit none
 
     integer,          intent(out)           :: fid
@@ -134,9 +134,11 @@ contains
     integer,          intent( in)           :: rankidx(:)
     character(LEN=*), intent( in), optional :: time_units
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: append
 
     character(len=File_HSHORT) :: time_units_
     logical :: single_
+    integer :: mode
     integer :: error
 
     intrinsic size
@@ -156,12 +158,17 @@ contains
        single_ = .false.
     endif
 
-    call FileGetfid(  &
-         fid,         & ! (out)
-         existed,     & ! (out)
-         basename,    & ! (in)
-         File_FWRITE, & ! (in)
-         single_      & ! (in)
+    mode = File_FWRITE
+    if ( present(append) ) then
+       if ( append ) mode = File_FAPPEND
+    end if
+
+    call FileGetfid( &
+         fid,        & ! (out)
+         existed,    & ! (out)
+         basename,   & ! (in)
+         mode,       & ! (in)
+         single_     & ! (in)
          )
 
     if ( existed ) return

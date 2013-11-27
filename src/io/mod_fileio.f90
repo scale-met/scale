@@ -297,7 +297,8 @@ contains
        desc,     &
        unit,     &
        axistype, &
-       datatype  )
+       datatype,  &
+       append    )
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -331,6 +332,7 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
     character(len=2)      :: dims(1)
@@ -370,7 +372,8 @@ contains
                      FILEIO_H_INSTITUTE, & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
-                     rankidx             ) ! [IN]
+                     rankidx,            & ! [IN]
+                     append              ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
@@ -432,7 +435,8 @@ contains
        desc,     &
        unit,     &
        axistype, &
-       datatype  )
+       datatype, &
+       append    )
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -466,6 +470,7 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
     character(len=2)      :: dims(2)
@@ -506,7 +511,8 @@ contains
                      FILEIO_H_INSTITUTE, & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
-                     rankidx             ) ! [IN]
+                     rankidx,            & ! [IN]
+                     append              ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
@@ -569,7 +575,8 @@ contains
        desc,     &
        unit,     &
        axistype, &
-       datatype  )
+       datatype, &
+       append    )
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -603,6 +610,7 @@ contains
     character(len=*), intent(in)  :: unit       !< unit        of the variable
     character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
+    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
     character(len=2)      :: dims(3)
@@ -644,7 +652,8 @@ contains
                      FILEIO_H_INSTITUTE, & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
-                     rankidx             ) ! [IN]
+                     rankidx,            & ! [IN]
+                     append              ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
