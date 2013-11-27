@@ -833,7 +833,7 @@ contains
           do k = KS, KE
              RHOQ_t(k,i,j) = QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
                            - DAMP_alpha(k,i,j,I_BND_QV) &
-                           * ( QTRC(k,i,j,iq) - DAMP_var(k,i,j,iq) ) * DENS00(k,i,j) ! rayleigh damping
+                           * ( QTRC(k,i,j,iq) - DAMP_var(k,i,j,I_BND_QV) ) * DENS00(k,i,j) ! rayleigh damping
           enddo
           enddo
           enddo
