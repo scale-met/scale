@@ -24,7 +24,6 @@ module mod_history
      HistoryInit, &
      HistoryAddVariable, &
      HistoryPutAxis, &
-     HistoryPutAdditionalAxis, &
      HistoryPut, &
      HistoryGet
   use mod_stdio, only: &
@@ -80,7 +79,7 @@ module mod_history
   !
   !++ Private procedures
   !
-  public :: HIST_put_axes
+!  public :: HIST_put_axes
 
   !-----------------------------------------------------------------------------
   !
@@ -89,13 +88,6 @@ module mod_history
   character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE3 HISTORY OUTPUT' !< for header
   character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION       !< for header
   character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'            !< for header
-
-  character(len=1), parameter :: HISTORY_dim_name (3) = (/'x','y','z'/)              !< for axis property
-  integer,          parameter :: HISTORY_dim_size (3) = (/IMAX,JMAX,KMAX/)           !< for axis property
-  character(len=1), parameter :: HISTORY_dim_desc (3) = (/'X','Y','Z'/)              !< for axis property
-  character(len=1), parameter :: HISTORY_dim_unit (3) = (/'m','m','m'/)              !< for axis property
-  character(len=5), parameter :: HISTORY_dim_dtype(3) = (/'REAL4','REAL4','REAL4'/)  !< for axis property
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -120,15 +112,13 @@ contains
     call HistoryInit( HISTORY_H_TITLE,           &
                       HISTORY_H_SOURCE,          &
                       HISTORY_H_INSTITUTE,       &
+                      IMAX*JMAX*KMAX,            &
                       PRC_master,                &
                       PRC_myrank,                &
                       rankidx,                   &
-                      HISTORY_dim_name,          &
-                      HISTORY_dim_size,          &
-                      HISTORY_dim_desc,          &
-                      HISTORY_dim_unit,          &
-                      HISTORY_dim_dtype,         &
                       namelist_fid = IO_FID_CONF )
+
+    call HIST_put_axes
 
     call TIME_rapend  ('FILE O NetCDF')
 
@@ -160,19 +150,19 @@ contains
 
     logical :: existed
 
-    character(len=2) :: dims(3)
+    character(len=4) :: dims(3)
     !---------------------------------------------------------------------------
 
     call TIME_rapstart('FILE O NetCDF')
 
-    dims(1) = 'x'
-    dims(2) = 'y'
+    dims(1) = 'lon'
+    dims(2) = 'lat'
     dims(3) = 'z'
     if ( present(xdim) ) then
-       if ( xdim=='half' ) dims(1) = 'xh'
+       if ( xdim=='half' ) dims(1) = 'lonh'
     endif
     if ( present(ydim) ) then
-       if ( ydim=='half' ) dims(2) = 'yh'
+       if ( ydim=='half' ) dims(2) = 'lath'
     endif
     if ( present(zdim) ) then
        if ( zdim=='half' ) dims(3) = 'zh'
@@ -184,10 +174,6 @@ contains
                              unit,             & ! [IN]
                              itemid  = itemid, & ! [OUT]
                              existed = existed ) ! [OUT]
-
-    if ( .NOT. existed ) then
-       call HIST_put_axes
-    endif
 
     call TIME_rapend  ('FILE O NetCDF')
 
@@ -262,8 +248,8 @@ contains
       itemid, &
       var,    &
       dt      )
-    use mod_interpolation, only: &
-       INTERP_vertical_xi2z
+!    use mod_interpolation, only: &
+!       INTERP_vertical_xi2z
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
@@ -273,7 +259,7 @@ contains
     intrinsic shape
     integer :: s(3)
 
-    real(RP) :: var_Z(KA,IA,JA)
+!    real(RP) :: var_Z(KA,IA,JA)
     real(RP) :: var2 (KMAX*IMAX*JMAX)
 
     integer  :: i, j, k
@@ -294,15 +280,16 @@ contains
        call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
 
     else
-       call TIME_rapstart('FILE O Interpolation')
-       call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
-                                  var_Z(:,:,:)  ) ! [OUT]
-       call TIME_rapend  ('FILE O Interpolation')
+!       call TIME_rapstart('FILE O Interpolation')
+!       call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
+!                                  var_Z(:,:,:)  ) ! [OUT]
+!       call TIME_rapend  ('FILE O Interpolation')
 
        do k = 1, KMAX
        do j = 1, JMAX
        do i = 1, IMAX
-          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
+          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+!          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
        enddo
        enddo
        enddo
@@ -589,49 +576,60 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
+    use mod_geometrics, only: &
+       GEOMETRICS_lon, &
+       GEOMETRICS_lat
     use gtool_history, only: &
-       HistoryPutAxis
+       HistoryPutAxis, &
+       HistoryPutAssociatedCoordinates
     implicit none
     !---------------------------------------------------------------------------
 
-    call HistoryPutAxis('x', GRID_CX(IS:IE))
-    call HistoryPutAxis('y', GRID_CY(JS:JE))
-    call HistoryPutAxis('z', GRID_CZ(KS:KE))
+    call HistoryPutAxis('x',     'X', 'm', 'x', GRID_CX(IS:IE))
+    call HistoryPutAxis('y',     'Y', 'm', 'y', GRID_CY(JS:JE))
+    call HistoryPutAxis('z',     'Z', 'm', 'z', GRID_CZ(KS:KE))
 
-    call HistoryPutAdditionalAxis('xh',    'X (half level)', 'm', 'xh', GRID_FX(IS:IE))
-    call HistoryPutAdditionalAxis('yh',    'Y (half level)', 'm', 'yh', GRID_FY(JS:JE))
-    call HistoryPutAdditionalAxis('zh',    'Z (half level)', 'm', 'zh', GRID_FZ(KS:KE))
+    call HistoryPutAxis('xh',    'X (half level)', 'm', 'xh', GRID_FX(IS:IE))
+    call HistoryPutAxis('yh',    'Y (half level)', 'm', 'yh', GRID_FY(JS:JE))
+    call HistoryPutAxis('zh',    'Z (half level)', 'm', 'zh', GRID_FZ(KS:KE))
 
-    call HistoryPutAdditionalAxis('CZ',    'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
-    call HistoryPutAdditionalAxis('CX',    'Grid Center Position X', 'm', 'CX', GRID_CX)
-    call HistoryPutAdditionalAxis('CY',    'Grid Center Position Y', 'm', 'CY', GRID_CY)
-    call HistoryPutAdditionalAxis('FZ',    'Grid Face Position Z',   'm', 'FZ', GRID_FZ)
-    call HistoryPutAdditionalAxis('FX',    'Grid Face Position X',   'm', 'FX', GRID_FX)
-    call HistoryPutAdditionalAxis('FY',    'Grid Face Position Y',   'm', 'FY', GRID_FY)
+    call HistoryPutAxis('CZ',    'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
+    call HistoryPutAxis('CX',    'Grid Center Position X', 'm', 'CX', GRID_CX)
+    call HistoryPutAxis('CY',    'Grid Center Position Y', 'm', 'CY', GRID_CY)
+    call HistoryPutAxis('FZ',    'Grid Face Position Z',   'm', 'FZ', GRID_FZ)
+    call HistoryPutAxis('FX',    'Grid Face Position X',   'm', 'FX', GRID_FX)
+    call HistoryPutAxis('FY',    'Grid Face Position Y',   'm', 'FY', GRID_FY)
 
-    call HistoryPutAdditionalAxis('CDZ',   'Grid Cell length Z', 'm', 'CZ', GRID_CDZ)
-    call HistoryPutAdditionalAxis('CDX',   'Grid Cell length X', 'm', 'CX', GRID_CDX)
-    call HistoryPutAdditionalAxis('CDY',   'Grid Cell length Y', 'm', 'CY', GRID_CDY)
-    call HistoryPutAdditionalAxis('FDZ',   'Grid distance Z',    'm', 'FDZ', GRID_FDZ)
-    call HistoryPutAdditionalAxis('FDX',   'Grid distance X',    'm', 'FDX', GRID_FDX)
-    call HistoryPutAdditionalAxis('FDY',   'Grid distance Y',    'm', 'FDY', GRID_FDY)
+    call HistoryPutAxis('CDZ',   'Grid Cell length Z', 'm', 'CZ', GRID_CDZ)
+    call HistoryPutAxis('CDX',   'Grid Cell length X', 'm', 'CX', GRID_CDX)
+    call HistoryPutAxis('CDY',   'Grid Cell length Y', 'm', 'CY', GRID_CDY)
+    call HistoryPutAxis('FDZ',   'Grid distance Z',    'm', 'FDZ', GRID_FDZ)
+    call HistoryPutAxis('FDX',   'Grid distance X',    'm', 'FDX', GRID_FDX)
+    call HistoryPutAxis('FDY',   'Grid distance Y',    'm', 'FDY', GRID_FDY)
 
-    call HistoryPutAdditionalAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
-    call HistoryPutAdditionalAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
-    call HistoryPutAdditionalAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
-    call HistoryPutAdditionalAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
-    call HistoryPutAdditionalAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
-    call HistoryPutAdditionalAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
+    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
+    call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
+    call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
+    call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
+    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
 
-    call HistoryPutAdditionalAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
-    call HistoryPutAdditionalAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
-    call HistoryPutAdditionalAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
-    call HistoryPutAdditionalAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
+    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
+    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
+    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
+    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
 
-    call HistoryPutAdditionalAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
-    call HistoryPutAdditionalAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
-    call HistoryPutAdditionalAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
-    call HistoryPutAdditionalAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
+    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
+    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
+
+    call HistoryPutAssociatedCoordinates('lon', 'longitude', 'degrees_east', (/'x', 'y'/), GEOMETRICS_lon(1,IS:IE,JS:JE) )
+    call HistoryPutAssociatedCoordinates('lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+         GEOMETRICS_lon(1,IS:IE,JS:JE) )
+    call HistoryPutAssociatedCoordinates('lat', 'latitude', 'degrees_north', (/'x', 'y'/), GEOMETRICS_lat(1,IS:IE,JS:JE) )
+    call HistoryPutAssociatedCoordinates('lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+         GEOMETRICS_lat(1,IS:IE,JS:JE) )
 
     return
   end subroutine HIST_put_axes

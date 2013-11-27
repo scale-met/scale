@@ -778,7 +778,7 @@ contains
        FileCreate, &
        FileAddVariable, &
        FilePutAxis, &
-       FilePutAdditionalAxis, &
+       FilePutAssociatedCoordinates, &
        FileWrite, &
        FileClose
     use mod_grid, only: &
@@ -808,6 +808,9 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
+    use mod_geometrics, only: &
+       GEOMETRICS_lon, &
+       GEOMETRICS_lat
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -823,12 +826,6 @@ contains
     character(len=IO_SYSCHR) :: H_TITLE     = 'SCALE3 PROGNOSTIC VARS.'
     character(len=IO_SYSCHR) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
     character(len=IO_SYSCHR) :: H_INSTITUTE = 'AICS/RIKEN'
-
-    character(len=1), parameter :: dim_name (3) = (/'z','x','y'/)    !< for axis property
-    integer,          parameter :: dim_size (3) = (/KMAX,IMAX,JMAX/) !< for axis property
-    character(len=1), parameter :: dim_desc (3) = (/'Z','X','Y'/)    !< for axis property
-    character(len=1), parameter :: dim_unit (3) = (/'m','m','m'/)    !< for axis property
-    integer                     :: dim_dtype(3)                      !< for axis property
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -853,7 +850,6 @@ contains
     else if ( RP == 4 ) then
        dtype = File_REAL4
     endif
-    dim_dtype(:) = dtype
 
     call FileCreate( fid,         & ! (out)
                      fileexisted, & ! (out)
@@ -861,73 +857,79 @@ contains
                      H_TITLE,     & ! (in)
                      H_SOURCE,    & ! (in)
                      H_INSTITUTE, & ! (in)
-                     dim_name,    & ! (in)
-                     dim_size,    & ! (in)
-                     dim_desc,    & ! (in)
-                     dim_unit,    & ! (in)
-                     dim_dtype,   & ! (in)
                      PRC_master,  & ! (in)
                      PRC_myrank,  & ! (in)
                      rankidx      ) ! (in)
 
-    call FilePutAxis( fid, 'z', GRID_CZ(KS:KE) )
-    call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
-    call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
+    call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
+    call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
+    call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
 
-    call FilePutAdditionalAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
-    call FilePutAdditionalAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
-    call FilePutAdditionalAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
+    call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
+    call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
+    call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
 
-    call FilePutAdditionalAxis( fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ )
-    call FilePutAdditionalAxis( fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX )
-    call FilePutAdditionalAxis( fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY )
-    call FilePutAdditionalAxis( fid, 'FZ', 'Grid Face Position Z',   'm', 'FZ', dtype, GRID_FZ )
-    call FilePutAdditionalAxis( fid, 'FX', 'Grid Face Position X',   'm', 'FX', dtype, GRID_FX )
-    call FilePutAdditionalAxis( fid, 'FY', 'Grid Face Position Y',   'm', 'FY', dtype, GRID_FY )
+    call FilePutAxis( fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ )
+    call FilePutAxis( fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX )
+    call FilePutAxis( fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY )
+    call FilePutAxis( fid, 'FZ', 'Grid Face Position Z',   'm', 'FZ', dtype, GRID_FZ )
+    call FilePutAxis( fid, 'FX', 'Grid Face Position X',   'm', 'FX', dtype, GRID_FX )
+    call FilePutAxis( fid, 'FY', 'Grid Face Position Y',   'm', 'FY', dtype, GRID_FY )
 
-    call FilePutAdditionalAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
-    call FilePutAdditionalAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
-    call FilePutAdditionalAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
-    call FilePutAdditionalAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
-    call FilePutAdditionalAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
-    call FilePutAdditionalAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
+    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
+    call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
+    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
+    call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
 
-    call FilePutAdditionalAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
-    call FilePutAdditionalAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
-    call FilePutAdditionalAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
-    call FilePutAdditionalAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
-    call FilePutAdditionalAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
-    call FilePutAdditionalAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
+    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
+    call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
+    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
+    call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
 
-    call FilePutAdditionalAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
-    call FilePutAdditionalAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
-    call FilePutAdditionalAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
-    call FilePutAdditionalAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
+    call FilePutAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
+    call FilePutAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
+    call FilePutAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
+    call FilePutAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
 
-    call FilePutAdditionalAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
-    call FilePutAdditionalAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
-    call FilePutAdditionalAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
-    call FilePutAdditionalAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
+    call FilePutAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
+    call FilePutAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
+    call FilePutAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
+    call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
+
+    call FilePutAssociatedCoordinates( fid, &
+         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+    call FilePutAssociatedCoordinates( fid, &
+         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+         dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+    call FilePutAssociatedCoordinates( fid, &
+         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+    call FilePutAssociatedCoordinates( fid, &
+         'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+         dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
 
     call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)
                           fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
-                          dim_name, dtype                                         ) ! (in)
+                          (/'z  ','lon','lat'/), dtype                            ) ! (in)
     call FileAddVariable( ap_vid(I_MOMZ),                                         & ! (out)
                           fid, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), & ! (in)
-                          (/'zh','x ','y '/), dtype                               ) ! (in)
+                          (/'zh ','lon','lat'/), dtype                            ) ! (in)
     call FileAddVariable( ap_vid(I_MOMX),                                         & ! (out)
                           fid, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), & ! (in)
-                          (/'z ','xh','y '/), dtype                               ) ! (in)
+                          (/'z   ','lonh','lat '/), dtype                          ) ! (in)
     call FileAddVariable( ap_vid(I_MOMY),                                         & ! (out)
                           fid, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), & ! (in)
-                          (/'z ','x ','yh'/), dtype                               ) ! (in)
+                          (/'z   ','lon ','lath'/), dtype                          ) ! (in)
     call FileAddVariable( ap_vid(I_RHOT),                                         & ! (out)
                           fid, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), & ! (in)
-                          dim_name, dtype                                         ) ! (in)
+                          (/'z  ','lon','lat'/), dtype                            ) ! (in)
     do iq = 1, QA
        call FileAddVariable( aq_vid(iq),                                 & ! (out)
                              fid, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), & ! (in)
-                             dim_name, dtype                             ) ! (in)
+                             (/'z  ','lon','lat'/), dtype                             ) ! (in)
     end do
 
     restart_atmos(1:KMAX,1:IMAX,1:JMAX) = DENS(KS:KE,IS:IE,JS:JE)

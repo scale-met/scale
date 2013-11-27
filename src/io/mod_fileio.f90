@@ -69,12 +69,6 @@ module mod_fileio
   character(len=IO_SYSCHR), private, save :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
   character(len=IO_SYSCHR), private, save :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
 
-  character(len=1), private, parameter :: FILEIO_dim_name (3) = (/'z','x','y'/)        !< for axis property
-  integer,          private, parameter :: FILEIO_dim_size (3) = (/KMAX,IMAX,JMAX/)     !< for axis property
-  character(len=1), private, parameter :: FILEIO_dim_desc (3) = (/'Z','X','Y'/)        !< for axis property
-  character(len=1), private, parameter :: FILEIO_dim_unit (3) = (/'m','m','m'/)        !< for axis property
-  integer,          private, save      :: FILEIO_dim_dtype(3)                          !< for axis property
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -310,6 +304,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FilePutAxis,     &
+       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use mod_process, only: &
@@ -323,6 +318,9 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
+    use mod_geometrics, only: &
+       GEOMETRICS_lon, &
+       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:)   !< value of the variable
@@ -363,7 +361,6 @@ contains
           call PRC_MPIstop
        endif
     endif
-    FILEIO_dim_dtype(:) = dtype
 
     call FileCreate( fid,                & ! [OUT]
                      fileexisted,        & ! [OUT]
@@ -371,19 +368,24 @@ contains
                      title,              & ! [IN]
                      FILEIO_H_SOURCE,    & ! [IN]
                      FILEIO_H_INSTITUTE, & ! [IN]
-                     FILEIO_dim_name,    & ! [IN]
-                     FILEIO_dim_size,    & ! [IN]
-                     FILEIO_dim_desc,    & ! [IN]
-                     FILEIO_dim_unit,    & ! [IN]
-                     FILEIO_dim_dtype,   & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
                      rankidx             ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
+       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
+       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
+       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'Z' ) then
@@ -437,6 +439,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FilePutAxis,     &
+       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use mod_process, only: &
@@ -450,6 +453,9 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
+    use mod_geometrics, only: &
+       GEOMETRICS_lon, &
+       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
@@ -491,7 +497,6 @@ contains
           call PRC_MPIstop
        endif
     endif
-    FILEIO_dim_dtype(:) = dtype
 
     call FileCreate( fid,                & ! [OUT]
                      fileexisted,        & ! [OUT]
@@ -499,19 +504,24 @@ contains
                      title,              & ! [IN]
                      FILEIO_H_SOURCE,    & ! [IN]
                      FILEIO_H_INSTITUTE, & ! [IN]
-                     FILEIO_dim_name,    & ! [IN]
-                     FILEIO_dim_size,    & ! [IN]
-                     FILEIO_dim_desc,    & ! [IN]
-                     FILEIO_dim_unit,    & ! [IN]
-                     FILEIO_dim_dtype,   & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
                      rankidx             ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
+       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
+       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
+       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'XY' ) then
@@ -566,6 +576,7 @@ contains
     use gtool_file, only: &
        FileCreate,      &
        FilePutAxis,     &
+       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use mod_process, only: &
@@ -579,6 +590,9 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
+    use mod_geometrics, only: &
+       GEOMETRICS_lon, &
+       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:,:,:) !< value of the variable
@@ -621,7 +635,6 @@ contains
           call PRC_MPIstop
        endif
     endif
-    FILEIO_dim_dtype(:) = dtype
 
     call FileCreate( fid,                & ! [OUT]
                      fileexisted,        & ! [OUT]
@@ -629,19 +642,24 @@ contains
                      title,              & ! [IN]
                      FILEIO_H_SOURCE,    & ! [IN]
                      FILEIO_H_INSTITUTE, & ! [IN]
-                     FILEIO_dim_name,    & ! [IN]
-                     FILEIO_dim_size,    & ! [IN]
-                     FILEIO_dim_desc,    & ! [IN]
-                     FILEIO_dim_unit,    & ! [IN]
-                     FILEIO_dim_dtype,   & ! [IN]
                      PRC_master,         & ! [IN]
                      PRC_myrank,         & ! [IN]
                      rankidx             ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', GRID_CY(JS:JE) )
+       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
+       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
+       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, &
+            'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'ZXY' ) then

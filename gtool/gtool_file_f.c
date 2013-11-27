@@ -140,85 +140,20 @@ void file_set_global_attributes_( int32_t *fid,             // (in)
   *error = file_set_global_attributes( *fid, _title, _source, _institution, _time_units, *nodeid, nodeidx, *nodeidx_dim );
 }
 
-void file_set_dim_info_( int32_t *fid,           // (in)
-			 int32_t *ndims,         // (in)
-			 char    *dim_name,      // (in)
-			 int32_t *dim_size,      // (in)
-			 char    *dim_desc,      // (in)
-			 char    *dim_units,     // (in)
-			 int32_t *dim_type,      // (in)
-			 int32_t *error,         // (out)
-			 int32_t  dim_name_len,  // (in)
-			 int32_t  dim_desc_len,  // (in)
-			 int32_t  dim_units_len) // (in)
-{
-  char **_dim_name, **_dim_desc, **_dim_units;
-  int32_t len;
-  int i;
-
-  _dim_name = (char**) malloc(sizeof(char*)*(*ndims));
-  len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
-  for ( i=0; i<*ndims; i++ ) {
-    _dim_name[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
-    fstr2cstr(_dim_name[i], dim_name+i*dim_name_len, len);
-  }
-
-  _dim_desc = (char**) malloc(sizeof(char*)*(*ndims));
-  len = dim_desc_len > File_HMID ? File_HMID : dim_desc_len;
-  for ( i=0; i<*ndims; i++ ) {
-    _dim_desc[i] = (char*) malloc(sizeof(char)*(File_HMID+1));
-    fstr2cstr(_dim_desc[i], dim_desc+i*dim_desc_len, len);
-  }
-
-  _dim_units = (char**) malloc(sizeof(char*)*(*ndims));
-  len = dim_units_len > File_HMID ? File_HMID : dim_units_len;
-  for ( i=0; i<*ndims; i++ ) {
-    _dim_units[i] = (char*) malloc(sizeof(char)*(File_HMID+1));
-    fstr2cstr(_dim_units[i], dim_units+i*dim_units_len, len);
-  }
-
-  *error = file_set_dim_info( *fid, *ndims, _dim_name, dim_size, _dim_desc, _dim_units, dim_type );
-
-  for ( i=0; i<*ndims; i++ ){
-    free( _dim_name[i] );
-    free( _dim_desc[i] );
-    free( _dim_units[i] );
-  }
-  free(_dim_name);
-  free(_dim_desc);
-  free(_dim_units);
-}
-
 void file_put_axis_( int32_t *fid,          // (in)
+		     char    *name,         // (in)
+		     char    *desc,         // (in)
+		     char    *units,        // (in)
 		     char    *dim_name,     // (in)
+		     int32_t *dtype,        // (in)
 		     void    *val,          // (in)
+		     int32_t *size,         // (in)
 		     int32_t *precision,    // (in)
 		     int32_t *error,        // (out)
+		     int32_t  name_len,     // (in)
+		     int32_t  desc_len,     // (in)
+		     int32_t  units_len,    // (in)
 		     int32_t  dim_name_len) // (in)
-{
-  char _dim_name[File_HSHORT+1];
-  int32_t len;
-
-  len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
-  fstr2cstr(_dim_name, dim_name, len);
-
-  *error = file_put_axis( *fid, _dim_name, val, *precision );
-}
-
-void file_put_additional_axis_( int32_t *fid,          // (in)
-				char    *name,         // (in)
-				char    *desc,         // (in)
-				char    *units,        // (in)
-				char    *dim_name,     // (in)
-				int32_t *dtype,        // (in)
-				void    *val,          // (in)
-				int32_t *size,         // (in)
-				int32_t *precision,    // (in)
-				int32_t *error,        // (out)
-				int32_t  name_len,     // (in)
-				int32_t  desc_len,     // (in)
-				int32_t  units_len,    // (in)
-				int32_t  dim_name_len) // (in)
 {
   char _name[File_HSHORT+1];
   char _desc[File_HMID+1];
@@ -238,7 +173,47 @@ void file_put_additional_axis_( int32_t *fid,          // (in)
   len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
   fstr2cstr(_dim_name, dim_name, len);
 
-  *error = file_put_additional_axis( *fid, _name, _desc, _units, _dim_name, *dtype, val, *size, *precision );
+  *error = file_put_axis( *fid, _name, _desc, _units, _dim_name, *dtype, val, *size, *precision );
+}
+
+void file_put_associated_coordinates_( int32_t *fid,          // (in)
+				       char    *name,         // (in)
+				       char    *desc,         // (in)
+				       char    *units,        // (in)
+				       char    *dim_names,    // (in)
+				       int32_t *ndims,        // (in)
+				       int32_t *dtype,        // (in)
+				       void    *val,          // (in)
+				       int32_t *precision,    // (in)
+				       int32_t *error,        // (out)
+				       int32_t  name_len,     // (in)
+				       int32_t  desc_len,     // (in)
+				       int32_t  units_len,    // (in)
+				       int32_t  dim_name_len) // (in)
+{
+  char _name[File_HSHORT+1];
+  char _desc[File_HMID+1];
+  char _units[File_HMID+1];
+  char **_dim_names;
+  int len;
+  int i;
+
+  len = name_len > File_HSHORT ? File_HSHORT : name_len;
+  fstr2cstr(_name, name, len);
+
+  len = desc_len > File_HMID ? File_HMID : desc_len;
+  fstr2cstr(_desc, desc, len);
+
+  len = units_len > File_HMID ? File_HMID : units_len;
+  fstr2cstr(_units, units, len);
+
+  _dim_names = (char**) malloc(sizeof(char*)*(*ndims));
+  len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
+  for ( i=0; i<*ndims; i++ ) {
+    _dim_names[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
+    fstr2cstr(_dim_names[i], dim_names+i*dim_name_len, len);
+  }
+  *error = file_put_associated_coordinates( *fid, _name, _desc, _units, _dim_names, *ndims, *dtype, val, *precision );
 }
 
 void file_add_variable_( int32_t  *vid,         // (out)
@@ -276,7 +251,7 @@ void file_add_variable_( int32_t  *vid,         // (out)
   _dims = (char**) malloc(sizeof(char*)*(*ndims));
   len = dims_len > File_HSHORT ? File_HSHORT : dims_len;
   for ( i=0; i<*ndims; i++ ) {
-    _dims[i] = (char*) malloc(sizeof(char)*(*ndims));
+    _dims[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
     fstr2cstr(_dims[i], dims+i*dims_len, len);
   }
 

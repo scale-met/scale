@@ -34,7 +34,7 @@ module gtool_file
   public :: FileCreate
   public :: FileSetOption
   public :: FilePutAxis
-  public :: FilePutAdditionalAxis
+  public :: FilePutAssociatedCoordinates
   public :: FileAddVariable
   public :: FileGetShape
   public :: FileRead
@@ -46,10 +46,16 @@ module gtool_file
      module procedure FilePutAxisRealSP
      module procedure FilePutAxisRealDP
   end interface FilePutAxis
-  interface FilePutAdditionalAxis
-     module procedure FilePutAdditionalAxisRealSP
-     module procedure FilePutAdditionalAxisRealDP
-  end interface FilePutAdditionalAxis
+  interface FilePutAssociatedCoordinates
+    module procedure FilePut1DAssociatedCoordinatesRealSP
+    module procedure FilePut1DAssociatedCoordinatesRealDP
+    module procedure FilePut2DAssociatedCoordinatesRealSP
+    module procedure FilePut2DAssociatedCoordinatesRealDP
+    module procedure FilePut3DAssociatedCoordinatesRealSP
+    module procedure FilePut3DAssociatedCoordinatesRealDP
+    module procedure FilePut4DAssociatedCoordinatesRealSP
+    module procedure FilePut4DAssociatedCoordinatesRealDP
+  end interface FilePutAssociatedCoordinates
   interface FileAddVariable
      module procedure FileAddVariableNoT
      module procedure FileAddVariableRealSP
@@ -110,11 +116,6 @@ contains
        title,       & ! (in)
        source,      & ! (in)
        institution, & ! (in)
-       dim_name,    & ! (in)
-       dim_size,    & ! (in)
-       dim_desc,    & ! (in)
-       dim_units,   & ! (in)
-       dim_type,    & ! (in)
        master,      & ! (in)
        myrank,      & ! (in)
        rankidx,     & ! (in)
@@ -129,11 +130,6 @@ contains
     character(LEN=*), intent( in)           :: title
     character(LEN=*), intent( in)           :: source
     character(LEN=*), intent( in)           :: institution
-    character(LEN=*), intent( in)           :: dim_name(:)
-    integer,          intent( in)           :: dim_size(:)
-    character(LEN=*), intent( in)           :: dim_desc(:)
-    character(LEN=*), intent( in)           :: dim_units(:)
-    integer,          intent( in)           :: dim_type(:)
     integer,          intent( in)           :: master
     integer,          intent( in)           :: myrank
     integer,          intent( in)           :: rankidx(:)
@@ -143,8 +139,6 @@ contains
     character(len=File_HSHORT) :: time_units_
     logical :: single_
     integer :: error
-
-    integer :: rankidx_dim
 
     intrinsic size
 
@@ -180,13 +174,6 @@ contains
          error                                    ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set global attributes')
-    end if
-    call file_set_dim_info( fid,                            & ! (in)
-         size(dim_name),                                    & ! (in)
-         dim_name, dim_size, dim_desc, dim_units, dim_type, & ! (in)
-         error                                              ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set dimension information')
     end if
 
     return
@@ -247,104 +234,297 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FilePutAxisRealSP( &
        fid,      & ! (in)
+       name,     & ! (in)
+       desc,     & ! (in)
+       units,    & ! (in)
        dim_name, & ! (in)
-       val       & ! (in)
-       )
+       dtype,    & ! (in)
+       val       ) ! (in)
     integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
+    integer,          intent(in) :: dtype
     real(SP),         intent(in) :: val(:)
 
     integer error
+    intrinsic size
 
-    call file_put_axis( fid, & ! (in)
-         dim_name, val, SP,  & ! (in)
-         error               ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to put axis value')
+    call file_put_axis( fid,                                          & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
+         error                                                   ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
     end if
 
     return
   end subroutine FilePutAxisRealSP
   subroutine FilePutAxisRealDP( &
        fid,      & ! (in)
+       name,     & ! (in)
+       desc,     & ! (in)
+       units,    & ! (in)
        dim_name, & ! (in)
-       val       & ! (in)
-       )
+       dtype,    & ! (in)
+       val       ) ! (in)
     integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
+    integer,          intent(in) :: dtype
     real(DP),         intent(in) :: val(:)
 
     integer error
+    intrinsic size
 
-    call file_put_axis( fid, & ! (in)
-         dim_name, val, DP,  & ! (in)
-         error               ) ! (out)
-    if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to put axis value')
+    call file_put_axis( fid,                                          & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
+         error                                                   ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
     end if
 
     return
   end subroutine FilePutAxisRealDP
 
   !-----------------------------------------------------------------------------
-  ! interface FilePutAdditionalAxis
+  ! interface FilePutAssociatedCoordinates
   !-----------------------------------------------------------------------------
-  subroutine FilePutAdditionalAxisRealSP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       dim_name, & ! (in)
-       dtype,    & ! (in)
-       val       ) ! (in)
+  subroutine FilePut1DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    character(len=*), intent(in) :: dim_name
+    character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
     real(SP),         intent(in) :: val(:)
 
     integer error
     intrinsic size
 
-    call file_put_additional_axis( fid,                          & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
-         error                                                   ) ! (out)
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, SP,                                         & ! (in)
+         error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put additional axis')
+       call Log('E', 'xxx failed to put associated coordinates')
     end if
 
     return
-  end subroutine FilePutAdditionalAxisRealSP
-  subroutine FilePutAdditionalAxisRealDP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       dim_name, & ! (in)
-       dtype,    & ! (in)
-       val       ) ! (in)
+  end subroutine FilePut1DAssociatedCoordinatesRealSP
+  subroutine FilePut1DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
-    character(len=*), intent(in) :: dim_name
+    character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
     real(DP),         intent(in) :: val(:)
 
     integer error
     intrinsic size
 
-    call file_put_additional_axis( fid,                          & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
-         error                                                   ) ! (out)
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, DP,                                         & ! (in)
+         error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put additional axis')
+       call Log('E', 'xxx failed to put associated coordinates')
     end if
 
     return
-  end subroutine FilePutAdditionalAxisRealDP
+  end subroutine FilePut1DAssociatedCoordinatesRealDP
+  subroutine FilePut2DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(SP),         intent(in) :: val(:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, SP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut2DAssociatedCoordinatesRealSP
+  subroutine FilePut2DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(DP),         intent(in) :: val(:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, DP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut2DAssociatedCoordinatesRealDP
+  subroutine FilePut3DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(SP),         intent(in) :: val(:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, SP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut3DAssociatedCoordinatesRealSP
+  subroutine FilePut3DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(DP),         intent(in) :: val(:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, DP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut3DAssociatedCoordinatesRealDP
+  subroutine FilePut4DAssociatedCoordinatesRealSP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(SP),         intent(in) :: val(:,:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, SP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut4DAssociatedCoordinatesRealSP
+  subroutine FilePut4DAssociatedCoordinatesRealDP( &
+       fid,       & ! (in)
+       name,      & ! (in)
+       desc,      & ! (in)
+       units,     & ! (in)
+       dim_names, & ! (in)
+       dtype,     & ! (in)
+       val        ) ! (in)
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: desc
+    character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: dim_names(:)
+    integer,          intent(in) :: dtype
+    real(DP),         intent(in) :: val(:,:,:,:)
+
+    integer error
+    intrinsic size
+
+    call file_put_associated_coordinates( fid,                 & ! (in)
+         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
+         val, DP,                                         & ! (in)
+         error                                                 ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put associated coordinates')
+    end if
+
+    return
+  end subroutine FilePut4DAssociatedCoordinatesRealDP
+
   !-----------------------------------------------------------------------------
   ! interface FileAddVariable
   !-----------------------------------------------------------------------------
