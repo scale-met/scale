@@ -808,9 +808,11 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
-    use mod_geometrics, only: &
-       GEOMETRICS_lon, &
-       GEOMETRICS_lat
+    use mod_grid_real, only: &
+       REAL_lon, &
+       REAL_lonx, &
+       REAL_lat, &
+       REAL_laty
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -901,15 +903,15 @@ contains
     call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
 
     call FilePutAssociatedCoordinates( fid, &
-         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_lon(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-         dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+         dtype, REAL_lonx(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_lat(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-         dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+         dtype, REAL_laty(IS:IE,JS:JE) )
 
     call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)
                           fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)

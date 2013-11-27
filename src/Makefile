@@ -157,18 +157,18 @@ $(BUILD_DIR)/mod_grid_cartesian.o	: mod_grid_cartesian.f90	mod_stdio.o mod_proce
 $(BUILD_DIR)/mod_topography.o			: mod_topography.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
 $(BUILD_DIR)/mod_landuse.o				: mod_landuse.f90			   mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_fileio.o
 $(BUILD_DIR)/mod_mapproj.o				: mod_mapproj.f90			   mod_stdio.o mod_process.o mod_time.o mod_const.o
-$(BUILD_DIR)/mod_grid_real.o			: mod_grid_real.f90			mod_stdio.o mod_process.o mod_time.o mod_const.o mod_fileio.o mod_grid_cartesian.o mod_topography.o
+$(BUILD_DIR)/mod_grid_real.o			: mod_grid_real.f90			mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian.o mod_topography.o mod_fileio.o
 $(BUILD_DIR)/mod_gridtrans.o			: mod_gridtrans.f90			mod_stdio.o mod_process.o mod_time.o mod_comm.o mod_grid_cartesian.o mod_grid_real.o
 $(BUILD_DIR)/mod_intepolation.o		: mod_intepolation.f90		mod_stdio.o mod_process.o mod_time.o mod_const.o mod_grid_cartesian.o mod_grid_real.o
 
 $(BUILD_DIR)/mod_stdio.o				: mod_stdio.f90
 $(BUILD_DIR)/mod_fileio.o				: mod_fileio.f90				mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian.o
-$(BUILD_DIR)/mod_history.o				: mod_history.f90		   	mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian.o mod_intepolation.o
+$(BUILD_DIR)/mod_history.o				: mod_history.f90		   	mod_stdio.o mod_process.o mod_time.o mod_grid_cartesian.o mod_intepolation.o mod_grid_real.o
 $(BUILD_DIR)/mod_monitor.o				: mod_monitor.f90			   mod_stdio.o mod_process.o mod_time.o mod_stats.o
 
 $(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_stdio.o mod_time.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
                              mod_atmos_dyn.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(microphysics).o mod_atmos_phy_rd_$(radiation).o mod_cpl_vars.o
-$(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_comm.o mod_stats.o mod_history.o mod_monitor.o mod_grid_cartesian.o mod_atmos_sub_thermodyn.o mod_time.o mod_misc.o mod_atmos_sub_saturation.o
+$(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_stdio.o mod_process.o mod_const.o mod_comm.o mod_stats.o mod_history.o mod_monitor.o mod_grid_cartesian.o mod_grid_real.o mod_atmos_sub_thermodyn.o mod_time.o mod_misc.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90 mod_stdio.o mod_process.o mod_comm.o
 $(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90 mod_stdio.o mod_const.o mod_grid_cartesian.o
 $(BUILD_DIR)/mod_atmos_sub_thermodyn.o	: mod_atmos_sub_thermodyn.f90 mod_stdio.o mod_const.o

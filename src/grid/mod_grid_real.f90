@@ -39,7 +39,6 @@ module mod_grid_real
   !++ Public procedure
   !
   public :: REAL_setup
-  public :: REAL_write
 
   !-----------------------------------------------------------------------------
   !
@@ -84,35 +83,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine REAL_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_mapproj, only: &
        MPRJ_setup
+    use mod_fileio, only: &
+       FILEIO_set_coordinates
     implicit none
 
-    namelist / PARAM_REAL / &
-       REAL_OUT_BASENAME, &
-       REAL_OUT_DTYPE
-
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_REAL,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_REAL. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_REAL)
 
     ! setup map projection
     call MPRJ_setup
@@ -126,43 +108,14 @@ contains
     ! calc control area & volume
     call REAL_make_area
 
-    ! write to file
-    call REAL_write
+    ! set latlon and z to fileio module
+    call FILEIO_set_coordinates( &
+         REAL_LON, REAL_LONX, &
+         REAL_LAT, REAL_LATY, &
+         REAL_CZ, REAL_FZ     )
 
     return
   end subroutine REAL_setup
-
-  !-----------------------------------------------------------------------------
-  !> Write lon&lat, control area/volume
-  subroutine REAL_write
-    use mod_const, only: &
-       D2R => CONST_D2R
-    use mod_fileio, only: &
-       FILEIO_write
-    implicit none
-    !---------------------------------------------------------------------------
-
-    if ( REAL_OUT_BASENAME /= '' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output GEOMETRICAL PARAMETER ***'
-
-       call FILEIO_write( REAL_LON(:,:)/D2R, REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
-                          'lon', 'Longitude', 'degrees_east', 'XY', REAL_OUT_DTYPE )
-
-       call FILEIO_write( REAL_LAT(:,:)/D2R, REAL_OUT_BASENAME, REAL_OUT_TITLE,        &
-                          'lat', 'Latitude', 'degrees_north', 'XY', REAL_OUT_DTYPE )
-
-       call FILEIO_write( REAL_AREA(:,:), REAL_OUT_BASENAME, REAL_OUT_TITLE, &
-                          'area', 'Control Area', 'm2', 'XY', REAL_OUT_DTYPE )
-
-       call FILEIO_write( REAL_VOL(:,:,:), REAL_OUT_BASENAME, REAL_OUT_TITLE,  &
-                          'vol', 'Control Volume', 'm3', 'ZXY', REAL_OUT_DTYPE )
-
-    endif
-
-    return
-  end subroutine REAL_write
 
   !-----------------------------------------------------------------------------
   !> Calc longitude & latitude

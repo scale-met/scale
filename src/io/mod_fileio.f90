@@ -39,6 +39,7 @@ module mod_fileio
   !++ Public procedure
   !
   public :: FILEIO_setup
+  public :: FILEIO_set_coordinates
   public :: FILEIO_read
   public :: FILEIO_write
 
@@ -66,8 +67,14 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private, save :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=IO_SYSCHR), private, save :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
+  character(len=IO_SYSCHR) :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
+  character(len=IO_SYSCHR) :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
+  real(RP) :: real_lon (IA,JA)
+  real(RP) :: real_lonx(IA,JA)
+  real(RP) :: real_lat (IA,JA)
+  real(RP) :: real_laty(IA,JA)
+  real(RP) :: real_cz(KA,IA,JA)
+  real(RP) :: real_fz(0:KA,IA,JA)
 
   !-----------------------------------------------------------------------------
 contains
@@ -115,6 +122,28 @@ contains
 
     return
   end subroutine FILEIO_setup
+
+  !-----------------------------------------------------------------------------
+  !> set latlon and z
+  subroutine FILEIO_set_coordinates( &
+       lon, lonx, lat, laty, cz, fz)
+    implicit none
+    real(RP), intent(in) :: lon (IA,JA)
+    real(RP), intent(in) :: lonx(IA,JA)
+    real(RP), intent(in) :: lat (IA,JA)
+    real(RP), intent(in) :: laty(IA,JA)
+    real(RP), intent(in) :: cz(KA,IA,JA)
+    real(RP), intent(in) :: fz(0:KA,IA,JA)
+
+    real_lon  = lon
+    real_lonx = lonx
+    real_lat  = lat
+    real_laty = laty
+    real_cz   = cz
+    real_fz   = fz
+
+    return
+  end subroutine FILEIO_set_coordinates
 
   !-----------------------------------------------------------------------------
   !> Read 1D data from file
@@ -319,9 +348,6 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
-    use mod_geometrics, only: &
-       GEOMETRICS_lon, &
-       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:)   !< value of the variable
@@ -380,15 +406,15 @@ contains
        call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
        call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            dtype, REAL_LONX(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            dtype, REAL_LATY(IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'Z' ) then
@@ -457,9 +483,6 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
-    use mod_geometrics, only: &
-       GEOMETRICS_lon, &
-       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
@@ -519,15 +542,15 @@ contains
        call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
        call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            dtype, REAL_LONX(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            dtype, REAL_LATY(IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'XY' ) then
@@ -597,9 +620,6 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
-    use mod_geometrics, only: &
-       GEOMETRICS_lon, &
-       GEOMETRICS_lat
     implicit none
 
     real(RP),         intent(in)  :: var(:,:,:) !< value of the variable
@@ -660,15 +680,15 @@ contains
        call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
        call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lon(1,IS:IE,JS:JE) )
+            dtype, REAL_LONX(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
        call FilePutAssociatedCoordinates( fid, &
             'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-            dtype, GEOMETRICS_lat(1,IS:IE,JS:JE) )
+            dtype, REAL_LATY(IS:IE,JS:JE) )
     endif
 
     if ( axistype == 'ZXY' ) then

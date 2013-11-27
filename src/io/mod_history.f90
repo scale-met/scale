@@ -576,9 +576,11 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
-    use mod_geometrics, only: &
-       GEOMETRICS_lon, &
-       GEOMETRICS_lat
+    use mod_grid_real, only: &
+       REAL_lon, &
+       REAL_lonx, &
+       REAL_lat, &
+       REAL_laty
     use gtool_history, only: &
        HistoryPutAxis, &
        HistoryPutAssociatedCoordinates
@@ -624,12 +626,12 @@ contains
     call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
     call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
 
-    call HistoryPutAssociatedCoordinates('lon', 'longitude', 'degrees_east', (/'x', 'y'/), GEOMETRICS_lon(1,IS:IE,JS:JE) )
+    call HistoryPutAssociatedCoordinates('lon', 'longitude', 'degrees_east', (/'x', 'y'/), REAL_lon(IS:IE,JS:JE) )
     call HistoryPutAssociatedCoordinates('lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-         GEOMETRICS_lon(1,IS:IE,JS:JE) )
-    call HistoryPutAssociatedCoordinates('lat', 'latitude', 'degrees_north', (/'x', 'y'/), GEOMETRICS_lat(1,IS:IE,JS:JE) )
+         REAL_lonx(IS:IE,JS:JE) )
+    call HistoryPutAssociatedCoordinates('lat', 'latitude', 'degrees_north', (/'x', 'y'/), REAL_lat(IS:IE,JS:JE) )
     call HistoryPutAssociatedCoordinates('lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-         GEOMETRICS_lat(1,IS:IE,JS:JE) )
+         REAL_laty(IS:IE,JS:JE) )
 
     return
   end subroutine HIST_put_axes

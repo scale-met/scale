@@ -468,6 +468,10 @@ contains
     real(RP), intent(out) :: y
     !---------------------------------------------------------------------------
 
+    ! dummy
+    x = 0.0_RP
+    y = 0.0_RP
+
     return
   end subroutine MPRJ_None_lonlat2xy
 
