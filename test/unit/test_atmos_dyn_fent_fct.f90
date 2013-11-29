@@ -62,9 +62,10 @@ module test_atmos_dyn_fent_fct
   real(RP) :: RHOT_o(KA,IA,JA)
   real(RP) :: QTRC_o(KA,IA,JA,QA)
 
-  real(RP) :: REF_dens(KA)
-  real(RP) :: REF_pott(KA)
-  real(RP) :: REF_qv  (KA)
+  real(RP) :: REF_dens(KA,IA,JA)
+  real(RP) :: REF_pott(KA,IA,JA)
+  real(RP) :: REF_qv  (KA,IA,JA)
+  real(RP) :: REF_pres(KA,IA,JA)
 
   real(RP) :: DAMP_var(KA,IA,JA,5)
   real(RP) :: DAMP_alpha(KA,IA,JA,5)
@@ -218,10 +219,15 @@ subroutine test_undef
   end do
   end do
 
+  do j = 1, JA
+  do i = 1, IA
   do k = 1, KA
-     REF_dens(k) = KA - k + 1
-     REF_pott(k) = k
-     REF_qv  (k) = KA - k + 1
+     REF_dens(k,i,j) = KA - k + 1
+     REF_pott(k,i,j) = k
+     REF_qv  (k,i,j) = KA - k + 1
+     REF_pres(k,i,j) = KA - k + 1
+  end do
+  end do
   end do
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
@@ -237,7 +243,7 @@ subroutine test_undef
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
           AQ_CV,                                       & ! (in)
-          REF_dens, REF_pott, REF_qv,                  & ! (in)
+          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
           CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
           divdmp_coef,                                 & ! (in)
@@ -270,9 +276,10 @@ subroutine test_const
   RHOT(:,:,:) = 300.0_RP
   QTRC(:,:,:,:) = 0.1_RP
 
-  REF_dens(:) = 1.0_RP
-  REF_pott(:) = 300.0_RP
-  REF_qv(:)   = 0.001_RP
+  REF_dens(:,:,:) = 1.0_RP
+  REF_pott(:,:,:) = 300.0_RP
+  REF_qv(:,:,:)   = 0.001_RP
+  REF_pres(:,:,:) = 1000._RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -286,7 +293,7 @@ subroutine test_const
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
        AQ_CV,                                       & ! (in)
-       REF_dens, REF_pott, REF_qv,                  & ! (in)
+       REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
        CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
        divdmp_coef,                                 & ! (in)
@@ -348,9 +355,10 @@ subroutine test_conserve
   end do
   end do
 
-  REF_dens(:) = 1.0_RP
-  REF_pott(:) = 1.0_RP
-  REF_qv(:)   = 1.0_RP
+  REF_dens(:,:,:) = 1.0_RP
+  REF_pott(:,:,:) = 1.0_RP
+  REF_qv(:,:,:)   = 1.0_RP
+  REF_pres(:,:,:) = 1.0_RP
 
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
@@ -368,7 +376,7 @@ subroutine test_conserve
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
          AQ_CV,                                       & ! (in)
-         REF_dens, REF_pott, REF_qv,                  & ! (in)
+         REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
          divdmp_coef,                                 & ! (in)
