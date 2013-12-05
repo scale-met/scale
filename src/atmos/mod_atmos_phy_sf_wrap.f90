@@ -20,7 +20,8 @@ module mod_atmos_phy_sf_wrap
   use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
-     IO_L
+     IO_L, &
+     IO_SYSCHR
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -51,7 +52,7 @@ module mod_atmos_phy_sf_wrap
   real(RP), private, allocatable :: SFLX_POTT(:,:)
   real(RP), private, allocatable :: SFLX_QV(:,:)
 
-
+  character(len=IO_SYSCHR), public :: ATMOS_PHY_SF_TYPE
   !-----------------------------------------------------------------------------
 contains
 
@@ -60,11 +61,19 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_wrap_setup
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L
     use mod_process, only: &
        PRC_MPIstop
+    use mod_atmos_phy_sf, only: &
+       ATMOS_PHY_SF_setup
     implicit none
 
+    NAMELIST / PARAM_ATMOS_PHY_SF / &
+         ATMOS_PHY_SF_TYPE
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -76,8 +85,21 @@ contains
     allocate( SFLX_POTT(IA,JA) )
     allocate( SFLX_QV(IA,JA) )
 
-    call ATMOS_PHY_sf_init()
-    call ATMOS_PHY_sf_wrap( .true., .false. )
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
+
+
+    call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
+    call ATMOS_PHY_SF_wrap( .true., .false. )
 
     return
   end subroutine ATMOS_PHY_SF_wrap_setup
@@ -99,19 +121,25 @@ contains
        HIST_in
     use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+       RFDZ => GRID_RFDZ, &
+       CZ   => GRID_CZ
+    use mod_atmos_phy_sf, only: &
+       ATMOS_PHY_SF
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
+       QTRC, &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
+    use mod_ocean_vars, only: &
+       SST
     implicit none
 
     logical, intent(in) :: update_flag
@@ -126,10 +154,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux'
 
     if ( update_flag ) then
-       call ATMOS_PHY_SF_main( &
+       call ATMOS_PHY_SF( &
             SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
-            DENS, MOMZ, MOMX, MOMY,                              & ! (in)
-            NOWSEC                                               ) ! (out)
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+            CZ, NOWSEC                                           ) ! (in)
 
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -169,6 +197,6 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_SF
+  end subroutine ATMOS_PHY_SF_wrap
 
-end module mod_atmos_phy_sf
+end module mod_atmos_phy_sf_wrap

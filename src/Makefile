@@ -56,18 +56,18 @@ MODS =	\
 	mod_atmos_sub_precipitation.o	\
 	mod_atmos_sub_solarins.o	\
 	mod_atmos_dyn_wrap.o	\
-	mod_atmos_phy_sf_$(sfcflx).o	\
-	mod_atmos_phy_tb_$(turbulence).o	\
+	mod_atmos_phy_sf_wrap.o	\
+	mod_atmos_phy_tb_wrap.o	\
 	mod_atmos_phy_mp_common.o \
 	mod_atmos_phy_mp_$(microphysics).o \
 	mod_atmos_phy_ae_$(aerosol).o \
 	mod_atmos_phy_rd_common.o \
 	mod_atmos_phy_rd_profile.o \
 	mod_atmos_phy_rd_$(radiation).o \
+	mod_cpl_atmos_land.o \
 	mod_cpl.o \
 	mod_atmos.o	\
 	mod_land_phy_bucket.o	\
-	mod_cpl_atmos_land.o \
 	mod_land.o	\
 	mod_ocean_phy_fixedsst.o	\
 	mod_ocean.o	\
@@ -119,7 +119,7 @@ $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 
 $(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
-                             mod_atmos_dyn.o mod_atmos_phy_sf_$(sfcflx).o mod_atmos_phy_tb_$(turbulence).o mod_atmos_phy_mp_$(microphysics).o mod_atmos_phy_rd_$(radiation).o mod_cpl_vars.o
+                             mod_atmos_dyn_wrap.o mod_atmos_phy_sf_wrap.o mod_atmos_phy_tb_wrap.o mod_atmos_phy_mp_$(microphysics).o mod_atmos_phy_rd_$(radiation).o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90 mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90
 $(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90
@@ -132,8 +132,8 @@ $(BUILD_DIR)/mod_atmos_sub_precipitation.o	: mod_atmos_sub_precipitation.f90 mod
 $(BUILD_DIR)/mod_atmos_sub_solarins.o	: mod_atmos_sub_solarins.f90
 
 $(BUILD_DIR)/mod_atmos_dyn_wrap.o	: mod_atmos_dyn_wrap.f90 mod_atmos_vars.o mod_atmos_sub_thermodyn.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o
-$(BUILD_DIR)/mod_atmos_phy_sf_$(sfcflx).o	: mod_atmos_phy_sf_$(sfcflx).f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
-$(BUILD_DIR)/mod_atmos_phy_tb_$(turbulence).o	: mod_atmos_phy_tb_$(turbulence).f90 mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_sf_wrap.o	: mod_atmos_phy_sf_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
+$(BUILD_DIR)/mod_atmos_phy_tb_wrap.o	: mod_atmos_phy_tb_wrap.f90 mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_common.o		: mod_atmos_phy_mp_common.f90 mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_phy_mp_$(microphysics).o	: mod_atmos_phy_mp_$(microphysics).f90 mod_atmos_vars.o mod_atmos_phy_mp_common.o mod_atmos_sub_precipitation.o mod_atmos_sub_thermodyn.o mod_atmos_sub_saturation.o
 $(BUILD_DIR)/mod_atmos_phy_ae_$(aerosol).o	: mod_atmos_phy_ae_$(aerosol).f90

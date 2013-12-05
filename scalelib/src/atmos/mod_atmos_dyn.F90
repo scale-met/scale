@@ -62,8 +62,8 @@ module mod_atmos_dyn
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_init
-  public :: ATMOS_DYN_main
+  public :: ATMOS_DYN_setup
+  public :: ATMOS_DYN
 
   !-----------------------------------------------------------------------------
   !
@@ -115,7 +115,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_init( &
+  subroutine ATMOS_DYN_setup( &
        DIFF4,            &
        CNZ3, CNX3, CNY3, &
        CNZ4, CNX4, CNY4, &
@@ -131,6 +131,8 @@ contains
        IO_FID_CONF, &
        IO_FID_LOG, &
        IO_L
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_const, only: &
        OHM => CONST_OHM
     use mod_atmos_dyn_common, only: &
@@ -201,11 +203,11 @@ contains
     call ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
 
     return
-  end subroutine ATMOS_DYN_init
+  end subroutine ATMOS_DYN_setup
 
   !-----------------------------------------------------------------------------
   !> Dynamical Process
-  subroutine ATMOS_DYN_main( &
+  subroutine ATMOS_DYN( &
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, &
@@ -847,6 +849,6 @@ contains
 #endif
 
     return
-  end subroutine ATMOS_DYN_main
+  end subroutine ATMOS_DYN
 
 end module mod_atmos_dyn

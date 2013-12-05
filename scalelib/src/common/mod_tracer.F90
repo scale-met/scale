@@ -108,6 +108,8 @@ contains
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L
+  use mod_process, only: &
+    PRC_MPIstop
   use mod_tracer_dry, only: &
     QA_dry => QA, &
     I_QV_dry => I_QV, &

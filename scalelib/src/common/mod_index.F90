@@ -91,6 +91,8 @@ contains
        IO_FID_LOG, &
        IO_FID_CONF, &
        IO_L
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
 #ifndef FIXED_INDEX

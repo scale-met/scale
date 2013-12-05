@@ -18,6 +18,9 @@ module mod_atmos_dyn_wrap
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -31,15 +34,6 @@ module mod_atmos_dyn_wrap
      UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
-  use mod_atmos_vars, only: &
-     ZDIR,   &
-     XDIR,   &
-     YDIR,   &
-     I_DENS, &
-     I_MOMZ, &
-     I_MOMX, &
-     I_MOMY, &
-     I_RHOT
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -49,14 +43,6 @@ module mod_atmos_dyn_wrap
   !
   public :: ATMOS_DYN_wrap_setup
   public :: ATMOS_DYN_wrap
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -74,29 +60,29 @@ module mod_atmos_dyn_wrap
   integer,  private, parameter :: RK = 3             ! order of Runge-Kutta scheme
 
   ! numerical filter
-  integer,  private, save      :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private, save      :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private, save      :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private, save      :: ATMOS_DYN_DIFF4                                   ! for numerical filter
-  real(RP), private, save      :: ATMOS_DYN_CNZ3(3,KA,2)
-  real(RP), private, save      :: ATMOS_DYN_CNX3(3,IA,2)
-  real(RP), private, save      :: ATMOS_DYN_CNY3(3,JA,2)
-  real(RP), private, save      :: ATMOS_DYN_CNZ4(5,KA,2)
-  real(RP), private, save      :: ATMOS_DYN_CNX4(5,IA,2)
-  real(RP), private, save      :: ATMOS_DYN_CNY4(5,JA,2)
+  integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
+  real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
+  logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
+  real(RP), private :: ATMOS_DYN_DIFF4                                   ! for numerical filter
+  real(RP), private, allocatable :: ATMOS_DYN_CNZ3(:,:,:)
+  real(RP), private, allocatable :: ATMOS_DYN_CNX3(:,:,:)
+  real(RP), private, allocatable :: ATMOS_DYN_CNY3(:,:,:)
+  real(RP), private, allocatable :: ATMOS_DYN_CNZ4(:,:,:)
+  real(RP), private, allocatable :: ATMOS_DYN_CNX4(:,:,:)
+  real(RP), private, allocatable :: ATMOS_DYN_CNY4(:,:,:)
 
   ! Coriolis force
-  logical,  private, save      :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, save      :: ATMOS_DYN_CORIOLI(IA,JA)            ! coriolis term
+  logical,  private              :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  real(RP), private, allocatable :: ATMOS_DYN_CORIOLI(:,:)            ! coriolis term
 
   ! divergence damping
-  real(RP), private, save      :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
+  real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
 
   ! fct
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical,  private, save      :: ATMOS_DYN_FLAG_FCT_T        = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -141,6 +127,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
 
+    allocate( ATMOS_DYN_CNZ3(3,KA,2) )
+    allocate( ATMOS_DYN_CNX3(3,IA,2) )
+    allocate( ATMOS_DYN_CNY3(3,JA,2) )
+    allocate( ATMOS_DYN_CNZ4(5,KA,2) )
+    allocate( ATMOS_DYN_CNX4(5,IA,2) )
+    allocate( ATMOS_DYN_CNY4(5,JA,2) )
+
+    allocate( ATMOS_DYN_CORIOLI(IA,JA) )
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -164,24 +159,24 @@ contains
 
     DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-    call ATMOS_DYN_init( ATMOS_DYN_DIFF4,                & ! [OUT]
-                         ATMOS_DYN_CNZ3,                 & ! [OUT]
-                         ATMOS_DYN_CNX3,                 & ! [OUT]
-                         ATMOS_DYN_CNY3,                 & ! [OUT]
-                         ATMOS_DYN_CNZ4,                 & ! [OUT]
-                         ATMOS_DYN_CNX4,                 & ! [OUT]
-                         ATMOS_DYN_CNY4,                 & ! [OUT]
-                         ATMOS_DYN_CORIOLI,              & ! [OUT]
-                         GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-                         GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-                         ATMOS_DYN_numerical_diff_order, & ! [IN]
-                         ATMOS_DYN_numerical_diff_coef,  & ! [IN]
-                         DT,                             & ! [IN]
-                         ATMOS_DYN_enable_coriolis,      & ! [IN]
-                         REAL_LAT                        ) ! [IN]
+    call ATMOS_DYN_setup( ATMOS_DYN_DIFF4,                & ! [OUT]
+                          ATMOS_DYN_CNZ3,                 & ! [OUT]
+                          ATMOS_DYN_CNX3,                 & ! [OUT]
+                          ATMOS_DYN_CNY3,                 & ! [OUT]
+                          ATMOS_DYN_CNZ4,                 & ! [OUT]
+                          ATMOS_DYN_CNX4,                 & ! [OUT]
+                          ATMOS_DYN_CNY4,                 & ! [OUT]
+                          ATMOS_DYN_CORIOLI,              & ! [OUT]
+                          GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+                          GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+                          ATMOS_DYN_numerical_diff_order, & ! [IN]
+                          ATMOS_DYN_numerical_diff_coef,  & ! [IN]
+                          DT,                             & ! [IN]
+                          ATMOS_DYN_enable_coriolis,      & ! [IN]
+                          REAL_LAT                        ) ! [IN]
 
     return
-  end subroutine ATMOS_DYN_setup
+  end subroutine ATMOS_DYN_wrap_setup
 
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
@@ -250,47 +245,48 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
-    call ATMOS_DYN_main( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
-                         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
-                         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
-                         ATMOS_DYN_CNZ3,                                       & ! [IN]
-                         ATMOS_DYN_CNX3,                                       & ! [IN]
-                         ATMOS_DYN_CNY3,                                       & ! [IN]
-                         ATMOS_DYN_CNZ4,                                       & ! [IN]
-                         ATMOS_DYN_CNX4,                                       & ! [IN]
-                         ATMOS_DYN_CNY4,                                       & ! [IN]
-                         GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
-                         GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
-                         GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
-                         GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
-                         REAL_PHI,                                             & ! [IN]
-                         GTRANS_GSQRT,                                         & ! [IN]
-                         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G,                & ! [IN]
-                         AQ_CV,                                                & ! [IN]
-                         ATMOS_REFSTATE_dens,                                  & ! [IN]
-                         ATMOS_REFSTATE_pott,                                  & ! [IN]
-                         ATMOS_REFSTATE_qv,                                    & ! [IN]
-                         ATMOS_REFSTATE_pres,                                  & ! [IN]
-                         ATMOS_DYN_DIFF4,                                      & ! [IN]
-                         ATMOS_DYN_numerical_diff_order,                       & ! [IN]
-                         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
-                         ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
-                         ATMOS_DYN_CORIOLI,                                    & ! [IN]
-                         ATMOS_BOUNDARY_var,                                   & ! [IN]
-                         ATMOS_BOUNDARY_alpha,                                 & ! [IN]
-                         ATMOS_DYN_divdmp_coef,                                & ! [IN]
-                         ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
-                         ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
-                         ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
-                         ATMOS_USE_AVERAGE,                                    & ! [IN]
-                         TIME_DTSEC,                                           & ! [IN]
-                         TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
-                         TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
+    call ATMOS_DYN( &
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
+         DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
+         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
+         ATMOS_DYN_CNZ3,                                       & ! [IN]
+         ATMOS_DYN_CNX3,                                       & ! [IN]
+         ATMOS_DYN_CNY3,                                       & ! [IN]
+         ATMOS_DYN_CNZ4,                                       & ! [IN]
+         ATMOS_DYN_CNX4,                                       & ! [IN]
+         ATMOS_DYN_CNY4,                                       & ! [IN]
+         GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
+         GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
+         GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
+         GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
+         REAL_PHI,                                             & ! [IN]
+         GTRANS_GSQRT,                                         & ! [IN]
+         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G,                & ! [IN]
+         AQ_CV,                                                & ! [IN]
+         ATMOS_REFSTATE_dens,                                  & ! [IN]
+         ATMOS_REFSTATE_pott,                                  & ! [IN]
+         ATMOS_REFSTATE_qv,                                    & ! [IN]
+         ATMOS_REFSTATE_pres,                                  & ! [IN]
+         ATMOS_DYN_DIFF4,                                      & ! [IN]
+         ATMOS_DYN_numerical_diff_order,                       & ! [IN]
+         ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
+         ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
+         ATMOS_DYN_CORIOLI,                                    & ! [IN]
+         ATMOS_BOUNDARY_var,                                   & ! [IN]
+         ATMOS_BOUNDARY_alpha,                                 & ! [IN]
+         ATMOS_DYN_divdmp_coef,                                & ! [IN]
+         ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
+         ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
+         ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
+         ATMOS_USE_AVERAGE,                                    & ! [IN]
+         TIME_DTSEC,                                           & ! [IN]
+         TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
+         TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
 
     call ATMOS_vars_total
 
     return
-  end subroutine ATMOS_DYN
+  end subroutine ATMOS_DYN_wrap
 
 
-end module mod_atmos_dyn
+end module mod_atmos_dyn_wrap

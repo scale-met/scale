@@ -30,7 +30,7 @@ module mod_atmos_phy_sf
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_SF_init
+  public :: ATMOS_PHY_SF_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -84,7 +84,7 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_init( ATMOS_TYPE_PHY_SF )
+  subroutine ATMOS_PHY_SF_setup( ATMOS_TYPE_PHY_SF )
     use mod_stdio, only: &
        IO_FID_CONF, &
        IO_FID_LOG, &
@@ -119,6 +119,6 @@ contains
     end select
 
     return
-  end subroutine ATMOS_PHY_SF_init
+  end subroutine ATMOS_PHY_SF_setup
 
 end module mod_atmos_phy_sf

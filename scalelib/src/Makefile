@@ -32,6 +32,18 @@ endif
 
 OBJS =	\
 	$(mod_rdma)	\
+	mod_precision.o	\
+	mod_index.o	\
+	mod_tracer.o	\
+	mod_tracer_dry.o	\
+	mod_tracer_kessler.o	\
+	mod_tracer_tomita08.o	\
+	mod_tracer_sn13.o	\
+	mod_tracer_sn13w.o	\
+	mod_tracer_binw.o	\
+	mod_tracer_binf.o	\
+	mod_tracer_hbinw.o	\
+	mod_tracer_hbinf.o	\
 	mod_stdio.o	\
 	mod_specfunc.o	\
 	mod_process.o	\

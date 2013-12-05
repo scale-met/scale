@@ -113,6 +113,8 @@ contains
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L
+  use mod_process, only: &
+    PRC_MPIstop
 % types.each do |type|
   use mod_tracer_<%=type%>, only: &
 %   (vars_int+vars_ary).each do |var|

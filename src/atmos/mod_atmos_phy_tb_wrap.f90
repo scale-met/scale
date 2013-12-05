@@ -21,7 +21,8 @@ module mod_atmos_phy_tb_wrap
   use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
-     IO_L
+     IO_L, &
+     IO_SYSCHR
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -43,11 +44,11 @@ module mod_atmos_phy_tb_wrap
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: MOMZ_t(KA,IA,JA)
-  real(RP), private, allocatable :: MOMX_t(KA,IA,JA)
-  real(RP), private, allocatable :: MOMY_t(KA,IA,JA)
-  real(RP), private, allocatable :: RHOT_t(KA,IA,JA)
-  real(RP), private, allocatable :: QTRC_t(KA,IA,JA,QA)
+  real(RP), private, allocatable :: MOMZ_t(:,:,:)
+  real(RP), private, allocatable :: MOMX_t(:,:,:)
+  real(RP), private, allocatable :: MOMY_t(:,:,:)
+  real(RP), private, allocatable :: RHOT_t(:,:,:)
+  real(RP), private, allocatable :: QTRC_t(:,:,:,:)
 
   character(len=IO_SYSCHR), public :: ATMOS_PHY_TB_TYPE
   !-----------------------------------------------------------------------------
@@ -57,14 +58,23 @@ contains
     use mod_stdio, only: &
        IO_FID_CONF, &
        IO_FID_LOG, &
-       IO_FID_L
+       IO_L
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_grid, only: &
-       CDZ, CDX, CDY, &
-       FDZ, FDX, FDY, &
-       CZ, FZ
+       CDZ => GRID_CDZ, &
+       CDX => GRID_CDX, &
+       CDY => GRID_CDY, &
+       FDZ => GRID_FDZ, &
+       FDX => GRID_FDX, &
+       FDY => GRID_FDY, &
+       CZ  => GRID_CZ, &
+       FZ  => GRID_FZ
+    use mod_atmos_phy_tb, only: &
+       ATMOS_PHY_TB_setup
     implicit none
 
-    NAMELIST /ATMOS_PHY_TB/, &
+    NAMELIST / PARAM_ATMOS_PHY_TB / &
          ATMOS_PHY_TB_TYPE
 
     integer :: ierr
@@ -85,13 +95,13 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
 
-    call ATMOS_PHY_TB_init( &
+    call ATMOS_PHY_TB_setup( &
          ATMOS_PHY_TB_TYPE, & ! (in)
          CDZ, CDX, CDY, & ! (in)
          FDZ, FDX, FDY, & ! (in)
          CZ, FZ         ) ! (in)
 
-    call ATMOS_PHY_TB( .true., history_flag = .false. )
+    call ATMOS_PHY_TB_wrap( .true., .false. )
 
   end subroutine ATMOS_PHY_TB_wrap_setup
 
@@ -108,6 +118,8 @@ contains
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
+    use mod_atmos_phy_tb, only: &
+       ATMOS_PHY_TB
     use mod_atmos_vars, only: &
        DENS_av, &
        MOMZ_av, &
@@ -142,7 +154,7 @@ contains
     integer :: IIS, IIE, JJS, JJE
 
     if ( update_flag ) then
-       call ATMOS_PHY_TB_main( &
+       call ATMOS_PHY_TB( &
             qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
             qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
             tke, nu, Ri, Pr,                             & ! (out) diagnostic variables

@@ -29,7 +29,7 @@ module mod_atmos_phy_tb
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_TB_init
+  public :: ATMOS_PHY_TB_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -79,7 +79,7 @@ module mod_atmos_phy_tb
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine ATMOS_PHY_TB_init( &
+  subroutine ATMOS_PHY_TB_setup( &
        TB_TYPE, &
        CDZ, CDX, CDY, &
        FDZ, FDX, FDY, &
@@ -125,6 +125,6 @@ contains
             CZ, FZ )
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
     end select
-  end subroutine ATMOS_PHY_TB_init
+  end subroutine ATMOS_PHY_TB_setup
 
 end module mod_atmos_phy_tb

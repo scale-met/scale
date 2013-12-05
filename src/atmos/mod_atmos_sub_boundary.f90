@@ -48,14 +48,14 @@ module mod_atmos_boundary
   !
   !++ included parameters
   !
-# include "scale-les.h"
+# include "scalelib.h"
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: ATMOS_BOUNDARY_var  (KA,IA,JA,5) !> reference container (with HALO)
-  real(RP), public, save :: ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ! damping coefficient [0-1]
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:) !> reference container (with HALO)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha(:,:,:,:) !> damping coefficient [0-1]
 
   !-----------------------------------------------------------------------------
   !
@@ -138,6 +138,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
+
+    allocate( ATMOS_BOUNDARY_var  (KA,IA,JA,5) )
+    allocate( ATMOS_BOUNDARY_alpha(KA,IA,JA,5) )
 
     !--- read namelist
     rewind(IO_FID_CONF)

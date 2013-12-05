@@ -86,10 +86,10 @@ contains
        ATMOS_BOUNDARY_setup
     use mod_atmos_dyn_wrap, only: &
        ATMOS_DYN_setup => ATMOS_DYN_wrap_setup
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
-    use mod_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup
+    use mod_atmos_phy_sf_wrap, only: &
+       ATMOS_PHY_SF_setup => ATMOS_PHY_SF_wrap_setup
+    use mod_atmos_phy_tb_wrap, only: &
+       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_wrap_setup
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
     use mod_atmos_phy_rd, only: &
@@ -186,10 +186,10 @@ contains
        SFLX_QVAtm
     use mod_atmos_dyn_wrap, only: &
        ATMOS_DYN => ATMOS_DYN_wrap
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
-    use mod_atmos_phy_tb, only: &
-       ATMOS_PHY_TB
+    use mod_atmos_phy_sf_wrap, only: &
+       ATMOS_PHY_SF => ATMOS_PHY_SF_wrap
+    use mod_atmos_phy_tb_wrap, only: &
+       ATMOS_PHY_TB => ATMOS_PHY_TB_wrap
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_phy_rd, only: &
