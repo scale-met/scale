@@ -1,0 +1,124 @@
+!-------------------------------------------------------------------------------
+!> module ATMOSPHERE / Physics Surface fluxes
+!!
+!! @par Description
+!!          Flux from/to bottom wall of atmosphere (surface)
+!!
+!! @author Team SCALE
+!!
+!! @par History
+!! @li      2013-12-05 (S.Nishizawa)  [new]
+!<
+!-------------------------------------------------------------------------------
+#include "inc_openmp.h"
+module mod_atmos_phy_sf
+  !-----------------------------------------------------------------------------
+  !
+  !++ used modules
+  !
+  use mod_precision
+  use mod_index
+  use mod_tracer
+  use mod_stdio, only: &
+     IO_FID_LOG,  &
+     IO_L, &
+     IO_SYSCHR
+  !-----------------------------------------------------------------------------
+  implicit none
+  private
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
+  public :: ATMOS_PHY_SF_init
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  character(len=IO_SYSCHR), public :: ATMOS_TYPE_PHY_SF    = 'NONE'
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
+  !-----------------------------------------------------------------------------
+  abstract interface
+     subroutine sf( &
+          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
+          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
+          CZ, ctime                                            ) ! (in)
+       use dc_types, only: &
+         DP
+       use mod_precision
+       use mod_index
+       use mod_tracer
+       implicit none
+
+       real(RP), intent(out) :: SFLX_MOMZ(IA,JA)
+       real(RP), intent(out) :: SFLX_MOMX(IA,JA)
+       real(RP), intent(out) :: SFLX_MOMY(IA,JA)
+       real(RP), intent(out) :: SFLX_POTT(IA,JA)
+       real(RP), intent(out) :: SFLX_QV  (IA,JA)
+
+       real(RP), intent(in)  :: DENS(KA,IA,JA)
+       real(RP), intent(in)  :: MOMZ(KA,IA,JA)
+       real(RP), intent(in)  :: MOMX(KA,IA,JA)
+       real(RP), intent(in)  :: MOMY(KA,IA,JA)
+       real(RP), intent(in)  :: RHOT(KA,IA,JA)
+       real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(in)  :: SST (1,IA,JA)
+
+       real(RP), intent(in)  :: CZ(KA)
+       real(DP), intent(in)  :: ctime
+     end subroutine sf
+  end interface
+  procedure(sf), pointer, public :: ATMOS_PHY_SF => NULL()
+
+contains
+
+  !-----------------------------------------------------------------------------
+  !
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_SF_init( ATMOS_TYPE_PHY_SF )
+    use mod_stdio, only: &
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L
+    use mod_process, only: &
+       PRC_MPIstop
+#define EXTM(pre, name, post) pre ## name ## post
+#define NAME(pre, name, post) EXTM(pre, name, post)
+#ifdef SF
+    use NAME(mod_atmos_phy_, SF,), only: &
+       NAME(ATMOS_PHY_, SF, _setup), &
+       NAME(ATMOS_PHY_, SF,)
+#else
+    use mod_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_setup, &
+       ATMOS_PHY_SF_const
+    use mod_atmos_phy_sf_louis, only: &
+       ATMOS_PHY_SF_louis_setup, &
+       ATMOS_PHY_SF_louis
+#endif
+    implicit none
+    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_PHY_SF
+    !---------------------------------------------------------------------------
+
+    select case( ATMOS_TYPE_PHY_SF )
+    case ( 'CONST')
+       call ATMOS_PHY_SF_const_setup( ATMOS_TYPE_PHY_SF )
+       ATMOS_PHY_SF => ATMOS_PHY_SF_const
+    case ( 'LOUIS')
+       call ATMOS_PHY_SF_louis_setup( ATMOS_TYPE_PHY_SF )
+       ATMOS_PHY_SF => ATMOS_PHY_SF_louis
+    end select
+
+    return
+  end subroutine ATMOS_PHY_SF_init
+
+end module mod_atmos_phy_sf

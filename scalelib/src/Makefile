@@ -59,7 +59,10 @@ OBJS =	\
 	mod_atmos_dyn_rk.o \
 	mod_atmos_dyn_rk_heve.o \
 	mod_atmos_dyn_rk_hevi.o \
-	mod_atmos_dyn.o
+	mod_atmos_dyn.o	\
+	mod_atmos_phy_sf_const.o	\
+	mod_atmos_phy_sf_louis.o	\
+	mod_atmos_phy_sf.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
 

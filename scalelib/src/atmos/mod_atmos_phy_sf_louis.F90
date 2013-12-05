@@ -15,14 +15,14 @@
 !! @li      2012-09-11 (S.Nishizawa) [mod] bugfix based on the scale document
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_sf
+module mod_atmos_phy_sf_louis
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
+  use mod_precision
+  use mod_index
+  use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,16 +30,8 @@ module mod_atmos_phy_sf
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_SF_setup
-  public :: ATMOS_PHY_SF
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+  public :: ATMOS_PHY_SF_louis_setup
+  public :: ATMOS_PHY_SF_louis
 
   !-----------------------------------------------------------------------------
   !
@@ -89,27 +81,22 @@ module mod_atmos_phy_sf
   real(RP), private, parameter :: U_maxH  =  100.0_RP  !                   T
   real(RP), private, parameter :: U_maxE  =  100.0_RP  !                   q
 
-  ! surface flux
-  real(RP), private, save :: SFLX_MOMZ(IA,JA)
-  real(RP), private, save :: SFLX_MOMX(IA,JA)
-  real(RP), private, save :: SFLX_MOMY(IA,JA)
-  real(RP), private, save :: SFLX_POTT(IA,JA)
-  real(RP), private, save :: SFLX_QV(IA,JA)
-
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_setup
+  subroutine ATMOS_PHY_SF_louis_setup( ATMOS_TYPE_PHY_SF )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG,  &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_SF
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_PHY_SF
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: ATMOS_PHY_SF_U_minH !                   T
@@ -204,99 +191,21 @@ contains
     ZeS    = ATMOS_PHY_SF_ZeS
     ThS    = ATMOS_PHY_SF_ThS
 
-    call ATMOS_PHY_SF( .true., .false. )
-
     return
-  end subroutine ATMOS_PHY_SF_setup
+  end subroutine ATMOS_PHY_SF_louis_setup
 
-  subroutine ATMOS_PHY_SF( &
-       update_flag, &
-       history_flag )
-    use mod_const, only: &
-       CPdry  => CONST_CPdry, &
-       LH0    => CONST_LH0
-    use mod_time, only: &
-       dtsf => TIME_DTSEC_ATMOS_PHY_SF
-    use mod_history, only: &
-       HIST_in
-    use mod_grid, only: &
-       CZ => GRID_CZ, &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp
-    use mod_ocean_vars, only: &
-       SST
-    implicit none
-
-    logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
-
-    ! monitor
-    real(RP) :: SHFLX(IA,JA) ! sensible heat flux [W/m2]
-    real(RP) :: LHFLX(IA,JA) ! latent   heat flux [W/m2]
-
-    integer :: i, j
-
-    if ( update_flag ) then
-       call ATMOS_PHY_SF_main( &
-            SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
-            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
-            CZ                                                   ) ! (in)
-       do j = JS, JE
-       do i = IS, IE
-          SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-          LHFLX(i,j) = SFLX_QV  (i,j) * LH0
-       end do
-       end do
-
-       if ( present(history_flag) ) then
-       if ( history_flag ) then
-          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
-       end if
-       end if
-
-    end if
-
-    do j = JS, JE
-    do i = IS, IE
-       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
-            + ( SFLX_POTT(i,j) &
-              + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
-              ) * RCDZ(KS)
-       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
-            + SFLX_QV(i,j) * RCDZ(KS)
-       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
-            + SFLX_MOMZ(i,j) * RFDZ(KS)
-       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
-            + SFLX_MOMX(i,j) * RCDZ(KS)
-       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
-            + SFLX_MOMY(i,j) * RCDZ(KS)
-       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
-            + SFLX_QV(i,j) * RCDZ(KS)
-    enddo
-    enddo
-
-  end subroutine ATMOS_PHY_SF
   !-----------------------------------------------------------------------------
   ! calclate surface flux
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_main( &
+  subroutine ATMOS_PHY_SF_louis( &
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
-         CZ                                                   ) ! (in)
+         CZ, ctime                                            ) ! (in)
+    use dc_types, only: &
+       DP
+    use mod_stdio, only: &
+       IO_FID_LOG, &
+       IO_L
     use mod_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
@@ -326,6 +235,7 @@ contains
     real(RP), intent(in)  :: SST (1,IA,JA)
 
     real(RP), intent(in)  :: CZ(KA)
+    real(DP), intent(in)  :: ctime
 
     real(RP) :: FB  = 9.4_RP  ! Louis factor b (bM)
     real(RP) :: FBS = 4.7_RP  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
@@ -481,7 +391,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_SF_main
+  end subroutine ATMOS_PHY_SF_louis
 
 
   subroutine get_RiB( &
@@ -545,4 +455,4 @@ contains
   end subroutine get_RiB
 
 
-end module mod_atmos_phy_sf
+end module mod_atmos_phy_sf_louis
