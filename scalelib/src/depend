@@ -1,0 +1,42 @@
+$(BUILD_DIR)/mod_grid_cartesian.o: grid/mod_grid_cartesian.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_mapproj.o: grid/mod_mapproj.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_intepolation.o: grid/mod_intepolation.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_grid_cartesian.o $(BUILD_DIR)/mod_grid_real.o $(BUILD_DIR)/mod_const.o
+$(BUILD_DIR)/mod_topography.o: grid/mod_topography.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_fileio.o $(BUILD_DIR)/mod_comm.o
+$(BUILD_DIR)/mod_gridtrans.o: grid/mod_gridtrans.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_grid_cartesian.o $(BUILD_DIR)/mod_grid_real.o $(BUILD_DIR)/mod_comm.o
+$(BUILD_DIR)/mod_grid_real.o: grid/mod_grid_real.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_mapproj.o $(BUILD_DIR)/mod_fileio.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_grid_cartesian.o $(BUILD_DIR)/mod_topography.o
+$(BUILD_DIR)/mod_landuse.o: grid/mod_landuse.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_fileio.o $(BUILD_DIR)/mod_comm.o
+$(BUILD_DIR)/mod_precision.o: grid/mod_precision.F90
+$(BUILD_DIR)/mod_tracer_hbinf.o: common/mod_tracer_hbinf.F90
+$(BUILD_DIR)/mod_stats.o: common/mod_stats.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_grid_real.o $(BUILD_DIR)/mod_const.o
+$(BUILD_DIR)/mod_tracer.o: common/mod_tracer.F90 $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_tracer_dry.o $(BUILD_DIR)/mod_tracer_kessler.o $(BUILD_DIR)/mod_tracer_tomita08.o $(BUILD_DIR)/mod_tracer_sn13.o $(BUILD_DIR)/mod_tracer_sn13w.o $(BUILD_DIR)/mod_tracer_binw.o $(BUILD_DIR)/mod_tracer_binf.o $(BUILD_DIR)/mod_tracer_hbinw.o $(BUILD_DIR)/mod_tracer_hbinf.o
+$(BUILD_DIR)/mod_const.o: common/mod_const.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_papi.o: common/mod_papi.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_misc.o: common/mod_misc.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_calendar.o: common/mod_calendar.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_tracer_binf.o: common/mod_tracer_binf.F90
+$(BUILD_DIR)/mod_option.o: common/mod_option.F90
+$(BUILD_DIR)/mod_tracer_sn13w.o: common/mod_tracer_sn13w.F90
+$(BUILD_DIR)/mod_comm.o: common/mod_comm.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_process.o: common/mod_process.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o
+$(BUILD_DIR)/mod_tracer_kessler.o: common/mod_tracer_kessler.F90
+$(BUILD_DIR)/mod_tracer_hbinw.o: common/mod_tracer_hbinw.F90
+$(BUILD_DIR)/mod_debug.o: common/mod_debug.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_const.o
+$(BUILD_DIR)/mod_tracer_dry.o: common/mod_tracer_dry.F90
+$(BUILD_DIR)/mod_index.o: common/mod_index.F90 $(BUILD_DIR)/mod_stdio.o
+$(BUILD_DIR)/mod_random.o: common/mod_random.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o
+$(BUILD_DIR)/mod_tracer_sn13.o: common/mod_tracer_sn13.F90
+$(BUILD_DIR)/mod_tracer_tomita08.o: common/mod_tracer_tomita08.F90
+$(BUILD_DIR)/mod_time.o: common/mod_time.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_calendar.o
+$(BUILD_DIR)/mod_tracer_binw.o: common/mod_tracer_binw.F90
+$(BUILD_DIR)/mod_specfunc.o: common/mod_specfunc.F90 $(BUILD_DIR)/mod_precision.o
+$(BUILD_DIR)/mod_history.o: io/mod_history.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_grid_cartesian.o $(BUILD_DIR)/mod_grid_real.o
+$(BUILD_DIR)/mod_stdio.o: io/mod_stdio.F90
+$(BUILD_DIR)/mod_monitor.o: io/mod_monitor.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_stats.o
+$(BUILD_DIR)/mod_fileio.o: io/mod_fileio.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_grid_cartesian.o
+$(BUILD_DIR)/mod_atmos_dyn_rk_heve.o: atmos/mod_atmos_dyn_rk_heve.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_debug.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_atmos_dyn_common.o $(BUILD_DIR)/mod_gridtrans.o
+$(BUILD_DIR)/mod_atmos_dyn_common.o: atmos/mod_atmos_dyn_common.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_debug.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_comm.o
+$(BUILD_DIR)/mod_atmos_dyn_rk.o: atmos/mod_atmos_dyn_rk.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_debug.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_atmos_dyn_rk_heve.o $(BUILD_DIR)/mod_atmos_dyn_rk_hevi.o
+$(BUILD_DIR)/mod_atmos_dyn_rk_hevi.o: atmos/mod_atmos_dyn_rk_hevi.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_debug.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_atmos_dyn_common.o $(BUILD_DIR)/mod_grid_cartesian.o
+$(BUILD_DIR)/mod_atmos_dyn.o: atmos/mod_atmos_dyn.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_index.o $(BUILD_DIR)/mod_tracer.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o $(BUILD_DIR)/mod_debug.o $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_atmos_dyn_common.o $(BUILD_DIR)/mod_atmos_dyn_rk.o $(BUILD_DIR)/mod_comm.o
+
+MODS = mod_grid.mod mod_mapproj.mod mod_interpolation.mod mod_topography.mod mod_gridtrans.mod mod_grid_real.mod mod_landuse.mod mod_precision.mod mod_tracer_hbinf.mod mod_stats.mod mod_tracer.mod mod_const.mod mod_papi.mod mod_misc.mod mod_calendar.mod mod_tracer_binf.mod mod_option.mod mod_tracer_sn13w.mod mod_comm.mod mod_process.mod mod_tracer_kessler.mod mod_tracer_hbinw.mod mod_debug.mod mod_tracer_dry.mod mod_index.mod mod_random.mod mod_tracer_sn13.mod mod_tracer_tomita08.mod mod_time.mod mod_tracer_binw.mod mod_specfunc.mod mod_history.mod mod_stdio.mod mod_monitor.mod mod_fileio.mod mod_atmos_dyn_rk_heve.mod mod_atmos_dyn_common.mod mod_atmos_dyn_rk.mod mod_atmos_dyn_rk_hevi.mod mod_atmos_dyn.mod

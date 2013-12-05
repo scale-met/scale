@@ -84,8 +84,8 @@ contains
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
-    use mod_atmos_dyn, only: &
-       ATMOS_DYN_setup
+    use mod_atmos_dyn_wrap, only: &
+       ATMOS_DYN_setup => ATMOS_DYN_wrap_setup
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     use mod_atmos_phy_tb, only: &
@@ -184,8 +184,8 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_QVAtm
-    use mod_atmos_dyn, only: &
-       ATMOS_DYN
+    use mod_atmos_dyn_wrap, only: &
+       ATMOS_DYN => ATMOS_DYN_wrap
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_phy_tb, only: &

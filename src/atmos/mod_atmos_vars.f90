@@ -19,6 +19,8 @@ module mod_atmos_vars
   !
   !++ used modules
   !
+  use gtool_file_h, only: &
+     File_HLONG
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -27,8 +29,27 @@ module mod_atmos_vars
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use gtool_file_h, only: &
-     File_HLONG
+  use mod_atmos_dyn, only: &
+     ATMOS_TYPE_DYN
+  use mod_atmos_phy_sf, only: &
+     ATMOS_TYPE_PHY_SF
+  use mod_atmos_phy_tb, only: &
+     ATMOS_TYPE_PHY_TB
+  use mod_atmos_phy_mp, only: &
+     ATMOS_TYPE_PHY_MP
+  use mod_atmos_phy_rd, only: &
+     ATMOS_TYPE_PHY_RD
+  use mod_atmos_phy_ae, only: &
+     ATMOS_TYPE_PHY_AE
+  use mod_atmos_phy_ch, only: &
+     ATMOS_TYPE_PHY_CH
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_SF = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,7 +69,7 @@ module mod_atmos_vars
   !
   !++ included parameters
   !
-# include "scale-les.h"
+# include "scalelib.h"
   include 'inc_precision.h'
   include 'inc_index.h'
   include 'inc_tracer.h'
@@ -57,14 +78,6 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_DYN    = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_SF = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
-
   logical,                  public, save :: ATMOS_sw_dyn
   logical,                  public, save :: ATMOS_sw_phy_sf
   logical,                  public, save :: ATMOS_sw_phy_tb
@@ -104,17 +117,6 @@ module mod_atmos_vars
   real(RP), public, save    :: MOMY_tp(KA,IA,JA)
   real(RP), public, save    :: RHOT_tp(KA,IA,JA)
   real(RP), public, save    :: QTRC_tp(KA,IA,JA,QA)
-
-  integer, public, parameter :: ZDIR = 1
-  integer, public, parameter :: XDIR = 2
-  integer, public, parameter :: YDIR = 3
-
-  integer, public, parameter :: I_DENS = 1
-  integer, public, parameter :: I_MOMZ = 2
-  integer, public, parameter :: I_MOMX = 3
-  integer, public, parameter :: I_MOMY = 4
-  integer, public, parameter :: I_RHOT = 5
-  integer, public, parameter :: I_QTRC = 6
 
   character(len=16), public, save :: AP_NAME(5)
   character(len=64), public, save :: AP_DESC(5)
@@ -213,16 +215,6 @@ contains
     use mod_monitor, only: &
        MONIT_reg
     implicit none
-
-    NAMELIST / PARAM_ATMOS / &
-       ATMOS_TYPE_DYN,    &
-       ATMOS_TYPE_PHY_SF, &
-       ATMOS_TYPE_PHY_TB, &
-       ATMOS_TYPE_PHY_MP, &
-       ATMOS_TYPE_PHY_RD, &
-       ATMOS_TYPE_PHY_AE, &
-       ATMOS_TYPE_PHY_CH, &
-       ATMOS_USE_AVERAGE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
