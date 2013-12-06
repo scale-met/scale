@@ -72,7 +72,7 @@ module mod_atmos_phy_mp_hbinw
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -349,7 +349,7 @@ contains
      endif
     endif
 
-    MP_DENS(I_mp_QC)  = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QC)  = CONST_DWATR
 
     !--- random number setup for stochastic method
     if( rndm_flgp > 0 ) then

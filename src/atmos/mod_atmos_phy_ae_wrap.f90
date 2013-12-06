@@ -1,21 +1,24 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Radiation
+!> module ATMOSPHERE / Physics Aerosol Microphysics
 !!
 !! @par Description
-!!          dummy code
+!!          Aerosol Microphysics wrapper
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-03-21 (H.Yashiro)  [new]
+!! @li      2013-12-06 (S.Nishizawa)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_rd
+module mod_atmos_phy_ae_wrap
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -26,16 +29,8 @@ module mod_atmos_phy_rd
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_setup
-  public :: ATMOS_PHY_RD
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+  public :: ATMOS_PHY_AE_wrap_setup
+  public :: ATMOS_PHY_AE_wrap
 
   !-----------------------------------------------------------------------------
   !
@@ -51,38 +46,40 @@ module mod_atmos_phy_rd
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD_setup
-    use mod_process, only: &
-       PRC_MPIstop
-    use mod_atmos_vars, only: &
-       ATMOS_PHY_RD_TYPE
+  !> Setup
+  subroutine ATMOS_PHY_AE_wrap_setup( AE_TYPE )
+    use mod_stdio, only: &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: AE_TYPE
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ dummy radiation process'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
 
-    if ( ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_RD_TYPE is not NONE. Check!'
-       call PRC_MPIstop
-    endif
+    call ATMOS_PHY_AE_setup( AE_TYPE )
+
+    call ATMOS_PHY_AE_wrap( .true., .false. )
 
     return
-  end subroutine ATMOS_PHY_RD_setup
+  end subroutine ATMOS_PHY_AE_wrap_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD( update_flag, history_flag )
+  !> Aerosol Microphysics
+  subroutine ATMOS_PHY_AE_wrap( update_flag, history_flag )
     implicit none
     logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
-    !---------------------------------------------------------------------------
+    logical, intent(in) :: history_flag
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(dummy)'
+    if ( update_flag ) then
+       call ATMOS_PHY_AE
+    end if
 
     return
-  end subroutine ATMOS_PHY_RD
+  end subroutine ATMOS_PHY_AE_wrap
 
-end module mod_atmos_phy_rd
+end module mod_atmos_phy_ae_wrap

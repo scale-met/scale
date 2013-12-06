@@ -11,11 +11,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_ae
+module mod_atmos_phy_ae_dummy
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -26,24 +29,16 @@ module mod_atmos_phy_ae
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_AE_setup
-  public :: ATMOS_PHY_AE
+  public :: ATMOS_PHY_AE_dummy_setup
+  public :: ATMOS_PHY_AE_dummy
 
-  public :: ATMOS_PHY_AE_EffectiveRadius
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+  public :: ATMOS_PHY_AE_dummy_EffectiveRadius
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: AE_DENS(AE_QA) = 0.0_RP ! aerosol density [kg/m3]=[g/L]
+  real(RP), public, allocatable :: AE_DENS(:) ! aerosol density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -57,40 +52,45 @@ module mod_atmos_phy_ae
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_AE_setup
+  subroutine ATMOS_PHY_AE_dummy_setup( AE_TYPE )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_atmos_vars, only: &
-       ATMOS_PHY_AE_TYPE
+    use mod_stdio, only: &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     implicit none
-
+    character(len=IO_SYSCHR), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
 
-    if ( ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not NONE. Check!'
+    if ( AE_TYPE /= 'DUMMY' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
        call PRC_MPIstop
     endif
 
+    allocate( AE_DENS(AE_QA) )
+    AE_DENS(:) = 0.0_RP
+
     return
-  end subroutine ATMOS_PHY_AE_setup
+  end subroutine ATMOS_PHY_AE_dummy_setup
 
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
-  subroutine ATMOS_PHY_AE
+  subroutine ATMOS_PHY_AE_dummy
     implicit none
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
 
     return
-  end subroutine ATMOS_PHY_AE
+  end subroutine ATMOS_PHY_AE_dummy
 
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_AE_EffectiveRadius( &
+  subroutine ATMOS_PHY_AE_dummy_EffectiveRadius( &
        Re,   &
        QTRC, &
        RH    )
@@ -112,6 +112,6 @@ contains
 !    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
 
     return
-  end subroutine ATMOS_PHY_AE_EffectiveRadius
+  end subroutine ATMOS_PHY_AE_dummy_EffectiveRadius
 
-end module mod_atmos_phy_ae 
+end module mod_atmos_phy_ae_dummy

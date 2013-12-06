@@ -65,16 +65,9 @@ module mod_atmos_dyn_wrap
   real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
   real(RP), private :: ATMOS_DYN_DIFF4                                   ! for numerical filter
-  real(RP), private, allocatable :: ATMOS_DYN_CNZ3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNX3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNY3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNZ4(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNX4(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNY4(:,:,:)
 
   ! Coriolis force
   logical,  private              :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, allocatable :: ATMOS_DYN_CORIOLI(:,:)            ! coriolis term
 
   ! divergence damping
   real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
@@ -129,15 +122,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
 
-    allocate( ATMOS_DYN_CNZ3(3,KA,2) )
-    allocate( ATMOS_DYN_CNX3(3,IA,2) )
-    allocate( ATMOS_DYN_CNY3(3,JA,2) )
-    allocate( ATMOS_DYN_CNZ4(5,KA,2) )
-    allocate( ATMOS_DYN_CNX4(5,IA,2) )
-    allocate( ATMOS_DYN_CNY4(5,JA,2) )
-
-    allocate( ATMOS_DYN_CORIOLI(IA,JA) )
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -162,13 +146,6 @@ contains
     DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
     call ATMOS_DYN_setup( ATMOS_DYN_DIFF4,                & ! [OUT]
-                          ATMOS_DYN_CNZ3,                 & ! [OUT]
-                          ATMOS_DYN_CNX3,                 & ! [OUT]
-                          ATMOS_DYN_CNY3,                 & ! [OUT]
-                          ATMOS_DYN_CNZ4,                 & ! [OUT]
-                          ATMOS_DYN_CNX4,                 & ! [OUT]
-                          ATMOS_DYN_CNY4,                 & ! [OUT]
-                          ATMOS_DYN_CORIOLI,              & ! [OUT]
                           DYN_TYPE,                       & ! [IN]
                           GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                           GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
@@ -255,12 +232,6 @@ contains
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
-         ATMOS_DYN_CNZ3,                                       & ! [IN]
-         ATMOS_DYN_CNX3,                                       & ! [IN]
-         ATMOS_DYN_CNY3,                                       & ! [IN]
-         ATMOS_DYN_CNZ4,                                       & ! [IN]
-         ATMOS_DYN_CNX4,                                       & ! [IN]
-         ATMOS_DYN_CNY4,                                       & ! [IN]
          GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
          GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
          GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
@@ -277,7 +248,6 @@ contains
          ATMOS_DYN_numerical_diff_order,                       & ! [IN]
          ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
          ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
-         ATMOS_DYN_CORIOLI,                                    & ! [IN]
          ATMOS_BOUNDARY_var,                                   & ! [IN]
          ATMOS_BOUNDARY_alpha,                                 & ! [IN]
          ATMOS_DYN_divdmp_coef,                                & ! [IN]

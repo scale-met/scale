@@ -78,6 +78,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
 
+    allocate( MOMZ_t(KA,IA,JA) )
+    allocate( MOMX_t(KA,IA,JA) )
+    allocate( MOMY_t(KA,IA,JA) )
+    allocate( RHOT_t(KA,IA,JA) )
+    allocate( QTRC_t(KA,IA,JA,QA) )
+
     call ATMOS_PHY_TB_setup( &
          TB_TYPE, & ! (in)
          CDZ, CDX, CDY, & ! (in)

@@ -20,6 +20,8 @@ module mod_atmos_phy_rd_profile
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -27,14 +29,6 @@ module mod_atmos_phy_rd_profile
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure

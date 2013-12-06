@@ -40,7 +40,7 @@ module mod_atmos_phy_mp_dry
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -69,7 +69,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
 
-    MP_DENS(:) = 0.0_RP
+    ATMOS_PHY_MP_DENS(:) = 0.0_RP
 
     if ( MP_TYPE /= 'DRY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'

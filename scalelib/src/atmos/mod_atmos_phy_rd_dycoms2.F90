@@ -13,11 +13,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_rd
+module mod_atmos_phy_rd_dycoms2
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -28,16 +31,9 @@ module mod_atmos_phy_rd
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_setup
-  public :: ATMOS_PHY_RD
+  public :: ATMOS_PHY_RD_dycoms2_setup
+  public :: ATMOS_PHY_RD_dycoms2
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -54,19 +50,22 @@ module mod_atmos_phy_rd
   real(RP), private, save :: F0    = 70.00_RP  ! Upward [J/m2/s]
   real(RP), private, save :: F1    = 22.00_RP  ! [K/m**-1/3]
   real(RP), private, save :: Dval  = 3.75E-6_RP ! divergence of large scale horizontal winds [1/s]
-  real(RP), private, save :: RHOT_t  (KA,IA,JA)
+
+  logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD_setup
+  subroutine ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_RD
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
     real(RP) :: ATMOS_RD_F0
     real(RP) :: ATMOS_RD_F1
@@ -74,7 +73,7 @@ contains
   
     integer :: ierr
 
-    NAMELIST / PARAM_ATMOS_PHY_RD / &
+    NAMELIST / PARAM_ATMOS_PHY_RD_DYCOMS2 / &
        ATMOS_RD_F0, &
        ATMOS_RD_F1, &
        ATMOS_RD_Dval
@@ -88,15 +87,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ DYCOMS-II Parametarized Radiative heating'
 
-    if ( ATMOS_TYPE_PHY_RD /= 'DYCOMSII' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not DYCOMSII. Check!'
+    if ( RD_TYPE /= 'DYCOMSII' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_RD_TYPE is not DYCOMSII. Check!'
        call PRC_MPIstop
     endif
 
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_DYCOMS2,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
@@ -104,21 +103,25 @@ contains
       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD. Check!'
       call PRC_MPIstop
     endif 
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_DYCOMS2)
 
     F0 = ATMOS_RD_F0
     F1 = ATMOS_RD_F1
     Dval = ATMOS_RD_Dval
 
-    call ATMOS_PHY_RD( .true., .false. )
-
     return
-  end subroutine ATMOS_PHY_RD_setup
+  end subroutine ATMOS_PHY_RD_dycoms2_setup
 
   !-----------------------------------------------------------------------------
   ! Parametarized Radiative heating
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD( update_flag, history_flag )
+  subroutine ATMOS_PHY_RD_dycoms2( &
+       flux_rad, flux_top, & ! [out]
+       solins, cosSZA, & ! [out]
+       DENS, RHOT, QTRC, & ! [in]
+       CZ, FZ, CDZ, RCDZ, & ! [in]
+       REAL_lon, REAL_lat, & ! [in]
+       TIME_NOWDATE ) ! [in]
     use mod_const, only: &
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
@@ -126,33 +129,38 @@ contains
        RovCV   => CONST_RovCV,  &
        CPovCV  => CONST_CPovCV, &
        EPSTvap => CONST_CPdry,  &
-       P00     => CONST_PRE00
+       P00     => CONST_PRE00,  &
+       UNDEF   => CONST_UNDEF
     use mod_time, only: &
        dtrd => TIME_DTSEC_ATMOS_PHY_RD
-    use mod_grid, only: &
-       CZ   => GRID_CZ,  &
-       FZ   => GRID_FZ,  &
-       CDZ  => GRID_CDZ, &
-       RCDZ => GRID_RCDZ
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
     use mod_history, only: &
        HIST_in
-    use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
-       DENS, &
-       RHOT, &
-       QTRC, &
-       RHOT_tp
+    use mod_atmos_phy_rd_common, only: &
+       I_SW, &
+       I_LW, &
+       I_dn, &
+       I_up
     implicit none
+    real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
+    real(RP), intent(out) :: flux_top(IA,JA,2)
+    real(RP), intent(out) :: solins(IA,JA)
+    real(RP), intent(out) :: cosSZA(IA,JA)
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: CZ(KA)
+    real(RP), intent(in)  :: FZ(KA-1)
+    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: RCDZ(KA)
+    real(RP), intent(in)  :: REAL_lon(IA,JA)
+    real(RP), intent(in)  :: REAL_lat(IA,JA)
+    integer , intent(in)  :: TIME_NOWDATE(6)
 
-    logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
-
-    real(RP) :: TEMP_t  (KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
     real(RP) :: EFLX_rad(KA,IA,JA) ! Radiative heating flux [J/m2/s]
-    real(RP) :: Zi      (1 ,IA,JA) ! Cloud top height [m]
+    real(RP) :: Zi      (   IA,JA) ! Cloud top height [m]
 
     real(RP) :: QTOT ! Qv + Qc + Qr [kg/kg]
 
@@ -171,16 +179,13 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( update_flag ) then
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation (DYCOMS-II'
 
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation'
+    do j = JS, JE
+    do i = IS, IE
 
-     do j = JS, JE
-     do i = IS, IE
        do k = KS, KE
-          EFLX_rad(k,i,j) = 0.0_RP
-          TEMP_t  (k,i,j) = 0.0_RP
-          Zi      (1,i,j) = 0.0_RP
+          Zi      (  i,j) = 0.0_RP
        enddo
 
        ! diagnose cloud top
@@ -196,7 +201,7 @@ contains
 
        if( k_cldtop == -1 ) cycle ! no cloud
 
-       Zi(1,i,j) = CZ(k_cldtop)
+       Zi(i,j) = CZ(k_cldtop)
 
        do k = KS-1, KE
 
@@ -216,8 +221,8 @@ contains
              endif
           enddo
 
-          EFLX_rad(k,i,j) = F0 * exp( -Qabove ) &
-                          + F1 * exp( -Qbelow )
+          flux_rad(k,i,j,I_LW,I_up) = F0 * exp( -Qabove ) &
+                                    + F1 * exp( -Qbelow )
        enddo
 
        do k = k_cldtop, KE
@@ -226,55 +231,28 @@ contains
           do iq = QQS, QWE
              QTOT = QTOT + QTRC(k,i,j,iq)
           enddo 
-          EFLX_rad(k,i,j) = EFLX_rad(k,i,j) &
+          flux_rad(k,i,j,I_LW,I_up) = flux_rad(k,i,j,I_LW,I_up) &
                           + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
                           * ( 0.250_RP * dZ  * dZ**(1.0_RP/3.0_RP) &
-                            + CZ(k_cldtop) * dZ**(1.0_RP/3.0_RP) )
-       enddo
-
-       do k = KS, KE
-          TEMP_t(k,i,j) = - ( EFLX_rad(k,i,j) - EFLX_rad(k-1,i,j) ) / CPdry * RCDZ(k)
-          TEMP_t_out(k,i,j) = TEMP_t(k,i,j) * 86400.0_RP / DENS(k,i,j)
-
-          RHOT_t(k,i,j) = ( 1.0_RP - RovCP ) &
-                        * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)
+                              + CZ(k_cldtop) * dZ**(1.0_RP/3.0_RP) )
        enddo
 
      enddo
      enddo
 
-    ! fill KHALO
-     do j  = JS, JE
-     do i  = IS, IE
-        RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-     enddo
-     enddo
-     ! fill IHALO & JHALO
-     call COMM_vars8( RHOT(:,:,:), 5 )
-     call COMM_wait ( RHOT(:,:,:), 5 )
-
-     call ATMOS_vars_total
-
-     if ( present(history_flag) ) then
-     if ( history_flag ) then
-       call HIST_in( EFLX_rad(:,:,:), 'EFLX_rd',   'Radiative heating flux', 'W/m2', dtrd )
-       call HIST_in( TEMP_t_out  (:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day',  dtrd )
-       call HIST_in( Zi      (1,:,:), 'Zi',        'Cloud top height',       'm',    dtrd )
-     endif
+     if ( .not. first ) then
+        flux_rad(:,:,:,I_SW,I_dn) = 0.0_RP
+        flux_rad(:,:,:,I_SW,I_up) = 0.0_RP
+        flux_rad(:,:,:,I_LW,I_dn) = 0.0_RP
+        flux_top(:,:,:) = UNDEF
+        solins(:,:) = UNDEF
+        cosSZA(:,:) = UNDEF
+        call HIST_in( Zi(:,:), 'Zi', 'Cloud top height', 'm', dtrd )
+        first = .false.
      endif
 
-    endif
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
-    enddo
-    enddo
-    enddo
 
     return
-  end subroutine ATMOS_PHY_RD
+  end subroutine ATMOS_PHY_RD_dycoms2
 
-end module mod_atmos_phy_rd
+end module mod_atmos_phy_rd_dycoms2

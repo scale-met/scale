@@ -51,15 +51,12 @@ MODS =	\
 	mod_atmos_sub_hydrostatic.o	\
 	mod_atmos_sub_refstate.o	\
 	mod_atmos_sub_boundary.o	\
-	mod_atmos_sub_solarins.o	\
 	mod_atmos_dyn_wrap.o	\
 	mod_atmos_phy_mp_wrap.o	\
 	mod_atmos_phy_sf_wrap.o	\
 	mod_atmos_phy_tb_wrap.o	\
-	mod_atmos_phy_ae_$(aerosol).o \
-	mod_atmos_phy_rd_common.o \
-	mod_atmos_phy_rd_profile.o \
-	mod_atmos_phy_rd_$(radiation).o \
+	mod_atmos_phy_ae_wrap.o \
+	mod_atmos_phy_rd_wrap.o \
 	mod_cpl_atmos_land.o \
 	mod_cpl.o \
 	mod_atmos.o	\
@@ -115,22 +112,17 @@ $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 
 $(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
-                             mod_atmos_dyn_wrap.o mod_atmos_phy_sf_wrap.o mod_atmos_phy_tb_wrap.o  mod_atmos_phy_rd_$(radiation).o mod_cpl_vars.o
+                             mod_atmos_dyn_wrap.o mod_atmos_phy_sf_wrap.o mod_atmos_phy_tb_wrap.o mod_atmos_phy_rd_wrap.o mod_atmos_phy_ae_wrap.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90
 $(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90
 $(BUILD_DIR)/mod_atmos_sub_hydrostatic.o : mod_atmos_sub_hydrostatic.f90
 $(BUILD_DIR)/mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_atmos_sub_profile.o mod_atmos_sub_hydrostatic.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_sub_solarins.o	: mod_atmos_sub_solarins.f90
-
 $(BUILD_DIR)/mod_atmos_dyn_wrap.o	: mod_atmos_dyn_wrap.f90 mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_sf_wrap.o	: mod_atmos_phy_sf_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_wrap.o	: mod_atmos_phy_tb_wrap.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_ae_$(aerosol).o	: mod_atmos_phy_ae_$(aerosol).f90
-$(BUILD_DIR)/mod_atmos_phy_rd_common.o		: mod_atmos_phy_rd_common.f90
-$(BUILD_DIR)/mod_atmos_phy_rd_$(radiation).o	: mod_atmos_phy_rd_$(radiation).f90 mod_atmos_sub_solarins.o mod_atmos_phy_rd_profile.o mod_atmos_phy_ae_$(aerosol).o mod_atmos_phy_rd_common.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_profile.o	: mod_atmos_phy_rd_profile.f90
+$(BUILD_DIR)/mod_atmos_phy_rd_wrap.o	: mod_atmos_phy_rd_wrap.f90 mod_atmos_phy_ae_wrap.o mod_atmos_vars.o
 
 $(BUILD_DIR)/mod_land.o	: mod_land.f90 mod_land_vars.o mod_land_phy_bucket.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_land_vars.o	: mod_land_vars.f90

@@ -69,7 +69,7 @@ module mod_atmos_phy_mp_hbinf
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
   !
   !++ Private procedure
   !
@@ -312,13 +312,13 @@ contains
      rada( n )  = ( exp( xactr( n ) )*ThirdovForth/pi/rhoa )**( OneovThird )
     enddo
 
-    MP_DENS(I_mp_QC)  = CONST_DWATR
-    MP_DENS(I_mp_QP)  = CONST_DICE
-    MP_DENS(I_mp_QCL) = CONST_DICE
-    MP_DENS(I_mp_QD)  = CONST_DICE
-    MP_DENS(I_mp_QS)  = CONST_DICE
-    MP_DENS(I_mp_QG)  = CONST_DICE
-    MP_DENS(I_mp_QH)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QC)  = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QP)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QCL) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QD)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QS)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QG)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QH)  = CONST_DICE
 
     if( flg_sf_aero ) then
      if ( CZ(KS) >= 10.0_RP ) then

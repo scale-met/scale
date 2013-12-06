@@ -98,6 +98,8 @@ module mod_atmos_phy_mp
   procedure(er), pointer, public :: ATMOS_PHY_MP_EffectiveRadius => NULL()
   procedure(mr), pointer, public :: ATMOS_PHY_MP_MixingRatio => NULL()
 
+  real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -112,66 +114,76 @@ contains
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef MP
     use NAME(mod_atmos_phy_mp_, MP,), only: &
-       NAME(ATMOS_PHY_TB_, TB, _setup), &
-       NAME(ATMOS_PHY_TB_, TB,), &
-       NAME(ATMOS_PHY_TB_, TB, _CloudFraction), &
-       NAME(ATMOS_PHY_TB_, TB, _EffectiveRadius), &
-       NAME(ATMOS_PHY_TB_, TB, _MixingRatio)
+       NAME(ATMOS_PHY_MP_, MP, _setup), &
+       NAME(ATMOS_PHY_MP_, MP,), &
+       NAME(ATMOS_PHY_MP_, MP, _CloudFraction), &
+       NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius), &
+       NAME(ATMOS_PHY_MP_, MP, _MixingRatio), &
+       NAME(ATMOS_PHY_MP_, MP, _DENS) => ATMOS_PHY_MP_DENS)
 #else
     use mod_atmos_phy_mp_dry, only: &
        ATMOS_PHY_MP_dry_setup, &
        ATMOS_PHY_MP_dry, &
        ATMOS_PHY_MP_dry_CloudFraction, &
        ATMOS_PHY_MP_dry_EffectiveRadius, &
-       ATMOS_PHY_MP_dry_MixingRatio
+       ATMOS_PHY_MP_dry_MixingRatio, &
+       ATMOS_PHY_MP_dry_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_kessler_setup, &
        ATMOS_PHY_MP_kessler, &
        ATMOS_PHY_MP_kessler_CloudFraction, &
        ATMOS_PHY_MP_kessler_EffectiveRadius, &
-       ATMOS_PHY_MP_kessler_MixingRatio
+       ATMOS_PHY_MP_kessler_MixingRatio, &
+       ATMOS_PHY_MP_kessler_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_tomita08_setup, &
        ATMOS_PHY_MP_tomita08, &
        ATMOS_PHY_MP_tomita08_CloudFraction, &
        ATMOS_PHY_MP_tomita08_EffectiveRadius, &
-       ATMOS_PHY_MP_tomita08_MixingRatio
+       ATMOS_PHY_MP_tomita08_MixingRatio, &
+       ATMOS_PHY_MP_tomita08_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_sn13, only: &
        ATMOS_PHY_MP_sn13_setup, &
        ATMOS_PHY_MP_sn13, &
        ATMOS_PHY_MP_sn13_CloudFraction, &
        ATMOS_PHY_MP_sn13_EffectiveRadius, &
-       ATMOS_PHY_MP_sn13_MixingRatio
+       ATMOS_PHY_MP_sn13_MixingRatio, &
+       ATMOS_PHY_MP_sn13_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_sn13w, only: &
        ATMOS_PHY_MP_sn13w_setup, &
        ATMOS_PHY_MP_sn13w, &
        ATMOS_PHY_MP_sn13w_CloudFraction, &
        ATMOS_PHY_MP_sn13w_EffectiveRadius, &
-       ATMOS_PHY_MP_sn13w_MixingRatio
+       ATMOS_PHY_MP_sn13w_MixingRatio, &
+       ATMOS_PHY_MP_sn13w_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_binw, only: &
        ATMOS_PHY_MP_binw_setup, &
        ATMOS_PHY_MP_binw, &
        ATMOS_PHY_MP_binw_CloudFraction, &
        ATMOS_PHY_MP_binw_EffectiveRadius, &
-       ATMOS_PHY_MP_binw_MixingRatio
+       ATMOS_PHY_MP_binw_MixingRatio, &
+       ATMOS_PHY_MP_binw_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_binf, only: &
        ATMOS_PHY_MP_binf_setup, &
        ATMOS_PHY_MP_binf, &
        ATMOS_PHY_MP_binf_CloudFraction, &
        ATMOS_PHY_MP_binf_EffectiveRadius, &
-       ATMOS_PHY_MP_binf_MixingRatio
+       ATMOS_PHY_MP_binf_MixingRatio, &
+       ATMOS_PHY_MP_binf_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_hbinw, only: &
        ATMOS_PHY_MP_hbinw_setup, &
        ATMOS_PHY_MP_hbinw, &
        ATMOS_PHY_MP_hbinw_CloudFraction, &
        ATMOS_PHY_MP_hbinw_EffectiveRadius, &
-       ATMOS_PHY_MP_hbinw_MixingRatio
+       ATMOS_PHY_MP_hbinw_MixingRatio, &
+       ATMOS_PHY_MP_hbinw_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_hbinf, only: &
        ATMOS_PHY_MP_hbinf_setup, &
        ATMOS_PHY_MP_hbinf, &
        ATMOS_PHY_MP_hbinf_CloudFraction, &
        ATMOS_PHY_MP_hbinf_EffectiveRadius, &
-       ATMOS_PHY_MP_hbinf_MixingRatio
+       ATMOS_PHY_MP_hbinf_MixingRatio, &
+       ATMOS_PHY_MP_hbinf_DENS => ATMOS_PHY_MP_DENS
 #endif
     implicit none
     character(len=IO_SYSCHR), intent(in) :: MP_TYPE
@@ -183,54 +195,63 @@ contains
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_dry_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_dry_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_dry_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_dry_DENS
     case ( 'KESSLER' )
        call ATMOS_PHY_MP_kessler_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_kessler
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_kessler_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_kessler_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_kessler_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_kessler_DENS
     case ( 'TOMITA08' )
        call ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_tomita08
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_tomita08_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_tomita08_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_tomita08_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_tomita08_DENS
     case ( 'SN13' )
        call ATMOS_PHY_MP_sn13_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_sn13
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn13_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13_DENS
     case ( 'SN13W' )
        call ATMOS_PHY_MP_sn13w_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_sn13w
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn13w_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13w_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13w_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13w_DENS
     case ( 'BINW' )
        call ATMOS_PHY_MP_binw_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_binw
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_binw_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_binw_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_binw_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_binw_DENS
     case ( 'BINF' )
        call ATMOS_PHY_MP_binf_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_binf
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_binf_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_binf_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_binf_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_binf_DENS
     case ( 'HBINW' )
        call ATMOS_PHY_MP_hbinw_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_hbinw
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_hbinw_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_hbinw_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_hbinw_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_hbinw_DENS
     case ( 'HBINF' )
        call ATMOS_PHY_MP_hbinf_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_hbinf
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_hbinf_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_hbinf_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_hbinf_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_hbinf_DENS
     end select
 
     return

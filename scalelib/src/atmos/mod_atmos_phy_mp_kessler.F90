@@ -49,7 +49,7 @@ module mod_atmos_phy_mp_kessler
   !
   real(RP), public, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
 
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -127,8 +127,8 @@ contains
 
     vterm(:,:,:,:) = 0.0_RP
 
-    MP_DENS(I_mp_QC) = CONST_DWATR
-    MP_DENS(I_mp_QR) = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
 
     return
   end subroutine ATMOS_PHY_MP_kessler_setup

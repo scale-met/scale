@@ -15,32 +15,32 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_rd
+module mod_atmos_phy_rd_mstrnX
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
      IO_FILECHR
+    use mod_atmos_phy_rd_common, only: &
+       I_SW, &
+       I_LW, &
+       I_dn, &
+       I_up
   !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_setup
-  public :: ATMOS_PHY_RD
+  public :: ATMOS_PHY_RD_mstrnX_setup
+  public :: ATMOS_PHY_RD_mstrnX
 
   !-----------------------------------------------------------------------------
   !
@@ -193,20 +193,9 @@ module mod_atmos_phy_rd
   integer,  private, parameter :: I_SWLW          = 4
   integer,  private, parameter :: I_H2O_continuum = 5
   integer,  private, parameter :: I_CFC_continuum = 7
-  ! for direction
-  integer,  private, parameter :: I_up = 1
-  integer,  private, parameter :: I_dn = 2
-  ! for band region
-  integer,  private, parameter :: I_LW = 1
-  integer,  private, parameter :: I_SW = 2
   ! for cloud type
   integer,  private, parameter :: I_ClearSky = 1
   integer,  private, parameter :: I_Cloud    = 2
-  ! for 2D history
-  integer,  private, parameter :: I_OLR = 1
-  integer,  private, parameter :: I_OSR = 2
-  integer,  private, parameter :: I_SLR = 3
-  integer,  private, parameter :: I_SSR = 4
 
   ! pre-calc
   real(RP), private, save :: RRHO_std         ! 1 / rho(0C,1atm) * 100 [cm*m2/kg]
@@ -215,23 +204,23 @@ module mod_atmos_phy_rd
   real(RP), private, save :: W(2)             ! discrete quadrature w  for two-stream approximation
   real(RP), private, save :: Wmns(2), Wpls(2) ! W-, W+
   real(RP), private, save :: Wbar(2), Wscale(2)
-  real(RP), private, save :: RHOT_t  (KA,IA,JA)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_setup
+  subroutine ATMOS_PHY_RD_mstrnX_setup( RD_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
        TIME_NOWDATE
     use mod_grid_real, only: &
        REAL_lat
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_RD
     use mod_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
     use mod_atmos_phy_rd_profile, only: &
@@ -239,6 +228,7 @@ contains
        RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
        RD_PROFILE_read_climatorogy => ATMOS_PHY_RD_PROFILE_read_climatology
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
     integer                   :: ATMOS_PHY_RD_MSTRN_KADD
     character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
@@ -262,8 +252,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
 
-    if ( ATMOS_TYPE_PHY_RD /= 'MSTRNX' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not MSTRNX. Check!'
+    if ( RD_TYPE /= 'MSTRNX' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx RD_TYPE is not MSTRNX. Check!'
        call PRC_MPIstop
     endif
 
@@ -360,60 +350,52 @@ contains
                                       RD_aerosol_radi(:,:),   & ! [INOUT]
                                       RD_cldfrac     (:)      ) ! [INOUT]
 
-    call ATMOS_PHY_RD( .true., .false. )
-
     return
-  end subroutine ATMOS_PHY_RD_setup
+  end subroutine ATMOS_PHY_RD_mstrnX_setup
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD( update_flag, history_flag )
-    use mod_time, only: &
-       TIME_NOWDATE
+  subroutine ATMOS_PHY_RD_mstrnX( &
+       flux_rad, flux_rad_top, & ! [out]
+       solins, cosSZA, & ! [out]
+       DENS, RHOT, QTRC, & ! [in]
+       CZ, FZ, CDZ, RCDZ, & ! [in]
+       REAL_lon, REAL_lat, & ! [in]
+       TIME_NOWDATE ) ! [in]
     use mod_const, only: &
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
        PPM  => CONST_PPM
-    use mod_grid, only: &
-       CDZ  => GRID_CDZ
-    use mod_grid_real, only: &
-       REAL_lon, &
-       REAL_lat
-    use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total,    &
-       DENS, &
-       RHOT, &
-       QTRC, &
-       RHOT_tp
     use mod_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
-       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
-    use mod_history, only: &
-       HIST_in
-    use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_RD
     use mod_atmos_solarins, only: &
        ATMOS_SOLARINS_insolation
     use mod_atmos_phy_mp, only: &
        MP_EffectiveRadius => ATMOS_PHY_MP_EffectiveRadius, &
        MP_CloudFraction   => ATMOS_PHY_MP_CloudFraction,   &
        MP_Mixingratio     => ATMOS_PHY_MP_Mixingratio,   &
-       MP_DENS
+       MP_DENS            => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS
-    use mod_atmos_phy_rd_common, only: &
-       RD_heating => ATMOS_PHY_RD_heating
     implicit none
 
-    logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
+    real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
+    real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+    real(RP), intent(out) :: solins(IA,JA)
+    real(RP), intent(out) :: cosSZA(IA,JA)
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: CZ(KA)
+    real(RP), intent(in)  :: FZ(KA-1)
+    real(RP), intent(in)  :: CDZ(KA)
+    real(RP), intent(in)  :: RCDZ(KA)
+    real(RP), intent(in)  :: REAL_lon(IA,JA)
+    real(RP), intent(in)  :: REAL_lat(IA,JA)
+    integer , intent(in)  :: TIME_NOWDATE(6)
 
     real(RP) :: temp   (KA,IA,JA)
     real(RP) :: pres   (KA,IA,JA)
@@ -424,22 +406,9 @@ contains
     real(RP) :: MP_Qe  (KA,IA,JA,MP_QA)
     real(RP) :: AE_Re  (KA,IA,JA,AE_QA)
 
-    real(RP) :: RHOE    (KA,IA,JA)
-    real(RP) :: RHOE_t  (KA,IA,JA,2)
-    real(RP) :: QDRY    (KA,IA,JA)
-    real(RP) :: CVtot   (KA,IA,JA)
-    real(RP) :: TEMP_t  (KA,IA,JA)
-    real(RP) :: flux_rad(KA,IA,JA,2,2)
-    real(RP) :: flux_net(KA,IA,JA,2)
-    real(RP) :: flux_up (KA,IA,JA,2)
-    real(RP) :: flux_dn (KA,IA,JA,2)
-    real(RP) :: flux_rad_boundary(1,IA,JA,4)
-
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
 
     ! from solar insolation
-    real(RP) :: solins(1,IA,JA) ! solar insolation [W/m2]
-    real(RP) :: cosSZA(1,IA,JA) ! cos(solar zenith angle)
     real(RP) :: Re_factor       ! The sun-Earth distance factor
 
     real(RP) :: rhodz_merge       (RD_KMAX)
@@ -461,10 +430,7 @@ contains
 
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j
-    real(RP) :: RHOT_tmp(KA,IA,JA)
     !---------------------------------------------------------------------------
-
-    if ( update_flag ) then
 
      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
 
@@ -504,8 +470,8 @@ contains
      do j = JS, JE
      do i = IS, IE
 
-       call ATMOS_SOLARINS_insolation( solins(1,i,j),  & ! [OUT]
-                                       cosSZA(1,i,j),  & ! [OUT]
+       call ATMOS_SOLARINS_insolation( solins(i,j),  & ! [OUT]
+                                       cosSZA(i,j),  & ! [OUT]
                                        Re_factor,      & ! [OUT]
                                        REAL_lon(i,j),  & ! [IN]
                                        REAL_lat(i,j),  & ! [IN]
@@ -583,8 +549,8 @@ contains
                             RD_hydro_end,             & ! [IN]
                             RD_aero_str,              & ! [IN]
                             RD_aero_end,              & ! [IN]
-                            solins(1,i,j),            & ! [IN]
-                            cosSZA(1,i,j),            & ! [IN]
+                            solins(i,j),              & ! [IN]
+                            cosSZA(i,j),              & ! [IN]
                             rhodz_merge       (:),    & ! [IN]
                             pres_merge        (:),    & ! [IN]
                             temp_merge        (:),    & ! [IN]
@@ -609,100 +575,14 @@ contains
           flux_rad(k,i,j,I_SW,I_dn) = flux_rad_merge(RD_k,I_SW,I_dn)
        enddo
 
-       do k = KS, KE
-          RD_k = RD_KMAX - ( k - KS ) ! reverse axis
-
-          flux_net(k,i,j,I_LW) = ( ( flux_rad_merge(RD_K+1,I_LW,I_up) - flux_rad_merge(RD_K+1,I_LW,I_dn) ) &
-                                 + ( flux_rad_merge(RD_K  ,I_LW,I_up) - flux_rad_merge(RD_K  ,I_LW,I_dn) ) ) * 0.5_RP
-          flux_net(k,i,j,I_SW) = ( ( flux_rad_merge(RD_K+1,I_SW,I_up) - flux_rad_merge(RD_K+1,I_SW,I_dn) ) &
-                                 + ( flux_rad_merge(RD_K  ,I_SW,I_up) - flux_rad_merge(RD_K  ,I_SW,I_dn) ) ) * 0.5_RP
-
-          flux_up (k,i,j,I_LW) = ( flux_rad_merge(RD_K+1,I_LW,I_up) + flux_rad_merge(RD_K  ,I_LW,I_up) ) * 0.5_RP
-          flux_up (k,i,j,I_SW) = ( flux_rad_merge(RD_K+1,I_SW,I_up) + flux_rad_merge(RD_K  ,I_SW,I_up) ) * 0.5_RP
-          flux_dn (k,i,j,I_LW) = ( flux_rad_merge(RD_K+1,I_LW,I_dn) + flux_rad_merge(RD_K  ,I_LW,I_dn) ) * 0.5_RP
-          flux_dn (k,i,j,I_SW) = ( flux_rad_merge(RD_K+1,I_SW,I_dn) + flux_rad_merge(RD_K  ,I_SW,I_dn) ) * 0.5_RP
-       enddo
-       flux_rad_boundary(1,i,j,I_OLR) = flux_rad_merge(1        ,I_LW,I_up)-flux_rad_merge(1        ,I_LW,I_dn)
-       flux_rad_boundary(1,i,j,I_OSR) = flux_rad_merge(1        ,I_SW,I_up)-flux_rad_merge(1        ,I_SW,I_dn)
-       flux_rad_boundary(1,i,j,I_SLR) = flux_rad_merge(RD_KMAX+1,I_LW,I_up)-flux_rad_merge(RD_KMAX+1,I_LW,I_dn)
-       flux_rad_boundary(1,i,j,I_SSR) = flux_rad_merge(RD_KMAX+1,I_SW,I_up)-flux_rad_merge(RD_KMAX+1,I_SW,I_dn)
+       flux_rad_top(i,j,I_LW) = flux_rad_merge(1,I_LW,I_up)-flux_rad_merge(1,I_LW,I_dn)
+       flux_rad_top(i,j,I_SW) = flux_rad_merge(1,I_SW,I_up)-flux_rad_merge(1,I_SW,I_dn)
 
      enddo
      enddo
-
-     call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                          RHOT(:,:,:),  & ! [IN]
-                          QTRC(:,:,:,:) ) ! [IN]
-
-     ! apply radiative flux convergence -> heating rate
-     call RD_heating( RHOE_t  (:,:,:,:),  & ! [OUT]
-                      RHOE    (:,:,:),    & ! [INOUT]
-                      flux_rad(:,:,:,:,:) ) ! [IN]
-
-     ! update rhot
-     call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
-                          RHOE(:,:,:),    & ! [IN]
-                          QTRC(:,:,:,:)   ) ! [IN]
-
-     do j = JS, JE
-     do i = IS, IE
-     do k = KS, KE
-       RHOT_t(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt
-     enddo
-     enddo
-     enddo
-
-     ! for history
-     call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                        QTRC(:,:,:,:) ) ! [IN]
-     call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                        QTRC (:,:,:,:), & ! [IN]
-                        QDRY (:,:,:)    ) ! [IN]
-
-     if ( present(history_flag) ) then
-     if ( history_flag ) then
-       TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
-       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt )
-       TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
-       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt )
-       TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
-       call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt )
-
-       call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW', 'net radiation flux(LW)', 'W/m2', dt )
-       call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW', 'net radiation flux(SW)', 'W/m2', dt )
-       call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt )
-       call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt )
-       call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt )
-       call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt )
-
-       call HIST_in( flux_rad_boundary(1,:,:,I_OLR), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt )
-       call HIST_in( flux_rad_boundary(1,:,:,I_OSR), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt )
-       call HIST_in( flux_rad_boundary(1,:,:,I_SLR), 'SLR', 'Surface longwave  radiation', 'W/m2', dt )
-       call HIST_in( flux_rad_boundary(1,:,:,I_SSR), 'SSR', 'Surface shortwave radiation', 'W/m2', dt )
-
-       call HIST_in( solins(1,:,:), 'SOLINS', 'solar insolation', 'W/m2', dt )
-       call HIST_in( cosSZA(1,:,:), 'COSZ', 'cos(solar zenith angle)', '0-1', dt )
-      endif
-      endif
-
-    endif
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    ! fill halo
-    call ATMOS_vars_fillhalo
-
-    ! check total (optional)
-    call ATMOS_vars_total
 
     return
-  end subroutine ATMOS_PHY_RD
+  end subroutine ATMOS_PHY_RD_mstrnX
 
   !-----------------------------------------------------------------------------
   !> Setup MSTRN parameter table
@@ -1743,4 +1623,4 @@ contains
     return
   end function albedo_sea
 
-end module mod_atmos_phy_rd
+end module mod_atmos_phy_rd_mstrnX

@@ -69,6 +69,7 @@ OBJS =	\
 	mod_monitor.o	\
 	mod_atmos_sub_saturation.o	\
 	mod_atmos_sub_thermodyn.o	\
+	mod_atmos_sub_solarins.o	\
 	mod_atmos_dyn_common.o	\
 	mod_atmos_dyn_rk.o \
 	mod_atmos_dyn_rk_heve.o \
@@ -90,7 +91,15 @@ OBJS =	\
 	mod_atmos_phy_mp_binf.o	\
 	mod_atmos_phy_mp_hbinw.o	\
 	mod_atmos_phy_mp_hbinf.o	\
-	mod_atmos_phy_mp.o
+	mod_atmos_phy_mp.o	\
+	mod_atmos_phy_rd_common.o	\
+	mod_atmos_phy_rd_profile.o	\
+	mod_atmos_phy_rd_dummy.o	\
+	mod_atmos_phy_rd_dycoms2.o	\
+	mod_atmos_phy_rd_mstrnX.o	\
+	mod_atmos_phy_rd.o	\
+	mod_atmos_phy_ae_dummy.o	\
+	mod_atmos_phy_ae.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
 

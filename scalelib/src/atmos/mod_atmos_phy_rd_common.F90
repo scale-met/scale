@@ -17,6 +17,9 @@ module mod_atmos_phy_rd_common
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -28,14 +31,6 @@ module mod_atmos_phy_rd_common
   private
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_heating
@@ -44,6 +39,13 @@ module mod_atmos_phy_rd_common
   !
   !++ Public parameters & variables
   !
+  ! for direction
+  integer,  public, parameter :: I_up = 1
+  integer,  public, parameter :: I_dn = 2
+  ! for band region
+  integer,  public, parameter :: I_LW = 1
+  integer,  public, parameter :: I_SW = 2
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -52,14 +54,6 @@ module mod_atmos_phy_rd_common
   !
   !++ Private parameters & variables
   !
-
-  ! for direction
-  integer,  private, parameter :: I_up = 1
-  integer,  private, parameter :: I_dn = 2
-  ! for band region
-  integer,  private, parameter :: I_LW = 1
-  integer,  private, parameter :: I_SW = 2
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------

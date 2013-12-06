@@ -99,8 +99,8 @@ contains
        ATMOS_PHY_TB_setup => ATMOS_PHY_TB_wrap_setup
     use mod_atmos_phy_mp_wrap, only: &
        ATMOS_PHY_MP_setup => ATMOS_PHY_MP_wrap_setup
-    use mod_atmos_phy_rd, only: &
-       ATMOS_PHY_RD_setup
+    use mod_atmos_phy_rd_wrap, only: &
+       ATMOS_PHY_RD_setup => ATMOS_PHY_RD_wrap_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ contains
 
     if ( sw_phy_mp ) call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
-    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup
+    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
     !########## initialize tendencies ##########
 !OCL XFILL
@@ -199,8 +199,8 @@ contains
        ATMOS_PHY_TB => ATMOS_PHY_TB_wrap
     use mod_atmos_phy_mp_wrap, only: &
        ATMOS_PHY_MP => ATMOS_PHY_MP_wrap
-    use mod_atmos_phy_rd, only: &
-       ATMOS_PHY_RD
+    use mod_atmos_phy_rd_wrap, only: &
+       ATMOS_PHY_RD => ATMOS_PHY_RD_wrap
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG

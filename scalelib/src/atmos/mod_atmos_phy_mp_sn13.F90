@@ -112,7 +112,7 @@ module mod_atmos_phy_mp_sn13
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -420,11 +420,11 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
-    MP_DENS(I_mp_QC) = CONST_DWATR
-    MP_DENS(I_mp_QR) = CONST_DWATR
-    MP_DENS(I_mp_QI) = CONST_DICE
-    MP_DENS(I_mp_QS) = CONST_DICE
-    MP_DENS(I_mp_QG) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QI) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QS) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QG) = CONST_DICE
 
     WLABEL( 1) = "VAPOR"
     WLABEL( 2) = "CLOUD"

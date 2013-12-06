@@ -77,6 +77,15 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
+  real(RP), private, allocatable :: CNZ3(:,:,:)
+  real(RP), private, allocatable :: CNX3(:,:,:)
+  real(RP), private, allocatable :: CNY3(:,:,:)
+  real(RP), private, allocatable :: CNZ4(:,:,:)
+  real(RP), private, allocatable :: CNX4(:,:,:)
+  real(RP), private, allocatable :: CNY4(:,:,:)
+
+  real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -84,9 +93,6 @@ contains
   !> Setup
   subroutine ATMOS_DYN_setup( &
        DIFF4,            &
-       CNZ3, CNX3, CNY3, &
-       CNZ4, CNX4, CNY4, &
-       CORIOLI,          &
        DYN_TYPE,         &
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
@@ -110,13 +116,6 @@ contains
     implicit none
 
     real(RP), intent(out) :: DIFF4
-    real(RP), intent(out) :: CNZ3(3,KA,2)
-    real(RP), intent(out) :: CNX3(3,IA,2)
-    real(RP), intent(out) :: CNY3(3,JA,2)
-    real(RP), intent(out) :: CNZ4(5,KA,2)
-    real(RP), intent(out) :: CNX4(5,IA,2)
-    real(RP), intent(out) :: CNY4(5,JA,2)
-    real(RP), intent(out) :: CORIOLI(1,IA,JA)
     character(len=IO_SYSCHR), intent(in) :: DYN_TYPE
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
@@ -131,6 +130,15 @@ contains
     real(RP), intent(in)  :: lat(IA,JA)
     !---------------------------------------------------------------------------
 
+    allocate( CNZ3(3,KA,2) )
+    allocate( CNX3(3,IA,2) )
+    allocate( CNY3(3,JA,2) )
+    allocate( CNZ4(5,KA,2) )
+    allocate( CNX4(5,IA,2) )
+    allocate( CNY4(5,JA,2) )
+
+    allocate( CORIOLI(IA,JA) )
+
     ! numerical diffusion
     call ATMOS_DYN_numfilter_setup( DIFF4,                              & ! [OUT]
                                     CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! [OUT]
@@ -140,9 +148,9 @@ contains
 
     ! coriolis parameter
     if ( enable_coriolis ) then
-       CORIOLI(1,:,:) = 2.0_RP * OHM * sin( lat(:,:) )
+       CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
     else
-       CORIOLI(1,:,:) = 0.0_RP
+       CORIOLI(:,:) = 0.0_RP
     endif
 
     call ATMOS_DYN_rk_setup( DYN_TYPE )
@@ -156,7 +164,6 @@ contains
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, &
-       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,                   &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
@@ -164,7 +171,7 @@ contains
        AQ_CV,                                                &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,              &
-       corioli, DAMP_var, DAMP_alpha,                        &
+       DAMP_var, DAMP_alpha,                                 &
        divdmp_coef,                                          &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
        USE_AVERAGE,                                          &
@@ -209,13 +216,6 @@ contains
     real(RP), intent(in)    :: RHOT_tp(KA,IA,JA)
     real(RP), intent(in)    :: QTRC_tp(KA,IA,JA,QA)
 
-    real(RP), intent(in)    :: CNZ3(3,KA,2)
-    real(RP), intent(in)    :: CNX3(3,IA,2)
-    real(RP), intent(in)    :: CNY3(3,JA,2)
-    real(RP), intent(in)    :: CNZ4(5,KA,2)
-    real(RP), intent(in)    :: CNX4(5,IA,2)
-    real(RP), intent(in)    :: CNY4(5,JA,2)
-
     real(RP), intent(in)    :: CDZ (KA)
     real(RP), intent(in)    :: CDX (IA)
     real(RP), intent(in)    :: CDY (JA)
@@ -245,7 +245,6 @@ contains
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
-    real(RP), intent(in)    :: CORIOLI(1,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
     real(RP), intent(in)    :: divdmp_coef

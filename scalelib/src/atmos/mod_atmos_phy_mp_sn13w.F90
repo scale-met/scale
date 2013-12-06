@@ -115,7 +115,7 @@ module mod_atmos_phy_mp_sn13w
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -373,6 +373,8 @@ contains
        PRC_MPIstop
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
+    use mod_const, only: &
+       CONST_DWATR
     implicit none
     character(len=IO_SYSCHR), intent(in) :: MP_TYPE
 
@@ -404,6 +406,9 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+
+    ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
 
     WLABEL( 1) = "VAPOR"
     WLABEL( 2) = "CLOUD"
