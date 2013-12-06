@@ -57,7 +57,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_RD
+       ATMOS_PHY_RD_TYPE
     implicit none
     !---------------------------------------------------------------------------
 
@@ -65,8 +65,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy radiation process'
 
-    if ( ATMOS_TYPE_PHY_RD /= 'NONE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_RD is not NONE. Check!'
+    if ( ATMOS_PHY_RD_TYPE /= 'NONE' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_RD_TYPE is not NONE. Check!'
        call PRC_MPIstop
     endif
 

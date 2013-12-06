@@ -3,7 +3,7 @@
 !+  NICAM Double moment Water 6 scheme
 !
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_mp
+module mod_atmos_phy_mp_sn13w
   !-----------------------------------------------------------------------------
   !
   !++ Description: 
@@ -61,6 +61,9 @@ module mod_atmos_phy_mp
   !
   !++ Used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer_sn13w
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -102,20 +105,18 @@ module mod_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
-  public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_sn13w_setup
+  public :: ATMOS_PHY_MP_sn13w
+  public :: ATMOS_PHY_MP_sn13w_CloudFraction
+  public :: ATMOS_PHY_MP_sn13w_EffectiveRadius
+  public :: ATMOS_PHY_MP_sn13w_Mixingratio
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -353,22 +354,27 @@ module mod_atmos_phy_mp
   logical, private, save :: doprecipitation  = .true.
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
 
+
+  integer :: IJA
+
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup
+  subroutine ATMOS_PHY_MP_sn13w_setup( MP_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_MP
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        doautoconversion, &
@@ -382,8 +388,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN13'
 
-    if ( ATMOS_TYPE_PHY_MP /= 'SN13W' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not SN13. Check!'
+    if ( MP_TYPE /= 'SN13W' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not SN13W. Check!'
        call PRC_MPIstop
     endif
 
@@ -427,37 +433,43 @@ contains
     rgs_d    (:,:,:) = 1.0_RP
     rgsh_d   (:,:,:) = 1.0_RP
 
+    IJA = IA * JA
+
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_sn13w_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP
-    use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total
+  subroutine ATMOS_PHY_MP_sn13w( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
     call TIME_rapstart('MP0 Setup')
-    call MP_negativefilter
+    call MP_negativefilter( DENS, QTRC )
     call TIME_rapend  ('MP0 Setup')
 
-    call mp_sn13w
+    call mp_sn13w( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
     call TIME_rapstart('MP6 Filter')
-    call MP_negativefilter
+    call MP_negativefilter( DENS, QTRC )
     call TIME_rapend  ('MP6 Filter')
 
-    call ATMOS_vars_fillhalo
-
-    call ATMOS_vars_total
-
     return
-  end subroutine ATMOS_PHY_MP
+  end subroutine ATMOS_PHY_MP_sn13w
 
   !-----------------------------------------------------------------------------
   subroutine mp_sn13w_init ( IAA, JA )
@@ -990,15 +1002,21 @@ contains
     return
   end subroutine mp_sn13w_init
   !-----------------------------------------------------------------------------
-  subroutine mp_sn13w
+  subroutine mp_sn13w( &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC  )
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP, &
        ct => TIME_NOWDAYSEC
     use mod_grid, only: &
        z    => GRID_CZ, &
        dz   => GRID_CDZ
-    use mod_atmos_precipitation, only: &
-       precipitation => ATMOS_PRECIPITATION
+    use mod_atmos_phy_mp_common, only: &
+       MP_precipitation => ATMOS_PHY_MP_PRECIPITATION
     use mod_atmos_thermodyn, only: &
        !-- For kji
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
@@ -1011,14 +1029,14 @@ contains
        moist_psat_water    => ATMOS_SATURATION_psat_liq,     &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice,     &
        moist_dqsw_dtem_rho => ATMOS_SATURATION_dqsw_dtem_rho
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     !
     ! primary variables
@@ -1670,16 +1688,23 @@ contains
 
        call MP_terminal_velocity( velw(:,:,:,:), &
                                   rhoq(:,:,:,:), &
+                                  DENS(:,:,:),   &
                                   temp(:,:,:),   &
                                   pres(:,:,:)    )
 
-       call precipitation( wflux_rain(:,:,:),     &
-                           wflux_snow(:,:,:),     &
-                           velw(:,:,:,:),         &
-                           rhoq(:,:,:,:),         &
-                           rhoe(:,:,:),           &
-                           temp(:,:,:),           &
-                           MP_DTSEC_SEDIMENTATION )
+!       call precipitation( wflux_rain(:,:,:),     &
+!                           wflux_snow(:,:,:),     &
+!                           velw(:,:,:,:),         &
+!                           rhoq(:,:,:,:),         &
+!                           rhoe(:,:,:),           &
+!                           temp(:,:,:),           &
+!                           MP_DTSEC_SEDIMENTATION )
+       call MP_precipitation( &
+            wflux_rain, wflux_snow, &
+            DENS, MOMZ, MOMX, MOMY, &
+            rhoge_d, QTRC, &
+            velw, tem_d, &
+            MP_DTSEC_SEDIMENTATION )
 
        do j = JS, JE
        do i = IS, IE
@@ -2564,16 +2589,16 @@ contains
   subroutine MP_terminal_velocity( &
       velw, &
       rhoq, &
+      DENS, &
       temp, &
       pres  )
     use mod_const, only: &
        PI => CONST_PI
-    use mod_atmos_vars, only: &
-       DENS
     implicit none
 
     real(RP), intent(out) :: velw(KA,IA,JA,QA) ! terminal velocity of cloud mass
     real(RP), intent(in)  :: rhoq(KA,IA,JA,QA) ! rho * q
+    real(RP), intent(in)  :: DENS(KA,IA,JA)    ! rho
     real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature
     real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure
 
@@ -2702,7 +2727,7 @@ contains
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &
        thrmdyn_cp      => ATMOS_THERMODYN_cp
     use mod_atmos_saturation, only: &
-       moist_qsat_water     => ATMOS_SATURATION_qsat_liq,      &
+       moist_qsat_water     => ATMOS_SATURATION_pres2qsat_liq,      &
        moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho, &
        moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre
     implicit none
@@ -3004,11 +3029,13 @@ contains
     
   end subroutine update_by_phase_change_kij
   !-------------------------------------------------------------------------------
-  subroutine MP_negativefilter
-     use mod_atmos_vars, only: &
+  subroutine MP_negativefilter( &
        DENS, &
-       QTRC
+       QTRC  )
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: diffq(KA,IA,JA)
     real(RP) :: r_xmin
@@ -3081,5 +3108,147 @@ contains
     return
   end subroutine MP_negativefilter
   !-------------------------------------------------------------------------------
-end module mod_atmos_phy_mp
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  subroutine ATMOS_PHY_MP_sn13w_CloudFraction( &
+       cldfrac, &
+       QTRC     )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
+    implicit none
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.D0
+       do iq = 1, MP_QA
+          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_sn13w_CloudFraction
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_sn13w_EffectiveRadius( &
+       Re,    &
+       QTRC0, &
+       DENS0  )
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
+    implicit none
+
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+
+    ! mass concentration[kg/m3] and mean particle mass[kg]
+    real(RP) :: xc(KA,IA,JA)
+    real(RP) :: xr(KA,IA,JA)
+    real(RP) :: xi(KA,IA,JA)
+    real(RP) :: xs(KA,IA,JA)
+    real(RP) :: xg(KA,IA,JA)
+    ! diameter of average mass[kg/m3]
+    real(RP) :: dc_ave(KA,IA,JA)
+    real(RP) :: dr_ave(KA,IA,JA)
+    ! radius of average mass
+    real(RP) :: rc, rr
+    ! 2nd. and 3rd. order moment of DSD
+    real(RP) :: ri2m(KA,IA,JA), ri3m(KA,IA,JA)
+    real(RP) :: rs2m(KA,IA,JA), rs3m(KA,IA,JA)
+    real(RP) :: rg2m(KA,IA,JA), rg3m(KA,IA,JA)
+
+    real(RP) :: coef_Fuetal1998
+    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
+    real(RP), parameter :: r2m_min=1.E-12_RP
+
+    real(RP) :: limitsw, zerosw
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    ! mean particle mass[kg]
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       xc(k,i,j) = min( xc_max, max( xc_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QC)/(QTRC0(k,i,j,I_NC)+nc_min) ) )
+       xr(k,i,j) = min( xr_max, max( xr_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QR)/(QTRC0(k,i,j,I_NR)+nr_min) ) )
+    enddo
+    enddo
+    enddo
+
+    ! diameter of average mass : SB06 eq.(32)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       dc_ave(k,i,j) = a_m(I_QC) * xc(k,i,j)**b_m(I_QC)
+       dr_ave(k,i,j) = a_m(I_QR) * xr(k,i,j)**b_m(I_QR)
+    enddo
+    enddo
+    enddo
+
+    ! cloud effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rc = 0.5_RP * dc_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rc-rmin_re )
+       Re(k,i,j,I_mp_QC) = coef_re(I_QC) * rc * limitsw
+    enddo
+    enddo
+    enddo
+
+    ! rain effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rr = 0.5_RP * dr_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rr-rmin_re )
+       Re(k,i,j,I_mp_QR) = coef_re(I_QR) * rr * limitsw
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_sn13w_EffectiveRadius
+  !-----------------------------------------------------------------------------
+  !> Calculate mixing ratio of each category
+  subroutine ATMOS_PHY_MP_sn13w_Mixingratio( &
+       Qe,    &
+       QTRC0  )
+    use mod_const, only: &
+       EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
+    implicit none
+
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
+
+    integer  :: ihydro
+    !---------------------------------------------------------------------------
+
+    do ihydro = 1, MP_QA
+       Qe(:,:,:,ihydro) = QTRC0(:,:,:,I_MP2ALL(ihydro))
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_sn13w_Mixingratio
+ !------------------------------------------------------------------------------
+end module mod_atmos_phy_mp_sn13w
 !-------------------------------------------------------------------------------

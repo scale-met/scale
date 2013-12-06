@@ -67,6 +67,8 @@ OBJS =	\
 	mod_stats.o	\
 	mod_history.o	\
 	mod_monitor.o	\
+	mod_atmos_sub_saturation.o	\
+	mod_atmos_sub_thermodyn.o	\
 	mod_atmos_dyn_common.o	\
 	mod_atmos_dyn_rk.o \
 	mod_atmos_dyn_rk_heve.o \
@@ -77,7 +79,18 @@ OBJS =	\
 	mod_atmos_phy_sf.o	\
 	mod_atmos_phy_tb_smg.o	\
 	mod_atmos_phy_tb_dummy.o	\
-	mod_atmos_phy_tb.o
+	mod_atmos_phy_tb.o	\
+	mod_atmos_phy_mp_common.o	\
+	mod_atmos_phy_mp_dry.o	\
+	mod_atmos_phy_mp_kessler.o	\
+	mod_atmos_phy_mp_tomita08.o	\
+	mod_atmos_phy_mp_sn13.o	\
+	mod_atmos_phy_mp_sn13w.o	\
+	mod_atmos_phy_mp_binw.o	\
+	mod_atmos_phy_mp_binf.o	\
+	mod_atmos_phy_mp_hbinw.o	\
+	mod_atmos_phy_mp_hbinf.o	\
+	mod_atmos_phy_mp.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
 

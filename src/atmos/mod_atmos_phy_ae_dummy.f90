@@ -61,7 +61,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_AE
+       ATMOS_PHY_AE_TYPE
     implicit none
 
     !---------------------------------------------------------------------------
@@ -70,8 +70,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
 
-    if ( ATMOS_TYPE_PHY_AE /= 'NONE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_AE is not NONE. Check!'
+    if ( ATMOS_PHY_AE_TYPE /= 'NONE' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not NONE. Check!'
        call PRC_MPIstop
     endif
 

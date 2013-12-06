@@ -16,11 +16,14 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module mod_atmos_phy_mp
+module mod_atmos_phy_mp_kessler
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer_kessler
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -34,27 +37,19 @@ module mod_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
-  public :: ATMOS_PHY_MP
-  public :: ATMOS_PHY_MP_CloudFraction
-  public :: ATMOS_PHY_MP_EffectiveRadius
-  public :: ATMOS_PHY_MP_Mixingratio
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+  public :: ATMOS_PHY_MP_kessler_setup
+  public :: ATMOS_PHY_MP_kessler
+  public :: ATMOS_PHY_MP_kessler_CloudFraction
+  public :: ATMOS_PHY_MP_kessler_EffectiveRadius
+  public :: ATMOS_PHY_MP_kessler_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+  real(RP), public, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
 
-  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -67,45 +62,47 @@ module mod_atmos_phy_mp
   !
   !++ Private parameters & variables
   !
-  logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
-  logical, private, save  :: MP_donegative_fixer  = .true. ! apply negative fixer?
+  logical :: MP_doreport_tendency = .false. ! report tendency of each process?
+  logical :: MP_donegative_fixer  = .true. ! apply negative fixer?
 
-  real(RP), private, save :: factor_vterm(KA) ! collection factor for terminal velocity of QR
+  real(RP), allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
+
+  logical :: first = .true.
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
-  subroutine ATMOS_PHY_MP_setup
+  subroutine ATMOS_PHY_MP_kessler_setup( MP_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
-    use mod_comm, only: &
-       COMM_horizontal_mean
     use mod_const, only: &
        CONST_DWATR
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_MP, &
-       DENS
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &
        MP_donegative_fixer
 
-    real(RP) :: rho_prof(KA) ! averaged profile of rho
-
     integer :: ierr
-    integer :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
 
-    if ( ATMOS_TYPE_PHY_MP /= 'KESSLER' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not KESSLER. Check!'
+    allocate( vterm(KA,IA,JA,QA) )
+    allocate( factor_vterm(KA) )
+
+
+    if ( MP_TYPE /= 'KESSLER' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
        call PRC_MPIstop
     endif
 
@@ -128,39 +125,30 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
-    ! Calculate collection factor for terminal velocity of QR
-    call COMM_horizontal_mean( rho_prof(:), DENS(:,:,:) )
-    rho_prof(:) = rho_prof(:) * 1.E-3_RP ! [kg/m3]->[g/cc]
-
-    do k = KS, KE
-       factor_vterm(k) = sqrt( rho_prof(KS)/rho_prof(k) )
-    enddo
-
     vterm(:,:,:,:) = 0.0_RP
 
     MP_DENS(I_mp_QC) = CONST_DWATR
     MP_DENS(I_mp_QR) = CONST_DWATR
 
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_kessler_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP
-    use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total,    &
+  subroutine ATMOS_PHY_MP_kessler( &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC
+       QTRC  )
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_history, only: &
        HIST_in
+    use mod_comm, only: &
+       COMM_horizontal_mean
     use mod_atmos_phy_mp_common, only: &
        MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
        MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
@@ -169,7 +157,16 @@ contains
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use mod_tracer, only: &
+       QAD => QA
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
@@ -180,9 +177,26 @@ contains
     real(RP) :: flux_tot (KA,IA,JA)
     real(RP) :: flux_rain(KA,IA,JA)
     real(RP) :: flux_snow(KA,IA,JA)
+
+    real(RP) :: rho_prof(KA) ! averaged profile of rho
+
+    integer :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(kessler)'
+
+    if ( first ) then
+       ! Calculate collection factor for terminal velocity of QR
+       call COMM_horizontal_mean( rho_prof(:), DENS(:,:,:) )
+       rho_prof(:) = rho_prof(:) * 1.E-3_RP ! [kg/m3]->[g/cc]
+
+       do k = KS, KE
+          factor_vterm(k) = sqrt( rho_prof(KS)/rho_prof(k) )
+       enddo
+       first = .false.
+    end if
+
+
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
@@ -223,7 +237,8 @@ contains
                            RHOE (:,:,:),     & ! [INOUT]
                            QTRC (:,:,:,:),   & ! [INOUT]
                            vterm(:,:,:,:),   & ! [IN]
-                           temp (:,:,:)      ) ! [IN]
+                           temp (:,:,:),     & ! [IN]
+                           dt                )
 
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
@@ -253,19 +268,13 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    ! fill halo
-    call ATMOS_vars_fillhalo
-
-    ! check total (optional)
-    call ATMOS_vars_total
-
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
     call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
     call HIST_in( flux_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
     return
-  end subroutine ATMOS_PHY_MP
+  end subroutine ATMOS_PHY_MP_kessler
 
   !-----------------------------------------------------------------------------
   !> Kessler-type warm rain microphysics
@@ -444,15 +453,17 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
-  subroutine ATMOS_PHY_MP_CloudFraction( &
+  subroutine ATMOS_PHY_MP_kessler_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use mod_tracer, only: &
+       QAD => QA
     use mod_const, only: &
        EPS => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -471,18 +482,21 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_CloudFraction
+  end subroutine ATMOS_PHY_MP_kessler_CloudFraction
 
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+  subroutine ATMOS_PHY_MP_kessler_EffectiveRadius( &
        Re,    &
        QTRC0, &
        DENS0  )
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
     !---------------------------------------------------------------------------
 
@@ -490,24 +504,27 @@ contains
     Re(:,:,:,I_mp_QR) = 100.E-6_RP
 
     return
-  end subroutine ATMOS_PHY_MP_EffectiveRadius
+  end subroutine ATMOS_PHY_MP_kessler_EffectiveRadius
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_Mixingratio( &
+  subroutine ATMOS_PHY_MP_kessler_Mixingratio( &
        Qe,    &
        QTRC0  )
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     use mod_const, only: &
        EPS => CONST_EPS
     implicit none
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     !---------------------------------------------------------------------------
 
     Qe(:,:,:,I_mp_QC) = QTRC0(:,:,:,I_QC)
     Qe(:,:,:,I_mp_QR) = QTRC0(:,:,:,I_QR)
 
     return
-  end subroutine ATMOS_PHY_MP_Mixingratio
+  end subroutine ATMOS_PHY_MP_kessler_Mixingratio
   !-----------------------------------------------------------------------------
-end module mod_atmos_phy_mp
+end module mod_atmos_phy_mp_kessler

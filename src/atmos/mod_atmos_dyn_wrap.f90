@@ -88,9 +88,10 @@ module mod_atmos_dyn_wrap
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_wrap_setup
+  subroutine ATMOS_DYN_wrap_setup( DYN_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
@@ -107,6 +108,7 @@ contains
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: DYN_TYPE
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_numerical_diff_order,        &
@@ -167,6 +169,7 @@ contains
                           ATMOS_DYN_CNX4,                 & ! [OUT]
                           ATMOS_DYN_CNY4,                 & ! [OUT]
                           ATMOS_DYN_CORIOLI,              & ! [OUT]
+                          DYN_TYPE,                       & ! [IN]
                           GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                           GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
                           ATMOS_DYN_numerical_diff_order, & ! [IN]
@@ -180,7 +183,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
-  subroutine ATMOS_DYN_wrap
+  subroutine ATMOS_DYN_wrap( do_flag )
     use mod_time, only: &
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN, &
@@ -241,7 +244,10 @@ contains
     use mod_atmos_dyn, only: &
        ATMOS_DYN
     implicit none
+    logical, intent(in) :: do_flag
     !---------------------------------------------------------------------------
+
+    if ( do_flag ) then
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
@@ -284,6 +290,8 @@ contains
          TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
 
     call ATMOS_vars_total
+
+    end if
 
     return
   end subroutine ATMOS_DYN_wrap

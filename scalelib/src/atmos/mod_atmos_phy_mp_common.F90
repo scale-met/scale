@@ -18,6 +18,9 @@ module mod_atmos_phy_mp_common
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -34,14 +37,6 @@ module mod_atmos_phy_mp_common
   public :: ATMOS_PHY_MP_negative_fixer
   public :: ATMOS_PHY_MP_saturation_adjustment
   public :: ATMOS_PHY_MP_precipitation
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -636,16 +631,21 @@ contains
        RHOE,      &
        QTRC,      &
        vterm,     &
-       temp       )
+       temp,      &
+       dt         )
+    use dc_types, only: &
+       DP
     use mod_const, only: &
        GRAV  => CONST_GRAV
-    use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_grid, only: &
        CZ   => GRID_CZ,   &
        FDZ  => GRID_FDZ,  &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
+    use mod_gridtrans, only: &
+       I_XYZ, &
+       GSQRT => GTRANS_GSQRT, &
+       J33G  => GTRANS_J33G
     use mod_atmos_thermodyn, only: &
        CVw => AQ_CV
     use mod_comm, only: &
@@ -663,6 +663,7 @@ contains
     real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
     real(RP), intent(inout) :: vterm    (KA,IA,JA,QA) ! terminal velocity of cloud mass
     real(RP), intent(in)    :: temp     (KA,IA,JA)
+    real(DP), intent(in)    :: dt
 
     real(RP) :: rhoq(KA,QA) ! rho * q before precipitation
     real(RP) :: qflx(KA,QA)
@@ -701,7 +702,7 @@ contains
 
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
-             qflx(k,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq)
+             qflx(k,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq) * J33G
           enddo
           qflx(KE,iq) = 0.0_RP
 
@@ -710,7 +711,7 @@ contains
              eflx(k) = qflx(k,iq) * temp(k+1,i,j) * CVw(iq)
           enddo
           do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
 
           !--- potential energy
@@ -719,7 +720,7 @@ contains
           enddo
           eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
           do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
 
           !--- momentum z (half level)
@@ -729,7 +730,7 @@ contains
                                * MOMZ(k,i,j)
           enddo
           do k  = KS, KE-1
-             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * RFDZ(k)
+             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * RFDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
 
           !--- momentum x
@@ -739,7 +740,7 @@ contains
                                * MOMX(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
 
           !--- momentum y
@@ -749,7 +750,7 @@ contains
                                * MOMY(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
 
        enddo ! mass tracer loop
@@ -779,14 +780,14 @@ contains
        !--- update total density
        do iq = I_QC, QQE
           do k  = KS, KE
-             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k)
+             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
           enddo
        enddo ! mass tracer loop
 
        !--- update falling tracer
        do iq = I_QC, QA
        do k  = KS, KE
-          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) ) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ) ) / DENS(k,i,j)
        enddo
        enddo
 

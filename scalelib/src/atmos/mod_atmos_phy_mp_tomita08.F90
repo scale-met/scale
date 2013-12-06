@@ -12,11 +12,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_mp
+module mod_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer_tomita08
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -30,27 +33,19 @@ module mod_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
-  public :: ATMOS_PHY_MP
-  public :: ATMOS_PHY_MP_CloudFraction
-  public :: ATMOS_PHY_MP_EffectiveRadius
-  public :: ATMOS_PHY_MP_Mixingratio
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+  public :: ATMOS_PHY_MP_tomita08_setup
+  public :: ATMOS_PHY_MP_tomita08
+  public :: ATMOS_PHY_MP_tomita08_CloudFraction
+  public :: ATMOS_PHY_MP_tomita08_EffectiveRadius
+  public :: ATMOS_PHY_MP_tomita08_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: vterm(KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+  real(RP), public, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
 
-  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
   !
@@ -121,7 +116,7 @@ module mod_atmos_phy_mp
   ! Auto-conversion parameter
   real(RP), private, save      :: Nc_lnd     = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
   real(RP), private, save      :: Nc_ocn     =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
-  real(RP), private, save      :: Nc_def(IA,JA)          !< number concentration of cloud water         [1/cc]
+  real(RP), private, allocatable :: Nc_def(:,:)          !< number concentration of cloud water         [1/cc]
 
   real(RP), private, save      :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
   real(RP), private, save      :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
@@ -202,7 +197,7 @@ module mod_atmos_phy_mp
   integer, private, parameter :: I_Pgdep   = 41 ! v->g
   integer, private, parameter :: I_Pgsub   = 42 ! g->v
 
-  real(RP),          private, save :: w       (w_nmax,KMAX*IMAX*JMAX) ! working array
+  real(RP),          private, allocatable :: w(:,:) ! working array
   integer,           private, save :: w_histid(w_nmax)
   character(len=16), private, save :: w_name  (w_nmax)
   character(len=64), private, save :: w_desc  (w_nmax) = ''
@@ -251,7 +246,7 @@ module mod_atmos_phy_mp
                 'Pgdep  ', &
                 'Pgsub  '  /
 
-  real(RP), private, save :: work3D(KA,IA,JA) !< for history output
+  real(RP), private, allocatable :: work3D(:,:,:) !< for history output
 
   logical, private :: debug
 
@@ -260,9 +255,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup
+  subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF
+       IO_FID_CONF, &
+       IO_FID_LOG, &
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -274,10 +272,8 @@ contains
        SF_gamma
     use mod_history, only: &
        HIST_reg
-    use mod_atmos_vars, only: &
-       ATMOS_TYPE_PHY_MP, &
-       DENS
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &
@@ -296,10 +292,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
-    if ( ATMOS_TYPE_PHY_MP /= 'TOMITA08' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not TOMITA08. Check!'
+    if ( MP_TYPE /= 'TOMITA08' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
        call PRC_MPIstop
     endif
+
+    allocate( vterm(KA,IA,JA,QA) )
+    allocate( Nc_def(IA,JA) )
+    allocate( w(w_nmax,KMAX*IMAX*JMAX) )
+    allocate( work3D(KA,IA,JA) )
+
 
     if (      I_QV <= 0 &
          .OR. I_QC <= 0 &
@@ -387,21 +389,18 @@ contains
     work3D(:,:,:) = 0.0_RP
 
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_tomita08_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP
-    use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total,    &
+  subroutine ATMOS_PHY_MP_tomita08( &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC
+       QTRC  )
     use mod_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use mod_history, only: &
@@ -414,7 +413,17 @@ contains
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
@@ -468,7 +477,8 @@ contains
                            RHOE (:,:,:),     & ! [INOUT]
                            QTRC (:,:,:,:),   & ! [INOUT]
                            vterm(:,:,:,:),   & ! [IN]
-                           temp (:,:,:)      ) ! [IN]
+                           temp (:,:,:),     & ! [IN]
+                           dt                ) ! [IN]
 
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
@@ -504,19 +514,13 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    ! fill halo
-    call ATMOS_vars_fillhalo
-
-    ! check total (optional)
-    call ATMOS_vars_total
-
     flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
     call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
     call HIST_in( flux_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
     return
-  end subroutine ATMOS_PHY_MP
+  end subroutine ATMOS_PHY_MP_tomita08
 
   !-----------------------------------------------------------------------------
   !> Lin-type cold rain microphysics
@@ -1468,15 +1472,18 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
-  subroutine ATMOS_PHY_MP_CloudFraction( &
+  subroutine ATMOS_PHY_MP_tomita08_CloudFraction( &
        cldfrac, &
        QTRC     )
     use mod_const, only: &
        EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq
@@ -1495,18 +1502,21 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_CloudFraction
+  end subroutine ATMOS_PHY_MP_tomita08_CloudFraction
 
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+  subroutine ATMOS_PHY_MP_tomita08_EffectiveRadius( &
        Re,    &
        QTRC0, &
        DENS0  )
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
 
     real(RP) :: dens
@@ -1548,18 +1558,21 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_EffectiveRadius
+  end subroutine ATMOS_PHY_MP_tomita08_EffectiveRadius
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_Mixingratio( &
+  subroutine ATMOS_PHY_MP_tomita08_Mixingratio( &
        Qe,    &
        QTRC0  )
     use mod_const, only: &
        EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
 
     integer  :: ihydro
     !---------------------------------------------------------------------------
@@ -1570,7 +1583,7 @@ contains
 
     return
 
-  end subroutine ATMOS_PHY_MP_Mixingratio
+  end subroutine ATMOS_PHY_MP_tomita08_Mixingratio
   !-----------------------------------------------------------------------------
-end module mod_atmos_phy_mp
+end module mod_atmos_phy_mp_tomita08
 !-------------------------------------------------------------------------------

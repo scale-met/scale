@@ -32,20 +32,6 @@ module mod_atmos_vars
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use mod_atmos_dyn, only: &
-     ATMOS_TYPE_DYN
-  use mod_atmos_phy_sf, only: &
-     ATMOS_TYPE_PHY_SF
-  use mod_atmos_phy_tb, only: &
-     ATMOS_TYPE_PHY_TB
-!  use mod_atmos_phy_mp, only: &
-!     ATMOS_TYPE_PHY_MP
-!  use mod_atmos_phy_rd, only: &
-!     ATMOS_TYPE_PHY_RD
-!  use mod_atmos_phy_ae, only: &
-!     ATMOS_TYPE_PHY_AE
-!  use mod_atmos_phy_ch, only: &
-!     ATMOS_TYPE_PHY_CH
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -72,10 +58,13 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_DYN_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
 
   logical,                  public, save :: ATMOS_sw_dyn
   logical,                  public, save :: ATMOS_sw_phy_sf
@@ -216,8 +205,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS / &
-       ATMOS_TYPE_PHY_MP, &
-       ATMOS_TYPE_PHY_RD
+       ATMOS_DYN_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_PHY_CH_TYPE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
@@ -273,7 +267,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
 
-    if ( ATMOS_TYPE_DYN /= 'OFF' .AND. ATMOS_TYPE_DYN /= 'NONE' ) then
+    if ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
        if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
        ATMOS_sw_dyn = .true.
@@ -285,28 +279,28 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
 
-    if ( ATMOS_TYPE_PHY_SF /= 'OFF' .AND. ATMOS_TYPE_PHY_SF /= 'NONE' ) then
+    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
        ATMOS_sw_phy_sf = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
        ATMOS_sw_phy_sf = .false.
     endif
-    if ( ATMOS_TYPE_PHY_TB /= 'OFF' .AND. ATMOS_TYPE_PHY_TB /= 'NONE' ) then
+    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
-    if ( ATMOS_TYPE_PHY_MP /= 'OFF' .AND. ATMOS_TYPE_PHY_MP /= 'NONE' ) then
+    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
        ATMOS_sw_phy_mp = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
-    if ( ATMOS_TYPE_PHY_RD /= 'OFF' .AND. ATMOS_TYPE_PHY_RD /= 'NONE' ) then
+    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
     else

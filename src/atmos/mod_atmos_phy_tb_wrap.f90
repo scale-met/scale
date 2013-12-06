@@ -49,16 +49,14 @@ module mod_atmos_phy_tb_wrap
   real(RP), private, allocatable :: MOMY_t(:,:,:)
   real(RP), private, allocatable :: RHOT_t(:,:,:)
   real(RP), private, allocatable :: QTRC_t(:,:,:,:)
-
-  character(len=IO_SYSCHR), public :: ATMOS_PHY_TB_TYPE
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine ATMOS_PHY_TB_wrap_setup
+  subroutine ATMOS_PHY_TB_wrap_setup( TB_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF, &
        IO_FID_LOG, &
-       IO_L
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_grid, only: &
@@ -73,30 +71,15 @@ contains
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     implicit none
+    character(len=IO_SYSCHR), intent(in) :: TB_TYPE
 
-    NAMELIST / PARAM_ATMOS_PHY_TB / &
-         ATMOS_PHY_TB_TYPE
-
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB)
-
     call ATMOS_PHY_TB_setup( &
-         ATMOS_PHY_TB_TYPE, & ! (in)
+         TB_TYPE, & ! (in)
          CDZ, CDX, CDY, & ! (in)
          FDZ, FDX, FDY, & ! (in)
          CZ, FZ         ) ! (in)

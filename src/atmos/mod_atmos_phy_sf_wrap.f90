@@ -51,29 +51,23 @@ module mod_atmos_phy_sf_wrap
   real(RP), private, allocatable :: SFLX_MOMY(:,:)
   real(RP), private, allocatable :: SFLX_POTT(:,:)
   real(RP), private, allocatable :: SFLX_QV(:,:)
-
-  character(len=IO_SYSCHR), public :: ATMOS_PHY_SF_TYPE
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_wrap_setup
+  subroutine ATMOS_PHY_SF_wrap_setup( SF_TYPE )
     use mod_stdio, only: &
-       IO_FID_CONF, &
        IO_FID_LOG, &
-       IO_L
+       IO_L, &
+       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     implicit none
-
-    NAMELIST / PARAM_ATMOS_PHY_SF / &
-         ATMOS_PHY_SF_TYPE
-
-    integer :: ierr
+    character(len=IO_SYSCHR), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -85,20 +79,7 @@ contains
     allocate( SFLX_POTT(IA,JA) )
     allocate( SFLX_QV(IA,JA) )
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF)
-
-
-    call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
+    call ATMOS_PHY_SF_setup( SF_TYPE )
     call ATMOS_PHY_SF_wrap( .true., .false. )
 
     return

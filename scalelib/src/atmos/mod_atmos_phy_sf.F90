@@ -36,8 +36,6 @@ module mod_atmos_phy_sf
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public :: ATMOS_TYPE_PHY_SF    = 'NONE'
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -84,7 +82,7 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_setup( ATMOS_TYPE_PHY_SF )
+  subroutine ATMOS_PHY_SF_setup( SF_TYPE )
     use mod_stdio, only: &
        IO_FID_CONF, &
        IO_FID_LOG, &
@@ -106,15 +104,15 @@ contains
        ATMOS_PHY_SF_louis
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_PHY_SF
+    character(len=IO_SYSCHR), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
-    select case( ATMOS_TYPE_PHY_SF )
+    select case( SF_TYPE )
     case ( 'CONST')
-       call ATMOS_PHY_SF_const_setup( ATMOS_TYPE_PHY_SF )
+       call ATMOS_PHY_SF_const_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_const
     case ( 'LOUIS')
-       call ATMOS_PHY_SF_louis_setup( ATMOS_TYPE_PHY_SF )
+       call ATMOS_PHY_SF_louis_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_louis
     end select
 

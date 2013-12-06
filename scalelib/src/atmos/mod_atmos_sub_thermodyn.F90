@@ -21,6 +21,9 @@ module mod_atmos_thermodyn
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -37,13 +40,6 @@ module mod_atmos_thermodyn
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -101,8 +97,8 @@ module mod_atmos_thermodyn
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: AQ_CP(QQA) !< CP for each hydrometeors [J/kg/K]
-  real(RP), public, save :: AQ_CV(QQA) !< CV for each hydrometeors [J/kg/K]
+  real(RP), public, allocatable :: AQ_CP(:) !< CP for each hydrometeors [J/kg/K]
+  real(RP), public, allocatable :: AQ_CV(:) !< CV for each hydrometeors [J/kg/K]
 
   !-----------------------------------------------------------------------------
   !
@@ -124,6 +120,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[THERMODYN]/Categ[ATMOS]'
+
+    allocate( AQ_CP(QQA) )
+    allocate( AQ_CV(QQA) )
 
     AQ_CP(I_QV) = CPvap
     AQ_CV(I_QV) = CVvap

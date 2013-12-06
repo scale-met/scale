@@ -20,11 +20,14 @@
 !! @li  ver.0.02   2012-10-18 (Y.Sato) [rev] extend to ice microphysics
 !<
 !--------------------------------------------------------------------------------
-module mod_atmos_phy_mp
+module mod_atmos_phy_mp_hbinf
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer_hbinf
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -55,25 +58,18 @@ module mod_atmos_phy_mp
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_setup
-  public :: ATMOS_PHY_MP
-  public :: ATMOS_PHY_MP_CloudFraction
-  public :: ATMOS_PHY_MP_EffectiveRadius
-  public :: ATMOS_PHY_MP_Mixingratio
+  public :: ATMOS_PHY_MP_hbinf_setup
+  public :: ATMOS_PHY_MP_hbinf
+  public :: ATMOS_PHY_MP_hbinf_CloudFraction
+  public :: ATMOS_PHY_MP_hbinf_EffectiveRadius
+  public :: ATMOS_PHY_MP_hbinf_Mixingratio
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), public, save :: MP_DENS(MP_QA)     ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public :: MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
   !
   !++ Private procedure
   !
@@ -146,10 +142,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup
+  subroutine ATMOS_PHY_MP_hbinf_setup( MP_TYPE )
     use mod_stdio, only: &
       IO_get_available_fid, &
-      IO_FID_CONF
+      IO_FID_CONF, &
+      IO_FID_LOG, &
+      IO_L, &
+      IO_SYSCHR
     use mod_process, only: &
       PRC_MPIstop
     use mod_grid, only: &
@@ -161,6 +160,7 @@ contains
        CONST_DICE
     implicit none
     !---------------------------------------------------------------------------
+    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
 
     real(RP) :: ATMOS_PHY_MP_RHOA  !--- density of aerosol
     real(RP) :: ATMOS_PHY_MP_EMAER !--- moleculer weight of aerosol
@@ -195,6 +195,15 @@ contains
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (mixed phase cloud)'
+
+    if ( MP_TYPE .ne. 'HBINF' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not HBINF. Check!'
+       call PRC_MPIstop
+    end if
+
     ATMOS_PHY_MP_RHOA = rhoa
     ATMOS_PHY_MP_EMAER = emaer
     ATMOS_PHY_MP_RAMIN = rasta
@@ -208,10 +217,6 @@ contains
     ATMOS_PHY_MP_RNDM_MBIN = mbin
     ATMOS_PHY_MP_doautoconversion = doautoconversion
     ATMOS_PHY_MP_doprecipitation  = doprecipitation
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (mixed phase cloud)'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -348,12 +353,18 @@ contains
     sfc_precp( 1:nspc ) = 0.0_RP
 
     return
-  end subroutine ATMOS_PHY_MP_setup
+  end subroutine ATMOS_PHY_MP_hbinf_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP
+  subroutine ATMOS_PHY_MP_hbinf( &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC  )
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
@@ -365,15 +376,17 @@ contains
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_atmos_vars, only: &
-       ATMOS_vars_total,   &
-       DENS, &
-       MOMX, &
-       MOMY, &
-       MOMZ, &
-       RHOT, &
-       QTRC
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
 
     real(RP) :: dz (KA)
     real(RP) :: dzh(KA)
@@ -648,10 +661,8 @@ call START_COLLECTION("MICROPHYSICS")
 call STOP_COLLECTION("MICROPHYSICS")
 #endif
 
-    call ATMOS_vars_total
-
     return
-  end subroutine ATMOS_PHY_MP
+  end subroutine ATMOS_PHY_MP_hbinf
   !-----------------------------------------------------------------------------
   subroutine getsups        &
        ( qvap, temp, pres,  & !--- in
@@ -2278,15 +2289,18 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_CloudFraction( &
+  subroutine ATMOS_PHY_MP_hbinf_CloudFraction( &
        cldfrac, &
        QTRC     )
     use mod_const, only: &
        EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq, ihydro
@@ -2307,19 +2321,22 @@ call STOP_COLLECTION("MICROPHYSICS")
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_CloudFraction
+  end subroutine ATMOS_PHY_MP_hbinf_CloudFraction
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_MP_EffectiveRadius( &
+  subroutine ATMOS_PHY_MP_hbinf_EffectiveRadius( &
        Re,    &
        QTRC0, &
        DENS0  )
     use mod_const, only: &
        EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
 
     real(RP) :: sum2(KA,IA,JA,MP_QA), sum3(KA,IA,JA,MP_QA)
@@ -2343,8 +2360,8 @@ call STOP_COLLECTION("MICROPHYSICS")
                             / exp( xctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) ) &   !--- mass -> number
                             * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
       enddo
-      sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro-EPS))
-      sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro-EPS))
+      sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
+      sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
 
       if( sum2(k,i,j,ihydro) /= 0.0_RP ) then
        Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)
@@ -2357,18 +2374,21 @@ call STOP_COLLECTION("MICROPHYSICS")
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_EffectiveRadius
+  end subroutine ATMOS_PHY_MP_hbinf_EffectiveRadius
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_Mixingratio( &
+  subroutine ATMOS_PHY_MP_hbinf_Mixingratio( &
        Qe,    &
        QTRC0  )
     use mod_const, only: &
        EPS => CONST_EPS
+    use mod_tracer, only: &
+       QAD => QA, &
+       MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
 
     real(RP) :: sum2
     integer  :: i, j, k, iq, ihydro
@@ -2389,7 +2409,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_Mixingratio
+  end subroutine ATMOS_PHY_MP_hbinf_Mixingratio
   !-----------------------------------------------------------------------------
-end module mod_atmos_phy_mp
+end module mod_atmos_phy_mp_hbinf
 !-------------------------------------------------------------------------------

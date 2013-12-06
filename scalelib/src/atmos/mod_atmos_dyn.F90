@@ -69,8 +69,6 @@ module mod_atmos_dyn
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public :: ATMOS_TYPE_DYN    = 'NONE'
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -79,37 +77,6 @@ module mod_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  ! time integration scheme
-  integer,  private, parameter :: RK = 3             ! order of Runge-Kutta scheme
-
-  ! numerical filter
-  integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
-  logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private :: ATMOS_DYN_DIFF4                                   ! for numerical filter
-  real(RP), private, allocatable :: ATMOS_DYN_CNZ3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNX3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNY3(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNZ4(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNX4(:,:,:)
-  real(RP), private, allocatable :: ATMOS_DYN_CNY4(:,:,:)
-
-  ! Coriolis force
-  logical,  private :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
-  real(RP), private, allocatable :: ATMOS_DYN_CORIOLI(:,:) ! coriolis term
-
-  ! divergence damping
-  real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
-
-  ! fct
-  logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
-
-  NAMELIST / PARAM_ATMOS_DYN / &
-       ATMOS_TYPE_DYN
-
   !-----------------------------------------------------------------------------
 contains
 
@@ -120,6 +87,7 @@ contains
        CNZ3, CNX3, CNY3, &
        CNZ4, CNX4, CNY4, &
        CORIOLI,          &
+       DYN_TYPE,         &
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
        ND_ORDER,         &
@@ -149,6 +117,7 @@ contains
     real(RP), intent(out) :: CNX4(5,IA,2)
     real(RP), intent(out) :: CNY4(5,JA,2)
     real(RP), intent(out) :: CORIOLI(1,IA,JA)
+    character(len=IO_SYSCHR), intent(in) :: DYN_TYPE
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
@@ -160,31 +129,7 @@ contains
     real(RP), intent(in)  :: DT
     logical , intent(in)  :: enable_coriolis
     real(RP), intent(in)  :: lat(IA,JA)
-
-    integer :: ierr
     !---------------------------------------------------------------------------
-
-    allocate( ATMOS_DYN_CNZ3(3,KA,2) )
-    allocate( ATMOS_DYN_CNX3(3,IA,2) )
-    allocate( ATMOS_DYN_CNY3(3,JA,2) )
-    allocate( ATMOS_DYN_CNZ4(5,KA,2) )
-    allocate( ATMOS_DYN_CNX4(5,IA,2) )
-    allocate( ATMOS_DYN_CNY4(5,JA,2) )
-
-    allocate( ATMOS_DYN_CORIOLI(IA,JA) )
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
-
 
     ! numerical diffusion
     call ATMOS_DYN_numfilter_setup( DIFF4,                              & ! [OUT]
@@ -200,7 +145,7 @@ contains
        CORIOLI(1,:,:) = 0.0_RP
     endif
 
-    call ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
+    call ATMOS_DYN_rk_setup( DYN_TYPE )
 
     return
   end subroutine ATMOS_DYN_setup

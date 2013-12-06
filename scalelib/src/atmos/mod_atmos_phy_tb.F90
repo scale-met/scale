@@ -21,8 +21,7 @@ module mod_atmos_phy_tb
   use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
-     IO_L, &
-     IO_SYSCHR
+     IO_L
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -35,8 +34,6 @@ module mod_atmos_phy_tb
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public :: ATMOS_TYPE_PHY_TB = 'NONE'
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -92,17 +89,17 @@ contains
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef SF
-    use NAME(mod_atmos_phy_, TB,), only: &
-       NAME(ATMOS_PHY_, TB, _setup), &
-       NAME(ATMOS_PHY_, TB,)
+#ifdef TB
+    use NAME(mod_atmos_phy_tb_, TB,), only: &
+       NAME(ATMOS_PHY_TB_, TB, _setup), &
+       NAME(ATMOS_PHY_TB_, TB,)
 #else
     use mod_atmos_phy_tb_smg, only: &
-       ATMOS_PHY_tb_smg_setup, &
-       ATMOS_PHY_tb_smg
+       ATMOS_PHY_TB_smg_setup, &
+       ATMOS_PHY_TB_smg
     use mod_atmos_phy_tb_dummy, only: &
-       ATMOS_PHY_tb_dummy_setup, &
-       ATMOS_PHY_tb_dummy
+       ATMOS_PHY_TB_dummy_setup, &
+       ATMOS_PHY_TB_dummy
 #endif
     implicit none
     character(len=IO_SYSCHR), intent(in) :: TB_TYPE
