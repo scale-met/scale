@@ -247,7 +247,6 @@ contains
     allocate( QTRC_tp(KA,IA,JA,QA) )
 
 
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
@@ -919,12 +918,12 @@ contains
     call FilePutAssociatedCoordinates( fid, &
          'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_lon(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
          dtype, REAL_lonx(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_lat(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+         'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
          dtype, REAL_laty(IS:IE,JS:JE) )
 
     call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)

@@ -16,6 +16,9 @@ module mod_mktopo
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_SYSCHR,   &
      IO_FILECHR,  &
@@ -41,14 +44,6 @@ module mod_mktopo
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   integer, public, save      :: MKTOPO_TYPE = -1
@@ -69,9 +64,9 @@ module mod_mktopo
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: z_sfc(1,IA,JA) ! ground height
+  real(RP), private, allocatable :: z_sfc(:,:,:)
 
-  real(RP), private :: bell (1,IA,JA) ! bell factor (0-1)
+  real(RP), private, allocatable :: bell (:,:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -95,6 +90,9 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKTOPO,iostat=ierr)
+
+     allocate( z_sfc(1,IA,JA) )
+     allocate( bell (1,IA,JA) )
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'

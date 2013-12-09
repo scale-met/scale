@@ -1,11 +1,16 @@
 module test_atmos_dyn_fent_fct
 
   !-----------------------------------------------------------------------------
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_atmos_dyn, only: &
-     ATMOS_DYN_main
+     ATMOS_DYN
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
+  use mod_stdio, only: &
+       IO_SYSCHR
   use mod_grid, only: &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
@@ -30,62 +35,49 @@ module test_atmos_dyn_fent_fct
   public :: test_atmos_dyn_fent_fct_run
 
   !-----------------------------------------------------------------------------
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-  !-----------------------------------------------------------------------------
-  real(RP) :: DENS(KA,IA,JA)
-  real(RP) :: MOMZ(KA,IA,JA)
-  real(RP) :: MOMX(KA,IA,JA)
-  real(RP) :: MOMY(KA,IA,JA)
-  real(RP) :: RHOT(KA,IA,JA)
-  real(RP) :: QTRC(KA,IA,JA,QA)
+  real(RP), allocatable :: DENS(:,:,:)
+  real(RP), allocatable :: MOMZ(:,:,:)
+  real(RP), allocatable :: MOMX(:,:,:)
+  real(RP), allocatable :: MOMY(:,:,:)
+  real(RP), allocatable :: RHOT(:,:,:)
+  real(RP), allocatable :: QTRC(:,:,:,:)
 
-  real(RP) :: DENS_av(KA,IA,JA)
-  real(RP) :: MOMZ_av(KA,IA,JA)
-  real(RP) :: MOMX_av(KA,IA,JA)
-  real(RP) :: MOMY_av(KA,IA,JA)
-  real(RP) :: RHOT_av(KA,IA,JA)
-  real(RP) :: QTRC_av(KA,IA,JA,QA)
+  real(RP), allocatable :: DENS_av(:,:,:)
+  real(RP), allocatable :: MOMZ_av(:,:,:)
+  real(RP), allocatable :: MOMX_av(:,:,:)
+  real(RP), allocatable :: MOMY_av(:,:,:)
+  real(RP), allocatable :: RHOT_av(:,:,:)
+  real(RP), allocatable :: QTRC_av(:,:,:,:)
 
-  real(RP) :: DENS_tp(KA,IA,JA)
-  real(RP) :: MOMZ_tp(KA,IA,JA)
-  real(RP) :: MOMX_tp(KA,IA,JA)
-  real(RP) :: MOMY_tp(KA,IA,JA)
-  real(RP) :: RHOT_tp(KA,IA,JA)
-  real(RP) :: QTRC_tp(KA,IA,JA,QA)
+  real(RP), allocatable :: DENS_tp(:,:,:)
+  real(RP), allocatable :: MOMZ_tp(:,:,:)
+  real(RP), allocatable :: MOMX_tp(:,:,:)
+  real(RP), allocatable :: MOMY_tp(:,:,:)
+  real(RP), allocatable :: RHOT_tp(:,:,:)
+  real(RP), allocatable :: QTRC_tp(:,:,:,:)
 
-  real(RP) :: DENS_o(KA,IA,JA)
-  real(RP) :: MOMZ_o(KA,IA,JA)
-  real(RP) :: MOMX_o(KA,IA,JA)
-  real(RP) :: MOMY_o(KA,IA,JA)
-  real(RP) :: RHOT_o(KA,IA,JA)
-  real(RP) :: QTRC_o(KA,IA,JA,QA)
+  real(RP), allocatable :: DENS_o(:,:,:)
+  real(RP), allocatable :: MOMZ_o(:,:,:)
+  real(RP), allocatable :: MOMX_o(:,:,:)
+  real(RP), allocatable :: MOMY_o(:,:,:)
+  real(RP), allocatable :: RHOT_o(:,:,:)
+  real(RP), allocatable :: QTRC_o(:,:,:,:)
 
-  real(RP) :: REF_dens(KA,IA,JA)
-  real(RP) :: REF_pott(KA,IA,JA)
-  real(RP) :: REF_qv  (KA,IA,JA)
-  real(RP) :: REF_pres(KA,IA,JA)
+  real(RP), allocatable :: REF_dens(:,:,:)
+  real(RP), allocatable :: REF_pott(:,:,:)
+  real(RP), allocatable :: REF_qv  (:,:,:)
+  real(RP), allocatable :: REF_pres(:,:,:)
 
-  real(RP) :: DAMP_var(KA,IA,JA,5)
-  real(RP) :: DAMP_alpha(KA,IA,JA,5)
+  real(RP), allocatable :: DAMP_var(:,:,:,:)
+  real(RP), allocatable :: DAMP_alpha(:,:,:,:)
 
-  real(RP) :: CNZ3(3,KA,2)
-  real(RP) :: CNX3(3,IA,2)
-  real(RP) :: CNY3(3,JA,2)
-  real(RP) :: CNZ4(5,KA,2)
-  real(RP) :: CNX4(5,IA,2)
-  real(RP) :: CNY4(5,JA,2)
-
-  real(RP) :: CORIOLI(1,IA,JA)
-
-  real(RP) :: PHI(KA,IA,JA)
-  real(RP) :: GSQRT(KA,IA,JA,7)
-  real(RP) :: J13G(KA,IA,JA,4)
-  real(RP) :: J23G(KA,IA,JA,4)
+  real(RP), allocatable :: PHI(:,:,:)
+  real(RP), allocatable :: GSQRT(:,:,:,:)
+  real(RP), allocatable :: J13G(:,:,:,:)
+  real(RP), allocatable :: J23G(:,:,:,:)
   real(RP) :: J33G
 
-  real(RP) :: AQ_CV(QA)
+  real(RP), allocatable :: AQ_CV(:)
 
   real(RP) :: DIFF4
   integer  :: nd_order
@@ -99,9 +91,11 @@ module test_atmos_dyn_fent_fct
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
 
-  real(RP), save :: ZERO(KA,IA,JA)
+  real(RP), allocatable :: ZERO(:,:,:)
 
   integer, save :: KME ! end of main region
+
+  character(len=IO_SYSCHR) :: DYN_TYPE
 
   integer :: k, i, j, iq
   character(len=7) :: message
@@ -114,13 +108,11 @@ contains
   !++ used modules
   !
   use mod_atmos_dyn, only: &
-     ATMOS_DYN_init
+     ATMOS_DYN_setup
   use mod_grid, only: &
      GRID_CZ_mask
   use mod_const, only: &
      GRAV => CONST_GRAV
-  use mod_atmos_vars, only: &
-     ATMOS_TYPE_DYN
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -134,6 +126,53 @@ contains
   !=============================================================================
 
   !########## Initial setup ##########
+
+  ! allocate 
+  allocate( DENS(KA,IA,JA) )
+  allocate( MOMZ(KA,IA,JA) )
+  allocate( MOMX(KA,IA,JA) )
+  allocate( MOMY(KA,IA,JA) )
+  allocate( RHOT(KA,IA,JA) )
+  allocate( QTRC(KA,IA,JA,QA) )
+
+  allocate( DENS_av(KA,IA,JA) )
+  allocate( MOMZ_av(KA,IA,JA) )
+  allocate( MOMX_av(KA,IA,JA) )
+  allocate( MOMY_av(KA,IA,JA) )
+  allocate( RHOT_av(KA,IA,JA) )
+  allocate( QTRC_av(KA,IA,JA,QA) )
+
+  allocate( DENS_tp(KA,IA,JA) )
+  allocate( MOMZ_tp(KA,IA,JA) )
+  allocate( MOMX_tp(KA,IA,JA) )
+  allocate( MOMY_tp(KA,IA,JA) )
+  allocate( RHOT_tp(KA,IA,JA) )
+  allocate( QTRC_tp(KA,IA,JA,QA) )
+
+  allocate( DENS_o(KA,IA,JA) )
+  allocate( MOMZ_o(KA,IA,JA) )
+  allocate( MOMX_o(KA,IA,JA) )
+  allocate( MOMY_o(KA,IA,JA) )
+  allocate( RHOT_o(KA,IA,JA) )
+  allocate( QTRC_o(KA,IA,JA,QA) )
+
+  allocate( REF_dens(KA,IA,JA) )
+  allocate( REF_pott(KA,IA,JA) )
+  allocate( REF_qv  (KA,IA,JA) )
+  allocate( REF_pres(KA,IA,JA) )
+
+  allocate( DAMP_var(KA,IA,JA,5) )
+  allocate( DAMP_alpha(KA,IA,JA,5) )
+
+  allocate( PHI(KA,IA,JA) )
+  allocate( GSQRT(KA,IA,JA,7) )
+  allocate( J13G(KA,IA,JA,4) )
+  allocate( J23G(KA,IA,JA,4) )
+
+  allocate( AQ_CV(QA) )
+
+  allocate( ZERO(KA,IA,JA) )
+
   ZERO(:,:,:) = 0.0_RP
 
   nd_order = 2
@@ -144,14 +183,12 @@ contains
      lat(1,:,j) = real(j, RP)
   end do
 
-  ATMOS_TYPE_DYN = "HEVE"
-
-  call ATMOS_DYN_init( DIFF4,                              & ! (out)
-                       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! (out)
-                       CORIOLI,                            & ! (out)
-                       CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
-                       nd_order, nd_coef, 1.0_RP,          & ! (in)
-                       .false., lat                        ) ! (in)
+  DYN_TYPE = "HEVE"
+  call ATMOS_DYN_setup( DIFF4,                              & ! (out)
+                        DYN_TYPE,                           & ! (in)
+                        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
+                        nd_order, nd_coef, 1.0_RP,          & ! (in)
+                        .false., lat                        ) ! (in)
 
   do k = KS+1, KE
      if ( .not. GRID_CZ_mask(k) ) then
@@ -234,18 +271,17 @@ subroutine test_undef
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
   do i = 1, 2
-     call ATMOS_DYN_main( &
+     call ATMOS_DYN( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-          CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
-          CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+          DAMP_var, DAMP_alpha,                        & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
           .false.,                                     & ! (in)
@@ -284,18 +320,17 @@ subroutine test_const
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
-  call ATMOS_DYN_main( &
+  call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-       CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
-       CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+       DAMP_var, DAMP_alpha,                        & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
        .false.,                                     & ! (in)
@@ -333,8 +368,9 @@ subroutine test_const
 end subroutine test_const
 
 subroutine test_conserve
-  use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo
+  use mod_comm, only: &
+     COMM_vars8, &
+     COMM_wait
 
   real(RP) :: total_o, total
 
@@ -363,22 +399,38 @@ subroutine test_conserve
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
-  call ATMOS_vars_fillhalo
+  ! fill IHALO & JHALO
+  call COMM_vars8( DENS(:,:,:), 1 )
+  call COMM_vars8( MOMZ(:,:,:), 2 )
+  call COMM_vars8( MOMX(:,:,:), 3 )
+  call COMM_vars8( MOMY(:,:,:), 4 )
+  call COMM_vars8( RHOT(:,:,:), 5 )
+  call COMM_wait ( DENS(:,:,:), 1 )
+  call COMM_wait ( MOMZ(:,:,:), 2 )
+  call COMM_wait ( MOMX(:,:,:), 3 )
+  call COMM_wait ( MOMY(:,:,:), 4 )
+  call COMM_wait ( RHOT(:,:,:), 5 )
+
+  do iq = 1, QA
+     call COMM_vars8( QTRC(:,:,:,iq), iq )
+  enddo
+  do iq = 1, QA
+     call COMM_wait ( QTRC(:,:,:,iq), iq )
+  enddo
 
   call copy
 
-  call ATMOS_DYN_main( &
+  call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (out)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
-         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,          & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
-         CORIOLI, DAMP_var, DAMP_alpha,               & ! (in)
+         DAMP_var, DAMP_alpha,                        & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
          .true.,                                      & ! (in)

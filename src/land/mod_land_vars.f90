@@ -18,6 +18,8 @@ module mod_land_vars
      File_HSHORT, &
      File_HMID,   &
      File_HLONG
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -33,8 +35,6 @@ module mod_land_vars
   !
   !++ included parameters
   !
-  include "inc_precision.h"
-  include 'inc_index.h'
   include 'inc_land.h'
 
   !-----------------------------------------------------------------------------
@@ -57,15 +57,15 @@ module mod_land_vars
   logical,                   public, save :: LAND_sw_restart       !< output restart?
 
   ! land-atmosphere flux
-  real(RP), public, save :: SFLX_GH   (IA,JA) ! ground heat flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_PREC (IA,JA) ! precipitation flux [kg/m2/s]
-  real(RP), public, save :: SFLX_QVLnd(IA,JA) ! moisture flux [kg/m2/s]
+  real(RP), public, allocatable :: SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, allocatable :: SFLX_QVLnd(:,:) ! moisture flux [kg/m2/s]
 
-  ! prognostic variables
-  real(RP), public, save :: TG   (IA,JA)      ! soil temperature [K]
-  real(RP), public, save :: QvEfc(IA,JA)      ! efficiency of evaporation [0-1]
-  real(RP), public, save :: ROFF (IA,JA)      ! run-off water [kg/m2]
-  real(RP), public, save :: STRG (IA,JA)      ! water storage [kg/m2]
+  ! prognostic varia
+  real(RP), public, allocatable :: TG   (:,:)      ! soil temperature [K]
+  real(RP), public, allocatable :: QvEfc(:,:)      ! efficiency of evaporation [0-1]
+  real(RP), public, allocatable :: ROFF (:,:)      ! run-off water [kg/m2]
+  real(RP), public, allocatable :: STRG (:,:)      ! water storage [kg/m2]
 
   integer,  public, save :: I_TG    = 1
   integer,  public, save :: I_QvEfc = 2
@@ -101,8 +101,8 @@ module mod_land_vars
   integer,  public, parameter :: I_Z0H     =  9             ! roughness length for heat     [m]
   integer,  public, parameter :: I_Z0E     = 10             ! roughness length for moisture [m]
 
-  integer,  public,      save :: LAND_Type    (IA,JA)                    ! land type index
-  real(RP), public,      save :: LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) ! land surface property
+  integer,  public, allocatable :: LAND_Type    (:,:)   ! land type index
+  real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
 
   !-----------------------------------------------------------------------------
   !
@@ -155,6 +155,19 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
+
+    allocate( SFLX_GH   (IA,JA) )
+    allocate( SFLX_PREC (IA,JA) )
+    allocate( SFLX_QVLnd(IA,JA) )
+
+    allocate( TG   (IA,JA) )
+    allocate( QvEfc(IA,JA) )
+    allocate( ROFF (IA,JA) )
+    allocate( STRG (IA,JA) )
+
+    allocate( LAND_Type    (IA,JA) )
+    allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
+
 
     !--- read namelist
     rewind(IO_FID_CONF)

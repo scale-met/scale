@@ -417,7 +417,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TRACER)
 
     select case (TRACER_TYPE)
-    case ("dry")
+    case ("DRY")
        QA = QA_dry
        I_QV = I_QV_dry
        I_QC = I_QC_dry
@@ -454,8 +454,8 @@ contains
        I_MP2RD = I_MP2RD_dry
        I_AE2ALL = I_AE2ALL_dry
        I_AE2RD = I_AE2RD_dry
-    call TRACER_dry_setup
-    case ("kessler")
+       call TRACER_dry_setup
+    case ("KESSLER")
        QA = QA_kessler
        I_QV = I_QV_kessler
        I_QC = I_QC_kessler
@@ -492,8 +492,8 @@ contains
        I_MP2RD = I_MP2RD_kessler
        I_AE2ALL = I_AE2ALL_kessler
        I_AE2RD = I_AE2RD_kessler
-    call TRACER_kessler_setup
-    case ("tomita08")
+       call TRACER_kessler_setup
+    case ("TOMITA08")
        QA = QA_tomita08
        I_QV = I_QV_tomita08
        I_QC = I_QC_tomita08
@@ -530,8 +530,8 @@ contains
        I_MP2RD = I_MP2RD_tomita08
        I_AE2ALL = I_AE2ALL_tomita08
        I_AE2RD = I_AE2RD_tomita08
-    call TRACER_tomita08_setup
-    case ("sn13")
+       call TRACER_tomita08_setup
+    case ("SN13")
        QA = QA_sn13
        I_QV = I_QV_sn13
        I_QC = I_QC_sn13
@@ -568,8 +568,8 @@ contains
        I_MP2RD = I_MP2RD_sn13
        I_AE2ALL = I_AE2ALL_sn13
        I_AE2RD = I_AE2RD_sn13
-    call TRACER_sn13_setup
-    case ("sn13w")
+       call TRACER_sn13_setup
+    case ("SN13W")
        QA = QA_sn13w
        I_QV = I_QV_sn13w
        I_QC = I_QC_sn13w
@@ -606,8 +606,8 @@ contains
        I_MP2RD = I_MP2RD_sn13w
        I_AE2ALL = I_AE2ALL_sn13w
        I_AE2RD = I_AE2RD_sn13w
-    call TRACER_sn13w_setup
-    case ("binw")
+       call TRACER_sn13w_setup
+    case ("BINW")
        QA = QA_binw
        I_QV = I_QV_binw
        I_QC = I_QC_binw
@@ -644,8 +644,8 @@ contains
        I_MP2RD = I_MP2RD_binw
        I_AE2ALL = I_AE2ALL_binw
        I_AE2RD = I_AE2RD_binw
-    call TRACER_binw_setup
-    case ("binf")
+       call TRACER_binw_setup
+    case ("BINF")
        QA = QA_binf
        I_QV = I_QV_binf
        I_QC = I_QC_binf
@@ -682,8 +682,8 @@ contains
        I_MP2RD = I_MP2RD_binf
        I_AE2ALL = I_AE2ALL_binf
        I_AE2RD = I_AE2RD_binf
-    call TRACER_binf_setup
-    case ("hbinw")
+       call TRACER_binf_setup
+    case ("HBINW")
        QA = QA_hbinw
        I_QV = I_QV_hbinw
        I_QC = I_QC_hbinw
@@ -720,8 +720,8 @@ contains
        I_MP2RD = I_MP2RD_hbinw
        I_AE2ALL = I_AE2ALL_hbinw
        I_AE2RD = I_AE2RD_hbinw
-    call TRACER_hbinw_setup
-    case ("hbinf")
+       call TRACER_hbinw_setup
+    case ("HBINF")
        QA = QA_hbinf
        I_QV = I_QV_hbinf
        I_QC = I_QC_hbinf
@@ -758,9 +758,12 @@ contains
        I_MP2RD = I_MP2RD_hbinf
        I_AE2ALL = I_AE2ALL_hbinf
        I_AE2RD = I_AE2RD_hbinf
-    call TRACER_hbinf_setup
+       call TRACER_hbinf_setup
 #endif
-   end select
+     case default
+        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+        call PRC_MPIstop
+     end select
 
   end subroutine TRACER_setup
 

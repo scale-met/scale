@@ -1,5 +1,7 @@
 program unit
 
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_setup
   use mod_process, only: &
@@ -13,6 +15,8 @@ program unit
   use mod_grid, only: &
      GRID_allocate, &
      GRID_generate
+  use mod_tracer, only: &
+     TRACER_setup
 
   use test_atmos_phy_tb_smg
 
@@ -29,6 +33,17 @@ program unit
 
   ! setup constants
   call CONST_setup
+
+  KMAX = 10
+  IMAX = 10
+  JMAX = 2
+  IBLOCK = 5
+  JBLOCK = 1
+
+  call INDEX_setup
+
+  TRACER_TYPE = 'SN13'
+  call TRACER_setup
 
   ! setup horisontal/veritical grid system
   call GRID_allocate

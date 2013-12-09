@@ -16,6 +16,9 @@ module mod_atmos_phy_sf
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -28,14 +31,6 @@ module mod_atmos_phy_sf
   !
   public :: ATMOS_PHY_SF_setup
   public :: ATMOS_PHY_SF
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !

@@ -12,6 +12,8 @@ SYSDEP_DIR  = ../sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/src/Mkinclude
 
+unexport BUILD_DIR
+
 # for build
 index        = 500m40x40x40
 precision    = real8
@@ -84,10 +86,7 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 makeinclude:
-	cp $(INDEX_DIR)/inc_index_$(index).f90         $(BUILD_DIR)/inc_index.h
-	cp $(INDEX_DIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
-	cp $(INDEX_DIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
-	cp $(INDEX_DIR)/inc_land.f90                   $(BUILD_DIR)/inc_land.h
+	cp $(INDEX_DIR)/inc_land.f90 $(BUILD_DIR)/inc_land.h
 
 makebin: $(PRJS)
 	install $(BUILD_DIR)/$(PRJ1) $(BINDIR)/$(BINNAME)

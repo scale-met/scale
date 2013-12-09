@@ -32,8 +32,8 @@ module mod_index
   integer, public, parameter :: JHALO = 2               ! # of halo cells: y
 
   integer, public, parameter :: ZDIR = 1
-  integer, public, parameter :: XDIR = 1
-  integer, public, parameter :: YDIR = 1
+  integer, public, parameter :: XDIR = 2
+  integer, public, parameter :: YDIR = 3
 
   integer, public, parameter :: I_DENS = 1
   integer, public, parameter :: I_MOMZ = 2
@@ -133,6 +133,9 @@ contains
     IE   = IMAX + IHALO
     JS   = 1    + JHALO    
     JE   = JMAX + JHALO
+
+    IF ( IBLOCK .eq. -1 ) IBLOCK = IMAX
+    IF ( JBLOCK .eq. -1 ) JBLOCK = JMAX
 #endif
 
   end subroutine INDEX_setup

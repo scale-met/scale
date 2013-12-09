@@ -13,6 +13,8 @@ module mod_land_phy_bucket
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -22,14 +24,6 @@ module mod_land_phy_bucket
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-!  include 'inc_land.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure

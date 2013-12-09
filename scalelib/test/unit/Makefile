@@ -1,4 +1,4 @@
-TOPDIR = ../..
+TOPDIR = ../../..
 BUILD_DIR := $(shell pwd)/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
@@ -24,25 +24,21 @@ MODS = \
 	test_atmos_phy_tb_smg.o \
 	test_atmos_dyn_fent_fct.o
 
-all: makedir makelib makeinclude makebin run
+all: makedir makelib makebin run
 
 makedir:
 	mkdir -p $(BUILD_DIR)
 
 makelib:
-	cd $(SRCDIR) && $(MAKE) INDEX_DIR=$(shell pwd) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
-
-makeinclude:
-	cp $(INCDIR)/inc_tracer_$(tracer).f90       $(BUILD_DIR)/inc_tracer.h
-	cp $(INCDIR)/inc_precision_$(precision).f90 $(BUILD_DIR)/inc_precision.h
+	cd $(SCALELIBDIR)/src && $(MAKE) index=$(index) tracer=$(tracer) radiation=$(radiation) sfcflx=$(sfcflx) precision=$(precision) postfix=$(postfix) FFLAGS="$(FFLAGS_DEBUG)" BUILD_DIR=$(BUILD_DIR)
 
 makebin: $(BUILD_DIR)/$(PROJ_EXE)
 
 run:
 	$(BUILD_DIR)/$(PROJ_EXE) dummy.conf
 
-$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/$(LIBNAME) $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
-	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS)
+$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscalelib.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS)
 
 $(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
 

@@ -122,7 +122,7 @@ $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 	$(RANLIB) $@
 
 modules: 
-	install $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(INCDIR)
+	@install $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(INCDIR)
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean

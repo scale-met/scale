@@ -1,8 +1,11 @@
 module test_atmos_phy_tb_smg
 
   !-----------------------------------------------------------------------------
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_atmos_phy_tb, only: &
-     ATMOS_PHY_TB_main
+     ATMOS_PHY_TB
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
@@ -13,29 +16,25 @@ module test_atmos_phy_tb_smg
   public :: test_atmos_phy_tb_smg_run
 
   !-----------------------------------------------------------------------------
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-  !-----------------------------------------------------------------------------
-  real(RP) :: qflx_sgs_momz(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_momx(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_momy(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_rhot(KA,IA,JA,3)
-  real(RP) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+  real(RP), allocatable :: qflx_sgs_momz(:,:,:,:)
+  real(RP), allocatable :: qflx_sgs_momx(:,:,:,:)
+  real(RP), allocatable :: qflx_sgs_momy(:,:,:,:)
+  real(RP), allocatable :: qflx_sgs_rhot(:,:,:,:)
+  real(RP), allocatable :: qflx_sgs_qtrc(:,:,:,:,:)
 
-  real(RP) :: tke (KA,IA,JA) ! TKE
-  real(RP) :: nu_C(KA,IA,JA) ! eddy viscosity (center)
-  real(RP) :: Pr  (KA,IA,JA) ! Prantle number
-  real(RP) :: Ri  (KA,IA,JA) ! Richardson number
+  real(RP), allocatable :: tke (:,:,:) ! TKE
+  real(RP), allocatable :: nu_C(:,:,:) ! eddy viscosity (center)
+  real(RP), allocatable :: Pr  (:,:,:) ! Prantle number
+  real(RP), allocatable :: Ri  (:,:,:) ! Richardson number
 
-  real(RP) :: MOMZ(KA,IA,JA)
-  real(RP) :: MOMX(KA,IA,JA)
-  real(RP) :: MOMY(KA,IA,JA)
-  real(RP) :: RHOT(KA,IA,JA)
-  real(RP) :: DENS(KA,IA,JA)
-  real(RP) :: QTRC(KA,IA,JA,QA)
+  real(RP), allocatable :: MOMZ(:,:,:)
+  real(RP), allocatable :: MOMX(:,:,:)
+  real(RP), allocatable :: MOMY(:,:,:)
+  real(RP), allocatable :: RHOT(:,:,:)
+  real(RP), allocatable :: DENS(:,:,:)
+  real(RP), allocatable :: QTRC(:,:,:,:)
 
-  real(RP), save :: ZERO(KA,IA,JA,3)
+  real(RP), allocatable, save :: ZERO(:,:,:,:)
 
   integer, save :: KME ! end of main region
 
@@ -49,8 +48,10 @@ contains
   !
   !++ used modules
   !
+  use mod_stdio, only: &
+     IO_SYSCHR
   use mod_atmos_phy_tb, only: &
-     ATMOS_PHY_TB_init
+     ATMOS_PHY_TB_setup
   use mod_grid, only: &
      CDZ => GRID_CDZ, &
      CDX => GRID_CDX, &
@@ -69,11 +70,34 @@ contains
   !++ parameters & variables
   !
   !=============================================================================
+  character(len=IO_SYSCHR) :: TB_TYPE
+
+  ! allocate
+  allocate( qflx_sgs_momz(KA,IA,JA,3) )
+  allocate( qflx_sgs_momx(KA,IA,JA,3) )
+  allocate( qflx_sgs_momy(KA,IA,JA,3) )
+  allocate( qflx_sgs_rhot(KA,IA,JA,3) )
+  allocate( qflx_sgs_qtrc(KA,IA,JA,QA,3) )
+
+  allocate( tke (KA,IA,JA) )
+  allocate( nu_C(KA,IA,JA) )
+  allocate( Pr  (KA,IA,JA) )
+  allocate( Ri  (KA,IA,JA) )
+
+  allocate( MOMZ(KA,IA,JA) )
+  allocate( MOMX(KA,IA,JA) )
+  allocate( MOMY(KA,IA,JA) )
+  allocate( RHOT(KA,IA,JA) )
+  allocate( DENS(KA,IA,JA) )
+  allocate( QTRC(KA,IA,JA,QA) )
+
+  allocate( ZERO(KA,IA,JA,3) )
 
 
   !########## Initial setup ##########
-  call ATMOS_PHY_TB_init( &
-       0.3_RP, 1.0_RP, & ! (in)
+  TB_TYPE = "SMAGORINSKY"
+  call ATMOS_PHY_TB_setup( &
+       TB_TYPE,       & ! (in)
        CDZ, CDX, CDY, & ! (in)
        FDZ, FDX, FDY, & ! (in)
        CZ, FZ         ) ! (in)
@@ -112,7 +136,7 @@ subroutine test_zero
   DENS(:,:,:) = 1.0_RP
   QTRC(:,:,:,:) = 0.0_RP
 
-  call ATMOS_PHY_TB_main( &
+  call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
@@ -143,7 +167,7 @@ subroutine test_constant
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB_main( &
+  call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
@@ -181,7 +205,7 @@ subroutine test_big
      MOMX(k,i,j) = 2.0_RP * cos( k*2.0_RP + i*3.0_RP + j*1.0_RP )
      MOMY(k,i,j) = 3.0_RP * sin( k*3.0_RP + i*1.0_RP + j*2.0_RP )
      RHOT(k,i,j) = 4.0_RP * cos( k*1.0_RP + i*1.0_RP + j*3.0_RP ) + 300.0_RP
-     DENS(k,i,j) = 5.0_RP * sin( k*2.0_RP + i*2.0_RP + j*2.0_RP ) + 6.0_rp
+     DENS(k,i,j) = 0.1_RP * sin( k*2.0_RP + i*2.0_RP + j*2.0_RP ) + 1.0_rp
      do iq = 1, QA
         QTRC(k,i,j,iq) = 6.0_RP * sin( k*3.0_RP + i*3.0_RP + j*1.0_RP + iq*2.0_RP ) + 6.0_RP
      end do
@@ -191,7 +215,7 @@ subroutine test_big
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB_main( &
+  call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
@@ -243,7 +267,7 @@ subroutine test_double
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB_main( &
+  call ATMOS_PHY_TB( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
@@ -254,7 +278,7 @@ subroutine test_double
   MOMY(:,:,:) = MOMY(:,:,:) * 2.0_RP
   QTRC(:,:,:,:) = QTRC(:,:,:,:) * 2.0_RP
 
-  call ATMOS_PHY_TB_main( &
+  call ATMOS_PHY_TB( &
        qflx_sgs_momz2, qflx_sgs_momx2, qflx_sgs_momy2, & ! (out)
        qflx_sgs_rhot2, qflx_sgs_qtrc2,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)

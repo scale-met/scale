@@ -72,6 +72,7 @@ module mod_grid_real
   character(len=IO_FILECHR), private :: REAL_OUT_BASENAME = ''                  !< basename of the output file
   character(len=IO_SYSCHR),  private :: REAL_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title    of the output file
   character(len=IO_SYSCHR),  private :: REAL_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  logical, private :: allocated = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -92,20 +93,24 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
 
 
-    allocate( REAL_LON(IA,JA) )
-    allocate( REAL_LAT(IA,JA) )
-    allocate( REAL_CZ (  KA,IA,JA) )
-    allocate( REAL_FZ (0:KA,IA,JA) )
+    if ( .not. allocated ) then
+       allocate( REAL_LON(IA,JA) )
+       allocate( REAL_LAT(IA,JA) )
+       allocate( REAL_CZ (  KA,IA,JA) )
+       allocate( REAL_FZ (0:KA,IA,JA) )
 
-    allocate( REAL_LONX(IA,JA) )
-    allocate( REAL_LATY(IA,JA) )
-    allocate( REAL_DLON(IA,JA) )
-    allocate( REAL_DLAT(IA,JA) )
+       allocate( REAL_LONX(IA,JA) )
+       allocate( REAL_LATY(IA,JA) )
+       allocate( REAL_DLON(IA,JA) )
+       allocate( REAL_DLAT(IA,JA) )
 
-    allocate( REAL_PHI (KA,IA,JA) )
+       allocate( REAL_PHI (KA,IA,JA) )
 
-    allocate( REAL_AREA(IA,JA) )
-    allocate( REAL_VOL (KA,IA,JA) )
+       allocate( REAL_AREA(IA,JA) )
+       allocate( REAL_VOL (KA,IA,JA) )
+
+       allocated = .true.
+    end if
 
 
     ! setup map projection

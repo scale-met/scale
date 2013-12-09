@@ -703,8 +703,12 @@ contains
                PT, A, B ) ! (in)
 #else
           call solve_lapack( &
-               C,         & ! (out)
-               PT, A, B ) ! (in)
+               C,       & ! (out)
+               PT, A, B &
+#ifdef DEBUG
+               , i, j &
+#endif
+               ) ! (in)
 #endif
 
           ! z momentum flux
@@ -1324,7 +1328,11 @@ contains
 
   subroutine solve_lapack( &
        C,       & ! (inout)
-       PT, A, B ) ! (in)
+       PT, A, B &
+#ifdef DEBUG
+       , i, j &
+#endif
+       ) ! (in)
     use mod_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
@@ -1334,6 +1342,10 @@ contains
     real(RP), intent(in)    :: PT(KA)
     real(RP), intent(in)    :: A(KA)
     real(RP), intent(in)    :: B
+#ifdef DEBUG
+    integer , intent(in)    :: i
+    integer , intent(in)    :: j
+#endif
 
     real(RP) :: M(NB*3+1,KMAX-1)
     integer  :: IPIV(KMAX-1)

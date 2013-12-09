@@ -151,7 +151,7 @@ contains
 
     select case (TRACER_TYPE)
 % types.each do |type|
-    case ("<%=type%>")
+    case ("<%=type.upcase%>")
 %   vars_int.each do |var|
        <%=var%> = <%=var%>_<%=type%>
 %   end
@@ -165,10 +165,13 @@ contains
 %   vars_ary.each do |var|
        <%=var%> = <%=var%>_<%=type%>
 %   end
-    call TRACER_<%=type%>_setup
+       call TRACER_<%=type%>_setup
 % end
 #endif
-   end select
+     case default
+        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+        call PRC_MPIstop
+     end select
 
   end subroutine TRACER_setup
 

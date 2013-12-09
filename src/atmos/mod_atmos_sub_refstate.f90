@@ -18,6 +18,9 @@ module mod_atmos_refstate
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use gtool_file_h, only: &
      File_HLONG
   use mod_stdio, only: &
@@ -30,14 +33,6 @@ module mod_atmos_refstate
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -53,11 +48,11 @@ module mod_atmos_refstate
   !
   logical,  public, save :: ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
-  real(RP), public, save :: ATMOS_REFSTATE_pres(KA,IA,JA) !< refernce pressure [Pa]
-  real(RP), public, save :: ATMOS_REFSTATE_temp(KA,IA,JA) !< refernce temperature [K]
-  real(RP), public, save :: ATMOS_REFSTATE_dens(KA,IA,JA) !< refernce density [kg/m3]
-  real(RP), public, save :: ATMOS_REFSTATE_pott(KA,IA,JA) !< refernce potential temperature [K]
-  real(RP), public, save :: ATMOS_REFSTATE_qv  (KA,IA,JA) !< refernce vapor [kg/kg]
+  real(RP), public, allocatable :: ATMOS_REFSTATE_pres(:,:,:) !< refernce pressure [Pa]
+  real(RP), public, allocatable :: ATMOS_REFSTATE_temp(:,:,:) !< refernce temperature [K]
+  real(RP), public, allocatable :: ATMOS_REFSTATE_dens(:,:,:) !< refernce density [kg/m3]
+  real(RP), public, allocatable :: ATMOS_REFSTATE_pott(:,:,:) !< refernce potential temperature [K]
+  real(RP), public, allocatable :: ATMOS_REFSTATE_qv  (:,:,:) !< refernce vapor [kg/kg]
 
   !-----------------------------------------------------------------------------
   !
@@ -71,11 +66,11 @@ module mod_atmos_refstate
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: ATMOS_REFSTATE1D_pres(KA) !< 1D refernce pressure [Pa]
-  real(RP), private, save :: ATMOS_REFSTATE1D_temp(KA) !< 1D refernce temperature [K]
-  real(RP), private, save :: ATMOS_REFSTATE1D_dens(KA) !< 1D refernce density [kg/m3]
-  real(RP), private, save :: ATMOS_REFSTATE1D_pott(KA) !< 1D refernce potential temperature [K]
-  real(RP), private, save :: ATMOS_REFSTATE1D_qv  (KA) !< 1D refernce vapor [kg/kg]
+  real(RP), private, allocatable :: ATMOS_REFSTATE1D_pres(:) !< 1D refernce pressure [Pa]
+  real(RP), private, allocatable :: ATMOS_REFSTATE1D_temp(:) !< 1D refernce temperature [K]
+  real(RP), private, allocatable :: ATMOS_REFSTATE1D_dens(:) !< 1D refernce density [kg/m3]
+  real(RP), private, allocatable :: ATMOS_REFSTATE1D_pott(:) !< 1D refernce potential temperature [K]
+  real(RP), private, allocatable :: ATMOS_REFSTATE1D_qv  (:) !< 1D refernce vapor [kg/kg]
 
   character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_IN_BASENAME  = ''                !< basename of the input  file
   character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_OUT_BASENAME = ''                !< basename of the output file
@@ -121,6 +116,18 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REFSTATE]/Categ[ATMOS]'
+
+    allocate( ATMOS_REFSTATE_pres(KA,IA,JA) )
+    allocate( ATMOS_REFSTATE_temp(KA,IA,JA) )
+    allocate( ATMOS_REFSTATE_dens(KA,IA,JA) )
+    allocate( ATMOS_REFSTATE_pott(KA,IA,JA) )
+    allocate( ATMOS_REFSTATE_qv  (KA,IA,JA) )
+
+    allocate( ATMOS_REFSTATE1D_pres(KA) )
+    allocate( ATMOS_REFSTATE1D_temp(KA) )
+    allocate( ATMOS_REFSTATE1D_dens(KA) )
+    allocate( ATMOS_REFSTATE1D_pott(KA) )
+    allocate( ATMOS_REFSTATE1D_qv  (KA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)

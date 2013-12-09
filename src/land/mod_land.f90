@@ -14,6 +14,8 @@ module mod_land
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -30,11 +32,6 @@ module mod_land
   public :: LAND_setup
   public :: LAND_step
 
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables

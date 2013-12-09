@@ -240,13 +240,14 @@ contains
      enddo
      enddo
 
+     flux_rad(:,:,:,I_SW,I_dn) = 0.0_RP
+     flux_rad(:,:,:,I_SW,I_up) = 0.0_RP
+     flux_rad(:,:,:,I_LW,I_dn) = 0.0_RP
+     flux_top(:,:,:) = UNDEF
+     solins(:,:) = UNDEF
+     cosSZA(:,:) = UNDEF
+
      if ( .not. first ) then
-        flux_rad(:,:,:,I_SW,I_dn) = 0.0_RP
-        flux_rad(:,:,:,I_SW,I_up) = 0.0_RP
-        flux_rad(:,:,:,I_LW,I_dn) = 0.0_RP
-        flux_top(:,:,:) = UNDEF
-        solins(:,:) = UNDEF
-        cosSZA(:,:) = UNDEF
         call HIST_in( Zi(:,:), 'Zi', 'Cloud top height', 'm', dtrd )
         first = .false.
      endif

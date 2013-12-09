@@ -19,6 +19,7 @@ module mod_atmos
   !
   !++ used modules
   !
+  use mod_precision
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -35,10 +36,6 @@ module mod_atmos
   public :: ATMOS_setup
   public :: ATMOS_step
 
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables

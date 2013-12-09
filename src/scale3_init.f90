@@ -39,6 +39,8 @@ program scaleinit
      TIME_rapreport
   use mod_grid, only: &
      GRID_setup
+  use mod_tracer, only: &
+     TRACER_setup
   use mod_fileio, only: &
      FILEIO_setup
   use mod_comm, only: &
@@ -112,6 +114,9 @@ program scaleinit
 
   ! setup horisontal/veritical grid system
   call GRID_setup
+
+  ! setup tracer
+  call TRACER_setup
 
   ! setup file I/O
   call FILEIO_setup
