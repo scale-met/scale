@@ -19,6 +19,9 @@ module mod_atmos_boundary
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -45,23 +48,14 @@ module mod_atmos_boundary
   !
   !++ included parameters
   !
-# include "scale-les.h"
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+# include "scalelib.h"
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: I_BND_VELZ = 1 ! reference velocity (z) [m/s]
-  integer, public, parameter :: I_BND_VELX = 2 ! reference velocity (x) [m/s]
-  integer, public, parameter :: I_BND_VELY = 3 ! reference velocity (y) [m/s]
-  integer, public, parameter :: I_BND_POTT = 4 ! reference potential temperature [K]
-  integer, public, parameter :: I_BND_QV   = 5 ! reference water vapor [kg/kg]
-
-  real(RP), public, save :: ATMOS_BOUNDARY_var  (KA,IA,JA,5) !> reference container (with HALO)
-  real(RP), public, save :: ATMOS_BOUNDARY_alpha(KA,IA,JA,5) ! damping coefficient [0-1]
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:) !> reference container (with HALO)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha(:,:,:,:) !> damping coefficient [0-1]
 
   !-----------------------------------------------------------------------------
   !
@@ -144,6 +138,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
+
+    allocate( ATMOS_BOUNDARY_var  (KA,IA,JA,5) )
+    allocate( ATMOS_BOUNDARY_alpha(KA,IA,JA,5) )
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -17,6 +17,8 @@ module mod_atmos_vars_sf
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -41,26 +43,24 @@ module mod_atmos_vars_sf
   !
   !++ included parameters
   !
-# include "scale-les.h"
-  include "inc_precision.h"
-  include 'inc_index.h'
+# include "scalelib.h"
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: PREC(IA,JA) ! surface precipitation rate [kg/m2/s]
-  real(RP), public, save :: SWD (IA,JA) ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save :: LWD (IA,JA) ! downward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: PREC(:,:) ! surface precipitation rate [kg/m2/s]
+  real(RP), public, allocatable :: SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
 
-  real(RP), public, save :: SFLX_MOMZ (IA,JA) ! momentum z [kg/s/m2]
-  real(RP), public, save :: SFLX_MOMX (IA,JA) ! momentum x [kg/s/m2]
-  real(RP), public, save :: SFLX_MOMY (IA,JA) ! momentum y [kg/s/m2]
-  real(RP), public, save :: SFLX_SWU  (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_LWU  (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_SH   (IA,JA) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_LH   (IA,JA) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, save :: SFLX_QVAtm(IA,JA) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, allocatable :: SFLX_MOMZ (:,:) ! momentum z [kg/s/m2]
+  real(RP), public, allocatable :: SFLX_MOMX (:,:) ! momentum x [kg/s/m2]
+  real(RP), public, allocatable :: SFLX_MOMY (:,:) ! momentum y [kg/s/m2]
+  real(RP), public, allocatable :: SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -100,6 +100,19 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Variables]/Categ[ATMOS]'
+
+    allocate( PREC(IA,JA) )
+    allocate( SWD (IA,JA) )
+    allocate( LWD (IA,JA) )
+
+    allocate( SFLX_MOMZ (IA,JA) )
+    allocate( SFLX_MOMX (IA,JA) )
+    allocate( SFLX_MOMY (IA,JA) )
+    allocate( SFLX_SWU  (IA,JA) )
+    allocate( SFLX_LWU  (IA,JA) )
+    allocate( SFLX_SH   (IA,JA) )
+    allocate( SFLX_LH   (IA,JA) )
+    allocate( SFLX_QVAtm(IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)

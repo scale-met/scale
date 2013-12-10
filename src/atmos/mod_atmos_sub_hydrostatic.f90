@@ -13,6 +13,8 @@ module mod_atmos_hydrostatic
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -34,13 +36,6 @@ module mod_atmos_hydrostatic
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure

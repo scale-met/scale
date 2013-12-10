@@ -13,6 +13,8 @@ module mod_ocean_phy
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -22,13 +24,6 @@ module mod_ocean_phy
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -108,7 +103,7 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          SST(1,i,j) = OCEAN_FIXEDSST_STARTSST
+          SST(i,j) = OCEAN_FIXEDSST_STARTSST
        enddo
        enddo
     endif
@@ -131,11 +126,11 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean SST step:', &
-               SST(1,IS,JS), '->', SST(1,IS,JS) + OCEAN_FIXEDSST_RATE * dt
+               SST(IS,JS), '->', SST(IS,JS) + OCEAN_FIXEDSST_RATE * dt
 
     do j = 1, JA
     do i = 1, IA
-       SST(1,i,j) = SST(1,i,j) + OCEAN_FIXEDSST_RATE * dt
+       SST(i,j) = SST(i,j) + OCEAN_FIXEDSST_RATE * dt
     enddo
     enddo
 

@@ -9,7 +9,6 @@ $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 
 build: makedir $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	$(MAKE) -C $(SRCDIR) BUILD_DIR=$(BUILD_DIR)   \
-                        INDEX_DIR=$(INDEX_DIR)   \
                         SYSDEP_DIR=$(SYSDEP_DIR) \
                         index=$(index)           \
                         precision=$(precision)   \

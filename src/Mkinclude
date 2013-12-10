@@ -6,10 +6,12 @@ ifeq ($(origin LIBDIR), undefined)
    LIBDIR = $(TOPDIR)/lib
 endif
 
-GTOOLDIR   = $(TOPDIR)/gtool
-DCUTILSDIR = $(TOPDIR)/dc_utils
+GTOOLDIR    = $(TOPDIR)/gtool
+DCUTILSDIR  = $(TOPDIR)/dc_utils
+SCALELIBDIR = $(TOPDIR)/scalelib
 SRCDIR     = $(TOPDIR)/src
-INCDIR     = $(TOPDIR)/src/include
+INCDIR     = $(TOPDIR)/include
+LIBDIR     = $(TOPDIR)/lib
 
 SUFFIX = $(index)_$(precision)_$(dynamics)_$(tracer)_$(sfcflx)_$(radiation)_$(turbulence)_$(postfix)
 

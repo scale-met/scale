@@ -15,6 +15,9 @@ module mod_cpl_atmos_land
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -28,14 +31,6 @@ module mod_cpl_atmos_land
   public :: CPL_AtmLnd_setup
   public :: CPL_AtmLnd_solve
   public :: CPL_AtmLnd_unsolve
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
@@ -72,34 +67,34 @@ module mod_cpl_atmos_land
   real(RP), private, parameter :: U_maxE = 100.0_RP  !                   q
 
   ! work
-  real(RP), private, save :: pDENS(KA,IA,JA)
-  real(RP), private, save :: pMOMX(KA,IA,JA)
-  real(RP), private, save :: pMOMY(KA,IA,JA)
-  real(RP), private, save :: pMOMZ(KA,IA,JA)
-  real(RP), private, save :: pRHOT(KA,IA,JA)
-  real(RP), private, save :: pQTRC(KA,IA,JA,QA)
-  real(RP), private, save :: pPREC(IA,JA)
-  real(RP), private, save :: pSWD (IA,JA)
-  real(RP), private, save :: pLWD (IA,JA)
+  real(RP), private, allocatable :: pDENS(:,:,:)
+  real(RP), private, allocatable :: pMOMX(:,:,:)
+  real(RP), private, allocatable :: pMOMY(:,:,:)
+  real(RP), private, allocatable :: pMOMZ(:,:,:)
+  real(RP), private, allocatable :: pRHOT(:,:,:)
+  real(RP), private, allocatable :: pQTRC(:,:,:,:)
+  real(RP), private, allocatable :: pPREC(:,:)
+  real(RP), private, allocatable :: pSWD (:,:)
+  real(RP), private, allocatable :: pLWD (:,:)
 
-  real(RP), private, save :: pTG   (IA,JA)
-  real(RP), private, save :: pQvEfc(IA,JA)
-  real(RP), private, save :: pEMIT (IA,JA)
-  real(RP), private, save :: pALB  (IA,JA)
-  real(RP), private, save :: pTCS  (IA,JA)
-  real(RP), private, save :: pDZg  (IA,JA)
-  real(RP), private, save :: pZ0M  (IA,JA)
-  real(RP), private, save :: pZ0H  (IA,JA)
-  real(RP), private, save :: pZ0E  (IA,JA)
+  real(RP), private, allocatable :: pTG   (:,:)
+  real(RP), private, allocatable :: pQvEfc(:,:)
+  real(RP), private, allocatable :: pEMIT (:,:)
+  real(RP), private, allocatable :: pALB  (:,:)
+  real(RP), private, allocatable :: pTCS  (:,:)
+  real(RP), private, allocatable :: pDZg  (:,:)
+  real(RP), private, allocatable :: pZ0M  (:,:)
+  real(RP), private, allocatable :: pZ0H  (:,:)
+  real(RP), private, allocatable :: pZ0E  (:,:)
 
-  real(RP), private, save :: pSFLX_MOMX(IA,JA)
-  real(RP), private, save :: pSFLX_MOMY(IA,JA)
-  real(RP), private, save :: pSFLX_MOMZ(IA,JA)
-  real(RP), private, save :: pSFLX_SWU (IA,JA)
-  real(RP), private, save :: pSFLX_LWU (IA,JA)
-  real(RP), private, save :: pSFLX_SH  (IA,JA)
-  real(RP), private, save :: pSFLX_LH  (IA,JA)
-  real(RP), private, save :: pSFLX_GH  (IA,JA)
+  real(RP), private, allocatable :: pSFLX_MOMX(:,:)
+  real(RP), private, allocatable :: pSFLX_MOMY(:,:)
+  real(RP), private, allocatable :: pSFLX_MOMZ(:,:)
+  real(RP), private, allocatable :: pSFLX_SWU (:,:)
+  real(RP), private, allocatable :: pSFLX_LWU (:,:)
+  real(RP), private, allocatable :: pSFLX_SH  (:,:)
+  real(RP), private, allocatable :: pSFLX_LH  (:,:)
+  real(RP), private, allocatable :: pSFLX_GH  (:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -113,6 +108,35 @@ contains
        CPL_AtmLnd_flushCPL
     implicit none
     !---------------------------------------------------------------------------
+
+    allocate( pDENS(KA,IA,JA) )
+    allocate( pMOMX(KA,IA,JA) )
+    allocate( pMOMY(KA,IA,JA) )
+    allocate( pMOMZ(KA,IA,JA) )
+    allocate( pRHOT(KA,IA,JA) )
+    allocate( pQTRC(KA,IA,JA,QA) )
+    allocate( pPREC(IA,JA) )
+    allocate( pSWD (IA,JA) )
+    allocate( pLWD (IA,JA) )
+
+    allocate( pTG   (IA,JA) )
+    allocate( pQvEfc(IA,JA) )
+    allocate( pEMIT (IA,JA) )
+    allocate( pALB  (IA,JA) )
+    allocate( pTCS  (IA,JA) )
+    allocate( pDZg  (IA,JA) )
+    allocate( pZ0M  (IA,JA) )
+    allocate( pZ0H  (IA,JA) )
+    allocate( pZ0E  (IA,JA) )
+
+    allocate( pSFLX_MOMX(IA,JA) )
+    allocate( pSFLX_MOMY(IA,JA) )
+    allocate( pSFLX_MOMZ(IA,JA) )
+    allocate( pSFLX_SWU (IA,JA) )
+    allocate( pSFLX_LWU (IA,JA) )
+    allocate( pSFLX_SH  (IA,JA) )
+    allocate( pSFLX_LH  (IA,JA) )
+    allocate( pSFLX_GH  (IA,JA) )
 
     call CPL_flushAtm
     call CPL_flushLnd

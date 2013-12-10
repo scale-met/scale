@@ -18,6 +18,9 @@ module mod_cpl_vars
      File_HSHORT, &
      File_HMID,   &
      File_HLONG
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -29,15 +32,6 @@ module mod_cpl_vars
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-!  include 'inc_land.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -64,12 +58,12 @@ module mod_cpl_vars
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: LST  (IA,JA) ! Land Surface Temperature [K]
-  real(RP), public, save :: SST  (IA,JA) ! Sea Surface Temperature [K]
-  real(RP), public, save :: SkinT(IA,JA) ! Ground Skin Temperature [K]
-  real(RP), public, save :: SkinW(IA,JA) ! Ground Skin Water       [kg/m2]
-  real(RP), public, save :: SnowQ(IA,JA) ! Ground Snow amount      [kg/m2]
-  real(RP), public, save :: SnowT(IA,JA) ! Ground Snow Temperature [K]
+  real(RP), public, allocatable :: LST  (:,:) ! Land Surface Temperature [K]
+  real(RP), public, allocatable :: SST  (:,:) ! Sea Surface Temperature [K]
+  real(RP), public, allocatable :: SkinT(:,:) ! Ground Skin Temperature [K]
+  real(RP), public, allocatable :: SkinW(:,:) ! Ground Skin Water       [kg/m2]
+  real(RP), public, allocatable :: SnowQ(:,:) ! Ground Snow amount      [kg/m2]
+  real(RP), public, allocatable :: SnowT(:,:) ! Ground Snow Temperature [K]
 
   character(len=IO_SYSCHR),  public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
   character(len=IO_SYSCHR),  public, save :: CPL_TYPE_AtmOcn = 'OFF' !< atmos-ocean coupler type
@@ -94,56 +88,56 @@ module mod_cpl_vars
   logical,                   private, save :: CPL_VARS_CHECKRANGE      = .false.
 
   ! surface fluxes for atmosphere
-  real(RP), private, save :: SFLX_MOMX (IA,JA) ! momentum flux for x [kg/m2/s]
-  real(RP), private, save :: SFLX_MOMY (IA,JA) ! momentum flux for y [kg/m2/s]
-  real(RP), private, save :: SFLX_MOMZ (IA,JA) ! momentum flux for z [kg/m2/s]
-  real(RP), private, save :: SFLX_SWU  (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_LWU  (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_SH   (IA,JA) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_LH   (IA,JA) ! latent heat flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_QVAtm(IA,JA) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_MOMX (:,:) ! momentum flux for x [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_MOMY (:,:) ! momentum flux for y [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_MOMZ (:,:) ! momentum flux for z [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! surface fluxes for land
-  real(RP), private, save :: SFLX_GH   (IA,JA) ! ground heat flux (upward positive) [W/m2]
-  real(RP), private, save :: SFLX_PREC (IA,JA) ! precipitation flux [kg/m2/s]
-  real(RP), private, save :: SFLX_QVLnd(IA,JA) ! moisture flux for land [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
+  real(RP), private, allocatable :: SFLX_QVLnd(:,:) ! moisture flux for land [kg/m2/s]
 
   ! Atmospheric values
-  real(RP), private, save :: DENS(KA,IA,JA)    ! air density [kg/m3]
-  real(RP), private, save :: MOMX(KA,IA,JA)    ! momentum x [kg/m2/s]
-  real(RP), private, save :: MOMY(KA,IA,JA)    ! momentum y [kg/m2/s]
-  real(RP), private, save :: MOMZ(KA,IA,JA)    ! momentum z [kg/m2/s]
-  real(RP), private, save :: RHOT(KA,IA,JA)    ! rho * theta [K*kg/m3]
-  real(RP), private, save :: QTRC(KA,IA,JA,QA) ! ratio of mass of tracer to total mass [kg/kg]
-  real(RP), private, save :: PREC(IA,JA)       ! surface precipitation rate [kg/m2/s]
-  real(RP), private, save :: SWD (IA,JA)       ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: LWD (IA,JA)       ! downward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: DENS(:,:,:)   ! air density [kg/m3]
+  real(RP), private, allocatable :: MOMX(:,:,:)   ! momentum x [kg/m2/s]
+  real(RP), private, allocatable :: MOMY(:,:,:)   ! momentum y [kg/m2/s]
+  real(RP), private, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/m2/s]
+  real(RP), private, allocatable :: RHOT(:,:,:)   ! rho * theta [K*kg/m3]
+  real(RP), private, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass [kg/kg]
+  real(RP), private, allocatable :: PREC(:,:)       ! surface precipitation rate [kg/m2/s]
+  real(RP), private, allocatable :: SWD (:,:)       ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: LWD (:,:)       ! downward long-wave radiation flux (upward positive) [W/m2]
 
   ! Land values
-  real(RP), private, save :: TG   (IA,JA) ! soil temperature [K]
-  real(RP), private, save :: QvEfc(IA,JA) ! efficiency of evaporation [no unit]
-  real(RP), private, save :: EMIT (IA,JA) ! emissivity in long-wave radiation [no unit]
-  real(RP), private, save :: ALB  (IA,JA) ! surface albedo in short-wave radiation [no unit]
-  real(RP), private, save :: TCS  (IA,JA) ! thermal conductivity for soil [W/m/K]
-  real(RP), private, save :: DZg  (IA,JA) ! soil depth [m]
-  real(RP), private, save :: Z0M  (IA,JA) ! roughness length for momemtum [m]
-  real(RP), private, save :: Z0H  (IA,JA) ! roughness length for heat [m]
-  real(RP), private, save :: Z0E  (IA,JA) ! roughness length for moisture [m]
+  real(RP), private, allocatable :: TG   (:,:) ! soil temperature [K]
+  real(RP), private, allocatable :: QvEfc(:,:) ! efficiency of evaporation [no unit]
+  real(RP), private, allocatable :: EMIT (:,:) ! emissivity in long-wave radiation [no unit]
+  real(RP), private, allocatable :: ALB  (:,:) ! surface albedo in short-wave radiation [no unit]
+  real(RP), private, allocatable :: TCS  (:,:) ! thermal conductivity for soil [W/m/K]
+  real(RP), private, allocatable :: DZg  (:,:) ! soil depth [m]
+  real(RP), private, allocatable :: Z0M  (:,:) ! roughness length for momemtum [m]
+  real(RP), private, allocatable :: Z0H  (:,:) ! roughness length for heat [m]
+  real(RP), private, allocatable :: Z0E  (:,:) ! roughness length for moisture [m]
 
   ! AtmLnd surface fluxes for atmosphere
-  real(RP), private, save :: Lnd_SFLX_MOMX (IA,JA) ! momentum flux for x [kg/m2/s]
-  real(RP), private, save :: Lnd_SFLX_MOMY (IA,JA) ! momentum flux for y [kg/m2/s]
-  real(RP), private, save :: Lnd_SFLX_MOMZ (IA,JA) ! momentum flux for z [kg/m2/s]
-  real(RP), private, save :: Lnd_SFLX_SWU  (IA,JA) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: Lnd_SFLX_LWU  (IA,JA) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, save :: Lnd_SFLX_SH   (IA,JA) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), private, save :: Lnd_SFLX_LH   (IA,JA) ! latent heat flux (upward positive) [W/m2]
-  real(RP), private, save :: Lnd_SFLX_QVAtm(IA,JA) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_MOMX (:,:) ! momentum flux for x [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_MOMY (:,:) ! momentum flux for y [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_MOMZ (:,:) ! momentum flux for z [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: Lnd_SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: Lnd_SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: Lnd_SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: Lnd_SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! AtmLnd surface fluxes for land
-  real(RP), private, save :: Lnd_SFLX_GH   (IA,JA) ! ground heat flux (upward positive) [W/m2]
-  real(RP), private, save :: Lnd_SFLX_PREC (IA,JA) ! precipitation flux [kg/m2/s]
-  real(RP), private, save :: Lnd_SFLX_QVLnd(IA,JA) ! moisture flux for land [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: Lnd_SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
+  real(RP), private, allocatable :: Lnd_SFLX_QVLnd(:,:) ! moisture flux for land [kg/m2/s]
 
   ! counter
   real(RP), private, save :: CNT_putAtm     ! counter for putAtm
@@ -254,6 +248,59 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
+
+    allocate( LST  (IA,JA) )
+    allocate( SST  (IA,JA) )
+    allocate( SkinT(IA,JA) )
+    allocate( SkinW(IA,JA) )
+    allocate( SnowQ(IA,JA) )
+    allocate( SnowT(IA,JA) )
+
+    allocate( SFLX_MOMX (IA,JA) )
+    allocate( SFLX_MOMY (IA,JA) )
+    allocate( SFLX_MOMZ (IA,JA) )
+    allocate( SFLX_SWU  (IA,JA) )
+    allocate( SFLX_LWU  (IA,JA) )
+    allocate( SFLX_SH   (IA,JA) )
+    allocate( SFLX_LH   (IA,JA) )
+    allocate( SFLX_QVAtm(IA,JA) )
+
+    allocate( SFLX_GH   (IA,JA) )
+    allocate( SFLX_PREC (IA,JA) )
+    allocate( SFLX_QVLnd(IA,JA) )
+
+    allocate( DENS(KA,IA,JA)    )
+    allocate( MOMX(KA,IA,JA)    )
+    allocate( MOMY(KA,IA,JA)    )
+    allocate( MOMZ(KA,IA,JA)    )
+    allocate( RHOT(KA,IA,JA)    )
+    allocate( QTRC(KA,IA,JA,QA) )
+    allocate( PREC(IA,JA)       )
+    allocate( SWD (IA,JA)       )
+    allocate( LWD (IA,JA)       )
+
+    allocate( TG   (IA,JA) )
+    allocate( QvEfc(IA,JA) )
+    allocate( EMIT (IA,JA) )
+    allocate( ALB  (IA,JA) )
+    allocate( TCS  (IA,JA) )
+    allocate( DZg  (IA,JA) )
+    allocate( Z0M  (IA,JA) )
+    allocate( Z0H  (IA,JA) )
+    allocate( Z0E  (IA,JA) )
+
+    allocate( Lnd_SFLX_MOMX (IA,JA) )
+    allocate( Lnd_SFLX_MOMY (IA,JA) )
+    allocate( Lnd_SFLX_MOMZ (IA,JA) )
+    allocate( Lnd_SFLX_SWU  (IA,JA) )
+    allocate( Lnd_SFLX_LWU  (IA,JA) )
+    allocate( Lnd_SFLX_SH   (IA,JA) )
+    allocate( Lnd_SFLX_LH   (IA,JA) )
+    allocate( Lnd_SFLX_QVAtm(IA,JA) )
+
+    allocate( Lnd_SFLX_GH   (IA,JA) )
+    allocate( Lnd_SFLX_PREC (IA,JA) )
+    allocate( Lnd_SFLX_QVLnd(IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)

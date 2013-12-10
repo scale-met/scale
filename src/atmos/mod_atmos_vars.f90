@@ -19,6 +19,11 @@ module mod_atmos_vars
   !
   !++ used modules
   !
+  use gtool_file_h, only: &
+     File_HLONG
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -27,11 +32,10 @@ module mod_atmos_vars
   use mod_time, only: &
      TIME_rapstart, &
      TIME_rapend
-  use gtool_file_h, only: &
-     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -48,22 +52,19 @@ module mod_atmos_vars
   !
   !++ included parameters
   !
-# include "scale-les.h"
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
+# include "scalelib.h"
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_DYN    = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_SF = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_TB = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_MP = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_RD = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_AE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_TYPE_PHY_CH = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_DYN_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
+  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
 
   logical,                  public, save :: ATMOS_sw_dyn
   logical,                  public, save :: ATMOS_sw_phy_sf
@@ -76,19 +77,19 @@ module mod_atmos_vars
   logical,                  public, save :: ATMOS_USE_AVERAGE = .false.
 
   ! prognostic variables
-  real(RP), public, target  :: DENS(KA,IA,JA)    ! Density    [kg/m3]
-  real(RP), public, target  :: MOMZ(KA,IA,JA)    ! momentum z [kg/s/m2]
-  real(RP), public, target  :: MOMX(KA,IA,JA)    ! momentum x [kg/s/m2]
-  real(RP), public, target  :: MOMY(KA,IA,JA)    ! momentum y [kg/s/m2]
-  real(RP), public, target  :: RHOT(KA,IA,JA)    ! DENS * POTT [K*kg/m3]
-  real(RP), public, target  :: QTRC(KA,IA,JA,QA) ! ratio of mass of tracer to total mass[kg/kg]
+  real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density    [kg/m3]
+  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y [kg/s/m2]
+  real(RP), public, target, allocatable :: RHOT(:,:,:)   ! DENS * POTT [K*kg/m3]
+  real(RP), public, target, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass[kg/kg]
 
-  real(RP), public, target  :: DENS_avw(KA,IA,JA)
-  real(RP), public, target  :: MOMZ_avw(KA,IA,JA)
-  real(RP), public, target  :: MOMX_avw(KA,IA,JA)
-  real(RP), public, target  :: MOMY_avw(KA,IA,JA)
-  real(RP), public, target  :: RHOT_avw(KA,IA,JA)
-  real(RP), public, target  :: QTRC_avw(KA,IA,JA,QA)
+  real(RP), public, target, allocatable :: DENS_avw(:,:,:)
+  real(RP), public, target, allocatable :: MOMZ_avw(:,:,:)
+  real(RP), public, target, allocatable :: MOMX_avw(:,:,:)
+  real(RP), public, target, allocatable :: MOMY_avw(:,:,:)
+  real(RP), public, target, allocatable :: RHOT_avw(:,:,:)
+  real(RP), public, target, allocatable :: QTRC_avw(:,:,:,:)
 
   real(RP), public, pointer :: DENS_av(:,:,:)
   real(RP), public, pointer :: MOMZ_av(:,:,:)
@@ -98,23 +99,12 @@ module mod_atmos_vars
   real(RP), public, pointer :: QTRC_av(:,:,:,:)
 
   ! tendency by physical processes
-  real(RP), public, save    :: DENS_tp(KA,IA,JA)
-  real(RP), public, save    :: MOMZ_tp(KA,IA,JA)
-  real(RP), public, save    :: MOMX_tp(KA,IA,JA)
-  real(RP), public, save    :: MOMY_tp(KA,IA,JA)
-  real(RP), public, save    :: RHOT_tp(KA,IA,JA)
-  real(RP), public, save    :: QTRC_tp(KA,IA,JA,QA)
-
-  integer, public, parameter :: ZDIR = 1
-  integer, public, parameter :: XDIR = 2
-  integer, public, parameter :: YDIR = 3
-
-  integer, public, parameter :: I_DENS = 1
-  integer, public, parameter :: I_MOMZ = 2
-  integer, public, parameter :: I_MOMX = 3
-  integer, public, parameter :: I_MOMY = 4
-  integer, public, parameter :: I_RHOT = 5
-  integer, public, parameter :: I_QTRC = 6
+  real(RP), public, allocatable :: DENS_tp(:,:,:)
+  real(RP), public, allocatable :: MOMZ_tp(:,:,:)
+  real(RP), public, allocatable :: MOMX_tp(:,:,:)
+  real(RP), public, allocatable :: MOMY_tp(:,:,:)
+  real(RP), public, allocatable :: RHOT_tp(:,:,:)
+  real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
 
   character(len=16), public, save :: AP_NAME(5)
   character(len=64), public, save :: AP_DESC(5)
@@ -156,8 +146,8 @@ module mod_atmos_vars
   logical,                   private, save :: ATMOS_VARS_CHECKRANGE          = .false.
 
   ! history output of prognostic variables
-  integer, private, save      :: AP_HIST_id(5)
-  integer, private, save      :: AQ_HIST_id(QA)
+  integer, private              :: AP_HIST_id(5)
+  integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
   integer, private, parameter :: AD_nmax = 26 ! number of diagnostic variables for history output
@@ -215,14 +205,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS / &
-       ATMOS_TYPE_DYN,    &
-       ATMOS_TYPE_PHY_SF, &
-       ATMOS_TYPE_PHY_TB, &
-       ATMOS_TYPE_PHY_MP, &
-       ATMOS_TYPE_PHY_RD, &
-       ATMOS_TYPE_PHY_AE, &
-       ATMOS_TYPE_PHY_CH, &
-       ATMOS_USE_AVERAGE
+       ATMOS_DYN_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_PHY_CH_TYPE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
@@ -240,6 +229,23 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Variables]/Categ[ATMOS]'
+
+    allocate( AQ_HIST_id(QA) )
+
+    allocate( DENS(KA,IA,JA) )
+    allocate( MOMZ(KA,IA,JA) )
+    allocate( MOMX(KA,IA,JA) )
+    allocate( MOMY(KA,IA,JA) )
+    allocate( RHOT(KA,IA,JA) )
+    allocate( QTRC(KA,IA,JA,QA) )
+
+    allocate( DENS_tp(KA,IA,JA) )
+    allocate( MOMZ_tp(KA,IA,JA) )
+    allocate( MOMX_tp(KA,IA,JA) )
+    allocate( MOMY_tp(KA,IA,JA) )
+    allocate( RHOT_tp(KA,IA,JA) )
+    allocate( QTRC_tp(KA,IA,JA,QA) )
+
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -260,7 +266,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
 
-    if ( ATMOS_TYPE_DYN /= 'OFF' .AND. ATMOS_TYPE_DYN /= 'NONE' ) then
+    if ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
        if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
        ATMOS_sw_dyn = .true.
@@ -272,28 +278,28 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
 
-    if ( ATMOS_TYPE_PHY_SF /= 'OFF' .AND. ATMOS_TYPE_PHY_SF /= 'NONE' ) then
+    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
        ATMOS_sw_phy_sf = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
        ATMOS_sw_phy_sf = .false.
     endif
-    if ( ATMOS_TYPE_PHY_TB /= 'OFF' .AND. ATMOS_TYPE_PHY_TB /= 'NONE' ) then
+    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
     endif
-    if ( ATMOS_TYPE_PHY_MP /= 'OFF' .AND. ATMOS_TYPE_PHY_MP /= 'NONE' ) then
+    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
        ATMOS_sw_phy_mp = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
-    if ( ATMOS_TYPE_PHY_RD /= 'OFF' .AND. ATMOS_TYPE_PHY_RD /= 'NONE' ) then
+    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
     else
@@ -355,6 +361,13 @@ contains
 
     if ( ATMOS_USE_AVERAGE ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : YES'
+       allocate( DENS_avw(KA,IA,JA) )
+       allocate( MOMZ_avw(KA,IA,JA) )
+       allocate( MOMX_avw(KA,IA,JA) )
+       allocate( MOMY_avw(KA,IA,JA) )
+       allocate( RHOT_avw(KA,IA,JA) )
+       allocate( QTRC_avw(KA,IA,JA,QA) )
+
        DENS_av => DENS_avw
        MOMZ_av => MOMZ_avw
        MOMX_av => MOMX_avw
@@ -905,12 +918,12 @@ contains
     call FilePutAssociatedCoordinates( fid, &
          'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_lon(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
+         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
          dtype, REAL_lonx(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_lat(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
+         'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
          dtype, REAL_laty(IS:IE,JS:JE) )
 
     call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)

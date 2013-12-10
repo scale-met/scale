@@ -28,6 +28,9 @@ module mod_mkinit
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_SYSCHR,   &
      IO_FILECHR,  &
@@ -74,14 +77,6 @@ module mod_mkinit
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
-  include 'inc_index.h'
-  include 'inc_tracer.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -146,24 +141,24 @@ module mod_mkinit
   !
   real(RP), private, parameter :: THETAstd = 300.0_RP ! [K]
 
-  real(RP), private :: pres(KA,IA,JA) ! pressure [Pa]
-  real(RP), private :: temp(KA,IA,JA) ! temperature [K]
-  real(RP), private :: pott(KA,IA,JA) ! potential temperature [K]
-  real(RP), private :: qsat(KA,IA,JA) ! satulated water vapor [kg/kg]
-  real(RP), private :: qv  (KA,IA,JA) ! water vapor [kg/kg]
-  real(RP), private :: qc  (KA,IA,JA) ! cloud water [kg/kg]
-  real(RP), private :: velx(KA,IA,JA) ! velocity u [m/s]
-  real(RP), private :: vely(KA,IA,JA) ! velocity v [m/s]
+  real(RP), private, allocatable :: pres(:,:,:) ! pressure [Pa]
+  real(RP), private, allocatable :: temp(:,:,:) ! temperature [K]
+  real(RP), private, allocatable :: pott(:,:,:) ! potential temperature [K]
+  real(RP), private, allocatable :: qsat(:,:,:) ! satulated water vapor [kg/kg]
+  real(RP), private, allocatable :: qv  (:,:,:) ! water vapor [kg/kg]
+  real(RP), private, allocatable :: qc  (:,:,:) ! cloud water [kg/kg]
+  real(RP), private, allocatable :: velx(:,:,:) ! velocity u [m/s]
+  real(RP), private, allocatable :: vely(:,:,:) ! velocity v [m/s]
 
-  real(RP), private :: pres_sfc(1,IA,JA)
-  real(RP), private :: temp_sfc(1,IA,JA)
-  real(RP), private :: pott_sfc(1,IA,JA)
-  real(RP), private :: qsat_sfc(1,IA,JA)
-  real(RP), private :: qv_sfc  (1,IA,JA)
-  real(RP), private :: qc_sfc  (1,IA,JA)
+  real(RP), private, allocatable :: pres_sfc(:,:,:)
+  real(RP), private, allocatable :: temp_sfc(:,:,:)
+  real(RP), private, allocatable :: pott_sfc(:,:,:)
+  real(RP), private, allocatable :: qsat_sfc(:,:,:)
+  real(RP), private, allocatable :: qv_sfc  (:,:,:)
+  real(RP), private, allocatable :: qc_sfc  (:,:,:)
 
-  real(RP), private :: rndm  (KA,IA,JA) ! random number (0-1)
-  real(RP), private :: bubble(KA,IA,JA) ! bubble factor (0-1)
+  real(RP), private, allocatable :: rndm  (:,:,:) ! random number (0-1)
+  real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
   logical,  private :: flg_bin = .false.
@@ -186,6 +181,26 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MKINIT]/Categ[MKINIT]'
+
+    allocate( pres(KA,IA,JA) )
+    allocate( temp(KA,IA,JA) )
+    allocate( pott(KA,IA,JA) )
+    allocate( qsat(KA,IA,JA) )
+    allocate( qv  (KA,IA,JA) )
+    allocate( qc  (KA,IA,JA) )
+    allocate( velx(KA,IA,JA) )
+    allocate( vely(KA,IA,JA) )
+
+    allocate( pres_sfc(1,IA,JA) )
+    allocate( temp_sfc(1,IA,JA) )
+    allocate( pott_sfc(1,IA,JA) )
+    allocate( qsat_sfc(1,IA,JA) )
+    allocate( qv_sfc  (1,IA,JA) )
+    allocate( qc_sfc  (1,IA,JA) )
+
+    allocate( rndm  (KA,IA,JA) )
+    allocate( bubble(KA,IA,JA) )
+
 
     !--- read namelist
     rewind(IO_FID_CONF)

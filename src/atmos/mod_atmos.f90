@@ -19,6 +19,7 @@ module mod_atmos
   !
   !++ used modules
   !
+  use mod_precision
   use mod_stdio, only: &
      IO_FID_LOG,  &
      IO_L
@@ -35,10 +36,6 @@ module mod_atmos
   public :: ATMOS_setup
   public :: ATMOS_step
 
-  !
-  !++ included parameters
-  !
-  include 'inc_precision.h'
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -65,6 +62,13 @@ contains
     use mod_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_vars, only: &
+       ATMOS_DYN_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_PHY_CH_TYPE, &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -84,16 +88,16 @@ contains
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
-    use mod_atmos_dyn, only: &
-       ATMOS_DYN_setup
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
-    use mod_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup
-    use mod_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_setup
-    use mod_atmos_phy_rd, only: &
-       ATMOS_PHY_RD_setup
+    use mod_atmos_dyn_wrap, only: &
+       ATMOS_DYN_setup => ATMOS_DYN_wrap_setup
+    use mod_atmos_phy_sf_wrap, only: &
+       ATMOS_PHY_SF_setup => ATMOS_PHY_SF_wrap_setup
+    use mod_atmos_phy_tb_wrap, only: &
+       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_wrap_setup
+    use mod_atmos_phy_mp_wrap, only: &
+       ATMOS_PHY_MP_setup => ATMOS_PHY_MP_wrap_setup
+    use mod_atmos_phy_rd_wrap, only: &
+       ATMOS_PHY_RD_setup => ATMOS_PHY_RD_wrap_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -115,15 +119,15 @@ contains
     call ATMOS_BOUNDARY_setup
 
     ! setup each components
-    if ( sw_dyn    ) call ATMOS_DYN_setup
+    if ( sw_dyn    ) call ATMOS_DYN_setup( ATMOS_DYN_TYPE )
 
-    if ( sw_phy_sf ) call ATMOS_PHY_SF_setup
+    if ( sw_phy_sf ) call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
 
-    if ( sw_phy_tb ) call ATMOS_PHY_TB_setup
+    if ( sw_phy_tb ) call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE )
 
-    if ( sw_phy_mp ) call ATMOS_PHY_MP_setup
+    if ( sw_phy_mp ) call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
-    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup
+    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
     !########## initialize tendencies ##########
 !OCL XFILL
@@ -184,16 +188,16 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_QVAtm
-    use mod_atmos_dyn, only: &
-       ATMOS_DYN
-    use mod_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
-    use mod_atmos_phy_tb, only: &
-       ATMOS_PHY_TB
-    use mod_atmos_phy_mp, only: &
-       ATMOS_PHY_MP
-    use mod_atmos_phy_rd, only: &
-       ATMOS_PHY_RD
+    use mod_atmos_dyn_wrap, only: &
+       ATMOS_DYN => ATMOS_DYN_wrap
+    use mod_atmos_phy_sf_wrap, only: &
+       ATMOS_PHY_SF => ATMOS_PHY_SF_wrap
+    use mod_atmos_phy_tb_wrap, only: &
+       ATMOS_PHY_TB => ATMOS_PHY_TB_wrap
+    use mod_atmos_phy_mp_wrap, only: &
+       ATMOS_PHY_MP => ATMOS_PHY_MP_wrap
+    use mod_atmos_phy_rd_wrap, only: &
+       ATMOS_PHY_RD => ATMOS_PHY_RD_wrap
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
@@ -235,7 +239,7 @@ contains
     !########## Microphysics ##########
     if ( sw_phy_mp ) then
        call TIME_rapstart('ATM Microphysics')
-       if ( do_phy_mp ) call ATMOS_PHY_MP
+       call ATMOS_PHY_MP( do_phy_mp, .true. )
        call TIME_rapend  ('ATM Microphysics')
     endif
 
@@ -249,7 +253,7 @@ contains
     !########## Dynamics ##########
     if ( sw_dyn ) then
        call TIME_rapstart('ATM Dynamics')
-       if ( do_dyn ) call ATMOS_DYN
+       call ATMOS_DYN( do_dyn )
        call TIME_rapend  ('ATM Dynamics')
     endif
 

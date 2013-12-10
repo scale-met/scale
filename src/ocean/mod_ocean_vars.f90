@@ -17,6 +17,8 @@ module mod_ocean_vars
      File_HSHORT, &
      File_HMID,   &
      File_HLONG
+  use mod_precision
+  use mod_index
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L,       &
@@ -28,13 +30,6 @@ module mod_ocean_vars
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include 'inc_index.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -50,7 +45,7 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: SST(1,IA,JA) !< sea surface prognostics container (with HALO)
+  real(RP), public, allocatable :: SST(:,:) !< sea surface prognostics container (with HALO)
 
   integer,                    public, save :: I_SST = 1
   character(len=File_HSHORT), public, save :: OP_NAME(1) !< name  of the ocean variables
@@ -109,6 +104,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OCEAN VARS]/Categ[OCEAN]'
+
+    allocate( SST(IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -179,9 +176,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    call COMM_vars8( SST(:,:,:), 1 )
+    call COMM_vars8( SST(:,:), 1 )
 
-    call COMM_wait ( SST(:,:,:), 1 )
+    call COMM_wait ( SST(:,:), 1 )
 
     return
   end subroutine OCEAN_vars_fillhalo
@@ -206,7 +203,7 @@ contains
 
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( SST(1,:,:),                                    & ! [OUT]
+       call FILEIO_read( SST(:,:),                                      & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, 'SST', 'XY', step=1 ) ! [IN]
 
        ! fill IHALO & JHALO
@@ -214,7 +211,7 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
 
-       SST(:,:,:) = CONST_Tstd
+       SST(:,:) = CONST_Tstd
     endif
 
     call TIME_rapend  ('FILE I NetCDF')
@@ -250,7 +247,7 @@ contains
        end do
        write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
 
-       call FILEIO_write( SST(1,:,:), bname,                        OCEAN_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( SST(:,:), bname,                          OCEAN_RESTART_OUT_TITLE, & ! [IN]
                           OP_NAME(1), OP_DESC(1), OP_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -273,10 +270,10 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call MISC_valcheck( SST(:,:,:),    0.0_RP, 1000.0_RP, OP_NAME(I_SST) )
+       call MISC_valcheck( SST(:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_SST) )
     endif
 
-    call HIST_in( SST(1,:,:), 'O_SST', OP_DESC(I_SST), OP_UNIT(I_SST), TIME_DTSEC_OCEAN )
+    call HIST_in( SST(:,:), 'O_SST', OP_DESC(I_SST), OP_UNIT(I_SST), TIME_DTSEC_OCEAN )
 
     return
   end subroutine OCEAN_vars_history
@@ -294,7 +291,7 @@ contains
 
 !    if ( STAT_checktotal ) then
 !
-!       call STAT_total( total, SST(:,:,:), OP_NAME(I_SST) )
+!       call STAT_total( total, SST(:,:), OP_NAME(I_SST) )
 !
 !    endif
 
