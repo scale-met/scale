@@ -110,7 +110,7 @@ contains
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnX_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnX
-    case ( 'DYCOMS2' )
+    case ( 'DYCOMSII' )
        call ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_dycoms2
     case default
