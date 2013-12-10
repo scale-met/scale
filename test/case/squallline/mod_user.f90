@@ -17,6 +17,9 @@ module mod_user
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
@@ -31,14 +34,6 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
-  include 'inc_tracer.h'
 
   !-----------------------------------------------------------------------------
   !
