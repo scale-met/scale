@@ -15,8 +15,6 @@ program unit
   use mod_grid, only: &
      GRID_allocate, &
      GRID_generate
-  use mod_tracer, only: &
-     TRACER_setup
 
   use test_atmos_phy_tb_smg
 
