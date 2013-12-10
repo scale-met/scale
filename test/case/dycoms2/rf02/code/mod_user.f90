@@ -16,20 +16,15 @@ module mod_user
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_index
+  use mod_tracer
   use mod_stdio, only: &
      IO_FID_LOG, &
      IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  include "inc_precision.h"
-  include "inc_index.h"
-  include 'inc_tracer.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -49,18 +44,19 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: MOMZ_LS(KA,2)
-  real(RP), private, save :: MOMZ_LS_DZ(KA,2)
-  real(RP), private, save :: QV_LS(KA,2)
-  logical,  private, save :: MOMZ_LS_FLG(6)
-  real(RP), private, save :: V_GEOS(KA), U_GEOS(KA)
+  real(RP), private, allocatable :: MOMZ_LS(:,:)
+  real(RP), private, allocatable :: MOMZ_LS_DZ(:,:)
+  real(RP), private, allocatable :: QV_LS(:,:)
+  logical,  private, save        :: MOMZ_LS_FLG(6)
+  real(RP), private, allocatable :: U_GEOS(:)
+  real(RP), private, allocatable :: V_GEOS(:)
 
   real(RP), private, save :: USER_LSsink_D = 0.0_RP         ! large scale sinking parameter [1/s]
   real(RP), private, save :: USER_LSsink_bottom = 0.0_RP    ! large scale sinking parameter [m]
   ! flag
   integer,  private, save :: USER_LS_FLG = 0 !-- 0->no force, 1->dycoms, 2->rico
 
-  real(RP), private, save :: Q_rate( KA,IA,JA,QA )
+  real(RP), private, allocatable :: Q_rate(:,:,:,:)
   real(RP), private, save :: corioli
   !-----------------------------------------------------------------------------
 contains
@@ -98,6 +94,13 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+
+    allocate( MOMZ_LS(KA,2) )
+    allocate( MOMZ_LS_DZ(KA,2) )
+    allocate( QV_LS(KA,2) )
+    allocate( V_GEOS(KA) )
+    allocate( U_GEOS(KA) )
+    allocate( Q_rate( KA,IA,JA,QA ) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
