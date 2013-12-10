@@ -53,6 +53,8 @@ contains
        IO_FID_LOG, &
        IO_L, &
        IO_SYSCHR
+    use mod_atmos_phy_ae, only: &
+       ATMOS_PHY_AE_setup
     implicit none
     character(len=IO_SYSCHR), intent(in) :: AE_TYPE
 
@@ -71,6 +73,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
   subroutine ATMOS_PHY_AE_wrap( update_flag, history_flag )
+    use mod_atmos_phy_ae, only: &
+       ATMOS_PHY_AE
     implicit none
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag

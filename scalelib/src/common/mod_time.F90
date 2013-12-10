@@ -51,6 +51,7 @@ module mod_time
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_TB   !< time interval of turbulence         [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_MP   !< time interval of microphysics       [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_RD   !< time interval of radiation          [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_PHY_AE   !< time interval of aerosol            [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_RESTART  !< time interval of atmosphere restart [sec]
   real(DP), public :: TIME_DTSEC_OCEAN          !< time interval of ocean step         [sec]
   real(DP), public :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart      [sec]
@@ -72,6 +73,7 @@ module mod_time
   logical,  public :: TIME_DOATMOS_PHY_TB       !< execute physics(turbulence)?
   logical,  public :: TIME_DOATMOS_PHY_MP       !< execute physics(microphysics)?
   logical,  public :: TIME_DOATMOS_PHY_RD       !< execute physics(radiation)?
+  logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics(aerosol)?
   logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output?
   logical,  public :: TIME_DOOCEAN_step         !< execute ocean component in this step?
   logical,  public :: TIME_DOOCEAN_restart      !< execute ocean restart output?
@@ -108,6 +110,7 @@ module mod_time
   real(DP), private :: TIME_RES_ATMOS_PHY_TB  = 0.0_DP
   real(DP), private :: TIME_RES_ATMOS_PHY_MP  = 0.0_DP
   real(DP), private :: TIME_RES_ATMOS_PHY_RD  = 0.0_DP
+  real(DP), private :: TIME_RES_ATMOS_PHY_AE  = 0.0_DP
   real(DP), private :: TIME_RES_ATMOS_RESTART = 0.0_DP
   real(DP), private :: TIME_RES_OCEAN         = 0.0_DP
   real(DP), private :: TIME_RES_OCEAN_RESTART = 0.0_DP
@@ -165,6 +168,8 @@ contains
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
     real(DP)                 :: TIME_DT_ATMOS_PHY_RD
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
+    real(DP)                 :: TIME_DT_ATMOS_PHY_AE
+    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_AE_UNIT  = ""
     real(DP)                 :: TIME_DT_ATMOS_RESTART
     character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = ""
 
@@ -200,6 +205,8 @@ contains
        TIME_DT_ATMOS_PHY_MP_UNIT,  &
        TIME_DT_ATMOS_PHY_RD,       &
        TIME_DT_ATMOS_PHY_RD_UNIT,  &
+       TIME_DT_ATMOS_PHY_AE,       &
+       TIME_DT_ATMOS_PHY_AE_UNIT,  &
        TIME_DT_ATMOS_RESTART,      &
        TIME_DT_ATMOS_RESTART_UNIT, &
        TIME_DT_OCEAN,              &
@@ -232,6 +239,7 @@ contains
     TIME_DT_ATMOS_PHY_TB  = UNDEF
     TIME_DT_ATMOS_PHY_MP  = UNDEF
     TIME_DT_ATMOS_PHY_RD  = UNDEF
+    TIME_DT_ATMOS_PHY_AE  = UNDEF
     TIME_DT_ATMOS_RESTART = UNDEF
     TIME_DT_OCEAN         = UNDEF
     TIME_DT_OCEAN_RESTART = UNDEF
@@ -310,6 +318,15 @@ contains
        if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
           if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD_UNIT. TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
+       end if
+       ! PHY_AE
+       if ( TIME_DT_ATMOS_PHY_AE == UNDEF ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_AE. TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_AE = TIME_DT
+       end if
+       if ( TIME_DT_ATMOS_PHY_AE_UNIT == '' ) then
+          if(IO_L) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_AE_UNIT. TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_AE_UNIT = TIME_DT_UNIT
        end if
        ! ATMOS RESTART
        if ( TIME_DT_ATMOS_RESTART == UNDEF ) then
@@ -432,6 +449,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP,  TIME_DT_ATMOS_PHY_MP_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
@@ -447,6 +465,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_MP  = max( TIME_DTSEC_ATMOS_PHY_MP,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_AE  = max( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -463,6 +482,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Cloud Microphysics : ', TIME_DTSEC_ATMOS_PHY_MP
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Radiation          : ', TIME_DTSEC_ATMOS_PHY_RD
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Physics, Aerosol            : ', TIME_DTSEC_ATMOS_PHY_AE
        if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for ocean process (sec.)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean update                : ', TIME_DTSEC_OCEAN
        if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for land process (sec.)'
@@ -492,6 +512,7 @@ contains
     TIME_DOATMOS_PHY_TB    = .false.
     TIME_DOATMOS_PHY_MP    = .false.
     TIME_DOATMOS_PHY_RD    = .false.
+    TIME_DOATMOS_PHY_AE    = .false.
     TIME_DOOCEAN_step      = .false.
     TIME_DOLAND_step       = .false.
     TIME_DOCPL_calc        = .false.
@@ -501,6 +522,7 @@ contains
     TIME_RES_ATMOS_PHY_TB = TIME_RES_ATMOS_PHY_TB + TIME_DTSEC
     TIME_RES_ATMOS_PHY_MP = TIME_RES_ATMOS_PHY_MP + TIME_DTSEC
     TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + TIME_DTSEC
+    TIME_RES_ATMOS_PHY_AE = TIME_RES_ATMOS_PHY_AE + TIME_DTSEC
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
     TIME_RES_LAND         = TIME_RES_LAND         + TIME_DTSEC
     TIME_RES_CPL          = TIME_RES_CPL          + TIME_DTSEC
@@ -529,6 +551,11 @@ contains
        TIME_DOATMOS_step     = .true.
        TIME_DOATMOS_PHY_RD   = .true.
        TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD - TIME_DTSEC_ATMOS_PHY_RD
+    endif
+    if ( TIME_RES_ATMOS_PHY_AE - TIME_DTSEC_ATMOS_PHY_AE > -eps ) then
+       TIME_DOATMOS_step     = .true.
+       TIME_DOATMOS_PHY_AE   = .true.
+       TIME_RES_ATMOS_PHY_AE = TIME_RES_ATMOS_PHY_AE - TIME_DTSEC_ATMOS_PHY_AE
     endif
 
     if ( TIME_RES_OCEAN - TIME_DTSEC_OCEAN > -eps ) then

@@ -71,6 +71,7 @@ module mod_atmos_vars
   logical,                  public, save :: ATMOS_sw_phy_tb
   logical,                  public, save :: ATMOS_sw_phy_mp
   logical,                  public, save :: ATMOS_sw_phy_rd
+  logical,                  public, save :: ATMOS_sw_phy_ae
   logical,                  public, save :: ATMOS_sw_restart
   logical,                  public, save :: ATMOS_sw_check
 
@@ -305,6 +306,13 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
        ATMOS_sw_phy_rd = .false.
+    endif
+    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol  : ON'
+       ATMOS_sw_phy_ae = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol  : OFF'
+       ATMOS_sw_phy_ae = .false.
     endif
 
     !-----< prognostic variable list check >-----

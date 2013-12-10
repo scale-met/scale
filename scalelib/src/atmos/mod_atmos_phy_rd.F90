@@ -113,6 +113,9 @@ contains
     case ( 'DYCOMS2' )
        call ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_dycoms2
+    case default
+       write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
+       call PRC_MPIstop
     end select
 
     return

@@ -80,6 +80,7 @@ contains
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
+       sw_phy_ae => ATMOS_sw_phy_ae, &
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
     use mod_atmos_vars_sf, only: &
@@ -98,6 +99,8 @@ contains
        ATMOS_PHY_MP_setup => ATMOS_PHY_MP_wrap_setup
     use mod_atmos_phy_rd_wrap, only: &
        ATMOS_PHY_RD_setup => ATMOS_PHY_RD_wrap_setup
+    use mod_atmos_phy_ae_wrap, only: &
+       ATMOS_PHY_AE_setup => ATMOS_PHY_AE_wrap_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -126,6 +129,8 @@ contains
     if ( sw_phy_tb ) call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE )
 
     if ( sw_phy_mp ) call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
+
+    if ( sw_phy_rd .or. sw_phy_ae ) call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
 
     if ( sw_phy_rd ) call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
@@ -156,7 +161,8 @@ contains
        do_phy_sf     => TIME_DOATMOS_PHY_SF, &
        do_phy_tb     => TIME_DOATMOS_PHY_TB, &
        do_phy_mp     => TIME_DOATMOS_PHY_MP, &
-       do_phy_rd     => TIME_DOATMOS_PHY_RD
+       do_phy_rd     => TIME_DOATMOS_PHY_RD, &
+       do_phy_ae     => TIME_DOATMOS_PHY_AE
     use mod_atmos_vars, only: &
        DENS,    &
        MOMX,    &
@@ -175,6 +181,7 @@ contains
        sw_phy_tb     => ATMOS_sw_phy_tb,     &
        sw_phy_mp     => ATMOS_sw_phy_mp,     &
        sw_phy_rd     => ATMOS_sw_phy_rd,     &
+       sw_phy_ae     => ATMOS_sw_phy_ae,     &
        ATMOS_vars_history
     use mod_atmos_vars_sf, only: &
        PREC,       &
@@ -198,6 +205,8 @@ contains
        ATMOS_PHY_MP => ATMOS_PHY_MP_wrap
     use mod_atmos_phy_rd_wrap, only: &
        ATMOS_PHY_RD => ATMOS_PHY_RD_wrap
+    use mod_atmos_phy_ae_wrap, only: &
+       ATMOS_PHY_AE => ATMOS_PHY_AE_wrap
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
@@ -241,6 +250,13 @@ contains
        call TIME_rapstart('ATM Microphysics')
        call ATMOS_PHY_MP( do_phy_mp, .true. )
        call TIME_rapend  ('ATM Microphysics')
+    endif
+
+    !########## Aerosol ##########
+    if ( sw_phy_ae ) then
+       call TIME_rapstart('ATM Aerosol')
+       call ATMOS_PHY_AE( do_phy_ae, .true. )
+       call TIME_rapend  ('ATM Aerosol')
     endif
 
     !########## Radiation ##########

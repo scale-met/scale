@@ -67,6 +67,8 @@ contains
   subroutine ATMOS_PHY_AE_setup( AE_TYPE )
     use mod_stdio, only: &
        IO_SYSCHR
+    use mod_process, only: &
+       PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef AE
@@ -85,10 +87,13 @@ contains
     !---------------------------------------------------------------------------
 
     select case( AE_TYPE )
-    case ( 'DUMMY' )
+    case ( 'DUMMY', 'NONE' )
        call ATMOS_PHY_AE_dummy_setup( AE_TYPE )
        ATMOS_PHY_AE => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
+    case default
+       write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
+       call PRC_MPIstop
     end select
 
     return

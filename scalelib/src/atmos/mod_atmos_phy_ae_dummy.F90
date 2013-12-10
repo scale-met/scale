@@ -67,7 +67,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
 
-    if ( AE_TYPE /= 'DUMMY' ) then
+    if ( AE_TYPE /= 'DUMMY' .and. AE_TYPE /= 'NONE' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'
        call PRC_MPIstop
     endif
