@@ -118,7 +118,7 @@ contains
        call ATMOS_PHY_tb_smg_setup( &
             TB_TYPE, &
             CDZ, CDX, CDY, &
-            FDX, FDX, FDY, &
+            FDZ, FDX, FDY, &
             CZ, FZ )
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
     end select
