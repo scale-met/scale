@@ -72,12 +72,6 @@ contains
     use mod_grid, only: &
        CZ => GRID_CZ, &
        FZ => GRID_FZ
-    use mod_atmos_vars, only: &
-       I_MOMZ, &
-       I_MOMX, &
-       I_MOMY, &
-       I_RHOT, &
-       I_QTRC
     implicit none
 
     namelist / PARAM_USER / &
@@ -240,11 +234,6 @@ contains
   !> User step
   subroutine USER_step
     use mod_atmos_vars, only: &
-         I_MOMZ, &
-         I_MOMX, &
-         I_MOMY, &
-         I_RHOT, &
-         I_QTRC, &
          DENS,    &
          MOMZ,    &
          MOMX,    &
