@@ -119,7 +119,7 @@ contains
     real(RP), intent(in) :: CZ(KA)
     real(RP), intent(in) :: FZ(0:KA)
 
-    real(RP) :: ATMOS_PHY_TB_SMG_Cs = 1.3_RP
+    real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
@@ -148,6 +148,7 @@ contains
     allocate( nu_factY (KA,IA,JA) )
 
 
+    ATMOS_PHY_TB_SMG_Cs = Cs
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
