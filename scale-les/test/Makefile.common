@@ -1,0 +1,55 @@
+################################################################################
+#
+# Common Makefile for each test (Please include this file)
+#
+################################################################################
+
+include $(TOPDIR)/Mkinclude
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+
+BUILD_DIR  := $(PWD)/.libs
+INDEX_DIR  := $(PWD)
+
+SRCDIR = $(SCALELESDIR)/src
+
+
+$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+	cp -f $< $@
+
+build: makedir $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	$(MAKE) -C $(SRCDIR) BUILD_DIR=$(BUILD_DIR)   \
+                        SYSDEP_DIR=$(SYSDEP_DIR) \
+                        index=$(index)           \
+                        precision=$(precision)   \
+                        tracer=$(tracer)         \
+                        dynamics=$(dynamics)     \
+                        sfcflx=$(sfcflx)         \
+                        turbulence=$(turbulence) \
+                        radiation=$(radiation)   \
+                        postfix=$(postfix)
+
+makedir:
+	mkdir -p $(BUILD_DIR)
+
+run: jobshell
+	$(JOBSUB) run.sh
+
+jobshell:
+	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
+		sh ../Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC); \
+	else \
+		sh $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR) $(INITNAME) $(BINNAME) $(INITCONF) $(RUNCONF) $(TPROC); \
+	fi
+
+
+
+.PHONY: allclean clean distclean
+
+allclean: clean
+	$(MAKE) -C $(SRCDIR) allclean
+
+clean:
+	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+
+distclean:
+	rm -f *.nc LOG.pe*

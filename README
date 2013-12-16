@@ -1,15 +1,36 @@
-SCALE-LES
+SCALE
 =========
 
-SCALE-LES is a large-Eddy Simulation (LES) model for weather and climate
-with Scalable Computing for Advanced Library and Environment (SCALE).
+SCALE (Scalable Computing for Advanced Library and Environment), which stands for Scalable Computing for Advanced Library and Environment, is a basic library for weather and climate model of the earth and planets aimed to be widely used in various models.
+The SCALE library is developed with co-design by researchers of computational science and computer science.
 (http://scale.aics.riken.jp/)
+
 
 Contributing
 ------------
-SCALE-LES is developed by Team SCALE.
+SCALE is developed by Team SCALE.
 
 License
 -------
 - License: The BSD 2-Clause License
 
+Build
+-----
+- set SCALE_SYS environmental variable (see the sysdef directory)
+ % SCALE_SYS=Linux64-gnu-ompi (example)
+
+- make dc_utils library
+ % cd dc_uitls
+ % make
+
+- make gtool library
+ % cd gtool
+ % make
+
+- make scalelib library
+ % cd scalelib/src
+ % make
+
+- make scale-les
+ % cd scale-les/src
+ % make

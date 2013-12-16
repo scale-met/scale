@@ -46,7 +46,7 @@ LDFLAGS = $(FFLAGS_CORE)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include -I/usr/lib64/gfortran/modules
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 LAPACK_LIBS    ?= -llapack
 
 ##### for frontend

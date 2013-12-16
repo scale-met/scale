@@ -5,10 +5,9 @@
 ################################################################################
 
 TOPDIR      = ..
-SYSDEP_DIR  = ../sysdep
 
+include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
-include $(TOPDIR)/src/Mkinclude
 
 LIBNAME = libdcutils.a
 

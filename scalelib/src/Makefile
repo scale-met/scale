@@ -8,16 +8,10 @@ TOPDIR      = ../..
 BUILD_DIR   = ./.libs
 INCLUDE_DIR = ../include
 
-SYSDEP_DIR = $(TOPDIR)/sysdep
-DCUTILSDIR = $(TOPDIR)/dc_utils
-GTOOLDIR   = $(TOPDIR)/gtool
-LIBDIR     = $(TOPDIR)/lib
-INCDIR     = $(TOPDIR)/include
-
+include $(TOPDIR)/Mkinclude
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 LIBNAME = libscalelib.a
-
-include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 VPATH = io:common:grid:atmos
 
@@ -28,6 +22,11 @@ else
   VERSION := $(VERSION)
 endif
 
+ifeq ($(RDMA),-D_USE_RDMA)
+  mod_rdma := rdma.o
+else
+  mod_rdma :=
+endif
 
 
 OBJS =	\

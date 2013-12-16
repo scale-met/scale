@@ -1,0 +1,36 @@
+LEGAL NOTICE INFORMATION
+------------------------
+
+All the files in this distribution are covered under the 2-clause BSD license (see the file LICENSE) except some files mentiond below.
+
+dc_utils/dc_types.f90:
+dc_utils/dc_test.f90:
+dc_utils/dc_test.rb2f90:
+dc_utils/rb2f90/:
+
+  Copyright (C) 2000--2009 Gtool Develop Group. All rights reserved.
+
+  All the resources of gtool5 are copyrighted by Gtool Development
+  Group.
+
+  Use of gtool5 is permitted under the principle of "NO WARRANTY" and
+  "NO RESPONSIBILITY". Gtool Development Group shall not be liable 
+  for any event arising in any way out of the use of these resources.
+
+  Redistribution in source and binary forms, with or without modification, 
+  is also permitted provided that the above copyright notice, disclaimer
+  and this condition are retained. 
+
+  -------------- Japanese Version start here --------------------------
+
+  gtool5 に関する全ての権利は Gtool 開発グループに属する. 
+ 
+  gtool5 は「無保証・無責任」の原則の元で利用が可能である. 
+  gtool5 を利用することによって生じるいかなる結果に対しても 
+  Gtool 開発グループは責任を持たない.
+
+  ソースコード形式であれバイナリ形式であれ, 変更の有無に関わらず, 
+  上記著作権表示・責任限定規定・および本条件書を必ず含める限りに
+  おいて gtool5 を再配布してかまわない. 
+
+  --------------  Japanese Version end here   --------------------------

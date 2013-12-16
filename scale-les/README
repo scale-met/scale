@@ -1,0 +1,25 @@
+SCALE-LES
+=========
+
+SCALE-LES is a large-Eddy Simulation (LES) model for weather and climate
+with Scalable Computing for Advanced Library and Environment (SCALE).
+(http://scale.aics.riken.jp/)
+
+Contributing
+------------
+SCALE-LES is developed by Team SCALE.
+
+License
+-------
+- License: The BSD 2-Clause License
+
+Build and Run the test cases
+-----
+- cd a test case directory
+- build
+- run
+
+-- example
+ % cd test/case/advection/500m
+ % make
+ % make run

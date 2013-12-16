@@ -1,0 +1,18 @@
+ifeq ($(origin BINDIR), undefined)
+	BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
+endif
+
+ifeq ($(origin LIBDIR), undefined)
+   LIBDIR = $(TOPDIR)/lib
+endif
+
+ifeq ($(origin INCDIR), undefined)
+   INCDIR = $(TOPDIR)/include
+endif
+
+GTOOLDIR    = $(TOPDIR)/gtool
+DCUTILSDIR  = $(TOPDIR)/dc_utils
+SCALELIBDIR = $(TOPDIR)/scalelib
+SCALELESDIR = $(TOPDIR)/scale-les
+
+SYSDEP_DIR = $(TOPDIR)/sysdep
