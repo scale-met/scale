@@ -103,7 +103,7 @@ $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90
 $(BUILD_DIR)/mod_atmos_dyn_wrap.o	: mod_atmos_dyn_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_sf_wrap.o	: mod_atmos_phy_sf_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_wrap.o	: mod_atmos_phy_tb_wrap.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_wrap.o	: mod_atmos_phy_rd_wrap.f90 mod_atmos_phy_ae_wrap.o mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_rd_wrap.o	: mod_atmos_phy_rd_wrap.f90 mod_atmos_phy_ae_wrap.o mod_atmos_vars.o mod_atmos_vars_sf.o mod_cpl_vars.o
 
 $(BUILD_DIR)/mod_land.o	: mod_land.f90 mod_land_vars.o mod_land_phy_bucket.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_land_vars.o	: mod_land_vars.f90

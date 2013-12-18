@@ -102,11 +102,19 @@ contains
        RHOT, &
        QTRC, &
        RHOT_tp
+    use mod_atmos_vars_sf, only: &
+       ATMOS_vars_sf_fillhalo, &
+       SWD,                    &
+       LWD
+    use mod_cpl_vars, only: &
+       sw_AtmLnd => CPL_sw_AtmLnd, &
+       SkinT
     use mod_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
        THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
        THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot
+       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_phy_rd, only: &
        ATMOS_PHY_RD
     use mod_atmos_phy_rd_common, only: &
@@ -126,6 +134,8 @@ contains
     real(RP) :: TEMP_t  (KA,IA,JA)
     real(RP) :: QDRY    (KA,IA,JA)
     real(RP) :: CVtot   (KA,IA,JA)
+    real(RP) :: temp    (KA,IA,JA)
+    real(RP) :: pres    (KA,IA,JA)
 
     real(RP) :: flux_rad(KA,IA,JA,2,2)
     real(RP) :: flux_net(KA,IA,JA,2)
@@ -134,21 +144,40 @@ contains
     real(RP) :: flux_rad_top(IA,JA,2)
     real(RP) :: flux_rad_sfc(IA,JA,2)
 
-    real(RP) :: solins(IA,JA)
-    real(RP) :: cosSZA(IA,JA)
+    real(RP) :: solins  (IA,JA)
+    real(RP) :: cosSZA  (IA,JA)
+    real(RP) :: temp_sfc(IA,JA)
+
+    real(RP) :: param_sfc(5) !< surface parameter
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
+       if( sw_AtmLnd ) then
+          temp_sfc(:,:) = SkinT(:,:)
+       else
+          call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
+                                    pres(:,:,:),  & ! [OUT]
+                                    DENS(:,:,:),  & ! [IN]
+                                    RHOT(:,:,:),  & ! [IN]
+                                    QTRC(:,:,:,:) ) ! [IN]
+          temp_sfc(:,:) = temp(KS,:,:)
+       end if
+
+       ! surface parameter
+       param_sfc(1)   = 2.D0 ! land surface only, tentative
+       param_sfc(2:5) = 0.D0
+
        call ATMOS_PHY_RD( &
             flux_rad, flux_rad_top, & ! [out]
-            solins, cosSZA, & ! [out]
-            DENS, RHOT, QTRC, & ! [in]
-            CZ, FZ, CDZ, RCDZ, & ! [in]
-            REAL_lon, REAL_lat, & ! [in]
-            TIME_NOWDATE ) ! [in]
+            solins, cosSZA,         & ! [out]
+            DENS, RHOT, QTRC,       & ! [in]
+            temp_sfc, param_sfc,    & ! [in]
+            CZ, FZ, CDZ, RCDZ,      & ! [in]
+            REAL_lon, REAL_lat,     & ! [in]
+            TIME_NOWDATE            ) ! [in]
 
        call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
                             RHOT(:,:,:),  & ! [IN]
@@ -171,6 +200,15 @@ contains
        enddo
        enddo
        enddo
+
+       if( sw_AtmLnd ) then
+          do j = JS, JE
+          do i = IS, IE
+             LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
+             SWD(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+          enddo
+          enddo
+       end if
 
      if ( present(history_flag) ) then
      if ( history_flag ) then
@@ -196,6 +234,7 @@ contains
            enddo
            flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
            flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
+
         enddo
         enddo
 
@@ -231,6 +270,7 @@ contains
 
       ! fill halo
       call ATMOS_vars_fillhalo
+      call ATMOS_vars_sf_fillhalo
 
       ! check total (optional)
       call ATMOS_vars_total

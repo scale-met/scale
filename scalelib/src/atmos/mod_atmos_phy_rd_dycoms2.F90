@@ -116,12 +116,13 @@ contains
   ! Parametarized Radiative heating
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_dycoms2( &
-       flux_rad, flux_top, & ! [out]
-       solins, cosSZA, & ! [out]
-       DENS, RHOT, QTRC, & ! [in]
-       CZ, FZ, CDZ, RCDZ, & ! [in]
-       REAL_lon, REAL_lat, & ! [in]
-       TIME_NOWDATE ) ! [in]
+       flux_rad, flux_top,  & ! [out]
+       solins, cosSZA,      & ! [out]
+       DENS, RHOT, QTRC,    & ! [in]
+       temp_sfc, param_sfc, & ! [in]
+       CZ, FZ, CDZ, RCDZ,   & ! [in]
+       REAL_lon, REAL_lat,  & ! [in]
+       TIME_NOWDATE         ) ! [in]
     use mod_const, only: &
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
@@ -151,6 +152,8 @@ contains
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: temp_sfc(IA,JA)
+    real(RP), intent(in)  :: param_sfc(5)
     real(RP), intent(in)  :: CZ(KA)
     real(RP), intent(in)  :: FZ(KA-1)
     real(RP), intent(in)  :: CDZ(KA)
