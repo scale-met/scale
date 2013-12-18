@@ -47,7 +47,6 @@ module mod_land_phy_bucket
   !-----------------------------------------------------------------------------
 
   ! limiter
-  real(RP), private, parameter :: BETA_MIN = 0.0E-8_RP
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
 
 contains
@@ -120,11 +119,13 @@ contains
     integer :: i,j
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
+
     do j = JS, JE
     do i = IS, IE
 
       ! update water storage
-      STRG(i,j) = STRG(i,j) + ( SFLX_PREC(i,j) - SFLX_QVLnd(i,j) ) * dt
+      STRG(i,j) = STRG(i,j) + ( SFLX_PREC(i,j) + SFLX_QVLnd(i,j) ) * dt
 
       if ( STRG(i,j) > P(i,j,I_STRGMAX) ) then
          ROFF(i,j) = ROFF(i,j) + STRG(i,j) - P(i,j,I_STRGMAX)
@@ -132,15 +133,12 @@ contains
       endif
 
       ! update moisture efficiency
-      QvEfc(i,j) = BETA_MAX
-      if ( STRG(i,j) < P(i,j,I_STRGCRT) ) then
-         QvEfc(i,j) = max( STRG(i,j)/P(i,j,I_STRGCRT), BETA_MIN )
-      endif
+      QvEfc(i,j) = min( STRG(i,j)/P(i,j,I_STRGCRT), BETA_MAX )
 
       ! update ground temperature
       TG(i,j) = TG(i,j) - 2.0_RP * SFLX_GH(i,j) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) &
-                + STRG(i,j) * 1.E-3_RP * DWATR * CL * P(i,j,I_DZg)    ) * dt
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(i,j) * 1.E-3_RP * DWATR * CL ) &
+              / P(i,j,I_DZg) * dt
 
     end do
     end do

@@ -41,6 +41,7 @@ module mod_cpl_atmos_land
   !++ Private procedure
   !
   private :: bulkcoef_uno
+  private :: sfcval_estimate
   private :: satmixr
   private :: satvapor
 
@@ -49,13 +50,10 @@ module mod_cpl_atmos_land
   !++ Private parameters & variables
   !
   ! limiter
-  real(RP), private, parameter :: res_min   =  1.0E-10_RP ! minimum number of residual in the Newton-Raphson Method
-  real(RP), private, parameter :: Ustar_min =  1.0E-3_RP ! minimum limit of U*
-
   real(RP), private, parameter :: Cm_min =   1.0E-5_RP ! minimum bulk coef. of u,v,w
   real(RP), private, parameter :: Ch_min =   1.0E-5_RP !                       T
   real(RP), private, parameter :: Ce_min =   1.0E-5_RP !                       q
-  real(RP), private, parameter :: Cm_max =   2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private, parameter :: Cm_max =   1.0_RP    ! maximum bulk coef. of u,v,w
   real(RP), private, parameter :: Ch_max =   1.0_RP    !                       T
   real(RP), private, parameter :: Ce_max =   1.0_RP    !                       q
 
@@ -152,7 +150,6 @@ contains
        CPL_AtmLnd_putCPL,     &
        CPL_AtmLnd_getAtm2CPL, &
        CPL_AtmLnd_getLnd2CPL, &
-       CPL_AtmLnd_flushCPL,   &
        LST
     implicit none
 
@@ -162,6 +159,7 @@ contains
     real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
     real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
     real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
+    real(RP), parameter :: res_min  = 1.0_RP    ! minimum number of residual
 
     ! works
     integer :: i, j, n
@@ -188,8 +186,7 @@ contains
     do n = 1, nmax
 
       ! calc. surface fluxes
-      call ts_residual( &
-        RES, DRES ) ! (out)
+      call ts_residual( RES, DRES ) ! (out)
 
       do j = JS-1, JE+1
       do i = IS-1, IE+1
@@ -209,7 +206,7 @@ contains
         end if
 
         ! update surface temperature
-        LST(i,j) = LST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
+        LST(i,j)  = LST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
 
         ! save residual in this step
         oldRES(i,j) = RES(i,j)
@@ -244,8 +241,6 @@ contains
       pSFLX_GH,   &
       pPREC       )
 
-    call CPL_AtmLnd_flushCPL
-
     return
   end subroutine CPL_AtmLnd_solve
 
@@ -255,8 +250,7 @@ contains
     use mod_cpl_vars, only: &
        CPL_AtmLnd_putCPL,     &
        CPL_AtmLnd_getAtm2CPL, &
-       CPL_AtmLnd_getLnd2CPL, &
-       CPL_AtmLnd_flushCPL
+       CPL_AtmLnd_getLnd2CPL
     implicit none
 
     if( IO_L ) write(IO_FID_LOG,*) '*** CPL unsolve: Atmos-Land'
@@ -284,23 +278,24 @@ contains
       pSFLX_GH,   &
       pPREC       )
 
-    call CPL_AtmLnd_flushCPL
-
     return
   end subroutine CPL_AtmLnd_unsolve
 
 ! --- Private procedure
 
-  subroutine ts_residual( &
-      RES, DRES ) ! (out)
+  subroutine ts_residual( RES, DRES ) ! (out)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
+      RovCP  => CONST_RovCP, &
       Rvap   => CONST_Rvap,  &
       STB    => CONST_STB,   &
-      LH0    => CONST_LH0
+      LH0    => CONST_LH0,   &
+      P00    => CONST_PRE00
     use mod_grid, only: &
       CZ => GRID_CZ
+    use mod_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_cpl_vars, only: &
       LST
     implicit none
@@ -308,27 +303,46 @@ contains
     real(RP), intent(out) :: RES  (IA,JA)
     real(RP), intent(out) :: DRES (IA,JA)
 
-    real(RP), parameter :: dTs   = 1.0E-10_RP ! delta skin temperature
+    real(RP), parameter :: dTs   = 1.0E-8_RP ! delta skin temperature
 
     ! work
-    real(RP) :: pta(IA,JA)
+    real(RP) :: tem(KA,IA,JA) ! temperature [K]
+    real(RP) :: pre(KA,IA,JA) ! pressure [Pa]
+
+    real(RP) :: rhos(IA,JA) ! surface density [kg/m3]
+    real(RP) :: pres(IA,JA) ! surface pressure [Pa]
+    real(RP) :: zs  (IA,JA) ! surface height [m]
+    real(RP) :: pta (IA,JA) ! surface air temperature [K]
+
     real(RP) :: Uabs ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: dCm, dCh, dCe
+    real(RP) :: dCm, dCh, dCe ! bulk transfer coeff. [no unit]
 
-    real(RP) :: dLST
     real(RP) :: SatQvs, dSatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dpSFLX_LWU, dpSFLX_GH
-    real(RP) :: dpSFLX_SH1, dpSFLX_SH2
-    real(RP) :: dpSFLX_LH1, dpSFLX_LH2
+    real(RP) :: dpSFLX_SH,  dpSFLX_LH
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! rho*theta -> potential temperature at cell centor
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-      pta(i,j) = pRHOT(KS,i,j) / pDENS(KS,i,j)
+    call THERMODYN_temp_pres( tem  (:,:,:),  & ! [OUT]
+                              pre  (:,:,:),  & ! [OUT]
+                              pDENS(:,:,:),  & ! [IN]
+                              pRHOT(:,:,:),  & ! [IN]
+                              pQTRC(:,:,:,:) ) ! [IN]
+    
+    ! surface height
+    zs(:,:) = 0.0_RP
+
+    call sfcval_estimate( rhos (:,:),   & ! [out]
+                          pres (:,:),   & ! [out]
+                          pDENS(:,:,:), & ! [in]
+                          pre  (:,:,:), & ! [in]
+                          zs   (:,:)    ) ! [in]
+
+    do j = 1, JA
+    do i = 1, IA
+      pta(i,j) = tem(KS,i,j) * ( pres(i,j) / pre(KS,i,j) )**RovCP
     end do
     end do
 
@@ -345,7 +359,7 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS),                       & ! (in)
+          CZ(KS), Uabs,                       & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j)     ) ! (in)
 
       pSFLX_MOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMX(KS,i,j)
@@ -365,7 +379,7 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS),                       & ! (in)
+          CZ(KS), Uabs,                       & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j)     ) ! (in)
 
       pSFLX_MOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMY(KS,i,j)
@@ -384,43 +398,40 @@ contains
       call bulkcoef_uno( &
           Cm, Ch, Ce,                     & ! (out)
           pta(i,j), LST(i,j),             & ! (in)
-          Uabs, CZ(KS),                   & ! (in)
+          CZ(KS), Uabs,                   & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j) ) ! (in)
 
       pSFLX_MOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMZ(KS,i,j) * 0.5_RP
 
       ! saturation at surface
-      SatQvs = satmixr( LST(i,j) )
+      SatQvs = satmixr( LST(i,j), pres(i,j) )
 
-      pSFLX_SH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*pDENS(KS,i,j) - pRHOT(KS,i,j) )
-      pSFLX_LH(i,j) = LH0   * Ce * min(max(Uabs,U_minE),U_maxE) * pDENS(KS,i,j) * ( SatQvs - pQTRC(KS,i,j,I_QV) ) * pQvEfc(i,j)
-      pSFLX_GH(i,j) = 2.0_RP * pTCS(i,j) * ( pTG(i,j) - LST(i,j) ) / pDZg(i,j)
-
+      pSFLX_SH(i,j)  = CPdry * min(max(Uabs,U_minH),U_maxH) * rhos(i,j) * Ch * ( LST(i,j) - pta(i,j) )
+      pSFLX_LH(i,j)  = LH0   * min(max(Uabs,U_minE),U_maxE) * rhos(i,j) * pQvEfc(i,j) * Ce * ( SatQvs - pQTRC(KS,i,j,I_QV) )
+      pSFLX_GH(i,j)  = -2.0_RP * pTCS(i,j) * ( LST(i,j) - pTG(i,j)  ) / pDZg(i,j)
       pSFLX_SWU(i,j) = pALB(i,j) * pSWD(i,j)
       pSFLX_LWU(i,j) = pEMIT(i,j) * STB * LST(i,j)**4
 
       ! calculation for residual
       RES(i,j) = pSWD(i,j) - pSFLX_SWU(i,j) + pLWD(i,j) - pSFLX_LWU(i,j) - pSFLX_SH(i,j) - pSFLX_LH(i,j) + pSFLX_GH(i,j)
 
-      dLST  = LST(i,j) + dTs
       dSatQvs = SatQvs * LH0 / ( Rvap * LST(i,j)**2 )
 
       call bulkcoef_uno( &
           dCm, dCh, dCe,                  & ! (out)
-          pta(i,j), dLST,                 & ! (in)
-          Uabs, CZ(KS),                   & ! (in)
+          pta(i,j), LST(i,j)+dTs,         & ! (in)
+          CZ(KS), Uabs,                   & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j) ) ! (in)
 
-      dpSFLX_SH1 = CPdry * (dCh-Ch)/dTs * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*pDENS(KS,i,j) - pRHOT(KS,i,j) )
-      dpSFLX_SH2 = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * pDENS(KS,i,j)
-      dpSFLX_LH1 = LH0 * (dCe-Ce)/dTs * min(max(Uabs,U_minE),U_maxE) * pDENS(KS,i,j) * ( SatQvs - pQTRC(KS,i,j,I_QV) ) * pQvEfc(i,j)
-      dpSFLX_LH2 = LH0 * Ce * min(max(Uabs,U_minE),U_maxE) * pDENS(KS,i,j) * dSatQvs * pQvEfc(i,j)
-
+      dpSFLX_SH  = CPdry * min(max(Uabs,U_minH),U_maxH) * rhos(i,j) &
+                 * ( (dCh-Ch)/dTs * ( LST(i,j) - pta(i,j) ) + Ch )
+      dpSFLX_LH  = LH0   * min(max(Uabs,U_minE),U_maxE) * rhos(i,j) * pQvEfc(i,j) &
+                 * ( (dCe-Ce)/dTs * ( SatQvs - pQTRC(KS,i,j,I_QV) ) + Ce * dSatQvs )
+      dpSFLX_GH  = -2.0_RP * pTCS(i,j) / pDZg(i,j)
       dpSFLX_LWU = 4.0_RP * pEMIT(i,j) * STB * LST(i,j)**3
-      dpSFLX_GH  = - 2.0_RP * pTCS(i,j) / pDZg(i,j)
 
       ! calculation for d(residual)/dTs
-      DRES(i,j) = - dpSFLX_LWU - dpSFLX_SH1 - dpSFLX_SH2 - dpSFLX_LH1 - dpSFLX_LH2 + dpSFLX_GH
+      DRES(i,j) = - dpSFLX_LWU - dpSFLX_SH - dpSFLX_LH + dpSFLX_GH
     enddo
     enddo
 
@@ -431,16 +442,28 @@ contains
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
+      RovCP  => CONST_RovCP, &
+      Rvap   => CONST_Rvap,  &
       STB    => CONST_STB,   &
-      LH0    => CONST_LH0
+      LH0    => CONST_LH0,   &
+      P00    => CONST_PRE00
     use mod_grid, only: &
       CZ => GRID_CZ
+    use mod_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_cpl_vars, only: &
       LST
     implicit none
 
     ! work
-    real(RP) :: pta(IA,JA)
+    real(RP) :: tem(KA,IA,JA) ! temperature [K]
+    real(RP) :: pre(KA,IA,JA) ! pressure [Pa]
+
+    real(RP) :: rhos(IA,JA) ! surface density [kg/m3]
+    real(RP) :: pres(IA,JA) ! surface pressure [Pa]
+    real(RP) :: zs  (IA,JA) ! surface height [m]
+    real(RP) :: pta (IA,JA) ! surface air tempearature [K]
+
     real(RP) :: Uabs ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
     real(RP) :: SatQvs ! saturation water vapor mixing ratio at surface [kg/kg]
@@ -448,10 +471,24 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! rho*theta -> potential temperature at cell centor
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-      pta(i,j) = pRHOT(KS,i,j) / pDENS(KS,i,j)
+    call THERMODYN_temp_pres( tem  (:,:,:),  & ! [OUT]
+                              pre  (:,:,:),  & ! [OUT]
+                              pDENS(:,:,:),  & ! [IN]
+                              pRHOT(:,:,:),  & ! [IN]
+                              pQTRC(:,:,:,:) ) ! [IN]
+
+    ! surface height
+    zs(:,:) = 0.0_RP
+
+    call sfcval_estimate( rhos (:,:),   & ! [out]
+                          pres (:,:),   & ! [out]
+                          pDENS(:,:,:), & ! [in]
+                          pre  (:,:,:), & ! [in]
+                          zs   (:,:)    ) ! [in]
+
+    do j = 1, JA
+    do i = 1, IA
+      pta(i,j) = tem(KS,i,j) * ( pres(i,j) / pre(KS,i,j) )**RovCP
     end do
     end do
 
@@ -468,7 +505,7 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i+1,j) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i+1,j) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS),                       & ! (in)
+          CZ(KS), Uabs,                       & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j)     ) ! (in)
 
       pSFLX_MOMX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMX(KS,i,j)
@@ -488,7 +525,7 @@ contains
           Cm, Ch, Ce,                         & ! (out)
           ( pta(i,j) + pta(i,j+1) ) * 0.5_RP, & ! (in)
           ( LST(i,j) + LST(i,j+1) ) * 0.5_RP, & ! (in)
-          Uabs, CZ(KS),                       & ! (in)
+          CZ(KS), Uabs,                       & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j)     ) ! (in)
 
       pSFLX_MOMY(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMY(KS,i,j)
@@ -507,20 +544,20 @@ contains
       call bulkcoef_uno( &
           Cm, Ch, Ce,                     & ! (out)
           pta(i,j), LST(i,j),             & ! (in)
-          Uabs, CZ(KS),                   & ! (in)
+          CZ(KS), Uabs,                   & ! (in)
           pZ0M(i,j), pZ0H(i,j), pZ0E(i,j) ) ! (in)
 
       pSFLX_MOMZ(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * pMOMZ(KS,i,j) * 0.5_RP
 
       ! saturation at surface
-      SatQvs = satmixr( LST(i,j) )
+      SatQvs = satmixr( LST(i,j), pres(i,j) )
 
-      pSFLX_SH(i,j) = CPdry * Ch * min(max(Uabs,U_minH),U_maxH) * ( LST(i,j)*pDENS(KS,i,j) - pRHOT(KS,i,j) )
-      pSFLX_LH(i,j) = LH0   * Ce * min(max(Uabs,U_minE),U_maxE) * pDENS(KS,i,j) * ( SatQvs - pQTRC(KS,i,j,I_QV) ) * pQvEfc(i,j)
-      pSFLX_GH(i,j) = 2.0_RP * pTCS(i,j) * ( pTG(i,j) - LST(i,j) ) / pDZg(i,j)
-
+      pSFLX_SH(i,j)  = CPdry * min(max(Uabs,U_minH),U_maxH) * rhos(i,j) * Ch * ( LST(i,j) - pta(i,j) )
+      pSFLX_LH(i,j)  = LH0   * min(max(Uabs,U_minE),U_maxE) * rhos(i,j) * pQvEfc(i,j) * Ce * ( SatQvs - pQTRC(KS,i,j,I_QV) )
+      pSFLX_GH(i,j)  = -2.0_RP * pTCS(i,j) * ( LST(i,j) - pTG(i,j)  ) / pDZg(i,j)
       pSFLX_SWU(i,j) = pALB(i,j) * pSWD(i,j)
       pSFLX_LWU(i,j) = pEMIT(i,j) * STB * LST(i,j)**4
+
     enddo
     enddo
 
@@ -533,8 +570,6 @@ contains
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       KARMAN => CONST_KARMAN
-    use mod_process, only: &
-       PRC_MPIstop
     implicit none
 
     ! argument
@@ -551,121 +586,143 @@ contains
     real(RP), intent(in) :: ze   ! roughness length of moisture [m]
 
     ! constant
-    integer,  parameter :: nmax = 2 ! maximum iteration number (n=2: Uno et al. 1995)
-
-    ! parameters of bulk transfer coefficient
-    real(RP), parameter :: dRiB = 1.0E-10_RP ! delta RiB [no unit]
     real(RP), parameter :: tPrn = 0.74_RP    ! turbulent Prandtl number (Businger et al. 1971)
     real(RP), parameter :: LFb  = 9.4_RP     ! Louis factor b (Louis 1979)
     real(RP), parameter :: LFbp = 4.7_RP     ! Louis factor b' (Louis 1979)
     real(RP), parameter :: LFdm = 7.4_RP     ! Louis factor d for momemtum (Louis 1979)
     real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
 
-    ! variables
-    integer :: n
-    real(RP) :: RiBT, RiB0, dRiB0 ! bulk Richardson number [no unit]
+    ! work
+    real(RP) :: RiB, RiBT ! bulk Richardson number [no unit]
     real(RP) :: C0 ! initial drag coefficient [no unit]
-    real(RP) :: psi, dpsi
-    real(RP) :: fm, fh
-    real(RP) :: dfm, dfh
-    real(RP) :: LFcm, LFch
-    real(RP) :: res, dres
+    real(RP) :: fm, fh, t0th, q0qe
 
-    RiBT = GRAV * za * ( pta - pts ) / ( ( pts + pta ) * 0.5_RP * uabs**2 )
-    C0   = ( KARMAN / log( za/z0 ) )**2
-    LFcm = LFb * LFdm * C0 * sqrt( za/z0 )
-    LFch = LFb * LFdh * C0 * sqrt( za/z0 )
+    C0    = ( KARMAN / log( za/z0 ) )**2
+    RiBT  = GRAV * za * ( pta - pts ) / ( ( pta + pts ) * 0.5_RP * uabs**2 )
+    RiB   = RiBT
 
-    RiB0 = RiBT
-    do n = 1, nmax
-      ! calculate psi
-      if( RiB0 < 0.0_RP ) then
-        ! unstable condition
-        fm = 1.0_RP - ( LFb * RiB0 ) / ( 1.0_RP + LFcm * sqrt( abs( RiB0 ) ) )
-        fh = 1.0_RP - ( LFb * RiB0 ) / ( 1.0_RP + LFch * sqrt( abs( RiB0 ) ) )
-      else
-        ! stable condition
-        fm = 1.0_RP / ( 1.0_RP + LFbp * RiB0 )**2
-        fh = 1.0_RP / ( 1.0_RP + LFbp * RiB0 )**2
-      end if
-      psi  = tPrn * log( za/z0 ) * sqrt( fm ) / fh
-
-      ! calculate dpsi
-      dRiB0 = RiB0 + dRiB
-      if( dRiB0 < 0.0_RP ) then
-        ! unstable condition
-        dfm = 1.0_RP - ( LFb * dRiB0 ) / ( 1.0_RP + LFcm * sqrt( abs( dRiB0 ) ) )
-        dfh = 1.0_RP - ( LFb * dRiB0 ) / ( 1.0_RP + LFch * sqrt( abs( dRiB0 ) ) )
-      else
-        ! stable condition
-        dfm = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 )**2
-        dfh = 1.0_RP / ( 1.0_RP + LFbp * dRiB0 )**2
-      end if
-      dpsi = ( tPrn * log( za/z0 ) * sqrt( dfm ) / dfh - psi ) / dRiB
-
-      res  = RiB0 * tPrn * log( z0/zt ) + ( RiB0 - RiBT ) * psi
-      dres = tPrn * log( z0/zt ) + psi + ( RiB0 - RiBT ) * dpsi
-
-      ! update the bulk Richardson number
-      RiB0 = RiB0 - res / dres
-
-      if( abs( res ) < res_min ) then
-        ! finish iteration
-        exit
-      end if
-
-    end do
-
-    if( n > 3 .and. n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration in the function of bulkcoef_uno.'
-      call PRC_MPIstop
+    if( RiBT >= 0.0_RP ) then
+      ! stable condition
+      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh = fm
+    else
+      ! unstable condition
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
     end if
 
+    t0th = 1.0_RP / ( 1.0_RP + log( z0/zt ) / log( za/z0 ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( z0/ze ) / log( za/z0 ) / sqrt( fm ) * fh )
+    RiB  = RiB * t0th
+
+    if( RiBT >= 0.0_RP ) then
+      ! stable condition
+      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh = fm
+    else
+      ! unstable condition
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
+    end if
+
+    t0th = 1.0_RP / ( 1.0_RP + log( z0/zt ) / log( za/z0 ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( z0/ze ) / log( za/z0 ) / sqrt( fm ) * fh )
+
     Cm = C0 * fm
-    Ch = C0 * fh / tPrn / ( tPrn * log( z0/zt ) / psi + 1.0_RP )
-    Ce = C0 * fh / tPrn / ( tPrn * log( z0/ze ) / psi + 1.0_RP )
+    Ch = C0 * fh * t0th / tPrn
+    Ce = C0 * fh * q0qe / tPrn
 
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
 
     return
-
   end subroutine bulkcoef_uno
 
-  function satmixr( temp )
+  subroutine sfcval_estimate( &
+      sfc_rho, sfc_pre, & ! (out)
+      rho, pre, zs      ) ! (in)
     use mod_const, only: &
-      P00    => CONST_PRE00, &
+      GRAV => CONST_GRAV
+    use mod_grid, only: &
+      CZ => GRID_CZ
+    implicit none
+
+    ! argument
+    real(RP), intent(out) :: sfc_rho(IA,JA)    ! density at surface [kg/m3]
+    real(RP), intent(out) :: sfc_pre(IA,JA)    ! pressure at surface [Pa]
+    real(RP), intent(in)  :: rho    (KA,IA,JA) ! density [kg/m3]
+    real(RP), intent(in)  :: pre    (KA,IA,JA) ! pressure [Pa]
+    real(RP), intent(in)  :: zs     (IA,JA)    ! surface height [m]
+
+    ! work
+    integer :: i, j
+
+    real(RP) :: zz
+    real(RP) :: z1, z2, z3
+    real(RP) :: p1, p2, p3
+    real(RP) :: lag_intpl
+
+    lag_intpl( zz, z1, p1, z2, p2, z3, p3 )                &
+      = ( (zz-z2) * (zz-z3) ) / ( (z1-z2) * (z1-z3) ) * p1 &
+      + ( (zz-z1) * (zz-z3) ) / ( (z2-z1) * (z2-z3) ) * p2 &
+      + ( (zz-z1) * (zz-z2) ) / ( (z3-z1) * (z3-z2) ) * p3
+
+    ! estimate surface density (extrapolation)
+    do j = 1, JA
+    do i = 1, IA
+      sfc_rho(i,j) = lag_intpl( zs(i,j),                 &
+                                CZ(KS  ), rho(KS  ,i,j), &
+                                CZ(KS+1), rho(KS+1,i,j), &
+                                CZ(KS+2), rho(KS+2,i,j)  )
+    end do
+    end do
+
+    ! estimate surface pressure (hydrostatic balance)
+    do j = 1, JA
+    do i = 1, IA
+      sfc_pre(i,j) = pre(KS,i,j)                             &
+                   + 0.5_RP * ( sfc_rho(i,j) + rho(KS,i,j) ) &
+                   * GRAV * ( CZ(KS) - zs(i,j) )
+    end do
+    end do
+
+    return
+  end subroutine sfcval_estimate
+
+  function satmixr( temp, pres )
+    use mod_const, only : &
       EPSvap => CONST_EPSvap
     implicit none
 
     ! argument
-    real(8), intent(in) :: temp ! temperature [K]
-!    real(8), intent(in) :: pres ! pressure [Pa]
+    real(RP), intent(in) :: temp ! temperature [K]
+    real(RP), intent(in) :: pres ! pressure [Pa]
     ! function
-    real(8) :: satmixr ! saturated mixing ratio [kg/kg]
+    real(RP) :: satmixr ! saturated mixing ratio [kg/kg]
 
-!    satmixr = EPSvap * satvapor( temp ) / ( pres - esat )
-    satmixr = EPSvap * satvapor( temp ) / P00
+    satmixr = EPSvap * satvapor( temp ) / ( pres - satvapor( temp ) )
 
+    return
   end function satmixr
 
   function satvapor( temp )
     use mod_const, only: &
-      T00   => CONST_TEM00, &
       LH0   => CONST_LH0,   &
       Rvap  => CONST_Rvap,  &
+      T00   => CONST_TEM00, &
       PSAT0 => CONST_PSAT0
     implicit none
 
     ! argument
-    real(8), intent(in) :: temp ! temperature [K]
+    real(RP), intent(in) :: temp ! temperature [K]
     ! function
-    real(8) :: satvapor ! saturated water vapor pressure [Pa]
+    real(RP) :: satvapor ! saturated water vapor pressure [Pa]
 
-    ! Tetens (1930)
+    ! Clasius-Clapeyron Equation
     satvapor = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/temp ) )
 
+    return
   end function satvapor
 
 end module mod_cpl_atmos_land

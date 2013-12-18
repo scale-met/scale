@@ -292,16 +292,14 @@ contains
        TG   (:,:) = 300.0_RP
        QvEfc(:,:) =   1.0_RP
        ROFF (:,:) =   0.0_RP
-       STRG (:,:) = 100.0_RP
+       STRG (:,:) = 200.0_RP
     endif
 
     LAND_PROPERTY(:,:,:) = CONST_UNDEF
 
     if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
 
-       LAND_Type(:,:)       = 2
-       LAND_Type(:,JS:JS+1) = 1
-       LAND_Type(:,JE-1:JE) = 1
+       LAND_Type(:,:)       = 1
 !       call FILEIO_read( LAND_Type(:,:),                                      & ! [OUT]
 !                         LAND_BOUNDARY_IN_BASENAME, 'LAND_Type', 'XY', step=1 ) ! [IN]
 
@@ -393,10 +391,10 @@ contains
        call MISC_valcheck( STRG (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG)  )
     endif
 
-    call HIST_in( TG   (:,:),   'L_TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )
-    call HIST_in( QvEfc(:,:),   'L_QvEfc', LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), TIME_DTSEC_LAND )
-    call HIST_in( ROFF (:,:),   'L_ROFF',  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  TIME_DTSEC_LAND )
-    call HIST_in( STRG  (:,:),  'L_STRG',  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  TIME_DTSEC_LAND )
+    call HIST_in( TG   (:,:),   'TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )
+    call HIST_in( QvEfc(:,:),   'QvEfc', LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), TIME_DTSEC_LAND )
+    call HIST_in( ROFF (:,:),   'ROFF',  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  TIME_DTSEC_LAND )
+    call HIST_in( STRG (:,:),   'STRG',  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  TIME_DTSEC_LAND )
 
     return
   end subroutine LAND_vars_history
@@ -481,6 +479,10 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     do n = 1, LAND_NUM_IDX
+       ! undefined roughness length
+       Z0H = -1.0_RP
+       Z0E = -1.0_RP
+
        read(IO_FID_CONF,nml=PARAM_LAND_DATA,iostat=ierr)
 
        if ( ierr < 0 ) then !--- no more data
@@ -488,6 +490,13 @@ contains
        elseif( ierr > 0 ) then !--- fatal error
           write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
           call PRC_MPIstop
+       endif
+
+       if( Z0H < 0.0_RP ) then
+         Z0H = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
+       endif
+       if( Z0E < 0.0_RP ) then
+         Z0E = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
        endif
 
        LAND_PROPERTY_table(index,I_STRGMAX) = STRGMAX

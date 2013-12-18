@@ -31,6 +31,7 @@ module mod_atmos_phy_sf_wrap
   !
   public :: ATMOS_PHY_SF_wrap_setup
   public :: ATMOS_PHY_SF_wrap
+  public :: ATMOS_PHY_SF_CPL
 
   !-----------------------------------------------------------------------------
   !
@@ -44,13 +45,6 @@ module mod_atmos_phy_sf_wrap
   !
   !++ Private parameters & variables
   !
-
-  ! surface flux
-  real(RP), private, allocatable :: SFLX_MOMZ(:,:)
-  real(RP), private, allocatable :: SFLX_MOMX(:,:)
-  real(RP), private, allocatable :: SFLX_MOMY(:,:)
-  real(RP), private, allocatable :: SFLX_POTT(:,:)
-  real(RP), private, allocatable :: SFLX_QV(:,:)
   !-----------------------------------------------------------------------------
 contains
 
@@ -66,6 +60,8 @@ contains
        PRC_MPIstop
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
+    use mod_cpl_vars, only: &
+       sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     character(len=IO_SYSCHR), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
@@ -73,14 +69,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
 
-    allocate( SFLX_MOMZ(IA,JA) )
-    allocate( SFLX_MOMX(IA,JA) )
-    allocate( SFLX_MOMY(IA,JA) )
-    allocate( SFLX_POTT(IA,JA) )
-    allocate( SFLX_QV(IA,JA) )
-
-    call ATMOS_PHY_SF_setup( SF_TYPE )
-    call ATMOS_PHY_SF_wrap( .true., .false. )
+    ! tentative process
+    ! finally, surface processes will be located under the coupler.
+    if( SF_TYPE /= 'COUPLE' ) then
+       call ATMOS_PHY_SF_setup( SF_TYPE )
+       call ATMOS_PHY_SF_wrap( .true., .false. )
+    end if
 
     return
   end subroutine ATMOS_PHY_SF_wrap_setup
@@ -125,6 +119,13 @@ contains
 
     logical, intent(in) :: update_flag
     logical, intent(in), optional :: history_flag
+
+    ! surface flux
+    real(RP) :: SFLX_MOMZ(IA,JA)
+    real(RP) :: SFLX_MOMX(IA,JA)
+    real(RP) :: SFLX_MOMY(IA,JA)
+    real(RP) :: SFLX_POTT(IA,JA)
+    real(RP) :: SFLX_QV  (IA,JA)
 
     ! monitor
     real(RP) :: SHFLX(IA,JA) ! sensible heat flux [W/m2]
@@ -179,5 +180,56 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF_wrap
+
+  subroutine ATMOS_PHY_SF_CPL
+    use mod_const, only: &
+       CPdry  => CONST_CPdry,  &
+       LH0    => CONST_LH0
+    use mod_grid, only: &
+       RCDZ => GRID_RCDZ, &
+       RFDZ => GRID_RFDZ
+    use mod_atmos_vars, only: &
+       DENS,    &
+       RHOT,    &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
+       QTRC_tp
+    use mod_atmos_vars_sf, only: &
+       SFLX_MOMZ, &
+       SFLX_MOMX, &
+       SFLX_MOMY, &
+       SFLX_SH,   &
+       SFLX_LH,   &
+       SFLX_QVAtm
+    implicit none
+
+    integer :: i, j
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
+
+    do j = JS, JE
+    do i = IS, IE
+       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+            + ( SFLX_SH(i,j)/CPdry &
+              + SFLX_QVAtm(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+              ) * RCDZ(KS)
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+            + SFLX_QVAtm(i,j)  * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+            + SFLX_MOMZ(i,j)   * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+            + SFLX_MOMX(i,j)   * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+            + SFLX_MOMY(i,j)   * RCDZ(KS)
+       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+            + SFLX_QVAtm(i,j)  * RCDZ(KS)
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_SF_CPL
 
 end module mod_atmos_phy_sf_wrap

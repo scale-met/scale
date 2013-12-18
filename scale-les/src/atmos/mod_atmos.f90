@@ -205,7 +205,8 @@ contains
     use mod_atmos_dyn_wrap, only: &
        ATMOS_DYN => ATMOS_DYN_wrap
     use mod_atmos_phy_sf_wrap, only: &
-       ATMOS_PHY_SF => ATMOS_PHY_SF_wrap
+       ATMOS_PHY_SF => ATMOS_PHY_SF_wrap, &
+       ATMOS_PHY_SF_CPL
     use mod_atmos_phy_tb_wrap, only: &
        ATMOS_PHY_TB => ATMOS_PHY_TB_wrap
     use mod_atmos_phy_mp_wrap, only: &
@@ -220,7 +221,6 @@ contains
     use mod_cpl_vars, only: &
        CPL_putAtm,     &
        CPL_getCPL2Atm, &
-       CPL_flushAtm,   &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
@@ -235,13 +235,16 @@ contains
        call CPL_getCPL2Atm( &
           SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, SFLX_SWU, SFLX_LWU, &
           SFLX_SH, SFLX_LH, SFLX_QVAtm                         )
-       call CPL_flushAtm
     endif
 
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
        call TIME_rapstart('ATM SurfaceFlux')
-       call ATMOS_PHY_SF( do_phy_sf, .true. )
+       if ( sw_AtmLnd ) then
+          call ATMOS_PHY_SF_CPL
+       else
+          call ATMOS_PHY_SF( do_phy_sf, .true. )
+       endif
        call TIME_rapend  ('ATM SurfaceFlux')
     endif
 
