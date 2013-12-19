@@ -20,7 +20,7 @@ radiation  = dummy
 # for run
 INITCONF  = init_200m.conf
 RUNCONF   = run_200m.conf
-TPROC     = run_200m.conf
+TPROC     = 4
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile

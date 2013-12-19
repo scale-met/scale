@@ -12,6 +12,9 @@ INDEX_DIR  := $(PWD)
 
 SRCDIR = $(SCALELESDIR)/src
 
+INITNAME = scale3_init
+BINNAME  = scale3
+BINDIR = .
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
