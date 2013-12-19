@@ -135,11 +135,12 @@ $(BUILD_DIR)/scale.o			: scale.f90 mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
 	$(MAKE) -C $(GTOOLDIR) allclean
+	$(MAKE) -C $(SCALELIBDIR)/src allclean
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
 
 distclean: clean
-	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a
+	rm -f $(PRJS)
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c

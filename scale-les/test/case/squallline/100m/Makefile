@@ -22,6 +22,10 @@ INITCONF  = init.conf
 RUNCONF   = run.conf
 TPROC     = 8
 
+# src files
+CODE_DIR    = ..
+ORG_SRCS    = mod_user.f90
+
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
