@@ -1,8 +1,9 @@
+PWD = $(shell pwd)
 TOPDIR = ../../..
-BUILD_DIR := $(shell pwd)/.libs
+BUILD_DIR := $(PWD)/.libs
 
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
-include $(TOPDIR)/src/Mkinclude
+include $(TOPDIR)/Mkinclude
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 VPATH = $(BUILD_DIR)
 
