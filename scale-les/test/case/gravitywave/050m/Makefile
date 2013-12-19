@@ -24,7 +24,7 @@ TPROC     = 150
 
 # src files
 CODE_DIR  = ..
-ORG_FILES = mod_user.f90
+ORG_SRCS = mod_user.f90
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
