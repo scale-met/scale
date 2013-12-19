@@ -49,10 +49,6 @@ MODS =	\
 	mod_land_vars.o	\
 	mod_ocean_vars.o	\
 	mod_cpl_vars.o \
-	mod_atmos_sub_profile.o	\
-	mod_atmos_sub_hydrostatic.o	\
-	mod_atmos_sub_refstate.o	\
-	mod_atmos_sub_boundary.o	\
 	mod_atmos_dyn_wrap.o	\
 	mod_atmos_phy_mp_wrap.o	\
 	mod_atmos_phy_sf_wrap.o	\
@@ -100,15 +96,11 @@ $(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
-$(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o \
+$(BUILD_DIR)/mod_atmos.o	: mod_atmos.f90 mod_atmos_vars.o \
                              mod_atmos_dyn_wrap.o mod_atmos_phy_sf_wrap.o mod_atmos_phy_tb_wrap.o mod_atmos_phy_rd_wrap.o mod_atmos_phy_ae_wrap.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_vars.o	: mod_atmos_vars.f90
 $(BUILD_DIR)/mod_atmos_vars_sf.o	: mod_atmos_vars_sf.f90
-$(BUILD_DIR)/mod_atmos_sub_profile.o	: mod_atmos_sub_profile.f90
-$(BUILD_DIR)/mod_atmos_sub_hydrostatic.o : mod_atmos_sub_hydrostatic.f90
-$(BUILD_DIR)/mod_atmos_sub_refstate.o	: mod_atmos_sub_refstate.f90 mod_atmos_sub_profile.o mod_atmos_sub_hydrostatic.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_sub_boundary.o	: mod_atmos_sub_boundary.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_dyn_wrap.o	: mod_atmos_dyn_wrap.f90 mod_atmos_vars.o mod_atmos_sub_refstate.o mod_atmos_sub_boundary.o mod_atmos_vars_sf.o mod_ocean_vars.o
+$(BUILD_DIR)/mod_atmos_dyn_wrap.o	: mod_atmos_dyn_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_sf_wrap.o	: mod_atmos_phy_sf_wrap.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_ocean_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_wrap.o	: mod_atmos_phy_tb_wrap.f90 mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_rd_wrap.o	: mod_atmos_phy_rd_wrap.f90 mod_atmos_phy_ae_wrap.o mod_atmos_vars.o
@@ -126,7 +118,7 @@ $(BUILD_DIR)/mod_cpl_vars.o	: mod_cpl_vars.f90
 $(BUILD_DIR)/mod_cpl_atmos_land.o	: mod_cpl_atmos_land.f90 mod_cpl_vars.o
 
 $(BUILD_DIR)/mod_mktopo.o	: mod_mktopo.f90
-$(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_atmos_vars.o mod_atmos_sub_profile.o mod_atmos_sub_hydrostatic.o
+$(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_atmos_vars.o
 
 $(BUILD_DIR)/mod_user.o	: mod_user.f90
 

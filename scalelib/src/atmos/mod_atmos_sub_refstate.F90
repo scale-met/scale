@@ -89,7 +89,8 @@ module mod_atmos_refstate
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_REFSTATE_setup
+  subroutine ATMOS_REFSTATE_setup( &
+       DENS, RHOT, QTRC )
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -97,6 +98,9 @@ contains
     use mod_grid, only: &
        CZ => GRID_CZ
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
@@ -158,7 +162,7 @@ contains
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
-          call ATMOS_REFSTATE_generate_frominit
+          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
        else
           write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
           call PRC_MPIstop
@@ -426,33 +430,37 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Horizontal average from initial data)
-  subroutine ATMOS_REFSTATE_generate_frominit
+  subroutine ATMOS_REFSTATE_generate_frominit( &
+       DENS, RHOT, QTRC )
     use mod_time, only: &
        TIME_NOWSEC
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     !---------------------------------------------------------------------------
 
     last_updated = TIME_NOWSEC - ATMOS_REFSTATE_UPDATE_DT
 
-    call ATMOS_REFSTATE_update
+    call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
-  subroutine ATMOS_REFSTATE_update
+  subroutine ATMOS_REFSTATE_update( &
+       DENS, RHOT, QTRC )
     use mod_time, only: &
        TIME_NOWSEC
     use mod_comm, only: &
        COMM_horizontal_mean
-    use mod_atmos_vars, only: &
-       DENS, &
-       RHOT, &
-       QTRC
     use mod_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)

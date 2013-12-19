@@ -69,6 +69,10 @@ OBJS =	\
 	mod_atmos_sub_saturation.o	\
 	mod_atmos_sub_thermodyn.o	\
 	mod_atmos_sub_solarins.o	\
+	mod_atmos_sub_hydrostatic.o	\
+	mod_atmos_sub_profile.o	\
+	mod_atmos_sub_refstate.o	\
+	mod_atmos_sub_boundary.o	\
 	mod_atmos_dyn_common.o	\
 	mod_atmos_dyn_rk.o \
 	mod_atmos_dyn_rk_heve.o \

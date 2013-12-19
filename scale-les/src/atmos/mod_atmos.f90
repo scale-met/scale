@@ -69,6 +69,12 @@ contains
        ATMOS_PHY_RD_TYPE, &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_PHY_CH_TYPE, &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC, &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -117,9 +123,10 @@ contains
     ! read restart
     call ATMOS_vars_restart_read
 
-    call ATMOS_REFSTATE_setup
+    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 
-    call ATMOS_BOUNDARY_setup
+    call ATMOS_BOUNDARY_setup( &
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
     ! setup each components
     if ( sw_dyn    ) call ATMOS_DYN_setup( ATMOS_DYN_TYPE )
@@ -220,7 +227,7 @@ contains
 
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call ATMOS_REFSTATE_update
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
     endif
 
     !########## from Coupler ##########

@@ -99,7 +99,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Initialize Boundary Treatment
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_BOUNDARY_setup
+  subroutine ATMOS_BOUNDARY_setup( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -110,6 +111,12 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
        ATMOS_BOUNDARY_TYPE,          &
@@ -168,7 +175,9 @@ contains
           call ATMOS_BOUNDARY_setalpha
        endif
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
-       call ATMOS_BOUNDARY_setinitval
+       call ATMOS_BOUNDARY_setinitval( &
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+
        call ATMOS_BOUNDARY_setalpha
     elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
@@ -392,24 +401,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Read boundary data
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_BOUNDARY_setinitval
+  subroutine ATMOS_BOUNDARY_setinitval( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use mod_const, only: &
        CONST_UNDEF
     use mod_grid, only: &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask, &
        CY_mask => GRID_CY_mask
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
     use mod_comm, only: &
        COMM_vars, &
        COMM_wait
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
