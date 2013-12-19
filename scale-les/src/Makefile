@@ -79,6 +79,7 @@ makegtool:
 	cd $(GTOOLDIR); $(MAKE)
 
 makescalelib:
+	cd $(SCALELIBDIR)/src; $(MAKE) depend
 	cd $(SCALELIBDIR)/src; $(MAKE)
 
 makedir:

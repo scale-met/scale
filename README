@@ -29,8 +29,10 @@ Build
 
 - make scalelib library
  % cd scalelib/src
+ % make depend
  % make
 
-- make scale-les
- % cd scale-les/src
+- make and run the test cases of scale-les
+ % cd scale-les/test/case/hydrostatic/500m (example)
  % make
+ % make run
