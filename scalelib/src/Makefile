@@ -5,8 +5,8 @@
 ################################################################################
 
 TOPDIR      = ../..
-BUILD_DIR   = ./.libs
 INCLUDE_DIR = ../include
+BUILD_DIR   := ./.libs
 
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)

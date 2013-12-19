@@ -12,7 +12,7 @@ SYSDEP_DIR  = ../sysdep
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
-unexport BUILD_DIR
+MAKEOVERRIDES = 
 
 # for build
 index        = 500m40x40x40
