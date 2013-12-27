@@ -36,6 +36,7 @@ module mod_atmos_vars_sf
   !++ Public procedure
   !
   public :: ATMOS_vars_sf_setup
+  public :: ATMOS_vars_sf_fillhalo
   public :: ATMOS_vars_sf_restart_read
   public :: ATMOS_vars_sf_restart_write
 
@@ -127,8 +128,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SF_VARS)
 
     PREC(:,:) = 0.0_RP
-    SWD (:,:) = 200.0_RP
-    LWD (:,:) = 300.0_RP
+    SWD (:,:) = 0.0_RP
+    LWD (:,:) = 0.0_RP
 
     SFLX_MOMZ (:,:) = 0.0_RP
     SFLX_MOMX (:,:) = 0.0_RP
@@ -142,73 +143,35 @@ contains
     return
   end subroutine ATMOS_vars_sf_setup
 
-  !-----------------------------------------------------------------------------
-  !> Read restart of atmospheric surface variables
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_vars_sf_restart_read
+  subroutine ATMOS_vars_sf_fillhalo
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use gtool_file, only: &
-       FileRead
     implicit none
 
-!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
-!    character(len=IO_FILECHR) :: bname
-!    character(len=8)          :: lname
-
-!    integer :: i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
-
-!    bname = ATMOS_SF_RESTART_IN_BASENAME
-!    write(lname,'(A,I4.4)') 'ZDEF', KMAX
-
-!    call FileRead( restart_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
-!    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-
     ! fill IHALO & JHALO
-!    call COMM_vars8( DENS(:,:,:), 1 )
-!    call COMM_wait ( RHOT(:,:,:), 5 )
+    call COMM_vars8( PREC(:,:), 1 )
+    call COMM_vars8( SWD (:,:), 2 )
+    call COMM_vars8( LWD (:,:), 3 )
+    call COMM_wait ( PREC(:,:), 1 )
+    call COMM_wait ( SWD (:,:), 2 )
+    call COMM_wait ( LWD (:,:), 3 )
 
+    return
+  end subroutine ATMOS_vars_sf_fillhalo
+
+  subroutine ATMOS_vars_sf_restart_read
+    implicit none
+    !---------------------------------------------------------------------------
     return
   end subroutine ATMOS_vars_sf_restart_read
 
-  !-----------------------------------------------------------------------------
-  !> Write restart of atmospheric surface variables
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_sf_restart_write
-!    use mod_time, only: &
-!       NOWSEC => TIME_NOWDAYSEC
-!    use gtool_file_h, only: &
-!       File_REAL4, &
-!       File_REAL8
-!    use gtool_file, only: &
-!       FileCreate, &
-!       FileAddVariable, &
-!       FilePutAxis, &
-!       FileWrite, &
-!       FielClose
     implicit none
-
-!    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
-!    character(len=IO_FILECHR) :: bname
-!    integer :: n
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
-
-!    write(bname(1:15), '(F15.3)') NOWSEC
-!    do n = 1, 15
-!      if ( bname(n:n) == ' ' ) bname(n:n) = '0'
-!    end do
-!    write(bname,'(A,A,A)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', basename
-
     return
   end subroutine ATMOS_vars_sf_restart_write
 

@@ -91,6 +91,8 @@ module mod_atmos_phy_rd_mstrnX
 
   integer,  private, save      :: MSTRN_nband    = 29 !< # of wave bands
 
+  logical,  private, save      :: MSTRN_single   = .false. !< # single radiation
+
   integer,  private, parameter :: MSTRN_nstream  =  1 !< # of streams
   integer,  private, parameter :: MSTRN_ch_limit = 10 !< max # of subintervals
   integer,  private, parameter :: MSTRN_nflag    =  7 ! # of optical properties flag
@@ -235,13 +237,15 @@ contains
     character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     integer                   :: ATMOS_PHY_RD_MSTRN_nband
+    logical                   :: ATMOS_PHY_RD_MSTRN_single
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband
+       ATMOS_PHY_RD_MSTRN_nband                , &
+       ATMOS_PHY_RD_MSTRN_single
 
     integer :: ngas, ncfc
     integer :: ihydro, iaero
@@ -263,6 +267,7 @@ contains
     ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = MSTRN_AEROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = MSTRN_HYGROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_nband                 = MSTRN_nband
+    ATMOS_PHY_RD_MSTRN_single                = MSTRN_single
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
@@ -280,6 +285,7 @@ contains
     MSTRN_AEROPARA_INPUTFILE  = ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     MSTRN_HYGROPARA_INPUTFILE = ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
+    MSTRN_single              = ATMOS_PHY_RD_MSTRN_single
 
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
@@ -356,12 +362,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Radiation main
   subroutine ATMOS_PHY_RD_mstrnX( &
-       flux_rad, flux_rad_top, & ! [out]
-       solins, cosSZA, & ! [out]
-       DENS, RHOT, QTRC, & ! [in]
-       CZ, FZ, CDZ, RCDZ, & ! [in]
-       REAL_lon, REAL_lat, & ! [in]
-       TIME_NOWDATE ) ! [in]
+       flux_rad, flux_rad_top,    & ! [out]
+       solins, cosSZA,            & ! [out]
+       DENS, RHOT, QTRC,          & ! [in]
+       temp_sfc, param_sfc,       & ! [in]
+       CZ, FZ, CDZ, RCDZ,         & ! [in]
+       REAL_lon, REAL_lat,        & ! [in]
+       TIME_NOWDATE               ) ! [in]
     use mod_const, only: &
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
@@ -389,6 +396,8 @@ contains
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: temp_sfc(IA,JA)
+    real(RP), intent(in)  :: param_sfc(5)
     real(RP), intent(in)  :: CZ(KA)
     real(RP), intent(in)  :: FZ(KA-1)
     real(RP), intent(in)  :: CDZ(KA)
@@ -421,9 +430,6 @@ contains
     real(RP) :: aerosol_conc_merge(RD_KMAX,RD_naero  )
     real(RP) :: aerosol_radi_merge(RD_KMAX,RD_naero  )
     real(RP) :: cldfrac_merge     (RD_KMAX)
-
-    real(RP) :: temp_sfc                       !< surface temperature [K]
-    real(RP) :: param_sfc(5)                   !< surface parameter
 
     ! output
     real(RP) :: flux_rad_merge(RD_KMAX+1,2,2)
@@ -535,11 +541,6 @@ contains
           endif
        enddo
 
-       ! surface parameter
-       temp_sfc       = temp(KS,i,j)
-       param_sfc(1)   = 1.D0 ! ocean surface only, tentative
-       param_sfc(2:5) = 0.D0
-
        ! calc radiative transfer
        call RD_MSTRN_DTRN3( RD_KMAX,                  & ! [IN]
                             MSTRN_ngas,               & ! [IN]
@@ -555,7 +556,7 @@ contains
                             pres_merge        (:),    & ! [IN]
                             temp_merge        (:),    & ! [IN]
                             temph_merge       (:),    & ! [IN]
-                            temp_sfc,                 & ! [IN]
+                            temp_sfc(i,j),            & ! [IN]
                             gas_merge         (:,:),  & ! [IN]
                             cfc_merge         (:,:),  & ! [IN]
                             aerosol_conc_merge(:,:),  & ! [IN]
@@ -580,6 +581,22 @@ contains
 
      enddo
      enddo
+
+     ! single radiation
+     if( MSTRN_single ) then
+        do k = KS-1, KE
+           flux_rad(k,:,:,I_LW,I_up) = flux_rad(k,IS,JS,I_LW,I_up)
+           flux_rad(k,:,:,I_LW,I_dn) = flux_rad(k,IS,JS,I_LW,I_dn)
+           flux_rad(k,:,:,I_SW,I_up) = flux_rad(k,IS,JS,I_SW,I_up)
+           flux_rad(k,:,:,I_SW,I_dn) = flux_rad(k,IS,JS,I_SW,I_dn)
+        end do
+
+        flux_rad_top(:,:,I_LW) = flux_rad_top(IS,JS,I_LW)
+        flux_rad_top(:,:,I_SW) = flux_rad_top(IS,JS,I_SW)
+
+        solins(:,:) = solins(IS,JS)
+        cosSZA(:,:) = cosSZA(IS,JS)
+     endif
 
     return
   end subroutine ATMOS_PHY_RD_mstrnX

@@ -423,7 +423,8 @@ contains
 !       LST  (:,:) = CONST_UNDEF
        LST  (:,:) = 300.0_RP
        SST  (:,:) = CONST_UNDEF
-       SkinT(:,:) = CONST_UNDEF
+!       SkinT(:,:) = CONST_UNDEF
+       SkinT(:,:) = LST(:,:)
        SkinW(:,:) = CONST_UNDEF
        SnowQ(:,:) = CONST_UNDEF
        SnowT(:,:) = CONST_UNDEF
@@ -570,8 +571,6 @@ contains
   subroutine CPL_vars_merge
     implicit none
 
-    if( CNT_getCPL2Atm == 0.D0 ) return
-
     ! merge Land-Ocean
     SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm
     SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) / CNT_getCPL2Atm
@@ -585,6 +584,8 @@ contains
     SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) / CNT_getCPL2Lnd
     SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) / CNT_getCPL2Lnd
     SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) / CNT_getCPL2Lnd
+
+    SkinT(:,:) = LST(:,:)
 
   end subroutine CPL_vars_merge
 
@@ -678,7 +679,7 @@ contains
 
     Lnd_SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) + pSFLX_GH  (:,:)
     Lnd_SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) + pSFLX_PREC(:,:)
-    Lnd_SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) + pSFLX_LH  (:,:)/LH0
+    Lnd_SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) - pSFLX_LH  (:,:)/LH0
 
     CNT_getCPL2Atm = CNT_getCPL2Atm + 1.0_RP
     CNT_getCPL2Lnd = CNT_getCPL2Lnd + 1.0_RP

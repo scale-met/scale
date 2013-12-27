@@ -92,7 +92,6 @@ contains
     use mod_cpl_vars, only: &
        CPL_putLnd,      &
        CPL_getCPL2Lnd,  &
-       CPL_flushLnd,    &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
@@ -102,7 +101,6 @@ contains
        call CPL_getCPL2Lnd( SFLX_GH   (:,:), & ! [OUT]
                             SFLX_PREC (:,:), & ! [OUT]
                             SFLX_QVLnd(:,:)  ) ! [OUT]
-       call CPL_flushLnd
     endif
 
     !########## Physics ##########

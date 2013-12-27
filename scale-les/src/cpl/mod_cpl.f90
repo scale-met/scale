@@ -76,17 +76,20 @@ contains
        sw_AtmLnd => CPL_sw_AtmLnd, &
        CPL_vars_setup,             &
        CPL_vars_restart_read,      &
+       CPL_vars_merge,             &
        CPL_vars_fillhalo,          &
        CPL_putAtm,                 &
-       CPL_putLnd
+       CPL_putLnd,                 &
+       CPL_flushAtm,               &
+       CPL_flushLnd,               &
+       CPL_AtmLnd_flushCPL
     use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_setup,   &
+       CPL_AtmLnd_setup, &
        CPL_AtmLnd_unsolve
     implicit none
     !---------------------------------------------------------------------------
 
     call CPL_vars_setup
-
     call CPL_vars_restart_read
 
     call CPL_AtmLnd_setup
@@ -107,6 +110,12 @@ contains
        call CPL_AtmLnd_unsolve
     endif
 
+    call CPL_vars_merge
+
+    call CPL_flushAtm
+    call CPL_flushLnd
+    call CPL_AtmLnd_flushCPL
+
     call CPL_vars_fillhalo
 
     return
@@ -117,10 +126,13 @@ contains
   subroutine CPL_calc
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
-       CPL_TYPE_AtmLnd,   &
-       CPL_vars_fillhalo, &
-       CPL_vars_history,  &
-       CPL_vars_merge
+       CPL_TYPE_AtmLnd,     &
+       CPL_vars_fillhalo,   &
+       CPL_vars_merge,      &
+       CPL_vars_history,    &
+       CPL_flushAtm,        &
+       CPL_flushLnd,        &
+       CPL_AtmLnd_flushCPL
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_solve,   &
        CPL_AtmLnd_unsolve
@@ -136,6 +148,11 @@ contains
 
     !########## merge Land-Ocean ##########
     call CPL_vars_merge
+
+    !########## flush Coupler values ##########
+    call CPL_flushAtm
+    call CPL_flushLnd
+    call CPL_AtmLnd_flushCPL
 
     !########## Fill HALO ##########
     call CPL_vars_fillhalo

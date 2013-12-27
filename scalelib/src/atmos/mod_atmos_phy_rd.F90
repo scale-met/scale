@@ -46,12 +46,13 @@ module mod_atmos_phy_rd
   !
   abstract interface
      subroutine rd( &
-          flux_rad, flux_top, & ! [out]
-          solins, cosSZA, & ! [out]
-          DENS, RHOT, QTRC, & ! [in]
-          CZ, FZ, CDZ, RCDZ, & ! [in]
-          REAL_lon, REAL_lat, & ! [in]
-          TIME_NOWDATE ) ! [in]
+          flux_rad, flux_top,  & ! [out]
+          solins, cosSZA,      & ! [out]
+          DENS, RHOT, QTRC,    & ! [in]
+          temp_sfc, param_sfc, & ! [in]
+          CZ, FZ, CDZ, RCDZ,   & ! [in]
+          REAL_lon, REAL_lat,  & ! [in]
+          TIME_NOWDATE         ) ! [in]
        use mod_precision
        use mod_index
        use mod_tracer
@@ -62,6 +63,8 @@ module mod_atmos_phy_rd
        real(RP), intent(in)  :: DENS(KA,IA,JA)
        real(RP), intent(in)  :: RHOT(KA,IA,JA)
        real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(in)  :: temp_sfc(IA,JA)
+       real(RP), intent(in)  :: param_sfc(5)
        real(RP), intent(in)  :: CZ(KA)
        real(RP), intent(in)  :: FZ(KA-1)
        real(RP), intent(in)  :: CDZ(KA)
