@@ -297,6 +297,11 @@ contains
     call FileRead( GRID_FX(:), bname, 'FX', 1, PRC_myrank )
     call FileRead( GRID_FY(:), bname, 'FY', 1, PRC_myrank )
 
+    call FileRead( GRID_CXG(:), bname, 'CXG', 1, PRC_myrank )
+    call FileRead( GRID_CYG(:), bname, 'CYG', 1, PRC_myrank )
+    call FileRead( GRID_FXG(:), bname, 'FXG', 1, PRC_myrank )
+    call FileRead( GRID_FYG(:), bname, 'FYG', 1, PRC_myrank )
+
     call FileRead( GRID_CDZ(:), bname, 'CDZ', 1, PRC_myrank )
     call FileRead( GRID_CDX(:), bname, 'CDX', 1, PRC_myrank )
     call FileRead( GRID_CDY(:), bname, 'CDY', 1, PRC_myrank )
