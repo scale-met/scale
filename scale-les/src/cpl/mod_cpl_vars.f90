@@ -302,6 +302,20 @@ contains
     allocate( Lnd_SFLX_PREC (IA,JA) )
     allocate( Lnd_SFLX_QVLnd(IA,JA) )
 
+    Lnd_SFLX_MOMX (:,:) = 0.0_RP
+    Lnd_SFLX_MOMY (:,:) = 0.0_RP
+    Lnd_SFLX_MOMZ (:,:) = 0.0_RP
+    Lnd_SFLX_SWU  (:,:) = 0.0_RP
+    Lnd_SFLX_LWU  (:,:) = 0.0_RP
+    Lnd_SFLX_SH   (:,:) = 0.0_RP
+    Lnd_SFLX_LH   (:,:) = 0.0_RP
+    Lnd_SFLX_QVAtm(:,:) = 0.0_RP
+
+    Lnd_SFLX_GH   (:,:) = 0.0_RP
+    Lnd_SFLX_PREC (:,:) = 0.0_RP
+    Lnd_SFLX_QVLnd(:,:) = 0.0_RP
+
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL,iostat=ierr)
@@ -572,18 +586,22 @@ contains
     implicit none
 
     ! merge Land-Ocean
-    SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm
-    SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) / CNT_getCPL2Atm
-    SFLX_MOMZ (:,:) = Lnd_SFLX_MOMZ (:,:) / CNT_getCPL2Atm
-    SFLX_SWU  (:,:) = Lnd_SFLX_SWU  (:,:) / CNT_getCPL2Atm
-    SFLX_LWU  (:,:) = Lnd_SFLX_LWU  (:,:) / CNT_getCPL2Atm
-    SFLX_SH   (:,:) = Lnd_SFLX_SH   (:,:) / CNT_getCPL2Atm
-    SFLX_LH   (:,:) = Lnd_SFLX_LH   (:,:) / CNT_getCPL2Atm
-    SFLX_QVAtm(:,:) = Lnd_SFLX_QVAtm(:,:) / CNT_getCPL2Atm
+    if ( CNT_getCPL2Atm > 0 ) then
+       SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm
+       SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) / CNT_getCPL2Atm
+       SFLX_MOMZ (:,:) = Lnd_SFLX_MOMZ (:,:) / CNT_getCPL2Atm
+       SFLX_SWU  (:,:) = Lnd_SFLX_SWU  (:,:) / CNT_getCPL2Atm
+       SFLX_LWU  (:,:) = Lnd_SFLX_LWU  (:,:) / CNT_getCPL2Atm
+       SFLX_SH   (:,:) = Lnd_SFLX_SH   (:,:) / CNT_getCPL2Atm
+       SFLX_LH   (:,:) = Lnd_SFLX_LH   (:,:) / CNT_getCPL2Atm
+       SFLX_QVAtm(:,:) = Lnd_SFLX_QVAtm(:,:) / CNT_getCPL2Atm
+    end if
 
-    SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) / CNT_getCPL2Lnd
-    SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) / CNT_getCPL2Lnd
-    SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) / CNT_getCPL2Lnd
+    if ( CNT_getCPL2Lnd > 0 ) then
+       SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) / CNT_getCPL2Lnd
+       SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) / CNT_getCPL2Lnd
+       SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) / CNT_getCPL2Lnd
+    end if
 
     SkinT(:,:) = LST(:,:)
 

@@ -108,9 +108,10 @@ contains
                         LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
                         LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
        call CPL_AtmLnd_unsolve
-    endif
 
-    call CPL_vars_merge
+       call CPL_vars_merge
+
+    endif
 
     call CPL_flushAtm
     call CPL_flushLnd
