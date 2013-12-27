@@ -39,10 +39,7 @@ OBJS =	\
 	mod_tracer_tomita08.o	\
 	mod_tracer_sn13.o	\
 	mod_tracer_sn13w.o	\
-	mod_tracer_binw.o	\
-	mod_tracer_binf.o	\
-	mod_tracer_hbinw.o	\
-	mod_tracer_hbinf.o	\
+	mod_tracer_suzuki10.o	\
 	mod_stdio.o	\
 	mod_specfunc.o	\
 	mod_process.o	\
@@ -90,10 +87,7 @@ OBJS =	\
 	mod_atmos_phy_mp_tomita08.o	\
 	mod_atmos_phy_mp_sn13.o	\
 	mod_atmos_phy_mp_sn13w.o	\
-	mod_atmos_phy_mp_binw.o	\
-	mod_atmos_phy_mp_binf.o	\
-	mod_atmos_phy_mp_hbinw.o	\
-	mod_atmos_phy_mp_hbinf.o	\
+	mod_atmos_phy_mp_suzuki10.o	\
 	mod_atmos_phy_mp.o	\
 	mod_atmos_phy_rd_common.o	\
 	mod_atmos_phy_rd_profile.o	\

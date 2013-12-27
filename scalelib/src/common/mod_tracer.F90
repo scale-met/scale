@@ -265,130 +265,37 @@ contains
     I_AE2ALL_sn13w => I_AE2ALL, &
     I_AE2RD_sn13w => I_AE2RD, &
     TRACER_sn13w_setup
-  use mod_tracer_binw, only: &
-    QA_binw => QA, &
-    I_QV_binw => I_QV, &
-    I_QC_binw => I_QC, &
-    I_QR_binw => I_QR, &
-    I_QI_binw => I_QI, &
-    I_QS_binw => I_QS, &
-    I_QG_binw => I_QG, &
-    I_NC_binw => I_NC, &
-    I_NR_binw => I_NR, &
-    I_NI_binw => I_NI, &
-    I_NS_binw => I_NS, &
-    I_NG_binw => I_NG, &
-    QQA_binw => QQA, &
-    QQS_binw => QQS, &
-    QQE_binw => QQE, &
-    QWS_binw => QWS, &
-    QWE_binw => QWE, &
-    QIS_binw => QIS, &
-    QIE_binw => QIE, &
-    MP_QA_binw => MP_QA, &
-    AE_QA_binw => AE_QA, &
-    I_ae_dummy_binw => I_ae_dummy, &
-    AQ_NAME_binw => AQ_NAME, &
-    AQ_DESC_binw => AQ_DESC, &
-    AQ_UNIT_binw => AQ_UNIT, &
-    I_MP2ALL_binw => I_MP2ALL, &
-    I_MP2RD_binw => I_MP2RD, &
-    I_AE2ALL_binw => I_AE2ALL, &
-    I_AE2RD_binw => I_AE2RD, &
-    TRACER_binw_setup
-  use mod_tracer_binf, only: &
-    QA_binf => QA, &
-    I_QV_binf => I_QV, &
-    I_QC_binf => I_QC, &
-    I_QR_binf => I_QR, &
-    I_QI_binf => I_QI, &
-    I_QS_binf => I_QS, &
-    I_QG_binf => I_QG, &
-    I_NC_binf => I_NC, &
-    I_NR_binf => I_NR, &
-    I_NI_binf => I_NI, &
-    I_NS_binf => I_NS, &
-    I_NG_binf => I_NG, &
-    QQA_binf => QQA, &
-    QQS_binf => QQS, &
-    QQE_binf => QQE, &
-    QWS_binf => QWS, &
-    QWE_binf => QWE, &
-    QIS_binf => QIS, &
-    QIE_binf => QIE, &
-    MP_QA_binf => MP_QA, &
-    AE_QA_binf => AE_QA, &
-    I_ae_dummy_binf => I_ae_dummy, &
-    AQ_NAME_binf => AQ_NAME, &
-    AQ_DESC_binf => AQ_DESC, &
-    AQ_UNIT_binf => AQ_UNIT, &
-    I_MP2ALL_binf => I_MP2ALL, &
-    I_MP2RD_binf => I_MP2RD, &
-    I_AE2ALL_binf => I_AE2ALL, &
-    I_AE2RD_binf => I_AE2RD, &
-    TRACER_binf_setup
-  use mod_tracer_hbinw, only: &
-    QA_hbinw => QA, &
-    I_QV_hbinw => I_QV, &
-    I_QC_hbinw => I_QC, &
-    I_QR_hbinw => I_QR, &
-    I_QI_hbinw => I_QI, &
-    I_QS_hbinw => I_QS, &
-    I_QG_hbinw => I_QG, &
-    I_NC_hbinw => I_NC, &
-    I_NR_hbinw => I_NR, &
-    I_NI_hbinw => I_NI, &
-    I_NS_hbinw => I_NS, &
-    I_NG_hbinw => I_NG, &
-    QQA_hbinw => QQA, &
-    QQS_hbinw => QQS, &
-    QQE_hbinw => QQE, &
-    QWS_hbinw => QWS, &
-    QWE_hbinw => QWE, &
-    QIS_hbinw => QIS, &
-    QIE_hbinw => QIE, &
-    MP_QA_hbinw => MP_QA, &
-    AE_QA_hbinw => AE_QA, &
-    I_ae_dummy_hbinw => I_ae_dummy, &
-    AQ_NAME_hbinw => AQ_NAME, &
-    AQ_DESC_hbinw => AQ_DESC, &
-    AQ_UNIT_hbinw => AQ_UNIT, &
-    I_MP2ALL_hbinw => I_MP2ALL, &
-    I_MP2RD_hbinw => I_MP2RD, &
-    I_AE2ALL_hbinw => I_AE2ALL, &
-    I_AE2RD_hbinw => I_AE2RD, &
-    TRACER_hbinw_setup
-  use mod_tracer_hbinf, only: &
-    QA_hbinf => QA, &
-    I_QV_hbinf => I_QV, &
-    I_QC_hbinf => I_QC, &
-    I_QR_hbinf => I_QR, &
-    I_QI_hbinf => I_QI, &
-    I_QS_hbinf => I_QS, &
-    I_QG_hbinf => I_QG, &
-    I_NC_hbinf => I_NC, &
-    I_NR_hbinf => I_NR, &
-    I_NI_hbinf => I_NI, &
-    I_NS_hbinf => I_NS, &
-    I_NG_hbinf => I_NG, &
-    QQA_hbinf => QQA, &
-    QQS_hbinf => QQS, &
-    QQE_hbinf => QQE, &
-    QWS_hbinf => QWS, &
-    QWE_hbinf => QWE, &
-    QIS_hbinf => QIS, &
-    QIE_hbinf => QIE, &
-    MP_QA_hbinf => MP_QA, &
-    AE_QA_hbinf => AE_QA, &
-    I_ae_dummy_hbinf => I_ae_dummy, &
-    AQ_NAME_hbinf => AQ_NAME, &
-    AQ_DESC_hbinf => AQ_DESC, &
-    AQ_UNIT_hbinf => AQ_UNIT, &
-    I_MP2ALL_hbinf => I_MP2ALL, &
-    I_MP2RD_hbinf => I_MP2RD, &
-    I_AE2ALL_hbinf => I_AE2ALL, &
-    I_AE2RD_hbinf => I_AE2RD, &
-    TRACER_hbinf_setup
+  use mod_tracer_suzuki10, only: &
+    QA_suzuki10 => QA, &
+    I_QV_suzuki10 => I_QV, &
+    I_QC_suzuki10 => I_QC, &
+    I_QR_suzuki10 => I_QR, &
+    I_QI_suzuki10 => I_QI, &
+    I_QS_suzuki10 => I_QS, &
+    I_QG_suzuki10 => I_QG, &
+    I_NC_suzuki10 => I_NC, &
+    I_NR_suzuki10 => I_NR, &
+    I_NI_suzuki10 => I_NI, &
+    I_NS_suzuki10 => I_NS, &
+    I_NG_suzuki10 => I_NG, &
+    QQA_suzuki10 => QQA, &
+    QQS_suzuki10 => QQS, &
+    QQE_suzuki10 => QQE, &
+    QWS_suzuki10 => QWS, &
+    QWE_suzuki10 => QWE, &
+    QIS_suzuki10 => QIS, &
+    QIE_suzuki10 => QIE, &
+    MP_QA_suzuki10 => MP_QA, &
+    AE_QA_suzuki10 => AE_QA, &
+    I_ae_dummy_suzuki10 => I_ae_dummy, &
+    AQ_NAME_suzuki10 => AQ_NAME, &
+    AQ_DESC_suzuki10 => AQ_DESC, &
+    AQ_UNIT_suzuki10 => AQ_UNIT, &
+    I_MP2ALL_suzuki10 => I_MP2ALL, &
+    I_MP2RD_suzuki10 => I_MP2RD, &
+    I_AE2ALL_suzuki10 => I_AE2ALL, &
+    I_AE2RD_suzuki10 => I_AE2RD, &
+    TRACER_suzuki10_setup
 #endif
     implicit none
 
@@ -418,6 +325,7 @@ contains
 
     select case (TRACER_TYPE)
     case ("DRY")
+       call TRACER_dry_setup
        QA = QA_dry
        I_QV = I_QV_dry
        I_QC = I_QC_dry
@@ -454,8 +362,8 @@ contains
        I_MP2RD = I_MP2RD_dry
        I_AE2ALL = I_AE2ALL_dry
        I_AE2RD = I_AE2RD_dry
-       call TRACER_dry_setup
     case ("KESSLER")
+       call TRACER_kessler_setup
        QA = QA_kessler
        I_QV = I_QV_kessler
        I_QC = I_QC_kessler
@@ -492,8 +400,8 @@ contains
        I_MP2RD = I_MP2RD_kessler
        I_AE2ALL = I_AE2ALL_kessler
        I_AE2RD = I_AE2RD_kessler
-       call TRACER_kessler_setup
     case ("TOMITA08")
+       call TRACER_tomita08_setup
        QA = QA_tomita08
        I_QV = I_QV_tomita08
        I_QC = I_QC_tomita08
@@ -530,8 +438,8 @@ contains
        I_MP2RD = I_MP2RD_tomita08
        I_AE2ALL = I_AE2ALL_tomita08
        I_AE2RD = I_AE2RD_tomita08
-       call TRACER_tomita08_setup
     case ("SN13")
+       call TRACER_sn13_setup
        QA = QA_sn13
        I_QV = I_QV_sn13
        I_QC = I_QC_sn13
@@ -568,8 +476,8 @@ contains
        I_MP2RD = I_MP2RD_sn13
        I_AE2ALL = I_AE2ALL_sn13
        I_AE2RD = I_AE2RD_sn13
-       call TRACER_sn13_setup
     case ("SN13W")
+       call TRACER_sn13w_setup
        QA = QA_sn13w
        I_QV = I_QV_sn13w
        I_QC = I_QC_sn13w
@@ -606,30 +514,30 @@ contains
        I_MP2RD = I_MP2RD_sn13w
        I_AE2ALL = I_AE2ALL_sn13w
        I_AE2RD = I_AE2RD_sn13w
-       call TRACER_sn13w_setup
-    case ("BINW")
-       QA = QA_binw
-       I_QV = I_QV_binw
-       I_QC = I_QC_binw
-       I_QR = I_QR_binw
-       I_QI = I_QI_binw
-       I_QS = I_QS_binw
-       I_QG = I_QG_binw
-       I_NC = I_NC_binw
-       I_NR = I_NR_binw
-       I_NI = I_NI_binw
-       I_NS = I_NS_binw
-       I_NG = I_NG_binw
-       QQA = QQA_binw
-       QQS = QQS_binw
-       QQE = QQE_binw
-       QWS = QWS_binw
-       QWE = QWE_binw
-       QIS = QIS_binw
-       QIE = QIE_binw
-       MP_QA = MP_QA_binw
-       AE_QA = AE_QA_binw
-       I_ae_dummy = I_ae_dummy_binw
+    case ("SUZUKI10")
+       call TRACER_suzuki10_setup
+       QA = QA_suzuki10
+       I_QV = I_QV_suzuki10
+       I_QC = I_QC_suzuki10
+       I_QR = I_QR_suzuki10
+       I_QI = I_QI_suzuki10
+       I_QS = I_QS_suzuki10
+       I_QG = I_QG_suzuki10
+       I_NC = I_NC_suzuki10
+       I_NR = I_NR_suzuki10
+       I_NI = I_NI_suzuki10
+       I_NS = I_NS_suzuki10
+       I_NG = I_NG_suzuki10
+       QQA = QQA_suzuki10
+       QQS = QQS_suzuki10
+       QQE = QQE_suzuki10
+       QWS = QWS_suzuki10
+       QWE = QWE_suzuki10
+       QIS = QIS_suzuki10
+       QIE = QIE_suzuki10
+       MP_QA = MP_QA_suzuki10
+       AE_QA = AE_QA_suzuki10
+       I_ae_dummy = I_ae_dummy_suzuki10
        allocate( AQ_NAME(QA) )
        allocate( AQ_DESC(QA) )
        allocate( AQ_UNIT(QA) )
@@ -637,128 +545,13 @@ contains
        allocate( I_MP2RD(MP_QA) )
        allocate( I_AE2ALL(AE_QA) )
        allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_binw
-       AQ_DESC = AQ_DESC_binw
-       AQ_UNIT = AQ_UNIT_binw
-       I_MP2ALL = I_MP2ALL_binw
-       I_MP2RD = I_MP2RD_binw
-       I_AE2ALL = I_AE2ALL_binw
-       I_AE2RD = I_AE2RD_binw
-       call TRACER_binw_setup
-    case ("BINF")
-       QA = QA_binf
-       I_QV = I_QV_binf
-       I_QC = I_QC_binf
-       I_QR = I_QR_binf
-       I_QI = I_QI_binf
-       I_QS = I_QS_binf
-       I_QG = I_QG_binf
-       I_NC = I_NC_binf
-       I_NR = I_NR_binf
-       I_NI = I_NI_binf
-       I_NS = I_NS_binf
-       I_NG = I_NG_binf
-       QQA = QQA_binf
-       QQS = QQS_binf
-       QQE = QQE_binf
-       QWS = QWS_binf
-       QWE = QWE_binf
-       QIS = QIS_binf
-       QIE = QIE_binf
-       MP_QA = MP_QA_binf
-       AE_QA = AE_QA_binf
-       I_ae_dummy = I_ae_dummy_binf
-       allocate( AQ_NAME(QA) )
-       allocate( AQ_DESC(QA) )
-       allocate( AQ_UNIT(QA) )
-       allocate( I_MP2ALL(MP_QA) )
-       allocate( I_MP2RD(MP_QA) )
-       allocate( I_AE2ALL(AE_QA) )
-       allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_binf
-       AQ_DESC = AQ_DESC_binf
-       AQ_UNIT = AQ_UNIT_binf
-       I_MP2ALL = I_MP2ALL_binf
-       I_MP2RD = I_MP2RD_binf
-       I_AE2ALL = I_AE2ALL_binf
-       I_AE2RD = I_AE2RD_binf
-       call TRACER_binf_setup
-    case ("HBINW")
-       QA = QA_hbinw
-       I_QV = I_QV_hbinw
-       I_QC = I_QC_hbinw
-       I_QR = I_QR_hbinw
-       I_QI = I_QI_hbinw
-       I_QS = I_QS_hbinw
-       I_QG = I_QG_hbinw
-       I_NC = I_NC_hbinw
-       I_NR = I_NR_hbinw
-       I_NI = I_NI_hbinw
-       I_NS = I_NS_hbinw
-       I_NG = I_NG_hbinw
-       QQA = QQA_hbinw
-       QQS = QQS_hbinw
-       QQE = QQE_hbinw
-       QWS = QWS_hbinw
-       QWE = QWE_hbinw
-       QIS = QIS_hbinw
-       QIE = QIE_hbinw
-       MP_QA = MP_QA_hbinw
-       AE_QA = AE_QA_hbinw
-       I_ae_dummy = I_ae_dummy_hbinw
-       allocate( AQ_NAME(QA) )
-       allocate( AQ_DESC(QA) )
-       allocate( AQ_UNIT(QA) )
-       allocate( I_MP2ALL(MP_QA) )
-       allocate( I_MP2RD(MP_QA) )
-       allocate( I_AE2ALL(AE_QA) )
-       allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_hbinw
-       AQ_DESC = AQ_DESC_hbinw
-       AQ_UNIT = AQ_UNIT_hbinw
-       I_MP2ALL = I_MP2ALL_hbinw
-       I_MP2RD = I_MP2RD_hbinw
-       I_AE2ALL = I_AE2ALL_hbinw
-       I_AE2RD = I_AE2RD_hbinw
-       call TRACER_hbinw_setup
-    case ("HBINF")
-       QA = QA_hbinf
-       I_QV = I_QV_hbinf
-       I_QC = I_QC_hbinf
-       I_QR = I_QR_hbinf
-       I_QI = I_QI_hbinf
-       I_QS = I_QS_hbinf
-       I_QG = I_QG_hbinf
-       I_NC = I_NC_hbinf
-       I_NR = I_NR_hbinf
-       I_NI = I_NI_hbinf
-       I_NS = I_NS_hbinf
-       I_NG = I_NG_hbinf
-       QQA = QQA_hbinf
-       QQS = QQS_hbinf
-       QQE = QQE_hbinf
-       QWS = QWS_hbinf
-       QWE = QWE_hbinf
-       QIS = QIS_hbinf
-       QIE = QIE_hbinf
-       MP_QA = MP_QA_hbinf
-       AE_QA = AE_QA_hbinf
-       I_ae_dummy = I_ae_dummy_hbinf
-       allocate( AQ_NAME(QA) )
-       allocate( AQ_DESC(QA) )
-       allocate( AQ_UNIT(QA) )
-       allocate( I_MP2ALL(MP_QA) )
-       allocate( I_MP2RD(MP_QA) )
-       allocate( I_AE2ALL(AE_QA) )
-       allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_hbinf
-       AQ_DESC = AQ_DESC_hbinf
-       AQ_UNIT = AQ_UNIT_hbinf
-       I_MP2ALL = I_MP2ALL_hbinf
-       I_MP2RD = I_MP2RD_hbinf
-       I_AE2ALL = I_AE2ALL_hbinf
-       I_AE2RD = I_AE2RD_hbinf
-       call TRACER_hbinf_setup
+       AQ_NAME = AQ_NAME_suzuki10
+       AQ_DESC = AQ_DESC_suzuki10
+       AQ_UNIT = AQ_UNIT_suzuki10
+       I_MP2ALL = I_MP2ALL_suzuki10
+       I_MP2RD = I_MP2RD_suzuki10
+       I_AE2ALL = I_AE2ALL_suzuki10
+       I_AE2RD = I_AE2RD_suzuki10
 #endif
      case default
         write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
