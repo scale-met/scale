@@ -42,8 +42,8 @@ CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
-NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
-NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
+NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend
