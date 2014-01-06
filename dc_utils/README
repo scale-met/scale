@@ -1,0 +1,5 @@
+dc_utils
+=========
+
+dc_utils is a library for numerical simulation model in geophysical fluid dynamics.
+The files (dc_types.f90, dc_test.rb2f90, dc_test.f90, and files in the rd2f90 directory) are a part of gtool5 Fortran 90/95 library (http://www.gfd-dennou.org/arch/gtool4/gtool5.htm).

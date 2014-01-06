@@ -44,6 +44,7 @@ LDFLAGS = $(FFLAGS)
 
 NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
 NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend
 INSTALL = install

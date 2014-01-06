@@ -53,7 +53,7 @@ NETCDF_INCLUDE ?= -I$(NETCDF3)/include
 NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?= -llapack
+LAPACK_LIBS    ?= -mkl=sequential
 
 ##### for frontend
 INSTALL = install

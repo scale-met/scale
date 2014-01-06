@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+
+def usage
+  print "Usage: ruby #$0 srcdir\n"
+  exit(-1)
+end
+
+srcdir = ARGV.shift || usage
+
+deps = Hash.new
+pros = Hash.new
+
+dirs = Dir[ File.join(srcdir, "*") ]
+
+suffix = ".F90"
+
+dirs.each do |dir|
+  next unless File.directory?(dir)
+  files = Dir[ File.join(dir, "*#{suffix}") ]
+  files.each do |file|
+    basename = File.basename(file, suffix)
+    dep = {
+      :dir => File.basename(dir),
+      :depends => Array.new
+    }
+    pro = {
+      :dir => File.basename(dir),
+      :file => basename
+    }
+    deps[basename] = dep
+    File.foreach(file) do |line|
+      case line
+      when /^\s*module (\w+)/
+        mod = $1
+        next if /procedure/ =~ mod
+        pros[mod] = pro
+      when /^\s*use (\w+)/
+        mod = $1
+        next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+        dep[:depends].push(mod) unless dep[:depends].include?(mod)
+      end
+    end
+  end
+end
+
+File.open( File.join(srcdir, "depend"), "w" ) do |file|
+  deps.sort.each do |name, dep|
+    file.print "$(BUILD_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90"
+#    file.print "$(BUILD_DIR)/#{name}.o: $(BUILD_DIR)/#{name}.f90"
+    dep[:depends].sort.each do |mod|
+      if pro = pros[mod]
+        file.print " $(BUILD_DIR)/#{pro[:file]}.o"
+      else
+        p name
+        p mod
+        raise
+      end
+    end
+    file.print "\n"
+  end
+  file.print "\n"
+  file.print "MODS = ", pros.keys.sort.map{|mod| "#{mod.downcase}.mod"}.join(" "), "\n"
+end

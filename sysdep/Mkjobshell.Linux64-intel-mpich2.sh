@@ -23,9 +23,6 @@ cat << EOF1 > ./run.sh
 export FORT_FMT_RECL=400
 
 
-ln -sv ${BINDIR}/${INITNAME} .
-ln -sv ${BINDIR}/${BINNAME}  .
-
 # run
 ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
 ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit

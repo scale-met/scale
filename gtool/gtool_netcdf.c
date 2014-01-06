@@ -21,7 +21,7 @@
   case NC_DOUBLE:						\
     type = File_REAL8;						\
     break;							\
-  default:							\
+  default:                                                      \
     fprintf(stderr, "unsuppoted data type: %d\n", xtype);	\
     return ERROR_CODE;						\
   }								\
@@ -87,7 +87,7 @@ int32_t file_open( int32_t *fid,     // (out)
 		   int32_t  mode )   // (in)
 {
   int ncid;
-  int len, i;
+  int len;
   char _fname[File_HLONG+4];
 
   if ( nfile >= FILE_MAX ) {
@@ -295,84 +295,18 @@ int32_t file_set_global_attributes( int32_t  fid,         // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_dim_info( int32_t  fid,       // (in)
-			   int32_t  ndims,     // (in)
-			   char   **dim_name,  // (in)
-			   int32_t *dim_size,  // (in)
-			   char   **dim_desc,  // (in)
-			   char   **dim_units, // (in)
-			   int32_t *dim_type)  // (in)
-{
-  int ncid, dimid, varid;
-  int xtype;
-  char tname[File_HSHORT+1];
-  int i;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-  for (i=0; i<ndims; i++) {
-    CHECK_ERROR( nc_def_dim(ncid, dim_name[i], dim_size[i], &dimid) );
-    TYPE2NCTYPE( dim_type[i], xtype );
-    CHECK_ERROR( nc_def_var(ncid, dim_name[i], xtype, 1, &dimid, &varid) );
-    CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(dim_desc[i]), dim_desc[i]) );
-    CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(dim_units[i]), dim_units[i]) );
-  }
-
-#ifdef NETCDF3
-  CHECK_ERROR( nc_enddef(ncid) );
-#endif
-
-  return SUCCESS_CODE;
-}
-
 int32_t file_put_axis( int32_t fid,        // (in)
+		       char   *name,       // (in)
+		       char   *desc,       // (in)
+		       char   *units,      // (in)
 		       char   *dim_name,   // (in)
-		       void   *val,        // (in)
-		       int32_t precision) // (in)
-{
-  int ncid, varid;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-#ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
-#endif
-
-  CHECK_ERROR( nc_inq_varid(ncid, dim_name, &varid) );
-
-#ifdef NETCDF3
-  CHECK_ERROR( nc_enddef(ncid) );
-#endif
-
-  switch ( precision ) {
-  case 8:
-    CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
-    break;
-  case 4:
-    CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) );
-    break;
-  default:
-    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
-    return ERROR_CODE;
-  }
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_put_additional_axis( int32_t fid,        // (in)
-				  char   *name,       // (in)
-				  char   *desc,       // (in)
-				  char   *units,      // (in)
-				  char   *dim_name,   // (in)
-				  int32_t dtype,      // (in)
-				  void*   val,        // (in)
-				  int32_t size,       // (in)
-				  int32_t precision)  // (in)
+		       int32_t dtype,      // (in)
+		       void*   val,        // (in)
+		       int32_t size,       // (in)
+		       int32_t precision)  // (in)
 {
   int ncid, dimid, varid;
-  nc_type xtype;
+  nc_type xtype = -1;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -411,6 +345,60 @@ int32_t file_put_additional_axis( int32_t fid,        // (in)
   return SUCCESS_CODE;
 }
 
+int32_t file_put_associated_coordinates( int32_t fid,        // (in)
+					 char   *name,       // (in)
+					 char   *desc,       // (in)
+					 char   *units,      // (in)
+					 char   **dim_names, // (in)
+					 int32_t ndims,      // (in)
+					 int32_t dtype,      // (in)
+					 void*   val,        // (in)
+					 int32_t precision)  // (in)
+{
+  int ncid, *dimids, varid;
+  nc_type xtype = -1;
+  int i;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_redef(ncid) );
+#endif
+
+  dimids = malloc(sizeof(int)*ndims);
+  for (i=0; i<ndims; i++)
+    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+i) );
+
+  TYPE2NCTYPE(dtype, xtype);
+
+  CHECK_ERROR( nc_def_var(ncid, name, xtype, ndims, dimids, &varid) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) );
+  CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
+  free(dimids);
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+#endif
+
+  switch ( precision ) {
+  case 8:
+    CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) );
+    break;
+  case 4:
+    CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) );
+    break;
+  default:
+    fprintf(stderr, "unsuppoted data precision: %d\n", precision);
+    return ERROR_CODE;
+  }
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_add_variable( int32_t *vid,     // (out)
 			   int32_t  fid,     // (in)
 			   char    *varname, // (in)
@@ -422,17 +410,17 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 			   real64_t tint,    // (in)
 			   int32_t  tavg)    // (in)
 {
-  int ncid, varid;
+  int ncid, varid, acid, *acdimids;
   int dimids[NC_MAX_DIMS];
   char tname[File_HSHORT+1];
   int tdimid, tvarid;
-  nc_type xtype;
-  int status;
+  nc_type xtype = -1;
   char buf[File_HMID+1];
-  int i, n;
+  int i, j, n, m;
   size_t size;
-  size_t chunksize[MAX_RANK];
   double rmiss = RMISS;
+  char coord[File_HMID+1];
+  int has_assoc;
 
   if ( nvar >= VAR_MAX ) {
     fprintf(stderr, "exceed max number of variable limit\n");
@@ -503,9 +491,25 @@ int32_t file_add_variable( int32_t *vid,     // (out)
     dimids[0] = vars[nvar]->t->dimid;
     ndims++;
   }
-  for (i=0; i<n; i++)
-    CHECK_ERROR( nc_inq_dimid(ncid, dims[i], &(dimids[ndims-i-1])) );
 
+  has_assoc = 0;
+  for (i=0; i<n; ) {
+    if ( nc_inq_dimid(ncid, dims[i], &(dimids[ndims-i-1])) == NC_NOERR ) {
+      i += 1;
+    } else {
+      CHECK_ERROR( nc_inq_varid(ncid, dims[i], &acid) );
+      CHECK_ERROR( nc_inq_varndims(ncid, acid, &m) );
+      if ( i+m > ndims ) {
+	fprintf(stderr, "Error: invalid associated coordinates\n");
+	return ERROR_CODE;
+      }
+      acdimids = (int*) malloc((sizeof(int)*m));
+      CHECK_ERROR( nc_inq_vardimid(ncid, acid, acdimids) );
+      for (j=0; j<m; j++) dimids[ndims-i-j-1] = acdimids[j];
+      has_assoc = 1;
+      i += m;
+    }
+  }
   TYPE2NCTYPE(dtype, xtype);
   CHECK_ERROR( nc_def_var(ncid, varname, xtype, ndims, dimids, &varid) );
 
@@ -514,6 +518,19 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) );
   CHECK_ERROR( nc_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) );
   CHECK_ERROR( nc_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) );
+  if ( has_assoc ) {
+    strcpy(coord, dims[0]);
+    for(i=1; i<n; i++) {
+      if (strlen(coord)+strlen(dims[i])+1 < File_HMID) {
+	strcat(coord, " ");
+	strcat(coord, dims[i]);
+      }
+    }
+    if ( ndims > n && strlen(coord)+6 < File_HMID)
+      strcat(coord, " time");
+    CHECK_ERROR( nc_put_att_text(ncid, varid, "coordinates", strlen(coord), coord) );
+  }
+
 
   if ( tavg ) {
     sprintf(buf, "%s: mean", tname);
@@ -578,10 +595,10 @@ int32_t file_write_data( int32_t  vid,        // (in)
 
   switch (precision) {
   case 8:
-    CHECK_ERROR( nc_put_vara_double(ncid, vars[vid]->varid, vars[vid]->start, vars[vid]->count, (double*)var) );
+    CHECK_ERROR( nc_put_vara_double(ncid, varid, vars[vid]->start, vars[vid]->count, (double*)var) );
     break;
   case 4:
-    CHECK_ERROR( nc_put_vara_float(ncid, vars[vid]->varid, vars[vid]->start, vars[vid]->count, (float*)var) );
+    CHECK_ERROR( nc_put_vara_float(ncid, varid, vars[vid]->start, vars[vid]->count, (float*)var) );
     break;
   default:
     fprintf(stderr, "unsuppoted data precision: %d\n", precision);
