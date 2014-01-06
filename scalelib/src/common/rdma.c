@@ -25,12 +25,12 @@ int32_t	IS, IE, JS, JE ;
 #define	offset(Z,X,Y)	(sizeof(var_t)*((Z)+(X)*(KA)+(Y)*(KA)*(IA)))
 
 size_t		datasize_NS, datasize_WE;
-size_t		datasize_NS8;
 
 int32_t	RANK_W, RANK_N, RANK_E, RANK_S;
 
 #define	RDMA_TAG_NUM_MAX	15
-#define	RDMA_TAG			0
+#define	RDMA_TAG		0
+#define	RDMA_TAG_TAIL		1
 
 int32_t	memid_cnt;
 
@@ -38,18 +38,12 @@ int32_t	*memid ;
 uint64_t	*lvar ;
 uint64_t	**rvar ;
 
+
 typedef uint64_t	sf_t ;
 volatile sf_t	*status_flag;
-int32_t	memid_sf;
+int32_t		memid_sf;
 uint64_t	local_sf;
 uint64_t	*remote_sf;
-
-int32_t		*put_cnt;
-
-
-#define FALSE	0
-#define TRUE	1
-
 #define LOCAL_RECV_READY	0
 #define REMOTE_RECV_READY	1
 #define LOCAL_PUT_DONE		2
@@ -58,6 +52,22 @@ int32_t		*put_cnt;
 #define FLAG_CNT				4
 #define sidx(DIR,FLAG)		((DIR)+(BEARING_CNT)*(FLAG))
 #define soffset(DIR,FLAG)	(sizeof(sf_t)*sidx(DIR,FLAG))
+
+int64_t		*sending; 
+#define FALSE	0
+#define TRUE	1
+
+
+volatile sf_t	rdma_put_id ;
+#define	RDMA_PUT_ID_MAX	0xFFFFFFFF
+
+
+#define FJMPI_RDMA_PUT_FLAGS_TO_NORTH	(FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 )
+#define FJMPI_RDMA_PUT_FLAGS_TO_SOUTH	(FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 )
+#define FJMPI_RDMA_PUT_FLAGS_TO_EAST	(FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 )
+#define FJMPI_RDMA_PUT_FLAGS_TO_WEST	(FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 )
+
+#include <stdio.h>
 
 void rdma_setup_(
 		const int32_t *COMM_vsize_max_in,
@@ -95,8 +105,6 @@ void rdma_setup_(
 	datasize_NS = sizeof(var_t) * (IE-IS+1) * KA ;
 	datasize_WE = sizeof(var_t) * IHALO * KA ;
 
-	datasize_NS8 = sizeof(var_t) * IA * KA ;
-
 	memid_cnt = 0;
 
 	memid = (int32_t *) malloc(sizeof(int32_t) * COMM_vsize_max);
@@ -107,7 +115,9 @@ void rdma_setup_(
 	status_flag = (sf_t *) calloc(BEARING_CNT*FLAG_CNT, sizeof(sf_t)) ;
 	remote_sf = (uint64_t *) malloc(sizeof(uint64_t) * BEARING_CNT) ;
 
-	put_cnt  = (int32_t *) calloc(BEARING_CNT, sizeof(int32_t)) ;
+	sending  = (int64_t *) calloc(BEARING_CNT, sizeof(int64_t)) ;
+
+	rdma_put_id = 0 ;
 
 	FJMPI_Rdma_init() ;
 
@@ -117,10 +127,25 @@ void rdma_setup_(
 
 	MPI_Barrier(MPI_COMM_WORLD) ;
 
-	remote_sf[WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid_sf) ;
-	remote_sf[NORTH] = FJMPI_Rdma_get_remote_addr(RANK_N, memid_sf) ;
-	remote_sf[EAST]  = FJMPI_Rdma_get_remote_addr(RANK_E, memid_sf) ;
-	remote_sf[SOUTH] = FJMPI_Rdma_get_remote_addr(RANK_S, memid_sf) ;
+	if( RANK_W != MPI_PROC_NULL )
+		remote_sf[WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid_sf) ;
+	else	
+		remote_sf[WEST]  = 0 ;
+	
+	if( RANK_N != MPI_PROC_NULL )
+		remote_sf[NORTH] = FJMPI_Rdma_get_remote_addr(RANK_N, memid_sf) ;
+	else
+		remote_sf[NORTH] = 0 ;
+
+	if( RANK_E != MPI_PROC_NULL )
+		remote_sf[EAST]  = FJMPI_Rdma_get_remote_addr(RANK_E, memid_sf) ;
+	else
+		remote_sf[EAST]  = 0 ;
+
+	if( RANK_S != MPI_PROC_NULL )
+		remote_sf[SOUTH] = FJMPI_Rdma_get_remote_addr(RANK_S, memid_sf) ;
+	else
+		remote_sf[SOUTH] = 0 ;
 
 }
 
@@ -137,10 +162,10 @@ void set_rdma_variable_(
 
 	MPI_Barrier(MPI_COMM_WORLD) ;
 
-	rvar[*vid][WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid[*vid]) ;
-	rvar[*vid][NORTH] = FJMPI_Rdma_get_remote_addr(RANK_N, memid[*vid]) ;
-	rvar[*vid][EAST]  = FJMPI_Rdma_get_remote_addr(RANK_E, memid[*vid]) ;
-	rvar[*vid][SOUTH] = FJMPI_Rdma_get_remote_addr(RANK_S, memid[*vid]) ;
+	if( RANK_W != MPI_PROC_NULL ) rvar[*vid][WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid[*vid]) ;
+	if( RANK_N != MPI_PROC_NULL ) rvar[*vid][NORTH] = FJMPI_Rdma_get_remote_addr(RANK_N, memid[*vid]) ;
+	if( RANK_E != MPI_PROC_NULL ) rvar[*vid][EAST]  = FJMPI_Rdma_get_remote_addr(RANK_E, memid[*vid]) ;
+	if( RANK_S != MPI_PROC_NULL ) rvar[*vid][SOUTH] = FJMPI_Rdma_get_remote_addr(RANK_S, memid[*vid]) ;
 
 }
 
@@ -150,49 +175,57 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 	struct FJMPI_Rdma_cq cq ;
 	int	j , v;
 
+	rdma_put_id = (rdma_put_id % RDMA_PUT_ID_MAX) + 1 ;
+
 	/* set status_flag(recv) */
-	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = rdma_put_id ;
 
-	FJMPI_Rdma_put(RANK_S, RDMA_TAG,
-			remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
-			local_sf+soffset(SOUTH,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_S != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_S, RDMA_TAG,
+				remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
+				local_sf+soffset(SOUTH,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_SOUTH | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_N, RDMA_TAG,
-			remote_sf[NORTH]+soffset(SOUTH,REMOTE_RECV_READY),
-			local_sf+soffset(NORTH,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_N != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_N, RDMA_TAG,
+				remote_sf[NORTH]+soffset(SOUTH,REMOTE_RECV_READY),
+				local_sf+soffset(NORTH,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_NORTH | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_E, RDMA_TAG,
-			remote_sf[EAST]+soffset(WEST,REMOTE_RECV_READY),
-			local_sf+soffset(EAST,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_E != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+				remote_sf[EAST]+soffset(WEST,REMOTE_RECV_READY),
+				local_sf+soffset(EAST,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_EAST | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_W, RDMA_TAG,
-			remote_sf[WEST]+soffset(EAST,REMOTE_RECV_READY),
-			local_sf+soffset(WEST,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
-
-	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = FALSE ;
+	if( RANK_W != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+				remote_sf[WEST]+soffset(EAST,REMOTE_RECV_READY),
+				local_sf+soffset(WEST,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_WEST | FJMPI_RDMA_STRONG_ORDER ) ;
 
 	/* send data */
 	do {
 		// to north
-		if(!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(NORTH,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id && RANK_N == MPI_PROC_NULL )
 		{
-			status_flag[sidx(NORTH,REMOTE_RECV_READY)] = FALSE ;
-
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = rdma_put_id ;
+			status_flag[sidx(NORTH,LOCAL_RECV_DONE)] = rdma_put_id ;
+			sending[NORTH] = FALSE ;
+		}
+		
+		if( status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id &&
+				status_flag[sidx(NORTH,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[NORTH] = TRUE ;
+			
 			// put_data
 			for(v=0; v<*num; v++)
 			{
@@ -202,24 +235,31 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][NORTH]+offset(0,IS-1,j+JE),
 							lvar[*vid+v]+offset(0,IS-1,j+JS-1),
 							datasize_NS,
-							FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_NORTH ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = rdma_put_id ;
 			FJMPI_Rdma_put(RANK_N, RDMA_TAG,
 					remote_sf[NORTH]+soffset(SOUTH,REMOTE_PUT_DONE),
 					local_sf+soffset(NORTH,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_NORTH | FJMPI_RDMA_STRONG_ORDER ) ;
 		}
 
 		// to south
-		if(!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] != rdma_put_id && RANK_S == MPI_PROC_NULL )
 		{
-			status_flag[sidx(SOUTH,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = rdma_put_id ;
+			status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] = rdma_put_id ;
+			sending[SOUTH] = FALSE;
+		}
+	
+		if( status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] != rdma_put_id  &&
+				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[SOUTH] = TRUE;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -230,24 +270,31 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][SOUTH]+offset(0,IS-1,j+JS-JHALO-1),
 							lvar[*vid+v]+offset(0,IS-1,j+JE-JHALO),
 							datasize_NS,
-							FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_SOUTH ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = rdma_put_id ;
 			FJMPI_Rdma_put(RANK_S, RDMA_TAG,
 					remote_sf[SOUTH]+soffset(NORTH,REMOTE_PUT_DONE),
 					local_sf+soffset(SOUTH,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_SOUTH | FJMPI_RDMA_STRONG_ORDER ) ;
 		}
 
 		// to west
-		if(!status_flag[sidx(WEST,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(WEST,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(WEST,LOCAL_PUT_DONE)] != rdma_put_id && RANK_W == MPI_PROC_NULL )
 		{
-			status_flag[sidx(WEST,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = rdma_put_id ;
+			status_flag[sidx(WEST,LOCAL_RECV_DONE)] = rdma_put_id ;
+			sending[WEST] = FALSE;
+		}
+
+		if( status_flag[sidx(WEST,LOCAL_PUT_DONE)] != rdma_put_id  &&
+				status_flag[sidx(WEST,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[WEST] = TRUE;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -258,24 +305,31 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][WEST]+offset(0,IE,j),
 							lvar[*vid+v]+offset(0,IS-1,j),
 							datasize_WE,
-							FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
 				}
 			}
-
+	
 			// set status_flag(send)
-			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = rdma_put_id ;
 			FJMPI_Rdma_put(RANK_W, RDMA_TAG,
 					remote_sf[WEST]+soffset(EAST,REMOTE_PUT_DONE),
 					local_sf+soffset(WEST,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_WEST | FJMPI_RDMA_STRONG_ORDER ) ;
 		}
 
 		// to east
-		if(!status_flag[sidx(EAST,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(EAST,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(EAST,LOCAL_PUT_DONE)] != rdma_put_id && RANK_E == MPI_PROC_NULL )
 		{
-			status_flag[sidx(EAST,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = rdma_put_id ;
+			status_flag[sidx(EAST,LOCAL_RECV_DONE)] = rdma_put_id ;
+			sending[EAST] = FALSE;
+		}
+
+		if( status_flag[sidx(EAST,LOCAL_PUT_DONE)] != rdma_put_id &&
+				status_flag[sidx(EAST,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[TRUE] = FALSE;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -286,69 +340,57 @@ void rdma_put_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
 							lvar[*vid+v]+offset(0,IE-IHALO,j),
 							datasize_WE,
-							FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = rdma_put_id ;
 			FJMPI_Rdma_put(RANK_E, RDMA_TAG,
 					remote_sf[EAST]+soffset(WEST,REMOTE_PUT_DONE),
 					local_sf+soffset(EAST,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_EAST | FJMPI_RDMA_STRONG_ORDER ) ;
 		}
-
-	} while(!status_flag[sidx(WEST, LOCAL_PUT_DONE)]  ||
-			!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] ||
-			!status_flag[sidx(EAST, LOCAL_PUT_DONE)]  ||
-			!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] ) ;
-
-	status_flag[sidx(WEST, LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(EAST, LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = FALSE;
-
-
-	put_cnt[NORTH] = 2 + *num * JHALO;
-	put_cnt[SOUTH] = 2 + *num * JHALO;
-	put_cnt[WEST] = 2 + *num * (JE-JS+1);
-	put_cnt[EAST] = 2 + *num * (JE-JS+1);
-
+	} while( status_flag[sidx(WEST, LOCAL_PUT_DONE)] != rdma_put_id ||
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id ||
+			status_flag[sidx(EAST, LOCAL_PUT_DONE)] != rdma_put_id ||
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] != rdma_put_id ) ;
 
 	/* completion check (put) */
 	do {
 		// to west
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC1, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[WEST]--;
+		if( RANK_W != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC1, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[WEST] = FALSE ;
+			}
 		}
 		// to east
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC3, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[EAST]--;
+		if( RANK_E != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC3, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[EAST] = FALSE ;
+			}
 		}
 		// to north
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC0, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[NORTH]--;
+		if( RANK_N != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC0, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[NORTH] = FALSE ;
+			}
 		}
 		// to south
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC2, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[SOUTH]--;
+		if( RANK_S != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC2, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[SOUTH] = FALSE ;
+			}
 		}
-	} while(put_cnt[WEST]  ||
-			  put_cnt[NORTH] ||
-			  put_cnt[EAST]  ||
-			  put_cnt[SOUTH] ) ;
+	 } while(sending[WEST]  || sending[NORTH] || sending[EAST]  || sending[SOUTH] ) ;
 
 	/* completion check (recv) */
-	while( !status_flag[sidx(WEST,LOCAL_RECV_DONE)]  ||
-			!status_flag[sidx(NORTH,LOCAL_RECV_DONE)] ||
-			!status_flag[sidx(EAST,LOCAL_RECV_DONE)]  ||
-			!status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] ) ;
+	while( status_flag[sidx(WEST,LOCAL_RECV_DONE)] != rdma_put_id ||
+			status_flag[sidx(NORTH,LOCAL_RECV_DONE)] != rdma_put_id ||
+			status_flag[sidx(EAST,LOCAL_RECV_DONE)]  != rdma_put_id ||
+			status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] != rdma_put_id ) ;
 
-	status_flag[sidx(WEST, LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(EAST, LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] = FALSE ;
 }
 
 void rdma_put8_(const int32_t *vid, const int32_t *num)
@@ -356,49 +398,55 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 	struct FJMPI_Rdma_cq cq ;
 	int	j , v;
 
+	rdma_put_id = (rdma_put_id % RDMA_PUT_ID_MAX) + 1 ;
+
 	/* set status_flag(recv) */
-	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = TRUE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = TRUE ;
+	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = rdma_put_id ;
+	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = rdma_put_id ;
 
-	FJMPI_Rdma_put(RANK_S, RDMA_TAG,
-			remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
-			local_sf+soffset(SOUTH,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_S != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_S, RDMA_TAG,
+				remote_sf[SOUTH]+soffset(NORTH,REMOTE_RECV_READY),
+				local_sf+soffset(SOUTH,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_SOUTH | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_N, RDMA_TAG,
-			remote_sf[NORTH]+soffset(SOUTH,REMOTE_RECV_READY),
-			local_sf+soffset(NORTH,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_N != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_N, RDMA_TAG,
+				remote_sf[NORTH]+soffset(SOUTH,REMOTE_RECV_READY),
+				local_sf+soffset(NORTH,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_NORTH | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_E, RDMA_TAG,
-			remote_sf[EAST]+soffset(WEST,REMOTE_RECV_READY),
-			local_sf+soffset(EAST,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+	if( RANK_E != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+				remote_sf[EAST]+soffset(WEST,REMOTE_RECV_READY),
+				local_sf+soffset(EAST,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_EAST | FJMPI_RDMA_STRONG_ORDER ) ;
 
-	FJMPI_Rdma_put(RANK_W, RDMA_TAG,
-			remote_sf[WEST]+soffset(EAST,REMOTE_RECV_READY),
-			local_sf+soffset(WEST,LOCAL_RECV_READY),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
-
-
-	status_flag[sidx(WEST ,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(EAST ,LOCAL_RECV_READY)] = FALSE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_READY)] = FALSE ;
+	if( RANK_W != MPI_PROC_NULL )
+		FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+				remote_sf[WEST]+soffset(EAST,REMOTE_RECV_READY),
+				local_sf+soffset(WEST,LOCAL_RECV_READY),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_WEST | FJMPI_RDMA_STRONG_ORDER ) ;
 
 	/* send data */
 	do {
 		// to north
-		if(!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(NORTH,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id && RANK_N == MPI_PROC_NULL )
 		{
-			status_flag[sidx(NORTH,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = rdma_put_id ;	
+			sending[NORTH] =  FALSE ;
+		}
+
+		if( status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id &&
+				status_flag[sidx(NORTH,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[NORTH] =  TRUE ;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -406,27 +454,34 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 				for(j=0; j<JHALO; j++)
 				{
 					FJMPI_Rdma_put(RANK_N, RDMA_TAG,
-							rvar[*vid+v][NORTH]+offset(0,0,j+JE),
-							lvar[*vid+v]+offset(0,0,j+JS-1),
-							datasize_NS8,
-							FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+							rvar[*vid+v][NORTH]+offset(0,IS-1,j+JE),
+							lvar[*vid+v]+offset(0,IS-1,j+JS-1),
+							datasize_NS,
+							FJMPI_RDMA_PUT_FLAGS_TO_NORTH ) ;
+
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = TRUE ;
-			FJMPI_Rdma_put(RANK_N, RDMA_TAG,
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = rdma_put_id ;
+			FJMPI_Rdma_put(RANK_N, RDMA_TAG_TAIL,
 					remote_sf[NORTH]+soffset(SOUTH,REMOTE_PUT_DONE),
 					local_sf+soffset(NORTH,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC0 | FJMPI_RDMA_REMOTE_NIC2 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_NORTH | FJMPI_RDMA_STRONG_ORDER ) ;	
 		}
 
-		// to south
-		if(!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] )
+		// to south	
+		if( status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] != rdma_put_id && RANK_S == MPI_PROC_NULL )
 		{
-			status_flag[sidx(SOUTH,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = rdma_put_id ;
+			sending[SOUTH] = FALSE;
+		}
+
+		if( status_flag[sidx(SOUTH,LOCAL_PUT_DONE)]  != rdma_put_id &&
+				status_flag[sidx(SOUTH,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[SOUTH] = TRUE;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -434,27 +489,33 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 				for(j=0; j<JHALO; j++)
 				{
 					FJMPI_Rdma_put(RANK_S, RDMA_TAG,
-							rvar[*vid+v][SOUTH]+offset(0,0,j+JS-JHALO-1),
-							lvar[*vid+v]+offset(0,0,j+JE-JHALO),
-							datasize_NS8,
-							FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+							rvar[*vid+v][SOUTH]+offset(0,IS-1,j+JS-JHALO-1),
+							lvar[*vid+v]+offset(0,IS-1,j+JE-JHALO),
+							datasize_NS,
+							FJMPI_RDMA_PUT_FLAGS_TO_SOUTH ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = TRUE ;
-			FJMPI_Rdma_put(RANK_S, RDMA_TAG,
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = rdma_put_id ;
+			FJMPI_Rdma_put(RANK_S, RDMA_TAG_TAIL,
 					remote_sf[SOUTH]+soffset(NORTH,REMOTE_PUT_DONE),
 					local_sf+soffset(SOUTH,LOCAL_PUT_DONE),
 					sizeof(sf_t),
-					FJMPI_RDMA_LOCAL_NIC2 | FJMPI_RDMA_REMOTE_NIC0 | FJMPI_RDMA_PATH0 ) ;
+					FJMPI_RDMA_PUT_FLAGS_TO_SOUTH | FJMPI_RDMA_STRONG_ORDER ) ;
 		}
 
 		// to west
-		if(!status_flag[sidx(WEST,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(WEST,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(WEST,LOCAL_PUT_DONE)] != rdma_put_id && RANK_W == MPI_PROC_NULL )
 		{
-			status_flag[sidx(WEST,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = rdma_put_id ;
+			sending[WEST] = FALSE ;
+		}
+		
+		if( status_flag[sidx(WEST,LOCAL_PUT_DONE)] != rdma_put_id &&
+				status_flag[sidx(WEST,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[WEST] = TRUE ;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -465,19 +526,25 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][WEST]+offset(0,IE,j),
 							lvar[*vid+v]+offset(0,IS-1,j),
 							datasize_WE,
-							FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(WEST,LOCAL_PUT_DONE)] = rdma_put_id ;
 		}
 
 		// to east
-		if(!status_flag[sidx(EAST,LOCAL_PUT_DONE)] &&
-				status_flag[sidx(EAST,REMOTE_RECV_READY)] )
+		if( status_flag[sidx(EAST,LOCAL_PUT_DONE)] != rdma_put_id && RANK_E == MPI_PROC_NULL )
 		{
-			status_flag[sidx(EAST,REMOTE_RECV_READY)] = FALSE ;
+			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = rdma_put_id ;
+			sending[EAST] = FALSE ;
+		}
+
+		if( status_flag[sidx(EAST,LOCAL_PUT_DONE)] != rdma_put_id &&
+				status_flag[sidx(EAST,REMOTE_RECV_READY)] == rdma_put_id )
+		{
+			sending[EAST] = TRUE ;
 
 			// put_data
 			for(v=0; v<*num; v++)
@@ -488,114 +555,159 @@ void rdma_put8_(const int32_t *vid, const int32_t *num)
 							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
 							lvar[*vid+v]+offset(0,IE-IHALO,j),
 							datasize_WE,
-							FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
 				}
 			}
 
 			// set status_flag(send)
-			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = TRUE ;
+			status_flag[sidx(EAST,LOCAL_PUT_DONE)] = rdma_put_id ;
 		}
 
-	} while(!status_flag[sidx(WEST,LOCAL_PUT_DONE)]  ||
-			!status_flag[sidx(NORTH,LOCAL_PUT_DONE)] ||
-			!status_flag[sidx(EAST,LOCAL_PUT_DONE)]  ||
-			!status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] ) ;
-
-	put_cnt[NORTH] = 2 + *num * JHALO;
-	put_cnt[SOUTH] = 2 + *num * JHALO;
-	put_cnt[WEST] = 1 + *num * (JE-JS+1);
-	put_cnt[EAST] = 1 + *num * (JE-JS+1);
+	} while( status_flag[sidx(WEST,LOCAL_PUT_DONE)]  != rdma_put_id ||
+			status_flag[sidx(NORTH,LOCAL_PUT_DONE)] != rdma_put_id ||
+			status_flag[sidx(EAST,LOCAL_PUT_DONE)]  != rdma_put_id ||
+			status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] != rdma_put_id ) ;	
 
 	/* completion check (recv from NORTH and SOUTH) */
-	while( !status_flag[sidx(NORTH,LOCAL_RECV_DONE)] ||
-			!status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] ) ;
+	if( RANK_N == MPI_PROC_NULL ) status_flag[sidx(NORTH, LOCAL_RECV_DONE)] = rdma_put_id ;	
+	if( RANK_S == MPI_PROC_NULL ) status_flag[sidx(SOUTH, LOCAL_RECV_DONE)] = rdma_put_id ;	
 
+	while( status_flag[sidx(NORTH,LOCAL_RECV_DONE)] != rdma_put_id ||
+			status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] != rdma_put_id ) ;
 
 	/* send data from North and South to West and East */
 	for(v=0; v<*num; v++)
 	{
-		// data form north
-		for(j=0; j<JHALO; j++)
-		{
-			FJMPI_Rdma_put(RANK_W, RDMA_TAG,
-					rvar[*vid+v][WEST]+offset(0,IE,j),
-					lvar[*vid+v]+offset(0,IS-1,j),
-					datasize_WE,
-					FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
-			FJMPI_Rdma_put(RANK_E, RDMA_TAG,
-					rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
-					lvar[*vid+v]+offset(0,IE-IHALO,j),
-					datasize_WE,
-					FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+		// data form north	
+		if( RANK_N != MPI_PROC_NULL ) {
+			if( RANK_W != MPI_PROC_NULL && RANK_E != MPI_PROC_NULL ) {
+				for(j=0; j<JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+							rvar[*vid+v][WEST]+offset(0,IE,j),
+							lvar[*vid+v]+offset(0,IS-1,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
+					FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
+							lvar[*vid+v]+offset(0,IE-IHALO,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
+				}
+			}
+			else if( RANK_W != MPI_PROC_NULL ) {
+				for(j=0; j<JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+							rvar[*vid+v][WEST]+offset(0,IE,j),
+							lvar[*vid+v]+offset(0,IS-1,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
+				}
+			}
+			else if( RANK_E != MPI_PROC_NULL ) {
+				for(j=0; j<JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
+							lvar[*vid+v]+offset(0,IE-IHALO,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
+				}
+			}
 		}
 
 		// data from south
-		for(j=JE; j<JE+JHALO; j++)
-		{
-			FJMPI_Rdma_put(RANK_W, RDMA_TAG,
-				rvar[*vid+v][WEST]+offset(0,IE,j),
-				lvar[*vid+v]+offset(0,IS-1,j),
-				datasize_WE,
-				FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
-			FJMPI_Rdma_put(RANK_E, RDMA_TAG,
-					rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
-					lvar[*vid+v]+offset(0,IE-IHALO,j),
-					datasize_WE,
-					FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
+		if( RANK_S != MPI_PROC_NULL ) {
+			if( RANK_W != MPI_PROC_NULL && RANK_E != MPI_PROC_NULL ) {
+				for(j=JE; j<JE+JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+							rvar[*vid+v][WEST]+offset(0,IE,j),
+							lvar[*vid+v]+offset(0,IS-1,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
+					FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
+							lvar[*vid+v]+offset(0,IE-IHALO,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
+				}
+			}
+			else if( RANK_W != MPI_PROC_NULL ) {
+				for(j=JE; j<JE+JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_W, RDMA_TAG,
+							rvar[*vid+v][WEST]+offset(0,IE,j),
+							lvar[*vid+v]+offset(0,IS-1,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_WEST ) ;
+				}
+			}
+			else if( RANK_E != MPI_PROC_NULL ) {
+				for(j=JE; j<JE+JHALO; j++)
+				{
+					FJMPI_Rdma_put(RANK_E, RDMA_TAG,
+							rvar[*vid+v][EAST]+offset(0,IS-IHALO-1,j),
+							lvar[*vid+v]+offset(0,IE-IHALO,j),
+							datasize_WE,
+							FJMPI_RDMA_PUT_FLAGS_TO_EAST ) ;
+				}
+			}
 		}
 	}
+	
+	if( RANK_W != MPI_PROC_NULL ) {
+		FJMPI_Rdma_put(RANK_W, RDMA_TAG_TAIL,
+				remote_sf[WEST]+soffset(EAST,REMOTE_PUT_DONE),
+				local_sf+soffset(WEST,LOCAL_PUT_DONE),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_WEST | FJMPI_RDMA_STRONG_ORDER ) ;
+	}
 
-	FJMPI_Rdma_put(RANK_W, RDMA_TAG,
-			remote_sf[WEST]+soffset(EAST,REMOTE_PUT_DONE),
-			local_sf+soffset(WEST,LOCAL_PUT_DONE),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC1 | FJMPI_RDMA_REMOTE_NIC3 | FJMPI_RDMA_PATH0 ) ;
-
-	FJMPI_Rdma_put(RANK_E, RDMA_TAG,
-			remote_sf[EAST]+soffset(WEST,REMOTE_PUT_DONE),
-			local_sf+soffset(EAST,LOCAL_PUT_DONE),
-			sizeof(sf_t),
-			FJMPI_RDMA_LOCAL_NIC3 | FJMPI_RDMA_REMOTE_NIC1 | FJMPI_RDMA_PATH0 ) ;
-
-	status_flag[sidx(WEST, LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(NORTH,LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(EAST, LOCAL_PUT_DONE)] = FALSE;
-	status_flag[sidx(SOUTH,LOCAL_PUT_DONE)] = FALSE;
-
-	put_cnt[WEST] += 1 + *num * 2 * JHALO;
-	put_cnt[EAST] += 1 + *num * 2 * JHALO;
-
+	if( RANK_E != MPI_PROC_NULL ) {
+		FJMPI_Rdma_put(RANK_E, RDMA_TAG_TAIL,
+				remote_sf[EAST]+soffset(WEST,REMOTE_PUT_DONE),
+				local_sf+soffset(EAST,LOCAL_PUT_DONE),
+				sizeof(sf_t),
+				FJMPI_RDMA_PUT_FLAGS_TO_EAST | FJMPI_RDMA_STRONG_ORDER ) ;
+	}
+	
 	/* completion check (put) */
 	do {
 		// to west
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC1, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[WEST]--;
+		if( RANK_W != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC1, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[WEST] = FALSE ;
+			}
 		}
 		// to east
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC3, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[EAST]--;
+		if( RANK_E != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC3, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[EAST] = FALSE ;
+			}
 		}
 		// to north
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC0, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[NORTH]--;
+		if( RANK_N != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC0, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[NORTH] = FALSE ;
+			}
 		}
 		// to south
-		while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC2, &cq) == FJMPI_RDMA_NOTICE ) {
-			put_cnt[SOUTH]--;
+		if( RANK_S != MPI_PROC_NULL ) {
+			while(FJMPI_Rdma_poll_cq(FJMPI_RDMA_NIC2, &cq) == FJMPI_RDMA_NOTICE ) {
+				if(cq.tag == RDMA_TAG_TAIL) sending[SOUTH] = FALSE ;
+			}
 		}
-	} while(put_cnt[WEST]  ||
-			  put_cnt[NORTH] ||
-			  put_cnt[EAST]  ||
-			  put_cnt[SOUTH] ) ;
+	} while(sending[WEST]  || sending[NORTH] || sending[EAST]  || sending[SOUTH] ) ;
 
 	/* completion check (recv from WEST and EAST) */
-	while( !status_flag[sidx(WEST,LOCAL_RECV_DONE)]  ||
-			!status_flag[sidx(EAST,LOCAL_RECV_DONE)]  ) ;
+	if( RANK_W == MPI_PROC_NULL ) status_flag[sidx(WEST, LOCAL_RECV_DONE)] = rdma_put_id  ;
+	if( RANK_E == MPI_PROC_NULL ) status_flag[sidx(EAST, LOCAL_RECV_DONE)] = rdma_put_id  ;
 
-	status_flag[sidx(WEST, LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(NORTH,LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(EAST, LOCAL_RECV_DONE)] = FALSE ;
-	status_flag[sidx(SOUTH,LOCAL_RECV_DONE)] = FALSE ;
+
+	while( status_flag[sidx(WEST,LOCAL_RECV_DONE)] != rdma_put_id ||
+			status_flag[sidx(EAST,LOCAL_RECV_DONE)] != rdma_put_id ) ;
 }
 
 
