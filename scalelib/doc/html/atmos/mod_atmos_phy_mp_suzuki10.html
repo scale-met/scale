@@ -1,0 +1,158 @@
+<html>
+  <head>
+    <title>mod_atmos_phy_mp_suzuki10 module</title>
+  </head>
+ <body>
+  <h1>mod_atmos_phy_mp_suzuki10 module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_ATMOS_PHY_MP</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RHOA</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td>--- density of aerosol</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_EMAER</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td>--- moleculer weight of aerosol</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RAMIN</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td>--- minimum radius of aerosol (um)</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RAMAX</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td>--- maximum radius of aerosol (um)</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_FLAG_REGENE</td>
+          <td>logical</td>
+          <td></td>
+          <td>--- flag of regeneration</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_FLAG_NUCLEAT</td>
+          <td>logical</td>
+          <td></td>
+          <td>--- flag of regeneration</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_FLAG_ICENUCLEAT</td>
+          <td>logical</td>
+          <td></td>
+          <td>--- flag of regeneration</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_FLAG_SFAERO</td>
+          <td>logical</td>
+          <td></td>
+          <td>--- flag of surface flux of aeorol</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_R0A</td>
+          <td>real(RP)</td>
+          <td></td>
+          <td>--- maximum radius of aerosol (um)</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RNDM_FLGP</td>
+          <td>integer</td>
+          <td></td>
+          <td>--- flag of surface flux of aeorol</td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RNDM_MSPC</td>
+          <td>integer</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_PHY_MP_RNDM_MBIN</td>
+          <td>integer</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>DOAUTOCONVERSION</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>apply collision process ?</td>
+        </tr>
+        <tr>
+          <td>DOPRECIPITATION</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>apply sedimentation of hydrometeor ?</td>
+        </tr>
+        <tr>
+          <td>DONEGATIVE_FIXER</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>apply negative fixer?</td>
+        </tr>
+        <tr>
+          <td>C_CCN</td>
+          <td>real(RP)</td>
+          <td>100.E+6_RP</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>KAPPA</td>
+          <td>real(RP)</td>
+          <td>0.462_RP</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>SIGMA</td>
+          <td>real(RP)</td>
+          <td>7.5E-02_RP</td>
+          <td>water surface tension [ N/m2 ]</td>
+        </tr>
+        <tr>
+          <td>VHFCT</td>
+          <td>real(RP)</td>
+          <td>2.0_RP</td>
+          <td>van't hoff factor</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+      <tr>
+        <td>PREC</td>
+        <td>surface precipitaion rate</td>
+        <td>kg/m2/s</td>
+        <td>flux_prec(:,:)</td>
+      </tr>
+      <tr>
+        <td>RAIN</td>
+        <td>surface rain rate</td>
+        <td>kg/m2/s</td>
+        <td>flux_rain(KS-1,:,:)</td>
+      </tr>
+      <tr>
+        <td>SNOW</td>
+        <td>surface snow rate</td>
+        <td>kg/m2/s</td>
+        <td>flux_snow(KS-1,:,:)</td>
+      </tr>
+      <tr>
+        <td>aerosol</td>
+        <td>aerosol mass</td>
+        <td>kg/m^3</td>
+        <td>AMR(:,:,:)</td>
+      </tr>
+    </table>
+  </body>
+</html>

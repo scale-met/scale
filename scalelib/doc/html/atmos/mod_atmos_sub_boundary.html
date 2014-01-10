@@ -1,0 +1,140 @@
+<html>
+  <head>
+    <title>mod_atmos_boundary module</title>
+  </head>
+ <body>
+  <h1>mod_atmos_boundary module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_ATMOS_BOUNDARY</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_TYPE</td>
+          <td>character(len=IO_FILECHR)</td>
+          <td>'NONE'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_IN_BASENAME</td>
+          <td>character(len=IO_FILECHR)</td>
+          <td>''</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_OUT_BASENAME</td>
+          <td>character(len=IO_FILECHR)</td>
+          <td>''</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_OUT_TITLE</td>
+          <td>character(len=IO_SYSCHR)</td>
+          <td>'SCALE3 BOUNDARY CONDITION'</td>
+          <td>title of the output file</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_USE_VELZ</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>read from file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_USE_VELX</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>read from file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_USE_VELY</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>read from file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_USE_POTT</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>read from file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_USE_QV</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>read from file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_VALUE_VELZ</td>
+          <td>real(RP)</td>
+          <td>0.0_RP</td>
+          <td>w at boundary, 0 [m/s]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_VALUE_VELY</td>
+          <td>real(RP)</td>
+          <td>5.E0_RP</td>
+          <td>v at boundary, 5 [m/s]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_VALUE_VELX</td>
+          <td>real(RP)</td>
+          <td>5.0_RP</td>
+          <td>u at boundary, 5 [m/s]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_VALUE_POTT</td>
+          <td>real(RP)</td>
+          <td>300.E0_RP</td>
+          <td>PT at boundary, 300 [K]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_VALUE_QV</td>
+          <td>real(RP)</td>
+          <td>1.E-3_RP</td>
+          <td>QV at boundary, 1.d-3 [kg/kg]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_FRACZ</td>
+          <td>real(RP)</td>
+          <td>1.0_RP</td>
+          <td>fraction of boundary region for dumping [z]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_FRACX</td>
+          <td>real(RP)</td>
+          <td>1.0_RP</td>
+          <td>fraction of boundary region for dumping [x]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_FRACY</td>
+          <td>real(RP)</td>
+          <td>1.0_RP</td>
+          <td>fraction of boundary region for dumping [y]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_TAUZ</td>
+          <td>real(RP)</td>
+          <td>75.0_RP</td>
+          <td>maximum value for damping tau (z) [s]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_TAUX</td>
+          <td>real(RP)</td>
+          <td>75.0_RP</td>
+          <td>maximum value for damping tau (x) [s]</td>
+        </tr>
+        <tr>
+          <td>ATMOS_BOUNDARY_TAUY</td>
+          <td>real(RP)</td>
+          <td>75.0_RP</td>
+          <td>maximum value for damping tau (y) [s]</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>

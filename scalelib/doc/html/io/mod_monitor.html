@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>mod_monitor module</title>
+  </head>
+ <body>
+  <h1>mod_monitor module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_MONITOR</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>MONITOR_OUT_BASENAME</td>
+          <td>character(len=IO_FILECHR)</td>
+          <td>'monitor'</td>
+          <td>filename of monitor output</td>
+        </tr>
+        <tr>
+          <td>MONITOR_USEDEVATION</td>
+          <td>logical</td>
+          <td>.true.</td>
+          <td>use deviation from first step?</td>
+        </tr>
+        <tr>
+          <td>MONITOR_STEP_INTERVAL</td>
+          <td>integer</td>
+          <td>1</td>
+          <td>step interval</td>
+        </tr>
+      </table>
+      <li>MONITITEM</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>ITEM</td>
+          <td>character(len=*)</td>
+          <td></td>
+          <td>name        of the item</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>
