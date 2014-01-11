@@ -43,7 +43,7 @@ LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend
