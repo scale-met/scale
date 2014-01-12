@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (very small for unit tests)
+  !++ scale-les grid parameters (very small for unit tests)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: KHALO = 2 ! # of halo cells: z

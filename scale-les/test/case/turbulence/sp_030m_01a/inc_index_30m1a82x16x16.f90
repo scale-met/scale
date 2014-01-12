@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (res. 30m, asp. 1)
+  !++ SCALE-LES grid parameters (res. 30m, asp. 1)
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX  =  82 ! # of computational cells: z

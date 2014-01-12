@@ -2,12 +2,12 @@ program convine
   implicit none
 
   include 'netcdf.inc'
- 
+
   integer(4), parameter :: nst=1, nen=1  !--- time for average profile
   integer(4), parameter :: nt=nen-nst+1
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: nzhalo, nxhalo, nyhalo
-  integer(4) :: xproc=2, yproc=3  !--- process number 
+  integer(4) :: xproc=2, yproc=3  !--- process number
   real(8) :: dt
   logical :: ofirst = .true.
   logical :: oread = .true.
@@ -28,7 +28,7 @@ program convine
   character*64 :: item
   character*5 :: HISTORY_DEFAULT_TUNIT
   real(8) :: HISTORY_DEFAULT_TINTERVAL
- 
+
   namelist  / PARAM_PRC / &
     PRC_NUM_X, PRC_NUM_Y
   namelist  / PARAM_HISTORY / &
@@ -46,7 +46,7 @@ program convine
    do n = 1, vcount
     write(*,*) "Imput variable"
     read(*,*) vname(n)
-    vname(n) = trim(vname(n)) 
+    vname(n) = trim(vname(n))
    enddo
   endif
 
@@ -105,13 +105,13 @@ program convine
     elseif( nrec < 100000 ) then
      write(cfile,'(a,i5,a)') "./init_rico_00000000000.000.pe0",nrec,".nc"
     endif
- 
+
     status = nf_open(cfile,0,ncid)
     if( status /= nf_noerr ) then
      write(*,*) "Stop at nf open"
      stop
     endif
- 
+
     if( ofirst ) then
       ofirst = .false.
 
@@ -238,14 +238,14 @@ program convine
      write(*,*) "stop at nf inq_varid ", trim(vname(n))
      stop
     end if
- 
+
     status = nf_inq_varndims( ncid,id01,ndim )
     if( status /= nf_noerr) then
      write(*,*) "stop at nf inq_varid dim", trim(vname(n))
      stop
     end if
 
-    if( ndim == 3 ) then 
+    if( ndim == 3 ) then
      status = nf_get_vara_double( ncid,id01,start,count,p_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double ", trim(vname(n))
@@ -258,10 +258,10 @@ program convine
       stop
      end if
     end if
- 
+
     status = nf_close(ncid)
 
-    !--- conbine variables in each processor to single  
+    !--- conbine variables in each processor to single
     do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
       cdx(iix) = p_cdx(iix-(ix-1)*nxp+nxhalo)
       cx(iix) = p_cx(iix-(ix-1)*nxp+nxhalo)
@@ -271,7 +271,7 @@ program convine
       cy(jjy) = p_cy(jjy-(jy-1)*nyp+nyhalo)
     enddo
 
-    if( ndim == 3 ) then 
+    if( ndim == 3 ) then
      do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
      do jjy = (jy-1)*nyp+1, (jy-1)*nyp+nyp
      do kz = 1, nz
@@ -282,7 +282,7 @@ program convine
     elseif( ndim == 2 ) then
      do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
      do jjy = (jy-1)*nyp+1, (jy-1)*nyp+nyp
-      var2d(iix,jjy) = real(p_2d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp)) 
+      var2d(iix,jjy) = real(p_2d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp))
      enddo
      enddo
     endif
@@ -294,7 +294,7 @@ program convine
      write(*,*) "create ctl file of ", trim(vname(n))
      open(10,file=trim(vname(n))//".ctl", form="formatted", access="sequential" )
      write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//".grd"
-     write(10,'(a)') "TITLE SCALE3 data output"
+     write(10,'(a)') "TITLE SCALE-LES data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
      write(10,'(a,1x,e15.7)') "UNDEF", -0.99900E+35
      write(10,'(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
@@ -306,14 +306,14 @@ program convine
       write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( ndim == 2 ) then
       write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
-     endif 
+     endif
      write(10,'(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nen-nst+1, "LINEAR", "00:00Z01JAN2000", "1mn"
      write(10,'(a,3x,i2)') "VARS", 1
      if( ndim == 3 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 2 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), 0, 99, "NONE"
-     endif 
+     endif
      write(10,'(a)') "ENDVARS"
      close(10)
    endif
@@ -322,12 +322,12 @@ program convine
     open(10,file=trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny*nz)
     write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
-    close(10)   
+    close(10)
    elseif( ndim == 2 ) then
     open(10,file=trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny)
     write(10,rec=it-nst+1) ((var2d(ix,jy),ix=1,nx),jy=1,ny)
-    close(10)   
+    close(10)
    endif
   enddo !--- for variable (n)
   enddo !--- for time (it)

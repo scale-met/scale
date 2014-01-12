@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (50m res, 15km height, 5km buffer)
+  !++ SCALE-LES grid parameters (50m res, 15km height, 5km buffer)
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =  300 ! # of computational cells: z

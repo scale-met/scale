@@ -38,7 +38,7 @@ makebin: $(BUILD_DIR)/$(PROJ_EXE)
 run:
 	$(BUILD_DIR)/$(PROJ_EXE) dummy.conf
 
-$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscalelib.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+$(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS)
 
 $(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90

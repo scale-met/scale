@@ -38,8 +38,8 @@ endif
 
 
 
-PRJ1 = scale3
-PRJ2 = scale3_init
+PRJ1 = scale-les
+PRJ2 = scale-les_init
 
 PRJS = $(PWD)/$(PRJ1) $(PWD)/$(PRJ2)
 
@@ -88,10 +88,10 @@ makeinclude:
 makebin: $(PRJS)
 
 $(PWD)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscalelib.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscalelib.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
@@ -122,8 +122,8 @@ $(BUILD_DIR)/mod_mkinit.o	: mod_mkinit.f90 mod_atmos_vars.o
 
 $(BUILD_DIR)/mod_user.o	: mod_user.f90
 
-$(BUILD_DIR)/scale3_init.o	: scale3_init.f90 mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
-$(BUILD_DIR)/scale.o			: scale.f90 mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
+$(BUILD_DIR)/scale-les_init.o	: scale-les_init.f90 mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
+$(BUILD_DIR)/scale-les.o		: scale-les.f90 mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean

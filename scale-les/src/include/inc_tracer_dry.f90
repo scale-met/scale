@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (vapor only)
+  !++ scale-les tracer parameters (vapor only)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 1

@@ -11,7 +11,7 @@ BUILD_DIR   := ./.libs
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
-LIBNAME = libscalelib.a
+LIBNAME = libscale.a
 
 VPATH = io:common:grid:atmos
 

@@ -79,11 +79,11 @@ module mod_cpl_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: CPL_RESTART_OUTPUT       = .false.             !< output restart file?
-  character(len=IO_FILECHR), private, save :: CPL_RESTART_IN_BASENAME  = ''                  !< basename of the input file
-  character(len=IO_FILECHR), private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'       !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE3 CPL VARS.'  !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  logical,                   private, save :: CPL_RESTART_OUTPUT       = .false.               !< output restart file?
+  character(len=IO_FILECHR), private, save :: CPL_RESTART_IN_BASENAME  = ''                    !< basename of the input file
+  character(len=IO_FILECHR), private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'         !< basename of the output file
+  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE-LES CPL VARS.' !< title    of the output file
+  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
 
   logical,                   private, save :: CPL_VARS_CHECKRANGE      = .false.
 

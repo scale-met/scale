@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program scaleles3
+program scaleles
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -31,6 +31,8 @@ program scaleles3
      CONST_setup
   use mod_calendar, only: &
      CALENDAR_setup
+  use mod_random, only: &
+     RANDOM_setup
   use mod_time, only: &
      TIME_setup,           &
      TIME_checkstate,      &
@@ -136,6 +138,9 @@ program scaleles3
 
   ! setup calendar
   call CALENDAR_setup
+
+  ! setup random number
+  call RANDOM_setup
 
   ! setup time
   call TIME_setup
@@ -265,4 +270,4 @@ program scaleles3
 
   stop
   !=============================================================================
-end program scaleles3
+end program scaleles

@@ -9,7 +9,7 @@
 !!
 !! @par History
 !! @li      2011-12-07 (Y.Miyamoto) [new]
-!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
+!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE-lES ver.3
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
@@ -377,7 +377,7 @@ contains
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_OUT_BASENAME
-    desc  = 'SCALE3 BOUNDARY CONDITION'
+    desc  = 'SCALE-LES BOUNDARY CONDITION'
     write(lname,'(A,I4.4)') 'ZDEF', KMAX
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then

@@ -31,7 +31,7 @@ module mod_tracer_dry
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (vapor only)
+  !++ scale-les tracer parameters (vapor only)
   !
   !-----------------------------------------------------------------------------
   integer, public, parameter :: QA = 1

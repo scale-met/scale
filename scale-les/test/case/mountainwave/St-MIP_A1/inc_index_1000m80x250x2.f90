@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (St-MIP A1 case, 20km height, 5km buffer)
+  !++ SCALE-LES grid parameters (St-MIP A1 case, 20km height, 5km buffer)
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =   80 ! # of computational cells: z

@@ -74,7 +74,7 @@ module mod_atmos_vars_sf
   logical,                   private, save :: ATMOS_SF_RESTART_OUTPUT        = .false.
   character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_IN_BASENAME   = ''
   character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_OUT_BASENAME  = 'restart_out'
-  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_TITLE     = 'SCALE3 PROGNOSTIC VARS.'
+  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
   character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_SOURCE    = 'SCALE-LES ver. '//VERSION
   character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_INSTITUTE = 'AICS/RIKEN'
 

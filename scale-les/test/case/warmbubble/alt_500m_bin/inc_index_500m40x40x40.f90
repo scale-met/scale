@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (500m res., 17km isotropic, 22km model top)
+  !++ SCALE-LES grid parameters (500m res., 17km isotropic, 22km model top)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: KHALO = 2 ! # of halo cells: z

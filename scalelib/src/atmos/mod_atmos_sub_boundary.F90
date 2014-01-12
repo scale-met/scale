@@ -9,7 +9,7 @@
 !!
 !! @par History
 !! @li      2011-12-07 (Y.Miyamoto) [new]
-!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
+!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE-LES ver.3
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !!
 !<
@@ -68,8 +68,8 @@ module mod_atmos_boundary
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
   character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
-  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE3 BOUNDARY CONDITION' !< title of the output file
-  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                   !< REAL4 or REAL8
+  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-lES BOUNDARY CONDITION' !< title of the output file
+  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?
   logical,                   private :: ATMOS_BOUNDARY_USE_VELX      = .false. ! read from file?

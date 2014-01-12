@@ -846,7 +846,7 @@ contains
     integer :: iq
     integer :: n
 
-    character(len=IO_SYSCHR) :: H_TITLE     = 'SCALE3 PROGNOSTIC VARS.'
+    character(len=IO_SYSCHR) :: H_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
     character(len=IO_SYSCHR) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
     character(len=IO_SYSCHR) :: H_INSTITUTE = 'AICS/RIKEN'
 

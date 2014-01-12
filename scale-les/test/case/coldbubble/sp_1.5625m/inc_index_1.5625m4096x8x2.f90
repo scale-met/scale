@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (1.5625m res)
+  !++ SCALE-LES grid parameters (1.5625m res)
   !
   !-----------------------------------------------------------------------------
   real(RP), private, parameter :: DX  = 1.5625_RP ! length in the main region [m]: x

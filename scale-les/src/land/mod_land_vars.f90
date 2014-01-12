@@ -116,11 +116,11 @@ module mod_land_vars
   !
   character(len=IO_FILECHR), private, save :: LAND_BOUNDARY_IN_BASENAME = '' !< basename of the boundary file
 
-  logical,                   private, save :: LAND_RESTART_OUTPUT       = .false.             !< output restart file?
-  character(len=IO_FILECHR), private, save :: LAND_RESTART_IN_BASENAME  = ''                  !< basename of the restart file
-  character(len=IO_FILECHR), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'       !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE3 LAND VARS.' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  logical,                   private, save :: LAND_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=IO_FILECHR), private, save :: LAND_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=IO_FILECHR), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
+  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE-LES LAND VARS.' !< title    of the output file
+  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   logical,                   private, save :: LAND_VARS_CHECKRANGE      = .false.
 

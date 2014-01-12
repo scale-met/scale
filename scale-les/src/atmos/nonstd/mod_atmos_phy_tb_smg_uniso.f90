@@ -9,7 +9,7 @@
 !!
 !! @par History
 !! @li      2011-11-29 (S.Iga)      [new]
-!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE3
+!! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE-lES ver.3
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !! @li      2012-03-27 (H.Yashiro)  [mod] reconstruction
 !! @li      2012-05-25 (Y.Sato)     [mod] un-isotropic grid

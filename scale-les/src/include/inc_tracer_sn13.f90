@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (2-moment bulk 6 category)
+  !++ scale-les tracer parameters (2-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 11
@@ -92,7 +92,7 @@
                   2,    & ! I_mp_QI => MSTRN_nptype=2: ice cloud
                   2,    & ! I_mp_QS => MSTRN_nptype=2: ice cloud
                   2     / ! I_mp_QG => MSTRN_nptype=2: ice cloud
-  
+
   integer, private, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, private, parameter :: I_ae_dummy = 1
 

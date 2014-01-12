@@ -32,7 +32,7 @@ module mod_tracer_sn13w
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (2-moment bulk 3 category)
+  !++ scale-les tracer parameters (2-moment bulk 3 category)
   !
   !-----------------------------------------------------------------------------
   integer, public, parameter :: QA = 5
@@ -97,7 +97,7 @@ module mod_tracer_sn13w
   integer, public :: I_MP2RD(MP_QA)
   data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
                   1     / ! I_mp_QR => MSTRN_nptype=1: water cloud
-  
+
   integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, public, parameter :: I_ae_dummy = 1
 

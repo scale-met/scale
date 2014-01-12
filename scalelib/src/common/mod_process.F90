@@ -8,7 +8,7 @@
 !!
 !! @par History
 !! @li      2011-10-11 (R.Yoshida)  [new]
-!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE3
+!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE-LES ver.3
 !!
 !<
 module mod_process

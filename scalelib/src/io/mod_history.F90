@@ -84,9 +84,9 @@ module mod_history
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE3 HISTORY OUTPUT' !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION       !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'            !< for header
+  character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE-LES HISTORY OUTPUT'        !< for header
+  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION !< for header
+  character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'                      !< for header
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------

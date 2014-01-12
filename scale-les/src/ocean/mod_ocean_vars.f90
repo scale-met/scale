@@ -70,10 +70,10 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.                !< output restart file?
-  character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE3 OCEANIC VARS.' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.                   !< output restart file?
+  character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'             !< basename of the output file
+  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE-LES OCEANIC VARS.' !< title    of the output file
+  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'                 !< REAL4 or REAL8
 
   logical,                   private, save :: OCEAN_VARS_CHECKRANGE      = .false.
 

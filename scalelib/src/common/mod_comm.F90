@@ -8,7 +8,7 @@
 !!
 !! @par History
 !! @li      2011-10-11 (R.Yoshida)  [new]
-!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE3
+!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE-LES ver.3
 !! @li      2012-01-10 (Y.Ohno)     [mod] Nonblocking communication (MPI)
 !! @li      2012-01-23 (Y.Ohno)     [mod] Self unpacking (MPI)
 !! @li      2012-03-12 (H.Yashiro)  [mod] REAL4(MPI)

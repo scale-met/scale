@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (100m for vertical, 1000m for horizontal res)
+  !++ SCALE-LES grid parameters (100m for vertical, 1000m for horizontal res)
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =   80 ! # of computational cells: z

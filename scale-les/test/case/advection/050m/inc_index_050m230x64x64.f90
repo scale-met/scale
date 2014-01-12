@@ -1,7 +1,7 @@
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters ( 50m res., 10km isotropic, 18km model top)
+  !++ scale-les grid parameters ( 50m res., 10km isotropic, 18km model top)
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =  230 ! # of computational cells: z

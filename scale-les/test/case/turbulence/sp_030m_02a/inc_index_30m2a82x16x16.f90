@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 grid parameters (res. 30m, asp. 2)
+  !++ SCALE-LES grid parameters (res. 30m, asp. 2)
   !
   !-----------------------------------------------------------------------------
   real(RP), private, parameter :: DZ  =  30 ! length in the main region [m]: z

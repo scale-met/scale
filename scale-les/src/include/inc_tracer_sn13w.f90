@@ -1,6 +1,6 @@
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (2-moment bulk 3 category)
+  !++ scale-les tracer parameters (2-moment bulk 3 category)
   !
   !-----------------------------------------------------------------------------
   integer, private, parameter :: QA = 5

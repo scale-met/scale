@@ -31,7 +31,7 @@ module mod_tracer_sn13
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (2-moment bulk 6 category)
+  !++ scale-les tracer parameters (2-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   integer, public, parameter :: QA = 11
@@ -123,7 +123,7 @@ module mod_tracer_sn13
                   2,    & ! I_mp_QI => MSTRN_nptype=2: ice cloud
                   2,    & ! I_mp_QS => MSTRN_nptype=2: ice cloud
                   2     / ! I_mp_QG => MSTRN_nptype=2: ice cloud
-  
+
   integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, public, parameter :: I_ae_dummy = 1
 

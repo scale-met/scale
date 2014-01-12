@@ -32,7 +32,7 @@ module mod_tracer_kessler
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (1-moment bulk 3 category)
+  !++ scale-les tracer parameters (1-moment bulk 3 category)
   !
   !-----------------------------------------------------------------------------
   integer, public, parameter :: QA = 3
@@ -91,11 +91,11 @@ module mod_tracer_kessler
   integer, public :: I_MP2RD(MP_QA)
   data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
                   1     / ! I_mp_QR => MSTRN_nptype=1: water cloud
-  
-  integer, public :: I_MP_BIN_NUM(MP_QA) !-- bin number 
+
+  integer, public :: I_MP_BIN_NUM(MP_QA) !-- bin number
   data I_MP_BIN_NUM     &
-                / 1,    & 
-                  1     / 
+                / 1,    &
+                  1     /
 
   integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, public, parameter :: I_ae_dummy = 1

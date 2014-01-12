@@ -9,7 +9,7 @@
 !!
 !! @par History
 !! @li      2011-12-03 (Y.Miyamoto)  [new]
-!! @li      2011-12-11 (H.Yashiro)   [mod] integrate to SCALE3
+!! @li      2011-12-11 (H.Yashiro)   [mod] integrate to SCALE-LES ver.3
 !! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
 !! @li      2012-04-10 (Y.Miyamoto)  [mod] introduce coefficients for interpolation
 !! @li      2012-09-11 (S.Nishizawa) [mod] bugfix based on the scale document

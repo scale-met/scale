@@ -31,7 +31,7 @@ module mod_tracer_tomita08
 
   !-----------------------------------------------------------------------------
   !
-  !++ scale3 tracer parameters (1-moment bulk 6 category)
+  !++ scale-les tracer parameters (1-moment bulk 6 category)
   !
   !-----------------------------------------------------------------------------
   integer, public, parameter :: QA = 6

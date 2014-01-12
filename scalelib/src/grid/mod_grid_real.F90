@@ -69,9 +69,9 @@ module mod_grid_real
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: REAL_OUT_BASENAME = ''                  !< basename of the output file
-  character(len=IO_SYSCHR),  private :: REAL_OUT_TITLE    = 'SCALE3 GEOMETRICS' !< title    of the output file
-  character(len=IO_SYSCHR),  private :: REAL_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+  character(len=IO_FILECHR), private :: REAL_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=IO_SYSCHR),  private :: REAL_OUT_TITLE    = 'SCALE-lES GEOMETRICS' !< title    of the output file
+  character(len=IO_SYSCHR),  private :: REAL_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
   logical, private :: allocated = .false.
 
   !-----------------------------------------------------------------------------

@@ -31,7 +31,7 @@ module mod_tracer_suzuki10
 
   !------------------------------------------------------------
   !
-  !++ scale3 grid parameter for inc_tracer_hbinf_h33_c20.f90
+  !++ scale-les grid parameter for inc_tracer_hbinf_h33_c20.f90
   !
   !------------------------------------------------------------
 !  include "setup_bin.h"
@@ -41,22 +41,22 @@ module mod_tracer_suzuki10
   integer, public :: kphase = 0
   integer, public :: ICEFLG = 1
   integer, public :: I_QV =  1
-  integer, public :: QA   
-  integer, public :: QQA  
+  integer, public :: QA
+  integer, public :: QQA
   integer, public :: QQS
   integer, public :: QQE
   integer, public :: QWS
   integer, public :: QWE
-  integer, public :: QIS   
-  integer, public :: QIE 
-!  integer, public, parameter :: QA   = I_QV+nbin*nspc+nccn  
-!  integer, public, parameter :: QQA  = I_QV+nbin*nspc      
+  integer, public :: QIS
+  integer, public :: QIE
+!  integer, public, parameter :: QA   = I_QV+nbin*nspc+nccn
+!  integer, public, parameter :: QQA  = I_QV+nbin*nspc
 !  integer, public, parameter :: QQS  = I_QV
 !  integer, public, parameter :: QQE  = I_QV+nbin*nspc
 !  integer, public, parameter :: QWS =  I_QV+1
 !  integer, public, parameter :: QWE =  I_QV+nbin
-!  integer, public, parameter :: QIS =  (I_QV+nbin+1)*ICEFLG   
-!  integer, public, parameter :: QIE =  (I_QV+nbin*nspc)*ICEFLG 
+!  integer, public, parameter :: QIS =  (I_QV+nbin+1)*ICEFLG
+!  integer, public, parameter :: QIE =  (I_QV+nbin*nspc)*ICEFLG
 
   integer, public, parameter :: I_QC =  2
   integer, public, parameter :: I_QR =  3
@@ -118,7 +118,7 @@ module mod_tracer_suzuki10
                   2,    & ! I_mp_QS => MSTRN_nptype=2: ice cloud (snow)
                   2,    & ! I_mp_QG => MSTRN_nptype=2: ice cloud (graupel)
                   2     / ! I_mp_QH => MSTRN_nptype=2: ice cloud (hail)
-  
+
   integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, public, parameter :: I_ae_dummy = 1
 
@@ -169,21 +169,21 @@ contains
      call PRC_MPIstop
     endif
 
-    !-- setup QA ... 
-    QA   = I_QV+nbin*nspc+nccn  
-    QQA  = I_QV+nbin*nspc      
+    !-- setup QA ...
+    QA   = I_QV+nbin*nspc+nccn
+    QQA  = I_QV+nbin*nspc
     QQS  = I_QV
     QQE  = I_QV+nbin*nspc
     QWS =  I_QV+1
     QWE =  I_QV+nbin
-    QIS =  (I_QV+nbin+1)*ICEFLG   
-    QIE =  (I_QV+nbin*nspc)*ICEFLG 
+    QIS =  (I_QV+nbin+1)*ICEFLG
+    QIE =  (I_QV+nbin*nspc)*ICEFLG
 
     allocate( AQ_NAME(QA) )
     allocate( AQ_DESC(QA) )
     allocate( AQ_UNIT(QA) )
 
- 
+
     !-----------------------------------------------------------------------------
     !
     !++ calculate each category and aerosol
@@ -203,8 +203,8 @@ contains
     do n = 1, nccn
      write(AQ_NAME(I_QV+nbin*nspc+n),'(a,i0)') trim(namspc(8)), n
     enddo
-   
-    write(AQ_DESC(I_QV),'(a)')  'Water Vapor mixing ratio' 
+
+    write(AQ_DESC(I_QV),'(a)')  'Water Vapor mixing ratio'
     do m = 1, nspc
     do n = 1, nbin
      write(AQ_DESC(I_QV+nbin*(m-1)+n),'(a,i0)') trim(lnamspc(m)), n
