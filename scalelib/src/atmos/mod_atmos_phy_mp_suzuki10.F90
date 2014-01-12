@@ -1,15 +1,18 @@
 !-------------------------------------------------------------------------------
-!> Module Spectran Bin Microphysical Module in SCALE-LED ver. 3
+!> Module Spectran Bin Microphysical Module in SCALE-LES ver. 3
 !!
 !! @par Description:
 !!      This module contains subroutines for the Spectral Bin Model
 !!
 !! - Reference
-!!  - Suzuki et al., 2006!!    Correlation Pattern between Effective Radius and Optical Thickness of Water Clouds Simulated by a Spectral Bin Microphysics Cloud Model
-!!    SOLA, 2: 116–119 doi:10.2151/sola.2006‒030
-!!  - Suzuki et al., 2010!!    A Study of Microphysical Mechanisms for Correlation Patterns between Droplet Radius and Optical Thickness of Warm Clouds with a Spectral Bin
+!!  - Suzuki et al., 2006
+!!    Correlation Pattern between Effective Radius and Optical Thickness of Water Clouds Simulated by a Spectral Bin Microphysics Cloud Model
+!!    SOLA, 2: 116-119 doi:10.2151/sola.2006-030
+!!  - Suzuki et al., 2010
+!!    A Study of Microphysical Mechanisms for Correlation Patterns between Droplet Radius and Optical Thickness of Warm Clouds with a Spectral Bin
 !!    J. Atmos. Sci., 67: 1126-1141
-!!  - Sato et al., 2009!!    Application of a Monte Carlo integration method to collision and coagulation growth processes of hydrometeors in a bin-type model
+!!  - Sato et al., 2009
+!!    Application of a Monte Carlo integration method to collision and coagulation growth processes of hydrometeors in a bin-type model
 !!    J. Geophy. Res., 114: D09215, doi:10.1029/2008JD011247
 !!
 !! @author : Team SCALE
@@ -154,9 +157,9 @@ module mod_atmos_phy_mp_suzuki10
   !--- Use for stochastic method
   integer, allocatable :: blrg( :,: ), bsml( :,: )
   real(RP) :: wgtbin
-  integer  :: mspc, mbin  
+  integer  :: mspc, mbin
   real(RP), private :: rndm(1,1,1)
-  !--- use for model without aerosol 
+  !--- use for model without aerosol
   real(RP), private :: c_ccn = 100.E+6_RP
   real(RP), private :: kappa = 0.462_RP
   !--- use for aerosol coupled model
@@ -398,7 +401,7 @@ contains
 
       !--- micpara.dat does not exist
       else
-       
+
         if ( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
         call mkpara
 
@@ -682,7 +685,7 @@ call START_COLLECTION("MICROPHYSICS")
 
     call TIME_rapend  ('MPX ijkconvert')
 
-    !--- Calculate Super saturation 
+    !--- Calculate Super saturation
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -779,7 +782,7 @@ call START_COLLECTION("MICROPHYSICS")
      end do
      end do
      end do
-  
+
      endif
 
     endif
@@ -855,8 +858,8 @@ call START_COLLECTION("MICROPHYSICS")
 
     call HIST_in( AMR(:,:,:),  'aerosol', 'aerosol mass', 'kg/m^3', dt)
 
-    deallocate(gdga) 
- 
+    deallocate(gdga)
+
     endif
 
     !--- gravitational falling
@@ -2586,7 +2589,7 @@ call STOP_COLLECTION("MICROPHYSICS")
    integer :: n
    real(RP) :: nbinr, tmp1
    real(RP) :: rans( mbin ), ranl( mbin )
-   integer  :: pq 
+   integer  :: pq
    real(RP), allocatable :: ranstmp( : )
    real(RP), allocatable :: ranltmp( : )
    integer :: p, q
@@ -2911,9 +2914,9 @@ call STOP_COLLECTION("MICROPHYSICS")
     return
   end subroutine ATMOS_PHY_MP_suzuki10_Mixingratio
   !-----------------------------------------------------------------------------
-  !----- mkpara is module to create micpara.dat, which is parameter file of 
+  !----- mkpara is module to create micpara.dat, which is parameter file of
   !----- micrphyisical proprties of hydrometeors (collision kernel, radius...).
-  !----- Imported from preprocess/mk_para2 at 2013/12/26 (Y.Sato) 
+  !----- Imported from preprocess/mk_para2 at 2013/12/26 (Y.Sato)
   !-----------------------------------------------------------------------------
   subroutine mkpara
 
@@ -2928,7 +2931,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   allocate( cctr_mk( nspc_mk,nbin ) )
   allocate( cbnd_mk( nspc_mk,nbin+1 ) )
   allocate( ck_mk( nspc_mk,nspc_mk,nbin,nbin ) )
-  allocate( vt_mk( nspc_mk,nbin ) ) 
+  allocate( vt_mk( nspc_mk,nbin ) )
   allocate( br_mk( nspc_mk,nbin ) )
 
   !--- file reading
@@ -2958,7 +2961,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   deallocate( cctr_mk )
   deallocate( cbnd_mk )
   deallocate( ck_mk )
-  deallocate( vt_mk ) 
+  deallocate( vt_mk )
   deallocate( br_mk )
 
   end subroutine mkpara
@@ -3296,8 +3299,8 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   real(DP) :: xsta, xend
   integer :: n
-  real(DP):: pi_dp = 3.1415920_DP 
-  real(DP):: rhow_dp = 1.0E+03_DP 
+  real(DP):: pi_dp = 3.1415920_DP
+  real(DP):: rhow_dp = 1.0E+03_DP
 
   xsta = log( rhow_dp * 4.0_DP*pi_dp/3.0_DP * ( 3.E-06_DP )**3.0_DP )
   xend = log( rhow_dp * 4.0_DP*pi_dp/3.0_DP * ( 3.E-03_DP )**3.0_DP )
@@ -3343,7 +3346,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
   call getmatrx                             &
          ( ndat, kdeg, qknt, xmss( myu,: ), & !--- in
-           elm                              ) !--- out 
+           elm                              ) !--- out
 
   call getcoef                             &
          ( ndat, kdeg, elm, zcap( myu,: ), & !--- in
@@ -3391,7 +3394,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(DP) :: coef( ndat,ndat )
 
   real(DP) :: xlrg, xsml, vlrg, vsml, rlrg
-  real(DP):: pi_dp = 3.1415920_DP 
+  real(DP):: pi_dp = 3.1415920_DP
   real(DP):: rhow_dp = 1.0E+03_DP
 
   if( kphase == 0 ) then
@@ -3403,7 +3406,7 @@ call STOP_COLLECTION("MICROPHYSICS")
 
    call getcoef2                          &
          ( ndat, ndat, kdeg, kdeg,       & !--- in
-           xmss( myu,: ), xmss( nyu,: ), & !--- in 
+           xmss( myu,: ), xmss( nyu,: ), & !--- in
            qknt, rknt,                   & !--- in
            ykrn( myu,nyu,:,: ),          & !--- in
            coef                          ) !--- out
@@ -3412,7 +3415,7 @@ call STOP_COLLECTION("MICROPHYSICS")
             ( ndat, ndat, kdeg, kdeg,       & !--- in
               coef, qknt, rknt,             & !--- in
               xmss( myu,: ), xmss( nyu,: ), & !--- in
-              x, y                          ) !--- in 
+              x, y                          ) !--- in
   else if( kphase == 1 ) then
    xlrg = max( x, y )
    xsml = min( x, y )

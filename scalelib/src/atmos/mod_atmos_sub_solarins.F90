@@ -6,7 +6,7 @@
 !!          based on berger(1978), berger et al.(1993)
 !!          The original algorithm is valid to +/- 1,000,000 years from AD1950
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2013-01-29 (H.Yashiro)  [new]
@@ -729,7 +729,7 @@ contains
     integer,  intent(in)  :: now_date(6) ! date(yyyy,mm,dd,hh,mm,ss)
 
     real(RP) :: lambda_m       ! mean longitude from vernal equinox
-    real(RP) :: lambda         ! 
+    real(RP) :: lambda         !
     real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
     real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point
 

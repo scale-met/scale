@@ -8,7 +8,7 @@
 !!           pressure, temperature         : CIRA86
 !!           H2O,CO2,O3,N2O,CO,CH4,O2,CFCs : MIPAS2001
 !!
-!! @author H.Tomita and SCALE developpers
+!! @author Team SCALE
 !!
 !! @par History
 !! @li      2013-02-06 (H.Yashiro)  [new]
