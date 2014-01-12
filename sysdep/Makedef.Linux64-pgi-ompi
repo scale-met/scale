@@ -1,0 +1,53 @@
+#
+# ------ FOR Linux 64bit & pgi fortran&C & OpenMPI1.4 -----
+#
+
+##### for computation
+
+FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+              -Mbyteswapio                       \
+              -Mflushz -pc 80                    \
+              -mcmodel=medium                    \
+              -Msmartalloc=huge -Minfo
+
+FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+               -Mbyteswapio                      \
+               -Ktrap=fp -pc 80                  \
+               -Mbounds -Mstandard -g -traceback \
+               -mcmodel=medium -Minfo
+
+FC     = mpif90
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
+ifneq ($(ENABLE_PAPI),)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+MODDIROPT ?= -module
+
+CC     = mpicc
+CFLAGS = -fastsse -mcmodel=medium
+
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
+LD     = $(FC)
+LFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I$(NETCDF3)/include
+NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh
