@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_ae_wrap
+module mod_atmos_phy_ae_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -29,8 +29,8 @@ module mod_atmos_phy_ae_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_AE_wrap_setup
-  public :: ATMOS_PHY_AE_wrap
+  public :: ATMOS_PHY_AE_driver_setup
+  public :: ATMOS_PHY_AE_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -48,7 +48,7 @@ module mod_atmos_phy_ae_wrap
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_AE_wrap_setup( AE_TYPE )
+  subroutine ATMOS_PHY_AE_driver_setup( AE_TYPE )
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L, &
@@ -65,14 +65,14 @@ contains
 
     call ATMOS_PHY_AE_setup( AE_TYPE )
 
-    call ATMOS_PHY_AE_wrap( .true., .false. )
+    call ATMOS_PHY_AE_driver( .true., .false. )
 
     return
-  end subroutine ATMOS_PHY_AE_wrap_setup
+  end subroutine ATMOS_PHY_AE_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
-  subroutine ATMOS_PHY_AE_wrap( update_flag, history_flag )
+  subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
     use mod_atmos_phy_ae, only: &
        ATMOS_PHY_AE
     implicit none
@@ -84,6 +84,6 @@ contains
     end if
 
     return
-  end subroutine ATMOS_PHY_AE_wrap
+  end subroutine ATMOS_PHY_AE_driver
 
-end module mod_atmos_phy_ae_wrap
+end module mod_atmos_phy_ae_driver

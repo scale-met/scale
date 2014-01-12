@@ -10,7 +10,7 @@
 !! @li      2013-12-05 (S.Nishizawa)  [new]
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_sf_wrap
+module mod_atmos_phy_sf_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -29,8 +29,8 @@ module mod_atmos_phy_sf_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_SF_wrap_setup
-  public :: ATMOS_PHY_SF_wrap
+  public :: ATMOS_PHY_SF_driver_setup
+  public :: ATMOS_PHY_SF_driver
   public :: ATMOS_PHY_SF_CPL
 
   !-----------------------------------------------------------------------------
@@ -59,7 +59,7 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_wrap_setup( SF_TYPE )
+  subroutine ATMOS_PHY_SF_driver_setup( SF_TYPE )
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L, &
@@ -88,16 +88,16 @@ contains
     ! finally, surface processes will be located under the coupler.
     if( SF_TYPE /= 'COUPLE' ) then
        call ATMOS_PHY_SF_setup( SF_TYPE )
-       call ATMOS_PHY_SF_wrap( .true., .false. )
+       call ATMOS_PHY_SF_driver( .true., .false. )
     end if
 
     return
-  end subroutine ATMOS_PHY_SF_wrap_setup
+  end subroutine ATMOS_PHY_SF_driver_setup
 
   !-----------------------------------------------------------------------------
   ! calculation flux
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_wrap( &
+  subroutine ATMOS_PHY_SF_driver( &
        update_flag, &
        history_flag &
        )
@@ -187,7 +187,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_SF_wrap
+  end subroutine ATMOS_PHY_SF_driver
 
   subroutine ATMOS_PHY_SF_CPL
     use mod_const, only: &
@@ -240,4 +240,4 @@ contains
     return
   end subroutine ATMOS_PHY_SF_CPL
 
-end module mod_atmos_phy_sf_wrap
+end module mod_atmos_phy_sf_driver

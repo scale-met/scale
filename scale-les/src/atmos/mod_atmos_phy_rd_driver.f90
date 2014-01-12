@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_rd_wrap
+module mod_atmos_phy_rd_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -30,8 +30,8 @@ module mod_atmos_phy_rd_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_wrap_setup
-  public :: ATMOS_PHY_RD_wrap
+  public :: ATMOS_PHY_RD_driver_setup
+  public :: ATMOS_PHY_RD_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -52,7 +52,7 @@ module mod_atmos_phy_rd_wrap
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_wrap_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L, &
@@ -73,14 +73,14 @@ contains
 
     call ATMOS_PHY_RD_setup( RD_TYPE )
 
-    call ATMOS_PHY_RD_wrap( .true., .false. )
+    call ATMOS_PHY_RD_driver( .true., .false. )
 
     return
-  end subroutine ATMOS_PHY_RD_wrap_setup
+  end subroutine ATMOS_PHY_RD_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD_wrap( update_flag, history_flag )
+  subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
     use mod_history, only: &
        HIST_in
     use mod_time, only: &
@@ -286,6 +286,6 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_RD_wrap
+  end subroutine ATMOS_PHY_RD_driver
 
-end module mod_atmos_phy_rd_wrap
+end module mod_atmos_phy_rd_driver

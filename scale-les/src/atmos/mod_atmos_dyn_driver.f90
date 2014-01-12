@@ -13,7 +13,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module mod_atmos_dyn_wrap
+module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -41,8 +41,8 @@ module mod_atmos_dyn_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_DYN_wrap_setup
-  public :: ATMOS_DYN_wrap
+  public :: ATMOS_DYN_driver_setup
+  public :: ATMOS_DYN_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -81,7 +81,7 @@ module mod_atmos_dyn_wrap
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_wrap_setup( DYN_TYPE )
+  subroutine ATMOS_DYN_driver_setup( DYN_TYPE )
     use mod_stdio, only: &
        IO_FID_CONF, &
        IO_SYSCHR
@@ -156,11 +156,11 @@ contains
                           REAL_LAT                        ) ! [IN]
 
     return
-  end subroutine ATMOS_DYN_wrap_setup
+  end subroutine ATMOS_DYN_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
-  subroutine ATMOS_DYN_wrap( do_flag )
+  subroutine ATMOS_DYN_driver( do_flag )
     use mod_time, only: &
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN, &
@@ -264,7 +264,7 @@ contains
     end if
 
     return
-  end subroutine ATMOS_DYN_wrap
+  end subroutine ATMOS_DYN_driver
 
 
-end module mod_atmos_dyn_wrap
+end module mod_atmos_dyn_driver

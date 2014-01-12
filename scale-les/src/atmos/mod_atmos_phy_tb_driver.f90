@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_tb_wrap
+module mod_atmos_phy_tb_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -29,8 +29,8 @@ module mod_atmos_phy_tb_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_TB_wrap_setup
-  public :: ATMOS_PHY_TB_wrap
+  public :: ATMOS_PHY_TB_driver_setup
+  public :: ATMOS_PHY_TB_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -52,7 +52,7 @@ module mod_atmos_phy_tb_wrap
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine ATMOS_PHY_TB_wrap_setup( TB_TYPE )
+  subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L, &
@@ -90,12 +90,12 @@ contains
          FDZ, FDX, FDY, & ! (in)
          CZ, FZ         ) ! (in)
 
-    call ATMOS_PHY_TB_wrap( .true., .false. )
+    call ATMOS_PHY_TB_driver( .true., .false. )
 
-  end subroutine ATMOS_PHY_TB_wrap_setup
+  end subroutine ATMOS_PHY_TB_driver_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB_wrap( update_flag, history_flag )
+  subroutine ATMOS_PHY_TB_driver( update_flag, history_flag )
     use mod_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
     use mod_history, only: &
@@ -284,7 +284,7 @@ contains
     end do
 
     return
-  end subroutine ATMOS_PHY_TB_wrap
+  end subroutine ATMOS_PHY_TB_driver
 
 
-end module mod_atmos_phy_tb_wrap
+end module mod_atmos_phy_tb_driver

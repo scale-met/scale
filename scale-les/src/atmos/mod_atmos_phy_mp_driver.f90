@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_phy_mp_wrap
+module mod_atmos_phy_mp_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -29,8 +29,8 @@ module mod_atmos_phy_mp_wrap
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_wrap_setup
-  public :: ATMOS_PHY_MP_wrap
+  public :: ATMOS_PHY_MP_driver_setup
+  public :: ATMOS_PHY_MP_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -55,7 +55,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_wrap_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_driver_setup( MP_TYPE )
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L, &
@@ -80,15 +80,15 @@ contains
 
     call ATMOS_PHY_MP_setup( MP_TYPE )
 
-!    call ATMOS_PHY_MP_wrap( .true., .false. )
+!    call ATMOS_PHY_MP_driver( .true., .false. )
 
     return
-  end subroutine ATMOS_PHY_MP_wrap_setup
+  end subroutine ATMOS_PHY_MP_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_wrap( update_flag, history_flag )
+  subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_vars, only: &
@@ -119,6 +119,6 @@ contains
     end if
 
     return
-  end subroutine ATMOS_PHY_MP_wrap
+  end subroutine ATMOS_PHY_MP_driver
 
-end module mod_atmos_phy_mp_wrap
+end module mod_atmos_phy_mp_driver

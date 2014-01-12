@@ -95,18 +95,18 @@ contains
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
-    use mod_atmos_dyn_wrap, only: &
-       ATMOS_DYN_setup => ATMOS_DYN_wrap_setup
-    use mod_atmos_phy_sf_wrap, only: &
-       ATMOS_PHY_SF_setup => ATMOS_PHY_SF_wrap_setup
-    use mod_atmos_phy_tb_wrap, only: &
-       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_wrap_setup
-    use mod_atmos_phy_mp_wrap, only: &
-       ATMOS_PHY_MP_setup => ATMOS_PHY_MP_wrap_setup
-    use mod_atmos_phy_rd_wrap, only: &
-       ATMOS_PHY_RD_setup => ATMOS_PHY_RD_wrap_setup
-    use mod_atmos_phy_ae_wrap, only: &
-       ATMOS_PHY_AE_setup => ATMOS_PHY_AE_wrap_setup
+    use mod_atmos_dyn_driver, only: &
+       ATMOS_DYN_setup => ATMOS_DYN_driver_setup
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_setup => ATMOS_PHY_SF_driver_setup
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_driver_setup
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_setup => ATMOS_PHY_MP_driver_setup
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_setup => ATMOS_PHY_RD_driver_setup
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_setup => ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -202,19 +202,19 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_QVAtm
-    use mod_atmos_dyn_wrap, only: &
-       ATMOS_DYN => ATMOS_DYN_wrap
-    use mod_atmos_phy_sf_wrap, only: &
-       ATMOS_PHY_SF => ATMOS_PHY_SF_wrap, &
+    use mod_atmos_dyn_driver, only: &
+       ATMOS_DYN => ATMOS_DYN_driver
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF => ATMOS_PHY_SF_driver, &
        ATMOS_PHY_SF_CPL
-    use mod_atmos_phy_tb_wrap, only: &
-       ATMOS_PHY_TB => ATMOS_PHY_TB_wrap
-    use mod_atmos_phy_mp_wrap, only: &
-       ATMOS_PHY_MP => ATMOS_PHY_MP_wrap
-    use mod_atmos_phy_rd_wrap, only: &
-       ATMOS_PHY_RD => ATMOS_PHY_RD_wrap
-    use mod_atmos_phy_ae_wrap, only: &
-       ATMOS_PHY_AE => ATMOS_PHY_AE_wrap
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB => ATMOS_PHY_TB_driver
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP => ATMOS_PHY_MP_driver
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD => ATMOS_PHY_RD_driver
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE => ATMOS_PHY_AE_driver
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
