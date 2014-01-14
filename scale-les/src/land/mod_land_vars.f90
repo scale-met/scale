@@ -35,8 +35,6 @@ module mod_land_vars
   !
   !++ included parameters
   !
-  include 'inc_land.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -124,7 +122,9 @@ module mod_land_vars
 
   logical,                   private, save :: LAND_VARS_CHECKRANGE      = .false.
 
-  real(RP), private, save :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
+  integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
+
+  real(RP), private, save      :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
 
   !-----------------------------------------------------------------------------
 contains
