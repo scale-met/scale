@@ -6,13 +6,15 @@ ifeq ($(origin LIBDIR), undefined)
    LIBDIR = $(TOPDIR)/lib
 endif
 
-ifeq ($(origin INCDIR), undefined)
-   INCDIR = $(TOPDIR)/include
+ifeq ($(origin MODDIR), undefined)
+   MODDIR = $(TOPDIR)/include
 endif
+
+SYSDEP_DIR  = $(TOPDIR)/sysdep
 
 GTOOLDIR    = $(TOPDIR)/gtool
 DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
-SCALELESDIR = $(TOPDIR)/scale-les
 
-SYSDEP_DIR = $(TOPDIR)/sysdep
+SCALELESDIR = $(TOPDIR)/scale-les
+SCALEGMDIR  = $(TOPDIR)/scale-gm
