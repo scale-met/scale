@@ -497,6 +497,10 @@ contains
 
     end if
 
+    ! only for register
+    call TIME_rapstart('Debug')
+    call TIME_rapend  ('Debug')
+
     return
   end subroutine TIME_setup
 

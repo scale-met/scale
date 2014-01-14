@@ -145,8 +145,6 @@ program scaleles
   ! setup time
   call TIME_setup
 
-  call TIME_rapstart('Debug')
-  call TIME_rapend  ('Debug')
   call TIME_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
