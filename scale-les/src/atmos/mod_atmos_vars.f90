@@ -1294,24 +1294,26 @@ contains
 
     if ( AD_PREP_sw(I_QHYD) > 0 ) then
        QHYD(:,:,:) = 0.0_RP
-       if( I_QC > 0 ) QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,I_QC)
-       if( I_QR > 0 ) QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,I_QR)
-       if( I_QI > 0 ) QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,I_QI)
-       if( I_QS > 0 ) QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,I_QS)
-       if( I_QG > 0 ) QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,I_QG)
+       do iq = QWS, QWE
+         QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
+       enddo
+       do iq = QIS, QIE
+         QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
+       enddo
     endif
 
     if ( AD_PREP_sw(I_QLIQ) > 0 ) then
        QLIQ(:,:,:) = 0.0_RP
-       if( I_QC > 0 ) QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,I_QC)
-       if( I_QR > 0 ) QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,I_QR)
+       do iq = QWS, QWE
+         QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,iq)
+       enddo
     endif
 
     if ( AD_PREP_sw(I_QICE) > 0 ) then
        QICE(:,:,:) = 0.0_RP
-       if( I_QI > 0 ) QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,I_QI)
-       if( I_QS > 0 ) QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,I_QS)
-       if( I_QG > 0 ) QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,I_QG)
+       do iq = QIS, QIE
+         QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,iq)
+       enddo
     endif
 
     if ( AD_PREP_sw(I_LWP) > 0 ) then
