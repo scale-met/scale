@@ -58,10 +58,6 @@ module mod_atmos_dyn_rk_hevi
 contains
 
   subroutine ATMOS_DYN_rk_hevi_setup( ATMOS_TYPE_DYN )
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -70,7 +66,9 @@ contains
        CPdry  => CONST_CPdry
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_DYN
+
+    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI'
 
@@ -1103,9 +1101,6 @@ contains
   subroutine solve_bicgstab( &
        C,       & ! (inout)
        PT, A, B ) ! (in)
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     implicit none

@@ -14,10 +14,6 @@ module mod_land_vars
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -45,9 +41,9 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR),  public, save :: LAND_TYPE_PHY = 'OFF' !< Land physics type
-  logical,                   public, save :: LAND_sw_phy           !< do land physics update?
-  logical,                   public, save :: LAND_sw_restart       !< output restart?
+  character(len=H_SHORT), public, save :: LAND_TYPE_PHY = 'OFF' !< Land physics type
+  logical,                public, save :: LAND_sw_phy           !< do land physics update?
+  logical,                public, save :: LAND_sw_restart       !< output restart?
 
   ! land-atmosphere flux
   real(RP), public, allocatable :: SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
@@ -65,9 +61,9 @@ module mod_land_vars
   integer,  public, save :: I_ROFF  = 3
   integer,  public, save :: I_STRG  = 4
 
-  character(len=File_HSHORT), public, save :: LP_NAME(4) !< name  of the land variables
-  character(len=File_HMID),   public, save :: LP_DESC(4) !< desc. of the land variables
-  character(len=File_HSHORT), public, save :: LP_UNIT(4) !< unit  of the land variables
+  character(len=H_SHORT), public, save :: LP_NAME(4) !< name  of the land variables
+  character(len=H_MID),   public, save :: LP_DESC(4) !< desc. of the land variables
+  character(len=H_SHORT), public, save :: LP_UNIT(4) !< unit  of the land variables
 
   data LP_NAME / 'TG',    &
                  'QvEfc', &
@@ -107,15 +103,15 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private, save :: LAND_BOUNDARY_IN_BASENAME = '' !< basename of the boundary file
+  character(len=H_LONG), private, save :: LAND_BOUNDARY_IN_BASENAME = ''                     !< basename of the boundary file
 
-  logical,                   private, save :: LAND_RESTART_OUTPUT       = .false.                !< output restart file?
-  character(len=IO_FILECHR), private, save :: LAND_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=IO_FILECHR), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE-LES LAND VARS.' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  logical,               private, save :: LAND_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=H_LONG), private, save :: LAND_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
+  character(len=H_MID),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE-LES LAND VARS.' !< title    of the output file
+  character(len=H_MID),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  logical,                   private, save :: LAND_VARS_CHECKRANGE      = .false.
+  logical,               private, save :: LAND_VARS_CHECKRANGE      = .false.
 
   integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
 
@@ -126,8 +122,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_vars_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -330,7 +324,7 @@ contains
        FILEIO_write
     implicit none
 
-    character(len=IO_FILECHR) :: basename
+    character(len=H_LONG) :: basename
 
     integer :: n
     !---------------------------------------------------------------------------
@@ -413,26 +407,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_param_read
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
        CONST_UNDEF
     implicit none
 
-    integer                  :: index
-    character(len=IO_SYSCHR) :: description
-    real(RP)                 :: STRGMAX
-    real(RP)                 :: STRGCRT
-    real(RP)                 :: EMIT
-    real(RP)                 :: ALB
-    real(RP)                 :: TCS
-    real(RP)                 :: HCS
-    real(RP)                 :: DZg
-    real(RP)                 :: Z0M
-    real(RP)                 :: Z0H
-    real(RP)                 :: Z0E
+    integer                :: index
+    character(len=H_SHORT) :: description
+    real(RP)               :: STRGMAX
+    real(RP)               :: STRGCRT
+    real(RP)               :: EMIT
+    real(RP)               :: ALB
+    real(RP)               :: TCS
+    real(RP)               :: HCS
+    real(RP)               :: DZg
+    real(RP)               :: Z0M
+    real(RP)               :: Z0H
+    real(RP)               :: Z0E
 
     NAMELIST / PARAM_LAND_DATA / &
        index,       &

@@ -47,7 +47,7 @@ module mod_prof
   !
   integer,                private, parameter :: PROF_rapnlimit = 100
   integer,                private,      save :: PROF_rapnmax   = 0
-  character(len=IO_SYSCHR), private,      save :: PROF_rapname(PROF_rapnlimit)
+  character(len=H_SHORT), private,      save :: PROF_rapname(PROF_rapnlimit)
   real(DP),               private,      save :: PROF_raptstr(PROF_rapnlimit)
   real(DP),               private,      save :: PROF_rapttot(PROF_rapnlimit)
   integer,                private,      save :: PROF_rapnstr(PROF_rapnlimit)
@@ -72,7 +72,7 @@ contains
     character(len=*), intent(in) :: rapname !< name of item
 
     integer :: id
-    character (len=IO_SYSCHR) :: trapname
+    character (len=H_SHORT) :: trapname
     !---------------------------------------------------------------------------
 
     trapname = trim(rapname)

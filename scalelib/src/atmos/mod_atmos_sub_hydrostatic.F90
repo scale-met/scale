@@ -88,8 +88,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_HYDROSTATIC_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &

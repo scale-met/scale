@@ -55,8 +55,8 @@ module mod_atmos_phy_rd_profile
   !++ Private parameters & variables
   !
   real(RP),                  private, save :: PROFILE_TOA = 100.0_RP            !< top of atmosphere [km]
-  character(len=IO_FILECHR), private, save :: PROFILE_CIRA86_fname  = "cira.nc" !< file (CIRA86,netCDF format)
-  character(len=IO_FILECHR), private, save :: PROFILE_MIPAS2001_dir = "."       !< dir  (MIPAS2001,ASCII format)
+  character(len=H_LONG), private, save :: PROFILE_CIRA86_fname  = "cira.nc" !< file (CIRA86,netCDF format)
+  character(len=H_LONG), private, save :: PROFILE_MIPAS2001_dir = "."       !< dir  (MIPAS2001,ASCII format)
   logical,                   private, save :: debug = .false.                   !< debug mode?
 
   integer,  private,              save :: CIRA_ntime
@@ -121,15 +121,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_PROFILE_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
     real(RP)                  :: ATMOS_PHY_RD_PROFILE_TOA
-    character(len=IO_FILECHR) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
-    character(len=IO_FILECHR) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
+    character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
+    character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
 
     namelist / PARAM_ATMOS_PHY_RD_PROFILE / &
        ATMOS_PHY_RD_PROFILE_TOA,                   &
@@ -363,17 +361,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup MIPAS2001 climatological data (gas)
   subroutine PROFILE_setup_MIPAS2001
-    use mod_stdio, only: &
-         IO_get_available_fid
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
-         CONST_D2R
+       CONST_D2R
     use mod_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
-    character(len=IO_FILECHR) :: fname
+    character(len=H_LONG) :: fname
 
     character(len=7), parameter :: MIPAS_fname(4) = (/"equ.atm","day.atm","sum.atm","win.atm"/)
 
@@ -381,7 +377,7 @@ contains
     integer  :: nday
     real(RP) :: nsec, subsec = 0.0_RP
 
-    character(len=128) :: dummy
+    character(len=H_LONG) :: dummy
     integer  :: fid, ierr
     integer  :: t, l, rgn
     !---------------------------------------------------------------------------
@@ -476,8 +472,8 @@ contains
     integer,  intent(in)  :: fid
     real(RP), intent(out) :: var(121)
 
-    character(len=128) :: dummy
-    real(RP)            :: tmp5(5), tmp1
+    character(len=H_LONG) :: dummy
+    real(RP)              :: tmp5(5), tmp1
 
     integer  :: nstr, l
     !---------------------------------------------------------------------------

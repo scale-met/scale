@@ -127,7 +127,8 @@ module mod_atmos_phy_mp_sn13w
   !++ Private parameters
   !
   integer, parameter :: HYDRO_MAX  = 3    ! total number of mixing ratio of water
-  character(len=32), save :: WLABEL(11)
+
+  character(len=H_SHORT), save :: WLABEL(11)
 
   ! empirical value from Meyers etal.(1991), 1[/liter] = 1.d3[/m3]
   real(RP), private, parameter :: nqmin(3) = (/ 0.0_RP, 1.E+4_RP, 1.0_RP /) ! [1/m3]
@@ -361,11 +362,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sn13w_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
@@ -373,7 +369,7 @@ contains
     use mod_const, only: &
        CONST_DWATR
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+    character(len=H_SHORT), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        doautoconversion, &
@@ -475,8 +471,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine mp_sn13w_init ( IAA, JA )
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -1778,8 +1772,6 @@ contains
        qke,              & ! in
        flag_history_in,  & ! in
        ct, dt            ) ! in
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_const, only: &
        GRAV   => CONST_GRAV, &
        UNDEF8 => CONST_UNDEF8
@@ -2722,8 +2714,6 @@ contains
        ! column integrated tendency terms
        sl_PLCdep,      &      !
        sl_PLRdep, sl_PNRdep ) !
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_atmos_thermodyn, only: &
        thrmdyn_qd      => ATMOS_THERMODYN_qd, &
        thrmdyn_cv      => ATMOS_THERMODYN_cv, &

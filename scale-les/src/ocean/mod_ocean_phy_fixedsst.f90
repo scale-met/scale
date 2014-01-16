@@ -46,8 +46,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_PHY_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &

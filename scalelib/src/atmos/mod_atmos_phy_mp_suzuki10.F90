@@ -195,29 +195,23 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
-    use mod_stdio, only: &
-      IO_get_available_fid, &
-      IO_FID_CONF, &
-      IO_FID_LOG, &
-      IO_L, &
-      IO_SYSCHR
     use mod_process, only: &
-      PRC_MPIstop, &
-      PRC_master, &
-      PRC_myrank
-    use mod_comm, only: &
-      COMM_datatype
-    use mod_grid, only: &
-      CDZ => GRID_CDZ, &
-      CZ  => GRID_CZ,  &
-      FZ  => GRID_FZ
-    use mod_time, only: &
-       TIME_DTSEC_ATMOS_PHY_MP
+       PRC_MPIstop, &
+       PRC_master,  &
+       PRC_myrank
     use mod_const, only: &
        CONST_DWATR
+    use mod_comm, only: &
+       COMM_datatype
+    use mod_grid, only: &
+       CDZ => GRID_CDZ, &
+       CZ  => GRID_CZ,  &
+       FZ  => GRID_FZ
+    use mod_time, only: &
+       TIME_DTSEC_ATMOS_PHY_MP
     implicit none
-    !---------------------------------------------------------------------------
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+
+    character(len=H_SHORT), intent(in) :: MP_TYPE
 
     real(RP) :: ATMOS_PHY_MP_RHOA  !--- density of aerosol
     real(RP) :: ATMOS_PHY_MP_EMAER !--- moleculer weight of aerosol

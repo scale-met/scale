@@ -15,6 +15,10 @@ module mod_stdio
   !
   !++ used modules
   !
+  use gtool_file_h, only: &
+     File_HSHORT, &
+     File_HMID,   &
+     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,15 +34,19 @@ module mod_stdio
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: IO_SYSCHR   = 32  !< Character length of system control
-  integer, public, parameter :: IO_FILECHR  = 128 !< Character length of file name
-  integer, public            :: IO_FID_CONF = 7   !< Config file ID
-  integer, public            :: IO_FID_LOG  = 8   !< Log file ID
+  integer,               public, parameter :: H_SHORT         = File_HSHORT !< Character length (short=16)
+  integer,               public, parameter :: H_MID           = File_HMID   !< Character length (short=64)
+  integer,               public, parameter :: H_LONG          = File_HLONG  !< Character length (short=256)
 
-  character(len=IO_FILECHR), public :: IO_LOG_BASENAME = 'LOG'   !< basename of logfile
-  logical,                   public :: IO_L            = .false. !< output log or not?
-  logical,                   public :: IO_LOG_SUPPRESS = .false. !< suppress log output?
-  logical,                   public :: IO_LOG_ALLNODE  = .false. !< output log for each node?
+
+  integer,               public            :: IO_FID_CONF     = 7           !< Config file ID
+  integer,               public            :: IO_FID_LOG      = 8           !< Log file ID
+
+  character(len=H_LONG), public            :: IO_LOG_BASENAME = 'LOG'       !< basename of logfile
+  logical,               public            :: IO_L            = .false.     !< output log or not? (this process)
+  logical,               public            :: IO_LOG_SUPPRESS = .false.     !< suppress all of log output?
+  logical,               public            :: IO_LOG_ALLNODE  = .false.     !< output log for each node?
+
 
   !-----------------------------------------------------------------------------
   !
@@ -65,7 +73,7 @@ contains
        IO_LOG_SUPPRESS, &
        IO_LOG_ALLNODE
 
-    character(len=IO_FILECHR) :: fname !< name of config file for each process
+    character(len=H_LONG) :: fname !< name of config file for each process
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -129,7 +137,7 @@ contains
     character(len=*), intent(in)  :: ext    !< extention
     integer,          intent(in)  :: rank   !< number
 
-    character(len=IO_SYSCHR) :: srank
+    character(len=H_SHORT) :: srank
     !---------------------------------------------------------------------------
 
     write(srank,'(I6.6)') rank + IO_RGNOFFSET

@@ -55,16 +55,13 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_driver_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+
+    character(len=H_SHORT), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

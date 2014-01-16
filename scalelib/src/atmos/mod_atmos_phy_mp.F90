@@ -105,8 +105,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -164,7 +162,9 @@ contains
        ATMOS_PHY_MP_suzuki10_DENS => ATMOS_PHY_MP_DENS
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+
+    character(len=H_SHORT), intent(in) :: MP_TYPE
+    !---------------------------------------------------------------------------
 
     select case ( MP_TYPE )
     case ( 'DRY' )

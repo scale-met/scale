@@ -124,7 +124,7 @@ module mod_atmos_phy_mp_sn13
   !++ Private parameters
   !
   integer, parameter :: HYDRO_MAX  = 6    ! total number of mixing ratio of water
-  character(len=32), save :: WLABEL(11)
+  character(len=H_SHORT), save :: WLABEL(11)
 
   ! empirical value from Meyers etal.(1991), 1[/liter] = 1.d3[/m3]
   real(RP), private, parameter :: nqmin(6) = (/ 0.0_RP, 1.E+4_RP, 1.0_RP, 1.0_RP, 1.E-4_RP, 1.E-4_RP /) ! [1/m3]
@@ -373,11 +373,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sn13_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -386,7 +381,8 @@ contains
     use mod_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+
+    character(len=H_SHORT), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        doautoconversion, &
@@ -501,8 +497,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine mp_sn13_init ( IAA, JA )
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_specfunc, only: &
@@ -2146,8 +2140,6 @@ contains
        qke,              & ! in
        flag_history_in,  & ! in
        dt                ) ! in
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -2644,8 +2636,6 @@ contains
        vtc_xave, vtr_xave, vti_xave, vts_xave, vtg_xave, &
 !       rho, & ! [Add] 11/08/30
        flag_history_in                 ) ! in [Add] 11/08/30
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_atmos_saturation, only: &
        moist_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
@@ -3979,8 +3969,6 @@ contains
        ! column integrated tendency terms
        sl_PLCdep,      &      !
        sl_PLRdep, sl_PNRdep ) !
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_atmos_thermodyn, only: &
        AQ_CV, &
        AQ_CP

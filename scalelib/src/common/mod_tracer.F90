@@ -63,9 +63,9 @@ module mod_tracer
   integer, public :: QIS ! start index for ice tracer
   integer, public :: QIE ! end   index for ice tracer
 
-  character(len=16), public, allocatable :: AQ_NAME(:)
-  character(len=64), public, allocatable :: AQ_DESC(:)
-  character(len=16), public, allocatable :: AQ_UNIT(:)
+  character(len=H_SHORT), public, allocatable :: AQ_NAME(:)
+  character(len=H_MID)  , public, allocatable :: AQ_DESC(:)
+  character(len=H_SHORT), public, allocatable :: AQ_UNIT(:)
 
   !-----------------------------------------------------------------------------
   !
@@ -84,9 +84,8 @@ module mod_tracer
 
   integer, public, allocatable :: I_AE2RD(:)
 
-  character(len=IO_SYSCHR), public :: TRACER_TYPE    = 'NONE'
+  character(len=H_SHORT), public :: TRACER_TYPE = 'NONE'
 #endif
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -103,10 +102,6 @@ contains
   !> Setup
   subroutine TRACER_setup
 #ifndef TRACER
-  use mod_stdio, only: &
-    IO_FID_CONF, &
-    IO_FID_LOG, &
-    IO_L
   use mod_process, only: &
     PRC_MPIstop
   use mod_tracer_dry, only: &

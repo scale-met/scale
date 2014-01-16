@@ -71,17 +71,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   subroutine ATMOS_PHY_MP_kessler_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
        CONST_DWATR
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+
+    character(len=H_SHORT), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &

@@ -81,10 +81,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_setup( RD_TYPE )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -105,8 +101,8 @@ contains
        ATMOS_PHY_RD_dummy
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
+    character(len=H_SHORT), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     select case ( RD_TYPE )

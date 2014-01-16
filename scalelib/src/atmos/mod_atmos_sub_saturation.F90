@@ -162,8 +162,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_SATURATION_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none

@@ -50,12 +50,9 @@ contains
   subroutine ATMOS_PHY_RD_dummy_setup( RD_TYPE )
     use mod_process, only: &
        PRC_MPIstop
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
+
+    character(len=H_SHORT), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

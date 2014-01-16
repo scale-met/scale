@@ -10,7 +10,7 @@ module test_atmos_dyn_fent_fct
      AssertEqual, &
      AssertLessThan
   use mod_stdio, only: &
-       IO_SYSCHR
+       H_SHORT
   use mod_grid, only: &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
@@ -93,7 +93,7 @@ module test_atmos_dyn_fent_fct
 
   integer, save :: KME ! end of main region
 
-  character(len=IO_SYSCHR) :: DYN_TYPE
+  character(len=H_SHORT) :: DYN_TYPE
 
   integer :: k, i, j, iq
   character(len=7) :: message

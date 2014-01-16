@@ -14,10 +14,6 @@ module mod_cpl_vars
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -60,11 +56,11 @@ module mod_cpl_vars
   real(RP), public, allocatable :: SnowQ(:,:) ! Ground Snow amount      [kg/m2]
   real(RP), public, allocatable :: SnowT(:,:) ! Ground Snow Temperature [K]
 
-  character(len=IO_SYSCHR),  public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
-  character(len=IO_SYSCHR),  public, save :: CPL_TYPE_AtmOcn = 'OFF' !< atmos-ocean coupler type
-  logical,                   public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
-  logical,                   public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
-  logical,                   public, save :: CPL_sw_restart          !< output coupler restart?
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF' !< atmos-ocean coupler type
+  logical,                public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
+  logical,                public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
+  logical,                public, save :: CPL_sw_restart          !< output coupler restart?
 
   !-----------------------------------------------------------------------------
   !
@@ -74,13 +70,13 @@ module mod_cpl_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: CPL_RESTART_OUTPUT       = .false.               !< output restart file?
-  character(len=IO_FILECHR), private, save :: CPL_RESTART_IN_BASENAME  = ''                    !< basename of the input file
-  character(len=IO_FILECHR), private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'         !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE-LES CPL VARS.' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
+  logical,                private, save :: CPL_RESTART_OUTPUT       = .false.               !< output restart file?
+  character(len=H_LONG) , private, save :: CPL_RESTART_IN_BASENAME  = ''                    !< basename of the input file
+  character(len=H_LONG) , private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'         !< basename of the output file
+  character(len=H_MID)  , private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE-LES CPL VARS.' !< title    of the output file
+  character(len=H_SHORT), private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
 
-  logical,                   private, save :: CPL_VARS_CHECKRANGE      = .false.
+  logical,                private, save :: CPL_VARS_CHECKRANGE      = .false.
 
   ! surface fluxes for atmosphere
   real(RP), private, allocatable :: SFLX_MOMX (:,:) ! momentum flux for x [kg/m2/s]
@@ -158,9 +154,9 @@ module mod_cpl_vars
   integer,                    private, save :: I_SFLX_PREC  = 16
   integer,                    private, save :: I_SFLX_QVLnd = 17
 
-  character(len=File_HSHORT), private, save :: LP_NAME(17) !< name  of the coupler variables
-  character(len=File_HMID),   private, save :: LP_DESC(17) !< desc. of the coupler variables
-  character(len=File_HSHORT), private, save :: LP_UNIT(17) !< unit  of the coupler variables
+  character(len=H_SHORT), private, save :: LP_NAME(17) !< name  of the coupler variables
+  character(len=H_MID),   private, save :: LP_DESC(17) !< desc. of the coupler variables
+  character(len=H_SHORT), private, save :: LP_UNIT(17) !< unit  of the coupler variables
 
   data LP_NAME / 'LST',        &
                  'SST',        &
@@ -221,8 +217,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_vars_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -454,7 +448,7 @@ contains
        FILEIO_write
     implicit none
 
-    character(len=IO_FILECHR) :: bname
+    character(len=H_LONG) :: bname
 
     integer :: n
     !---------------------------------------------------------------------------

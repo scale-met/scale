@@ -62,22 +62,22 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR) :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=IO_SYSCHR) :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'      !< for header
-  real(RP), allocatable :: real_lon (:,:)
-  real(RP), allocatable :: real_lonx(:,:)
-  real(RP), allocatable :: real_lat (:,:)
-  real(RP), allocatable :: real_laty(:,:)
-  real(RP), allocatable :: real_cz(:,:,:)
-  real(RP), allocatable :: real_fz(:,:,:)
+  character(len=H_MID) :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
+  character(len=H_MID) :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'               !< for header
+
+  real(RP), private, allocatable :: REAL_LON (:,:)
+  real(RP), private, allocatable :: REAL_LONX(:,:)
+  real(RP), private, allocatable :: REAL_LAT (:,:)
+  real(RP), private, allocatable :: REAL_LATY(:,:)
+
+  real(RP), private, allocatable :: REAL_CZ(:,:,:)
+  real(RP), private, allocatable :: REAL_FZ(:,:,:)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILEIO_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -92,13 +92,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIELIO]/Categ[IO]'
 
-    allocate( real_lon (IA,JA) )
-    allocate( real_lonx(IA,JA) )
-    allocate( real_lat (IA,JA) )
-    allocate( real_laty(IA,JA) )
-    allocate( real_cz(KA,IA,JA) )
-    allocate( real_fz(0:KA,IA,JA) )
+    allocate( REAL_LON (IA,JA) )
+    allocate( REAL_LONX(IA,JA) )
+    allocate( REAL_LAT (IA,JA) )
+    allocate( REAL_LATY(IA,JA) )
 
+    allocate( REAL_CZ  (  KA,IA,JA) )
+    allocate( REAL_FZ  (0:KA,IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -111,7 +111,7 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_FILEIO)
-
+    ! only for register
     call PROF_rapstart('FILE I NetCDF')
     call PROF_rapend  ('FILE I NetCDF')
     call PROF_rapstart('FILE O NetCDF')
@@ -129,21 +129,29 @@ contains
   !-----------------------------------------------------------------------------
   !> set latlon and z
   subroutine FILEIO_set_coordinates( &
-       lon, lonx, lat, laty, cz, fz)
+       LON,  &
+       LONX, &
+       LAT,  &
+       LATY, &
+       CZ,   &
+       FZ    )
     implicit none
-    real(RP), intent(in) :: lon (IA,JA)
-    real(RP), intent(in) :: lonx(IA,JA)
-    real(RP), intent(in) :: lat (IA,JA)
-    real(RP), intent(in) :: laty(IA,JA)
-    real(RP), intent(in) :: cz(KA,IA,JA)
-    real(RP), intent(in) :: fz(0:KA,IA,JA)
 
-    real_lon  = lon
-    real_lonx = lonx
-    real_lat  = lat
-    real_laty = laty
-    real_cz   = cz
-    real_fz   = fz
+    real(RP), intent(in) :: LON (IA,JA)
+    real(RP), intent(in) :: LONX(IA,JA)
+    real(RP), intent(in) :: LAT (IA,JA)
+    real(RP), intent(in) :: LATY(IA,JA)
+    real(RP), intent(in) :: CZ  (  KA,IA,JA)
+    real(RP), intent(in) :: FZ  (0:KA,IA,JA)
+    !---------------------------------------------------------------------------
+
+    REAL_LON (:,:) = LON (:,:)
+    REAL_LONX(:,:) = LONX(:,:)
+    REAL_LAT (:,:) = LAT (:,:)
+    REAL_LATY(:,:) = LATY(:,:)
+
+    REAL_CZ(:,:,:) = CZ(:,:,:)
+    REAL_FZ(:,:,:) = FZ(:,:,:)
 
     return
   end subroutine FILEIO_set_coordinates

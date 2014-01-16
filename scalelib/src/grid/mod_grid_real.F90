@@ -63,10 +63,10 @@ module mod_grid_real
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: REAL_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=IO_SYSCHR),  private :: REAL_OUT_TITLE    = 'SCALE-lES GEOMETRICS' !< title    of the output file
-  character(len=IO_SYSCHR),  private :: REAL_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
   logical, private :: allocated = .false.
+  character(len=H_LONG), private :: REAL_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  private :: REAL_OUT_TITLE    = 'SCALE-LES GEOMETRICS' !< title    of the output file
+  character(len=H_MID),  private :: REAL_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
@@ -120,10 +120,9 @@ contains
     call REAL_make_area
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( &
-         REAL_LON, REAL_LONX, &
-         REAL_LAT, REAL_LATY, &
-         REAL_CZ, REAL_FZ     )
+    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, &
+                                 REAL_LAT, REAL_LATY, &
+                                 REAL_CZ,  REAL_FZ    )
 
     return
   end subroutine REAL_setup

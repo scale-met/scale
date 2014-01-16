@@ -26,7 +26,6 @@ module mod_atmos_boundary
   use mod_tracer
 
   use gtool_file_h, only: &
-     File_HSHORT, &
      File_REAL4,  &
      File_REAL8
   !-----------------------------------------------------------------------------
@@ -63,11 +62,11 @@ module mod_atmos_boundary
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
-  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
-  character(len=IO_FILECHR), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
-  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-lES BOUNDARY CONDITION' !< title of the output file
-  character(len=IO_SYSCHR),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                      !< REAL4 or REAL8
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-lES BOUNDARY CONDITION' !< title of the output file
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?
   logical,                   private :: ATMOS_BOUNDARY_USE_VELX      = .false. ! read from file?
@@ -88,7 +87,7 @@ module mod_atmos_boundary
   real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.0_RP ! maximum value for damping tau (x) [s]
   real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.0_RP ! maximum value for damping tau (y) [s]
 
-  character(len=File_HSHORT), private :: REF_NAME(5)
+  character(len=H_SHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
 
   !-----------------------------------------------------------------------------
@@ -99,8 +98,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_setup( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -489,7 +486,7 @@ contains
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: bname
+    character(len=H_LONG) :: bname
 
     integer :: iv, i, j
     !---------------------------------------------------------------------------

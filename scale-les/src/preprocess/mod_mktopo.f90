@@ -73,7 +73,7 @@ contains
   subroutine MKTOPO_setup
     implicit none
 
-    character(len=IO_SYSCHR) :: MKTOPO_initname = 'OFF'
+    character(len=H_SHORT) :: MKTOPO_initname = 'OFF'
 
     NAMELIST / PARAM_MKTOPO / &
        MKTOPO_initname

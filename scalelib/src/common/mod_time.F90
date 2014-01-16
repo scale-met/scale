@@ -117,8 +117,6 @@ contains
   !> Setup
   subroutine TIME_setup( &
        flg_init ) ! (in)
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -134,40 +132,40 @@ contains
     logical, intent(in), optional :: flg_init
     logical :: flgi = .false.
 
-    real(DP)                 :: TIME_DURATION
-    character(len=IO_SYSCHR) :: TIME_DURATION_UNIT         = "SEC"
-    real(DP)                 :: TIME_DT
-    character(len=IO_SYSCHR) :: TIME_DT_UNIT               = "SEC"
+    real(DP)               :: TIME_DURATION
+    character(len=H_SHORT) :: TIME_DURATION_UNIT         = "SEC"
+    real(DP)               :: TIME_DT
+    character(len=H_SHORT) :: TIME_DT_UNIT               = "SEC"
 
-    real(DP)                 :: TIME_DT_ATMOS_DYN
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(DP)                 :: TIME_DT_ATMOS_PHY_SF
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_SF_UNIT  = ""
-    real(DP)                 :: TIME_DT_ATMOS_PHY_TB
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_TB_UNIT  = ""
-    real(DP)                 :: TIME_DT_ATMOS_PHY_MP
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
-    real(DP)                 :: TIME_DT_ATMOS_PHY_RD
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
-    real(DP)                 :: TIME_DT_ATMOS_PHY_AE
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_PHY_AE_UNIT  = ""
-    real(DP)                 :: TIME_DT_ATMOS_RESTART
-    character(len=IO_SYSCHR) :: TIME_DT_ATMOS_RESTART_UNIT = ""
+    real(DP)               :: TIME_DT_ATMOS_DYN
+    character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
+    real(DP)               :: TIME_DT_ATMOS_PHY_SF
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT  = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_TB
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT  = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_MP
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_RD
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_AE
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT  = ""
+    real(DP)               :: TIME_DT_ATMOS_RESTART
+    character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT = ""
 
-    real(DP)                 :: TIME_DT_OCEAN
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_UNIT         = ""
-    real(DP)                 :: TIME_DT_OCEAN_RESTART
-    character(len=IO_SYSCHR) :: TIME_DT_OCEAN_RESTART_UNIT = ""
+    real(DP)               :: TIME_DT_OCEAN
+    character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT         = ""
+    real(DP)               :: TIME_DT_OCEAN_RESTART
+    character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT = ""
 
-    real(DP)                 :: TIME_DT_LAND
-    character(len=IO_SYSCHR) :: TIME_DT_LAND_UNIT          = ""
-    real(DP)                 :: TIME_DT_LAND_RESTART
-    character(len=IO_SYSCHR) :: TIME_DT_LAND_RESTART_UNIT  = ""
+    real(DP)               :: TIME_DT_LAND
+    character(len=H_SHORT) :: TIME_DT_LAND_UNIT          = ""
+    real(DP)               :: TIME_DT_LAND_RESTART
+    character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT  = ""
 
-    real(DP)                 :: TIME_DT_CPL
-    character(len=IO_SYSCHR) :: TIME_DT_CPL_UNIT           = ""
-    real(DP)                 :: TIME_DT_CPL_RESTART
-    character(len=IO_SYSCHR) :: TIME_DT_CPL_RESTART_UNIT   = ""
+    real(DP)               :: TIME_DT_CPL
+    character(len=H_SHORT) :: TIME_DT_CPL_UNIT           = ""
+    real(DP)               :: TIME_DT_CPL_RESTART
+    character(len=H_SHORT) :: TIME_DT_CPL_RESTART_UNIT   = ""
 
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &

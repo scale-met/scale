@@ -23,8 +23,6 @@ module mod_atmos_refstate
   use mod_prof
   use mod_grid_index
   use mod_tracer
-  use gtool_file_h, only: &
-     File_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,18 +65,18 @@ module mod_atmos_refstate
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_pott(:) !< 1D refernce potential temperature [K]
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_qv  (:) !< 1D refernce vapor [kg/kg]
 
-  character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
-  character(len=IO_FILECHR), private, save :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-LES Refstate' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
+  character(len=H_LONG),  private, save :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
+  character(len=H_LONG),  private, save :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
+  character(len=H_MID) ,  private, save :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-LES Refstate' !< title    of the output file
+  character(len=H_MID) ,  private, save :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
 
-  character(len=IO_SYSCHR),  private, save :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type
-  real(RP),                  private, save :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
-  real(RP),                  private, save :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
-  real(RP),                  private, save :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
-  real(DP),                  private, save :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
+  character(len=H_SHORT), private, save :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type
+  real(RP),               private, save :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
+  real(RP),               private, save :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
+  real(RP),               private, save :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
+  real(DP),               private, save :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
 
-  real(DP),                  private, save :: last_updated
+  real(DP),               private, save :: last_updated
 
   !-----------------------------------------------------------------------------
 contains
@@ -86,8 +84,6 @@ contains
   !> Setup
   subroutine ATMOS_REFSTATE_setup( &
        DENS, RHOT, QTRC )
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_grid, only: &

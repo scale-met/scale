@@ -78,9 +78,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_driver_setup( DYN_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
@@ -97,7 +94,8 @@ contains
     use mod_atmos_dyn, only: &
        ATMOS_DYN_setup
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: DYN_TYPE
+
+    character(len=H_SHORT), intent(in) :: DYN_TYPE
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_numerical_diff_order,        &

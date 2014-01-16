@@ -16,9 +16,6 @@ module mod_monitor
   !
   !++ Used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -51,25 +48,25 @@ module mod_monitor
   !
   !++ Private parameters & variables
   !
-  integer                    :: MONIT_FID = -1                    !< fileID for monitor output file
+  integer                :: MONIT_FID = -1                    !< fileID for monitor output file
 
-  character(len=IO_FILECHR)  :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
-  logical                    :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
-  integer                    :: MONITOR_STEP_INTERVAL = 1         !< step interval
+  character(len=H_LONG)  :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
+  logical                :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
+  integer                :: MONITOR_STEP_INTERVAL = 1         !< step interval
 
-  integer, parameter         :: MONIT_req_limit = 1000            !< number limit for item request
-  integer                    :: MONIT_req_nmax = 0                !< number of requested item
-  character(len=File_HSHORT) :: MONIT_req_item(MONIT_req_limit)   !< name of requested monitor item
+  integer, parameter     :: MONIT_req_limit = 1000            !< number limit for item request
+  integer                :: MONIT_req_nmax = 0                !< number of requested item
+  character(len=H_SHORT) :: MONIT_req_item(MONIT_req_limit)   !< name of requested monitor item
 
-  integer                                 :: MONIT_id_count = 0        !< number of item to output
-  character(len=File_HSHORT), allocatable :: MONIT_item (:)            !< name                of the item
-  character(len=File_HMID),   allocatable :: MONIT_desc (:)            !< description         of the item
-  character(len=File_HSHORT), allocatable :: MONIT_unit (:)            !< unit                of the item
-  character(len=File_HSHORT), allocatable :: MONIT_ktype(:)            !< vertical layer type of the item
-  integer,                    allocatable :: MONIT_kmax (:)            !< # of vertical grid  of the item
-  real(RP),                   allocatable :: MONIT_var  (:)            !< value               of the item
-  logical,                    allocatable :: MONIT_first(:)            !< first time?         of the item
-  real(RP),                   allocatable :: MONIT_var0 (:)            !< value at first time of the item
+  integer                             :: MONIT_id_count = 0 !< number of item to output
+  character(len=H_SHORT), allocatable :: MONIT_item (:)     !< name                of the item
+  character(len=H_MID)  , allocatable :: MONIT_desc (:)     !< description         of the item
+  character(len=H_SHORT), allocatable :: MONIT_unit (:)     !< unit                of the item
+  character(len=H_SHORT), allocatable :: MONIT_ktype(:)     !< vertical layer type of the item
+  integer,                allocatable :: MONIT_kmax (:)     !< # of vertical grid  of the item
+  real(RP),               allocatable :: MONIT_var  (:)     !< value               of the item
+  logical,                allocatable :: MONIT_first(:)     !< first time?         of the item
+  real(RP),               allocatable :: MONIT_var0 (:)     !< value at first time of the item
 
   real(RP), parameter :: eps = 1.E-10_RP !< epsilon for timesec
 
@@ -78,8 +75,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MONIT_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -89,7 +84,7 @@ contains
        MONITOR_USEDEVATION,  &
        MONITOR_STEP_INTERVAL
 
-    character(len=File_HSHORT) :: ITEM  !> name of monitor item
+    character(len=H_SHORT) :: ITEM  !> name of monitor item
 
     NAMELIST / MONITITEM / &
        ITEM
@@ -327,18 +322,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Open file and write header at the first time
   subroutine MONIT_writeheader
-    use mod_stdio, only: &
-       IO_get_available_fid, &
-       IO_make_idstr,        &
-       IO_FILECHR,           &
-       IO_LOG_ALLNODE
     use mod_process, only: &
        PRC_myrank, &
        PRC_master, &
        PRC_MPIstop
     implicit none
 
-    character(len=IO_FILECHR) :: fname !< name of monitor file for each process
+    character(len=H_LONG) :: fname !< name of monitor file for each process
 
     logical :: MONIT_L
     integer :: ierr
@@ -392,13 +382,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Close file
   subroutine MONIT_finalize
-    use mod_stdio, only: &
-       IO_make_idstr
     use mod_process, only: &
        PRC_myrank
     implicit none
 
-    character(len=IO_FILECHR) :: fname !< name of monitor file for each process
+    character(len=H_LONG) :: fname !< name of monitor file for each process
     !---------------------------------------------------------------------------
 
     if ( MONIT_FID > 0 ) then

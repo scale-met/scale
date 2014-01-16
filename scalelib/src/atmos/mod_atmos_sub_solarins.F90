@@ -535,8 +535,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SOLARINS_setup( &
        iyear )
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &

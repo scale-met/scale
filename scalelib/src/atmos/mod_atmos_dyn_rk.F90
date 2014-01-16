@@ -136,8 +136,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
-    use mod_stdio, only: &
-       IO_SYSCHR
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS
@@ -153,7 +151,8 @@ contains
        ATMOS_DYN_rk_hevi
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_DYN
+
+    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
     !---------------------------------------------------------------------------
 
     select case ( ATMOS_TYPE_DYN )

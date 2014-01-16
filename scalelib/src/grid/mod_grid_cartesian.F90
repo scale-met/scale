@@ -104,18 +104,16 @@ module mod_grid
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: GRID_IN_BASENAME  = ''
-  character(len=IO_FILECHR), private :: GRID_OUT_BASENAME = ''
-  real(RP)                 , private :: GRID_OFFSET_X = 0.0_RP
-  real(RP)                 , private :: GRID_OFFSET_Y = 0.0_RP
+  character(len=H_LONG), private :: GRID_IN_BASENAME  = ''
+  character(len=H_LONG), private :: GRID_OUT_BASENAME = ''
+  real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
+  real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine GRID_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop, &
        PRC_myrank,  &
@@ -271,7 +269,7 @@ contains
        PRC_myrank
     implicit none
 
-    character(len=IO_FILECHR) :: bname
+    character(len=H_LONG) :: bname
 
     integer :: k, i, j
     !---------------------------------------------------------------------------

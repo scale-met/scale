@@ -196,9 +196,9 @@ module mod_atmos_phy_mp_tomita08
 
   real(RP),          private, allocatable :: w(:,:) ! working array
   integer,           private, save :: w_histid(w_nmax)
-  character(len=16), private, save :: w_name  (w_nmax)
-  character(len=64), private, save :: w_desc  (w_nmax) = ''
-  character(len=16), private, save :: w_unit  (w_nmax) = 'kg/kg/s'
+  character(len=H_SHORT), private, save :: w_name  (w_nmax)
+  character(len=H_MID),   private, save :: w_desc  (w_nmax) = ''
+  character(len=H_SHORT), private, save :: w_unit  (w_nmax) = 'kg/kg/s'
 
   data w_name / 'dqv_dt ', &
                 'dqc_dt ', &
@@ -253,11 +253,6 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -270,7 +265,7 @@ contains
     use mod_history, only: &
        HIST_reg
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: MP_TYPE
+    character(len=H_SHORT), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &

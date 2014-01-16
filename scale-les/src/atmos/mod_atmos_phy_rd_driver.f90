@@ -51,17 +51,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
     implicit none
 
-    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
+    character(len=H_SHORT), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

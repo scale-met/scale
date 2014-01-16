@@ -18,12 +18,6 @@ module mod_history
   !
   !++ Used modules
   !
-  use gtool_history, only: &
-     HistoryInit, &
-     HistoryAddVariable, &
-     HistoryPutAxis, &
-     HistoryPut, &
-     HistoryGet
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -77,20 +71,21 @@ module mod_history
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: HISTORY_H_TITLE     = 'SCALE-LES HISTORY OUTPUT'        !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION !< for header
-  character(len=IO_SYSCHR), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'                      !< for header
+  character(len=H_MID), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION !< for header
+  character(len=H_MID), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'                      !< for header
+  character(len=H_MID), private :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine HIST_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank
+    use gtool_history, only: &
+       HistoryInit
     implicit none
 
     integer :: rankidx(2)
@@ -128,6 +123,8 @@ contains
        xdim,   &
        ydim,   &
        zdim    )
+    use gtool_history, only: &
+       HistoryAddVariable
     implicit none
 
     integer,          intent(out) :: itemid !< index number of the item
@@ -178,6 +175,8 @@ contains
       itemid, &
       var,    &
       dt      )
+    use gtool_history, only: &
+       HistoryPut
     implicit none
 
     integer,  intent(in) :: itemid !< index number of the item
@@ -208,6 +207,8 @@ contains
       itemid, &
       var,    &
       dt      )
+    use gtool_history, only: &
+       HistoryPut
     implicit none
 
     integer,  intent(in) :: itemid   !< index number of the item
@@ -240,6 +241,8 @@ contains
       itemid, &
       var,    &
       dt      )
+    use gtool_history, only: &
+       HistoryPut
 !    use mod_interpolation, only: &
 !       INTERP_vertical_xi2z
     implicit none
@@ -419,6 +422,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
+    use gtool_history, only: &
+       HistoryGet
     implicit none
 
     real(RP),         intent(out) :: var(:)   !< value
@@ -455,6 +460,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
+    use gtool_history, only: &
+       HistoryGet
     implicit none
 
     real(RP),         intent(out) :: var(:,:) !< value
@@ -491,6 +498,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
+    use gtool_history, only: &
+       HistoryGet
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:) !< value

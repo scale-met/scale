@@ -167,7 +167,7 @@ contains
   subroutine MKINIT_setup
     implicit none
 
-    character(len=IO_SYSCHR) :: MKINIT_initname = 'OFF'
+    character(len=H_SHORT) :: MKINIT_initname = 'OFF'
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
@@ -1536,11 +1536,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for supercell experiment
   subroutine MKINIT_supercell
-    use mod_stdio, only: &
-       IO_get_available_fid
     implicit none
 
-    character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
+    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
     ! Bubble
     real(RP) :: BBL_THETA = 3.D0 ! extremum of temperature in bubble [K]
 
@@ -1690,11 +1688,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
-    use mod_stdio, only: &
-       IO_get_available_fid
     implicit none
 
-    character(len=IO_FILECHR) :: ENV_IN_SOUNDING_file = ''
+    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
 
     real(RP) :: RANDOM_THETA =  0.01_RP
     real(RP) :: OFFSET_velx  = 12.0_RP
@@ -2722,7 +2718,7 @@ contains
 
     integer :: dims(3)
 
-    character(len=IO_FILECHR) :: BASENAME_ORG = ''
+    character(len=H_LONG) :: BASENAME_ORG = ''
 
     NAMELIST / PARAM_MKINIT_INTERPORATION / &
          BASENAME_ORG

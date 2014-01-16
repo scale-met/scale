@@ -65,7 +65,7 @@ module mod_mapproj
   !
   !++ Private parameters & variables
   !
-  character(len=IO_SYSCHR), private :: MPRJ_type = 'NONE' !< map projection type
+  character(len=H_SHORT), private :: MPRJ_type = 'NONE' !< map projection type
                                                  ! 'NONE'
                                                  ! 'LC'
                                                  ! 'PS'
@@ -98,8 +98,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MPRJ_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none

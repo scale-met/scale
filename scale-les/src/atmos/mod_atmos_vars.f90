@@ -19,8 +19,6 @@ module mod_atmos_vars
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HLONG
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -52,24 +50,24 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  character(len=IO_SYSCHR), public, save :: ATMOS_DYN_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
-  character(len=IO_SYSCHR), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
 
-  logical,                  public, save :: ATMOS_sw_dyn
-  logical,                  public, save :: ATMOS_sw_phy_sf
-  logical,                  public, save :: ATMOS_sw_phy_tb
-  logical,                  public, save :: ATMOS_sw_phy_mp
-  logical,                  public, save :: ATMOS_sw_phy_rd
-  logical,                  public, save :: ATMOS_sw_phy_ae
-  logical,                  public, save :: ATMOS_sw_restart
-  logical,                  public, save :: ATMOS_sw_check
+  logical,                public, save :: ATMOS_sw_dyn
+  logical,                public, save :: ATMOS_sw_phy_sf
+  logical,                public, save :: ATMOS_sw_phy_tb
+  logical,                public, save :: ATMOS_sw_phy_mp
+  logical,                public, save :: ATMOS_sw_phy_rd
+  logical,                public, save :: ATMOS_sw_phy_ae
+  logical,                public, save :: ATMOS_sw_restart
+  logical,                public, save :: ATMOS_sw_check
 
-  logical,                  public, save :: ATMOS_USE_AVERAGE = .false.
+  logical,                public, save :: ATMOS_USE_AVERAGE = .false.
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density    [kg/m3]
@@ -101,9 +99,9 @@ module mod_atmos_vars
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
   real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
 
-  character(len=16), public, save :: AP_NAME(5)
-  character(len=64), public, save :: AP_DESC(5)
-  character(len=16), public, save :: AP_UNIT(5)
+  character(len=H_SHORT), public, save :: AP_NAME(5)
+  character(len=H_MID),   public, save :: AP_DESC(5)
+  character(len=H_SHORT), public, save :: AP_UNIT(5)
 
   data AP_NAME / 'DENS', &
                  'MOMZ', &
@@ -129,16 +127,17 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: ATMOS_RESTART_OUTPUT           = .false.
-  character(len=IO_FILECHR), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
-  character(len=IO_FILECHR), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
-  logical,                   private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+  logical,               private, save :: ATMOS_RESTART_OUTPUT           = .false.
+  character(len=H_LONG), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
+  character(len=H_LONG), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
+  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES PROGNOSTIC VARS.'
+  logical,               private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
-  logical,                   private, save :: ATMOS_RESTART_CHECK            = .false.
-  character(len=IO_FILECHR), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),                  private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+  logical,               private, save :: ATMOS_RESTART_CHECK            = .false.
+  character(len=H_LONG), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
+  real(RP),              private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
 
-  logical,                   private, save :: ATMOS_VARS_CHECKRANGE          = .false.
+  logical,               private, save :: ATMOS_VARS_CHECKRANGE          = .false.
 
   ! history output of prognostic variables
   integer, private              :: AP_HIST_id(5)
@@ -189,8 +188,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_vars_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     use mod_history, only: &
@@ -652,7 +649,7 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: basename
+    character(len=H_LONG) :: basename
 
     real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
     real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
@@ -832,7 +829,7 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: basename
+    character(len=H_LONG) :: basename
 
     integer :: fid, ap_vid(5), aq_vid(QA)
     logical :: fileexisted
@@ -840,9 +837,9 @@ contains
     integer :: iq
     integer :: n
 
-    character(len=IO_SYSCHR) :: H_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
-    character(len=IO_SYSCHR) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
-    character(len=IO_SYSCHR) :: H_INSTITUTE = 'AICS/RIKEN'
+    character(len=H_MID) :: H_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
+    character(len=H_MID) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
+    character(len=H_MID) :: H_INSTITUTE = 'AICS/RIKEN'
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -996,7 +993,7 @@ contains
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=IO_FILECHR) :: basename
+    character(len=H_LONG) :: basename
 
     logical :: datacheck
     integer :: k, i, j, iq

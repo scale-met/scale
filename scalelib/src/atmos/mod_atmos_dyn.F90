@@ -97,10 +97,6 @@ contains
        DT,               &
        enable_coriolis,  &
        lat               )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -111,19 +107,19 @@ contains
        ATMOS_DYN_rk_setup
     implicit none
 
-    real(RP), intent(out) :: DIFF4
-    character(len=IO_SYSCHR), intent(in) :: DYN_TYPE
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: CDX(IA)
-    real(RP), intent(in)  :: CDY(JA)
-    real(RP), intent(in)  :: FDZ(KA-1)
-    real(RP), intent(in)  :: FDX(IA-1)
-    real(RP), intent(in)  :: FDY(JA-1)
-    integer,  intent(in)  :: ND_ORDER
-    real(RP), intent(in)  :: ND_COEF
-    real(RP), intent(in)  :: DT
-    logical , intent(in)  :: enable_coriolis
-    real(RP), intent(in)  :: lat(IA,JA)
+    real(RP),               intent(out) :: DIFF4
+    character(len=H_SHORT), intent(in)  :: DYN_TYPE
+    real(RP),               intent(in)  :: CDZ(KA)
+    real(RP),               intent(in)  :: CDX(IA)
+    real(RP),               intent(in)  :: CDY(JA)
+    real(RP),               intent(in)  :: FDZ(KA-1)
+    real(RP),               intent(in)  :: FDX(IA-1)
+    real(RP),               intent(in)  :: FDY(JA-1)
+    integer,                intent(in)  :: ND_ORDER
+    real(RP),               intent(in)  :: ND_COEF
+    real(RP),               intent(in)  :: DT
+    logical ,               intent(in)  :: enable_coriolis
+    real(RP),               intent(in)  :: lat(IA,JA)
     !---------------------------------------------------------------------------
 
     allocate( CNZ3(3,KA,2) )

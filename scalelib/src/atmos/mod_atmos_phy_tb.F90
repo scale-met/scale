@@ -81,10 +81,6 @@ contains
        CDZ, CDX, CDY, &
        FDZ, FDX, FDY, &
        CZ, FZ         )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -102,8 +98,8 @@ contains
        ATMOS_PHY_TB_dummy
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: TB_TYPE
 
+    character(len=H_SHORT), intent(in) :: TB_TYPE
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

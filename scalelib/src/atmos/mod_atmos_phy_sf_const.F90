@@ -76,16 +76,11 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_const_setup( ATMOS_TYPE_PHY_SF )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_PHY_SF
 
+    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_PHY_SF
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: ATMOS_PHY_SF_CM_min ! minimum bulk coef. of u,v,w
@@ -162,9 +157,6 @@ contains
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
          CZ, ctime                                            ) ! (in)
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L
     use mod_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0

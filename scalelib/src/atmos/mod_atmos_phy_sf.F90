@@ -79,10 +79,6 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_setup( SF_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -100,8 +96,8 @@ contains
        ATMOS_PHY_SF_louis
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: SF_TYPE
 
+    character(len=H_SHORT), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
     select case( SF_TYPE )

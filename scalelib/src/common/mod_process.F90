@@ -79,17 +79,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Start MPI
   subroutine PRC_MPIstart
-    use mod_stdio, only: &
-       IO_FID_CONF,          &
-       IO_FILECHR,           &
-       IO_get_available_fid, &
-       IO_make_idstr,        &
-       IO_LOG_BASENAME,      &
-       IO_LOG_SUPPRESS,      &
-       IO_LOG_ALLNODE
     implicit none
 
-    character(len=IO_FILECHR) :: fname ! name of logfile for each process
+    character(len=H_LONG) :: fname ! name of logfile for each process
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -152,16 +144,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Dummy subroutine of MPIstart
   subroutine PRC_NOMPIstart
-    use mod_stdio, only: &
-       IO_FID_CONF,          &
-       IO_FILECHR,           &
-       IO_get_available_fid, &
-       IO_make_idstr,        &
-       IO_LOG_SUPPRESS,      &
-       IO_LOG_ALLNODE
     implicit none
 
-    character(len=IO_FILECHR) :: fname ! name of logfile
+    character(len=H_LONG) :: fname ! name of logfile
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -233,12 +218,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Stop MPI peacefully
   subroutine PRC_MPIfinish
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_SYSCHR
     implicit none
 
-    character(len=IO_SYSCHR) :: request = 'STOP'
+    character(len=H_SHORT) :: request = 'STOP'
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -249,7 +231,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '++++++ Stop MPI'
        if( IO_L ) write(IO_FID_LOG,*) '*** Broadcast STOP signal'
        call MPI_BCAST( request,        &
-                       IO_SYSCHR,      &
+                       H_SHORT,      &
                        MPI_CHARACTER,  & !--- type
                        PRC_master,     & !--- source rank
                        MPI_COMM_WORLD, &
@@ -272,8 +254,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Processor topology
   subroutine PRC_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     implicit none
 
     logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?

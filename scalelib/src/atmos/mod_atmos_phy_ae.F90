@@ -64,8 +64,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_setup( AE_TYPE )
-    use mod_stdio, only: &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -82,7 +80,8 @@ contains
        ATMOS_PHY_AE_dummy_EffectiveRadius
 #endif
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: AE_TYPE
+
+    character(len=H_SHORT), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
     select case( AE_TYPE )

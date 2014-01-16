@@ -46,18 +46,16 @@ module mod_topography
   !
   !++ Private parameters & variables
   !
-  character(len=IO_FILECHR), private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
-  character(len=IO_FILECHR), private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=IO_SYSCHR),  private :: TOPO_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
-  character(len=IO_SYSCHR),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG), private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
+  character(len=H_LONG), private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  private :: TOPO_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
+  character(len=H_MID),  private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine TOPO_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none

@@ -52,10 +52,6 @@ module mod_atmos_phy_tb_driver
 contains
 
   subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_grid, only: &
@@ -70,8 +66,8 @@ contains
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: TB_TYPE
 
+    character(len=H_SHORT), intent(in) :: TB_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

@@ -59,9 +59,9 @@ module mod_tracer_sn13
   integer, public, parameter :: QIS =  4 ! start index for ice tracer
   integer, public, parameter :: QIE =  6 ! end   index for ice tracer
 
-  character(len=16), public :: AQ_NAME(QA)
-  character(len=64), public :: AQ_DESC(QA)
-  character(len=16), public :: AQ_UNIT(QA)
+  character(len=H_SHORT), public :: AQ_NAME(QA)
+  character(len=H_MID)  , public :: AQ_DESC(QA)
+  character(len=H_SHORT), public :: AQ_UNIT(QA)
 
   data AQ_NAME / 'QV', &
                  'QC', &

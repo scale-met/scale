@@ -58,10 +58,6 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_driver_setup( SF_TYPE )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_atmos_phy_sf, only: &
@@ -69,7 +65,8 @@ contains
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: SF_TYPE
+
+    character(len=H_SHORT), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

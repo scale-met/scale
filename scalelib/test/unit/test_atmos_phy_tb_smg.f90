@@ -49,7 +49,7 @@ contains
   !++ used modules
   !
   use mod_stdio, only: &
-     IO_SYSCHR
+     H_SHORT
   use mod_atmos_phy_tb, only: &
      ATMOS_PHY_TB_setup
   use mod_grid, only: &
@@ -70,7 +70,7 @@ contains
   !++ parameters & variables
   !
   !=============================================================================
-  character(len=IO_SYSCHR) :: TB_TYPE
+  character(len=H_SHORT) :: TB_TYPE
 
   ! allocate
   allocate( qflx_sgs_momz(KA,IA,JA,3) )

@@ -56,16 +56,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
+    character(len=H_SHORT), intent(in) :: RD_TYPE
 
     real(RP) :: ATMOS_RD_F0
     real(RP) :: ATMOS_RD_F1

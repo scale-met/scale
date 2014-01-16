@@ -71,15 +71,15 @@ module mod_tracer_suzuki10
   integer, public, parameter :: I_NS =  11
   integer, public, parameter :: I_NG =  12
 
-  character(len=16), public, save, allocatable :: AQ_NAME(:)
-  character(len=64), public, save, allocatable :: AQ_DESC(:)
-  character(len=16), public, save, allocatable :: AQ_UNIT(:)
+  character(len=H_SHORT), public, save, allocatable :: AQ_NAME(:)
+  character(len=H_MID)  , public, save, allocatable :: AQ_DESC(:)
+  character(len=H_SHORT), public, save, allocatable :: AQ_UNIT(:)
 !  character(len=16), public, save :: AQ_NAME(QA)
 !  character(len=64), public, save :: AQ_DESC(QA)
 !  character(len=16), public, save :: AQ_UNIT(QA)
 
-  character*3 :: namspc(8) =(/'Qcl','Qic','Qip','Qid','Qis','Qig','Qih','Qae'/)
-  character*27 :: lnamspc(8) = &
+  character(len=3)  :: namspc(8) =(/'Qcl','Qic','Qip','Qid','Qis','Qig','Qih','Qae'/)
+  character(len=27) :: lnamspc(8) = &
                              (/'Mixing ratio of cloud   bin', &
                                'Mixing ratio of colum   bin', &
                                'Mixing ratio of plate   bin', &
@@ -135,10 +135,6 @@ module mod_tracer_suzuki10
 contains
   !-----------------------------------------------------------------------------
   subroutine TRACER_suzuki10_setup
-    use mod_stdio, only: &
-       IO_FID_LOG,  &
-       IO_FID_CONF, &
-       IO_L
     use mod_process, only: &
       PRC_MPIstop
     implicit none

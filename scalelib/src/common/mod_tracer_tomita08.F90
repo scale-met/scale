@@ -59,9 +59,9 @@ module mod_tracer_tomita08
   integer, public, parameter :: QIS =  4 ! start index for ice tracer
   integer, public, parameter :: QIE =  6 ! end   index for ice tracer
 
-  character(len=16), public, save :: AQ_NAME(QA)
-  character(len=64), public, save :: AQ_DESC(QA)
-  character(len=16), public, save :: AQ_UNIT(QA)
+  character(len=H_SHORT), public, save :: AQ_NAME(QA)
+  character(len=H_MID)  , public, save :: AQ_DESC(QA)
+  character(len=H_SHORT), public, save :: AQ_UNIT(QA)
 
   data AQ_NAME / 'QV', &
                  'QC', &

@@ -13,10 +13,6 @@ module mod_ocean_vars
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
   use mod_precision
   use mod_stdio
   use mod_prof
@@ -42,20 +38,20 @@ module mod_ocean_vars
   !
   real(RP), public, allocatable :: SST(:,:) !< sea surface prognostics container (with HALO)
 
-  integer,                    public, save :: I_SST = 1
-  character(len=File_HSHORT), public, save :: OP_NAME(1) !< name  of the ocean variables
-  character(len=File_HMID),   public, save :: OP_DESC(1) !< desc. of the ocean variables
-  character(len=File_HSHORT), public, save :: OP_UNIT(1) !< unit  of the ocean variables
+  integer,                public, save :: I_SST = 1
+  character(len=H_SHORT), public, save :: OP_NAME(1) !< name  of the ocean variables
+  character(len=H_MID),   public, save :: OP_DESC(1) !< desc. of the ocean variables
+  character(len=H_SHORT), public, save :: OP_UNIT(1) !< unit  of the ocean variables
 
   data OP_NAME / 'SST' /
   data OP_DESC / 'sea surface temp.' /
   data OP_UNIT / 'K' /
 
-  character(len=IO_SYSCHR),  public, save :: OCEAN_TYPE_PHY = 'OFF' !< Ocean physics type
-  logical,                   public, save :: OCEAN_sw_phy           !< do ocean physics update?
-  logical,                   public, save :: OCEAN_sw_restart       !< output restart?
+  character(len=H_SHORT),  public, save :: OCEAN_TYPE_PHY = 'OFF' !< Ocean physics type
+  logical,                 public, save :: OCEAN_sw_phy           !< do ocean physics update?
+  logical,                 public, save :: OCEAN_sw_restart       !< output restart?
 
-  character(len=IO_FILECHR), public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
+  character(len=H_LONG), public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
 
   !-----------------------------------------------------------------------------
   !
@@ -65,10 +61,10 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: OCEAN_RESTART_OUTPUT       = .false.                   !< output restart file?
-  character(len=IO_FILECHR), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'             !< basename of the output file
-  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE-LES OCEANIC VARS.' !< title    of the output file
-  character(len=IO_SYSCHR),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'                 !< REAL4 or REAL8
+  logical,               private, save :: OCEAN_RESTART_OUTPUT       = .false.                   !< output restart file?
+  character(len=H_LONG), private, save :: OCEAN_RESTART_OUT_BASENAME = 'restart_out'             !< basename of the output file
+  character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE-LES OCEANIC VARS.' !< title    of the output file
+  character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'                 !< REAL4 or REAL8
 
   logical,                   private, save :: OCEAN_VARS_CHECKRANGE      = .false.
 
@@ -77,8 +73,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_vars_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -223,7 +217,7 @@ contains
        FILEIO_write
     implicit none
 
-    character(len=IO_FILECHR) :: bname
+    character(len=H_LONG) :: bname
 
     integer :: n
     !---------------------------------------------------------------------------

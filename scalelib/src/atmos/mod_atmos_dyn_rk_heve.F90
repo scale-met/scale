@@ -58,15 +58,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_rk_heve_setup( ATMOS_TYPE_DYN )
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_DYN
 
+    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'

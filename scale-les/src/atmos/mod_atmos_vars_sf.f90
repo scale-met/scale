@@ -18,10 +18,6 @@ module mod_atmos_vars_sf
   !++ used modules
   !
   use mod_precision
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
   use mod_stdio
   use mod_prof
   use mod_grid_index
@@ -68,12 +64,10 @@ module mod_atmos_vars_sf
   !
   !++ Private parameters & variables
   !
-  logical,                   private, save :: ATMOS_SF_RESTART_OUTPUT        = .false.
-  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_IN_BASENAME   = ''
-  character(len=IO_FILECHR), private, save :: ATMOS_SF_RESTART_OUT_BASENAME  = 'restart_out'
-  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
-  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_SOURCE    = 'SCALE-LES ver. '//VERSION
-  character(len=File_HLONG), private, save :: ATMOS_SF_RESTART_OUT_INSTITUTE = 'AICS/RIKEN'
+  logical,               private, save :: ATMOS_SF_RESTART_OUTPUT        = .false.
+  character(len=H_LONG), private, save :: ATMOS_SF_RESTART_IN_BASENAME   = ''
+  character(len=H_LONG), private, save :: ATMOS_SF_RESTART_OUT_BASENAME  = 'restart_out'
+  character(len=H_MID),  private, save :: ATMOS_SF_RESTART_OUT_TITLE     = 'SCALE-LES SURFACE VARS.'
 
   !-----------------------------------------------------------------------------
 contains
@@ -82,8 +76,6 @@ contains
   !> Setup atmospheric surface variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_sf_setup
-    use mod_stdio, only: &
-       IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -145,8 +137,6 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO

@@ -99,16 +99,11 @@ contains
        CDZ, CDX, CDY,   &
        FDZ, FDX, FDY,   &
        CZ, FZ )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=IO_SYSCHR), intent(in) :: TYPE_TB
+    character(len=H_SHORT), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

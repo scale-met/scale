@@ -84,9 +84,9 @@ module mod_atmos_phy_rd_mstrnX
 
   integer,  private, allocatable, save :: I_MPAE2RD      (:)   ! look-up table between input aerosol category and MSTRN particle type
 
-  character(len=IO_FILECHR), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
-  character(len=IO_FILECHR), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
-  character(len=IO_FILECHR), private :: MSTRN_HYGROPARA_INPUTFILE = 'VARDATA.RM29' !< input file (hygroscopic parameter)
+  character(len=H_LONG), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
+  character(len=H_LONG), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
+  character(len=H_LONG), private :: MSTRN_HYGROPARA_INPUTFILE = 'VARDATA.RM29' !< input file (hygroscopic parameter)
 
   integer,  private, save      :: MSTRN_nband    = 29 !< # of wave bands
 
@@ -211,11 +211,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_mstrnX_setup( RD_TYPE )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_FID_LOG, &
-       IO_L, &
-       IO_SYSCHR
     use mod_process, only: &
        PRC_MPIstop
     use mod_time, only: &
@@ -229,14 +224,15 @@ contains
        RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
        RD_PROFILE_read_climatorogy => ATMOS_PHY_RD_PROFILE_read_climatology
     implicit none
-    character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
-    integer                   :: ATMOS_PHY_RD_MSTRN_KADD
-    character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
-    character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
-    character(len=IO_FILECHR) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
-    integer                   :: ATMOS_PHY_RD_MSTRN_nband
-    logical                   :: ATMOS_PHY_RD_MSTRN_single
+    character(len=H_SHORT), intent(in) :: RD_TYPE
+
+    integer               :: ATMOS_PHY_RD_MSTRN_KADD
+    character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
+    character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
+    character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
+    integer               :: ATMOS_PHY_RD_MSTRN_nband
+    logical               :: ATMOS_PHY_RD_MSTRN_single
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
@@ -605,9 +601,6 @@ contains
   subroutine RD_MSTRN_setup( &
        ngas, &
        ncfc  )
-    use mod_stdio, only: &
-       IO_FID_CONF, &
-       IO_get_available_fid
     use mod_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
@@ -622,7 +615,7 @@ contains
     integer :: nsfc, nptype, nplkord, nfitPLK      !< aerosol/surface parameters for check
     integer :: nradius                             !< hygroscopic     parameters for check
 
-    character(len=128) :: dummy
+    character(len=H_LONG) :: dummy
 
     integer :: fid, ierr
     integer :: iw, ich, ip, it, igas, icfc, iptype, im
