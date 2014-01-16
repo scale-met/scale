@@ -19,9 +19,8 @@ module mod_atmos_solarins
   !++ used modules
   !
   use mod_precision
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -541,7 +540,7 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
-         CONST_D2R
+       CONST_D2R
     implicit none
 
     integer, intent(in) :: iyear ! year at setup

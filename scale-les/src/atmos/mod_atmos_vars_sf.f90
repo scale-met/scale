@@ -19,15 +19,12 @@ module mod_atmos_vars_sf
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR,  &
-     IO_FILECHR
   use gtool_file_h, only: &
      File_HSHORT, &
      File_HMID,   &
      File_HLONG
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private

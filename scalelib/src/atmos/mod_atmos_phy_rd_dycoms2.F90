@@ -20,10 +20,9 @@ module mod_atmos_phy_rd_dycoms2
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,16 +66,17 @@ contains
     implicit none
     character(len=IO_SYSCHR), intent(in) :: RD_TYPE
 
+
     real(RP) :: ATMOS_RD_F0
     real(RP) :: ATMOS_RD_F1
     real(RP) :: ATMOS_RD_Dval
-  
-    integer :: ierr
 
     NAMELIST / PARAM_ATMOS_PHY_RD_DYCOMS2 / &
        ATMOS_RD_F0, &
        ATMOS_RD_F1, &
        ATMOS_RD_Dval
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     ATMOS_RD_F0 = F0
@@ -102,7 +102,7 @@ contains
     elseif( ierr > 0 ) then !--- fatal error
       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD. Check!'
       call PRC_MPIstop
-    endif 
+    endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_DYCOMS2)
 
     F0 = ATMOS_RD_F0
@@ -197,7 +197,7 @@ contains
            QTOT = 0.0_RP
            do iq = QQS, QWE
               QTOT = QTOT + QTRC(k,i,j,iq)
-           enddo 
+           enddo
           if( QTOT < 8.E-3_RP ) exit ! above cloud
           k_cldtop = k
        enddo
@@ -233,7 +233,7 @@ contains
           QTOT = 0.0_RP
           do iq = QQS, QWE
              QTOT = QTOT + QTRC(k,i,j,iq)
-          enddo 
+          enddo
           flux_rad(k,i,j,I_LW,I_up) = flux_rad(k,i,j,I_LW,I_up) &
                           + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
                           * ( 0.250_RP * dZ  * dZ**(1.0_RP/3.0_RP) &

@@ -20,12 +20,8 @@ module mod_atmos
   !++ used modules
   !
   use mod_precision
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -239,54 +235,54 @@ contains
 
     !########## Surface Flux ##########
     if ( sw_phy_sf ) then
-       call TIME_rapstart('ATM SurfaceFlux')
+       call PROF_rapstart('ATM SurfaceFlux')
        if ( sw_AtmLnd ) then
           call ATMOS_PHY_SF_CPL
        else
           call ATMOS_PHY_SF( do_phy_sf, .true. )
        endif
-       call TIME_rapend  ('ATM SurfaceFlux')
+       call PROF_rapend  ('ATM SurfaceFlux')
     endif
 
     !########## Turbulence ##########
     if ( sw_phy_tb ) then
-       call TIME_rapstart('ATM Turbulence')
+       call PROF_rapstart('ATM Turbulence')
        call ATMOS_PHY_TB( do_phy_tb, .true. )
-       call TIME_rapend  ('ATM Turbulence')
+       call PROF_rapend  ('ATM Turbulence')
     endif
 
     !########## Microphysics ##########
     if ( sw_phy_mp ) then
-       call TIME_rapstart('ATM Microphysics')
+       call PROF_rapstart('ATM Microphysics')
        call ATMOS_PHY_MP( do_phy_mp, .true. )
-       call TIME_rapend  ('ATM Microphysics')
+       call PROF_rapend  ('ATM Microphysics')
     endif
 
     !########## Aerosol ##########
     if ( sw_phy_ae ) then
-       call TIME_rapstart('ATM Aerosol')
+       call PROF_rapstart('ATM Aerosol')
        call ATMOS_PHY_AE( do_phy_ae, .true. )
-       call TIME_rapend  ('ATM Aerosol')
+       call PROF_rapend  ('ATM Aerosol')
     endif
 
     !########## Radiation ##########
     if ( sw_phy_rd ) then
-       call TIME_rapstart('ATM Radiation')
+       call PROF_rapstart('ATM Radiation')
        call ATMOS_PHY_RD( do_phy_rd, .true. )
-       call TIME_rapend  ('ATM Radiation')
+       call PROF_rapend  ('ATM Radiation')
     endif
 
     !########## Dynamics ##########
     if ( sw_dyn ) then
-       call TIME_rapstart('ATM Dynamics')
+       call PROF_rapstart('ATM Dynamics')
        call ATMOS_DYN( do_dyn )
-       call TIME_rapend  ('ATM Dynamics')
+       call PROF_rapend  ('ATM Dynamics')
     endif
 
     !########## History & Monitor ##########
-    call TIME_rapstart('ATM History Vars')
+    call PROF_rapstart('ATM History Vars')
        call ATMOS_vars_history
-    call TIME_rapend  ('ATM History Vars')
+    call PROF_rapend  ('ATM History Vars')
 
     !########## to Coupler ##########
     if ( sw_AtmLnd ) then

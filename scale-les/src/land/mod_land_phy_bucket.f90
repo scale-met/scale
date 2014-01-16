@@ -15,12 +15,8 @@ module mod_land_phy_bucket
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -113,7 +109,7 @@ contains
        I_HCS,      &
        I_DZg,      &
        P => LAND_PROPERTY
- 
+
     implicit none
 
     integer :: i,j

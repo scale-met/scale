@@ -22,16 +22,15 @@ module mod_atmos_phy_rd_mstrnX
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR
-    use mod_atmos_phy_rd_common, only: &
-       I_SW, &
-       I_LW, &
-       I_dn, &
-       I_up
+
+  use mod_atmos_phy_rd_common, only: &
+     I_SW, &
+     I_LW, &
+     I_dn, &
+     I_up
   !-----------------------------------------------------------------------------
   implicit none
   private

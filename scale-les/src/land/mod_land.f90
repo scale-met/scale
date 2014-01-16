@@ -16,12 +16,8 @@ module mod_land
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -104,19 +100,19 @@ contains
     endif
 
     !########## Physics ##########
-    call TIME_rapstart('LND Physics')
+    call PROF_rapstart('LND Physics')
     if ( sw_phy ) then
        call LAND_PHY
     endif
-    call TIME_rapend  ('LND Physics')
+    call PROF_rapend  ('LND Physics')
 
     !########## Fill HALO ##########
     call LAND_vars_fillhalo
 
     !########## History & Monitor ##########
-    call TIME_rapstart('LND History')
+    call PROF_rapstart('LND History')
        call LAND_vars_history
-    call TIME_rapend  ('LND History')
+    call PROF_rapend  ('LND History')
 
     !########## to Coupler ##########
     if ( sw_AtmLnd ) then

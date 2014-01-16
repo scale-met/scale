@@ -23,13 +23,9 @@ module mod_atmos_phy_mp_kessler
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer_kessler
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -328,7 +324,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('MP_kessler')
+    call PROF_rapstart('MP_kessler')
 
     rdt = 1.D0 / dt
 
@@ -413,7 +409,7 @@ contains
     enddo
     enddo
 
-    call TIME_rapend  ('MP_kessler')
+    call PROF_rapend  ('MP_kessler')
 
     return
   end subroutine MP_kessler

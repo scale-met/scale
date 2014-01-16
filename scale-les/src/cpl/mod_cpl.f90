@@ -16,13 +16,9 @@ module mod_cpl
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -141,11 +137,11 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Coupler Atoms-Land ##########
-    call TIME_rapstart('CPL Atmos-Land')
+    call PROF_rapstart('CPL Atmos-Land')
     if( sw_AtmLnd ) then
        call CPL_AtmLnd_solve
     endif
-    call TIME_rapend  ('CPL Atmos-Land')
+    call PROF_rapend  ('CPL Atmos-Land')
 
     !########## merge Land-Ocean ##########
     call CPL_vars_merge
@@ -159,9 +155,9 @@ contains
     call CPL_vars_fillhalo
 
     !########## History & Monitor ##########
-    call TIME_rapstart('CPL History')
+    call PROF_rapstart('CPL History')
        call CPL_vars_history
-    call TIME_rapend  ('CPL History')
+    call PROF_rapend  ('CPL History')
 
     return
   end subroutine CPL_calc

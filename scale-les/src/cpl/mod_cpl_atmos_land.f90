@@ -17,10 +17,9 @@ module mod_cpl_atmos_land
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -330,7 +329,7 @@ contains
                               pDENS(:,:,:),  & ! [IN]
                               pRHOT(:,:,:),  & ! [IN]
                               pQTRC(:,:,:,:) ) ! [IN]
-    
+
     ! surface height
     zs(:,:) = 0.0_RP
 

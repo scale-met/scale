@@ -26,13 +26,9 @@ module mod_comm
   use mpi
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -145,14 +141,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_COMM)
 
     ! only for register
-    call TIME_rapstart('COMM vars MPI')
-    call TIME_rapend  ('COMM vars MPI')
-    call TIME_rapstart('COMM wait MPI')
-    call TIME_rapend  ('COMM wait MPI')
-    call TIME_rapstart('COMM Bcast MPI')
-    call TIME_rapend  ('COMM Bcast MPI')
-    call TIME_rapstart('COMM Allreduce MPI')
-    call TIME_rapend  ('COMM Allreduce MPI')
+    call PROF_rapstart('COMM vars MPI')
+    call PROF_rapend  ('COMM vars MPI')
+    call PROF_rapstart('COMM wait MPI')
+    call PROF_rapend  ('COMM wait MPI')
+    call PROF_rapstart('COMM Bcast MPI')
+    call PROF_rapend  ('COMM Bcast MPI')
+    call PROF_rapstart('COMM Allreduce MPI')
+    call PROF_rapend  ('COMM Allreduce MPI')
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -241,7 +237,7 @@ contains
     tag  = vid * 100
     ireq = 1
 
-    call TIME_rapstart('COMM vars MPI')
+    call PROF_rapstart('COMM vars MPI')
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -393,7 +389,7 @@ contains
 
     req_cnt(vid) = ireq - 1
 
-    call TIME_rapend  ('COMM vars MPI')
+    call PROF_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars_3D
@@ -424,7 +420,7 @@ contains
     tag  = vid * 100
     ireq = 1
 
-    call TIME_rapstart('COMM vars MPI')
+    call PROF_rapstart('COMM vars MPI')
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -760,7 +756,7 @@ contains
 
     req_cnt(vid) = ireq - 1
 
-    call TIME_rapend  ('COMM vars MPI')
+    call PROF_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars8_3D
@@ -782,7 +778,7 @@ contains
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM wait MPI')
+    call PROF_rapstart('COMM wait MPI')
 
     !--- wait packets
     call MPI_WAITALL( req_cnt (vid),                &
@@ -996,7 +992,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('COMM wait MPI')
+    call PROF_rapend  ('COMM wait MPI')
 
     return
   end subroutine COMM_wait_3D
@@ -1022,7 +1018,7 @@ contains
     tag = vid * 100
     ireq = 1
 
-    call TIME_rapstart('COMM vars MPI')
+    call PROF_rapstart('COMM vars MPI')
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -1190,7 +1186,7 @@ contains
 
     req_cnt(vid) = ireq - 1
 
-    call TIME_rapend  ('COMM vars MPI')
+    call PROF_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars_2D
@@ -1221,7 +1217,7 @@ contains
     tag   = vid * 100
     ireq = 1
 
-    call TIME_rapstart('COMM vars MPI')
+    call PROF_rapstart('COMM vars MPI')
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -1591,7 +1587,7 @@ contains
 
     req_cnt(vid) = ireq - 1
 
-    call TIME_rapend  ('COMM vars MPI')
+    call PROF_rapend  ('COMM vars MPI')
 
     return
   end subroutine COMM_vars8_2D
@@ -1613,7 +1609,7 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM wait MPI')
+    call PROF_rapstart('COMM wait MPI')
 
     !--- wait packets
     call MPI_WAITALL(req_cnt(vid), req_list(1:req_cnt(vid),vid), MPI_STATUSES_IGNORE, ierr)
@@ -1800,7 +1796,7 @@ contains
     endif
 
 
-    call TIME_rapend  ('COMM wait MPI')
+    call PROF_rapend  ('COMM wait MPI')
 
     return
   end subroutine COMM_wait_2D
@@ -1831,9 +1827,9 @@ contains
     integer, intent(in) :: num !< number of variables from vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM RDMA')
+    call PROF_rapstart('COMM RDMA')
     call rdma_put(vid-1, num)
-    call TIME_rapend  ('COMM RDMA')
+    call PROF_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars
@@ -1847,9 +1843,9 @@ contains
     integer, intent(in) :: num !< number of variables from vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('COMM RDMA')
+    call PROF_rapstart('COMM RDMA')
     call rdma_put8(vid-1, num)
-    call TIME_rapend  ('COMM RDMA')
+    call PROF_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars8
@@ -1886,7 +1882,7 @@ contains
     enddo
 
     ! [NOTE] always communicate globally
-    call TIME_rapstart('COMM Allreduce MPI')
+    call PROF_rapstart('COMM Allreduce MPI')
     ! All reduce
     call MPI_Allreduce( statval(1),           &
                         allstatval(1),        &
@@ -1896,7 +1892,7 @@ contains
                         MPI_COMM_WORLD,       &
                         ierr                  )
 
-    call TIME_rapend  ('COMM Allreduce MPI')
+    call PROF_rapend  ('COMM Allreduce MPI')
 
     do k = KS, KE
        varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP)

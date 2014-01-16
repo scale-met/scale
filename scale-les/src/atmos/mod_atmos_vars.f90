@@ -23,19 +23,12 @@ module mod_atmos_vars
      File_HLONG
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR,  &
-     IO_FILECHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -681,7 +674,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     basename = ATMOS_RESTART_IN_BASENAME
 
@@ -701,7 +694,7 @@ contains
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     ! fill halo
     call ATMOS_vars_fillhalo
@@ -856,7 +849,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     basename = ''
     write(basename(1:15), '(F15.3)') NOWSEC
@@ -977,7 +970,7 @@ contains
 
     call FileClose( fid )
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     call ATMOS_vars_total
 
@@ -1008,7 +1001,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
+    call PROF_rapstart('Debug')
 
     write(*,*) 'Compare last Data with ', trim(ATMOS_RESTART_CHECK_BASENAME), 'on PE=', PRC_myrank
     write(*,*) '*** criterion = ', ATMOS_RESTART_CHECK_CRITERION
@@ -1110,7 +1103,7 @@ contains
        write(*,*) 'Data Check Failed.'
     endif
 
-    call TIME_rapend('Debug')
+    call PROF_rapend('Debug')
 
     return
   end subroutine ATMOS_vars_restart_check

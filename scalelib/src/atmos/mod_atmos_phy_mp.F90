@@ -20,10 +20,9 @@ module mod_atmos_phy_mp
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private

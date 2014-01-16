@@ -21,12 +21,10 @@ module mod_atmos_boundary
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR, &
-     IO_SYSCHR
+
   use gtool_file_h, only: &
      File_HSHORT, &
      File_REAL4,  &
@@ -111,6 +109,7 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: MOMZ(KA,IA,JA)
     real(RP), intent(in) :: MOMX(KA,IA,JA)

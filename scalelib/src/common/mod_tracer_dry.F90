@@ -16,6 +16,8 @@ module mod_tracer_dry
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,11 +26,11 @@ module mod_tracer_dry
   !++ Public procedure
   !
   public :: TRACER_dry_setup
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-
   !-----------------------------------------------------------------------------
   !
   !++ scale-les tracer parameters (vapor only)
@@ -91,8 +93,9 @@ module mod_tracer_dry
   integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
 
+  !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine TRACER_dry_setup
     implicit none
 

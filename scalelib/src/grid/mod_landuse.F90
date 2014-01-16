@@ -16,14 +16,8 @@ module mod_landuse
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR, &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -84,14 +78,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LANDUSE]/Categ[GRID]'
 
+    allocate( LANDUSE_frac_ocean(IA,JA) )
+    allocate( LANDUSE_frac_river(IA,JA) )
+    allocate( LANDUSE_frac_lake (IA,JA) )
+    LANDUSE_frac_ocean(:,:) = 1.0_RP
+    LANDUSE_frac_river(:,:) = 0.0_RP
+    LANDUSE_frac_lake (:,:) = 0.0_RP
 
-  allocate( LANDUSE_frac_ocean(IA,JA) )
-  allocate( LANDUSE_frac_river(IA,JA) )
-  allocate( LANDUSE_frac_lake (IA,JA) )
-
-  allocate( LANDUSE_index_vegetation(IA,JA,LUCA) )
-  allocate( LANDUSE_frac_vegetation (IA,JA,LUCA) )
-
+    allocate( LANDUSE_index_vegetation(IA,JA,LUCA) )
+    allocate( LANDUSE_frac_vegetation (IA,JA,LUCA) )
+    LANDUSE_index_vegetation(:,:,:) = -999
+    LANDUSE_frac_vegetation (:,:,:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -104,13 +101,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
-
-    LANDUSE_frac_ocean(:,:) = 1.0_RP
-    LANDUSE_frac_river(:,:) = 0.0_RP
-    LANDUSE_frac_lake (:,:) = 0.0_RP
-
-    LANDUSE_index_vegetation(:,:,:) = -999
-    LANDUSE_frac_vegetation (:,:,:) = 0.0_RP
 
     ! read from file
     call FRAC_OCEAN_read

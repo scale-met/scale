@@ -18,10 +18,10 @@ module mod_atmos_phy_tb
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
+  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -103,6 +103,8 @@ contains
 #endif
     implicit none
     character(len=IO_SYSCHR), intent(in) :: TB_TYPE
+
+
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)

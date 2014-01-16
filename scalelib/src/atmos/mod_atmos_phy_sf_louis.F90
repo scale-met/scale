@@ -22,6 +22,8 @@ module mod_atmos_phy_sf_louis
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -97,6 +99,7 @@ contains
        PRC_MPIstop
     implicit none
     character(len=IO_SYSCHR), intent(in) :: ATMOS_TYPE_PHY_SF
+
 
     real(RP) :: ATMOS_PHY_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: ATMOS_PHY_SF_U_minH !                   T

@@ -20,10 +20,10 @@ module mod_atmos_saturation
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
+
   use mod_const, only: &
      Rdry   => CONST_Rdry,   &
      CPdry  => CONST_CPdry,  &

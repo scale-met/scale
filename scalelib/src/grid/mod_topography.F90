@@ -18,14 +18,8 @@ module mod_topography
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR, &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -66,8 +60,6 @@ contains
        IO_FID_CONF
     use mod_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
-       CONST_GRAV
     implicit none
 
     namelist / PARAM_TOPO / &
@@ -82,6 +74,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TOPOGRAPHY]/Categ[GRID]'
 
     allocate( TOPO_Zsfc(IA,JA) )
+    TOPO_Zsfc(:,:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -94,8 +87,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TOPO)
-
-    TOPO_Zsfc(:,:) = 0.0_RP
 
     ! read from file
     call TOPO_read

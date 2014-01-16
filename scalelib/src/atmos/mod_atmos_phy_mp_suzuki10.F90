@@ -33,15 +33,12 @@ module mod_atmos_phy_mp_suzuki10
   use mpi
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
+
   use mod_tracer_suzuki10
   use dc_types, only: &
      DP
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   use mod_const, only: &
      pi => CONST_PI, &
      CONST_CPdry, &
@@ -237,7 +234,6 @@ contains
     integer :: ATMOS_PHY_MP_RNDM_MSPC
     integer :: ATMOS_PHY_MP_RNDM_MBIN
 
-
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        ATMOS_PHY_MP_RHOA,  &
        ATMOS_PHY_MP_EMAER, &
@@ -261,6 +257,7 @@ contains
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
     integer :: COMM_world
+    !---------------------------------------------------------------------------
 
     !--- allocation
     allocate( xctr( nbin ) )
@@ -600,7 +597,7 @@ call START_COLLECTION("MICROPHYSICS")
      enddo
     end if
 
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)
     dzh(2:KA) = GRID_FDZ(1:KA-1)
@@ -683,7 +680,7 @@ call START_COLLECTION("MICROPHYSICS")
     endif
 
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
     !--- Calculate Super saturation
     do k = KS, KE
@@ -809,7 +806,7 @@ call START_COLLECTION("MICROPHYSICS")
      end do
     end if
 
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
     AMR(:,:,:) = 0.0_RP
     do j = JS, JE
      do i = IS, IE
@@ -930,7 +927,7 @@ call START_COLLECTION("MICROPHYSICS")
     call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
     call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )

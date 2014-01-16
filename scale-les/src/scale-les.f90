@@ -18,11 +18,10 @@ program scaleles
      LogInit
   use gtool_file, only: &
      FileCloseAll
-  use mod_stdio, only: &
-     IO_setup,   &
-     IO_FID_CONF, &
-     IO_FID_LOG, &
-     IO_L
+  use mod_precision
+  use mod_stdio
+  use mod_prof
+
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
@@ -45,10 +44,7 @@ program scaleles
      TIME_DOLAND_restart,  &
      TIME_DOOCEAN_restart, &
      TIME_DOCPL_restart,   &
-     TIME_DOend,           &
-     TIME_rapstart,        &
-     TIME_rapend,          &
-     TIME_rapreport
+     TIME_DOend
   use mod_grid, only: &
      GRID_setup
   use mod_tracer, only: &
@@ -105,12 +101,6 @@ program scaleles
   use mod_user, only: &
      USER_setup, &
      USER_step
-#ifdef _PAPI_
-  use mod_papi, only: &
-     PAPI_rapstart, &
-     PAPI_rapstop,  &
-     PAPI_rapreport
-#endif
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -145,7 +135,7 @@ program scaleles
   ! setup time
   call TIME_setup
 
-  call TIME_rapstart('Initialize')
+  call PROF_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -193,7 +183,7 @@ program scaleles
   ! setup user-defined procedure
   call USER_setup
 
-  call TIME_rapend('Initialize')
+  call PROF_rapend('Initialize')
 
   !########## main ##########
 
@@ -201,12 +191,12 @@ program scaleles
   call fipp_start
 #endif
 #ifdef _PAPI_
-  call PAPI_rapstart
+  call PROF_PAPI_rapstart
 #endif
 
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
-  call TIME_rapstart('Main Loop(Total)')
+  call PROF_rapstart('Main Loop(Total)')
 
   do
 
@@ -239,7 +229,7 @@ program scaleles
 
   enddo
 
-  call TIME_rapend('Main Loop(Total)')
+  call PROF_rapend('Main Loop(Total)')
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 
@@ -247,7 +237,7 @@ program scaleles
   call fipp_stop
 #endif
 #ifdef _PAPI_
-  call PAPI_rapstop
+  call PROF_PAPI_rapstop
 #endif
 
   !########## Finalize ##########
@@ -255,9 +245,9 @@ program scaleles
   ! check data
   if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
-  call TIME_rapreport
+  call PROF_rapreport
 #ifdef _PAPI_
-  call PAPI_rapreport
+  call PROF_PAPI_rapreport
 #endif
 
   call FileCloseAll

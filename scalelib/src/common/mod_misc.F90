@@ -16,13 +16,8 @@ module mod_misc
   !++ used modules
   !
   use mod_precision
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -72,7 +67,7 @@ contains
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
+    call PROF_rapstart('Debug')
 
     kstr = lbound( var(:), 1 )
     kend = ubound( var(:), 1 )
@@ -93,7 +88,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call TIME_rapend  ('Debug')
+    call PROF_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_1D
@@ -119,7 +114,7 @@ contains
     integer :: i, istr, iend
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
+    call PROF_rapstart('Debug')
 
     kstr = lbound( var(:,:), 1 )
     kend = ubound( var(:,:), 1 )
@@ -145,7 +140,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call TIME_rapend  ('Debug')
+    call PROF_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_2D
@@ -172,7 +167,7 @@ contains
     integer :: j, jstr, jend
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
+    call PROF_rapstart('Debug')
 
     kstr = lbound( var(:,:,:), 1 )
     kend = ubound( var(:,:,:), 1 )
@@ -203,7 +198,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call TIME_rapend  ('Debug')
+    call PROF_rapend  ('Debug')
 
     return
   end subroutine MISC_valcheck_3D

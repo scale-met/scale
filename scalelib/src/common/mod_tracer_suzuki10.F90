@@ -16,6 +16,8 @@ module mod_tracer_suzuki10
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,11 +26,11 @@ module mod_tracer_suzuki10
   !++ Public procedure
   !
   public :: TRACER_suzuki10_setup
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-
   !------------------------------------------------------------
   !
   !++ scale-les grid parameter for inc_tracer_hbinf_h33_c20.f90
@@ -129,7 +131,9 @@ module mod_tracer_suzuki10
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
   integer :: m, n, ierr
 
+  !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
   subroutine TRACER_suzuki10_setup
     use mod_stdio, only: &
        IO_FID_LOG,  &

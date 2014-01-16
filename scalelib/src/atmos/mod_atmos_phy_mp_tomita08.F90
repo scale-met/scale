@@ -19,13 +19,10 @@ module mod_atmos_phy_mp_tomita08
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
+
   use mod_tracer_tomita08
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -623,7 +620,7 @@ contains
     integer :: k, i, j, iq, ijk, indirect, ip
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('MP_tomita08')
+    call PROF_rapstart('MP_tomita08')
 
     do j = JS, JE
     do i = IS, IE
@@ -1338,7 +1335,7 @@ contains
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE0  MAX/MIN:", maxval(RHOE0(:,:,:)), minval(RHOE0(:,:,:))
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE_t MAX/MIN:", maxval(RHOE_t(:,:,:)), minval(RHOE_t(:,:,:))
 
-    call TIME_rapend  ('MP_tomita08')
+    call PROF_rapend  ('MP_tomita08')
 
     return
   end subroutine MP_tomita08

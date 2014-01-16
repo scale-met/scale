@@ -19,14 +19,11 @@ module mod_time
   use dc_types, only: &
      DP
   use mod_precision
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -34,10 +31,6 @@ module mod_time
   public :: TIME_setup
   public :: TIME_checkstate
   public :: TIME_advance
-
-  public :: TIME_rapstart
-  public :: TIME_rapend
-  public :: TIME_rapreport
 
   !-----------------------------------------------------------------------------
   !
@@ -87,8 +80,6 @@ module mod_time
   !
   !++ Private procedure
   !
-  private :: TIME_rapid
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -118,14 +109,6 @@ module mod_time
   real(DP), private :: TIME_RES_LAND_RESTART  = 0.0_DP
   real(DP), private :: TIME_RES_CPL           = 0.0_DP
   real(DP), private :: TIME_RES_CPL_RESTART   = 0.0_DP
-
-  integer,                  private, parameter :: TIME_rapnlimit = 100
-  integer,                  private,      save :: TIME_rapnmax   = 0
-  character(len=IO_SYSCHR), private,      save :: TIME_rapname(TIME_rapnlimit)
-  real(DP),                 private,      save :: TIME_raptstr(TIME_rapnlimit)
-  real(DP),                 private,      save :: TIME_rapttot(TIME_rapnlimit)
-  integer,                  private,      save :: TIME_rapnstr(TIME_rapnlimit)
-  integer,                  private,      save :: TIME_rapnend(TIME_rapnlimit)
 
   real(DP), private, parameter :: eps = 1.E-10_DP !> epsilon for timesec
 
@@ -498,8 +481,8 @@ contains
     end if
 
     ! only for register
-    call TIME_rapstart('Debug')
-    call TIME_rapend  ('Debug')
+    call PROF_rapstart('Debug')
+    call PROF_rapend  ('Debug')
 
     return
   end subroutine TIME_setup
@@ -666,156 +649,6 @@ contains
 
     return
   end subroutine TIME_advance
-
-  !-----------------------------------------------------------------------------
-  !> Get item ID or register item
-  function TIME_rapid( rapname ) result(id)
-    implicit none
-
-    character(len=*), intent(in) :: rapname !< name of item
-
-    integer :: id
-    character (len=IO_SYSCHR) :: trapname
-    !---------------------------------------------------------------------------
-
-    trapname = trim(rapname)
-
-    do id = 1, TIME_rapnmax
-       if( trapname == TIME_rapname(id) ) return
-    enddo
-
-    TIME_rapnmax     = TIME_rapnmax + 1
-    id               = TIME_rapnmax
-    TIME_rapname(id) = trapname
-
-    TIME_rapnstr(id) = 0
-    TIME_rapnend(id) = 0
-    TIME_rapttot(id) = 0.0_DP
-
-  end function TIME_rapid
-
-  !-----------------------------------------------------------------------------
-  !> Start raptime
-  subroutine TIME_rapstart( rapname )
-    use mod_process, only: &
-       PRC_MPItime
-    implicit none
-
-    character(len=*), intent(in) :: rapname !< name of item
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    id = TIME_rapid( rapname )
-
-    TIME_raptstr(id) = PRC_MPItime()
-    TIME_rapnstr(id) = TIME_rapnstr(id) + 1
-
-    !if( IO_L ) write(IO_FID_LOG,*) rapname, TIME_rapnstr(id)
-
-#ifdef _FAPP_
-call START_COLLECTION( rapname )
-#endif
-
-    return
-  end subroutine TIME_rapstart
-
-  !-----------------------------------------------------------------------------
-  !> Save raptime
-  subroutine TIME_rapend( rapname )
-    use mod_process, only: &
-       PRC_MPItime
-    implicit none
-
-    character(len=*), intent(in) :: rapname !< name of item
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    id = TIME_rapid( rapname )
-
-    TIME_rapttot(id) = TIME_rapttot(id) + ( PRC_MPItime()-TIME_raptstr(id) )
-    TIME_rapnend(id) = TIME_rapnend(id) + 1
-
-#ifdef _FAPP_
-call STOP_COLLECTION( rapname )
-#endif
-
-    return
-  end subroutine TIME_rapend
-
-  !-----------------------------------------------------------------------------
-  !> Report raptime
-  subroutine TIME_rapreport
-    use mod_stdio, only: &
-       IO_LOG_SUPPRESS, &
-       IO_LOG_ALLNODE
-    use mod_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_MPItimestat
-    implicit none
-
-    real(DP) :: avgvar(TIME_rapnlimit)
-    real(DP) :: maxvar(TIME_rapnlimit)
-    real(DP) :: minvar(TIME_rapnlimit)
-    integer  :: maxidx(TIME_rapnlimit)
-    integer  :: minidx(TIME_rapnlimit)
-
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    do id = 1, TIME_rapnmax
-       if ( TIME_rapnstr(id) /= TIME_rapnend(id) ) then
-           write(*,*) '*** Mismatch Report',id,TIME_rapname(id),TIME_rapnstr(id),TIME_rapnend(id)
-       endif
-    enddo
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Computational Time Report'
-
-    if ( IO_LOG_ALLNODE ) then ! report for each node
-
-       do id = 1, TIME_rapnmax
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
-                     '*** ID=',id,' : ',TIME_rapname(id),' T=',TIME_rapttot(id),' N=',TIME_rapnstr(id)
-       enddo
-
-    else
-
-       call PRC_MPItimestat( avgvar      (1:TIME_rapnmax), &
-                             maxvar      (1:TIME_rapnmax), &
-                             minvar      (1:TIME_rapnmax), &
-                             maxidx      (1:TIME_rapnmax), &
-                             minidx      (1:TIME_rapnmax), &
-                             TIME_rapttot(1:TIME_rapnmax)  )
-
-       do id = 1, TIME_rapnmax
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                     '*** ID=',id,' : ',TIME_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',TIME_rapnstr(id)
-       enddo
-
-       if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
-          if ( PRC_myrank == PRC_master ) then ! master node
-             write(*,*) '*** Computational Time Report'
-             do id = 1, TIME_rapnmax
-                write(*,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                     '*** ID=',id,' : ',TIME_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',TIME_rapnstr(id)
-             enddo
-          endif
-       endif
-    endif
-
-    return
-  end subroutine TIME_rapreport
 
 end module mod_time
 !-------------------------------------------------------------------------------

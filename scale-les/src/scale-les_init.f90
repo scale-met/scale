@@ -18,11 +18,14 @@ program scaleles_init
   !
   !++ used modules
   !
-  use mod_stdio, only: &
-     IO_setup,   &
-     IO_FID_CONF, &
-     IO_FID_LOG, &
-     IO_L
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
+  use mod_precision
+  use mod_stdio
+  use mod_prof
+
   use mod_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
@@ -33,10 +36,7 @@ program scaleles_init
   use mod_random, only: &
      RANDOM_setup
   use mod_time, only: &
-     TIME_setup,    &
-     TIME_rapstart, &
-     TIME_rapend,   &
-     TIME_rapreport
+     TIME_setup
   use mod_grid, only: &
      GRID_setup
   use mod_tracer, only: &
@@ -73,10 +73,6 @@ program scaleles_init
   use mod_mkinit, only: &
      MKINIT_setup, &
      MKINIT
-  use dc_log, only: &
-     LogInit
-  use gtool_file, only: &
-     FileCloseAll
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -108,9 +104,7 @@ program scaleles_init
   ! setup time
   call TIME_setup( .true. )
 
-  call TIME_rapstart('Debug')
-  call TIME_rapend  ('Debug')
-  call TIME_rapstart('Initialize')
+  call PROF_rapstart('Initialize')
 
   ! setup horisontal/veritical grid system
   call GRID_setup
@@ -153,30 +147,30 @@ program scaleles_init
   ! setup mkinit
   call MKINIT_setup
 
-  call TIME_rapend('Initialize')
+  call PROF_rapend('Initialize')
 
   !########## main ##########
 
-  call TIME_rapstart('Main')
+  call PROF_rapstart('Main')
 
   ! execute mktopo
-  call TIME_rapstart('MkTopo')
+  call PROF_rapstart('MkTopo')
   call MKTOPO
-  call TIME_rapend  ('MkTopo')
+  call PROF_rapend  ('MkTopo')
 
   ! re-setup
   call REAL_setup
 
   ! execute mkinit
-  call TIME_rapstart('MkInit')
+  call PROF_rapstart('MkInit')
   call MKINIT
-  call TIME_rapend  ('MkInit')
+  call PROF_rapend  ('MkInit')
 
-  call TIME_rapend('Main')
+  call PROF_rapend('Main')
 
   !########## Finalize ##########
 
-  call TIME_rapreport
+  call PROF_rapreport
 
   call FileCloseAll
 

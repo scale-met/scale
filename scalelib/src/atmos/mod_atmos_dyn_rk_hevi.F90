@@ -18,16 +18,19 @@ module mod_atmos_dyn_rk_hevi
   !
   !++ used modules
   !
-  !-----------------------------------------------------------------------------
   use dc_types, only: &
        DP
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
+
 #ifdef DEBUG
   use mod_debug, only: &
        CHECK
 #endif
+  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------

@@ -20,12 +20,8 @@ module mod_stats
   use mod_precision
   use mod_index
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -140,7 +136,7 @@ contains
     endif
 
     if ( STAT_use_globalcomm ) then
-       call TIME_rapstart('COMM Allreduce MPI')
+       call PROF_rapstart('COMM Allreduce MPI')
        ! All reduce
        call MPI_Allreduce( statval,              &
                            allstatval,           &
@@ -150,7 +146,7 @@ contains
                            MPI_COMM_WORLD,       &
                            ierr                  )
 
-       call TIME_rapend  ('COMM Allreduce MPI')
+       call PROF_rapend  ('COMM Allreduce MPI')
 
        ! statistics over the all node
        if ( varname /= "" ) then ! if varname is empty, suppress output
@@ -176,11 +172,11 @@ contains
     use mod_process, only: &
        PRC_nmax,   &
        PRC_myrank
-    use mod_comm, only: &
-       COMM_datatype
     use mod_const, only: &
        CONST_UNDEF8, &
        CONST_UNDEF2
+    use mod_comm, only: &
+       COMM_datatype
     implicit none
 
     real(RP),         intent(inout) :: var(:,:,:,:) !< values
@@ -232,7 +228,7 @@ contains
     enddo
 
     ! MPI broadcast
-    call TIME_rapstart('COMM Bcast MPI')
+    call PROF_rapstart('COMM Bcast MPI')
     do p = 0, PRC_nmax-1
        call MPI_Bcast( statval(1,1,p),   &
                        vsize*2,          &
@@ -247,7 +243,7 @@ contains
                        MPI_COMM_WORLD,   &
                        ierr              )
     enddo
-    call TIME_rapend  ('COMM Bcast MPI')
+    call PROF_rapend  ('COMM Bcast MPI')
 
     do v = 1, vsize
        allstatval(v,1)   = maxval(statval(v,1,:))

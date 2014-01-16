@@ -40,14 +40,10 @@ module mod_atmos_dyn
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L,  &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+
 #ifdef DEBUG
   use mod_debug, only: &
      CHECK

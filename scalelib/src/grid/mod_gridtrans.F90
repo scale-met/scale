@@ -19,14 +19,8 @@ module mod_gridtrans
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR, &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -82,7 +76,6 @@ contains
     allocate( GTRANS_GSQRT(KA,IA,JA,7) )
     allocate( GTRANS_J13G (KA,IA,JA,4) )
     allocate( GTRANS_J23G (KA,IA,JA,4) )
-
 
     ! calc metrics for orthogonal curvelinear coordinate
     call GTRANS_mapfactor

@@ -21,9 +21,7 @@ module mod_calendar
      DP
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private

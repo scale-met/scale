@@ -18,13 +18,8 @@ module mod_fileio
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -117,16 +112,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_FILEIO)
 
-    call TIME_rapstart('FILE I NetCDF')
-    call TIME_rapend  ('FILE I NetCDF')
-    call TIME_rapstart('FILE O NetCDF')
-    call TIME_rapend  ('FILE O NetCDF')
-    call TIME_rapstart('FILE I ASCII')
-    call TIME_rapend  ('FILE I ASCII')
-    call TIME_rapstart('FILE O ASCII')
-    call TIME_rapend  ('FILE O ASCII')
-    call TIME_rapstart('FILE O Interpolation')
-    call TIME_rapend  ('FILE O Interpolation')
+    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapstart('FILE I ASCII')
+    call PROF_rapend  ('FILE I ASCII')
+    call PROF_rapstart('FILE O ASCII')
+    call PROF_rapend  ('FILE O ASCII')
+    call PROF_rapstart('FILE O Interpolation')
+    call PROF_rapend  ('FILE O Interpolation')
 
     return
   end subroutine FILEIO_setup
@@ -178,7 +173,7 @@ contains
     real(RP), allocatable :: var1D(:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     if ( axistype == 'Z' ) then
        dim1_max = KMAX
@@ -204,7 +199,7 @@ contains
 
     deallocate( var1D )
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_1D
@@ -235,7 +230,7 @@ contains
     real(RP), allocatable :: var2D(:,:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     if ( axistype == 'XY' ) then
        dim1_max = IMAX
@@ -263,7 +258,7 @@ contains
 
     deallocate( var2D )
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_2D
@@ -295,7 +290,7 @@ contains
     real(RP), allocatable :: var3D(:,:,:)
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     if ( axistype == 'ZXY' ) then
        dim1_max = KMAX
@@ -319,7 +314,7 @@ contains
 
     deallocate( var3D )
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine FILEIO_read_3D
@@ -369,6 +364,7 @@ contains
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
 
     integer               :: dtype
@@ -381,7 +377,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -460,7 +456,7 @@ contains
 
     deallocate( var1D )
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_1D
@@ -523,7 +519,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -603,7 +599,7 @@ contains
 
     deallocate( var2D )
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_2D
@@ -667,7 +663,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -742,7 +738,7 @@ contains
 
     deallocate( var3D )
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     return
   end subroutine FILEIO_write_3D

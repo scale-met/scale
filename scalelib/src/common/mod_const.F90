@@ -20,9 +20,7 @@ module mod_const
      DP, &
      SP
   use mod_precision
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private

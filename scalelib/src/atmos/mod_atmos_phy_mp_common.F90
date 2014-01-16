@@ -20,13 +20,9 @@ module mod_atmos_phy_mp_common
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -74,7 +70,7 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('Debug')
+    call PROF_rapstart('Debug')
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
@@ -114,7 +110,7 @@ contains
     enddo
     enddo
 
-    call TIME_rapend  ('Debug')
+    call PROF_rapend  ('Debug')
 
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
@@ -165,7 +161,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('MP_saturation_adjustment')
+    call PROF_rapstart('MP_saturation_adjustment')
 
     rdt = 1.D0 / dt
 
@@ -310,7 +306,7 @@ contains
     enddo
     enddo
 
-    call TIME_rapend  ('MP_saturation_adjustment')
+    call PROF_rapend  ('MP_saturation_adjustment')
 
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
@@ -672,7 +668,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('MP_precipitation')
+    call PROF_rapstart('MP_precipitation')
 
     do iq = 1, QA
        call COMM_vars8( vterm(:,:,:,iq), iq )
@@ -813,9 +809,9 @@ contains
     enddo ! I loop
     enddo ! J loop
 
-    call TIME_rapend  ('MP_precipitation')
+    call PROF_rapend  ('MP_precipitation')
 
     return
   end subroutine ATMOS_PHY_MP_precipitation
 
-end module mod_atmos_phy_mp_common 
+end module mod_atmos_phy_mp_common

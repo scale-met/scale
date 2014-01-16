@@ -33,6 +33,7 @@ OBJS =	\
 	$(mod_rdma)	\
 	mod_precision.o	\
 	mod_index.o	\
+	mod_prof.o	\
 	mod_tracer.o	\
 	mod_tracer_dry.o	\
 	mod_tracer_kessler.o	\
@@ -46,7 +47,6 @@ OBJS =	\
 	mod_const.o	\
 	mod_calendar.o	\
 	mod_random.o	\
-	mod_papi.o	\
 	mod_debug.o	\
 	mod_time.o	\
 	mod_misc.o	\

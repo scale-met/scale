@@ -18,10 +18,9 @@ module mod_user
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -31,7 +30,7 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -372,7 +371,7 @@ contains
              MOMY_tp(KE,i,j) = MOMY_tp(KE,i,j) &
                   + 0.5_RP * ( DENS(KE,i,j+1)+DENS(KE,i,j) ) &
                   * ( + CORIOLI * U_GEOS(KE) &
-                      - CORIOLI * 0.25_RP  & 
+                      - CORIOLI * 0.25_RP  &
                       * ( VELX(KE,i,j)+VELX(KE,i,j+1)+VELX(KE,i-1,j)+VELX(KE,i-1,j+1) ) &
                     ) &
                   - MOMZ_LS(KE,1) * ( WORK(KE,i,j) - WORK(KE-1,i,j) ) * RFDZ(KE-1)

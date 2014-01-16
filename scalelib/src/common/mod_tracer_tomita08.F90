@@ -16,6 +16,8 @@ module mod_tracer_tomita08
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,11 +26,11 @@ module mod_tracer_tomita08
   !++ Public procedure
   !
   public :: TRACER_tomita08_setup
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-
   !-----------------------------------------------------------------------------
   !
   !++ scale-les tracer parameters (1-moment bulk 6 category)
@@ -118,7 +120,9 @@ module mod_tracer_tomita08
   integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
 
+  !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
   subroutine TRACER_tomita08_setup
     implicit none
 

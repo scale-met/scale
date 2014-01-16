@@ -20,14 +20,11 @@ module mod_atmos_refstate
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
   use gtool_file_h, only: &
      File_HLONG
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR,  &
-     IO_FILECHR
   use dc_types, only: &
      DP
   !-----------------------------------------------------------------------------
@@ -98,6 +95,7 @@ contains
     use mod_grid, only: &
        CZ => GRID_CZ
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)

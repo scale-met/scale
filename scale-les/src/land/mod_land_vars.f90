@@ -20,14 +20,8 @@ module mod_land_vars
      File_HLONG
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR,  &
-     IO_FILECHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -271,7 +265,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (land) ***'
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
@@ -321,7 +315,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
     endif
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine LAND_vars_restart_read
@@ -340,7 +334,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     if ( LAND_RESTART_OUT_BASENAME /= '' ) then
 
@@ -365,7 +359,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     call LAND_vars_total
 

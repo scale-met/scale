@@ -20,15 +20,9 @@ module mod_cpl_vars
      File_HLONG
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_SYSCHR,  &
-     IO_FILECHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -409,7 +403,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (coupler) ***'
 
-    call TIME_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF')
 
     if ( CPL_RESTART_IN_BASENAME /= '' ) then
 
@@ -445,7 +439,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine CPL_vars_restart_read
@@ -464,7 +458,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    call TIME_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF')
 
     if ( CPL_RESTART_OUT_BASENAME /= '' ) then
 
@@ -493,7 +487,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF')
 
     call CPL_vars_total
 

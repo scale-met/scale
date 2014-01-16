@@ -64,10 +64,10 @@ module mod_atmos_phy_mp_sn13
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
+
   use mod_tracer_sn13
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   use mod_const, only: &
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
@@ -92,9 +92,6 @@ module mod_atmos_phy_mp_sn13
      PSAT0  => CONST_PSAT0,   &
      EMELT  => CONST_EMELT,   &
      DWATR  => CONST_DWATR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -488,16 +485,16 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
-    call TIME_rapstart('MP0 Setup')
+    call PROF_rapstart('MP0 Setup')
     call MP_negativefilter( DENS, QTRC )
-    call TIME_rapend  ('MP0 Setup')
+    call PROF_rapend  ('MP0 Setup')
 
     call mp_sn13( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
 
-    call TIME_rapstart('MP6 Filter')
+    call PROF_rapstart('MP6 Filter')
     call MP_negativefilter( DENS, QTRC )
-    call TIME_rapend  ('MP6 Filter')
+    call PROF_rapend  ('MP6 Filter')
 
     return
   end subroutine ATMOS_PHY_MP_sn13
@@ -1355,7 +1352,7 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
 
     do iq = 1, QA
        do j = JS, JE
@@ -1405,9 +1402,9 @@ contains
 
     if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
-    call TIME_rapstart('MP1 Nucleation')
+    call PROF_rapstart('MP1 Nucleation')
 
     do j = JS,  JE
     do i = IS,  IE
@@ -1494,13 +1491,13 @@ contains
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP1 Nucleation')
+    call PROF_rapend  ('MP1 Nucleation')
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP2 Phase change')
+    call PROF_rapstart('MP2 Phase change')
 
     ! parameter setting
     wdt=dt
@@ -1644,13 +1641,13 @@ contains
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP2 Phase change')
+    call PROF_rapend  ('MP2 Phase change')
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP3 Collection')
+    call PROF_rapstart('MP3 Collection')
 
     wdt = dt
     flag_history_in=.true.
@@ -1995,9 +1992,9 @@ contains
 !    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP3 Collection')
+    call PROF_rapend  ('MP3 Collection')
 
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
 
     do j = JS, JE
     do i = IS, IE
@@ -2021,22 +2018,22 @@ contains
        enddo
     enddo
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP4 Saturation adjustment')
+    call PROF_rapstart('MP4 Saturation adjustment')
     ! nothing to do
-    call TIME_rapend  ('MP4 Saturation adjustment')
+    call PROF_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP5 Sedimentation')
+    call PROF_rapstart('MP5 Sedimentation')
 
     if ( doprecipitation ) then
 
@@ -2092,7 +2089,7 @@ contains
     call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
     call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
 
-    call TIME_rapend  ('MP5 Sedimentation')
+    call PROF_rapend  ('MP5 Sedimentation')
 
     return
   end subroutine mp_sn13

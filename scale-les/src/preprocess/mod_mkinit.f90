@@ -30,13 +30,10 @@ module mod_mkinit
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_SYSCHR,   &
-     IO_FILECHR,  &
-     IO_FID_LOG,  &
-     IO_FID_CONF, &
-     IO_L
+
   use mod_process, only: &
      PRC_MPIstop
   use mod_const, only: &

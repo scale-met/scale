@@ -18,11 +18,9 @@ module mod_atmos_phy_sf
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L, &
-     IO_SYSCHR
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -105,6 +103,7 @@ contains
 #endif
     implicit none
     character(len=IO_SYSCHR), intent(in) :: SF_TYPE
+
     !---------------------------------------------------------------------------
 
     select case( SF_TYPE )

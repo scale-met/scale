@@ -20,9 +20,9 @@ module mod_tracer
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_stdio
   !-----------------------------------------------------------------------------
-  use mod_stdio, only: &
-     IO_SYSCHR
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -33,7 +33,6 @@ module mod_tracer
   !
   !++ Public parameters & variables
   !
-
 #ifdef TRACER
 #define EXTM(name) mod_tracer_ ## name ## .f90
 #define NAME(name) EXTM(name)

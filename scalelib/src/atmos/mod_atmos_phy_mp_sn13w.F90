@@ -6,19 +6,19 @@
 module mod_atmos_phy_mp_sn13w
   !-----------------------------------------------------------------------------
   !
-  !++ Description: 
+  !++ Description:
   !       This module contains subroutines for the sn13w parametrization.
   !
-  !       
+  !
   !++ Current Corresponding Author : T.Seiki
-  ! 
+  !
   !++ History: SN13
-  !      Version   Date       Comment 
+  !      Version   Date       Comment
   !      -----------------------------------------------------------------------
   !        0.00   11/10/24 T.Seiki, import from NICAM(11/08/30 ver.)
-  !        0.01   12/11/09 Y.Sato,  arrange for SN13W version(warm rain only)      
+  !        0.01   12/11/09 Y.Sato,  arrange for SN13W version(warm rain only)
   !      -----------------------------------------------------------------------
-  !      Reference:  -- Journals 
+  !      Reference:  -- Journals
   !                   Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66
   !                   Seifert and Beheng(2001)  : Atmos.Res.,vol.59-60,pp.265-281
   !                   Seifert(2008)             : J.Atmos.Sci.,vol.65,pp.3608-3619
@@ -28,8 +28,8 @@ module mod_atmos_phy_mp_sn13w
   !                   Cotton etal.(1986)        : J.C.Appl.Meteor.,25,pp.1658-1680
   !                   Cotton and Field (2002)   : QJRMS.,vol.128,pp2417-pp2437
   !                   Beard(1980)               : J.Atmos.Sci.,vol.37,pp.1363-1374 [Add] 10/08/03
-  !                   Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824  
-  !                   Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831  
+  !                   Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824
+  !                   Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831
   !                   Fu(1996)                  : J.Climate, vol.9, pp.2058-2082   [Add] 10/08/03
   !                   Fu etal(1998)             : J.Climate, vol.11, pp.2223-2237  [Add] 10/08/03
   !                   Ghan etal.(1997)          : J.Geophys.Res.,vol.102,pp.21777-21794, [Add] 09/08/18
@@ -63,10 +63,10 @@ module mod_atmos_phy_mp_sn13w
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
+
   use mod_tracer_sn13w
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   use mod_const, only: &
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
@@ -95,9 +95,6 @@ module mod_atmos_phy_mp_sn13w
      PSAT0  => CONST_PSAT0,   &
      EMELT  => CONST_EMELT,   &
      DWATR  => CONST_DWATR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -313,7 +310,7 @@ module mod_atmos_phy_mp_sn13w
   real(RP), private, save :: bh_vent0 (HYDRO_MAX,2) !
   real(RP), private, save :: ah_vent1 (HYDRO_MAX,2) !
   real(RP), private, save :: bh_vent1 (HYDRO_MAX,2) !
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$  ! coefficient of collision growth
 !!$  real(RP), private, save :: delta_b0 (HYDRO_MAX)
 !!$  real(RP), private, save :: delta_b1 (HYDRO_MAX)
@@ -463,15 +460,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
 
-    call TIME_rapstart('MP0 Setup')
+    call PROF_rapstart('MP0 Setup')
     call MP_negativefilter( DENS, QTRC )
-    call TIME_rapend  ('MP0 Setup')
+    call PROF_rapend  ('MP0 Setup')
 
     call mp_sn13w( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
-    call TIME_rapstart('MP6 Filter')
+    call PROF_rapstart('MP6 Filter')
     call MP_negativefilter( DENS, QTRC )
-    call TIME_rapend  ('MP6 Filter')
+    call PROF_rapend  ('MP6 Filter')
 
     return
   end subroutine ATMOS_PHY_MP_sn13w
@@ -853,7 +850,7 @@ contains
           bh_vent1(iw,2) = 0.0_RP
        endif
     end do
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    !-------------------------------------------------------
 !!$    ! coefficient for collision process
 !!$    ! stochastic coefficient for collision cross section
@@ -982,7 +979,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(:,1)
     if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(:,2)
 
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(:)
 !!$    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(:)
 !!$    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(:)
@@ -1106,7 +1103,7 @@ contains
     real(RP) :: wrm_dqr, wrm_dnr
 
     real(RP) :: fac1
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    real(RP) :: gc_dqc, gc_dnc
 !!$    real(RP) :: sc_dqc, sc_dnc
 !!$    real(RP) :: ic_dqc, ic_dnc
@@ -1206,7 +1203,7 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
 
     do j = 1, JA
     do i = 1, IA
@@ -1288,9 +1285,9 @@ contains
 
     if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
-    call TIME_rapstart('MP1 Nucleation')
+    call PROF_rapstart('MP1 Nucleation')
 
     do k = KS, KE
     do j = 1,  JA
@@ -1367,7 +1364,7 @@ contains
        rhogq_d(k,i,j,I_NC) = max(0.0_RP, rhogq_d(k,i,j,I_NC) + drhognc)
 
        ! cloud number concentration filter
-       rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv 
+       rhoge_d(k,i,j) = rhoge_d(k,i,j) - LHV * drhogqv
     enddo
     enddo
     enddo
@@ -1397,13 +1394,13 @@ contains
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP1 Nucleation')
+    call PROF_rapend  ('MP1 Nucleation')
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP2 Phase change')
+    call PROF_rapstart('MP2 Phase change')
 
     ! parameter setting
     wdt=dt
@@ -1464,7 +1461,7 @@ contains
             PLRdep_d, PNRdep_d,   & ! out
             rho_d, wtem_d, pre_d, lv_d,& ! in
             qd_d,                 & ! in
-!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki             
+!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$         esw_d,                & ! in
             esw_d,                & ! in
             nc_d,                 & ! in
@@ -1493,7 +1490,7 @@ contains
             rhogq_d, q_d,                  & ! inout
             tem_d, pre_d, rho_d,           & ! inout
             cva_d,                         & ! out
-!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$         esw_d, esi_d, LV_d,            & ! in
             esw_d, LV_d,            & ! in
             LC_d, LR_d,                    & ! in
@@ -1510,13 +1507,13 @@ contains
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP2 Phase change')
+    call PROF_rapend  ('MP2 Phase change')
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP3 Collection')
+    call PROF_rapstart('MP3 Collection')
 
     wdt = dt
     flag_history_in=.true.
@@ -1609,9 +1606,9 @@ contains
 !    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), rho_d(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call TIME_rapend  ('MP3 Collection')
+    call PROF_rapend  ('MP3 Collection')
 
-    call TIME_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MPX ijkconvert')
 
     do k  = KS, KE
     do j = 1,    JA
@@ -1660,22 +1657,22 @@ contains
        enddo
     enddo
 
-    call TIME_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MPX ijkconvert')
 
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP4 Saturation adjustment')
+    call PROF_rapstart('MP4 Saturation adjustment')
     ! nothing to do
-    call TIME_rapend  ('MP4 Saturation adjustment')
+    call PROF_rapend  ('MP4 Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     !
     !----------------------------------------------------------------------------
-    call TIME_rapstart('MP5 Sedimentation')
+    call PROF_rapstart('MP5 Sedimentation')
 
     if ( doprecipitation ) then
 
@@ -1725,7 +1722,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('MP5 Sedimentation')
+    call PROF_rapend  ('MP5 Sedimentation')
 
     return
   end subroutine mp_sn13w
@@ -2169,7 +2166,7 @@ contains
        PLRdep, PNRdep,       & ! out
        rho, tem, pre, LV,    & ! in
        qd,                   & ! in
-!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki             
+!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    esw, esi,             & ! in
        esw,                  & ! in
        NC, NR,               & ! in
@@ -2185,13 +2182,13 @@ contains
     real(RP), intent(out) :: PLCdep(KA,IA,JA)  ! mass change   for cloud, [Add]  09/08/18 T.Mitsui
     real(RP), intent(out) :: PLRdep(KA,IA,JA)  ! mass change   for rain deposion
     real(RP), intent(out) :: PNRdep(KA,IA,JA)  ! number change
- 
+
     real(RP), intent(in)  :: rho(KA,IA,JA)     ! air density
     real(RP), intent(in)  :: tem(KA,IA,JA)     ! air temperature
     real(RP), intent(in)  :: pre(KA,IA,JA)     ! air pressure
     real(RP), intent(in)  :: qd(KA,IA,JA)      ! mixing ratio of dry air
     real(RP), intent(in)  :: esw(KA,IA,JA)     ! saturation vapor pressure(liquid water)
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$ real(RP), intent(in)  :: esi(KA,IA,JA)     ! saturation vapor pressure(solid water)
     real(RP), intent(in)  :: LV(KA,IA,JA)      ! mass   of vapor
     real(RP), intent(in)  :: NC(KA,IA,JA)      ! number of cloud  09/08/18 [Add] T.Mitsui
@@ -2229,12 +2226,12 @@ contains
     real(RP) :: Nrerl_r2, Nreil_r2  !
     real(RP) :: Nresl_r2, Nregl_r2  !
     real(RP) :: NscNrer_s, NscNrer_l
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    real(RP) :: NscNrei_s, NscNrei_l
 !!$    real(RP) :: NscNres_s, NscNres_l
 !!$    real(RP) :: NscNreg_s, NscNreg_l
     real(RP) :: ventLR_s, ventLR_l
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    real(RP) :: ventNI_s, ventNI_l, ventLI_s, ventLI_l
 !!$    real(RP) :: ventNS_s, ventNS_l, ventLS_s, ventLS_l
 !!$    real(RP) :: ventNG_s, ventNG_l, ventLG_s, ventLG_l
@@ -2244,7 +2241,7 @@ contains
     real(RP), parameter :: r_15=1.0_RP/1.5_RP
     !
     real(RP) :: ventNR, ventLR(KA,IA,JA)     !
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    real(RP) :: ventNI(KA,IA,JA), ventLI(KA,IA,JA)     !
 !!$    real(RP) :: ventNS(KA,IA,JA), ventLS(KA,IA,JA)     !
 !!$    real(RP) :: ventNG(KA,IA,JA), ventLG(KA,IA,JA)     !
@@ -2272,12 +2269,12 @@ contains
     bh_vent1_rl(:,:,:)  = bh_vent1(I_QR,2)
     !
     ventNR=0.0_RP
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    ventNI=0.0_RP
 !!$    ventNS=0.0_RP
 !!$    ventNG=0.0_RP
     ventLR=0.0_RP
-!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! delete xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    ventLI=0.0_RP
 !!$    ventLS=0.0_RP
 !!$    ventLG=0.0_RP
@@ -2711,7 +2708,7 @@ contains
        rhogq, q,                 & ! inout
        tem, pre, rho,            & ! inout
        cva,                      & ! out
-!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki 
+!!!!!!!! mod xxxxxxxxxxxxxxxxxxxx T.Seiki
 !!$    esw, esi, LV,             & ! in
        esw, LV,             & ! in
        LC, LR,                   & ! in
@@ -2912,9 +2909,9 @@ contains
              r_qsw            = 1.0_RP/qsw(k,i,j)
              ssw_o            = ssw
              !
-             Acnd             = Pdynliq + Pradliq 
+             Acnd             = Pdynliq + Pradliq
              r_taucnd         = &
-                  + aliqliq*( r_taucnd_c+r_taucnd_r ) 
+                  + aliqliq*( r_taucnd_c+r_taucnd_r )
              !
              uplim_cnd        = max( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
              lowlim_cnd       = min( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
@@ -3002,7 +2999,7 @@ contains
              rhogq(k,i,j,I_QR) = max(0.0_RP, rhogq(k,i,j,I_QR) + drhogqr )
              rhogq(k,i,j,I_NR) = max(0.0_RP, rhogq(k,i,j,I_NR) + drhognr )
              !
-             rhoge(k,i,j) = rhoge(k,i,j) - LHV * drhogqv 
+             rhoge(k,i,j) = rhoge(k,i,j) - LHV * drhogqv
              !
              !--- update mixing ratio
              q(k,i,j,I_QV) = rhogq(k,i,j,I_QV) * rrhog(k,i,j)
@@ -3031,7 +3028,7 @@ contains
     pre(:,:,:) = rho(:,:,:)*( qd(:,:,:)*Rdry+q(:,:,:,I_QV)*Rvap )*tem(:,:,:)
     !
     return
-    
+
   end subroutine update_by_phase_change_kij
   !-------------------------------------------------------------------------------
   subroutine MP_negativefilter( &
@@ -3054,7 +3051,7 @@ contains
     do k = 1, KA
        diffq(k,i,j) = QTRC(k,i,j,I_QV) &
                     + QTRC(k,i,j,I_QC) &
-                    + QTRC(k,i,j,I_QR) 
+                    + QTRC(k,i,j,I_QR)
     enddo
     enddo
     enddo

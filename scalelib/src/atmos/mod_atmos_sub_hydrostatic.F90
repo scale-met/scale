@@ -15,9 +15,8 @@ module mod_atmos_hydrostatic
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
+  use mod_stdio
+  use mod_prof
   use mod_const, only: &
      GRAV    => CONST_GRAV,    &
      Rdry    => CONST_Rdry,    &

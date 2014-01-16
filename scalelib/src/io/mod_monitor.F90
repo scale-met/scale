@@ -21,13 +21,8 @@ module mod_monitor
      File_HMID
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -303,7 +298,7 @@ contains
 
     if( MONIT_id_count == 0 ) return
 
-    call TIME_rapstart('FILE O ASCII')
+    call PROF_rapstart('FILE O ASCII')
 
     if (firsttime) then
        firsttime = .false.
@@ -324,7 +319,7 @@ contains
 
     endif
 
-    call TIME_rapend  ('FILE O ASCII')
+    call PROF_rapend  ('FILE O ASCII')
 
     return
   end subroutine MONIT_write

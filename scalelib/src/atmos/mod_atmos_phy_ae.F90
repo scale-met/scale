@@ -18,10 +18,9 @@ module mod_atmos_phy_ae
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -99,4 +98,4 @@ contains
     return
   end subroutine ATMOS_PHY_AE_setup
 
-end module mod_atmos_phy_ae 
+end module mod_atmos_phy_ae

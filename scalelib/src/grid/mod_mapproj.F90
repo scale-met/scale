@@ -18,19 +18,14 @@ module mod_mapproj
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR, &
-     IO_SYSCHR
+  use mod_stdio
+  use mod_prof
+
   use mod_const, only: &
      PI     => CONST_PI,     &
      D2R    => CONST_D2R,    &
      RADIUS => CONST_RADIUS, &
      CONST_UNDEF
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
   !-----------------------------------------------------------------------------
   implicit none
   private

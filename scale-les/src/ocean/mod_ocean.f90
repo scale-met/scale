@@ -13,12 +13,9 @@ module mod_ocean
   !
   !++ used modules
   !
-  use mod_stdio, only: &
-     IO_FID_LOG,  &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_precision
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -76,16 +73,16 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Physics ##########
-    call TIME_rapstart('OCN Physics')
+    call PROF_rapstart('OCN Physics')
     if ( sw_phy ) then
        call OCEAN_PHY
     endif
-    call TIME_rapend  ('OCN Physics')
+    call PROF_rapend  ('OCN Physics')
 
     !########## History & Monitor ##########
-    call TIME_rapstart('OCN History')
+    call PROF_rapstart('OCN History')
        call OCEAN_vars_history
-    call TIME_rapend  ('OCN History')
+    call PROF_rapend  ('OCN History')
 
     return
   end subroutine OCEAN_step

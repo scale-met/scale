@@ -17,12 +17,8 @@ module mod_interpolation
   !
   use mod_precision
   use mod_index
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L
-  use mod_time, only: &
-     TIME_rapstart, &
-     TIME_rapend
+  use mod_stdio
+  use mod_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -70,12 +66,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[INTERPOLATION]/Categ[COMMON]'
 
-
     allocate( INTERP_xi2z_idx (KA,IA,JA,2) )
     allocate( INTERP_xi2z_coef(KA,IA,JA,3) )
     allocate( INTERP_z2xi_idx (KA,IA,JA,2) )
     allocate( INTERP_z2xi_coef(KA,IA,JA,3) )
-
 
     do j = 1, JA
     do i = 1, IA

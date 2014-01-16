@@ -18,11 +18,9 @@ module mod_atmos_phy_rd
   !
   use mod_precision
   use mod_index
+  use mod_stdio
+  use mod_prof
   use mod_tracer
-  use mod_stdio, only: &
-     IO_FID_LOG, &
-     IO_L,       &
-     IO_FILECHR
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,6 +54,8 @@ module mod_atmos_phy_rd
        use mod_precision
        use mod_index
        use mod_tracer
+       implicit none
+
        real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
        real(RP), intent(out) :: flux_top(IA,JA,2)
        real(RP), intent(out) :: solins(IA,JA)
@@ -104,9 +104,9 @@ contains
        ATMOS_PHY_RD_dummy_setup, &
        ATMOS_PHY_RD_dummy
 #endif
-
     implicit none
     character(len=IO_SYSCHR), intent(in) :: RD_TYPE
+
     !---------------------------------------------------------------------------
 
     select case ( RD_TYPE )
