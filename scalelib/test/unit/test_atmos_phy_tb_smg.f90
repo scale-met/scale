@@ -2,7 +2,7 @@ module test_atmos_phy_tb_smg
 
   !-----------------------------------------------------------------------------
   use mod_precision
-  use mod_index
+  use mod_grid_index
   use mod_tracer
   use mod_atmos_phy_tb, only: &
      ATMOS_PHY_TB

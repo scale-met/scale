@@ -32,9 +32,9 @@ module mod_atmos_phy_mp_suzuki10
   !
   use mpi
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
 
   use mod_tracer_suzuki10
   use dc_types, only: &

@@ -17,9 +17,9 @@ module mod_atmos_phy_tb
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -49,7 +49,7 @@ module mod_atmos_phy_tb
        tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        implicit none
        real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)

@@ -17,9 +17,9 @@ module mod_atmos_phy_sf
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -51,7 +51,7 @@ module mod_atmos_phy_sf
        use dc_types, only: &
          DP
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        implicit none
 

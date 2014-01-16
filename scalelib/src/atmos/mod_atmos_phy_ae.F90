@@ -17,9 +17,9 @@ module mod_atmos_phy_ae
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -39,7 +39,7 @@ module mod_atmos_phy_ae
      end subroutine ae
      subroutine er( RE, QTRC, RH )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        real(RP), intent(out) :: Re  (KA,IA,JA,AE_QA) ! effective radius
        real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]

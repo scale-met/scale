@@ -18,9 +18,9 @@ module mod_atmos_dyn_rk
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
 
 #ifdef DEBUG
@@ -61,7 +61,7 @@ module mod_atmos_dyn_rk
           REF_pres, REF_dens,                          &
           dtrk                                         )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
        real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
        real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !

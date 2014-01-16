@@ -18,13 +18,13 @@ module mod_atmos_vars_sf
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use gtool_file_h, only: &
      File_HSHORT, &
      File_HMID,   &
      File_HLONG
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private

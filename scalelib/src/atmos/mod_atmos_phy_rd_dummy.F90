@@ -17,9 +17,9 @@ module mod_atmos_phy_rd_dummy
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none

@@ -63,9 +63,9 @@ module mod_atmos_phy_mp_sn13
   !++ Used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
 
   use mod_tracer_sn13
   use mod_const, only: &

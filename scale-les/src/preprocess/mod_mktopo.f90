@@ -17,9 +17,9 @@ module mod_mktopo
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
 
   use mod_process, only: &

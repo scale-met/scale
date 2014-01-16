@@ -45,6 +45,8 @@ program scaleles
      TIME_DOOCEAN_restart, &
      TIME_DOCPL_restart,   &
      TIME_DOend
+  use mod_grid_index, only: &
+     GRID_INDEX_setup
   use mod_grid, only: &
      GRID_setup
   use mod_tracer, only: &
@@ -137,10 +139,13 @@ program scaleles
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/veritical grid system
+  ! setup horisontal/veritical grid index
+  call GRID_INDEX_setup
+
+  ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
 
-  ! setup tracer
+  ! setup tracer index
   call TRACER_setup
 
   ! setup file I/O
@@ -153,7 +158,7 @@ program scaleles
   call TOPO_setup
   ! setup land use category index/fraction
   call LANDUSE_setup
-  ! setup coordinates in real world
+  ! setup grid coordinates (real world)
   call REAL_setup
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)

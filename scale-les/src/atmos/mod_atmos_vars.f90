@@ -22,9 +22,9 @@ module mod_atmos_vars
   use gtool_file_h, only: &
      File_HLONG
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none

@@ -2,7 +2,7 @@ module test_atmos_dyn_fent_fct
 
   !-----------------------------------------------------------------------------
   use mod_precision
-  use mod_index
+  use mod_grid_index
   use mod_tracer
   use mod_atmos_dyn, only: &
      ATMOS_DYN
@@ -127,7 +127,7 @@ contains
 
   !########## Initial setup ##########
 
-  ! allocate 
+  ! allocate
   allocate( DENS(KA,IA,JA) )
   allocate( MOMZ(KA,IA,JA) )
   allocate( MOMX(KA,IA,JA) )

@@ -1,6 +1,6 @@
 program unit
 
-  use mod_index
+  use mod_grid_index
   use mod_tracer
   use mod_stdio, only: &
      IO_setup

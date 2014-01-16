@@ -37,6 +37,8 @@ program scaleles_init
      RANDOM_setup
   use mod_time, only: &
      TIME_setup
+  use mod_grid_index, only: &
+     GRID_INDEX_setup
   use mod_grid, only: &
      GRID_setup
   use mod_tracer, only: &
@@ -106,10 +108,13 @@ program scaleles_init
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/veritical grid system
+  ! setup horisontal/veritical grid index
+  call GRID_INDEX_setup
+
+  ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
 
-  ! setup tracer
+  ! setup tracer index
   call TRACER_setup
 
   ! setup file I/O

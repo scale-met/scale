@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module INDEX
+!> module grid index
 !!
 !! @par Description
-!!          Index module
+!!          Grid Index module
 !!
 !! @author Team SCALE
 !!
@@ -11,11 +11,13 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_index
+module mod_grid_index
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
+  use mod_precision
+  use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -76,7 +78,7 @@ module mod_index
   !
   !++ Private procedure
   !
-  public :: INDEX_setup
+  public :: GRID_INDEX_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -86,20 +88,16 @@ module mod_index
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine INDEX_setup
-    use mod_stdio, only: &
-       IO_FID_LOG, &
-       IO_FID_CONF, &
-       IO_L
+  subroutine GRID_INDEX_setup
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
 #ifndef FIXED_INDEX
     namelist / PARAM_INDEX / &
-       KMAX, &
-       IMAX, &
-       JMAX, &
+       KMAX,   &
+       IMAX,   &
+       JMAX,   &
        IBLOCK, &
        JBLOCK
 #endif
@@ -131,13 +129,13 @@ contains
     KE   = KMAX + KHALO
     IS   = 1    + IHALO
     IE   = IMAX + IHALO
-    JS   = 1    + JHALO    
+    JS   = 1    + JHALO
     JE   = JMAX + JHALO
 
     IF ( IBLOCK .eq. -1 ) IBLOCK = IMAX
     IF ( JBLOCK .eq. -1 ) JBLOCK = JMAX
 #endif
 
-  end subroutine INDEX_setup
+  end subroutine GRID_INDEX_setup
 
-end module mod_index
+end module mod_grid_index

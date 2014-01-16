@@ -20,7 +20,6 @@ module mod_calendar
   use dc_types, only: &
      DP
   use mod_precision
-  use mod_index
   use mod_stdio
   !-----------------------------------------------------------------------------
   implicit none

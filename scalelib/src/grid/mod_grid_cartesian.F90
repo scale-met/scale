@@ -20,9 +20,9 @@ module mod_grid
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -114,8 +114,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine GRID_setup
-    use mod_index, only: &
-       INDEX_setup
     use mod_stdio, only: &
        IO_FID_CONF
     use mod_process, only: &
@@ -144,8 +142,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CARTESIAN_PLANE]/Categ[GRID]'
-
-    call INDEX_setup
 
     !--- read namelist
     rewind(IO_FID_CONF)

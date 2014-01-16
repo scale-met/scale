@@ -19,9 +19,9 @@ module mod_atmos_refstate
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   use gtool_file_h, only: &
      File_HLONG

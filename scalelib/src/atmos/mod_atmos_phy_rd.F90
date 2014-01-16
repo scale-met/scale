@@ -17,9 +17,9 @@ module mod_atmos_phy_rd
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -52,7 +52,7 @@ module mod_atmos_phy_rd
           REAL_lon, REAL_lat,  & ! [in]
           TIME_NOWDATE         ) ! [in]
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        implicit none
 

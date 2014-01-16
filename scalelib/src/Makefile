@@ -32,8 +32,8 @@ endif
 OBJS =	\
 	$(mod_rdma)	\
 	mod_precision.o	\
-	mod_index.o	\
 	mod_prof.o	\
+	mod_grid_index.o	\
 	mod_tracer.o	\
 	mod_tracer_dry.o	\
 	mod_tracer_kessler.o	\

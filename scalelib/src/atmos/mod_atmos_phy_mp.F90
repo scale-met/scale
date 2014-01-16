@@ -19,9 +19,9 @@ module mod_atmos_phy_mp
   !++ used modules
   !
   use mod_precision
-  use mod_index
   use mod_stdio
   use mod_prof
+  use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -53,7 +53,7 @@ module mod_atmos_phy_mp
           RHOT, &
           QTRC  )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        real(RP), intent(inout) :: DENS(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ(KA,IA,JA)
@@ -66,7 +66,7 @@ module mod_atmos_phy_mp
           cldfrac, &
           QTRC     )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        real(RP), intent(out) :: cldfrac(KA,IA,JA)
        real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
@@ -76,17 +76,17 @@ module mod_atmos_phy_mp
           QTRC0, &
           DENS0  )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-       real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density  
+       real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density
      end subroutine er
      subroutine mr( &
           Qe,    &
           QTRC0  )
        use mod_precision
-       use mod_index
+       use mod_grid_index
        use mod_tracer
        real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QA) ! mixing ratio of each cateory [kg/kg]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
