@@ -13,7 +13,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 LIBNAME = libscale.a
 
-VPATH = io:common:atmos-physics:atmos-les:atmos-les/grid:atmos-les/comm:atmos-les/dynamics
+VPATH = io:common:grid:atmos
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
