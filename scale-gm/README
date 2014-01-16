@@ -1,0 +1,27 @@
+SCALE-GM
+=========
+
+SCALE-GM is a global atmosphere model for weather and climate
+with Scalable Computing for Advanced Library and Environment (SCALE).
+(http://scale.aics.riken.jp/)
+This model is based on the NICAM-DC, dynamical core package of NICAM.
+(http://scale.aics.riken.jp/nicamdc/)
+
+Contributing
+------------
+SCALE-GM is developed by Team SCALE and NICAM developers.
+
+License
+-------
+- License: The BSD 2-Clause License
+
+Build and Run the test cases
+-----
+- cd a test case directory
+- build
+- run
+
+-- example
+ % cd test/case/DCMIP2012-13/gl05rl00z40pe02
+ % make
+ % make run
