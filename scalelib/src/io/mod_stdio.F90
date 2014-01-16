@@ -24,6 +24,11 @@ module mod_stdio
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scalelib.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: IO_setup
@@ -38,6 +43,8 @@ module mod_stdio
   integer,               public, parameter :: H_MID           = File_HMID   !< Character length (short=64)
   integer,               public, parameter :: H_LONG          = File_HLONG  !< Character length (short=256)
 
+  character(len=H_MID),  public            :: H_SOURCE        = 'SCALE-LES ver. '//VERSION !< for header
+  character(len=H_MID),  public            :: H_INSTITUTE     = 'AICS/RIKEN'               !< for header
 
   integer,               public            :: IO_FID_CONF     = 7           !< Config file ID
   integer,               public            :: IO_FID_LOG      = 8           !< Log file ID
@@ -69,6 +76,8 @@ contains
     implicit none
 
     namelist / PARAM_IO / &
+       H_SOURCE,        &
+       H_INSTITUTE,     &
        IO_LOG_BASENAME, &
        IO_LOG_SUPPRESS, &
        IO_LOG_ALLNODE

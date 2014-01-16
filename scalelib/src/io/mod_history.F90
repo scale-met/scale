@@ -27,11 +27,6 @@ module mod_history
   private
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-#include "scalelib.h"
-  !-----------------------------------------------------------------------------
-  !
   !++ Public procedures
   !
   public :: HIST_setup
@@ -71,8 +66,6 @@ module mod_history
   !
   !++ Private parameters & variables
   !
-  character(len=H_MID), private :: HISTORY_H_SOURCE    = 'SCALE-LES ver. VERSION'//VERSION !< for header
-  character(len=H_MID), private :: HISTORY_H_INSTITUTE = 'AICS/RIKEN'                      !< for header
   character(len=H_MID), private :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
 
   !-----------------------------------------------------------------------------
@@ -97,8 +90,8 @@ contains
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
     call HistoryInit( HISTORY_H_TITLE,           &
-                      HISTORY_H_SOURCE,          &
-                      HISTORY_H_INSTITUTE,       &
+                      H_SOURCE,                  &
+                      H_INSTITUTE,               &
                       IMAX*JMAX*KMAX,            &
                       PRC_master,                &
                       PRC_myrank,                &

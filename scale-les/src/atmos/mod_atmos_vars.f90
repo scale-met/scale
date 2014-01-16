@@ -837,10 +837,6 @@ contains
     integer :: iq
     integer :: n
 
-    character(len=H_MID) :: H_TITLE     = 'SCALE-LES PROGNOSTIC VARS.'
-    character(len=H_MID) :: H_SOURCE    = 'SCALE-LES ver. '//VERSION
-    character(len=H_MID) :: H_INSTITUTE = 'AICS/RIKEN'
-
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
@@ -865,15 +861,15 @@ contains
        dtype = File_REAL4
     endif
 
-    call FileCreate( fid,         & ! (out)
-                     fileexisted, & ! (out)
-                     basename,    & ! (in)
-                     H_TITLE,     & ! (in)
-                     H_SOURCE,    & ! (in)
-                     H_INSTITUTE, & ! (in)
-                     PRC_master,  & ! (in)
-                     PRC_myrank,  & ! (in)
-                     rankidx      ) ! (in)
+    call FileCreate( fid,                     & ! (out)
+                     fileexisted,             & ! (out)
+                     basename,                & ! (in)
+                     ATMOS_RESTART_OUT_TITLE, & ! (in)
+                     H_SOURCE,                & ! (in)
+                     H_INSTITUTE,             & ! (in)
+                     PRC_master,              & ! (in)
+                     PRC_myrank,              & ! (in)
+                     rankidx                  ) ! (in)
 
     call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
     call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )

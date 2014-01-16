@@ -27,8 +27,6 @@ module mod_fileio
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -62,9 +60,6 @@ module mod_fileio
   !
   !++ Private parameters & variables
   !
-  character(len=H_MID) :: FILEIO_H_SOURCE    = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=H_MID) :: FILEIO_H_INSTITUTE = 'AICS/RIKEN'               !< for header
-
   real(RP), private, allocatable :: REAL_LON (:,:)
   real(RP), private, allocatable :: REAL_LONX(:,:)
   real(RP), private, allocatable :: REAL_LAT (:,:)
@@ -81,12 +76,6 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     implicit none
-
-    namelist / PARAM_FILEIO / &
-       FILEIO_H_SOURCE, &
-       FILEIO_H_INSTITUTE
-
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -100,17 +89,6 @@ contains
     allocate( REAL_CZ  (  KA,IA,JA) )
     allocate( REAL_FZ  (0:KA,IA,JA) )
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_FILEIO,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_FILEIO. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_FILEIO)
     ! only for register
     call PROF_rapstart('FILE I NetCDF')
     call PROF_rapend  ('FILE I NetCDF')
@@ -405,16 +383,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,                & ! [OUT]
-                     fileexisted,        & ! [OUT]
-                     basename,           & ! [IN]
-                     title,              & ! [IN]
-                     FILEIO_H_SOURCE,    & ! [IN]
-                     FILEIO_H_INSTITUTE, & ! [IN]
-                     PRC_master,         & ! [IN]
-                     PRC_myrank,         & ! [IN]
-                     rankidx,            & ! [IN]
-                     append              ) ! [IN]
+    call FileCreate( fid,         & ! [OUT]
+                     fileexisted, & ! [OUT]
+                     basename,    & ! [IN]
+                     title,       & ! [IN]
+                     H_SOURCE,    & ! [IN]
+                     H_INSTITUTE, & ! [IN]
+                     PRC_master,  & ! [IN]
+                     PRC_myrank,  & ! [IN]
+                     rankidx,     & ! [IN]
+                     append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
@@ -547,16 +525,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,                & ! [OUT]
-                     fileexisted,        & ! [OUT]
-                     basename,           & ! [IN]
-                     title,              & ! [IN]
-                     FILEIO_H_SOURCE,    & ! [IN]
-                     FILEIO_H_INSTITUTE, & ! [IN]
-                     PRC_master,         & ! [IN]
-                     PRC_myrank,         & ! [IN]
-                     rankidx,            & ! [IN]
-                     append              ) ! [IN]
+    call FileCreate( fid,         & ! [OUT]
+                     fileexisted, & ! [OUT]
+                     basename,    & ! [IN]
+                     title,       & ! [IN]
+                     H_SOURCE,    & ! [IN]
+                     H_INSTITUTE, & ! [IN]
+                     PRC_master,  & ! [IN]
+                     PRC_myrank,  & ! [IN]
+                     rankidx,     & ! [IN]
+                     append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
@@ -691,16 +669,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,                & ! [OUT]
-                     fileexisted,        & ! [OUT]
-                     basename,           & ! [IN]
-                     title,              & ! [IN]
-                     FILEIO_H_SOURCE,    & ! [IN]
-                     FILEIO_H_INSTITUTE, & ! [IN]
-                     PRC_master,         & ! [IN]
-                     PRC_myrank,         & ! [IN]
-                     rankidx,            & ! [IN]
-                     append              ) ! [IN]
+    call FileCreate( fid,         & ! [OUT]
+                     fileexisted, & ! [OUT]
+                     basename,    & ! [IN]
+                     title,       & ! [IN]
+                     H_SOURCE,    & ! [IN]
+                     H_INSTITUTE, & ! [IN]
+                     PRC_master,  & ! [IN]
+                     PRC_myrank,  & ! [IN]
+                     rankidx,     & ! [IN]
+                     append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
@@ -709,16 +687,15 @@ contains
        call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
        call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
        call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
-            dtype, REAL_LONX(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
-            dtype, REAL_LATY(IS:IE,JS:JE) )
+
+       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
+                                          (/'x', 'y'/)  , dtype, REAL_LON (IS:IE,JS:JE)           )
+       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
+                                          (/'xh', 'y '/), dtype, REAL_LONX(IS:IE,JS:JE)           )
+       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
+                                          (/'x', 'y'/)  , dtype, REAL_LAT (IS:IE,JS:JE)           )
+       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
+                                          (/'x ', 'yh'/), dtype, REAL_LATY(IS:IE,JS:JE)           )
     endif
 
     if ( axistype == 'ZXY' ) then
