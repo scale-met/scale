@@ -32,7 +32,15 @@ endif
 OBJS =	\
 	$(mod_rdma)	\
 	mod_precision.o	\
+	mod_stdio.o	\
+	mod_process.o	\
+	mod_const.o	\
+	mod_calendar.o	\
 	mod_prof.o	\
+	mod_debug.o	\
+	mod_random.o	\
+	mod_specfunc.o	\
+	mod_time.o	\
 	mod_grid_index.o	\
 	mod_tracer.o	\
 	mod_tracer_dry.o	\
@@ -41,15 +49,6 @@ OBJS =	\
 	mod_tracer_sn13.o	\
 	mod_tracer_sn13w.o	\
 	mod_tracer_suzuki10.o	\
-	mod_stdio.o	\
-	mod_specfunc.o	\
-	mod_process.o	\
-	mod_const.o	\
-	mod_calendar.o	\
-	mod_random.o	\
-	mod_debug.o	\
-	mod_time.o	\
-	mod_option.o	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
 	mod_comm.o	\
