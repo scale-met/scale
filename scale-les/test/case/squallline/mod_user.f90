@@ -22,8 +22,6 @@ module mod_user
   use mod_prof
   use mod_grid_index
   use mod_tracer
-  use dc_types, only: &
-     DP
   !-----------------------------------------------------------------------------
   implicit none
   private

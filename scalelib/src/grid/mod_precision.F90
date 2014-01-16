@@ -15,10 +15,10 @@ module mod_precision
   !
   !++ used modules
   !
-  !-----------------------------------------------------------------------------
   use dc_types, only: &
-     DP, &
-     SP
+     dc_SP => SP, &
+     dc_DP => DP
+  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -34,6 +34,8 @@ module mod_precision
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
+  integer, public, parameter :: SP = dc_SP ! Single Precision: kind(0.E0)
+  integer, public, parameter :: DP = dc_DP ! Double Precision: kind(0.D0)
 #ifdef SINGLE
   integer, public, parameter :: RP = SP ! single precision
 #else

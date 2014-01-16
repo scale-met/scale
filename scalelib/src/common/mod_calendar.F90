@@ -17,8 +17,6 @@ module mod_calendar
   !
   !++ used modules
   !
-  use dc_types, only: &
-     DP
   use mod_precision
   use mod_stdio
   !-----------------------------------------------------------------------------

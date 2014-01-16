@@ -629,8 +629,6 @@ contains
        vterm,     &
        temp,      &
        dt         )
-    use dc_types, only: &
-       DP
     use mod_const, only: &
        GRAV  => CONST_GRAV
     use mod_grid, only: &

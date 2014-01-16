@@ -18,8 +18,6 @@ module mod_history
   !
   !++ Used modules
   !
-  use dc_types, only: &
-     DP
   use gtool_history, only: &
      HistoryInit, &
      HistoryAddVariable, &

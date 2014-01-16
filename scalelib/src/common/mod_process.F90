@@ -17,8 +17,6 @@ module mod_process
   !++ used modules
   !
   use mpi
-  use dc_types, only: &
-     DP
   use mod_precision
   use mod_stdio
   !-----------------------------------------------------------------------------
@@ -437,8 +435,6 @@ contains
       maxidx, &
       minidx, &
       var     )
-    use dc_types, only: &
-         DP
     implicit none
 
     real(DP), intent(out) :: avgvar(:) !< average

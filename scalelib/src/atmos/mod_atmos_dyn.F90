@@ -172,8 +172,6 @@ contains
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
        USE_AVERAGE,                                          &
        DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               )
-    use dc_types, only: &
-       DP
     use mod_const, only: &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &

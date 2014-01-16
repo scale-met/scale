@@ -162,8 +162,6 @@ contains
          SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
          CZ, ctime                                            ) ! (in)
-    use dc_types, only: &
-       DP
     use mod_stdio, only: &
        IO_FID_LOG, &
        IO_L

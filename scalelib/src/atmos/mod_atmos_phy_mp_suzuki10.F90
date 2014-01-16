@@ -37,8 +37,6 @@ module mod_atmos_phy_mp_suzuki10
   use mod_grid_index
 
   use mod_tracer_suzuki10
-  use dc_types, only: &
-     DP
   use mod_const, only: &
      pi => CONST_PI, &
      CONST_CPdry, &

@@ -26,8 +26,6 @@ module test_atmos_dyn_fent_fct
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
-  use dc_types, only: &
-       DP
   !-----------------------------------------------------------------------------
   implicit none
   private

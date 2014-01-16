@@ -48,8 +48,6 @@ module mod_atmos_phy_sf
           SFLX_MOMZ, SFLX_MOMX, SFLX_MOMY, SFLX_POTT, SFLX_QV, & ! (out)
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST,             & ! (in)
           CZ, ctime                                            ) ! (in)
-       use dc_types, only: &
-         DP
        use mod_precision
        use mod_grid_index
        use mod_tracer

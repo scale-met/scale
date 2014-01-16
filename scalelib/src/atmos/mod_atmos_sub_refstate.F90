@@ -25,8 +25,6 @@ module mod_atmos_refstate
   use mod_tracer
   use gtool_file_h, only: &
      File_HLONG
-  use dc_types, only: &
-     DP
   !-----------------------------------------------------------------------------
   implicit none
   private

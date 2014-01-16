@@ -18,8 +18,6 @@ module mod_atmos_dyn_rk_hevi
   !
   !++ used modules
   !
-  use dc_types, only: &
-       DP
   use mod_precision
   use mod_stdio
   use mod_prof

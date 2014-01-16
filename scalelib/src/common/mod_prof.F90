@@ -12,8 +12,6 @@ module mod_prof
   !
   !++ used modules
   !
-  use dc_types, only: &
-     DP, SP
   use mod_precision
   use mod_stdio
   !-----------------------------------------------------------------------------

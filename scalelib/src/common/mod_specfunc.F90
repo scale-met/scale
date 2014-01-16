@@ -45,16 +45,13 @@ contains
   ! Lanczos approximation
   ! g = 7.0, N = 8
   function SF_gamma(x)
-    use dc_types, only: &
-       DP
     implicit none
 
     real(RP), intent(in) :: x        !< input
     real(RP)             :: SF_gamma
 
     real(DP), parameter :: LRTP = 0.9189385332046727_DP ! log(sqrt(2*PI))
-
-    real(DP) :: Ag, dx
+    real(DP)            :: Ag, dx
     !---------------------------------------------------------------------------
 
     dx = real(x, kind=DP)

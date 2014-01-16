@@ -16,8 +16,6 @@ module mod_time
   !
   !++ used modules
   !
-  use dc_types, only: &
-     DP
   use mod_precision
   use mod_stdio
   use mod_prof
