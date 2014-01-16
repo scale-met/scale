@@ -24,6 +24,7 @@ module mod_atmos_vars
   use mod_precision
   use mod_stdio
   use mod_prof
+  use mod_debug
   use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
@@ -1119,8 +1120,6 @@ contains
        CVdry => CONST_CVdry, &
        LH0   => CONST_LH0,   &
        P00   => CONST_PRE00
-    use mod_misc, only: &
-       MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC
     use mod_grid, only: &
@@ -1188,11 +1187,11 @@ contains
 
     ! value check for prognostic variables
     if ( ATMOS_VARS_CHECKRANGE ) then
-       call MISC_valcheck( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(I_DENS) )
-       call MISC_valcheck( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMZ) )
-       call MISC_valcheck( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMX) )
-       call MISC_valcheck( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMY) )
-       call MISC_valcheck( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(I_RHOT) )
+       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(I_DENS), __FILE__, __LINE__ )
+       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMZ), __FILE__, __LINE__ )
+       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMX), __FILE__, __LINE__ )
+       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMY), __FILE__, __LINE__ )
+       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(I_RHOT), __FILE__, __LINE__ )
     endif
 
     ! history output of prognostic variables

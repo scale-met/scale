@@ -20,6 +20,7 @@ module mod_ocean_vars
   use mod_precision
   use mod_stdio
   use mod_prof
+  use mod_debug
   use mod_grid_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -254,8 +255,6 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for ocean variables
   subroutine OCEAN_vars_history
-    use mod_misc, only: &
-       MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC_OCEAN
     use mod_history, only: &
@@ -264,7 +263,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call MISC_valcheck( SST(:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_SST) )
+       call VALCHECK( SST(:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_SST), __FILE__, __LINE__ )
     endif
 
     call HIST_in( SST(:,:), 'O_SST', OP_DESC(I_SST), OP_UNIT(I_SST), TIME_DTSEC_OCEAN )

@@ -21,6 +21,7 @@ module mod_cpl_vars
   use mod_precision
   use mod_stdio
   use mod_prof
+  use mod_debug
   use mod_grid_index
   use mod_tracer
   !-----------------------------------------------------------------------------
@@ -497,8 +498,6 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for coupler variables
   subroutine CPL_vars_history
-    use mod_misc, only: &
-       MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC_CPL
     use mod_history, only: &
@@ -507,25 +506,25 @@ contains
     !---------------------------------------------------------------------------
 
     if ( CPL_VARS_CHECKRANGE ) then
-       call MISC_valcheck( LST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_LST)   )
-       call MISC_valcheck( SST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SST)   )
-       call MISC_valcheck( SkinT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinT) )
-       call MISC_valcheck( SkinW(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinW) )
-       call MISC_valcheck( SnowQ(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ) )
-       call MISC_valcheck( SnowT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowT) )
+       call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_LST)  , __FILE__, __LINE__ )
+       call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SST)  , __FILE__, __LINE__ )
+       call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinT), __FILE__, __LINE__ )
+       call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinW), __FILE__, __LINE__ )
+       call VALCHECK( SnowQ(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ), __FILE__, __LINE__ )
+       call VALCHECK( SnowT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowT), __FILE__, __LINE__ )
 
-       call MISC_valcheck( SFLX_MOMX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMX)  )
-       call MISC_valcheck( SFLX_MOMY(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMY)  )
-       call MISC_valcheck( SFLX_MOMZ(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMZ)  )
-       call MISC_valcheck( SFLX_SWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SWU)   )
-       call MISC_valcheck( SFLX_LWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LWU)   )
-       call MISC_valcheck( SFLX_SH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SH)    )
-       call MISC_valcheck( SFLX_LH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LH)    )
-       call MISC_valcheck( SFLX_QVAtm(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVAtm) )
+       call VALCHECK( SFLX_MOMX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMX) , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_MOMY(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMY) , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_MOMZ(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMZ) , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_SWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SWU)  , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_LWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LWU)  , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_SH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SH)   , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_LH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LH)   , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_QVAtm(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVAtm), __FILE__, __LINE__ )
 
-       call MISC_valcheck( SFLX_GH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_GH)    )
-       call MISC_valcheck( SFLX_PREC(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_PREC)  )
-       call MISC_valcheck( SFLX_QVLnd(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVLnd) )
+       call VALCHECK( SFLX_GH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_GH)   , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_PREC(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_PREC) , __FILE__, __LINE__ )
+       call VALCHECK( SFLX_QVLnd(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVLnd), __FILE__, __LINE__ )
     endif
 
     call HIST_in( LST  (:,:), 'LST',   LP_DESC(I_LST),   LP_UNIT(I_LST),   TIME_DTSEC_CPL )

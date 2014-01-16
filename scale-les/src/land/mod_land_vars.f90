@@ -21,6 +21,7 @@ module mod_land_vars
   use mod_precision
   use mod_stdio
   use mod_prof
+  use mod_debug
   use mod_grid_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -369,8 +370,6 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for land variables
   subroutine LAND_vars_history
-    use mod_misc, only: &
-       MISC_valcheck
     use mod_time, only: &
        TIME_DTSEC_LAND
     use mod_history, only: &
@@ -379,10 +378,10 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call MISC_valcheck( TG   (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)    )
-       call MISC_valcheck( QvEfc(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QvEfc) )
-       call MISC_valcheck( ROFF (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF)  )
-       call MISC_valcheck( STRG (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG)  )
+       call VALCHECK( TG   (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)   , __FILE__, __LINE__ )
+       call VALCHECK( QvEfc(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QvEfc), __FILE__, __LINE__ )
+       call VALCHECK( ROFF (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF) , __FILE__, __LINE__ )
+       call VALCHECK( STRG (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG) , __FILE__, __LINE__ )
     endif
 
     call HIST_in( TG   (:,:),   'TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )

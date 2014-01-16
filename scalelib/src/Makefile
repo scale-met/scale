@@ -49,7 +49,6 @@ OBJS =	\
 	mod_random.o	\
 	mod_debug.o	\
 	mod_time.o	\
-	mod_misc.o	\
 	mod_option.o	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
