@@ -38,7 +38,7 @@ program unit
   IBLOCK = 5
   JBLOCK = 1
 
-  call INDEX_setup
+  call GRID_INDEX_setup
 
   TRACER_TYPE = 'SN13'
   call TRACER_setup
