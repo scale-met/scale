@@ -28,6 +28,7 @@ module mod_grid_real
   !++ Public procedure
   !
   public :: REAL_setup
+  public :: REAL_update_Z
 
   !-----------------------------------------------------------------------------
   !
@@ -55,15 +56,14 @@ module mod_grid_real
   !
   !++ Private procedure
   !
-  private :: REAL_make_latlon
-  private :: REAL_make_Z
-  private :: REAL_make_area
+  private :: REAL_calc_latlon
+  private :: REAL_calc_Z
+  private :: REAL_calc_areavol
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  logical, private :: allocated = .false.
   character(len=H_LONG), private :: REAL_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),  private :: REAL_OUT_TITLE    = 'SCALE-LES GEOMETRICS' !< title    of the output file
   character(len=H_MID),  private :: REAL_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
@@ -80,44 +80,36 @@ contains
     use mod_fileio, only: &
        FILEIO_set_coordinates
     implicit none
-
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
 
+    allocate( REAL_LON (IA,JA) )
+    allocate( REAL_LAT (IA,JA) )
+    allocate( REAL_LONX(IA,JA) )
+    allocate( REAL_LATY(IA,JA) )
+    allocate( REAL_DLON(IA,JA) )
+    allocate( REAL_DLAT(IA,JA) )
 
-    if ( .not. allocated ) then
-       allocate( REAL_LON(IA,JA) )
-       allocate( REAL_LAT(IA,JA) )
-       allocate( REAL_CZ (  KA,IA,JA) )
-       allocate( REAL_FZ (0:KA,IA,JA) )
+    allocate( REAL_CZ (  KA,IA,JA) )
+    allocate( REAL_FZ (0:KA,IA,JA) )
+    allocate( REAL_PHI(  KA,IA,JA) )
 
-       allocate( REAL_LONX(IA,JA) )
-       allocate( REAL_LATY(IA,JA) )
-       allocate( REAL_DLON(IA,JA) )
-       allocate( REAL_DLAT(IA,JA) )
-
-       allocate( REAL_PHI (KA,IA,JA) )
-
-       allocate( REAL_AREA(IA,JA) )
-       allocate( REAL_VOL (KA,IA,JA) )
-
-       allocated = .true.
-    end if
-
+    allocate( REAL_AREA(IA,JA)    )
+    allocate( REAL_VOL (KA,IA,JA) )
 
     ! setup map projection
     call MPRJ_setup
 
     ! calc longitude & latitude
-    call REAL_make_latlon
+    call REAL_calc_latlon
 
     ! calc real height
-    call REAL_make_Z
+    call REAL_calc_Z
 
     ! calc control area & volume
-    call REAL_make_area
+    call REAL_calc_areavol
 
     ! set latlon and z to fileio module
     call FILEIO_set_coordinates( REAL_LON, REAL_LONX, &
@@ -128,8 +120,32 @@ contains
   end subroutine REAL_setup
 
   !-----------------------------------------------------------------------------
+  !> Re-setup with updated topography
+  subroutine REAL_update_Z
+    use mod_process, only: &
+       PRC_MPIstop
+    use mod_fileio, only: &
+       FILEIO_set_coordinates
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! calc real height
+    call REAL_calc_Z
+
+    ! calc control area & volume
+    call REAL_calc_areavol
+
+    ! set latlon and z to fileio module
+    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, &
+                                 REAL_LAT, REAL_LATY, &
+                                 REAL_CZ,  REAL_FZ    )
+
+    return
+  end subroutine REAL_update_Z
+
+  !-----------------------------------------------------------------------------
   !> Calc longitude & latitude
-  subroutine REAL_make_latlon
+  subroutine REAL_calc_latlon
     use mod_const, only: &
        D2R    => CONST_D2R
     use mod_grid, only: &
@@ -171,11 +187,11 @@ contains
                                 'SE(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')'
 
     return
-  end subroutine REAL_make_latlon
+  end subroutine REAL_calc_latlon
 
   !-----------------------------------------------------------------------------
   !> Convert Xi to Z coordinate
-  subroutine REAL_make_Z
+  subroutine REAL_calc_Z
     use mod_const, only: &
        CONST_GRAV
     use mod_grid, only: &
@@ -211,11 +227,11 @@ contains
     REAL_PHI(:,:,:) = REAL_CZ(:,:,:) * CONST_GRAV
 
     return
-  end subroutine REAL_make_Z
+  end subroutine REAL_calc_Z
 
   !-----------------------------------------------------------------------------
   !> Calc control area/volume
-  subroutine REAL_make_area
+  subroutine REAL_calc_areavol
     use mod_const, only: &
        RADIUS => CONST_RADIUS
     use mod_grid, only: &
@@ -265,6 +281,6 @@ contains
     enddo
 
     return
-  end subroutine REAL_make_area
+  end subroutine REAL_calc_areavol
 
 end module mod_grid_real

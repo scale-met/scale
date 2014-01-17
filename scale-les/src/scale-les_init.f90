@@ -52,7 +52,8 @@ program scaleles_init
   use mod_landuse, only: &
      LANDUSE_setup
   use mod_grid_real, only: &
-     REAL_setup
+     REAL_setup,   &
+     REAL_update_Z
   use mod_gridtrans, only: &
      GTRANS_setup
   use mod_interpolation, only: &
@@ -164,7 +165,7 @@ program scaleles_init
   call PROF_rapend  ('MkTopo')
 
   ! re-setup
-  call REAL_setup
+  call REAL_update_Z
 
   ! execute mkinit
   call PROF_rapstart('MkInit')
