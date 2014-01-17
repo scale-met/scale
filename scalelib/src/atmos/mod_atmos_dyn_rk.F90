@@ -22,14 +22,6 @@ module mod_atmos_dyn_rk
   use mod_prof
   use mod_grid_index
   use mod_tracer
-
-#ifdef DEBUG
-  use mod_debug, only: &
-     CHECK
-  use mod_const, only: &
-     UNDEF  => CONST_UNDEF, &
-     IUNDEF => CONST_UNDEF2
-#endif
   !-----------------------------------------------------------------------------
   implicit none
   private

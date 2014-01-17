@@ -1205,11 +1205,9 @@ contains
        sl_PLRdep_d(1,i,j) = 0.0_RP
        sl_PNRdep_d(1,i,j) = 0.0_RP
 
-!OCL XFILL
        do k = KS, KE
           rhog_d  (k,i,j) = DENS(k,i,j)
        enddo
-!OCL XFILL
        do k = KS, KE
           rhogw_d (k,i,j) = MOMZ(k,i,j)
        enddo
@@ -1617,15 +1615,12 @@ contains
        do k = KS, KE
           RHOT(k,i,j) = th_d(k,i,j) * rhog_d(k,i,j)
        enddo
-!OCL XFILL
        do k = KS, KE
           rhoe(k,i,j) = rhoge_d(k,i,j)
        enddo
-!OCL XFILL
        do k = KS, KE
           temp(k,i,j) = tem_d(k,i,j)
        enddo
-!OCL XFILL
        do k = KS, KE
           pres(k,i,j) = pre_d(k,i,j)
        enddo
@@ -1635,7 +1630,6 @@ contains
     do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE
-!OCL XFILL
           do k = KS, KE
              rhoq(k,i,j,iq) = rhogq_d(k,i,j,iq)
           enddo
@@ -1670,7 +1664,6 @@ contains
 
     if ( doprecipitation ) then
 
-!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

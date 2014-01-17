@@ -2031,7 +2031,6 @@ contains
 
     if ( doprecipitation ) then
 
-!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS-1, KE

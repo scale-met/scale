@@ -65,7 +65,7 @@ module mod_atmos_boundary
   character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
   character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-lES BOUNDARY CONDITION' !< title of the output file
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-LES BOUNDARY CONDITION' !< title of the output file
   character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                      !< REAL4 or REAL8
 
   logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?

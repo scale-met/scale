@@ -126,7 +126,7 @@ contains
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
     ! setup each components
-    if ( sw_dyn    ) call ATMOS_DYN_setup( ATMOS_DYN_TYPE )
+    if ( sw_dyn    ) call ATMOS_DYN_setup   ( ATMOS_DYN_TYPE    )
 
     if ( sw_phy_sf ) call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
 
@@ -139,21 +139,14 @@ contains
     if ( sw_phy_rd ) call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
     !########## initialize tendencies ##########
-!OCL XFILL
-    DENS_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMZ_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMX_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMY_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    RHOT_tp(:,:,:) = 0.0_RP
-!OCL XFILL
+    DENS_tp(:,:,:)   = 0.0_RP
+    MOMZ_tp(:,:,:)   = 0.0_RP
+    MOMX_tp(:,:,:)   = 0.0_RP
+    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOT_tp(:,:,:)   = 0.0_RP
     QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
-
   end subroutine ATMOS_setup
 
   !-----------------------------------------------------------------------------
@@ -161,12 +154,12 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_step
     use mod_time, only: &
-       do_dyn        => TIME_DOATMOS_DYN,    &
-       do_phy_sf     => TIME_DOATMOS_PHY_SF, &
-       do_phy_tb     => TIME_DOATMOS_PHY_TB, &
-       do_phy_mp     => TIME_DOATMOS_PHY_MP, &
-       do_phy_rd     => TIME_DOATMOS_PHY_RD, &
-       do_phy_ae     => TIME_DOATMOS_PHY_AE
+       do_dyn    => TIME_DOATMOS_DYN,    &
+       do_phy_sf => TIME_DOATMOS_PHY_SF, &
+       do_phy_tb => TIME_DOATMOS_PHY_TB, &
+       do_phy_mp => TIME_DOATMOS_PHY_MP, &
+       do_phy_rd => TIME_DOATMOS_PHY_RD, &
+       do_phy_ae => TIME_DOATMOS_PHY_AE
     use mod_atmos_vars, only: &
        DENS,    &
        MOMX,    &
@@ -180,12 +173,12 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp, &
-       sw_dyn        => ATMOS_sw_dyn,        &
-       sw_phy_sf     => ATMOS_sw_phy_sf,     &
-       sw_phy_tb     => ATMOS_sw_phy_tb,     &
-       sw_phy_mp     => ATMOS_sw_phy_mp,     &
-       sw_phy_rd     => ATMOS_sw_phy_rd,     &
-       sw_phy_ae     => ATMOS_sw_phy_ae,     &
+       sw_dyn    => ATMOS_sw_dyn,    &
+       sw_phy_sf => ATMOS_sw_phy_sf, &
+       sw_phy_tb => ATMOS_sw_phy_tb, &
+       sw_phy_mp => ATMOS_sw_phy_mp, &
+       sw_phy_rd => ATMOS_sw_phy_rd, &
+       sw_phy_ae => ATMOS_sw_phy_ae, &
        ATMOS_vars_history
     use mod_atmos_vars_sf, only: &
        PREC,       &
@@ -293,17 +286,11 @@ contains
     endif
 
     !########## reset tendencies ##########
-!OCL XFILL
-    DENS_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMZ_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMX_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    MOMY_tp(:,:,:) = 0.0_RP
-!OCL XFILL
-    RHOT_tp(:,:,:) = 0.0_RP
-!OCL XFILL
+    DENS_tp(:,:,:)   = 0.0_RP
+    MOMZ_tp(:,:,:)   = 0.0_RP
+    MOMX_tp(:,:,:)   = 0.0_RP
+    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOT_tp(:,:,:)   = 0.0_RP
     QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
