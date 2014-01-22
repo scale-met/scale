@@ -1,10 +1,16 @@
 ##### for computation
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 # Fortran Compiler
 FC     = mpiifort
 FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays \
          -assume byterecl -convert big_endian \
-         -fno-alias
+         -fno-alias $(SDM)
 
 # compiler flag for mod_atmos_dyn_fent_pdfct
 FFLAGS_DYN ?= $(FFLAGS)

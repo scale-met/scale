@@ -1,6 +1,6 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
-% types = %w(dry kessler tomita08 sn13 sn13w suzuki10)
+% types = %w(dry kessler tomita08 sn13 sn13w suzuki10 sdm)
 !-------------------------------------------------------------------------------
 !> module ATMOSPHERE / Physics Cloud Microphysics
 !!
@@ -107,9 +107,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_setup( MP_TYPE, DENS, RHOT, QTRC )
     use mod_process, only: &
        PRC_MPIstop
+    use mod_tracer, only: &
+       QAD => QA
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef MP
@@ -132,14 +134,16 @@ contains
 % end
 #endif
     implicit none
-
     character(len=H_SHORT), intent(in) :: MP_TYPE
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
     select case ( MP_TYPE )
 % types.each do |type|
     case ( '<%=type.upcase%>' )
-       call ATMOS_PHY_MP_<%=type%>_setup( MP_TYPE )
+       call ATMOS_PHY_MP_<%=type%>_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_<%=type%>
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_<%=type%>_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_<%=type%>_EffectiveRadius

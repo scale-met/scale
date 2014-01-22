@@ -290,6 +290,37 @@ contains
     I_AE2ALL_suzuki10 => I_AE2ALL, &
     I_AE2RD_suzuki10 => I_AE2RD, &
     TRACER_suzuki10_setup
+  use mod_tracer_sdm, only: &
+    QA_sdm => QA, &
+    I_QV_sdm => I_QV, &
+    I_QC_sdm => I_QR, &
+    I_QR_sdm => I_QR, &
+    I_QI_sdm => I_QI, &
+    I_QS_sdm => I_QS, &
+    I_QG_sdm => I_QG, &
+    I_NC_sdm => I_NC, &
+    I_NR_sdm => I_NR, &
+    I_NI_sdm => I_NI, &
+    I_NS_sdm => I_NS, &
+    I_NG_sdm => I_NG, &
+    QQA_sdm => QQA, &
+    QQS_sdm => QQS, &
+    QQE_sdm => QQE, &
+    QWS_sdm => QWS, &
+    QWE_sdm => QWE, &
+    QIS_sdm => QIS, &
+    QIE_sdm => QIE, &
+    MP_QA_sdm => MP_QA, &
+    AE_QA_sdm => AE_QA, &
+    I_ae_dummy_sdm => I_ae_dummy, &
+    AQ_NAME_sdm => AQ_NAME, &
+    AQ_DESC_sdm => AQ_DESC, &
+    AQ_UNIT_sdm => AQ_UNIT, &
+    I_MP2ALL_sdm => I_MP2ALL, &
+    I_MP2RD_sdm => I_MP2RD, &
+    I_AE2ALL_sdm => I_AE2ALL, &
+    I_AE2RD_sdm => I_AE2RD, &
+    TRACER_sdm_setup
 #endif
     implicit none
 
@@ -546,6 +577,44 @@ contains
        I_MP2RD = I_MP2RD_suzuki10
        I_AE2ALL = I_AE2ALL_suzuki10
        I_AE2RD = I_AE2RD_suzuki10
+    case ("SDM")
+       call TRACER_sdm_setup
+       QA = QA_sdm
+       I_QV = I_QV_sdm
+       I_QC = I_QC_sdm
+       I_QR = I_QR_sdm
+       I_QI = I_QI_sdm
+       I_QS = I_QS_sdm
+       I_QG = I_QG_sdm
+       I_NC = I_NC_sdm
+       I_NR = I_NR_sdm
+       I_NI = I_NI_sdm
+       I_NS = I_NS_sdm
+       I_NG = I_NG_sdm
+       QQA = QQA_sdm
+       QQS = QQS_sdm
+       QQE = QQE_sdm
+       QWS = QWS_sdm
+       QWE = QWE_sdm
+       QIS = QIS_sdm
+       QIE = QIE_sdm
+       MP_QA = MP_QA_sdm
+       AE_QA = AE_QA_sdm
+       I_ae_dummy = I_ae_dummy_sdm
+       allocate( AQ_NAME(QA) )
+       allocate( AQ_DESC(QA) )
+       allocate( AQ_UNIT(QA) )
+       allocate( I_MP2ALL(MP_QA) )
+       allocate( I_MP2RD(MP_QA) )
+       allocate( I_AE2ALL(AE_QA) )
+       allocate( I_AE2RD(AE_QA) )
+       AQ_NAME = AQ_NAME_sdm
+       AQ_DESC = AQ_DESC_sdm
+       AQ_UNIT = AQ_UNIT_sdm
+       I_MP2ALL = I_MP2ALL_sdm
+       I_MP2RD = I_MP2RD_sdm
+       I_AE2ALL = I_AE2ALL_sdm
+       I_AE2RD = I_AE2RD_sdm
 #endif
      case default
         write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'

@@ -10,6 +10,9 @@ SYSDEP_DIR := ../sysdep
 
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+ifeq ($(SDM),-D_SDM)
+  include $(TOPDIR)/contrib/Mkinclude_sdm
+endif
 
 LIBNAME = libscale.a
 
@@ -26,6 +29,14 @@ ifeq ($(RDMA),-D_USE_RDMA)
   mod_rdma := rdma.o
 else
   mod_rdma :=
+endif
+
+ifeq ($(SDM),-D_SDM)
+  mod_sdm_tracer := mod_tracer_sdm.o
+  mod_sdm := mod_atmos_phy_mp_sdm.o
+else
+  mod_sdm_tracer :=
+  mod_sdm :=
 endif
 
 
@@ -49,6 +60,7 @@ OBJS =	\
 	mod_tracer_sn13.o	\
 	mod_tracer_sn13w.o	\
 	mod_tracer_suzuki10.o	\
+	$(mod_sdm_tracer)	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
 	mod_comm.o	\
@@ -86,6 +98,7 @@ OBJS =	\
 	mod_atmos_phy_mp_sn13.o	\
 	mod_atmos_phy_mp_sn13w.o	\
 	mod_atmos_phy_mp_suzuki10.o	\
+	$(mod_sdm)	\
 	mod_atmos_phy_mp.o	\
 	mod_atmos_phy_rd_common.o	\
 	mod_atmos_phy_rd_profile.o	\
@@ -96,7 +109,11 @@ OBJS =	\
 	mod_atmos_phy_ae_dummy.o	\
 	mod_atmos_phy_ae.o
 
+ifeq ($(SDM),-D_SDM)
+all: makedir makedcutils makegtool makegagetry makemt $(LIBDIR)/$(LIBNAME) modules
+else
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
+endif
 
 makedir:
 	mkdir -p $(BUILD_DIR)
@@ -108,6 +125,14 @@ makedcutils:
 
 makegtool:
 	$(MAKE) -C $(GTOOLDIR)
+
+ifeq ($(SDM),-D_SDM)
+makegagetry:
+	$(MAKE) -C $(GAGETRYDIR)
+
+makemt:
+	$(MAKE) -C $(MTDIR)
+endif
 
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
@@ -121,13 +146,25 @@ modules:
 
 
 
+ifeq ($(SDM),-D_SDM)
+allclean: cleandcutils cleangtool cleangagetry cleanmt distclean 
+else
 allclean: cleandcutils cleangtool distclean
+endif
 
 cleandcutils:
 	$(MAKE) -C $(DCUTILSDIR) allclean
 
 cleangtool:
 	$(MAKE) -C $(GTOOLDIR)   allclean
+
+ifeq ($(SDM),-D_SDM)
+cleangagetry:
+	$(MAKE) -C $(GAGETRYDIR)   allclean
+
+cleanmt:
+	$(MAKE) -C $(MTDIR)	allclean
+endif
 
 distclean: clean
 	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a depend
@@ -166,7 +203,10 @@ $(BUILD_DIR)/mod_atmos_dyn_rk_hevi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
-
+ifeq ($(SDM),-D_SDM)
+$(BUILD_DIR)/mod_atmos_phy_mp_sdm.o:
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(GAGETRYDIR) -I$(MTDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+endif
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 

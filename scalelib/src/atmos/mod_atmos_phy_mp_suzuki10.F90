@@ -194,7 +194,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_suzuki10_setup( MP_TYPE,DENS,RHOT,QTRC )
     use mod_process, only: &
        PRC_MPIstop, &
        PRC_master,  &
@@ -212,6 +212,9 @@ contains
     implicit none
 
     character(len=H_SHORT), intent(in) :: MP_TYPE
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: ATMOS_PHY_MP_RHOA  !--- density of aerosol
     real(RP) :: ATMOS_PHY_MP_EMAER !--- moleculer weight of aerosol

@@ -25,10 +25,15 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) $(GNUCPPOPT) \
                -g -fbacktrace \
                -DDEBUG
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
 
 FC     = mpif90
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
+#FFLAGS = $(FFLAGS_FAST) $(SDM)
+FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
 FFLAGS_DYN = $(FFLAGS)
 

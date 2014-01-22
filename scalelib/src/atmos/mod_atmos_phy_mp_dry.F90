@@ -55,12 +55,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_dry_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_dry_setup( MP_TYPE,DENS,RHOT,QTRC )
     use mod_process, only: &
        PRC_MPIstop
+    use mod_tracer, only: &
+       QAD => QA
     implicit none
-
     character(len=H_SHORT), intent(in) :: MP_TYPE
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

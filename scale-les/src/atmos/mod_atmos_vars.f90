@@ -825,6 +825,11 @@ contains
        REAL_lonx, &
        REAL_lat, &
        REAL_laty
+#ifdef _SDM
+    use mod_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_out
+#endif
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -839,6 +844,13 @@ contains
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
+       call ATMOS_PHY_MP_sdm_restart_out(NOWSEC)
+    endif
+#endif
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'

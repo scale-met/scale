@@ -18,9 +18,15 @@ FFLAGS_DEBUG = -fpp3 -O0 -
                -heap-arrays -fno-alias              \
                -DDEBUG
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = mpiifort
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS = $(FFLAGS_FAST) $(SDM)
+#FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
 FFLAGS_DYN ?= $(FFLAGS)
 

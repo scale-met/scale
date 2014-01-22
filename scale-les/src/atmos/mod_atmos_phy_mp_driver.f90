@@ -59,6 +59,10 @@ contains
        PRC_MPIstop
     use mod_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
+    use mod_atmos_vars, only: &
+       DENS, &
+       RHOT, &
+       QTRC
     implicit none
 
     character(len=H_SHORT), intent(in) :: MP_TYPE
@@ -74,7 +78,7 @@ contains
 !    allocate( RHOT_t(KA,IA,JA) )
 !    allocate( QTRC_t(KA,IA,JA,QA) )
 
-    call ATMOS_PHY_MP_setup( MP_TYPE )
+    call ATMOS_PHY_MP_setup( MP_TYPE, DENS, RHOT, QTRC )
 
 !    call ATMOS_PHY_MP_driver( .true., .false. )
 

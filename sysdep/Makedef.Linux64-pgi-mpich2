@@ -16,9 +16,15 @@ FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -Mbounds -Mstandard -g -traceback \
                -mcmodel=medium -Minfo
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = mpif90
-FFLAGS = $(FFLAGS_FAST)
-#FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS = $(FFLAGS_FAST) $(SDM)
+#FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
 ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report

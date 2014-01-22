@@ -252,7 +252,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE,DENS,RHOT,QTRC )
     use mod_process, only: &
        PRC_MPIstop
     use mod_const, only: &
@@ -266,6 +266,9 @@ contains
        HIST_reg
     implicit none
     character(len=H_SHORT), intent(in) :: MP_TYPE
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &

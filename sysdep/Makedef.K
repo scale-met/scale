@@ -28,9 +28,15 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = mpifrtpx
-FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA) $(SDM)
+#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA $(SDM)
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll -Ksimd=2
 

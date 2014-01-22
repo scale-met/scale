@@ -16,9 +16,15 @@ FFLAGS_DEBUG = -cpp -O0 -m64 \
                -g -fbacktrace \
                -DDEBUG
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = openmpif90
-#FFLAGS = $(FFLAGS_FAST)
-FFLAGS = $(FFLAGS_DEBUG)
+#FFLAGS = $(FFLAGS_FAST) $(SDM)
+FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
 FFLAGS_DYN = $(FFLAGS)
 

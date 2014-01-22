@@ -583,7 +583,11 @@ contains
     !------------------------------------------------------------------------
     ! Update each tracer
     !------------------------------------------------------------------------
+#ifdef _SDM
+    do iq = 1, I_QV
+#else
     do iq = 1, QA
+#endif
 
        if ( iq == I_QV ) then
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)

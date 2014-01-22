@@ -36,7 +36,8 @@ dirs.each do |dir|
         pros[mod] = pro
       when /^\s*use (\w+)/
         mod = $1
-        next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+#        next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+        next if /(dc_types|gtool|mpi|netcdf|gadg|rng|NAME)/ =~ mod 
         dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
     end

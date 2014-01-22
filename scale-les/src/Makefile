@@ -11,6 +11,10 @@ SYSDEP_DIR  = ../sysdep
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
+ifeq ($(SDM),-D_SDM)
+  include $(TOPDIR)/contrib/Mkinclude_sdm
+endif
+
 VPATH = $(BUILD_DIR):include:atmos:land:ocean:cpl:preprocess:user
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -64,11 +68,19 @@ makescalelib:
 
 makebin: $(PRJS)
 
+ifeq ($(SDM),-D_SDM)
+$(PWD)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+
+$(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+else
 $(PWD)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+endif
 
 $(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 $(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
@@ -122,6 +134,10 @@ clean:
 
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+ifeq ($(SDM),-D_SDM)
+$(BUILD_DIR)/mod_mkinit.o:
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(GAGETRYDIR) -I$(MTDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+endif
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
