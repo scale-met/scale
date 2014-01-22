@@ -55,9 +55,9 @@ module mod_tracer_dry
   integer, public, parameter :: QQE =  1 ! end   index for mass tracer
 
   integer, public, parameter :: QWS =  0 ! start index for water tracer
-  integer, public, parameter :: QWE =  0 ! end   index for water tracer
+  integer, public, parameter :: QWE = -1 ! end   index for water tracer
   integer, public, parameter :: QIS =  0 ! start index for ice tracer
-  integer, public, parameter :: QIE =  0 ! end   index for ice tracer
+  integer, public, parameter :: QIE = -1 ! end   index for ice tracer
 
   character(len=H_SHORT), public :: AQ_NAME(QA)
   character(len=H_MID)  , public :: AQ_DESC(QA)

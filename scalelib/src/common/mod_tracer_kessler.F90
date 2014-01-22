@@ -57,7 +57,7 @@ module mod_tracer_kessler
   integer, public, parameter :: QWS =  2 ! start index for water tracer
   integer, public, parameter :: QWE =  3 ! end   index for water tracer
   integer, public, parameter :: QIS =  0 ! start index for ice tracer
-  integer, public, parameter :: QIE =  0 ! end   index for ice tracer
+  integer, public, parameter :: QIE = -1 ! end   index for ice tracer
 
   character(len=H_SHORT), public :: AQ_NAME(QA)
   character(len=H_MID)  , public :: AQ_DESC(QA)

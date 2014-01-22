@@ -176,8 +176,13 @@ contains
     QQE  = I_QV+nbin*nspc
     QWS =  I_QV+1
     QWE =  I_QV+nbin
-    QIS =  (I_QV+nbin+1)*ICEFLG
-    QIE =  (I_QV+nbin*nspc)*ICEFLG
+    if( ICEFLG == 0 ) then
+      QIS =  0
+      QIE = -1
+    elseif( ICEFLG == 1 ) then
+      QIS =  (I_QV+nbin+1)*ICEFLG
+      QIE =  (I_QV+nbin*nspc)*ICEFLG
+    endif
 
     allocate( AQ_NAME(QA) )
     allocate( AQ_DESC(QA) )
