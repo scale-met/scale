@@ -46,7 +46,7 @@ $(BUILD_DIR)/mod_intepolation.o: grid/mod_intepolation.F90 $(BUILD_DIR)/mod_cons
 $(BUILD_DIR)/mod_landuse.o: grid/mod_landuse.F90 $(BUILD_DIR)/mod_comm.o $(BUILD_DIR)/mod_fileio.o $(BUILD_DIR)/mod_grid_index.o $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_prof.o $(BUILD_DIR)/mod_stdio.o
 $(BUILD_DIR)/mod_mapproj.o: grid/mod_mapproj.F90 $(BUILD_DIR)/mod_const.o $(BUILD_DIR)/mod_grid_index.o $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_prof.o $(BUILD_DIR)/mod_stdio.o
 $(BUILD_DIR)/mod_monitor.o: io/mod_monitor.F90 $(BUILD_DIR)/mod_grid_index.o $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_prof.o $(BUILD_DIR)/mod_stats.o $(BUILD_DIR)/mod_stdio.o $(BUILD_DIR)/mod_time.o
-$(BUILD_DIR)/mod_precision.o: grid/mod_precision.F90
+$(BUILD_DIR)/mod_precision.o: common/mod_precision.F90
 $(BUILD_DIR)/mod_process.o: common/mod_process.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_stdio.o
 $(BUILD_DIR)/mod_prof.o: common/mod_prof.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_stdio.o
 $(BUILD_DIR)/mod_random.o: common/mod_random.F90 $(BUILD_DIR)/mod_precision.o $(BUILD_DIR)/mod_process.o $(BUILD_DIR)/mod_stdio.o
