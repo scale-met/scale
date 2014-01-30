@@ -181,17 +181,9 @@ contains
        sw_phy_ae => ATMOS_sw_phy_ae, &
        ATMOS_vars_history
     use mod_atmos_vars_sf, only: &
-       PREC,       &
-       SWD,        &
-       LWD,        &
-       SFLX_MOMX,  &
-       SFLX_MOMY,  &
-       SFLX_MOMZ,  &
-       SFLX_SWU,   &
-       SFLX_LWU,   &
-       SFLX_SH,    &
-       SFLX_LH,    &
-       SFLX_QVAtm
+       PREC, &
+       SWD,  &
+       LWD
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN => ATMOS_DYN_driver
     use mod_atmos_phy_sf_driver, only: &
@@ -209,8 +201,7 @@ contains
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
     use mod_cpl_vars, only: &
-       CPL_putAtm,     &
-       CPL_getCPL2Atm, &
+       CPL_putAtm, &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
@@ -218,13 +209,6 @@ contains
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
-    endif
-
-    !########## from Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_getCPL2Atm( &
-          SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, SFLX_SWU, SFLX_LWU, &
-          SFLX_SH, SFLX_LH, SFLX_QVAtm                         )
     endif
 
     !########## Surface Flux ##########

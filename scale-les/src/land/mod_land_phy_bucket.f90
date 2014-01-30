@@ -41,6 +41,9 @@ module mod_land_phy_bucket
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), allocatable :: SFLX_GH  (:,:)
+  real(RP), allocatable :: SFLX_PREC(:,:)
+  real(RP), allocatable :: SFLX_QV  (:,:)
 
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
@@ -65,6 +68,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BUCKET]/Categ[LAND]'
+
+    allocate( SFLX_GH  (IA,JA) )
+    allocate( SFLX_PREC(IA,JA) )
+    allocate( SFLX_QV  (IA,JA) )
 
     if ( LAND_TYPE_PHY /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE_PHY is not BUCKET. Check!'
@@ -95,9 +102,6 @@ contains
     use mod_time, only: &
        dt => TIME_DTSEC_LAND
     use mod_land_vars, only: &
-       SFLX_GH,    &
-       SFLX_PREC,  &
-       SFLX_QVLnd, &
        TG,         &
        QvEfc,      &
        ROFF,       &
@@ -107,6 +111,9 @@ contains
        I_HCS,      &
        I_DZg,      &
        P => LAND_PROPERTY
+    use mod_cpl_vars, only: &
+       CPL_getCPL2Lnd, &
+       sw_AtmLnd => CPL_sw_AtmLnd
 
     implicit none
 
@@ -115,11 +122,18 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
 
+    !########## from Coupler ##########
+    if ( sw_AtmLnd ) then
+       call CPL_getCPL2Lnd( SFLX_GH  (:,:), & ! [OUT]
+                            SFLX_PREC(:,:), & ! [OUT]
+                            SFLX_QV  (:,:)  ) ! [OUT]
+    endif
+
     do j = JS, JE
     do i = IS, IE
 
       ! update water storage
-      STRG(i,j) = STRG(i,j) + ( SFLX_PREC(i,j) + SFLX_QVLnd(i,j) ) * dt
+      STRG(i,j) = STRG(i,j) + ( SFLX_PREC(i,j) + SFLX_QV(i,j) ) * dt
 
       if ( STRG(i,j) > P(i,j,I_STRGMAX) ) then
          ROFF(i,j) = ROFF(i,j) + STRG(i,j) - P(i,j,I_STRGMAX)

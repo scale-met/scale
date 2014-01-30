@@ -68,9 +68,6 @@ contains
   subroutine LAND_step
     use mod_land_vars, only: &
        sw_phy => LAND_sw_phy, &
-       SFLX_GH,            &
-       SFLX_PREC,          &
-       SFLX_QVLnd,         &
        TG,                 &
        QvEfc,              &
        I_EMIT,             &
@@ -86,18 +83,10 @@ contains
     use mod_land_phy_bucket, only: &
        LAND_PHY
     use mod_cpl_vars, only: &
-       CPL_putLnd,      &
-       CPL_getCPL2Lnd,  &
+       CPL_putLnd, &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
-
-    !########## from Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_getCPL2Lnd( SFLX_GH   (:,:), & ! [OUT]
-                            SFLX_PREC (:,:), & ! [OUT]
-                            SFLX_QVLnd(:,:)  ) ! [OUT]
-    endif
 
     !########## Physics ##########
     call PROF_rapstart('LND Physics')
