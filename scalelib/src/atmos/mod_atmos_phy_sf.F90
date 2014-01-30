@@ -71,7 +71,8 @@ module mod_atmos_phy_sf
        real(DP), intent(in)  :: ctime
      end subroutine sf
   end interface
-  procedure(sf), pointer, public :: ATMOS_PHY_SF => NULL()
+  procedure(sf), pointer :: ATMOS_PHY_SF => NULL()
+  public :: ATMOS_PHY_SF
 
 contains
 

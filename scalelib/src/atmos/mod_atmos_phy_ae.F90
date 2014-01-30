@@ -46,8 +46,10 @@ module mod_atmos_phy_ae
        real(RP), intent(in)  :: RH  (KA,IA,JA)       ! relative humidity         [0-1]
      end subroutine er
   end interface
-  procedure(ae), public, pointer :: ATMOS_PHY_AE => NULL()
-  procedure(er), public, pointer :: ATMOS_PHY_AE_EffectiveRadius => NULL()
+  procedure(ae), pointer :: ATMOS_PHY_AE => NULL()
+  procedure(er), pointer :: ATMOS_PHY_AE_EffectiveRadius => NULL()
+  public :: ATMOS_PHY_AE
+  public :: ATMOS_PHY_AE_EffectiveRadius
 
   real(RP), public, pointer :: AE_DENS(:) ! aerosol density [kg/m3]=[g/L]
 

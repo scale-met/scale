@@ -74,7 +74,8 @@ module mod_atmos_phy_rd
        integer , intent(in)  :: TIME_NOWDATE(6)
      end subroutine rd
   end interface
-  procedure(rd), pointer, public :: ATMOS_PHY_RD => NULL()
+  procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
+  public :: ATMOS_PHY_RD
 
   !-----------------------------------------------------------------------------
 contains
