@@ -183,7 +183,7 @@ program scaleles
   call OCEAN_setup
 
   ! setup coupler
-!  call CPL_setup
+  call CPL_setup
 
   ! setup user-defined procedure
   call USER_setup
@@ -215,7 +215,7 @@ program scaleles
     if ( TIME_DOATMOS_step ) call ATMOS_step
     if ( TIME_DOLAND_step  ) call LAND_step
     if ( TIME_DOOCEAN_step ) call OCEAN_step
-!    if ( TIME_DOCPL_calc   ) call CPL_calc
+    if ( TIME_DOCPL_calc   ) call CPL_calc
 
     ! time advance
     call TIME_advance
@@ -228,7 +228,7 @@ program scaleles
     if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
     if ( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
     if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-!    if ( CPL_sw_restart   .AND. TIME_DOCPL_restart   ) call CPL_vars_restart_write
+    if ( CPL_sw_restart   .AND. TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit
 
