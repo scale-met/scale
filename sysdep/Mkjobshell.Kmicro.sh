@@ -9,7 +9,17 @@ RUNCONF=${5}
 TPROC=${6}
 
 # System specific
-MPIEXEC="mpirun -np ${TPROC}"
+MPIEXEC="mpiexec"
+
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]:-1}
+let xy="${x} * ${y}"
+
+if [ ${xy} -gt 1024 ]; then
+   echo "Node usage is less than 1024. STOP"
+   exit
+fi
 
 # Generate run.sh
 
@@ -17,11 +27,20 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Linux64 & gnu C&fortran & openmpi -----
+# for K computer
 #
 ################################################################################
-export FORT_FMT_RECL=400
-
+#PJM --rsc-list "rscgrp=micro"
+#PJM --rsc-list "node=${TPROC}"
+#PJM --rsc-list "elapse=00:25:00"
+#PJM -j
+#PJM -s
+#
+. /work/system/Env_base
+#
+export PARALLEL=8
+export OMP_NUM_THREADS=8
+#export fu08bf=1
 
 # run
 ${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit

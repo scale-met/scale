@@ -9,7 +9,7 @@ RUNCONF=${5}
 TPROC=${6}
 
 # System specific
-MPIEXEC="openmpirun -np ${TPROC}"
+MPIEXEC="mpiexec -np ${TPROC}"
 
 # Generate run.sh
 
@@ -24,8 +24,8 @@ export FORT_FMT_RECL=400
 export GFORTRAN_UNBUFFERED_ALL=Y
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

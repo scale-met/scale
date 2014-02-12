@@ -10,7 +10,7 @@ FFLAGS_FAST = -fpp3 -O3 -xHost -ip                 \
               -mcmodel=medium -shared-intel        \
               -heap-arrays -fno-alias
 
-FFLAGS_DEBUG = -fpp3 -O0 -
+FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -assume byterecl -convert big_endian \
                -fp-model precise -pc 80             \
                -check all -warn all -g -traceback   \
@@ -51,6 +51,8 @@ LDFLAGS = $(FFLAGS)
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### Lapack
 LAPACK_LIBS    ?= -mkl=sequential
 
 ##### for frontend
