@@ -10,38 +10,45 @@ srcdir = ARGV.shift || usage
 deps = Hash.new
 pros = Hash.new
 
-dirs = Dir[ File.join(srcdir, "*") ]
 
-suffix = ".F90"
+SUFFIX = ".F90"
 
-dirs.each do |dir|
-  next unless File.directory?(dir)
-  files = Dir[ File.join(dir, "*#{suffix}") ]
-  files.each do |file|
-    basename = File.basename(file, suffix)
-    dep = {
-      :dir => File.basename(dir),
-      :depends => Array.new
-    }
-    pro = {
-      :dir => File.basename(dir),
-      :file => basename
-    }
-    deps[basename] = dep
-    File.foreach(file) do |line|
-      case line
-      when /^\s*module (\w+)/
-        mod = $1
-        next if /procedure/ =~ mod
-        pros[mod] = pro
-      when /^\s*use (\w+)/
-        mod = $1
-        next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
-        dep[:depends].push(mod) unless dep[:depends].include?(mod)
+def parse(deps, pros, srcdir, dir="")
+  dirs = Dir[ File.join(srcdir, dir, "*") ]
+  dirs.each do |fdir|
+    dir = fdir.sub(/#{srcdir}\//,"")
+    next if /\A\./ =~ dir
+    parse(deps, pros, srcdir, dir)
+    files = Dir[ File.join(fdir, "*#{SUFFIX}") ]
+    files.each do |file|
+      basename = File.basename(file, SUFFIX)
+      dep = {
+        :dir => dir,
+        :depends => Array.new
+      }
+      pro = {
+        :dir => dir,
+        :file => basename
+      }
+      deps[basename] = dep
+      File.foreach(file) do |line|
+        case line
+        when /^\s*module (\w+)/
+          mod = $1
+          next if /procedure/ =~ mod
+          pros[mod] = pro
+        when /^\s*use (\w+)/
+          mod = $1
+#          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|NAME)/ =~ mod
+          dep[:depends].push(mod) unless dep[:depends].include?(mod)
+        end
       end
     end
   end
 end
+
+parse(deps, pros, srcdir)
 
 File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
