@@ -61,10 +61,10 @@ makescalelib:
 
 makebin: $(PRJS)
 
-$(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(INITNAME).o: $(INITNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
