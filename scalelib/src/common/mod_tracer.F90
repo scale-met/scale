@@ -228,37 +228,6 @@ contains
     I_AE2ALL_sn13 => I_AE2ALL, &
     I_AE2RD_sn13 => I_AE2RD, &
     TRACER_sn13_setup
-  use mod_tracer_sn13w, only: &
-    QA_sn13w => QA, &
-    I_QV_sn13w => I_QV, &
-    I_QC_sn13w => I_QC, &
-    I_QR_sn13w => I_QR, &
-    I_QI_sn13w => I_QI, &
-    I_QS_sn13w => I_QS, &
-    I_QG_sn13w => I_QG, &
-    I_NC_sn13w => I_NC, &
-    I_NR_sn13w => I_NR, &
-    I_NI_sn13w => I_NI, &
-    I_NS_sn13w => I_NS, &
-    I_NG_sn13w => I_NG, &
-    QQA_sn13w => QQA, &
-    QQS_sn13w => QQS, &
-    QQE_sn13w => QQE, &
-    QWS_sn13w => QWS, &
-    QWE_sn13w => QWE, &
-    QIS_sn13w => QIS, &
-    QIE_sn13w => QIE, &
-    MP_QA_sn13w => MP_QA, &
-    AE_QA_sn13w => AE_QA, &
-    I_ae_dummy_sn13w => I_ae_dummy, &
-    AQ_NAME_sn13w => AQ_NAME, &
-    AQ_DESC_sn13w => AQ_DESC, &
-    AQ_UNIT_sn13w => AQ_UNIT, &
-    I_MP2ALL_sn13w => I_MP2ALL, &
-    I_MP2RD_sn13w => I_MP2RD, &
-    I_AE2ALL_sn13w => I_AE2ALL, &
-    I_AE2RD_sn13w => I_AE2RD, &
-    TRACER_sn13w_setup
   use mod_tracer_suzuki10, only: &
     QA_suzuki10 => QA, &
     I_QV_suzuki10 => I_QV, &
@@ -470,44 +439,6 @@ contains
        I_MP2RD = I_MP2RD_sn13
        I_AE2ALL = I_AE2ALL_sn13
        I_AE2RD = I_AE2RD_sn13
-    case ("SN13W")
-       call TRACER_sn13w_setup
-       QA = QA_sn13w
-       I_QV = I_QV_sn13w
-       I_QC = I_QC_sn13w
-       I_QR = I_QR_sn13w
-       I_QI = I_QI_sn13w
-       I_QS = I_QS_sn13w
-       I_QG = I_QG_sn13w
-       I_NC = I_NC_sn13w
-       I_NR = I_NR_sn13w
-       I_NI = I_NI_sn13w
-       I_NS = I_NS_sn13w
-       I_NG = I_NG_sn13w
-       QQA = QQA_sn13w
-       QQS = QQS_sn13w
-       QQE = QQE_sn13w
-       QWS = QWS_sn13w
-       QWE = QWE_sn13w
-       QIS = QIS_sn13w
-       QIE = QIE_sn13w
-       MP_QA = MP_QA_sn13w
-       AE_QA = AE_QA_sn13w
-       I_ae_dummy = I_ae_dummy_sn13w
-       allocate( AQ_NAME(QA) )
-       allocate( AQ_DESC(QA) )
-       allocate( AQ_UNIT(QA) )
-       allocate( I_MP2ALL(MP_QA) )
-       allocate( I_MP2RD(MP_QA) )
-       allocate( I_AE2ALL(AE_QA) )
-       allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_sn13w
-       AQ_DESC = AQ_DESC_sn13w
-       AQ_UNIT = AQ_UNIT_sn13w
-       I_MP2ALL = I_MP2ALL_sn13w
-       I_MP2RD = I_MP2RD_sn13w
-       I_AE2ALL = I_AE2ALL_sn13w
-       I_AE2RD = I_AE2RD_sn13w
     case ("SUZUKI10")
        call TRACER_suzuki10_setup
        QA = QA_suzuki10

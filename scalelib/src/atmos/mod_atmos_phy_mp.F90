@@ -92,14 +92,10 @@ module mod_atmos_phy_mp
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
      end subroutine mr
   end interface
-  procedure(mp), pointer :: ATMOS_PHY_MP => NULL()
-  procedure(cf), pointer :: ATMOS_PHY_MP_CloudFraction => NULL()
-  procedure(er), pointer :: ATMOS_PHY_MP_EffectiveRadius => NULL()
-  procedure(mr), pointer :: ATMOS_PHY_MP_MixingRatio => NULL()
-  public :: ATMOS_PHY_MP
-  public :: ATMOS_PHY_MP_CloudFraction
-  public :: ATMOS_PHY_MP_EffectiveRadius
-  public :: ATMOS_PHY_MP_MixingRatio
+  procedure(mp), pointer, public :: ATMOS_PHY_MP => NULL()
+  procedure(cf), pointer, public :: ATMOS_PHY_MP_CloudFraction => NULL()
+  procedure(er), pointer, public :: ATMOS_PHY_MP_EffectiveRadius => NULL()
+  procedure(mr), pointer, public :: ATMOS_PHY_MP_MixingRatio => NULL()
 
   real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
 
@@ -150,13 +146,6 @@ contains
        ATMOS_PHY_MP_sn13_EffectiveRadius, &
        ATMOS_PHY_MP_sn13_MixingRatio, &
        ATMOS_PHY_MP_sn13_DENS => ATMOS_PHY_MP_DENS
-    use mod_atmos_phy_mp_sn13w, only: &
-       ATMOS_PHY_MP_sn13w_setup, &
-       ATMOS_PHY_MP_sn13w, &
-       ATMOS_PHY_MP_sn13w_CloudFraction, &
-       ATMOS_PHY_MP_sn13w_EffectiveRadius, &
-       ATMOS_PHY_MP_sn13w_MixingRatio, &
-       ATMOS_PHY_MP_sn13w_DENS => ATMOS_PHY_MP_DENS
     use mod_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_setup, &
        ATMOS_PHY_MP_suzuki10, &
@@ -199,13 +188,6 @@ contains
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13_DENS
-    case ( 'SN13W' )
-       call ATMOS_PHY_MP_sn13w_setup( MP_TYPE )
-       ATMOS_PHY_MP => ATMOS_PHY_MP_sn13w
-       ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn13w_CloudFraction
-       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13w_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13w_MixingRatio
-       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13w_DENS
     case ( 'SUZUKI10' )
        call ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_suzuki10

@@ -47,7 +47,6 @@ OBJS =	\
 	mod_tracer_kessler.o	\
 	mod_tracer_tomita08.o	\
 	mod_tracer_sn13.o	\
-	mod_tracer_sn13w.o	\
 	mod_tracer_suzuki10.o	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
@@ -84,7 +83,6 @@ OBJS =	\
 	mod_atmos_phy_mp_kessler.o	\
 	mod_atmos_phy_mp_tomita08.o	\
 	mod_atmos_phy_mp_sn13.o	\
-	mod_atmos_phy_mp_sn13w.o	\
 	mod_atmos_phy_mp_suzuki10.o	\
 	mod_atmos_phy_mp.o	\
 	mod_atmos_phy_rd_common.o	\
