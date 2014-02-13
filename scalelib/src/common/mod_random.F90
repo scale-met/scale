@@ -41,21 +41,39 @@ module mod_random
   !
   !++ Private parameters & variables
   !
+  logical, private :: RANDOM_FIX = .false.
+
   integer, private, allocatable :: RANDOM_seedvar(:)
-  integer, private              :: RANDOM_count
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine RANDOM_setup
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
-    integer :: nseeds
+    namelist / PARAM_RANDOM / &
+       RANDOM_FIX
+
+    integer :: nseeds, ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RANDOM]/Categ[COMMON]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_RANDOM,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)
@@ -63,8 +81,9 @@ contains
     allocate( RANDOM_seedvar(nseeds))
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Array size for random seed:', nseeds
-
-    RANDOM_count = 0
+    if ( RANDOM_FIX ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** random seed is fixed.'
+    endif
 
     return
   end subroutine RANDOM_setup
@@ -80,9 +99,20 @@ contains
     real(RP) :: time2
     !---------------------------------------------------------------------------
 
-    call date_and_time(values=time1)
-    call cpu_time(time2)
-    RANDOM_count = RANDOM_count + 1
+    if ( RANDOM_FIX ) then
+       time1(1) = 2011
+       time1(2) = 12
+       time1(3) = 5
+       time1(4) = 10
+       time1(5) = 20
+       time1(6) = 41 ! birthday of SCALE-LES
+       time2    = 0.0_RP
+    else
+       call date_and_time(values=time1)
+       call cpu_time(time2)
+    endif
+    if( IO_L ) write(IO_FID_LOG,*) '*** time1:', time1
+    if( IO_L ) write(IO_FID_LOG,*) '*** time2:', time2
 
     RANDOM_seedvar(:) = &
          + ( time1(1) - 1970 ) * 32140800 &
