@@ -112,7 +112,8 @@ module mod_atmos_dyn_rk
        real(RP), intent(in)  :: dtrk
      end subroutine rk
   end interface
-  procedure(rk), pointer, public :: ATMOS_DYN_rk => NULL()
+  procedure(rk), pointer :: ATMOS_DYN_rk => NULL()
+  public :: ATMOS_DYN_rk
 
 
   !-----------------------------------------------------------------------------

@@ -13,7 +13,7 @@ FFLAGS_FAST = -fpp3 -O3 -xHost -ip                 \
 FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -assume byterecl -convert big_endian \
                -fp-model precise -pc 80             \
-               -fpe0 -check all -CB -CU -C -warn all -g -traceback   \
+               -fpe0 -check all -CB -CU -C -warn all -g -traceback \
                -mcmodel=medium -shared-intel        \
                -heap-arrays -fno-alias              \
                -DDEBUG

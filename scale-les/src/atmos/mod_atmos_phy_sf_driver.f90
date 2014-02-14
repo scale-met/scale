@@ -50,6 +50,10 @@ module mod_atmos_phy_sf_driver
   real(RP), allocatable :: SFLX_MOMX(:,:)
   real(RP), allocatable :: SFLX_MOMY(:,:)
   real(RP), allocatable :: SFLX_POTT(:,:)
+  real(RP), allocatable :: SFLX_SWU (:,:)
+  real(RP), allocatable :: SFLX_LWU (:,:)
+  real(RP), allocatable :: SFLX_SH  (:,:)
+  real(RP), allocatable :: SFLX_LH  (:,:)
   real(RP), allocatable :: SFLX_QV  (:,:)
 
 contains
@@ -76,8 +80,11 @@ contains
     allocate( SFLX_MOMX(IA,JA) )
     allocate( SFLX_MOMY(IA,JA) )
     allocate( SFLX_POTT(IA,JA) )
+    allocate( SFLX_SWU (IA,JA) )
+    allocate( SFLX_LWU (IA,JA) )
+    allocate( SFLX_SH  (IA,JA) )
+    allocate( SFLX_LH  (IA,JA) )
     allocate( SFLX_QV  (IA,JA) )
-
 
     ! tentative process
     ! finally, surface processes will be located under the coupler.
@@ -186,8 +193,7 @@ contains
 
   subroutine ATMOS_PHY_SF_CPL
     use mod_const, only: &
-       CPdry  => CONST_CPdry,  &
-       LH0    => CONST_LH0
+       CPdry  => CONST_CPdry
     use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
@@ -200,35 +206,39 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
-    use mod_atmos_vars_sf, only: &
-!       SFLX_MOMZ, &
-!       SFLX_MOMX, &
-!       SFLX_MOMY, &
-!       SFLX_SH,   &
-!       SFLX_LH,   &
-       SFLX_QVAtm
+    use mod_cpl_vars, only: &
+       CPL_getCPL2Atm, &
+       sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
 
     integer :: i, j
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
+    !########## from Coupler ##########
+    if ( sw_AtmLnd ) then
+       call CPL_getCPL2Atm( &
+          SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, &
+          SFLX_SWU, SFLX_LWU,              &
+          SFLX_SH, SFLX_LH, SFLX_QV        )
+    endif
+
     do j = JS, JE
     do i = IS, IE
-!       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
-!            + ( SFLX_SH(i,j)/CPdry &
-!              + SFLX_QVAtm(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
-!              ) * RCDZ(KS)
-!       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
-!            + SFLX_QVAtm(i,j)  * RCDZ(KS)
-!       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
-!            + SFLX_MOMZ(i,j)   * RFDZ(KS)
-!       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
-!            + SFLX_MOMX(i,j)   * RCDZ(KS)
-!       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
-!            + SFLX_MOMY(i,j)   * RCDZ(KS)
-!       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
-!            + SFLX_QVAtm(i,j)  * RCDZ(KS)
+       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+            + ( SFLX_SH(i,j)/CPdry &
+              + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+              ) * RCDZ(KS)
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+            + SFLX_QV(i,j) * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+            + SFLX_MOMZ(i,j) * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+            + SFLX_MOMX(i,j) * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+            + SFLX_MOMY(i,j) * RCDZ(KS)
+       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+            + SFLX_QV(i,j) * RCDZ(KS)
     enddo
     enddo
 

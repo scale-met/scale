@@ -45,11 +45,6 @@ module mod_land_vars
   logical,                public, save :: LAND_sw_phy           !< do land physics update?
   logical,                public, save :: LAND_sw_restart       !< output restart?
 
-  ! land-atmosphere flux
-  real(RP), public, allocatable :: SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
-  real(RP), public, allocatable :: SFLX_QVLnd(:,:) ! moisture flux [kg/m2/s]
-
   ! prognostic varia
   real(RP), public, allocatable :: TG   (:,:)      ! soil temperature [K]
   real(RP), public, allocatable :: QvEfc(:,:)      ! efficiency of evaporation [0-1]
@@ -145,10 +140,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
 
-    allocate( SFLX_GH   (IA,JA) )
-    allocate( SFLX_PREC (IA,JA) )
-    allocate( SFLX_QVLnd(IA,JA) )
-
     allocate( TG   (IA,JA) )
     allocate( QvEfc(IA,JA) )
     allocate( ROFF (IA,JA) )
@@ -156,7 +147,6 @@ contains
 
     allocate( LAND_Type    (IA,JA) )
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
-
 
     !--- read namelist
     rewind(IO_FID_CONF)

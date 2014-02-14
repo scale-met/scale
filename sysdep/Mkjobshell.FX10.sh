@@ -56,16 +56,13 @@ cat << EOF1 > ./run.sh
 #
 . /work/system/Env_base
 #
-export PARALLEL=8
-export OMP_NUM_THREADS=8
-export fu08bf=1
-
-ln -sv ${BINDIR}/${INITNAME} .
-ln -sv ${BINDIR}/${BINNAME}  .
+export PARALLEL=16
+export OMP_NUM_THREADS=16
+#export fu08bf=1
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

@@ -24,8 +24,8 @@ export FORT_FMT_RECL=400
 
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF1

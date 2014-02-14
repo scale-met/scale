@@ -22,7 +22,7 @@ SDM =
 # with SDM
 #SDM = -D_SDM
 
-FC     = openmpif90
+FC     = mpif90
 #FFLAGS = $(FFLAGS_FAST) $(SDM)
 FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
@@ -30,7 +30,7 @@ FFLAGS_DYN = $(FFLAGS)
 
 MODDIROPT ?= -J
 
-CC     = openmpicc
+CC     = mpicc
 CFLAGS = -O3 -m64 -g
 
 LD      = $(FC)

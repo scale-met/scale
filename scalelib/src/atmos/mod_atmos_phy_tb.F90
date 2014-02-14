@@ -71,7 +71,8 @@ module mod_atmos_phy_tb
        real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
      end subroutine tb
   end interface
-  procedure(tb), pointer, public :: ATMOS_PHY_TB => NULL()
+  procedure(tb), pointer :: ATMOS_PHY_TB => NULL()
+  public :: ATMOS_PHY_TB
 
   !-----------------------------------------------------------------------------
 contains

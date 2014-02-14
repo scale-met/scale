@@ -47,15 +47,6 @@ module mod_atmos_vars_sf
   real(RP), public, allocatable :: SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
   real(RP), public, allocatable :: LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
 
-  real(RP), public, allocatable :: SFLX_MOMZ (:,:) ! momentum z [kg/s/m2]
-  real(RP), public, allocatable :: SFLX_MOMX (:,:) ! momentum x [kg/s/m2]
-  real(RP), public, allocatable :: SFLX_MOMY (:,:) ! momentum y [kg/s/m2]
-  real(RP), public, allocatable :: SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -95,15 +86,6 @@ contains
     allocate( SWD (IA,JA) )
     allocate( LWD (IA,JA) )
 
-    allocate( SFLX_MOMZ (IA,JA) )
-    allocate( SFLX_MOMX (IA,JA) )
-    allocate( SFLX_MOMY (IA,JA) )
-    allocate( SFLX_SWU  (IA,JA) )
-    allocate( SFLX_LWU  (IA,JA) )
-    allocate( SFLX_SH   (IA,JA) )
-    allocate( SFLX_LH   (IA,JA) )
-    allocate( SFLX_QVAtm(IA,JA) )
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_SF_VARS,iostat=ierr)
@@ -119,15 +101,6 @@ contains
     PREC(:,:) = 0.0_RP
     SWD (:,:) = 0.0_RP
     LWD (:,:) = 0.0_RP
-
-    SFLX_MOMZ (:,:) = 0.0_RP
-    SFLX_MOMX (:,:) = 0.0_RP
-    SFLX_MOMY (:,:) = 0.0_RP
-    SFLX_SWU  (:,:) = 0.0_RP
-    SFLX_LWU  (:,:) = 0.0_RP
-    SFLX_SH   (:,:) = 0.0_RP
-    SFLX_LH   (:,:) = 0.0_RP
-    SFLX_QVAtm(:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_vars_sf_setup

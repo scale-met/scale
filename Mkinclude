@@ -1,5 +1,5 @@
 ifeq ($(origin BINDIR), undefined)
-	BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
+   BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
 endif
 
 ifeq ($(origin LIBDIR), undefined)
@@ -9,6 +9,9 @@ endif
 ifeq ($(origin MODDIR), undefined)
    MODDIR = $(TOPDIR)/include
 endif
+
+INITNAME    = scale-les_init
+BINNAME     = scale-les
 
 SYSDEP_DIR  = $(TOPDIR)/sysdep
 

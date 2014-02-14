@@ -51,6 +51,9 @@ LFLAGS = $(FFLAGS)
 NETCDF_INCLUDE ?= -I$(NETCDF3)/include
 NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
 
+###### Lapack
+LAPACK_LIBS    ?= -lacml
+
 ##### for frontend
 INSTALL = install
 AR      = ar

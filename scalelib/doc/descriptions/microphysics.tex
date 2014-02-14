@@ -1,5 +1,5 @@
 %\section{Surface flux}
-{\bf \Large 
+{\bf \Large
 \begin{tabular}{ccc}
 \hline
   Corresponding author & : & Yousuke Sato\\
@@ -10,7 +10,7 @@
  The SCALE-LES has three types of cloud microphysics models. We will show description of these models below.
 
 \subsection{Kessler Parameterization}
-An one-moment bulk microphysical scheme, which treats only warm cloud (cloud and rain), is implemented in SCALE3. This scehem predicts mixing ratio of cloud ($Q_{cloud}$) and rain ($Q_{rain}$). Cloud microphysical processes treated in this scheme is saturation adjustment (corresponding to nucleatioin, evaporation, and condensation of cloud), evaporation, auto-conversion, accretion, and sedimentation. The tendency of $Q_{cloud}$, $Q_{rain}$, and $Q_{v}$ (vapor mixing ratio) is given as
+An one-moment bulk microphysical scheme, which treats only warm cloud (cloud and rain), is implemented in SCALE. This scehem predicts mixing ratio of cloud ($Q_{cloud}$) and rain ($Q_{rain}$). Cloud microphysical processes treated in this scheme is saturation adjustment (corresponding to nucleatioin, evaporation, and condensation of cloud), evaporation, auto-conversion, accretion, and sedimentation. The tendency of $Q_{cloud}$, $Q_{rain}$, and $Q_{v}$ (vapor mixing ratio) is given as
 
 \begin{eqnarray}
 \frac{\partial Q_{cloud}}{\partial t}&=&dQ|_{sat}-dQ|_{auto}-dQ|_{acc}\\
@@ -46,7 +46,7 @@ Terminal velocity of cloud ($V_{t,c}$) and rain ($V_{t,r}$) is given as
 \begin{eqnarray}
 V_{t,c}&=&0\\
 V_{t,r}&=&36.34(\rho Q_{rain})^{0.1364} [m/s]
-\end{eqnarray} 
+\end{eqnarray}
 
 
 
@@ -61,7 +61,7 @@ The time evolution of SDF (number density) of aerosol ($f_{a}(m,t)$) and SDF (nu
 \begin{eqnarray}
 \frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}&=&Adv\bigl[f^{(\mu)}_{c}(m,t)\bigr]+Grav\bigl[f^{(\mu)}_{c}(m,t)\bigr]+\Bigl[ \frac{\partial f^{(\mu)}_{c}(m,t)}{\partial t}\Bigr ]_{cloud\;microphysics}\\
 \frac{\partial f_{a}(m_{a},t)}{\partial t}&=&Adv\bigl[f_{a}(m_{a},t)\bigr]+Grav\bigl[f_{a}(m_{a},t)\bigr]+\Bigl[ \frac{\partial f_{a}(m_{a},t)}{\partial t} \Bigr ]_{cloud\;microphysics}.
-\end{eqnarray} 
+\end{eqnarray}
 
 where $\mu$ shows type of hydrometeor (the 7 types), $Adv[]$, $Grav[])$ shows change of SDF by the advection and the gravitational falling. $\Bigl[ \Bigr]_{cloud\;microphycis}$ shows changes of SDF by the cloud microphysical processes.\\
 The time evolution of $f_{c}^{(\mu)}(m,t)$ and $f_{a}(m,t)$ are shown as:
@@ -79,7 +79,7 @@ where $\Bigl[\;\Bigr]_{***}$ show change of SDF by each cloud growth processes. 
 
 \subsubsection{Discretization of Size Distribution Function(SDF)}
 The SDF of aerosol and cloud is predict as mass density of each particle size ($g_{a}(m_{a})$, $g_{c}^{(\mu)}(m)$). However most of equations are given as equations of number density of cloud/aerosol ($f_{c}^{(\mu)}(m,t)$, $f_{a}(m_{a},t)$), the mass density of cloud/aerosol are transferred to number density of cloud/aerosol ($g_{a}(m_{a},t)=m_{a}g_{a}(m_{a},t)$, $g_{c}^{(\mu)}(m,t)=m^{(\mu)}f_{c}^{(\mu)}(m,t)$).\\
-To cover wide size range (i.e. $2\;\mu m$ $\sim$ $3\;mm$), logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied. 
+To cover wide size range (i.e. $2\;\mu m$ $\sim$ $3\;mm$), logarithmically uniform grid system ($log(m)\equiv \eta$, $log(m_{a})\equiv \eta_{a}$) is used. In this system, the relationship, $\frac{m_{i+1}}{m_{i}}=const.$ is satisfied.
 
 \subsubsection{Activation from aerosol to cloud particles (Nucleation process)}
 The change of SDFs by activation from aerosol to cloud particles are calculated based on Kohler theory (Kohler 1936). Through this process, aerosols whose radii are larger than critical radius of aerosol ($r_{a,crit}$) are activated to clouds. The critical radius is given as
@@ -181,7 +181,7 @@ c^{n}_{i+1/2}&=&U^{n}_{i+1/2}\frac{\Delta t}{\Delta \eta}
 \end{eqnarray}
 
 Since the super saturation ($S^{(\mu)}$) can change during time step ($\Delta t$), we apply a method shown below to reflect the change of supersaturation during $\Delta t$.\\
-Time evolution of supersaturation can be given by equations: 
+Time evolution of supersaturation can be given by equations:
 
 \begin{eqnarray}
 \frac{d}{dt}\left(
@@ -240,17 +240,17 @@ where $K(m,m')$ is collection kernel function. Three types of the kernel functio
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')
 \end{eqnarray}
 
-where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are shown in Figure 4.1. $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\ 
+where $r(m)$ is radius of hydrometeros whose mass is $m$, and $V(m)$ is terminal velocity of hydrometeors. The terminal velocity of each species of hydrometeor and each size are shown in Figure 4.1. $E_{col}$, and $E_{coag}$ is collision effieiency and coagulation efficiansy, respectively.\\
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[scale=0.9]{./figure/terminal-velocity.eps}
 \end{center}
-\caption{Terminal velocity of Water (Plus), Plate-type ice (Cross), Columnar-type ice (Asterisk), Dendrite-type ice(Open square), Snow(Closed square), Graupel(Open circle), and Hail(Closed circle)} 
+\caption{Terminal velocity of Water (Plus), Plate-type ice (Cross), Columnar-type ice (Asterisk), Dendrite-type ice(Open square), Snow(Closed square), Graupel(Open circle), and Hail(Closed circle)}
 \end{figure}
 
 
-Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-LES3 predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation: 
+Although the stochastic collision equation can be apply for collision/coagulation of one type of hydrometeros (i.e. liquid water), the SCALE-LES3 predicts 7 types of hydrometeors, and interactions of these types hydrometeors (i.e. riming/aggregation) must be calculated. To calculate the interaction of all 7 types of hydrometeors, the extented stochastic collision equation:
 
 \begin{eqnarray}
 \Bigr[\frac{\partial f^{(\mu)}(m)}{\partial t}\Bigr]_{coll/coag/rim/agg}&=&\nonumber\\
@@ -276,8 +276,8 @@ H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{table}
 
 
-To solve the stochastic collision equation, a scheme developed by Bott (1998) was implemented into SCLAE-LES3.\\ 
-The Bott (1998) scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to 
+To solve the stochastic collision equation, a scheme developed by Bott (1998) was implemented into SCLAE-LES3.\\
+The Bott (1998) scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to
 
 \begin{eqnarray}
 \frac{\partial g(\eta)}{\partial t}&=&\int_{\eta_{0}}^{\eta_{1}}\frac{m^{2}}{(m-m')^{2} m'}g(\eta-\eta') K(\eta-\eta',\eta')g(\eta')d\eta' \nonumber\\
@@ -300,7 +300,7 @@ and
 respectively. The terms corresponds to the second term of right-hand side of eq.(???). The equation (???) and (???) can transfer to
 
 \begin{eqnarray}
-\Delta g_{i}^{(\mu)}=g_{i}^{(\mu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\nu)}_{j}}{m_{j}}\Delta \eta\Delta t\bigr) \Bigl]\\ 
+\Delta g_{i}^{(\mu)}=g_{i}^{(\mu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\nu)}_{j}}{m_{j}}\Delta \eta\Delta t\bigr) \Bigl]\\
 \Delta g_{j}^{(\nu)}=g_{j}^{(\nu)}\Bigl [1-\exp\bigl(-K_{\mu\nu}(i,j)\frac{g^{(\mu)}_{i}}{m_{i}}\Delta \eta\Delta t\bigr) \Bigl].
 \end{eqnarray}
 
@@ -325,7 +325,7 @@ The calculation of freezing process is based on a parameterization of Bigg (1953
 
 \begin{eqnarray}
 \frac{\partial}{\partial t}f^{(w)}(m)&=&-\frac{f^{(w)}(m)}{\tau_{fr}}\\
-\tau_{fr}&=&\frac{\exp \bigl[b_{fr}(T_{0}-T)\bigr]}{a_{fr} m}\nonumber 
+\tau_{fr}&=&\frac{\exp \bigl[b_{fr}(T_{0}-T)\bigr]}{a_{fr} m}\nonumber
 \end{eqnarray}
 
 where $a_{fr}=10^{-4}s^{-1}$, and $b_{fr}=0.66^{o}C^{-1}$ are emperical parameters, and $T_{0}$ is 273.15 $K$.\\
@@ -334,7 +334,7 @@ The equation (???) can transfer to
 \begin{eqnarray}
 \frac{\partial g^{(w)(m)}}{\partial t}&=&-\frac{g^{(w)}(m)}{\tau_{fr}(m)}\\
 \tau_{fr,i}&=&\frac{\exp\bigl (b_{fr}(T_{0}-T)\bigr )}{a_{fr}m}\nonumber
-\end{eqnarray} 
+\end{eqnarray}
 
 From this equation, The mass change of i-th bin during $\Delta t$ is given as
 
@@ -353,4 +353,4 @@ Frz_{i}=g_{i}^{(w)}(t)\Bigl [1-\exp\bigl (-\frac{\Delta t}{\tau_{fr,i}}\bigr )\b
 
 \subsubsection{Melting}
 The calculation of melting process is too simple way, that is, all ice particles (i.e. plate, columner, dendrite, snow, graupel and hail) melt immediately when the temperature is larger than $T_{0}=273.15$ $K$. This is too simply to represent ice phase process, and we will modify this method near future.
- 
+

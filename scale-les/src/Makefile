@@ -26,10 +26,7 @@ endif
 
 
 
-PRJ1 = scale-les
-PRJ2 = scale-les_init
-
-PRJS = $(PWD)/$(PRJ1) $(PWD)/$(PRJ2)
+PRJS = $(BINDIR)/$(INITNAME) $(BINDIR)/$(BINNAME)
 
 MODS =	\
 	mod_atmos_vars.o	\
@@ -69,21 +66,21 @@ makescalelib:
 makebin: $(PRJS)
 
 ifeq ($(SDM),-D_SDM)
-$(PWD)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 else
-$(PWD)/$(PRJ1): $(BUILD_DIR)/$(PRJ1).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(PWD)/$(PRJ2): $(BUILD_DIR)/$(PRJ2).o $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
 	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 endif
 
-$(BUILD_DIR)/$(PRJ1).o: $(PRJ1).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-$(BUILD_DIR)/$(PRJ2).o: $(PRJ2).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BUILD_DIR)/$(INITNAME).o: $(INITNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BUILD_DIR)/$(BINNAME).o:  $(BINNAME).f90  $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 $(BUILD_DIR)/mod_atmos.o					: mod_atmos.f90 mod_atmos_vars.o \
                                          mod_atmos_dyn_driver.o mod_atmos_phy_sf_driver.o mod_atmos_phy_tb_driver.o mod_atmos_phy_rd_driver.o mod_atmos_phy_ae_driver.o mod_cpl_vars.o

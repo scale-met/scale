@@ -47,8 +47,12 @@ endif
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
+###### NetCDF library
 NETCDF_INCLUDE ?= -I/SX/usr/include
 NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
+
+###### Lapack
+LAPACK_LIBS    ?=
 
 ##### for frontend
 INSTALL = install

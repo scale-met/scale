@@ -17,19 +17,17 @@ FFLAGS_DYN ?= $(FFLAGS)
 
 # C compiler
 CC     = mpiicc
-CFLAGS = -O3 -ftz -mmic -g -O3 -parallel -openmp 
+CFLAGS = -O3 -ftz -mmic -g -O3 -parallel -openmp
 
 # linker
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
-# for frontend
-
-# Libraries
-# Netcdf 4.2 is installed from source
+###### NetCDF library
 NETCDF_LIBS ?= -lnetcdf -lhdf5_hl -lhdf5 -lz -lcurl -ldl -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err -lidn -lssl -lcrypto -lz
 NETCDF_INCLUDE ?=
 
+##### for frontend
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib

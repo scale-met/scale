@@ -534,7 +534,10 @@ contains
     real(RP) :: qv_mp    (KA,IA,JA)      !-- Qv [kg/kg]
     real(RP) :: wfall( KA )
 
-    real(RP) :: ssliq, ssice, sum1, rtotal, sum2
+    real(RP) :: ssliq(KA,IA,JA)
+    real(RP) :: ssice(KA,IA,JA)
+    real(RP) :: sum1(KA,IA,JA)
+    real(RP) :: sum2
     integer :: m, n, k, i, j, iq, countbin
     logical, save :: ofirst_sdfa = .true.
 
@@ -682,15 +685,15 @@ call START_COLLECTION("MICROPHYSICS")
     do j = JS, JE
     do i = IS, IE
 
-      call pres2qsat_liq( ssliq,temp_mp(k,i,j),pres_mp(k,i,j) )
-      call pres2qsat_ice( ssice,temp_mp(k,i,j),pres_mp(k,i,j) )
-      ssliq = qv_mp(k,i,j)/ssliq-1.0_RP
-      ssice = qv_mp(k,i,j)/ssice-1.0_RP
+      call pres2qsat_liq( ssliq(k,i,j),temp_mp(k,i,j),pres_mp(k,i,j) )
+      call pres2qsat_ice( ssice(k,i,j),temp_mp(k,i,j),pres_mp(k,i,j) )
+      ssliq(k,i,j) = qv_mp(k,i,j)/ssliq(k,i,j)-1.0_RP
+      ssice(k,i,j) = qv_mp(k,i,j)/ssice(k,i,j)-1.0_RP
 
-      sum1 = 0.0_RP
+      sum1(k,i,j) = 0.0_RP
       do m = 1, nspc
       do n = 1, nbin
-        sum1 = sum1 + gdgc(k,i,j,m,n)*dxmic
+        sum1(k,i,j) = sum1(k,i,j) + gdgc(k,i,j,m,n)*dxmic
       end do
       end do
 
@@ -707,7 +710,7 @@ call START_COLLECTION("MICROPHYSICS")
      do j = JS, JE
      do i = IS, IE
 
-      if( ssliq > 0.0_RP .or. sum1 > cldmin ) then
+      if( ssliq(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_abinw_evolve                    &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
               gdgc(k,i,j,1,1:nbin),            &  !--- inout
@@ -725,7 +728,7 @@ call START_COLLECTION("MICROPHYSICS")
      do j = JS, JE
      do i = IS, IE
 
-      if( ssliq > 0.0_RP .or. sum1 > cldmin ) then
+      if( ssliq(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_abinf_evolve                    &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
               gdgc(k,i,j,1:nspc,1:nbin),       &  !--- inout
@@ -739,7 +742,7 @@ call START_COLLECTION("MICROPHYSICS")
 
      endif
 
-    elseif( nccn /= 0 ) then  ! without aerosol tracer
+    elseif( nccn == 0 ) then  ! without aerosol tracer
 
      if( nspc == 1 ) then
 
@@ -747,7 +750,7 @@ call START_COLLECTION("MICROPHYSICS")
      do j = JS, JE
      do i = IS, IE
 
-      if( ssliq > 0.0_RP .or. sum1 > cldmin ) then
+      if( ssliq(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_binw_evolve                     &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
               gdgc(k,i,j,1,1:nbin),            &  !--- inout
@@ -764,7 +767,7 @@ call START_COLLECTION("MICROPHYSICS")
      do j = JS, JE
      do i = IS, IE
 
-      if( ssliq > 0.0_RP .or. ssice > 0.0_RP .or. sum1 > cldmin ) then
+      if( ssliq(k,i,j) > 0.0_RP .or. ssice(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_binf_evolve                     &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
               gdgc(k,i,j,1:nspc,1:nbin),       &  !--- inout
