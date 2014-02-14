@@ -4,10 +4,10 @@
 !! @par Description
 !!          Cloud Microphysics by Super Droplet Method (SDM)
 !!
-!! - Reference 
+!! - Reference
 !!  - Shima et al., 2009:
 !!    The super-droplet method for the numerical simulation of clouds and precipitation: A particle-based and probabilistic microphysics model coupled with a non-hydrostatic model.
-!!    Quart. J. Roy. Meteorol. Soc., 135: 1307–1320 
+!!    Quart. J. Roy. Meteorol. Soc., 135: 1307-1320
 !!
 !! @author Team SCALE
 !!
@@ -28,7 +28,7 @@ module mod_atmos_phy_mp_sdm
   use mod_stdio
   use mod_prof
 !  use mod_index
-  use mod_grid_index 
+  use mod_grid_index
   use mod_tracer_sdm
 
   use mod_process, only: &
@@ -41,10 +41,10 @@ module mod_atmos_phy_mp_sdm
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
      mass_air => CONST_Mdry, &  ! Molecular mass of air [g/mol]
      GasV_C => CONST_Rvap, &    ! Gas Constant of vapor [J/K/kg]
-     GasD_C => CONST_Rdry, &    ! Gas Constant of dry air [J/K/kg] 
+     GasD_C => CONST_Rdry, &    ! Gas Constant of dry air [J/K/kg]
      p0_C => CONST_PRE00, &     ! Reference Pressure [Pa]
      cp_C => CONST_CPdry, &     ! Specific heat of dry air [J/kg/K]
-     grav => CONST_GRAV   
+     grav => CONST_GRAV
   use gadg_algorithm, only: &
      gadg_count_sort
   use rng_uniform_mt, only: &
@@ -89,7 +89,7 @@ module mod_atmos_phy_mp_sdm
   character(len=H_LONG), save :: RANDOM_OUT_BASENAME = ''
   type(c_rng_uniform_mt), save :: rng_s2c
   integer, save :: fid_sd_i, fid_sd_o
-  integer, save :: fid_random_i, fid_random_o 
+  integer, save :: fid_random_i, fid_random_o
   logical, save :: sd_rest_flg_in = .false. ! restart flg of Super Droplet
   !
   !++ Basic variable for SDM
@@ -115,7 +115,7 @@ module mod_atmos_phy_mp_sdm
   real(RP), allocatable :: sdr_tmp(:)      ! equivalent radius of super-droplets
   real(RP), allocatable :: sdu_tmp(:)      ! x-components velocity of super-droplets
   real(RP), allocatable :: sdv_tmp(:)      ! y-components velocity of super-droplets
-  real(RP), allocatable :: sdvz_tmp(:)     ! terminal velocity of super-droplets zeta components of contravariant velocity 
+  real(RP), allocatable :: sdvz_tmp(:)     ! terminal velocity of super-droplets zeta components of contravariant velocity
   real(RP), allocatable :: sdasl_tmp(:,:)  ! aerosol mass of super-droplets
   ! SDM for aerosol formation
   integer(DP), allocatable :: sdn_fm(:)    ! multiplicity of super-droplets
@@ -124,7 +124,7 @@ module mod_atmos_phy_mp_sdm
   real(RP), allocatable :: sdy_fm(:)       ! y-coordinate of super-droplets
   real(RP), allocatable :: sdz_fm(:)       ! z-coordinate of super-droplets
   real(RP), allocatable :: sdr_fm(:)       ! equivalent radius of super-droplets
-  real(RP), allocatable :: sdvz_fm(:)      ! terminal velocity of super-droplets zeta components of contravariant velocity 
+  real(RP), allocatable :: sdvz_fm(:)      ! terminal velocity of super-droplets zeta components of contravariant velocity
   real(RP), allocatable :: sdasl_fm(:,:)   ! aerosol mass of super-droplets formed by gas-to-particle conversion
   real(RP), allocatable :: rhod_crs(:,:,:) ! dry air density
   real(RP), allocatable :: rhoc_sdm(:,:,:) ! density of cloud water
@@ -158,7 +158,7 @@ module mod_atmos_phy_mp_sdm
   real(RP),private :: xmax_sdm, ymax_sdm      ! Distance in X, Y-direction
   real(RP),private :: rkumax, rkumin, rklmax  ! Maxinum nad Minumu real number of 'sd_rku, sd_rku, sd_rkl
   real(RP),private :: minzph                  ! Minimum of zph(i,j,2)
-  integer, private :: knum_sdm                ! Maximum number of SDM grid in vertical 
+  integer, private :: knum_sdm                ! Maximum number of SDM grid in vertical
 !  integer, private :: ni=IE-IS+1, nj=JE-JS+1, nz=KE-KS+1     ! Number of grid for each dirrection with halo
   integer, private :: stat
   integer, private :: dstw_sub, dste_sub, dsts_sub, dstn_sub
@@ -193,8 +193,8 @@ module mod_atmos_phy_mp_sdm
   !
   !------------------------------------------------------------------------------
   real(RP), private, parameter :: boltz = 1.38066E-23_RP  ! Boltzmann constant
-  real(RP), private, parameter :: mass_nacl = 58.44277_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g] 
-  real(RP), private, parameter :: mass_amsul = 132.14_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g] 
+  real(RP), private, parameter :: mass_nacl = 58.44277_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
+  real(RP), private, parameter :: mass_amsul = 132.14_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
   real(RP), private, parameter :: ion_amsul = 2.0_RP, ion_nacl = 2.0_RP ! Degree of ion dissociation of ammonium sulfate and sea salt contained as water-soluble aerosol in super droplets
   real(RP), private, parameter :: rho_amsul = 1.769E+6_RP, rho_nacl = 2.165E+6_RP ! Density of ammonium sulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
   ! parameter for 3mode log-normal distribution of aerosol
@@ -317,14 +317,14 @@ module mod_atmos_phy_mp_sdm
   integer,  private :: sdm_colbrwn  = 0           ! Flag of Brownian Coagulation and Scavenge process
   integer,  private :: sdm_mvexchg  = 0           ! flag of exchange momentum betweeen super-droplets and fluid 0:No, 1:Yes
   integer,  private :: sdm_aslset   = 1.0_RP      ! Conrol flag to set the species and way of chemical material as water-soluble aerosol
-  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol 
+  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol
   real(RP), private :: sdm_aslfmsdnc = 1000.0_RP  ! Number of S.D. per sdnmvol as aeroosl(s)
-  real(RP), private :: sdm_aslfmrate = 0.0_RP ! Formation rate of super droplets as aerosol [1/(m^3 s)] 
+  real(RP), private :: sdm_aslfmrate = 0.0_RP ! Formation rate of super droplets as aerosol [1/(m^3 s)]
   real(RP), private :: sdm_aslmw(1:20)      ! User specified molecular mass of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_aslion(1:20)     ! User specified ion of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_aslrho(1:20)     ! User specified density of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_nadjdt = 0.1_RP  ! Time interval of adjust S.D. number [s]
-  integer,  private :: sdm_nadjvar = 3      ! Control flag of adjustment super-droplet number in each grid 
+  integer,  private :: sdm_nadjvar = 3      ! Control flag of adjustment super-droplet number in each grid
                                             ! 0:adjust number of droplet by adding and removal, 1:adjust number of droplet by adding
                                             ! 2:adjust number of droplet by removal 3:No adjust number of droplet
   data sdm_dtcmph / 0.1_RP,0.1_RP,0.1_RP /
@@ -355,7 +355,7 @@ module mod_atmos_phy_mp_sdm
   integer, private :: nisub, njsub
   integer, private :: sthopt=1, trnopt=0
 !  real(RP) :: crs_dtmp1(KA,IA,JA), crs_dtmp2(KA,IA,JA)
-!  real(RP), private :: crs_dtmp3(KA,IA,JA), crs_dtmp4(KA,IA,JA) 
+!  real(RP), private :: crs_dtmp3(KA,IA,JA), crs_dtmp4(KA,IA,JA)
 !  real(RP), private :: crs_dtmp5(KA,IA,JA), crs_dtmp6(KA,IA,JA)
   real(RP), private :: sdm_dtevl  ! time step of {condensation/evaporation} process
   real(RP), private :: sdm_dtcol  ! time step of {stochastic coalescence} process
@@ -453,7 +453,7 @@ contains
        sdm_colkrnl, &
        sdm_mvexchg, &
        sdm_nadjdt, &
-       sdm_nadjvar 
+       sdm_nadjvar
 
     real(RP) :: dtevl
     real(RP) :: n0, dry_r
@@ -479,7 +479,7 @@ contains
     allocate( j32(KA,IA,JA) )
     allocate( jcb(KA,IA,JA) )
     allocate( jcb8w(KA,IA,JA) )
-    allocate( mf(IA,JA) ) 
+    allocate( mf(IA,JA) )
     allocate( KMIN1(KA) )
     allocate( IMIN1(IA) )
     allocate( JMIN1(JA) )
@@ -492,12 +492,12 @@ contains
     allocate( dziv_sdm(KA) )
     allocate( dx_sdm(IA) )
     allocate( dy_sdm(JA) )
-    allocate( dz_sdm(KA) ) 
+    allocate( dz_sdm(KA) )
 
     buffact = 0.0_RP
     do k = KS, KE
       buffact = max( buffact,CBFZ(k) )
-    enddo 
+    enddo
 
     if( buffact > 0.0_RP ) then
        sthopt = 1
@@ -523,7 +523,7 @@ contains
       JMIN1(j) = j-1
     enddo
     JMIN1(1) = 1
- 
+
     do k = 1, KA-1
       KPLS1(k) = k+1
     enddo
@@ -612,16 +612,16 @@ contains
     if( docondensation )   sdm_calvar(1) = .true.
     if( doautoconversion ) sdm_calvar(2) = .true.
     if( domovement )       sdm_calvar(3) = .true.
- 
+
      if( sdm_zlower < CZ(KS) ) then
-      if( mype == PRC_master )  write(*,*) "sdm_zlower was set to CZ(KS) because zlower < CZ(KS)" 
+      if( mype == PRC_master )  write(*,*) "sdm_zlower was set to CZ(KS) because zlower < CZ(KS)"
       sdm_zlower = CZ(KS)
-     endif  
+     endif
      if( sdm_zupper > CZ(KE) ) then
-      if( mype == PRC_master )  write(*,*) "sdm_zupper was set to CZ(KE) because zupper > CZ(KE)" 
+      if( mype == PRC_master )  write(*,*) "sdm_zupper was set to CZ(KE) because zupper > CZ(KE)"
       sdm_zupper = CZ(KE)
-     endif  
- 
+     endif
+
 !     if( ( dmod( dt, sdm_dtcmph(1) ) /= 0.0_RP .and. docondensation )     .or. &
 !         ( dmod( dt, sdm_dtcmph(2) ) /= 0.0_RP .and. doautoconversion )   .or. &
 !         ( dmod( dt, sdm_dtcmph(3) ) /= 0.0_RP .and. domovement )         .or. &
@@ -634,14 +634,14 @@ contains
 !       if ( IO_L ) write(IO_FID_LOG,*) 'and shorter than TIME_DTSEC_ATMOS_PHY_MP'
 !
 !     write(*,*) dmod( dt, sdm_dtcmph(1) ), docondensation, &
-!               dmod( dt, sdm_dtcmph(2) ), doautoconversion, & 
+!               dmod( dt, sdm_dtcmph(2) ), doautoconversion, &
 !               dmod( dt, sdm_dtcmph(3) ), domovement,   &
 !               sdm_aslfmdt ,  &
 !               sdm_nadjdt ,  sdm_dtcmph(1:3)
 !
 !        call PRC_MPIstop
 !     endif
- 
+
     sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
     sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
     sdm_dtadv = real( sdm_dtcmph(3),kind=RP )  !! motion of super-droplets
@@ -651,7 +651,7 @@ contains
             /int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))
     else
      nclstp(1) = 1
-     sdm_dtcmph(1) = dt 
+     sdm_dtcmph(1) = dt
      sdm_dtevl = dt
     endif
     if( dt >= sdm_dtcmph(2) ) then
@@ -659,7 +659,7 @@ contains
             /int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))
     else
      nclstp(2) = 1
-     sdm_dtcmph(2) = dt 
+     sdm_dtcmph(2) = dt
      sdm_dtcol = dt
     endif
     if( dt >= sdm_dtcmph(3) ) then
@@ -667,7 +667,7 @@ contains
             /int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))
     else
      nclstp(3) = 1
-     sdm_dtcmph(3) = dt 
+     sdm_dtcmph(3) = dt
      sdm_dtadv = dt
     endif
     nclstp(0)=min(nclstp(1),nclstp(2),nclstp(3))
@@ -693,7 +693,7 @@ contains
     dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
     xmax_sdm = FX(IE)-FX(IS-1)
     ymax_sdm = FY(JE)-FY(JS-1)
- 
+
     !--- set number of super droplet etc...
     call sdm_numset(              &
       sdm_extbuf,                 &
@@ -704,10 +704,10 @@ contains
       minzph, sdininum_s2c,       &
       sdfmnum_s2c, sdnum_s2c,     &
       ni_s2c, nj_s2c, nk_s2c, zph_crs )
-    
+
     call sdm_allocinit
 
-    !---- set initial condition   
+    !---- set initial condition
     call sdm_iniset(DENS, RHOT, QTRC,                   &
                     RANDOM_IN_BASENAME, fid_random_i,   &
                     xmax_sdm, ymax_sdm, sdm_dtcmph,     &
@@ -723,7 +723,7 @@ contains
                     sdz_s2c, sdr_s2c,                   &
                     sdrk_s2c, sdvz_s2c,                 &
                     sdrkl_s2c, sdrku_s2c                )
-      
+
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
   !-----------------------------------------------------------------------------
@@ -753,7 +753,7 @@ contains
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use mod_gridtrans, only: &
        I_XYZ, I_XYW,    &
-       GTRANS_GSQRT, & 
+       GTRANS_GSQRT, &
        GTRANS_J13G,  &
        GTRANS_J23G,  &
        GTRANS_J33G
@@ -797,7 +797,7 @@ contains
     ! Work variables
     logical :: lsdmup       ! flag for updating water hydrometeor by SDM
     real(RP) :: sd_nc  ! averaged number concentration in a grid
-    
+
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
     real(RP) :: QDRY(KA,IA,JA)
@@ -812,10 +812,10 @@ contains
     real(RP) :: flux_rain(KA,IA,JA)
     real(RP) :: flux_snow(KA,IA,JA)
     real(RP) :: crs_dtmp1(KA,IA,JA), crs_dtmp2(KA,IA,JA)
-    real(RP) :: crs_dtmp3(KA,IA,JA), crs_dtmp4(KA,IA,JA) 
+    real(RP) :: crs_dtmp3(KA,IA,JA), crs_dtmp4(KA,IA,JA)
     real(RP) :: crs_dtmp5(KA,IA,JA), crs_dtmp6(KA,IA,JA)
     integer  :: n, s, k, i, j, iq         ! index
-    logical, save ::  TIME_DO_RANDOM_restart = .false. 
+    logical, save ::  TIME_DO_RANDOM_restart = .false.
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(Super Droplet Method)'
@@ -827,11 +827,11 @@ contains
         .not. sdm_calvar(3)       ) return
 
     dtcl(1:3) = sdm_dtcmph(1:3)
-    dtcl(4) =  sdm_aslfmdt 
-    dtcl(5) =  sdm_nadjdt 
+    dtcl(4) =  sdm_aslfmdt
+    dtcl(5) =  sdm_nadjdt
 
-    ! Convert 
-    mf(:,:) = 1.0_RP 
+    ! Convert
+    mf(:,:) = 1.0_RP
     QDRY(:,:,:) = 1.0_RP
     do k = 1, KA
     do i = 1, IA
@@ -854,7 +854,7 @@ contains
       QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
     enddo
     enddo
-    enddo  
+    enddo
      jcb8w(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
      jcb(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
     do k = 1, KA
@@ -866,8 +866,8 @@ contains
       wcf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) * jcb8w(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
     enddo
     enddo
-    enddo  
- 
+    enddo
+
     bufsiz1 = nint( sdininum_s2c*(real(sdm_extbuf)*1.E-2_RP) )
     bufsiz1 = nomp * ( int((bufsiz1-1)/nomp) + 1 ) !! being multiple number to 'nomp'
     bufsiz2 = 8 + sdnumasl_s2c    !! n,x,y,rk,u,v,wc(vz),r,asl
@@ -973,15 +973,15 @@ contains
     do i = 1, IA
     do j = 1, JA
       RHOT(k,i,j) = ( ptbr_crs(k,i,j)+ptpf_crs(k,i,j) ) * DENS(k,i,j)
-!      MOMX(k,i,j) = uf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,IPLS1(i),j) ) 
-!      MOMY(k,i,j) = vf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,JPLS1(j)) ) 
+!      MOMX(k,i,j) = uf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,IPLS1(i),j) )
+!      MOMY(k,i,j) = vf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,JPLS1(j)) )
 !      MOMZ(k,i,j) = wcf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(KPLS1(k),i,j) ) / jcb8w(k,i,j)
       QTRC(k,i,j,I_QV) = qvf_crs(k,i,j)
       QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
       QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
     enddo
     enddo
-    enddo  
+    enddo
 
     call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
@@ -1031,7 +1031,7 @@ contains
         nj_s2c = JE-JS+1
         nk_s2c = KE-KS+1
         minzph = TOPO_Zsfc(IS,JS)
-  
+
         do j = 1, JA
         do i = 1, IA
            minzph = min( minzph, TOPO_Zsfc(i,j) )
@@ -1072,31 +1072,31 @@ contains
 
   !-----------------------------------------------------------------------------
    subroutine sdm_allocinit
- 
+
     use mod_gridtrans, only: &
        I_XYZ, I_XYW,    &
-       GTRANS_GSQRT, & 
+       GTRANS_GSQRT, &
        GTRANS_J13G,  &
        GTRANS_J23G,  &
        GTRANS_J33G
     integer :: i, j, k, n, s
     integer :: bndsdmdim, bufsiz
     !------------------------------------------------------
-    ! Get numbers of kind of chemical material contained as  
-    ! water-soluble aerosol in super droplets.         
+    ! Get numbers of kind of chemical material contained as
+    ! water-soluble aerosol in super droplets.
     if( abs(mod(sdm_aslset,10))==1 ) then
-         !### init+rest : (NH4)2SO4 ###! 
+         !### init+rest : (NH4)2SO4 ###!
          sdnumasl_s2c = 1
     else if( abs(mod(sdm_aslset,10))==2 ) then
          if( abs(sdm_aslset)==2 ) then
-            !### init : NaCl ###! 
+            !### init : NaCl ###!
             sdnumasl_s2c = 1
          else if( abs(sdm_aslset)==12 ) then
-            !### init : NaCl, rest : (NH4)2SO4 ###! 
+            !### init : NaCl, rest : (NH4)2SO4 ###!
             sdnumasl_s2c = 2
          end if
     else if( abs(mod(sdm_aslset,10))==3 ) then
-         !### init+rest : (NH4)2SO4, NaCl, ... ###! 
+         !### init+rest : (NH4)2SO4, NaCl, ... ###!
          sdnumasl_s2c = 2   !! default
          do n=1,20
             if( sdm_aslmw(n)>0.0_RP ) then
@@ -1316,7 +1316,7 @@ contains
       integer :: iexced, sdnum_tmp1, sdnum_tmp2 ! temporary
       integer :: i, j, k, n, iq, np             ! index
       real(RP) :: CPTOT(KA,IA,JA), RTOT(KA,IA,JA)
-      real(RP) :: QDRY(KA,IA,JA),  CPovCV(KA,IA,JA) 
+      real(RP) :: QDRY(KA,IA,JA),  CPovCV(KA,IA,JA)
       real(RP) :: crs_dtmp1(KA,IA,JA), crs_dtmp2(KA,IA,JA)
       integer :: sd_str, sd_end, sd_valid
      !---------------------------------------------------------------------
@@ -1333,7 +1333,7 @@ contains
         rbr_crs(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
         RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
         CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-        do iq = QQS, QQE 
+        do iq = QQS, QQE
          CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
         enddo
         CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
@@ -1649,8 +1649,8 @@ contains
 !      do k = 1, KA
 !      do i = 1, IA
 !      do j = 1, JA
-!         QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j) 
-!         QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j) 
+!         QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
+!         QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
 !      enddo
 !      enddo
 !      enddo
@@ -1670,7 +1670,7 @@ contains
 !          write(moji,'(i25)')nint(sdininum_s2c)
 !          write(IO_FID_LOG,'(a43,a25)')                                 &
 !      &     "    initial number of super-droplets     : ", adjustl(moji)
- 
+
       end if
 
     return
@@ -1825,7 +1825,7 @@ contains
       end do
       end do
 
-     ! Get vertical index[k/real] at 'sdm_zlower', 'sdm_zupper' 
+     ! Get vertical index[k/real] at 'sdm_zlower', 'sdm_zupper'
 !      do k=2,nk-1
 !      do j=1,nj-1
 !      do i=1,ni-1
@@ -1896,7 +1896,7 @@ contains
 
       end do
 
-     ! Get maximum grid number, maximum index and minimum index in vertical 
+     ! Get maximum grid number, maximum index and minimum index in vertical
 !      do j=0,nj+1
 !      do i=0,ni+1
       do j=1,JA
@@ -1940,7 +1940,7 @@ contains
          FX => GRID_FX, &
          FY => GRID_FY
       ! Input variables
-      integer,  intent(in) :: sdm_aslset 
+      integer,  intent(in) :: sdm_aslset
       real(RP), intent(in) :: sdm_aslmw(20)
       real(RP), intent(in) :: sdm_aslion(20)
       real(RP), intent(in) :: sdm_dtevl  ! tims step of {condensation/evaporation} process
@@ -2079,13 +2079,13 @@ contains
            i = ix
            exit iloop
           endif
-         enddo iloop 
+         enddo iloop
          jloop : do jy = JS, JE
           if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
            j = jy
            exit jloop
           endif
-         enddo jloop 
+         enddo jloop
 !         i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
 !         j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
          k = floor( sd_rk(n) )
@@ -2174,7 +2174,7 @@ contains
             if( dtmp<=0.0_RP ) dtmp = rdi * rdi * 1.E-4_RP
 
             rdi = sqrt(dtmp)
- 
+
          end do
 
          sd_r(n) = rdi   !! particle radius at future
@@ -2391,13 +2391,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      rk = sd_rk(n)
@@ -2555,13 +2555,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      rk = sd_rk(n)
@@ -2744,13 +2744,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      rk = sd_rk(n)
@@ -2951,13 +2951,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
 
@@ -3052,13 +3052,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
 
@@ -3174,13 +3174,13 @@ contains
                      do i = IS, IE
                       if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
                        ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit 
+                       exit
                       endif
                      enddo
                      do j = JS, JE
                       if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
                        rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit 
+                       exit
                       endif
                      enddo
 
@@ -3298,8 +3298,8 @@ contains
          end if
 
       end if
- 
-      if( .not. doprecipitation ) then 
+
+      if( .not. doprecipitation ) then
          sd_vz(:) = 0.0_RP
       endif
 
@@ -3325,7 +3325,7 @@ contains
       real(RP), intent(in) :: ptp_crs(KA,IA,JA)  ! Potential temperature perturbation
       real(RP), intent(in) :: qv_crs(KA,IA,JA)   ! Water vapor mixing ratio
       real(RP), intent(in) :: zph_crs(KA,IA,JA)  ! z physical coordinate
-      logical, intent(in) :: lsdmup    ! flag for updating water hydrometeor by SDM 
+      logical, intent(in) :: lsdmup    ! flag for updating water hydrometeor by SDM
       integer, intent(in) :: sd_num    ! number of super-droplets
       integer(DP), intent(in) :: sd_n(1:sd_num)   ! multiplicity of super-droplets
       real(RP), intent(in) :: sd_x(1:sd_num)      ! x-coordinate of super-droplets
@@ -3360,7 +3360,7 @@ contains
       call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,        &
                        qv_crs,rhod_crs)
 
-      ! Get density of water hydrometeor 
+      ! Get density of water hydrometeor
 
       if( lsdmup ) then
 
@@ -3434,7 +3434,7 @@ contains
       real(RP), intent(out) :: liqc_sdm(KA,IA,JA)  ! liquid cloud water of super-droplets
       real(RP), intent(out) :: liqr_sdm(KA,IA,JA)  ! liquid rain water of super-droplets
       !--- Y.Sato add ---
-      real(RP), intent(out) :: rhoa_sdm(KA,IA,JA)  ! densitiy of 
+      real(RP), intent(out) :: rhoa_sdm(KA,IA,JA)  ! densitiy of
       !--- Y.Sato add ---
       integer, intent(out) :: ilist_c(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
       integer, intent(out) :: ilist_r(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
@@ -3453,9 +3453,9 @@ contains
       integer :: tlist_c            ! total list number for cloud
       integer :: tlist_r            ! total list number for rain
       integer :: tlist_a            ! total list number for aerosol
-      integer :: ccnt               ! counter 
-      integer :: rcnt               ! counter 
-      integer :: acnt               ! counter 
+      integer :: ccnt               ! counter
+      integer :: rcnt               ! counter
+      integer :: acnt               ! counter
       integer :: i, ix              ! index
       integer :: j, jy              ! index
       integer :: k                  ! index
@@ -3568,15 +3568,15 @@ contains
                   do ix = IS, IE
                    if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                     i = ix
-                    exit 
+                    exit
                    endif
-                  enddo 
+                  enddo
                   do jy = JS, JE
                    if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                     j = jy
-                    exit 
+                    exit
                    endif
-                  enddo  
+                  enddo
                   k = floor( sd_rk(n) )
 
                   liqc_sdm(k,i,j) = liqc_sdm(k,i,j)                     &
@@ -3658,15 +3658,15 @@ contains
                   do ix = IS, IE
                    if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                     i = ix
-                    exit 
+                    exit
                    endif
-                  enddo 
+                  enddo
                   do jy = JS, JE
                    if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                     j = jy
-                    exit 
+                    exit
                    endif
-                  enddo  
+                  enddo
                   k = floor( sd_rk(n) )
 
                   liqr_sdm(k,i,j) = liqr_sdm(k,i,j)                     &
@@ -3891,7 +3891,7 @@ contains
    use mod_process, only: &
        PRC_MPIstop
    use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP 
+       dt => TIME_DTSEC_ATMOS_PHY_MP
    ! Input variables
    logical,  intent(in) :: sdm_calvar(3)
    integer,  intent(in) :: sdm_aslset
@@ -3932,7 +3932,7 @@ contains
    integer, intent(inout) :: sort_tag(1:ni_sdm*nj_sdm*nk_sdm+2)  ! accumulated number of super-droplets in each grid
    real(RP), intent(inout) :: u_crs(KA,IA,JA)  ! x-component velocity
    real(RP), intent(inout) :: v_crs(KA,IA,JA)  ! y-component velocity
-   real(RP), intent(inout) :: wc_crs(KA,IA,JA) ! zeta components of contravariant velocity 
+   real(RP), intent(inout) :: wc_crs(KA,IA,JA) ! zeta components of contravariant velocity
    real(RP), intent(inout) :: ptp_crs(KA,IA,JA)! Potential temperature perturbation
    real(RP), intent(inout) :: qv_crs(KA,IA,JA) ! Water vapor mixing ratio
    real(RP), intent(inout) :: prec_crs(IA,JA,1:2)! [1]:precipitation and [2]:accumlation
@@ -4258,15 +4258,15 @@ contains
                do ix = IS, IE
                 if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                  i = ix
-                 exit 
+                 exit
                 endif
-               enddo 
+               enddo
                do jy = IS, JE
                 if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                  j = jy
-                 exit 
+                 exit
                 endif
-               enddo  
+               enddo
                k = floor( sd_rk(n) )
 
                liqw_sdm(k,i,j) = liqw_sdm(k,i,j)                        &
@@ -4405,7 +4405,7 @@ contains
                                        /(1.e0+qv_crs(k,i,j)), kind=RP )
 
 !DBG     rhod_crs(i,j,k) = real( p_crs / (tv_crs*rd), kind=r8 )
-                                   !! density of moist air (rhod+rhov) 
+                                   !! density of moist air (rhod+rhov)
     end do
     end do
 
@@ -4432,7 +4432,7 @@ contains
       use mod_const, only:  &
          t0 => CONST_TEM00, &    ! Gas Constant of vapor [J/K/kg]
          rw => CONST_Rvap,  &    ! Gas Constant of vapor [J/K/kg]
-         rd => CONST_Rdry,  &    ! Gas Constant of dry air [J/K/kg] 
+         rd => CONST_Rdry,  &    ! Gas Constant of dry air [J/K/kg]
          cp => CONST_CPdry, &
          p0 => CONST_PRE00       ! Reference Pressure [Pa]
       !  Input variables
@@ -4538,7 +4538,7 @@ contains
       integer, allocatable :: fsort_freq(:) ! buffer for sorting
 
       integer :: idx_nasl(1:22)  ! index for vactorization
- 
+
 
       integer :: gnum          ! grid number
       integer :: iexced        ! temporary
@@ -4598,7 +4598,7 @@ contains
 !            call getrname( id_sdm_aslrho + (n-1), sd_aslrho(n+2) )
 !         end do
          do n=1,20
-           sd_aslrho(n+2) = sdm_aslrho(n) 
+           sd_aslrho(n+2) = sdm_aslrho(n)
          end do
 
       end if
@@ -4928,15 +4928,15 @@ contains
                do ix = IS, IE
                 if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                  i = ix
-                 exit 
+                 exit
                 endif
-               enddo 
+               enddo
                do jy = JS, JE
                 if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                  j = jy
-                 exit 
+                 exit
                 endif
-               enddo  
+               enddo
                k = floor( sd_rk(icp(tc)) )
 
                ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
@@ -4969,15 +4969,15 @@ contains
                do ix = IS, IE
                 if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                  i = ix
-                 exit 
+                 exit
                 endif
-               enddo 
+               enddo
                do jy = JS, JE
                 if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                  j = jy
-                 exit 
+                 exit
                 endif
-               enddo  
+               enddo
                k = floor( sd_rk(icp(tc)) )
                ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
                                      / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
@@ -4992,7 +4992,7 @@ contains
       end if
 
      ! Get effective collision for "Brownian Coagulation and Scavenging
-     ! (Seinfeld & Pandis,2006)" of droplets less than 
+     ! (Seinfeld & Pandis,2006)" of droplets less than
      ! micrometer-size ( below 1um )
       if( sdm_colbrwn>0 ) then
         do n=1,hfreq_max
@@ -5055,15 +5055,15 @@ contains
             do ix = IS, IE
              if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
               i = ix
-              exit 
+              exit
              endif
-            enddo 
+            enddo
             do jy = JS, JE
              if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
               j = jy
-              exit 
+              exit
              endif
-            enddo  
+            enddo
             k = floor( sd_rk(icp(tc)) )
 
             ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)             &
@@ -5413,15 +5413,15 @@ contains
 !!                if( sd_x(n) < CX(ix) ) then
 !                if( dist < CX(ix) ) then
 !                 i = ix
-!                 exit 
+!                 exit
 !                endif
-!               enddo 
+!               enddo
 !               do jy = JS, JE
 !                if( sd_y(n) < CY(jy) ) then
 !                 j = jy
-!                 exit 
+!                 exit
 !                endif
-!               enddo  
+!               enddo
 !!               i = int( floor( dist*1.d5   , kind=i8 )/idx_sdm ) + 2
 !!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
 !               k = floor( sd_rk(n) )
@@ -5434,16 +5434,16 @@ contains
 !               do ix = IS, IE
 !                if( sd_x(n) < CX(ix) ) then
 !                 i = ix
-!                 exit 
+!                 exit
 !                endif
-!               enddo 
+!               enddo
 !               do jy = JS, JE
 !!                if( sd_y(n) < CY(jy) ) then
 !                if( dist < CY(jy) ) then
 !                 j = jy
-!                 exit 
+!                 exit
 !                endif
-!               enddo 
+!               enddo
 !!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
 !!               j = int( floor( dist*1.d5   , kind=i8 )/idy_sdm ) + 2
 !               k = floor( sd_rk(n) )
@@ -5455,13 +5455,13 @@ contains
 !               do ix = IS, IE
 !                if( sd_x(n) < CX(ix) ) then
 !                 i = ix
-!                 exit 
+!                 exit
 !                endif
-!               enddo 
+!               enddo
 !               do jy = JS, JE
 !                if( sd_y(n) < CY(jy) ) then
 !                 j = jy
-!                 exit 
+!                 exit
 !                endif
 !               enddo
 !!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
@@ -5474,7 +5474,7 @@ contains
 !         end if
 !
 !      end do
-! 
+!
 !      ! Convert super-droplets to density of liquid-water.
 !      do k=2,nk-1
 !      do j=1,nj-1
@@ -5703,10 +5703,10 @@ contains
      use mod_process, only: &
        mype => PRC_myrank
       ! Input variables
-      integer, intent(in) :: wbc ! Option for west boundary conditions 
-      integer, intent(in) :: ebc ! Option for east boundary conditions 
-      integer, intent(in) :: sbc ! Option for south boundary conditions 
-      integer, intent(in) :: nbc ! Option for north boundary conditions 
+      integer, intent(in) :: wbc ! Option for west boundary conditions
+      integer, intent(in) :: ebc ! Option for east boundary conditions
+      integer, intent(in) :: sbc ! Option for south boundary conditions
+      integer, intent(in) :: nbc ! Option for north boundary conditions
       integer, intent(in) :: sd_num ! number of super-droplets
       integer, intent(in) :: sd_numasl ! number of kind of chemical materia contained as water-soluble aerosol in super droplets
       integer, intent(in) :: bufsiz1  ! buffer size for MPI
@@ -6476,7 +6476,7 @@ contains
                           sd_r,sd_asl,                            &
                           bufsiz1,bufsiz2,stat,ilist,sbufy)
       use mod_process, only: &
-          mype  => PRC_myrank 
+          mype  => PRC_myrank
       ! Input variables
       integer, intent(in) :: sbc   ! Option for west boundary conditions
       integer, intent(in) :: nbc   ! Option for east boundaty conditions
@@ -6519,7 +6519,7 @@ contains
       integer :: nasl, ns, nn     ! index
     !---------------------------------------------------------------------
 
-  
+
     ! Initialize
 
       maxssend = 0
@@ -7253,20 +7253,20 @@ contains
                   do ix = IS, IE
                    if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                     i = ix
-                    exit 
+                    exit
                    endif
-                  enddo 
+                  enddo
                   do jy = JS, JE
                    if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                     j = jy
-                    exit 
+                    exit
                    endif
-                  enddo  
+                  enddo
                   pr_sdm(i,j,1) = pr_sdm(i,j,1)                         &
                                 + sd_r(n) * sd_r(n) * sd_r(n)           &
                                 * real(sd_n(n),kind=RP)
 
-                  sd_rk(n) = INVALID     !! convert to invalid 
+                  sd_rk(n) = INVALID     !! convert to invalid
 
                end do
 
@@ -7440,7 +7440,7 @@ contains
       real(RP) :: sd_fmnc      ! number concentration of super-droplets at aerosol formation
       real(RP) :: sdm_dtevl    ! time step of {condensation/evaporation} process
       real(RP) :: sdm_aslfmdt  ! time step of aerosol formation
-      integer :: max_key       ! max key to sort data 
+      integer :: max_key       ! max key to sort data
       integer :: n_invd        ! number of invalid droplets
       integer :: innum         ! temporary
       integer :: id_invd       ! index
@@ -7651,24 +7651,24 @@ contains
                do ix = IS, IE
                    if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
                     i = ix
-                    exit 
+                    exit
                    endif
-               enddo 
+               enddo
                do jy = JS, JE
                    if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                     j = jy
-                    exit 
+                    exit
                    endif
-               enddo  
+               enddo
 !               k = floor( sd_rk(n) ) - 2
                k = floor( sd_rk(n) ) - KS + 1
 
                !=========================================
                !--- k-index of SCALE start from 1 but
-               !--- that of CRess start from 0 
+               !--- that of CRess start from 0
                !=========================================
 !               adr = ni_sdm*nj_sdm*k &
-               adr = ni_sdm*nj_sdm*(k-1) & 
+               adr = ni_sdm*nj_sdm*(k-1) &
                    + ni_sdm*(j-JS+1) + (i-IS+1) + 1
 
             else
@@ -7697,21 +7697,21 @@ contains
                do ix = IS, IE
                    if( sd_x(n) <= ( FX(ix)-FX(IS-1)) ) then
                     i = ix
-                    exit 
+                    exit
                    endif
-               enddo 
+               enddo
                do jy = JS, JE
                    if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
                     j = jy
-                    exit 
+                    exit
                    endif
-               enddo  
+               enddo
 !               k = floor( sd_rk(n) ) - 2
                k = floor( sd_rk(n) ) - KS + 1
 
                !=========================================
                !--- k-index of SCALE start from 1 but
-               !--- that of CRess start from 0 
+               !--- that of CRess start from 0
                !=========================================
 !               adr = ni_sdm*nj_sdm*k +ni_sdm*j+i+1
                adr = ni_sdm*nj_sdm*(k-1) &
@@ -7821,7 +7821,7 @@ contains
                         sdm_itmp1,sdm_itmp2,sd_itmp1)
 
       end if
- 
+
      ! Message for adjustment
 
       if( mype==0 .and. sdm_nadjvar==0 ) then
@@ -7956,7 +7956,7 @@ contains
 
             !### get index of valid droplets ###!
             ip = isd_perm( sort_tag0(m)  + s ,1)   !! search forward
-!SELECT     ip = isd_perm( sort_tag(m+1) - s )   !! search backward 
+!SELECT     ip = isd_perm( sort_tag(m+1) - s )   !! search backward
 
             id_vd = sort_id( sort_tag0(m) + ip )
 
@@ -8041,7 +8041,7 @@ contains
       integer :: n_invd        ! number of invalid super-droplets
       integer :: n_plus        ! number of adding super-droplets
       integer :: sdnum_valid   ! number of valid super-droplets in each grid
-      integer :: sdnum_split   ! number of splitable valid super-droplets in each grid 
+      integer :: sdnum_split   ! number of splitable valid super-droplets in each grid
       integer :: ip            ! index
       integer :: m, n, q, s, t ! index
      !---------------------------------------------------------------------
@@ -8050,7 +8050,7 @@ contains
       gnum = ni_sdm * nj_sdm * knum_sdm
       freq_max = 1
 
-      ! Add super-droplets in the grid with small number of super-droplets 
+      ! Add super-droplets in the grid with small number of super-droplets
 
       ! Sorting super-droplets
 
@@ -8115,7 +8115,7 @@ contains
       ! Search invalid super-droplets
       n_invd = sort_freq(gnum+1)   !! number of invalid droplet
 
-      ! Add super-droplets to grids with small number of super-droplets 
+      ! Add super-droplets to grids with small number of super-droplets
 
       q = 1        !! counter
       iwarn = -1   !! warning flg
@@ -8157,7 +8157,7 @@ contains
             !### Add droplets ###!
 
             !== split multiplicity of valid droplets ==!
-            !== and copy other status to invalid one ==!  
+            !== and copy other status to invalid one ==!
 
             sd_n(id_invd)  = sd_n(id_vd)/2
             sd_n(id_vd)    = sd_n(id_vd) - sd_n(id_invd)
@@ -8249,7 +8249,7 @@ contains
 
          if( sd_rk(n)>=rkumin ) then
 
-            !! update horizontal index after moving 
+            !! update horizontal index after moving
 
 !            ri = sd_x(n) * real(dxiv_sdm,kind=r8) + 2.d0
 !            rj = sd_y(n) * real(dyiv_sdm,kind=r8) + 2.d0
@@ -8296,7 +8296,7 @@ contains
 
          if( sd_rk(n)<=rklmax ) then
 
-            !! update horizontal index after moving 
+            !! update horizontal index after moving
 
 !            ri = sd_x(n) * real(dxiv_sdm,kind=r8) + 2.d0
 !            rj = sd_y(n) * real(dyiv_sdm,kind=r8) + 2.d0
@@ -8359,7 +8359,7 @@ contains
                            !               super-droplets in each
                            !               SDM-grid
       integer, intent(in) :: fsort_tag(0:freq_max+1)
-                           ! accumulated number with respect to 
+                           ! accumulated number with respect to
                            ! the number contaiend super-droplets
       integer, intent(in) :: fsort_id(1:ni_sdm*nj_sdm*nk_sdm+2)
                            ! super-droplets sorted by the number
@@ -8409,7 +8409,7 @@ contains
   !----------------------------------------------------------------------------
   subroutine sdm_aslsulf(sd_aslfmrate,sd_aslfmdt,             &
                          sd_num,sd_numasl,sd_n,sd_asl,sd_fmnc)
-  
+
       use mod_process, only: &
          PRC_MPIstop
       ! Input variables
@@ -8480,7 +8480,7 @@ contains
       if( iexced<0 ) then
          call PRC_MPIstop
       end if
-  
+
      ! Set other aerosol mass
 
       do t=2,sd_numasl
@@ -8610,7 +8610,7 @@ contains
 
     open (fid_sd_i, file = trim(SD_IN_BASENAME), action = "read", &
           access = "sequential", status = "old", form = "unformatted", &
-          err = 999) 
+          err = 999)
     !--- read time and precision
     read(fid_sd_i) otime, rp_dum, dp_dum, sdnum_dum, sdnumasl_dum, sdfmnum_dum
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file of Super Droplet  '
@@ -8649,7 +8649,7 @@ contains
     read(fid_sd_i) sdr_fm
     read(fid_sd_i) sdvz_fm
     read(fid_sd_i) sdasl_fm
-    close(fid_sd_i) 
+    close(fid_sd_i)
 
     return
     999 continue
@@ -8688,11 +8688,11 @@ contains
        write(fmt2(16:16),'(I1)') 6
        write(ftmp,fmt3) trim(SD_OUT_BASENAME), '_', trim(basename_time)
        write(basename_sd_out,fmt2) trim(ftmp),'pe',mype
-    endif 
- 
+    endif
+
     open (fid_sd_o, file = trim(basename_sd_out), action = "write", &
           access = "sequential", status = "replace", form = "unformatted", &
-          err = 999) 
+          err = 999)
 
     !--- write time and precision
     write(fid_sd_o) otime, RP, DP, sdnum_s2c, sdnumasl_s2c, sdfmnum_s2c
@@ -8717,7 +8717,7 @@ contains
     write(fid_sd_o) sdr_fm
     write(fid_sd_o) sdvz_fm
     write(fid_sd_o) sdasl_fm
-    close(fid_sd_o) 
+    close(fid_sd_o)
 
     if( RANDOM_OUT_BASENAME == '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found random number output file name. Default used..'
@@ -8726,8 +8726,8 @@ contains
     else
        write(ftmp,fmt3) trim(RANDOM_OUT_BASENAME), '_', trim(basename_time)
        write(basename_random,fmt2) trim(ftmp),'pe',mype
-    endif 
-  
+    endif
+
     fid_random_o = IO_get_available_fid()
     if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
     call rng_save_state( rng_s2c, trim(basename_random), fid_random_o )
