@@ -104,9 +104,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_setup( MP_TYPE, DENS, RHOT, QTRC )
     use mod_process, only: &
        PRC_MPIstop
+    use mod_tracer, only: &
+       QAD => QA
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef MP
@@ -153,48 +155,64 @@ contains
        ATMOS_PHY_MP_suzuki10_EffectiveRadius, &
        ATMOS_PHY_MP_suzuki10_MixingRatio, &
        ATMOS_PHY_MP_suzuki10_DENS => ATMOS_PHY_MP_DENS
+    use mod_atmos_phy_mp_sdm, only: &
+       ATMOS_PHY_MP_sdm_setup, &
+       ATMOS_PHY_MP_sdm, &
+       ATMOS_PHY_MP_sdm_CloudFraction, &
+       ATMOS_PHY_MP_sdm_EffectiveRadius, &
+       ATMOS_PHY_MP_sdm_MixingRatio, &
+       ATMOS_PHY_MP_sdm_DENS => ATMOS_PHY_MP_DENS
 #endif
     implicit none
-
     character(len=H_SHORT), intent(in) :: MP_TYPE
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
     select case ( MP_TYPE )
     case ( 'DRY' )
-       call ATMOS_PHY_MP_dry_setup( MP_TYPE )
+       call ATMOS_PHY_MP_dry_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_dry
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_dry_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_dry_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_dry_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_dry_DENS
     case ( 'KESSLER' )
-       call ATMOS_PHY_MP_kessler_setup( MP_TYPE )
+       call ATMOS_PHY_MP_kessler_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_kessler
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_kessler_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_kessler_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_kessler_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_kessler_DENS
     case ( 'TOMITA08' )
-       call ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
+       call ATMOS_PHY_MP_tomita08_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_tomita08
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_tomita08_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_tomita08_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_tomita08_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_tomita08_DENS
     case ( 'SN13' )
-       call ATMOS_PHY_MP_sn13_setup( MP_TYPE )
+       call ATMOS_PHY_MP_sn13_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_sn13
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn13_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13_DENS
     case ( 'SUZUKI10' )
-       call ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
+       call ATMOS_PHY_MP_suzuki10_setup( MP_TYPE, DENS, RHOT, QTRC )
        ATMOS_PHY_MP => ATMOS_PHY_MP_suzuki10
        ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_suzuki10_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_suzuki10_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_suzuki10_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_suzuki10_DENS
+    case ( 'SDM' )
+       call ATMOS_PHY_MP_sdm_setup( MP_TYPE, DENS, RHOT, QTRC )
+       ATMOS_PHY_MP => ATMOS_PHY_MP_sdm
+       ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sdm_CloudFraction
+       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sdm_EffectiveRadius
+       ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sdm_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sdm_DENS
     end select
 
     return

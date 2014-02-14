@@ -262,7 +262,7 @@ contains
   use mod_tracer_sdm, only: &
     QA_sdm => QA, &
     I_QV_sdm => I_QV, &
-    I_QC_sdm => I_QR, &
+    I_QC_sdm => I_QC, &
     I_QR_sdm => I_QR, &
     I_QI_sdm => I_QI, &
     I_QS_sdm => I_QS, &

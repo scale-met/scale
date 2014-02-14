@@ -36,11 +36,9 @@ module mod_mkinit
 
   use mod_process, only: &
 #ifdef _SDM
-     PRC_MPIstop, &
-     PRC_myrank
-#else
-     PRC_MPIstop
+     PRC_myrank, &
 #endif
+     PRC_MPIstop
   use mod_const, only: &
      PI    => CONST_PI,    &
      GRAV  => CONST_GRAV,  &
@@ -329,9 +327,9 @@ contains
       endif
 
 #ifdef _SDM
-    if ( flg_sdm ) then
-       call SDM_random_setup
-    endif
+      if ( flg_sdm ) then
+         call SDM_random_setup
+      endif
 #endif
 
       select case(MKINIT_TYPE)
@@ -555,8 +553,9 @@ contains
 
     return
   end subroutine SBMAERO_setup
-  !-------------------------------------------------------------
+
 #ifdef _SDM
+  !-------------------------------------------------------------
   ! generate random number set for SDM
   subroutine SDM_random_setup
     implicit none
@@ -600,8 +599,9 @@ contains
 
     return
   end subroutine SDM_random_setup
-  !-----------------------------------------------------------------------------
 #endif
+
+  !-----------------------------------------------------------------------------
   function faero( f0,r0,x,alpha,rhoa )
     use mod_const, only: &
        pi => CONST_PI

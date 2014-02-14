@@ -11,10 +11,6 @@ SYSDEP_DIR  = ../sysdep
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
-ifeq ($(SDM),-D_SDM)
-  include $(TOPDIR)/contrib/Mkinclude_sdm
-endif
-
 VPATH = $(BUILD_DIR):include:atmos:land:ocean:cpl:preprocess:user
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -65,19 +61,11 @@ makescalelib:
 
 makebin: $(PRJS)
 
-ifeq ($(SDM),-D_SDM)
 $(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
-else
-$(BINDIR)/$(INITNAME): $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^  $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
-
-$(BINDIR)/$(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
-endif
+	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(INITNAME).o: $(INITNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 $(BUILD_DIR)/$(BINNAME).o:  $(BINNAME).f90  $(patsubst %,$(BUILD_DIR)/%,$(MODS))
@@ -130,11 +118,7 @@ clean:
 .SUFFIXES: .o .f90 .c
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
-ifeq ($(SDM),-D_SDM)
-$(BUILD_DIR)/mod_mkinit.o:
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(GAGETRYDIR) -I$(MTDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
-endif
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 

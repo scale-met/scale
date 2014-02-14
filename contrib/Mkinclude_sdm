@@ -1,4 +1,0 @@
-ifeq ($(SDM),-D_SDM)
-GAGETRYDIR  = $(TOPDIR)/contrib/Gadgetry
-MTDIR       = $(TOPDIR)/contrib/mt
-endif
