@@ -70,6 +70,7 @@ contains
        LAND_PROPERTY
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
+       BULK_TYPE => CPL_BULK_TYPE, &
        CPL_vars_setup,             &
        CPL_vars_restart_read,      &
        CPL_vars_merge,             &
@@ -79,6 +80,8 @@ contains
        CPL_flushAtm,               &
        CPL_flushLnd,               &
        CPL_AtmLnd_flushCPL
+    use mod_cpl_bulkcoef, only: &
+       CPL_bulkcoef_setup
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_setup, &
        CPL_AtmLnd_unsolve
@@ -88,6 +91,7 @@ contains
     call CPL_vars_setup
     call CPL_vars_restart_read
 
+    call CPL_bulkcoef_setup( BULK_TYPE )
     call CPL_AtmLnd_setup
 
     if( sw_AtmLnd ) then

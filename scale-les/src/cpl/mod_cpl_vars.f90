@@ -61,6 +61,7 @@ module mod_cpl_vars
   logical,                public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
   logical,                public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
   logical,                public, save :: CPL_sw_restart          !< output coupler restart?
+  character(len=H_SHORT), public, save :: CPL_BULK_TYPE   = ''    !< what is bulk method?
 
   !-----------------------------------------------------------------------------
   !
@@ -222,7 +223,8 @@ contains
     implicit none
 
     NAMELIST / PARAM_CPL / &
-       CPL_TYPE_AtmLnd
+       CPL_TYPE_AtmLnd,   &
+       CPL_BULK_TYPE
 
     NAMELIST / PARAM_CPL_VARS /  &
        CPL_RESTART_IN_BASENAME,  &
