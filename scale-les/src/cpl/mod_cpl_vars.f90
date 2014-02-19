@@ -95,15 +95,17 @@ module mod_cpl_vars
   real(RP), private, allocatable :: SFLX_QVLnd(:,:) ! moisture flux for land [kg/m2/s]
 
   ! Atmospheric values
-  real(RP), private, allocatable :: DENS(:,:,:)   ! air density [kg/m3]
-  real(RP), private, allocatable :: MOMX(:,:,:)   ! momentum x [kg/m2/s]
-  real(RP), private, allocatable :: MOMY(:,:,:)   ! momentum y [kg/m2/s]
-  real(RP), private, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/m2/s]
-  real(RP), private, allocatable :: RHOT(:,:,:)   ! rho * theta [K*kg/m3]
-  real(RP), private, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass [kg/kg]
-  real(RP), private, allocatable :: PREC(:,:)       ! surface precipitation rate [kg/m2/s]
-  real(RP), private, allocatable :: SWD (:,:)       ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: LWD (:,:)       ! downward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: DENS(:,:) ! air density [kg/m3]
+  real(RP), private, allocatable :: MOMX(:,:) ! momentum x [kg/m2/s]
+  real(RP), private, allocatable :: MOMY(:,:) ! momentum y [kg/m2/s]
+  real(RP), private, allocatable :: MOMZ(:,:) ! momentum z [kg/m2/s]
+  real(RP), private, allocatable :: RHOS(:,:) ! air density at the surface [kg/m3]
+  real(RP), private, allocatable :: PRES(:,:) ! pressure at the surface [Pa]
+  real(RP), private, allocatable :: ATMP(:,:) ! air temperature at the surface [K]
+  real(RP), private, allocatable :: QV  (:,:) ! ratio of mass of tracer to total mass [kg/kg]
+  real(RP), private, allocatable :: PREC(:,:) ! surface precipitation rate [kg/m2/s]
+  real(RP), private, allocatable :: SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), private, allocatable :: LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
 
   ! Land values
   real(RP), private, allocatable :: TG   (:,:) ! soil temperature [K]
@@ -260,15 +262,17 @@ contains
     allocate( SFLX_PREC (IA,JA) )
     allocate( SFLX_QVLnd(IA,JA) )
 
-    allocate( DENS(KA,IA,JA)    )
-    allocate( MOMX(KA,IA,JA)    )
-    allocate( MOMY(KA,IA,JA)    )
-    allocate( MOMZ(KA,IA,JA)    )
-    allocate( RHOT(KA,IA,JA)    )
-    allocate( QTRC(KA,IA,JA,QA) )
-    allocate( PREC(IA,JA)       )
-    allocate( SWD (IA,JA)       )
-    allocate( LWD (IA,JA)       )
+    allocate( DENS(IA,JA) )
+    allocate( MOMX(IA,JA) )
+    allocate( MOMY(IA,JA) )
+    allocate( MOMZ(IA,JA) )
+    allocate( RHOS(IA,JA) )
+    allocate( PRES(IA,JA) )
+    allocate( ATMP(IA,JA) )
+    allocate( QV  (IA,JA) )
+    allocate( PREC(IA,JA) )
+    allocate( SWD (IA,JA) )
+    allocate( LWD (IA,JA) )
 
     allocate( TG   (IA,JA) )
     allocate( QvEfc(IA,JA) )
@@ -597,29 +601,34 @@ contains
   end subroutine CPL_vars_merge
 
   subroutine CPL_putAtm( &
-      pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (in)
-      pQTRC, pPREC, pSWD, pLWD           ) ! (in)
+      pDENS, pMOMX, pMOMY, pMOMZ, & ! (in)
+      pRHOS, pPRES, pATMP, pQV,   & ! (in)
+      pPREC, pSWD, pLWD           ) ! (in)
     implicit none
 
-    real(RP), intent(in) :: pDENS(KA,IA,JA)
-    real(RP), intent(in) :: pMOMX(KA,IA,JA)
-    real(RP), intent(in) :: pMOMY(KA,IA,JA)
-    real(RP), intent(in) :: pMOMZ(KA,IA,JA)
-    real(RP), intent(in) :: pRHOT(KA,IA,JA)
-    real(RP), intent(in) :: pQTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: pDENS(IA,JA)
+    real(RP), intent(in) :: pMOMX(IA,JA)
+    real(RP), intent(in) :: pMOMY(IA,JA)
+    real(RP), intent(in) :: pMOMZ(IA,JA)
+    real(RP), intent(in) :: pRHOS(IA,JA)
+    real(RP), intent(in) :: pPRES(IA,JA)
+    real(RP), intent(in) :: pATMP(IA,JA)
+    real(RP), intent(in) :: pQV  (IA,JA)
     real(RP), intent(in) :: pPREC(IA,JA)
     real(RP), intent(in) :: pSWD (IA,JA)
     real(RP), intent(in) :: pLWD (IA,JA)
 
-    DENS(:,:,:)   = DENS(:,:,:)   + pDENS  (:,:,:)
-    MOMX(:,:,:)   = MOMX(:,:,:)   + pMOMX  (:,:,:)
-    MOMY(:,:,:)   = MOMY(:,:,:)   + pMOMY  (:,:,:)
-    MOMZ(:,:,:)   = MOMZ(:,:,:)   + pMOMZ  (:,:,:)
-    RHOT(:,:,:)   = RHOT(:,:,:)   + pRHOT  (:,:,:)
-    QTRC(:,:,:,:) = QTRC(:,:,:,:) + pQTRC  (:,:,:,:)
-    PREC(:,:)     = PREC(:,:)     + pPREC  (:,:)
-    SWD (:,:)     = SWD (:,:)     + pSWD(:,:)
-    LWD (:,:)     = LWD (:,:)     + pLWD(:,:)
+    DENS(:,:) = DENS(:,:) + pDENS(:,:)
+    MOMX(:,:) = MOMX(:,:) + pMOMX(:,:)
+    MOMY(:,:) = MOMY(:,:) + pMOMY(:,:)
+    MOMZ(:,:) = MOMZ(:,:) + pMOMZ(:,:)
+    RHOS(:,:) = RHOS(:,:) + pRHOS(:,:)
+    PRES(:,:) = PRES(:,:) + pPRES(:,:)
+    ATMP(:,:) = ATMP(:,:) + pATMP(:,:)
+    QV  (:,:) = QV  (:,:) + pQV  (:,:)
+    PREC(:,:) = PREC(:,:) + pPREC(:,:)
+    SWD (:,:) = SWD (:,:) + pSWD (:,:)
+    LWD (:,:) = LWD (:,:) + pLWD (:,:)
 
     CNT_putAtm = CNT_putAtm + 1.0_RP
 
@@ -736,29 +745,34 @@ contains
   end subroutine CPL_getCPL2Lnd
 
   subroutine CPL_AtmLnd_getAtm2CPL( &
-      pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (out)
-      pQTRC, pPREC, pSWD, pLWD           ) ! (out)
+      pDENS, pMOMX, pMOMY, pMOMZ, & ! (out)
+      pRHOS, pPRES, pATMP, pQV,   & ! (out)
+      pPREC, pSWD, pLWD           ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: pDENS(KA,IA,JA)
-    real(RP), intent(out) :: pMOMX(KA,IA,JA)
-    real(RP), intent(out) :: pMOMY(KA,IA,JA)
-    real(RP), intent(out) :: pMOMZ(KA,IA,JA)
-    real(RP), intent(out) :: pRHOT(KA,IA,JA)
-    real(RP), intent(out) :: pQTRC(KA,IA,JA,QA)
+    real(RP), intent(out) :: pDENS(IA,JA)
+    real(RP), intent(out) :: pMOMX(IA,JA)
+    real(RP), intent(out) :: pMOMY(IA,JA)
+    real(RP), intent(out) :: pMOMZ(IA,JA)
+    real(RP), intent(out) :: pRHOS(IA,JA)
+    real(RP), intent(out) :: pPRES(IA,JA)
+    real(RP), intent(out) :: pATMP(IA,JA)
+    real(RP), intent(out) :: pQV  (IA,JA)
     real(RP), intent(out) :: pPREC(IA,JA)
     real(RP), intent(out) :: pSWD (IA,JA)
     real(RP), intent(out) :: pLWD (IA,JA)
 
-    pDENS(:,:,:)   = DENS(:,:,:)   / CNT_putAtm
-    pMOMX(:,:,:)   = MOMX(:,:,:)   / CNT_putAtm
-    pMOMY(:,:,:)   = MOMY(:,:,:)   / CNT_putAtm
-    pMOMZ(:,:,:)   = MOMZ(:,:,:)   / CNT_putAtm
-    pRHOT(:,:,:)   = RHOT(:,:,:)   / CNT_putAtm
-    pQTRC(:,:,:,:) = QTRC(:,:,:,:) / CNT_putAtm
-    pPREC(:,:)     = PREC(:,:)     / CNT_putAtm
-    pSWD(:,:)      = SWD(:,:)      / CNT_putAtm
-    pLWD(:,:)      = LWD(:,:)      / CNT_putAtm
+    pDENS(:,:) = DENS(:,:) / CNT_putAtm
+    pMOMX(:,:) = MOMX(:,:) / CNT_putAtm
+    pMOMY(:,:) = MOMY(:,:) / CNT_putAtm
+    pMOMZ(:,:) = MOMZ(:,:) / CNT_putAtm
+    pRHOS(:,:) = RHOS(:,:) / CNT_putAtm
+    pPRES(:,:) = PRES(:,:) / CNT_putAtm
+    pATMP(:,:) = ATMP(:,:) / CNT_putAtm
+    pQV  (:,:) = QV  (:,:) / CNT_putAtm
+    pPREC(:,:) = PREC(:,:) / CNT_putAtm
+    pSWD (:,:) = SWD (:,:) / CNT_putAtm
+    pLWD (:,:) = LWD (:,:) / CNT_putAtm
 
     return
   end subroutine CPL_AtmLnd_getAtm2CPL
@@ -795,15 +809,17 @@ contains
   subroutine CPL_flushAtm
     implicit none
 
-    DENS(:,:,:)    = 0.0_RP
-    MOMX(:,:,:)    = 0.0_RP
-    MOMY(:,:,:)    = 0.0_RP
-    MOMZ(:,:,:)    = 0.0_RP
-    RHOT(:,:,:)    = 0.0_RP
-    QTRC(:,:,:,:)  = 0.0_RP
-    PREC(:,:)      = 0.0_RP
-    SWD (:,:)      = 0.0_RP
-    LWD (:,:)      = 0.0_RP
+    DENS(:,:) = 0.0_RP
+    MOMX(:,:) = 0.0_RP
+    MOMY(:,:) = 0.0_RP
+    MOMZ(:,:) = 0.0_RP
+    RHOS(:,:) = 0.0_RP
+    PRES(:,:) = 0.0_RP
+    ATMP(:,:) = 0.0_RP
+    QV  (:,:) = 0.0_RP
+    PREC(:,:) = 0.0_RP
+    SWD (:,:) = 0.0_RP
+    LWD (:,:) = 0.0_RP
 
     Lnd_SFLX_MOMX (:,:) = 0.0_RP
     Lnd_SFLX_MOMY (:,:) = 0.0_RP

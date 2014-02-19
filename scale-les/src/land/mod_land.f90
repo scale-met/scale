@@ -50,7 +50,7 @@ contains
        LAND_vars_setup,        &
        LAND_vars_restart_read
     use mod_land_phy_bucket, only: &
-       LAND_PHY_setup
+       LAND_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ contains
 
     call LAND_vars_restart_read
 
-    if ( sw_phy ) call LAND_PHY_setup
+    if ( sw_phy ) call LAND_PHY_driver_setup
 
     return
   end subroutine LAND_setup
@@ -68,53 +68,31 @@ contains
   subroutine LAND_step
     use mod_land_vars, only: &
        sw_phy => LAND_sw_phy, &
-       TG,                 &
-       QvEfc,              &
-       I_EMIT,             &
-       I_ALB,              &
-       I_TCS,              &
-       I_DZg,              &
-       I_Z0M,              &
-       I_Z0H,              &
-       I_Z0E,              &
-       LAND_PROPERTY,      &
-       LAND_vars_fillhalo, &
        LAND_vars_history
     use mod_land_phy_bucket, only: &
-       LAND_PHY
-    use mod_cpl_vars, only: &
-       CPL_putLnd, &
-       sw_AtmLnd => CPL_sw_AtmLnd
+       LAND_PHY_driver_first, &
+       LAND_PHY_driver_final
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Physics ##########
+    !########## Physics First ##########
     call PROF_rapstart('LND Physics')
     if ( sw_phy ) then
-       call LAND_PHY
+       call LAND_PHY_driver_first
     endif
     call PROF_rapend  ('LND Physics')
 
-    !########## Fill HALO ##########
-    call LAND_vars_fillhalo
+    !########## Physics Final ##########
+    call PROF_rapstart('LND Physics')
+    if ( sw_phy ) then
+       call LAND_PHY_driver_final
+    endif
+    call PROF_rapend  ('LND Physics')
 
     !########## History & Monitor ##########
     call PROF_rapstart('LND History')
-       call LAND_vars_history
+    call LAND_vars_history
     call PROF_rapend  ('LND History')
-
-    !########## to Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_putLnd( TG           (:,:),        & ! [IN]
-                        QvEfc        (:,:),        & ! [IN]
-                        LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
-                        LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
-    endif
 
     return
   end subroutine LAND_step

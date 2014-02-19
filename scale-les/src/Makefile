@@ -36,14 +36,14 @@ MODS =	\
 	mod_atmos_phy_tb_driver.o	\
 	mod_atmos_phy_ae_driver.o \
 	mod_atmos_phy_rd_driver.o \
+	mod_land_phy_bucket.o	\
+	mod_ocean_phy_fixedsst.o	\
 	mod_cpl_bulkcoef.o \
 	mod_cpl_atmos_land.o \
-	mod_cpl.o \
 	mod_atmos.o	\
-	mod_land_phy_bucket.o	\
 	mod_land.o	\
-	mod_ocean_phy_fixedsst.o	\
 	mod_ocean.o	\
+	mod_cpl.o \
 	mod_mktopo.o	\
 	mod_mkinit.o	\
 	mod_user.o

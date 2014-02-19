@@ -24,8 +24,9 @@ module mod_land_phy_bucket
   !
   !++ Public procedure
   !
-  public :: LAND_PHY_setup
-  public :: LAND_PHY
+  public :: LAND_PHY_driver_setup
+  public :: LAND_PHY_driver_first
+  public :: LAND_PHY_driver_final
 
   !-----------------------------------------------------------------------------
   !
@@ -51,7 +52,7 @@ module mod_land_phy_bucket
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_PHY_setup
+  subroutine LAND_PHY_driver_setup
     use mod_process, only: &
        PRC_MPIstop
     use mod_land_vars, only: &
@@ -91,30 +92,29 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_BUCKET)
 
     return
-  end subroutine LAND_PHY_setup
+  end subroutine LAND_PHY_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Physical processes for land submodel
-  subroutine LAND_PHY
+  subroutine LAND_PHY_driver_first
     use mod_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
     use mod_time, only: &
        dt => TIME_DTSEC_LAND
     use mod_land_vars, only: &
-       TG,         &
-       QvEfc,      &
-       ROFF,       &
-       STRG,       &
-       I_STRGMAX,  &
-       I_STRGCRT,  &
-       I_HCS,      &
-       I_DZg,      &
-       P => LAND_PROPERTY
+       TG,                 &
+       QvEfc,              &
+       ROFF,               &
+       STRG,               &
+       I_STRGMAX,          &
+       I_STRGCRT,          &
+       I_HCS,              &
+       I_DZg,              &
+       P => LAND_PROPERTY, &
+       LAND_vars_fillhalo
     use mod_cpl_vars, only: &
-       CPL_getCPL2Lnd, &
-       sw_AtmLnd => CPL_sw_AtmLnd
-
+       CPL_getCPL2Lnd
     implicit none
 
     integer :: i,j
@@ -122,12 +122,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
 
-    !########## from Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_getCPL2Lnd( SFLX_GH  (:,:), & ! [OUT]
-                            SFLX_PREC(:,:), & ! [OUT]
-                            SFLX_QV  (:,:)  ) ! [OUT]
-    endif
+    call CPL_getCPL2Lnd( SFLX_GH  (:,:), & ! [OUT]
+                         SFLX_PREC(:,:), & ! [OUT]
+                         SFLX_QV  (:,:)  ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
@@ -151,7 +148,38 @@ contains
     end do
     end do
 
+    call LAND_vars_fillhalo
+
     return
-  end subroutine LAND_PHY
+  end subroutine LAND_PHY_driver_first
+
+  subroutine LAND_PHY_driver_final
+    use mod_land_vars, only: &
+       TG,                 &
+       QvEfc,              &
+       I_EMIT,             &
+       I_ALB,              &
+       I_TCS,              &
+       I_DZg,              &
+       I_Z0M,              &
+       I_Z0H,              &
+       I_Z0E,              &
+       P => LAND_PROPERTY
+    use mod_cpl_vars, only: &
+       CPL_putLnd
+    implicit none
+
+    call CPL_putLnd( TG   (:,:),        & ! [IN]
+                     QvEfc(:,:),        & ! [IN]
+                     P    (:,:,I_EMIT), & ! [IN]
+                     P    (:,:,I_ALB),  & ! [IN]
+                     P    (:,:,I_TCS),  & ! [IN]
+                     P    (:,:,I_DZg),  & ! [IN]
+                     P    (:,:,I_Z0M),  & ! [IN]
+                     P    (:,:,I_Z0H),  & ! [IN]
+                     P    (:,:,I_Z0E)   ) ! [IN]
+
+    return
+  end subroutine LAND_PHY_driver_final
 
 end module mod_land_phy_bucket

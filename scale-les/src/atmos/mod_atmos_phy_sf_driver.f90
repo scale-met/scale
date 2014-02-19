@@ -29,7 +29,8 @@ module mod_atmos_phy_sf_driver
   !
   public :: ATMOS_PHY_SF_driver_setup
   public :: ATMOS_PHY_SF_driver
-  public :: ATMOS_PHY_SF_CPL
+  public :: ATMOS_PHY_SF_driver_first
+  public :: ATMOS_PHY_SF_driver_final
 
   !-----------------------------------------------------------------------------
   !
@@ -66,8 +67,6 @@ contains
        PRC_MPIstop
     use mod_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
-    use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
 
     character(len=H_SHORT), intent(in) :: SF_TYPE
@@ -191,9 +190,10 @@ contains
     return
   end subroutine ATMOS_PHY_SF_driver
 
-  subroutine ATMOS_PHY_SF_CPL
+  subroutine ATMOS_PHY_SF_driver_first
     use mod_const, only: &
-       CPdry  => CONST_CPdry
+       CPdry => CONST_CPdry, &
+       RovCP => CONST_RovCP
     use mod_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
@@ -207,21 +207,18 @@ contains
        RHOT_tp, &
        QTRC_tp
     use mod_cpl_vars, only: &
-       CPL_getCPL2Atm, &
-       sw_AtmLnd => CPL_sw_AtmLnd
+       CPL_getCPL2Atm
     implicit none
 
+    ! work
     integer :: i, j
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface'
 
-    !########## from Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_getCPL2Atm( &
-          SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, &
-          SFLX_SWU, SFLX_LWU,              &
-          SFLX_SH, SFLX_LH, SFLX_QV        )
-    endif
+    call CPL_getCPL2Atm( &
+       SFLX_MOMX, SFLX_MOMY, SFLX_MOMZ, &
+       SFLX_SWU, SFLX_LWU,              &
+       SFLX_SH, SFLX_LH, SFLX_QV        )
 
     do j = JS, JE
     do i = IS, IE
@@ -243,6 +240,123 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_SF_CPL
+  end subroutine ATMOS_PHY_SF_driver_first
+
+  subroutine ATMOS_PHY_SF_driver_final
+    use mod_const, only: &
+       RovCP => CONST_RovCP
+    use mod_atmos_vars, only: &
+       DENS,    &
+       MOMX,    &
+       MOMY,    &
+       MOMZ,    &
+       RHOT,    &
+       QTRC
+    use mod_atmos_vars_sf, only: &
+       PREC, &
+       SWD,  &
+       LWD
+    use mod_atmos_thermodyn, only: &
+       temp_pres => ATMOS_THERMODYN_temp_pres
+    use mod_cpl_vars, only: &
+       CPL_putAtm
+    implicit none
+
+    ! work
+    integer :: i, j
+
+    real(RP) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
+    real(RP) :: PRES(IA,JA) ! pressure at the surface [Pa]
+    real(RP) :: ATMP(IA,JA) ! air temperature at the surface [K]
+
+    real(RP) :: tem(KA,IA,JA) ! temperature [K]
+    real(RP) :: pre(KA,IA,JA) ! pressure [Pa]
+    real(RP) :: zs (IA,JA)
+
+    call temp_pres( tem (:,:,:),  & ! (out)
+                    pre (:,:,:),  & ! (out)
+                    DENS(:,:,:),  & ! (in)
+                    RHOT(:,:,:),  & ! (in)
+                    QTRC(:,:,:,:) ) ! (in)
+
+    zs(:,:) = 0.0_RP
+    call sfcval_estimate( RHOS(:,:),   & ! (out)
+                          PRES(:,:),   & ! (out)
+                          DENS(:,:,:), & ! (in)
+                          pre (:,:,:), & ! (in)
+                          zs  (:,:)    ) ! (in)
+
+    do j = 1, JA
+    do i = 1, IA
+      ATMP(i,j) = tem(KS,i,j) * ( PRES(i,j) / pre(KS,i,j) )**RovCP
+    end do
+    end do
+
+    call CPL_putAtm( &
+       DENS(KS,:,:),      &
+       MOMX(KS,:,:),      &
+       MOMY(KS,:,:),      &
+       MOMZ(KS,:,:),      &
+       RHOS(:,:),         &
+       PRES(:,:),         &
+       ATMP(:,:),         &
+       QTRC(KS,:,:,I_QV), &
+       PREC(:,:),         &
+       SWD(:,:),          &
+       LWD(:,:)           )
+
+    return
+  end subroutine ATMOS_PHY_SF_driver_final
+
+  subroutine sfcval_estimate( &
+      sfc_rho, sfc_pre, & ! (out)
+      rho, pre, zs      ) ! (in)
+    use mod_const, only: &
+      GRAV => CONST_GRAV
+    use mod_grid, only: &
+      CZ => GRID_CZ
+    implicit none
+
+    ! argument
+    real(RP), intent(out) :: sfc_rho(IA,JA)    ! density at surface [kg/m3]
+    real(RP), intent(out) :: sfc_pre(IA,JA)    ! pressure at surface [Pa]
+    real(RP), intent(in)  :: rho    (KA,IA,JA) ! density [kg/m3]
+    real(RP), intent(in)  :: pre    (KA,IA,JA) ! pressure [Pa]
+    real(RP), intent(in)  :: zs     (IA,JA)    ! surface height [m]
+
+    ! work
+    integer :: i, j
+
+    real(RP) :: zz
+    real(RP) :: z1, z2, z3
+    real(RP) :: p1, p2, p3
+    real(RP) :: lag_intpl
+
+    lag_intpl( zz, z1, p1, z2, p2, z3, p3 )                &
+      = ( (zz-z2) * (zz-z3) ) / ( (z1-z2) * (z1-z3) ) * p1 &
+      + ( (zz-z1) * (zz-z3) ) / ( (z2-z1) * (z2-z3) ) * p2 &
+      + ( (zz-z1) * (zz-z2) ) / ( (z3-z1) * (z3-z2) ) * p3
+
+    ! estimate surface density (extrapolation)
+    do j = 1, JA
+    do i = 1, IA
+      sfc_rho(i,j) = lag_intpl( zs(i,j),                 &
+                                CZ(KS  ), rho(KS  ,i,j), &
+                                CZ(KS+1), rho(KS+1,i,j), &
+                                CZ(KS+2), rho(KS+2,i,j)  )
+    end do
+    end do
+
+    ! estimate surface pressure (hydrostatic balance)
+    do j = 1, JA
+    do i = 1, IA
+      sfc_pre(i,j) = pre(KS,i,j)                             &
+                   + 0.5_RP * ( sfc_rho(i,j) + rho(KS,i,j) ) &
+                   * GRAV * ( CZ(KS) - zs(i,j) )
+    end do
+    end do
+
+    return
+  end subroutine sfcval_estimate
 
 end module mod_atmos_phy_sf_driver
