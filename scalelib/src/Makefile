@@ -93,7 +93,8 @@ OBJS =	\
 	mod_atmos_phy_rd.o	\
 	mod_atmos_phy_ae_dummy.o	\
 	mod_atmos_phy_ae.o	\
-	mod_cpl_sub_bulkcoef.o
+	mod_cpl_sub_bulkcoef.o	\
+	mod_cpl_sub_sfcflux.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
 
