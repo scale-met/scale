@@ -443,8 +443,10 @@ contains
 
       call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )
 
-      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
-      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
+      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
+              * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
+      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
+              * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
       dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
       dLWUFLX = 4.0_RP * EMIT(i,j) * STB * TS(i,j)**3
 
