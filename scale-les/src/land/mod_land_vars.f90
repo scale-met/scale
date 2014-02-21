@@ -46,24 +46,24 @@ module mod_land_vars
   logical,                public, save :: LAND_sw_restart       !< output restart?
 
   ! prognostic varia
-  real(RP), public, allocatable :: TG   (:,:)      ! soil temperature [K]
-  real(RP), public, allocatable :: QvEfc(:,:)      ! efficiency of evaporation [0-1]
-  real(RP), public, allocatable :: ROFF (:,:)      ! run-off water [kg/m2]
-  real(RP), public, allocatable :: STRG (:,:)      ! water storage [kg/m2]
+  real(RP), public, allocatable :: TG  (:,:) ! soil temperature [K]
+  real(RP), public, allocatable :: QVEF(:,:) ! efficiency of evaporation [0-1]
+  real(RP), public, allocatable :: ROFF(:,:) ! run-off water [kg/m2]
+  real(RP), public, allocatable :: STRG(:,:) ! water storage [kg/m2]
 
-  integer,  public, save :: I_TG    = 1
-  integer,  public, save :: I_QvEfc = 2
-  integer,  public, save :: I_ROFF  = 3
-  integer,  public, save :: I_STRG  = 4
+  integer,  public, save :: I_TG   = 1
+  integer,  public, save :: I_QVEF = 2
+  integer,  public, save :: I_ROFF = 3
+  integer,  public, save :: I_STRG = 4
 
   character(len=H_SHORT), public, save :: LP_NAME(4) !< name  of the land variables
   character(len=H_MID),   public, save :: LP_DESC(4) !< desc. of the land variables
   character(len=H_SHORT), public, save :: LP_UNIT(4) !< unit  of the land variables
 
-  data LP_NAME / 'TG',    &
-                 'QvEfc', &
-                 'ROFF',  &
-                 'STRG'   /
+  data LP_NAME / 'TG',   &
+                 'QVEF', &
+                 'ROFF', &
+                 'STRG'  /
   data LP_DESC / 'soil temperature',          &
                  'efficiency of evaporation', &
                  'run-off water',             &
@@ -74,16 +74,16 @@ module mod_land_vars
                  'kg/m2'  /
 
   integer,  public, parameter :: LAND_PROPERTY_nmax = 10
-  integer,  public, parameter :: I_STRGMAX =  1             ! maximum  water storage [kg/m2]
-  integer,  public, parameter :: I_STRGCRT =  2             ! critical water storage [kg/m2]
-  integer,  public, parameter :: I_EMIT    =  3             ! surface emissivity in long-wave  radiation [0-1]
-  integer,  public, parameter :: I_ALB     =  4             ! surface albedo     in short-wave radiation [0-1]
-  integer,  public, parameter :: I_TCS     =  5             ! thermal conductivity for soil [W/m/K]
-  integer,  public, parameter :: I_HCS     =  6             ! heat capacity        for soil [J/K]
-  integer,  public, parameter :: I_DZg     =  7             ! soil depth [m]
-  integer,  public, parameter :: I_Z0M     =  8             ! roughness length for momemtum [m]
-  integer,  public, parameter :: I_Z0H     =  9             ! roughness length for heat     [m]
-  integer,  public, parameter :: I_Z0E     = 10             ! roughness length for moisture [m]
+  integer,  public, parameter :: I_STRGMAX =  1  ! maximum  water storage [kg/m2]
+  integer,  public, parameter :: I_STRGCRT =  2  ! critical water storage [kg/m2]
+  integer,  public, parameter :: I_EMIT    =  3  ! surface emissivity in long-wave  radiation [0-1]
+  integer,  public, parameter :: I_ALB     =  4  ! surface albedo     in short-wave radiation [0-1]
+  integer,  public, parameter :: I_TCS     =  5  ! thermal conductivity for soil [W/m/K]
+  integer,  public, parameter :: I_HCS     =  6  ! heat capacity        for soil [J/K]
+  integer,  public, parameter :: I_DZG     =  7  ! soil depth [m]
+  integer,  public, parameter :: I_Z0M     =  8  ! roughness length for momemtum [m]
+  integer,  public, parameter :: I_Z0H     =  9  ! roughness length for heat     [m]
+  integer,  public, parameter :: I_Z0E     = 10  ! roughness length for moisture [m]
 
   integer,  public, allocatable :: LAND_Type    (:,:)   ! land type index
   real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
@@ -140,10 +140,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
 
-    allocate( TG   (IA,JA) )
-    allocate( QvEfc(IA,JA) )
-    allocate( ROFF (IA,JA) )
-    allocate( STRG (IA,JA) )
+    allocate( TG  (IA,JA) )
+    allocate( QVEF(IA,JA) )
+    allocate( ROFF(IA,JA) )
+    allocate( STRG(IA,JA) )
 
     allocate( LAND_Type    (IA,JA) )
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
@@ -219,15 +219,15 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    call COMM_vars8( TG   (:,:), 1 )
-    call COMM_vars8( QvEfc(:,:), 2 )
-    call COMM_vars8( ROFF (:,:), 3 )
-    call COMM_vars8( STRG (:,:), 4 )
+    call COMM_vars8( TG  (:,:), 1 )
+    call COMM_vars8( QVEF(:,:), 2 )
+    call COMM_vars8( ROFF(:,:), 3 )
+    call COMM_vars8( STRG(:,:), 4 )
 
-    call COMM_wait ( TG   (:,:), 1 )
-    call COMM_wait ( QvEfc(:,:), 2 )
-    call COMM_wait ( ROFF (:,:), 3 )
-    call COMM_wait ( STRG (:,:), 4 )
+    call COMM_wait ( TG  (:,:), 1 )
+    call COMM_wait ( QVEF(:,:), 2 )
+    call COMM_wait ( ROFF(:,:), 3 )
+    call COMM_wait ( STRG(:,:), 4 )
 
     return
   end subroutine LAND_vars_fillhalo
@@ -254,24 +254,24 @@ contains
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( TG(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'TG',    'XY', step=1 ) ! [IN]
-       call FILEIO_read( QvEfc(:,:),                                     & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'QvEfc', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ROFF(:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ROFF',  'XY', step=1 ) ! [IN]
-       call FILEIO_read( STRG(:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'STRG',  'XY', step=1 ) ! [IN]
+       call FILEIO_read( TG(:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'TG',   'XY', step=1 ) ! [IN]
+       call FILEIO_read( QVEF(:,:),                                     & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'QVEF', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ROFF(:,:),                                     & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( STRG(:,:),                                     & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'STRG', 'XY', step=1 ) ! [IN]
 
        call LAND_vars_fillhalo
 
        call LAND_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
-       TG   (:,:) = 300.0_RP
-       QvEfc(:,:) =   1.0_RP
-       ROFF (:,:) =   0.0_RP
-       STRG (:,:) = 200.0_RP
+       TG  (:,:) = 300.0_RP
+       QVEF(:,:) =   1.0_RP
+       ROFF(:,:) =   0.0_RP
+       STRG(:,:) = 200.0_RP
     endif
 
     LAND_PROPERTY(:,:,:) = CONST_UNDEF
@@ -333,14 +333,14 @@ contains
        enddo
        basename = trim(LAND_RESTART_OUT_BASENAME) // '_' // trim(basename)
 
-       call FILEIO_write( TG(:,:),    basename,                                       LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_TG),    LP_DESC(I_TG),    LP_UNIT(I_TG),    'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( QvEfc(:,:), basename,                                       LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_QvEfc), LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF(:,:),  basename,                                       LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_ROFF),  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( STRG(:,:),  basename,                                       LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_STRG),  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TG(:,:),    basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
+                          LP_NAME(I_TG),   LP_DESC(I_TG),   LP_UNIT(I_TG),   'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( QVEF(:,:), basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
+                          LP_NAME(I_QVEF), LP_DESC(I_QVEF), LP_UNIT(I_QVEF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ROFF(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
+                          LP_NAME(I_ROFF), LP_DESC(I_ROFF), LP_UNIT(I_ROFF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( STRG(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
+                          LP_NAME(I_STRG), LP_DESC(I_STRG), LP_UNIT(I_STRG), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -362,16 +362,16 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( TG   (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)   , __FILE__, __LINE__ )
-       call VALCHECK( QvEfc(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QvEfc), __FILE__, __LINE__ )
-       call VALCHECK( ROFF (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF) , __FILE__, __LINE__ )
-       call VALCHECK( STRG (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG) , __FILE__, __LINE__ )
+       call VALCHECK( TG  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)  , __FILE__, __LINE__ )
+       call VALCHECK( QVEF(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QVEF), __FILE__, __LINE__ )
+       call VALCHECK( ROFF(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF), __FILE__, __LINE__ )
+       call VALCHECK( STRG(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TG   (:,:),   'TG',    LP_DESC(I_TG),    LP_UNIT(I_TG),    TIME_DTSEC_LAND )
-    call HIST_in( QvEfc(:,:),   'QvEfc', LP_DESC(I_QvEfc), LP_UNIT(I_QvEfc), TIME_DTSEC_LAND )
-    call HIST_in( ROFF (:,:),   'ROFF',  LP_DESC(I_ROFF),  LP_UNIT(I_ROFF),  TIME_DTSEC_LAND )
-    call HIST_in( STRG (:,:),   'STRG',  LP_DESC(I_STRG),  LP_UNIT(I_STRG),  TIME_DTSEC_LAND )
+    call HIST_in( TG  (:,:), 'TG',   LP_DESC(I_TG),   LP_UNIT(I_TG),   TIME_DTSEC_LAND )
+    call HIST_in( QVEF(:,:), 'QVEF', LP_DESC(I_QVEF), LP_UNIT(I_QVEF), TIME_DTSEC_LAND )
+    call HIST_in( ROFF(:,:), 'ROFF', LP_DESC(I_ROFF), LP_UNIT(I_ROFF), TIME_DTSEC_LAND )
+    call HIST_in( STRG(:,:), 'STRG', LP_DESC(I_STRG), LP_UNIT(I_STRG), TIME_DTSEC_LAND )
 
     return
   end subroutine LAND_vars_history
@@ -411,7 +411,7 @@ contains
     real(RP)               :: ALB
     real(RP)               :: TCS
     real(RP)               :: HCS
-    real(RP)               :: DZg
+    real(RP)               :: DZG
     real(RP)               :: Z0M
     real(RP)               :: Z0H
     real(RP)               :: Z0E
@@ -425,7 +425,7 @@ contains
        ALB,         &
        TCS,         &
        HCS,         &
-       DZg,         &
+       DZG,         &
        Z0M,         &
        Z0H,         &
        Z0E
@@ -480,7 +480,7 @@ contains
        LAND_PROPERTY_table(index,I_ALB    ) = ALB
        LAND_PROPERTY_table(index,I_TCS    ) = TCS
        LAND_PROPERTY_table(index,I_HCS    ) = HCS
-       LAND_PROPERTY_table(index,I_DZg    ) = DZg
+       LAND_PROPERTY_table(index,I_DZG    ) = DZG
        LAND_PROPERTY_table(index,I_Z0M    ) = Z0M
        LAND_PROPERTY_table(index,I_Z0H    ) = Z0H
        LAND_PROPERTY_table(index,I_Z0E    ) = Z0E
@@ -493,7 +493,7 @@ contains
                                      ALB,     &
                                      TCS,     &
                                      HCS,     &
-                                     DZg,     &
+                                     DZG,     &
                                      Z0M,     &
                                      Z0H,     &
                                      Z0E

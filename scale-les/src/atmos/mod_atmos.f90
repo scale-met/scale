@@ -161,12 +161,9 @@ contains
        do_phy_rd => TIME_DOATMOS_PHY_RD, &
        do_phy_ae => TIME_DOATMOS_PHY_AE
     use mod_atmos_vars, only: &
-       DENS,    &
-       MOMX,    &
-       MOMY,    &
-       MOMZ,    &
-       RHOT,    &
-       QTRC,    &
+       DENS, &
+       RHOT, &
+       QTRC, &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -180,15 +177,12 @@ contains
        sw_phy_rd => ATMOS_sw_phy_rd, &
        sw_phy_ae => ATMOS_sw_phy_ae, &
        ATMOS_vars_history
-    use mod_atmos_vars_sf, only: &
-       PREC, &
-       SWD,  &
-       LWD
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN => ATMOS_DYN_driver
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF => ATMOS_PHY_SF_driver, &
-       ATMOS_PHY_SF_CPL
+       ATMOS_PHY_SF_driver_first,  &
+       ATMOS_PHY_SF_driver_final
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB => ATMOS_PHY_TB_driver
     use mod_atmos_phy_mp_driver, only: &
@@ -201,7 +195,6 @@ contains
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
     use mod_cpl_vars, only: &
-       CPL_putAtm, &
        sw_AtmLnd => CPL_sw_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
@@ -211,11 +204,11 @@ contains
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
     endif
 
-    !########## Surface Flux ##########
+    !########## Surface First ##########
     if ( sw_phy_sf ) then
        call PROF_rapstart('ATM SurfaceFlux')
        if ( sw_AtmLnd ) then
-          call ATMOS_PHY_SF_CPL
+          call ATMOS_PHY_SF_driver_first
        else
           call ATMOS_PHY_SF( do_phy_sf, .true. )
        endif
@@ -257,17 +250,19 @@ contains
        call PROF_rapend  ('ATM Dynamics')
     endif
 
+    !########## Surface Final ##########
+    if ( sw_phy_sf ) then
+       call PROF_rapstart('ATM SurfaceFlux')
+       if ( sw_AtmLnd ) then
+          call ATMOS_PHY_SF_driver_final
+       endif
+       call PROF_rapend  ('ATM SurfaceFlux')
+    endif
+
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars')
-       call ATMOS_vars_history
+    call ATMOS_vars_history
     call PROF_rapend  ('ATM History Vars')
-
-    !########## to Coupler ##########
-    if ( sw_AtmLnd ) then
-       call CPL_putATM( &
-          DENS, MOMX, MOMY, MOMZ,    &
-          RHOT, QTRC, PREC, SWD, LWD )
-    endif
 
     !########## reset tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP

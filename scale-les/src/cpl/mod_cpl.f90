@@ -46,28 +46,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_setup
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMX, &
-       MOMY, &
-       MOMZ, &
-       RHOT, &
-       QTRC
-    use mod_atmos_vars_sf, only: &
-       PREC, &
-       SWD,  &
-       LWD
-    use mod_land_vars, only: &
-       TG,    &
-       QvEfc, &
-       I_EMIT,             &
-       I_ALB,              &
-       I_TCS,              &
-       I_DZg,              &
-       I_Z0M,              &
-       I_Z0H,              &
-       I_Z0E,              &
-       LAND_PROPERTY
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver_final
+    use mod_land_phy_bucket, only: &
+       LAND_PHY_driver_final
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        BULK_TYPE => CPL_BULK_TYPE, &
@@ -94,24 +76,11 @@ contains
     call CPL_bulkcoef_setup( BULK_TYPE )
     call CPL_AtmLnd_setup
 
-    if( sw_AtmLnd ) then
-       call CPL_putATM( &
-          DENS, MOMX, MOMY, MOMZ,    &
-          RHOT, QTRC, PREC, SWD, LWD )
-       call CPL_putLnd( TG           (:,:),        & ! [IN]
-                        QvEfc        (:,:),        & ! [IN]
-                        LAND_PROPERTY(:,:,I_EMIT), & ! [IN]
-                        LAND_PROPERTY(:,:,I_ALB),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_TCS),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_DZg),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0M),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0H),  & ! [IN]
-                        LAND_PROPERTY(:,:,I_Z0E)   ) ! [IN]
-       call CPL_AtmLnd_unsolve
+    call ATMOS_PHY_SF_driver_final
+    call LAND_PHY_driver_final
 
-       call CPL_vars_merge
-
-    endif
+    call CPL_AtmLnd_unsolve
+    call CPL_vars_merge
 
     call CPL_flushAtm
     call CPL_flushLnd
@@ -160,7 +129,7 @@ contains
 
     !########## History & Monitor ##########
     call PROF_rapstart('CPL History')
-       call CPL_vars_history
+    call CPL_vars_history
     call PROF_rapend  ('CPL History')
 
     return
