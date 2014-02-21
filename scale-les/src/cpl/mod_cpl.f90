@@ -65,8 +65,8 @@ contains
     use mod_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_setup, &
-       CPL_AtmLnd_unsolve
+       CPL_AtmLnd_driver_setup, &
+       CPL_AtmLnd_driver
     implicit none
     !---------------------------------------------------------------------------
 
@@ -75,19 +75,16 @@ contains
 
     if( sw_AtmLnd ) then
       call CPL_bulkcoef_setup( BULK_TYPE )
-      call CPL_AtmLnd_setup
+      call CPL_AtmLnd_driver_setup
 
       call ATMOS_PHY_SF_driver_final
       call LAND_PHY_driver_final
-
-      call CPL_AtmLnd_unsolve
+      call CPL_AtmLnd_driver( .false. )
     end if
 
     call CPL_vars_merge
 
-    call CPL_flushAtm
-    call CPL_flushLnd
-    call CPL_AtmLnd_flushCPL
+    call CPL_AtmLnd_driver_setup
 
     call CPL_vars_fillhalo
 
@@ -107,15 +104,14 @@ contains
        CPL_flushLnd,        &
        CPL_AtmLnd_flushCPL
     use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_solve,   &
-       CPL_AtmLnd_unsolve
+       CPL_AtmLnd_driver
     implicit none
     !---------------------------------------------------------------------------
 
     !########## Coupler Atoms-Land ##########
     call PROF_rapstart('CPL Atmos-Land')
     if( sw_AtmLnd ) then
-       call CPL_AtmLnd_solve
+       call CPL_AtmLnd_driver( .true. )
     endif
     call PROF_rapend  ('CPL Atmos-Land')
 
