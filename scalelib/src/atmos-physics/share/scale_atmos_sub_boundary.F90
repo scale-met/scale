@@ -78,7 +78,7 @@ module scale_atmos_boundary
   real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELX    =  5.0_RP ! u at boundary, 5 [m/s]
   real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELY    =  5.E0_RP ! v at boundary, 5 [m/s]
   real(RP),                  private :: ATMOS_BOUNDARY_VALUE_POTT    = 300.E0_RP! PT at boundary, 300 [K]
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_QV      = 1.E-3_RP ! QV at boundary, 1.d-3 [kg/kg]
+  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_QV      = 1.E-3_RP ! QV at boundary, 1e-3 [kg/kg]
 
   real(RP),                  private :: ATMOS_BOUNDARY_FRACZ         = 1.0_RP  ! fraction of boundary region for dumping [z]
   real(RP),                  private :: ATMOS_BOUNDARY_FRACX         = 1.0_RP  ! fraction of boundary region for dumping [x]

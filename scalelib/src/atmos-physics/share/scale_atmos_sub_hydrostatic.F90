@@ -185,7 +185,7 @@ contains
     CPovCV = ( CVtot + Rtot ) / CVtot
 
     ! density at surface
-    CVovCP_sfc = 1.D0 / CPovCV_sfc
+    CVovCP_sfc = 1.0_RP / CPovCV_sfc
     dens_sfc   = P00 / Rtot_sfc / pott_sfc * ( pres_sfc/P00 )**CVovCP_sfc
     temp_sfc   = pres_sfc / ( dens_sfc * Rtot_sfc )
 
@@ -193,7 +193,7 @@ contains
     if ( HYDROSTATIC_uselapserate ) then
 
        CPovR  = ( CVtot + Rtot ) / Rtot
-       CVovCP = 1.D0 / CPovCV
+       CVovCP = 1.0_RP / CPovCV
 
        temp(KS) = pott_sfc - LASPdry * CZ(KS) ! use dry lapse rate
        pres(KS) = P00 * ( temp(KS)/pott(KS) )**CPovR
@@ -325,7 +325,7 @@ contains
     ! density at surface
     do j = JS, JE
     do i = IS, IE
-       CVovCP_sfc      = 1.D0 / CPovCV_sfc(i,j)
+       CVovCP_sfc      = 1.0_RP / CPovCV_sfc(i,j)
        dens_sfc(1,i,j) = P00 / Rtot_sfc(i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP_sfc
        temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rtot_sfc(i,j) )
     enddo
@@ -337,7 +337,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
-          CVovCP = 1.D0 / CPovCV(i,j)
+          CVovCP = 1.0_RP / CPovCV(i,j)
 
           temp(KS,i,j) = pott_sfc(1,i,j) - LASPdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
           pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR

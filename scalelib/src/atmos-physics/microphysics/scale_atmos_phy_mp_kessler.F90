@@ -323,7 +323,7 @@ contains
 
     call PROF_rapstart('MP_kessler')
 
-    rdt = 1.D0 / dt
+    rdt = 1.0_RP / dt
 
     call THERMODYN_temp_pres_E( TEMP0(:,:,:),  & ! [OUT]
                                 PRES0(:,:,:),  & ! [OUT]
@@ -465,7 +465,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       qhydro = 0.D0
+       qhydro = 0.0_RP
        do iq = 1, MP_QA
           qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
        enddo

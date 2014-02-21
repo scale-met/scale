@@ -388,16 +388,16 @@ contains
                            * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )                            ! rayleigh damping
           enddo
 
-          DENS_t(   1:KS-1,i,j) = 0.D0
-          MOMZ_t(   1:KS-1,i,j) = 0.D0
-          MOMX_t(   1:KS-1,i,j) = 0.D0
-          MOMY_t(   1:KS-1,i,j) = 0.D0
-          RHOT_t(   1:KS-1,i,j) = 0.D0
-          DENS_t(KE+1:KA  ,i,j) = 0.D0
-          MOMZ_t(KE+1:KA  ,i,j) = 0.D0
-          MOMX_t(KE+1:KA  ,i,j) = 0.D0
-          MOMY_t(KE+1:KA  ,i,j) = 0.D0
-          RHOT_t(KE+1:KA  ,i,j) = 0.D0
+          DENS_t(   1:KS-1,i,j) = 0.0_RP
+          MOMZ_t(   1:KS-1,i,j) = 0.0_RP
+          MOMX_t(   1:KS-1,i,j) = 0.0_RP
+          MOMY_t(   1:KS-1,i,j) = 0.0_RP
+          RHOT_t(   1:KS-1,i,j) = 0.0_RP
+          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
+          MOMZ_t(KE+1:KA  ,i,j) = 0.0_RP
+          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
+          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
+          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
        enddo
        enddo
 
@@ -438,7 +438,7 @@ contains
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 3.D0
+       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -467,7 +467,7 @@ contains
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 2.D0
+       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
        call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -608,8 +608,8 @@ contains
        endif
        do j = JS, JE
        do i = IS, IE
-          RHOQ_t(   1:KS-1,i,j) = 0.D0
-          RHOQ_t(KE+1:KA  ,i,j) = 0.D0
+          RHOQ_t(   1:KS-1,i,j) = 0.0_RP
+          RHOQ_t(KE+1:KA  ,i,j) = 0.0_RP
        enddo
        enddo
 

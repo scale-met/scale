@@ -1484,7 +1484,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       qhydro = 0.D0
+       qhydro = 0.0_RP
        do iq = 1, MP_QA
           qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
        enddo

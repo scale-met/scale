@@ -70,10 +70,10 @@ module mod_atmos_vars
   logical,                public, save :: ATMOS_USE_AVERAGE = .false.
 
   ! prognostic variables
-  real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density    [kg/m3]
-  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y [kg/s/m2]
+  real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
+  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z  [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x  [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y  [kg/s/m2]
   real(RP), public, target, allocatable :: RHOT(:,:,:)   ! DENS * POTT [K*kg/m3]
   real(RP), public, target, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass[kg/kg]
 
@@ -1271,7 +1271,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTOT(k,i,j) = 1.D0 - QDRY(k,i,j)
+          QTOT(k,i,j) = 1.0_RP - QDRY(k,i,j)
        enddo
        enddo
        enddo

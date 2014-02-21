@@ -478,7 +478,7 @@ contains
                                              - CNZ3(1,KE-1,1) * dens_diff(KE-2,i,j) )
           num_diff(KE  ,i,j,I_DENS,ZDIR) = - num_diff(KE-1,i,j,I_DENS,ZDIR)
           num_diff(KE+1,i,j,I_DENS,ZDIR) = - num_diff(KE-2,i,j,I_DENS,ZDIR)
-          num_diff(KE+2,i,j,I_DENS,ZDIR) = 0.D0
+          num_diff(KE+2,i,j,I_DENS,ZDIR) = 0.0_RP
        enddo
        enddo
 
@@ -528,8 +528,8 @@ contains
 
        do j = JJS, JJE
        do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -668,8 +668,8 @@ contains
 
        do j = JJS, JJE
        do i = IIS, IIE
-          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.D0
-          num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.D0
+          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -745,7 +745,7 @@ contains
                                              - CNZ3(1,KE-1,1) * VELX(KE-2,i,j) )
           num_diff(KE  ,i,j,I_MOMX,ZDIR) = - num_diff(KE-1,i,j,I_MOMX,ZDIR)
           num_diff(KE+1,i,j,I_MOMX,ZDIR) = - num_diff(KE-2,i,j,I_MOMX,ZDIR)
-          num_diff(KE+2,i,j,I_MOMX,ZDIR) = 0.D0
+          num_diff(KE+2,i,j,I_MOMX,ZDIR) = 0.0_RP
        enddo
        enddo
 
@@ -795,8 +795,8 @@ contains
 
        do j = JJS, JJE
        do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -872,7 +872,7 @@ contains
                                              - CNZ3(1,KE-1,1) * VELY(KE-2,i,j) )
           num_diff(KE  ,i,j,I_MOMY,ZDIR) = - num_diff(KE-1,i,j,I_MOMY,ZDIR)
           num_diff(KE+1,i,j,I_MOMY,ZDIR) = - num_diff(KE-2,i,j,I_MOMY,ZDIR)
-          num_diff(KE+2,i,j,I_MOMY,ZDIR) = 0.D0
+          num_diff(KE+2,i,j,I_MOMY,ZDIR) = 0.0_RP
        enddo
        enddo
 
@@ -922,8 +922,8 @@ contains
 
        do j = JJS, JJE
        do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -990,7 +990,7 @@ contains
                                              - CNZ3(1,KE-1,1) * pott_diff(KE-2,i,j) )
           num_diff(KE  ,i,j,I_RHOT,ZDIR) = - num_diff(KE-1,i,j,I_RHOT,ZDIR)
           num_diff(KE+1,i,j,I_RHOT,ZDIR) = - num_diff(KE-2,i,j,I_RHOT,ZDIR)
-          num_diff(KE+2,i,j,I_RHOT,ZDIR) = 0.D0
+          num_diff(KE+2,i,j,I_RHOT,ZDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1040,8 +1040,8 @@ contains
 
        do j = JJS, JJE
        do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1154,8 +1154,8 @@ contains
           do k = KS-1, KE
              num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) * DIFF4 * CDZ(k)**nd_order4
           enddo
-          num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.D0
+          num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.0_RP
 
           do k = KS+2, KE
              num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) * DIFF4 * CDX(i)**nd_order4
@@ -1163,8 +1163,8 @@ contains
           num_diff(KS  ,i,j,I_DENS,XDIR) = num_DIFF(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_DENS,XDIR) = num_DIFF(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
 
           do k = KS+2, KE
              num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) * DIFF4 * CDY(j)**nd_order4
@@ -1172,8 +1172,8 @@ contains
           num_diff(KS  ,i,j,I_DENS,YDIR) = num_DIFF(KS  ,i,j,I_DENS,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_DENS,YDIR) = num_DIFF(KS+1,i,j,I_DENS,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1187,8 +1187,8 @@ contains
                                          * DENS(k,i,j)
           enddo
 
-          num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.D0
-          num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.D0
+          num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.0_RP
+          num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.0_RP
 
           do k = KS, KE-1
              num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) * DIFF4 * CDX(i)**nd_order4 &
@@ -1197,8 +1197,8 @@ contains
           num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_DIFF(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_DIFF(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.D0
-          num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.D0
+          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
 
           do k = KS, KE-1
              num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) * DIFF4 * CDY(j)**nd_order4 &
@@ -1207,8 +1207,8 @@ contains
           num_diff(KS  ,i,j,I_MOMZ,YDIR) = num_DIFF(KS  ,i,j,I_MOMZ,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMZ,YDIR) = num_DIFF(KS+1,i,j,I_MOMZ,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.D0
-          num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.D0
+          num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
+          num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1222,8 +1222,8 @@ contains
                                          * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
           enddo
 
-          num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.D0
-          num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.D0
+          num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.0_RP
+          num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) * DIFF4 * FDX(i)**nd_order4 &
@@ -1232,8 +1232,8 @@ contains
           num_diff(KS  ,i,j,I_MOMX,XDIR) = num_DIFF(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMX,XDIR) = num_DIFF(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) * DIFF4 * CDY(j)**nd_order4 &
@@ -1242,8 +1242,8 @@ contains
           num_diff(KS  ,i,j,I_MOMX,YDIR) = num_DIFF(KS  ,i,j,I_MOMX,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMX,YDIR) = num_DIFF(KS+1,i,j,I_MOMX,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1257,8 +1257,8 @@ contains
                                          * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
           enddo
 
-          num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.D0
-          num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.D0
+          num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.0_RP
+          num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) * DIFF4 * CDX(i)**nd_order4 &
@@ -1267,8 +1267,8 @@ contains
           num_diff(KS  ,i,j,I_MOMY,XDIR) = num_DIFF(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMY,XDIR) = num_DIFF(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) * DIFF4 * FDY(j)**nd_order4 &
@@ -1277,8 +1277,8 @@ contains
           num_diff(KS  ,i,j,I_MOMY,YDIR) = num_DIFF(KS  ,i,j,I_MOMY,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMY,YDIR) = num_DIFF(KS+1,i,j,I_MOMY,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
        enddo
        enddo
 
@@ -1296,8 +1296,8 @@ contains
           num_diff(KE  ,i,j,I_RHOT,ZDIR) = num_diff_pt0(KE  ,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
                                          * DENS(KE,i,j)
 
-          num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.D0
+          num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) * DIFF4 * CDX(i)**nd_order4 &
@@ -1306,8 +1306,8 @@ contains
           num_diff(KS  ,i,j,I_RHOT,XDIR) = num_DIFF(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_RHOT,XDIR) = num_DIFF(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
 
           do k = KS, KE
              num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) * DIFF4 * CDY(j)**nd_order4 &
@@ -1316,8 +1316,8 @@ contains
           num_diff(KS  ,i,j,I_RHOT,YDIR) = num_DIFF(KS  ,i,j,I_RHOT,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_RHOT,YDIR) = num_DIFF(KS+1,i,j,I_RHOT,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.D0
-          num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.D0
+          num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
+          num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
        enddo
        enddo
 

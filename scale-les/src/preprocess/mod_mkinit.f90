@@ -2049,9 +2049,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
 
     if ( USE_LWSET ) then
-       GEOP_sw = 1.D0
+       GEOP_sw = 1.0_RP
     else
-       GEOP_sw = 0.D0
+       GEOP_sw = 0.0_RP
     endif
 
     ! calc in dry condition

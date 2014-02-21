@@ -122,7 +122,7 @@ contains
          + time1(5) * 3600 &
          + time1(6) * 60 &
          + time1(7) &
-         + int(time2*1.D6) + PRC_myrank
+         + int(time2*1.E6_RP) + PRC_myrank
 
     call random_seed(put=RANDOM_seedvar)
 

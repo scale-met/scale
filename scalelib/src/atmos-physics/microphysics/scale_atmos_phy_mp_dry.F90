@@ -115,7 +115,7 @@ contains
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
-    cldfrac(:,:,:) = 0.D0 ! dummy
+    cldfrac(:,:,:) = 0.0_RP ! dummy
 
     return
   end subroutine ATMOS_PHY_MP_dry_CloudFraction

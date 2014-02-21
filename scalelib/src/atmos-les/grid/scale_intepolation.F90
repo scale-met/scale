@@ -78,33 +78,33 @@ contains
 
           INTERP_xi2z_idx (k,i,j,1) = KS   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KS   ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 0.D0
-          INTERP_xi2z_coef(k,i,j,2) = 0.D0
-          INTERP_xi2z_coef(k,i,j,3) = 1.D0 ! set UNDEF
+          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        elseif( GRID_CZ(k) <= REAL_CZ(KS,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KS   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KS
-          INTERP_xi2z_coef(k,i,j,1) = 0.D0
-          INTERP_xi2z_coef(k,i,j,2) = 1.D0
-          INTERP_xi2z_coef(k,i,j,3) = 0.D0
+          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,2) = 1.0_RP
+          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
 
        elseif( GRID_CZ(k) > REAL_CZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 1.D0
-          INTERP_xi2z_coef(k,i,j,2) = 0.D0
-          INTERP_xi2z_coef(k,i,j,3) = 0.D0
+          INTERP_xi2z_coef(k,i,j,1) = 1.0_RP
+          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
 
        elseif( GRID_CZ(k) > REAL_FZ(KE,i,j) ) then
 
           INTERP_xi2z_idx (k,i,j,1) = KE   ! dummmy
           INTERP_xi2z_idx (k,i,j,2) = KE   ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 0.D0
-          INTERP_xi2z_coef(k,i,j,2) = 0.D0
-          INTERP_xi2z_coef(k,i,j,3) = 1.D0 ! set UNDEF
+          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
+          INTERP_xi2z_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        else
 
@@ -119,7 +119,7 @@ contains
                                     / ( REAL_CZ(kp,i,j) - REAL_CZ(kp-1,i,j) )
           INTERP_xi2z_coef(k,i,j,2) = ( GRID_CZ(k)      - REAL_CZ(kp-1,i,j) ) &
                                     / ( REAL_CZ(kp,i,j) - REAL_CZ(kp-1,i,j) )
-          INTERP_xi2z_coef(k,i,j,3) = 0.D0
+          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
 
        endif
     enddo
@@ -133,33 +133,33 @@ contains
 
           INTERP_z2xi_idx (k,i,j,1) = KS   ! dummmy
           INTERP_z2xi_idx (k,i,j,2) = KS   ! dummmy
-          INTERP_z2xi_coef(k,i,j,1) = 0.D0
-          INTERP_z2xi_coef(k,i,j,2) = 0.D0
-          INTERP_z2xi_coef(k,i,j,3) = 1.D0 ! set UNDEF
+          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        elseif( REAL_CZ(k,i,j) <= GRID_CZ(KS) ) then
 
           INTERP_z2xi_idx (k,i,j,1) = KS   ! dummmy
           INTERP_z2xi_idx (k,i,j,2) = KS
-          INTERP_z2xi_coef(k,i,j,1) = 0.D0
-          INTERP_z2xi_coef(k,i,j,2) = 1.D0
-          INTERP_z2xi_coef(k,i,j,3) = 0.D0
+          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
+          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
 
        elseif( REAL_CZ(k,i,j) > GRID_CZ(KE) ) then
 
           INTERP_z2xi_idx (k,i,j,1) = KE
           INTERP_z2xi_idx (k,i,j,2) = KE   ! dummmy
-          INTERP_z2xi_coef(k,i,j,1) = 1.D0
-          INTERP_z2xi_coef(k,i,j,2) = 0.D0
-          INTERP_z2xi_coef(k,i,j,3) = 0.D0
+          INTERP_z2xi_coef(k,i,j,1) = 1.0_RP
+          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
 
        elseif( REAL_CZ(k,i,j) > GRID_FZ(KE) ) then
 
           INTERP_z2xi_idx (k,i,j,1) = KE   ! dummmy
           INTERP_z2xi_idx (k,i,j,2) = KE   ! dummmy
-          INTERP_z2xi_coef(k,i,j,1) = 0.D0
-          INTERP_z2xi_coef(k,i,j,2) = 0.D0
-          INTERP_z2xi_coef(k,i,j,3) = 1.D0 ! set UNDEF
+          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
+          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        else
 
@@ -174,7 +174,7 @@ contains
                                     / ( GRID_CZ(kp)    - GRID_CZ(kp-1)  )
           INTERP_z2xi_coef(k,i,j,2) = ( REAL_CZ(k,i,j) - GRID_CZ(kp-1)  ) &
                                     / ( GRID_CZ(kp)    - GRID_CZ(kp-1)  )
-          INTERP_z2xi_coef(k,i,j,3) = 0.D0
+          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
 
        endif
     enddo
@@ -185,27 +185,27 @@ contains
     do i = 1, IA
        INTERP_xi2z_idx ( 1:KS-1,i,j,1) = KS   ! dummmy
        INTERP_xi2z_idx ( 1:KS-1,i,j,2) = KS   ! dummmy
-       INTERP_xi2z_coef( 1:KS-1,i,j,1) = 0.D0
-       INTERP_xi2z_coef( 1:KS-1,i,j,2) = 0.D0
-       INTERP_xi2z_coef( 1:KS-1,i,j,3) = 1.D0 ! set UNDEF
+       INTERP_xi2z_coef( 1:KS-1,i,j,1) = 0.0_RP
+       INTERP_xi2z_coef( 1:KS-1,i,j,2) = 0.0_RP
+       INTERP_xi2z_coef( 1:KS-1,i,j,3) = 1.0_RP ! set UNDEF
 
        INTERP_xi2z_idx (KE+1:KA,i,j,1) = KE   ! dummmy
        INTERP_xi2z_idx (KE+1:KA,i,j,2) = KE   ! dummmy
-       INTERP_xi2z_coef(KE+1:KA,i,j,1) = 0.D0
-       INTERP_xi2z_coef(KE+1:KA,i,j,2) = 0.D0
-       INTERP_xi2z_coef(KE+1:KA,i,j,3) = 1.D0 ! set UNDEF
+       INTERP_xi2z_coef(KE+1:KA,i,j,1) = 0.0_RP
+       INTERP_xi2z_coef(KE+1:KA,i,j,2) = 0.0_RP
+       INTERP_xi2z_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
 
        INTERP_z2xi_idx ( 1:KS-1,i,j,1) = KS   ! dummmy
        INTERP_z2xi_idx ( 1:KS-1,i,j,2) = KS   ! dummmy
-       INTERP_z2xi_coef( 1:KS-1,i,j,1) = 0.D0
-       INTERP_z2xi_coef( 1:KS-1,i,j,2) = 0.D0
-       INTERP_z2xi_coef( 1:KS-1,i,j,3) = 1.D0 ! set UNDEF
+       INTERP_z2xi_coef( 1:KS-1,i,j,1) = 0.0_RP
+       INTERP_z2xi_coef( 1:KS-1,i,j,2) = 0.0_RP
+       INTERP_z2xi_coef( 1:KS-1,i,j,3) = 1.0_RP ! set UNDEF
 
        INTERP_z2xi_idx (KE+1:KA,i,j,1) = KE   ! dummmy
        INTERP_z2xi_idx (KE+1:KA,i,j,2) = KE   ! dummmy
-       INTERP_z2xi_coef(KE+1:KA,i,j,1) = 0.D0
-       INTERP_z2xi_coef(KE+1:KA,i,j,2) = 0.D0
-       INTERP_z2xi_coef(KE+1:KA,i,j,3) = 1.D0 ! set UNDEF
+       INTERP_z2xi_coef(KE+1:KA,i,j,1) = 0.0_RP
+       INTERP_z2xi_coef(KE+1:KA,i,j,2) = 0.0_RP
+       INTERP_z2xi_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
     enddo
     enddo
 

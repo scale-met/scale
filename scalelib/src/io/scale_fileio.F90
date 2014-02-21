@@ -401,16 +401,14 @@ contains
        call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
        call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
        call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
-            dtype, REAL_LONX(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
-            dtype, REAL_LATY(IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
+                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
+                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
+                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
+                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
     endif
 
     if ( axistype == 'Z' ) then
@@ -543,16 +541,14 @@ contains
        call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
        call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
        call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
-            dtype, REAL_LONX(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
-       call FilePutAssociatedCoordinates( fid, &
-            'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
-            dtype, REAL_LATY(IS:IE,JS:JE) )
+       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
+                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
+                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
+                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
+       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
+                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
     endif
 
     if ( axistype == 'XY' ) then
@@ -689,13 +685,13 @@ contains
        call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
 
        call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
-                                          (/'x', 'y'/)  , dtype, REAL_LON (IS:IE,JS:JE)           )
+                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
        call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
-                                          (/'xh', 'y '/), dtype, REAL_LONX(IS:IE,JS:JE)           )
+                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
        call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
-                                          (/'x', 'y'/)  , dtype, REAL_LAT (IS:IE,JS:JE)           )
+                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
        call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
-                                          (/'x ', 'yh'/), dtype, REAL_LATY(IS:IE,JS:JE)           )
+                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
     endif
 
     if ( axistype == 'ZXY' ) then

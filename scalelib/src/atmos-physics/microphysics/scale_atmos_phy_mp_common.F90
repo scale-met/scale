@@ -163,7 +163,7 @@ contains
 
     call PROF_rapstart('MP_saturation_adjustment')
 
-    rdt = 1.D0 / dt
+    rdt = 1.0_RP / dt
 
     !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = QQS, QQE

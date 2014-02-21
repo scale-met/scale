@@ -138,10 +138,10 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CONST)
 
-    if ( RP == SP ) then
-       CONST_UNDEF = CONST_UNDEF4
-    else if ( RP == DP ) then
-       CONST_UNDEF = CONST_UNDEF8
+    if    ( RP == SP ) then
+       CONST_UNDEF = real(CONST_UNDEF4,kind=RP)
+    elseif( RP == DP ) then
+       CONST_UNDEF = real(CONST_UNDEF8,kind=RP)
     else
        write(*,*) 'xxx unsupported precision: ', RP
        call PRC_MPIstop
