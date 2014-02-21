@@ -56,12 +56,13 @@ module mod_cpl_vars
   real(RP), public, allocatable :: SnowQ(:,:) ! Ground Snow amount      [kg/m2]
   real(RP), public, allocatable :: SnowT(:,:) ! Ground Snow Temperature [K]
 
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF' !< atmos-ocean coupler type
-  logical,                public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
-  logical,                public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
-  logical,                public, save :: CPL_sw_restart          !< output coupler restart?
-  character(len=H_SHORT), public, save :: CPL_BULK_TYPE   = ''    !< what is bulk method?
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF'   !< atmos-land coupler type
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF'   !< atmos-ocean coupler type
+  logical,                public, save :: CPL_sw_AtmLnd             !< do atmos-land coupler calculation?
+  logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
+  logical,                public, save :: CPL_sw_restart            !< output coupler restart?
+  character(len=H_SHORT), public, save :: CPL_BULK_TYPE   = ''      !< what is bulk method?
+  logical,                public, save :: CPL_LST_UPDATE  = .false. !< is Land Surface Temperature updated?
 
   !-----------------------------------------------------------------------------
   !
@@ -225,8 +226,9 @@ contains
     implicit none
 
     NAMELIST / PARAM_CPL / &
-       CPL_TYPE_AtmLnd,   &
-       CPL_BULK_TYPE
+       CPL_TYPE_AtmLnd, &
+       CPL_BULK_TYPE,   &
+       CPL_LST_UPDATE
 
     NAMELIST / PARAM_CPL_VARS /  &
        CPL_RESTART_IN_BASENAME,  &

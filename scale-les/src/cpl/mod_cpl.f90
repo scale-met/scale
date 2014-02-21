@@ -95,13 +95,14 @@ contains
   !> CPL calcuration
   subroutine CPL_calc
     use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd, &
-       CPL_TYPE_AtmLnd,     &
-       CPL_vars_fillhalo,   &
-       CPL_vars_merge,      &
-       CPL_vars_history,    &
-       CPL_flushAtm,        &
-       CPL_flushLnd,        &
+       sw_AtmLnd  => CPL_sw_AtmLnd,  &
+       LST_UPDATE => CPL_LST_UPDATE, &
+       CPL_TYPE_AtmLnd,              &
+       CPL_vars_fillhalo,            &
+       CPL_vars_merge,               &
+       CPL_vars_history,             &
+       CPL_flushAtm,                 &
+       CPL_flushLnd,                 &
        CPL_AtmLnd_flushCPL
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_driver
@@ -111,7 +112,7 @@ contains
     !########## Coupler Atoms-Land ##########
     call PROF_rapstart('CPL Atmos-Land')
     if( sw_AtmLnd ) then
-       call CPL_AtmLnd_driver( .true. )
+       call CPL_AtmLnd_driver( LST_UPDATE )
     endif
     call PROF_rapend  ('CPL Atmos-Land')
 
