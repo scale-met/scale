@@ -73,13 +73,16 @@ contains
     call CPL_vars_setup
     call CPL_vars_restart_read
 
-    call CPL_bulkcoef_setup( BULK_TYPE )
-    call CPL_AtmLnd_setup
+    if( sw_AtmLnd ) then
+      call CPL_bulkcoef_setup( BULK_TYPE )
+      call CPL_AtmLnd_setup
 
-    call ATMOS_PHY_SF_driver_final
-    call LAND_PHY_driver_final
+      call ATMOS_PHY_SF_driver_final
+      call LAND_PHY_driver_final
 
-    call CPL_AtmLnd_unsolve
+      call CPL_AtmLnd_unsolve
+    end if
+
     call CPL_vars_merge
 
     call CPL_flushAtm
