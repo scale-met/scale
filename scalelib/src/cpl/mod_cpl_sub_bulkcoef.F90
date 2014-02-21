@@ -17,9 +17,6 @@ module mod_cpl_bulkcoef
   !
   use mod_precision
   use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,8 +31,6 @@ module mod_cpl_bulkcoef
           Cm, Ch, Ce,                    & ! (out)
           pta, pts, za, uabs, z0, zt, ze ) ! (in)
        use mod_precision
-       use mod_grid_index
-       use mod_tracer
        implicit none
 
        real(RP), intent(out) :: Cm ! momentum bulk coefficient [no unit]
@@ -88,6 +83,8 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine CPL_bulkcoef_setup( BULK_TYPE )
+    use mod_process, only: &
+       PRC_MPIstop
     implicit none
 
     character(len=H_SHORT), intent(in) :: BULK_TYPE
@@ -98,6 +95,9 @@ contains
        CPL_bulkcoef => CPL_bulkcoef_uno
     case ( 'BH91' )
        CPL_bulkcoef => CPL_bulkcoef_beljaars
+    case default
+       write(*,*) 'xxx invalid bulk scheme (', trim(BULK_TYPE), '). CHECK!'
+       call PRC_MPIstop
     end select
 
     return
@@ -265,7 +265,7 @@ contains
     end do
 
     if( n > nmax ) then
-      write(*,*) 'Error: reach maximum iteration in the function of CPL_bulkcoef_beljaars.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration in the function of CPL_bulkcoef_beljaars.'
     end if
 
     Cm = min( max( Cm, Cm_min ), Cm_max )

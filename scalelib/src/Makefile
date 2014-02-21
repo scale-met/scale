@@ -13,7 +13,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 LIBNAME = libscale.a
 
-VPATH = io:common:grid:atmos
+VPATH = io:common:grid:atmos:cpl
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -92,7 +92,9 @@ OBJS =	\
 	mod_atmos_phy_rd_mstrnX.o	\
 	mod_atmos_phy_rd.o	\
 	mod_atmos_phy_ae_dummy.o	\
-	mod_atmos_phy_ae.o
+	mod_atmos_phy_ae.o	\
+	mod_cpl_sub_bulkcoef.o	\
+	mod_cpl_sub_sfcflux.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
 
