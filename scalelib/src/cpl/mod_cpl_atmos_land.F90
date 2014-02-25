@@ -104,6 +104,9 @@ contains
        NAME(CPL_AtmLnd_, CAL, _setup), &
        NAME(CPL_AtmLnd_, CAL,)
 #else
+    use mod_cpl_atmos_land_const, only: &
+       CPL_AtmLnd_const_setup, &
+       CPL_AtmLnd_const
     use mod_cpl_atmos_land_bulk, only: &
        CPL_AtmLnd_bulk_setup, &
        CPL_AtmLnd_bulk
@@ -114,6 +117,9 @@ contains
     !---------------------------------------------------------------------------
 
     select case( CPL_TYPE_AtmLnd )
+    case ( 'CONST' )
+       call CPL_AtmLnd_const_setup( CPL_TYPE_AtmLnd )
+       CPL_AtmLnd => CPL_AtmLnd_const
     case ( 'BH91', 'U95' )
        call CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
        CPL_AtmLnd => CPL_AtmLnd_bulk
