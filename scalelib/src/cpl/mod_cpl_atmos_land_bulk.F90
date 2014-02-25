@@ -1,16 +1,16 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Surface fluxes
+!> module COUPLER / Atmosphere-Land Surface fluxes
 !!
 !! @par Description
-!!          Surface flux with Bulk Method
+!!          Surface flux between atmosphere and land with Bulk Method
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2014-02-21 (T.Yamaura)  [new]
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
-module mod_cpl_sfcflux
+module mod_cpl_atmos_land_bulk
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,7 +25,8 @@ module mod_cpl_sfcflux
   !
   !++ Public procedure
   !
-  public :: CPL_sfcflux
+  public :: CPL_AtmLnd_bulk_setup
+  public :: CPL_AtmLnd_bulk
 
   !-----------------------------------------------------------------------------
   !
@@ -35,6 +36,8 @@ module mod_cpl_sfcflux
   !
   !++ Private procedure
   !
+  private :: bulkflux
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -44,13 +47,158 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_sfcflux( &
-      RES, DRES,                                              & ! (out)
-      XMFLX, YMFLX, ZMFLX,                                    & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,                    & ! (out)
-      DZ, TS,                                                 & ! (in)
-      DENS, MOMX, MOMY, MOMZ, RHOS, PRES, ATMP, QV, SWD, LWD, & ! (in)
-      TG, QVEF, EMIT, ALB, TCS, DZG, Z0M, Z0H, Z0E            ) ! (in)
+  subroutine CPL_AtmLnd_bulk_setup( BULK_TYPE )
+    use mod_cpl_bulkcoef, only: &
+       CPL_bulkcoef_setup
+    implicit none
+
+    character(len=H_SHORT), intent(in) :: BULK_TYPE
+    !---------------------------------------------------------------------------
+
+    call CPL_bulkcoef_setup( BULK_TYPE )
+
+    return
+  end subroutine CPL_AtmLnd_bulk_setup
+
+  subroutine CPL_AtmLnd_bulk( &
+        LST,                                  & ! (inout)
+        LST_UPDATE,                           & ! (in)
+        XMFLX, YMFLX, ZMFLX,                  & ! (out)
+        SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
+        DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
+        RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
+        TG, QVEF, EMIT, ALB,                  & ! (in)
+        TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
+    use mod_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    ! parameters
+    integer,  parameter :: nmax     = 100       ! maximum iteration number
+    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
+    real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
+    real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
+    real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
+    real(RP), parameter :: res_min  = 1.0_RP    ! minimum number of residual
+
+    ! works
+    integer :: i, j, n
+
+    real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
+    logical,  intent(in)    :: LST_UPDATE ! is land surface temperature updated?
+
+    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
+    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
+    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+
+    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
+    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
+    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
+    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
+    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
+    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
+    real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
+    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
+
+    real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
+    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
+    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
+    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
+    real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
+    real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
+    real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
+    real(RP), intent(in) :: Z0H (IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E (IA,JA) ! roughness length for vapor [m]
+
+    real(RP) :: RES   (IA,JA)
+    real(RP) :: DRES  (IA,JA)
+    real(RP) :: oldRES(IA,JA) ! RES in previous step
+    real(RP) :: redf  (IA,JA) ! reduced factor
+    !---------------------------------------------------------------------------
+
+    redf  (:,:) = 1.0_RP
+    oldRES(:,:) = 1.0E+5_RP
+
+    do n = 1, nmax
+      ! calculate surface flux
+      call bulkflux( &
+        RES, DRES,                           & ! (out)
+        XMFLX, YMFLX, ZMFLX,                 & ! (out)
+        SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
+        LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
+        RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+        TG, QVEF, EMIT, ALB,                 & ! (in)
+        TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+
+      if( LST_UPDATE ) then
+
+        do j = JS-1, JE+1
+        do i = IS-1, IE+1
+
+          if( redf(i,j) < 0.0_RP ) then
+            redf(i,j) = 1.0_RP
+          end if
+
+          if( abs(RES(i,j)) > abs(oldRES(i,j)) ) then
+            redf(i,j) = max( TFa*redf(i,j), redf_min )
+          else
+            redf(i,j) = min( TFb*redf(i,j), redf_max )
+          end if
+
+          if( DRES(i,j) > 0.0_RP ) then
+            redf(i,j) = -1.0_RP
+          end if
+
+          ! update surface temperature
+          LST(i,j)  = LST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
+
+          ! put residual in ground heat flux
+          GHFLX(i,j) = GHFLX(i,j) - RES(i,j)
+
+          ! save residual in this step
+          oldRES(i,j) = RES(i,j)
+
+        end do
+        end do
+
+        if( maxval(abs(RES(IS-1:IE+1,JS-1:JE+1))) < res_min ) then
+          ! iteration converged
+          exit
+        end if
+
+      else
+        ! get surface flux without LST updating
+        exit
+
+      end if
+
+    end do
+
+    if( n > nmax ) then
+      ! not converged and stop program
+      if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
+      call PRC_MPIstop
+    end if
+
+    return
+  end subroutine CPL_AtmLnd_bulk
+
+  subroutine bulkflux( &
+      RES, DRES,                           & ! (out)
+      XMFLX, YMFLX, ZMFLX,                 & ! (out)
+      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
+      TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
+      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      TG, QVEF, EMIT, ALB,                 & ! (in)
+      TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -76,8 +224,8 @@ contains
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
 
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: TS  (IA,JA) ! skin temperature [K]
+    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
 
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
@@ -208,6 +356,6 @@ contains
     enddo
 
     return
-  end subroutine CPL_sfcflux
+  end subroutine bulkflux
 
-end module mod_cpl_sfcflux
+end module mod_cpl_atmos_land_bulk
