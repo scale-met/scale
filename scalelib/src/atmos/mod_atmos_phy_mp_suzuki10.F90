@@ -200,7 +200,8 @@ contains
        PRC_master,  &
        PRC_myrank
     use mod_const, only: &
-       CONST_DWATR
+       CONST_DWATR, &
+       CONST_DICE
     use mod_comm, only: &
        COMM_datatype
     use mod_grid, only: &
@@ -456,6 +457,11 @@ contains
     endif
 
     ATMOS_PHY_MP_DENS(I_mp_QC)  = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QCL) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QD)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QS)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QG)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QH)  = CONST_DICE
 
     !--- random number setup for stochastic method
     if( rndm_flgp > 0 ) then
@@ -466,8 +472,10 @@ contains
     velw(:,:,:,I_QV) = 0.0_RP
     velw(:,:,:,QQE+1:QA) = 0.0_RP
     mm = 0
+    do myu = 1, nspc
     do n = 1, nbin
-      velw(:,:,:,n+I_QV) = -vt( 1,n )
+      velw(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( 1,n )
+    enddo
     enddo
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
