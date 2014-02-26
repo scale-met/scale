@@ -43,19 +43,97 @@ module mod_cpl_atmos_land_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  integer,  private, save :: nmax = 100 ! maximum iteration number
+
+  real(RP), private, save :: res_min  =   1.0_RP    ! minimum number of residual
+  real(RP), private, save :: dTS      =   1.0E-8_RP ! delta TS
+  real(RP), private, save :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
+  real(RP), private, save :: U_minH   =   0.0_RP    !                   T
+  real(RP), private, save :: U_minE   =   0.0_RP    !                   q
+  real(RP), private, save :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
+  real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
+  real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
+
 contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_AtmLnd_bulk_setup( BULK_TYPE )
+  subroutine CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
+    use mod_process, only: &
+       PRC_MPIstop
     use mod_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     implicit none
 
-    character(len=H_SHORT), intent(in) :: BULK_TYPE
+    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmLnd
+
+    integer  :: CPL_AtmLnd_bulk_nmax
+    real(RP) :: CPL_AtmLnd_bulk_res_min
+    real(RP) :: CPL_AtmLnd_bulk_dTS
+    real(RP) :: CPL_AtmLnd_bulk_U_minM
+    real(RP) :: CPL_AtmLnd_bulk_U_minH
+    real(RP) :: CPL_AtmLnd_bulk_U_minE
+    real(RP) :: CPL_AtmLnd_bulk_U_maxM
+    real(RP) :: CPL_AtmLnd_bulk_U_maxH
+    real(RP) :: CPL_AtmLnd_bulk_U_maxE
+
+    NAMELIST / PARAM_CPL_ATMLND_BULK / &
+       CPL_AtmLnd_bulk_nmax,    &
+       CPL_AtmLnd_bulk_res_min, &
+       CPL_AtmLnd_bulk_dTS,     &
+       CPL_AtmLnd_bulk_U_minM,  &
+       CPL_AtmLnd_bulk_U_minH,  &
+       CPL_AtmLnd_bulk_U_minE,  &
+       CPL_AtmLnd_bulk_U_maxM,  &
+       CPL_AtmLnd_bulk_U_maxH,  &
+       CPL_AtmLnd_bulk_U_maxE
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
-    call CPL_bulkcoef_setup( BULK_TYPE )
+    CPL_AtmLnd_bulk_nmax    = nmax
+    CPL_AtmLnd_bulk_res_min = res_min
+    CPL_AtmLnd_bulk_dTS     = dTS
+    CPL_AtmLnd_bulk_U_minM  = U_minM
+    CPL_AtmLnd_bulk_U_minH  = U_minH
+    CPL_AtmLnd_bulk_U_minE  = U_minE
+    CPL_AtmLnd_bulk_U_maxM  = U_maxM
+    CPL_AtmLnd_bulk_U_maxH  = U_maxH
+    CPL_AtmLnd_bulk_U_maxE  = U_maxE
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk flux parameter'
+
+    if ( CPL_TYPE_AtmLnd /= 'U95'  .and. &
+         CPL_TYPE_AtmLnd /= 'BH91'       ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not U95 or BH91. Check!'
+       call PRC_MPIstop
+    endif
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_ATMLND_BULK,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMLND_BULK. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_BULK)
+
+    nmax    = CPL_AtmLnd_bulk_nmax
+    res_min = CPL_AtmLnd_bulk_res_min
+    dTS     = CPL_AtmLnd_bulk_dTS
+    U_minM  = CPL_AtmLnd_bulk_U_minM
+    U_minH  = CPL_AtmLnd_bulk_U_minH
+    U_minE  = CPL_AtmLnd_bulk_U_minE
+    U_maxM  = CPL_AtmLnd_bulk_U_maxM
+    U_maxH  = CPL_AtmLnd_bulk_U_maxH
+    U_maxE  = CPL_AtmLnd_bulk_U_maxE
+
+    !--- set up bulk coefficient function
+    call CPL_bulkcoef_setup( CPL_TYPE_AtmLnd )
 
     return
   end subroutine CPL_AtmLnd_bulk_setup
@@ -74,12 +152,10 @@ contains
     implicit none
 
     ! parameters
-    integer,  parameter :: nmax     = 100       ! maximum iteration number
     real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
     real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
     real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
     real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
-    real(RP), parameter :: res_min  = 1.0_RP    ! minimum number of residual
 
     ! works
     integer :: i, j, n
@@ -247,15 +323,6 @@ contains
     real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E (IA,JA) ! roughness length for vapor [m]
-
-    ! constant
-    real(RP), parameter :: dTS    =   1.0E-8_RP ! delta TS
-    real(RP), parameter :: U_minM =   0.0_RP    ! minimum U_abs for u,v,w
-    real(RP), parameter :: U_minH =   0.0_RP    !                   T
-    real(RP), parameter :: U_minE =   0.0_RP    !                   q
-    real(RP), parameter :: U_maxM = 100.0_RP    ! maximum U_abs for u,v,w
-    real(RP), parameter :: U_maxH = 100.0_RP    !                   T
-    real(RP), parameter :: U_maxE = 100.0_RP    !                   q
 
     ! work
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]

@@ -226,6 +226,7 @@ contains
 
     NAMELIST / PARAM_CPL / &
        CPL_TYPE_AtmLnd, &
+       CPL_TYPE_AtmOcn, &
        CPL_LST_UPDATE
 
     NAMELIST / PARAM_CPL_VARS /  &

@@ -70,12 +70,12 @@ module mod_cpl_bulkcoef
   !++ Private parameters & variables
   !
   ! limiter
-  real(RP), private, parameter :: Cm_min =   1.0E-8_RP ! minimum bulk coef. of u,v,w
-  real(RP), private, parameter :: Ch_min =   1.0E-8_RP !                       T
-  real(RP), private, parameter :: Ce_min =   1.0E-8_RP !                       q
-  real(RP), private, parameter :: Cm_max =   1.0_RP    ! maximum bulk coef. of u,v,w
-  real(RP), private, parameter :: Ch_max =   1.0_RP    !                       T
-  real(RP), private, parameter :: Ce_max =   1.0_RP    !                       q
+  real(RP), private, save :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, save :: Ch_min = 1.0E-8_RP !                       T
+  real(RP), private, save :: Ce_min = 1.0E-8_RP !                       q
+  real(RP), private, save :: Cm_max = 1.0_RP    ! maximum bulk coef. of u,v,w
+  real(RP), private, save :: Ch_max = 1.0_RP    !                       T
+  real(RP), private, save :: Ce_max = 1.0_RP    !                       q
 
 contains
 
@@ -88,7 +88,34 @@ contains
     implicit none
 
     character(len=H_SHORT), intent(in) :: BULK_TYPE
+
+    real(RP) :: CPL_bulkcoef_Cm_min
+    real(RP) :: CPL_bulkcoef_Ch_min
+    real(RP) :: CPL_bulkcoef_Ce_min
+    real(RP) :: CPL_bulkcoef_Cm_max
+    real(RP) :: CPL_bulkcoef_Ch_max
+    real(RP) :: CPL_bulkcoef_Ce_max
+
+    NAMELIST / PARAM_CPL_BULKCOEF / &
+       CPL_bulkcoef_Cm_min,  &
+       CPL_bulkcoef_Ch_min,  &
+       CPL_bulkcoef_Ce_min,  &
+       CPL_bulkcoef_Cm_max,  &
+       CPL_bulkcoef_Ch_max,  &
+       CPL_bulkcoef_Ce_max
+
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    CPL_bulkcoef_Cm_min = Cm_min
+    CPL_bulkcoef_Ch_min = Ch_min
+    CPL_bulkcoef_Ce_min = Ce_min
+    CPL_bulkcoef_Cm_max = Cm_max
+    CPL_bulkcoef_Ch_max = Ch_max
+    CPL_bulkcoef_Ce_max = Ce_max
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk coefficient parameter'
 
     select case( BULK_TYPE )
     case ( 'U95' )
@@ -99,6 +126,25 @@ contains
        write(*,*) 'xxx invalid bulk scheme (', trim(BULK_TYPE), '). CHECK!'
        call PRC_MPIstop
     end select
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_BULKCOEF,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_BULKCOEF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_BULKCOEF)
+
+    Cm_min = CPL_bulkcoef_Cm_min
+    Ch_min = CPL_bulkcoef_Ch_min
+    Ce_min = CPL_bulkcoef_Ce_min
+    Cm_max = CPL_bulkcoef_Cm_max
+    Ch_max = CPL_bulkcoef_Ch_max
+    Ce_max = CPL_bulkcoef_Ce_max
 
     return
   end subroutine CPL_bulkcoef_setup
