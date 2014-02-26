@@ -96,6 +96,9 @@ OBJS =	\
 	mod_cpl_atmos_land.o	\
 	mod_cpl_atmos_land_bulk.o	\
 	mod_cpl_atmos_land_const.o	\
+	mod_cpl_atmos_ocean.o	\
+	mod_cpl_atmos_ocean_bulk.o	\
+	mod_cpl_atmos_ocean_const.o	\
 	mod_cpl_sub_bulkcoef.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules

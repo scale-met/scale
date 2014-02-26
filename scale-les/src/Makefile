@@ -39,6 +39,7 @@ MODS =	\
 	mod_land_phy_bucket.o	\
 	mod_ocean_phy_fixedsst.o	\
 	mod_cpl_atmos_land_driver.o \
+	mod_cpl_atmos_ocean_driver.o \
 	mod_atmos.o	\
 	mod_land.o	\
 	mod_ocean.o	\
@@ -90,6 +91,7 @@ $(BUILD_DIR)/mod_ocean_phy_fixedsst.o	: mod_ocean_phy_fixedsst.f90 mod_ocean_var
 $(BUILD_DIR)/mod_cpl.o						: mod_cpl.f90 mod_cpl_vars.o mod_cpl_atmos_land_driver.o
 $(BUILD_DIR)/mod_cpl_vars.o				: mod_cpl_vars.f90
 $(BUILD_DIR)/mod_cpl_atmos_land_driver.o		: mod_cpl_atmos_land_driver.f90 mod_cpl_vars.o
+$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o		: mod_cpl_atmos_ocean_driver.f90 mod_cpl_vars.o
 
 $(BUILD_DIR)/mod_mktopo.o					: mod_mktopo.f90
 $(BUILD_DIR)/mod_mkinit.o					: mod_mkinit.f90 mod_atmos_vars.o

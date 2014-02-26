@@ -1,16 +1,16 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Atmosphere-Land Surface fluxes
+!> module COUPLER / Atmosphere-Ocean Surface fluxes
 !!
 !! @par Description
-!!          Surface flux between atmosphere and land with constant method
+!!          Surface flux between atmosphere and ocean with constant method
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2014-02-25 (T.Yamaura)  [new]
+!! @li      2014-02-26 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
-module mod_cpl_atmos_land_const
+module mod_cpl_atmos_ocean_const
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,8 +25,8 @@ module mod_cpl_atmos_land_const
   !
   !++ Public procedure
   !
-  public :: CPL_AtmLnd_const_setup
-  public :: CPL_AtmLnd_const
+  public :: CPL_AtmOcn_const_setup
+  public :: CPL_AtmOcn_const
 
   !-----------------------------------------------------------------------------
   !
@@ -52,7 +52,7 @@ module mod_cpl_atmos_land_const
   real(RP), private, save      :: Const_LWU   = 200.0_RP    ! constant upward long-wave radiation flux [W/m2]
   real(RP), private, save      :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
   real(RP), private, save      :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
-  real(RP), private, save      :: Const_GH    =   0.0_RP    ! constant ground heat flux [W/m2]
+  real(RP), private, save      :: Const_WH    =   0.0_RP    ! constant water heat flux [W/m2]
   real(RP), private, save      :: Const_Ustar =   0.25_RP   ! constant friction velocity [m/s]
   real(RP), private, save      :: Const_FREQ  =  24.0_RP    ! frequency of sensible heat flux [hour]
 
@@ -66,101 +66,100 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_AtmLnd_const_setup( CPL_TYPE_AtmLnd )
+  subroutine CPL_AtmOcn_const_setup( CPL_TYPE_AtmOcn )
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmLnd
+    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmOcn
 
-    real(RP) :: CPL_AtmLnd_const_U_min  ! minimum U_abs for u,v,w
-    real(RP) :: CPL_AtmLnd_const_CM_min ! minimum bulk coef. of u,v,w
-    real(RP) :: CPL_AtmLnd_const_CM
-    real(RP) :: CPL_AtmLnd_const_SWU
-    real(RP) :: CPL_AtmLnd_const_LWU
-    real(RP) :: CPL_AtmLnd_const_SH
-    real(RP) :: CPL_AtmLnd_const_LH
-    real(RP) :: CPL_AtmLnd_const_GH
-    real(RP) :: CPL_AtmLnd_const_Ustar
-    real(RP) :: CPL_AtmLnd_const_FREQ
-    integer  :: CPL_AtmLnd_const_CMTYPE
-    logical  :: CPL_AtmLnd_const_DIURNAL
+    real(RP) :: CPL_AtmOcn_const_U_min  ! minimum U_abs for u,v,w
+    real(RP) :: CPL_AtmOcn_const_CM_min ! minimum bulk coef. of u,v,w
+    real(RP) :: CPL_AtmOcn_const_CM
+    real(RP) :: CPL_AtmOcn_const_SWU
+    real(RP) :: CPL_AtmOcn_const_LWU
+    real(RP) :: CPL_AtmOcn_const_SH
+    real(RP) :: CPL_AtmOcn_const_LH
+    real(RP) :: CPL_AtmOcn_const_WH
+    real(RP) :: CPL_AtmOcn_const_Ustar
+    real(RP) :: CPL_AtmOcn_const_FREQ
+    integer  :: CPL_AtmOcn_const_CMTYPE
+    logical  :: CPL_AtmOcn_const_DIURNAL
 
-    NAMELIST / PARAM_CPL_ATMLND_CONST / &
-       CPL_AtmLnd_const_U_min,  &
-       CPL_AtmLnd_const_CM_min, &
-       CPL_AtmLnd_const_CM,     &
-       CPL_AtmLnd_const_SWU,    &
-       CPL_AtmLnd_const_LWU,    &
-       CPL_AtmLnd_const_SH,     &
-       CPL_AtmLnd_const_LH,     &
-       CPL_AtmLnd_const_GH,     &
-       CPL_AtmLnd_const_Ustar,  &
-       CPL_AtmLnd_const_FREQ,   &
-       CPL_AtmLnd_const_CMTYPE, &
-       CPL_AtmLnd_const_DIURNAL
+    NAMELIST / PARAM_CPL_ATMOCN_CONST / &
+       CPL_AtmOcn_const_U_min,  &
+       CPL_AtmOcn_const_CM_min, &
+       CPL_AtmOcn_const_CM,     &
+       CPL_AtmOcn_const_SWU,    &
+       CPL_AtmOcn_const_LWU,    &
+       CPL_AtmOcn_const_SH,     &
+       CPL_AtmOcn_const_LH,     &
+       CPL_AtmOcn_const_WH,     &
+       CPL_AtmOcn_const_Ustar,  &
+       CPL_AtmOcn_const_FREQ,   &
+       CPL_AtmOcn_const_CMTYPE, &
+       CPL_AtmOcn_const_DIURNAL
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    CPL_AtmLnd_const_U_min   = U_min
-    CPL_AtmLnd_const_CM_min  = CM_min
-    CPL_AtmLnd_const_CM      = Const_CM
-    CPL_AtmLnd_const_SWU     = Const_SWU
-    CPL_AtmLnd_const_LWU     = Const_LWU
-    CPL_AtmLnd_const_SH      = Const_SH
-    CPL_AtmLnd_const_LH      = Const_LH
-    CPL_AtmLnd_const_GH      = Const_GH
-    CPL_AtmLnd_const_Ustar   = Const_Ustar
-    CPL_AtmLnd_const_FREQ    = Const_FREQ
-    CPL_AtmLnd_const_CMTYPE  = CMTYPE
-    CPL_AtmLnd_const_DIURNAL = DIURNAL
+    CPL_AtmOcn_const_U_min   = U_min
+    CPL_AtmOcn_const_CM_min  = CM_min
+    CPL_AtmOcn_const_CM      = Const_CM
+    CPL_AtmOcn_const_SWU     = Const_SWU
+    CPL_AtmOcn_const_LWU     = Const_LWU
+    CPL_AtmOcn_const_SH      = Const_SH
+    CPL_AtmOcn_const_LH      = Const_LH
+    CPL_AtmOcn_const_WH      = Const_WH
+    CPL_AtmOcn_const_Ustar   = Const_Ustar
+    CPL_AtmOcn_const_FREQ    = Const_FREQ
+    CPL_AtmOcn_const_CMTYPE  = CMTYPE
+    CPL_AtmOcn_const_DIURNAL = DIURNAL
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land: constant flux parameter'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: constant flux parameter'
 
-    if ( CPL_TYPE_AtmLnd /= 'CONST' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not CONST. Check!'
+    if ( CPL_TYPE_AtmOcn /= 'CONST' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not CONST. Check!'
        call PRC_MPIstop
     endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_ATMLND_CONST,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_CPL_ATMOCN_CONST,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMLND_CONST. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMOCN_CONST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_CONST)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_CONST)
 
-    U_min       = CPL_AtmLnd_const_U_min
-    CM_min      = CPL_AtmLnd_const_CM_min
-    Const_Cm    = CPL_AtmLnd_const_Cm
-    Const_SWU   = CPL_AtmLnd_const_SWU
-    Const_LWU   = CPL_AtmLnd_const_LWU
-    Const_SH    = CPL_AtmLnd_const_SH
-    Const_LH    = CPL_AtmLnd_const_LH
-    Const_GH    = CPL_AtmLnd_const_GH
-    Const_Ustar = CPL_AtmLnd_const_Ustar
-    Const_FREQ  = CPL_AtmLnd_const_FREQ
-    CMTYPE      = CPL_AtmLnd_const_CMTYPE
-    DIURNAL     = CPL_AtmLnd_const_DIURNAL
+    U_min       = CPL_AtmOcn_const_U_min
+    CM_min      = CPL_AtmOcn_const_CM_min
+    Const_Cm    = CPL_AtmOcn_const_Cm
+    Const_SWU   = CPL_AtmOcn_const_SWU
+    Const_LWU   = CPL_AtmOcn_const_LWU
+    Const_SH    = CPL_AtmOcn_const_SH
+    Const_LH    = CPL_AtmOcn_const_LH
+    Const_WH    = CPL_AtmOcn_const_WH
+    Const_Ustar = CPL_AtmOcn_const_Ustar
+    Const_FREQ  = CPL_AtmOcn_const_FREQ
+    CMTYPE      = CPL_AtmOcn_const_CMTYPE
+    DIURNAL     = CPL_AtmOcn_const_DIURNAL
 
     return
-  end subroutine CPL_AtmLnd_const_setup
+  end subroutine CPL_AtmOcn_const_setup
 
-  subroutine CPL_AtmLnd_const( &
-        LST,                                  & ! (inout)
-        LST_UPDATE,                           & ! (in)
+  subroutine CPL_AtmOcn_const( &
+        SST,                                  & ! (inout)
+        SST_UPDATE,                           & ! (in)
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
+        SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TG, QVEF, EMIT, ALB,                  & ! (in)
-        TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
+        TW, ALB, DZW                          ) ! (in)
     use mod_const, only: &
       PI => CONST_PI
     use mod_time, only: &
@@ -168,8 +167,8 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
-    logical,  intent(in)    :: LST_UPDATE ! is land surface temperature updated?
+    real(RP), intent(inout) :: SST(IA,JA) ! ocean surface temperature [K]
+    logical,  intent(in)    :: SST_UPDATE ! is ocean surface temperature updated?
 
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -178,7 +177,7 @@ contains
     real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
     real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
     real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
@@ -192,15 +191,9 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
+    real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
-    real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
-    real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
-    real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
-    real(RP), intent(in) :: Z0H (IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E (IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: DZW (IA,JA) ! water depth [m]
 
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowest atmospheric layer [m/s]
@@ -273,12 +266,12 @@ contains
 
       LHFLX (i,j) = Const_LH
       LWUFLX(i,j) = Const_LWU
-      GHFLX (i,j) = Const_GH
+      WHFLX (i,j) = Const_WH
 
     enddo
     enddo
 
     return
-  end subroutine CPL_AtmLnd_const
+  end subroutine CPL_AtmOcn_const
 
-end module mod_cpl_atmos_land_const
+end module mod_cpl_atmos_ocean_const
