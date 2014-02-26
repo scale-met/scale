@@ -229,7 +229,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALB, DZW                          ) ! (in)
+        TW, ALBW, DZW                         ) ! (in)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -268,7 +268,7 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
+    real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
     real(RP), intent(in) :: DZW (IA,JA) ! water depth [m]
 
     real(RP) :: RES   (IA,JA)
@@ -288,7 +288,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
         SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-        TW, ALB, DZW                         ) ! (in)
+        TW, ALBW, DZW                        ) ! (in)
 
       if( SST_UPDATE ) then
 
@@ -349,7 +349,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALB, DZW                         ) ! (in)
+      TW, ALBW, DZW                        ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -390,7 +390,7 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
+    real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
     real(RP), intent(in) :: DZW (IA,JA) ! water depth [m]
 
     ! work
@@ -493,7 +493,7 @@ contains
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
       WHFLX (i,j) = -2.0_RP * TCW * ( TS(i,j) - TW(i,j)  ) / DZW(i,j)
-      SWUFLX(i,j) = ALB(i,j) * SWD(i,j)
+      SWUFLX(i,j) = ALBW(i,j) * SWD(i,j)
       LWUFLX(i,j) = EMIT * STB * TS(i,j)**4
 
       ! calculation for residual
