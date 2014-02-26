@@ -17,8 +17,6 @@ module mod_cpl
   use mod_precision
   use mod_stdio
   use mod_prof
-  use mod_grid_index
-  use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,45 +44,30 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_final
-    use mod_land_phy_bucket, only: &
-       LAND_PHY_driver_final
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
-       BULK_TYPE => CPL_BULK_TYPE, &
        CPL_vars_setup,             &
        CPL_vars_restart_read,      &
        CPL_vars_merge,             &
        CPL_vars_fillhalo,          &
-       CPL_putAtm,                 &
-       CPL_putLnd,                 &
        CPL_flushAtm,               &
        CPL_flushLnd,               &
        CPL_AtmLnd_flushCPL
-    use mod_cpl_bulkcoef, only: &
-       CPL_bulkcoef_setup
-    use mod_cpl_atmos_land, only: &
-       CPL_AtmLnd_driver_setup, &
-       CPL_AtmLnd_driver
+    use mod_cpl_atmos_land_driver, only: &
+       CPL_AtmLnd_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
     call CPL_vars_setup
     call CPL_vars_restart_read
 
-    if( sw_AtmLnd ) then
-      call CPL_bulkcoef_setup( BULK_TYPE )
-      call CPL_AtmLnd_driver_setup
-
-      call ATMOS_PHY_SF_driver_final
-      call LAND_PHY_driver_final
-      call CPL_AtmLnd_driver( .false. )
-    end if
+    if( sw_AtmLnd ) call CPL_AtmLnd_driver_setup
 
     call CPL_vars_merge
 
-    call CPL_AtmLnd_driver_setup
+    call CPL_flushAtm
+    call CPL_flushLnd
+    call CPL_AtmLnd_flushCPL
 
     call CPL_vars_fillhalo
 
@@ -97,24 +80,23 @@ contains
     use mod_cpl_vars, only: &
        sw_AtmLnd  => CPL_sw_AtmLnd,  &
        LST_UPDATE => CPL_LST_UPDATE, &
-       CPL_TYPE_AtmLnd,              &
        CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
        CPL_vars_history,             &
        CPL_flushAtm,                 &
        CPL_flushLnd,                 &
        CPL_AtmLnd_flushCPL
-    use mod_cpl_atmos_land, only: &
+    use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver
     implicit none
     !---------------------------------------------------------------------------
 
     !########## Coupler Atoms-Land ##########
-    call PROF_rapstart('CPL Atmos-Land')
     if( sw_AtmLnd ) then
-       call CPL_AtmLnd_driver( LST_UPDATE )
+      call PROF_rapstart('CPL Atmos-Land')
+      call CPL_AtmLnd_driver( LST_UPDATE )
+      call PROF_rapend  ('CPL Atmos-Land')
     endif
-    call PROF_rapend  ('CPL Atmos-Land')
 
     !########## merge Land-Ocean ##########
     call CPL_vars_merge

@@ -61,7 +61,6 @@ module mod_cpl_vars
   logical,                public, save :: CPL_sw_AtmLnd             !< do atmos-land coupler calculation?
   logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
   logical,                public, save :: CPL_sw_restart            !< output coupler restart?
-  character(len=H_SHORT), public, save :: CPL_BULK_TYPE   = ''      !< what is bulk method?
   logical,                public, save :: CPL_LST_UPDATE  = .false. !< is Land Surface Temperature updated?
 
   !-----------------------------------------------------------------------------
@@ -227,7 +226,7 @@ contains
 
     NAMELIST / PARAM_CPL / &
        CPL_TYPE_AtmLnd, &
-       CPL_BULK_TYPE,   &
+       CPL_TYPE_AtmOcn, &
        CPL_LST_UPDATE
 
     NAMELIST / PARAM_CPL_VARS /  &
