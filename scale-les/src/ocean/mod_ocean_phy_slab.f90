@@ -40,7 +40,9 @@ module mod_ocean_phy_slab
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: DZW = 50.0_RP !< water depth of slab ocean [m]
+  real(RP), private, save :: DZW    = 50.0_RP    !< water depth of slab ocean [m]
+  logical,  private, save :: FLG_CR = .false.    !< is the fixed change rate used?
+  real(RP), private, save :: CRATE  = 2.0E-5_RP  !< fixed change rate of water temperature [K/s]
 
   real(RP), private, save, allocatable :: WHFLX  (:,:)
   real(RP), private, save, allocatable :: PRECFLX(:,:)
@@ -59,9 +61,13 @@ contains
     implicit none
 
     real(RP) :: OCEAN_SLAB_DEPTH
+    logical  :: OCEAN_SLAB_FLG_CR
+    real(RP) :: OCEAN_SLAB_CRATE
 
     NAMELIST / PARAM_OCEAN_SLAB / &
-       OCEAN_SLAB_DEPTH
+       OCEAN_SLAB_DEPTH,  &
+       OCEAN_SLAB_FLG_CR, &
+       OCEAN_SLAB_CRATE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -73,7 +79,9 @@ contains
     allocate( PRECFLX(IA,JA) )
     allocate( QVFLX  (IA,JA) )
 
-    OCEAN_SLAB_DEPTH = DZW
+    OCEAN_SLAB_DEPTH  = DZW
+    OCEAN_SLAB_FLG_CR = FLG_CR
+    OCEAN_SLAB_CRATE  = CRATE
 
     if ( OCEAN_TYPE_PHY /= 'SLAB' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE_PHY is not SLAB. Check!'
@@ -92,7 +100,9 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN_SLAB)
 
-    DZW = OCEAN_SLAB_DEPTH
+    DZW    = OCEAN_SLAB_DEPTH
+    FLG_CR = OCEAN_SLAB_FLG_CR
+    CRATE  = OCEAN_SLAB_CRATE
 
     return
   end subroutine OCEAN_PHY_driver_setup
@@ -121,14 +131,24 @@ contains
                          PRECFLX(:,:), & ! [OUT]
                          QVFLX  (:,:)  ) ! [OUT]
 
-    do j = JS, JE
-    do i = IS, IE
+    ! update water temperature
+    if( FLG_CR ) then
 
-      ! update water temperature
-      TW(i,j) = TW(i,j) - 2.0_RP * WHFLX(i,j) / ( DWATR * CL * DZW ) * dt
+      do j = JS, JE
+      do i = IS, IE
+        TW(i,j) = TW(i,j) + CRATE * dt
+      end do
+      end do
 
-    end do
-    end do
+    else
+
+      do j = JS, JE
+      do i = IS, IE
+        TW(i,j) = TW(i,j) - 2.0_RP * WHFLX(i,j) / ( DWATR * CL * DZW ) * dt
+      end do
+      end do
+
+    end if
 
     call OCEAN_vars_fillhalo
 
