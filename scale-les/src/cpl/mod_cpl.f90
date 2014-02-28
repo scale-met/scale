@@ -50,11 +50,7 @@ contains
        CPL_vars_setup,             &
        CPL_vars_restart_read,      &
        CPL_vars_merge,             &
-       CPL_vars_fillhalo,          &
-       CPL_flushAtm,               &
-       CPL_flushLnd,               &
-       CPL_flushOcn,               &
-       CPL_flushCPL
+       CPL_vars_fillhalo
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver_setup
     use mod_cpl_atmos_ocean_driver, only: &
@@ -69,12 +65,6 @@ contains
     if( sw_AtmOcn ) call CPL_AtmOcn_driver_setup
 
     call CPL_vars_merge
-
-    call CPL_flushAtm
-    call CPL_flushLnd
-    call CPL_flushOcn
-    call CPL_flushCPL
-
     call CPL_vars_fillhalo
 
     return
@@ -90,11 +80,7 @@ contains
        SST_UPDATE => CPL_SST_UPDATE, &
        CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
-       CPL_vars_history,             &
-       CPL_flushAtm,                 &
-       CPL_flushLnd,                 &
-       CPL_flushOcn,                 &
-       CPL_flushCPL
+       CPL_vars_history
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver
     use mod_cpl_atmos_ocean_driver, only: &
@@ -111,19 +97,13 @@ contains
 
     !########## Coupler Atoms-Ocean ##########
     if( sw_AtmOcn ) then
-      call PROF_rapstart('CPL Atmos-Land')
+      call PROF_rapstart('CPL Atmos-Ocean')
       call CPL_AtmOcn_driver( SST_UPDATE )
-      call PROF_rapend  ('CPL Atmos-Land')
+      call PROF_rapend  ('CPL Atmos-Ocean')
     endif
 
     !########## merge Land-Ocean ##########
     call CPL_vars_merge
-
-    !########## flush Coupler values ##########
-    call CPL_flushAtm
-    call CPL_flushLnd
-    call CPL_flushOcn
-    call CPL_flushCPL
 
     !########## Fill HALO ##########
     call CPL_vars_fillhalo

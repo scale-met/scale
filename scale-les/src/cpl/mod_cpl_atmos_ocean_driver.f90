@@ -46,24 +46,17 @@ contains
   subroutine CPL_AtmOcn_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_final
-!    use mod_ocean_phy_fixed, only: &
-!       OCEAN_PHY_driver_final
+    use mod_ocean_phy_slab, only: &
+       OCEAN_PHY_driver_final
     use mod_cpl_vars, only: &
-       CPL_TYPE_AtmOcn,    &
-       CPL_flushAtm,       &
-       CPL_flushOcn,       &
-       CPL_flushCPL
+       CPL_TYPE_AtmOcn
     use mod_cpl_atmos_ocean, only: &
        CPL_AtmOcn_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    call CPL_flushAtm
-    call CPL_flushOcn
-    call CPL_flushCPL
-
     call ATMOS_PHY_SF_driver_final
-!    call OCEAN_PHY_driver_final
+    call OCEAN_PHY_driver_final
 
     call CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
     call CPL_AtmOcn_driver( .false. )
@@ -72,16 +65,41 @@ contains
   end subroutine CPL_AtmOcn_driver_setup
 
   subroutine CPL_AtmOcn_driver( update_flag )
+    use mod_const, only: &
+       LH0 => CONST_LH0
     use mod_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
-    use mod_cpl_vars, only: &
-       CPL_AtmOcn_putCPL,     &
-       CPL_AtmOcn_getAtm2CPL, &
-       CPL_AtmOcn_getOcn2CPL, &
-       SST
     use mod_cpl_atmos_ocean, only: &
        CPL_AtmOcn
+    use mod_cpl_vars, only: &
+       SST,              &
+       DENS => CPL_DENS, &
+       MOMX => CPL_MOMX, &
+       MOMY => CPL_MOMY, &
+       MOMZ => CPL_MOMZ, &
+       RHOS => CPL_RHOS, &
+       PRES => CPL_PRES, &
+       ATMP => CPL_ATMP, &
+       QV   => CPL_QV  , &
+       PREC => CPL_PREC, &
+       SWD  => CPL_SWD , &
+       LWD  => CPL_LWD , &
+       TW   => CPL_TW,   &
+       ALBW => CPL_ALBW, &
+       AtmOcn_XMFLX,     &
+       AtmOcn_YMFLX,     &
+       AtmOcn_ZMFLX,     &
+       AtmOcn_SWUFLX,    &
+       AtmOcn_LWUFLX,    &
+       AtmOcn_SHFLX,     &
+       AtmOcn_LHFLX,     &
+       AtmOcn_QVFLX,     &
+       Ocn_WHFLX,        &
+       Ocn_PRECFLX,      &
+       Ocn_QVFLX,        &
+       CNT_Atm_Ocn,      &
+       CNT_Ocn
     implicit none
 
     ! argument
@@ -98,33 +116,9 @@ contains
     real(RP) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
-    real(RP) :: DENS  (IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP) :: MOMX  (IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: MOMY  (IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: MOMZ  (IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: RHOS  (IA,JA) ! air density at the sruface [kg/m3]
-    real(RP) :: PRES  (IA,JA) ! pressure at the surface [Pa]
-    real(RP) :: ATMP  (IA,JA) ! air temperature at the surface [K]
-    real(RP) :: QV    (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP) :: PREC  (IA,JA) ! precipitaton flux at the surface [kg/m2/s]
-    real(RP) :: SWD   (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP) :: LWD   (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
-
-    real(RP) :: TW    (IA,JA) ! water temperature [K]
-    real(RP) :: ALB   (IA,JA) ! surface albedo in short-wave radiation [no unit]
-    real(RP) :: DZW   (IA,JA) ! water depth [m]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
-
-    call CPL_AtmOcn_getAtm2CPL( &
-      DENS, MOMX, MOMY, MOMZ, & ! (out)
-      RHOS, PRES, ATMP, QV,   & ! (out)
-      PREC, SWD, LWD          ) ! (out)
-
-    call CPL_AtmOcn_getOcn2CPL( &
-      TW, ALB, DZW ) ! (out)
 
     DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
@@ -135,13 +129,24 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALB, DZW                         ) ! (in)
+      TW, ALBW                             ) ! (in)
 
-    call CPL_AtmOcn_putCPL( &
-      XMFLX, YMFLX, ZMFLX,  &
-      SWUFLX, LWUFLX,       &
-      SHFLX, LHFLX, WHFLX,  &
-      PREC                  )
+    ! average flux
+    AtmOcn_XMFLX (:,:) = ( AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_YMFLX (:,:) = ( AtmOcn_YMFLX (:,:) * CNT_Atm_Ocn + YMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_ZMFLX (:,:) = ( AtmOcn_ZMFLX (:,:) * CNT_Atm_Ocn + ZMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_SWUFLX(:,:) = ( AtmOcn_SWUFLX(:,:) * CNT_Atm_Ocn + SWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_LWUFLX(:,:) = ( AtmOcn_LWUFLX(:,:) * CNT_Atm_Ocn + LWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_SHFLX (:,:) = ( AtmOcn_SHFLX (:,:) * CNT_Atm_Ocn + SHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_LHFLX (:,:) = ( AtmOcn_LHFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    AtmOcn_QVFLX (:,:) = ( AtmOcn_QVFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Ocn + 1.0_RP )
+
+    Ocn_WHFLX  (:,:) = ( Ocn_WHFLX  (:,:) * CNT_Ocn + WHFLX(:,:)     ) / ( CNT_Ocn + 1.0_RP )
+    Ocn_PRECFLX(:,:) = ( Ocn_PRECFLX(:,:) * CNT_Ocn + PREC (:,:)     ) / ( CNT_Ocn + 1.0_RP )
+    Ocn_QVFLX  (:,:) = ( Ocn_QVFLX  (:,:) * CNT_Ocn - LHFLX(:,:)/LH0 ) / ( CNT_Ocn + 1.0_RP )
+
+    CNT_Atm_Ocn = CNT_Atm_Ocn + 1.0_RP
+    CNT_Ocn     = CNT_Ocn     + 1.0_RP
 
     return
   end subroutine CPL_AtmOcn_driver

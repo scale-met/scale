@@ -16,7 +16,6 @@ module mod_ocean
   use mod_precision
   use mod_stdio
   use mod_prof
-  use mod_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,16 +47,15 @@ contains
        sw_phy => OCEAN_sw_phy,  &
        OCEAN_vars_setup,        &
        OCEAN_vars_restart_read
-    use mod_ocean_phy, only: &
-       OCEAN_PHY_setup
+    use mod_ocean_phy_slab, only: &
+       OCEAN_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
     call OCEAN_vars_setup
-
     call OCEAN_vars_restart_read
 
-    if ( sw_phy ) call OCEAN_PHY_setup
+    if ( sw_phy ) call OCEAN_PHY_driver_setup
 
     return
   end subroutine OCEAN_setup
@@ -68,21 +66,29 @@ contains
     use mod_ocean_vars, only: &
        sw_phy => OCEAN_sw_phy, &
        OCEAN_vars_history
-    use mod_ocean_phy, only: &
-       OCEAN_PHY
+    use mod_ocean_phy_slab, only: &
+       OCEAN_PHY_driver_first, &
+       OCEAN_PHY_driver_final
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Physics ##########
-    call PROF_rapstart('OCN Physics')
+    !########## Physics First ##########
     if ( sw_phy ) then
-       call OCEAN_PHY
+      call PROF_rapstart('OCN Physics')
+      call OCEAN_PHY_driver_first
+      call PROF_rapend  ('OCN Physics')
     endif
-    call PROF_rapend  ('OCN Physics')
+
+    !########## Physics Final ##########
+    if ( sw_phy ) then
+      call PROF_rapstart('OCN Physics')
+      call OCEAN_PHY_driver_final
+      call PROF_rapend  ('OCN Physics')
+    endif
 
     !########## History & Monitor ##########
     call PROF_rapstart('OCN History')
-       call OCEAN_vars_history
+    call OCEAN_vars_history
     call PROF_rapend  ('OCN History')
 
     return

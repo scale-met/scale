@@ -195,7 +195,8 @@ contains
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
     use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd
+       sw_AtmLnd => CPL_sw_AtmLnd, &
+       sw_AtmOcn => CPL_sw_AtmOcn
     implicit none
     !---------------------------------------------------------------------------
 
@@ -207,7 +208,7 @@ contains
     !########## Surface First ##########
     if ( sw_phy_sf ) then
        call PROF_rapstart('ATM SurfaceFlux')
-       if ( sw_AtmLnd ) then
+       if ( sw_AtmLnd .or. sw_AtmOcn ) then
           call ATMOS_PHY_SF_driver_first
        else
           call ATMOS_PHY_SF( do_phy_sf, .true. )
@@ -253,7 +254,7 @@ contains
     !########## Surface Final ##########
     if ( sw_phy_sf ) then
        call PROF_rapstart('ATM SurfaceFlux')
-       if ( sw_AtmLnd ) then
+       if ( sw_AtmLnd .or. sw_AtmOcn ) then
           call ATMOS_PHY_SF_driver_final
        endif
        call PROF_rapend  ('ATM SurfaceFlux')

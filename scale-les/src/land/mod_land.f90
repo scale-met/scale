@@ -55,7 +55,6 @@ contains
     !---------------------------------------------------------------------------
 
     call LAND_vars_setup
-
     call LAND_vars_restart_read
 
     if ( sw_phy ) call LAND_PHY_driver_setup
@@ -76,18 +75,18 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Physics First ##########
-    call PROF_rapstart('LND Physics')
     if ( sw_phy ) then
-       call LAND_PHY_driver_first
+      call PROF_rapstart('LND Physics')
+      call LAND_PHY_driver_first
+      call PROF_rapend  ('LND Physics')
     endif
-    call PROF_rapend  ('LND Physics')
 
     !########## Physics Final ##########
-    call PROF_rapstart('LND Physics')
     if ( sw_phy ) then
-       call LAND_PHY_driver_final
+      call PROF_rapstart('LND Physics')
+      call LAND_PHY_driver_final
+      call PROF_rapend  ('LND Physics')
     endif
-    call PROF_rapend  ('LND Physics')
 
     !########## History & Monitor ##########
     call PROF_rapstart('LND History')

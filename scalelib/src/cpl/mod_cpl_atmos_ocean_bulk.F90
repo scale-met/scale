@@ -229,7 +229,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALBW, DZW                         ) ! (in)
+        TW, ALBW                              ) ! (in)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -269,94 +269,37 @@ contains
 
     real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
-    real(RP), intent(in) :: DZW (IA,JA) ! water depth [m]
-
-    real(RP) :: RES   (IA,JA)
-    real(RP) :: DRES  (IA,JA)
-    real(RP) :: oldRES(IA,JA) ! RES in previous step
-    real(RP) :: redf  (IA,JA) ! reduced factor
     !---------------------------------------------------------------------------
 
-    redf  (:,:) = 1.0_RP
-    oldRES(:,:) = 1.0E+5_RP
-
-    do n = 1, nmax
-      ! calculate surface flux
-      call bulkflux( &
-        RES, DRES,                           & ! (out)
-        XMFLX, YMFLX, ZMFLX,                 & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
-        SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
-        RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-        TW, ALBW, DZW                        ) ! (in)
-
-      if( SST_UPDATE ) then
-
-        do j = JS-1, JE+1
-        do i = IS-1, IE+1
-
-          if( redf(i,j) < 0.0_RP ) then
-            redf(i,j) = 1.0_RP
-          end if
-
-          if( abs(RES(i,j)) > abs(oldRES(i,j)) ) then
-            redf(i,j) = max( TFa*redf(i,j), redf_min )
-          else
-            redf(i,j) = min( TFb*redf(i,j), redf_max )
-          end if
-
-          if( DRES(i,j) > 0.0_RP ) then
-            redf(i,j) = -1.0_RP
-          end if
-
-          ! update surface temperature
-          SST(i,j)  = SST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
-
-          ! put residual in ocean heat flux
-          WHFLX(i,j) = WHFLX(i,j) - RES(i,j)
-
-          ! save residual in this step
-          oldRES(i,j) = RES(i,j)
-
-        end do
-        end do
-
-        if( maxval(abs(RES(IS-1:IE+1,JS-1:JE+1))) < res_min ) then
-          ! iteration converged
-          exit
-        end if
-
-      else
-        ! get surface flux without SST updating
-        exit
-
-      end if
-
-    end do
-
-    if( n > nmax ) then
-      ! not converged and stop program
-      if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-      call PRC_MPIstop
+    if( SST_UPDATE ) then
+      ! update surface temperature
+      SST(:,:) = TW(:,:)
+    else
+      ! get surface flux without SST updating
     end if
+
+    ! calculate surface flux
+    call bulkflux( &
+      XMFLX, YMFLX, ZMFLX,                 & ! (out)
+      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
+      SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
+      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      ALBW                                 ) ! (in)
 
     return
   end subroutine CPL_AtmOcn_bulk
 
   subroutine bulkflux( &
-      RES, DRES,                           & ! (out)
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
-      TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALBW, DZW                        ) ! (in)
+      XMFLX, YMFLX, ZMFLX,                  & ! (out)
+      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
+      TS, DZ, DENS, MOMX, MOMY, MOMZ,       & ! (in)
+      RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
+      ALBW                                  ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
-      Rvap   => CONST_Rvap,  &
       STB    => CONST_STB,   &
-      LH0    => CONST_LH0,   &
-      P00    => CONST_PRE00
+      LH0    => CONST_LH0
     use mod_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     use mod_cpl_bulkcoef, only: &
@@ -364,8 +307,6 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(out) :: RES   (IA,JA) ! residual in the equation of heat balance
-    real(RP), intent(out) :: DRES  (IA,JA) ! d(residual) / d(Ts)
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
@@ -389,19 +330,15 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
-    real(RP), intent(in) :: DZW (IA,JA) ! water depth [m]
 
     ! work
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Ustar ! friction velocity [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: dCm, dCh, dCe
 
     real(RP) :: Z0M, Z0H, Z0E ! oceanic modified roughness length [m]
-    real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: dLWUFLX, dWHFLX, dSHFLX, dLHFLX
+    real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -492,30 +429,11 @@ contains
 
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
-      WHFLX (i,j) = -2.0_RP * TCW * ( TS(i,j) - TW(i,j)  ) / DZW(i,j)
       SWUFLX(i,j) = ALBW(i,j) * SWD(i,j)
       LWUFLX(i,j) = EMIT * STB * TS(i,j)**4
 
       ! calculation for residual
-      RES(i,j) = SWD(i,j) - SWUFLX(i,j) + LWD(i,j) - LWUFLX(i,j) - SHFLX(i,j) - LHFLX(i,j) + WHFLX(i,j)
-
-      call CPL_bulkcoef( &
-          dCm, dCh, dCe,               & ! (out)
-          ATMP(i,j), TS(i,j)+dTS,      & ! (in)
-          DZ(i,j), Uabs,               & ! (in)
-          Z0M, Z0H, Z0E                ) ! (in)
-
-      call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )
-
-      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
-              * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
-      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) &
-              * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
-      dWHFLX  = -2.0_RP * TCW / DZW(i,j)
-      dLWUFLX = 4.0_RP * EMIT * STB * TS(i,j)**3
-
-      ! calculation for d(residual)/dTS
-      DRES(i,j) = - dLWUFLX - dSHFLX - dLHFLX + dWHFLX
+      WHFLX(i,j) = - SWD(i,j) + SWUFLX(i,j) - LWD(i,j) + LWUFLX(i,j) + SHFLX(i,j) + LHFLX(i,j)
     enddo
     enddo
 

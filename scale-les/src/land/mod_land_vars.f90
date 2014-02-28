@@ -45,11 +45,11 @@ module mod_land_vars
   logical,                public, save :: LAND_sw_phy           !< do land physics update?
   logical,                public, save :: LAND_sw_restart       !< output restart?
 
-  ! prognostic varia
-  real(RP), public, allocatable :: TG  (:,:) ! soil temperature [K]
-  real(RP), public, allocatable :: QVEF(:,:) ! efficiency of evaporation [0-1]
-  real(RP), public, allocatable :: ROFF(:,:) ! run-off water [kg/m2]
-  real(RP), public, allocatable :: STRG(:,:) ! water storage [kg/m2]
+  ! prognostic variables
+  real(RP), public, save, allocatable :: TG  (:,:) ! soil temperature [K]
+  real(RP), public, save, allocatable :: QVEF(:,:) ! efficiency of evaporation [0-1]
+  real(RP), public, save, allocatable :: ROFF(:,:) ! run-off water [kg/m2]
+  real(RP), public, save, allocatable :: STRG(:,:) ! water storage [kg/m2]
 
   integer,  public, save :: I_TG   = 1
   integer,  public, save :: I_QVEF = 2
@@ -77,7 +77,7 @@ module mod_land_vars
   integer,  public, parameter :: I_STRGMAX =  1  ! maximum  water storage [kg/m2]
   integer,  public, parameter :: I_STRGCRT =  2  ! critical water storage [kg/m2]
   integer,  public, parameter :: I_EMIT    =  3  ! surface emissivity in long-wave  radiation [0-1]
-  integer,  public, parameter :: I_ALB     =  4  ! surface albedo     in short-wave radiation [0-1]
+  integer,  public, parameter :: I_ALBG    =  4  ! surface albedo     in short-wave radiation [0-1]
   integer,  public, parameter :: I_TCS     =  5  ! thermal conductivity for soil [W/m/K]
   integer,  public, parameter :: I_HCS     =  6  ! heat capacity        for soil [J/K]
   integer,  public, parameter :: I_DZG     =  7  ! soil depth [m]
@@ -85,8 +85,8 @@ module mod_land_vars
   integer,  public, parameter :: I_Z0H     =  9  ! roughness length for heat     [m]
   integer,  public, parameter :: I_Z0E     = 10  ! roughness length for moisture [m]
 
-  integer,  public, allocatable :: LAND_Type    (:,:)   ! land type index
-  real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
+  integer,  public, save, allocatable :: LAND_Type    (:,:)   ! land type index
+  real(RP), public, save, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
 
   !-----------------------------------------------------------------------------
   !
@@ -379,17 +379,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-!    use mod_comm, only: &
-!       STAT_checktotal, &
-!       STAT_total
+    use mod_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     implicit none
 
     !real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( STAT_checktotal ) then
-!
-!    endif
+    if ( STAT_checktotal ) then
+
+!       call STAT_total( total, TG(:,:),   OP_NAME(I_TG)   )
+!       call STAT_total( total, QVEF(:,:), OP_NAME(I_QVEF) )
+!       call STAT_total( total, ROFF(:,:), OP_NAME(I_ROFF) )
+!       call STAT_total( total, STRG(:,:), OP_NAME(I_STRG) )
+
+    endif
 
     return
   end subroutine LAND_vars_total
@@ -408,7 +413,7 @@ contains
     real(RP)               :: STRGMAX
     real(RP)               :: STRGCRT
     real(RP)               :: EMIT
-    real(RP)               :: ALB
+    real(RP)               :: ALBG
     real(RP)               :: TCS
     real(RP)               :: HCS
     real(RP)               :: DZG
@@ -422,7 +427,7 @@ contains
        STRGMAX,     &
        STRGCRT,     &
        EMIT,        &
-       ALB,         &
+       ALBG,        &
        TCS,         &
        HCS,         &
        DZG,         &
@@ -477,7 +482,7 @@ contains
        LAND_PROPERTY_table(index,I_STRGMAX) = STRGMAX
        LAND_PROPERTY_table(index,I_STRGCRT) = STRGCRT
        LAND_PROPERTY_table(index,I_EMIT   ) = EMIT
-       LAND_PROPERTY_table(index,I_ALB    ) = ALB
+       LAND_PROPERTY_table(index,I_ALBG   ) = ALBG
        LAND_PROPERTY_table(index,I_TCS    ) = TCS
        LAND_PROPERTY_table(index,I_HCS    ) = HCS
        LAND_PROPERTY_table(index,I_DZG    ) = DZG
@@ -490,7 +495,7 @@ contains
                                      STRGMAX, &
                                      STRGCRT, &
                                      EMIT,    &
-                                     ALB,     &
+                                     ALBG,    &
                                      TCS,     &
                                      HCS,     &
                                      DZG,     &
