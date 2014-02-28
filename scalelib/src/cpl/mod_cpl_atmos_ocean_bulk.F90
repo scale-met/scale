@@ -106,9 +106,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: bulk flux parameter'
 
-    if ( CPL_TYPE_AtmOcn /= 'U95'  .and. &
-         CPL_TYPE_AtmOcn /= 'BH91'       ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not U95 or BH91. Check!'
+    if ( CPL_TYPE_AtmOcn /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not BULK. Check!'
        call PRC_MPIstop
     endif
 
@@ -124,18 +123,18 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
 
-    nmax    = CPL_AtmOcn_bulk_nmax
-    res_min = CPL_AtmOcn_bulk_res_min
-    dTS     = CPL_AtmOcn_bulk_dTS
-    U_minM  = CPL_AtmOcn_bulk_U_minM
-    U_minH  = CPL_AtmOcn_bulk_U_minH
-    U_minE  = CPL_AtmOcn_bulk_U_minE
-    U_maxM  = CPL_AtmOcn_bulk_U_maxM
-    U_maxH  = CPL_AtmOcn_bulk_U_maxH
-    U_maxE  = CPL_AtmOcn_bulk_U_maxE
+    nmax      = CPL_AtmOcn_bulk_nmax
+    res_min   = CPL_AtmOcn_bulk_res_min
+    dTS       = CPL_AtmOcn_bulk_dTS
+    U_minM    = CPL_AtmOcn_bulk_U_minM
+    U_minH    = CPL_AtmOcn_bulk_U_minH
+    U_minE    = CPL_AtmOcn_bulk_U_minE
+    U_maxM    = CPL_AtmOcn_bulk_U_maxM
+    U_maxH    = CPL_AtmOcn_bulk_U_maxH
+    U_maxE    = CPL_AtmOcn_bulk_U_maxE
 
     !--- set up bulk coefficient function
-    call CPL_bulkcoef_setup( CPL_TYPE_AtmOcn )
+    call CPL_bulkcoef_setup
 
     !--- set up roughness length of sea surface
     call OCEAN_roughness_setup

@@ -104,9 +104,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land: bulk flux parameter'
 
-    if ( CPL_TYPE_AtmLnd /= 'U95'  .and. &
-         CPL_TYPE_AtmLnd /= 'BH91'       ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not U95 or BH91. Check!'
+    if ( CPL_TYPE_AtmLnd /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
        call PRC_MPIstop
     endif
 
@@ -133,7 +132,7 @@ contains
     U_maxE  = CPL_AtmLnd_bulk_U_maxE
 
     !--- set up bulk coefficient function
-    call CPL_bulkcoef_setup( CPL_TYPE_AtmLnd )
+    call CPL_bulkcoef_setup
 
     return
   end subroutine CPL_AtmLnd_bulk_setup

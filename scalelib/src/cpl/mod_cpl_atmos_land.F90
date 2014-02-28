@@ -120,7 +120,7 @@ contains
     case ( 'CONST' )
        call CPL_AtmLnd_const_setup( CPL_TYPE_AtmLnd )
        CPL_AtmLnd => CPL_AtmLnd_const
-    case ( 'BH91', 'U95' )
+    case ( 'BULK' )
        call CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
        CPL_AtmLnd => CPL_AtmLnd_bulk
     end select

@@ -113,7 +113,7 @@ contains
     case ( 'CONST' )
        call CPL_AtmOcn_const_setup( CPL_TYPE_AtmOcn )
        CPL_AtmOcn => CPL_AtmOcn_const
-    case ( 'BH91', 'U95' )
+    case ( 'BULK' )
        call CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
        CPL_AtmOcn => CPL_AtmOcn_bulk
     end select

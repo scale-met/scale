@@ -69,6 +69,8 @@ module mod_cpl_bulkcoef
   !
   !++ Private parameters & variables
   !
+  character(len=H_SHORT), private, save :: bulkcoef_TYPE = 'BH91'
+
   ! limiter
   real(RP), private, save :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
   real(RP), private, save :: Ch_min = 1.0E-8_RP !                       T
@@ -82,12 +84,12 @@ contains
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkcoef_setup( BULK_TYPE )
+  subroutine CPL_bulkcoef_setup
     use mod_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: BULK_TYPE
+    character(len=H_SHORT) :: CPL_bulkcoef_TYPE
 
     real(RP) :: CPL_bulkcoef_Cm_min
     real(RP) :: CPL_bulkcoef_Ch_min
@@ -97,6 +99,7 @@ contains
     real(RP) :: CPL_bulkcoef_Ce_max
 
     NAMELIST / PARAM_CPL_BULKCOEF / &
+       CPL_bulkcoef_TYPE,    &
        CPL_bulkcoef_Cm_min,  &
        CPL_bulkcoef_Ch_min,  &
        CPL_bulkcoef_Ce_min,  &
@@ -107,6 +110,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    CPL_bulkcoef_TYPE   = bulkcoef_TYPE
     CPL_bulkcoef_Cm_min = Cm_min
     CPL_bulkcoef_Ch_min = Ch_min
     CPL_bulkcoef_Ce_min = Ce_min
@@ -116,16 +120,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Bulk coefficient parameter'
-
-    select case( BULK_TYPE )
-    case ( 'U95' )
-       CPL_bulkcoef => CPL_bulkcoef_uno
-    case ( 'BH91' )
-       CPL_bulkcoef => CPL_bulkcoef_beljaars
-    case default
-       write(*,*) 'xxx invalid bulk scheme (', trim(BULK_TYPE), '). CHECK!'
-       call PRC_MPIstop
-    end select
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -139,12 +133,23 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_BULKCOEF)
 
-    Cm_min = CPL_bulkcoef_Cm_min
-    Ch_min = CPL_bulkcoef_Ch_min
-    Ce_min = CPL_bulkcoef_Ce_min
-    Cm_max = CPL_bulkcoef_Cm_max
-    Ch_max = CPL_bulkcoef_Ch_max
-    Ce_max = CPL_bulkcoef_Ce_max
+    bulkcoef_TYPE = CPL_bulkcoef_TYPE
+    Cm_min        = CPL_bulkcoef_Cm_min
+    Ch_min        = CPL_bulkcoef_Ch_min
+    Ce_min        = CPL_bulkcoef_Ce_min
+    Cm_max        = CPL_bulkcoef_Cm_max
+    Ch_max        = CPL_bulkcoef_Ch_max
+    Ce_max        = CPL_bulkcoef_Ce_max
+
+    select case( bulkcoef_TYPE )
+    case ( 'U95' )
+       CPL_bulkcoef => CPL_bulkcoef_uno
+    case ( 'BH91' )
+       CPL_bulkcoef => CPL_bulkcoef_beljaars
+    case default
+       write(*,*) 'xxx invalid bulk scheme (', trim(bulkcoef_TYPE), '). CHECK!'
+       call PRC_MPIstop
+    end select
 
     return
   end subroutine CPL_bulkcoef_setup
