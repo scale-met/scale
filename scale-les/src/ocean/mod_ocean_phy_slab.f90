@@ -40,9 +40,11 @@ module mod_ocean_phy_slab
   !
   !++ Private parameters & variables
   !
-  real(RP), allocatable :: WHFLX  (:,:)
-  real(RP), allocatable :: PRECFLX(:,:)
-  real(RP), allocatable :: QVFLX  (:,:)
+  real(RP), private, save :: DZW = 50.0_RP !< water depth of slab ocean [m]
+
+  real(RP), private, save, allocatable :: WHFLX  (:,:)
+  real(RP), private, save, allocatable :: PRECFLX(:,:)
+  real(RP), private, save, allocatable :: QVFLX  (:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -56,10 +58,10 @@ contains
        OCEAN_TYPE_PHY
     implicit none
 
-    logical  :: dummy
+    real(RP) :: OCEAN_SLAB_DEPTH
 
     NAMELIST / PARAM_OCEAN_SLAB / &
-       dummy
+       OCEAN_SLAB_DEPTH
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -70,6 +72,8 @@ contains
     allocate( WHFLX  (IA,JA) )
     allocate( PRECFLX(IA,JA) )
     allocate( QVFLX  (IA,JA) )
+
+    OCEAN_SLAB_DEPTH = DZW
 
     if ( OCEAN_TYPE_PHY /= 'SLAB' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE_PHY is not SLAB. Check!'
@@ -88,6 +92,8 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN_SLAB)
 
+    DZW = OCEAN_SLAB_DEPTH
+
     return
   end subroutine OCEAN_PHY_driver_setup
 
@@ -101,7 +107,6 @@ contains
        dt => TIME_DTSEC_OCEAN
     use mod_ocean_vars, only: &
        TW,                  &
-       DZW,                 &
        OCEAN_vars_fillhalo
     use mod_cpl_vars, only: &
        CPL_getCPL2Ocn
@@ -120,7 +125,7 @@ contains
     do i = IS, IE
 
       ! update water temperature
-      TW(i,j) = TW(i,j) - 2.0_RP * WHFLX(i,j) / ( DWATR * CL * DZW(i,j) ) * dt
+      TW(i,j) = TW(i,j) - 2.0_RP * WHFLX(i,j) / ( DWATR * CL * DZW ) * dt
 
     end do
     end do
@@ -133,14 +138,16 @@ contains
   subroutine OCEAN_PHY_driver_final
     use mod_ocean_vars, only: &
        TW,   &
-       ALBW
+       ALBW, &
+       Z0W
     use mod_cpl_vars, only: &
        CPL_putOcn
     implicit none
     !---------------------------------------------------------------------------
 
     call CPL_putOcn( TW  (:,:), & ! [IN]
-                     ALBW(:,:)  ) ! [IN]
+                     ALBW(:,:), & ! [IN]
+                     Z0W (:,:)  ) ! [IN]
 
     return
   end subroutine OCEAN_PHY_driver_final

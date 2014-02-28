@@ -87,6 +87,7 @@ contains
        LWD  => CPL_LWD , &
        TW   => CPL_TW,   &
        ALBW => CPL_ALBW, &
+       Z0W  => CPL_Z0W,  &
        AtmOcn_XMFLX,     &
        AtmOcn_YMFLX,     &
        AtmOcn_ZMFLX,     &
@@ -129,7 +130,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALBW                             ) ! (in)
+      TW, ALBW, Z0W                        ) ! (in)
 
     ! average flux
     AtmOcn_XMFLX (:,:) = ( AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )

@@ -54,8 +54,6 @@ module mod_cpl_atmos_ocean_bulk
   real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
   real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
 
-  real(RP), private, save :: EMIT  = 1.0_RP    ! emissivity in long-wave radiation [no unit]
-  real(RP), private, save :: TCW   = 0.6_RP    ! thermal conductivity for water [W/m/K]
   real(RP), private, save :: CM0   = 1.0E-3_RP ! bulk coef. for U*
   real(RP), private, save :: visck = 1.5E-5_RP ! kinematic viscosity
 
@@ -96,8 +94,6 @@ contains
     real(RP) :: CPL_AtmOcn_bulk_U_maxM
     real(RP) :: CPL_AtmOcn_bulk_U_maxH
     real(RP) :: CPL_AtmOcn_bulk_U_maxE
-    real(RP) :: CPL_AtmOcn_bulk_EMIT
-    real(RP) :: CPL_AtmOcn_bulk_TCW
     real(RP) :: CPL_AtmOcn_bulk_CM0
     real(RP) :: CPL_AtmOcn_bulk_visck
     real(RP) :: CPL_AtmOcn_bulk_Z0M_min
@@ -123,8 +119,6 @@ contains
        CPL_AtmOcn_bulk_U_maxM,  &
        CPL_AtmOcn_bulk_U_maxH,  &
        CPL_AtmOcn_bulk_U_maxE,  &
-       CPL_AtmOcn_bulk_EMIT,    &
-       CPL_AtmOcn_bulk_TCW,     &
        CPL_AtmOcn_bulk_CM0,     &
        CPL_AtmOcn_bulk_visck,   &
        CPL_AtmOcn_bulk_Z0M_min, &
@@ -152,8 +146,6 @@ contains
     CPL_AtmOcn_bulk_U_maxM  = U_maxM
     CPL_AtmOcn_bulk_U_maxH  = U_maxH
     CPL_AtmOcn_bulk_U_maxE  = U_maxE
-    CPL_AtmOcn_bulk_EMIT    = EMIT
-    CPL_AtmOcn_bulk_TCW     = TCW
     CPL_AtmOcn_bulk_CM0     = CM0
     CPL_AtmOcn_bulk_visck   = visck
     CPL_AtmOcn_bulk_Z0M_min = Z0M_min
@@ -199,8 +191,6 @@ contains
     U_maxM  = CPL_AtmOcn_bulk_U_maxM
     U_maxH  = CPL_AtmOcn_bulk_U_maxH
     U_maxE  = CPL_AtmOcn_bulk_U_maxE
-    EMIT    = CPL_AtmOcn_bulk_EMIT
-    TCW     = CPL_AtmOcn_bulk_TCW
     CM0     = CPL_AtmOcn_bulk_CM0
     visck   = CPL_AtmOcn_bulk_visck
     Z0M_min = CPL_AtmOcn_bulk_Z0M_min
@@ -229,7 +219,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALBW                              ) ! (in)
+        TW, ALBW, Z0W                         ) ! (in)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -269,6 +259,7 @@ contains
 
     real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
+    real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
     !---------------------------------------------------------------------------
 
     if( SST_UPDATE ) then
@@ -284,7 +275,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      ALBW                                 ) ! (in)
+      ALBW, Z0W                            ) ! (in)
 
     return
   end subroutine CPL_AtmOcn_bulk
@@ -294,7 +285,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,       & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-      ALBW                                  ) ! (in)
+      ALBW, Z0W                             ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -331,6 +322,10 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
+    real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
+
+    ! parameter
+    real(RP), parameter :: EMIT = 0.96_RP ! emissivity in long-wave radiation for water [no unit]
 
     ! work
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]

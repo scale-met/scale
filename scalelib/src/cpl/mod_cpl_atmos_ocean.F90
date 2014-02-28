@@ -35,7 +35,7 @@ module mod_cpl_atmos_ocean
          SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TW, ALBW                             ) ! (in)
+         TW, ALBW, Z0W                        ) ! (in)
        use mod_precision
        use mod_grid_index
        implicit none
@@ -66,6 +66,7 @@ module mod_cpl_atmos_ocean
 
        real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
        real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
+       real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
      end subroutine cao
   end interface
   procedure(cao), pointer :: CPL_AtmOcn => NULL()

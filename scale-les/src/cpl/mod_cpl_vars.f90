@@ -123,6 +123,7 @@ module mod_cpl_vars
   ! Ocean values
   real(RP), public, save, allocatable :: CPL_TW  (:,:) ! water temperature [K]
   real(RP), public, save, allocatable :: CPL_ALBW(:,:) ! surface albedo in short-wave radiation for water [no unit]
+  real(RP), public, save, allocatable :: CPL_Z0W (:,:) ! roughness length of sea surface [m]
 
   ! counter
   real(RP), public, save :: CNT_Atm_Lnd ! counter for atmos flux by land
@@ -317,6 +318,7 @@ contains
 
     allocate( CPL_TW  (IA,JA) )
     allocate( CPL_ALBW(IA,JA) )
+    allocate( CPL_Z0W (IA,JA) )
 
     allocate( AtmLnd_XMFLX      (IA,JA) )
     allocate( AtmLnd_YMFLX      (IA,JA) )
@@ -711,15 +713,17 @@ contains
   end subroutine CPL_putLnd
 
   subroutine CPL_putOcn( &
-      pTW, pALBW ) ! (in)
+      pTW, pALBW, pZ0W ) ! (in)
     implicit none
 
     real(RP), intent(in) :: pTW  (IA,JA)
     real(RP), intent(in) :: pALBW(IA,JA)
+    real(RP), intent(in) :: pZ0W (IA,JA)
     !---------------------------------------------------------------------------
 
     CPL_TW  (:,:) = pTW  (:,:)
     CPL_ALBW(:,:) = pALBW(:,:)
+    CPL_Z0W (:,:) = pZ0W (:,:)
 
     return
   end subroutine CPL_putOcn

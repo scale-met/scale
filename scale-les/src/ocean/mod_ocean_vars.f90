@@ -38,21 +38,21 @@ module mod_ocean_vars
   !
   real(RP), public, save, allocatable :: TW  (:,:) !< water temperature [K]
   real(RP), public, save, allocatable :: ALBW(:,:) !< surface albedo of short-wave radiation for water [0-1]
-  real(RP), public, save, allocatable :: DZW (:,:) !< water depth [m]
+  real(RP), public, save, allocatable :: Z0W (:,:) !< roughness length of sea surface [m]
 
   integer,                public, save :: I_TW   = 1
   integer,                public, save :: I_ALBW = 2
-  integer,                public, save :: I_DZW  = 3
+  integer,                public, save :: I_Z0W  = 3
   character(len=H_SHORT), public, save :: OP_NAME(3) !< name  of the ocean variables
   character(len=H_MID),   public, save :: OP_DESC(3) !< desc. of the ocean variables
   character(len=H_SHORT), public, save :: OP_UNIT(3) !< unit  of the ocean variables
 
   data OP_NAME / 'TW',   &
                  'ALBW', &
-                 'DZW'   /
+                 'Z0W'   /
   data OP_DESC / 'water temperature',                                &
                  'surface albedo of short-wave radiation for water', &
-                 'water depth'                                       /
+                 'roughness length of sea surface'                                       /
   data OP_UNIT / 'K',   &
                  '0-1', &
                  'm'    /
@@ -106,7 +106,7 @@ contains
 
     allocate( TW  (IA,JA) )
     allocate( ALBW(IA,JA) )
-    allocate( DZW (IA,JA) )
+    allocate( Z0W (IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -179,11 +179,11 @@ contains
     ! fill IHALO & JHALO
     call COMM_vars8( TW  (:,:), 1 )
     call COMM_vars8( ALBW(:,:), 2 )
-    call COMM_vars8( DZW (:,:), 3 )
+    call COMM_vars8( Z0W (:,:), 3 )
 
     call COMM_wait ( TW  (:,:), 1 )
     call COMM_wait ( ALBW(:,:), 2 )
-    call COMM_wait ( DZW (:,:), 3 )
+    call COMM_wait ( Z0W (:,:), 3 )
 
     return
   end subroutine OCEAN_vars_fillhalo
@@ -210,16 +210,16 @@ contains
                          OCEAN_RESTART_IN_BASENAME, 'TW',   'XY', step=1 ) ! [IN]
        call FILEIO_read( ALBW(:,:),                                      & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, 'ALBW', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( DZW(:,:),                                       & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'DZW',  'XY', step=1 ) ! [IN]
+       call FILEIO_read( Z0W(:,:),                                       & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, 'Z0W',  'XY', step=1 ) ! [IN]
 
        ! fill IHALO & JHALO
        call OCEAN_vars_fillhalo
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
        TW  (:,:) = 300.0_RP
-       ALBW(:,:) = 0.1_RP
-       DZW (:,:) = 50.0_RP
+       ALBW(:,:) = 0.05_RP
+       Z0W (:,:) = 0.0_RP
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
@@ -259,7 +259,7 @@ contains
                           OP_NAME(1), OP_DESC(1), OP_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ALBW(:,:), bname,                         OCEAN_RESTART_OUT_TITLE, & ! [IN]
                           OP_NAME(2), OP_DESC(2), OP_UNIT(2), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( DZW(:,:),  bname,                         OCEAN_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( Z0W(:,:),  bname,                         OCEAN_RESTART_OUT_TITLE, & ! [IN]
                           OP_NAME(3), OP_DESC(3), OP_UNIT(3), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -282,12 +282,12 @@ contains
     if ( OCEAN_VARS_CHECKRANGE ) then
        call VALCHECK( TW  (:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_TW),   __FILE__, __LINE__ )
        call VALCHECK( ALBW(:,:), 0.0_RP,    2.0_RP, OP_NAME(I_ALBW), __FILE__, __LINE__ )
-       call VALCHECK( DZW (:,:), 0.0_RP, 1.0E+6_RP, OP_NAME(I_DZW),  __FILE__, __LINE__ )
+       call VALCHECK( Z0W (:,:), 0.0_RP, 1.0E+6_RP, OP_NAME(I_Z0W),  __FILE__, __LINE__ )
     endif
 
     call HIST_in( TW(:,:),   'TW',   OP_DESC(I_TW),   OP_UNIT(I_TW),   TIME_DTSEC_OCEAN )
     call HIST_in( ALBW(:,:), 'ALBW', OP_DESC(I_ALBW), OP_UNIT(I_ALBW), TIME_DTSEC_OCEAN )
-    call HIST_in( DZW(:,:),  'DZW',  OP_DESC(I_DZW),  OP_UNIT(I_DZW),  TIME_DTSEC_OCEAN )
+    call HIST_in( Z0W(:,:),  'Z0W',  OP_DESC(I_Z0W),  OP_UNIT(I_Z0W),  TIME_DTSEC_OCEAN )
 
     return
   end subroutine OCEAN_vars_history
@@ -307,7 +307,7 @@ contains
 
 !       call STAT_total( total, TW(:,:),   OP_NAME(I_TW)   )
 !       call STAT_total( total, ALBW(:,:), OP_NAME(I_ALBW) )
-!       call STAT_total( total, DZW(:,:),  OP_NAME(I_DZW)  )
+!       call STAT_total( total, Z0W(:,:),  OP_NAME(I_Z0W)  )
 
     endif
 
