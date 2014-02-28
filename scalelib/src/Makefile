@@ -13,7 +13,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 LIBNAME = libscale.a
 
-VPATH = io:common:grid:atmos:cpl
+VPATH = io:common:grid:atmos:ocean:cpl
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -93,6 +93,7 @@ OBJS =	\
 	mod_atmos_phy_rd.o	\
 	mod_atmos_phy_ae_dummy.o	\
 	mod_atmos_phy_ae.o	\
+	mod_ocean_sub_roughness.o	\
 	mod_cpl_atmos_land.o	\
 	mod_cpl_atmos_land_bulk.o	\
 	mod_cpl_atmos_land_const.o	\

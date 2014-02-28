@@ -54,24 +54,6 @@ module mod_cpl_atmos_ocean_bulk
   real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
   real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
 
-  real(RP), private, save :: CM0   = 1.0E-3_RP ! bulk coef. for U*
-  real(RP), private, save :: visck = 1.5E-5_RP ! kinematic viscosity
-
-  real(RP), private, save :: Ustar_min = 1.0E-3_RP ! minimum fiction velocity
-  real(RP), private, save :: Z0M_min   = 1.0E-5_RP ! minimum roughness length for u,v,w
-  real(RP), private, save :: Z0H_min   = 1.0E-5_RP !                              T
-  real(RP), private, save :: Z0E_min   = 1.0E-5_RP !                              q
-
-  real(RP), private, save :: Z0MI = 0.0E-0_RP ! base roughness rength for u,v,w
-  real(RP), private, save :: Z0MR = 1.8E-2_RP ! rough factor for u,v,w
-  real(RP), private, save :: Z0MS = 1.1E-1_RP ! smooth factor for u,v,w
-  real(RP), private, save :: Z0HI = 1.4E-5_RP ! base roughness rength for T
-  real(RP), private, save :: Z0HR = 0.0E-0_RP ! rough factor for T
-  real(RP), private, save :: Z0HS = 4.0E-1_RP ! smooth factor for T
-  real(RP), private, save :: Z0EI = 1.3E-4_RP ! base roughness rength for q
-  real(RP), private, save :: Z0ER = 0.0E-0_RP ! rough factor for q
-  real(RP), private, save :: Z0ES = 6.2E-1_RP ! smooth factor for q
-
 contains
   !-----------------------------------------------------------------------------
   !
@@ -79,6 +61,8 @@ contains
   subroutine CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
     use mod_process, only: &
        PRC_MPIstop
+    use mod_ocean_roughness, only: &
+       OCEAN_roughness_setup
     use mod_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     implicit none
@@ -94,20 +78,6 @@ contains
     real(RP) :: CPL_AtmOcn_bulk_U_maxM
     real(RP) :: CPL_AtmOcn_bulk_U_maxH
     real(RP) :: CPL_AtmOcn_bulk_U_maxE
-    real(RP) :: CPL_AtmOcn_bulk_CM0
-    real(RP) :: CPL_AtmOcn_bulk_visck
-    real(RP) :: CPL_AtmOcn_bulk_Z0M_min
-    real(RP) :: CPL_AtmOcn_bulk_Z0H_min
-    real(RP) :: CPL_AtmOcn_bulk_Z0E_min
-    real(RP) :: CPL_AtmOcn_bulk_Z0MI
-    real(RP) :: CPL_AtmOcn_bulk_Z0MR
-    real(RP) :: CPL_AtmOcn_bulk_Z0MS
-    real(RP) :: CPL_AtmOcn_bulk_Z0HI
-    real(RP) :: CPL_AtmOcn_bulk_Z0HR
-    real(RP) :: CPL_AtmOcn_bulk_Z0HS
-    real(RP) :: CPL_AtmOcn_bulk_Z0EI
-    real(RP) :: CPL_AtmOcn_bulk_Z0ER
-    real(RP) :: CPL_AtmOcn_bulk_Z0ES
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
        CPL_AtmOcn_bulk_nmax,    &
@@ -118,21 +88,7 @@ contains
        CPL_AtmOcn_bulk_U_minE,  &
        CPL_AtmOcn_bulk_U_maxM,  &
        CPL_AtmOcn_bulk_U_maxH,  &
-       CPL_AtmOcn_bulk_U_maxE,  &
-       CPL_AtmOcn_bulk_CM0,     &
-       CPL_AtmOcn_bulk_visck,   &
-       CPL_AtmOcn_bulk_Z0M_min, &
-       CPL_AtmOcn_bulk_Z0H_min, &
-       CPL_AtmOcn_bulk_Z0E_min, &
-       CPL_AtmOcn_bulk_Z0MI,    &
-       CPL_AtmOcn_bulk_Z0MR,    &
-       CPL_AtmOcn_bulk_Z0MS,    &
-       CPL_AtmOcn_bulk_Z0HI,    &
-       CPL_AtmOcn_bulk_Z0HR,    &
-       CPL_AtmOcn_bulk_Z0HS,    &
-       CPL_AtmOcn_bulk_Z0EI,    &
-       CPL_AtmOcn_bulk_Z0ER,    &
-       CPL_AtmOcn_bulk_Z0ES
+       CPL_AtmOcn_bulk_U_maxE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -146,20 +102,6 @@ contains
     CPL_AtmOcn_bulk_U_maxM  = U_maxM
     CPL_AtmOcn_bulk_U_maxH  = U_maxH
     CPL_AtmOcn_bulk_U_maxE  = U_maxE
-    CPL_AtmOcn_bulk_CM0     = CM0
-    CPL_AtmOcn_bulk_visck   = visck
-    CPL_AtmOcn_bulk_Z0M_min = Z0M_min
-    CPL_AtmOcn_bulk_Z0H_min = Z0H_min
-    CPL_AtmOcn_bulk_Z0E_min = Z0E_min
-    CPL_AtmOcn_bulk_Z0MI    = Z0MI
-    CPL_AtmOcn_bulk_Z0MR    = Z0MR
-    CPL_AtmOcn_bulk_Z0MS    = Z0MS
-    CPL_AtmOcn_bulk_Z0HI    = Z0HI
-    CPL_AtmOcn_bulk_Z0HR    = Z0HR
-    CPL_AtmOcn_bulk_Z0HS    = Z0HS
-    CPL_AtmOcn_bulk_Z0EI    = Z0EI
-    CPL_AtmOcn_bulk_Z0ER    = Z0ER
-    CPL_AtmOcn_bulk_Z0ES    = Z0ES
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: bulk flux parameter'
@@ -191,23 +133,12 @@ contains
     U_maxM  = CPL_AtmOcn_bulk_U_maxM
     U_maxH  = CPL_AtmOcn_bulk_U_maxH
     U_maxE  = CPL_AtmOcn_bulk_U_maxE
-    CM0     = CPL_AtmOcn_bulk_CM0
-    visck   = CPL_AtmOcn_bulk_visck
-    Z0M_min = CPL_AtmOcn_bulk_Z0M_min
-    Z0H_min = CPL_AtmOcn_bulk_Z0H_min
-    Z0E_min = CPL_AtmOcn_bulk_Z0E_min
-    Z0MI    = CPL_AtmOcn_bulk_Z0MI
-    Z0MR    = CPL_AtmOcn_bulk_Z0MR
-    Z0MS    = CPL_AtmOcn_bulk_Z0MS
-    Z0HI    = CPL_AtmOcn_bulk_Z0HI
-    Z0HR    = CPL_AtmOcn_bulk_Z0HR
-    Z0HS    = CPL_AtmOcn_bulk_Z0HS
-    Z0EI    = CPL_AtmOcn_bulk_Z0EI
-    Z0ER    = CPL_AtmOcn_bulk_Z0ER
-    Z0ES    = CPL_AtmOcn_bulk_Z0ES
 
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup( CPL_TYPE_AtmOcn )
+
+    !--- set up roughness length of sea surface
+    call OCEAN_roughness_setup
 
     return
   end subroutine CPL_AtmOcn_bulk_setup
@@ -293,6 +224,8 @@ contains
       LH0    => CONST_LH0
     use mod_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
+    use mod_ocean_roughness, only: &
+      OCEAN_roughness
     use mod_cpl_bulkcoef, only: &
       CPL_bulkcoef
     implicit none
@@ -347,13 +280,9 @@ contains
            + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
            ) / ( DENS(i,j) + DENS(i+1,j) )
 
-      !--- friction velocity at u, v, and w points
-      Ustar = max ( sqrt ( CM0 ) * Uabs , Ustar_min )
-
-      !--- roughness lengths at u, v, and w points
-      Z0M = max( Z0MI + Z0MR/GRAV * Ustar*Ustar + Z0MS*visck / Ustar, Z0M_min )
-      Z0H = max( Z0HI + Z0HR/GRAV * Ustar*Ustar + Z0HS*visck / Ustar, Z0H_min )
-      Z0E = max( Z0EI + Z0ER/GRAV * Ustar*Ustar + Z0ES*visck / Ustar, Z0E_min )
+      call OCEAN_roughness( &
+          Z0M, Z0H, Z0E, & ! (out)
+          Uabs, Z0W(i,j) ) ! (in)
 
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                           & ! (out)
@@ -375,13 +304,9 @@ contains
            + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
            ) / ( DENS(i,j) + DENS(i,j+1) )
 
-      !--- friction velocity at u, v, and w points
-      Ustar = max ( sqrt ( CM0 ) * Uabs , Ustar_min )
-
-      !--- roughness lengths at u, v, and w points
-      Z0M = max( Z0MI + Z0MR/GRAV * Ustar*Ustar + Z0MS*visck / Ustar, Z0M_min )
-      Z0H = max( Z0HI + Z0HR/GRAV * Ustar*Ustar + Z0HS*visck / Ustar, Z0H_min )
-      Z0E = max( Z0EI + Z0ER/GRAV * Ustar*Ustar + Z0ES*visck / Ustar, Z0E_min )
+      call OCEAN_roughness( &
+          Z0M, Z0H, Z0E, & ! (out)
+          Uabs, Z0W(i,j) ) ! (in)
 
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                           & ! (out)
@@ -403,13 +328,9 @@ contains
            + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
            ) / DENS(i,j) * 0.5_RP
 
-      !--- friction velocity at u, v, and w points
-      Ustar = max ( sqrt ( CM0 ) * Uabs , Ustar_min )
-
-      !--- roughness lengths at u, v, and w points
-      Z0M = max( Z0MI + Z0MR/GRAV * Ustar*Ustar + Z0MS*visck / Ustar, Z0M_min )
-      Z0H = max( Z0HI + Z0HR/GRAV * Ustar*Ustar + Z0HS*visck / Ustar, Z0H_min )
-      Z0E = max( Z0EI + Z0ER/GRAV * Ustar*Ustar + Z0ES*visck / Ustar, Z0E_min )
+      call OCEAN_roughness( &
+          Z0M, Z0H, Z0E, & ! (out)
+          Uabs, Z0W(i,j) ) ! (in)
 
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                  & ! (out)
