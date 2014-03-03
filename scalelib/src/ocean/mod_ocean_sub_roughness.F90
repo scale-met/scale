@@ -26,10 +26,13 @@ module mod_ocean_roughness
 
   abstract interface
      subroutine rl( &
+          Z0W,           & ! (inout)
           Z0M, Z0H, Z0E, & ! (out)
-          Uabs, ZA, Z0W  ) ! (in)
+          Uabs, ZA       ) ! (in)
        use mod_precision
        implicit none
+
+       real(RP), intent(inout) :: Z0W ! roughness length of sea surface [m]
 
        real(RP), intent(out) :: Z0M ! roughness length of momentum [m]
        real(RP), intent(out) :: Z0H ! roughness length of heat [m]
@@ -37,7 +40,6 @@ module mod_ocean_roughness
 
        real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
-       real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
      end subroutine rl
   end interface
 
@@ -188,20 +190,22 @@ contains
   end subroutine OCEAN_roughness_setup
 
   subroutine OCEAN_roughness_miller( &
+      Z0W,           & ! (inout)
       Z0M, Z0H, Z0E, & ! (out)
-      Uabs, ZA, Z0W  ) ! (in)
+      Uabs, ZA       ) ! (in)
     use mod_const, only: &
       GRAV => CONST_GRAV
     implicit none
     
     ! argument
+    real(RP), intent(inout) :: Z0W ! roughness length of sea surface [m]
+
     real(RP), intent(out) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(out) :: Z0H ! roughness length of heat [m]
     real(RP), intent(out) :: Z0E ! roughness length of vapor [m]
 
     real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
-    real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
 
     ! work
     real(RP) :: Ustar
@@ -219,14 +223,16 @@ contains
   end subroutine OCEAN_roughness_miller
 
   subroutine OCEAN_roughness_yqw( &
+      Z0W,           & ! (inout)
       Z0M, Z0H, Z0E, & ! (out)
-      Uabs, ZA, Z0W  ) ! (in)
+      Uabs, ZA       ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN
     implicit none
 
     ! argument
+    real(RP), intent(inout) :: Z0W ! roughness length of sea surface [m]
 
     real(RP), intent(out) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(out) :: Z0H ! roughness length of heat [m]
@@ -234,7 +240,6 @@ contains
 
     real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
-    real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
 
     ! parameter
     integer, parameter :: nmax = 5 ! maximum iteration number
@@ -265,6 +270,9 @@ contains
     !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
     Z0H = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP )
     Z0E = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP ) ! Z0H = Z0E
+
+    ! update Z0W
+    Z0W = Z0M
 
     return
   end subroutine OCEAN_roughness_yqw
