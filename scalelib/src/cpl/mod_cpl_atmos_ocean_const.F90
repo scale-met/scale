@@ -41,25 +41,25 @@ module mod_cpl_atmos_ocean_const
   !++ Private parameters & variables
   !
   ! limiter
-  real(RP), private, save      :: Cm_min = 1.0E-5_RP ! minimum bulk coef. of u,v,w
-  real(RP), private, parameter :: Cm_max = 2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private, save   :: U_min =   0.0_RP ! minimum U_abs for u,v,w
+  real(RP), private, save   :: U_max = 100.0_RP ! maximum U_abs for u,v,w
 
-  real(RP), private, save      :: U_min =   0.0_RP ! minimum U_abs for u,v,w
-  real(RP), private, parameter :: U_max = 100.0_RP ! maximum U_abs for u,v,w
+  real(RP), private, save   :: Cm_min = 1.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, save   :: Cm_max = 2.5E-3_RP ! maximum bulk coef. of u,v,w
 
-  real(RP), private, save      :: Const_CM    =   1.1E-3_RP ! constant bulk coef. of u,v,w
-  real(RP), private, save      :: Const_SWU   = 200.0_RP    ! constant upward short-wave radiation flux [W/m2]
-  real(RP), private, save      :: Const_LWU   = 200.0_RP    ! constant upward long-wave radiation flux [W/m2]
-  real(RP), private, save      :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
-  real(RP), private, save      :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
-  real(RP), private, save      :: Const_WH    =   0.0_RP    ! constant water heat flux [W/m2]
-  real(RP), private, save      :: Const_Ustar =   0.25_RP   ! constant friction velocity [m/s]
-  real(RP), private, save      :: Const_FREQ  =  24.0_RP    ! frequency of sensible heat flux [hour]
+  real(RP), private, save   :: Const_CM    =   1.1E-3_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save   :: Const_SWU   = 200.0_RP    ! constant upward short-wave radiation flux [W/m2]
+  real(RP), private, save   :: Const_LWU   = 200.0_RP    ! constant upward long-wave radiation flux [W/m2]
+  real(RP), private, save   :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
+  real(RP), private, save   :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
+  real(RP), private, save   :: Const_WH    =   0.0_RP    ! constant water heat flux [W/m2]
+  real(RP), private, save   :: Const_Ustar =   0.25_RP   ! constant friction velocity [m/s]
+  real(RP), private, save   :: Const_FREQ  =  24.0_RP    ! frequency of sensible heat flux [hour]
 
-  integer(4), private, save    :: CMTYPE = 0 ! 0->Bulk coef. is constant
-                                             ! 1->Friction velocity is constant
+  integer(4), private, save :: CMTYPE = 0 ! 0->Bulk coef. is constant
+                                          ! 1->Friction velocity is constant
 
-  logical, private, save       :: DIURNAL = .false.
+  logical, private, save    :: DIURNAL = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -73,8 +73,10 @@ contains
 
     character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmOcn
 
-    real(RP) :: CPL_AtmOcn_const_U_min  ! minimum U_abs for u,v,w
-    real(RP) :: CPL_AtmOcn_const_CM_min ! minimum bulk coef. of u,v,w
+    real(RP) :: CPL_AtmOcn_const_U_min
+    real(RP) :: CPL_AtmOcn_const_U_max
+    real(RP) :: CPL_AtmOcn_const_CM_min
+    real(RP) :: CPL_AtmOcn_const_CM_max
     real(RP) :: CPL_AtmOcn_const_CM
     real(RP) :: CPL_AtmOcn_const_SWU
     real(RP) :: CPL_AtmOcn_const_LWU
@@ -88,7 +90,9 @@ contains
 
     NAMELIST / PARAM_CPL_ATMOCN_CONST / &
        CPL_AtmOcn_const_U_min,  &
+       CPL_AtmOcn_const_U_max,  &
        CPL_AtmOcn_const_CM_min, &
+       CPL_AtmOcn_const_CM_max, &
        CPL_AtmOcn_const_CM,     &
        CPL_AtmOcn_const_SWU,    &
        CPL_AtmOcn_const_LWU,    &
@@ -104,7 +108,9 @@ contains
     !---------------------------------------------------------------------------
 
     CPL_AtmOcn_const_U_min   = U_min
+    CPL_AtmOcn_const_U_max   = U_max
     CPL_AtmOcn_const_CM_min  = CM_min
+    CPL_AtmOcn_const_CM_max  = CM_max
     CPL_AtmOcn_const_CM      = Const_CM
     CPL_AtmOcn_const_SWU     = Const_SWU
     CPL_AtmOcn_const_LWU     = Const_LWU
@@ -137,7 +143,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_CONST)
 
     U_min       = CPL_AtmOcn_const_U_min
+    U_max       = CPL_AtmOcn_const_U_max
     CM_min      = CPL_AtmOcn_const_CM_min
+    CM_max      = CPL_AtmOcn_const_CM_max
     Const_Cm    = CPL_AtmOcn_const_Cm
     Const_SWU   = CPL_AtmOcn_const_SWU
     Const_LWU   = CPL_AtmOcn_const_LWU
@@ -207,40 +215,6 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-      ! at (u, y, layer)
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i+1,j)                               ) )**2 &
-           + ( 2.0_RP *   MOMX(i,j)                                               )**2 &
-           + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
-           ) / ( DENS(i,j) + DENS(i+1,j) )
-
-      if( CMTYPE == 1 ) then
-        ! friction velocity is constant
-        Cm = min( max( Const_Ustar**2 / Uabs**2, Cm_min ), Cm_max )
-      else
-        ! Bulk coef. is constant
-        Cm = Const_Cm
-      endif
-
-      XMFLX(i,j) = - Cm * min(max(Uabs,U_min),U_max) * MOMX(i,j)
-
-      ! at (x, v, layer)
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i,j+1)                               ) )**2 &
-           + ( 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) + MOMX(i-1,j+1) + MOMX(i,j+1) ) )**2 &
-           + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
-           ) / ( DENS(i,j) + DENS(i,j+1) )
-
-      if( CMTYPE == 1 ) then
-        ! friction velocity is constant
-        Cm = min( max( Const_Ustar**2 / Uabs**2, Cm_min ), Cm_max )
-      else
-        ! Bulk coef. is constant
-        Cm = Const_Cm
-      endif
-
-      YMFLX(i,j) = - Cm * min(max(Uabs,U_min),U_max) * MOMY(i,j)
-
       ! at cell center
       Uabs = sqrt( &
              ( MOMZ(i,j)               )**2 &
@@ -256,7 +230,9 @@ contains
         Cm = Const_Cm
       endif
 
-      ZMFLX(i,j) = - Cm * min(max(Uabs,U_min),U_max) * MOMZ(i,j) * 0.5_RP
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMX(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMY(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMZ(i,j)
 
       if( DIURNAL ) then
         ! include diurnal change
