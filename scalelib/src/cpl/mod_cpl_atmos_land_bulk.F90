@@ -144,7 +144,7 @@ contains
         LST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TG, QVEF, EMIT, ALBG,                 & ! (in)
+        TG, QVEF, EMIT, ALB,                  & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
     use mod_process, only: &
        PRC_MPIstop
@@ -185,9 +185,9 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
-    real(RP), intent(in) :: ALBG(IA,JA) ! surface albedo in short-wave radiation for soil [no unit]
+    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
+    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
+    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
@@ -211,7 +211,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
         LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-        TG, QVEF, EMIT, ALBG,                & ! (in)
+        TG, QVEF, EMIT, ALB,                 & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
 
       if( LST_UPDATE ) then
@@ -273,7 +273,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, EMIT, ALBG,                & ! (in)
+      TG, QVEF, EMIT, ALB,                 & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
@@ -315,9 +315,9 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
-    real(RP), intent(in) :: ALBG(IA,JA) ! surface albedo in short-wave radiation for soil [no unit]
+    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
+    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
+    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
@@ -335,46 +335,6 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! at (u, y, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i+1,j)                               ) )**2 &
-           + ( 2.0_RP *   MOMX(i,j)                                               )**2 &
-           + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
-           ) / ( DENS(i,j) + DENS(i+1,j) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i+1,j) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i+1,j) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      XMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
-    enddo
-    enddo
-
-    ! at (x, v, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i,j+1)                               ) )**2 &
-           + ( 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) + MOMX(i-1,j+1) + MOMX(i,j+1) ) )**2 &
-           + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
-           ) / ( DENS(i,j) + DENS(i,j+1) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i,j+1) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i,j+1) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      YMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
-    enddo
-    enddo
-
     ! at cell center
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -390,7 +350,9 @@ contains
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
-      ZMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) * 0.5_RP
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
 
       ! saturation at the surface
       call qsat( SQV, TS(i,j), PRES(i,j) )
@@ -398,7 +360,7 @@ contains
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
       GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( TS(i,j) - TG(i,j)  ) / DZG(i,j)
-      SWUFLX(i,j) = ALBG(i,j) * SWD(i,j)
+      SWUFLX(i,j) = ALB(i,j) * SWD(i,j)
       LWUFLX(i,j) = EMIT(i,j) * STB * TS(i,j)**4
 
       ! calculation for residual

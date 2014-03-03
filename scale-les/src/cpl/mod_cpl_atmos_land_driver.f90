@@ -122,7 +122,12 @@ contains
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
 
+    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
+    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
+
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
@@ -138,6 +143,22 @@ contains
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
       TG, QVEF, EMIT, ALBG,                & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+
+    ! interpolate momentum fluxes
+    do j = JS, JE
+    do i = IS, IE
+      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
+      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+      XMFLX(i,j) = tmpX(i,j)
+      YMFLX(i,j) = tmpY(i,j)
+      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
+    enddo
+    enddo
 
     ! average flux
     AtmLnd_XMFLX (:,:) = ( AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )

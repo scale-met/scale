@@ -191,7 +191,7 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo [0-1]
+    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
     real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
@@ -257,7 +257,7 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo [0-1]
+    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
     real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]

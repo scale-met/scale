@@ -35,7 +35,7 @@ module mod_cpl_atmos_land
          LST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, EMIT, ALBG,                & ! (in)
+         TG, QVEF, EMIT, ALB,                 & ! (in)
          TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
        use mod_precision
        use mod_grid_index
@@ -67,9 +67,9 @@ module mod_cpl_atmos_land
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
        real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-       real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-       real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
-       real(RP), intent(in) :: ALBG(IA,JA) ! surface albedo in short-wave radiation for soil [no unit]
+       real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
+       real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
+       real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
        real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
        real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
        real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
