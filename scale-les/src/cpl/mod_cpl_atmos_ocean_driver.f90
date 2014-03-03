@@ -128,6 +128,9 @@ contains
     ! work
     integer :: i, j
 
+    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
+    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
+
     real(RP) :: Z0M(IA,JA) ! roughness length of momentum [m]
     real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
     real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
@@ -149,8 +152,9 @@ contains
            ) / DENS(i,j) * 0.5_RP
 
       call OCEAN_roughness( &
+        Z0W(i,j),                     & ! (inout)
         Z0M(i,j), Z0H(i,j), Z0E(i,j), & ! (out)
-        Uabs, DZ(i,j), Z0W(i,j)       ) ! (in)
+        Uabs, DZ(i,j)                 ) ! (in)
     end do
     end do
 
@@ -163,7 +167,23 @@ contains
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
       TW, ALBW, Z0M, Z0H, Z0E              ) ! (in)
 
-    ! average flux
+    ! interpolate momentum fluxes
+    do j = JS, JE
+    do i = IS, IE
+      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
+      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+      XMFLX(i,j) = tmpX(i,j)
+      YMFLX(i,j) = tmpY(i,j)
+      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
+    enddo
+    enddo
+
+    ! temporal average flux
     AtmOcn_XMFLX (:,:) = ( AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
     AtmOcn_YMFLX (:,:) = ( AtmOcn_YMFLX (:,:) * CNT_Atm_Ocn + YMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
     AtmOcn_ZMFLX (:,:) = ( AtmOcn_ZMFLX (:,:) * CNT_Atm_Ocn + ZMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )

@@ -53,6 +53,7 @@ module mod_cpl_atmos_ocean_bulk
   real(RP), private, save :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
   real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
   real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
+  real(RP), private, save :: EMIT     =   0.96_RP   ! emissivity for water [no unit]
 
 contains
   !-----------------------------------------------------------------------------
@@ -78,6 +79,7 @@ contains
     real(RP) :: CPL_AtmOcn_bulk_U_maxM
     real(RP) :: CPL_AtmOcn_bulk_U_maxH
     real(RP) :: CPL_AtmOcn_bulk_U_maxE
+    real(RP) :: CPL_AtmOcn_bulk_EMIT
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
        CPL_AtmOcn_bulk_nmax,    &
@@ -88,7 +90,8 @@ contains
        CPL_AtmOcn_bulk_U_minE,  &
        CPL_AtmOcn_bulk_U_maxM,  &
        CPL_AtmOcn_bulk_U_maxH,  &
-       CPL_AtmOcn_bulk_U_maxE
+       CPL_AtmOcn_bulk_U_maxE,  &
+       CPL_AtmOcn_bulk_EMIT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -102,6 +105,7 @@ contains
     CPL_AtmOcn_bulk_U_maxM  = U_maxM
     CPL_AtmOcn_bulk_U_maxH  = U_maxH
     CPL_AtmOcn_bulk_U_maxE  = U_maxE
+    CPL_AtmOcn_bulk_EMIT    = EMIT
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: bulk flux parameter'
@@ -132,6 +136,7 @@ contains
     U_maxM    = CPL_AtmOcn_bulk_U_maxM
     U_maxH    = CPL_AtmOcn_bulk_U_maxH
     U_maxE    = CPL_AtmOcn_bulk_U_maxE
+    EMIT      = CPL_AtmOcn_bulk_EMIT
 
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup
@@ -257,9 +262,6 @@ contains
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
 
-    ! parameter
-    real(RP), parameter :: EMIT = 0.96_RP ! emissivity in long-wave radiation for water [no unit]
-
     ! work
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Ustar ! friction velocity [m/s]
@@ -269,46 +271,6 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
-
-    ! at (u, y, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i+1,j)                               ) )**2 &
-           + ( 2.0_RP *   MOMX(i,j)                                               )**2 &
-           + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
-           ) / ( DENS(i,j) + DENS(i+1,j) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i+1,j) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i+1,j) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      XMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
-    enddo
-    enddo
-
-    ! at (x, v, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i,j+1)                               ) )**2 &
-           + ( 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) + MOMX(i-1,j+1) + MOMX(i,j+1) ) )**2 &
-           + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
-           ) / ( DENS(i,j) + DENS(i,j+1) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i,j+1) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i,j+1) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      YMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
-    enddo
-    enddo
 
     ! at cell center
     do j = JS-1, JE+1
@@ -325,10 +287,12 @@ contains
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
-      ZMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) * 0.5_RP
-
       ! saturation at the surface
       call qsat( SQV, TS(i,j), PRES(i,j) )
+
+      XMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
+      YMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
+      ZMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
 
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
