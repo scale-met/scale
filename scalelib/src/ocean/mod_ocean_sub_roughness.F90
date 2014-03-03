@@ -257,7 +257,7 @@ contains
     Z0M = Z0W
     do n = 1, nmax
       Ustar = KARMAN * Uabs / log( ZA / Z0M )
-      U10M  = Uabs * log( 10.0_RP / Z0M ) / log( ZA / Z0M )
+      U10M  = Ustar / KARMAN * log( 10.0_RP / Z0M )
 
       if( U10M <= 12.5_RP ) then
         Z0M = 0.0185_RP * Ustar**2 / GRAV

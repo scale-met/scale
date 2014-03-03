@@ -43,10 +43,6 @@ module mod_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer,  private, save :: nmax = 100 ! maximum iteration number
-
-  real(RP), private, save :: res_min  =   1.0_RP    ! minimum number of residual
-  real(RP), private, save :: dTS      =   1.0E-8_RP ! delta TS
   real(RP), private, save :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
   real(RP), private, save :: U_minH   =   0.0_RP    !                   T
   real(RP), private, save :: U_minE   =   0.0_RP    !                   q
@@ -70,9 +66,6 @@ contains
 
     character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmOcn
 
-    integer  :: CPL_AtmOcn_bulk_nmax
-    real(RP) :: CPL_AtmOcn_bulk_res_min
-    real(RP) :: CPL_AtmOcn_bulk_dTS
     real(RP) :: CPL_AtmOcn_bulk_U_minM
     real(RP) :: CPL_AtmOcn_bulk_U_minH
     real(RP) :: CPL_AtmOcn_bulk_U_minE
@@ -82,9 +75,6 @@ contains
     real(RP) :: CPL_AtmOcn_bulk_EMIT
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
-       CPL_AtmOcn_bulk_nmax,    &
-       CPL_AtmOcn_bulk_res_min, &
-       CPL_AtmOcn_bulk_dTS,     &
        CPL_AtmOcn_bulk_U_minM,  &
        CPL_AtmOcn_bulk_U_minH,  &
        CPL_AtmOcn_bulk_U_minE,  &
@@ -96,9 +86,6 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    CPL_AtmOcn_bulk_nmax    = nmax
-    CPL_AtmOcn_bulk_res_min = res_min
-    CPL_AtmOcn_bulk_dTS     = dTS
     CPL_AtmOcn_bulk_U_minM  = U_minM
     CPL_AtmOcn_bulk_U_minH  = U_minH
     CPL_AtmOcn_bulk_U_minE  = U_minE
@@ -127,9 +114,6 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
 
-    nmax      = CPL_AtmOcn_bulk_nmax
-    res_min   = CPL_AtmOcn_bulk_res_min
-    dTS       = CPL_AtmOcn_bulk_dTS
     U_minM    = CPL_AtmOcn_bulk_U_minM
     U_minH    = CPL_AtmOcn_bulk_U_minH
     U_minE    = CPL_AtmOcn_bulk_U_minE

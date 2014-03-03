@@ -79,24 +79,24 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
 
   ! surface fluxes from atmosphere-land coupler
-  real(RP), public, save, allocatable :: AtmLnd_XMFLX      (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_YMFLX      (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_ZMFLX      (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_SWUFLX     (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_LWUFLX     (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_SHFLX      (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_LHFLX      (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_QVFLX      (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! surface fluxes from atmosphere-ocean coupler
-  real(RP), public, save, allocatable :: AtmOcn_XMFLX      (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_YMFLX      (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_ZMFLX      (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_SWUFLX     (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_LWUFLX     (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_SHFLX      (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_LHFLX      (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_QVFLX      (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! Atmospheric values
   real(RP), public, save, allocatable :: CPL_DENS(:,:) ! air density [kg/m3]
@@ -113,9 +113,9 @@ module mod_cpl_vars
 
   ! Land values
   real(RP), public, save, allocatable :: CPL_TG  (:,:) ! soil temperature [K]
-  real(RP), public, save, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [no unit]
-  real(RP), public, save, allocatable :: CPL_EMIT(:,:) ! emissivity in long-wave radiation [no unit]
-  real(RP), public, save, allocatable :: CPL_ALBG(:,:) ! surface albedo in short-wave radiation for soil [no unit]
+  real(RP), public, save, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [0-1]
+  real(RP), public, save, allocatable :: CPL_EMIT(:,:) ! emissivity for soil [0-1]
+  real(RP), public, save, allocatable :: CPL_ALBG(:,:) ! surface albedo for soil [0-1]
   real(RP), public, save, allocatable :: CPL_TCS (:,:) ! thermal conductivity for soil [W/m/K]
   real(RP), public, save, allocatable :: CPL_DZG (:,:) ! soil depth [m]
   real(RP), public, save, allocatable :: CPL_Z0M (:,:) ! roughness length for momemtum [m]

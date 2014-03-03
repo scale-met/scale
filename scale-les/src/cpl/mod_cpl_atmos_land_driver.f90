@@ -113,6 +113,8 @@ contains
     logical, intent(in) :: update_flag
 
     ! work
+    integer :: i, j
+
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
@@ -126,8 +128,6 @@ contains
     real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
 
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
@@ -160,7 +160,7 @@ contains
     enddo
     enddo
 
-    ! average flux
+    ! temporal average flux
     AtmLnd_XMFLX (:,:) = ( AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     AtmLnd_YMFLX (:,:) = ( AtmLnd_YMFLX (:,:) * CNT_Atm_Lnd + YMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     AtmLnd_ZMFLX (:,:) = ( AtmLnd_ZMFLX (:,:) * CNT_Atm_Lnd + ZMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
