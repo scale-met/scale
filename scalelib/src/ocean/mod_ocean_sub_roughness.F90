@@ -27,7 +27,7 @@ module mod_ocean_roughness
   abstract interface
      subroutine rl( &
           Z0M, Z0H, Z0E, & ! (out)
-          Uabs, Z0W      ) ! (in)
+          Uabs, ZA, Z0W  ) ! (in)
        use mod_precision
        implicit none
 
@@ -36,6 +36,7 @@ module mod_ocean_roughness
        real(RP), intent(out) :: Z0E ! roughness length of vapor [m]
 
        real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
        real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
      end subroutine rl
   end interface
@@ -188,7 +189,7 @@ contains
 
   subroutine OCEAN_roughness_miller( &
       Z0M, Z0H, Z0E, & ! (out)
-      Uabs, Z0W      ) ! (in)
+      Uabs, ZA, Z0W  ) ! (in)
     use mod_const, only: &
       GRAV => CONST_GRAV
     implicit none
@@ -199,6 +200,7 @@ contains
     real(RP), intent(out) :: Z0E ! roughness length of vapor [m]
 
     real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
     real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
 
     ! work
@@ -218,21 +220,51 @@ contains
 
   subroutine OCEAN_roughness_yqw( &
       Z0M, Z0H, Z0E, & ! (out)
-      Uabs, Z0W      ) ! (in)
+      Uabs, ZA, Z0W  ) ! (in)
+    use mod_const, only: &
+      GRAV   => CONST_GRAV,   &
+      KARMAN => CONST_KARMAN
     implicit none
 
     ! argument
+
     real(RP), intent(out) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(out) :: Z0H ! roughness length of heat [m]
     real(RP), intent(out) :: Z0E ! roughness length of vapor [m]
 
     real(RP), intent(in) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
     real(RP), intent(in) :: Z0W  ! roughness length of sea surface [m]
+
+    ! parameter
+    integer, parameter :: nmax = 5 ! maximum iteration number
+
+    ! work
+    integer :: n
+
+    real(RP) :: Ustar, U10M
     !---------------------------------------------------------------------------
 
-    Z0M = 0.0_RP
-    Z0H = 0.0_RP
-    Z0E = 0.0_RP
+    ! IL-JU MOON, ISAAC GINIS, TETSU HARA, AND BIJU THOMAS, 2007:
+    ! A Physics-Based Parameterization of Air-Sea Momentum Flux at High Wind Speeds
+    ! and Its Impact on Hurricane Intensity Predictions, Mon. Wea. Rev., 135, 2869-2878
+
+    Z0M = Z0W
+    do n = 1, nmax
+      Ustar = KARMAN * Uabs / log( ZA / Z0M )
+      U10M  = Uabs * log( 10.0_RP / Z0M ) / log( ZA / Z0M )
+
+      if( U10M <= 12.5_RP ) then
+        Z0M = 0.0185_RP * Ustar**2 / GRAV
+      else
+        Z0M = 1.0E-3_RP * ( 0.085_RP * ( -0.56_RP * Ustar**2 + 20.255_RP * Ustar + 2.458_RP) - 0.58_RP )
+      end if
+    end do
+
+    !  Fairall et al. TOGA V3.0
+    !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
+    Z0H = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP )
+    Z0E = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP ) ! Z0H = Z0E
 
     return
   end subroutine OCEAN_roughness_yqw
