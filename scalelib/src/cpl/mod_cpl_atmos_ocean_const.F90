@@ -154,12 +154,12 @@ contains
 
   subroutine CPL_AtmOcn_const( &
         SST,                                  & ! (inout)
-        SST_UPDATE,                           & ! (in)
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
+        SST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALBW, Z0W                         ) ! (in)
+        TW, ALB, Z0M, Z0H, Z0E                ) ! (in)
     use mod_const, only: &
       PI => CONST_PI
     use mod_time, only: &
@@ -167,8 +167,7 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(inout) :: SST(IA,JA) ! ocean surface temperature [K]
-    logical,  intent(in)    :: SST_UPDATE ! is ocean surface temperature updated?
+    real(RP), intent(inout) :: SST (IA,JA) ! ocean surface temperature [K]
 
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -178,6 +177,8 @@ contains
     real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
+
+    logical,  intent(in) :: SST_UPDATE  ! is ocean surface temperature updated?
 
     real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
@@ -191,9 +192,11 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
-    real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
+    real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
+    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo [0-1]
+    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
 
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowest atmospheric layer [m/s]

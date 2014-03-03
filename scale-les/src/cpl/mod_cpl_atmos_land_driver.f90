@@ -131,9 +131,9 @@ contains
 
     call CPL_AtmLnd( &
       LST,                                 & ! (inout)
-      update_flag,                         & ! (in)
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
+      update_flag,                         & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
       TG, QVEF, EMIT, ALBG,                & ! (in)

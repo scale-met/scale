@@ -157,17 +157,13 @@ contains
 
   subroutine OCEAN_PHY_driver_final
     use mod_ocean_vars, only: &
-       TW,   &
-       ALBW, &
-       Z0W
+       TW
     use mod_cpl_vars, only: &
        CPL_putOcn
     implicit none
     !---------------------------------------------------------------------------
 
-    call CPL_putOcn( TW  (:,:), & ! [IN]
-                     ALBW(:,:), & ! [IN]
-                     Z0W (:,:)  ) ! [IN]
+    call CPL_putOcn( TW(:,:) ) ! [IN]
 
     return
   end subroutine OCEAN_PHY_driver_final

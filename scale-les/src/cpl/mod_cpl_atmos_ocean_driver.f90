@@ -46,6 +46,8 @@ contains
   subroutine CPL_AtmOcn_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_final
+    use mod_ocean_roughness, only: &
+       OCEAN_roughness_setup
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_final
     use mod_cpl_vars, only: &
@@ -57,6 +59,9 @@ contains
 
     call ATMOS_PHY_SF_driver_final
     call OCEAN_PHY_driver_final
+
+    !--- set up roughness length of sea surface
+    call OCEAN_roughness_setup
 
     call CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
     call CPL_AtmOcn_driver( .false. )
@@ -70,10 +75,14 @@ contains
     use mod_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
+    use mod_ocean_roughness, only: &
+       OCEAN_roughness
     use mod_cpl_atmos_ocean, only: &
        CPL_AtmOcn
     use mod_cpl_vars, only: &
        SST,              &
+       ALBW,             &
+       Z0W,              &
        DENS => CPL_DENS, &
        MOMX => CPL_MOMX, &
        MOMY => CPL_MOMY, &
@@ -86,8 +95,6 @@ contains
        SWD  => CPL_SWD , &
        LWD  => CPL_LWD , &
        TW   => CPL_TW,   &
-       ALBW => CPL_ALBW, &
-       Z0W  => CPL_Z0W,  &
        AtmOcn_XMFLX,     &
        AtmOcn_YMFLX,     &
        AtmOcn_ZMFLX,     &
@@ -117,20 +124,44 @@ contains
     real(RP) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
+
+    ! work
+    integer :: i, j
+
+    real(RP) :: Z0M(IA,JA) ! roughness length of momentum [m]
+    real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
+    real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
+
+    real(RP) :: Uabs       ! absolute velocity at the lowest atmospheric layer [m/s]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
 
     DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+      ! at cell center
+      Uabs = sqrt( &
+             ( MOMZ(i,j)               )**2 &
+           + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
+           + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
+           ) / DENS(i,j) * 0.5_RP
+
+      call OCEAN_roughness( &
+        Z0M(i,j), Z0H(i,j), Z0E(i,j), & ! (out)
+        Uabs, DZ(i,j), Z0W(i,j)       ) ! (in)
+    end do
+    end do
+
     call CPL_AtmOcn( &
       SST,                                 & ! (inout)
-      update_flag,                         & ! (in)
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
+      update_flag,                         & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALBW, Z0W                        ) ! (in)
+      TW, ALBW, Z0M, Z0H, Z0E              ) ! (in)
 
     ! average flux
     AtmOcn_XMFLX (:,:) = ( AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )

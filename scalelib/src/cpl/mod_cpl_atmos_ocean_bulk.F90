@@ -136,20 +136,17 @@ contains
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup
 
-    !--- set up roughness length of sea surface
-    call OCEAN_roughness_setup
-
     return
   end subroutine CPL_AtmOcn_bulk_setup
 
   subroutine CPL_AtmOcn_bulk( &
         SST,                                  & ! (inout)
-        SST_UPDATE,                           & ! (in)
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
+        SST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALBW, Z0W                         ) ! (in)
+        TW, ALB, Z0M, Z0H, Z0E                ) ! (in)
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -163,8 +160,7 @@ contains
     ! works
     integer :: i, j, n
 
-    real(RP), intent(inout) :: SST(IA,JA) ! sea surface temperature [K]
-    logical,  intent(in)    :: SST_UPDATE ! is sea surface temperature updated?
+    real(RP), intent(inout) :: SST (IA,JA) ! sea surface temperature [K]
 
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -174,6 +170,8 @@ contains
     real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
+
+    logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
     real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
@@ -187,9 +185,12 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: TW  (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
-    real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
+    real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
+    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo [0-1]
+    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+
     !---------------------------------------------------------------------------
 
     if( SST_UPDATE ) then
@@ -205,17 +206,17 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      ALBW, Z0W                            ) ! (in)
+      ALB, Z0M, Z0H, Z0E                   ) ! (in)
 
     return
   end subroutine CPL_AtmOcn_bulk
 
   subroutine bulkflux( &
-      XMFLX, YMFLX, ZMFLX,                  & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
-      TS, DZ, DENS, MOMX, MOMY, MOMZ,       & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-      ALBW, Z0W                             ) ! (in)
+      XMFLX, YMFLX, ZMFLX,                 & ! (out)
+      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
+      TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
+      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      ALB, Z0M, Z0H, Z0E                   ) ! (in)
     use mod_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -223,8 +224,6 @@ contains
       LH0    => CONST_LH0
     use mod_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
-    use mod_ocean_roughness, only: &
-      OCEAN_roughness
     use mod_cpl_bulkcoef, only: &
       CPL_bulkcoef
     implicit none
@@ -253,8 +252,10 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: ALBW(IA,JA) ! surface albedo in short-wave radiation for water [no unit]
-    real(RP), intent(in) :: Z0W (IA,JA) ! roughness length of sea surface [m]
+    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo [0-1]
+    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
 
     ! parameter
     real(RP), parameter :: EMIT = 0.96_RP ! emissivity in long-wave radiation for water [no unit]
@@ -264,7 +265,6 @@ contains
     real(RP) :: Ustar ! friction velocity [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
 
-    real(RP) :: Z0M, Z0H, Z0E ! oceanic modified roughness length [m]
     real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j
@@ -279,16 +279,12 @@ contains
            + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
            ) / ( DENS(i,j) + DENS(i+1,j) )
 
-      call OCEAN_roughness( &
-          Z0M, Z0H, Z0E, & ! (out)
-          Uabs, Z0W(i,j) ) ! (in)
-
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                           & ! (out)
           ( ATMP(i,j) + ATMP(i+1,j) ) * 0.5_RP, & ! (in)
           ( TS  (i,j) + TS  (i+1,j) ) * 0.5_RP, & ! (in)
           DZ(i,j), Uabs,                        & ! (in)
-          Z0M, Z0H, Z0E                         ) ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
 
       XMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
     enddo
@@ -303,16 +299,12 @@ contains
            + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
            ) / ( DENS(i,j) + DENS(i,j+1) )
 
-      call OCEAN_roughness( &
-          Z0M, Z0H, Z0E, & ! (out)
-          Uabs, Z0W(i,j) ) ! (in)
-
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                           & ! (out)
           ( ATMP(i,j) + ATMP(i,j+1) ) * 0.5_RP, & ! (in)
           ( TS  (i,j) + TS  (i,j+1) ) * 0.5_RP, & ! (in)
           DZ(i,j), Uabs,                        & ! (in)
-          Z0M, Z0H, Z0E                         ) ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
 
       YMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
     enddo
@@ -327,15 +319,11 @@ contains
            + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
            ) / DENS(i,j) * 0.5_RP
 
-      call OCEAN_roughness( &
-          Z0M, Z0H, Z0E, & ! (out)
-          Uabs, Z0W(i,j) ) ! (in)
-
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                  & ! (out)
           ATMP(i,j), TS(i,j),          & ! (in)
           DZ(i,j), Uabs,               & ! (in)
-          Z0M, Z0H, Z0E                ) ! (in)
+          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       ZMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) * 0.5_RP
 
@@ -344,7 +332,7 @@ contains
 
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
-      SWUFLX(i,j) = ALBW(i,j) * SWD(i,j)
+      SWUFLX(i,j) = ALB(i,j) * SWD(i,j)
       LWUFLX(i,j) = EMIT * STB * TS(i,j)**4
 
       ! calculation for residual

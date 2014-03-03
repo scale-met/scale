@@ -154,9 +154,9 @@ contains
 
   subroutine CPL_AtmLnd_const( &
         LST,                                  & ! (inout)
-        LST_UPDATE,                           & ! (in)
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
+        LST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
         TG, QVEF, EMIT, ALBG,                 & ! (in)
@@ -169,7 +169,6 @@ contains
 
     ! argument
     real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
-    logical,  intent(in)    :: LST_UPDATE ! is land surface temperature updated?
 
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -179,6 +178,8 @@ contains
     real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+
+    logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
     real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
