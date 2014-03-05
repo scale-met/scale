@@ -56,7 +56,6 @@ contains
     use mod_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &
-       OCEAN_RESTART_IN_BASENAME, &
        OCEAN_TYPE_PHY
     implicit none
 
