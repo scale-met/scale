@@ -487,22 +487,17 @@ contains
        call CPL_vars_fillhalo
 
        call CPL_vars_total
-
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
 
        LST  (:,:) = CONST_UNDEF
        SST  (:,:) = CONST_UNDEF
-!       ALBW (:,:) = CONST_UNDEF
-!       Z0W  (:,:) = CONST_UNDEF
-       ALBW (:,:) = 0.05_RP
-       Z0W  (:,:) = 1.0E-4_RP
+       ALBW (:,:) = CONST_UNDEF
+       Z0W  (:,:) = CONST_UNDEF
        SkinT(:,:) = CONST_UNDEF
        SkinW(:,:) = CONST_UNDEF
        SnowQ(:,:) = CONST_UNDEF
        SnowT(:,:) = CONST_UNDEF
-
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
