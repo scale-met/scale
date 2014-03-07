@@ -98,7 +98,7 @@ $(BUILD_DIR)/mod_mkinit.o					: mod_mkinit.f90 mod_atmos_vars.o
 
 $(BUILD_DIR)/mod_user.o						: mod_user.f90
 
-$(BUILD_DIR)/scale-les_init.o	: scale-les_init.f90 mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
+$(BUILD_DIR)/scale-les_init.o	: scale-les_init.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_land_vars.o mod_ocean_vars.o mod_cpl_vars.o mod_mktopo.o mod_mkinit.o
 $(BUILD_DIR)/scale-les.o		: scale-les.f90 mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
 
 

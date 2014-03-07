@@ -141,40 +141,41 @@ module mod_cpl_vars
   !
   logical,                private, save :: CPL_RESTART_OUTPUT       = .false.               !< output restart file?
   character(len=H_LONG) , private, save :: CPL_RESTART_IN_BASENAME  = ''                    !< basename of the input file
-  character(len=H_LONG) , private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'         !< basename of the output file
+  character(len=H_LONG) , private, save :: CPL_RESTART_OUT_BASENAME = ''                    !< basename of the output file
   character(len=H_MID)  , private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE-LES CPL VARS.' !< title    of the output file
   character(len=H_SHORT), private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
-
   logical,                private, save :: CPL_VARS_CHECKRANGE      = .false.
 
-  integer,                private, save :: I_LST         = 1
-  integer,                private, save :: I_SST         = 2
-  integer,                private, save :: I_ALBW        = 3
-  integer,                private, save :: I_Z0W         = 4
-  integer,                private, save :: I_SkinT       = 5
-  integer,                private, save :: I_SkinW       = 6
-  integer,                private, save :: I_SnowQ       = 7
-  integer,                private, save :: I_SnowT       = 8
-  integer,                private, save :: I_XMFLX       = 9
-  integer,                private, save :: I_YMFLX       = 10
-  integer,                private, save :: I_ZMFLX       = 11
-  integer,                private, save :: I_SWUFLX      = 12
-  integer,                private, save :: I_LWUFLX      = 13
-  integer,                private, save :: I_SHFLX       = 14
-  integer,                private, save :: I_LHFLX       = 15
-  integer,                private, save :: I_QVFLX       = 16
-  integer,                private, save :: I_Lnd_GHFLX   = 17
-  integer,                private, save :: I_Lnd_PRECFLX = 18
-  integer,                private, save :: I_Lnd_QVFLX   = 19
-  integer,                private, save :: I_Ocn_WHFLX   = 20
-  integer,                private, save :: I_Ocn_PRECFLX = 21
-  integer,                private, save :: I_Ocn_QVFLX   = 22
+  integer, private, parameter :: PV_NUM        = 22
 
-  character(len=H_SHORT), private, save :: LP_NAME(22) !< name  of the coupler variables
-  character(len=H_MID),   private, save :: LP_DESC(22) !< desc. of the coupler variables
-  character(len=H_SHORT), private, save :: LP_UNIT(22) !< unit  of the coupler variables
+  integer, private, parameter :: I_LST         = 1
+  integer, private, parameter :: I_SST         = 2
+  integer, private, parameter :: I_ALBW        = 3
+  integer, private, parameter :: I_Z0W         = 4
+  integer, private, parameter :: I_SkinT       = 5
+  integer, private, parameter :: I_SkinW       = 6
+  integer, private, parameter :: I_SnowQ       = 7
+  integer, private, parameter :: I_SnowT       = 8
+  integer, private, parameter :: I_XMFLX       = 9
+  integer, private, parameter :: I_YMFLX       = 10
+  integer, private, parameter :: I_ZMFLX       = 11
+  integer, private, parameter :: I_SWUFLX      = 12
+  integer, private, parameter :: I_LWUFLX      = 13
+  integer, private, parameter :: I_SHFLX       = 14
+  integer, private, parameter :: I_LHFLX       = 15
+  integer, private, parameter :: I_QVFLX       = 16
+  integer, private, parameter :: I_Lnd_GHFLX   = 17
+  integer, private, parameter :: I_Lnd_PRECFLX = 18
+  integer, private, parameter :: I_Lnd_QVFLX   = 19
+  integer, private, parameter :: I_Ocn_WHFLX   = 20
+  integer, private, parameter :: I_Ocn_PRECFLX = 21
+  integer, private, parameter :: I_Ocn_QVFLX   = 22
 
-  data LP_NAME / 'LST',         &
+  character(len=H_SHORT), private, save :: PV_NAME(PV_NUM) !< name  of the coupler variables
+  character(len=H_MID),   private, save :: PV_DESC(PV_NUM) !< desc. of the coupler variables
+  character(len=H_SHORT), private, save :: PV_UNIT(PV_NUM) !< unit  of the coupler variables
+
+  data PV_NAME / 'LST',         &
                  'SST',         &
                  'ALBW',        &
                  'Z0W',         &
@@ -197,7 +198,7 @@ module mod_cpl_vars
                  'Ocn_PRECFLX', &
                  'Ocn_QVFLX'    /
 
-  data LP_DESC / 'land surface temp.',               &
+  data PV_DESC / 'land surface temp.',               &
                  'sea surface temp.',                &
                  'sea surface albedo',               &
                  'sea surface roughness length',     &
@@ -220,7 +221,7 @@ module mod_cpl_vars
                  'precipitation flux for ocean',     &
                  'moisture flux for ocean'           /
 
-  data LP_UNIT / 'K',       &
+  data PV_UNIT / 'K',       &
                  'K',       &
                  '0-1',     &
                  'm',       &
@@ -266,7 +267,7 @@ contains
        CPL_RESTART_OUT_DTYPE,    &
        CPL_VARS_CHECKRANGE
 
-    integer :: ierr
+    integer :: ip, ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -359,18 +360,6 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL)
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
-
     if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] selected components'
 
     ! Atoms-Land Switch
@@ -391,8 +380,38 @@ contains
        CPL_sw_AtmOcn = .false.
     endif
 
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] prognostic variables'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
+               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, PV_NUM
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(PV_NAME(ip)),'|', PV_DESC(ip),'[', PV_UNIT(ip),']'
+    enddo
+
+    ! restart switch
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
+    if ( CPL_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : YES'
+       CPL_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : NO'
+       CPL_sw_restart = .false.
+    endif
+    if( IO_L ) write(IO_FID_LOG,*)
 
     return
   end subroutine CPL_vars_setup
@@ -468,25 +487,17 @@ contains
        call CPL_vars_fillhalo
 
        call CPL_vars_total
-
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
 
-       LST  (:,:) = 300.0_RP
-       SST  (:,:) = 300.0_RP
-       ALBW (:,:) = 0.05_RP
-       Z0W  (:,:) = 1.0E-4_RP
-       SkinT(:,:) = 300.0_RP
-!       LST  (:,:) = CONST_UNDEF
-!       SST  (:,:) = CONST_UNDEF
-!       ALBW (:,:) = CONST_UNDEF
-!       Z0W  (:,:) = CONST_UNDEF
-!       SkinT(:,:) = CONST_UNDEF
+       LST  (:,:) = CONST_UNDEF
+       SST  (:,:) = CONST_UNDEF
+       ALBW (:,:) = CONST_UNDEF
+       Z0W  (:,:) = CONST_UNDEF
+       SkinT(:,:) = CONST_UNDEF
        SkinW(:,:) = CONST_UNDEF
        SnowQ(:,:) = CONST_UNDEF
        SnowT(:,:) = CONST_UNDEF
-
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
@@ -523,21 +534,21 @@ contains
        write(bname,'(A,A,A)') trim(CPL_RESTART_OUT_BASENAME), '_', trim(bname)
 
        call FILEIO_write( LST(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_LST),   LP_DESC(I_LST),   LP_UNIT(I_LST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_LST),   PV_DESC(I_LST),   PV_UNIT(I_LST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SST(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SST),   LP_DESC(I_SST),   LP_UNIT(I_SST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SST),   PV_DESC(I_SST),   PV_UNIT(I_SST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ALBW(:,:),  bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_ALBW),  LP_DESC(I_ALBW),  LP_UNIT(I_ALBW),  'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_ALBW),  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( Z0W(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_Z0W),   LP_DESC(I_Z0W),   LP_UNIT(I_Z0W),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_Z0W),   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SkinT(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SkinT), LP_DESC(I_SkinT), LP_UNIT(I_SkinT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SkinT), PV_DESC(I_SkinT), PV_UNIT(I_SkinT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SkinW(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SkinW), LP_DESC(I_SkinW), LP_UNIT(I_SkinW), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SkinW), PV_DESC(I_SkinW), PV_UNIT(I_SkinW), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SnowQ(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SnowQ), LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SnowQ), PV_DESC(I_SnowQ), PV_UNIT(I_SnowQ), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SnowT(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SnowT), LP_DESC(I_SnowT), LP_UNIT(I_SnowT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SnowT), PV_DESC(I_SnowT), PV_UNIT(I_SnowT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -559,58 +570,58 @@ contains
     !---------------------------------------------------------------------------
 
     if ( CPL_VARS_CHECKRANGE ) then
-       call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_LST)  , __FILE__, __LINE__ )
-       call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SST)  , __FILE__, __LINE__ )
-       call VALCHECK( ALBW (:,:), 0.0_RP,    2.0_RP, LP_NAME(I_ALBW) , __FILE__, __LINE__ )
-       call VALCHECK( Z0W  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_Z0W)  , __FILE__, __LINE__ )
-       call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinT), __FILE__, __LINE__ )
-       call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinW), __FILE__, __LINE__ )
-       call VALCHECK( SnowQ(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ), __FILE__, __LINE__ )
-       call VALCHECK( SnowT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowT), __FILE__, __LINE__ )
+       call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_LST)  , __FILE__, __LINE__ )
+       call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SST)  , __FILE__, __LINE__ )
+       call VALCHECK( ALBW (:,:), 0.0_RP,    2.0_RP, PV_NAME(I_ALBW) , __FILE__, __LINE__ )
+       call VALCHECK( Z0W  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_Z0W)  , __FILE__, __LINE__ )
+       call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinT), __FILE__, __LINE__ )
+       call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinW), __FILE__, __LINE__ )
+       call VALCHECK( SnowQ(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SnowQ), __FILE__, __LINE__ )
+       call VALCHECK( SnowT(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SnowT), __FILE__, __LINE__ )
 
-       call VALCHECK( XMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_XMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( YMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_YMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( ZMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_ZMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( SWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SWUFLX), __FILE__, __LINE__ )
-       call VALCHECK( LWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_LWUFLX), __FILE__, __LINE__ )
-       call VALCHECK( SHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SHFLX) , __FILE__, __LINE__ )
-       call VALCHECK( LHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_LHFLX) , __FILE__, __LINE__ )
-       call VALCHECK( QVFLX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_QVFLX) , __FILE__, __LINE__ )
+       call VALCHECK( XMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_XMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( YMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_YMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( ZMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_ZMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( SWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_SWUFLX), __FILE__, __LINE__ )
+       call VALCHECK( LWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_LWUFLX), __FILE__, __LINE__ )
+       call VALCHECK( SHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_SHFLX) , __FILE__, __LINE__ )
+       call VALCHECK( LHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_LHFLX) , __FILE__, __LINE__ )
+       call VALCHECK( QVFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_QVFLX) , __FILE__, __LINE__ )
 
-       call VALCHECK( Lnd_GHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Lnd_GHFLX)  , __FILE__, __LINE__ )
-       call VALCHECK( Lnd_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Lnd_PRECFLX), __FILE__, __LINE__ )
-       call VALCHECK( Lnd_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Lnd_QVFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Lnd_GHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_GHFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Lnd_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_PRECFLX), __FILE__, __LINE__ )
+       call VALCHECK( Lnd_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_QVFLX)  , __FILE__, __LINE__ )
 
-       call VALCHECK( Ocn_WHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Ocn_WHFLX)  , __FILE__, __LINE__ )
-       call VALCHECK( Ocn_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Ocn_PRECFLX), __FILE__, __LINE__ )
-       call VALCHECK( Ocn_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_Ocn_QVFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Ocn_WHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_WHFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Ocn_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_PRECFLX), __FILE__, __LINE__ )
+       call VALCHECK( Ocn_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_QVFLX)  , __FILE__, __LINE__ )
     endif
 
-    call HIST_in( LST  (:,:), 'LST',   LP_DESC(I_LST),   LP_UNIT(I_LST),   TIME_DTSEC_CPL )
-    call HIST_in( SST  (:,:), 'SST',   LP_DESC(I_SST),   LP_UNIT(I_SST),   TIME_DTSEC_CPL )
-    call HIST_in( ALBW (:,:), 'ALBW',  LP_DESC(I_ALBW),  LP_UNIT(I_ALBW),  TIME_DTSEC_CPL )
-    call HIST_in( Z0W  (:,:), 'Z0W',   LP_DESC(I_Z0W),   LP_UNIT(I_Z0W),   TIME_DTSEC_CPL )
-    call HIST_in( SkinT(:,:), 'SkinT', LP_DESC(I_SkinT), LP_UNIT(I_SkinT), TIME_DTSEC_CPL )
-    call HIST_in( SkinW(:,:), 'SkinW', LP_DESC(I_SkinW), LP_UNIT(I_SkinW), TIME_DTSEC_CPL )
-    call HIST_in( SnowQ(:,:), 'SnowQ', LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), TIME_DTSEC_CPL )
-    call HIST_in( SnowT(:,:), 'SnowT', LP_DESC(I_SnowT), LP_UNIT(I_SnowT), TIME_DTSEC_CPL )
+    call HIST_in( LST  (:,:), 'LST',   PV_DESC(I_LST),   PV_UNIT(I_LST),   TIME_DTSEC_CPL )
+    call HIST_in( SST  (:,:), 'SST',   PV_DESC(I_SST),   PV_UNIT(I_SST),   TIME_DTSEC_CPL )
+    call HIST_in( ALBW (:,:), 'ALBW',  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  TIME_DTSEC_CPL )
+    call HIST_in( Z0W  (:,:), 'Z0W',   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   TIME_DTSEC_CPL )
+    call HIST_in( SkinT(:,:), 'SkinT', PV_DESC(I_SkinT), PV_UNIT(I_SkinT), TIME_DTSEC_CPL )
+    call HIST_in( SkinW(:,:), 'SkinW', PV_DESC(I_SkinW), PV_UNIT(I_SkinW), TIME_DTSEC_CPL )
+    call HIST_in( SnowQ(:,:), 'SnowQ', PV_DESC(I_SnowQ), PV_UNIT(I_SnowQ), TIME_DTSEC_CPL )
+    call HIST_in( SnowT(:,:), 'SnowT', PV_DESC(I_SnowT), PV_UNIT(I_SnowT), TIME_DTSEC_CPL )
 
-    call HIST_in( XMFLX (:,:), 'XMFLX',  LP_DESC(I_XMFLX),  LP_UNIT(I_XMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( YMFLX (:,:), 'YMFLX',  LP_DESC(I_YMFLX),  LP_UNIT(I_YMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( ZMFLX (:,:), 'ZMFLX',  LP_DESC(I_ZMFLX),  LP_UNIT(I_ZMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( SWUFLX(:,:), 'SWUFLX', LP_DESC(I_SWUFLX), LP_UNIT(I_SWUFLX), TIME_DTSEC_CPL )
-    call HIST_in( LWUFLX(:,:), 'LWUFLX', LP_DESC(I_LWUFLX), LP_UNIT(I_LWUFLX), TIME_DTSEC_CPL )
-    call HIST_in( SHFLX (:,:), 'SHFLX',  LP_DESC(I_SHFLX),  LP_UNIT(I_SHFLX),  TIME_DTSEC_CPL )
-    call HIST_in( LHFLX (:,:), 'LHFLX',  LP_DESC(I_LHFLX),  LP_UNIT(I_LHFLX),  TIME_DTSEC_CPL )
-    call HIST_in( QVFLX (:,:), 'QVFLX',  LP_DESC(I_QVFLX),  LP_UNIT(I_QVFLX),  TIME_DTSEC_CPL )
+    call HIST_in( XMFLX (:,:), 'XMFLX',  PV_DESC(I_XMFLX),  PV_UNIT(I_XMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( YMFLX (:,:), 'YMFLX',  PV_DESC(I_YMFLX),  PV_UNIT(I_YMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( ZMFLX (:,:), 'ZMFLX',  PV_DESC(I_ZMFLX),  PV_UNIT(I_ZMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( SWUFLX(:,:), 'SWUFLX', PV_DESC(I_SWUFLX), PV_UNIT(I_SWUFLX), TIME_DTSEC_CPL )
+    call HIST_in( LWUFLX(:,:), 'LWUFLX', PV_DESC(I_LWUFLX), PV_UNIT(I_LWUFLX), TIME_DTSEC_CPL )
+    call HIST_in( SHFLX (:,:), 'SHFLX',  PV_DESC(I_SHFLX),  PV_UNIT(I_SHFLX),  TIME_DTSEC_CPL )
+    call HIST_in( LHFLX (:,:), 'LHFLX',  PV_DESC(I_LHFLX),  PV_UNIT(I_LHFLX),  TIME_DTSEC_CPL )
+    call HIST_in( QVFLX (:,:), 'QVFLX',  PV_DESC(I_QVFLX),  PV_UNIT(I_QVFLX),  TIME_DTSEC_CPL )
 
-    call HIST_in( Lnd_GHFLX  (:,:), 'Lnd_GHFLX',   LP_DESC(I_Lnd_GHFLX),   LP_UNIT(I_Lnd_GHFLX),   TIME_DTSEC_CPL )
-    call HIST_in( Lnd_PRECFLX(:,:), 'Lnd_PRECFLX', LP_DESC(I_Lnd_PRECFLX), LP_UNIT(I_Lnd_PRECFLX), TIME_DTSEC_CPL )
-    call HIST_in( Lnd_QVFLX  (:,:), 'Lnd_QVFLX',   LP_DESC(I_Lnd_QVFLX),   LP_UNIT(I_Lnd_QVFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Lnd_GHFLX  (:,:), 'Lnd_GHFLX',   PV_DESC(I_Lnd_GHFLX),   PV_UNIT(I_Lnd_GHFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Lnd_PRECFLX(:,:), 'Lnd_PRECFLX', PV_DESC(I_Lnd_PRECFLX), PV_UNIT(I_Lnd_PRECFLX), TIME_DTSEC_CPL )
+    call HIST_in( Lnd_QVFLX  (:,:), 'Lnd_QVFLX',   PV_DESC(I_Lnd_QVFLX),   PV_UNIT(I_Lnd_QVFLX),   TIME_DTSEC_CPL )
 
-    call HIST_in( Ocn_WHFLX  (:,:), 'Ocn_WHFLX',   LP_DESC(I_Ocn_WHFLX),   LP_UNIT(I_Ocn_WHFLX),   TIME_DTSEC_CPL )
-    call HIST_in( Ocn_PRECFLX(:,:), 'Ocn_PRECFLX', LP_DESC(I_Ocn_PRECFLX), LP_UNIT(I_Ocn_PRECFLX), TIME_DTSEC_CPL )
-    call HIST_in( Ocn_QVFLX  (:,:), 'Ocn_QVFLX',   LP_DESC(I_Ocn_QVFLX),   LP_UNIT(I_Ocn_QVFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Ocn_WHFLX  (:,:), 'Ocn_WHFLX',   PV_DESC(I_Ocn_WHFLX),   PV_UNIT(I_Ocn_WHFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Ocn_PRECFLX(:,:), 'Ocn_PRECFLX', PV_DESC(I_Ocn_PRECFLX), PV_UNIT(I_Ocn_PRECFLX), TIME_DTSEC_CPL )
+    call HIST_in( Ocn_QVFLX  (:,:), 'Ocn_QVFLX',   PV_DESC(I_Ocn_QVFLX),   PV_UNIT(I_Ocn_QVFLX),   TIME_DTSEC_CPL )
 
     return
   end subroutine CPL_vars_history
@@ -628,14 +639,14 @@ contains
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, LST(:,:),   LP_NAME(I_LST)   )
-!       call STAT_total( total, SST(:,:),   LP_NAME(I_SST)   )
-!       call STAT_total( total, ALBW(:,:),  LP_NAME(I_ALBW)  )
-!       call STAT_total( total, Z0W(:,:),   LP_NAME(I_Z0W)   )
-!       call STAT_total( total, SkinT(:,:), LP_NAME(I_SkinT) )
-!       call STAT_total( total, SkinW(:,:), LP_NAME(I_SkinW) )
-!       call STAT_total( total, SnowQ(:,:), LP_NAME(I_SnowQ) )
-!       call STAT_total( total, SnowT(:,:), LP_NAME(I_SnowT) )
+!       call STAT_total( total, LST(:,:),   PV_NAME(I_LST)   )
+!       call STAT_total( total, SST(:,:),   PV_NAME(I_SST)   )
+!       call STAT_total( total, ALBW(:,:),  PV_NAME(I_ALBW)  )
+!       call STAT_total( total, Z0W(:,:),   PV_NAME(I_Z0W)   )
+!       call STAT_total( total, SkinT(:,:), PV_NAME(I_SkinT) )
+!       call STAT_total( total, SkinW(:,:), PV_NAME(I_SkinW) )
+!       call STAT_total( total, SnowQ(:,:), PV_NAME(I_SnowQ) )
+!       call STAT_total( total, SnowT(:,:), PV_NAME(I_SnowT) )
 
     endif
 

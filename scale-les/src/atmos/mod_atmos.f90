@@ -87,7 +87,8 @@ contains
        ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
     use mod_atmos_vars_sf, only: &
-       ATMOS_vars_sf_setup
+       ATMOS_vars_sf_setup, &
+       ATMOS_vars_sf_restart_read
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
@@ -119,6 +120,8 @@ contains
 
     ! read restart
     call ATMOS_vars_restart_read
+
+    call ATMOS_vars_sf_restart_read
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 

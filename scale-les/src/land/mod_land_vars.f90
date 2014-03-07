@@ -51,24 +51,26 @@ module mod_land_vars
   real(RP), public, save, allocatable :: ROFF(:,:) ! run-off water [kg/m2]
   real(RP), public, save, allocatable :: STRG(:,:) ! water storage [kg/m2]
 
-  integer,  public, save :: I_TG   = 1
-  integer,  public, save :: I_QVEF = 2
-  integer,  public, save :: I_ROFF = 3
-  integer,  public, save :: I_STRG = 4
+  integer,  public, parameter :: PV_NUM = 4
 
-  character(len=H_SHORT), public, save :: LP_NAME(4) !< name  of the land variables
-  character(len=H_MID),   public, save :: LP_DESC(4) !< desc. of the land variables
-  character(len=H_SHORT), public, save :: LP_UNIT(4) !< unit  of the land variables
+  integer,  public, parameter :: I_TG   = 1
+  integer,  public, parameter :: I_QVEF = 2
+  integer,  public, parameter :: I_ROFF = 3
+  integer,  public, parameter :: I_STRG = 4
 
-  data LP_NAME / 'TG',   &
+  character(len=H_SHORT), public, save :: PV_NAME(PV_NUM) !< name  of the land variables
+  character(len=H_MID),   public, save :: PV_DESC(PV_NUM) !< desc. of the land variables
+  character(len=H_SHORT), public, save :: PV_UNIT(PV_NUM) !< unit  of the land variables
+
+  data PV_NAME / 'TG',   &
                  'QVEF', &
                  'ROFF', &
                  'STRG'  /
-  data LP_DESC / 'soil temperature',          &
+  data PV_DESC / 'soil temperature',          &
                  'efficiency of evaporation', &
                  'run-off water',             &
                  'water storage'              /
-  data LP_UNIT / 'K',     &
+  data PV_UNIT / 'K',     &
                  '0-1',   &
                  'kg/m2', &
                  'kg/m2'  /
@@ -102,7 +104,7 @@ module mod_land_vars
 
   logical,               private, save :: LAND_RESTART_OUTPUT       = .false.                !< output restart file?
   character(len=H_LONG), private, save :: LAND_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
+  character(len=H_LONG), private, save :: LAND_RESTART_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE-LES LAND VARS.' !< title    of the output file
   character(len=H_MID),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
@@ -170,9 +172,6 @@ contains
        LAND_sw_phy = .false.
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_VARS,iostat=ierr)
@@ -186,14 +185,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] prognostic variables'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
                '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 4
+    do ip = 1, PV_NUM
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(LP_NAME(ip)),'|', LP_DESC(ip),'[', LP_UNIT(ip),']'
+                  '*** NO.',ip,'|',trim(PV_NAME(ip)),'|', PV_DESC(ip),'[', PV_UNIT(ip),']'
     enddo
 
+    ! restart switch
     if( IO_L ) write(IO_FID_LOG,*) 'Output...'
     if ( LAND_RESTART_OUTPUT ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Land restart output : YES'
@@ -268,17 +268,20 @@ contains
        call LAND_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
-       TG  (:,:) = 300.0_RP
-       QVEF(:,:) =   1.0_RP
-       ROFF(:,:) =   0.0_RP
-       STRG(:,:) = 200.0_RP
+
+       TG  (:,:) = CONST_UNDEF
+       QVEF(:,:) = CONST_UNDEF
+       ROFF(:,:) = CONST_UNDEF
+       STRG(:,:) = CONST_UNDEF
     endif
 
     LAND_PROPERTY(:,:,:) = CONST_UNDEF
 
+    ! tentative
+    ! this will be merged into the landuse module
     if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
 
-       LAND_Type(:,:)       = 1
+       LAND_Type(:,:) = 1
 !       call FILEIO_read( LAND_Type(:,:),                                      & ! [OUT]
 !                         LAND_BOUNDARY_IN_BASENAME, 'LAND_Type', 'XY', step=1 ) ! [IN]
 
@@ -333,14 +336,14 @@ contains
        enddo
        basename = trim(LAND_RESTART_OUT_BASENAME) // '_' // trim(basename)
 
-       call FILEIO_write( TG(:,:),    basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_TG),   LP_DESC(I_TG),   LP_UNIT(I_TG),   'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TG(:,:),   basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
+                          PV_NAME(I_TG),   PV_DESC(I_TG),   PV_UNIT(I_TG),   'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( QVEF(:,:), basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_QVEF), LP_DESC(I_QVEF), LP_UNIT(I_QVEF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_ROFF), LP_DESC(I_ROFF), LP_UNIT(I_ROFF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( STRG(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_STRG), LP_DESC(I_STRG), LP_UNIT(I_STRG), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_QVEF), PV_DESC(I_QVEF), PV_UNIT(I_QVEF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ROFF(:,:), basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
+                          PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( STRG(:,:), basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
+                          PV_NAME(I_STRG), PV_DESC(I_STRG), PV_UNIT(I_STRG), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -362,16 +365,16 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( TG  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)  , __FILE__, __LINE__ )
-       call VALCHECK( QVEF(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QVEF), __FILE__, __LINE__ )
-       call VALCHECK( ROFF(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF), __FILE__, __LINE__ )
-       call VALCHECK( STRG(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG), __FILE__, __LINE__ )
+       call VALCHECK( TG  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_TG)  , __FILE__, __LINE__ )
+       call VALCHECK( QVEF(:,:), 0.0_RP,    2.0_RP, PV_NAME(I_QVEF), __FILE__, __LINE__ )
+       call VALCHECK( ROFF(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_ROFF), __FILE__, __LINE__ )
+       call VALCHECK( STRG(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_STRG), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TG  (:,:), 'TG',   LP_DESC(I_TG),   LP_UNIT(I_TG),   TIME_DTSEC_LAND )
-    call HIST_in( QVEF(:,:), 'QVEF', LP_DESC(I_QVEF), LP_UNIT(I_QVEF), TIME_DTSEC_LAND )
-    call HIST_in( ROFF(:,:), 'ROFF', LP_DESC(I_ROFF), LP_UNIT(I_ROFF), TIME_DTSEC_LAND )
-    call HIST_in( STRG(:,:), 'STRG', LP_DESC(I_STRG), LP_UNIT(I_STRG), TIME_DTSEC_LAND )
+    call HIST_in( TG  (:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND )
+    call HIST_in( QVEF(:,:), 'QVEF', PV_DESC(I_QVEF), PV_UNIT(I_QVEF), TIME_DTSEC_LAND )
+    call HIST_in( ROFF(:,:), 'ROFF', PV_DESC(I_ROFF), PV_UNIT(I_ROFF), TIME_DTSEC_LAND )
+    call HIST_in( STRG(:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND )
 
     return
   end subroutine LAND_vars_history
@@ -389,10 +392,10 @@ contains
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, TG(:,:),   OP_NAME(I_TG)   )
-!       call STAT_total( total, QVEF(:,:), OP_NAME(I_QVEF) )
-!       call STAT_total( total, ROFF(:,:), OP_NAME(I_ROFF) )
-!       call STAT_total( total, STRG(:,:), OP_NAME(I_STRG) )
+!       call STAT_total( total, TG(:,:),   PV_NAME(I_TG)   )
+!       call STAT_total( total, QVEF(:,:), PV_NAME(I_QVEF) )
+!       call STAT_total( total, ROFF(:,:), PV_NAME(I_ROFF) )
+!       call STAT_total( total, STRG(:,:), PV_NAME(I_STRG) )
 
     endif
 
