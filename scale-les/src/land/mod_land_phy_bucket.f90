@@ -143,7 +143,7 @@ contains
       ! update ground temperature
       TG(i,j) = TG(i,j) - 2.0_RP * GHFLX(i,j) &
               / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(i,j) * 1.E-3_RP * DWATR * CL ) &
-              / P(i,j,I_DZg) * dt
+              / P(i,j,I_DZG) * dt
 
     end do
     end do
@@ -158,7 +158,7 @@ contains
        TG,                 &
        QVEF,               &
        I_EMIT,             &
-       I_ALB,              &
+       I_ALBG,             &
        I_TCS,              &
        I_DZG,              &
        I_Z0M,              &
@@ -168,11 +168,12 @@ contains
     use mod_cpl_vars, only: &
        CPL_putLnd
     implicit none
+    !---------------------------------------------------------------------------
 
     call CPL_putLnd( TG  (:,:),        & ! [IN]
                      QVEF(:,:),        & ! [IN]
                      P   (:,:,I_EMIT), & ! [IN]
-                     P   (:,:,I_ALB),  & ! [IN]
+                     P   (:,:,I_ALBG), & ! [IN]
                      P   (:,:,I_TCS),  & ! [IN]
                      P   (:,:,I_DZG),  & ! [IN]
                      P   (:,:,I_Z0M),  & ! [IN]

@@ -129,7 +129,7 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
-    use mod_ocean_vars, only: &
+    use mod_cpl_vars, only: &
        SST
     implicit none
 

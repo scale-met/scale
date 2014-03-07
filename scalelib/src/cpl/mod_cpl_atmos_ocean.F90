@@ -1,16 +1,16 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Atmosphere-Land Surface fluxes
+!> module COUPLER / Atmosphere-Ocean Surface fluxes
 !!
 !! @par Description
-!!          Surface flux from the atmosphere-land coupler
+!!          Surface flux from the atmosphere-ocean coupler
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2014-02-25 (T.Yamaura)  [new]
+!! @li      2014-02-26 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
-module mod_cpl_atmos_land
+module mod_cpl_atmos_ocean
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,23 +25,22 @@ module mod_cpl_atmos_land
   !
   !++ Public procedure
   !
-  public :: CPL_AtmLnd_setup
+  public :: CPL_AtmOcn_setup
 
   abstract interface
-     subroutine cal( &
-         LST,                                 & ! (inout)
+     subroutine cao( &
+         SST,                                 & ! (inout)
          XMFLX, YMFLX, ZMFLX,                 & ! (out)
-         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-         LST_UPDATE,                          & ! (in)
+         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
+         SST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, EMIT, ALB,                 & ! (in)
-         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+         TW, ALB, Z0M, Z0H, Z0E               ) ! (in)
        use mod_precision
        use mod_grid_index
        implicit none
 
-       real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
+       real(RP), intent(inout) :: SST (IA,JA) ! sea surface temperature [K]
 
        real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
        real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -50,9 +49,9 @@ module mod_cpl_atmos_land
        real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
        real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
        real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-       real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+       real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
-       logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
+       logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
        real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
        real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
@@ -66,19 +65,15 @@ module mod_cpl_atmos_land
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-       real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-       real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
-       real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
-       real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
-       real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
-       real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
-       real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
-       real(RP), intent(in) :: Z0H (IA,JA) ! roughness length for heat [m]
-       real(RP), intent(in) :: Z0E (IA,JA) ! roughness length for vapor [m]
-     end subroutine cal
+       real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
+       real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
+       real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
+       real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
+       real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+     end subroutine cao
   end interface
-  procedure(cal), pointer :: CPL_AtmLnd => NULL()
-  public :: CPL_AtmLnd
+  procedure(cao), pointer :: CPL_AtmOcn => NULL()
+  public :: CPL_AtmOcn
 
   !-----------------------------------------------------------------------------
   !
@@ -95,37 +90,37 @@ module mod_cpl_atmos_land
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )
+  subroutine CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef CAL
-    use NAME(mod_cpl_atmos_land_, CAL,), only: &
-       NAME(CPL_AtmLnd_, CAL, _setup), &
-       NAME(CPL_AtmLnd_, CAL,)
+    use NAME(mod_cpl_atmos_ocean_, CAO,), only: &
+       NAME(CPL_AtmOcn_, CAO, _setup), &
+       NAME(CPL_AtmOcn_, CAO,)
 #else
-    use mod_cpl_atmos_land_const, only: &
-       CPL_AtmLnd_const_setup, &
-       CPL_AtmLnd_const
-    use mod_cpl_atmos_land_bulk, only: &
-       CPL_AtmLnd_bulk_setup, &
-       CPL_AtmLnd_bulk
+    use mod_cpl_atmos_ocean_const, only: &
+       CPL_AtmOcn_const_setup, &
+       CPL_AtmOcn_const
+    use mod_cpl_atmos_ocean_bulk, only: &
+       CPL_AtmOcn_bulk_setup, &
+       CPL_AtmOcn_bulk
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmLnd
+    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmOcn
     !---------------------------------------------------------------------------
 
-    select case( CPL_TYPE_AtmLnd )
+    select case( CPL_TYPE_AtmOcn )
     case ( 'CONST' )
-       call CPL_AtmLnd_const_setup( CPL_TYPE_AtmLnd )
-       CPL_AtmLnd => CPL_AtmLnd_const
+       call CPL_AtmOcn_const_setup( CPL_TYPE_AtmOcn )
+       CPL_AtmOcn => CPL_AtmOcn_const
     case ( 'BULK' )
-       call CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
-       CPL_AtmLnd => CPL_AtmLnd_bulk
+       call CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
+       CPL_AtmOcn => CPL_AtmOcn_bulk
     end select
 
-  end subroutine CPL_AtmLnd_setup
+  end subroutine CPL_AtmOcn_setup
 
-end module mod_cpl_atmos_land
+end module mod_cpl_atmos_ocean

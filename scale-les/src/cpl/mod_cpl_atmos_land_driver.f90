@@ -48,19 +48,12 @@ contains
        ATMOS_PHY_SF_driver_final
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_final
-    use mod_cpl_vars, only: &
-       CPL_TYPE_AtmLnd,    &
-       CPL_flushAtm,       &
-       CPL_flushLnd,       &
-       CPL_AtmLnd_flushCPL
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd_setup
+    use mod_cpl_vars, only: &
+       CPL_TYPE_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
-
-    call CPL_flushAtm
-    call CPL_flushLnd
-    call CPL_AtmLnd_flushCPL
 
     call ATMOS_PHY_SF_driver_final
     call LAND_PHY_driver_final
@@ -72,22 +65,56 @@ contains
   end subroutine CPL_AtmLnd_driver_setup
 
   subroutine CPL_AtmLnd_driver( update_flag )
+    use mod_const, only: &
+       LH0 => CONST_LH0
     use mod_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
-    use mod_cpl_vars, only: &
-       CPL_AtmLnd_putCPL,     &
-       CPL_AtmLnd_getAtm2CPL, &
-       CPL_AtmLnd_getLnd2CPL, &
-       LST
     use mod_cpl_atmos_land, only: &
        CPL_AtmLnd
+    use mod_cpl_vars, only: &
+       LST,              &
+       DENS => CPL_DENS, &
+       MOMX => CPL_MOMX, &
+       MOMY => CPL_MOMY, &
+       MOMZ => CPL_MOMZ, &
+       RHOS => CPL_RHOS, &
+       PRES => CPL_PRES, &
+       ATMP => CPL_ATMP, &
+       QV   => CPL_QV  , &
+       PREC => CPL_PREC, &
+       SWD  => CPL_SWD , &
+       LWD  => CPL_LWD , &
+       TG   => CPL_TG,   &
+       QVEF => CPL_QVEF, &
+       EMIT => CPL_EMIT, &
+       ALBG => CPL_ALBG, &
+       TCS  => CPL_TCS,  &
+       DZG  => CPL_DZG,  &
+       Z0M  => CPL_Z0M,  &
+       Z0H  => CPL_Z0H,  &
+       Z0E  => CPL_Z0E,  &
+       AtmLnd_XMFLX,     &
+       AtmLnd_YMFLX,     &
+       AtmLnd_ZMFLX,     &
+       AtmLnd_SWUFLX,    &
+       AtmLnd_LWUFLX,    &
+       AtmLnd_SHFLX,     &
+       AtmLnd_LHFLX,     &
+       AtmLnd_QVFLX,     &
+       Lnd_GHFLX,        &
+       Lnd_PRECFLX,      &
+       Lnd_QVFLX,        &
+       CNT_Atm_Lnd,      &
+       CNT_Lnd
     implicit none
 
     ! argument
     logical, intent(in) :: update_flag
 
     ! work
+    integer :: i, j
+
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
@@ -97,60 +124,58 @@ contains
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
 
+    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
+    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
+
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
-    real(RP) :: DENS  (IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP) :: MOMX  (IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: MOMY  (IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: MOMZ  (IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP) :: RHOS  (IA,JA) ! air density at the sruface [kg/m3]
-    real(RP) :: PRES  (IA,JA) ! pressure at the surface [Pa]
-    real(RP) :: ATMP  (IA,JA) ! air temperature at the surface [K]
-    real(RP) :: QV    (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP) :: PREC  (IA,JA) ! precipitaton flux at the surface [kg/m2/s]
-    real(RP) :: SWD   (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP) :: LWD   (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
-
-    real(RP) :: TG    (IA,JA) ! soil temperature [K]
-    real(RP) :: QVEF  (IA,JA) ! efficiency of evaporation [no unit]
-    real(RP) :: EMIT  (IA,JA) ! emissivity in long-wave radiation [no unit]
-    real(RP) :: ALB   (IA,JA) ! surface albedo in short-wave radiation [no unit]
-    real(RP) :: TCS   (IA,JA) ! thermal conductivity for soil [W/m/K]
-    real(RP) :: DZG   (IA,JA) ! soil depth [m]
-    real(RP) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
-    real(RP) :: Z0H   (IA,JA) ! roughness length for heat [m]
-    real(RP) :: Z0E   (IA,JA) ! roughness length for vapor [m]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
-
-    call CPL_AtmLnd_getAtm2CPL( &
-      DENS, MOMX, MOMY, MOMZ, & ! (out)
-      RHOS, PRES, ATMP, QV,   & ! (out)
-      PREC, SWD, LWD          ) ! (out)
-
-    call CPL_AtmLnd_getLnd2CPL( &
-      TG, QVEF, EMIT, & ! (out)
-      ALB, TCS, DZG,  & ! (out)
-      Z0M, Z0H, Z0E   ) ! (out)
 
     DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
     call CPL_AtmLnd( &
       LST,                                 & ! (inout)
-      update_flag,                         & ! (in)
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
+      update_flag,                         & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, EMIT, ALB,                 & ! (in)
+      TG, QVEF, EMIT, ALBG,                & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
 
-    call CPL_AtmLnd_putCPL( &
-      XMFLX, YMFLX, ZMFLX,  &
-      SWUFLX, LWUFLX,       &
-      SHFLX, LHFLX, GHFLX,  &
-      PREC                  )
+    ! interpolate momentum fluxes
+    do j = JS, JE
+    do i = IS, IE
+      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
+      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+      XMFLX(i,j) = tmpX(i,j)
+      YMFLX(i,j) = tmpY(i,j)
+      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
+    enddo
+    enddo
+
+    ! temporal average flux
+    AtmLnd_XMFLX (:,:) = ( AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_YMFLX (:,:) = ( AtmLnd_YMFLX (:,:) * CNT_Atm_Lnd + YMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_ZMFLX (:,:) = ( AtmLnd_ZMFLX (:,:) * CNT_Atm_Lnd + ZMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_SWUFLX(:,:) = ( AtmLnd_SWUFLX(:,:) * CNT_Atm_Lnd + SWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_LWUFLX(:,:) = ( AtmLnd_LWUFLX(:,:) * CNT_Atm_Lnd + LWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_SHFLX (:,:) = ( AtmLnd_SHFLX (:,:) * CNT_Atm_Lnd + SHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_LHFLX (:,:) = ( AtmLnd_LHFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    AtmLnd_QVFLX (:,:) = ( AtmLnd_QVFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
+
+    Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
+    Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )
+    Lnd_QVFLX  (:,:) = ( Lnd_QVFLX  (:,:) * CNT_Lnd - LHFLX(:,:)/LH0 ) / ( CNT_Lnd + 1.0_RP )
+
+    CNT_Atm_Lnd = CNT_Atm_Lnd + 1.0_RP
+    CNT_Lnd     = CNT_Lnd     + 1.0_RP
 
     return
   end subroutine CPL_AtmLnd_driver

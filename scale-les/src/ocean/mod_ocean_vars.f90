@@ -36,22 +36,22 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: SST(:,:) !< sea surface prognostics container (with HALO)
+  real(RP), public, save, allocatable :: TW(:,:) !< water temperature [K]
 
-  integer,                public, save :: I_SST = 1
+  integer,                public, save :: I_TW = 1
   character(len=H_SHORT), public, save :: OP_NAME(1) !< name  of the ocean variables
   character(len=H_MID),   public, save :: OP_DESC(1) !< desc. of the ocean variables
   character(len=H_SHORT), public, save :: OP_UNIT(1) !< unit  of the ocean variables
 
-  data OP_NAME / 'SST' /
-  data OP_DESC / 'sea surface temp.' /
+  data OP_NAME / 'TW' /
+  data OP_DESC / 'water temperature' /
   data OP_UNIT / 'K' /
 
   character(len=H_SHORT),  public, save :: OCEAN_TYPE_PHY = 'OFF' !< Ocean physics type
   logical,                 public, save :: OCEAN_sw_phy           !< do ocean physics update?
   logical,                 public, save :: OCEAN_sw_restart       !< output restart?
 
-  character(len=H_LONG), public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
+  character(len=H_LONG),   public, save :: OCEAN_RESTART_IN_BASENAME = '' !< basename of the input file
 
   !-----------------------------------------------------------------------------
   !
@@ -66,7 +66,7 @@ module mod_ocean_vars
   character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE-LES OCEANIC VARS.' !< title    of the output file
   character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'                 !< REAL4 or REAL8
 
-  logical,                   private, save :: OCEAN_VARS_CHECKRANGE      = .false.
+  logical,               private, save :: OCEAN_VARS_CHECKRANGE      = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -94,7 +94,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OCEAN VARS]/Categ[OCEAN]'
 
-    allocate( SST(IA,JA) )
+    allocate( TW(IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -165,9 +165,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    call COMM_vars8( SST(:,:), 1 )
+    call COMM_vars8( TW(:,:), 1 )
 
-    call COMM_wait ( SST(:,:), 1 )
+    call COMM_wait ( TW(:,:), 1 )
 
     return
   end subroutine OCEAN_vars_fillhalo
@@ -177,8 +177,6 @@ contains
   subroutine OCEAN_vars_restart_read
     use mod_fileio, only: &
        FILEIO_read
-    use mod_const, only: &
-       CONST_Tstd
     use mod_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -192,15 +190,14 @@ contains
 
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( SST(:,:),                                      & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'SST', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( TW(:,:),                                      & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, 'TW', 'XY', step=1 ) ! [IN]
 
        ! fill IHALO & JHALO
        call OCEAN_vars_fillhalo
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
-
-       SST(:,:) = CONST_Tstd
+       TW(:,:) = 300.0_RP
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
@@ -236,7 +233,7 @@ contains
        end do
        write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
 
-       call FILEIO_write( SST(:,:), bname,                          OCEAN_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( TW(:,:),   bname,                         OCEAN_RESTART_OUT_TITLE, & ! [IN]
                           OP_NAME(1), OP_DESC(1), OP_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -257,10 +254,10 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( SST(:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_SST), __FILE__, __LINE__ )
+       call VALCHECK( TW(:,:), 0.0_RP, 1000.0_RP, OP_NAME(I_TW), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( SST(:,:), 'O_SST', OP_DESC(I_SST), OP_UNIT(I_SST), TIME_DTSEC_OCEAN )
+    call HIST_in( TW(:,:), 'TW', OP_DESC(I_TW), OP_UNIT(I_TW), TIME_DTSEC_OCEAN )
 
     return
   end subroutine OCEAN_vars_history
@@ -268,19 +265,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
   subroutine OCEAN_vars_total
-!    use mod_comm, only: &
-!       STAT_checktotal, &
-!       STAT_total
+    use mod_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     implicit none
 
-!    real(RP) :: total
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( STAT_checktotal ) then
-!
-!       call STAT_total( total, SST(:,:), OP_NAME(I_SST) )
-!
-!    endif
+    if ( STAT_checktotal ) then
+
+!       call STAT_total( total, TW(:,:),   OP_NAME(I_TW)   )
+
+    endif
 
     return
   end subroutine OCEAN_vars_total

@@ -102,6 +102,7 @@ contains
        LWD
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
+       sw_AtmOcn => CPL_sw_AtmOcn, &
        SkinT
     use mod_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
@@ -149,7 +150,7 @@ contains
 
     if ( update_flag ) then
 
-       if( sw_AtmLnd ) then
+       if( sw_AtmLnd .or. sw_AtmOcn ) then
           temp_sfc(:,:) = SkinT(:,:)
        else
           call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
@@ -195,7 +196,7 @@ contains
        enddo
        enddo
 
-       if( sw_AtmLnd ) then
+       if( sw_AtmLnd .or. sw_AtmOcn ) then
           do j = JS, JE
           do i = IS, IE
              LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)

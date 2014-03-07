@@ -102,11 +102,10 @@ contains
     CPL_AtmLnd_bulk_U_maxE  = U_maxE
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk flux parameter'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land: bulk flux parameter'
 
-    if ( CPL_TYPE_AtmLnd /= 'U95'  .and. &
-         CPL_TYPE_AtmLnd /= 'BH91'       ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not U95 or BH91. Check!'
+    if ( CPL_TYPE_AtmLnd /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
        call PRC_MPIstop
     endif
 
@@ -133,16 +132,16 @@ contains
     U_maxE  = CPL_AtmLnd_bulk_U_maxE
 
     !--- set up bulk coefficient function
-    call CPL_bulkcoef_setup( CPL_TYPE_AtmLnd )
+    call CPL_bulkcoef_setup
 
     return
   end subroutine CPL_AtmLnd_bulk_setup
 
   subroutine CPL_AtmLnd_bulk( &
         LST,                                  & ! (inout)
-        LST_UPDATE,                           & ! (in)
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
+        LST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
         TG, QVEF, EMIT, ALB,                  & ! (in)
@@ -161,7 +160,6 @@ contains
     integer :: i, j, n
 
     real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
-    logical,  intent(in)    :: LST_UPDATE ! is land surface temperature updated?
 
     real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
@@ -171,6 +169,8 @@ contains
     real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+
+    logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
     real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
@@ -185,9 +185,9 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
-    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
+    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
+    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
+    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
@@ -315,9 +315,9 @@ contains
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [no unit]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity in long-wave radiation [no unit]
-    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo in short-wave radiation [no unit]
+    real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
+    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
+    real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
@@ -335,46 +335,6 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! at (u, y, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i+1,j)                               ) )**2 &
-           + ( 2.0_RP *   MOMX(i,j)                                               )**2 &
-           + ( 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) + MOMY(i+1,j-1) + MOMY(i+1,j) ) )**2 &
-           ) / ( DENS(i,j) + DENS(i+1,j) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i+1,j) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i+1,j) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      XMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
-    enddo
-    enddo
-
-    ! at (x, v, layer)
-    do j = JS, JE
-    do i = IS, IE
-      Uabs = sqrt( &
-             ( 0.5_RP * ( MOMZ(i,j) + MOMZ(i,j+1)                               ) )**2 &
-           + ( 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) + MOMX(i-1,j+1) + MOMX(i,j+1) ) )**2 &
-           + ( 2.0_RP *   MOMY(i,j)                                               )**2 &
-           ) / ( DENS(i,j) + DENS(i,j+1) )
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                           & ! (out)
-          ( ATMP(i,j) + ATMP(i,j+1) ) * 0.5_RP, & ! (in)
-          ( TS  (i,j) + TS  (i,j+1) ) * 0.5_RP, & ! (in)
-          DZ(i,j), Uabs,                        & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j)          ) ! (in)
-
-      YMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
-    enddo
-    enddo
-
     ! at cell center
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -390,7 +350,9 @@ contains
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
-      ZMFLX(i,j) = - Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) * 0.5_RP
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
 
       ! saturation at the surface
       call qsat( SQV, TS(i,j), PRES(i,j) )
@@ -412,8 +374,10 @@ contains
 
       call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )
 
-      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
-      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
+      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
+              * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
+      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
+              * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
       dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
       dLWUFLX = 4.0_RP * EMIT(i,j) * STB * TS(i,j)**3
 
