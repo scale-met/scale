@@ -84,10 +84,8 @@ contains
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        sw_phy_ae => ATMOS_sw_phy_ae, &
-       ATMOS_vars_setup,  &
        ATMOS_vars_restart_read
     use mod_atmos_vars_sf, only: &
-       ATMOS_vars_sf_setup, &
        ATMOS_vars_sf_restart_read
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
@@ -113,14 +111,8 @@ contains
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
 
-    ! setup variable container
-    call ATMOS_vars_setup
-
-    call ATMOS_vars_sf_setup
-
     ! read restart
     call ATMOS_vars_restart_read
-
     call ATMOS_vars_sf_restart_read
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)

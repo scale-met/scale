@@ -47,14 +47,12 @@ contains
   subroutine LAND_setup
     use mod_land_vars, only: &
        sw_phy => LAND_sw_phy,  &
-       LAND_vars_setup,        &
        LAND_vars_restart_read
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    call LAND_vars_setup
     call LAND_vars_restart_read
 
     if ( sw_phy ) call LAND_PHY_driver_setup

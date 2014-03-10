@@ -78,26 +78,32 @@ program scaleles
      ATMOS_setup, &
      ATMOS_step
   use mod_atmos_vars, only: &
+     ATMOS_vars_setup,         &
      ATMOS_vars_restart_write, &
      ATMOS_vars_restart_check, &
      ATMOS_sw_restart,         &
      ATMOS_sw_check
+  use mod_atmos_vars_sf, only: &
+     ATMOS_vars_sf_setup
   use mod_land, only: &
      LAND_setup, &
      LAND_step
   use mod_land_vars, only: &
+     LAND_vars_setup,         &
      LAND_vars_restart_write, &
      LAND_sw_restart
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
   use mod_ocean_vars, only: &
+     OCEAN_vars_setup,         &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
   use mod_cpl, only: &
      CPL_setup, &
      CPL_calc
   use mod_cpl_vars, only: &
+     CPL_vars_setup,         &
      CPL_vars_restart_write, &
      CPL_sw_restart
   use mod_user, only: &
@@ -172,6 +178,17 @@ program scaleles
   call HIST_setup
   ! setup monitor I/O
   call MONIT_setup
+
+  ! setup variable container: atmos
+  call ATMOS_vars_setup
+  ! setup variable container: atmos_sf
+  call ATMOS_vars_sf_setup
+  ! setup variable container: land
+  call LAND_vars_setup
+  ! setup variable container: ocean
+  call OCEAN_vars_setup
+  ! setup variable container: coupler
+  call CPL_vars_setup
 
   ! setup atmosphere
   call ATMOS_setup
