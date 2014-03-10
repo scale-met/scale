@@ -44,16 +44,11 @@ contains
   !> Setup
   subroutine OCEAN_setup
     use mod_ocean_vars, only: &
-       sw_phy => OCEAN_sw_phy,  &
-       OCEAN_vars_setup,        &
-       OCEAN_vars_restart_read
+       sw_phy => OCEAN_sw_phy
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
-
-    call OCEAN_vars_setup
-    call OCEAN_vars_restart_read
 
     if ( sw_phy ) call OCEAN_PHY_driver_setup
 

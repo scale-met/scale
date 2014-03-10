@@ -47,8 +47,6 @@ contains
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
-       CPL_vars_setup,             &
-       CPL_vars_restart_read,      &
        CPL_vars_merge,             &
        CPL_vars_fillhalo
     use mod_cpl_atmos_land_driver, only: &
@@ -57,9 +55,6 @@ contains
        CPL_AtmOcn_driver_setup
     implicit none
     !---------------------------------------------------------------------------
-
-    call CPL_vars_setup
-    call CPL_vars_restart_read
 
     if( sw_AtmLnd ) call CPL_AtmLnd_driver_setup
     if( sw_AtmOcn ) call CPL_AtmOcn_driver_setup

@@ -78,26 +78,43 @@ program scaleles
      ATMOS_setup, &
      ATMOS_step
   use mod_atmos_vars, only: &
+     ATMOS_vars_setup,         &
+     ATMOS_vars_restart_read,  &
      ATMOS_vars_restart_write, &
      ATMOS_vars_restart_check, &
      ATMOS_sw_restart,         &
      ATMOS_sw_check
+  use mod_atmos_vars_sf, only: &
+     ATMOS_vars_sf_setup,       &
+     ATMOS_vars_sf_restart_read
+  use mod_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
+  use mod_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_setup
+  use mod_atmos_saturation, only: &
+     ATMOS_SATURATION_setup
   use mod_land, only: &
      LAND_setup, &
      LAND_step
   use mod_land_vars, only: &
+     LAND_vars_setup,         &
+     LAND_vars_restart_read,  &
      LAND_vars_restart_write, &
      LAND_sw_restart
   use mod_ocean, only: &
      OCEAN_setup, &
      OCEAN_step
   use mod_ocean_vars, only: &
+     OCEAN_vars_setup,         &
+     OCEAN_vars_restart_read,  &
      OCEAN_vars_restart_write, &
      OCEAN_sw_restart
   use mod_cpl, only: &
      CPL_setup, &
      CPL_calc
   use mod_cpl_vars, only: &
+     CPL_vars_setup,         &
+     CPL_vars_restart_read,  &
      CPL_vars_restart_write, &
      CPL_sw_restart
   use mod_user, only: &
@@ -172,6 +189,33 @@ program scaleles
   call HIST_setup
   ! setup monitor I/O
   call MONIT_setup
+
+  ! setup common tools
+  call ATMOS_HYDROSTATIC_setup
+  call ATMOS_THERMODYN_setup
+  call ATMOS_SATURATION_setup
+
+  ! setup variable container: atmos
+  call ATMOS_vars_setup
+  ! setup variable container: atmos_sf
+  call ATMOS_vars_sf_setup
+  ! setup variable container: land
+  call LAND_vars_setup
+  ! setup variable container: ocean
+  call OCEAN_vars_setup
+  ! setup variable container: coupler
+  call CPL_vars_setup
+
+  ! setup restart data: atmos
+  call ATMOS_vars_restart_read
+  ! setup restart data: atmos_sf
+  call ATMOS_vars_sf_restart_read
+  ! setup restart data: land
+  call LAND_vars_restart_read
+  ! setup restart data: ocean
+  call OCEAN_vars_restart_read
+  ! setup restart data: coupler
+  call CPL_vars_restart_read
 
   ! setup atmosphere
   call ATMOS_setup
