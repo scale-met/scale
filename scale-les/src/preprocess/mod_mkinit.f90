@@ -75,9 +75,10 @@ module mod_mkinit
   use mod_ocean_vars, only: &
      TW
   use mod_cpl_vars, only: &
-     LST,  &
-     SST,  &
-     ALBW, &
+     LST,   &
+     SST,   &
+     SkinT, &
+     ALBW,  &
      Z0W
   use mod_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
@@ -3338,7 +3339,8 @@ contains
        SWD (i,j) = SFC_SWD
        LWD (i,j) = SFC_LWD
 
-       LST (i,j) = CPL_TEMP
+       LST  (i,j) = CPL_TEMP
+       SkinT(i,j) = CPL_TEMP
     enddo
     enddo
 
@@ -3514,9 +3516,10 @@ contains
        SWD (i,j) = SFC_SWD
        LWD (i,j) = SFC_LWD
 
-       SST (i,j) = CPL_TEMP
-       ALBW(i,j) = CPL_ALBW
-       Z0W (i,j) = CPL_Z0W
+       SST  (i,j) = CPL_TEMP
+       SkinT(i,j) = CPL_TEMP
+       ALBW (i,j) = CPL_ALBW
+       Z0W  (i,j) = CPL_Z0W
     enddo
     enddo
 
