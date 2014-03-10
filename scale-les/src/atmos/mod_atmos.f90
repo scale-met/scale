@@ -52,12 +52,6 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
-    use mod_atmos_hydrostatic, only: &
-       ATMOS_HYDROSTATIC_setup
-    use mod_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_setup
-    use mod_atmos_saturation, only: &
-       ATMOS_SATURATION_setup
     use mod_atmos_vars, only: &
        ATMOS_DYN_TYPE, &
        ATMOS_PHY_SF_TYPE, &
@@ -83,10 +77,7 @@ contains
        sw_phy_tb => ATMOS_sw_phy_tb, &
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
-       sw_phy_ae => ATMOS_sw_phy_ae, &
-       ATMOS_vars_restart_read
-    use mod_atmos_vars_sf, only: &
-       ATMOS_vars_sf_restart_read
+       sw_phy_ae => ATMOS_sw_phy_ae
     use mod_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
     use mod_atmos_boundary, only: &
@@ -105,15 +96,6 @@ contains
        ATMOS_PHY_AE_setup => ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
-
-    ! setup common tools
-    call ATMOS_HYDROSTATIC_setup
-    call ATMOS_THERMODYN_setup
-    call ATMOS_SATURATION_setup
-
-    ! read restart
-    call ATMOS_vars_restart_read
-    call ATMOS_vars_sf_restart_read
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 
