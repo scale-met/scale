@@ -33,6 +33,8 @@ module mod_grid_index
   integer, public, parameter :: IHALO = 2               ! # of halo cells: x
   integer, public, parameter :: JHALO = 2               ! # of halo cells: y
 
+  integer, public, parameter :: LKHALO = 1              ! # of halo cells: z for land
+
   integer, public, parameter :: ZDIR = 1
   integer, public, parameter :: XDIR = 2
   integer, public, parameter :: YDIR = 3
@@ -59,6 +61,8 @@ module mod_grid_index
   integer, public :: IMAX =   -1 ! # of computational cells: x
   integer, public :: JMAX =   -1 ! # of computational cells: y
 
+  integer, public :: LKMAX =  -1 ! # of computational cells: z for land
+
   integer, public :: IBLOCK = -1 ! block size for cache blocking: x
   integer, public :: JBLOCK = -1 ! block size for cache blocking: y
 
@@ -72,6 +76,10 @@ module mod_grid_index
   integer, public :: IE ! end   point of inner domain: x, local
   integer, public :: JS ! start point of inner domain: y, local
   integer, public :: JE ! end   point of inner domain: y, local
+
+  integer, public :: LKA ! # of z whole cells for land (local, with HALO)
+  integer, public :: LKS ! start point of inner domain: z for land, local
+  integer, public :: LKE ! end   point of inner domain: z for land, local
 #endif
 
   !-----------------------------------------------------------------------------
@@ -98,6 +106,7 @@ contains
        KMAX,   &
        IMAX,   &
        JMAX,   &
+       LKMAX,  &
        IBLOCK, &
        JBLOCK
 #endif
@@ -131,6 +140,10 @@ contains
     IE   = IMAX + IHALO
     JS   = 1    + JHALO
     JE   = JMAX + JHALO
+
+    LKS  = 1
+    LKE  = LKMAX
+    LKA  = LKMAX + LKHALO
 
     IF ( IBLOCK .eq. -1 ) IBLOCK = IMAX
     IF ( JBLOCK .eq. -1 ) JBLOCK = JMAX

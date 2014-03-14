@@ -68,10 +68,10 @@ module mod_mkinit
      SWD,  &
      LWD
   use mod_land_vars, only: &
-     TG,       &
-     QVEF,     &
-     ROFF,     &
-     STRG
+     TG,   &
+     STRG, &
+     ROFF, &
+     QVEF
   use mod_ocean_vars, only: &
      TW
   use mod_cpl_vars, only: &
@@ -3330,10 +3330,10 @@ contains
     ! make land variables
     do j = JS, JE
     do i = IS, IE
-       TG  (i,j) = LND_TEMP
-       QVEF(i,j) = LND_QVEF
-       ROFF(i,j) = LND_ROFF
-       STRG(i,j) = LND_STRG
+       TG  (:,i,j) = LND_TEMP
+       STRG(:,i,j) = LND_STRG
+       ROFF(:,i,j) = LND_ROFF
+       QVEF(i,j)   = LND_QVEF
 
        PREC(i,j) = SFC_PREC
        SWD (i,j) = SFC_SWD
