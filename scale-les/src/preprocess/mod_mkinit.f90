@@ -3332,7 +3332,7 @@ contains
     do i = IS, IE
        TG  (:,i,j) = LND_TEMP
        STRG(:,i,j) = LND_STRG
-       ROFF(:,i,j) = LND_ROFF
+       ROFF(i,j)   = LND_ROFF
        QVEF(i,j)   = LND_QVEF
 
        PREC(i,j) = SFC_PREC

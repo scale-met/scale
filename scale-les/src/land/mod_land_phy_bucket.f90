@@ -155,11 +155,12 @@ contains
       ! update water storage
       STRG(LKS,i,j) = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
 
+      ! update run-off water
+      ROFF(i,j) = ROFF(i,j) + STRG(k,i,j) - P(i,j,I_STRGMAX)
+
+      ! modify STRG to the upper limit
       do k = LKS, LKE
-        if ( STRG(k,i,j) > P(i,j,I_STRGMAX) ) then
-          ROFF(k,i,j) = ROFF(k,i,j) + STRG(k,i,j) - P(i,j,I_STRGMAX)
-          STRG(k,i,j) = P(i,j,I_STRGMAX)
-        endif
+        STRG(k,i,j) = min( STRG(k,i,j), P(i,j,I_STRGMAX) )
       end do
 
       ! update moisture efficiency
@@ -186,9 +187,6 @@ contains
 
       ! update ground temperature
       TG(LKS:LKE,i,j) = ov(:)
-
-      !TG(LKS,i,j) = TG(LKS,i,j) - dt * GHFLX(i,j) &
-      !            / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(LKS,i,j) * 1.E-3_RP * DWATR * CL )
 
     end do
     end do

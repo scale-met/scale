@@ -48,7 +48,7 @@ module mod_land_vars
   ! prognostic variables
   real(RP), public, save, allocatable :: TG  (:,:,:) ! soil temperature [K]
   real(RP), public, save, allocatable :: STRG(:,:,:) ! water storage [kg/m2]
-  real(RP), public, save, allocatable :: ROFF(:,:,:) ! run-off water [kg/m2]
+  real(RP), public, save, allocatable :: ROFF(:,:)   ! run-off water [kg/m2]
   real(RP), public, save, allocatable :: QVEF(:,:)   ! efficiency of evaporation [0-1]
 
   integer,  public, parameter :: PV_NUM = 4
@@ -144,7 +144,7 @@ contains
 
     allocate( TG  (LKA,IA,JA) )
     allocate( STRG(LKA,IA,JA) )
-    allocate( ROFF(LKA,IA,JA) )
+    allocate( ROFF(IA,JA)     )
     allocate( QVEF(IA,JA)     )
 
     allocate( LAND_Type    (IA,JA) )
@@ -224,15 +224,16 @@ contains
     do k = 1, LKA
       call COMM_vars8( TG  (k,:,:), 1 )
       call COMM_vars8( STRG(k,:,:), 2 )
-      call COMM_vars8( ROFF(k,:,:), 3 )
 
       call COMM_wait ( TG  (k,:,:), 1 )
       call COMM_wait ( STRG(k,:,:), 2 )
-      call COMM_wait ( ROFF(k,:,:), 3 )
     end do
 
     ! 2D variable
+    call COMM_vars8( ROFF(:,:), 3 )
     call COMM_vars8( QVEF(:,:), 4 )
+
+    call COMM_wait ( ROFF(:,:), 3 )
     call COMM_wait ( QVEF(:,:), 4 )
     return
   end subroutine LAND_vars_fillhalo
@@ -263,8 +264,8 @@ contains
                          LAND_RESTART_IN_BASENAME, 'TG',   'ZXY', step=1 ) ! [IN]
        call FILEIO_read( STRG(:,:,:),                                    & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'STRG', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ROFF(:,:,:),                                    & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ROFF', 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( ROFF(:,:),                                      & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY',  step=1 ) ! [IN]
        call FILEIO_read( QVEF(:,:),                                      & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'QVEF', 'XY',  step=1 ) ! [IN]
 
@@ -276,11 +277,11 @@ contains
 
        TG  (:,:,:) = 300.0_RP
        STRG(:,:,:) = 200.0_RP
-       ROFF(:,:,:) = 0.0_RP
+       ROFF(:,:)   = 0.0_RP
        QVEF(:,:)   = 1.0_RP
 !       TG  (:,:,:) = CONST_UNDEF
 !       STRG(:,:,:) = CONST_UNDEF
-!       ROFF(:,:,:) = CONST_UNDEF
+!       ROFF(:,:)   = CONST_UNDEF
 !       QVEF(:,:)   = CONST_UNDEF
     endif
 
@@ -349,8 +350,8 @@ contains
                           PV_NAME(I_TG),   PV_DESC(I_TG),   PV_UNIT(I_TG),   'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( STRG(:,:,:), basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
                           PV_NAME(I_STRG), PV_DESC(I_STRG), PV_UNIT(I_STRG), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF(:,:,:), basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ROFF(:,:),   basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
+                          PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'XY',  LAND_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( QVEF(:,:),   basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
                           PV_NAME(I_QVEF), PV_DESC(I_QVEF), PV_UNIT(I_QVEF), 'XY',  LAND_RESTART_OUT_DTYPE  ) ! [IN]
 
@@ -376,13 +377,13 @@ contains
     if ( LAND_VARS_CHECKRANGE ) then
        call VALCHECK( TG  (:,:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_TG)  , __FILE__, __LINE__ )
        call VALCHECK( STRG(:,:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_STRG), __FILE__, __LINE__ )
-       call VALCHECK( ROFF(:,:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_ROFF), __FILE__, __LINE__ )
+       call VALCHECK( ROFF(:,:),   0.0_RP, 1000.0_RP, PV_NAME(I_ROFF), __FILE__, __LINE__ )
        call VALCHECK( QVEF(:,:),   0.0_RP,    2.0_RP, PV_NAME(I_QVEF), __FILE__, __LINE__ )
     endif
 
     call HIST_in( TG  (:,:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND )
     call HIST_in( STRG(:,:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND )
-    call HIST_in( ROFF(:,:,:), 'ROFF', PV_DESC(I_ROFF), PV_UNIT(I_ROFF), TIME_DTSEC_LAND )
+    call HIST_in( ROFF(:,:),   'ROFF', PV_DESC(I_ROFF), PV_UNIT(I_ROFF), TIME_DTSEC_LAND )
     call HIST_in( QVEF(:,:),   'QVEF', PV_DESC(I_QVEF), PV_UNIT(I_QVEF), TIME_DTSEC_LAND )
 
     return
@@ -403,7 +404,7 @@ contains
 
 !       call STAT_total( total, TG(:,:,:),   PV_NAME(I_TG)   )
 !       call STAT_total( total, STRG(:,:,:), PV_NAME(I_STRG) )
-!       call STAT_total( total, ROFF(:,:,:), PV_NAME(I_ROFF) )
+!       call STAT_total( total, ROFF(:,:),   PV_NAME(I_ROFF) )
 !       call STAT_total( total, QVEF(:,:),   PV_NAME(I_QVEF) )
 
     endif
