@@ -48,6 +48,8 @@ module mod_land_phy_bucket
 
   real(RP), allocatable :: dz(:)
 
+  real(RP) :: DFW
+
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
 
@@ -86,6 +88,8 @@ contains
     dz(4) = 0.10_RP
     dz(5) = 0.30_RP
     dz(6) = 0.50_RP
+
+    DFW = 1.0E-2_RP
 
     if ( LAND_TYPE_PHY /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE_PHY is not BUCKET. Check!'
@@ -148,19 +152,37 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+      ! prepare to solve tridiagonal matrix for STRG
       ld(:) = 0.0_RP
       md(:) = 0.0_RP
       ud(:) = 0.0_RP
 
-      ! update water storage
-      STRG(LKS,i,j) = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
+      STRG(LKE+1,i,j) = STRG(LKE,i,j)
 
+      do k = LKS+1, LKE
+        ld(k) = -2.0_RP * dt * DFW / ( dz(k) * ( dz(k) + dz(k-1) ) )
+      end do
+      do k = LKS, LKE
+        ud(k) = -2.0_RP * dt * DFW / ( dz(k) * ( dz(k) + dz(k+1) ) )
+        md(k) = 1.0_RP - ld(k) - ud(k)
+      end do
+
+      iv(:)   = STRG(LKS:LKE,i,j)
+      iv(LKS) = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
+      iv(LKE) = STRG(LKE,i,j) - ud(LKE) * STRG(LKE+1,i,j)
+
+      call solve_tridiagonal_matrix( &
+        ov(:),                     & ! (out)
+        iv(:), ld(:), md(:), ud(:) ) ! (in)
+
+      ! update water storage
+      STRG(LKS:LKE,i,j) = ov(:)
+
+      ! modify STRG to the upper limit
       do k = LKS, LKE
         if( STRG(k,i,j) > P(i,j,I_STRGMAX) ) then
-          ! update run-off water
-          ROFF(i,j) = ROFF(i,j) + STRG(k,i,j) - P(i,j,I_STRGMAX)
-
-          ! modify STRG to the upper limit
+          ! update vertically integral run-off water
+          ROFF(i,j)   = ROFF(i,j) + STRG(k,i,j) - P(i,j,I_STRGMAX)
           STRG(k,i,j) = P(i,j,I_STRGMAX)
         end if
       end do
@@ -169,22 +191,26 @@ contains
       QVEF(i,j) = min( STRG(LKS,i,j)/P(i,j,I_STRGCRT), BETA_MAX )
 
       ! prepare to solve tridiagonal matrix for TG
+      ld(:) = 0.0_RP
+      md(:) = 0.0_RP
+      ud(:) = 0.0_RP
+
       do k = LKS+1, LKE
         ld(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.E-3_RP ) * P(i,j,I_HCS) &
-                + STRG(k,i,j) / dz(k) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
+                + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
       end do
       do k = LKS, LKE
         ud(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.E-3_RP ) * P(i,j,I_HCS) &
-                + STRG(k,i,j) / dz(k) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
+                + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
       iv(:)   = TG(LKS:LKE,i,j)
       iv(LKS) = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.E-3_RP ) * P(i,j,I_HCS) &
-                + STRG(LKS,i,j) / dz(LKS) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
+                + STRG(LKS,i,j) / dz(LKS) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
       iv(LKE) = TG(LKE,i,j) - ud(LKE) * TG(LKE+1,i,j)
 
       call solve_tridiagonal_matrix( &
