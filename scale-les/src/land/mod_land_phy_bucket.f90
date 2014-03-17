@@ -168,20 +168,23 @@ contains
       ! update moisture efficiency
       QVEF(i,j) = min( STRG(LKS,i,j)/P(i,j,I_STRGCRT), BETA_MAX )
 
-      ! prepare to solve tridiagonal matrix
+      ! prepare to solve tridiagonal matrix for TG
       do k = LKS+1, LKE
         ld(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(k,i,j) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.E-3_RP ) * P(i,j,I_HCS) &
+                + STRG(k,i,j) / dz(k) * 1.E-3_RP * DWATR * CL )
       end do
       do k = LKS, LKE
         ud(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(k,i,j) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.E-3_RP ) * P(i,j,I_HCS) &
+                + STRG(k,i,j) / dz(k) * 1.E-3_RP * DWATR * CL )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
       iv(:)   = TG(LKS:LKE,i,j)
       iv(LKS) = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) * 1.E-3_RP ) * P(i,j,I_HCS) + STRG(LKS,i,j) * 1.E-3_RP * DWATR * CL )
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.E-3_RP ) * P(i,j,I_HCS) &
+                + STRG(LKS,i,j) / dz(LKS) * 1.E-3_RP * DWATR * CL )
       iv(LKE) = TG(LKE,i,j) - ud(LKE) * TG(LKE+1,i,j)
 
       call solve_tridiagonal_matrix( &
