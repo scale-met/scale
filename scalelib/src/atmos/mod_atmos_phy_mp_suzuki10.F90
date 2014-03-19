@@ -1324,26 +1324,34 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: dens   !  atmospheric density [ kg/m3 ]
   real(RP), intent(in) :: pres   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin )  ! Size Distribution Function
+  real(RP), intent(inout) :: gc( nspc,nbin )  ! Size Distribution Function
   real(RP), intent(inout) :: qvap    !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp    !  temperature [ K ]
   !
   !--- local variables
-  integer :: iflg( il ), n, iliq
-  real(RP) :: csum( il )
+  integer :: iflg( nspc ), n, m, iliq, iice
+  real(RP) :: csum( nspc )
   real(RP) :: regene_gcn
   !
   !
   iflg( : ) = 0
   csum( : ) = 0.0_RP
   regene_gcn = 0.0_RP
+  do m = 1, nspc
   do n = 1, nbin
-    csum( il ) = csum( il )+gc( n )*dxmic
+    csum( m ) = csum( m )+gc( m,n )*dxmic
+  end do
   end do
 
-  if ( csum( il ) > cldmin ) iflg( il ) = 1
+  do m = 1, nspc
+   if ( csum( m ) > cldmin ) iflg( m ) = 1
+  enddo
 
   iliq = iflg( il )
+  iice = 0
+  do m = 2, nspc
+     iice = iice + iflg( m )
+  enddo
 
   if ( iliq == 1 ) then
       call  liqphase            &
@@ -1351,6 +1359,16 @@ call STOP_COLLECTION("MICROPHYSICS")
                 dens, pres,     & !--- in
                 gc, qvap, temp, & !--- inout
                 regene_gcn      ) !--- out
+  elseif ( iliq == 0 .and. iice >= 1 ) then
+      call icephase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
+  elseif ( iliq == 1 .and. iice >= 1 ) then 
+      call mixphase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
   end if
   !
   end subroutine cndevpsbl
@@ -1363,13 +1381,13 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: dens   !  atmospheric density [ kg/m3 ]
   real(RP), intent(in) :: pres   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin )  ! Size Distribution Function
+  real(RP), intent(inout) :: gc( nspc,nbin )  ! Size Distribution Function
   real(RP), intent(inout) :: ga( nccn )  !  SDF ( aerosol ) : mass
   real(RP), intent(inout) :: qvap    !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp    !  temperature [ K ]
   !
   !--- local variables
-  integer :: iflg( il ), n, iliq
+  integer :: iflg( nspc ), n, m, iliq, iice
   real(RP) :: csum( il )
   real(RP) :: regene_gcn
   !
@@ -1377,13 +1395,21 @@ call STOP_COLLECTION("MICROPHYSICS")
   iflg( : ) = 0
   csum( : ) = 0.0_RP
   regene_gcn = 0.0_RP
+  do m = 1, nspc
   do n = 1, nbin
-    csum( il ) = csum( il )+gc( n )*dxmic
+    csum( m ) = csum( m )+gc( m,n )*dxmic
+  end do
   end do
 
-  if ( csum( il ) > cldmin ) iflg( il ) = 1
+  do m = 1, nspc
+    if ( csum( m ) > cldmin ) iflg( m ) = 1
+  enddo
 
   iliq = iflg( il )
+  iice = 0
+  do m = 2, nspc
+    iice = iice + iflg( m )
+  enddo 
 
   if ( iliq == 1 ) then
       call  liqphase            &
@@ -1396,6 +1422,16 @@ call STOP_COLLECTION("MICROPHYSICS")
        call faero( regene_gcn,  & !--- in
                    ga           ) !--- inout
       end if
+  elseif ( iliq == 0 .and. iice >= 1 ) then
+      call icephase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
+  elseif ( iliq == 1 .and. iice >= 1 ) then 
+      call mixphase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
   end if
   !
   end subroutine cndevpsbla
