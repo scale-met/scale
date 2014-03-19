@@ -1353,7 +1353,7 @@ call STOP_COLLECTION("MICROPHYSICS")
      iice = iice + iflg( m )
   enddo
 
-  if ( iliq == 1 ) then
+  if ( iliq == 1 .and. iice == 0 ) then
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
@@ -1411,7 +1411,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     iice = iice + iflg( m )
   enddo 
 
-  if ( iliq == 1 ) then
+  if ( iliq == 1 .and. iice == 0 ) then
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
