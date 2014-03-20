@@ -82,7 +82,7 @@ module mod_land_vars
   integer,  public, parameter :: I_ALBG    =  4  ! surface albedo     in short-wave radiation [0-1]
   integer,  public, parameter :: I_TCS     =  5  ! thermal conductivity for soil [W/m/K]
   integer,  public, parameter :: I_HCS     =  6  ! heat capacity        for soil [J/K]
-  integer,  public, parameter :: I_DZG     =  7  ! soil depth [m]
+  integer,  public, parameter :: I_DFW     =  7  ! diffusive coefficient of soil water [m2/s]
   integer,  public, parameter :: I_Z0M     =  8  ! roughness length for momemtum [m]
   integer,  public, parameter :: I_Z0H     =  9  ! roughness length for heat     [m]
   integer,  public, parameter :: I_Z0E     = 10  ! roughness length for moisture [m]
@@ -429,7 +429,7 @@ contains
     real(RP)               :: ALBG
     real(RP)               :: TCS
     real(RP)               :: HCS
-    real(RP)               :: DZG
+    real(RP)               :: DFW
     real(RP)               :: Z0M
     real(RP)               :: Z0H
     real(RP)               :: Z0E
@@ -443,7 +443,7 @@ contains
        ALBG,        &
        TCS,         &
        HCS,         &
-       DZG,         &
+       DFW,         &
        Z0M,         &
        Z0H,         &
        Z0E
@@ -464,7 +464,7 @@ contains
                                '  Albedo', &
                                'T condu.', &
                                'H capac.', &
-                               '   Depth', &
+                               'DFC Wat.', &
                                '   Z0(m)', &
                                '   Z0(h)', &
                                '   Z0(e)'
@@ -498,7 +498,7 @@ contains
        LAND_PROPERTY_table(index,I_ALBG   ) = ALBG
        LAND_PROPERTY_table(index,I_TCS    ) = TCS
        LAND_PROPERTY_table(index,I_HCS    ) = HCS
-       LAND_PROPERTY_table(index,I_DZG    ) = DZG
+       LAND_PROPERTY_table(index,I_DFW    ) = DFW
        LAND_PROPERTY_table(index,I_Z0M    ) = Z0M
        LAND_PROPERTY_table(index,I_Z0H    ) = Z0H
        LAND_PROPERTY_table(index,I_Z0E    ) = Z0E
@@ -511,7 +511,7 @@ contains
                                      ALBG,    &
                                      TCS,     &
                                      HCS,     &
-                                     DZG,     &
+                                     DFW,     &
                                      Z0M,     &
                                      Z0H,     &
                                      Z0E

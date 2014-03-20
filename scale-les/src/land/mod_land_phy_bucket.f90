@@ -48,8 +48,6 @@ module mod_land_phy_bucket
 
   real(RP), allocatable :: dz(:)
 
-  real(RP) :: DFW
-
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
 
@@ -89,8 +87,6 @@ contains
     dz(5) = 0.30_RP
     dz(6) = 0.50_RP
 
-    DFW = 1.0E-2_RP
-
     if ( LAND_TYPE_PHY /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE_PHY is not BUCKET. Check!'
        call PRC_MPIstop
@@ -128,6 +124,7 @@ contains
        I_STRGCRT,          &
        I_TCS,              &
        I_HCS,              &
+       I_DFW,              &
        P => LAND_PROPERTY, &
        LAND_vars_fillhalo
     use mod_cpl_vars, only: &
@@ -160,10 +157,10 @@ contains
       STRG(LKE+1,i,j) = STRG(LKE,i,j)
 
       do k = LKS+1, LKE
-        ld(k) = -2.0_RP * dt * DFW / ( dz(k) * ( dz(k) + dz(k-1) ) )
+        ld(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k-1) ) )
       end do
       do k = LKS, LKE
-        ud(k) = -2.0_RP * dt * DFW / ( dz(k) * ( dz(k) + dz(k+1) ) )
+        ud(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k+1) ) )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
@@ -235,7 +232,6 @@ contains
        I_EMIT,             &
        I_ALBG,             &
        I_TCS,              &
-       I_DZG,              &
        I_Z0M,              &
        I_Z0H,              &
        I_Z0E,              &
@@ -243,14 +239,18 @@ contains
     use mod_cpl_vars, only: &
        CPL_putLnd
     implicit none
+
+    real(RP) :: dz_h(IA,JA)
     !---------------------------------------------------------------------------
+
+    dz_h(:,:) = dz(LKS)
 
     call CPL_putLnd( TG  (LKS,:,:),    & ! [IN]
                      QVEF(:,:),        & ! [IN]
                      P   (:,:,I_EMIT), & ! [IN]
                      P   (:,:,I_ALBG), & ! [IN]
                      P   (:,:,I_TCS),  & ! [IN]
-                     P   (:,:,I_DZG),  & ! [IN]
+                     dz_h(:,:),        & ! [IN]
                      P   (:,:,I_Z0M),  & ! [IN]
                      P   (:,:,I_Z0H),  & ! [IN]
                      P   (:,:,I_Z0E)   ) ! [IN]
