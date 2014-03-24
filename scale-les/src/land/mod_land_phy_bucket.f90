@@ -42,11 +42,14 @@ module mod_land_phy_bucket
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), allocatable :: GHFLX  (:,:)
-  real(RP), allocatable :: PRECFLX(:,:)
-  real(RP), allocatable :: QVFLX  (:,:)
+  logical, private, save :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
+  logical, private, save :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
 
-  real(RP), allocatable :: dz(:)
+  real(RP), private, save, allocatable :: GHFLX  (:,:)
+  real(RP), private, save, allocatable :: PRECFLX(:,:)
+  real(RP), private, save, allocatable :: QVFLX  (:,:)
+
+  real(RP), private, save, allocatable :: dz(:)
 
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
@@ -64,7 +67,8 @@ contains
     logical  :: dummy
 
     NAMELIST / PARAM_LAND_BUCKET / &
-       dummy
+       LAND_LKE_STRG_UPDATE, &
+       LAND_LKE_TG_UPDATE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -76,10 +80,9 @@ contains
     allocate( PRECFLX(IA,JA) )
     allocate( QVFLX  (IA,JA) )
 
-    allocate( dz(LKS-1:LKE+1) )
+    allocate( dz(LKS:LKE) )
 
     ! tentative
-    dz(0) = 0.00_RP
     dz(1) = 0.02_RP
     dz(2) = 0.03_RP
     dz(3) = 0.05_RP
@@ -134,11 +137,11 @@ contains
     ! work
     integer :: k, i, j
 
-    real(RP) :: ov(LKS:LKE)
-    real(RP) :: iv(LKS:LKE)
-    real(RP) :: ld(LKS:LKE)
-    real(RP) :: md(LKS:LKE)
-    real(RP) :: ud(LKS:LKE)
+    real(RP) :: ov(LKS:LKE-1)
+    real(RP) :: iv(LKS:LKE-1)
+    real(RP) :: ld(LKS:LKE-1)
+    real(RP) :: md(LKS:LKE-1)
+    real(RP) :: ud(LKS:LKE-1)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
@@ -154,26 +157,29 @@ contains
       md(:) = 0.0_RP
       ud(:) = 0.0_RP
 
-      STRG(LKE+1,i,j) = STRG(LKE,i,j)
-
-      do k = LKS+1, LKE
+      do k = LKS+1, LKE-1
         ld(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k-1) ) )
       end do
-      do k = LKS, LKE
+      do k = LKS, LKE-1
         ud(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k+1) ) )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
-      iv(:)   = STRG(LKS:LKE,i,j)
-      iv(LKS) = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
-      iv(LKE) = STRG(LKE,i,j) - ud(LKE) * STRG(LKE+1,i,j)
+      iv(:)     = STRG(LKS:LKE-1,i,j)
+      iv(LKS)   = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
+      iv(LKE-1) = STRG(LKE-1,i,j) - ud(LKE-1) * STRG(LKE,i,j)
 
       call solve_tridiagonal_matrix( &
         ov(:),                     & ! (out)
         iv(:), ld(:), md(:), ud(:) ) ! (in)
 
       ! update water storage
-      STRG(LKS:LKE,i,j) = ov(:)
+      STRG(LKS:LKE-1,i,j) = ov(:)
+
+      ! update lowest STRG
+      if( LAND_LKE_STRG_UPDATE ) then
+        STRG(LKE,i,j) = STRG(LKE-1,i,j)
+      end if
 
       ! modify STRG to the upper limit
       do k = LKS, LKE
@@ -192,30 +198,35 @@ contains
       md(:) = 0.0_RP
       ud(:) = 0.0_RP
 
-      do k = LKS+1, LKE
+      do k = LKS+1, LKE-1
         ld(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
               / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
                 + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
       end do
-      do k = LKS, LKE
+      do k = LKS, LKE-1
         ud(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
               / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
                 + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
-      iv(:)   = TG(LKS:LKE,i,j)
-      iv(LKS) = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
-                + STRG(LKS,i,j) / dz(LKS) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
-      iv(LKE) = TG(LKE,i,j) - ud(LKE) * TG(LKE+1,i,j)
+      iv(:)     = TG(LKS:LKE-1,i,j)
+      iv(LKS)   = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
+                / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
+                  + STRG(LKS,i,j) / dz(LKS) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
+      iv(LKE-1) = TG(LKE-1,i,j) - ud(LKE-1) * TG(LKE,i,j)
 
       call solve_tridiagonal_matrix( &
         ov(:),                     & ! (out)
         iv(:), ld(:), md(:), ud(:) ) ! (in)
 
       ! update ground temperature
-      TG(LKS:LKE,i,j) = ov(:)
+      TG(LKS:LKE-1,i,j) = ov(:)
+
+      ! update lowest TG
+      if( LAND_LKE_TG_UPDATE ) then
+        TG(LKE,i,j) = TG(LKE-1,i,j)
+      end if
 
     end do
     end do

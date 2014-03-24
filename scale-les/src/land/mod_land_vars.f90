@@ -142,8 +142,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
 
-    allocate( TG  (LKA,IA,JA) )
-    allocate( STRG(LKA,IA,JA) )
+    allocate( TG  (LKE,IA,JA) )
+    allocate( STRG(LKE,IA,JA) )
     allocate( ROFF(IA,JA)     )
     allocate( QVEF(IA,JA)     )
 
@@ -221,7 +221,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    do k = 1, LKA
+    do k = 1, LKE
       call COMM_vars8( TG  (k,:,:), 1 )
       call COMM_vars8( STRG(k,:,:), 2 )
 

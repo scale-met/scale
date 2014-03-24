@@ -33,8 +33,6 @@ module mod_grid_index
   integer, public, parameter :: IHALO = 2               ! # of halo cells: x
   integer, public, parameter :: JHALO = 2               ! # of halo cells: y
 
-  integer, public, parameter :: LKHALO = 1              ! # of halo cells: z for land
-
   integer, public, parameter :: ZDIR = 1
   integer, public, parameter :: XDIR = 2
   integer, public, parameter :: YDIR = 3
@@ -77,7 +75,6 @@ module mod_grid_index
   integer, public :: JS ! start point of inner domain: y, local
   integer, public :: JE ! end   point of inner domain: y, local
 
-  integer, public :: LKA ! # of z whole cells for land (local, with HALO)
   integer, public :: LKS ! start point of inner domain: z for land, local
   integer, public :: LKE ! end   point of inner domain: z for land, local
 #endif
@@ -143,7 +140,6 @@ contains
 
     LKS  = 1
     LKE  = LKMAX
-    LKA  = LKMAX + LKHALO
 
     IF ( IBLOCK .eq. -1 ) IBLOCK = IMAX
     IF ( JBLOCK .eq. -1 ) JBLOCK = JMAX
