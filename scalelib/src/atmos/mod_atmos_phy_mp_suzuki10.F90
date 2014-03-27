@@ -471,10 +471,9 @@ contains
     allocate( velw(KA,IA,JA,QA) )
     velw(:,:,:,I_QV) = 0.0_RP
     velw(:,:,:,QQE+1:QA) = 0.0_RP
-    mm = 0
     do myu = 1, nspc
     do n = 1, nbin
-      velw(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( 1,n )
+      velw(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( myu,n )
     enddo
     enddo
 
