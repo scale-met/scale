@@ -80,8 +80,7 @@ contains
   subroutine ATMOS_PHY_TB_setup( &
        TB_TYPE, &
        CDZ, CDX, CDY, &
-       FDZ, FDX, FDY, &
-       CZ, FZ         )
+       CZ             )
     use mod_process, only: &
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
@@ -105,11 +104,7 @@ contains
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: FDZ(KA-1)
-    real(RP), intent(in) :: FDX(IA-1)
-    real(RP), intent(in) :: FDY(JA-1)
     real(RP), intent(in) :: CZ(KA)
-    real(RP), intent(in) :: FZ(0:KA)
     !---------------------------------------------------------------------------
 
     select case( TB_TYPE )
@@ -117,8 +112,7 @@ contains
        call ATMOS_PHY_tb_smg_setup( &
             TB_TYPE, &
             CDZ, CDX, CDY, &
-            FDZ, FDX, FDY, &
-            CZ, FZ )
+            CZ )
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
     end select
   end subroutine ATMOS_PHY_TB_setup
