@@ -6,10 +6,10 @@
 
 TOPDIR      = $(abspath ../..)
 BUILD_DIR   = ./.libs
-SYSDEP_DIR  = ../sysdep
+SYSDEP_DIR  = ../../sysdep
 
-include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 VPATH = $(BUILD_DIR):include:atmos:land:ocean:cpl:preprocess:user
 
@@ -117,8 +117,13 @@ clean:
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
 
+ifeq ($(SDM),-D_SDM)
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+else
+$(BUILD_DIR)/%.o : %.f90
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+endif
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 

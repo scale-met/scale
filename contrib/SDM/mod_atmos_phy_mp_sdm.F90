@@ -6,7 +6,8 @@
 !!
 !! - Reference
 !!  - Shima et al., 2009:
-!!    The super-droplet method for the numerical simulation of clouds and precipitation: A particle-based and probabilistic microphysics model coupled with a non-hydrostatic model.
+!!    The super-droplet method for the numerical simulation of clouds and precipitation:
+!!    A particle-based and probabilistic microphysics model coupled with a non-hydrostatic model.
 !!    Quart. J. Roy. Meteorol. Soc., 135: 1307-1320
 !!
 !! @author Team SCALE
@@ -23,11 +24,10 @@ module mod_atmos_phy_mp_sdm
   !
   !++ used modules
   !
-!  use mpi
+  use mpi
   use mod_precision
   use mod_stdio
   use mod_prof
-!  use mod_index
   use mod_grid_index
   use mod_tracer_sdm
 
@@ -72,8 +72,8 @@ module mod_atmos_phy_mp_sdm
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
+  logical,  public, save   :: sd_rest_flg_out = .false. ! restart flg of Super Droplet
   real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
-  logical, public, save :: sd_rest_flg_out = .false. ! restart flg of Super Droplet
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -183,7 +183,8 @@ module mod_atmos_phy_mp_sdm
   real(RP), private, parameter :: F_THRD = 4.0_RP / 3.0_RP
   real(RP), private, parameter :: O_SIX  = 1.0_RP / 6.0_RP
   real(RP), private, parameter :: T_EIGH = 3.0_RP / 8.0_RP
-  real(RP), private, parameter :: VALID2INVALID = -999.0_RP ! thereshold value between valid super-droplet and invalid super-droplets
+  ! thereshold value between valid super-droplet and invalid super-droplets
+  real(RP), private, parameter :: VALID2INVALID = -999.0_RP 
   real(RP), private, parameter :: PRECIPI = -999.9_RP  ! value indicated as super-droplets is precipitation
   real(RP), private, parameter :: PREC2INVALID = -999.99_RP ! thereshold value between precipitation and invalid super-droplets
   real(RP), private, parameter :: INVALID = -999.999_RP ! value indicated as invalid super-droplets
@@ -193,10 +194,15 @@ module mod_atmos_phy_mp_sdm
   !
   !------------------------------------------------------------------------------
   real(RP), private, parameter :: boltz = 1.38066E-23_RP  ! Boltzmann constant
-  real(RP), private, parameter :: mass_nacl = 58.44277_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
-  real(RP), private, parameter :: mass_amsul = 132.14_RP  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
-  real(RP), private, parameter :: ion_amsul = 2.0_RP, ion_nacl = 2.0_RP ! Degree of ion dissociation of ammonium sulfate and sea salt contained as water-soluble aerosol in super droplets
-  real(RP), private, parameter :: rho_amsul = 1.769E+6_RP, rho_nacl = 2.165E+6_RP ! Density of ammonium sulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
+  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
+  real(RP), private, parameter :: mass_nacl = 58.44277_RP 
+  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
+  real(RP), private, parameter :: mass_amsul = 132.14_RP  
+  ! Degree of ion dissociation of ammonium sulfate and sea salt contained 
+  ! as water-soluble aerosol in super droplets
+  real(RP), private, parameter :: ion_amsul = 2.0_RP, ion_nacl = 2.0_RP 
+  ! Density of ammonium sulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
+  real(RP), private, parameter :: rho_amsul = 1.769E+6_RP, rho_nacl = 2.165E+6_RP
   ! parameter for 3mode log-normal distribution of aerosol
   real(RP), private  :: n1_amsul                                  !! [1/m3]
   real(RP), private  :: n2_amsul
@@ -505,7 +511,7 @@ contains
        sthopt = 0
     endif
 
-    if( maxval( TOPO_Zsfc ) >= 0.0_RP ) then
+    if( maxval( TOPO_Zsfc ) > 0.0_RP ) then
        trnopt = 2
     elseif( maxval( TOPO_Zsfc ) == 0.0_RP ) then
        trnopt = 0
@@ -1373,7 +1379,7 @@ contains
 
       !### Get random generator seed ###!
 
-      call rng_load_state( rng_s2c, RANDOM_IN_BASENAME, fid_random_i )
+      call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
 
       ! Initialized super-droplets.
       !### Get parameter for 3mode log-nomiral distribution ###!
@@ -1545,7 +1551,7 @@ contains
                end if
                !! check muliplicity
                if( sdn_tmp<(2.0_RP**63.0_RP) ) then
-                  sdn_s2c(n) = nint( sdn_tmp, kind=RP )
+                  sdn_s2c(n) = nint( sdn_tmp, kind=DP )
                else
                   iexced = -1
                end if
@@ -2214,7 +2220,7 @@ contains
       real(RP), intent(in) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
-      character*6, intent(in) :: ptype             ! process type : 'motion process' or 'stochastic coalescence process'
+      character(len=6), intent(in) :: ptype             ! process type : 'motion process' or 'stochastic coalescence process'
       ! Output variables
       real(RP), intent(out) :: sd_vz(1:sd_num)! terminal velocity of super-droplets
       integer, intent(out) :: ilist_s(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
@@ -7614,7 +7620,7 @@ contains
       real(RP), intent(in) :: sd_x(1:sd_num)   ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num)   ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)  ! index[k/real] of super-droplets
-      character*5, intent(in) :: jdgtype   ! flag for sorting
+      character(len=5), intent(in) :: jdgtype   ! flag for sorting
       ! Output variables
       integer, intent(out) :: sort_id(1:sd_num)   ! id that super-droplets sorted by sd-grids
       integer, intent(out) :: sort_key(1:sd_num)  ! sort key
@@ -7796,7 +7802,6 @@ contains
       if( sdm_nadjvar==0 .or. sdm_nadjvar==2 ) then
 
          sdnum_upr = floor( RATE4REMOVE * sd_nc )
-!write(*,*) sdnum_upr, sd_nc
          call sdm_sdremove(ni_sdm,nj_sdm,nk_sdm,                        &
                            sdnum_upr,sd_num,sd_n,sd_x,sd_y,sd_rk,       &
                            sort_id,sort_key,sort_freq,sort_tag,         &
@@ -8604,17 +8609,23 @@ contains
     implicit none
 
     integer :: sdnum_dum, sdnumasl_dum, sdfmnum_dum
-    integer :: dp_dum, rp_dum
+    integer :: dp_dum, rp_dum, n, m, ierr
     real(DP) :: otime
 
 
-    open (fid_sd_i, file = trim(SD_IN_BASENAME), action = "read", &
+    open (fid_sd_i, file = trim(SD_IN_BASENAME), &! action = "read", &
           access = "sequential", status = "old", form = "unformatted", &
-          err = 999)
+          iostat = ierr)
+
+    if( ierr /= 0 ) then
+      write(*,*) "sdm_restart_in", "read error"
+      call PRC_MPIstop
+    endif 
+    
     !--- read time and precision
     read(fid_sd_i) otime, rp_dum, dp_dum, sdnum_dum, sdnumasl_dum, sdfmnum_dum
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file of Super Droplet  '
-    if( IO_L ) write(IO_FID_LOG,*) 'SD. restart now time =  ', real(otime,kind=RP)
+    if( IO_L ) write(IO_FID_LOG,*) 'SD. restart now time =  ', real(otime,kind=DP)
     if( rp_dum /= RP .or. dp_dum /= DP .or. &
         sdnum_dum /= sdnum_s2c .or. sdnumasl_dum /= sdnumasl_s2c .or. &
         sdfmnum_dum /= sdfmnum_s2c ) then
@@ -8629,32 +8640,21 @@ contains
     endif
 
     !--- read S.D.
-    read(fid_sd_i) sdn_s2c
-    read(fid_sd_i) sdrk_s2c
-    read(fid_sd_i) sdx_s2c
-    read(fid_sd_i) sdy_s2c
-    read(fid_sd_i) sdz_s2c
-    read(fid_sd_i) sdr_s2c
-    read(fid_sd_i) sdu_s2c
-    read(fid_sd_i) sdv_s2c
-    read(fid_sd_i) sdvz_s2c
-    read(fid_sd_i) sdasl_s2c
-    read(fid_sd_i) sdasl_s2c
+    read(fid_sd_i) (sdn_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdrk_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdx_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdy_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdz_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdr_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdu_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdv_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) (sdvz_s2c(n),n=1,sdnum_s2c)
+    read(fid_sd_i) ((sdasl_s2c(n,m),n=1,sdnum_s2c),m=1,sdnumasl_s2c)
     !--- read formation S.D.
-    read(fid_sd_i) sdn_fm
-    read(fid_sd_i) sdrk_fm
-    read(fid_sd_i) sdx_fm
-    read(fid_sd_i) sdy_fm
-    read(fid_sd_i) sdz_fm
-    read(fid_sd_i) sdr_fm
-    read(fid_sd_i) sdvz_fm
-    read(fid_sd_i) sdasl_fm
     close(fid_sd_i)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Closed restart file of Super Droplet  '
 
     return
-    999 continue
-    write(*,*) "sdm_restart_in", "read error"
-    stop
   end subroutine ATMOS_PHY_MP_sdm_restart_in
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm_restart_out(otime)
@@ -8667,10 +8667,10 @@ contains
     character(len=H_LONG) :: basename_sd_out
     character(len=H_LONG) :: basename_random
     character(len=H_LONG) :: basename_time
-    integer :: n
+    integer :: n, m, ierr
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file of Super Droplet  '
 
+    !--- output restart file of Super Droplet
     write(basename_time,'(F15.3)') otime
     do n = 1, 15
        if( basename_time(n:n) == ' ' ) basename_time(n:n) = '0'
@@ -8690,35 +8690,35 @@ contains
        write(basename_sd_out,fmt2) trim(ftmp),'pe',mype
     endif
 
-    open (fid_sd_o, file = trim(basename_sd_out), action = "write", &
+    if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file of Super Droplet  ', trim(basename_sd_out)
+
+    open (fid_sd_o, file = trim(basename_sd_out), & !action = "write", &
           access = "sequential", status = "replace", form = "unformatted", &
-          err = 999)
+          iostat = ierr)
+
+    if( ierr /= 0 ) then
+      write(*,*) "sdm_restart_out", "Write error"
+      call PRC_MPIstop
+    endif 
 
     !--- write time and precision
     write(fid_sd_o) otime, RP, DP, sdnum_s2c, sdnumasl_s2c, sdfmnum_s2c
     !--- write S.D.
-    write(fid_sd_o) sdn_s2c
-    write(fid_sd_o) sdrk_s2c
-    write(fid_sd_o) sdx_s2c
-    write(fid_sd_o) sdy_s2c
-    write(fid_sd_o) sdz_s2c
-    write(fid_sd_o) sdr_s2c
-    write(fid_sd_o) sdu_s2c
-    write(fid_sd_o) sdv_s2c
-    write(fid_sd_o) sdvz_s2c
-    write(fid_sd_o) sdasl_s2c
-    write(fid_sd_o) sdasl_s2c
-    !--- write formation S.D.
-    write(fid_sd_o) sdn_fm
-    write(fid_sd_o) sdrk_fm
-    write(fid_sd_o) sdx_fm
-    write(fid_sd_o) sdy_fm
-    write(fid_sd_o) sdz_fm
-    write(fid_sd_o) sdr_fm
-    write(fid_sd_o) sdvz_fm
-    write(fid_sd_o) sdasl_fm
-    close(fid_sd_o)
+    write(fid_sd_o) (sdn_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdrk_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdx_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdy_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdz_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdr_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdu_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdv_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) (sdvz_s2c(n),n=1,sdnum_s2c)
+    write(fid_sd_o) ((sdasl_s2c(n,m),n=1,sdnum_s2c),m=1,sdnumasl_s2c)
 
+    close(fid_sd_o)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Closed restart file of Super Droplet  '
+
+    !--- output restart file of Random number
     if( RANDOM_OUT_BASENAME == '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found random number output file name. Default used..'
        write(ftmp,fmt3) 'random_number_output', '_', trim(basename_time)
@@ -8729,14 +8729,10 @@ contains
     endif
 
     fid_random_o = IO_get_available_fid()
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***', trim(basename_random)
     call rng_save_state( rng_s2c, trim(basename_random), fid_random_o )
 
     return
-    999 continue
-
-    write(*,*) "sdm_restart_out", "Write error"
-    stop
   end subroutine ATMOS_PHY_MP_sdm_restart_out
   !-----------------------------------------------------------------------------
 end module mod_atmos_phy_mp_sdm
