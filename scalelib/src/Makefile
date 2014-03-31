@@ -6,10 +6,10 @@
 
 TOPDIR      = ../..
 BUILD_DIR  := ./.libs
-SYSDEP_DIR := ../sysdep
+SYSDEP_DIR := ../../sysdep
 
-include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 

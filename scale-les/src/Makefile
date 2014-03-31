@@ -6,10 +6,10 @@
 
 TOPDIR      = $(abspath ../..)
 BUILD_DIR   = ./.libs
-SYSDEP_DIR  = ../sysdep
+SYSDEP_DIR  = ../../sysdep
 
-include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 VPATH = $(BUILD_DIR):include:atmos:land:ocean:cpl:preprocess:user
 
