@@ -395,6 +395,68 @@ contains
         if ( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
         call mkpara
 
+
+        fid_micpara = IO_get_available_fid()
+        !--- open parameter of cloud microphysics
+        open ( fid_micpara, file = fname_micpara, form = 'formatted', status = 'old', iostat=ierr )
+
+        read( fid_micpara,* ) nnspc, nnbin
+
+        if( nnbin /= nbin ) then
+           if ( IO_L ) write(IO_FID_LOG,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           call PRC_MPIstop
+        end if
+
+        ! grid parameter
+        if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
+        do n = 1, nbin
+          read( fid_micpara,* ) nn, xctr( n ), radc( n )
+          if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
+                    "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
+        end do
+        do n = 1, nbin+1
+          read( fid_micpara,* ) nn, xbnd( n )
+        end do
+        read( fid_micpara,* ) dxmic
+        if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
+
+        ! capacity
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, cctr( myu,n )
+         end do
+         do n = 1, nbin+1
+          read( fid_micpara,* ) mmyu, nn, cbnd( myu,n )
+         end do
+        end do
+
+        ! collection kernel
+        do myu = 1, nspc_mk
+         do nyu = 1, nspc_mk
+          do i = 1, nbin
+           do j = 1, nbin
+            read( fid_micpara,* ) mmyu, nnyu, mm, nn, ck( myu,nyu,i,j )
+           enddo
+          enddo
+         enddo
+        enddo
+
+        ! terminal velocity
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, vt( myu,n )
+         enddo
+        enddo
+
+        ! bulk density
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, br( myu,n )
+         enddo
+        enddo
+
+        close ( fid_micpara )
+
       endif
 
     endif
