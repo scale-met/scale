@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 BUILD_DIR  := $(PWD)/.libs
 INDEX_DIR  := $(PWD)
