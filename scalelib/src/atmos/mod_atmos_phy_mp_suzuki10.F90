@@ -1356,7 +1356,8 @@ call STOP_COLLECTION("MICROPHYSICS")
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
-                gc, qvap, temp, & !--- inout
+                gc(il,1:nbin),  & !--- inout
+                qvap, temp,     & !--- inout
                 regene_gcn      ) !--- out
   elseif ( iliq == 0 .and. iice >= 1 ) then
       call icephase             &
@@ -1414,7 +1415,8 @@ call STOP_COLLECTION("MICROPHYSICS")
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
-                gc, qvap, temp, & !--- inout
+                gc(il,1:nbin),  & !--- inout
+                qvap, temp,     & !--- inout
                 regene_gcn      ) !--- out
      !--- regeneration of aerosol
       if( flg_regeneration ) then
