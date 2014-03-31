@@ -6,6 +6,7 @@
 
 TOPDIR      = ../..
 BUILD_DIR  := ./.libs
+#SYSDEP_DIR := ../sysdep
 SYSDEP_DIR := ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
@@ -13,7 +14,7 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
-VPATH = io:common:grid:atmos:ocean:cpl
+VPATH = $(BUILD_DIR):io:common:grid:atmos
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -21,13 +22,6 @@ ifeq ($(VERSION),)
 else
   VERSION := $(VERSION)
 endif
-
-ifeq ($(RDMA),-D_USE_RDMA)
-  mod_rdma := rdma.o
-else
-  mod_rdma :=
-endif
-
 
 OBJS =	\
 	$(mod_rdma)	\
@@ -48,6 +42,7 @@ OBJS =	\
 	mod_tracer_tomita08.o	\
 	mod_tracer_sn13.o	\
 	mod_tracer_suzuki10.o	\
+	mod_tracer_sdm.o	\
 	mod_grid_cartesian.o	\
 	mod_fileio.o	\
 	mod_comm.o	\
@@ -72,8 +67,8 @@ OBJS =	\
 	mod_atmos_dyn_rk_heve.o \
 	mod_atmos_dyn_rk_hevi.o \
 	mod_atmos_dyn.o	\
-	mod_atmos_phy_sf_const.o	\
 	mod_atmos_phy_sf_rico.o	\
+	mod_atmos_phy_sf_const.o	\
 	mod_atmos_phy_sf_louis.o	\
 	mod_atmos_phy_sf.o	\
 	mod_atmos_phy_tb_smg.o	\
@@ -85,6 +80,7 @@ OBJS =	\
 	mod_atmos_phy_mp_tomita08.o	\
 	mod_atmos_phy_mp_sn13.o	\
 	mod_atmos_phy_mp_suzuki10.o	\
+	mod_atmos_phy_mp_sdm.o	\
 	mod_atmos_phy_mp.o	\
 	mod_atmos_phy_rd_common.o	\
 	mod_atmos_phy_rd_profile.o	\
@@ -93,17 +89,9 @@ OBJS =	\
 	mod_atmos_phy_rd_mstrnX.o	\
 	mod_atmos_phy_rd.o	\
 	mod_atmos_phy_ae_dummy.o	\
-	mod_atmos_phy_ae.o	\
-	mod_ocean_sub_roughness.o	\
-	mod_cpl_atmos_land.o	\
-	mod_cpl_atmos_land_bulk.o	\
-	mod_cpl_atmos_land_const.o	\
-	mod_cpl_atmos_ocean.o	\
-	mod_cpl_atmos_ocean_bulk.o	\
-	mod_cpl_atmos_ocean_const.o	\
-	mod_cpl_sub_bulkcoef.o
+	mod_atmos_phy_ae.o
 
-all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
+all: makedir makedcutils makegtool makesdm $(LIBDIR)/$(LIBNAME) modules
 
 makedir:
 	mkdir -p $(BUILD_DIR)
@@ -115,6 +103,16 @@ makedcutils:
 
 makegtool:
 	$(MAKE) -C $(GTOOLDIR)
+
+
+ifeq ($(SDM),-D_SDM)
+makesdm:
+	$(MAKE) -C $(GAGETRYDIR)
+	$(MAKE) -C $(MTDIR)
+else
+makesdm:
+	@echo "skip making additional component:SDM"
+endif
 
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
@@ -128,13 +126,22 @@ modules:
 
 
 
-allclean: cleandcutils cleangtool distclean
+allclean: cleandcutils cleangtool cleangsdm distclean
 
 cleandcutils:
 	$(MAKE) -C $(DCUTILSDIR) allclean
 
 cleangtool:
 	$(MAKE) -C $(GTOOLDIR)   allclean
+
+ifeq ($(SDM),-D_SDM)
+cleangsdm:
+	$(MAKE) -C $(GAGETRYDIR) allclean
+	$(MAKE) -C $(MTDIR)      allclean
+else
+cleangsdm:
+	@echo "skip cleaning additional component"
+endif
 
 distclean: clean
 	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a depend
@@ -160,7 +167,7 @@ $(MODDIR)/%.mod : $(BUILD_DIR)/%.mod
 	install $< $@
 
 $(BUILD_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_dyn_common.o:
@@ -173,7 +180,11 @@ $(BUILD_DIR)/mod_atmos_dyn_rk_hevi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
-
+ifeq ($(SDM),-D_SDM)
+$(BUILD_DIR)/mod_atmos_phy_mp_sdm.o:
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+else
+endif
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
