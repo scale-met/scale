@@ -6,6 +6,7 @@
 
 TOPDIR      = ../..
 BUILD_DIR  := ./.libs
+#SYSDEP_DIR := ../sysdep
 SYSDEP_DIR := ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
@@ -66,8 +67,8 @@ OBJS =	\
 	mod_atmos_dyn_rk_heve.o \
 	mod_atmos_dyn_rk_hevi.o \
 	mod_atmos_dyn.o	\
-	mod_atmos_phy_sf_const.o	\
 	mod_atmos_phy_sf_rico.o	\
+	mod_atmos_phy_sf_const.o	\
 	mod_atmos_phy_sf_louis.o	\
 	mod_atmos_phy_sf.o	\
 	mod_atmos_phy_tb_smg.o	\
@@ -106,7 +107,6 @@ makegtool:
 
 ifeq ($(SDM),-D_SDM)
 makesdm:
-	cp -f $(SDMDIR)/mod_atmos_phy_mp_sdm.f90 $(BUILD_DIR)/
 	$(MAKE) -C $(GAGETRYDIR)
 	$(MAKE) -C $(MTDIR)
 else
