@@ -95,10 +95,14 @@ module mod_atmos_phy_mp
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
      end subroutine mr
   end interface
-  procedure(mp), pointer, public :: ATMOS_PHY_MP => NULL()
-  procedure(cf), pointer, public :: ATMOS_PHY_MP_CloudFraction => NULL()
-  procedure(er), pointer, public :: ATMOS_PHY_MP_EffectiveRadius => NULL()
-  procedure(mr), pointer, public :: ATMOS_PHY_MP_MixingRatio => NULL()
+  procedure(mp), pointer :: ATMOS_PHY_MP => NULL()
+  procedure(cf), pointer :: ATMOS_PHY_MP_CloudFraction => NULL()
+  procedure(er), pointer :: ATMOS_PHY_MP_EffectiveRadius => NULL()
+  procedure(mr), pointer :: ATMOS_PHY_MP_MixingRatio => NULL()
+  public :: ATMOS_PHY_MP
+  public :: ATMOS_PHY_MP_CloudFraction
+  public :: ATMOS_PHY_MP_EffectiveRadius
+  public :: ATMOS_PHY_MP_MixingRatio
 
   real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
 
