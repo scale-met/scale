@@ -1893,7 +1893,11 @@ contains
 
 
     !##### Tracers #####
+#ifdef _SDM
+    do iq = 1, I_QV
+#else
     do iq = 1, QA
+#endif
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
