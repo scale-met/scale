@@ -58,11 +58,7 @@ contains
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
-       FDZ => GRID_FDZ, &
-       FDX => GRID_FDX, &
-       FDY => GRID_FDY, &
-       CZ  => GRID_CZ, &
-       FZ  => GRID_FZ
+       CZ  => GRID_CZ
     use mod_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     implicit none
@@ -80,10 +76,9 @@ contains
     allocate( QTRC_t(KA,IA,JA,QA) )
 
     call ATMOS_PHY_TB_setup( &
-         TB_TYPE, & ! (in)
+         TB_TYPE,       & ! (in)
          CDZ, CDX, CDY, & ! (in)
-         FDZ, FDX, FDY, & ! (in)
-         CZ, FZ         ) ! (in)
+         CZ             ) ! (in)
 
     call ATMOS_PHY_TB_driver( .true., .false. )
 
