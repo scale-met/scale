@@ -69,13 +69,7 @@ module mod_atmos_phy_tb_smg
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: nu_factC (:,:,:) ! (Cs*Delta)^2 (cell center)
-  real(RP), private, allocatable :: nu_factXY(:,:,:) !              (x-y plane)
-  real(RP), private, allocatable :: nu_factYZ(:,:,:) !              (y-z plane)
-  real(RP), private, allocatable :: nu_factZX(:,:,:) !              (z-x plane)
-  real(RP), private, allocatable :: nu_factZ (:,:,:) !              (z edge)
-  real(RP), private, allocatable :: nu_factX (:,:,:) !              (x edge)
-  real(RP), private, allocatable :: nu_factY (:,:,:) !              (y edge)
+  real(RP), private, allocatable :: nu_fact (:,:,:) ! (Cs*Delta)^2
 
   real(RP), private, save      :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
   real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
@@ -97,8 +91,7 @@ contains
   subroutine ATMOS_PHY_TB_smg_setup( &
        TYPE_TB, &
        CDZ, CDX, CDY,   &
-       FDZ, FDX, FDY,   &
-       CZ, FZ )
+       CZ )
     use mod_process, only: &
        PRC_MPIstop
     implicit none
@@ -108,11 +101,7 @@ contains
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: FDZ(KA-1)
-    real(RP), intent(in) :: FDX(IA-1)
-    real(RP), intent(in) :: FDY(JA-1)
     real(RP), intent(in) :: CZ(KA)
-    real(RP), intent(in) :: FZ(0:KA)
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
@@ -134,13 +123,7 @@ contains
        call PRC_MPIstop
     endif
 
-    allocate( nu_factC (KA,IA,JA) )
-    allocate( nu_factXY(KA,IA,JA) )
-    allocate( nu_factYZ(KA,IA,JA) )
-    allocate( nu_factZX(KA,IA,JA) )
-    allocate( nu_factZ (KA,IA,JA) )
-    allocate( nu_factX (KA,IA,JA) )
-    allocate( nu_factY (KA,IA,JA) )
+    allocate( nu_fact(KA,IA,JA) )
 
 
     ATMOS_PHY_TB_SMG_Cs = Cs
@@ -163,83 +146,17 @@ contains
     PrNovRiC = (1- PrN) * RRiC
 
 #ifdef DEBUG
-    nu_factC (:,:,:) = UNDEF
-    nu_factXY(:,:,:) = UNDEF
-    nu_factYZ(:,:,:) = UNDEF
-    nu_factZX(:,:,:) = UNDEF
-    nu_factZ (:,:,:) = UNDEF
-    nu_factX (:,:,:) = UNDEF
-    nu_factY (:,:,:) = UNDEF
+    nu_fact (:,:,:) = UNDEF
 #endif
-    do j = JS, JE+1
-    do i = IS, IE+1
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
     do k = KS, KE
-       nu_factC (k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
+       nu_fact(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
     enddo
     enddo
     enddo
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       nu_factXY(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS  , JE
-    do i = IS-1, IE
-    do k = KS, KE
-       nu_factYZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),CDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS  , IE
-    do k = KS  , KE
-       nu_factZX(k,i,j) = ( Cs * mixlen(CDZ(k),CDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS-1, IE
-    do k = KS  , KE
-       nu_factZ(k,i,j) = ( Cs * mixlen(CDZ(k),FDX(i),FDY(j),CZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS-1, JE
-    do i = IS  , IE
-    do k = KS  , KE
-       nu_factX(k,i,j) = ( Cs * mixlen(FDZ(k),CDX(i),FDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-    do j = JS  , JE
-    do i = IS-1, IE
-    do k = KS  , KE
-       nu_factY(k,i,j) = ( Cs * mixlen(FDZ(k),FDX(i),CDY(j),FZ(k),ATMOS_PHY_TB_SMG_filter_fact) )**2
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-    i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
   end subroutine ATMOS_PHY_TB_smg_setup
@@ -247,7 +164,7 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
+       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
     use mod_const, only: &
        GRAV => CONST_GRAV
@@ -270,10 +187,10 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
 
-    real(RP), intent(out) :: tke (KA,IA,JA) ! TKE
-    real(RP), intent(out) :: nu_C(KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Pr  (KA,IA,JA) ! Prantle number
-    real(RP), intent(out) :: Ri  (KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
+    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
+    real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -321,17 +238,11 @@ contains
     real(RP) :: S12_Y(KA,IA,JA)
     real(RP) :: S23_Y(KA,IA,JA)
 
-    real(RP) :: nu_Z(KA,IA,JA)  ! eddy viscosity (z edge or x-y plane)
-    real(RP) :: nu_X(KA,IA,JA)  !                (x edge or y-z plane)
-    real(RP) :: nu_Y(KA,IA,JA)  !                (y edge or z-x plane)
-
     real(RP) :: S2(KA,IA,JA)     ! |S|^2
     real(RP) :: WORK_V(KA,IA,JA) ! work space (vertex)
     real(RP) :: WORK_Z(KA,IA,JA) !            (z edge or x-y plane)
     real(RP) :: WORK_X(KA,IA,JA) !            (x edge or y-z plane)
     real(RP) :: WORK_Y(KA,IA,JA) !            (y edge or z-x plane)
-
-    real(RP) :: TMP1, TMP2, TMP3
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -380,11 +291,7 @@ contains
 
     S2(:,:,:) = UNDEF
 
-    nu_C(:,:,:) = UNDEF
-    nu_Z(:,:,:) = UNDEF
-    nu_X(:,:,:) = UNDEF
-    nu_Y(:,:,:) = UNDEF
-
+    nu(:,:,:) = UNDEF
     tke (:,:,:) = UNDEF
     Pr  (:,:,:) = UNDEF
     Ri  (:,:,:) = UNDEF
@@ -415,8 +322,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-    do j = JS-1, JE+2
-    do i = IS-1, IE+2
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
     do k = KS+1, KE
 #ifdef DEBUG
        call CHECK( __LINE__, MOMZ(k,i,j) )
@@ -430,8 +337,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-    do j = JS-1, JE+2
-    do i = IS-1, IE+2
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
 #ifdef DEBUG
        call CHECK( __LINE__, MOMZ(KS,i,j) )
        call CHECK( __LINE__, DENS(KS,i,j) )
@@ -444,7 +351,7 @@ contains
 #endif
 
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = IS-2, IE+1
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, MOMX(k,i,j) )
@@ -459,14 +366,14 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = IS-2, IE+1
        VELX_YZ(KE+1,i,j) = 0.0_RP
     enddo
     enddo
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-    do j = JS-1, JE+2
+    do j = JS-2, JE+2
     do i = IS-1, IE+2
     do k = KS, KE
 #ifdef DEBUG
@@ -482,7 +389,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
-    do j = JS-1, JE+1
+    do j = JS-2, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
 #ifdef DEBUG
@@ -497,7 +404,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-    do j = JS-1, JE+1
+    do j = JS-2, JE+1
     do i = IS-1, IE+1
        VELY_ZX(KE+1,i,j) = 0.0_RP
     enddo
@@ -506,7 +413,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     do j = JS-1, JE+2
-    do i = IS-1, IE+2
+    do i = IS-2, IE+2
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, MOMY(k,i,j) )
@@ -616,8 +523,8 @@ contains
 
        ! dw/dz
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS+1, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_XY(k,i,j) )
@@ -631,8 +538,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_XY(KS,i,j) )
        call CHECK( __LINE__, RCDZ(KS) )
@@ -706,8 +613,8 @@ contains
 
        ! 1/2 * dw/dx
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_C(k,i+1,j) )
@@ -770,8 +677,8 @@ contains
 
        ! 1/2 * dw/dy
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_C(k,i,j+1) )
@@ -892,8 +799,8 @@ contains
 
        ! du/dx
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELX_YZ(k,i,j) )
@@ -958,8 +865,8 @@ contains
 
        ! 1/2 * du/dz
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, S31_C(k,i,j) )
@@ -976,8 +883,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, S31_C(KS,i,j) )
        call CHECK( __LINE__, VELX_C(KS+1,i,j) )
@@ -991,8 +898,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, S31_C(KE,i,j) )
        call CHECK( __LINE__, VELX_C(KE,i,j) )
@@ -1101,8 +1008,8 @@ contains
 
        ! 1/2 * du/dy
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELX_C(k,i,j+1) )
@@ -1194,7 +1101,7 @@ contains
        call CHECK( __LINE__, VELY_C(k,i+1,j) )
        call CHECK( __LINE__, VELY_C(k,i,j) )
 #endif
-          WORK_X(k,i,j) = 0.5_RP * ( VELY_C(k,i+1,j) + VELY_C(k,i,j) )
+          WORK_X(k,i,j) = 0.5_RP * ( VELZ_C(k,i+1,j) + VELZ_C(k,i,j) )
        enddo
        enddo
        enddo
@@ -1223,8 +1130,8 @@ contains
 
        ! dv/dy
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, VELY_ZX(k,i,j) )
@@ -1288,8 +1195,8 @@ contains
 #endif
        ! 1/2 * dv/dx
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, S12_C(k,i,j) )
@@ -1362,8 +1269,8 @@ contains
 
        ! 1/2 * dv/dz
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, S23_C(k,i,j) )
@@ -1380,8 +1287,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, S23_C(KS,i,j) )
        call CHECK( __LINE__, VELY_C(KS+1,i,j) )
@@ -1395,8 +1302,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, S23_C(KE,i,j) )
        call CHECK( __LINE__, VELY_C(KE,i,j) )
@@ -1508,8 +1415,8 @@ contains
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
        ! (cell center)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, S11_C(k,i,j) )
@@ -1530,8 +1437,8 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, POTT(k+1,i,j) )
@@ -1549,8 +1456,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, POTT(KS+1,i,j) )
        call CHECK( __LINE__, POTT(KS,i,j) )
@@ -1564,8 +1471,8 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, POTT(KE,i,j) )
        call CHECK( __LINE__, POTT(KE-1,i,j) )
@@ -1579,22 +1486,22 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, Ri(k,i,j) )
-       call CHECK( __LINE__, nu_factC(k,i,j) )
+       call CHECK( __LINE__, nu_fact(k,i,j) )
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
           if ( Ri(k,i,j) < 0.0_RP ) then ! stable
-             nu_C(k,i,j) = nu_factC(k,i,j) &
+             nu(k,i,j) = nu_fact(k,i,j) &
                   * sqrt( S2(k,i,j) * (1.0_RP - FmC*Ri(k,i,j)) )
           else if ( Ri(k,i,j) < RiC ) then ! weakly stable
-             nu_C(k,i,j) = nu_factC(k,i,j) &
+             nu(k,i,j) = nu_fact(k,i,j) &
                   * sqrt( S2(k,i,j) ) * ( 1.0_RP - Ri(k,i,j)*RRiC )**4
           else ! strongly stable
-             nu_C(k,i,j) = 0.0_RP
+             nu(k,i,j) = 0.0_RP
           endif
        enddo
        enddo
@@ -1608,10 +1515,10 @@ contains
        do i = IIS, IIE+1
        do k = KS, KE
 #ifdef DEBUG
-       call CHECK( __LINE__, nu_C(k,i,j) )
-       call CHECK( __LINE__, nu_factC(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu_fact(k,i,j) )
 #endif
-          tke(k,i,j) = ( nu_C(k,i,j) * Cs / Ck )**2 / nu_factC(k,i,j)
+          tke(k,i,j) = ( nu(k,i,j) * Cs / Ck )**2 / nu_fact(k,i,j)
        enddo
        enddo
        enddo
@@ -1644,270 +1551,6 @@ contains
        S2(:,:,:) = UNDEF
        WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
 #endif
-       ! (z edge)
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_Z(k,i,j) )
-       call CHECK( __LINE__, S22_Z(k,i,j) )
-       call CHECK( __LINE__, S33_Z(k,i,j) )
-       call CHECK( __LINE__, S31_Z(k,i,j) )
-       call CHECK( __LINE__, S12_Z(k,i,j) )
-       call CHECK( __LINE__, S23_Z(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_Z(k,i,j)**2 + S22_Z(k,i,j)**2 + S33_Z(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_Z(k,i,j)**2 + S12_Z(k,i,j)**2 + S23_Z(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS+1, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k+1,i+1,j) )
-       call CHECK( __LINE__, POTT(k+1,i,j+1) )
-       call CHECK( __LINE__, POTT(k+1,i+1,j+1) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k,i+1,j) )
-       call CHECK( __LINE__, POTT(k,i,j+1) )
-       call CHECK( __LINE__, POTT(k,i+1,j+1) )
-       call CHECK( __LINE__, POTT(k-1,i,j) )
-       call CHECK( __LINE__, POTT(k-1,i+1,j) )
-       call CHECK( __LINE__, POTT(k-1,i,j+1) )
-       call CHECK( __LINE__, POTT(k-1,i+1,j+1) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          TMP1 = ( POTT(k+1,i,j) + POTT(k+1,i+1,j) + POTT(k+1,i,j+1) + POTT(k+1,i+1,j+1) ) * 0.25_RP
-          TMP2 = ( POTT(k  ,i,j) + POTT(k  ,i+1,j) + POTT(k  ,i,j+1) + POTT(k  ,i+1,j+1) ) * 0.25_RP
-          TMP3 = ( POTT(k-1,i,j) + POTT(k-1,i+1,j) + POTT(k-1,i,j+1) + POTT(k-1,i+1,j+1) ) * 0.25_RP
-          WORK_Z(k,i,j) = GRAV * ( TMP1 - TMP3 ) &
-               / ( ( FDZ(k) + FDZ(k-1) ) * TMP2 * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE,i+1,j) )
-       call CHECK( __LINE__, POTT(KE,i,j+1) )
-       call CHECK( __LINE__, POTT(KE,i+1,j+1) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i+1,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j+1) )
-       call CHECK( __LINE__, POTT(KE-1,i+1,j+1) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          TMP2 = ( POTT(KE  ,i,j) + POTT(KE  ,i+1,j) + POTT(KE  ,i,j+1) + POTT(KE  ,i+1,j+1) ) * 0.25_RP
-          TMP3 = ( POTT(KE-1,i,j) + POTT(KE-1,i+1,j) + POTT(KE-1,i,j+1) + POTT(KE-1,i+1,j+1) ) * 0.25_RP
-          WORK_Z(KE,i,j) = 0.5_RP * GRAV * ( TMP2 - TMP3 ) &
-               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS+1,i+1,j) )
-       call CHECK( __LINE__, POTT(KS+1,i,j+1) )
-       call CHECK( __LINE__, POTT(KS+1,i+1,j+1) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, POTT(KS,i+1,j) )
-       call CHECK( __LINE__, POTT(KS,i,j+1) )
-       call CHECK( __LINE__, POTT(KS,i+1,j+1) )
-       call CHECK( __LINE__, RFDZ(KS-1) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          TMP1 = ( POTT(KS+1,i,j) + POTT(KS+1,i+1,j) + POTT(KS+1,i,j+1) + POTT(KS+1,i+1,j+1) ) * 0.25_RP
-          TMP2 = ( POTT(KS  ,i,j) + POTT(KS  ,i+1,j) + POTT(KS  ,i,j+1) + POTT(KS  ,i+1,j+1) ) * 0.25_RP
-          WORK_Z(KS,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, nu_factZ(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_Z(k,i,j) < 0.0_RP ) then
-             nu_Z(k,i,j) = nu_factZ(k,i,j) &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FmC*WORK_Z(k,i,j)) )
-          else if ( WORK_Z(k,i,j) < RiC ) then
-             nu_Z(k,i,j) = nu_factZ(k,i,j) &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Z(k,i,j)*RRiC )**4
-          else
-             nu_Z(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-#ifdef DEBUG
-       S2(:,:,:) = UNDEF
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! (x edge)
-       do j = JJS-1, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_X(k,i,j) )
-       call CHECK( __LINE__, S22_X(k,i,j) )
-       call CHECK( __LINE__, S33_X(k,i,j) )
-       call CHECK( __LINE__, S31_X(k,i,j) )
-       call CHECK( __LINE__, S12_X(k,i,j) )
-       call CHECK( __LINE__, S23_X(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_X(k,i,j)**2 + S22_X(k,i,j)**2 + S33_X(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_X(k,i,j)**2 + S12_X(k,i,j)**2 + S23_X(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k+1,i,j+1) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k,i,j+1) )
-       call CHECK( __LINE__, RFDZ(k) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          TMP1 = ( POTT(k+1,i,j) + POTT(k+1,i,j+1) ) * 0.5_RP
-          TMP2 = ( POTT(k  ,i,j) + POTT(k  ,i,j+1) ) * 0.5_RP
-          WORK_X(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(k) / ( ( TMP1 + TMP2 ) * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, nu_factX(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_X(k,i,j) < 0.0_RP ) then
-             nu_X(k,i,j) = nu_factX(k,i,j) &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FmC*WORK_X(k,i,j)) )
-          else if ( WORK_X(k,i,j) < RiC ) then
-             nu_X(k,i,j) = nu_factX(k,i,j) &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_X(k,i,j)*RRiC )**4
-          else
-             nu_X(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-#ifdef DEBUG
-       S2(:,:,:) = UNDEF
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! (y edge)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_Y(k,i,j) )
-       call CHECK( __LINE__, S22_Y(k,i,j) )
-       call CHECK( __LINE__, S33_Y(k,i,j) )
-       call CHECK( __LINE__, S31_Y(k,i,j) )
-       call CHECK( __LINE__, S12_Y(k,i,j) )
-       call CHECK( __LINE__, S23_Y(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_Y(k,i,j)**2 + S22_Y(k,i,j)**2 + S33_Y(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_Y(k,i,j)**2 + S12_Y(k,i,j)**2 + S23_Y(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k+1,i+1,j) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k,i+1,j) )
-       call CHECK( __LINE__, RFDZ(k) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          TMP1 = ( POTT(k+1,i,j) + POTT(k+1,i+1,j) ) * 0.5_RP
-          TMP2 = ( POTT(k  ,i,j) + POTT(k  ,i+1,j) ) * 0.5_RP
-          WORK_Y(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(k) / ( ( TMP1 + TMP2 ) * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, nu_factY(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_Y(k,i,j) < 0.0_RP ) then
-             nu_Y(k,i,j) = nu_factY(k,i,j) &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FmC*WORK_Y(k,i,j)) )
-          else if ( WORK_Y(k,i,j) < RiC ) then
-             nu_Y(k,i,j) = nu_factY(k,i,j) &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Y(k,i,j)*RRiC )**4
-          else
-             nu_Y(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
 
        !##### momentum equation (z) #####
        ! (cell center)
@@ -1916,14 +1559,14 @@ contains
        do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, nu_C(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
           qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
-               - 2.0_RP * nu_C(k,i,j) &
+               - 2.0_RP * nu(k,i,j) &
                * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
        enddo
@@ -1950,11 +1593,16 @@ contains
        call CHECK( __LINE__, DENS(k,i+1,j) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
        call CHECK( __LINE__, DENS(k+1,i+1,j) )
-       call CHECK( __LINE__, nu_Y(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
+       call CHECK( __LINE__, nu(k+1,i+1,j) )
        call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs_momz(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-                               * nu_Y(k,i,j) * S31_Y(k,i,j)
+          qflx_sgs_momz(k,i,j,XDIR) = - 0.125_RP & ! 2.0 / 4 / 4
+               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j)) &
+               * S31_Y(k,i,j)
        enddo
        enddo
        enddo
@@ -1970,11 +1618,16 @@ contains
        call CHECK( __LINE__, DENS(k,i,j+1) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
        call CHECK( __LINE__, DENS(k+1,i,j+1) )
-       call CHECK( __LINE__, nu_X(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
+       call CHECK( __LINE__, nu(k+1,i,j+1) )
        call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs_momz(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-                               * nu_X(k,i,j) * S23_X(k,i,j)
+          qflx_sgs_momz(k,i,j,YDIR) = - 0.125_RP & ! 2/4/4
+               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
+               * S23_X(k,i,j)
        enddo
        enddo
        enddo
@@ -1992,11 +1645,16 @@ contains
        call CHECK( __LINE__, DENS(k,i+1,j) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
        call CHECK( __LINE__, DENS(k+1,i+1,j) )
-       call CHECK( __LINE__, nu_Y(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
+       call CHECK( __LINE__, nu(k+1,i+1,j) )
        call CHECK( __LINE__, S31_Y(k,i,j) )
 #endif
-          qflx_sgs_momx(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k+1,i,j)+DENS(k+1,i+1,j) ) &
-                               * nu_Y(k,i,j) * S31_Y(k,i,j)
+          qflx_sgs_momx(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i+1,j)+nu  (k+1,i+1,j) ) &
+               * S31_Y(k,i,j)
        enddo
        enddo
        enddo
@@ -2018,14 +1676,14 @@ contains
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, nu_C(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
-               - 2.0_RP * nu_C(k,i,j) &
+               - 2.0_RP * nu(k,i,j) &
                * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
        enddo
@@ -2043,11 +1701,16 @@ contains
        call CHECK( __LINE__, DENS(k,i+1,j) )
        call CHECK( __LINE__, DENS(k,i,j+1) )
        call CHECK( __LINE__, DENS(k,i+1,j+1) )
-       call CHECK( __LINE__, nu_Z(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
+       call CHECK( __LINE__, nu(k,i+1,j+1) )
        call CHECK( __LINE__, S12_Z(k,i,j) )
 #endif
-          qflx_sgs_momx(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
-                               * nu_Z(k,i,j) * S12_Z(k,i,j)
+          qflx_sgs_momx(k,i,j,YDIR) = - 0.125_RP & ! 2/4/4
+               * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k,i+1,j)+nu  (k,i,j+1)+nu  (k,i+1,j+1) ) &
+               * S12_Z(k,i,j)
        enddo
        enddo
        enddo
@@ -2065,11 +1728,16 @@ contains
        call CHECK( __LINE__, DENS(k,i,j+1) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
        call CHECK( __LINE__, DENS(k+1,i,j+1) )
-       call CHECK( __LINE__, nu_X(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
+       call CHECK( __LINE__, nu(k+1,i,j+1) )
        call CHECK( __LINE__, S23_X(k,i,j) )
 #endif
-          qflx_sgs_momy(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j)+DENS(k+1,i,j+1) ) &
-                               * nu_X(k,i,j) * S23_X(k,i,j)
+          qflx_sgs_momy(k,i,j,ZDIR) = - 0.125_RP & ! 2/4/4
+               * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j)+nu  (k,i,j+1)+nu  (k+1,i,j+1) ) &
+               * S23_X(k,i,j)
        enddo
        enddo
        enddo
@@ -2095,11 +1763,16 @@ contains
        call CHECK( __LINE__, DENS(k,i+1,j) )
        call CHECK( __LINE__, DENS(k,i,j+1) )
        call CHECK( __LINE__, DENS(k,i+1,j+1) )
-       call CHECK( __LINE__, nu_Z(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
+       call CHECK( __LINE__, nu(k,i+1,j+1) )
        call CHECK( __LINE__, S12_Z(k,i,j) )
 #endif
-          qflx_sgs_momy(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
-                               * nu_Z(k,i,j) * S12_Z(k,i,j)
+          qflx_sgs_momy(k,i,j,XDIR) = - 0.125_RP & !
+               * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k,i+1,j)+nu  (k,i,j+1)+nu  (k,i+1,j+1) ) &
+               * S12_Z(k,i,j)
        enddo
        enddo
        enddo
@@ -2113,14 +1786,14 @@ contains
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
-       call CHECK( __LINE__, nu_C(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
        call CHECK( __LINE__, S11_C(k,i,j) )
        call CHECK( __LINE__, S22_C(k,i,j) )
        call CHECK( __LINE__, S33_C(k,i,j) )
        call CHECK( __LINE__, tke(k,i,j) )
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
-               - 2.0_RP * nu_C(k,i,j) &
+               - 2.0_RP * nu(k,i,j) &
                * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * tke(k,i,j) )
        enddo
@@ -2132,1066 +1805,6 @@ contains
 
        !##### Thermodynamic Equation #####
 
-#ifdef DEBUG
-       S33_Z(:,:,:) = UNDEF; S33_X(:,:,:) = UNDEF; S33_Y(:,:,:) = UNDEF
-       S22_Z(:,:,:) = UNDEF; S22_X(:,:,:) = UNDEF; S22_Y(:,:,:) = UNDEF
-       S11_Z(:,:,:) = UNDEF; S11_X(:,:,:) = UNDEF; S11_Y(:,:,:) = UNDEF
-       S31_Z(:,:,:) = UNDEF; S31_X(:,:,:) = UNDEF; S31_Y(:,:,:) = UNDEF
-       S12_Z(:,:,:) = UNDEF; S12_X(:,:,:) = UNDEF; S12_Y(:,:,:) = UNDEF
-       S23_Z(:,:,:) = UNDEF; S23_X(:,:,:) = UNDEF; S23_Y(:,:,:) = UNDEF
-#endif
-
-
-#ifdef DEBUG
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! w
-       ! (z edge)
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_C(k,i,j) )
-       call CHECK( __LINE__, VELZ_C(k,i+1,j) )
-       call CHECK( __LINE__, VELZ_C(k,i,j+1) )
-       call CHECK( __LINE__, VELZ_C(k,i+1,j+1) )
-#endif
-          WORK_Z(k,i,j) = 0.25_RP * ( VELZ_C(k,i,j) + VELZ_C(k,i+1,j) + VELZ_C(k,i,j+1) + VELZ_C(k,i+1,j+1) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (x edge)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_XY(k,i,j) )
-       call CHECK( __LINE__, VELZ_XY(k,i,j+1) )
-#endif
-          WORK_X(k,i,j) = 0.5_RP * ( VELZ_XY(k,i,j) + VELZ_XY(k,i,j+1) )
-       enddo
-       enddo
-       enddo
-       ! (y edge)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_XY(k,i,j) )
-       call CHECK( __LINE__, VELZ_XY(k,i+1,j) )
-#endif
-          WORK_Y(k,i,j) = 0.5_RP * ( VELZ_XY(k,i,j) + VELZ_XY(k,i+1,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! dw/dz
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_C(k+1,i,j) )
-       call CHECK( __LINE__, VELZ_C(k,i,j) )
-       call CHECK( __LINE__, RFDZ(k) )
-#endif
-          S33_Z(k,i,j) = ( VELZ_C(k+1,i,j) - VELZ_C(k,i,j) ) * RFDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS+1, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k-1,i,j) )
-       call CHECK( __LINE__, RCDZ(k) )
-#endif
-          S33_X(k,i,j) = ( WORK_Y(k,i,j) - WORK_Y(k-1,i,j) ) * RCDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Y(KS,i,j) )
-       call CHECK( __LINE__, RCDZ(KS) )
-#endif
-          S33_X(KS,i,j) = WORK_Y(KS,i,j) * RCDZ(KS) ! WORK_Y(k-1,i,j) = 0
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS+1, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k-1,i,j) )
-       call CHECK( __LINE__, RCDZ(k) )
-#endif
-          S33_Y(k,i,j) = ( WORK_X(k,i,j) - WORK_X(k-1,i,j) ) * RCDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(KS,i,j) )
-       call CHECK( __LINE__, RCDZ(KS) )
-#endif
-          S33_Y(KS,i,j) = WORK_X(KS,i,j) * RCDZ(KS) ! WORK_Z(KS-1,i,j) = 0
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * dw/dx
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_XY(k,i+1,j) )
-       call CHECK( __LINE__, VELZ_XY(k,i-1,j) )
-       call CHECK( __LINE__, FDX(i) )
-       call CHECK( __LINE__, FDX(i-1) )
-#endif
-          S31_Z(k,i,j) = 0.5_RP * ( VELZ_XY(k,i+1,j) - VELZ_XY(k,i-1,j) ) / ( FDX(i) + FDX(i-1) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELZ_C(k,i+1,j) )
-       call CHECK( __LINE__, VELZ_C(k,i,j) )
-       call CHECK( __LINE__, RFDX(i) )
-#endif
-          S31_X(k,i,j) = 0.5_RP * ( VELZ_C(k,i+1,j) - VELZ_C(k,i,j) ) * RFDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Z(k,i-1,j) )
-       call CHECK( __LINE__, RCDX(i) )
-#endif
-          S31_Y(k,i,j) = 0.5_RP * ( WORK_Z(k,i,j) - WORK_Z(k,i-1,j) ) * RCDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * dw/dy
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k,i,j-1) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          S23_Z(k,i,j) = 0.5_RP * ( WORK_X(k,i,j) - WORK_X(k,i,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Z(k,i,j-1) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          S23_X(k,i,j) = 0.5_RP * ( WORK_Z(k,i,j) - WORK_Z(k,i,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Z(k,i-1,j) )
-       call CHECK( __LINE__, RCDX(i) )
-#endif
-          S23_Y(k,i,j) = 0.5_RP * ( WORK_Z(k,i,j) - WORK_Z(k,i-1,j) ) *RCDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-
-#ifdef DEBUG
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! u
-       ! (z edge)
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_YZ(k,i,j+1) )
-       call CHECK( __LINE__, VELX_YZ(k,i,j) )
-#endif
-          WORK_Z(k,i,j) = 0.5_RP * ( VELX_YZ(k,i,j+1) + VELX_YZ(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (x edge)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_C(k,i,j) )
-       call CHECK( __LINE__, VELX_C(k+1,i,j) )
-       call CHECK( __LINE__, VELX_C(k,i,j+1) )
-       call CHECK( __LINE__, VELX_C(k+1,i,j+1) )
-#endif
-          WORK_X(k,i,j) = 0.25_RP * ( VELX_C(k,i,j) + VELX_C(k+1,i,j) + VELX_C(k,i,j+1) + VELX_C(k+1,i,j+1) )
-       enddo
-       enddo
-       enddo
-       ! (y edge)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_YZ(k+1,i,j) )
-       call CHECK( __LINE__, VELX_YZ(k,i,j) )
-#endif
-          WORK_Y(k,i,j) = 0.5_RP * ( VELX_YZ(k+1,i,j) + VELX_YZ(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! du/dx
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k,i-1,j) )
-       call CHECK( __LINE__, RCDX(i) )
-#endif
-          S11_Z(k,i,j) = ( WORK_Y(k,i,j) - WORK_Y(k,i-1,j) ) * RCDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_C(k,i+1,j) )
-       call CHECK( __LINE__, VELX_C(k,i,j) )
-       call CHECK( __LINE__, RFDX(i) )
-#endif
-          S11_X(k,i,j) = ( VELX_C(k,i+1,j) - VELX_C(k,i,j) ) * RFDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Z(k,i-1,j) )
-       call CHECK( __LINE__, RCDX(i) )
-#endif
-          S11_Y(k,i,j) = ( WORK_Z(k,i,j) - WORK_Z(k,i-1,j) ) * RCDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * du/dy
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k,i,j-1) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          S12_Z(k,i,j) = 0.5_RP * ( WORK_X(k,i,j) - WORK_X(k,i,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_YZ(k,i,j+1) )
-       call CHECK( __LINE__, VELX_YZ(k,i,j-1) )
-       call CHECK( __LINE__, FDY(j) )
-       call CHECK( __LINE__, FDY(j-1) )
-#endif
-          S12_X(k,i,j) = 0.5_RP * ( VELX_YZ(k,i,j+1) - VELX_YZ(k,i,j-1) ) / ( FDY(j) + FDY(j-1) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELX_C(k,i,j+1) )
-       call CHECK( __LINE__, VELX_C(k,i,j) )
-       call CHECK( __LINE__, RFDY(j) )
-#endif
-          S12_Y(k,i,j) = 0.5_RP * ( VELX_C(k,i,j+1) - VELX_C(k,i,j) ) * RFDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * du/dz
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_Z(k,i,j) )
-       call CHECK( __LINE__, VELX_C(k+1,i,j) )
-       call CHECK( __LINE__, VELX_C(k,i,j) )
-       call CHECK( __LINE__, RFDZ(k) )
-#endif
-          S31_Z(k,i,j) = S31_Z(k,i,j) + &
-               0.5_RP * ( VELX_C(k+1,i,j) - VELX_C(k,i,j) ) * RFDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS+1, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_X(k,i,j) )
-       call CHECK( __LINE__, VELX_YZ(k+1,i,j) )
-       call CHECK( __LINE__, VELX_YZ(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
-#endif
-          S31_X(k,i,j) = S31_X(k,i,j) + &
-               0.5_RP * ( VELX_YZ(k+1,i,j) - VELX_YZ(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_X(KS,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KS+1,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-#endif
-          S31_X(KS,i,j) = S31_X(KS,i,j) + &
-               0.5_RP * ( VELX_YZ(KS+1,i,j) - VELX_YZ(KS,i,j) ) * RFDZ(KS)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS+1, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_Y(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k-1,i,j) )
-       call CHECK( __LINE__, RCDZ(k) )
-#endif
-          S31_Y(k,i,j) = S31_Y(k,i,j) + &
-               0.5_RP * ( WORK_X(k,i,j) - WORK_X(k-1,i,j) ) * RCDZ(k)
-       enddo
-       enddo
-       enddo
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_Y(KS,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KS+1,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KS+1,i+1,j) )
-       call CHECK( __LINE__, VELX_YZ(KS+1,i,j+1) )
-       call CHECK( __LINE__, VELX_YZ(KS+1,i+1,j+1) )
-       call CHECK( __LINE__, RCDZ(KS) )
-#endif
-          S31_Y(KS,i,j) = S31_Y(KS,i,j) + &
-               0.125_RP * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i+1,j) + VELX_YZ(KS+1,i,j+1) + VELX_YZ(KS+1,i+1,j+1) &
-                          - VELX_YZ(KS  ,i,j) - VELX_YZ(KS  ,i+1,j) - VELX_YZ(KS  ,i,j+1) - VELX_YZ(KS  ,i+1,j+1) ) * RCDZ(KS)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S31_Y(KE,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KE,i,j) )
-       call CHECK( __LINE__, VELX_YZ(KE,i+1,j) )
-       call CHECK( __LINE__, VELX_YZ(KE,i,j+1) )
-       call CHECK( __LINE__, VELX_YZ(KE,i+1,j+1) )
-       call CHECK( __LINE__, RCDZ(KE-1) )
-#endif
-          S31_Y(KE,i,j) = S31_Y(KE,i,j) + &
-               0.125_RP * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i+1,j) + VELX_YZ(KE  ,i,j+1) + VELX_YZ(KE  ,i+1,j+1) &
-                          - VELX_YZ(KE-1,i,j) - VELX_YZ(KE-1,i+1,j) - VELX_YZ(KE-1,i,j+1) - VELX_YZ(KE-1,i+1,j+1) ) * RCDZ(KE-1)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-
-#ifdef DEBUG
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! v
-       ! (z edge)
-       do j = JJS-1, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELY_ZX(k,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(k,i,j) )
-#endif
-          WORK_Z(k,i,j) = 0.5_RP * ( VELY_ZX(k,i+1,j) + VELY_ZX(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (x edge)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, VELY_ZX(k+1,i,j) )
-       call CHECK( __LINE__, VELY_ZX(k,i,j) )
-#endif
-          WORK_X(k,i,j) = 0.5_RP * ( VELY_ZX(k+1,i,j) + VELY_ZX(k,i,j) )
-       enddo
-       enddo
-       enddo
-       ! (y edge)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, VELY_C(k,i,j) )
-       call CHECK( __LINE__, VELY_C(k+1,i,j) )
-       call CHECK( __LINE__, VELY_C(k,i+1,j) )
-       call CHECK( __LINE__, VELY_C(k+1,i+1,j) )
-#endif
-          WORK_Y(k,i,j) = 0.25_RP * ( VELY_C(k,i,j) + VELY_C(k+1,i,j) + VELY_C(k,i+1,j) + VELY_C(k+1,i+1,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! dv/dy
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, WORK_X(k,i,j-1) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          S22_Z(k,i,j) = ( WORK_X(k,i,j) - WORK_X(k,i,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Z(k,i,j-1) )
-       call CHECK( __LINE__, RCDY(j) )
-#endif
-          S22_X(k,i,j) = ( WORK_Z(k,i,j) - WORK_Z(k,i,j-1) ) * RCDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, VELY_C(k,i,j+1) )
-       call CHECK( __LINE__, VELY_C(k,i,j) )
-       call CHECK( __LINE__, RFDY(j) )
-#endif
-          S22_Y(k,i,j) = ( VELY_C(k,i,j+1) - VELY_C(k,i,j) ) * RFDY(j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * dv/dz
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_Z(k,i,j) )
-       call CHECK( __LINE__, VELY_C(k+1,i,j) )
-       call CHECK( __LINE__, VELY_C(k,i,j) )
-       call CHECK( __LINE__, RFDZ(k) )
-#endif
-          S23_Z(k,i,j) = S23_Z(k,i,j) + &
-               0.5_RP * ( VELY_C(k+1,i,j) - VELY_C(k,i,j) ) * RFDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS+1, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_X(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k-1,i,j) )
-       call CHECK( __LINE__, RCDZ(k) )
-#endif
-          S23_X(k,i,j) = S23_X(k,i,j) + &
-               0.5_RP * ( WORK_Y(k,i,j) - WORK_Y(k-1,i,j) ) * RCDZ(k)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_X(KS,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KS+1,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KS+1,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(KS+1,i,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KS+1,i+1,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KS,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KS,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(KS,i,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KS,i+1,j+1) )
-       call CHECK( __LINE__, RCDZ(KS) )
-#endif
-          S23_X(KS,i,j) = S23_X(KS,i,j) + &
-               0.125_RP * ( VELY_ZX(KS+1,i,j) + VELY_ZX(KS+1,i+1,j) + VELY_ZX(KS+1,i,j+1) + VELY_ZX(KS+1,i+1,j+1) &
-                           -VELY_ZX(KS  ,i,j) - VELY_ZX(KS  ,i+1,j) - VELY_ZX(KS  ,i,j+1) - VELY_ZX(KS  ,i+1,j+1) ) * RCDZ(KS)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_X(KE,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KE,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KE,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(KE,i,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KE,i+1,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KE-1,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KE-1,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(KE-1,i,j+1) )
-       call CHECK( __LINE__, VELY_ZX(KE-1,i+1,j+1) )
-       call CHECK( __LINE__, RCDZ(KE-1) )
-#endif
-          S23_X(KE,i,j) = S23_X(KE,i,j) + &
-               0.125_RP * ( VELY_ZX(KE  ,i,j) + VELY_ZX(KE  ,i+1,j) + VELY_ZX(KE  ,i,j+1) + VELY_ZX(KE  ,i+1,j+1) &
-                           -VELY_ZX(KE-1,i,j) - VELY_ZX(KE-1,i+1,j) - VELY_ZX(KE-1,i,j+1) - VELY_ZX(KE-1,i+1,j+1) ) * RCDZ(KE-1)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS+1, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_Y(k,i,j) )
-       call CHECK( __LINE__, VELY_ZX(k+1,i,j) )
-       call CHECK( __LINE__, VELY_ZX(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
-#endif
-          S23_Y(k,i,j) = S23_Y(k,i,j) + &
-               0.5_RP * ( VELY_ZX(k+1,i,j) - VELY_ZX(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) )
-       enddo
-       enddo
-       enddo
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_Y(KS,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KS+1,i,j) )
-       call CHECK( __LINE__, VELY_ZX(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-#endif
-          S23_Y(KS,i,j) = S23_Y(KS,i,j) + &
-               0.5_RP * ( VELY_ZX(KS+1,i,j) - VELY_ZX(KS,i,j) ) * RFDZ(KS)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-       ! 1/2 * dv/dx
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S23_Z(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, WORK_Y(k,i-1,j) )
-       call CHECK( __LINE__, RCDX(i) )
-#endif
-          S12_Z(k,i,j) = S12_Z(k,i,j) + &
-               0.5_RP * ( WORK_Y(k,i,j) - WORK_Y(k,i-1,j) ) * RCDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S12_X(k,i,j) )
-       call CHECK( __LINE__, VELY_C(k,i+1,j) )
-       call CHECK( __LINE__, VELY_C(k,i,j) )
-       call CHECK( __LINE__, RFDX(i) )
-#endif
-          S12_X(k,i,j) = S12_X(k,i,j) + &
-               0.5_RP * ( VELY_C(k,i+1,j) - VELY_C(k,i,j) ) * RFDX(i)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S12_Y(k,i,j) )
-       call CHECK( __LINE__, VELY_ZX(k,i+1,j) )
-       call CHECK( __LINE__, VELY_ZX(k,i-1,j) )
-       call CHECK( __LINE__, FDX(i) )
-       call CHECK( __LINE__, FDX(i-1) )
-#endif
-          S12_Y(k,i,j) = S12_Y(k,i,j) + &
-               0.5_RP * ( VELY_ZX(k,i+1,j) - VELY_ZX(k,i-1,j) ) / ( FDX(i) + FDX(i-1) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-
-#ifdef DEBUG
-       S2(:,:,:) = UNDEF
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! (x-y plane)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_Z(k,i,j) )
-       call CHECK( __LINE__, S22_Z(k,i,j) )
-       call CHECK( __LINE__, S33_Z(k,i,j) )
-       call CHECK( __LINE__, S31_Z(k,i,j) )
-       call CHECK( __LINE__, S12_Z(k,i,j) )
-       call CHECK( __LINE__, S23_Z(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_Z(k,i,j)**2 + S22_Z(k,i,j)**2 + S33_Z(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_Z(k,i,j)**2 + S12_Z(k,i,j)**2 + S23_Z(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, RFDZ(k) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          WORK_Z(k,i,j) = 2.0_RP * GRAV * ( POTT(k+1,i,j) - POTT(k,i,j) ) &
-               * RFDZ(k) / ( ( POTT(k+1,i,j) + POTT(k,i,j) ) * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Z(k,i,j) )
-       call CHECK( __LINE__, nu_factXY(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_Z(k,i,j) < 0.0_RP ) then
-             nu_Z(k,i,j) = nu_factXY(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FhB*WORK_Z(k,i,j)) )
-          else if ( WORK_Z(k,i,j) < RiC ) then
-             nu_Z(k,i,j) = nu_factXY(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Z(k,i,j)*RRiC )**4 &
-                  * ( 1.0_RP - PrNovRiC*WORK_Z(k,i,j) )
-          else
-             nu_Z(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-#ifdef DEBUG
-       S2(:,:,:) = UNDEF
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! (y-z plane)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_X(k,i,j) )
-       call CHECK( __LINE__, S22_X(k,i,j) )
-       call CHECK( __LINE__, S33_X(k,i,j) )
-       call CHECK( __LINE__, S31_X(k,i,j) )
-       call CHECK( __LINE__, S12_X(k,i,j) )
-       call CHECK( __LINE__, S23_X(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_X(k,i,j)**2 + S22_X(k,i,j)**2 + S33_X(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_X(k,i,j)**2 + S12_X(k,i,j)**2 + S23_X(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS+1, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i+1,j) )
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k,i+1,j) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k-1,i+1,j) )
-       call CHECK( __LINE__, POTT(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          TMP1 = ( POTT(k+1,i+1,j) + POTT(k+1,i,j) ) * 0.5_RP
-          TMP2 = ( POTT(k  ,i+1,j) + POTT(k  ,i,j) ) * 0.5_RP
-          TMP3 = ( POTT(k-1,i+1,j) + POTT(k-1,i,j) ) * 0.5_RP
-          WORK_X(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP3 ) &
-               / ( ( FDZ(k) + FDZ(k-1) ) * TMP2 * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i+1,j) )
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i+1,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          TMP2 = ( POTT(KE  ,i+1,j) + POTT(KE  ,i,j) ) * 0.5_RP
-          TMP3 = ( POTT(KE-1,i+1,j) + POTT(KE-1,i,j) ) * 0.5_RP
-          WORK_X(KE,i,j) = 0.5_RP * GRAV * ( TMP2 - TMP3 ) &
-               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i+1,j) )
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS,i+1,j) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          TMP1 = ( POTT(KS+1,i+1,j) + POTT(KS+1,i,j) ) * 0.5_RP
-          TMP2 = ( POTT(KS  ,i+1,j) + POTT(KS  ,i,j) ) * 0.5_RP
-          WORK_X(KS,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_X(k,i,j) )
-       call CHECK( __LINE__, nu_factYZ(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_X(k,i,j) < 0.0_RP ) then
-             nu_X(k,i,j) = nu_factYZ(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FhB*WORK_X(k,i,j)) )
-          else if ( WORK_X(k,i,j) < RiC ) then
-             nu_X(k,i,j) = nu_factYZ(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_X(k,i,j)*RRiC )**4 &
-                  * ( 1.0_RP - PrNovRiC*WORK_X(k,i,j) )
-          else
-             nu_X(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-
-#ifdef DEBUG
-       S2(:,:,:) = UNDEF
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-       ! (z-x plane)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, S11_Y(k,i,j) )
-       call CHECK( __LINE__, S22_Y(k,i,j) )
-       call CHECK( __LINE__, S33_Y(k,i,j) )
-       call CHECK( __LINE__, S31_Y(k,i,j) )
-       call CHECK( __LINE__, S12_Y(k,i,j) )
-       call CHECK( __LINE__, S23_Y(k,i,j) )
-#endif
-          S2(k,i,j) = &
-                 2.0_RP * ( S11_Y(k,i,j)**2 + S22_Y(k,i,j)**2 + S33_Y(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_Y(k,i,j)**2 + S12_Y(k,i,j)**2 + S23_Y(k,i,j)**2 )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       ! Ri
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS+1, KE-1
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(k+1,i,j+1) )
-       call CHECK( __LINE__, POTT(k+1,i,j) )
-       call CHECK( __LINE__, POTT(k,i,j+1) )
-       call CHECK( __LINE__, POTT(k,i,j) )
-       call CHECK( __LINE__, POTT(k-1,i,j+1) )
-       call CHECK( __LINE__, POTT(k-1,i,j) )
-       call CHECK( __LINE__, FDZ(k) )
-       call CHECK( __LINE__, FDZ(k-1) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          TMP1 = ( POTT(k+1,i,j+1) + POTT(k+1,i,j) ) * 0.5_RP
-          TMP2 = ( POTT(k  ,i,j+1) + POTT(k  ,i,j) ) * 0.5_RP
-          TMP3 = ( POTT(k-1,i,j+1) + POTT(k-1,i,j) ) * 0.5_RP
-          WORK_Y(k,i,j) = 2.0_RP * GRAV * ( TMP1 - TMP3 ) &
-               / ( ( FDZ(k) + FDZ(k-1) ) * TMP2 * max(S2(k,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KE,i,j+1) )
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, POTT(KE-1,i,j+1) )
-       call CHECK( __LINE__, POTT(KE-1,i,j) )
-       call CHECK( __LINE__, RFDZ(KE-1) )
-       call CHECK( __LINE__, S2(KE,i,j) )
-#endif
-          TMP2 = ( POTT(KE  ,i,j+1) + POTT(KE  ,i,j) ) * 0.5_RP
-          TMP3 = ( POTT(KE-1,i,j+1) + POTT(KE-1,i,j) ) * 0.5_RP
-          WORK_Y(KE,i,j) = 0.5_RP * GRAV * ( TMP2 - TMP3 ) &
-               * RFDZ(KE-1) / ( TMP2 * max(S2(KE,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, POTT(KS+1,i,j+1) )
-       call CHECK( __LINE__, POTT(KS+1,i,j) )
-       call CHECK( __LINE__, POTT(KS,i,j+1) )
-       call CHECK( __LINE__, POTT(KS,i,j) )
-       call CHECK( __LINE__, RFDZ(KS) )
-       call CHECK( __LINE__, S2(KS,i,j) )
-#endif
-          TMP1 = ( POTT(KS+1,i,j+1) + POTT(KS+1,i,j) ) * 0.5_RP
-          TMP2 = ( POTT(KS  ,i,j+1) + POTT(KS  ,i,j) ) * 0.5_RP
-          WORK_Y(KS,i,j) = 0.5_RP * GRAV * ( TMP1 - TMP2 ) &
-               * RFDZ(KS) / ( TMP2 * max(S2(KS,i,j),1.0E-20_RP) )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-       do k = KS, KE
-#ifdef DEBUG
-       call CHECK( __LINE__, WORK_Y(k,i,j) )
-       call CHECK( __LINE__, nu_factZX(k,i,j) )
-       call CHECK( __LINE__, S2(k,i,j) )
-#endif
-          if ( WORK_Y(k,i,j) < 0.0_RP ) then
-             nu_Y(k,i,j) = nu_factZX(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) * (1.0_RP - FhB*WORK_Y(k,i,j)) )
-          else if ( WORK_Y(k,i,j) < RiC ) then
-             nu_Y(k,i,j) = nu_factZX(k,i,j) * RPrN &
-                  * sqrt( S2(k,i,j) ) * ( 1.0_RP - WORK_Y(k,i,j)*RRiC )**4 &
-                  * ( 1.0_RP - PrNovRiC*WORK_Y(k,i,j) )
-          else
-             nu_Y(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-#ifdef DEBUG
-       WORK_Z(:,:,:) = UNDEF; WORK_X(:,:,:) = UNDEF; WORK_Y(:,:,:) = UNDEF
-#endif
-
-
        ! (x-y plane)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -3199,14 +1812,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, nu_Z(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
        call CHECK( __LINE__, POTT(k+1,i,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs_rhot(k,i,j,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-                               * nu_Z(k,i,j) &
-                               * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k)
+          qflx_sgs_rhot(k,i,j,ZDIR) = - 0.25_RP & ! 2/2/2/2
+               * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j) ) &
+               * ( POTT(k+1,i,j)-POTT(k,i,j) ) &
+               * RFDZ(k)
        enddo
        enddo
        enddo
@@ -3230,14 +1846,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k,i+1,j) )
-       call CHECK( __LINE__, nu_X(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_rhot(k,i,j,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-                               * nu_X(k,i,j) &
-                               * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i)
+          qflx_sgs_rhot(k,i,j,XDIR) = - 0.25_RP & ! 2/2/2/2
+               * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+               * ( nu  (k,i,j)+nu  (k,i+1,j) ) &
+               * ( POTT(k,i+1,j)-POTT(k,i,j) ) &
+               * RFDX(i)
        enddo
        enddo
        enddo
@@ -3251,14 +1870,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k,i,j+1) )
-       call CHECK( __LINE__, nu_Y(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_rhot(k,i,j,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-                               * nu_Y(k,i,j) &
-                               * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)
+          qflx_sgs_rhot(k,i,j,YDIR) = - 0.25_RP & ! 2/2/2/2
+               * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k,i,j+1) ) &
+               * ( POTT(k,i,j+1)-POTT(k,i,j) ) &
+               * RFDY(j)
        enddo
        enddo
        enddo
@@ -3285,14 +1907,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
-       call CHECK( __LINE__, nu_Z(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k+1,i,j) )
        call CHECK( __LINE__, QTRC(k+1,i,j,iq) )
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-                               * nu_Z(k,i,j) &
-                               * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
+          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = - 0.25_RP & ! 2/2/2/2
+               * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+               * ( nu  (k,i,j)+nu  (k+1,i,j) ) &
+               * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) &
+               * RFDZ(k)
        enddo
        enddo
        enddo
@@ -3316,14 +1941,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k,i+1,j) )
-       call CHECK( __LINE__, nu_X(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i+1,j) )
        call CHECK( __LINE__, QTRC(k,i+1,j,iq) )
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,XDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-                               * nu_X(k,i,j) &
-                               * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
+          qflx_sgs_qtrc(k,i,j,iq,XDIR) = - 0.25_RP & ! 2/2/2/2
+               * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
+               * ( nu  (k,i,j)+nu  (k,i+1,j) ) &
+               * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) &
+               * RFDX(i)
        enddo
        enddo
        enddo
@@ -3337,14 +1965,17 @@ contains
 #ifdef DEBUG
        call CHECK( __LINE__, DENS(k,i,j) )
        call CHECK( __LINE__, DENS(k,i,j+1) )
-       call CHECK( __LINE__, nu_Y(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j) )
+       call CHECK( __LINE__, nu(k,i,j+1) )
        call CHECK( __LINE__, QTRC(k,i,j+1,iq) )
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,YDIR) = - 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-                               * nu_Y(k,i,j) &
-                               * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
+          qflx_sgs_qtrc(k,i,j,iq,YDIR) = - 0.25_RP &
+               * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
+               * ( nu  (k,i,j)+nu  (k,i,j+1) ) &
+               * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) &
+               * RFDY(j)
        enddo
        enddo
        enddo

@@ -13,7 +13,7 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
-VPATH = $(BUILD_DIR):io:common:grid:atmos
+VPATH = io:common:grid:atmos:ocean:cpl
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -88,7 +88,15 @@ OBJS =	\
 	mod_atmos_phy_rd_mstrnX.o	\
 	mod_atmos_phy_rd.o	\
 	mod_atmos_phy_ae_dummy.o	\
-	mod_atmos_phy_ae.o
+	mod_atmos_phy_ae.o	\
+	mod_ocean_sub_roughness.o	\
+	mod_cpl_atmos_land.o	\
+	mod_cpl_atmos_land_bulk.o	\
+	mod_cpl_atmos_land_const.o	\
+	mod_cpl_atmos_ocean.o	\
+	mod_cpl_atmos_ocean_bulk.o	\
+	mod_cpl_atmos_ocean_const.o	\
+	mod_cpl_sub_bulkcoef.o
 
 all: makedir makedcutils makegtool makesdm $(LIBDIR)/$(LIBNAME) modules
 

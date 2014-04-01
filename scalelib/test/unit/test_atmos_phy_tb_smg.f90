@@ -56,11 +56,7 @@ contains
      CDZ => GRID_CDZ, &
      CDX => GRID_CDX, &
      CDY => GRID_CDX, &
-     FDZ => GRID_FDZ, &
-     FDX => GRID_FDX, &
-     FDY => GRID_FDX, &
      CZ  => GRID_CZ, &
-     FZ  => GRID_FZ, &
      GRID_CZ_mask
 
   !-----------------------------------------------------------------------------
@@ -99,8 +95,7 @@ contains
   call ATMOS_PHY_TB_setup( &
        TB_TYPE,       & ! (in)
        CDZ, CDX, CDY, & ! (in)
-       FDZ, FDX, FDY, & ! (in)
-       CZ, FZ         ) ! (in)
+       CZ             ) ! (in)
 
   ZERO(:,:,:,:) = 0.0_RP
 

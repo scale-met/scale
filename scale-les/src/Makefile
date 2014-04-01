@@ -36,13 +36,14 @@ MODS =	\
 	mod_atmos_phy_tb_driver.o	\
 	mod_atmos_phy_ae_driver.o \
 	mod_atmos_phy_rd_driver.o \
-	mod_cpl_atmos_land.o \
-	mod_cpl.o \
-	mod_atmos.o	\
 	mod_land_phy_bucket.o	\
+	mod_ocean_phy_slab.o	\
+	mod_cpl_atmos_land_driver.o \
+	mod_cpl_atmos_ocean_driver.o \
+	mod_atmos.o	\
 	mod_land.o	\
-	mod_ocean_phy_fixedsst.o	\
 	mod_ocean.o	\
+	mod_cpl.o \
 	mod_mktopo.o	\
 	mod_mkinit.o	\
 	mod_user.o
@@ -81,22 +82,23 @@ $(BUILD_DIR)/mod_atmos_phy_rd_driver.o	: mod_atmos_phy_rd_driver.f90 mod_atmos_p
 
 $(BUILD_DIR)/mod_land.o						: mod_land.f90 mod_land_vars.o mod_land_phy_bucket.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_land_vars.o				: mod_land_vars.f90
-$(BUILD_DIR)/mod_land_phy_bucket.o		: mod_land_phy_bucket.f90 mod_land_vars.o
+$(BUILD_DIR)/mod_land_phy_bucket.o		: mod_land_phy_bucket.f90 mod_land_vars.o mod_cpl_vars.o
 
-$(BUILD_DIR)/mod_ocean.o					: mod_ocean.f90 mod_ocean_vars.o mod_ocean_phy_fixedsst.o
+$(BUILD_DIR)/mod_ocean.o					: mod_ocean.f90 mod_ocean_vars.o mod_ocean_phy_slab.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_ocean_vars.o				: mod_ocean_vars.f90
-$(BUILD_DIR)/mod_ocean_phy_fixedsst.o	: mod_ocean_phy_fixedsst.f90 mod_ocean_vars.o
+$(BUILD_DIR)/mod_ocean_phy_slab.o	: mod_ocean_phy_slab.f90 mod_ocean_vars.o mod_cpl_vars.o
 
-$(BUILD_DIR)/mod_cpl.o						: mod_cpl.f90 mod_cpl_vars.o mod_cpl_atmos_land.o
+$(BUILD_DIR)/mod_cpl.o						: mod_cpl.f90 mod_cpl_vars.o mod_cpl_atmos_land_driver.o
 $(BUILD_DIR)/mod_cpl_vars.o				: mod_cpl_vars.f90
-$(BUILD_DIR)/mod_cpl_atmos_land.o		: mod_cpl_atmos_land.f90 mod_cpl_vars.o
+$(BUILD_DIR)/mod_cpl_atmos_land_driver.o		: mod_cpl_atmos_land_driver.f90 mod_cpl_vars.o mod_land_phy_bucket.o
+$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o		: mod_cpl_atmos_ocean_driver.f90 mod_cpl_vars.o mod_ocean_phy_slab.o
 
 $(BUILD_DIR)/mod_mktopo.o					: mod_mktopo.f90
 $(BUILD_DIR)/mod_mkinit.o					: mod_mkinit.f90 mod_atmos_vars.o
 
 $(BUILD_DIR)/mod_user.o						: mod_user.f90
 
-$(BUILD_DIR)/scale-les_init.o	: scale-les_init.f90 mod_atmos_vars.o mod_mktopo.o mod_mkinit.o
+$(BUILD_DIR)/scale-les_init.o	: scale-les_init.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_land_vars.o mod_ocean_vars.o mod_cpl_vars.o mod_mktopo.o mod_mkinit.o
 $(BUILD_DIR)/scale-les.o		: scale-les.f90 mod_atmos.o mod_atmos_vars.o mod_ocean.o mod_ocean_vars.o mod_cpl.o mod_cpl_vars.o
 
 

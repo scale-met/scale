@@ -70,6 +70,14 @@ program scaleles_init
      ATMOS_SATURATION_setup
   use mod_atmos_vars, only: &
      ATMOS_vars_setup
+  use mod_atmos_vars_sf, only: &
+     ATMOS_vars_sf_setup
+  use mod_land_vars, only: &
+     LAND_vars_setup
+  use mod_ocean_vars, only: &
+     OCEAN_vars_setup
+  use mod_cpl_vars, only: &
+     CPL_vars_setup
   use mod_mktopo, only: &
      MKTOPO_setup, &
      MKTOPO
@@ -146,6 +154,18 @@ program scaleles_init
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
   call ATMOS_vars_setup
+
+  ! setup atmos sf
+  call ATMOS_vars_sf_setup
+
+  ! setup land
+  call LAND_vars_setup
+
+  ! setup ocean
+  call OCEAN_vars_setup
+
+  ! setup coupler
+  call CPL_vars_setup
 
   ! setup mktopo
   call MKTOPO_setup

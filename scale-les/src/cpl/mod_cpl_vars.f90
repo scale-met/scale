@@ -19,7 +19,6 @@ module mod_cpl_vars
   use mod_prof
   use mod_debug
   use mod_grid_index
-  use mod_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,31 +35,101 @@ module mod_cpl_vars
   public :: CPL_vars_merge
   public :: CPL_putAtm
   public :: CPL_putLnd
-  public :: CPL_AtmLnd_putCPL
+  public :: CPL_putOcn
   public :: CPL_getCPL2Atm
   public :: CPL_getCPL2Lnd
-  public :: CPL_AtmLnd_getAtm2CPL
-  public :: CPL_AtmLnd_getLnd2CPL
-  public :: CPL_flushAtm
-  public :: CPL_flushLnd
-  public :: CPL_AtmLnd_flushCPL
+  public :: CPL_getCPL2Ocn
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: LST  (:,:) ! Land Surface Temperature [K]
-  real(RP), public, allocatable :: SST  (:,:) ! Sea Surface Temperature [K]
-  real(RP), public, allocatable :: SkinT(:,:) ! Ground Skin Temperature [K]
-  real(RP), public, allocatable :: SkinW(:,:) ! Ground Skin Water       [kg/m2]
-  real(RP), public, allocatable :: SnowQ(:,:) ! Ground Snow amount      [kg/m2]
-  real(RP), public, allocatable :: SnowT(:,:) ! Ground Snow Temperature [K]
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF'   !< atmos-land coupler type
+  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF'   !< atmos-ocean coupler type
+  logical,                public, save :: CPL_LST_UPDATE  = .false. !< is Land Surface Temperature updated?
+  logical,                public, save :: CPL_SST_UPDATE  = .false. !< is Sea Surface Temperature updated?
+  logical,                public, save :: CPL_sw_AtmLnd             !< do atmos-land coupler calculation?
+  logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
+  logical,                public, save :: CPL_sw_restart            !< output coupler restart?
 
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF' !< atmos-land coupler type
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF' !< atmos-ocean coupler type
-  logical,                public, save :: CPL_sw_AtmLnd           !< do atmos-land coupler calculation?
-  logical,                public, save :: CPL_sw_AtmOcn           !< do atmos-ocean coupler calculation?
-  logical,                public, save :: CPL_sw_restart          !< output coupler restart?
+  real(RP), public, save, allocatable :: LST  (:,:) ! Land Surface Temperature [K]
+  real(RP), public, save, allocatable :: SST  (:,:) ! Sea Surface Temperature [K]
+  real(RP), public, save, allocatable :: ALBW (:,:) ! Sea Surface albedo [0-1]
+  real(RP), public, save, allocatable :: Z0W  (:,:) ! Sea Surface roughness length [m]
+  real(RP), public, save, allocatable :: SkinT(:,:) ! Ground Skin Temperature [K]
+  real(RP), public, save, allocatable :: SkinW(:,:) ! Ground Skin Water       [kg/m2]
+  real(RP), public, save, allocatable :: SnowQ(:,:) ! Ground Snow amount      [kg/m2]
+  real(RP), public, save, allocatable :: SnowT(:,:) ! Ground Snow Temperature [K]
+
+  real(RP), public, save, allocatable :: XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+
+  real(RP), public, save, allocatable :: Lnd_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Lnd_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, save, allocatable :: Lnd_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
+
+  real(RP), public, save, allocatable :: Ocn_WHFLX  (:,:) ! water heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Ocn_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, save, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
+
+  ! surface fluxes from atmosphere-land coupler
+  real(RP), public, save, allocatable :: AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmLnd_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+
+  ! surface fluxes from atmosphere-ocean coupler
+  real(RP), public, save, allocatable :: AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: AtmOcn_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+
+  ! Atmospheric values
+  real(RP), public, save, allocatable :: CPL_DENS(:,:) ! air density [kg/m3]
+  real(RP), public, save, allocatable :: CPL_MOMX(:,:) ! momentum x [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_MOMY(:,:) ! momentum y [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_MOMZ(:,:) ! momentum z [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_RHOS(:,:) ! air density at the surface [kg/m3]
+  real(RP), public, save, allocatable :: CPL_PRES(:,:) ! pressure at the surface [Pa]
+  real(RP), public, save, allocatable :: CPL_ATMP(:,:) ! air temperature at the surface [K]
+  real(RP), public, save, allocatable :: CPL_QV  (:,:) ! ratio of mass of tracer to total mass [kg/kg]
+  real(RP), public, save, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
+
+  ! Land values
+  real(RP), public, save, allocatable :: CPL_TG  (:,:) ! soil temperature [K]
+  real(RP), public, save, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [0-1]
+  real(RP), public, save, allocatable :: CPL_EMIT(:,:) ! emissivity for soil [0-1]
+  real(RP), public, save, allocatable :: CPL_ALBG(:,:) ! surface albedo for soil [0-1]
+  real(RP), public, save, allocatable :: CPL_TCS (:,:) ! thermal conductivity for soil [W/m/K]
+  real(RP), public, save, allocatable :: CPL_DZG (:,:) ! soil depth [m]
+  real(RP), public, save, allocatable :: CPL_Z0M (:,:) ! roughness length for momemtum [m]
+  real(RP), public, save, allocatable :: CPL_Z0H (:,:) ! roughness length for heat [m]
+  real(RP), public, save, allocatable :: CPL_Z0E (:,:) ! roughness length for vapor [m]
+
+  ! Ocean values
+  real(RP), public, save, allocatable :: CPL_TW  (:,:) ! water temperature [K]
+
+  ! counter
+  real(RP), public, save :: CNT_Atm_Lnd ! counter for atmos flux by land
+  real(RP), public, save :: CNT_Atm_Ocn ! counter for atmos flux by ocean
+  real(RP), public, save :: CNT_Lnd     ! counter for land flux
+  real(RP), public, save :: CNT_Ocn     ! counter for ocean flux
 
   !-----------------------------------------------------------------------------
   !
@@ -72,130 +141,90 @@ module mod_cpl_vars
   !
   logical,                private, save :: CPL_RESTART_OUTPUT       = .false.               !< output restart file?
   character(len=H_LONG) , private, save :: CPL_RESTART_IN_BASENAME  = ''                    !< basename of the input file
-  character(len=H_LONG) , private, save :: CPL_RESTART_OUT_BASENAME = 'restart_out'         !< basename of the output file
+  character(len=H_LONG) , private, save :: CPL_RESTART_OUT_BASENAME = ''                    !< basename of the output file
   character(len=H_MID)  , private, save :: CPL_RESTART_OUT_TITLE    = 'SCALE-LES CPL VARS.' !< title    of the output file
   character(len=H_SHORT), private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
-
   logical,                private, save :: CPL_VARS_CHECKRANGE      = .false.
 
-  ! surface fluxes for atmosphere
-  real(RP), private, allocatable :: SFLX_MOMX (:,:) ! momentum flux for x [kg/m2/s]
-  real(RP), private, allocatable :: SFLX_MOMY (:,:) ! momentum flux for y [kg/m2/s]
-  real(RP), private, allocatable :: SFLX_MOMZ (:,:) ! momentum flux for z [kg/m2/s]
-  real(RP), private, allocatable :: SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
+  integer, private, parameter :: PV_NUM        = 22
 
-  ! surface fluxes for land
-  real(RP), private, allocatable :: SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
-  real(RP), private, allocatable :: SFLX_QVLnd(:,:) ! moisture flux for land [kg/m2/s]
+  integer, private, parameter :: I_LST         = 1
+  integer, private, parameter :: I_SST         = 2
+  integer, private, parameter :: I_ALBW        = 3
+  integer, private, parameter :: I_Z0W         = 4
+  integer, private, parameter :: I_SkinT       = 5
+  integer, private, parameter :: I_SkinW       = 6
+  integer, private, parameter :: I_SnowQ       = 7
+  integer, private, parameter :: I_SnowT       = 8
+  integer, private, parameter :: I_XMFLX       = 9
+  integer, private, parameter :: I_YMFLX       = 10
+  integer, private, parameter :: I_ZMFLX       = 11
+  integer, private, parameter :: I_SWUFLX      = 12
+  integer, private, parameter :: I_LWUFLX      = 13
+  integer, private, parameter :: I_SHFLX       = 14
+  integer, private, parameter :: I_LHFLX       = 15
+  integer, private, parameter :: I_QVFLX       = 16
+  integer, private, parameter :: I_Lnd_GHFLX   = 17
+  integer, private, parameter :: I_Lnd_PRECFLX = 18
+  integer, private, parameter :: I_Lnd_QVFLX   = 19
+  integer, private, parameter :: I_Ocn_WHFLX   = 20
+  integer, private, parameter :: I_Ocn_PRECFLX = 21
+  integer, private, parameter :: I_Ocn_QVFLX   = 22
 
-  ! Atmospheric values
-  real(RP), private, allocatable :: DENS(:,:,:)   ! air density [kg/m3]
-  real(RP), private, allocatable :: MOMX(:,:,:)   ! momentum x [kg/m2/s]
-  real(RP), private, allocatable :: MOMY(:,:,:)   ! momentum y [kg/m2/s]
-  real(RP), private, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/m2/s]
-  real(RP), private, allocatable :: RHOT(:,:,:)   ! rho * theta [K*kg/m3]
-  real(RP), private, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass [kg/kg]
-  real(RP), private, allocatable :: PREC(:,:)       ! surface precipitation rate [kg/m2/s]
-  real(RP), private, allocatable :: SWD (:,:)       ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: LWD (:,:)       ! downward long-wave radiation flux (upward positive) [W/m2]
+  character(len=H_SHORT), private, save :: PV_NAME(PV_NUM) !< name  of the coupler variables
+  character(len=H_MID),   private, save :: PV_DESC(PV_NUM) !< desc. of the coupler variables
+  character(len=H_SHORT), private, save :: PV_UNIT(PV_NUM) !< unit  of the coupler variables
 
-  ! Land values
-  real(RP), private, allocatable :: TG   (:,:) ! soil temperature [K]
-  real(RP), private, allocatable :: QvEfc(:,:) ! efficiency of evaporation [no unit]
-  real(RP), private, allocatable :: EMIT (:,:) ! emissivity in long-wave radiation [no unit]
-  real(RP), private, allocatable :: ALB  (:,:) ! surface albedo in short-wave radiation [no unit]
-  real(RP), private, allocatable :: TCS  (:,:) ! thermal conductivity for soil [W/m/K]
-  real(RP), private, allocatable :: DZg  (:,:) ! soil depth [m]
-  real(RP), private, allocatable :: Z0M  (:,:) ! roughness length for momemtum [m]
-  real(RP), private, allocatable :: Z0H  (:,:) ! roughness length for heat [m]
-  real(RP), private, allocatable :: Z0E  (:,:) ! roughness length for moisture [m]
+  data PV_NAME / 'LST',         &
+                 'SST',         &
+                 'ALBW',        &
+                 'Z0W',         &
+                 'SkinT',       &
+                 'SkinW',       &
+                 'SnowQ',       &
+                 'SnowT',       &
+                 'XMFLX',       &
+                 'YMFLX',       &
+                 'ZMFLX',       &
+                 'SWUFLX',      &
+                 'LWUFLX',      &
+                 'SHFLX',       &
+                 'LHFLX',       &
+                 'QVFLX',       &
+                 'Lnd_GHFLX',   &
+                 'Lnd_PRECFLX', &
+                 'Lnd_QVFLX',   &
+                 'Ocn_WHFLX',   &
+                 'Ocn_PRECFLX', &
+                 'Ocn_QVFLX'    /
 
-  ! AtmLnd surface fluxes for atmosphere
-  real(RP), private, allocatable :: Lnd_SFLX_MOMX (:,:) ! momentum flux for x [kg/m2/s]
-  real(RP), private, allocatable :: Lnd_SFLX_MOMY (:,:) ! momentum flux for y [kg/m2/s]
-  real(RP), private, allocatable :: Lnd_SFLX_MOMZ (:,:) ! momentum flux for z [kg/m2/s]
-  real(RP), private, allocatable :: Lnd_SFLX_SWU  (:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: Lnd_SFLX_LWU  (:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: Lnd_SFLX_SH   (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: Lnd_SFLX_LH   (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: Lnd_SFLX_QVAtm(:,:) ! moisture flux for atmosphere [kg/m2/s]
-
-  ! AtmLnd surface fluxes for land
-  real(RP), private, allocatable :: Lnd_SFLX_GH   (:,:) ! ground heat flux (upward positive) [W/m2]
-  real(RP), private, allocatable :: Lnd_SFLX_PREC (:,:) ! precipitation flux [kg/m2/s]
-  real(RP), private, allocatable :: Lnd_SFLX_QVLnd(:,:) ! moisture flux for land [kg/m2/s]
-
-  ! counter
-  real(RP), private, save :: CNT_putAtm     ! counter for putAtm
-  real(RP), private, save :: CNT_putLnd     ! counter for putLnd
-  real(RP), private, save :: CNT_getCPL2Atm ! counter for getDat2Atm
-  real(RP), private, save :: CNT_getCPL2Lnd ! counter for getDat2Lnd
-
-  integer,                    private, save :: I_LST        = 1
-  integer,                    private, save :: I_SST        = 2
-  integer,                    private, save :: I_SkinT      = 3
-  integer,                    private, save :: I_SkinW      = 4
-  integer,                    private, save :: I_SnowQ      = 5
-  integer,                    private, save :: I_SnowT      = 6
-  integer,                    private, save :: I_SFLX_MOMX  = 7
-  integer,                    private, save :: I_SFLX_MOMY  = 8
-  integer,                    private, save :: I_SFLX_MOMZ  = 9
-  integer,                    private, save :: I_SFLX_SWU   = 10
-  integer,                    private, save :: I_SFLX_LWU   = 11
-  integer,                    private, save :: I_SFLX_SH    = 12
-  integer,                    private, save :: I_SFLX_LH    = 13
-  integer,                    private, save :: I_SFLX_QVAtm = 14
-  integer,                    private, save :: I_SFLX_GH    = 15
-  integer,                    private, save :: I_SFLX_PREC  = 16
-  integer,                    private, save :: I_SFLX_QVLnd = 17
-
-  character(len=H_SHORT), private, save :: LP_NAME(17) !< name  of the coupler variables
-  character(len=H_MID),   private, save :: LP_DESC(17) !< desc. of the coupler variables
-  character(len=H_SHORT), private, save :: LP_UNIT(17) !< unit  of the coupler variables
-
-  data LP_NAME / 'LST',        &
-                 'SST',        &
-                 'SkinT',      &
-                 'SkinW',      &
-                 'SnowQ',      &
-                 'SnowT',      &
-                 'SFLX_MOMX',  &
-                 'SFLX_MOMY',  &
-                 'SFLX_MOMZ',  &
-                 'SFLX_SWU',   &
-                 'SFLX_LWU',   &
-                 'SFLX_SH',    &
-                 'SFLX_LH',    &
-                 'SFLX_QVAtm', &
-                 'SFLX_GH',    &
-                 'SFLX_PREC',  &
-                 'SFLX_QVLnd'  /
-
-  data LP_DESC / 'land surface temp.',               &
+  data PV_DESC / 'land surface temp.',               &
                  'sea surface temp.',                &
+                 'sea surface albedo',               &
+                 'sea surface roughness length',     &
                  'ground skin temp.',                &
                  'ground skin water',                &
                  'ground snow amount',               &
                  'ground snow temp.',                &
-                 'momentum flux for x',              &
-                 'momentum flux for y',              &
-                 'momentum flux for z',              &
+                 'x-momentum flux',                  &
+                 'y-momentum flux',                  &
+                 'z-momentum flux',                  &
                  'upward short-wave radiation flux', &
                  'upward long-wave radiation flux',  &
                  'sensible heat flux',               &
                  'latent heat flux',                 &
                  'moisture flux for atmosphere',     &
                  'ground heat flux',                 &
-                 'precipitation flux',               &
-                 'moisture flux for land'            /
+                 'precipitation flux for land',      &
+                 'moisture flux for land',           &
+                 'water heat flux',                  &
+                 'precipitation flux for ocean',     &
+                 'moisture flux for ocean'           /
 
-  data LP_UNIT / 'K',       &
+  data PV_UNIT / 'K',       &
                  'K',       &
+                 '0-1',     &
+                 'm',       &
                  'K',       &
                  'kg/m2',   &
                  'kg/m2',   &
@@ -207,6 +236,9 @@ module mod_cpl_vars
                  'W/m2',    &
                  'W/m2',    &
                  'W/m2',    &
+                 'kg/m2/s', &
+                 'W/m2',    &
+                 'kg/m2/s', &
                  'kg/m2/s', &
                  'W/m2',    &
                  'kg/m2/s', &
@@ -222,7 +254,10 @@ contains
     implicit none
 
     NAMELIST / PARAM_CPL / &
-       CPL_TYPE_AtmLnd
+       CPL_TYPE_AtmLnd, &
+       CPL_TYPE_AtmOcn, &
+       CPL_LST_UPDATE,  &
+       CPL_SST_UPDATE
 
     NAMELIST / PARAM_CPL_VARS /  &
        CPL_RESTART_IN_BASENAME,  &
@@ -232,77 +267,85 @@ contains
        CPL_RESTART_OUT_DTYPE,    &
        CPL_VARS_CHECKRANGE
 
-    integer :: ierr
+    integer :: ip, ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
 
+
+    CNT_Atm_Lnd = 0.0_RP
+    CNT_Atm_Ocn = 0.0_RP
+    CNT_Lnd     = 0.0_RP
+    CNT_Ocn     = 0.0_RP
+
     allocate( LST  (IA,JA) )
     allocate( SST  (IA,JA) )
+    allocate( ALBW (IA,JA) )
+    allocate( Z0W  (IA,JA) )
     allocate( SkinT(IA,JA) )
     allocate( SkinW(IA,JA) )
     allocate( SnowQ(IA,JA) )
     allocate( SnowT(IA,JA) )
 
-    allocate( SFLX_MOMX (IA,JA) )
-    allocate( SFLX_MOMY (IA,JA) )
-    allocate( SFLX_MOMZ (IA,JA) )
-    allocate( SFLX_SWU  (IA,JA) )
-    allocate( SFLX_LWU  (IA,JA) )
-    allocate( SFLX_SH   (IA,JA) )
-    allocate( SFLX_LH   (IA,JA) )
-    allocate( SFLX_QVAtm(IA,JA) )
+    allocate( XMFLX (IA,JA) )
+    allocate( YMFLX (IA,JA) )
+    allocate( ZMFLX (IA,JA) )
+    allocate( SWUFLX(IA,JA) )
+    allocate( LWUFLX(IA,JA) )
+    allocate( SHFLX (IA,JA) )
+    allocate( LHFLX (IA,JA) )
+    allocate( QVFLX (IA,JA) )
 
-    allocate( SFLX_GH   (IA,JA) )
-    allocate( SFLX_PREC (IA,JA) )
-    allocate( SFLX_QVLnd(IA,JA) )
+    allocate( Lnd_GHFLX  (IA,JA) )
+    allocate( Lnd_PRECFLX(IA,JA) )
+    allocate( Lnd_QVFLX  (IA,JA) )
 
-    allocate( DENS(KA,IA,JA)    )
-    allocate( MOMX(KA,IA,JA)    )
-    allocate( MOMY(KA,IA,JA)    )
-    allocate( MOMZ(KA,IA,JA)    )
-    allocate( RHOT(KA,IA,JA)    )
-    allocate( QTRC(KA,IA,JA,QA) )
-    allocate( PREC(IA,JA)       )
-    allocate( SWD (IA,JA)       )
-    allocate( LWD (IA,JA)       )
+    allocate( Ocn_WHFLX  (IA,JA) )
+    allocate( Ocn_PRECFLX(IA,JA) )
+    allocate( Ocn_QVFLX  (IA,JA) )
 
-    allocate( TG   (IA,JA) )
-    allocate( QvEfc(IA,JA) )
-    allocate( EMIT (IA,JA) )
-    allocate( ALB  (IA,JA) )
-    allocate( TCS  (IA,JA) )
-    allocate( DZg  (IA,JA) )
-    allocate( Z0M  (IA,JA) )
-    allocate( Z0H  (IA,JA) )
-    allocate( Z0E  (IA,JA) )
+    allocate( CPL_DENS(IA,JA) )
+    allocate( CPL_MOMX(IA,JA) )
+    allocate( CPL_MOMY(IA,JA) )
+    allocate( CPL_MOMZ(IA,JA) )
+    allocate( CPL_RHOS(IA,JA) )
+    allocate( CPL_PRES(IA,JA) )
+    allocate( CPL_ATMP(IA,JA) )
+    allocate( CPL_QV  (IA,JA) )
+    allocate( CPL_PREC(IA,JA) )
+    allocate( CPL_SWD (IA,JA) )
+    allocate( CPL_LWD (IA,JA) )
 
-    allocate( Lnd_SFLX_MOMX (IA,JA) )
-    allocate( Lnd_SFLX_MOMY (IA,JA) )
-    allocate( Lnd_SFLX_MOMZ (IA,JA) )
-    allocate( Lnd_SFLX_SWU  (IA,JA) )
-    allocate( Lnd_SFLX_LWU  (IA,JA) )
-    allocate( Lnd_SFLX_SH   (IA,JA) )
-    allocate( Lnd_SFLX_LH   (IA,JA) )
-    allocate( Lnd_SFLX_QVAtm(IA,JA) )
+    allocate( CPL_TG  (IA,JA) )
+    allocate( CPL_QVEF(IA,JA) )
+    allocate( CPL_EMIT(IA,JA) )
+    allocate( CPL_ALBG(IA,JA) )
+    allocate( CPL_TCS (IA,JA) )
+    allocate( CPL_DZG (IA,JA) )
+    allocate( CPL_Z0M (IA,JA) )
+    allocate( CPL_Z0H (IA,JA) )
+    allocate( CPL_Z0E (IA,JA) )
 
-    allocate( Lnd_SFLX_GH   (IA,JA) )
-    allocate( Lnd_SFLX_PREC (IA,JA) )
-    allocate( Lnd_SFLX_QVLnd(IA,JA) )
+    allocate( CPL_TW  (IA,JA) )
 
-    Lnd_SFLX_MOMX (:,:) = 0.0_RP
-    Lnd_SFLX_MOMY (:,:) = 0.0_RP
-    Lnd_SFLX_MOMZ (:,:) = 0.0_RP
-    Lnd_SFLX_SWU  (:,:) = 0.0_RP
-    Lnd_SFLX_LWU  (:,:) = 0.0_RP
-    Lnd_SFLX_SH   (:,:) = 0.0_RP
-    Lnd_SFLX_LH   (:,:) = 0.0_RP
-    Lnd_SFLX_QVAtm(:,:) = 0.0_RP
+    allocate( AtmLnd_XMFLX      (IA,JA) )
+    allocate( AtmLnd_YMFLX      (IA,JA) )
+    allocate( AtmLnd_ZMFLX      (IA,JA) )
+    allocate( AtmLnd_SWUFLX     (IA,JA) )
+    allocate( AtmLnd_LWUFLX     (IA,JA) )
+    allocate( AtmLnd_SHFLX      (IA,JA) )
+    allocate( AtmLnd_LHFLX      (IA,JA) )
+    allocate( AtmLnd_QVFLX      (IA,JA) )
 
-    Lnd_SFLX_GH   (:,:) = 0.0_RP
-    Lnd_SFLX_PREC (:,:) = 0.0_RP
-    Lnd_SFLX_QVLnd(:,:) = 0.0_RP
+    allocate( AtmOcn_XMFLX      (IA,JA) )
+    allocate( AtmOcn_YMFLX      (IA,JA) )
+    allocate( AtmOcn_ZMFLX      (IA,JA) )
+    allocate( AtmOcn_SWUFLX     (IA,JA) )
+    allocate( AtmOcn_LWUFLX     (IA,JA) )
+    allocate( AtmOcn_SHFLX      (IA,JA) )
+    allocate( AtmOcn_LHFLX      (IA,JA) )
+    allocate( AtmOcn_QVFLX      (IA,JA) )
 
 
     !--- read namelist
@@ -316,18 +359,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL)
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] selected components'
 
@@ -349,8 +380,38 @@ contains
        CPL_sw_AtmOcn = .false.
     endif
 
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] prognostic variables'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
+               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, PV_NUM
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(PV_NAME(ip)),'|', PV_DESC(ip),'[', PV_UNIT(ip),']'
+    enddo
+
+    ! restart switch
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
+    if ( CPL_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : YES'
+       CPL_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : NO'
+       CPL_sw_restart = .false.
+    endif
+    if( IO_L ) write(IO_FID_LOG,*)
 
     return
   end subroutine CPL_vars_setup
@@ -367,17 +428,21 @@ contains
     ! fill IHALO & JHALO
     call COMM_vars8( LST  (:,:), 1 )
     call COMM_vars8( SST  (:,:), 2 )
-    call COMM_vars8( SkinT(:,:), 3 )
-    call COMM_vars8( SkinW(:,:), 4 )
-    call COMM_vars8( SnowQ(:,:), 5 )
-    call COMM_vars8( SnowT(:,:), 6 )
+    call COMM_vars8( ALBW (:,:), 3 )
+    call COMM_vars8( Z0W  (:,:), 4 )
+    call COMM_vars8( SkinT(:,:), 5 )
+    call COMM_vars8( SkinW(:,:), 6 )
+    call COMM_vars8( SnowQ(:,:), 7 )
+    call COMM_vars8( SnowT(:,:), 8 )
 
     call COMM_wait ( LST  (:,:), 1 )
     call COMM_wait ( SST  (:,:), 2 )
-    call COMM_wait ( SkinT(:,:), 3 )
-    call COMM_wait ( SkinW(:,:), 4 )
-    call COMM_wait ( SnowQ(:,:), 5 )
-    call COMM_wait ( SnowT(:,:), 6 )
+    call COMM_wait ( ALBW (:,:), 3 )
+    call COMM_wait ( Z0W  (:,:), 4 )
+    call COMM_wait ( SkinT(:,:), 5 )
+    call COMM_wait ( SkinW(:,:), 6 )
+    call COMM_wait ( SnowQ(:,:), 7 )
+    call COMM_wait ( SnowT(:,:), 8 )
 
     return
   end subroutine CPL_vars_fillhalo
@@ -406,6 +471,10 @@ contains
                          CPL_RESTART_IN_BASENAME, 'LST',   'XY', step=1 ) ![IN]
        call FILEIO_read( SST(:,:),                                      & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'SST',   'XY', step=1 ) ![IN]
+       call FILEIO_read( ALBW(:,:),                                     & ![OUT]
+                         CPL_RESTART_IN_BASENAME, 'ALBW',  'XY', step=1 ) ![IN]
+       call FILEIO_read( Z0W(:,:),                                      & ![OUT]
+                         CPL_RESTART_IN_BASENAME, 'Z0W',   'XY', step=1 ) ![IN]
        call FILEIO_read( SkinT(:,:),                                    & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'SkinT', 'XY', step=1 ) ![IN]
        call FILEIO_read( SkinW(:,:),                                    & ![OUT]
@@ -418,20 +487,17 @@ contains
        call CPL_vars_fillhalo
 
        call CPL_vars_total
-
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
 
-!       LST  (:,:) = CONST_UNDEF
-       LST  (:,:) = 300.0_RP
+       LST  (:,:) = CONST_UNDEF
        SST  (:,:) = CONST_UNDEF
-!       SkinT(:,:) = CONST_UNDEF
-       SkinT(:,:) = LST(:,:)
+       ALBW (:,:) = CONST_UNDEF
+       Z0W  (:,:) = CONST_UNDEF
+       SkinT(:,:) = CONST_UNDEF
        SkinW(:,:) = CONST_UNDEF
        SnowQ(:,:) = CONST_UNDEF
        SnowT(:,:) = CONST_UNDEF
-
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
@@ -468,17 +534,21 @@ contains
        write(bname,'(A,A,A)') trim(CPL_RESTART_OUT_BASENAME), '_', trim(bname)
 
        call FILEIO_write( LST(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_LST),   LP_DESC(I_LST),   LP_UNIT(I_LST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_LST),   PV_DESC(I_LST),   PV_UNIT(I_LST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SST(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SST),   LP_DESC(I_SST),   LP_UNIT(I_SST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SST),   PV_DESC(I_SST),   PV_UNIT(I_SST),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ALBW(:,:),  bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
+                          PV_NAME(I_ALBW),  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( Z0W(:,:),   bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
+                          PV_NAME(I_Z0W),   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SkinT(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SkinT), LP_DESC(I_SkinT), LP_UNIT(I_SkinT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SkinT), PV_DESC(I_SkinT), PV_UNIT(I_SkinT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SkinW(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SkinW), LP_DESC(I_SkinW), LP_UNIT(I_SkinW), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SkinW), PV_DESC(I_SkinW), PV_UNIT(I_SkinW), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SnowQ(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SnowQ), LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SnowQ), PV_DESC(I_SnowQ), PV_UNIT(I_SnowQ), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( SnowT(:,:), bname, CPL_RESTART_OUT_TITLE,                                          & ! [IN]
-                          LP_NAME(I_SnowT), LP_DESC(I_SnowT), LP_UNIT(I_SnowT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
+                          PV_NAME(I_SnowT), PV_DESC(I_SnowT), PV_UNIT(I_SnowT), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -500,46 +570,58 @@ contains
     !---------------------------------------------------------------------------
 
     if ( CPL_VARS_CHECKRANGE ) then
-       call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_LST)  , __FILE__, __LINE__ )
-       call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SST)  , __FILE__, __LINE__ )
-       call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinT), __FILE__, __LINE__ )
-       call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SkinW), __FILE__, __LINE__ )
-       call VALCHECK( SnowQ(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowQ), __FILE__, __LINE__ )
-       call VALCHECK( SnowT(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_SnowT), __FILE__, __LINE__ )
+       call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_LST)  , __FILE__, __LINE__ )
+       call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SST)  , __FILE__, __LINE__ )
+       call VALCHECK( ALBW (:,:), 0.0_RP,    2.0_RP, PV_NAME(I_ALBW) , __FILE__, __LINE__ )
+       call VALCHECK( Z0W  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_Z0W)  , __FILE__, __LINE__ )
+       call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinT), __FILE__, __LINE__ )
+       call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinW), __FILE__, __LINE__ )
+       call VALCHECK( SnowQ(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SnowQ), __FILE__, __LINE__ )
+       call VALCHECK( SnowT(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SnowT), __FILE__, __LINE__ )
 
-       call VALCHECK( SFLX_MOMX(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMX) , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_MOMY(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMY) , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_MOMZ(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_MOMZ) , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_SWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SWU)  , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_LWU(:,:),   -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LWU)  , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_SH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_SH)   , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_LH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_LH)   , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_QVAtm(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVAtm), __FILE__, __LINE__ )
+       call VALCHECK( XMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_XMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( YMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_YMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( ZMFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_ZMFLX) , __FILE__, __LINE__ )
+       call VALCHECK( SWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_SWUFLX), __FILE__, __LINE__ )
+       call VALCHECK( LWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_LWUFLX), __FILE__, __LINE__ )
+       call VALCHECK( SHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_SHFLX) , __FILE__, __LINE__ )
+       call VALCHECK( LHFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_LHFLX) , __FILE__, __LINE__ )
+       call VALCHECK( QVFLX(:,:),  -1.0E4_RP, 1.0E4_RP, PV_NAME(I_QVFLX) , __FILE__, __LINE__ )
 
-       call VALCHECK( SFLX_GH(:,:),    -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_GH)   , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_PREC(:,:),  -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_PREC) , __FILE__, __LINE__ )
-       call VALCHECK( SFLX_QVLnd(:,:), -1.0E4_RP, 1.0E4_RP, LP_NAME(I_SFLX_QVLnd), __FILE__, __LINE__ )
+       call VALCHECK( Lnd_GHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_GHFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Lnd_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_PRECFLX), __FILE__, __LINE__ )
+       call VALCHECK( Lnd_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Lnd_QVFLX)  , __FILE__, __LINE__ )
+
+       call VALCHECK( Ocn_WHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_WHFLX)  , __FILE__, __LINE__ )
+       call VALCHECK( Ocn_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_PRECFLX), __FILE__, __LINE__ )
+       call VALCHECK( Ocn_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, PV_NAME(I_Ocn_QVFLX)  , __FILE__, __LINE__ )
     endif
 
-    call HIST_in( LST  (:,:), 'LST',   LP_DESC(I_LST),   LP_UNIT(I_LST),   TIME_DTSEC_CPL )
-    call HIST_in( SST  (:,:), 'SST',   LP_DESC(I_SST),   LP_UNIT(I_SST),   TIME_DTSEC_CPL )
-    call HIST_in( SkinT(:,:), 'SkinT', LP_DESC(I_SkinT), LP_UNIT(I_SkinT), TIME_DTSEC_CPL )
-    call HIST_in( SkinW(:,:), 'SkinW', LP_DESC(I_SkinW), LP_UNIT(I_SkinW), TIME_DTSEC_CPL )
-    call HIST_in( SnowQ(:,:), 'SnowQ', LP_DESC(I_SnowQ), LP_UNIT(I_SnowQ), TIME_DTSEC_CPL )
-    call HIST_in( SnowT(:,:), 'SnowT', LP_DESC(I_SnowT), LP_UNIT(I_SnowT), TIME_DTSEC_CPL )
+    call HIST_in( LST  (:,:), 'LST',   PV_DESC(I_LST),   PV_UNIT(I_LST),   TIME_DTSEC_CPL )
+    call HIST_in( SST  (:,:), 'SST',   PV_DESC(I_SST),   PV_UNIT(I_SST),   TIME_DTSEC_CPL )
+    call HIST_in( ALBW (:,:), 'ALBW',  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  TIME_DTSEC_CPL )
+    call HIST_in( Z0W  (:,:), 'Z0W',   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   TIME_DTSEC_CPL )
+    call HIST_in( SkinT(:,:), 'SkinT', PV_DESC(I_SkinT), PV_UNIT(I_SkinT), TIME_DTSEC_CPL )
+    call HIST_in( SkinW(:,:), 'SkinW', PV_DESC(I_SkinW), PV_UNIT(I_SkinW), TIME_DTSEC_CPL )
+    call HIST_in( SnowQ(:,:), 'SnowQ', PV_DESC(I_SnowQ), PV_UNIT(I_SnowQ), TIME_DTSEC_CPL )
+    call HIST_in( SnowT(:,:), 'SnowT', PV_DESC(I_SnowT), PV_UNIT(I_SnowT), TIME_DTSEC_CPL )
 
-    call HIST_in( SFLX_MOMX (:,:), 'SFLX_MOMX',  LP_DESC(I_SFLX_MOMX),  LP_UNIT(I_SFLX_MOMX),  TIME_DTSEC_CPL )
-    call HIST_in( SFLX_MOMY (:,:), 'SFLX_MOMY',  LP_DESC(I_SFLX_MOMY),  LP_UNIT(I_SFLX_MOMY),  TIME_DTSEC_CPL )
-    call HIST_in( SFLX_MOMZ (:,:), 'SFLX_MOMZ',  LP_DESC(I_SFLX_MOMZ),  LP_UNIT(I_SFLX_MOMZ),  TIME_DTSEC_CPL )
-    call HIST_in( SFLX_SWU  (:,:), 'SFLX_SWU',   LP_DESC(I_SFLX_SWU),   LP_UNIT(I_SFLX_SWU),   TIME_DTSEC_CPL )
-    call HIST_in( SFLX_LWU  (:,:), 'SFLX_LWU',   LP_DESC(I_SFLX_LWU),   LP_UNIT(I_SFLX_LWU),   TIME_DTSEC_CPL )
-    call HIST_in( SFLX_SH   (:,:), 'SFLX_SH',    LP_DESC(I_SFLX_SH),    LP_UNIT(I_SFLX_SH),    TIME_DTSEC_CPL )
-    call HIST_in( SFLX_LH   (:,:), 'SFLX_LH',    LP_DESC(I_SFLX_LH),    LP_UNIT(I_SFLX_LH),    TIME_DTSEC_CPL )
-    call HIST_in( SFLX_QVAtm(:,:), 'SFLX_QVAtm', LP_DESC(I_SFLX_QVAtm), LP_UNIT(I_SFLX_QVAtm), TIME_DTSEC_CPL )
+    call HIST_in( XMFLX (:,:), 'XMFLX',  PV_DESC(I_XMFLX),  PV_UNIT(I_XMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( YMFLX (:,:), 'YMFLX',  PV_DESC(I_YMFLX),  PV_UNIT(I_YMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( ZMFLX (:,:), 'ZMFLX',  PV_DESC(I_ZMFLX),  PV_UNIT(I_ZMFLX),  TIME_DTSEC_CPL )
+    call HIST_in( SWUFLX(:,:), 'SWUFLX', PV_DESC(I_SWUFLX), PV_UNIT(I_SWUFLX), TIME_DTSEC_CPL )
+    call HIST_in( LWUFLX(:,:), 'LWUFLX', PV_DESC(I_LWUFLX), PV_UNIT(I_LWUFLX), TIME_DTSEC_CPL )
+    call HIST_in( SHFLX (:,:), 'SHFLX',  PV_DESC(I_SHFLX),  PV_UNIT(I_SHFLX),  TIME_DTSEC_CPL )
+    call HIST_in( LHFLX (:,:), 'LHFLX',  PV_DESC(I_LHFLX),  PV_UNIT(I_LHFLX),  TIME_DTSEC_CPL )
+    call HIST_in( QVFLX (:,:), 'QVFLX',  PV_DESC(I_QVFLX),  PV_UNIT(I_QVFLX),  TIME_DTSEC_CPL )
 
-    call HIST_in( SFLX_GH   (:,:), 'SFLX_GH',    LP_DESC(I_SFLX_GH),    LP_UNIT(I_SFLX_GH),    TIME_DTSEC_CPL )
-    call HIST_in( SFLX_PREC (:,:), 'SFLX_PREC',  LP_DESC(I_SFLX_PREC),  LP_UNIT(I_SFLX_PREC),  TIME_DTSEC_CPL )
-    call HIST_in( SFLX_QVLnd(:,:), 'SFLX_QVLnd', LP_DESC(I_SFLX_QVLnd), LP_UNIT(I_SFLX_QVLnd), TIME_DTSEC_CPL )
+    call HIST_in( Lnd_GHFLX  (:,:), 'Lnd_GHFLX',   PV_DESC(I_Lnd_GHFLX),   PV_UNIT(I_Lnd_GHFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Lnd_PRECFLX(:,:), 'Lnd_PRECFLX', PV_DESC(I_Lnd_PRECFLX), PV_UNIT(I_Lnd_PRECFLX), TIME_DTSEC_CPL )
+    call HIST_in( Lnd_QVFLX  (:,:), 'Lnd_QVFLX',   PV_DESC(I_Lnd_QVFLX),   PV_UNIT(I_Lnd_QVFLX),   TIME_DTSEC_CPL )
+
+    call HIST_in( Ocn_WHFLX  (:,:), 'Ocn_WHFLX',   PV_DESC(I_Ocn_WHFLX),   PV_UNIT(I_Ocn_WHFLX),   TIME_DTSEC_CPL )
+    call HIST_in( Ocn_PRECFLX(:,:), 'Ocn_PRECFLX', PV_DESC(I_Ocn_PRECFLX), PV_UNIT(I_Ocn_PRECFLX), TIME_DTSEC_CPL )
+    call HIST_in( Ocn_QVFLX  (:,:), 'Ocn_QVFLX',   PV_DESC(I_Ocn_QVFLX),   PV_UNIT(I_Ocn_QVFLX),   TIME_DTSEC_CPL )
 
     return
   end subroutine CPL_vars_history
@@ -547,305 +629,205 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for coupler
   subroutine CPL_vars_total
-!    use mod_comm, only: &
-!       STAT_checktotal, &
-!       STAT_total
+    use mod_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     implicit none
 
-    !real(RP) :: total
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
-!    if ( STAT_checktotal ) then
-!
-!       call STAT_total( total, LST(:,:),     LP_NAME(I_LST)   )
-!       call STAT_total( total, SST(:,:),     LP_NAME(I_SST)   )
-!       call STAT_total( total, SkinT(:,:),   LP_NAME(I_SkinT) )
-!       call STAT_total( total, SkinW(:,:),   LP_NAME(I_SkinW) )
-!       call STAT_total( total, SnowQ(:,:),   LP_NAME(I_SnowQ) )
-!       call STAT_total( total, SnowT(:,:),   LP_NAME(I_SnowT) )
-!
-!    endif
+    if ( STAT_checktotal ) then
+
+!       call STAT_total( total, LST(:,:),   PV_NAME(I_LST)   )
+!       call STAT_total( total, SST(:,:),   PV_NAME(I_SST)   )
+!       call STAT_total( total, ALBW(:,:),  PV_NAME(I_ALBW)  )
+!       call STAT_total( total, Z0W(:,:),   PV_NAME(I_Z0W)   )
+!       call STAT_total( total, SkinT(:,:), PV_NAME(I_SkinT) )
+!       call STAT_total( total, SkinW(:,:), PV_NAME(I_SkinW) )
+!       call STAT_total( total, SnowQ(:,:), PV_NAME(I_SnowQ) )
+!       call STAT_total( total, SnowT(:,:), PV_NAME(I_SnowT) )
+
+    endif
 
     return
   end subroutine CPL_vars_total
 
   subroutine CPL_vars_merge
+    use mod_landuse, only: &
+      frac_ocean => LANDUSE_frac_ocean
     implicit none
+    !---------------------------------------------------------------------------
 
-    ! merge Land-Ocean
-    if ( CNT_getCPL2Atm > 0 ) then
-       SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) / CNT_getCPL2Atm
-       SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) / CNT_getCPL2Atm
-       SFLX_MOMZ (:,:) = Lnd_SFLX_MOMZ (:,:) / CNT_getCPL2Atm
-       SFLX_SWU  (:,:) = Lnd_SFLX_SWU  (:,:) / CNT_getCPL2Atm
-       SFLX_LWU  (:,:) = Lnd_SFLX_LWU  (:,:) / CNT_getCPL2Atm
-       SFLX_SH   (:,:) = Lnd_SFLX_SH   (:,:) / CNT_getCPL2Atm
-       SFLX_LH   (:,:) = Lnd_SFLX_LH   (:,:) / CNT_getCPL2Atm
-       SFLX_QVAtm(:,:) = Lnd_SFLX_QVAtm(:,:) / CNT_getCPL2Atm
+    ! tentative
+    if( CPL_sw_AtmLnd ) then
+      frac_ocean(:,:) = 0.0_RP
     end if
 
-    if ( CNT_getCPL2Lnd > 0 ) then
-       SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) / CNT_getCPL2Lnd
-       SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) / CNT_getCPL2Lnd
-       SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) / CNT_getCPL2Lnd
-    end if
+    ! input land
+    SkinT (:,:) = LST          (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    XMFLX (:,:) = AtmLnd_XMFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    YMFLX (:,:) = AtmLnd_YMFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    ZMFLX (:,:) = AtmLnd_ZMFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    SWUFLX(:,:) = AtmLnd_SWUFLX(:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    LWUFLX(:,:) = AtmLnd_LWUFLX(:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    SHFLX (:,:) = AtmLnd_SHFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    LHFLX (:,:) = AtmLnd_LHFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
+    QVFLX (:,:) = AtmLnd_QVFLX (:,:) * ( 1.0_RP - frac_ocean(:,:) )
 
-    SkinT(:,:) = LST(:,:)
+    ! input ocean
+    SkinT (:,:) = SkinT (:,:) + SST          (:,:) * frac_ocean(:,:)
+    XMFLX (:,:) = XMFLX (:,:) + AtmOcn_XMFLX (:,:) * frac_ocean(:,:)
+    YMFLX (:,:) = YMFLX (:,:) + AtmOcn_YMFLX (:,:) * frac_ocean(:,:)
+    ZMFLX (:,:) = ZMFLX (:,:) + AtmOcn_ZMFLX (:,:) * frac_ocean(:,:)
+    SWUFLX(:,:) = SWUFLX(:,:) + AtmOcn_SWUFLX(:,:) * frac_ocean(:,:)
+    LWUFLX(:,:) = LWUFLX(:,:) + AtmOcn_LWUFLX(:,:) * frac_ocean(:,:)
+    SHFLX (:,:) = SHFLX (:,:) + AtmOcn_SHFLX (:,:) * frac_ocean(:,:)
+    LHFLX (:,:) = LHFLX (:,:) + AtmOcn_LHFLX (:,:) * frac_ocean(:,:)
+    QVFLX (:,:) = QVFLX (:,:) + AtmOcn_QVFLX (:,:) * frac_ocean(:,:)
 
+    return
   end subroutine CPL_vars_merge
 
   subroutine CPL_putAtm( &
-      pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (in)
-      pQTRC, pPREC, pSWD, pLWD           ) ! (in)
+      pDENS, pMOMX, pMOMY, pMOMZ, & ! (in)
+      pRHOS, pPRES, pATMP, pQV,   & ! (in)
+      pPREC, pSWD, pLWD           ) ! (in)
     implicit none
 
-    real(RP), intent(in) :: pDENS(KA,IA,JA)
-    real(RP), intent(in) :: pMOMX(KA,IA,JA)
-    real(RP), intent(in) :: pMOMY(KA,IA,JA)
-    real(RP), intent(in) :: pMOMZ(KA,IA,JA)
-    real(RP), intent(in) :: pRHOT(KA,IA,JA)
-    real(RP), intent(in) :: pQTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: pDENS(IA,JA)
+    real(RP), intent(in) :: pMOMX(IA,JA)
+    real(RP), intent(in) :: pMOMY(IA,JA)
+    real(RP), intent(in) :: pMOMZ(IA,JA)
+    real(RP), intent(in) :: pRHOS(IA,JA)
+    real(RP), intent(in) :: pPRES(IA,JA)
+    real(RP), intent(in) :: pATMP(IA,JA)
+    real(RP), intent(in) :: pQV  (IA,JA)
     real(RP), intent(in) :: pPREC(IA,JA)
     real(RP), intent(in) :: pSWD (IA,JA)
     real(RP), intent(in) :: pLWD (IA,JA)
+    !---------------------------------------------------------------------------
 
-    DENS(:,:,:)   = DENS(:,:,:)   + pDENS  (:,:,:)
-    MOMX(:,:,:)   = MOMX(:,:,:)   + pMOMX  (:,:,:)
-    MOMY(:,:,:)   = MOMY(:,:,:)   + pMOMY  (:,:,:)
-    MOMZ(:,:,:)   = MOMZ(:,:,:)   + pMOMZ  (:,:,:)
-    RHOT(:,:,:)   = RHOT(:,:,:)   + pRHOT  (:,:,:)
-    QTRC(:,:,:,:) = QTRC(:,:,:,:) + pQTRC  (:,:,:,:)
-    PREC(:,:)     = PREC(:,:)     + pPREC  (:,:)
-    SWD (:,:)     = SWD (:,:)     + pSWD(:,:)
-    LWD (:,:)     = LWD (:,:)     + pLWD(:,:)
-
-    CNT_putAtm = CNT_putAtm + 1.0_RP
+    CPL_DENS(:,:) = pDENS(:,:)
+    CPL_MOMX(:,:) = pMOMX(:,:)
+    CPL_MOMY(:,:) = pMOMY(:,:)
+    CPL_MOMZ(:,:) = pMOMZ(:,:)
+    CPL_RHOS(:,:) = pRHOS(:,:)
+    CPL_PRES(:,:) = pPRES(:,:)
+    CPL_ATMP(:,:) = pATMP(:,:)
+    CPL_QV  (:,:) = pQV  (:,:)
+    CPL_PREC(:,:) = pPREC(:,:)
+    CPL_SWD (:,:) = pSWD (:,:)
+    CPL_LWD (:,:) = pLWD (:,:)
 
     return
   end subroutine CPL_putAtm
 
   subroutine CPL_putLnd( &
-      pTG, pQvEfc, pEMIT, & ! (in)
-      pALB, pTCS, pDZg,   & ! (in)
-      pZ0M, pZ0H, pZ0E    ) ! (in)
+      pTG, pQVEF, pEMIT, & ! (in)
+      pALBG, pTCS, pDZG, & ! (in)
+      pZ0M, pZ0H, pZ0E   ) ! (in)
     implicit none
 
-    real(RP), intent(in) :: pTG   (IA,JA)
-    real(RP), intent(in) :: pQvEfc(IA,JA)
-    real(RP), intent(in) :: pEMIT (IA,JA)
-    real(RP), intent(in) :: pALB  (IA,JA)
-    real(RP), intent(in) :: pTCS  (IA,JA)
-    real(RP), intent(in) :: pDZg  (IA,JA)
-    real(RP), intent(in) :: pZ0M  (IA,JA)
-    real(RP), intent(in) :: pZ0H  (IA,JA)
-    real(RP), intent(in) :: pZ0E  (IA,JA)
+    real(RP), intent(in) :: pTG  (IA,JA)
+    real(RP), intent(in) :: pQVEF(IA,JA)
+    real(RP), intent(in) :: pEMIT(IA,JA)
+    real(RP), intent(in) :: pALBG(IA,JA)
+    real(RP), intent(in) :: pTCS (IA,JA)
+    real(RP), intent(in) :: pDZG (IA,JA)
+    real(RP), intent(in) :: pZ0M (IA,JA)
+    real(RP), intent(in) :: pZ0H (IA,JA)
+    real(RP), intent(in) :: pZ0E (IA,JA)
+    !---------------------------------------------------------------------------
 
-    TG   (:,:) = TG   (:,:) + pTG   (:,:)
-    QvEfc(:,:) = QvEfc(:,:) + pQvEfc(:,:)
-    EMIT (:,:) = EMIT (:,:) + pEMIT (:,:)
-    ALB  (:,:) = ALB  (:,:) + pALB  (:,:)
-    TCS  (:,:) = TCS  (:,:) + pTCS  (:,:)
-    DZg  (:,:) = DZg  (:,:) + pDZg  (:,:)
-    Z0M  (:,:) = Z0M  (:,:) + pZ0M  (:,:)
-    Z0H  (:,:) = Z0H  (:,:) + pZ0H  (:,:)
-    Z0E  (:,:) = Z0E  (:,:) + pZ0E  (:,:)
-
-    CNT_putLnd = CNT_putLnd + 1.0_RP
+    CPL_TG  (:,:) = pTG  (:,:)
+    CPL_QVEF(:,:) = pQVEF(:,:)
+    CPL_EMIT(:,:) = pEMIT(:,:)
+    CPL_ALBG(:,:) = pALBG(:,:)
+    CPL_TCS (:,:) = pTCS (:,:)
+    CPL_DZG (:,:) = pDZG (:,:)
+    CPL_Z0M (:,:) = pZ0M (:,:)
+    CPL_Z0H (:,:) = pZ0H (:,:)
+    CPL_Z0E (:,:) = pZ0E (:,:)
 
     return
   end subroutine CPL_putLnd
 
-  subroutine CPL_AtmLnd_putCPL( &
-      pSFLX_MOMX, pSFLX_MOMY, pSFLX_MOMZ,       & ! (in)
-      pSFLX_SWU, pSFLX_LWU, pSFLX_SH, pSFLX_LH, & ! (in)
-      pSFLX_GH, pSFLX_PREC                      ) ! (in)
-    use mod_const, only: &
-       LH0 => CONST_LH0
+  subroutine CPL_putOcn( &
+      pTW ) ! (in)
     implicit none
 
-    real(RP), intent(in) :: pSFLX_MOMX(IA,JA)
-    real(RP), intent(in) :: pSFLX_MOMY(IA,JA)
-    real(RP), intent(in) :: pSFLX_MOMZ(IA,JA)
-    real(RP), intent(in) :: pSFLX_SWU (IA,JA)
-    real(RP), intent(in) :: pSFLX_LWU (IA,JA)
-    real(RP), intent(in) :: pSFLX_SH  (IA,JA)
-    real(RP), intent(in) :: pSFLX_LH  (IA,JA)
-    real(RP), intent(in) :: pSFLX_GH  (IA,JA)
-    real(RP), intent(in) :: pSFLX_PREC(IA,JA)
+    real(RP), intent(in) :: pTW  (IA,JA)
+    !---------------------------------------------------------------------------
 
-    Lnd_SFLX_MOMX (:,:) = Lnd_SFLX_MOMX (:,:) + pSFLX_MOMX(:,:)
-    Lnd_SFLX_MOMY (:,:) = Lnd_SFLX_MOMY (:,:) + pSFLX_MOMY(:,:)
-    Lnd_SFLX_MOMZ (:,:) = Lnd_SFLX_MOMZ (:,:) + pSFLX_MOMZ(:,:)
-    Lnd_SFLX_SWU  (:,:) = Lnd_SFLX_SWU  (:,:) + pSFLX_SWU (:,:)
-    Lnd_SFLX_LWU  (:,:) = Lnd_SFLX_LWU  (:,:) + pSFLX_LWU (:,:)
-    Lnd_SFLX_SH   (:,:) = Lnd_SFLX_SH   (:,:) + pSFLX_SH  (:,:)
-    Lnd_SFLX_LH   (:,:) = Lnd_SFLX_LH   (:,:) + pSFLX_LH  (:,:)
-    Lnd_SFLX_QVAtm(:,:) = Lnd_SFLX_QVAtm(:,:) + pSFLX_LH  (:,:)/LH0
-
-    Lnd_SFLX_GH   (:,:) = Lnd_SFLX_GH   (:,:) + pSFLX_GH  (:,:)
-    Lnd_SFLX_PREC (:,:) = Lnd_SFLX_PREC (:,:) + pSFLX_PREC(:,:)
-    Lnd_SFLX_QVLnd(:,:) = Lnd_SFLX_QVLnd(:,:) - pSFLX_LH  (:,:)/LH0
-
-    CNT_getCPL2Atm = CNT_getCPL2Atm + 1.0_RP
-    CNT_getCPL2Lnd = CNT_getCPL2Lnd + 1.0_RP
+    CPL_TW  (:,:) = pTW  (:,:)
 
     return
-  end subroutine CPL_AtmLnd_putCPL
+  end subroutine CPL_putOcn
 
   subroutine CPL_getCPL2Atm( &
-      pSFLX_MOMX, pSFLX_MOMY, pSFLX_MOMZ, pSFLX_SWU, pSFLX_LWU, & ! (out)
-      pSFLX_SH, pSFLX_LH, pSFLX_QVAtm                           ) ! (out)
+      pXMFLX, pYMFLX, pZMFLX, & ! (out)
+      pSWUFLX, pLWUFLX,       & ! (out)
+      pSHFLX, pLHFLX, pQVFLX  ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: pSFLX_MOMX (IA,JA)
-    real(RP), intent(out) :: pSFLX_MOMY (IA,JA)
-    real(RP), intent(out) :: pSFLX_MOMZ (IA,JA)
-    real(RP), intent(out) :: pSFLX_SWU  (IA,JA)
-    real(RP), intent(out) :: pSFLX_LWU  (IA,JA)
-    real(RP), intent(out) :: pSFLX_SH   (IA,JA)
-    real(RP), intent(out) :: pSFLX_LH   (IA,JA)
-    real(RP), intent(out) :: pSFLX_QVAtm(IA,JA)
+    real(RP), intent(out) :: pXMFLX (IA,JA)
+    real(RP), intent(out) :: pYMFLX (IA,JA)
+    real(RP), intent(out) :: pZMFLX (IA,JA)
+    real(RP), intent(out) :: pSWUFLX(IA,JA)
+    real(RP), intent(out) :: pLWUFLX(IA,JA)
+    real(RP), intent(out) :: pSHFLX (IA,JA)
+    real(RP), intent(out) :: pLHFLX (IA,JA)
+    real(RP), intent(out) :: pQVFLX (IA,JA)
+    !---------------------------------------------------------------------------
 
-    pSFLX_MOMX (:,:) = SFLX_MOMX (:,:)
-    pSFLX_MOMY (:,:) = SFLX_MOMY (:,:)
-    pSFLX_MOMZ (:,:) = SFLX_MOMZ (:,:)
-    pSFLX_SWU  (:,:) = SFLX_SWU  (:,:)
-    pSFLX_LWU  (:,:) = SFLX_LWU  (:,:)
-    pSFLX_SH   (:,:) = SFLX_SH   (:,:)
-    pSFLX_LH   (:,:) = SFLX_LH   (:,:)
-    pSFLX_QVAtm(:,:) = SFLX_QVAtm(:,:)
+    pXMFLX (:,:) = XMFLX (:,:)
+    pYMFLX (:,:) = YMFLX (:,:)
+    pZMFLX (:,:) = ZMFLX (:,:)
+    pSWUFLX(:,:) = SWUFLX(:,:)
+    pLWUFLX(:,:) = LWUFLX(:,:)
+    pSHFLX (:,:) = SHFLX (:,:)
+    pLHFLX (:,:) = LHFLX (:,:)
+    pQVFLX (:,:) = QVFLX (:,:)
+
+    CNT_Atm_Lnd = 0.0_RP
+    CNT_Atm_Ocn = 0.0_RP
 
     return
   end subroutine CPL_getCPL2Atm
 
   subroutine CPL_getCPL2Lnd( &
-      pSFLX_GH, pSFLX_PREC, pSFLX_QVLnd ) ! (out)
+      pLnd_GHFLX, pLnd_PRECFLX, pLnd_QVFLX ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: pSFLX_GH   (IA,JA)
-    real(RP), intent(out) :: pSFLX_PREC (IA,JA)
-    real(RP), intent(out) :: pSFLX_QVLnd(IA,JA)
+    real(RP), intent(out) :: pLnd_GHFLX  (IA,JA)
+    real(RP), intent(out) :: pLnd_PRECFLX(IA,JA)
+    real(RP), intent(out) :: pLnd_QVFLX  (IA,JA)
 
-    pSFLX_GH   (:,:) = SFLX_GH   (:,:)
-    pSFLX_PREC (:,:) = SFLX_PREC (:,:)
-    pSFLX_QVLnd(:,:) = SFLX_QVLnd(:,:)
+    pLnd_GHFLX  (:,:) = Lnd_GHFLX  (:,:)
+    pLnd_PRECFLX(:,:) = Lnd_PRECFLX(:,:)
+    pLnd_QVFLX  (:,:) = Lnd_QVFLX  (:,:)
+
+    CNT_Lnd = 0.0_RP
 
     return
   end subroutine CPL_getCPL2Lnd
 
-  subroutine CPL_AtmLnd_getAtm2CPL( &
-      pDENS, pMOMX, pMOMY, pMOMZ, pRHOT, & ! (out)
-      pQTRC, pPREC, pSWD, pLWD           ) ! (out)
+  subroutine CPL_getCPL2Ocn( &
+      pOcn_WHFLX, pOcn_PRECFLX, pOcn_QVFLX ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: pDENS(KA,IA,JA)
-    real(RP), intent(out) :: pMOMX(KA,IA,JA)
-    real(RP), intent(out) :: pMOMY(KA,IA,JA)
-    real(RP), intent(out) :: pMOMZ(KA,IA,JA)
-    real(RP), intent(out) :: pRHOT(KA,IA,JA)
-    real(RP), intent(out) :: pQTRC(KA,IA,JA,QA)
-    real(RP), intent(out) :: pPREC(IA,JA)
-    real(RP), intent(out) :: pSWD (IA,JA)
-    real(RP), intent(out) :: pLWD (IA,JA)
+    real(RP), intent(out) :: pOcn_WHFLX  (IA,JA)
+    real(RP), intent(out) :: pOcn_PRECFLX(IA,JA)
+    real(RP), intent(out) :: pOcn_QVFLX  (IA,JA)
 
-    pDENS(:,:,:)   = DENS(:,:,:)   / CNT_putAtm
-    pMOMX(:,:,:)   = MOMX(:,:,:)   / CNT_putAtm
-    pMOMY(:,:,:)   = MOMY(:,:,:)   / CNT_putAtm
-    pMOMZ(:,:,:)   = MOMZ(:,:,:)   / CNT_putAtm
-    pRHOT(:,:,:)   = RHOT(:,:,:)   / CNT_putAtm
-    pQTRC(:,:,:,:) = QTRC(:,:,:,:) / CNT_putAtm
-    pPREC(:,:)     = PREC(:,:)     / CNT_putAtm
-    pSWD(:,:)      = SWD(:,:)      / CNT_putAtm
-    pLWD(:,:)      = LWD(:,:)      / CNT_putAtm
+    pOcn_WHFLX  (:,:) = Ocn_WHFLX  (:,:)
+    pOcn_PRECFLX(:,:) = Ocn_PRECFLX(:,:)
+    pOcn_QVFLX  (:,:) = Ocn_QVFLX  (:,:)
+
+    CNT_Ocn = 0.0_RP
 
     return
-  end subroutine CPL_AtmLnd_getAtm2CPL
-
-  subroutine CPL_AtmLnd_getLnd2CPL( &
-      pTG, pQvEfc, pEMIT, & ! (out)
-      pALB, pTCS, pDZg,   & ! (out)
-      pZ0M, pZ0H, pZ0E    ) ! (out)
-    implicit none
-
-    real(RP), intent(out) :: pTG   (IA,JA)
-    real(RP), intent(out) :: pQvEfc(IA,JA)
-    real(RP), intent(out) :: pEMIT (IA,JA)
-    real(RP), intent(out) :: pALB  (IA,JA)
-    real(RP), intent(out) :: pTCS  (IA,JA)
-    real(RP), intent(out) :: pDZg  (IA,JA)
-    real(RP), intent(out) :: pZ0M  (IA,JA)
-    real(RP), intent(out) :: pZ0H  (IA,JA)
-    real(RP), intent(out) :: pZ0E  (IA,JA)
-
-    pTG   (:,:)    = TG   (:,:) / CNT_putLnd
-    pQvEfc(:,:)    = QvEfc(:,:) / CNT_putLnd
-    pEMIT (:,:)    = EMIT (:,:) / CNT_putLnd
-    pALB  (:,:)    = ALB  (:,:) / CNT_putLnd
-    pTCS  (:,:)    = TCS  (:,:) / CNT_putLnd
-    pDZg  (:,:)    = DZg  (:,:) / CNT_putLnd
-    pZ0M  (:,:)    = Z0M  (:,:) / CNT_putLnd
-    pZ0H  (:,:)    = Z0H  (:,:) / CNT_putLnd
-    pZ0E  (:,:)    = Z0E  (:,:) / CNT_putLnd
-
-    return
-  end subroutine CPL_AtmLnd_getLnd2CPL
-
-  subroutine CPL_flushAtm
-    implicit none
-
-    DENS(:,:,:)    = 0.0_RP
-    MOMX(:,:,:)    = 0.0_RP
-    MOMY(:,:,:)    = 0.0_RP
-    MOMZ(:,:,:)    = 0.0_RP
-    RHOT(:,:,:)    = 0.0_RP
-    QTRC(:,:,:,:)  = 0.0_RP
-    PREC(:,:)      = 0.0_RP
-    SWD (:,:)      = 0.0_RP
-    LWD (:,:)      = 0.0_RP
-
-    Lnd_SFLX_MOMX (:,:) = 0.0_RP
-    Lnd_SFLX_MOMY (:,:) = 0.0_RP
-    Lnd_SFLX_MOMZ (:,:) = 0.0_RP
-    Lnd_SFLX_SWU  (:,:) = 0.0_RP
-    Lnd_SFLX_LWU  (:,:) = 0.0_RP
-    Lnd_SFLX_SH   (:,:) = 0.0_RP
-    Lnd_SFLX_LH   (:,:) = 0.0_RP
-    Lnd_SFLX_QVAtm(:,:) = 0.0_RP
-
-    CNT_getCPL2Atm = 0.0_RP
-
-    return
-  end subroutine CPL_flushAtm
-
-  subroutine CPL_flushLnd
-    implicit none
-
-    TG   (:,:) = 0.0_RP
-    QvEfc(:,:) = 0.0_RP
-    EMIT (:,:) = 0.0_RP
-    ALB  (:,:) = 0.0_RP
-    TCS  (:,:) = 0.0_RP
-    DZg  (:,:) = 0.0_RP
-    Z0M  (:,:) = 0.0_RP
-    Z0H  (:,:) = 0.0_RP
-    Z0E  (:,:) = 0.0_RP
-
-    Lnd_SFLX_GH   (:,:) = 0.0_RP
-    Lnd_SFLX_PREC (:,:) = 0.0_RP
-    Lnd_SFLX_QVLnd(:,:) = 0.0_RP
-
-    CNT_getCPL2Lnd = 0.0_RP
-
-    return
-  end subroutine CPL_flushLnd
-
-  subroutine CPL_AtmLnd_flushCPL
-    implicit none
-
-    CNT_putAtm     = 0.0_RP
-    CNT_putLnd     = 0.0_RP
-
-    return
-  end subroutine CPL_AtmLnd_flushCPL
+  end subroutine CPL_getCPL2Ocn
 
 end module mod_CPL_vars

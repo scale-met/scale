@@ -1424,7 +1424,7 @@ call STOP_COLLECTION("MICROPHYSICS")
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
                 gc(il,1:nbin),  & !--- inout
-                qvap, temp, & !--- inout
+                qvap, temp,     & !--- inout
                 regene_gcn      ) !--- out
   elseif ( iliq == 0 .and. iice >= 1 ) then
       call icephase             &

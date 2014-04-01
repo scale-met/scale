@@ -7,12 +7,12 @@ program convine
   integer(4), parameter :: nt=nen-nst+1
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: nzhalo, nxhalo, nyhalo
-  integer(4) :: xproc=2, yproc=3  !--- process number
+  integer(4) :: xproc=2, yproc=3  !--- process number 
   real(8) :: dt
   logical :: ofirst = .true.
   logical :: oread = .true.
-  integer(4) :: start(3), start2(2)
-  integer(4) :: count(3), count2(2)
+  integer(4) :: start(4), start2(3)
+  integer(4) :: count(4), count2(3)
   character*64 :: cfile
   character*64, allocatable :: vname(:)
   integer(4) :: it, ix, jy, kz, nrec, n
@@ -28,7 +28,9 @@ program convine
   character*64 :: item
   character*5 :: HISTORY_DEFAULT_TUNIT
   real(8) :: HISTORY_DEFAULT_TINTERVAL
-
+  character*64 :: ATMOS_RESTART_OUT_BASENAME, rfile
+  logical :: ATMOS_RESTART_OUTPUT
+ 
   namelist  / PARAM_PRC / &
     PRC_NUM_X, PRC_NUM_Y
   namelist  / PARAM_HISTORY / &
@@ -36,6 +38,9 @@ program convine
     HISTORY_DEFAULT_TUNIT
 !  namelist  / HISTITEM / &
 !    item
+  namelist / PARAM_ATMOS_VARS / &
+    ATMOS_RESTART_OUTPUT, &
+    ATMOS_RESTART_OUT_BASENAME
 
   write(*,*) "Imput number of variable"
   read(*,*) vcount
@@ -61,6 +66,10 @@ program convine
   read(10,nml=PARAM_PRC,iostat=ierr)
   xproc = PRC_NUM_X
   yproc = PRC_NUM_Y
+
+  rewind(10)
+  read(10,nml=PARAM_ATMOS_VARS,iostat=ierr)
+  rfile=trim(ATMOS_RESTART_OUT_BASENAME)
 
 !  if( vcount == 0 ) then
 !   rewind(10)
@@ -95,15 +104,15 @@ program convine
    do ix = 1, xproc
     nrec = nrec + 1
     if( nrec < 10 ) then
-     write(cfile,'(a,i1,a)') "./init_rico_00000000000.000.pe00000",nrec,".nc"
+     write(cfile,'(a,a,a,i1,a)') "./",trim(rfile),"_00000000000.000.pe00000",nrec,".nc"
     elseif( nrec < 100 ) then
-     write(cfile,'(a,i2,a)') "./init_rico_00000000000.000.pe0000",nrec,".nc"
+     write(cfile,'(a,a,a,i2,a)') "./",trim(rfile),"_00000000000.000.pe0000",nrec,".nc"
     elseif( nrec < 1000 ) then
-     write(cfile,'(a,i3,a)') "./init_rico_00000000000.000.pe000",nrec,".nc"
+     write(cfile,'(a,a,a,i3,a)') "./",trim(rfile),"_00000000000.000.pe000",nrec,".nc"
     elseif( nrec < 10000 ) then
-     write(cfile,'(a,i4,a)') "./init_rico_00000000000.000.pe00",nrec,".nc"
+     write(cfile,'(a,a,a,i4,a)') "./",trim(rfile),"_00000000000.000.pe00",nrec,".nc"
     elseif( nrec < 100000 ) then
-     write(cfile,'(a,i5,a)') "./init_rico_00000000000.000.pe0",nrec,".nc"
+     write(cfile,'(a,a,a,i5,a)') "./",trim(rfile),"_00000000000.000.pe0",nrec,".nc"
     endif
 
     status = nf_open(cfile,0,ncid)
