@@ -109,7 +109,7 @@ contains
        call ATMOS_PHY_SF_const_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_const
     case ( 'RICO')
-       call ATMOS_PHY_SF_const_rico( SF_TYPE )
+       call ATMOS_PHY_SF_rico_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_rico
     case ( 'LOUIS')
        call ATMOS_PHY_SF_louis_setup( SF_TYPE )
