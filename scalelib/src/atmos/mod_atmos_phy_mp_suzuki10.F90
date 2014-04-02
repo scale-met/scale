@@ -200,7 +200,8 @@ contains
        PRC_master,  &
        PRC_myrank
     use mod_const, only: &
-       CONST_DWATR
+       CONST_DWATR, &
+       CONST_DICE
     use mod_comm, only: &
        COMM_datatype
     use mod_grid, only: &
@@ -394,6 +395,67 @@ contains
         if ( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
         call mkpara
 
+        fid_micpara = IO_get_available_fid()
+        !--- open parameter of cloud microphysics
+        open ( fid_micpara, file = fname_micpara, form = 'formatted', status = 'old', iostat=ierr )
+
+        read( fid_micpara,* ) nnspc, nnbin
+
+        if( nnbin /= nbin ) then
+           if ( IO_L ) write(IO_FID_LOG,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           call PRC_MPIstop
+        end if
+
+        ! grid parameter
+        if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
+        do n = 1, nbin
+          read( fid_micpara,* ) nn, xctr( n ), radc( n )
+          if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
+                    "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
+        end do
+        do n = 1, nbin+1
+          read( fid_micpara,* ) nn, xbnd( n )
+        end do
+        read( fid_micpara,* ) dxmic
+        if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
+
+        ! capacity
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, cctr( myu,n )
+         end do
+         do n = 1, nbin+1
+          read( fid_micpara,* ) mmyu, nn, cbnd( myu,n )
+         end do
+        end do
+
+        ! collection kernel
+        do myu = 1, nspc_mk
+         do nyu = 1, nspc_mk
+          do i = 1, nbin
+           do j = 1, nbin
+            read( fid_micpara,* ) mmyu, nnyu, mm, nn, ck( myu,nyu,i,j )
+           enddo
+          enddo
+         enddo
+        enddo
+
+        ! terminal velocity
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, vt( myu,n )
+         enddo
+        enddo
+
+        ! bulk density
+        do myu = 1, nspc_mk
+         do n = 1, nbin
+          read( fid_micpara,* ) mmyu, nn, br( myu,n )
+         enddo
+        enddo
+
+        close ( fid_micpara )
+     
       endif
 
     endif
@@ -456,6 +518,11 @@ contains
     endif
 
     ATMOS_PHY_MP_DENS(I_mp_QC)  = CONST_DWATR
+    ATMOS_PHY_MP_DENS(I_mp_QCL) = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QD)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QS)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QG)  = CONST_DICE
+    ATMOS_PHY_MP_DENS(I_mp_QH)  = CONST_DICE
 
     !--- random number setup for stochastic method
     if( rndm_flgp > 0 ) then
@@ -463,11 +530,11 @@ contains
     endif
 
     allocate( velw(KA,IA,JA,QA) )
-    velw(:,:,:,I_QV) = 0.0_RP
-    velw(:,:,:,QQE+1:QA) = 0.0_RP
-    mm = 0
+    velw(:,:,:,:) = 0.0_RP
+    do myu = 1, nspc
     do n = 1, nbin
-      velw(:,:,:,n+I_QV) = -vt( 1,n )
+      velw(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( myu,n )
+    enddo
     enddo
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
@@ -574,7 +641,11 @@ call START_COLLECTION("MICROPHYSICS")
      endif
 
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM-liquid only)'
+    if( nspc == 1 ) then
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM Liquid water only)'
+    elseif( nspc == 7 ) then
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM Mixed phase)'
+    endif
 
     if( flg_sf_aero ) then
      do j = JS-2, JE+2
@@ -1316,33 +1387,52 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: dens   !  atmospheric density [ kg/m3 ]
   real(RP), intent(in) :: pres   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin )  ! Size Distribution Function
+  real(RP), intent(inout) :: gc( nspc,nbin )  ! Size Distribution Function
   real(RP), intent(inout) :: qvap    !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp    !  temperature [ K ]
   !
   !--- local variables
-  integer :: iflg( il ), n, iliq
-  real(RP) :: csum( il )
+  integer :: iflg( nspc ), n, m, iliq, iice
+  real(RP) :: csum( nspc )
   real(RP) :: regene_gcn
   !
   !
   iflg( : ) = 0
   csum( : ) = 0.0_RP
   regene_gcn = 0.0_RP
+  do m = 1, nspc
   do n = 1, nbin
-    csum( il ) = csum( il )+gc( n )*dxmic
+    csum( m ) = csum( m )+gc( m,n )*dxmic
+  end do
   end do
 
-  if ( csum( il ) > cldmin ) iflg( il ) = 1
+  do m = 1, nspc
+   if ( csum( m ) > cldmin ) iflg( m ) = 1
+  enddo
 
   iliq = iflg( il )
+  iice = 0
+  do m = 2, nspc
+     iice = iice + iflg( m )
+  enddo
 
-  if ( iliq == 1 ) then
+  if ( iliq == 1 .and. iice == 0 ) then
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
-                gc, qvap, temp, & !--- inout
+                gc(il,1:nbin),  & !--- inout
+                qvap, temp,     & !--- inout
                 regene_gcn      ) !--- out
+  elseif ( iliq == 0 .and. iice >= 1 ) then
+      call icephase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
+  elseif ( iliq == 1 .and. iice >= 1 ) then
+      call mixphase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
   end if
   !
   end subroutine cndevpsbl
@@ -1355,39 +1445,58 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dtime
   real(RP), intent(in) :: dens   !  atmospheric density [ kg/m3 ]
   real(RP), intent(in) :: pres   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin )  ! Size Distribution Function
+  real(RP), intent(inout) :: gc( nspc,nbin )  ! Size Distribution Function
   real(RP), intent(inout) :: ga( nccn )  !  SDF ( aerosol ) : mass
   real(RP), intent(inout) :: qvap    !  specific humidity [ kg/kg ]
   real(RP), intent(inout) :: temp    !  temperature [ K ]
   !
   !--- local variables
-  integer :: iflg( il ), n, iliq
-  real(RP) :: csum( il )
+  integer :: iflg( nspc ), n, m, iliq, iice
+  real(RP) :: csum( nspc )
   real(RP) :: regene_gcn
   !
   !
   iflg( : ) = 0
   csum( : ) = 0.0_RP
   regene_gcn = 0.0_RP
+  do m = 1, nspc
   do n = 1, nbin
-    csum( il ) = csum( il )+gc( n )*dxmic
+    csum( m ) = csum( m )+gc( m,n )*dxmic
+  end do
   end do
 
-  if ( csum( il ) > cldmin ) iflg( il ) = 1
+  do m = 1, nspc
+    if ( csum( m ) > cldmin ) iflg( m ) = 1
+  enddo
 
   iliq = iflg( il )
+  iice = 0
+  do m = 2, nspc
+    iice = iice + iflg( m )
+  enddo 
 
-  if ( iliq == 1 ) then
+  if ( iliq == 1 .and. iice == 0 ) then
       call  liqphase            &
               ( dtime, iliq,    & !--- in
                 dens, pres,     & !--- in
-                gc, qvap, temp, & !--- inout
+                gc(il,1:nbin),  & !--- inout
+                qvap, temp,     & !--- inout
                 regene_gcn      ) !--- out
      !--- regeneration of aerosol
       if( flg_regeneration ) then
        call faero( regene_gcn,  & !--- in
                    ga           ) !--- inout
       end if
+  elseif ( iliq == 0 .and. iice >= 1 ) then
+      call icephase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
+  elseif ( iliq == 1 .and. iice >= 1 ) then
+      call mixphase             &
+              ( dtime, iflg,    & !--- in
+                dens, pres,     & !--- in
+                gc, qvap, temp  ) !--- inout
   end if
   !
   end subroutine cndevpsbla
@@ -1459,15 +1568,20 @@ call STOP_COLLECTION("MICROPHYSICS")
     sumliq = sumliq + gcn( n )*cctr( il,n )
   end do
   sumliq = sumliq * dxmic
-  cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp*qlevp/cp/rvap/temp/temp )
-  a = - cefliq*sumliq*gtliq/dens
-  !
-  !----- supersaturation tendency
-  if ( abs( a*dtcnd ) >= 0.10_RP ) then
-    sliqtnd = ssliq*( exp( a*dtcnd )-1.0_RP )/( a*dtcnd )
-  else
-    sliqtnd = ssliq
-  end if
+
+  if( qvap /= 0.0_RP ) then
+   cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp*qlevp/cp/rvap/temp/temp )
+   a = - cefliq*sumliq*gtliq/dens
+   !
+   !----- supersaturation tendency
+   if ( abs( a*dtcnd ) >= 0.10_RP ) then
+     sliqtnd = ssliq*( exp( a*dtcnd )-1.0_RP )/( a*dtcnd )
+   else
+     sliqtnd = ssliq
+   end if
+  elseif( qvap == 0.0_RP ) then
+   sliqtnd = ssliq
+  endif
   !
   !----- change of SDF
   gdu( 1:nbin+1 ) = cbnd( il,1:nbin+1 )/exp( xbnd( 1:nbin+1 ) )*gtliq*sliqtnd
@@ -1593,15 +1707,19 @@ call STOP_COLLECTION("MICROPHYSICS")
                     + gcn( ih,n )*cctr( ih,n )
   end do
   sumice = sumice*dxmic
-  cefice = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl*qlsbl/cp/rvap/temp/temp )
-  d = - cefice*sumice*gtice/dens
+  if( qvap /= 0.0_RP ) then
+   cefice = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl*qlsbl/cp/rvap/temp/temp )
+   d = - cefice*sumice*gtice/dens
 
-  !----- supersaturation tendency
-  if ( abs( d*dtcnd ) >= 0.10_RP ) then
-    sicetnd = ssice*( exp( d*dtcnd )-1.0_RP )/( d*dtcnd )
-  else
-    sicetnd = ssice
-  end if
+   !----- supersaturation tendency
+   if ( abs( d*dtcnd ) >= 0.10_RP ) then
+     sicetnd = ssice*( exp( d*dtcnd )-1.0_RP )/( d*dtcnd )
+   else
+     sicetnd = ssice
+   end if
+  elseif( qvap == 0.0_RP ) then
+   sicetnd = ssice
+  endif
   !
   !----- change of SDF
   do myu = 2, nspc
@@ -1748,38 +1866,43 @@ call STOP_COLLECTION("MICROPHYSICS")
   end do
   sumice = sumice*dxmic
 
-  cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlevp/cp )
-  cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlsbl/cp )
-  cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlevp/cp )
-  cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlsbl/cp )
+  if( qvap /= 0.0_RP ) then
+   cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlevp/cp )
+   cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvap + qlevp/rvap/temp/temp*qlsbl/cp )
+   cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlevp/cp )
+   cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvap + qlsbl/rvap/temp/temp*qlsbl/cp )
 
-  a = - cef1*sumliq*gtliq/dens
-  b = - cef2*sumice*gtice/dens
-  c = - cef3*sumliq*gtliq/dens
-  d = - cef4*sumice*gtice/dens
+   a = - cef1*sumliq*gtliq/dens
+   b = - cef2*sumice*gtice/dens
+   c = - cef3*sumliq*gtliq/dens
+   d = - cef4*sumice*gtice/dens
 
-  !--- eigenvalues
-  rmdplus = ( ( a+d ) + sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
-  rmdmins = ( ( a+d ) - sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
+   !--- eigenvalues
+   rmdplus = ( ( a+d ) + sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
+   rmdmins = ( ( a+d ) - sqrt( ( a-d )**2 + 4.0_RP*b*c ) ) * 0.50_RP
 
-  !--- supersaturation tendency
-  ssplus = ( ( rmdmins-a )*ssliq - b*ssice )/b/( rmdmins-rmdplus )
-  ssmins = ( ( a-rmdplus )*ssliq + b*ssice )/b/( rmdmins-rmdplus )
+   !--- supersaturation tendency
+   ssplus = ( ( rmdmins-a )*ssliq - b*ssice )/b/( rmdmins-rmdplus )
+   ssmins = ( ( a-rmdplus )*ssliq + b*ssice )/b/( rmdmins-rmdplus )
 
-  if ( abs( rmdplus*dtcnd ) >= 0.10_RP ) then
-    tplus = ( exp( rmdplus*dtcnd )-1.0_RP )/( rmdplus*dtcnd )
-  else
-    tplus = 1.0_RP
-  end if
+   if ( abs( rmdplus*dtcnd ) >= 0.10_RP ) then
+     tplus = ( exp( rmdplus*dtcnd )-1.0_RP )/( rmdplus*dtcnd )
+   else
+     tplus = 1.0_RP
+   end if
 
-  if ( abs( rmdmins*dtcnd ) >= 0.10_RP ) then
-    tmins = ( exp( rmdmins*dtcnd )-1.0_RP )/( rmdmins*dtcnd )
-  else
-    tmins = 1.0_RP
-  end if
-  sliqtnd = b*tplus*ssplus + b*tmins*ssmins
-  sicetnd = ( rmdplus-a )*tplus*ssplus  &
-          + ( rmdmins-a )*tmins*ssmins
+   if ( abs( rmdmins*dtcnd ) >= 0.10_RP ) then
+     tmins = ( exp( rmdmins*dtcnd )-1.0_RP )/( rmdmins*dtcnd )
+   else
+     tmins = 1.0_RP
+   end if
+   sliqtnd = b*tplus*ssplus + b*tmins*ssmins
+   sicetnd = ( rmdplus-a )*tplus*ssplus  &
+           + ( rmdmins-a )*tmins*ssmins
+  elseif( qvap == 0.0_RP ) then
+   sliqtnd = ssliq
+   sicetnd = ssice
+  endif
 
   !--- change of SDF
   !- liquid
