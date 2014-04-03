@@ -74,8 +74,8 @@ contains
     allocate( GTRANS_MAPF (IA,JA,4) )
 
     allocate( GTRANS_GSQRT(KA,IA,JA,7) )
-    allocate( GTRANS_J13G (KA,IA,JA,4) )
-    allocate( GTRANS_J23G (KA,IA,JA,4) )
+    allocate( GTRANS_J13G (KA,IA,JA,7) )
+    allocate( GTRANS_J23G (KA,IA,JA,7) )
 
     ! calc metrics for orthogonal curvelinear coordinate
     call GTRANS_mapfactor
@@ -115,6 +115,7 @@ contains
 
     real(RP) :: REAL_CZ_U (  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
     real(RP) :: REAL_CZ_V (  KA,IA,JA) !< Z coordinate [m] at (x,v,z)
+    real(RP) :: REAL_CZ_UV(  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
     real(RP) :: REAL_FZ_U (0:KA,IA,JA) !< Z coordinate [m] at (u,y,w)
     real(RP) :: REAL_FZ_V (0:KA,IA,JA) !< Z coordinate [m] at (x,v,w)
     real(RP) :: REAL_FZ_UV(0:KA,IA,JA) !< Z coordinate [m] at (u,v,w)
@@ -151,6 +152,15 @@ contains
     do i = 1, IA
     do k = 0, KA
        REAL_FZ_V(k,i,j) = 0.5D0 * ( REAL_FZ(k,i,j+1) + REAL_FZ(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA-1
+    do k = 1, KA
+       REAL_CZ_UV(k,i,j) = 0.25D0 * ( REAL_CZ(k,i+1,j  ) + REAL_CZ(k,i+1,j) &
+                                    + REAL_CZ(k,i  ,j+1) + REAL_CZ(k,i  ,j) )
     enddo
     enddo
     enddo
@@ -227,6 +237,9 @@ contains
        GTRANS_J13G(k,i,j,I_XYW) = -( REAL_FZ_U (k,i  ,j) - REAL_FZ_U (k,i-1,j) ) * GRID_RCDX(i)
        GTRANS_J13G(k,i,j,I_UYW) = -( REAL_FZ   (k,i+1,j) - REAL_FZ   (k,i  ,j) ) * GRID_RFDX(i)
        GTRANS_J13G(k,i,j,I_XVW) = -( REAL_FZ_UV(k,i  ,j) - REAL_FZ_UV(k,i-1,j) ) * GRID_RCDX(i)
+       GTRANS_J13G(k,i,j,I_UYZ) = -( REAL_CZ   (k,i  ,j) - REAL_CZ   (k,i-1,j) ) * GRID_RFDX(i)
+       GTRANS_J13G(k,i,j,I_XVZ) = -( REAL_CZ_UV(k,i  ,j) - REAL_CZ_UV(k,i-1,j) ) * GRID_RCDX(i)
+       GTRANS_J13G(k,i,j,I_UVZ) = -( REAL_CZ_V (k,i  ,j) - REAL_CZ_V (k,i-1,j) ) * GRID_RFDX(i)
     enddo
     enddo
     enddo
@@ -238,6 +251,9 @@ contains
        GTRANS_J23G(k,i,j,I_XYW) = -( REAL_FZ_V (k,i,j  ) - REAL_FZ_V (k,i,j-1) ) * GRID_RCDY(j)
        GTRANS_J23G(k,i,j,I_UYW) = -( REAL_FZ   (k,i,j+1) - REAL_FZ   (k,i,j  ) ) * GRID_RFDY(j)
        GTRANS_J23G(k,i,j,I_XVW) = -( REAL_FZ_UV(k,i,j  ) - REAL_FZ_UV(k,i,j-1) ) * GRID_RCDY(j)
+       GTRANS_J23G(k,i,j,I_UYZ) = -( REAL_CZ_UV(k,i,j  ) - REAL_CZ_UV(k,i,j-1) ) * GRID_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j  ) - REAL_CZ   (k,i,j-1) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UVZ) = -( REAL_CZ_U (k,i,j  ) - REAL_CZ_U (k,i,j-1) ) * GRID_RFDY(j)
     enddo
     enddo
     enddo
@@ -249,19 +265,31 @@ contains
     call COMM_vars8( GTRANS_J13G(:,:,:,I_XYW),  2 )
     call COMM_vars8( GTRANS_J13G(:,:,:,I_UYW),  3 )
     call COMM_vars8( GTRANS_J13G(:,:,:,I_XVW),  4 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYZ),  5 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYW),  6 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_UYW),  7 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XVW),  8 )
+    call COMM_vars8( GTRANS_J13G(:,:,:,I_UYZ),  5 )
+    call COMM_vars8( GTRANS_J13G(:,:,:,I_XVZ),  6 )
+    call COMM_vars8( GTRANS_J13G(:,:,:,I_UVZ),  7 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYZ),  8 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYW),  9 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_UYW), 10 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_XVW), 11 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_UYZ), 12 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_XVZ), 13 )
+    call COMM_vars8( GTRANS_J23G(:,:,:,I_UVZ), 14 )
 
     call COMM_wait ( GTRANS_J13G(:,:,:,I_XYZ),  1 )
     call COMM_wait ( GTRANS_J13G(:,:,:,I_XYW),  2 )
     call COMM_wait ( GTRANS_J13G(:,:,:,I_UYW),  3 )
     call COMM_wait ( GTRANS_J13G(:,:,:,I_XVW),  4 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYZ),  5 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYW),  6 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_UYW),  7 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XVW),  8 )
+    call COMM_wait ( GTRANS_J13G(:,:,:,I_UYZ),  5 )
+    call COMM_wait ( GTRANS_J13G(:,:,:,I_XVZ),  6 )
+    call COMM_wait ( GTRANS_J13G(:,:,:,I_UVZ),  7 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYZ),  8 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYW),  9 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_UYW), 10 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_XVW), 11 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_UYZ), 12 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_XVZ), 13 )
+    call COMM_wait ( GTRANS_J23G(:,:,:,I_UVZ), 14 )
 
     return
   end subroutine GTRANS_terrainfollowing

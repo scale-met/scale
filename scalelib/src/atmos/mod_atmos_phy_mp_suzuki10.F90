@@ -458,7 +458,7 @@ contains
         enddo
 
         close ( fid_micpara )
-
+     
       endif
 
     endif
@@ -1431,7 +1431,7 @@ call STOP_COLLECTION("MICROPHYSICS")
               ( dtime, iflg,    & !--- in
                 dens, pres,     & !--- in
                 gc, qvap, temp  ) !--- inout
-  elseif ( iliq == 1 .and. iice >= 1 ) then 
+  elseif ( iliq == 1 .and. iice >= 1 ) then
       call mixphase             &
               ( dtime, iflg,    & !--- in
                 dens, pres,     & !--- in
@@ -1455,7 +1455,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !--- local variables
   integer :: iflg( nspc ), n, m, iliq, iice
-  real(RP) :: csum( il )
+  real(RP) :: csum( nspc )
   real(RP) :: regene_gcn
   !
   !
@@ -1495,7 +1495,7 @@ call STOP_COLLECTION("MICROPHYSICS")
               ( dtime, iflg,    & !--- in
                 dens, pres,     & !--- in
                 gc, qvap, temp  ) !--- inout
-  elseif ( iliq == 1 .and. iice >= 1 ) then 
+  elseif ( iliq == 1 .and. iice >= 1 ) then
       call mixphase             &
               ( dtime, iflg,    & !--- in
                 dens, pres,     & !--- in

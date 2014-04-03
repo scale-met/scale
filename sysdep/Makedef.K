@@ -56,8 +56,6 @@ LDFLAGS = $(FFLAGS)
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
-
-###### Lapack
 LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend
