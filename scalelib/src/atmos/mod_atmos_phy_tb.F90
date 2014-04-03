@@ -47,7 +47,8 @@ module mod_atmos_phy_tb
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
        tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       GSQRT, J13G, J23G, J33G                      ) ! (in)
        use mod_precision
        use mod_grid_index
        use mod_tracer
@@ -69,6 +70,11 @@ module mod_atmos_phy_tb
        real(RP), intent(in)  :: RHOT(KA,IA,JA)
        real(RP), intent(in)  :: DENS(KA,IA,JA)
        real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+
+       real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
+       real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+       real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+       real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
      end subroutine tb
   end interface
   procedure(tb), pointer :: ATMOS_PHY_TB => NULL()

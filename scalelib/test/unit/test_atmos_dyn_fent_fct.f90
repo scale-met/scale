@@ -207,7 +207,7 @@ contains
   GSQRT(:,:,:,:) = 1.0_RP
   J13G(:,:,:,:) = 0.0_RP
   J23G(:,:,:,:) = 0.0_RP
-  J33G          = 0.0_RP
+  J33G          = 1.0_RP
 
   divdmp_coef = 0.0_RP
 
