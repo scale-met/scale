@@ -96,8 +96,17 @@ contains
        RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+       RFDY => GRID_RFDY, &
+       CDZ  => GRID_CDZ,  &
+       FDZ  => GRID_FDZ
     use mod_gridtrans, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYW, &
+       I_XVW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_UVZ, &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
@@ -162,8 +171,9 @@ contains
                   + ( J13G(k+1,i,j,I_XYZ)*(qflx_sgs_momz(k+1,i,j,XDIR)+qflx_sgs_momz(k+1,i-1,j,XDIR)) &
                     - J13G(k-1,i,j,I_XYZ)*(qflx_sgs_momz(k-1,i,j,XDIR)-qflx_sgs_momz(k-1,i,j-1,XDIR)) &
                     + J23G(k+1,i,j,I_XYZ)*(qflx_sgs_momz(k+1,i,j,YDIR)+qflx_sgs_momz(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_XYZ)*(qflx_sgs_momz(k-1,i,j,YDIR)+qflx_sgs_momz(k-1,i,j-1,YDIR)) ) * 0.5_RP / ( CDZ(k+1)+CDZ(k) ) &
-                  + J33G * ( qflx_sgs_momz(k+1,i,j,ZDIR) - qflx_sgs_momz(k,i,j,ZDIR) ) * RFDZ(k)
+                    - J23G(k-1,i,j,I_XYZ)*(qflx_sgs_momz(k-1,i,j,YDIR)+qflx_sgs_momz(k-1,i,j-1,YDIR)) &
+                    ) * 0.5_RP / ( CDZ(k+1)+CDZ(k) ) &
+                  + J33G * ( qflx_sgs_momz(k+1,i,j,ZDIR) - qflx_sgs_momz(k,i,j,ZDIR) ) * RFDZ(k) &
                   ) / GSQRT(k,i,j,I_XYW)
           end do
           end do
@@ -190,14 +200,15 @@ contains
           do i = IIS, IIE
           do k = KS, KE
              MOMY_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYV)*qflx_sgs_momy(k,i  ,j,XDIR) &
+                  + ( GSQRT(k,i  ,j,I_UVZ)*qflx_sgs_momy(k,i  ,j,XDIR) &
                     - GSQRT(k,i-1,j,I_UVZ)*qflx_sgs_momy(k,i-1,j,XDIR) ) * RCDX(i) &
                   + ( GSQRT(k,i,j+1,I_XYZ)*qflx_sgs_momy(k,i,j+1,YDIR) &
                     - GSQRT(k,i,j  ,I_XYZ)*qflx_sgs_momy(k,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(k+1,i,j,I_XVW)*(qflx_sgs_momy(k+1,i,j)+qflx_sgs_momy(k+1,i-1,j)) &
-                    - J13G(k-1,i,j,I_XVW)*(qflx_sgs_momy(k-1,i,j)+qflx_sgs_momy(k-1,i-1,j)) &
-                    + J23G(k+1,i,j+1,I_XVW)*(qflx_sgs_momy(k+1,i,j+1)+qflx_sgs_momy(k+1,i,j)) &
-                    - J23G(k-1,i,j+1,I_XVW)*(qflx_sgs_momy(k-1,i,j+1)+qflx_sgs_momy(k-1,i,j)) ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                  + ( J13G(k+1,i,j,I_XVW)*(qflx_sgs_momy(k+1,i,j,XDIR)+qflx_sgs_momy(k+1,i-1,j,XDIR)) &
+                    - J13G(k-1,i,j,I_XVW)*(qflx_sgs_momy(k-1,i,j,XDIR)+qflx_sgs_momy(k-1,i-1,j,XDIR)) &
+                    + J23G(k+1,i,j+1,I_XVW)*(qflx_sgs_momy(k+1,i,j+1,YDIR)+qflx_sgs_momy(k+1,i,j,YDIR)) &
+                    - J23G(k-1,i,j+1,I_XVW)*(qflx_sgs_momy(k-1,i,j+1,YDIR)+qflx_sgs_momy(k-1,i,j,YDIR)) &
+                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
                   + J33G * ( qflx_sgs_momy(k,i,j  ,ZDIR) - qflx_sgs_momy(k-1,i,j,ZDIR) ) * RCDZ(k) &
                 ) / GSQRT(k,i,j,I_XVW)
           end do
