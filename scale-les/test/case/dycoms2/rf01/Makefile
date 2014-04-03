@@ -29,3 +29,7 @@ ORG_SRCS = mod_user.f90
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
+
+analy:
+	$(FC) $(FFLAGS_FAST) -o .libs/profile_maker \
+	$(CODE_DIR)/make_profile_cmp_nc_each.f90 $(NETCDF_INCLUDE) $(NETCDF_LIBS)

@@ -29,7 +29,7 @@ program convine
   integer(4) :: ix, jy, kz, kz1, nrec, n
   integer(4) :: ncid, id01, status, iix, jjy
   real(8) :: count1
-  character*64 :: cfile
+  character(len=64) :: cfile
   real(8),allocatable :: dens(:,:,:), qt(:,:,:), t(:,:,:), pres(:,:,:)
   real(8),allocatable :: pt(:,:,:), w(:,:,:), u(:,:,:), v(:,:,:)
   real(8),allocatable :: qc(:,:,:), qr(:,:,:), ql(:,:,:), qv(:,:,:)
@@ -762,13 +762,19 @@ program convine
   open(51,file="r_comp_profile.txt")
   open(52,file="comp_profile.txt")
 
-  write(51,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
+  write(51,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", &
+                                  "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
   do kz = 1, nzs
-   write(51,'(1x,f10.5,14(1x,e15.7))') s_hgt(kz), s_qt(kz), s_ql(kz), s_tke(kz), s_sgstke(kz), s_ww(kz), s_www(kz), s_wpt(kz), s_wqt(kz), s_totwpt(kz), s_totwqt(kz), s_pl(kz), s_uu(kz), s_vv(kz)
+   write(51,'(1x,f10.5,14(1x,e15.7))') s_hgt(kz), s_qt(kz), s_ql(kz), s_tke(kz), s_sgstke(kz), s_ww(kz), &
+                                       s_www(kz), s_wpt(kz), s_wqt(kz), s_totwpt(kz), s_totwqt(kz), &
+                                       s_pl(kz), s_uu(kz), s_vv(kz)
   end do
-  write(52,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
+  write(52,'(1x,a10,13(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", &
+                                  "WPT(GR)", "WQT(GR)", "WPT(SGS)", "WQT(SGS)", "PT", "UU", "VV"
   do kz = 1, nz 
-   write(52,'(1x,f10.5,13(1x,e15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz), avewqt(kz), totwpt(kz), totwqt(kz), profilept(kz), aveuu(kz), avevv(kz)
+   write(52,'(1x,f10.5,13(1x,e15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), &
+                                       outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz), avewqt(kz), &
+                                       totwpt(kz), totwqt(kz), profilept(kz), aveuu(kz), avevv(kz)
   end do
 
   close(50)
