@@ -50,13 +50,13 @@ V_{t,r}&=&36.34(\rho Q_{rain})^{0.1364} [m/s]
 
 
 
-\subsection{Double-Moment Bulk of Seiki and Nakajima(2013)}
+\subsection{Double-Moment Bulk\cite{sn_2013}}
 
 \subsubsection{Treatment of hydrometeors}
 Generally, characteristics of cloud particles are determined by their size, shape and chemical properties of solute in them. Representation of these characteristics needs a multi-dimensional parameter space of size, shape and chemical compositions. Since development of a cloud resolving model (CRM) coupled with an aerosol transport model is beyond the scope of this study, we consider a two-dimensional parameter space of size and shape of cloud particles. We then categorize cloud models into two major groups according to their representation of cloud particles. One is the bin method, with discretized particle size bins, predicting the population density of particles in each bin. The other is the bulk method in which the particle size distributions are approximated by several prescribed modes, predicting the total populations of partilces of each mode. The treatment of hydrometeors adopted in this study is described in the following sections.
 
 \subsubsection{Droplet Size Distribution}
-The Seiki and Nakajima (2013) scheme is designed to maintain the self-consistency of the assumptions regarding droplet size distribution (DSD) and the shapes of ice particles among the cloud microphysical processes. Following Seifert and Beheng (2006; hereafter, SB06), Seiki and Nakajima(2013) predicts the moments of the DSDs of each hydrometeor assuming the generalized gamma distribution to analytically formulate the cloud microphysics as follows:
+The Seiki and Nakajima (2013)\cite{sn_2013} scheme is designed to maintain the self-consistency of the assumptions regarding droplet size distribution (DSD) and the shapes of ice particles among the cloud microphysical processes. Following Seifert and Beheng (2006; hereafter, SB06), Seiki and Nakajima(2013)\cite{sn_2013} predicts the moments of the DSDs of each hydrometeor assuming the generalized gamma distribution to analytically formulate the cloud microphysics as follows:
 
 \begin{eqnarray}
 f_{a}(r)=\alpha_{a}x^{\nu_{a}}\exp(-\lambda x)
@@ -1282,8 +1282,8 @@ M^{k}=\frac{\Gamma\bigl(\frac{k+\nu+1}{\mu}\bigr)}{\Gamma\bigl(\frac{\nu+1}{\mu}
 \end{eqnarray}
 
 
-\subsection{Spectral Bin Model(SBM) of Suzuki et al. (2010)}
-The Spectral Bin Model (SBM) was developed by Suzuki et al. (2010). The model forecasts Size Distribution Function(SDF) of 7 types hydrometeors (liquid, plate-ice, columner-ice, dendrite-ice, snow, graupel, and hail). \\
+\subsection{Spectral Bin Model(SBM)\cite{suzuki_etal_2010}}
+The Spectral Bin Model (SBM) was developed by Suzuki et al. (2010)\cite{suzuki_etal_2010}. The model forecasts Size Distribution Function(SDF) of 7 types hydrometeors (liquid, plate-ice, columner-ice, dendrite-ice, snow, graupel, and hail). \\
 The SBM calculates mass density of the 7 types of hydrometeor and 1 type of aerosol as their SDFs. The SDF of aerosol can be changed by advection and acvitvaiton (i.e. nucleation from aerosol to cloud) process. The SDF of hydrometeors can be changed by several growth processes (i.e. activation from aerosol to cloud, condensation/evaporation, collision/coaguration, freezing/melting, ice nucleation, riming, aggregation, advection, and gravitational falling). \\
 The time evolution of SDF (number density) of aerosol ($f_{a}(m,t)$) and SDF (number density) of hydrometeor ($f_{c}(m,t)$) are shown as equations:
 
@@ -1350,7 +1350,7 @@ are transferred to cloud paricles as:
 where $q_{v}$ and $\rho$ is mixing ratio of water vapor and density.
 
 \subsubsection{Condensation/Evaporation}
-Calculation of condensation and evaporation process are based on a equation. The mass change by these two process are given by an equation (e.g. Rogers and Yau, 1989):
+Calculation of condensation and evaporation process are based on a equation. The mass change by these two process are given by an equation (e.g. Rogers and Yau, 1989\cite{ry_1989}):
 
 \begin{eqnarray}
 \frac{dm}{dt}&=&C^{(\mu)}(m)G^{(\mu)}(T)S^{(\mu)}\\
@@ -1392,7 +1392,7 @@ By using the $\eta(=\log(m))$, the eq.\ref{s10-11} is transferred to advection e
 U^{(\mu)}(\eta)&=&\frac{C^{(\mu)}(\eta)}{\exp (\eta)}G^{(\eta)}(T)S^{(\eta)}.\nonumber
 \end{eqnarray}
 
-To solve the eq. \ref{s10-12}, a scheme developed by Bott (1989) is used. The number density of i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follow:
+To solve the eq. \ref{s10-12}, a scheme developed by Bott (1989)\cite{bott_1989} is used. The number density of i-th bin after $\Delta t$ ($f_{i}(t+\Delta t)$) is given as follow:
 
 \begin{eqnarray}
 f_{i}(t+\Delta t)&=&f_{i}(t)-\frac{\Delta t}{\Delta \eta}\bigl [F_{cond/evap,i+1/2}-F_{cond/evap,i-1/2}\Bigr ].\nonumber\\
@@ -1456,14 +1456,14 @@ S_{+}(t)&=&\frac{(a-\Lambda_{+})S_{w}(t)+bS_{i}(t)}{b(\Lambda_{-}-\Lambda_{+})}\
 The averaged super saturation ($\bar{S}_{w,i}(t)$) is used to solve the eq. \ref{s10-13}.
 
 \subsubsection{Collision/Coagulation/Riming/Aggregation}
-Collision/Coagulation process are calculated by solving Stochastic Collision Equation (e.g. Pruppecher and Klett, 1997):
+Collision/Coagulation process are calculated by solving Stochastic Collision Equation (e.g. Pruppecher and Klett, 1997)\cite{pk_1997}:
 
 \begin{eqnarray}
 \frac{\partial f(m)}{\partial t}&=&\int_0^{m/2}f(m')f(m-m')K(m',m-m')dm' \nonumber\\
 &-&f(m)\int_0^{\infty}f(m'')K(m,m'')dm''\label{s10-14}
 \end{eqnarray}
 
-where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974), Golovin type kernel (Golovin, 1963) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-LES3.
+where $K(m,m')$ is collection kernel function. Three types of the kernel function, i.e. Long type kernel (Long, 1974\cite{long_1974}), Golovin type kernel (Golovin, 1963\cite{golovin_1963}) and Hydro-dynamic dynamic kernel as shown eq. \ref{s10-15} are implemented into the SCALE-LES3.
 
 \begin{eqnarray}
 K(m,m')=\pi(r(m)-r(m'))\left| V(m)-V(m')\right |E_{col}(m,m')E_{coag}(m,m')\label{s10-15}
@@ -1507,8 +1507,8 @@ H    & G/H & G/H & G/H & G/H & H   \\ \hline
 \end{table}
 
 
-To solve the stochastic collision equation, a scheme developed by Bott (1998) was implemented into SCLAE-LES3.\\
-The Bott (1998) scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to
+To solve the stochastic collision equation, a scheme developed by Bott (1998)\cite{bott_1998} was implemented into SCLAE-LES3.\\
+The Bott (1998)\cite{bott_1998} scheme calculate evolution of mass density distribution ($g(\eta)=mf(\eta)$, $\eta=\log(m)$). The stochastic collision equation can be transferred to
 
 \begin{eqnarray}
 \frac{\partial g(\eta)}{\partial t}&=&\int_{\eta_{0}}^{\eta_{1}}\frac{m^{2}}{(m-m')^{2} m'}g(\eta-\eta') K(\eta-\eta',\eta')g(\eta')d\eta' \nonumber\\
@@ -1549,10 +1549,10 @@ a_{k,2}&=&-\frac{1}{2}(g_{k+1}^{(\lambda)}-2g_{k}^{(\lambda)}+g_{k-1}^{(\lambda)
 \end{eqnarray}
 
 These procedure is applied for all bin of all types of hydrometeors.\\
-In addition, to calculate this process fastly, a scheme of Sato et al. (2009) are also implemented into SCALE-LES3.
+In addition, to calculate this process fastly, a scheme of Sato et al. (2009)\cite{sato_etal_2009} are also implemented into SCALE-LES3.
 
 \subsubsection{Freezing}
-The calculation of freezing process is based on a parameterization of Bigg (1953). The parameterization is calculated number density of water ($f_{c}^{(w)}$), wchich can be freezed:
+The calculation of freezing process is based on a parameterization of Bigg (1953)\cite{bigg_1953}. The parameterization is calculated number density of water ($f_{c}^{(w)}$), wchich can be freezed:
 
 \begin{eqnarray}
 \frac{\partial}{\partial t}f^{(w)}(m)&=&-\frac{f^{(w)}(m)}{\tau_{fr}}\label{s10-24}\\
