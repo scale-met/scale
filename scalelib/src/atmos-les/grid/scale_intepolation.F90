@@ -34,6 +34,8 @@ module scale_interpolation
   !
   !++ Public parameters & variables
   !
+  logical, public :: INTERP_available = .false. !< vertical interpolation is available? (have meaning?)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -55,6 +57,8 @@ contains
     use scale_grid, only: &
        GRID_CZ, &
        GRID_FZ
+    use scale_topography, only: &
+       TOPO_exist
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_FZ
@@ -65,6 +69,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[INTERPOLATION]/Categ[COMMON]'
+
+    INTERP_available = TOPO_exist
+    if( IO_L ) write(IO_FID_LOG,*) '*** Interpolation is available? : ', INTERP_available
 
     allocate( INTERP_xi2z_idx (KA,IA,JA,2) )
     allocate( INTERP_xi2z_coef(KA,IA,JA,3) )

@@ -194,11 +194,12 @@ module scale_atmos_phy_mp_tomita08
   integer, private, parameter :: I_Pgdep   = 41 ! v->g
   integer, private, parameter :: I_Pgsub   = 42 ! g->v
 
-  real(RP),          private, allocatable :: w(:,:) ! working array
-  integer,           private, save :: w_histid(w_nmax)
-  character(len=H_SHORT), private, save :: w_name  (w_nmax)
-  character(len=H_MID),   private, save :: w_desc  (w_nmax) = ''
-  character(len=H_SHORT), private, save :: w_unit  (w_nmax) = 'kg/kg/s'
+  real(RP),        private, allocatable :: w(:,:) ! working array
+  integer,                private, save :: w_histid (w_nmax) = -999
+  logical,                private, save :: w_zinterp(w_nmax) = .false.
+  character(len=H_SHORT), private, save :: w_name   (w_nmax)
+  character(len=H_MID),   private, save :: w_desc   (w_nmax) = ''
+  character(len=H_SHORT), private, save :: w_unit   (w_nmax) = 'kg/kg/s'
 
   data w_name / 'dqv_dt ', &
                 'dqc_dt ', &
@@ -373,7 +374,7 @@ contains
     GAM_5dg_h = SF_gamma( 0.5_RP * (5.0_RP+Dg) )
 
     do ip = 1, w_nmax
-       call HIST_reg( w_histid(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
+       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
     enddo
 
     w_desc(:) = w_name(:)
@@ -1302,7 +1303,7 @@ contains
 !          if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
 !                     maxval(work3D(KS:KE,IS:IE,JS:JE)), minval(work3D(KS:KE,IS:IE,JS:JE))
 
-          call HIST_put( w_histid(ip), work3D(:,:,:), dt)
+          call HIST_put( w_histid(ip), work3D(:,:,:), dt, w_zinterp(ip) )
        endif
     enddo
 

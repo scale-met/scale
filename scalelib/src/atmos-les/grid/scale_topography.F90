@@ -34,6 +34,8 @@ module scale_topography
   !
   !++ Public parameters & variables
   !
+  logical, public :: TOPO_exist = .false. !< topography exists?
+
   real(RP), public, allocatable :: TOPO_Zsfc(:,:)   !< absolute ground height [m]
 
   !-----------------------------------------------------------------------------
@@ -115,8 +117,11 @@ contains
        call COMM_vars8( TOPO_Zsfc(:,:), 1 )
        call COMM_wait ( TOPO_Zsfc(:,:), 1 )
 
+       TOPO_exist = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'
+
+       TOPO_exist = .false.
     endif
 
     return

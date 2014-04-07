@@ -60,14 +60,12 @@ module scale_history
   !
   !++ Private procedures
   !
-!  public :: HIST_put_axes
+  private :: HIST_put_axes
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_MID), private :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -80,6 +78,8 @@ contains
     use gtool_history, only: &
        HistoryInit
     implicit none
+
+    character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -108,23 +108,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Register/Append variable to history file
   subroutine HIST_reg( &
-       itemid, &
-       item,   &
-       desc,   &
-       unit,   &
-       ndim,   &
-       xdim,   &
-       ydim,   &
-       zdim    )
+       itemid,  &
+       zinterp, &
+       item,    &
+       desc,    &
+       unit,    &
+       ndim,    &
+       xdim,    &
+       ydim,    &
+       zdim     )
     use gtool_history, only: &
        HistoryAddVariable
     implicit none
 
-    integer,          intent(out) :: itemid !< index number of the item
-    character(len=*), intent(in)  :: item   !< name         of the item
-    character(len=*), intent(in)  :: desc   !< description  of the item
-    character(len=*), intent(in)  :: unit   !< unit         of the item
-    integer,          intent(in)  :: ndim   !< dimension    of the item
+    integer,          intent(out) :: itemid  !< index number of the item
+    logical,          intent(out) :: zinterp !< z* -> z flag of the item
+    character(len=*), intent(in)  :: item    !< name         of the item
+    character(len=*), intent(in)  :: desc    !< description  of the item
+    character(len=*), intent(in)  :: unit    !< unit         of the item
+    integer,          intent(in)  :: ndim    !< dimension    of the item
 
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
@@ -150,12 +152,13 @@ contains
        if ( zdim=='half' ) dims(3) = 'zh'
     endif
 
-    call HistoryAddVariable( item,             & ! [IN]
-                             dims(1:ndim),     & ! [IN]
-                             desc,             & ! [IN]
-                             unit,             & ! [IN]
-                             itemid  = itemid, & ! [OUT]
-                             existed = existed ) ! [OUT]
+    call HistoryAddVariable( item,              & ! [IN]
+                             dims(1:ndim),      & ! [IN]
+                             desc,              & ! [IN]
+                             unit,              & ! [IN]
+                             itemid  = itemid,  & ! [OUT]
+                             zinterp = zinterp, & ! [OUT]
+                             existed = existed  ) ! [OUT]
 
     call PROF_rapend  ('FILE O NetCDF')
 
@@ -233,21 +236,24 @@ contains
   subroutine HIST_put_3D( &
       itemid, &
       var,    &
-      dt      )
+      dt,     &
+      zinterp )
     use gtool_history, only: &
        HistoryPut
-!    use scale_interpolation, only: &
-!       INTERP_vertical_xi2z
+    use scale_interpolation, only: &
+       INTERP_vertical_xi2z, &
+       INTERP_available
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
     real(RP), intent(in) :: var(:,:,:) !< value
     real(DP), intent(in) :: dt         !< delta t [sec]
+    logical,  intent(in) :: zinterp    !< vertical interpolation?
 
     intrinsic shape
     integer :: s(3)
 
-!    real(RP) :: var_Z(KA,IA,JA)
+    real(RP) :: var_Z(KA,IA,JA)
     real(RP) :: var2 (KMAX*IMAX*JMAX)
 
     integer  :: i, j, k
@@ -268,19 +274,29 @@ contains
        call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
 
     else
-!       call PROF_rapstart('FILE O Interpolation')
-!       call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
-!                                  var_Z(:,:,:)  ) ! [OUT]
-!       call PROF_rapend  ('FILE O Interpolation')
+       if ( zinterp .AND. INTERP_available ) then
+          call PROF_rapstart('FILE O Interpolation')
+          call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
+                                     var_Z(:,:,:)  ) ! [OUT]
+          call PROF_rapend  ('FILE O Interpolation')
 
-       do k = 1, KMAX
-       do j = 1, JMAX
-       do i = 1, IMAX
-          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
-!          var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
-       enddo
-       enddo
-       enddo
+          do k = 1, KMAX
+          do j = 1, JMAX
+          do i = 1, IMAX
+             var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
+          enddo
+          enddo
+          enddo
+       else
+          do k = 1, KMAX
+          do j = 1, JMAX
+          do i = 1, IMAX
+             var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+          enddo
+          enddo
+          enddo
+       endif
+
        call HistoryPut(itemid, var2, dt)
 
     endif
@@ -311,12 +327,14 @@ contains
 
     character(len=4) :: zd
     integer          :: itemid
+    logical          :: zinterp
     !---------------------------------------------------------------------------
 
     zd = ''
     if( present(zdim) ) zd = zdim
 
     call HIST_reg( itemid,              & ! [OUT]
+                   zinterp,             & ! [OUT]
                    item, desc, unit, 1, & ! [IN]
                    zdim = zd            ) ! [IN]
 
@@ -348,6 +366,7 @@ contains
 
     character(len=4) :: xd, yd
     integer          :: itemid
+    logical          :: zinterp
     !---------------------------------------------------------------------------
 
     xd = ''
@@ -356,6 +375,7 @@ contains
     if( present(ydim) ) yd = ydim
 
     call HIST_reg( itemid,              & ! [OUT]
+                   zinterp,             & ! [OUT]
                    item, desc, unit, 2, & ! [IN]
                    xdim = xd, ydim = yd ) ! [IN]
 
@@ -389,6 +409,7 @@ contains
 
     character(len=4) :: xd, yd, zd
     integer          :: itemid
+    logical          :: zinterp
     !---------------------------------------------------------------------------
 
     xd = ''
@@ -399,10 +420,11 @@ contains
     if( present(zdim) ) zd = zdim
 
     call HIST_reg( itemid,                       & ! [OUT]
+                   zinterp,                      & ! [OUT]
                    item, desc, unit, 3,          & ! [IN]
                    xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
-    call HIST_put( itemid, var, dt ) ! [IN]
+    call HIST_put( itemid, var, dt, zinterp ) ! [IN]
 
     return
   end subroutine HIST_in_3D
