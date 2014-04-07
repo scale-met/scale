@@ -56,7 +56,7 @@ OBJS = $(mod_rdma)	\
 	scale_atmos_phy_mp_common.o	\
 	scale_atmos_phy_mp_dry.o	\
 	scale_atmos_phy_mp_kessler.o	\
-	scale_atmos_phy_mp_sn13.o	\
+	scale_atmos_phy_mp_sn14.o	\
 	scale_atmos_phy_mp_suzuki10.o	\
 	scale_atmos_phy_mp_tomita08.o	\
 	scale_atmos_phy_rd.o	\
@@ -113,7 +113,7 @@ OBJS = $(mod_rdma)	\
 	scale_tracer.o	\
 	scale_tracer_dry.o	\
 	scale_tracer_kessler.o	\
-	scale_tracer_sn13.o	\
+	scale_tracer_sn14.o	\
 	scale_tracer_suzuki10.o	\
 	scale_tracer_tomita08.o
 

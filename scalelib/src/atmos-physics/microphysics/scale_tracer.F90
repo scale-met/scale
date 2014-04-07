@@ -197,37 +197,37 @@ contains
     I_AE2ALL_tomita08 => I_AE2ALL, &
     I_AE2RD_tomita08 => I_AE2RD, &
     TRACER_tomita08_setup
-  use scale_tracer_sn13, only: &
-    QA_sn13 => QA, &
-    I_QV_sn13 => I_QV, &
-    I_QC_sn13 => I_QC, &
-    I_QR_sn13 => I_QR, &
-    I_QI_sn13 => I_QI, &
-    I_QS_sn13 => I_QS, &
-    I_QG_sn13 => I_QG, &
-    I_NC_sn13 => I_NC, &
-    I_NR_sn13 => I_NR, &
-    I_NI_sn13 => I_NI, &
-    I_NS_sn13 => I_NS, &
-    I_NG_sn13 => I_NG, &
-    QQA_sn13 => QQA, &
-    QQS_sn13 => QQS, &
-    QQE_sn13 => QQE, &
-    QWS_sn13 => QWS, &
-    QWE_sn13 => QWE, &
-    QIS_sn13 => QIS, &
-    QIE_sn13 => QIE, &
-    MP_QA_sn13 => MP_QA, &
-    AE_QA_sn13 => AE_QA, &
-    I_ae_dummy_sn13 => I_ae_dummy, &
-    AQ_NAME_sn13 => AQ_NAME, &
-    AQ_DESC_sn13 => AQ_DESC, &
-    AQ_UNIT_sn13 => AQ_UNIT, &
-    I_MP2ALL_sn13 => I_MP2ALL, &
-    I_MP2RD_sn13 => I_MP2RD, &
-    I_AE2ALL_sn13 => I_AE2ALL, &
-    I_AE2RD_sn13 => I_AE2RD, &
-    TRACER_sn13_setup
+  use scale_tracer_sn14, only: &
+    QA_sn14 => QA, &
+    I_QV_sn14 => I_QV, &
+    I_QC_sn14 => I_QC, &
+    I_QR_sn14 => I_QR, &
+    I_QI_sn14 => I_QI, &
+    I_QS_sn14 => I_QS, &
+    I_QG_sn14 => I_QG, &
+    I_NC_sn14 => I_NC, &
+    I_NR_sn14 => I_NR, &
+    I_NI_sn14 => I_NI, &
+    I_NS_sn14 => I_NS, &
+    I_NG_sn14 => I_NG, &
+    QQA_sn14 => QQA, &
+    QQS_sn14 => QQS, &
+    QQE_sn14 => QQE, &
+    QWS_sn14 => QWS, &
+    QWE_sn14 => QWE, &
+    QIS_sn14 => QIS, &
+    QIE_sn14 => QIE, &
+    MP_QA_sn14 => MP_QA, &
+    AE_QA_sn14 => AE_QA, &
+    I_ae_dummy_sn14 => I_ae_dummy, &
+    AQ_NAME_sn14 => AQ_NAME, &
+    AQ_DESC_sn14 => AQ_DESC, &
+    AQ_UNIT_sn14 => AQ_UNIT, &
+    I_MP2ALL_sn14 => I_MP2ALL, &
+    I_MP2RD_sn14 => I_MP2RD, &
+    I_AE2ALL_sn14 => I_AE2ALL, &
+    I_AE2RD_sn14 => I_AE2RD, &
+    TRACER_sn14_setup
   use scale_tracer_suzuki10, only: &
     QA_suzuki10 => QA, &
     I_QV_suzuki10 => I_QV, &
@@ -401,30 +401,30 @@ contains
        I_MP2RD = I_MP2RD_tomita08
        I_AE2ALL = I_AE2ALL_tomita08
        I_AE2RD = I_AE2RD_tomita08
-    case ("SN13")
-       call TRACER_sn13_setup
-       QA = QA_sn13
-       I_QV = I_QV_sn13
-       I_QC = I_QC_sn13
-       I_QR = I_QR_sn13
-       I_QI = I_QI_sn13
-       I_QS = I_QS_sn13
-       I_QG = I_QG_sn13
-       I_NC = I_NC_sn13
-       I_NR = I_NR_sn13
-       I_NI = I_NI_sn13
-       I_NS = I_NS_sn13
-       I_NG = I_NG_sn13
-       QQA = QQA_sn13
-       QQS = QQS_sn13
-       QQE = QQE_sn13
-       QWS = QWS_sn13
-       QWE = QWE_sn13
-       QIS = QIS_sn13
-       QIE = QIE_sn13
-       MP_QA = MP_QA_sn13
-       AE_QA = AE_QA_sn13
-       I_ae_dummy = I_ae_dummy_sn13
+    case ("SN14")
+       call TRACER_sn14_setup
+       QA = QA_sn14
+       I_QV = I_QV_sn14
+       I_QC = I_QC_sn14
+       I_QR = I_QR_sn14
+       I_QI = I_QI_sn14
+       I_QS = I_QS_sn14
+       I_QG = I_QG_sn14
+       I_NC = I_NC_sn14
+       I_NR = I_NR_sn14
+       I_NI = I_NI_sn14
+       I_NS = I_NS_sn14
+       I_NG = I_NG_sn14
+       QQA = QQA_sn14
+       QQS = QQS_sn14
+       QQE = QQE_sn14
+       QWS = QWS_sn14
+       QWE = QWE_sn14
+       QIS = QIS_sn14
+       QIE = QIE_sn14
+       MP_QA = MP_QA_sn14
+       AE_QA = AE_QA_sn14
+       I_ae_dummy = I_ae_dummy_sn14
        allocate( AQ_NAME(QA) )
        allocate( AQ_DESC(QA) )
        allocate( AQ_UNIT(QA) )
@@ -432,13 +432,13 @@ contains
        allocate( I_MP2RD(MP_QA) )
        allocate( I_AE2ALL(AE_QA) )
        allocate( I_AE2RD(AE_QA) )
-       AQ_NAME = AQ_NAME_sn13
-       AQ_DESC = AQ_DESC_sn13
-       AQ_UNIT = AQ_UNIT_sn13
-       I_MP2ALL = I_MP2ALL_sn13
-       I_MP2RD = I_MP2RD_sn13
-       I_AE2ALL = I_AE2ALL_sn13
-       I_AE2RD = I_AE2RD_sn13
+       AQ_NAME = AQ_NAME_sn14
+       AQ_DESC = AQ_DESC_sn14
+       AQ_UNIT = AQ_UNIT_sn14
+       I_MP2ALL = I_MP2ALL_sn14
+       I_MP2RD = I_MP2RD_sn14
+       I_AE2ALL = I_AE2ALL_sn14
+       I_AE2RD = I_AE2RD_sn14
     case ("SUZUKI10")
        call TRACER_suzuki10_setup
        QA = QA_suzuki10

@@ -40,7 +40,7 @@ program unit
 
   call GRID_INDEX_setup
 
-  TRACER_TYPE = 'SN13'
+  TRACER_TYPE = 'SN14'
   call TRACER_setup
 
   ! setup horisontal/veritical grid system

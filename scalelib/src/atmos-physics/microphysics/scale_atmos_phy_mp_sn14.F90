@@ -4,16 +4,16 @@
 !
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
-module scale_atmos_phy_mp_sn13
+module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !
   !++ Description:
-  !       This module contains subroutines for the sn13 parametrization.
+  !       This module contains subroutines for the sn14 parametrization.
   !
   !
   !++ Current Corresponding Author : T.Seiki
   !
-  !++ History: SN13
+  !++ History: SN14
   !      Version   Date       Comment
   !      -----------------------------------------------------------------------
   !        0.00   11/10/24 T.Seiki, import from NICAM(11/08/30 ver.)
@@ -67,7 +67,7 @@ module scale_atmos_phy_mp_sn13
   use scale_prof
   use scale_grid_index
 
-  use scale_tracer_sn13
+  use scale_tracer_sn14
   use scale_const, only: &
      GRAV   => CONST_GRAV,    &
      PI     => CONST_PI,      &
@@ -99,11 +99,11 @@ module scale_atmos_phy_mp_sn13
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_MP_sn13_setup
-  public :: ATMOS_PHY_MP_sn13
-  public :: ATMOS_PHY_MP_sn13_CloudFraction
-  public :: ATMOS_PHY_MP_sn13_EffectiveRadius
-  public :: ATMOS_PHY_MP_sn13_Mixingratio
+  public :: ATMOS_PHY_MP_sn14_setup
+  public :: ATMOS_PHY_MP_sn14
+  public :: ATMOS_PHY_MP_sn14_CloudFraction
+  public :: ATMOS_PHY_MP_sn14_EffectiveRadius
+  public :: ATMOS_PHY_MP_sn14_Mixingratio
 
   !-----------------------------------------------------------------------------
   !
@@ -115,8 +115,8 @@ module scale_atmos_phy_mp_sn13
   !
   !++ Private procedure
   !
-  private :: mp_sn13_init
-  private :: mp_sn13
+  private :: mp_sn14_init
+  private :: mp_sn14
   private :: MP_terminal_velocity
 
   !-----------------------------------------------------------------------------
@@ -372,7 +372,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_sn13_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_sn14_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -394,10 +394,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN13'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN14'
 
-    if ( MP_TYPE .ne. 'SN13' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not SN13. Check!'
+    if ( MP_TYPE .ne. 'SN14' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not SN14. Check!'
        call PRC_MPIstop
     end if
 
@@ -431,7 +431,7 @@ contains
     WLABEL(10) = "SNOW_NUM"
     WLABEL(11) = "GRAUPEL_NUM"
 
-    call mp_sn13_init( IA, JA )
+    call mp_sn14_init( IA, JA )
 
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
@@ -455,12 +455,12 @@ contains
     rgsh_d   (:,:,:) = 1.0_RP
 
     return
-  end subroutine ATMOS_PHY_MP_sn13_setup
+  end subroutine ATMOS_PHY_MP_sn14_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_sn13( &
+  subroutine ATMOS_PHY_MP_sn14( &
        DENS, &
        MOMZ, &
        MOMX, &
@@ -485,7 +485,7 @@ contains
     call MP_negativefilter( DENS, QTRC )
     call PROF_rapend  ('MP0 Setup')
 
-    call mp_sn13( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call mp_sn14( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
 
     call PROF_rapstart('MP6 Filter')
@@ -493,10 +493,10 @@ contains
     call PROF_rapend  ('MP6 Filter')
 
     return
-  end subroutine ATMOS_PHY_MP_sn13
+  end subroutine ATMOS_PHY_MP_sn14
 
   !-----------------------------------------------------------------------------
-  subroutine mp_sn13_init ( IAA, JA )
+  subroutine mp_sn14_init ( IAA, JA )
     use scale_process, only: &
        PRC_MPIstop
     use scale_specfunc, only: &
@@ -515,7 +515,7 @@ contains
     integer :: iw, ia, ib
     integer :: n
     !
-    namelist /nm_mp_sn13_init/       &
+    namelist /nm_mp_sn14_init/       &
          opt_debug,                  &
          opt_debug_tem,              &
          opt_debug_inc,              &
@@ -526,7 +526,7 @@ contains
          ntmax_collection,           &
          ntmax_sedimentation
     !
-    namelist /nm_mp_sn13_particles/ &
+    namelist /nm_mp_sn14_particles/ &
          a_m, b_m, alpha_v, beta_v, gamma_v, &
          alpha_vn, beta_vn,    &
          a_area, b_area, cap,  &
@@ -594,19 +594,19 @@ contains
     !
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SN13]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SN14]/Categ[ATMOS]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_sn13_init,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn14_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13_init. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13_init)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn14_init)
 
     !
     ! default setting
@@ -697,15 +697,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_sn13_particles,iostat=ierr)
+    read(IO_FID_CONF,nml=nm_mp_sn14_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn13_particles. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn13_particles)
+    if( IO_L ) write(IO_FID_LOG,nml=nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -1119,9 +1119,9 @@ contains
     nc_uplim_d(:,:,:) = 150.d6
 
     return
-  end subroutine mp_sn13_init
+  end subroutine mp_sn14_init
   !-----------------------------------------------------------------------------
-  subroutine mp_sn13 ( &
+  subroutine mp_sn14 ( &
     DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
@@ -2085,7 +2085,7 @@ contains
     call PROF_rapend  ('MP5 Sedimentation')
 
     return
-  end subroutine mp_sn13
+  end subroutine mp_sn14
 
   !-----------------------------------------------------------------------------
   subroutine debug_tem_kij( &
@@ -2198,7 +2198,7 @@ contains
     logical, save :: nucl_twomey = .false.
     logical, save :: inucl_w     = .false.
     !
-    namelist /nm_mp_sn13_nucleation/ &
+    namelist /nm_mp_sn14_nucleation/ &
          in_max,                     & !
          c_ccn, kappa,               & ! cloud nucleation
          nm_M92, am_M92, bm_M92,     & ! ice nucleation
@@ -2261,8 +2261,8 @@ contains
     !
     if( flag_first )then
        rewind(IO_FID_CONF)
-       read(IO_FID_CONF, nml=nm_mp_sn13_nucleation, end=100)
-100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn13_nucleation)
+       read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
+100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn14_nucleation)
        flag_first=.false.
     endif
     !
@@ -2793,7 +2793,7 @@ contains
     real(RP), parameter :: d_dec = 4.5185E-5_RP
     !
     logical, save :: flag_first = .true.
-    namelist /nm_mp_sn13_collection/ &
+    namelist /nm_mp_sn14_collection/ &
          dc0, dc1, di0, ds0, dg0,    &
          sigma_c, sigma_r, sigma_i, sigma_s, sigma_g, &
          opt_stick_KS96,   &
@@ -2862,8 +2862,8 @@ contains
     !
     if( flag_first )then
        rewind( IO_FID_CONF )
-       read( IO_FID_CONF, nml=nm_mp_sn13_collection, end=100 )
-100    if( IO_L ) write( IO_FID_LOG, nml=nm_mp_sn13_collection )
+       read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
+100    if( IO_L ) write( IO_FID_LOG, nml=nm_mp_sn14_collection )
        flag_first = .false.
     end if
     !
@@ -4111,7 +4111,7 @@ contains
     logical, save :: opt_fix_taucnd_c=.false.
     logical, save :: flag_first      =.true.
     !
-    namelist /nm_mp_sn13_condensation/ &
+    namelist /nm_mp_sn14_condensation/ &
          opt_fix_taucnd_c, fac_cndc
 
     real(RP) :: fac_cndc_wrk
@@ -4127,8 +4127,8 @@ contains
     if( flag_first )then
        flag_first = .false.
        rewind(IO_FID_CONF)
-       read  (IO_FID_CONF,nml=nm_mp_sn13_condensation, end=100)
-100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_sn13_condensation)
+       read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
+100    if( IO_L ) write (IO_FID_LOG,nml=nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax
@@ -4583,7 +4583,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
-  subroutine ATMOS_PHY_MP_sn13_CloudFraction( &
+  subroutine ATMOS_PHY_MP_sn14_CloudFraction( &
        cldfrac, &
        QTRC     )
     use scale_const, only: &
@@ -4613,11 +4613,11 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_sn13_CloudFraction
+  end subroutine ATMOS_PHY_MP_sn14_CloudFraction
 
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
-  subroutine ATMOS_PHY_MP_sn13_EffectiveRadius( &
+  subroutine ATMOS_PHY_MP_sn14_EffectiveRadius( &
        Re,    &
        QTRC0, &
        DENS0  )
@@ -4752,10 +4752,10 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_sn13_EffectiveRadius
+  end subroutine ATMOS_PHY_MP_sn14_EffectiveRadius
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_sn13_Mixingratio( &
+  subroutine ATMOS_PHY_MP_sn14_Mixingratio( &
        Qe,    &
        QTRC0  )
     use scale_const, only: &
@@ -4776,7 +4776,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_MP_sn13_Mixingratio
+  end subroutine ATMOS_PHY_MP_sn14_Mixingratio
   !-----------------------------------------------------------------------------
-end module scale_atmos_phy_mp_sn13
+end module scale_atmos_phy_mp_sn14
 !-------------------------------------------------------------------------------
