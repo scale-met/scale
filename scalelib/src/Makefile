@@ -5,7 +5,7 @@
 ################################################################################
 
 TOPDIR      = ../..
-BUILD_DIR  := ./.libs
+BUILD_DIR   = ./.libs
 SYSDEP_DIR := ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
