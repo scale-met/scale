@@ -111,12 +111,13 @@ contains
   ! Parametarized Radiative heating
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_dycoms2( &
-       DENS, RHOT, QTRC,                &
-       CZ, FZ,                          &
-       temp_sfc, albedo_land, oceanfrc, &
-       solins, cosSZA,                  &
-       flux_rad,                        &
-       flux_rad_top                     )
+       DENS, RHOT, QTRC,      &
+       CZ, FZ,                &
+       oceanfrc,              &
+       temp_sfc, albedo_land, &
+       solins, cosSZA,        &
+       flux_rad,              &
+       flux_rad_top           )
     use scale_const, only: &
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
@@ -138,15 +139,15 @@ contains
     real(RP), intent(in)  :: DENS        (KA,IA,JA)
     real(RP), intent(in)  :: RHOT        (KA,IA,JA)
     real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
-    real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
-    real(RP), intent(in)  :: FZ          (KA,IA,JA)
-    real(RP), intent(in)  :: temp_sfc    (IA,JA)
-    real(RP), intent(in)  :: albedo_land (IA,JA,2)
-    real(RP), intent(in)  :: oceanfrc    (IA,JA)
-    real(RP), intent(in)  :: solins      (IA,JA)
-    real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(in)  :: CZ          (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
+    real(RP), intent(in)  :: oceanfrc    (IA,JA)      ! UNUSED
+    real(RP), intent(in)  :: temp_sfc    (IA,JA)      ! UNUSED
+    real(RP), intent(in)  :: albedo_land (IA,JA,2)    ! UNUSED
+    real(RP), intent(in)  :: solins      (IA,JA)      ! UNUSED
+    real(RP), intent(in)  :: cosSZA      (IA,JA)      ! UNUSED
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-    real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+    real(RP), intent(out) :: flux_rad_top(IA,JA,2)    ! UNDEFINED
 
     real(RP), parameter :: kappa = 85.00_RP  ! scaling factor for LWP [m2/kg]
     real(RP), parameter :: a     =  1.00_RP  ! [K/m**-1/3]

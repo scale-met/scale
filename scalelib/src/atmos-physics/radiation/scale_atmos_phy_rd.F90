@@ -44,12 +44,13 @@ module scale_atmos_phy_rd
   !
   abstract interface
      subroutine rd( &
-          DENS, RHOT, QTRC,                &
-          CZ, FZ,                          &
-          temp_sfc, albedo_land, oceanfrc, &
-          solins, cosSZA,                  &
-          flux_rad,                        &
-          flux_rad_top                     )
+          DENS, RHOT, QTRC,      &
+          CZ, FZ,                &
+          oceanfrc,              &
+          temp_sfc, albedo_land, &
+          solins, cosSZA,        &
+          flux_rad,              &
+          flux_rad_top           )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -60,9 +61,9 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
        real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
        real(RP), intent(in)  :: FZ          (KA,IA,JA)
+       real(RP), intent(in)  :: oceanfrc    (IA,JA)
        real(RP), intent(in)  :: temp_sfc    (IA,JA)
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
-       real(RP), intent(in)  :: oceanfrc    (IA,JA)
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)

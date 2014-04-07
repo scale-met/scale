@@ -69,22 +69,23 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_dummy( &
-       DENS, RHOT, QTRC,                &
-       CZ, FZ,                          &
-       temp_sfc, albedo_land, oceanfrc, &
-       solins, cosSZA,                  &
-       flux_rad,                        &
-       flux_rad_top                     )
+       DENS, RHOT, QTRC,      &
+       CZ, FZ,                &
+       oceanfrc,              &
+       temp_sfc, albedo_land, &
+       solins, cosSZA,        &
+       flux_rad,              &
+       flux_rad_top           )
     implicit none
 
     real(RP), intent(in)  :: DENS        (KA,IA,JA)
     real(RP), intent(in)  :: RHOT        (KA,IA,JA)
     real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
-    real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
-    real(RP), intent(in)  :: FZ          (KA,IA,JA)
+    real(RP), intent(in)  :: CZ          (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
+    real(RP), intent(in)  :: oceanfrc    (IA,JA)
     real(RP), intent(in)  :: temp_sfc    (IA,JA)
     real(RP), intent(in)  :: albedo_land (IA,JA,2)
-    real(RP), intent(in)  :: oceanfrc    (IA,JA)
     real(RP), intent(in)  :: solins      (IA,JA)
     real(RP), intent(in)  :: cosSZA      (IA,JA)
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
