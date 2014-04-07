@@ -91,9 +91,9 @@ contains
        NAME(ATMOS_PHY_RD_, RD, _setup), &
        NAME(ATMOS_PHY_RD_, RD,)
 #else
-    use scale_atmos_phy_rd_mstrnX, only: &
-       ATMOS_PHY_RD_mstrnX_setup, &
-       ATMOS_PHY_RD_mstrnX
+    use scale_atmos_phy_rd_mstrnx, only: &
+       ATMOS_PHY_RD_mstrnx_setup, &
+       ATMOS_PHY_RD_mstrnx
     use scale_atmos_phy_rd_dycoms2, only: &
        ATMOS_PHY_RD_dycoms2_setup, &
        ATMOS_PHY_RD_dycoms2
@@ -108,8 +108,8 @@ contains
 
     select case ( RD_TYPE )
     case ( 'MSTRNX' )
-       call ATMOS_PHY_RD_mstrnX_setup( RD_TYPE )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnX
+       call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
+       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
     case ( 'DYCOMSII' )
        call ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_dycoms2

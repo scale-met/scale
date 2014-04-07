@@ -15,7 +15,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_atmos_phy_rd_mstrnX
+module scale_atmos_phy_rd_mstrnx
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -38,8 +38,8 @@ module scale_atmos_phy_rd_mstrnX
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_mstrnX_setup
-  public :: ATMOS_PHY_RD_mstrnX
+  public :: ATMOS_PHY_RD_mstrnx_setup
+  public :: ATMOS_PHY_RD_mstrnx
 
   !-----------------------------------------------------------------------------
   !
@@ -210,7 +210,7 @@ module scale_atmos_phy_rd_mstrnX
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_mstrnX_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     use scale_time, only: &
@@ -352,11 +352,11 @@ contains
                                       RD_cldfrac     (:)      ) ! [INOUT]
 
     return
-  end subroutine ATMOS_PHY_RD_mstrnX_setup
+  end subroutine ATMOS_PHY_RD_mstrnx_setup
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD_mstrnX( &
+  subroutine ATMOS_PHY_RD_mstrnx( &
        flux_rad, flux_rad_top,    & ! [out]
        solins, cosSZA,            & ! [out]
        DENS, RHOT, QTRC,          & ! [in]
@@ -433,7 +433,7 @@ contains
     integer :: RD_k, k, i, j
     !---------------------------------------------------------------------------
 
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnx)'
 
      call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                                pres(:,:,:),  & ! [OUT]
@@ -594,7 +594,7 @@ contains
      endif
 
     return
-  end subroutine ATMOS_PHY_RD_mstrnX
+  end subroutine ATMOS_PHY_RD_mstrnx
 
   !-----------------------------------------------------------------------------
   !> Setup MSTRN parameter table
@@ -1632,4 +1632,4 @@ contains
     return
   end function albedo_sea
 
-end module scale_atmos_phy_rd_mstrnX
+end module scale_atmos_phy_rd_mstrnx

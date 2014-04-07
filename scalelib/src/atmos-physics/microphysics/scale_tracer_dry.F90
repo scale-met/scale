@@ -71,7 +71,7 @@ module scale_tracer_dry
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_dry+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_dry+AE_dummy+RD_mstrnx)
   !
   !-----------------------------------------------------------------------------
 

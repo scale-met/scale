@@ -86,7 +86,7 @@ module scale_tracer_tomita08
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_tomita08+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_tomita08+AE_dummy+RD_mstrnx)
   !
   !-----------------------------------------------------------------------------
 

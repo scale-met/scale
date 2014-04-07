@@ -15,7 +15,7 @@ dynamics   = heve
 tracer     = sn13
 sfcflx     = const
 turbulence = smg
-radiation  = mstrnX
+radiation  = mstrnx
 
 # for run
 INITCONF  = init.conf

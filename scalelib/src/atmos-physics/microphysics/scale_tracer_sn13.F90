@@ -101,7 +101,7 @@ module scale_tracer_sn13
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_sn13+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_sn13+AE_dummy+RD_mstrnx)
   !
   !-----------------------------------------------------------------------------
 

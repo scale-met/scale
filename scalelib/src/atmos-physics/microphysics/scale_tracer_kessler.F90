@@ -77,7 +77,7 @@ module scale_tracer_kessler
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_kessler+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_kessler+AE_dummy+RD_mstrnx)
   !
   !-----------------------------------------------------------------------------
 

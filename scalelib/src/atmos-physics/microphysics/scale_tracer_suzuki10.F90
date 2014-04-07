@@ -90,7 +90,7 @@ module scale_tracer_suzuki10
                                'Mixing ratio of aerosol bin' /)
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_binf+AE_dummy+RD_mstrnX)
+  !++ tracer index & relationship (MP_binf+AE_dummy+RD_mstrnx)
   !
   !-----------------------------------------------------------------------------
 
