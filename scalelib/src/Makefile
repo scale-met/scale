@@ -13,7 +13,23 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
-VPATH = io:common:grid:atmos:ocean:cpl
+VPATH = common:                     \
+        io:                         \
+        atmos-physics:              \
+        atmos-physics/share:        \
+        atmos-physics/cumulus:      \
+        atmos-physics/microphysics: \
+        atmos-physics/radiation:    \
+        atmos-physics/surfaceflux:  \
+        atmos-physics/turbulence:   \
+        atmos-physics/aerosol:      \
+        atmos-physics/chemistry:    \
+        atmos-les:                  \
+        atmos-les/communication:    \
+        atmos-les/grid:             \
+        atmos-les/dynamics:         \
+        ocean:                      \
+        cpl:
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
