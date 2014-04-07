@@ -380,14 +380,10 @@ contains
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
 #endif
           mflx_hi(k,i,j,ZDIR) = J33G * MOMZ(k,i,j) &
-                              + J13G(k,i,j,I_XYW) * 0.5_RP * ( FACT_N * ( MOMX(k+1,i  ,j)+MOMX(k+1,i-1,j) ) &
-                                                             + FACT_F * ( MOMX(k+1,i+1,j)+MOMX(k+1,i-2,j) ) &
-                                                             + FACT_N * ( MOMX(k  ,i  ,j)+MOMX(k  ,i-1,j) ) &
-                                                             + FACT_F * ( MOMX(k  ,i+1,j)+MOMX(k  ,i-2,j) ) ) & ! [{u,y,z->x,y,w}]
-                              + J23G(k,i,j,I_XYW) * 0.5_RP * ( FACT_N * ( MOMY(k+1,i,j  )+MOMY(k+1,i,j-1) ) &
-                                                             + FACT_F * ( MOMY(k+1,i,j+1)+MOMY(k+1,i,j-2) ) &
-                                                             + FACT_N * ( MOMY(k  ,i,j  )+MOMY(k  ,i,j-1) ) &
-                                                             + FACT_F * ( MOMY(k  ,i,j+1)+MOMY(k  ,i,j-2) ) ) & ! [{x,v,z->x,y,w}]
+                              + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
+                                                              + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) & ! [{u,y,z->x,y,w}]
+                              + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
+                                                              + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) & ! [{x,v,z->x,y,w}]
                               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
        enddo
        enddo
@@ -419,7 +415,6 @@ contains
           call CHECK( __LINE__, MOMX(k,i-1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
-!          mflx_hi(k,i,j,XDIR) = ( -MOMX(k,i+1,j) + 8.0_RP*MOMX(k,i,j) -MOMX(k,i-1,j) ) / 6.0_RP &
           mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) * ( MOMX(k,i,j) + num_diff(k,i,j,I_DENS,XDIR) )
        enddo
        enddo
@@ -440,7 +435,6 @@ contains
           call CHECK( __LINE__, MOMY(k,i,j-1) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,YDIR) )
 #endif
-!          mflx_hi(k,i,j,YDIR) = ( -MOMY(k,i,j+1) + 8.0_RP*MOMY(k,i,j) -MOMY(k,i,j-1) ) / 6.0_RP &
           mflx_hi(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) * ( MOMY(k,i,j) + num_diff(k,i,j,I_DENS,YDIR) )
        enddo
        enddo
@@ -707,7 +701,7 @@ contains
           ! if w>0; min(f,w*dz/dt)
           ! else  ; max(f,w*dz/dt) = -min(-f,-w*dz/dt)
           sw = sign( 1.0_RP, MOMZ(KS,i,j) )
-          qflx_hi(KS  ,i,j,ZDIR) = sw * min( sw*qflx_hi(KS,i,j,ZDIR), sw*MOMZ(KS,i,j)*FDZ(KS)/dtrk )
+          qflx_hi(KS  ,i,j,ZDIR) = sw * min( sw*qflx_hi(KS,i,j,ZDIR), sw*MOMZ(KS,i,j)*GSQRT(KS,i,j,I_XYZ)*FDZ(KS)/dtrk )
 
           qflx_hi(KE-2,i,j,ZDIR) = J33G &
                                  * 0.5_RP * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) & ! [x,y,w->x,y,z]
