@@ -222,9 +222,8 @@ contains
                     - GSQRT(k,i-1,j,I_UVZ)*qflx_sgs_rhot(k,i-1,j,XDIR) ) * RCDX(i) &
                   + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_rhot(k,i,j  ,YDIR) &
                     - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_rhot(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( GSQRT(k  ,i,j,I_XVW)*qflx_sgs_rhot(k  ,i,j,ZDIR) &
-                    - GSQRT(k-1,i,j,I_XVW)*qflx_sgs_rhot(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                  * ( J13G(k,i,j,I_XYZ) + J23G(k,i,j,I_XYZ) + J33G ) / GSQRT(k,i,j,I_XYZ) &
+                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*qflx_sgs_rhot(k  ,i,j,ZDIR) &
+                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*qflx_sgs_rhot(k-1,i,j,ZDIR) ) * RCDZ(k) &
                 ) / GSQRT(k,i,j,I_XYZ)
           end do
           end do
@@ -238,9 +237,8 @@ contains
                     - GSQRT(k,i-1,j,I_UYZ)*qflx_sgs_qtrc(k,i-1,j,iq,XDIR) ) * RCDX(i) &
                   + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_qtrc(k,i,j  ,iq,YDIR) &
                     - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_qtrc(k,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( GSQRT(k  ,i,j,I_XYW)*qflx_sgs_qtrc(k  ,i,j,iq,ZDIR) &
-                    - GSQRT(k-1,i,j,I_XYW)*qflx_sgs_qtrc(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
-                  * ( J13G(k,i,j,I_XYZ) + J23G(k,i,j,I_XYZ) + J33G ) / GSQRT(k,i,j,I_XYZ) &
+                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*qflx_sgs_qtrc(k  ,i,j,iq,ZDIR) &
+                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*qflx_sgs_qtrc(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
                 ) / GSQRT(k,i,j,I_XYZ)
           end do
           end do
