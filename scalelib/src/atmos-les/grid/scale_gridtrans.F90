@@ -159,7 +159,7 @@ contains
     do j = 1, JA-1
     do i = 1, IA-1
     do k = 1, KA
-       REAL_CZ_UV(k,i,j) = 0.25D0 * ( REAL_CZ(k,i+1,j  ) + REAL_CZ(k,i+1,j) &
+       REAL_CZ_UV(k,i,j) = 0.25D0 * ( REAL_CZ(k,i+1,j+1) + REAL_CZ(k,i+1,j) &
                                     + REAL_CZ(k,i  ,j+1) + REAL_CZ(k,i  ,j) )
     enddo
     enddo
