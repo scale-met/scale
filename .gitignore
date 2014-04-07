@@ -3,3 +3,8 @@
 *~
 *.a
 *.bak
+*.aux
+*.dvi
+*.pdf
+*.toc
+*.log
