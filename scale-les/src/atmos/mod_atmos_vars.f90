@@ -19,12 +19,12 @@ module mod_atmos_vars
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_debug
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_debug
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -188,11 +188,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_vars_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_reg
-    use mod_monitor, only: &
+    use scale_monitor, only: &
        MONIT_reg
     implicit none
 
@@ -569,7 +569,7 @@ contains
   !-----------------------------------------------------------------------------
   !> fill HALO region of atmospheric variables
   subroutine ATMOS_vars_fillhalo
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -630,18 +630,18 @@ contains
   subroutine ATMOS_vars_restart_read
     use gtool_file, only: &
        FileRead
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_myrank
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ
-    use mod_monitor, only: &
+    use scale_monitor, only: &
        MONIT_put,  &
        MONIT_in,   &
        MONIT_write
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV
@@ -777,11 +777,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart of atmospheric variables
   subroutine ATMOS_vars_restart_write
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_REAL4, &
@@ -793,7 +793,7 @@ contains
        FilePutAssociatedCoordinates, &
        FileWrite, &
        FileClose
-    use mod_grid, only: &
+    use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
        GRID_CY,    &
@@ -820,7 +820,7 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        REAL_lon, &
        REAL_lonx, &
        REAL_lat, &
@@ -974,7 +974,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
   subroutine ATMOS_vars_restart_check
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_myrank
     use gtool_file, only: &
        FileRead
@@ -1105,7 +1105,7 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for atmospheric variables
   subroutine ATMOS_vars_history
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        Rdry  => CONST_Rdry,  &
        Rvap  => CONST_Rvap,  &
@@ -1113,24 +1113,24 @@ contains
        CVdry => CONST_CVdry, &
        LH0   => CONST_LH0,   &
        P00   => CONST_PRE00
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ   => GRID_CZ,   &
        CDZ  => GRID_CDZ,  &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_put
-    use mod_monitor, only: &
+    use scale_monitor, only: &
        MONIT_put, &
        MONIT_in
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        CPw => AQ_CP,                       &
        CVw => AQ_CV
-    use mod_atmos_saturation, only: &
+    use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -1630,15 +1630,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for atmosphere
   subroutine ATMOS_vars_total
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ   => GRID_CZ
-    use mod_stats, only: &
+    use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV

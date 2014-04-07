@@ -6,7 +6,7 @@ FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays
          -assume byterecl -convert big_endian \
          -fno-alias
 
-# compiler flag for mod_atmos_dyn_fent_pdfct
+# compiler flag for scale_atmos_dyn_fent_pdfct
 FFLAGS_DYN ?= $(FFLAGS)
 
 # C compiler

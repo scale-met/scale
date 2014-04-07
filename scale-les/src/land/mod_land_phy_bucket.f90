@@ -13,10 +13,10 @@ module mod_land_phy_bucket
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -58,7 +58,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_PHY_driver_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
     use mod_land_vars, only: &
        LAND_TYPE_PHY
@@ -113,10 +113,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Physical processes for land submodel
   subroutine LAND_PHY_driver_first
-    use mod_const, only: &
+    use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
-    use mod_time, only: &
+    use scale_time, only: &
        dt => TIME_DTSEC_LAND
     use mod_land_vars, only: &
        TG,                 &

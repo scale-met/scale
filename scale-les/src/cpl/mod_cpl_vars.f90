@@ -14,11 +14,11 @@ module mod_cpl_vars
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_debug
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_debug
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -249,7 +249,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_vars_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
     implicit none
 
@@ -419,7 +419,7 @@ contains
   !-----------------------------------------------------------------------------
   !> fill HALO region of coupler variables
   subroutine CPL_vars_fillhalo
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -450,11 +450,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Read coupler restart
   subroutine CPL_vars_restart_read
-    use mod_fileio, only: &
+    use scale_fileio, only: &
        FILEIO_read
-    use mod_const, only: &
+    use scale_const, only: &
        CONST_UNDEF
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -508,9 +508,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Write coupler restart
   subroutine CPL_vars_restart_write
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use mod_fileio, only: &
+    use scale_fileio, only: &
        FILEIO_write
     implicit none
 
@@ -562,9 +562,9 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for coupler variables
   subroutine CPL_vars_history
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC_CPL
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
     implicit none
     !---------------------------------------------------------------------------
@@ -629,7 +629,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for coupler
   subroutine CPL_vars_total
-    use mod_stats, only: &
+    use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
     implicit none
@@ -654,7 +654,7 @@ contains
   end subroutine CPL_vars_total
 
   subroutine CPL_vars_merge
-    use mod_landuse, only: &
+    use scale_landuse, only: &
       frac_ocean => LANDUSE_frac_ocean
     implicit none
     !---------------------------------------------------------------------------

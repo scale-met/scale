@@ -1,10 +1,10 @@
 module test_atmos_phy_tb_smg
 
   !-----------------------------------------------------------------------------
-  use mod_precision
-  use mod_grid_index
-  use mod_tracer
-  use mod_atmos_phy_tb, only: &
+  use scale_precision
+  use scale_grid_index
+  use scale_tracer
+  use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
   use dc_test, only: &
      AssertEqual, &
@@ -55,11 +55,11 @@ contains
   !
   !++ used modules
   !
-  use mod_stdio, only: &
+  use scale_stdio, only: &
      H_SHORT
-  use mod_atmos_phy_tb, only: &
+  use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB_setup
-  use mod_grid, only: &
+  use scale_grid, only: &
      CDZ => GRID_CDZ, &
      CDX => GRID_CDX, &
      CDY => GRID_CDX, &

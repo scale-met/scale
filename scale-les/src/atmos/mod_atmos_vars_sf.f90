@@ -17,10 +17,10 @@ module mod_atmos_vars_sf
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -90,7 +90,7 @@ contains
   !> Setup atmospheric surface variables
   !-----------------------------------------------------------------------------
   subroutine ATMOS_vars_sf_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
     implicit none
 
@@ -146,7 +146,7 @@ contains
   end subroutine ATMOS_vars_sf_setup
 
   subroutine ATMOS_vars_sf_fillhalo
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -165,11 +165,11 @@ contains
   end subroutine ATMOS_vars_sf_fillhalo
 
   subroutine ATMOS_vars_sf_restart_read
-    use mod_fileio, only: &
+    use scale_fileio, only: &
        FILEIO_read
-    use mod_const, only: &
+    use scale_const, only: &
        CONST_UNDEF
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -206,9 +206,9 @@ contains
   end subroutine ATMOS_vars_sf_restart_read
 
   subroutine ATMOS_vars_sf_restart_write
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use mod_fileio, only: &
+    use scale_fileio, only: &
        FILEIO_write
     implicit none
 
@@ -246,7 +246,7 @@ contains
   end subroutine ATMOS_vars_sf_restart_write
 
   subroutine ATMOS_vars_sf_total
-    use mod_stats, only: &
+    use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
     implicit none

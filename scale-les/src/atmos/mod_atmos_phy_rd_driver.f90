@@ -16,11 +16,11 @@ module mod_atmos_phy_rd_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -51,9 +51,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_phy_rd, only: &
+    use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
     implicit none
 
@@ -75,18 +75,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Radiation main
   subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
-    use mod_time, only: &
+    use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_RD
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ, &
        FZ => GRID_FZ, &
        CDZ => GRID_CDZ, &
        RCDZ => GRID_RCDZ
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_NOWDATE
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        REAL_lon, &
        REAL_lat
     use mod_atmos_vars, only: &
@@ -104,15 +104,15 @@ contains
        sw_AtmLnd => CPL_sw_AtmLnd, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
        SkinT
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
        THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
        THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
        THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use mod_atmos_phy_rd, only: &
+    use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
-    use mod_atmos_phy_rd_common, only: &
+    use scale_atmos_phy_rd_common, only: &
        RD_heating => ATMOS_PHY_RD_heating, &
        I_SW, &
        I_LW, &

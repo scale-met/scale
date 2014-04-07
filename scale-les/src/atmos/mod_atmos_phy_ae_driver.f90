@@ -16,11 +16,11 @@ module mod_atmos_phy_ae_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,7 +48,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_driver_setup( AE_TYPE )
-    use mod_atmos_phy_ae, only: &
+    use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE_setup
     implicit none
 
@@ -69,7 +69,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
   subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
-    use mod_atmos_phy_ae, only: &
+    use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE
     implicit none
     logical, intent(in) :: update_flag

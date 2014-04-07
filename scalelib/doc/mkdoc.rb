@@ -98,7 +98,7 @@ files.each do |fname|
         lists = lists.split(",").map{|c| c.strip.upcase}
         namelists[group] = lists
       when /call HIST_(?:reg|in)\s*\((.+)$/
-        next if modname == "mod_history"
+        next if modname == "scale_history"
         str = $1.strip.sub(/\)\Z/,"").strip
         str.sub!(/,[^,]+\Z/,"")
         info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}

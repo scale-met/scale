@@ -16,11 +16,11 @@ module mod_atmos_phy_mp_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,9 +55,9 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_driver_setup( MP_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_phy_mp, only: &
+    use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
     implicit none
 
@@ -85,7 +85,7 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
-    use mod_atmos_phy_mp, only: &
+    use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &

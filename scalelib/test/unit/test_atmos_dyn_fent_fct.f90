@@ -1,17 +1,17 @@
 module test_atmos_dyn_fent_fct
 
   !-----------------------------------------------------------------------------
-  use mod_precision
-  use mod_grid_index
-  use mod_tracer
-  use mod_atmos_dyn, only: &
+  use scale_precision
+  use scale_grid_index
+  use scale_tracer
+  use scale_atmos_dyn, only: &
      ATMOS_DYN
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-  use mod_stdio, only: &
+  use scale_stdio, only: &
        H_SHORT
-  use mod_grid, only: &
+  use scale_grid, only: &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
@@ -105,11 +105,11 @@ contains
   !
   !++ used modules
   !
-  use mod_atmos_dyn, only: &
+  use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
-  use mod_grid, only: &
+  use scale_grid, only: &
      GRID_CZ_mask
-  use mod_const, only: &
+  use scale_const, only: &
      GRAV => CONST_GRAV
 
   !-----------------------------------------------------------------------------
@@ -366,7 +366,7 @@ subroutine test_const
 end subroutine test_const
 
 subroutine test_conserve
-  use mod_comm, only: &
+  use scale_comm, only: &
      COMM_vars8, &
      COMM_wait
 

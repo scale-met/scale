@@ -16,11 +16,11 @@ module mod_atmos_phy_tb_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,14 +52,14 @@ module mod_atmos_phy_tb_driver
 contains
 
   subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
+    use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
        CZ  => GRID_CZ
-    use mod_atmos_phy_tb, only: &
+    use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     implicit none
 
@@ -86,11 +86,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_driver( update_flag, history_flag )
-    use mod_time, only: &
+    use scale_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
-    use mod_grid, only: &
+    use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
@@ -99,7 +99,7 @@ contains
        RFDY => GRID_RFDY, &
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
-    use mod_gridtrans, only: &
+    use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -111,7 +111,7 @@ contains
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
        J33G  => GTRANS_J33G
-    use mod_atmos_phy_tb, only: &
+    use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB
     use mod_atmos_vars, only: &
        DENS_av, &

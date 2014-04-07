@@ -28,15 +28,15 @@ module mod_mkinit
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
 
-  use mod_process, only: &
+  use scale_process, only: &
      PRC_MPIstop
-  use mod_const, only: &
+  use scale_const, only: &
      PI    => CONST_PI,    &
      GRAV  => CONST_GRAV,  &
      Pstd  => CONST_Pstd,  &
@@ -45,16 +45,16 @@ module mod_mkinit
      RovCP => CONST_RovCP, &
      LH0   => CONST_LH0,   &
      P00   => CONST_PRE00
-  use mod_random, only: &
+  use scale_random, only: &
      RANDOM_get
-  use mod_comm, only: &
+  use scale_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use mod_grid, only: &
+  use scale_grid, only: &
      CZ => GRID_CZ, &
      CX => GRID_CX, &
      CY => GRID_CY
-  use mod_grid_real, only: &
+  use scale_grid_real, only: &
      REAL_CZ
   use mod_atmos_vars, only: &
      DENS, &
@@ -80,13 +80,13 @@ module mod_mkinit
      SkinT, &
      ALBW,  &
      Z0W
-  use mod_atmos_profile, only: &
+  use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
-  use mod_atmos_hydrostatic, only: &
+  use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
-  use mod_atmos_saturation, only: &
+  use scale_atmos_saturation, only: &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
   !-----------------------------------------------------------------------------
   implicit none
@@ -288,7 +288,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKINIT
-    use mod_const, only: &
+    use scale_const, only: &
        CONST_UNDEF8
     use mod_atmos_vars, only: &
        ATMOS_sw_restart,    &
@@ -421,7 +421,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
-    use mod_const, only: &
+    use scale_const, only: &
        CONST_UNDEF8
     implicit none
 
@@ -501,7 +501,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
-    use mod_const, only: &
+    use scale_const, only: &
        PI => CONST_PI
 
     implicit none
@@ -596,7 +596,7 @@ contains
 
   !-----------------------------------------------------------------------------
   function faero( f0,r0,x,alpha,rhoa )
-    use mod_const, only: &
+    use scale_const, only: &
        pi => CONST_PI
     implicit none
 
@@ -2726,7 +2726,7 @@ contains
     use gtool_file, only: &
        FileGetShape, &
        FileRead
-    use mod_grid, only: &
+    use scale_grid, only: &
        FZ => GRID_FZ, &
        FX => GRID_FX, &
        FY => GRID_FY

@@ -15,9 +15,9 @@ module mod_cpl_atmos_land_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,7 +48,7 @@ contains
        ATMOS_PHY_SF_driver_final
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_final
-    use mod_cpl_atmos_land, only: &
+    use scale_cpl_atmos_land, only: &
        CPL_AtmLnd_setup
     use mod_cpl_vars, only: &
        CPL_TYPE_AtmLnd
@@ -65,12 +65,12 @@ contains
   end subroutine CPL_AtmLnd_driver_setup
 
   subroutine CPL_AtmLnd_driver( update_flag )
-    use mod_const, only: &
+    use scale_const, only: &
        LH0 => CONST_LH0
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
-    use mod_cpl_atmos_land, only: &
+    use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
        LST,              &

@@ -16,11 +16,11 @@ module mod_user
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -62,11 +62,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
+    use scale_const, only: &
        PI => CONST_PI
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ, &
        FZ => GRID_FZ
     implicit none
@@ -242,16 +242,16 @@ contains
          MOMY_tp, &
          RHOT_tp, &
          QTRC_tp
-    use mod_grid, only: &
+    use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
-    use mod_const, only: &
+    use scale_const, only: &
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
          LH0   => CONST_LH0, &
          P00   => CONST_PRE00 
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
          CPw   => AQ_CP 
  
     implicit none

@@ -15,9 +15,9 @@ module mod_cpl_atmos_ocean_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,13 +46,13 @@ contains
   subroutine CPL_AtmOcn_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_final
-    use mod_ocean_roughness, only: &
+    use scale_ocean_roughness, only: &
        OCEAN_roughness_setup
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_final
     use mod_cpl_vars, only: &
        CPL_TYPE_AtmOcn
-    use mod_cpl_atmos_ocean, only: &
+    use scale_cpl_atmos_ocean, only: &
        CPL_AtmOcn_setup
     implicit none
     !---------------------------------------------------------------------------
@@ -70,14 +70,14 @@ contains
   end subroutine CPL_AtmOcn_driver_setup
 
   subroutine CPL_AtmOcn_driver( update_flag )
-    use mod_const, only: &
+    use scale_const, only: &
        LH0 => CONST_LH0
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
-    use mod_ocean_roughness, only: &
+    use scale_ocean_roughness, only: &
        OCEAN_roughness
-    use mod_cpl_atmos_ocean, only: &
+    use scale_cpl_atmos_ocean, only: &
        CPL_AtmOcn
     use mod_cpl_vars, only: &
        SST,              &

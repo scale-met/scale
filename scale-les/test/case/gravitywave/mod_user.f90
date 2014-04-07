@@ -16,11 +16,11 @@ module mod_user
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -53,7 +53,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
     implicit none
 
@@ -86,18 +86,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV  => CONST_GRAV
-    use mod_grid, only : &
+    use scale_grid, only : &
        CZ => GRID_CZ
-    use mod_time, only: &
+    use scale_time, only: &
        DTSEC => TIME_DTSEC
     use mod_atmos_vars, only: &
        DENS, &
        RHOT
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
     implicit none
 
