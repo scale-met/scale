@@ -113,7 +113,7 @@ program scaleles_init
   call RANDOM_setup
 
   ! setup time
-  call TIME_setup( .true. )
+  call TIME_setup( setup_TimeIntegration = .false. )
 
   call PROF_rapstart('Initialize')
 
