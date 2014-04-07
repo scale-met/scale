@@ -5,11 +5,11 @@ $(BUILD_DIR)/scale_atmos_dyn_rk_heve.o: atmos/scale_atmos_dyn_rk_heve.F90 $(BUIL
 $(BUILD_DIR)/scale_atmos_dyn_rk_hevi.o: atmos/scale_atmos_dyn_rk_hevi.F90 $(BUILD_DIR)/scale_atmos_dyn_common.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_ae.o: atmos/scale_atmos_phy_ae.F90 $(BUILD_DIR)/scale_atmos_phy_ae_dummy.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_ae_dummy.o: atmos/scale_atmos_phy_ae_dummy.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
-$(BUILD_DIR)/scale_atmos_phy_mp.o: atmos/scale_atmos_phy_mp.F90 $(BUILD_DIR)/scale_atmos_phy_mp_dry.o $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o $(BUILD_DIR)/scale_atmos_phy_mp_sn13.o $(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.o $(BUILD_DIR)/scale_atmos_phy_mp_tomita08.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
+$(BUILD_DIR)/scale_atmos_phy_mp.o: atmos/scale_atmos_phy_mp.F90 $(BUILD_DIR)/scale_atmos_phy_mp_dry.o $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o $(BUILD_DIR)/scale_atmos_phy_mp_sn14.o $(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.o $(BUILD_DIR)/scale_atmos_phy_mp_tomita08.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_mp_common.o: atmos/scale_atmos_phy_mp_common.F90 $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_gridtrans.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_mp_dry.o: atmos/scale_atmos_phy_mp_dry.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_dry.o
 $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o: atmos/scale_atmos_phy_mp_kessler.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_kessler.o
-$(BUILD_DIR)/scale_atmos_phy_mp_sn13.o: atmos/scale_atmos_phy_mp_sn13.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_specfunc.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_sn13.o
+$(BUILD_DIR)/scale_atmos_phy_mp_sn14.o: atmos/scale_atmos_phy_mp_sn14.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_specfunc.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_sn14.o
 $(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.o: atmos/scale_atmos_phy_mp_suzuki10.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_random.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_suzuki10.o
 $(BUILD_DIR)/scale_atmos_phy_mp_tomita08.o: atmos/scale_atmos_phy_mp_tomita08.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_specfunc.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_tomita08.o
 $(BUILD_DIR)/scale_atmos_phy_rd.o: atmos/scale_atmos_phy_rd.F90 $(BUILD_DIR)/scale_atmos_phy_rd_dummy.o $(BUILD_DIR)/scale_atmos_phy_rd_dycoms2.o $(BUILD_DIR)/scale_atmos_phy_rd_mstrnx.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
@@ -63,10 +63,10 @@ $(BUILD_DIR)/scale_stats.o: common/scale_stats.F90 $(BUILD_DIR)/scale_comm.o $(B
 $(BUILD_DIR)/scale_stdio.o: io/scale_stdio.F90
 $(BUILD_DIR)/scale_time.o: common/scale_time.F90 $(BUILD_DIR)/scale_calendar.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_topography.o: grid/scale_topography.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_fileio.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
-$(BUILD_DIR)/scale_tracer.o: common/scale_tracer.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer_dry.o $(BUILD_DIR)/scale_tracer_kessler.o $(BUILD_DIR)/scale_tracer_sn13.o $(BUILD_DIR)/scale_tracer_suzuki10.o $(BUILD_DIR)/scale_tracer_tomita08.o
+$(BUILD_DIR)/scale_tracer.o: common/scale_tracer.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer_dry.o $(BUILD_DIR)/scale_tracer_kessler.o $(BUILD_DIR)/scale_tracer_sn14.o $(BUILD_DIR)/scale_tracer_suzuki10.o $(BUILD_DIR)/scale_tracer_tomita08.o
 $(BUILD_DIR)/scale_tracer_dry.o: common/scale_tracer_dry.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_tracer_kessler.o: common/scale_tracer_kessler.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
-$(BUILD_DIR)/scale_tracer_sn13.o: common/scale_tracer_sn13.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
+$(BUILD_DIR)/scale_tracer_sn14.o: common/scale_tracer_sn14.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_tracer_suzuki10.o: common/scale_tracer_suzuki10.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_tracer_tomita08.o: common/scale_tracer_tomita08.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 
@@ -84,7 +84,7 @@ MODS =	\
 	scale_atmos_phy_mp_common.mod	\
 	scale_atmos_phy_mp_dry.mod	\
 	scale_atmos_phy_mp_kessler.mod	\
-	scale_atmos_phy_mp_sn13.mod	\
+	scale_atmos_phy_mp_sn14.mod	\
 	scale_atmos_phy_mp_suzuki10.mod	\
 	scale_atmos_phy_mp_tomita08.mod	\
 	scale_atmos_phy_rd.mod	\
@@ -139,6 +139,6 @@ MODS =	\
 	scale_tracer.mod	\
 	scale_tracer_dry.mod	\
 	scale_tracer_kessler.mod	\
-	scale_tracer_sn13.mod	\
+	scale_tracer_sn14.mod	\
 	scale_tracer_suzuki10.mod	\
 	scale_tracer_tomita08.mod

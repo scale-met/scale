@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module TRACER / sn13
+!> module TRACER / suzuki10
 !!
 !! @par Description
-!!          Tracer sn13 module
+!!          Tracer suzuki10 module
 !!
 !! @author Team SCALE
 !!

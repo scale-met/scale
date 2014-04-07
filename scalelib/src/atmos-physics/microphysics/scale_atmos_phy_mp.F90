@@ -143,13 +143,13 @@ contains
        ATMOS_PHY_MP_tomita08_EffectiveRadius, &
        ATMOS_PHY_MP_tomita08_MixingRatio, &
        ATMOS_PHY_MP_tomita08_DENS => ATMOS_PHY_MP_DENS
-    use scale_atmos_phy_mp_sn13, only: &
-       ATMOS_PHY_MP_sn13_setup, &
-       ATMOS_PHY_MP_sn13, &
-       ATMOS_PHY_MP_sn13_CloudFraction, &
-       ATMOS_PHY_MP_sn13_EffectiveRadius, &
-       ATMOS_PHY_MP_sn13_MixingRatio, &
-       ATMOS_PHY_MP_sn13_DENS => ATMOS_PHY_MP_DENS
+    use scale_atmos_phy_mp_sn14, only: &
+       ATMOS_PHY_MP_sn14_setup, &
+       ATMOS_PHY_MP_sn14, &
+       ATMOS_PHY_MP_sn14_CloudFraction, &
+       ATMOS_PHY_MP_sn14_EffectiveRadius, &
+       ATMOS_PHY_MP_sn14_MixingRatio, &
+       ATMOS_PHY_MP_sn14_DENS => ATMOS_PHY_MP_DENS
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_setup, &
        ATMOS_PHY_MP_suzuki10, &
@@ -185,13 +185,13 @@ contains
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_tomita08_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_tomita08_MixingRatio
        ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_tomita08_DENS
-    case ( 'SN13' )
-       call ATMOS_PHY_MP_sn13_setup( MP_TYPE )
-       ATMOS_PHY_MP => ATMOS_PHY_MP_sn13
-       ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn13_CloudFraction
-       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn13_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn13_MixingRatio
-       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn13_DENS
+    case ( 'SN14' )
+       call ATMOS_PHY_MP_sn14_setup( MP_TYPE )
+       ATMOS_PHY_MP => ATMOS_PHY_MP_sn14
+       ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_sn14_CloudFraction
+       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sn14_EffectiveRadius
+       ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_sn14_MixingRatio
+       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_sn14_DENS
     case ( 'SUZUKI10' )
        call ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
        ATMOS_PHY_MP => ATMOS_PHY_MP_suzuki10

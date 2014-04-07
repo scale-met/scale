@@ -1,17 +1,17 @@
 !-------------------------------------------------------------------------------
-!> module TRACER / sn13
+!> module TRACER / sn14
 !!
 !! @par Description
-!!          Tracer sn13 module
+!!          Tracer sn14 module
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-05 (S.Nishizawa)   [new] imported from inc_tracer_sn13.f90
+!! @li      2013-12-05 (S.Nishizawa)   [new] imported from inc_tracer_sn14.f90
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_tracer_sn13
+module scale_tracer_sn14
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,7 +25,7 @@ module scale_tracer_sn13
   !
   !++ Public procedure
   !
-  public :: TRACER_sn13_setup
+  public :: TRACER_sn14_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -101,7 +101,7 @@ module scale_tracer_sn13
 
   !-----------------------------------------------------------------------------
   !
-  !++ tracer index & relationship (MP_sn13+AE_dummy+RD_mstrnx)
+  !++ tracer index & relationship (MP_sn14+AE_dummy+RD_mstrnX)
   !
   !-----------------------------------------------------------------------------
 
@@ -138,10 +138,10 @@ module scale_tracer_sn13
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  subroutine TRACER_sn13_setup
+  subroutine TRACER_sn14_setup
     implicit none
 
     return
-  end subroutine TRACER_sn13_setup
+  end subroutine TRACER_sn14_setup
 
-end module scale_tracer_sn13
+end module scale_tracer_sn14
