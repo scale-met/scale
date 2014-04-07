@@ -52,6 +52,8 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
+    use scale_time, only: &
+       TIME_NOWDATE
     use mod_atmos_vars, only: &
        ATMOS_DYN_TYPE, &
        ATMOS_PHY_SF_TYPE, &
@@ -78,6 +80,8 @@ contains
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        sw_phy_ae => ATMOS_sw_phy_ae
+    use scale_atmos_solarins, only: &
+       ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
     use scale_atmos_boundary, only: &
@@ -96,6 +100,9 @@ contains
        ATMOS_PHY_AE_setup => ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
+
+    !--- setup solar insolation
+    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 

@@ -111,19 +111,15 @@ contains
   ! Parametarized Radiative heating
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_dycoms2( &
-       flux_rad, flux_top,  & ! [out]
-       solins, cosSZA,      & ! [out]
-       DENS, RHOT, QTRC,    & ! [in]
-       temp_sfc, param_sfc, & ! [in]
-       CZ, FZ, CDZ, RCDZ,   & ! [in]
-       REAL_lon, REAL_lat,  & ! [in]
-       TIME_NOWDATE         ) ! [in]
+       DENS, RHOT, QTRC,                &
+       CZ, FZ,                          &
+       temp_sfc, albedo_land, oceanfrc, &
+       solins, cosSZA,                  &
+       flux_rad,                        &
+       flux_rad_top                     )
     use scale_const, only: &
        Rdry    => CONST_Rdry,   &
        CPdry   => CONST_CPdry,  &
-       RovCP   => CONST_RovCP,  &
-       RovCV   => CONST_RovCV,  &
-       CPovCV  => CONST_CPovCV, &
        EPSTvap => CONST_CPdry,  &
        P00     => CONST_PRE00,  &
        UNDEF   => CONST_UNDEF
@@ -135,78 +131,72 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_rd_common, only: &
-       I_SW, &
        I_LW, &
-       I_dn, &
        I_up
     implicit none
-    real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
-    real(RP), intent(out) :: flux_top(IA,JA,2)
-    real(RP), intent(out) :: solins(IA,JA)
-    real(RP), intent(out) :: cosSZA(IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)  :: temp_sfc(IA,JA)
-    real(RP), intent(in)  :: param_sfc(5)
-    real(RP), intent(in)  :: CZ(KA)
-    real(RP), intent(in)  :: FZ(KA-1)
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: RCDZ(KA)
-    real(RP), intent(in)  :: REAL_lon(IA,JA)
-    real(RP), intent(in)  :: REAL_lat(IA,JA)
-    integer , intent(in)  :: TIME_NOWDATE(6)
 
-    real(RP) :: EFLX_rad(KA,IA,JA) ! Radiative heating flux [J/m2/s]
-    real(RP) :: Zi      (   IA,JA) ! Cloud top height [m]
-
-    real(RP) :: QTOT ! Qv + Qc + Qr [kg/kg]
-
-    real(RP) :: Qbelow, Qabove ! scaled LWP (above/below layer)
+    real(RP), intent(in)  :: DENS        (KA,IA,JA)
+    real(RP), intent(in)  :: RHOT        (KA,IA,JA)
+    real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
+    real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
+    real(RP), intent(in)  :: FZ          (KA,IA,JA)
+    real(RP), intent(in)  :: temp_sfc    (IA,JA)
+    real(RP), intent(in)  :: albedo_land (IA,JA,2)
+    real(RP), intent(in)  :: oceanfrc    (IA,JA)
+    real(RP), intent(in)  :: solins      (IA,JA)
+    real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
+    real(RP), intent(out) :: flux_rad_top(IA,JA,2)
 
     real(RP), parameter :: kappa = 85.00_RP  ! scaling factor for LWP [m2/kg]
     real(RP), parameter :: a     =  1.00_RP  ! [K/m**-1/3]
 
-    real(RP) :: pres
+    real(RP) :: CDZ(KA)
+    real(RP) :: Zi(IA,JA) ! Cloud top height [m]
+    real(RP) :: dZ, dZ_CBRT
+    integer  :: k_cldtop
 
-    real(RP) :: dQ, dZ, QWSUM
-    integer :: k_cldtop
+    real(RP) :: QTOT ! Qv + Qc + Qr [kg/kg]
+    real(RP) :: Qbelow, Qabove ! scaled LWP (above/below layer)
+    real(RP) :: dQ, QWSUM
 
     integer :: k, k2, i, j, iq
-    real(RP) :: TEMP_t_out  (KA,IA,JA) ! tendency rho*theta     [K/day]
-
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation (DYCOMS-II'
 
+    flux_rad    (:,:,:,:,:) = 0.0_RP
+    flux_rad_top(:,:,:)     = UNDEF
+
+    Zi(:,:) = 0.0_RP ! for history
+
     do j = JS, JE
     do i = IS, IE
-
        do k = KS, KE
-          Zi      (  i,j) = 0.0_RP
+          CDZ(k) = FZ(k,i,j) - FZ(k-1,i,j)
        enddo
 
        ! diagnose cloud top
        k_cldtop = -1
        do k = KS, KE
-           QTOT = 0.0_RP
-           do iq = QQS, QWE
-              QTOT = QTOT + QTRC(k,i,j,iq)
-           enddo
+          QTOT = 0.0_RP
+          do iq = QQS, QWE
+             QTOT = QTOT + QTRC(k,i,j,iq)
+          enddo
           if( QTOT < 8.E-3_RP ) exit ! above cloud
+
           k_cldtop = k
        enddo
 
        if( k_cldtop == -1 ) cycle ! no cloud
 
-       Zi(i,j) = CZ(k_cldtop)
+       Zi(i,j) = CZ(k_cldtop,i,j)
 
        do k = KS-1, KE
-
           Qbelow = 0.0_RP
           Qabove = 0.0_RP
+
           do k2 = KS, KE
-!             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * ( QTRC(k2,i,j,I_QC) + QTRC(k2,i,j,I_QR) )
              QWSUM = 0.0_RP
              do iq = QWS, QWE
                 QWSUM = QWSUM + QTRC(k2,i,j,iq)
@@ -221,29 +211,24 @@ contains
 
           flux_rad(k,i,j,I_LW,I_up) = F0 * exp( -Qabove ) &
                                     + F1 * exp( -Qbelow )
-       enddo
+        enddo
 
-       do k = k_cldtop, KE
-          dZ = FZ(k)-CZ(k_cldtop)
-          QTOT = 0.0_RP
-          do iq = QQS, QWE
-             QTOT = QTOT + QTRC(k,i,j,iq)
-          enddo
-          flux_rad(k,i,j,I_LW,I_up) = flux_rad(k,i,j,I_LW,I_up) &
-                          + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
-                          * ( 0.250_RP * dZ  * dZ**(1.0_RP/3.0_RP) &
-                              + CZ(k_cldtop) * dZ**(1.0_RP/3.0_RP) )
-       enddo
+        do k = k_cldtop, KE
+           dZ      = FZ(k,i,j)-CZ(k_cldtop,i,j)
+           dZ_CBRT = dZ**(1.0_RP/3.0_RP)
+
+           QTOT = 0.0_RP
+           do iq = QQS, QWE
+              QTOT = QTOT + QTRC(k,i,j,iq)
+           enddo
+
+           flux_rad(k,i,j,I_LW,I_up) = flux_rad(k,i,j,I_LW,I_up) &
+                                     + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
+                                     * ( 0.250_RP * dZ * dZ_CBRT + CZ(k_cldtop,i,j) * dZ_CBRT )
+        enddo
 
      enddo
      enddo
-
-     flux_rad(:,:,:,I_SW,I_dn) = 0.0_RP
-     flux_rad(:,:,:,I_SW,I_up) = 0.0_RP
-     flux_rad(:,:,:,I_LW,I_dn) = 0.0_RP
-     flux_top(:,:,:) = UNDEF
-     solins(:,:) = UNDEF
-     cosSZA(:,:) = UNDEF
 
      if ( .not. first ) then
         call HIST_in( Zi(:,:), 'Zi', 'Cloud top height', 'm', dtrd )

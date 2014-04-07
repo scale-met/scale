@@ -44,34 +44,29 @@ module scale_atmos_phy_rd
   !
   abstract interface
      subroutine rd( &
-          flux_rad, flux_top,  & ! [out]
-          solins, cosSZA,      & ! [out]
-          DENS, RHOT, QTRC,    & ! [in]
-          temp_sfc, param_sfc, & ! [in]
-          CZ, FZ, CDZ, RCDZ,   & ! [in]
-          REAL_lon, REAL_lat,  & ! [in]
-          TIME_NOWDATE         ) ! [in]
+          DENS, RHOT, QTRC,                &
+          CZ, FZ,                          &
+          temp_sfc, albedo_land, oceanfrc, &
+          solins, cosSZA,                  &
+          flux_rad,                        &
+          flux_rad_top                     )
        use scale_precision
        use scale_grid_index
        use scale_tracer
        implicit none
 
-       real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
-       real(RP), intent(out) :: flux_top(IA,JA,2)
-       real(RP), intent(out) :: solins(IA,JA)
-       real(RP), intent(out) :: cosSZA(IA,JA)
-       real(RP), intent(in)  :: DENS(KA,IA,JA)
-       real(RP), intent(in)  :: RHOT(KA,IA,JA)
-       real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-       real(RP), intent(in)  :: temp_sfc(IA,JA)
-       real(RP), intent(in)  :: param_sfc(5)
-       real(RP), intent(in)  :: CZ(KA)
-       real(RP), intent(in)  :: FZ(KA-1)
-       real(RP), intent(in)  :: CDZ(KA)
-       real(RP), intent(in)  :: RCDZ(KA)
-       real(RP), intent(in)  :: REAL_lon(IA,JA)
-       real(RP), intent(in)  :: REAL_lat(IA,JA)
-       integer , intent(in)  :: TIME_NOWDATE(6)
+       real(RP), intent(in)  :: DENS        (KA,IA,JA)
+       real(RP), intent(in)  :: RHOT        (KA,IA,JA)
+       real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
+       real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
+       real(RP), intent(in)  :: FZ          (KA,IA,JA)
+       real(RP), intent(in)  :: temp_sfc    (IA,JA)
+       real(RP), intent(in)  :: albedo_land (IA,JA,2)
+       real(RP), intent(in)  :: oceanfrc    (IA,JA)
+       real(RP), intent(in)  :: solins      (IA,JA)
+       real(RP), intent(in)  :: cosSZA      (IA,JA)
+       real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
+       real(RP), intent(out) :: flux_rad_top(IA,JA,2)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
@@ -97,9 +92,6 @@ contains
     use scale_atmos_phy_rd_dycoms2, only: &
        ATMOS_PHY_RD_dycoms2_setup, &
        ATMOS_PHY_RD_dycoms2
-    use scale_atmos_phy_rd_dummy, only: &
-       ATMOS_PHY_RD_dummy_setup, &
-       ATMOS_PHY_RD_dummy
 #endif
     implicit none
 

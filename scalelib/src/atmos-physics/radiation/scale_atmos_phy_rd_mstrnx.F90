@@ -217,8 +217,6 @@ contains
        TIME_NOWDATE
     use scale_grid_real, only: &
        REAL_lat
-    use scale_atmos_solarins, only: &
-       ATMOS_SOLARINS_setup
     use scale_atmos_phy_rd_profile, only: &
        RD_PROFILE_setup            => ATMOS_PHY_RD_PROFILE_setup,            &
        RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
@@ -266,7 +264,6 @@ contains
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -282,9 +279,6 @@ contains
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
     MSTRN_single              = ATMOS_PHY_RD_MSTRN_single
 
-    !--- setup solar insolation
-    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
-
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]
                          ncfc  ) ! [OUT]
@@ -292,8 +286,8 @@ contains
     !--- setup climatological profile
     call RD_PROFILE_setup
 
-    RD_KMAX  = KMAX + RD_KADD
-    RD_naero = MP_QA + AE_QA
+    RD_KMAX      = KMAX + RD_KADD
+    RD_naero     = MP_QA + AE_QA
     RD_hydro_str = 1
     RD_hydro_end = MP_QA
     RD_aero_str  = MP_QA + 1
@@ -357,13 +351,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Radiation main
   subroutine ATMOS_PHY_RD_mstrnx( &
-       flux_rad, flux_rad_top,    & ! [out]
-       solins, cosSZA,            & ! [out]
-       DENS, RHOT, QTRC,          & ! [in]
-       temp_sfc, param_sfc,       & ! [in]
-       CZ, FZ, CDZ, RCDZ,         & ! [in]
-       REAL_lon, REAL_lat,        & ! [in]
-       TIME_NOWDATE               ) ! [in]
+       DENS, RHOT, QTRC,                &
+       CZ, FZ,                          &
+       temp_sfc, albedo_land, oceanfrc, &
+       solins, cosSZA,                  &
+       flux_rad,                        &
+       flux_rad_top                     )
+!       Jval                            )
     use scale_const, only: &
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
@@ -372,34 +366,29 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
-    use scale_atmos_solarins, only: &
-       ATMOS_SOLARINS_insolation
     use scale_atmos_phy_mp, only: &
        MP_EffectiveRadius => ATMOS_PHY_MP_EffectiveRadius, &
        MP_CloudFraction   => ATMOS_PHY_MP_CloudFraction,   &
-       MP_Mixingratio     => ATMOS_PHY_MP_Mixingratio,   &
+       MP_Mixingratio     => ATMOS_PHY_MP_Mixingratio,     &
        MP_DENS            => ATMOS_PHY_MP_DENS
     use scale_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS
     implicit none
 
-    real(RP), intent(out) :: flux_rad(KA,IA,JA,2,2)
+    real(RP), intent(in)  :: DENS        (KA,IA,JA)
+    real(RP), intent(in)  :: RHOT        (KA,IA,JA)
+    real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
+    real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
+    real(RP), intent(in)  :: FZ          (KA,IA,JA)
+    real(RP), intent(in)  :: temp_sfc    (IA,JA)
+    real(RP), intent(in)  :: albedo_land (IA,JA,2)
+    real(RP), intent(in)  :: oceanfrc    (IA,JA)
+    real(RP), intent(in)  :: solins      (IA,JA)
+    real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
     real(RP), intent(out) :: flux_rad_top(IA,JA,2)
-    real(RP), intent(out) :: solins(IA,JA)
-    real(RP), intent(out) :: cosSZA(IA,JA)
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)  :: temp_sfc(IA,JA)
-    real(RP), intent(in)  :: param_sfc(5)
-    real(RP), intent(in)  :: CZ(KA)
-    real(RP), intent(in)  :: FZ(KA-1)
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(in)  :: RCDZ(KA)
-    real(RP), intent(in)  :: REAL_lon(IA,JA)
-    real(RP), intent(in)  :: REAL_lat(IA,JA)
-    integer , intent(in)  :: TIME_NOWDATE(6)
+!    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: temp   (KA,IA,JA)
     real(RP) :: pres   (KA,IA,JA)
@@ -411,9 +400,6 @@ contains
     real(RP) :: AE_Re  (KA,IA,JA,AE_QA)
 
     real(RP), parameter :: min_cldfrac = 1.E-8_RP
-
-    ! from solar insolation
-    real(RP) :: Re_factor       ! The sun-Earth distance factor
 
     real(RP) :: rhodz_merge       (RD_KMAX)
     real(RP) :: pres_merge        (RD_KMAX)
@@ -470,14 +456,6 @@ contains
 
      do j = JS, JE
      do i = IS, IE
-
-       call ATMOS_SOLARINS_insolation( solins(i,j),  & ! [OUT]
-                                       cosSZA(i,j),  & ! [OUT]
-                                       Re_factor,      & ! [OUT]
-                                       REAL_lon(i,j),  & ! [IN]
-                                       REAL_lat(i,j),  & ! [IN]
-                                       TIME_NOWDATE(:) ) ! [IN]
-
        ! marge basic profile and value in LES domain
        rhodz_merge(:) = RD_rhodz(:)
        pres_merge (:) = RD_pres (:)
@@ -500,7 +478,7 @@ contains
        do k = KS, KE
           RD_k = RD_KMAX - ( k - KS ) ! reverse axis
 
-          rhodz_merge(RD_k)   = dens(k,i,j) * CDZ(k)   ! [kg/m2]
+          rhodz_merge(RD_k)   = dens(k,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) ) ! [kg/m2]
           pres_merge (RD_k)   = pres(k,i,j) * 1.E-2_RP ! [hPa]
           temp_merge (RD_k)   = temp(k,i,j)
 
@@ -537,29 +515,30 @@ contains
        enddo
 
        ! calc radiative transfer
-       call RD_MSTRN_DTRN3( RD_KMAX,                  & ! [IN]
-                            MSTRN_ngas,               & ! [IN]
-                            MSTRN_ncfc,               & ! [IN]
-                            RD_naero,                 & ! [IN]
-                            RD_hydro_str,             & ! [IN]
-                            RD_hydro_end,             & ! [IN]
-                            RD_aero_str,              & ! [IN]
-                            RD_aero_end,              & ! [IN]
-                            solins(i,j),              & ! [IN]
-                            cosSZA(i,j),              & ! [IN]
-                            rhodz_merge       (:),    & ! [IN]
-                            pres_merge        (:),    & ! [IN]
-                            temp_merge        (:),    & ! [IN]
-                            temph_merge       (:),    & ! [IN]
-                            temp_sfc(i,j),            & ! [IN]
-                            gas_merge         (:,:),  & ! [IN]
-                            cfc_merge         (:,:),  & ! [IN]
-                            aerosol_conc_merge(:,:),  & ! [IN]
-                            aerosol_radi_merge(:,:),  & ! [IN]
-                            I_MPAE2RD         (:),    & ! [IN]
-                            cldfrac_merge     (:),    & ! [IN]
-                            param_sfc         (:),    & ! [IN]
-                            flux_rad_merge    (:,:,:) ) ! [OUT]
+       call RD_MSTRN_DTRN3( RD_KMAX,                   & ! [IN]
+                            MSTRN_ngas,                & ! [IN]
+                            MSTRN_ncfc,                & ! [IN]
+                            RD_naero,                  & ! [IN]
+                            RD_hydro_str,              & ! [IN]
+                            RD_hydro_end,              & ! [IN]
+                            RD_aero_str,               & ! [IN]
+                            RD_aero_end,               & ! [IN]
+                            solins(i,j),               & ! [IN]
+                            cosSZA(i,j),               & ! [IN]
+                            rhodz_merge       (:),     & ! [IN]
+                            pres_merge        (:),     & ! [IN]
+                            temp_merge        (:),     & ! [IN]
+                            temph_merge       (:),     & ! [IN]
+                            temp_sfc(i,j),             & ! [IN]
+                            gas_merge         (:,:),   & ! [IN]
+                            cfc_merge         (:,:),   & ! [IN]
+                            aerosol_conc_merge(:,:),   & ! [IN]
+                            aerosol_radi_merge(:,:),   & ! [IN]
+                            I_MPAE2RD         (:),     & ! [IN]
+                            cldfrac_merge     (:),     & ! [IN]
+                            albedo_land       (i,j,:), & ! [IN]
+                            oceanfrc          (i,j),   & ! [IN]
+                            flux_rad_merge    (:,:,:)  ) ! [OUT]
 
        ! return to grid coordinate of LES domain
        do k = KS-1, KE
@@ -588,9 +567,6 @@ contains
 
         flux_rad_top(:,:,I_LW) = flux_rad_top(IS,JS,I_LW)
         flux_rad_top(:,:,I_SW) = flux_rad_top(IS,JS,I_SW)
-
-        solins(:,:) = solins(IS,JS)
-        cosSZA(:,:) = cosSZA(IS,JS)
      endif
 
     return
@@ -915,13 +891,15 @@ contains
        aerosol_radi, &
        aero2ptype,   &
        cldfrac,      &
-       param_sfc,    &
+!       param_sfc,    &
+       albedo_land,  &
+       oceanfrc,     &
        rflux         )
     use scale_const, only: &
-         EPS  => CONST_EPS, &
-         GRAV => CONST_GRAV, &
-         Pstd => CONST_Pstd, &
-         PPM  => CONST_PPM
+       EPS  => CONST_EPS, &
+       GRAV => CONST_GRAV, &
+       Pstd => CONST_Pstd, &
+       PPM  => CONST_PPM
     implicit none
 
     integer,  intent(in)  :: kmax
@@ -945,7 +923,9 @@ contains
     real(RP), intent(in)  :: aerosol_radi(kmax,naero)
     integer,  intent(in)  :: aero2ptype  (naero)
     real(RP), intent(in)  :: cldfrac     (kmax)
-    real(RP), intent(in)  :: param_sfc   (5)
+!    real(RP), intent(in)  :: param_sfc   (5)
+    real(RP), intent(in)  :: albedo_land (2)
+    real(RP), intent(in)  :: oceanfrc
     real(RP), intent(out) :: rflux       (kmax+1,2,2)
 
     ! for planck functions
@@ -984,7 +964,7 @@ contains
     ! for albedo
     real(RP) :: albedo_sfc(MSTRN_ncloud,MSTRN_nband) ! surface albedo
     real(RP) :: tau_column
-    integer  :: luindex
+    !integer  :: luindex
 
     ! for two-stream
     real(RP) :: tau(    kmax,MSTRN_ncloud) ! total optical thickness
@@ -1231,30 +1211,48 @@ contains
        enddo
 
        !--- Albedo
-       luindex = int( param_sfc(1) )
-       if ( luindex == 1 ) then ! ocean
-
-          do icloud = 1, MSTRN_ncloud
-
-             tau_column = 0.0_RP
-             do k = 1, kmax
-                tau_column = tau_column + tauPR(k,icloud) ! layer-total(for ocean albedo)
-             enddo
-
-             if ( tau_column > 0.0_RP .AND. iflgb(I_SWLW,iw)+1 == I_SW ) then
-                albedo_sfc(icloud,iw) = albedo_sea(cosSZA,tau_column)
-             else
-                albedo_sfc(icloud,iw) = 0.05_RP
-             endif
-
+       ! [NOTE] mstrn has look-up table for albedo.
+       !        Original scheme calculates albedo by using land-use index (and surface wetness).
+       !        In the atmospheric model, albedo is calculated by surface model.
+       do icloud = 1, MSTRN_ncloud
+          tau_column = 0.0_RP
+          do k = 1, kmax
+             tau_column = tau_column + tauPR(k,icloud) ! layer-total(for ocean albedo)
           enddo
 
-       elseif( luindex == 2 ) then ! land surface
-          albedo_sfc(:,iw) = (        param_sfc(2) ) * sfc(iw,2) & ! wet land
-                           + ( 1.0_RP-param_sfc(2) ) * sfc(iw,3)   ! dry land
-       else
-          albedo_sfc(:,iw) = sfc(luindex,iw)
-       endif
+          if ( tau_column > 0.0_RP .AND. iflgb(I_SWLW,iw)+1 == I_SW ) then
+             albedo_sfc(icloud,iw) = (          oceanfrc ) * albedo_sea(cosSZA,tau_column) &
+                                   + ( 1.0_RP - oceanfrc ) * albedo_land(I_SW)
+          else
+             albedo_sfc(icloud,iw) = 0.05_RP &
+                                   + ( 1.0_RP - oceanfrc ) * albedo_land(I_LW)
+          endif
+       enddo
+
+!       luindex = int( param_sfc(1) )
+!       if ( luindex == 1 ) then ! ocean
+!
+!          do icloud = 1, MSTRN_ncloud
+!
+!             tau_column = 0.0_RP
+!             do k = 1, kmax
+!                tau_column = tau_column + tauPR(k,icloud) ! layer-total(for ocean albedo)
+!             enddo
+!
+!             if ( tau_column > 0.0_RP .AND. iflgb(I_SWLW,iw)+1 == I_SW ) then
+!                albedo_sfc(icloud,iw) = albedo_sea(cosSZA,tau_column)
+!             else
+!                albedo_sfc(icloud,iw) = 0.05_RP
+!             endif
+!
+!          enddo
+!
+!       elseif( luindex == 2 ) then ! land surface
+!          albedo_sfc(:,iw) = (        param_sfc(2) ) * sfc(iw,2) & ! wet land
+!                           + ( 1.0_RP-param_sfc(2) ) * sfc(iw,3)   ! dry land
+!       else
+!          albedo_sfc(:,iw) = sfc(luindex,iw)
+!       endif
 
        ! sub-channel loop
        do ich = 1, nch(iw)
