@@ -32,6 +32,11 @@ module mod_atmos_solarins
   public :: ATMOS_SOLARINS_orbit
   public :: ATMOS_SOLARINS_insolation
 
+  interface ATMOS_SOLARINS_insolation
+     module procedure ATMOS_SOLARINS_insolation_0D
+     module procedure ATMOS_SOLARINS_insolation_2D
+  end interface ATMOS_SOLARINS_insolation
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -700,8 +705,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_SOLARINS_insolation( &
+  subroutine ATMOS_SOLARINS_insolation_0D( &
       solins,    &
       cosSZA,    &
       Re_factor, &
@@ -783,7 +787,107 @@ contains
     solins = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA,0.0_RP)
 
     return
-  end subroutine ATMOS_SOLARINS_insolation
+  end subroutine ATMOS_SOLARINS_insolation_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc factor of Earths solar insolation
+  subroutine ATMOS_SOLARINS_insolation_2D( &
+      solins,    &
+      cosSZA,    &
+      lon,       &
+      lat,       &
+      now_date   )
+    use mod_grid_index
+    use mod_const, only: &
+         PI => CONST_PI
+    use mod_calendar, only: &
+         CALENDAR_getDayOfYear,  &
+         CALENDAR_ymd2absday,    &
+         CALENDAR_hms2abssec,    &
+         I_year, I_month, I_day, &
+         I_hour, I_min, I_sec
+    implicit none
+
+    real(RP), intent(out) :: solins(IA,JA) ! solar insolation
+    real(RP), intent(out) :: cosSZA(IA,JA) ! cos(Solar Zenith Angle)
+    real(RP), intent(in)  :: lon   (IA,JA) ! longitude
+    real(RP), intent(in)  :: lat   (IA,JA) ! latitude
+    integer,  intent(in)  :: now_date(6)   ! date(yyyy,mm,dd,hh,mm,ss)
+
+    real(RP) :: lambda_m       ! mean longitude from vernal equinox
+    real(RP) :: lambda         !
+    real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
+    real(RP) :: hourangle(IA,JA) ! hour angle: relative longitude of subsolar point
+
+    integer  :: absday, absday_ve
+    real(RP) :: DayOfYear, abssec
+    real(RP) :: nu
+    real(RP) :: Re_factor   ! factor of the distance of Earth from the sun (1/rho2)
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    call CALENDAR_getDayOfYear( DayOfYear, now_date(I_year) )
+
+    call CALENDAR_ymd2absday( absday,            & ! [OUT]
+                              now_date(I_year),  & ! [IN]
+                              now_date(I_month), & ! [IN]
+                              now_date(I_day)    ) ! [IN]
+
+    call CALENDAR_ymd2absday( absday_ve,         & ! [OUT]
+                              now_date(I_year),  & ! [IN]
+                              ve_date (I_month), & ! [IN]
+                              ve_date (I_day)    ) ! [IN]
+
+    call CALENDAR_hms2abssec( abssec,            & ! [OUT]
+                              now_date(I_hour),  & ! [IN]
+                              now_date(I_min),   & ! [IN]
+                              now_date(I_sec),   & ! [IN]
+                              0.0_RP             ) ! [IN]
+
+    lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
+
+    nu = lambda_m - omega
+
+    ! 1 / (rho*rho)
+    Re_factor = 1.0_RP                          &
+              + 2.0_RP*E     * cos(        nu ) &
+              + 0.5_RP*E*E   * cos( 2.0_RP*nu ) &
+              + 2.5_RP*E*E                      &
+              + 4.0_RP*E*E*E * cos( 3.0_RP*nu )
+
+    ! actual longitude from vernal equinox
+    lambda = lambda_m &
+           + ( 2.0_RP*E -  1.0_RP/ 4.0_RP*E*E*E ) * sin(        nu ) &
+           + (             5.0_RP/ 4.0_RP*E*E   ) * sin( 2.0_RP*nu ) &
+           + (            13.0_RP/12.0_RP*E*E*E ) * sin( 3.0_RP*nu )
+
+    ! solar declination
+    sinDEC = sin(lambda) * sin(obliquity)
+    cosDEC = sqrt( 1.0_RP - sinDEC*sinDEC )
+
+    do j = JS, JE
+    do i = IS, IE
+       ! hour angle
+       hourangle(i,j) = lon(i,j) + 2.0_RP * PI * abssec / (24.0_RP*60.0_RP*60.0_RP)
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       ! cos(Solar Zenith Angle)
+       cosSZA(i,j) = sin(lat(i,j))*sinDEC - cos(lat(i,j))*cosDEC*cos(hourangle(i,j))
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA(i,j),0.0_RP)
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SOLARINS_insolation_2D
 
 end module mod_atmos_solarins
 !-------------------------------------------------------------------------------
