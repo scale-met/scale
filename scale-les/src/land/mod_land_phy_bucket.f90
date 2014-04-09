@@ -17,6 +17,7 @@ module mod_land_phy_bucket
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -49,8 +50,6 @@ module mod_land_phy_bucket
   real(RP), private, save, allocatable :: PRECFLX(:,:)
   real(RP), private, save, allocatable :: QVFLX  (:,:)
 
-  real(RP), private, save, allocatable :: dz(:)
-
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
 
@@ -80,16 +79,6 @@ contains
     allocate( PRECFLX(IA,JA) )
     allocate( QVFLX  (IA,JA) )
 
-    allocate( dz(LKS:LKE) )
-
-    ! tentative
-    dz(1) = 0.02_RP
-    dz(2) = 0.03_RP
-    dz(3) = 0.05_RP
-    dz(4) = 0.10_RP
-    dz(5) = 0.30_RP
-    dz(6) = 0.50_RP
-
     if ( LAND_TYPE_PHY /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE_PHY is not BUCKET. Check!'
        call PRC_MPIstop
@@ -118,6 +107,8 @@ contains
        CL    => CONST_CL
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
+    use scale_land_grid, only: &
+       dz => GRID_LCDZ
     use mod_land_vars, only: &
        TG,                 &
        STRG,               &
@@ -237,6 +228,8 @@ contains
   end subroutine LAND_PHY_driver_first
 
   subroutine LAND_PHY_driver_final
+    use scale_land_grid, only: &
+       dz => GRID_LCDZ
     use mod_land_vars, only: &
        TG,                 &
        QVEF,               &

@@ -53,4 +53,4 @@ clean:
 	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
 
 distclean:
-	rm -f *.nc LOG.pe*
+	rm -f *.nc LOG.pe* init_LOG.pe* monitor.pe* run.sh

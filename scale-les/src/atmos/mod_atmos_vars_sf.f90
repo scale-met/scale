@@ -193,7 +193,7 @@ contains
 
        call ATMOS_vars_sf_total
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for atmos-sf is not specified.'
 
        PREC(:,:) = CONST_UNDEF
        SWD (:,:) = CONST_UNDEF
@@ -231,12 +231,12 @@ contains
        end do
        write(bname,'(A,A,A)') trim(ATMOS_SF_RESTART_OUT_BASENAME), '_', trim(bname)
 
-       call FILEIO_write( PREC(:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', ATMOS_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( SWD (:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(2), PV_DESC(2), PV_UNIT(2), 'XY', ATMOS_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( LWD (:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(3), PV_DESC(3), PV_UNIT(3), 'XY', ATMOS_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( PREC(:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', ATMOS_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( SWD (:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(2), PV_DESC(2), PV_UNIT(2), 'XY', ATMOS_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( LWD (:,:),  bname,                        ATMOS_SF_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(3), PV_DESC(3), PV_UNIT(3), 'XY', ATMOS_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
 

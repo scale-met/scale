@@ -19,6 +19,7 @@ module mod_land_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,8 +143,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
 
-    allocate( TG  (LKE,IA,JA) )
-    allocate( STRG(LKE,IA,JA) )
+    allocate( TG  (LKS:LKE,IA,JA) )
+    allocate( STRG(LKS:LKE,IA,JA) )
     allocate( ROFF(IA,JA)     )
     allocate( QVEF(IA,JA)     )
 
@@ -221,7 +222,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    do k = 1, LKE
+    do k = LKS, LKE
       call COMM_vars8( TG  (k,:,:), 1 )
       call COMM_vars8( STRG(k,:,:), 2 )
 
@@ -260,14 +261,14 @@ contains
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( TG(:,:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'TG',   'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( STRG(:,:,:),                                    & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'STRG', 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ROFF(:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY',  step=1 ) ! [IN]
-       call FILEIO_read( QVEF(:,:),                                      & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'QVEF', 'XY',  step=1 ) ! [IN]
+       call FILEIO_read( TG(:,:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'TG',   'Land', step=1 ) ! [IN]
+       call FILEIO_read( STRG(:,:,:),                                     & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'STRG', 'Land', step=1 ) ! [IN]
+       call FILEIO_read( ROFF(:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY',   step=1 ) ! [IN]
+       call FILEIO_read( QVEF(:,:),                                       & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, 'QVEF', 'XY',   step=1 ) ! [IN]
 
        call LAND_vars_fillhalo
 
@@ -275,14 +276,10 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
 
-       TG  (:,:,:) = 300.0_RP
-       STRG(:,:,:) = 200.0_RP
-       ROFF(:,:)   = 0.0_RP
-       QVEF(:,:)   = 1.0_RP
-!       TG  (:,:,:) = CONST_UNDEF
-!       STRG(:,:,:) = CONST_UNDEF
-!       ROFF(:,:)   = CONST_UNDEF
-!       QVEF(:,:)   = CONST_UNDEF
+       TG  (:,:,:) = CONST_UNDEF
+       STRG(:,:,:) = CONST_UNDEF
+       ROFF(:,:)   = CONST_UNDEF
+       QVEF(:,:)   = CONST_UNDEF
     endif
 
     LAND_PROPERTY(:,:,:) = CONST_UNDEF
@@ -346,14 +343,14 @@ contains
        enddo
        basename = trim(LAND_RESTART_OUT_BASENAME) // '_' // trim(basename)
 
-       call FILEIO_write( TG(:,:,:),   basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(I_TG),   PV_DESC(I_TG),   PV_UNIT(I_TG),   'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( STRG(:,:,:), basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(I_STRG), PV_DESC(I_STRG), PV_UNIT(I_STRG), 'ZXY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF(:,:),   basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'XY',  LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( QVEF(:,:),   basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(I_QVEF), PV_DESC(I_QVEF), PV_UNIT(I_QVEF), 'XY',  LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TG(:,:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TG),   PV_DESC(I_TG),   PV_UNIT(I_TG),   'Land', LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( STRG(:,:,:), basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_STRG), PV_DESC(I_STRG), PV_UNIT(I_STRG), 'Land', LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( ROFF(:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'XY',   LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( QVEF(:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_QVEF), PV_DESC(I_QVEF), PV_UNIT(I_QVEF), 'XY',   LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
 
@@ -381,8 +378,8 @@ contains
        call VALCHECK( QVEF(:,:),   0.0_RP,    2.0_RP, PV_NAME(I_QVEF), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TG  (:,:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND )
-    call HIST_in( STRG(:,:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND )
+    call HIST_in( TG  (:,:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND, zdim ='land' )
+    call HIST_in( STRG(:,:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND, zdim ='land' )
     call HIST_in( ROFF(:,:),   'ROFF', PV_DESC(I_ROFF), PV_UNIT(I_ROFF), TIME_DTSEC_LAND )
     call HIST_in( QVEF(:,:),   'QVEF', PV_DESC(I_QVEF), PV_UNIT(I_QVEF), TIME_DTSEC_LAND )
 
