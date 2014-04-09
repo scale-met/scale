@@ -56,6 +56,8 @@ module scale_fileio
   !
   !++ Private procedure
   !
+  private :: set_axes
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -322,8 +324,6 @@ contains
        File_REAL4
     use gtool_file, only: &
        FileCreate,      &
-       FilePutAxis,     &
-       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
@@ -333,13 +333,6 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
     implicit none
 
     real(RP),         intent(in)  :: var(:)   !< value of the variable
@@ -395,20 +388,7 @@ contains
                      append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
-       call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
-       call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
-       call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
-                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
-                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
-                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
-                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
+       call set_axes( fid, dtype ) ! [IN]
     endif
 
     if ( axistype == 'Z' ) then
@@ -462,8 +442,6 @@ contains
        File_REAL4
     use gtool_file, only: &
        FileCreate,      &
-       FilePutAxis,     &
-       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
@@ -473,13 +451,6 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
     implicit none
 
     real(RP),         intent(in)  :: var(:,:) !< value of the variable
@@ -535,20 +506,7 @@ contains
                      append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
-       call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
-       call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
-       call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
-                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
-                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
-                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
-                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
+       call set_axes( fid, dtype ) ! [IN]
     endif
 
     if ( axistype == 'XY' ) then
@@ -603,8 +561,6 @@ contains
        File_REAL4
     use gtool_file, only: &
        FileCreate,      &
-       FilePutAxis,     &
-       FilePutAssociatedCoordinates, &
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
@@ -614,13 +570,6 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
     implicit none
 
     real(RP),         intent(in)  :: var(:,:,:) !< value of the variable
@@ -677,21 +626,7 @@ contains
                      append       ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
-       call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
-       call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
-       call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
-       call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
-       call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
-       call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-
-       call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
-                                          (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
-                                          (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
-                                          (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
-       call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
-                                          (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
+       call set_axes( fid, dtype ) ! [IN]
     endif
 
     if ( axistype == 'ZXY' ) then
@@ -723,6 +658,44 @@ contains
 
     return
   end subroutine FILEIO_write_3D
+
+  subroutine set_axes( &
+      fid,  &
+      dtype )
+    use gtool_file, only: &
+       FilePutAxis,     &
+       FilePutAssociatedCoordinates
+    use scale_grid, only: &
+       GRID_CZ, &
+       GRID_CX, &
+       GRID_CY, &
+       GRID_FZ, &
+       GRID_FX, &
+       GRID_FY
+    implicit none
+
+    integer, intent(in) :: fid
+    integer, intent(in) :: dtype
+    !---------------------------------------------------------------------------
+
+    call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
+    call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
+    call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
+    call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
+    call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
+    call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
+
+    call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
+                                       (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
+    call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
+                                       (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
+    call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
+                                       (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
+    call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
+                                       (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
+
+    return
+  end subroutine set_axes
 
 end module scale_fileio
 !-------------------------------------------------------------------------------
