@@ -50,6 +50,8 @@ $(BUILD_DIR)/scale_grid_real.o: atmos-les/grid/scale_grid_real.F90 $(BUILD_DIR)/
 $(BUILD_DIR)/scale_gridtrans.o: atmos-les/grid/scale_gridtrans.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_history.o: io/scale_history.F90 $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_intepolation.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o
 $(BUILD_DIR)/scale_intepolation.o: atmos-les/grid/scale_intepolation.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_topography.o
+$(BUILD_DIR)/scale_land_grid_cartesian.o: land/grid/scale_land_grid_cartesian.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_land_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
+$(BUILD_DIR)/scale_land_grid_index.o: land/grid/scale_land_grid_index.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_landuse.o: atmos-les/grid/scale_landuse.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_fileio.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_mapproj.o: atmos-les/grid/scale_mapproj.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_monitor.o: io/scale_monitor.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stats.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o
@@ -123,6 +125,8 @@ MODS =	\
 	scale_gridtrans.mod	\
 	scale_history.mod	\
 	scale_interpolation.mod	\
+	scale_land_grid.mod	\
+	scale_land_grid_index.mod	\
 	scale_landuse.mod	\
 	scale_mapproj.mod	\
 	scale_monitor.mod	\

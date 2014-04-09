@@ -19,6 +19,7 @@ module mod_land_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,8 +143,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
 
-    allocate( TG  (LKE,IA,JA) )
-    allocate( STRG(LKE,IA,JA) )
+    allocate( TG  (LKS:LKE,IA,JA) )
+    allocate( STRG(LKS:LKE,IA,JA) )
     allocate( ROFF(IA,JA)     )
     allocate( QVEF(IA,JA)     )
 
@@ -221,7 +222,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
-    do k = 1, LKE
+    do k = LKS, LKE
       call COMM_vars8( TG  (k,:,:), 1 )
       call COMM_vars8( STRG(k,:,:), 2 )
 

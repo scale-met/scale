@@ -47,8 +47,12 @@ program scaleles
      TIME_DOend
   use scale_grid_index, only: &
      GRID_INDEX_setup
+  use scale_land_grid_index, only: &
+     LAND_GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
+  use scale_land_grid, only: &
+     LAND_GRID_setup
   use scale_tracer, only: &
      TRACER_setup
   use scale_fileio, only: &
@@ -158,9 +162,11 @@ program scaleles
 
   ! setup horisontal/veritical grid index
   call GRID_INDEX_setup
+  call LAND_GRID_INDEX_setup
 
   ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
+  call LAND_GRID_setup
 
   ! setup tracer index
   call TRACER_setup

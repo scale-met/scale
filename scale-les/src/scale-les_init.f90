@@ -39,8 +39,12 @@ program scaleles_init
      TIME_setup
   use scale_grid_index, only: &
      GRID_INDEX_setup
+  use scale_land_grid_index, only: &
+     LAND_GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
+  use scale_land_grid, only: &
+     LAND_GRID_setup
   use scale_tracer, only: &
      TRACER_setup
   use scale_fileio, only: &
