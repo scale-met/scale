@@ -213,6 +213,7 @@ contains
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
     real(RP) :: PT(KA)
+    real(RP) :: CPRES(KA) ! kappa * PRES / RHOT
     real(RP) :: CPtot(KA,IA,JA)
     real(RP) :: C(KMAX-1)
 
@@ -226,6 +227,9 @@ contains
     VELY(:,:,:) = UNDEF
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
+
+    PT(:) = UNDEF
+    CPRES(:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
     mflx_hi(KS-1,:,:,ZDIR) = 0.0_RP
@@ -415,7 +419,7 @@ contains
                                                               + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
                               + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
                                                               + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
-                              + GSQRT(k,i,j,I_XYZ) * num_diff(k,i,j,I_DENS,ZDIR)
+                              + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
        enddo
        enddo
        enddo
@@ -565,7 +569,6 @@ contains
           call CHECK( __LINE__, MOMZ(k-1,i,j) )
           call CHECK( __LINE__, MOMZ(k  ,i,j) )
           call CHECK( __LINE__, MOMZ(k+1,i,j) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_MOMZ,ZDIR) )
 #endif
           qflx_J(k,i,j) = 0.5_RP &
                         * ( J13G(k,i,j,I_XYZ) * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
@@ -586,26 +589,25 @@ contains
           call CHECK( __LINE__, VELZ(KS+1,i,j) )
           call CHECK( __LINE__, MOMZ(KS  ,i,j) )
           call CHECK( __LINE__, MOMZ(KS+1,i,j) )
-          call CHECK( __LINE__, num_diff(KS+1,i,j,I_MOMZ,ZDIR) )
           call CHECK( __LINE__, VELZ(KE-2,i,j) )
           call CHECK( __LINE__, VELZ(KE-1,i,j) )
           call CHECK( __LINE__, MOMZ(KE-2,i,j) )
           call CHECK( __LINE__, MOMZ(KE-1,i,j) )
-          call CHECK( __LINE__, num_diff(KE-1,i,j,I_MOMZ,ZDIR) )
 #endif
           ! k = KS
           qflx_J(KS,i,j) = 0.0_RP
           ! k = KS+1
-          qflx_J(KS+1,i,j) = 0.25_RP &
+          qflx_J(KS+1,i,j) = 0.5_RP &
                            * ( J13G(KS+1,i,j,I_XYZ) * ( VELX(KS+1,i,j)+VELX(KS+1,i-1,j) ) &
                              + J23G(KS+1,i,j,I_XYZ) * ( VELY(KS+1,i,j)+VELY(KS+1,i,j-1) ) ) &
-                           * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) )
-
+                           * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) &
+                             + FACT_F * ( MOMZ(KS+2,i,j)                ) )
           ! k = KE-1
-          qflx_J(KE-1,i,j) = 0.25_RP &
+          qflx_J(KE-1,i,j) = 0.5_RP &
                            * ( J13G(KE-1,i,j,I_XYZ) * ( VELX(KE-1,i,j)+VELX(KE-1,i-1,j) ) &
                              + J23G(KE-1,i,j,I_XYZ) * ( VELY(KE-1,i,j)+VELY(KE-1,i,j-1) ) ) &
-                           * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) )
+                           * ( FACT_N * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
+                             + FACT_F * (                MOMZ(KE-3,i,j) ) )
           ! k = KE
           qflx_J(KE,i,j) = 0.0_RP
        enddo
@@ -639,15 +641,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-          qflx_hi(KE,i,j,XDIR) = 0.0_RP
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+
        ! at (x, v, w)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
@@ -673,15 +667,6 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE
-       do i = IIS  , IIE
-          qflx_hi(KE,i,j,YDIR) = 0.0_RP
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
 
        !--- update momentum(z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -691,14 +676,12 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_hi(k+1,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, qflx_J (k+1,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, qflx_J (k  ,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, PRES(k  ,i,j) )
-          call CHECK( __LINE__, PRES(k+1,i,j) )
-          call CHECK( __LINE__, DENS(k  ,i,j) )
-          call CHECK( __LINE__, DENS(k+1,i,j) )
           call CHECK( __LINE__, DDIV(k  ,i,j) )
           call CHECK( __LINE__, DDIV(k+1,i,j) )
           call CHECK( __LINE__, MOMZ0(k,i,j) )
@@ -737,9 +720,9 @@ contains
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
           qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-               * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
-                 + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) ) &
-               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_RHOT,ZDIR)
+                              * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
+                                + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) ) &
+                              + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_RHOT,ZDIR)
        enddo
        enddo
        enddo
@@ -751,9 +734,9 @@ contains
        do i = IIS, IIE
           qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) &
-               + GSQRT(KS  ,i,j,I_XYW) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
+                                 + GSQRT(KS,i,j,I_XYW) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
           qflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) &
-               + GSQRT(KE-1,i,j,I_XYW) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
+                                 + GSQRT(KE-1,i,j,ZDIR) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
@@ -773,12 +756,10 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) &
-               * ( &
-                   mflx_hi(k,i,j,XDIR) &
-                   * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
-                     + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
-                   + num_diff(k,i,j,I_RHOT,XDIR) )
+          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
+                                * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
+                                  + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
+                                + GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_RHOT,XDIR)
        enddo
        enddo
        enddo
@@ -798,11 +779,10 @@ contains
           call CHECK( __LINE__, POTT(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) &
-                              * ( mflx_hi(k,i,j,YDIR) &
+          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                                 * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                   + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
-                                + num_diff(k,i,j,I_RHOT,YDIR) )
+                                + GSQRT(k,i,j,I_XVZ) * num_diff(k,i,j,I_RHOT,YDIR)
        enddo
        enddo
        enddo
@@ -815,6 +795,8 @@ contains
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
+          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
@@ -846,13 +828,16 @@ contains
           PT(KE-1) = ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) * 0.5_RP
 
           do k = KS, KE
+             CPRES(k) = &
 #ifdef DRY
-             A(k) = dtrk**2 * J33G * RCDZ(k) &
-                  * J33G * kappa        * PRES(k,i,j) / (                RHOT(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+             kappa        * PRES(k,i,j) /                  RHOT(k,i,j)
 #else
-             A(k) = dtrk**2 * J33G * RCDZ(k) &
-                  * J33G * CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+             CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) )
 #endif
+          end do
+
+          do k = KS, KE
+             A(k) = dtrk**2 * J33G * RCDZ(k) * CPRES(k) * J33G / GSQRT(k,i,j,I_XYZ)
           end do
           do k = KS, KE
              B(k) = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
@@ -862,16 +847,13 @@ contains
           do k = KS, KE-1
              C(k-KS+1) = MOMZ(k,i,j) &
                   + dtrk * ( &
-                      - ( &
-#ifdef DRY
-                          PRES(k+1,i,j)*( 1.0_RP + dtrk*kappa*St(k+1,i,j)/RHOT(k+1,i,j) ) &
-                        - PRES(k  ,i,j)*( 1.0_RP + dtrk*kappa*St(k  ,i,j)/RHOT(k  ,i,j) ) &
-#else
-                          PRES(k+1,i,j)*( 1.0_RP + dtrk*CPtot(k+1,i,j)*St(k+1,i,j)/(CVtot(k+1,i,j)*RHOT(k+1,i,j)) ) &
-                        - PRES(k  ,i,j)*( 1.0_RP + dtrk*CPtot(k  ,i,j)*St(k  ,i,j)/(CVtot(k  ,i,j)*RHOT(k  ,i,j)) ) &
-#endif
-                        ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
-                      - 0.5_RP * GRAV * ( DENS(k+1,i,j) + DENS(k,i,j) + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) ) &
+                      - ( DPRES(k+1,i,j) + CPRES(k+1)*dtrk*St(k+1,i,j) &
+                        - DPRES(k  ,i,j) - CPRES(k  )*dtrk*St(k  ,i,j) ) &
+                      * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
+                      - 0.5_RP * GRAV &
+                      * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
+                        + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) &
+                        + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) ) &
                       + Sw(k,i,j) )
           end do
 
@@ -900,6 +882,19 @@ contains
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + ( C(k-KS+1) - MOMZ(k,i,j) )
           end do
+
+#ifdef DEBUG_HEVI2HEVE
+          ! for debug (change to explicit integration)
+          do k = KS, KE-1
+             C(k-KS+1) = MOMZ(k,i,j)
+             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + J33G * MOMZ(k,i,j)
+             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                  + dtrk*( &
+                  - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
+                  - 0.5_RP * GRAV * ( (DENS(k,i,j)-REF_dens(k,i,j))+(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
+                  + Sw(k,i,j) )
+          end do
+#endif
 
           ! density
           do k = KS+1, KE-1
@@ -1023,17 +1018,14 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
-          qflx_J(k,i,j) = J13G(k,i,j,I_UYW) &
-                        * 0.5_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
-                        * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
-                          + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) ) &
-                        + J23G(k,i,j,I_UYW) &
-                        * 0.125_RP * ( VELY(k+1,i+1,j  )+VELY(k,i+1,j  ) &
-                                     + VELY(k+1,i  ,j  )+VELY(k,i  ,j  ) &
-                                     + VELY(k+1,i+1,j-1)+VELY(k,i+1,j-1) &
-                                     + VELY(k+1,i  ,j-1)+VELY(k,i  ,j-1) ) &
-                        * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
-                          + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) )
+          qflx_J(k,i,j) = &
+               ( J13G(k,i,j,I_UYW) * 0.5_RP   * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
+               + J23G(k,i,j,I_UYW) * 0.125_RP * ( VELY(k+1,i+1,j  )+VELY(k,i+1,j  ) &
+                                                + VELY(k+1,i  ,j  )+VELY(k,i  ,j  ) &
+                                                + VELY(k+1,i+1,j-1)+VELY(k,i+1,j-1) &
+                                                + VELY(k+1,i  ,j-1)+VELY(k,i  ,j-1) ) ) &
+               * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
+                 + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) )
 
        enddo
        enddo
@@ -1041,25 +1033,20 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_J(KS-1,i,j) = 0.0_RP
-
-          qflx_J(KS  ,i,j) = J13G(KS,i,j,I_UYW) &
-                           * 0.25_RP * ( VELX(KS+1,i,j)+VELX(KS,i,j) ) &
-                                     * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) ) &
-                           + J23G(KS,i,j,I_UYW) &
-                           * 0.0625_RP * ( VELY(KS+1,i+1,j  )+VELY(KS,i+1,j  ) &
-                                         + VELY(KS+1,i  ,j  )+VELY(KS,i  ,j  ) &
-                                         + VELY(KS+1,i+1,j-1)+VELY(KS,i+1,j-1) &
-                                         + VELY(KS+1,i  ,j-1)+VELY(KS,i  ,j-1) ) &
-                                       * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) )
-          qflx_J(KE-1,i,j) = J13G(KE-1,i,j,I_UYW) &
-                           * 0.25_RP * ( VELX(KE,i,j)+VELX(KE-1,i,j) ) &
-                                     * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) ) &
-                           + J23G(KE-1,i,j,I_UYW) &
-                           * 0.0625_RP * ( VELY(KE,i+1,j  )+VELY(KE-1,i+1,j  ) &
-                                         + VELY(KE,i  ,j  )+VELY(KE-1,i  ,j  ) &
-                                         + VELY(KE,i+1,j-1)+VELY(KE-1,i+1,j-1) &
-                                         + VELY(KE,i  ,j-1)+VELY(KE-1,i  ,j-1) ) &
-                                       * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) )
+          qflx_J(KS  ,i,j) = &
+               ( J13G(KS,i,j,I_UYW) * 0.5_RP   * ( VELX(KS+1,i,j)+VELX(KS,i,j) ) &
+               + J23G(KS,i,j,I_UYW) * 0.125_RP * ( VELY(KS+1,i+1,j  )+VELY(KS,i+1,j  ) &
+                                                 + VELY(KS+1,i  ,j  )+VELY(KS,i  ,j  ) &
+                                                 + VELY(KS+1,i+1,j-1)+VELY(KS,i+1,j-1) &
+                                                 + VELY(KS+1,i  ,j-1)+VELY(KS,i  ,j-1) ) ) &
+               * 0.5_RP * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) )
+          qflx_J(KE-1,i,j) = &
+               ( J13G(KE-1,i,j,I_UYW) * 0.5_RP    * ( VELX(KE,i,j)+VELX(KE-1,i,j) ) &
+               + J23G(KE-1,i,j,I_UYW) * 0.125_RP * ( VELY(KE,i+1,j  )+VELY(KE-1,i+1,j  ) &
+                                                   + VELY(KE,i  ,j  )+VELY(KE-1,i  ,j  ) &
+                                                   + VELY(KE,i+1,j-1)+VELY(KE-1,i+1,j-1) &
+                                                   + VELY(KE,i  ,j-1)+VELY(KE-1,i  ,j-1) ) ) &
+               * 0.5_RP * ( MOMX(KE,i,j)+MOMX(KE-1,i,j) )
           qflx_J(KE  ,i,j) = 0.0_RP
        enddo
        enddo
@@ -1147,7 +1134,7 @@ contains
                             - ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) &
                               - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) ) * RFDX(i) &
                             - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
-                              - J13G(k-1,i,j,I_UYW) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
+                              - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
                             * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &  ! pressure gradient force
                           ) / GSQRT(k,i,j,I_UYZ) &
                           + 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
@@ -1237,41 +1224,34 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-2
-          qflx_J(k,i,j) = J13G(k,i,j,I_XVW) * 0.125_RP &
-                        * ( VELX(k+1,i  ,j+1)+VELX(k,i  ,j+1) &
-                          + VELX(k+1,i-1,j+1)+VELX(k,i-1,j+1) &
-                          + VELX(k+1,i  ,j  )+VELX(k,i  ,j  ) &
-                          + VELX(k+1,i-1,j  )+VELX(k,i-1,j  ) ) &
-                        * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
-                          + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
-                        + J23G(k,i,j,I_XVW) * 0.5_RP &
-                        * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
-                        * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
-                          + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) )
+          qflx_J(k,i,j) = &
+               ( J13G(k,i,j,I_XVW) * 0.125_RP * ( VELX(k+1,i  ,j+1)+VELX(k,i  ,j+1) &
+                                                + VELX(k+1,i-1,j+1)+VELX(k,i-1,j+1) &
+                                                + VELX(k+1,i  ,j  )+VELX(k,i  ,j  ) &
+                                                + VELX(k+1,i-1,j  )+VELX(k,i-1,j  ) ) &
+               + J23G(k,i,j,I_XVW) * 0.5_RP   * ( VELY(k+1,i,j)+VELY(k,i,j) ) ) &
+               * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
+                 + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) )
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_J(KS-1,i,j) = 0.0_RP
-          qflx_J(KS  ,i,j) = J13G(KS,i,j,I_XVW) * 0.0625_RP &
-                           * ( VELX(KS+1,i  ,j+1)+VELX(KS,i  ,j+1) &
-                             + VELX(KS+1,i-1,j+1)+VELX(KS,i-1,j+1) &
-                             + VELX(KS+1,i  ,j  )+VELX(KS,i  ,j  ) &
-                             + VELX(KS+1,i-1,j  )+VELX(KS,i-1,j  ) ) &
-                           * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) ) &
-                           + J23G(KS,i,j,I_XVW) * 0.25_RP &
-                           * ( VELY(KS+1,i,j)+VELY(KS,i,j) ) &
-                           * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )
-          qflx_J(KE-1,i,j) = J23G(KE-1,i,j,I_XVW) * 0.25_RP &
-                           * ( VELY(KE,i,j)+VELY(KE-1,i,j) ) &
-                           * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) ) &
-                           + J13G(KE-1,i,j,I_XVW) * 0.0625_RP &
-                           * ( VELX(KE,i  ,j+1)+VELX(KE-1,i  ,j+1) &
-                             + VELX(KE,i-1,j+1)+VELX(KE-1,i-1,j+1) &
-                             + VELX(KE,i  ,j  )+VELX(KE-1,i  ,j  ) &
-                             + VELX(KE,i-1,j  )+VELX(KE-1,i-1,j  ) ) &
-                             * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )
+          qflx_J(KS  ,i,j) = &
+               ( J13G(KS,i,j,I_XVW) * 0.125_RP * ( VELX(KS+1,i  ,j+1)+VELX(KS,i  ,j+1) &
+                                                 + VELX(KS+1,i-1,j+1)+VELX(KS,i-1,j+1) &
+                                                 + VELX(KS+1,i  ,j  )+VELX(KS,i  ,j  ) &
+                                                 + VELX(KS+1,i-1,j  )+VELX(KS,i-1,j  ) ) &
+               + J23G(KS,i,j,I_XVW) * 0.5_RP   * ( VELY(KS+1,i,j)+VELY(KS,i,j) ) ) &
+               * 0.5_RP * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) )
+          qflx_J(KE-1,i,j) = &
+               ( J23G(KE-1,i,j,I_XVW) * 0.5_RP   * ( VELY(KE,i,j)+VELY(KE-1,i,j) ) &
+               + J13G(KE-1,i,j,I_XVW) * 0.125_RP * ( VELX(KE,i  ,j+1)+VELX(KE-1,i  ,j+1) &
+                                                   + VELX(KE,i-1,j+1)+VELX(KE-1,i-1,j+1) &
+                                                   + VELX(KE,i  ,j  )+VELX(KE-1,i  ,j  ) &
+                                                   + VELX(KE,i-1,j  )+VELX(KE-1,i-1,j  ) ) ) &
+               * 0.5_RP * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) )
           qflx_J(KE  ,i,j) = 0.0_RP
        enddo
        enddo
@@ -1359,8 +1339,8 @@ contains
                               + ( qflx_hi(k,i,j+1,YDIR) - qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) &
                             - ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) &
                               - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) ) * RFDY(j) &
-                            - ( J23G(k+1,i,j,I_XVW) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
-                              - J23G(k-1,i,j,I_XVW) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) & 
+                            - ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
+                              - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
                             * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & ! pressure gradient force
                           ) / GSQRT(k,i,j,I_XVZ) &
                           - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
@@ -1449,7 +1429,7 @@ contains
 !       if ( error < epsilon .or. error / norm < epsilon ) then
        if ( error/norm < epsilon ) then
 #ifdef DEBUG
-          write(*,*) "Bi-CGSTAB converged:", iter
+!          write(*,*) "Bi-CGSTAB converged:", iter
 #endif
           exit
        end if
@@ -1684,7 +1664,6 @@ contains
     real(RP) :: RHOT_N(KA)
     real(RP) :: PRES_N(KA)
 
-    real(RP) :: mflx(KA)
     real(RP) :: POTT(KA)
     real(RP) :: PT(KA)
 
@@ -1701,24 +1680,17 @@ contains
        MOMZ_N(k) = VECT(k-KS+1)
     end do
     MOMZ_N(:KS-1) = 0.0_RP
-    MOMZ_N(KE-2:) = 0.0_RP
-
-    ! z momentum flux
-    do k = KS, KE-1
-       mflx(k) = MOMZ_N(k)
-    end do
-    mflx(KS-1) = 0.0_RP
-    mflx(KE  ) = 0.0_RP
+    MOMZ_N(KE:) = 0.0_RP
 
     ! density
     do k = KS+1, KE-1
        DENS_N(k) = DENS(k) &
-            + dt * ( - J33G * ( mflx(k) - mflx(k-1) ) * RCDZ(k) / G(k,I_XYZ) + Sr(k) )
+            + dt * ( - J33G * ( MOMZ_N(k) - MOMZ_N(k-1) ) * RCDZ(k) / G(k,I_XYZ) + Sr(k) )
     end do
     DENS_N(KS) = DENS(KS) &
-         + dt * ( - J33G * mflx(KS) * RCDZ(KS) / G(KS,I_XYZ) + Sr(KS) )
+         + dt * ( - J33G * MOMZ_N(KS) * RCDZ(KS) / G(KS,I_XYZ) + Sr(KS) )
     DENS_N(KE) = DENS(KE) &
-         + dt * ( J33G * mflx(KE-1) * RCDZ(KE) / G(KE,I_XYZ) + Sr(KE) )
+         + dt * ( J33G * MOMZ_N(KE-1) * RCDZ(KE) / G(KE,I_XYZ) + Sr(KE) )
 
     ! rho*theta
     do k = KS, KE
@@ -1734,13 +1706,13 @@ contains
     PT(KE  ) = 0.0_RP
     do k = KS+1, KE-1
        RHOT_N(k) = RHOT(k) &
-            + dt * ( - J33G * ( mflx(k)*PT(k) - mflx(k-1)*PT(k-1) ) * RCDZ(k) / G(k,I_XYZ) &
+            + dt * ( - J33G * ( MOMZ_N(k)*PT(k) - MOMZ_N(k-1)*PT(k-1) ) * RCDZ(k) / G(k,I_XYZ) &
                      + St(k) )
     end do
     RHOT_N(KS) = RHOT(KS) &
-         + dt * ( - J33G * mflx(KS)*PT(KS) * RCDZ(KS) / G(KS,I_XYZ) + St(KS) )
+         + dt * ( - J33G * MOMZ_N(KS)*PT(KS) * RCDZ(KS) / G(KS,I_XYZ) + St(KS) )
     RHOT_N(KE) = RHOT(KE) &
-         + dt * ( J33G * mflx(KE-1)*PT(KE-1) * RCDZ(KE) / G(KE-1,I_XYZ) + St(KE) )
+         + dt * ( J33G * MOMZ_N(KE-1)*PT(KE-1) * RCDZ(KE) / G(KE-1,I_XYZ) + St(KE) )
 
 
     do k = KS, KE
@@ -1752,7 +1724,7 @@ contains
 
     do k = KS, KE
        lhs = ( DENS_N(k) - DENS(k) ) / dt
-       rhs = - J33G * ( mflx(k) - mflx(k-1) ) * RCDZ(k) / G(k,I_XYZ) + Sr(k)
+       rhs = - J33G * ( MOMZ_N(k) - MOMZ_N(k-1) ) * RCDZ(k) / G(k,I_XYZ) + Sr(k)
        if ( abs(lhs) < small ) then
           error = rhs
        else
@@ -1778,13 +1750,16 @@ contains
        if ( abs(error) > small ) then
           write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
           write(*,*) MOMZ_N(k), MOMZ(k), dt
+          write(*,*) - J33G * ( PRES(k+1) - PRES(k) ) * RFDZ(k) / G(k,I_XYW) &
+             - GRAV * ( DENS(k+1) + DENS(k) ) * 0.5_RP &
+             + Sw(k)
           call PRC_MPIstop
        end if
     end do
 
     do k = KS, KE
        lhs = ( RHOT_N(k) - RHOT(k) ) / dt
-       rhs = - J33G * ( mflx(k)*PT(k) - mflx(k-1)*PT(k-1) ) * RCDZ(k) / G(k,I_XYZ) + St(k)
+       rhs = - J33G * ( MOMZ_N(k)*PT(k) - MOMZ_N(k-1)*PT(k-1) ) * RCDZ(k) / G(k,I_XYZ) + St(k)
        if ( abs(lhs) < small ) then
           error = rhs
        else
