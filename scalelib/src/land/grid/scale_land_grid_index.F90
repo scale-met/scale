@@ -33,7 +33,7 @@ module scale_land_grid_index
 #ifdef FIXED_INDEX
   include "inc_index.h"
 #else
-  integer, public :: LKMAX =  -1 ! # of computational cells: z for land
+  integer, public :: LKMAX = 1 ! # of computational cells: z for land
 
   integer, public :: LKS ! start point of inner domain: z for land, local
   integer, public :: LKE ! end   point of inner domain: z for land, local

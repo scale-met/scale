@@ -80,7 +80,7 @@ contains
 
     allocate( LDZ(LKS:LKE) )
 
-    LDZ(:) = UNDEF
+    LDZ(:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -93,11 +93,6 @@ contains
       call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_GRID)
-
-    if( any( LDZ(:) == UNDEF ) ) then
-      write(*,*) 'xxx Wrong LDZ setting in namelist PARAM_LAND_GRID. Check!'
-      call PRC_MPIstop
-    end if
 
     call LAND_GRID_allocate
 
