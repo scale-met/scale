@@ -232,8 +232,8 @@ contains
        end do
        write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
 
-       call FILEIO_write( TW(:,:),   bname,                         OCEAN_RESTART_OUT_TITLE, & ! [IN]
-                          PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TW(:,:),   bname,                         OCEAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
 

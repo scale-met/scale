@@ -123,9 +123,11 @@ program scaleles_init
 
   ! setup horisontal/veritical grid index
   call GRID_INDEX_setup
+  call LAND_GRID_INDEX_setup
 
   ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
+  call LAND_GRID_setup
 
   ! setup tracer index
   call TRACER_setup

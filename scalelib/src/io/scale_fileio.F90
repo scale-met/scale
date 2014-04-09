@@ -20,6 +20,7 @@ module scale_fileio
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -290,6 +291,16 @@ contains
        dim2_E   = IE
        dim3_S   = JS
        dim3_E   = JE
+    else if ( axistype == 'Land' ) then
+       dim1_max = LKMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = LKS
+       dim1_E   = LKE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -376,16 +387,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,         & ! [OUT]
-                     fileexisted, & ! [OUT]
-                     basename,    & ! [IN]
-                     title,       & ! [IN]
-                     H_SOURCE,    & ! [IN]
-                     H_INSTITUTE, & ! [IN]
-                     PRC_master,  & ! [IN]
-                     PRC_myrank,  & ! [IN]
-                     rankidx,     & ! [IN]
-                     append       ) ! [IN]
+    call FileCreate( fid,            & ! [OUT]
+                     fileexisted,    & ! [OUT]
+                     basename,       & ! [IN]
+                     title,          & ! [IN]
+                     H_SOURCE,       & ! [IN]
+                     H_INSTITUTE,    & ! [IN]
+                     PRC_master,     & ! [IN]
+                     PRC_myrank,     & ! [IN]
+                     rankidx,        & ! [IN]
+                     append = append ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call set_axes( fid, dtype ) ! [IN]
@@ -494,16 +505,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,         & ! [OUT]
-                     fileexisted, & ! [OUT]
-                     basename,    & ! [IN]
-                     title,       & ! [IN]
-                     H_SOURCE,    & ! [IN]
-                     H_INSTITUTE, & ! [IN]
-                     PRC_master,  & ! [IN]
-                     PRC_myrank,  & ! [IN]
-                     rankidx,     & ! [IN]
-                     append       ) ! [IN]
+    call FileCreate( fid,            & ! [OUT]
+                     fileexisted,    & ! [OUT]
+                     basename,       & ! [IN]
+                     title,          & ! [IN]
+                     H_SOURCE,       & ! [IN]
+                     H_INSTITUTE,    & ! [IN]
+                     PRC_master,     & ! [IN]
+                     PRC_myrank,     & ! [IN]
+                     rankidx,        & ! [IN]
+                     append = append ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call set_axes( fid, dtype ) ! [IN]
@@ -614,16 +625,16 @@ contains
        endif
     endif
 
-    call FileCreate( fid,         & ! [OUT]
-                     fileexisted, & ! [OUT]
-                     basename,    & ! [IN]
-                     title,       & ! [IN]
-                     H_SOURCE,    & ! [IN]
-                     H_INSTITUTE, & ! [IN]
-                     PRC_master,  & ! [IN]
-                     PRC_myrank,  & ! [IN]
-                     rankidx,     & ! [IN]
-                     append       ) ! [IN]
+    call FileCreate( fid,            & ! [OUT]
+                     fileexisted,    & ! [OUT]
+                     basename,       & ! [IN]
+                     title,          & ! [IN]
+                     H_SOURCE,       & ! [IN]
+                     H_INSTITUTE,    & ! [IN]
+                     PRC_master,     & ! [IN]
+                     PRC_myrank,     & ! [IN]
+                     rankidx,        & ! [IN]
+                     append = append ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call set_axes( fid, dtype ) ! [IN]
@@ -636,6 +647,17 @@ contains
        dim3_max = JMAX
        dim1_S   = KS
        dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    else if ( axistype == 'Land' ) then
+       dims = (/'lz','x','y'/)
+       dim1_max = LKMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = LKS
+       dim1_E   = LKE
        dim2_S   = IS
        dim2_E   = IE
        dim3_S   = JS
@@ -659,9 +681,10 @@ contains
     return
   end subroutine FILEIO_write_3D
 
+  !-----------------------------------------------------------------------------
   subroutine set_axes( &
-      fid,  &
-      dtype )
+       fid,  &
+       dtype )
     use gtool_file, only: &
        FilePutAxis,     &
        FilePutAssociatedCoordinates
@@ -672,6 +695,9 @@ contains
        GRID_FZ, &
        GRID_FX, &
        GRID_FY
+    use scale_land_grid, only: &
+       GRID_LCZ, &
+       GRID_LFZ
     implicit none
 
     integer, intent(in) :: fid
@@ -684,6 +710,9 @@ contains
     call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
     call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
     call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
+
+    call FilePutAxis( fid, 'lz', 'LZ', 'm', 'lz', dtype, GRID_LCZ(LKS:LKE) )
+    call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
 
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
                                        (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
