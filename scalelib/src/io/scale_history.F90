@@ -22,6 +22,7 @@ module scale_history
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -134,7 +135,7 @@ contains
 
     logical :: existed
 
-    character(len=4) :: dims(3)
+    character(len=16) :: dims(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE O NetCDF')
@@ -150,6 +151,12 @@ contains
     endif
     if ( present(zdim) ) then
        if ( zdim=='half' ) dims(3) = 'zh'
+    endif
+    if ( present(zdim) ) then
+       if ( zdim=='land' ) dims(3) = 'lz'
+    endif
+    if ( present(zdim) ) then
+       if ( zdim=='landhalf' ) dims(3) = 'lzh'
     endif
 
     call HistoryAddVariable( item,              & ! [IN]
@@ -234,10 +241,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 3D data to history buffer
   subroutine HIST_put_3D( &
-      itemid, &
-      var,    &
-      dt,     &
-      zinterp )
+      itemid,  &
+      var,     &
+      dt,      &
+      zinterp, &
+      xdim,    &
+      ydim,    &
+      zdim     )
     use gtool_history, only: &
        HistoryPut
     use scale_interpolation, only: &
@@ -250,28 +260,71 @@ contains
     real(DP), intent(in) :: dt         !< delta t [sec]
     logical,  intent(in) :: zinterp    !< vertical interpolation?
 
+    character(len=*), intent(in), optional :: xdim
+    character(len=*), intent(in), optional :: ydim
+    character(len=*), intent(in), optional :: zdim
+
     intrinsic shape
     integer :: s(3)
 
-    real(RP) :: var_Z(KA,IA,JA)
-    real(RP) :: var2 (KMAX*IMAX*JMAX)
+    character(len=16) :: xd, yd, zd
+
+    real(RP), allocatable :: var_Z(:,:,:)
+    real(RP), allocatable :: var2 (:)
 
     integer  :: i, j, k
+    integer  :: isize, jsize, ksize
+    integer  :: iall, jall, kall
+    integer  :: istart, jstart, kstart
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     call PROF_rapstart('FILE O NetCDF')
 
+    xd = ''
+    yd = ''
+    zd = ''
+    if( present(xdim) ) xd = xdim
+    if( present(ydim) ) yd = ydim
+    if( present(zdim) ) zd = zdim
+
+    ! select dimension
+    select case ( xd )
+      case default
+        isize  = IMAX
+        iall   = IA
+        istart = IS
+    end select
+    select case ( yd )
+      case default
+        jsize  = JMAX
+        jall   = JA
+        jstart = JS
+    end select
+    select case ( zd )
+      case ('land')
+        ksize  = LKMAX
+        kall   = LKE
+        kstart = LKS
+      case default
+        ksize  = KMAX
+        kall   = KA
+        Kstart = KS
+    end select
+
+    allocate( var_Z(kall,iall,jall)    )
+    allocate( var2 (ksize*isize*jsize) )
+
     s = shape(var)
     if ( s(1) == 1 ) then
 
-       do j = 1, JMAX
-       do i = 1, IMAX
-          var2(i + (j-1)*IMAX) = var(1,IS+i-1,JS+j-1)
+       do j = 1, jsize
+       do i = 1, isize
+          var2(i + (j-1)*isize) = var(1,istart+i-1,jstart+j-1)
        enddo
        enddo
-       call HistoryPut(itemid, var2(1:IMAX*JMAX), dt)
+       call HistoryPut(itemid, var2(1:isize*jsize), dt)
 
     else
        if ( zinterp .AND. INTERP_available ) then
@@ -280,18 +333,18 @@ contains
                                      var_Z(:,:,:)  ) ! [OUT]
           call PROF_rapend  ('FILE O Interpolation')
 
-          do k = 1, KMAX
-          do j = 1, JMAX
-          do i = 1, IMAX
-             var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var_Z(KS+k-1,IS+i-1,JS+j-1)
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
           enddo
           enddo
           enddo
        else
-          do k = 1, KMAX
-          do j = 1, JMAX
-          do i = 1, IMAX
-             var2(i + (j-1)*IMAX + (k-1)*JMAX*IMAX) = var(KS+k-1,IS+i-1,JS+j-1)
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = var(kstart+k-1,istart+i-1,jstart+j-1)
           enddo
           enddo
           enddo
@@ -325,7 +378,7 @@ contains
 
     character(len=*), intent(in), optional :: zdim
 
-    character(len=4) :: zd
+    character(len=16) :: zd
     integer          :: itemid
     logical          :: zinterp
     !---------------------------------------------------------------------------
@@ -364,7 +417,7 @@ contains
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
 
-    character(len=4) :: xd, yd
+    character(len=16) :: xd, yd
     integer          :: itemid
     logical          :: zinterp
     !---------------------------------------------------------------------------
@@ -407,7 +460,7 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    character(len=4) :: xd, yd, zd
+    character(len=16) :: xd, yd, zd
     integer          :: itemid
     logical          :: zinterp
     !---------------------------------------------------------------------------
@@ -424,7 +477,8 @@ contains
                    item, desc, unit, 3,          & ! [IN]
                    xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
-    call HIST_put( itemid, var, dt, zinterp ) ! [IN]
+    call HIST_put( itemid, var, dt, zinterp,     & ! [IN]
+                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
     return
   end subroutine HIST_in_3D
@@ -592,6 +646,11 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
+    use scale_land_grid, only: &
+       GRID_LCZ,  &
+       GRID_LFZ,  &
+       GRID_LCDZ, &
+       GRID_LFDZ
     use scale_grid_real, only: &
        REAL_lon, &
        REAL_lonx, &
@@ -603,13 +662,15 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call HistoryPutAxis('x',     'X', 'm', 'x', GRID_CX(IS:IE))
-    call HistoryPutAxis('y',     'Y', 'm', 'y', GRID_CY(JS:JE))
-    call HistoryPutAxis('z',     'Z', 'm', 'z', GRID_CZ(KS:KE))
+    call HistoryPutAxis('x',     'X',  'm', 'x',  GRID_CX(IS:IE))
+    call HistoryPutAxis('y',     'Y',  'm', 'y',  GRID_CY(JS:JE))
+    call HistoryPutAxis('z',     'Z',  'm', 'z',  GRID_CZ(KS:KE))
+    call HistoryPutAxis('lz',    'LZ', 'm', 'lz', GRID_LCZ(LKS:LKE))
 
-    call HistoryPutAxis('xh',    'X (half level)', 'm', 'xh', GRID_FX(IS:IE))
-    call HistoryPutAxis('yh',    'Y (half level)', 'm', 'yh', GRID_FY(JS:JE))
-    call HistoryPutAxis('zh',    'Z (half level)', 'm', 'zh', GRID_FZ(KS:KE))
+    call HistoryPutAxis('xh',    'X (half level)',  'm', 'xh',  GRID_FX(IS:IE))
+    call HistoryPutAxis('yh',    'Y (half level)',  'm', 'yh',  GRID_FY(JS:JE))
+    call HistoryPutAxis('zh',    'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE))
+    call HistoryPutAxis('lzh',   'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE))
 
     call HistoryPutAxis('CZ',    'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
     call HistoryPutAxis('CX',    'Grid Center Position X', 'm', 'CX', GRID_CX)
@@ -624,6 +685,11 @@ contains
     call HistoryPutAxis('FDZ',   'Grid distance Z',    'm', 'FDZ', GRID_FDZ)
     call HistoryPutAxis('FDX',   'Grid distance X',    'm', 'FDX', GRID_FDX)
     call HistoryPutAxis('FDY',   'Grid distance Y',    'm', 'FDY', GRID_FDY)
+
+    call HistoryPutAxis('LCZ',   'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ)
+    call HistoryPutAxis('LFZ',   'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ)
+    call HistoryPutAxis('LCDZ',  'Land Grid Cell length Z', 'm', 'LCDZ', GRID_LCDZ)
+    call HistoryPutAxis('LFDZ',  'Land Grid distance Z',    'm', 'LFDZ', GRID_LFDZ)
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
     call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)

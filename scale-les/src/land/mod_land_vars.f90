@@ -378,8 +378,8 @@ contains
        call VALCHECK( QVEF(:,:),   0.0_RP,    2.0_RP, PV_NAME(I_QVEF), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TG  (:,:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND )
-    call HIST_in( STRG(:,:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND )
+    call HIST_in( TG  (:,:,:), 'TG',   PV_DESC(I_TG),   PV_UNIT(I_TG),   TIME_DTSEC_LAND, zdim ='land' )
+    call HIST_in( STRG(:,:,:), 'STRG', PV_DESC(I_STRG), PV_UNIT(I_STRG), TIME_DTSEC_LAND, zdim ='land' )
     call HIST_in( ROFF(:,:),   'ROFF', PV_DESC(I_ROFF), PV_UNIT(I_ROFF), TIME_DTSEC_LAND )
     call HIST_in( QVEF(:,:),   'QVEF', PV_DESC(I_QVEF), PV_UNIT(I_QVEF), TIME_DTSEC_LAND )
 
