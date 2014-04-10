@@ -676,8 +676,8 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_hi(k+1,i  ,j  ,ZDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_J (k+1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_J (k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, qflx_J (k+1,i  ,j)        )
+          call CHECK( __LINE__, qflx_J (k  ,i  ,j)        )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
