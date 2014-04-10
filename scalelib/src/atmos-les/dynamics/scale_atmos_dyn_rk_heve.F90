@@ -899,7 +899,7 @@ contains
                                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) & ! advection
                                     - pgf (k,i,j)                                                       & ! pressure gradient force
                                     - buoy(k,i,j)                                                       & ! buoyancy force
-                                  ) * GSQRT(k,i,j,I_XYW) &
+                                  ) / GSQRT(k,i,j,I_XYW) &
                          + dtrk * ( divdmp_coef * dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) & ! divergence damping
                                   + MOMZ_t(k,i,j)                                               ) ! physics tendency
        enddo
@@ -1310,7 +1310,7 @@ contains
                                       + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) & ! advection
                                     - pgf(k,i,j)                                                        & ! pressure gradient force
-                                  ) * GSQRT(k,i,j,I_UYZ) &
+                                  ) / GSQRT(k,i,j,I_UYZ) &
                          + dtrk * ( + cor(k,i,j)                                                        & ! coriolis force
                                     + divdmp_coef * dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) )       & ! divergence damping
                                     + MOMX_t(k,i,j)                                                     ) ! physics tendency
