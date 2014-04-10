@@ -652,7 +652,7 @@ contains
        dim3_S   = JS
        dim3_E   = JE
     else if ( axistype == 'Land' ) then
-       dims = (/'lz','x','y'/)
+       dims = (/'lz','x ','y '/)
        dim1_max = LKMAX
        dim2_max = IMAX
        dim3_max = JMAX
