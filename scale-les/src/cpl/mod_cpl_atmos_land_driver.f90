@@ -74,6 +74,7 @@ contains
        CPL_AtmLnd
     use mod_cpl_vars, only: &
        LST,              &
+       ALBG,             &
        DENS => CPL_DENS, &
        MOMX => CPL_MOMX, &
        MOMY => CPL_MOMY, &
@@ -87,8 +88,6 @@ contains
        LWD  => CPL_LWD , &
        TG   => CPL_TG,   &
        QVEF => CPL_QVEF, &
-       EMIT => CPL_EMIT, &
-       ALBG => CPL_ALBG, &
        TCS  => CPL_TCS,  &
        DZG  => CPL_DZG,  &
        Z0M  => CPL_Z0M,  &
@@ -141,8 +140,8 @@ contains
       update_flag,                         & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, EMIT, ALBG,                & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+      TG, QVEF, ALBG, TCS, DZG,            & ! (in)
+      Z0M, Z0H, Z0E                        ) ! (in)
 
     ! interpolate momentum fluxes
     do j = JS, JE

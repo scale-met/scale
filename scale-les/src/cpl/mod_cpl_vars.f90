@@ -55,6 +55,7 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: LST  (:,:) ! Land Surface Temperature [K]
   real(RP), public, save, allocatable :: SST  (:,:) ! Sea Surface Temperature [K]
   real(RP), public, save, allocatable :: ALBW (:,:) ! Sea Surface albedo [0-1]
+  real(RP), public, save, allocatable :: ALBG (:,:) ! Land Surface albedo [0-1]
   real(RP), public, save, allocatable :: Z0W  (:,:) ! Sea Surface roughness length [m]
   real(RP), public, save, allocatable :: SkinT(:,:) ! Ground Skin Temperature [K]
   real(RP), public, save, allocatable :: SkinW(:,:) ! Ground Skin Water       [kg/m2]
@@ -114,8 +115,6 @@ module mod_cpl_vars
   ! Land values
   real(RP), public, save, allocatable :: CPL_TG  (:,:) ! soil temperature [K]
   real(RP), public, save, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [0-1]
-  real(RP), public, save, allocatable :: CPL_EMIT(:,:) ! emissivity for soil [0-1]
-  real(RP), public, save, allocatable :: CPL_ALBG(:,:) ! surface albedo for soil [0-1]
   real(RP), public, save, allocatable :: CPL_TCS (:,:) ! thermal conductivity for soil [W/m/K]
   real(RP), public, save, allocatable :: CPL_DZG (:,:) ! soil depth [m]
   real(RP), public, save, allocatable :: CPL_Z0M (:,:) ! roughness length for momemtum [m]
@@ -146,30 +145,31 @@ module mod_cpl_vars
   character(len=H_SHORT), private, save :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
   logical,                private, save :: CPL_VARS_CHECKRANGE      = .false.
 
-  integer, private, parameter :: PV_NUM        = 22
+  integer, private, parameter :: PV_NUM        = 23
 
   integer, private, parameter :: I_LST         = 1
   integer, private, parameter :: I_SST         = 2
   integer, private, parameter :: I_ALBW        = 3
-  integer, private, parameter :: I_Z0W         = 4
-  integer, private, parameter :: I_SkinT       = 5
-  integer, private, parameter :: I_SkinW       = 6
-  integer, private, parameter :: I_SnowQ       = 7
-  integer, private, parameter :: I_SnowT       = 8
-  integer, private, parameter :: I_XMFLX       = 9
-  integer, private, parameter :: I_YMFLX       = 10
-  integer, private, parameter :: I_ZMFLX       = 11
-  integer, private, parameter :: I_SWUFLX      = 12
-  integer, private, parameter :: I_LWUFLX      = 13
-  integer, private, parameter :: I_SHFLX       = 14
-  integer, private, parameter :: I_LHFLX       = 15
-  integer, private, parameter :: I_QVFLX       = 16
-  integer, private, parameter :: I_Lnd_GHFLX   = 17
-  integer, private, parameter :: I_Lnd_PRECFLX = 18
-  integer, private, parameter :: I_Lnd_QVFLX   = 19
-  integer, private, parameter :: I_Ocn_WHFLX   = 20
-  integer, private, parameter :: I_Ocn_PRECFLX = 21
-  integer, private, parameter :: I_Ocn_QVFLX   = 22
+  integer, private, parameter :: I_ALBG        = 4
+  integer, private, parameter :: I_Z0W         = 5
+  integer, private, parameter :: I_SkinT       = 6
+  integer, private, parameter :: I_SkinW       = 7
+  integer, private, parameter :: I_SnowQ       = 8
+  integer, private, parameter :: I_SnowT       = 9
+  integer, private, parameter :: I_XMFLX       = 10
+  integer, private, parameter :: I_YMFLX       = 11
+  integer, private, parameter :: I_ZMFLX       = 12
+  integer, private, parameter :: I_SWUFLX      = 13
+  integer, private, parameter :: I_LWUFLX      = 14
+  integer, private, parameter :: I_SHFLX       = 15
+  integer, private, parameter :: I_LHFLX       = 16
+  integer, private, parameter :: I_QVFLX       = 17
+  integer, private, parameter :: I_Lnd_GHFLX   = 18
+  integer, private, parameter :: I_Lnd_PRECFLX = 19
+  integer, private, parameter :: I_Lnd_QVFLX   = 20
+  integer, private, parameter :: I_Ocn_WHFLX   = 21
+  integer, private, parameter :: I_Ocn_PRECFLX = 22
+  integer, private, parameter :: I_Ocn_QVFLX   = 23
 
   character(len=H_SHORT), private, save :: PV_NAME(PV_NUM) !< name  of the coupler variables
   character(len=H_MID),   private, save :: PV_DESC(PV_NUM) !< desc. of the coupler variables
@@ -178,6 +178,7 @@ module mod_cpl_vars
   data PV_NAME / 'LST',         &
                  'SST',         &
                  'ALBW',        &
+                 'ALBG',        &
                  'Z0W',         &
                  'SkinT',       &
                  'SkinW',       &
@@ -201,6 +202,7 @@ module mod_cpl_vars
   data PV_DESC / 'land surface temp.',               &
                  'sea surface temp.',                &
                  'sea surface albedo',               &
+                 'land surface albedo',              &
                  'sea surface roughness length',     &
                  'ground skin temp.',                &
                  'ground skin water',                &
@@ -223,6 +225,7 @@ module mod_cpl_vars
 
   data PV_UNIT / 'K',       &
                  'K',       &
+                 '0-1',     &
                  '0-1',     &
                  'm',       &
                  'K',       &
@@ -282,6 +285,7 @@ contains
     allocate( LST  (IA,JA) )
     allocate( SST  (IA,JA) )
     allocate( ALBW (IA,JA) )
+    allocate( ALBG (IA,JA) )
     allocate( Z0W  (IA,JA) )
     allocate( SkinT(IA,JA) )
     allocate( SkinW(IA,JA) )
@@ -319,8 +323,6 @@ contains
 
     allocate( CPL_TG  (IA,JA) )
     allocate( CPL_QVEF(IA,JA) )
-    allocate( CPL_EMIT(IA,JA) )
-    allocate( CPL_ALBG(IA,JA) )
     allocate( CPL_TCS (IA,JA) )
     allocate( CPL_DZG (IA,JA) )
     allocate( CPL_Z0M (IA,JA) )
@@ -429,6 +431,7 @@ contains
     call COMM_vars8( LST  (:,:), 1 )
     call COMM_vars8( SST  (:,:), 2 )
     call COMM_vars8( ALBW (:,:), 3 )
+    call COMM_vars8( ALBG (:,:), 3 )
     call COMM_vars8( Z0W  (:,:), 4 )
     call COMM_vars8( SkinT(:,:), 5 )
     call COMM_vars8( SkinW(:,:), 6 )
@@ -438,6 +441,7 @@ contains
     call COMM_wait ( LST  (:,:), 1 )
     call COMM_wait ( SST  (:,:), 2 )
     call COMM_wait ( ALBW (:,:), 3 )
+    call COMM_wait ( ALBG (:,:), 3 )
     call COMM_wait ( Z0W  (:,:), 4 )
     call COMM_wait ( SkinT(:,:), 5 )
     call COMM_wait ( SkinW(:,:), 6 )
@@ -453,7 +457,7 @@ contains
     use scale_fileio, only: &
        FILEIO_read
     use scale_const, only: &
-       CONST_UNDEF
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -473,6 +477,8 @@ contains
                          CPL_RESTART_IN_BASENAME, 'SST',   'XY', step=1 ) ![IN]
        call FILEIO_read( ALBW(:,:),                                     & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'ALBW',  'XY', step=1 ) ![IN]
+       call FILEIO_read( ALBG(:,:),                                     & ![OUT]
+                         CPL_RESTART_IN_BASENAME, 'ALBG',  'XY', step=1 ) ![IN]
        call FILEIO_read( Z0W(:,:),                                      & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'Z0W',   'XY', step=1 ) ![IN]
        call FILEIO_read( SkinT(:,:),                                    & ![OUT]
@@ -490,14 +496,15 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
 
-       LST  (:,:) = CONST_UNDEF
-       SST  (:,:) = CONST_UNDEF
-       ALBW (:,:) = CONST_UNDEF
-       Z0W  (:,:) = CONST_UNDEF
-       SkinT(:,:) = CONST_UNDEF
-       SkinW(:,:) = CONST_UNDEF
-       SnowQ(:,:) = CONST_UNDEF
-       SnowT(:,:) = CONST_UNDEF
+       LST  (:,:) = UNDEF
+       SST  (:,:) = UNDEF
+       ALBW (:,:) = UNDEF
+       ALBG (:,:) = UNDEF
+       Z0W  (:,:) = UNDEF
+       SkinT(:,:) = UNDEF
+       SkinW(:,:) = UNDEF
+       SnowQ(:,:) = UNDEF
+       SnowT(:,:) = UNDEF
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
@@ -539,6 +546,8 @@ contains
                           PV_NAME(I_SST),   PV_DESC(I_SST),   PV_UNIT(I_SST),   'XY', CPL_RESTART_OUT_DTYPE, .true. ) ! [IN]
        call FILEIO_write( ALBW(:,:),  bname, CPL_RESTART_OUT_TITLE,                                                 & ! [IN]
                           PV_NAME(I_ALBW),  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  'XY', CPL_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( ALBG(:,:),  bname, CPL_RESTART_OUT_TITLE,                                                 & ! [IN]
+                          PV_NAME(I_ALBG),  PV_DESC(I_ALBG),  PV_UNIT(I_ALBG),  'XY', CPL_RESTART_OUT_DTYPE, .true. ) ! [IN]
        call FILEIO_write( Z0W(:,:),   bname, CPL_RESTART_OUT_TITLE,                                                 & ! [IN]
                           PV_NAME(I_Z0W),   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   'XY', CPL_RESTART_OUT_DTYPE, .true. ) ! [IN]
        call FILEIO_write( SkinT(:,:), bname, CPL_RESTART_OUT_TITLE,                                                 & ! [IN]
@@ -573,6 +582,7 @@ contains
        call VALCHECK( LST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_LST)  , __FILE__, __LINE__ )
        call VALCHECK( SST  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SST)  , __FILE__, __LINE__ )
        call VALCHECK( ALBW (:,:), 0.0_RP,    2.0_RP, PV_NAME(I_ALBW) , __FILE__, __LINE__ )
+       call VALCHECK( ALBG (:,:), 0.0_RP,    2.0_RP, PV_NAME(I_ALBG) , __FILE__, __LINE__ )
        call VALCHECK( Z0W  (:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_Z0W)  , __FILE__, __LINE__ )
        call VALCHECK( SkinT(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinT), __FILE__, __LINE__ )
        call VALCHECK( SkinW(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_SkinW), __FILE__, __LINE__ )
@@ -600,6 +610,7 @@ contains
     call HIST_in( LST  (:,:), 'LST',   PV_DESC(I_LST),   PV_UNIT(I_LST),   TIME_DTSEC_CPL )
     call HIST_in( SST  (:,:), 'SST',   PV_DESC(I_SST),   PV_UNIT(I_SST),   TIME_DTSEC_CPL )
     call HIST_in( ALBW (:,:), 'ALBW',  PV_DESC(I_ALBW),  PV_UNIT(I_ALBW),  TIME_DTSEC_CPL )
+    call HIST_in( ALBG (:,:), 'ALBG',  PV_DESC(I_ALBG),  PV_UNIT(I_ALBG),  TIME_DTSEC_CPL )
     call HIST_in( Z0W  (:,:), 'Z0W',   PV_DESC(I_Z0W),   PV_UNIT(I_Z0W),   TIME_DTSEC_CPL )
     call HIST_in( SkinT(:,:), 'SkinT', PV_DESC(I_SkinT), PV_UNIT(I_SkinT), TIME_DTSEC_CPL )
     call HIST_in( SkinW(:,:), 'SkinW', PV_DESC(I_SkinW), PV_UNIT(I_SkinW), TIME_DTSEC_CPL )
@@ -642,6 +653,7 @@ contains
 !       call STAT_total( total, LST(:,:),   PV_NAME(I_LST)   )
 !       call STAT_total( total, SST(:,:),   PV_NAME(I_SST)   )
 !       call STAT_total( total, ALBW(:,:),  PV_NAME(I_ALBW)  )
+!       call STAT_total( total, ALBG(:,:),  PV_NAME(I_ALBG)  )
 !       call STAT_total( total, Z0W(:,:),   PV_NAME(I_Z0W)   )
 !       call STAT_total( total, SkinT(:,:), PV_NAME(I_SkinT) )
 !       call STAT_total( total, SkinW(:,:), PV_NAME(I_SkinW) )
@@ -724,15 +736,13 @@ contains
   end subroutine CPL_putAtm
 
   subroutine CPL_putLnd( &
-      pTG, pQVEF, pEMIT, & ! (in)
-      pALBG, pTCS, pDZG, & ! (in)
+      pTG, pQVEF,        & ! (in)
+      pTCS, pDZG,        & ! (in)
       pZ0M, pZ0H, pZ0E   ) ! (in)
     implicit none
 
     real(RP), intent(in) :: pTG  (IA,JA)
     real(RP), intent(in) :: pQVEF(IA,JA)
-    real(RP), intent(in) :: pEMIT(IA,JA)
-    real(RP), intent(in) :: pALBG(IA,JA)
     real(RP), intent(in) :: pTCS (IA,JA)
     real(RP), intent(in) :: pDZG (IA,JA)
     real(RP), intent(in) :: pZ0M (IA,JA)
@@ -742,8 +752,6 @@ contains
 
     CPL_TG  (:,:) = pTG  (:,:)
     CPL_QVEF(:,:) = pQVEF(:,:)
-    CPL_EMIT(:,:) = pEMIT(:,:)
-    CPL_ALBG(:,:) = pALBG(:,:)
     CPL_TCS (:,:) = pTCS (:,:)
     CPL_DZG (:,:) = pDZG (:,:)
     CPL_Z0M (:,:) = pZ0M (:,:)

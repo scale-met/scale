@@ -79,6 +79,7 @@ module mod_mkinit
      SST,   &
      SkinT, &
      ALBW,  &
+     ALBG,  &
      Z0W
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
@@ -3190,6 +3191,7 @@ contains
     real(RP) :: LND_STRG     =   0.0_RP ! water storage [kg/m2]
     ! coupler state
     real(RP) :: CPL_TEMP                ! land surface temperature [K]
+    real(RP) :: CPL_ALBG     =   0.0_RP ! land surface albedo [0-1]
 
     NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
        SFC_THETA,    &
@@ -3207,7 +3209,8 @@ contains
        LND_QVEF,     &
        LND_ROFF,     &
        LND_STRG,     &
-       CPL_TEMP
+       CPL_TEMP,     &
+       CPL_ALBG
 
     real(RP) :: pott_prof(KA)
 
@@ -3341,6 +3344,7 @@ contains
 
        LST  (i,j) = CPL_TEMP
        SkinT(i,j) = CPL_TEMP
+       ALBG (i,j) = CPL_ALBG
     enddo
     enddo
 

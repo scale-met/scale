@@ -144,8 +144,8 @@ contains
         LST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TG, QVEF, EMIT, ALB,                  & ! (in)
-        TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
+        TG, QVEF, ALB, TCS, DZG,              & ! (in)
+        Z0M, Z0H, Z0E                         ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -186,7 +186,6 @@ contains
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
     real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
@@ -211,8 +210,8 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
         LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-        TG, QVEF, EMIT, ALB,                 & ! (in)
-        TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+        TG, QVEF, ALB, TCS, DZG,             & ! (in)
+        Z0M, Z0H, Z0E                        ) ! (in)
 
       if( LST_UPDATE ) then
 
@@ -273,8 +272,8 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, EMIT, ALB,                 & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+      TG, QVEF, ALB, TCS, DZG,             & ! (in)
+      Z0M, Z0H, Z0E                        ) ! (in)
     use scale_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -316,7 +315,6 @@ contains
 
     real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
-    real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
     real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
     real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
     real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
@@ -333,6 +331,9 @@ contains
     real(RP) :: dLWUFLX, dGHFLX, dSHFLX, dLHFLX
 
     integer :: i, j
+
+    ! tentative
+    real(RP), parameter :: ALB_LW = 0.0_RP
     !---------------------------------------------------------------------------
 
     ! at cell center
@@ -361,7 +362,7 @@ contains
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
       GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( TS(i,j) - TG(i,j)  ) / DZG(i,j)
       SWUFLX(i,j) = ALB(i,j) * SWD(i,j)
-      LWUFLX(i,j) = EMIT(i,j) * STB * TS(i,j)**4
+      LWUFLX(i,j) = ALB_LW   * LWD(i,j) + ( 1.0_RP - ALB_LW ) * STB * TS(i,j)**4
 
       ! calculation for residual
       RES(i,j) = SWD(i,j) - SWUFLX(i,j) + LWD(i,j) - LWUFLX(i,j) - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
@@ -379,7 +380,7 @@ contains
       dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
               * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
       dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
-      dLWUFLX = 4.0_RP * EMIT(i,j) * STB * TS(i,j)**3
+      dLWUFLX = 4.0_RP * ( 1.0_RP - ALB_LW ) * STB * TS(i,j)**3
 
       ! calculation for d(residual)/dTS
       DRES(i,j) = - dLWUFLX - dSHFLX - dLHFLX + dGHFLX

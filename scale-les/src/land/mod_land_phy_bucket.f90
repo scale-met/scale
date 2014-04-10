@@ -233,8 +233,6 @@ contains
     use mod_land_vars, only: &
        TG,                 &
        QVEF,               &
-       I_EMIT,             &
-       I_ALBG,             &
        I_TCS,              &
        I_Z0M,              &
        I_Z0H,              &
@@ -251,8 +249,6 @@ contains
 
     call CPL_putLnd( TG  (LKS,:,:),    & ! [IN]
                      QVEF(:,:),        & ! [IN]
-                     P   (:,:,I_EMIT), & ! [IN]
-                     P   (:,:,I_ALBG), & ! [IN]
                      P   (:,:,I_TCS),  & ! [IN]
                      dz_h(:,:),        & ! [IN]
                      P   (:,:,I_Z0M),  & ! [IN]

@@ -35,8 +35,8 @@ module scale_cpl_atmos_land
          LST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, EMIT, ALB,                 & ! (in)
-         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+         TG, QVEF, ALB, TCS, DZG,             & ! (in)
+         Z0M, Z0H, Z0E                        ) ! (in)
        use scale_precision
        use scale_grid_index
        implicit none
@@ -68,7 +68,6 @@ module scale_cpl_atmos_land
 
        real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
        real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
-       real(RP), intent(in) :: EMIT(IA,JA) ! emissivity for soil [0-1]
        real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
        real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
        real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]

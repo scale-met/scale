@@ -76,17 +76,15 @@ module mod_land_vars
                  'kg/m2', &
                  '0-1'    /
 
-  integer,  public, parameter :: LAND_PROPERTY_nmax = 10
+  integer,  public, parameter :: LAND_PROPERTY_nmax = 8
   integer,  public, parameter :: I_STRGMAX =  1  ! maximum  water storage [kg/m2]
   integer,  public, parameter :: I_STRGCRT =  2  ! critical water storage [kg/m2]
-  integer,  public, parameter :: I_EMIT    =  3  ! surface emissivity in long-wave  radiation [0-1]
-  integer,  public, parameter :: I_ALBG    =  4  ! surface albedo     in short-wave radiation [0-1]
-  integer,  public, parameter :: I_TCS     =  5  ! thermal conductivity for soil [W/m/K]
-  integer,  public, parameter :: I_HCS     =  6  ! heat capacity        for soil [J/K]
-  integer,  public, parameter :: I_DFW     =  7  ! diffusive coefficient of soil water [m2/s]
-  integer,  public, parameter :: I_Z0M     =  8  ! roughness length for momemtum [m]
-  integer,  public, parameter :: I_Z0H     =  9  ! roughness length for heat     [m]
-  integer,  public, parameter :: I_Z0E     = 10  ! roughness length for moisture [m]
+  integer,  public, parameter :: I_TCS     =  3  ! thermal conductivity for soil [W/m/K]
+  integer,  public, parameter :: I_HCS     =  4  ! heat capacity        for soil [J/K]
+  integer,  public, parameter :: I_DFW     =  5  ! diffusive coefficient of soil water [m2/s]
+  integer,  public, parameter :: I_Z0M     =  6  ! roughness length for momemtum [m]
+  integer,  public, parameter :: I_Z0H     =  7  ! roughness length for heat     [m]
+  integer,  public, parameter :: I_Z0E     =  8  ! roughness length for moisture [m]
 
   integer,  public, save, allocatable :: LAND_Type    (:,:)   ! land type index
   real(RP), public, save, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
@@ -422,8 +420,6 @@ contains
     character(len=H_SHORT) :: description
     real(RP)               :: STRGMAX
     real(RP)               :: STRGCRT
-    real(RP)               :: EMIT
-    real(RP)               :: ALBG
     real(RP)               :: TCS
     real(RP)               :: HCS
     real(RP)               :: DFW
@@ -436,8 +432,6 @@ contains
        description, &
        STRGMAX,     &
        STRGCRT,     &
-       EMIT,        &
-       ALBG,        &
        TCS,         &
        HCS,         &
        DFW,         &
@@ -457,8 +451,6 @@ contains
                '***        ',  'description ', &
                                'Max Stg.', &
                                'CRT Stg.', &
-                               'Emissiv.', &
-                               '  Albedo', &
                                'T condu.', &
                                'H capac.', &
                                'DFC Wat.', &
@@ -491,8 +483,6 @@ contains
 
        LAND_PROPERTY_table(index,I_STRGMAX) = STRGMAX
        LAND_PROPERTY_table(index,I_STRGCRT) = STRGCRT
-       LAND_PROPERTY_table(index,I_EMIT   ) = EMIT
-       LAND_PROPERTY_table(index,I_ALBG   ) = ALBG
        LAND_PROPERTY_table(index,I_TCS    ) = TCS
        LAND_PROPERTY_table(index,I_HCS    ) = HCS
        LAND_PROPERTY_table(index,I_DFW    ) = DFW
@@ -504,8 +494,6 @@ contains
                   '*** IDX=', index, trim(description), &
                                      STRGMAX, &
                                      STRGCRT, &
-                                     EMIT,    &
-                                     ALBG,    &
                                      TCS,     &
                                      HCS,     &
                                      DFW,     &
