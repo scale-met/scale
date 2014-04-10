@@ -67,11 +67,15 @@ module scale_history
   !
   !++ Private parameters & variables
   !
+  real(RP), private, allocatable :: GRID_RAD(:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine HIST_setup
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
@@ -86,6 +90,10 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE O NetCDF')
+
+    allocate( GRID_RAD(1:NRAD) )
+
+    GRID_RAD(:) = (/ 1:NRAD /)
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -619,6 +627,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Put axis coordinate to history file
   subroutine HIST_put_axes
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
@@ -705,6 +715,8 @@ contains
     call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
     call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
     call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
+
+    call HistoryPutAxis('rad',   'Radiation', 'int', 'rad', GRID_RAD(1:NRAD))
 
     call HistoryPutAssociatedCoordinates('lon', 'longitude', 'degrees_east', (/'x', 'y'/), REAL_lon(IS:IE,JS:JE) )
     call HistoryPutAssociatedCoordinates('lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &

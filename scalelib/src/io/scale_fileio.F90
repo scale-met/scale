@@ -71,11 +71,15 @@ module scale_fileio
   real(RP), private, allocatable :: REAL_CZ(:,:,:)
   real(RP), private, allocatable :: REAL_FZ(:,:,:)
 
+  real(RP), private, allocatable :: GRID_RAD(:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILEIO_setup
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -91,6 +95,8 @@ contains
 
     allocate( REAL_CZ  (  KA,IA,JA) )
     allocate( REAL_FZ  (0:KA,IA,JA) )
+
+    allocate( GRID_RAD(NRAD) )
 
     ! only for register
     call PROF_rapstart('FILE I NetCDF')
@@ -116,6 +122,8 @@ contains
        LATY, &
        CZ,   &
        FZ    )
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     implicit none
 
     real(RP), intent(in) :: LON (IA,JA)
@@ -133,6 +141,8 @@ contains
 
     REAL_CZ(:,:,:) = CZ(:,:,:)
     REAL_FZ(:,:,:) = FZ(:,:,:)
+
+    GRID_RAD(:) = (/ 1:NRAD /)
 
     return
   end subroutine FILEIO_set_coordinates
@@ -262,6 +272,8 @@ contains
        step      )
     use gtool_file, only: &
        FileRead
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -297,6 +309,16 @@ contains
        dim3_max = JMAX
        dim1_S   = LKS
        dim1_E   = LKE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    else if ( axistype == 'Rad' ) then
+       dim1_max = NRAD
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = 1
+       dim1_E   = NRAD
        dim2_S   = IS
        dim2_E   = IE
        dim3_S   = JS
@@ -574,6 +596,8 @@ contains
        FileCreate,      &
        FileAddVariable, &
        FileWrite
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
@@ -662,6 +686,17 @@ contains
        dim2_E   = IE
        dim3_S   = JS
        dim3_E   = JE
+    else if ( axistype == 'Rad' ) then
+       dims = (/'rad','x','y'/)
+       dim1_max = NRAD
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = 1
+       dim1_E   = NRAD
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -688,6 +723,8 @@ contains
     use gtool_file, only: &
        FilePutAxis,     &
        FilePutAssociatedCoordinates
+    use scale_const, only: &
+       NRAD => CONST_NRAD
     use scale_grid, only: &
        GRID_CZ, &
        GRID_CX, &
@@ -713,6 +750,8 @@ contains
 
     call FilePutAxis( fid, 'lz', 'LZ', 'm', 'lz', dtype, GRID_LCZ(LKS:LKE) )
     call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+
+    call FilePutAxis( fid, 'rad', 'Radiation', 'int', 'rad', dtype, GRID_RAD(1:NRAD) )
 
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
                                        (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
