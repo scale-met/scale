@@ -155,7 +155,7 @@ cleangtool:
 	$(MAKE) -C $(GTOOLDIR)   allclean
 
 distclean: clean
-	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a depend
+	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a
 
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
