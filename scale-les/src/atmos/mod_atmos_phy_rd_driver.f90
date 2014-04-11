@@ -118,8 +118,8 @@ contains
        sw_AtmLnd => CPL_sw_AtmLnd, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
        SkinT,                      &
-       CPL_EMIT,                   &
-       CPL_ALBG
+       ALBW,                       &
+       ALBG
     implicit none
 
     logical, intent(in) :: update_flag
@@ -165,8 +165,11 @@ contains
        endif
 
        if ( sw_AtmLnd ) then ! tentative
-          albedo_land(:,:,I_LW) = 1.0_RP - CPL_EMIT(:,:)
-          albedo_land(:,:,I_SW) = CPL_ALBG(:,:)
+          albedo_land(:,:,I_SW) = ALBG(:,:,1)
+          albedo_land(:,:,I_LW) = ALBG(:,:,2)
+       elseif ( sw_AtmOcn ) then ! tentative
+          albedo_land(:,:,I_SW) = ALBW(:,:,1)
+          albedo_land(:,:,I_LW) = ALBW(:,:,2)
        else
           albedo_land(:,:,:) = 0.5_RP
        endif

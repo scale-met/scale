@@ -35,10 +35,8 @@ module scale_land_grid
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: GRID_LCZ  (:)  !< center coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_LCDZ (:)  !< z-length of control volume [m]
-
   real(RP), public, allocatable :: GRID_LFZ  (:)  !< face   coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_LFDZ (:)  !< z-length of grid(k)-to-grid(k-1) [m]
+  real(RP), public, allocatable :: GRID_LCDZ (:)  !< z-length of control volume [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -114,11 +112,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! local domain
-    allocate( GRID_LCZ (LKS:LKE) )
-    allocate( GRID_LCDZ(LKS:LKE) )
-
+    allocate( GRID_LCZ (LKS  :LKE) )
     allocate( GRID_LFZ (LKS-1:LKE) )
-    allocate( GRID_LFDZ(LKS:LKE-1) )
+    allocate( GRID_LCDZ(LKS  :LKE) )
 
   end subroutine LAND_GRID_allocate
 
@@ -139,11 +135,9 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(LAND_GRID_IN_BASENAME)
 
-    call FileRead( GRID_LCZ(:), bname, 'LCZ', 1, PRC_myrank )
-    call FileRead( GRID_LFZ(:), bname, 'LFZ', 1, PRC_myrank )
-
+    call FileRead( GRID_LCZ(:),  bname, 'LCZ',  1, PRC_myrank )
     call FileRead( GRID_LCDZ(:), bname, 'LCDZ', 1, PRC_myrank )
-    call FileRead( GRID_LFDZ(:), bname, 'LFDZ', 1, PRC_myrank )
+    call FileRead( GRID_LFZ(:),  bname, 'LFZ',  1, PRC_myrank )
 
     return
   end subroutine LAND_GRID_read
@@ -166,10 +160,6 @@ contains
       GRID_LCZ(k) = GRID_LCDZ(k) / 2.0_RP + GRID_LFZ(k-1)
       GRID_LFZ(k) = GRID_LCDZ(k)          + GRID_LFZ(k-1)
     end do
-
-    do k = LKS, LKE-1
-      GRID_LFDZ(k) = GRID_LCZ(k+1) - GRID_LCZ(k)
-    enddo
 
     return
   end subroutine LAND_GRID_generate

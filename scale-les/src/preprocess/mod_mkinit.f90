@@ -79,6 +79,7 @@ module mod_mkinit
      SST,   &
      SkinT, &
      ALBW,  &
+     ALBG,  &
      Z0W
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
@@ -3168,6 +3169,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + land variables )
   subroutine MKINIT_landcouple
+    use scale_const, only: &
+      I_SW => CONST_I_SW, &
+      I_LW => CONST_I_LW
     implicit none
 
     ! Surface state
@@ -3190,6 +3194,8 @@ contains
     real(RP) :: LND_STRG     =   0.0_RP ! water storage [kg/m2]
     ! coupler state
     real(RP) :: CPL_TEMP                ! land surface temperature [K]
+    real(RP) :: CPL_ALBG_SW  =   0.0_RP ! land surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBG_LW  =   0.0_RP ! land surface albedo for LW [0-1]
 
     NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
        SFC_THETA,    &
@@ -3207,7 +3213,9 @@ contains
        LND_QVEF,     &
        LND_ROFF,     &
        LND_STRG,     &
-       CPL_TEMP
+       CPL_TEMP,     &
+       CPL_ALBG_SW,  &
+       CPL_ALBG_LW
 
     real(RP) :: pott_prof(KA)
 
@@ -3339,8 +3347,10 @@ contains
        SWD (i,j) = SFC_SWD
        LWD (i,j) = SFC_LWD
 
-       LST  (i,j) = CPL_TEMP
-       SkinT(i,j) = CPL_TEMP
+       LST  (i,j)      = CPL_TEMP
+       SkinT(i,j)      = CPL_TEMP
+       ALBG (i,j,I_SW) = CPL_ALBG_SW
+       ALBG (i,j,I_LW) = CPL_ALBG_LW
     enddo
     enddo
 
@@ -3350,6 +3360,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + ocean variables )
   subroutine MKINIT_oceancouple
+    use scale_const, only: &
+      I_SW => CONST_I_SW, &
+      I_LW => CONST_I_LW
     implicit none
 
     ! Surface state
@@ -3369,7 +3382,8 @@ contains
     real(RP) :: OCN_TEMP                ! water temperature [K]
     ! coupler state
     real(RP) :: CPL_TEMP                ! sea surface temperature [K]
-    real(RP) :: CPL_ALBW     =   0.0_RP ! sea surface albedo [0-1]
+    real(RP) :: CPL_ALBW_SW  =   0.0_RP ! sea surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBW_LW  =   0.0_RP ! sea surface albedo for LW [0-1]
     real(RP) :: CPL_Z0W      =   0.0_RP ! sea surface roughness length [m]
 
     NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
@@ -3386,7 +3400,8 @@ contains
        ENV_RH,       &
        OCN_TEMP,     &
        CPL_TEMP,     &
-       CPL_ALBW,     &
+       CPL_ALBW_SW,  &
+       CPL_ALBW_LW,  &
        CPL_Z0W
 
     real(RP) :: pott_prof(KA)
@@ -3516,10 +3531,11 @@ contains
        SWD (i,j) = SFC_SWD
        LWD (i,j) = SFC_LWD
 
-       SST  (i,j) = CPL_TEMP
-       SkinT(i,j) = CPL_TEMP
-       ALBW (i,j) = CPL_ALBW
-       Z0W  (i,j) = CPL_Z0W
+       SST  (i,j)      = CPL_TEMP
+       SkinT(i,j)      = CPL_TEMP
+       ALBW (i,j,I_SW) = CPL_ALBW_SW
+       ALBW (i,j,I_LW) = CPL_ALBW_LW
+       Z0W  (i,j)      = CPL_Z0W
     enddo
     enddo
 

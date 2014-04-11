@@ -54,8 +54,8 @@ module scale_ocean_roughness
   !
   !++ Private procedure
   !
-  private :: OCEAN_roughness_miller
-  private :: OCEAN_roughness_yqw
+  private :: OCEAN_roughness_miller92
+  private :: OCEAN_roughness_moon07
 
   !-----------------------------------------------------------------------------
   !
@@ -177,10 +177,10 @@ contains
     Z0ES           = OCEAN_roughness_Z0ES
 
     select case( ROUGHNESS_TYPE )
-    case ( 'MILLER' )
-       OCEAN_roughness => OCEAN_roughness_miller
-    case ( 'YQW' )
-       OCEAN_roughness => OCEAN_roughness_yqw
+    case ( 'MILLER92' )
+       OCEAN_roughness => OCEAN_roughness_miller92
+    case ( 'MOON07' )
+       OCEAN_roughness => OCEAN_roughness_moon07
     case default
        write(*,*) 'xxx invalid sea roughness length scheme (', trim(ROUGHNESS_TYPE), '). CHECK!'
        call PRC_MPIstop
@@ -189,7 +189,7 @@ contains
     return
   end subroutine OCEAN_roughness_setup
 
-  subroutine OCEAN_roughness_miller( &
+  subroutine OCEAN_roughness_miller92( &
       Z0W,           & ! (inout)
       Z0M, Z0H, Z0E, & ! (out)
       Uabs, ZA       ) ! (in)
@@ -220,9 +220,9 @@ contains
     Z0E = max( Z0EI + Z0ER/GRAV * Ustar*Ustar + Z0ES*visck / Ustar, Z0E_min )
 
     return
-  end subroutine OCEAN_roughness_miller
+  end subroutine OCEAN_roughness_miller92
 
-  subroutine OCEAN_roughness_yqw( &
+  subroutine OCEAN_roughness_moon07( &
       Z0W,           & ! (inout)
       Z0M, Z0H, Z0E, & ! (out)
       Uabs, ZA       ) ! (in)
@@ -242,7 +242,7 @@ contains
     real(RP), intent(in) :: ZA   ! height at 1st atm. layer [m]
 
     ! parameter
-    integer, parameter :: nmax = 5 ! maximum iteration number
+    integer, parameter :: nmax = 10 ! maximum iteration number
 
     ! work
     integer :: n
@@ -268,13 +268,13 @@ contains
 
     !  Fairall et al. TOGA V3.0
     !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
-    Z0H = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP )
-    Z0E = min( 5.5E-5_RP * ( visck / Ustar / Z0M )**0.6_RP, 1.1E-4_RP ) ! Z0H = Z0E
+    Z0H = min( 5.5E-5_RP * ( Z0M * Ustar / visck )**(-0.6_RP), 1.1E-4_RP )
+    Z0E = min( 5.5E-5_RP * ( Z0M * Ustar / visck )**(-0.6_RP), 1.1E-4_RP ) ! Z0H = Z0E
 
     ! update Z0W
     Z0W = Z0M
 
     return
-  end subroutine OCEAN_roughness_yqw
+  end subroutine OCEAN_roughness_moon07
 
 end module scale_ocean_roughness

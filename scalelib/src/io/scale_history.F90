@@ -649,8 +649,7 @@ contains
     use scale_land_grid, only: &
        GRID_LCZ,  &
        GRID_LFZ,  &
-       GRID_LCDZ, &
-       GRID_LFDZ
+       GRID_LCDZ
     use scale_grid_real, only: &
        REAL_lon, &
        REAL_lonx, &
@@ -689,7 +688,6 @@ contains
     call HistoryPutAxis('LCZ',   'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ)
     call HistoryPutAxis('LFZ',   'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ)
     call HistoryPutAxis('LCDZ',  'Land Grid Cell length Z', 'm', 'LCDZ', GRID_LCDZ)
-    call HistoryPutAxis('LFDZ',  'Land Grid distance Z',    'm', 'LFDZ', GRID_LFDZ)
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
     call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)

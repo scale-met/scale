@@ -49,7 +49,6 @@ module scale_cpl_atmos_ocean_bulk
   real(RP), private, save :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
   real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
   real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
-  real(RP), private, save :: EMIT     =   0.96_RP   ! emissivity for water [no unit]
 
 contains
   !-----------------------------------------------------------------------------
@@ -72,7 +71,6 @@ contains
     real(RP) :: CPL_AtmOcn_bulk_U_maxM
     real(RP) :: CPL_AtmOcn_bulk_U_maxH
     real(RP) :: CPL_AtmOcn_bulk_U_maxE
-    real(RP) :: CPL_AtmOcn_bulk_EMIT
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
        CPL_AtmOcn_bulk_U_minM,  &
@@ -80,8 +78,7 @@ contains
        CPL_AtmOcn_bulk_U_minE,  &
        CPL_AtmOcn_bulk_U_maxM,  &
        CPL_AtmOcn_bulk_U_maxH,  &
-       CPL_AtmOcn_bulk_U_maxE,  &
-       CPL_AtmOcn_bulk_EMIT
+       CPL_AtmOcn_bulk_U_maxE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -92,7 +89,6 @@ contains
     CPL_AtmOcn_bulk_U_maxM  = U_maxM
     CPL_AtmOcn_bulk_U_maxH  = U_maxH
     CPL_AtmOcn_bulk_U_maxE  = U_maxE
-    CPL_AtmOcn_bulk_EMIT    = EMIT
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: bulk flux parameter'
@@ -120,7 +116,6 @@ contains
     U_maxM    = CPL_AtmOcn_bulk_U_maxM
     U_maxH    = CPL_AtmOcn_bulk_U_maxH
     U_maxE    = CPL_AtmOcn_bulk_U_maxE
-    EMIT      = CPL_AtmOcn_bulk_EMIT
 
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup
@@ -135,7 +130,8 @@ contains
         SST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
         RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
-        TW, ALB, Z0M, Z0H, Z0E                ) ! (in)
+        TW, ALB_SW, ALB_LW,                   & ! (in)
+        Z0M, Z0H, Z0E                         ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -174,11 +170,12 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
-    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
-    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
+    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     !---------------------------------------------------------------------------
 
@@ -195,7 +192,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      ALB, Z0M, Z0H, Z0E                   ) ! (in)
+      ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
 
     return
   end subroutine CPL_AtmOcn_bulk
@@ -205,7 +202,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      ALB, Z0M, Z0H, Z0E                   ) ! (in)
+      ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
     use scale_const, only: &
       GRAV   => CONST_GRAV,  &
       CPdry  => CONST_CPdry, &
@@ -241,10 +238,11 @@ contains
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-    real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
-    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
+    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! work
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
@@ -280,8 +278,8 @@ contains
 
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
-      SWUFLX(i,j) = ALB(i,j) * SWD(i,j)
-      LWUFLX(i,j) = EMIT * STB * TS(i,j)**4
+      SWUFLX(i,j) = ALB_SW(i,j) * SWD(i,j)
+      LWUFLX(i,j) = ALB_LW(i,j) * LWD(i,j) + ( 1.0_RP - ALB_LW(i,j) ) * STB * TS(i,j)**4
 
       ! calculation for residual
       WHFLX(i,j) = - SWD(i,j) + SWUFLX(i,j) - LWD(i,j) + LWUFLX(i,j) + SHFLX(i,j) + LHFLX(i,j)

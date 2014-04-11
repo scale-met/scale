@@ -93,6 +93,11 @@ module scale_const
   real(RP), public, parameter :: CONST_TEM00   = 273.15_RP           !< temperature reference (0 degree C) [K]
   real(RP), public, parameter :: CONST_PPM     = 1.E-6_RP            !< parts par million
 
+  ! tentative
+  integer,  public, save      :: CONST_NRAD    = 2                   !< # of radiation categories
+  integer,  public, save      :: CONST_I_SW    = 1                   !< short-wave radiation index
+  integer,  public, save      :: CONST_I_LW    = 2                   !< long-wave radiation index
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
