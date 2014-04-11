@@ -35,7 +35,8 @@ module scale_cpl_atmos_ocean
          SST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TW, ALB, Z0M, Z0H, Z0E               ) ! (in)
+         TW, ALB_SW, ALB_LW,                  & ! (in)
+         Z0M, Z0H, Z0E                        ) ! (in)
        use scale_precision
        use scale_grid_index
        implicit none
@@ -65,11 +66,12 @@ module scale_cpl_atmos_ocean
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-       real(RP), intent(in) :: TW (IA,JA) ! water temperature [K]
-       real(RP), intent(in) :: ALB(IA,JA) ! surface albedo for water [0-1]
-       real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
-       real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
-       real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+       real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
+       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
+       real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
+       real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
+       real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
      end subroutine cao
   end interface
   procedure(cao), pointer :: CPL_AtmOcn => NULL()

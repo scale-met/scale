@@ -71,7 +71,9 @@ contains
 
   subroutine CPL_AtmOcn_driver( update_flag )
     use scale_const, only: &
-       LH0 => CONST_LH0
+       LH0  => CONST_LH0,  &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
@@ -165,7 +167,8 @@ contains
       update_flag,                         & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TW, ALBW, Z0M, Z0H, Z0E              ) ! (in)
+      TW, ALBW(:,:,I_SW), ALBW(:,:,I_LW),  & ! (in)
+      Z0M, Z0H, Z0E                        ) ! (in)
 
     ! interpolate momentum fluxes
     do j = JS, JE

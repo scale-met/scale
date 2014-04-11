@@ -35,8 +35,8 @@ module scale_cpl_atmos_land
          LST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
          RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, ALB, TCS, DZG,             & ! (in)
-         Z0M, Z0H, Z0E                        ) ! (in)
+         TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
+         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
        use scale_precision
        use scale_grid_index
        implicit none
@@ -66,14 +66,15 @@ module scale_cpl_atmos_land
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
-       real(RP), intent(in) :: TG  (IA,JA) ! soil temperature [K]
-       real(RP), intent(in) :: QVEF(IA,JA) ! efficiency of evaporation [0-1]
-       real(RP), intent(in) :: ALB (IA,JA) ! surface albedo for soil [0-1]
-       real(RP), intent(in) :: TCS (IA,JA) ! thermal conductivity for soil [W/m/K]
-       real(RP), intent(in) :: DZG (IA,JA) ! soil depth [m]
-       real(RP), intent(in) :: Z0M (IA,JA) ! roughness length for momemtum [m]
-       real(RP), intent(in) :: Z0H (IA,JA) ! roughness length for heat [m]
-       real(RP), intent(in) :: Z0E (IA,JA) ! roughness length for vapor [m]
+       real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
+       real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
+       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
+       real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [W/m/K]
+       real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+       real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
+       real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
+       real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
      end subroutine cal
   end interface
   procedure(cal), pointer :: CPL_AtmLnd => NULL()

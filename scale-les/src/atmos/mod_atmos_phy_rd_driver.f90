@@ -165,11 +165,11 @@ contains
        endif
 
        if ( sw_AtmLnd ) then ! tentative
-          albedo_land(:,:,I_LW) = 0.00_RP
-          albedo_land(:,:,I_SW) = ALBG(:,:)
+          albedo_land(:,:,I_SW) = ALBG(:,:,1)
+          albedo_land(:,:,I_LW) = ALBG(:,:,2)
        elseif ( sw_AtmOcn ) then ! tentative
-          albedo_land(:,:,I_LW) = 0.04_RP
-          albedo_land(:,:,I_SW) = ALBW(:,:)
+          albedo_land(:,:,I_SW) = ALBW(:,:,1)
+          albedo_land(:,:,I_LW) = ALBW(:,:,2)
        else
           albedo_land(:,:,:) = 0.5_RP
        endif
