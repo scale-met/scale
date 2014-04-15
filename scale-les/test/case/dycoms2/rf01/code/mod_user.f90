@@ -57,6 +57,13 @@ module mod_user
 
   real(RP), private, allocatable :: Q_rate(:,:,:,:)
   real(RP), private, save :: corioli
+
+  real(RP), private, save :: F0    = 70.00_RP  ! Upward [J/m2/s]
+  real(RP), private, save :: F1    = 22.00_RP  ! [K/m**-1/3]
+  real(RP), private, save :: Dval  = 3.75E-6_RP ! divergence of large scale horizontal winds [1/s]
+  real(RP), private, parameter :: kappa = 85.00_RP  ! scaling factor for LWP [m2/kg]
+  real(RP), private, parameter :: a     =  1.00_RP  ! [K/m**-1/3]
+  logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -244,7 +251,18 @@ contains
          QTRC_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
-         RFDZ => GRID_RFDZ
+         RFDZ => GRID_RFDZ, &
+         CZ   => GRID_CZ, &
+         FZ   => GRID_FZ
+    use scale_const, only: &
+         CPdry => CONST_CPdry, &
+         Rdry  => CONST_Rdry, &
+         RovCP => CONST_RovCP, &
+         RovCV => CONST_RovCV, &
+         P00   => CONST_PRE00
+    use scale_time, only: &
+         do_phy_rd => TIME_DOATMOS_PHY_RD, &
+         dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
     implicit none
     !---------------------------------------------------------------------------
     real(RP) :: ratesum
@@ -253,6 +271,19 @@ contains
     real(RP) :: VELX(KA,IA,JA), VELY(KA,IA,JA)
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
+
+    real(RP) :: CDZ(KA)
+    real(RP) :: Zi(IA,JA) ! Cloud top height [m]
+    real(RP) :: dZ, dZ_CBRT
+    integer  :: k_cldtop
+
+    real(RP) :: QTOT ! Qv + Qc + Qr [kg/kg]
+    real(RP) :: Qbelow, Qabove ! scaled LWP (above/below layer)
+    real(RP) :: dQ, QWSUM
+    real(RP) :: TEMP_t(KA,IA,JA)
+    real(RP) :: flux_rad(KA,IA,JA)
+
+    integer :: k2
 
 
     do JJS = JS, JE, JBLOCK
@@ -453,7 +484,81 @@ contains
     enddo
 
 
+    if( do_phy_rd ) then
 
+      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation (DYCOMS-II)'
+
+      flux_rad    (:,:,:) = 0.0_RP
+
+      Zi(:,:) = 0.0_RP ! for history
+
+      do j = JS, JE
+      do i = IS, IE
+       do k = KS, KE
+          CDZ(k) = FZ(k) - FZ(k-1)
+       enddo
+
+       ! diagnose cloud top
+       k_cldtop = -1
+       do k = KS, KE
+          QTOT = 0.0_RP
+          do iq = QQS, QWE
+             QTOT = QTOT + QTRC(k,i,j,iq)
+          enddo
+          if( QTOT < 8.E-3_RP ) exit ! above cloud
+
+          k_cldtop = k
+       enddo
+
+       if( k_cldtop == -1 ) cycle ! no cloud
+
+       Zi(i,j) = CZ(k_cldtop)
+
+       do k = KS-1, KE
+          Qbelow = 0.0_RP
+          Qabove = 0.0_RP
+
+          do k2 = KS, KE
+             QWSUM = 0.0_RP
+             do iq = QWS, QWE
+                QWSUM = QWSUM + QTRC(k2,i,j,iq)
+             enddo
+             dQ = kappa * CDZ(k2) * DENS(k2,i,j) * QWSUM
+             if ( k2 <= k ) then ! below layer
+                Qbelow = Qbelow + dQ
+             else                ! above layer
+                Qabove = Qabove + dQ
+             endif
+          enddo
+
+          flux_rad(k,i,j) = F0 * exp( -Qabove ) + F1 * exp( -Qbelow )
+        enddo
+
+        do k = k_cldtop, KE
+           dZ      = FZ(k)-CZ(k_cldtop)
+           dZ_CBRT = dZ**(1.0_RP/3.0_RP)
+
+           QTOT = 0.0_RP
+           do iq = QQS, QWE
+              QTOT = QTOT + QTRC(k,i,j,iq)
+           enddo
+
+           flux_rad(k,i,j) = flux_rad(k,i,j) &
+                           + a * DENS(k_cldtop,i,j)*( 1.0_RP-QTOT ) * CPdry * Dval &
+                           * ( 0.250_RP * dZ * dZ_CBRT + CZ(k_cldtop) * dZ_CBRT )
+        enddo
+
+        do k = KS, KE
+          TEMP_t(k,i,j) = - ( flux_rad(k,i,j) - flux_rad(k-1,i,j) ) / CPdry * RCDZ(k)
+          RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + ( 1.0_RP - RovCP ) &
+                         * ( P00/(RHOT(k,i,j)*Rdry) )**RovCV * TEMP_t(k,i,j)
+        enddo
+
+
+       enddo
+       enddo
+
+    endif
 
     return
   end subroutine USER_step

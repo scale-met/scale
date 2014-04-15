@@ -64,13 +64,11 @@ OBJS = $(mod_rdma)	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	scale_atmos_phy_rd_dummy.o	\
-	scale_atmos_phy_rd_dycoms2.o	\
 	scale_atmos_phy_rd_mstrnx.o	\
 	scale_atmos_phy_rd_profile.o	\
 	scale_atmos_phy_sf.o	\
 	scale_atmos_phy_sf_const.o	\
 	scale_atmos_phy_sf_louis.o	\
-	scale_atmos_phy_sf_rico.o	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_dummy.o	\
 	scale_atmos_phy_tb_smg.o	\

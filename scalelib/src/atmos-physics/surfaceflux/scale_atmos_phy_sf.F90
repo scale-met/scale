@@ -92,9 +92,6 @@ contains
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_setup, &
        ATMOS_PHY_SF_const
-    use scale_atmos_phy_sf_rico, only: &
-       ATMOS_PHY_SF_rico_setup, &
-       ATMOS_PHY_SF_rico
     use scale_atmos_phy_sf_louis, only: &
        ATMOS_PHY_SF_louis_setup, &
        ATMOS_PHY_SF_louis
@@ -108,9 +105,6 @@ contains
     case ( 'CONST')
        call ATMOS_PHY_SF_const_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_const
-    case ( 'RICO')
-       call ATMOS_PHY_SF_rico_setup( SF_TYPE )
-       ATMOS_PHY_SF => ATMOS_PHY_SF_rico
     case ( 'LOUIS')
        call ATMOS_PHY_SF_louis_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_louis
