@@ -103,8 +103,8 @@ module scale_atmos_dyn_rk
 
        real(RP), intent(in)  :: PHI     (KA,IA,JA)   !< geopotential
        real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
-       real(RP), intent(in)  :: J13G    (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
-       real(RP), intent(in)  :: J23G    (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
+       real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+       real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
        real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
@@ -129,6 +129,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_stdio, only: &
+       IO_FID_LOG
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS
@@ -142,6 +146,9 @@ contains
     use scale_atmos_dyn_rk_hevi, only: &
        ATMOS_DYN_rk_hevi_setup, &
        ATMOS_DYN_rk_hevi
+    use scale_atmos_dyn_rk_hivi, only: &
+       ATMOS_DYN_rk_hivi_setup, &
+       ATMOS_DYN_rk_hivi
 #endif
     implicit none
 
@@ -155,6 +162,12 @@ contains
     case ( 'HEVI' )
        call ATMOS_DYN_rk_hevi_setup( ATMOS_TYPE_DYN )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
+    case ( 'HIVI' )
+       call ATMOS_DYN_rk_hivi_setup( ATMOS_TYPE_DYN )
+       ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
+    case default
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is invalid'
+       call PRC_MPIstop
     end select
 
     return
