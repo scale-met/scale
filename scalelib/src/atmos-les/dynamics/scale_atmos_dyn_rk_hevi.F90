@@ -1378,7 +1378,7 @@ contains
 
     real(RP) :: r0(KMAX-1)
 
-    real(RP) :: M(5,KMAX-1)
+    real(RP) :: M(3,KMAX-1)
     real(RP) :: p(KMAX-1)
     real(RP) :: ap(KMAX-1)
     real(RP) :: s(KMAX-1)
