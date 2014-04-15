@@ -90,9 +90,6 @@ contains
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
-    use scale_atmos_phy_rd_dycoms2, only: &
-       ATMOS_PHY_RD_dycoms2_setup, &
-       ATMOS_PHY_RD_dycoms2
 #endif
     implicit none
 
@@ -103,9 +100,6 @@ contains
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
-    case ( 'DYCOMSII' )
-       call ATMOS_PHY_RD_dycoms2_setup( RD_TYPE )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_dycoms2
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop
