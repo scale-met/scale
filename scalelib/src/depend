@@ -3,6 +3,7 @@ $(BUILD_DIR)/scale_atmos_dyn_common.o: atmos-les/dynamics/scale_atmos_dyn_common
 $(BUILD_DIR)/scale_atmos_dyn_rk.o: atmos-les/dynamics/scale_atmos_dyn_rk.F90 $(BUILD_DIR)/scale_atmos_dyn_rk_heve.o $(BUILD_DIR)/scale_atmos_dyn_rk_hevi.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_dyn_rk_heve.o: atmos-les/dynamics/scale_atmos_dyn_rk_heve.F90 $(BUILD_DIR)/scale_atmos_dyn_common.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_gridtrans.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_dyn_rk_hevi.o: atmos-les/dynamics/scale_atmos_dyn_rk_hevi.F90 $(BUILD_DIR)/scale_atmos_dyn_common.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_gridtrans.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
+$(BUILD_DIR)/scale_atmos_dyn_rk_hivi.o: atmos-les/dynamics/scale_atmos_dyn_rk_hivi.F90 $(BUILD_DIR)/scale_atmos_dyn_common.o $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_gridtrans.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_ae.o: atmos-physics/aerosol/scale_atmos_phy_ae.F90 $(BUILD_DIR)/scale_atmos_phy_ae_dummy.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_ae_dummy.o: atmos-physics/aerosol/scale_atmos_phy_ae_dummy.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_mp.o: atmos-physics/microphysics/scale_atmos_phy_mp.F90 $(BUILD_DIR)/scale_atmos_phy_mp_dry.o $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o $(BUILD_DIR)/scale_atmos_phy_mp_sn14.o $(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.o $(BUILD_DIR)/scale_atmos_phy_mp_tomita08.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
@@ -79,6 +80,7 @@ MODS =	\
 	scale_atmos_dyn_rk.mod	\
 	scale_atmos_dyn_rk_heve.mod	\
 	scale_atmos_dyn_rk_hevi.mod	\
+	scale_atmos_dyn_rk_hivi.mod	\
 	scale_atmos_hydrostatic.mod	\
 	scale_atmos_phy_ae.mod	\
 	scale_atmos_phy_ae_dummy.mod	\

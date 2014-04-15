@@ -36,11 +36,13 @@ where
   G^{\frac{1}{2}}S_{\rho u}
   &= - \frac{\partial G^{\frac{1}{2}}u\rho u}{\partial x^*}
      - \frac{\partial G^{\frac{1}{2}}v\rho u}{\partial y^*}
-     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho u + J_{23}G^{\frac{1}{2}}v\rho u + J_{33}G^{\frac{1}{2}}w\rho u), \\
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho u + J_{23}G^{\frac{1}{2}}v\rho u + J_{33}G^{\frac{1}{2}}w\rho u) \nonumber\\
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}p) \\
   G^{\frac{1}{2}}S_{\rho v}
   &= - \frac{\partial G^{\frac{1}{2}}u\rho v}{\partial x^*}
      - \frac{\partial G^{\frac{1}{2}}v\rho v}{\partial y^*}
-     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho v + J_{23}G^{\frac{1}{2}}v\rho v + J_{33}G^{\frac{1}{2}}w\rho v), \\
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho v + J_{23}G^{\frac{1}{2}}v\rho v + J_{33}G^{\frac{1}{2}}w\rho v), \nonumber\\
+     - \frac{\partial}{\partial \xi}(J_{23}G^{\frac{1}{2}}p) \\
   G^{\frac{1}{2}}S_{\rho w}
   &= - \frac{\partial G^{\frac{1}{2}}u\rho w}{\partial x^*}
      - \frac{\partial G^{\frac{1}{2}}v\rho w}{\partial y^*}
@@ -75,11 +77,10 @@ For the temporal discritization, backward temporal integrations are employed for
 where $\kappa = c_p/c_v$.
 Note that the pressure equation is linealized.
 
-In order to obtain Helmholtz equation, a linearlized diagnostic equation for the density is used instead of Eq. \ref{eq: hivi rho}.
+In order to obtain Helmholtz equation, a linearlized equation for the density is used instead of Eq. \ref{eq: hivi rho}.
 \begin{align}
   \rho^{n+1} &\sim
-  \frac{P_{00}}{R\theta^n}\left(\frac{p^{n+1}}{P_{00}}\right)^{\frac{1}{\kappa^n}}
-  \sim \frac{1}{\kappa^n} \frac{\rho^n}{p^n} \left\{p^{n+1}-(1-\kappa^n)p^n\right\}.
+  \rho^n + \frac{1}{\kappa^n} \frac{\rho^n}{p^n} \left\{p^{n+1}-p^n\right\}.
 \end{align}
 Here we assume that the potential temperature does not change during a temporal step due to acoustic wave.
 
@@ -96,7 +97,7 @@ Eliminating $(\rho u)^{n+1}, (\rho v)^{n+1} (\rho w)^{n+1}, $, and $\rho^{n+1}$,
     + \frac{\partial G^{\frac{1}{2}}\theta^n\left\{(\rho v)^n + \Delta t S_{\rho v}^n\right\}}{\partial y^*}
     + \frac{\partial J_{33}G^{\frac{1}{2}}\theta^n\left\{(\rho w)^n + \Delta t S_{\rho w}^n\right\}}{\partial \xi}
     \right] \nonumber\\&\;\;\;
-  + g \frac{\partial}{\partial \xi}\left\{(1-\kappa^n)\frac{J_{33}P^n}{Q^n}\right\}
+  + g \frac{\partial}{\partial \xi}\left\{\frac{J_{33}P^n}{Q^n}-J_{33}G^{\frac{1}{2}}(\rho\theta)^n\right\}
   + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
   - \frac{P^n}{\Delta t^2 Q^n},
 \end{align}
@@ -117,8 +118,8 @@ Horizontal differentials are descritized.
   -\hat{\theta}_{j-1/2}\frac{P^{n+1}-P^{n+1}_{j-1}}{\partial y_{j-1/2}}
  \right) \nonumber\\&
   + \frac{1}{\Delta z_k}\left\{
-   (J_{33})_{k+1/2}\hat{\theta}_{k+1/2}\frac{(J_{33})_{k+1}P^{n+1}_{k+1}-J_{33}P^{n+1}}{\Delta k_{k+1/2}}
-  -(J_{33})_{k-1/2}\hat{\theta}_{k-1/2}\frac{J_{33}P^{n+1}-(J_{33})_{k-1}P^{n+1}_{k-1}}{\Delta k_{k-1/2}}
+   (J_{33})_{k+1/2}\hat{\theta}_{k+1/2}\frac{(J_{33})_{k+1}P^{n+1}_{k+1}-J_{33}P^{n+1}}{\Delta z_{k+1/2}}
+  -(J_{33})_{k-1/2}\hat{\theta}_{k-1/2}\frac{J_{33}P^{n+1}-(J_{33})_{k-1}P^{n+1}_{k-1}}{\Delta z_{k-1/2}}
   \right) \nonumber\\&
   + g \frac{1}{\Delta_{k+1/2}+\Delta z_{k-1/2}} \left\{
    \frac{(J_{33})_{k+1}P^{n+1}_{k+1}}{Q_{k+1}}
@@ -140,8 +141,9 @@ Horizontal differentials are descritized.
       }{\Delta z_k}
     \right] \nonumber\\&\;\;\;
   + g \frac{1}{\Delta z_{k+1/2}+\Delta z_{k-1/2}}\left\{
-    (1-\kappa_{k+1})\frac{(J_{33})_{k+1}P^n_{k+1}}{Q^n_{k+1}}
-   -(1-\kappa_{k-1})\frac{(J_{33})_{k-1}P^n_{k-1}}{Q^n_{k-1}}
+    \frac{(J_{33})_{k+1}P^n_{k+1}}{Q^n_{k+1}}
+   -\frac{(J_{33})_{k-1}P^n_{k-1}}{Q^n_{k-1}}
+   - J33G \{(\rho\theta)_{k+1} + (\rho\theta)_{k-1}\}
   \right\} \nonumber\\&
   + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
   - \frac{P^n}{\Delta t^2 Q^n}.
