@@ -59,7 +59,7 @@ Prime describes deviation from a reference state, and the reference state depend
 
 \section{Descritization}
 
-For the temporal discritization, backward temporal integrations are employed for the terms related to acoustic wave in vertical direction.
+For the temporal discritization, backward temporal integrations are employed for the terms related to acoustic wave.
 \begin{align}
   \frac{\rho'^{n+1}-\rho'^n}{\Delta t} &=
   -G^{-\frac{1}{2}}\frac{\partial}{\partial x^*}\{G^{\frac{1}{2}}(\rho u)^{n+1}\}
@@ -95,24 +95,24 @@ Eliminating $(\rho u)^{n+1}, (\rho v)^{n+1} (\rho w)^{n+1}, $, and $\rho'^{n+1}$
   & \frac{\partial}{\partial x^*}\left(\theta^n\frac{\partial G^{\frac{1}{2}}p'^{n+1}}{\partial x^*}\right)
   + \frac{\partial}{\partial y^*}\left(\theta^n\frac{\partial G^{\frac{1}{2}}p'^{n+1}}{\partial y^*}\right)
   + \frac{\partial}{\partial \xi}\left(J_{33}\theta^n\frac{\partial J_{33}G^{\frac{1}{2}}p'^{n+1}}{\partial \xi}\right) \nonumber\\&
-  + g \frac{\partial}{\partial \xi} \left(\frac{J_{33}G^{\frac{1}{2}}p'^{n+1}}{C_s^{2n}}\right)
-  - \frac{G^{\frac{1}{2}}p'^{n+1}}{\Delta t^2 C_s^{2n}} \nonumber\\
+  + g \frac{\partial}{\partial \xi} \left(\frac{J_{33}G^{\frac{1}{2}}\theta^np'^{n+1}}{C_s^{2n}}\right)
+  - \frac{G^{\frac{1}{2}}\theta^np'^{n+1}}{\Delta t^2 C_s^{2n}} \nonumber\\
   &=
   \frac{1}{\Delta t}\left[
       \frac{\partial G^{\frac{1}{2}}\theta^n\left\{(\rho u)^n + \Delta t S_{\rho u}^n\right\}}{\partial x^*}
     + \frac{\partial G^{\frac{1}{2}}\theta^n\left\{(\rho v)^n + \Delta t S_{\rho v}^n\right\}}{\partial y^*}
     + \frac{\partial J_{33}G^{\frac{1}{2}}\theta^n\left\{(\rho w)^n + \Delta t S_{\rho w}^n\right\}}{\partial \xi}
     \right] \nonumber\\&\;\;\;
-  + g \frac{\partial}{\partial \xi}\left\{\frac{J_{33}G^{\frac{1}{2}}p'^n}{C_s^{2n}}-J_{33}G^{\frac{1}{2}}(\rho'\theta)^n\right\}
+  + g \frac{\partial}{\partial \xi}\left\{\frac{J_{33}G^{\frac{1}{2}}\theta^np'^n}{C_s^{2n}}-J_{33}G^{\frac{1}{2}}(\rho'\theta)^n\right\}
   + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
-  - \frac{P^n}{\Delta t^2 C_s^{2n}},
+  - \frac{G^{\frac{1}{2}}\theta^np'^n}{\Delta t^2 C_s^{2n}},
 \end{align}
 where
 \begin{align}
-  C_s^2 &= \kappa\frac{p}{\rho\theta}.
+  C_s^2 &= \kappa\frac{p}{\rho}.
 \end{align}
 
-Horizontal differentials are descritized.
+Spatial differentials are descritized.
 \begin{align}
   & \frac{1}{\Delta x_i}\left(
    \hat{\theta}_{i+1/2}\frac{(G^{\frac{1}{2}}p'^{n+1})_{i+1}-G^{\frac{1}{2}}p'^{n+1}}{\Delta x_{i+1/2}}
@@ -127,9 +127,9 @@ Horizontal differentials are descritized.
   -(J_{33})_{k-1/2}\hat{\theta}_{k-1/2}\frac{J_{33}G^{\frac{1}{2}}p'^{n+1}-J_{33}G^{\frac{1}{2}}p'^{n+1}_{k-1}}{\Delta z_{k-1/2}}
   \right) \nonumber\\&
   + g \frac{1}{\Delta_{k+1/2}+\Delta z_{k-1/2}} \left\{
-   \frac{J_{33}G^{\frac{1}{2}}p'^{n+1}_{k+1}}{C^2_{s k+1}}
-  -\frac{J_{33}G^{\frac{1}{2}}p'^{n+1}_{k-1}}{C^2_{s k-1}} \right\}
-  - \frac{G^{\frac{1}{2}}p'^{n+1}}{\Delta t^2 C^2_s} \nonumber\\
+   \frac{J_{33}G^{\frac{1}{2}}\theta p'^{n+1}_{k+1}}{C^2_{s k+1}}
+  -\frac{J_{33}G^{\frac{1}{2}}\theta p'^{n+1}_{k-1}}{C^2_{s k-1}} \right\}
+  - \frac{G^{\frac{1}{2}}\theta p'^{n+1}}{\Delta t^2 C^2_s} \nonumber\\
   &=
   \frac{1}{\Delta t}\left[
       \frac{
@@ -146,10 +146,10 @@ Horizontal differentials are descritized.
       }{\Delta z_k}
     \right] \nonumber\\&\;\;\;
   + g \frac{1}{\Delta z_{k+1/2}+\Delta z_{k-1/2}}\left\{
-    \frac{J_{33}G^{\frac{1}{2}}p'^n_{k+1}}{C^2_{s k+1}}
-   -\frac{J_{33}G^{\frac{1}{2}}p'^n_{k-1}}{C^2_{s k-1}}
+    \frac{J_{33}G^{\frac{1}{2}}\theta p'^n_{k+1}}{C^2_{s k+1}}
+   -\frac{J_{33}G^{\frac{1}{2}}\theta p'^n_{k-1}}{C^2_{s k-1}}
    - J_{33}G^{\frac{1}{2}} \{(\rho'\theta)_{k+1} - (\rho'\theta)_{k-1}\}
   \right\} \nonumber\\&
   + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
-  - \frac{G^{\frac{1}{2}}p'}{\Delta t^2 C^2_s}.
+  - \frac{G^{\frac{1}{2}}\theta p'}{\Delta t^2 C^2_s}.
 \end{align}
