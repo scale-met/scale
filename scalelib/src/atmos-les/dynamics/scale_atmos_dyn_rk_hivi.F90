@@ -426,7 +426,7 @@ contains
           call CHECK( __LINE__, DENS(k,i,j) )
           call CHECK( __LINE__, REF_dens(k,i,j) )
 #endif
-          DDENS(k,i,j) = ( DENS(k,i,j) - REF_dens(k,i,j) ) / DENS(k,i,j)
+          DDENS(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
        end do
        enddo
        enddo
@@ -1361,7 +1361,7 @@ contains
     call solve_bicgstab( &
        DPRES,        & ! (inout)
        MOMZ, MOMX, MOMY, &
-       RHOT, POTT, DDENS, &
+       RHOT, POTT, DENS, DDENS, &
        Sw, Su, Sv, St, RCs2, &
        GSQRT, J33G, &
        M, &
@@ -1400,8 +1400,10 @@ contains
 #ifdef DEBUG
           call CHECK( __LINE__, DPRES(k+1,i,j) )
           call CHECK( __LINE__, DPRES(k  ,i,j) )
-          call CHECK( __LINE__, DENS(k+1,i,j) )
-          call CHECK( __LINE__, DENS(k  ,i,j) )
+          call CHECK( __LINE__, PRES(k+1,i,j) )
+          call CHECK( __LINE__, PRES(k  ,i,j) )
+          call CHECK( __LINE__, DDENS(k+1,i,j) )
+          call CHECK( __LINE__, DDENS(k  ,i,j) )
           call CHECK( __LINE__, REF_DENS(k+1,i,j) )
           call CHECK( __LINE__, REF_DENS(k,i,j) )
           call CHECK( __LINE__, MOMZ0(k,i,j) )
@@ -1410,8 +1412,13 @@ contains
                + dtrk * ( ( &
                    - J33G * ( DPRES(k+1,i,j) - DPRES(k,i,j) ) * RFDZ(k) &
                    ) / GSQRT(k,i,j,I_UYZ) &
-                 - 0.5_RP * GRAV * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
-                                   + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) ) &
+                 - 0.5_RP * GRAV &
+                 * ( DDENS(k+1,i,j) &
+                   + ( DPRES(k+1,i,j) - (PRES(k+1,i,j)-REF_pres(k+1,i,j)) ) &
+                   * DENS(k+1,i,j) / ( kappa(k+1,i,j)*PRES(k+1,i,j) ) &
+                   + DDENS(k  ,i,j) &
+                   + ( DPRES(k  ,i,j) - (PRES(k  ,i,j)-REF_pres(k  ,i,j)) ) &
+                   * DENS(k  ,i,j) / ( kappa(k  ,i,j)*PRES(k  ,i,j) ) ) &
                  + Sw(k,i,j) )
        enddo
        enddo
@@ -1695,7 +1702,7 @@ contains
   subroutine solve_bicgstab( &
        DPRES,        & ! (inout)
        MOMZ, MOMX, MOMY, &
-       RHOT, POTT, DDENS, &
+       RHOT, POTT, DENS, DDENS, &
        Sw, Su, Sv, St, RCs2, &
        GSQRT, J33G, &
        M, &
@@ -1716,6 +1723,7 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: POTT(KA,IA,JA)
+    real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: DDENS(KA,IA,JA)
     real(RP), intent(in) :: Sw(KA,IA,JA)
     real(RP), intent(in) :: Su(KA,IA,JA)
@@ -1869,8 +1877,10 @@ contains
                    + FACT_F*(POTT(k,i,j+1)+POTT(k,i,j-2)) ) ) * RCDY(j) &
              + GSQRT(k,i,j,I_XYZ) * ( St(k,i,j) - DPRES(k,i,j) * RCs2(k,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( DPRES(k+1,i,j)*RCs2(k+1,i,j) - DPRES(k-1,i,j)*RCs2(k-1,i,j) &
-                             - RHOT(k+1,i,j)*DDENS(k+1,i,j) + RHOT(k-1,i,j)*DDENS(k-1,i,j) &
+             + GRAV * J33G * ( ( DPRES(k+1,i,j)*RCs2(k+1,i,j) &
+                               - DPRES(k-1,i,j)*RCs2(k-1,i,j) ) &
+                             - ( RHOT(k+1,i,j)*DDENS(k+1,i,j)/DENS(k+1,i,j) &
+                               - RHOT(k-1,i,j)*DDENS(k-1,i,j)/DENS(k-1,i,j) ) &
                              ) / ( FDZ(k) + FDZ(k-1) ) &
              - v1(k,i,j)
        end do
@@ -1932,7 +1942,7 @@ contains
              + GSQRT(KS,i,j,I_XYZ) * ( St(KS,i,j) - DPRES(KS,i,j) * RCs2(KS,i,j) * rdt ) &
              ) * rdt &
              + GRAV * J33G * ( DPRES(KS+1,i,j)*RCs2(KS+1,i,j) &
-                             - RHOT(KS+1,i,j)*DDENS(KS+1,i,j) ) &
+                             - RHOT(KS+1,i,j)*DDENS(KS+1,i,j)/DENS(KS+1,i,j) ) &
                              / ( FDZ(KS) + FDZ(KS-1) ) &
              - v1(KS,i,j)
 #ifdef DEBUG
@@ -2000,8 +2010,10 @@ contains
                    + FACT_F*(POTT(KS+1,i,j+1)+POTT(KS+1,i,j-2)) ) ) * RCDY(j) &
              + GSQRT(KS+1,i,j,I_XYZ) * ( St(KS+1,i,j) - DPRES(KS+1,i,j) * RCs2(KS+1,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( DPRES(KS+2,i,j)*RCs2(KS+2,i,j) - DPRES(KS,i,j)*RCs2(KS,i,j) &
-                             - RHOT(KS+2,i,j)*DDENS(KS+2,i,j) + RHOT(KS,i,j)*DDENS(KS,i,j) &
+             + GRAV * J33G * ( ( DPRES(KS+2,i,j)*RCs2(KS+2,i,j) &
+                               - DPRES(KS  ,i,j)*RCs2(KS  ,i,j) ) &
+                             - ( RHOT(KS+2,i,j)*DDENS(KS+2,i,j)/DENS(KS+2,i,j) &
+                               - RHOT(KS  ,i,j)*DDENS(KS  ,i,j)/DENS(KS  ,i,j) ) &
                              ) / ( FDZ(KS+1) + FDZ(KS) ) &
              - v1(KS+1,i,j)
 #ifdef DEBUG
@@ -2069,8 +2081,10 @@ contains
                    + FACT_F*(POTT(KE-1,i,j+1)+POTT(KE-1,i,j-2)) ) ) * RCDY(j) &
              + GSQRT(KE-1,i,j,I_XYZ) * ( St(KE-1,i,j) - DPRES(KE-1,i,j) * RCs2(KE-1,i,j) * rdt ) &
              ) * rdt &
-             + GRAV * J33G * ( DPRES(KE,i,j)*RCs2(KE,i,j) - DPRES(KE-2,i,j)*RCs2(KE-2,i,j) &
-                             - RHOT(KE,i,j)*DDENS(KE,i,j) + RHOT(KE-2,i,j)*DDENS(KE-2,i,j) &
+             + GRAV * J33G * ( ( DPRES(KE  ,i,j)*RCs2(KE  ,i,j) &
+                               - DPRES(KE-2,i,j)*RCs2(KE-2,i,j) ) &
+                             - ( RHOT(KE  ,i,j)*DDENS(KE  ,i,j)/DENS(KE  ,i,j) &
+                               - RHOT(KE-2,i,j)*DDENS(KE-2,i,j)/DENS(KE-2,i,j) )&
                              ) / ( FDZ(KE-1) + FDZ(KE-1-1) ) &
              - v1(KE-1,i,j)
 #ifdef DEBUG
@@ -2130,7 +2144,8 @@ contains
              + GSQRT(KE,i,j,I_XYZ) * ( St(KE,i,j) - DPRES(KE,i,j) * RCs2(KE,i,j) * rdt ) &
              ) * rdt &
              + GRAV * J33G * ( - DPRES(KE-1,i,j)*RCs2(KE-1,i,j) &
-                               + RHOT(KE-1,i,j)*DDENS(KE-1,i,j) ) / ( FDZ(KE) + FDZ(KE-1) ) &
+                               + RHOT(KE-1,i,j)*DDENS(KE-1,i,j)/DENS(KE-1,i,j) ) &
+                             / ( FDZ(KE) + FDZ(KE-1) ) &
              - v1(KE,i,j)
        end do
        end do
