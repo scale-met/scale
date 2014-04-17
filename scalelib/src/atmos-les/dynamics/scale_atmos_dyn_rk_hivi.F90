@@ -55,7 +55,9 @@ module scale_atmos_dyn_rk_hivi
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: ITMAX = 100
+  integer,  private :: ITMAX
+  real(RP), private :: epsilon
+
 #ifdef DRY
   real(RP), private :: kappa
 #endif
@@ -76,6 +78,12 @@ contains
     implicit none
 
     character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+
+    integer :: ierr
+
+    namelist / PARAM_ATMOS_DYN_RK_HIVI / &
+         ITMAX, &
+         EPSILON
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI'
@@ -92,6 +100,21 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) 'xxx Not Implemented yet'
     call PRC_MPIstop
 #endif
+
+    ITMAX = 100
+    epsilon = 0.1_RP ** (RP+2)
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_DYN_RK_HIVI,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_RK_HIVI. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_RK_HIVI)
+
 
 #ifdef DRY
     kappa = CPdry / CVdry
@@ -1730,7 +1753,7 @@ contains
     real(RP), target :: v0(KA,IA,JA)
     real(RP), target :: v1(KA,IA,JA)
     real(RP) :: r0r
-    real(RP) :: norm, error, error2, epsilon
+    real(RP) :: norm, error, error2
 
     real(RP) :: iprod(2)
     real(RP) :: buf(2)
@@ -1739,8 +1762,6 @@ contains
     integer :: iis, iie, jjs, jje
     integer :: iter
     integer :: ierror
-
-    epsilon = 0.1_RP**(RP+2)
 
 #ifdef DEBUG
     r0(:,:,:) = UNDEF
