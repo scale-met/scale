@@ -59,8 +59,8 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: DENS        (KA,IA,JA)
        real(RP), intent(in)  :: RHOT        (KA,IA,JA)
        real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
-       real(RP), intent(in)  :: CZ          (KA,IA,JA)    ! UNUSED
-       real(RP), intent(in)  :: FZ          (KA,IA,JA)
+       real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
+       real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
        real(RP), intent(in)  :: oceanfrc    (IA,JA)
        real(RP), intent(in)  :: temp_sfc    (IA,JA)
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
