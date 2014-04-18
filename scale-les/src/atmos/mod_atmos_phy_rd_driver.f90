@@ -193,9 +193,11 @@ contains
                             QTRC(:,:,:,:) ) ! [IN]
 
        ! apply radiative flux convergence -> heating rate
-       call RD_heating( RHOE_t  (:,:,:,:),  & ! [OUT]
-                        RHOE    (:,:,:),    & ! [INOUT]
-                        flux_rad(:,:,:,:,:) ) ! [IN]
+       call RD_heating( flux_rad(:,:,:,:,:),  & ! [IN]
+                        REAL_FZ (:,:,:),      & ! [IN]
+                        dt_RD,                & ! [IN]
+                        RHOE_t  (:,:,:,:),    & ! [OUT]
+                        RHOE    (:,:,:)       ) ! [INOUT]
 
        ! update rhot
        call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
@@ -256,7 +258,7 @@ contains
           enddo
           enddo
           call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( flux_rad_sfc(:,:,I_LW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 
           call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
                              QTRC(:,:,:,:) ) ! [IN]
@@ -273,14 +275,6 @@ contains
           call HIST_in( TEMP_t, 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt_RD )
        endif
        endif
-
-       ! fill halo
-       call ATMOS_vars_fillhalo
-       call ATMOS_vars_sf_fillhalo
-
-       ! check total (optional)
-       call ATMOS_vars_total
-
     endif
 
     do j = JS, JE
