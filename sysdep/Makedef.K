@@ -7,7 +7,7 @@
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
                -Kdynamic_iteration -Ksimd                                \
-               -Kauto,threadsafe,autoobjstack,temparraystack
+               -Kauto,threadsafe
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
@@ -38,11 +38,16 @@ FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+#FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
+CFLAGS_DEBUG = -O0 -Qt $(PERF_MONIT)
+
+CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
@@ -50,6 +55,8 @@ LDFLAGS = $(FFLAGS)
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+
+###### Lapack
 LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend

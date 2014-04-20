@@ -4,23 +4,28 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -Kfast,parallel,auto,ocl,preex,array_private,noalias=s,mfunc=2 \
-               -Kparallel_iteration=8,instance=8,dynamic_iteration                   \
-               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                               \
-               -Kprefetch_cache_level=all,prefetch_iteration_L2=50 -Ksimd
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
+               -Kdynamic_iteration -Ksimd                                \
+               -Kauto,threadsafe
 
-FFLAGS_DEBUG = -O0 \
+# note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
+# If you find the segmentation fault error, please check.
+
+FFLAGS_DEBUG = -O0                                                       \
                -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
-               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
-#               -DDEBUG
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \
+               -DDEBUG
 
 # Performance monitor
 # disable
-#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_
+#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fipp
-PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_
+PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
 # fapp
-#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_
+#PERF_MONIT = -Ntl_trt -U_FIPP_ -D_FAPP_ -U_FINEPA_
+# fine PA
+#PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
 
 # RDMA
 # disable
@@ -32,20 +37,30 @@ FC     = mpifrtpx
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll -Ksimd=2
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+#FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
+CFLAGS_DEBUG = -O0 -Qt $(PERF_MONIT)
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
-NETCDF_INCLUDE ?= -I/data/share005/cross-K/include
-NETCDF_LIBS    ?= -L/data/share005/cross-K/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
+NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+
+###### Lapack
+LAPACK_LIBS    ?= -SSL2
 
 ##### for frontend
+INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
