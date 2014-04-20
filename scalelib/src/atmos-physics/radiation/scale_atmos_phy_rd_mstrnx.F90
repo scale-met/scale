@@ -553,7 +553,7 @@ contains
     do RD_k = RD_KADD+1, RD_KMAX
        k = KS + RD_KMAX - RD_k ! reverse axis
 
-       aerosol_conc_merge(RD_k,i,j,ihydro) = MP_Qe(k,i,j,ihydro) &
+       aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
                                            / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
        aerosol_radi_merge(RD_k,i,j,ihydro) = MP_Re(k,i,j,ihydro)
     enddo
@@ -568,7 +568,7 @@ contains
           do RD_k = RD_KADD+1, RD_KMAX
              k = KS + RD_KMAX - RD_k ! reverse axis
 
-             aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = QTRC(k,i,j,I_AE2ALL(iaero)) &
+             aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = max( QTRC(k,i,j,I_AE2ALL(iaero)), 0.0_RP ) &
                                                       / AE_DENS(iaero) * DENS(k,i,j) / PPM ! [PPM]
              aerosol_radi_merge(RD_k,i,j,MP_QA+iaero) = AE_Re(k,i,j,iaero)
           enddo
@@ -959,7 +959,6 @@ contains
        aerosol_radi, &
        aero2ptype,   &
        cldfrac,      &
-!       param_sfc,    &
        albedo_land,  &
        oceanfrc,     &
        rflux         )
@@ -992,7 +991,6 @@ contains
     real(RP), intent(in)  :: aerosol_radi(kmax,imax,jmax,naero)
     integer,  intent(in)  :: aero2ptype  (naero)
     real(RP), intent(in)  :: cldfrac     (kmax,imax,jmax)
-!    real(RP), intent(in)  :: param_sfc   (5)
     real(RP), intent(in)  :: albedo_land (imax,jmax,2)
     real(RP), intent(in)  :: oceanfrc    (imax,jmax)
     real(RP), intent(out) :: rflux       (kmax+1,imax,jmax,2,2)
@@ -1105,15 +1103,16 @@ contains
 
              ir = 1
              indexR(k,i,j,iaero) = ir
-             factR (k,i,j,iaero) = ( radmode(iptype,ir  ) - aerosol_radi(k,i,j,iaero) ) &
-                                 / ( radmode(iptype,ir+1) - radmode(iptype,ir)        )
+             factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
+                                 / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
           elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) ) then ! extrapolation
 
-             ir = MSTRN_nradius
+             ir = MSTRN_nradius - 1
              indexR(k,i,j,iaero) = ir
-             factR (k,i,j,iaero) = ( radmode(iptype,ir) - aerosol_radi(k,i,j,iaero) ) &
-                                 / ( radmode(iptype,ir) - radmode(iptype,ir-1)      )
+             factR (k,i,j,iaero) = ( radmode(iptype,ir+1) - aerosol_radi(k,i,j,iaero) ) &
+                                 / ( radmode(iptype,ir+1) - radmode(iptype,ir)        ) &
+                                 + 1.0_RP
 
           else
              do ir = 1, MSTRN_nradius-1
@@ -1121,8 +1120,8 @@ contains
                      .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
 
                    indexR(k,i,j,iaero) = ir
-                   factR (k,i,j,iaero) = ( aerosol_radi(k,iptype,i,j) - radmode(iptype,ir) ) &
-                                       / ( radmode(iptype,ir+1)       - radmode(iptype,ir) )
+                   factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
+                                       / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
                 endif
              enddo
@@ -1148,7 +1147,6 @@ contains
        enddo
        enddo
        enddo
-!       if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tauGAS(:,:,:,1)), "OK1"
 
        !--- Gas line absorption
        do igas = 1, ngasabs(iw)
@@ -1175,7 +1173,6 @@ contains
           enddo
           enddo
           enddo ! channel loop
-!       if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tauGAS(:,:,:,1)), "OK2", igas
        enddo ! gas loop
 
        !--- Gas broad absorption
@@ -1202,7 +1199,6 @@ contains
           enddo
           enddo ! channel loop
        endif
-!       if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tauGAS(:,:,:,1)), "OK3"
 
        if ( iflgb(I_CFC_continuum,iw) == 1 ) then
           do icfc = 1, ncfc
@@ -1218,9 +1214,6 @@ contains
           enddo
           enddo
        endif
-!          do icfc = 1, ncfc
-!       if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tauGAS(:,:,:,1)), sum(cfc(:,:,:,icfc)), "OK4", icfc
-!          enddo
 
        !---< particle (Rayleigh/Cloud/Aerosol) >---
 
@@ -1345,8 +1338,6 @@ contains
           enddo
           enddo
           enddo
-!          if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tau(:,:,:,1)), sum(tauGAS(:,:,:,1)), sum(tauPR(:,:,:,1))
-!          if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(tau(:,:,:,2)), sum(tauGAS(:,:,:,2)), sum(tauPR(:,:,:,2))
 
           !--- omega
           do icloud = 1, 2
@@ -1361,8 +1352,6 @@ contains
           enddo
           enddo
           enddo
-!       if( IO_L ) write(IO_FID_LOG,*) "tau/omg", iw, ich, maxval(tau(:,IS:IE,JS:JE,1)), minval(tau(:,IS:IE,JS:JE,1)), &
-!                                                          maxval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,1))
 
           !--- bn
           if ( irgn == I_SW ) then ! solar
@@ -1460,6 +1449,13 @@ contains
 
           endif ! solar/IR switch
 
+          !if( IO_L ) write(IO_FID_LOG,*) "tau sum", iw, ich, sum   (tau(:,IS:IE,JS:JE,1)), sum   (tau(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "tau max", iw, ich, maxval(tau(:,IS:IE,JS:JE,1)), maxval(tau(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "tau min", iw, ich, minval(tau(:,IS:IE,JS:JE,1)), minval(tau(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "omg sum", iw, ich, sum   (omg(:,IS:IE,JS:JE,1)), sum   (omg(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "omg max", iw, ich, maxval(omg(:,IS:IE,JS:JE,1)), maxval(omg(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
+
           ! two-stream transfer
           call RD_MSTRN_two_stream( kmax,                   & ! [IN]
                                     imax, IS, IE,           & ! [IN]
@@ -1486,9 +1482,12 @@ contains
           enddo
           enddo
           enddo
-!          if( IO_L ) write(IO_FID_LOG,*) iw, ich, sum(flux(:,IS:IE,JS:JE,1)), sum(flux(:,IS:IE,JS:JE,2)), &
-!                                         sum(flux_direct(:,IS:IE,JS:JE)),wgtch(ich,iw)
 
+          !if( IO_L ) write(IO_FID_LOG,*) "flux sum", iw, ich, sum   (flux(:,IS:IE,JS:JE,1)), sum   (flux(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "flux max", iw, ich, maxval(flux(:,IS:IE,JS:JE,1)), maxval(flux(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "flux min", iw, ich, minval(flux(:,IS:IE,JS:JE,1)), minval(flux(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "flux mal", iw, ich, maxloc(flux(:,IS:IE,JS:JE,1)), maxloc(flux(:,IS:IE,JS:JE,2))
+          !if( IO_L ) write(IO_FID_LOG,*) "flux mil", iw, ich, minloc(flux(:,IS:IE,JS:JE,1)), minloc(flux(:,IS:IE,JS:JE,2))
 
        enddo ! ICH loop
     enddo ! IW loop
@@ -1620,6 +1619,7 @@ contains
 
        !---< calculate R, T, e+, e- >---
        sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
+       tau_new = max( tau_new, RD_EPS )
 
        !--- X, Y
        X     =  ( 1.0_RP - W(irgn) * ( Ppls - Pmns ) ) / M(irgn)
