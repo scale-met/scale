@@ -7,6 +7,7 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+SYSDEP_DIR  = $(abspath ..)
 
 # for build
 index      = 005m1256x32x32
