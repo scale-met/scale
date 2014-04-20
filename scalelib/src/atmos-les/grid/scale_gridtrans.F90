@@ -186,16 +186,19 @@ contains
        do k = 1, KA-1
           GTRANS_GSQRT(k,i,j,I_XYW) = ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       GTRANS_GSQRT(KA,i,j,I_XYW) = GTRANS_GSQRT(KA-1,i,j,I_XYW)
 
        ! at (u,y,w)
        do k = 1, KA-1
           GTRANS_GSQRT(k,i,j,I_UYW) = ( REAL_CZ_U(k+1,i,j) - REAL_CZ_U(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       GTRANS_GSQRT(KA,i,j,I_UYW) = GTRANS_GSQRT(KA-1,i,j,I_UYW)
 
        ! at (x,v,w)
        do k = 1, KA-1
           GTRANS_GSQRT(k,i,j,I_XVW) = ( REAL_CZ_V(k+1,i,j) - REAL_CZ_V(k,i,j) ) * GRID_RFDZ(k)
        enddo
+       GTRANS_GSQRT(KA,i,j,I_XVW) = GTRANS_GSQRT(KA-1,i,j,I_XVW)
 
        ! at (u,y,z)
        do k = 1, KA
