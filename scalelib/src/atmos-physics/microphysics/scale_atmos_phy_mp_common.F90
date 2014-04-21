@@ -360,11 +360,10 @@ contains
     integer  :: ijk_sat
     integer  :: index_sat(KA*IA*JA,3) ! list vector
 
-    integer,  parameter :: itelim = 30
+    integer, parameter :: itelim = 100
     real(RP) :: dtemp_criteria
-
-    logical :: converged
-    integer :: k, i, j, ijk, iq, ite
+    logical  :: converged
+    integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
 
     dtemp_criteria = 0.1_RP**(2+RP/2)
@@ -511,12 +510,13 @@ contains
     integer  :: ijk_sat
     integer  :: index_sat(KA*IA*JA,3) ! list vector
 
-    integer,  parameter :: itelim = 30
-    real(RP), parameter :: dtemp_criteria = 1.E-6_RP
-
-    logical :: converged
-    integer :: k, i, j, ijk, iq, ite
+    integer, parameter :: itelim = 100
+    real(RP) :: dtemp_criteria
+    logical  :: converged
+    integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
+
+    dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_all( QSAT (:,:,:), & ! [OUT]
                                    TEMP1(:,:,:), & ! [IN]
