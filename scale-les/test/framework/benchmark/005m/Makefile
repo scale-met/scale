@@ -16,7 +16,7 @@ dynamics   = heve
 tracer     = sn14
 sfcflx     = louis
 turbulence = smg
-radiation  = dummy
+radiation  = mstrnx
 
 # for run
 INITCONF  = init.conf
