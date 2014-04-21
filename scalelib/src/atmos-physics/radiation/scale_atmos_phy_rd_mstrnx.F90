@@ -534,8 +534,6 @@ contains
     enddo
     enddo
 
-!       if( IO_L ) write(IO_FID_LOG,*) maxval(cldfrac_merge(:,IS:IE,JS:JE)),minval(cldfrac_merge(:,IS:IE,JS:JE)),sum(cldfrac_merge(:,IS:IE,JS:JE))
-
     do v = 1,  RD_naero
     do j = JS, JE
     do i = IS, IE
@@ -1589,95 +1587,95 @@ contains
     cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min )
 
     do icloud = 1, 2
-    do j = JS, JE
-    do i = IS, IE
-    do k = 1, kmax
+       do j = JS, JE
+       do i = IS, IE
+       do k = 1, kmax
 
-       !---< two-stream truncation >---
-       tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
+          !---< two-stream truncation >---
+          tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
 
-       omg_new = ( 1.0_RP - g(k,i,j,2,icloud) ) / ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * omg(k,i,j,icloud)
-       omg_new = min( omg_new, EPS1 )
+          omg_new = ( 1.0_RP - g(k,i,j,2,icloud) ) / ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * omg(k,i,j,icloud)
+          omg_new = min( omg_new, EPS1 )
 
-       g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
+          g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
-       Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
+          Tdir0(k,i,j,icloud) = exp(-tau_new/cosSZA(i,j))
 
-       factor   = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) )
-       b_new(0) = b(k,i,j,0,icloud)
-       b_new(1) = b(k,i,j,1,icloud) / factor
-       b_new(2) = b(k,i,j,2,icloud) / (factor*factor)
-       c(:)     = Wmns(irgn) * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new(:)
+          factor   = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) )
+          b_new(0) = b(k,i,j,0,icloud)
+          b_new(1) = b(k,i,j,1,icloud) / factor
+          b_new(2) = b(k,i,j,2,icloud) / (factor*factor)
+          c(:)     = Wmns(irgn) * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new(:)
 
-       !--- P+, P-
-       Pmns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M(irgn)*M(irgn) )
-       Ppls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M(irgn)*M(irgn) )
+          !--- P+, P-
+          Pmns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M(irgn)*M(irgn) )
+          Ppls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M(irgn)*M(irgn) )
 
-       !--- S+, S-
-       Smns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M(irgn)*cosSZA(i,j) )
-       Spls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M(irgn)*cosSZA(i,j) )
+          !--- S+, S-
+          Smns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M(irgn)*cosSZA(i,j) )
+          Spls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M(irgn)*cosSZA(i,j) )
 
-       !---< calculate R, T, e+, e- >---
-       sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
-       tau_new = max( tau_new, RD_EPS )
+          !---< calculate R, T, e+, e- >---
+          sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
+          tau_new = max( tau_new, RD_EPS )
 
-       !--- X, Y
-       X     =  ( 1.0_RP - W(irgn) * ( Ppls - Pmns ) ) / M(irgn)
-       Y     =  ( 1.0_RP - W(irgn) * ( Ppls + Pmns ) ) / M(irgn)
-       lamda = sqrt(X*Y)
-       E     = exp(-lamda*tau_new)
+          !--- X, Y
+          X     =  ( 1.0_RP - W(irgn) * ( Ppls - Pmns ) ) / M(irgn)
+          Y     =  ( 1.0_RP - W(irgn) * ( Ppls + Pmns ) ) / M(irgn)
+          lamda = sqrt(X*Y)
+          E     = exp(-lamda*tau_new)
 
-       !--- A+/A-, B+/B-
-       Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
-                / ( X * ( 1.0_RP+E ) + lamda * ( 1.0_RP-E ) )
-       Bpls_mns = ( X * ( 1.0_RP-E ) - lamda * ( 1.0_RP+E ) ) &
-                / ( X * ( 1.0_RP-E ) + lamda * ( 1.0_RP+E ) )
+          !--- A+/A-, B+/B-
+          Apls_mns = ( X * ( 1.0_RP+E ) - lamda * ( 1.0_RP-E ) ) &
+                   / ( X * ( 1.0_RP+E ) + lamda * ( 1.0_RP-E ) )
+          Bpls_mns = ( X * ( 1.0_RP-E ) - lamda * ( 1.0_RP+E ) ) &
+                   / ( X * ( 1.0_RP-E ) + lamda * ( 1.0_RP+E ) )
 
-       !--- R, T
-       R0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &
-                        + ( 1.0_RP-sw ) * (          tau_new * (          Pmns ) / M(irgn) )
-       T0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns - Bpls_mns ) &
-                        + ( 1.0_RP-sw ) * ( 1.0_RP - tau_new * ( 1.0_RP - Ppls ) / M(irgn) )
+          !--- R, T
+          R0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &
+                           + ( 1.0_RP-sw ) * (          tau_new * (          Pmns ) / M(irgn) )
+          T0(k,i,j,icloud) = (        sw ) * 0.5_RP * ( Apls_mns - Bpls_mns ) &
+                           + ( 1.0_RP-sw ) * ( 1.0_RP - tau_new * ( 1.0_RP - Ppls ) / M(irgn) )
 
-       !--- thermal source
-       Dmns(0) = c(0) / Y + 2.0_RP * c(2) / (X*Y*Y) + c(1) / (X*Y)
-       Dpls(0) = c(0) / Y + 2.0_RP * c(2) / (X*Y*Y) - c(1) / (X*Y)
-       Dmns(1) = c(1) / Y + 2.0_RP * c(2) / (X*Y)
-       Dpls(1) = c(1) / Y - 2.0_RP * c(2) / (X*Y)
-       Dmns(2) = c(2) / Y
-       Dpls(2) = c(2) / Y
+          !--- thermal source
+          Dmns(0) = c(0) / Y + 2.0_RP * c(2) / (X*Y*Y) + c(1) / (X*Y)
+          Dpls(0) = c(0) / Y + 2.0_RP * c(2) / (X*Y*Y) - c(1) / (X*Y)
+          Dmns(1) = c(1) / Y + 2.0_RP * c(2) / (X*Y)
+          Dpls(1) = c(1) / Y - 2.0_RP * c(2) / (X*Y)
+          Dmns(2) = c(2) / Y
+          Dpls(2) = c(2) / Y
 
-       V0mns = Dmns(0)
-       V0pls = Dpls(0)
-       V1mns = Dmns(0) + Dmns(1)*tau_new + Dmns(2)*tau_new*tau_new
-       V1pls = Dpls(0) + Dpls(1)*tau_new + Dpls(2)*tau_new*tau_new
+          V0mns = Dmns(0)
+          V0pls = Dpls(0)
+          V1mns = Dmns(0) + Dmns(1)*tau_new + Dmns(2)*tau_new*tau_new
+          V1pls = Dpls(0) + Dpls(1)*tau_new + Dpls(2)*tau_new*tau_new
 
-       Em_LW(k,i,j,icloud) = (        sw ) * ( V0mns - R0(k,i,j,icloud) * V0pls - T0(k,i,j,icloud) * V1mns ) &
-                           + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c(0) + c(1)*tau_new + c(2)*tau_new*tau_new )
-       Ep_LW(k,i,j,icloud) = (        sw ) * ( V1pls - T0(k,i,j,icloud) * V0pls - R0(k,i,j,icloud) * V1mns ) &
-                           + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c(0) + c(1)*tau_new + c(2)*tau_new*tau_new )
+          Em_LW(k,i,j,icloud) = (        sw ) * ( V0mns - R0(k,i,j,icloud) * V0pls - T0(k,i,j,icloud) * V1mns ) &
+                              + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c(0) + c(1)*tau_new + c(2)*tau_new*tau_new )
+          Ep_LW(k,i,j,icloud) = (        sw ) * ( V1pls - T0(k,i,j,icloud) * V0pls - R0(k,i,j,icloud) * V1mns ) &
+                              + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c(0) + c(1)*tau_new + c(2)*tau_new*tau_new )
 
-       !--- solar source
-       SIGmns = Wmns(irgn) * ( Spls - Smns )
-       SIGpls = Wmns(irgn) * ( Spls + Smns )
+          !--- solar source
+          SIGmns = Wmns(irgn) * ( Spls - Smns )
+          SIGpls = Wmns(irgn) * ( Spls + Smns )
 
-       Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( X*Y*cosSZA(i,j) - 1.0/cosSZA(i,j) )
+          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( X*Y*cosSZA(i,j) - 1.0/cosSZA(i,j) )
 
-       V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
-       V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
+          V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
+          V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
 
-       V1pls = V0pls * Tdir0(k,i,j,icloud)
-       V1mns = V0mns * Tdir0(k,i,j,icloud)
+          V1pls = V0pls * Tdir0(k,i,j,icloud)
+          V1mns = V0mns * Tdir0(k,i,j,icloud)
 
-       Em_SW(k,i,j,icloud) = (        sw ) * ( V0mns - R0(k,i,j,icloud) * V0pls - T0(k,i,j,icloud) * V1mns ) &
-                           + ( 1.0_RP-sw ) * Wmns(irgn) * Smns * tau_new * sqrt( Tdir0(k,i,j,icloud) )
-       Ep_SW(k,i,j,icloud) = (        sw ) * ( V1pls - T0(k,i,j,icloud) * V0pls - R0(k,i,j,icloud) * V1mns ) &
-                           + ( 1.0_RP-sw ) * Wmns(irgn) * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud) )
+          Em_SW(k,i,j,icloud) = (        sw ) * ( V0mns - R0(k,i,j,icloud) * V0pls - T0(k,i,j,icloud) * V1mns ) &
+                              + ( 1.0_RP-sw ) * Wmns(irgn) * Smns * tau_new * sqrt( Tdir0(k,i,j,icloud) )
+          Ep_SW(k,i,j,icloud) = (        sw ) * ( V1pls - T0(k,i,j,icloud) * V0pls - R0(k,i,j,icloud) * V1mns ) &
+                              + ( 1.0_RP-sw ) * Wmns(irgn) * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud) )
 
 
-    enddo ! k loop
-    enddo ! i loop
-    enddo ! j loop
+       enddo ! k loop
+       enddo ! i loop
+       enddo ! j loop
     enddo ! cloud loop
 
     !---< consider partial cloud layer: semi-random over-wrapping >---
