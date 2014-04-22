@@ -217,7 +217,7 @@ contains
     use scale_time, only: &
        TIME_NOWDATE
     use scale_grid_real, only: &
-       REAL_lat
+       REAL_LAT
     use scale_atmos_phy_rd_profile, only: &
        RD_PROFILE_setup            => ATMOS_PHY_RD_PROFILE_setup,            &
        RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
@@ -331,7 +331,7 @@ contains
                                       ngas,                   & ! [IN]
                                       ncfc,                   & ! [IN]
                                       RD_naero,               & ! [IN]
-                                      REAL_lat       (IS,JS), & ! [IN], tentative treatment
+                                      REAL_LAT       (IS,JS), & ! [IN], tentative treatment
                                       TIME_NOWDATE   (:),     & ! [IN]
                                       RD_zh          (:),     & ! [IN]
                                       RD_z           (:),     & ! [IN]

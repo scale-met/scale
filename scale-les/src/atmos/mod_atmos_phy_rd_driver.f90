@@ -78,8 +78,8 @@ contains
     use scale_grid_real, only: &
        REAL_CZ,  &
        REAL_FZ,  &
-       REAL_lon, &
-       REAL_lat
+       REAL_LON, &
+       REAL_LAT
     use scale_landuse, only: &
        LANDUSE_frac_ocean
     use scale_time, only: &
@@ -176,8 +176,8 @@ contains
 
        call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
                                  cosSZA  (:,:),  & ! [OUT]
-                                 REAL_lon(:,:),  & ! [IN]
-                                 REAL_lat(:,:),  & ! [IN]
+                                 REAL_LON(:,:),  & ! [IN]
+                                 REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,      & ! [IN]

@@ -63,13 +63,13 @@ module scale_fileio
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: REAL_LON (:,:)
-  real(RP), private, allocatable :: REAL_LONX(:,:)
-  real(RP), private, allocatable :: REAL_LAT (:,:)
-  real(RP), private, allocatable :: REAL_LATY(:,:)
+  real(RP), private, allocatable :: AXIS_LON (:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LONX(:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LAT (:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LATY(:,:) ! [deg]
 
-  real(RP), private, allocatable :: REAL_CZ(:,:,:)
-  real(RP), private, allocatable :: REAL_FZ(:,:,:)
+  real(RP), private, allocatable :: AXIS_CZ(:,:,:) ! [m]
+  real(RP), private, allocatable :: AXIS_FZ(:,:,:) ! [m]
 
   !-----------------------------------------------------------------------------
 contains
@@ -84,13 +84,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIELIO]/Categ[IO]'
 
-    allocate( REAL_LON (IA,JA) )
-    allocate( REAL_LONX(IA,JA) )
-    allocate( REAL_LAT (IA,JA) )
-    allocate( REAL_LATY(IA,JA) )
+    allocate( AXIS_LON (IA,JA) )
+    allocate( AXIS_LONX(IA,JA) )
+    allocate( AXIS_LAT (IA,JA) )
+    allocate( AXIS_LATY(IA,JA) )
 
-    allocate( REAL_CZ  (  KA,IA,JA) )
-    allocate( REAL_FZ  (0:KA,IA,JA) )
+    allocate( AXIS_CZ  (  KA,IA,JA) )
+    allocate( AXIS_FZ  (0:KA,IA,JA) )
 
     ! only for register
     call PROF_rapstart('FILE I NetCDF')
@@ -116,6 +116,8 @@ contains
        LATY, &
        CZ,   &
        FZ    )
+    use scale_const, only: &
+       D2R => CONST_D2R
     implicit none
 
     real(RP), intent(in) :: LON (IA,JA)
@@ -126,13 +128,13 @@ contains
     real(RP), intent(in) :: FZ  (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    REAL_LON (:,:) = LON (:,:)
-    REAL_LONX(:,:) = LONX(:,:)
-    REAL_LAT (:,:) = LAT (:,:)
-    REAL_LATY(:,:) = LATY(:,:)
+    AXIS_LON (:,:) = LON (:,:) / D2R
+    AXIS_LONX(:,:) = LONX(:,:) / D2R
+    AXIS_LAT (:,:) = LAT (:,:) / D2R
+    AXIS_LATY(:,:) = LATY(:,:) / D2R
 
-    REAL_CZ(:,:,:) = CZ(:,:,:)
-    REAL_FZ(:,:,:) = FZ(:,:,:)
+    AXIS_CZ(:,:,:) = CZ(:,:,:)
+    AXIS_FZ(:,:,:) = FZ(:,:,:)
 
     return
   end subroutine FILEIO_set_coordinates
@@ -715,13 +717,13 @@ contains
     call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
 
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
-                                       (/'x ','y '/), dtype, REAL_LON (IS:IE,JS:JE)            )
+                                       (/'x ','y '/), dtype, AXIS_LON (IS:IE,JS:JE)            )
     call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)', 'degrees_east' , &
-                                       (/'xh','y '/), dtype, REAL_LONX(IS:IE,JS:JE)            )
+                                       (/'xh','y '/), dtype, AXIS_LONX(IS:IE,JS:JE)            )
     call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              , 'degrees_north', &
-                                       (/'x ','y '/), dtype, REAL_LAT (IS:IE,JS:JE)            )
+                                       (/'x ','y '/), dtype, AXIS_LAT (IS:IE,JS:JE)            )
     call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
-                                       (/'x ','yh'/), dtype, REAL_LATY(IS:IE,JS:JE)            )
+                                       (/'x ','yh'/), dtype, AXIS_LATY(IS:IE,JS:JE)            )
 
     return
   end subroutine set_axes

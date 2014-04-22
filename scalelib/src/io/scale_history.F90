@@ -619,6 +619,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Put axis coordinate to history file
   subroutine HIST_put_axes
+    use scale_const, only: &
+       D2R => CONST_D2R
     use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
@@ -651,14 +653,17 @@ contains
        GRID_LFZ,  &
        GRID_LCDZ
     use scale_grid_real, only: &
-       REAL_lon, &
-       REAL_lonx, &
-       REAL_lat, &
-       REAL_laty
+       REAL_LON, &
+       REAL_LONX, &
+       REAL_LAT, &
+       REAL_LATY
     use gtool_history, only: &
        HistoryPutAxis, &
        HistoryPutAssociatedCoordinates
     implicit none
+
+    real(RP)         :: AXIS     (IA,JA)
+    character(len=2) :: AXIS_name(2)
     !---------------------------------------------------------------------------
 
     call HistoryPutAxis('x',     'X',  'm', 'x',  GRID_CX(IS:IE))
@@ -706,12 +711,29 @@ contains
     call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
     call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
 
-    call HistoryPutAssociatedCoordinates('lon', 'longitude', 'degrees_east', (/'x', 'y'/), REAL_lon(IS:IE,JS:JE) )
-    call HistoryPutAssociatedCoordinates('lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'yh'/), &
-         REAL_lonx(IS:IE,JS:JE) )
-    call HistoryPutAssociatedCoordinates('lat', 'latitude', 'degrees_north', (/'x', 'y'/), REAL_lat(IS:IE,JS:JE) )
-    call HistoryPutAssociatedCoordinates('lath', 'latitude (half level)', 'degrees_north', (/'xh', 'yh'/), &
-         REAL_laty(IS:IE,JS:JE) )
+    AXIS(:,:) = REAL_LON (:,:) / D2R
+    AXIS_name = (/'x ','y '/)
+
+    call HistoryPutAssociatedCoordinates( 'lon' , 'longitude'             , 'degrees_east' , &
+                                          AXIS_name, AXIS(IS:IE,JS:JE)                       )
+
+    AXIS(:,:) = REAL_LONX(:,:) / D2R
+    AXIS_name = (/'xh','y '/)
+
+    call HistoryPutAssociatedCoordinates( 'lonh', 'longitude (half level)', 'degrees_east' , &
+                                          AXIS_name, AXIS(IS:IE,JS:JE)                       )
+
+    AXIS(:,:) = REAL_LAT (:,:) / D2R
+    AXIS_name = (/'x ','y '/)
+
+    call HistoryPutAssociatedCoordinates( 'lat' , 'latitude'              , 'degrees_north', &
+                                          AXIS_name, AXIS(IS:IE,JS:JE)                       )
+
+    AXIS(:,:) = REAL_LATY(:,:) / D2R
+    AXIS_name = (/'x ','yh'/)
+
+    call HistoryPutAssociatedCoordinates( 'lath', 'latitude (half level)' , 'degrees_north', &
+                                          AXIS_name, AXIS(IS:IE,JS:JE)                       )
 
     return
   end subroutine HIST_put_axes
