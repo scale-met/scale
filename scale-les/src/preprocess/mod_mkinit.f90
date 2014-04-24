@@ -55,7 +55,8 @@ module mod_mkinit
      CX => GRID_CX, &
      CY => GRID_CY
   use scale_grid_real, only: &
-     REAL_CZ
+     REAL_CZ, &
+     REAL_FZ
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -383,9 +384,11 @@ contains
       case(I_INTERPORATION)
          call MKINIT_INTERPORATION
       case(I_LANDCOUPLE)
-         call MKINIT_LANDCOUPLE
+         call MKINIT_planestate
+         call MKINIT_landcouple
       case(I_OCEANCOUPLE)
-         call MKINIT_OCEANCOUPLE
+         call MKINIT_planestate
+         call MKINIT_oceancouple
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -673,44 +676,61 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_PLANESTATE)
 
-    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
-       call PROFILE_isa( pott_prof(:), & ! [OUT]
-                         SFC_THETA,    & ! [IN]
-                         SFC_PRES      ) ! [IN]
-    else
-       do k = KS, KE
-          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
-       enddo
-    endif
-
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       pott_sfc(1,i,j) = SFC_THETA
+       pres_sfc(1,i,j) = SFC_PRES
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
 
-    do k = KS, KE
-       pott(k,1,1) = pott_prof(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
+       do k = KS, KE
+          qv(k,i,j) = 0.0_RP
+          qc(k,i,j) = 0.0_RP
+       enddo
+    enddo
     enddo
 
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
+
+       do j = JS, JE
+       do i = IS, IE
+          call PROFILE_isa( KA, KS, KE,      & ! [IN]
+                            pott_sfc(1,i,j), & ! [IN]
+                            pres_sfc(1,i,j), & ! [IN]
+                            REAL_CZ (:,i,j), & ! [IN]
+                            pott    (:,i,j)  ) ! [OUT]
+       enddo
+       enddo
+
+    else
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          pott(k,i,j) = ENV_THETA + ENV_TLAPS * REAL_CZ(k,i,j)
+       enddo
+       enddo
+       enddo
+
+    endif
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
@@ -728,11 +748,10 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(1,i,j) = pott_sfc(1,i,j) + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = pott_prof(k) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = pott(k,i,j) + rndm(k,i,j) * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -3167,7 +3186,7 @@ contains
   end subroutine interporation_fact
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( horizontally uniform + land variables )
+  !> Make initial state ( land variables )
   subroutine MKINIT_landcouple
     use scale_const, only: &
       I_SW => CONST_I_SW, &
@@ -3175,40 +3194,23 @@ contains
     implicit none
 
     ! Surface state
-    real(RP) :: SFC_THETA               ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                ! surface pressure [Pa]
-    real(RP) :: SFC_RH       =   0.0_RP ! surface relative humidity [%]
-    real(RP) :: SFC_PREC     =   0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD      =   0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD      =   0.0_RP ! surface downwad long-wave radiation [W/m2]
-    ! Environment state
-    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
-    real(RP) :: ENV_TLAPS    =   0.0_RP ! Lapse rate of THETA [K/m]
-    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
-    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
-    real(RP) :: ENV_RH       =   0.0_RP ! relative humidity of environment [%]
+    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
+    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
+    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
     ! land state
-    real(RP) :: LND_TEMP                ! soil temperature [K]
-    real(RP) :: LND_QVEF     =   0.0_RP ! efficiency of evaporation [0-1]
-    real(RP) :: LND_ROFF     =   0.0_RP ! run-off water [kg/m2]
-    real(RP) :: LND_STRG     =   0.0_RP ! water storage [kg/m2]
+    real(RP) :: LND_TEMP             ! soil temperature [K]
+    real(RP) :: LND_QVEF    = 0.0_RP ! efficiency of evaporation [0-1]
+    real(RP) :: LND_ROFF    = 0.0_RP ! run-off water [kg/m2]
+    real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
     ! coupler state
-    real(RP) :: CPL_TEMP                ! land surface temperature [K]
-    real(RP) :: CPL_ALBG_SW  =   0.0_RP ! land surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBG_LW  =   0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: CPL_TEMP             ! land surface temperature [K]
+    real(RP) :: CPL_ALBG_SW = 0.0_RP ! land surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBG_LW = 0.0_RP ! land surface albedo for LW [0-1]
 
     NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
-       SFC_THETA,    &
-       SFC_PRES,     &
-       SFC_RH,       &
        SFC_PREC,     &
        SFC_SWD,      &
        SFC_LWD,      &
-       ENV_THETA,    &
-       ENV_TLAPS,    &
-       ENV_U,        &
-       ENV_V,        &
-       ENV_RH,       &
        LND_TEMP,     &
        LND_QVEF,     &
        LND_ROFF,     &
@@ -3217,18 +3219,13 @@ contains
        CPL_ALBG_SW,  &
        CPL_ALBG_LW
 
-    real(RP) :: pott_prof(KA)
-
     integer :: ierr
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Horiz_UNIFORM]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
 
-    SFC_THETA = THETAstd
-    SFC_PRES  = Pstd
-    ENV_THETA = THETAstd
     LND_TEMP  = THETAstd
     CPL_TEMP  = THETAstd
 
@@ -3244,108 +3241,17 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
 
-    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
-       call PROFILE_isa( pott_prof(:), & ! [OUT]
-                         SFC_THETA,    & ! [IN]
-                         SFC_PRES      ) ! [IN]
-    else
-       do k = KS, KE
-          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
-       enddo
-    endif
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       pott(k,1,1) = pott_prof(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
-    enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
-
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
-    do j = JS, JE
-    do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
-       qc_sfc(1,i,j) = 0.0_RP
-
-       do k = KS, KE
-          qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-          qc(k,i,j) = 0.0_RP
-       enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
-
-       do k = KS, KE
-          pott(k,i,j) = pott_prof(k)
-       enddo
-    enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    ! fill IHALO & JHALO
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMX(k,i,j)      = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j)      = ENV_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-       MOMZ(k,i,j)      = 0.0_RP
-       RHOT(k,i,j)      = pott(k,i,j) * DENS(k,i,j)
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
-
     ! make land variables
     do j = JS, JE
     do i = IS, IE
-       TG  (:,i,j) = LND_TEMP
-       STRG(:,i,j) = LND_STRG
-       ROFF(i,j)   = LND_ROFF
-       QVEF(i,j)   = LND_QVEF
+       PREC (i,j)      = SFC_PREC
+       SWD  (i,j)      = SFC_SWD
+       LWD  (i,j)      = SFC_LWD
 
-       PREC(i,j) = SFC_PREC
-       SWD (i,j) = SFC_SWD
-       LWD (i,j) = SFC_LWD
+       TG   (:,i,j)    = LND_TEMP
+       STRG (:,i,j)    = LND_STRG
+       ROFF (i,j)      = LND_ROFF
+       QVEF (i,j)      = LND_QVEF
 
        LST  (i,j)      = CPL_TEMP
        SkinT(i,j)      = CPL_TEMP
@@ -3358,7 +3264,7 @@ contains
   end subroutine MKINIT_landcouple
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( horizontally uniform + ocean variables )
+  !> Make initial state ( ocean variables )
   subroutine MKINIT_oceancouple
     use scale_const, only: &
       I_SW => CONST_I_SW, &
@@ -3366,56 +3272,34 @@ contains
     implicit none
 
     ! Surface state
-    real(RP) :: SFC_THETA               ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                ! surface pressure [Pa]
-    real(RP) :: SFC_RH       =   0.0_RP ! surface relative humidity [%]
-    real(RP) :: SFC_PREC     =   0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD      =   0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD      =   0.0_RP ! surface downwad long-wave radiation [W/m2]
-    ! Environment state
-    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
-    real(RP) :: ENV_TLAPS    =   0.0_RP ! Lapse rate of THETA [K/m]
-    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
-    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
-    real(RP) :: ENV_RH       =   0.0_RP ! relative humidity of environment [%]
+    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
+    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
+    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
     ! ocean state
-    real(RP) :: OCN_TEMP                ! water temperature [K]
+    real(RP) :: OCN_TEMP             ! water temperature [K]
     ! coupler state
-    real(RP) :: CPL_TEMP                ! sea surface temperature [K]
-    real(RP) :: CPL_ALBW_SW  =   0.0_RP ! sea surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBW_LW  =   0.0_RP ! sea surface albedo for LW [0-1]
-    real(RP) :: CPL_Z0W      =   0.0_RP ! sea surface roughness length [m]
+    real(RP) :: CPL_TEMP             ! sea surface temperature [K]
+    real(RP) :: CPL_ALBW_SW = 0.0_RP ! sea surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBW_LW = 0.0_RP ! sea surface albedo for LW [0-1]
+    real(RP) :: CPL_Z0W     = 0.0_RP ! sea surface roughness length [m]
 
     NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
-       SFC_THETA,    &
-       SFC_PRES,     &
-       SFC_RH,       &
        SFC_PREC,     &
        SFC_SWD,      &
        SFC_LWD,      &
-       ENV_THETA,    &
-       ENV_TLAPS,    &
-       ENV_U,        &
-       ENV_V,        &
-       ENV_RH,       &
        OCN_TEMP,     &
        CPL_TEMP,     &
        CPL_ALBW_SW,  &
        CPL_ALBW_LW,  &
        CPL_Z0W
 
-    real(RP) :: pott_prof(KA)
-
     integer :: ierr
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Horiz_UNIFORM]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OceanCouple]/Categ[MKINIT]'
 
-    SFC_THETA = THETAstd
-    SFC_PRES  = Pstd
-    ENV_THETA = THETAstd
     OCN_TEMP  = THETAstd
     CPL_TEMP  = THETAstd
 
@@ -3431,105 +3315,14 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
 
-    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
-       call PROFILE_isa( pott_prof(:), & ! [OUT]
-                         SFC_THETA,    & ! [IN]
-                         SFC_PRES      ) ! [IN]
-    else
-       do k = KS, KE
-          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
-       enddo
-    endif
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = 0.0_RP
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    do k = KS, KE
-       pott(k,1,1) = pott_prof(k)
-       qv  (k,1,1) = 0.0_RP
-       qc  (k,1,1) = 0.0_RP
-    enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
-
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
-    do j = JS, JE
-    do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
-       qc_sfc(1,i,j) = 0.0_RP
-
-       do k = KS, KE
-          qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-          qc(k,i,j) = 0.0_RP
-       enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
-
-       do k = KS, KE
-          pott(k,i,j) = pott_prof(k)
-       enddo
-    enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    ! fill IHALO & JHALO
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMX(k,i,j)      = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j)      = ENV_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-       MOMZ(k,i,j)      = 0.0_RP
-       RHOT(k,i,j)      = pott(k,i,j) * DENS(k,i,j)
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
-
     ! make ocean variables
     do j = JS, JE
     do i = IS, IE
-       TW  (i,j) = OCN_TEMP
+       PREC (i,j)      = SFC_PREC
+       SWD  (i,j)      = SFC_SWD
+       LWD  (i,j)      = SFC_LWD
 
-       PREC(i,j) = SFC_PREC
-       SWD (i,j) = SFC_SWD
-       LWD (i,j) = SFC_LWD
+       TW   (i,j)      = OCN_TEMP
 
        SST  (i,j)      = CPL_TEMP
        SkinT(i,j)      = CPL_TEMP

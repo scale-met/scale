@@ -248,6 +248,10 @@ contains
   subroutine ATMOS_REFSTATE_generate_isa
     use scale_const, only: &
        Pstd => CONST_Pstd
+    use scale_grid_real, only: &
+       REAL_CZ
+    use scale_comm, only: &
+       COMM_horizontal_mean
     use scale_atmos_profile, only: &
        PROFILE_isa => ATMOS_PROFILE_isa
     use scale_atmos_hydrostatic, only: &
@@ -255,6 +259,8 @@ contains
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
+
+    real(RP) :: z(KA)
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
@@ -278,9 +284,13 @@ contains
     pott_sfc = ATMOS_REFSTATE_TEMP_SFC
     pres_sfc = Pstd
 
-    call PROFILE_isa( pott(:),  & ! [OUT]
-                      pott_sfc, & ! [IN]
-                      pres_sfc  ) ! [IN]
+    call COMM_horizontal_mean( z(:), REAL_CZ(:,:,:) )
+
+    call PROFILE_isa( KA, KS, KE, & ! [IN]
+                      pott_sfc,   & ! [IN]
+                      pres_sfc,   & ! [IN]
+                      z   (:),    & ! [IN]
+                      pott(:)     ) ! [OUT]
 
     qv(:)  = 0.0_RP
     qc(:)  = 0.0_RP
