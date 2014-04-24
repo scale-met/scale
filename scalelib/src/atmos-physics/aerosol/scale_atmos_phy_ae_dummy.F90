@@ -76,8 +76,22 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
-  subroutine ATMOS_PHY_AE_dummy
+  subroutine ATMOS_PHY_AE_dummy( &
+          DENS, &
+          MOMZ, &
+          MOMX, &
+          MOMY, &
+          RHOT, &
+          QTRC  )
+    use scale_tracer, only: &
+       QAD => QA
     implicit none
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
 

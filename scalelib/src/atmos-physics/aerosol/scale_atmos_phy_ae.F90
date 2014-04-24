@@ -35,8 +35,24 @@ module scale_atmos_phy_ae
   !++ Public parameters & variables
   !
   abstract interface
-     subroutine ae
+     subroutine ae( &
+          DENS, &
+          MOMZ, &
+          MOMX, &
+          MOMY, &
+          RHOT, &
+          QTRC  )
+       use scale_precision
+       use scale_grid_index
+       use scale_tracer
+       real(RP), intent(inout) :: DENS(KA,IA,JA)
+       real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+       real(RP), intent(inout) :: MOMX(KA,IA,JA)
+       real(RP), intent(inout) :: MOMY(KA,IA,JA)
+       real(RP), intent(inout) :: RHOT(KA,IA,JA)
+       real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
      end subroutine ae
+
      subroutine er( RE, QTRC, RH )
        use scale_precision
        use scale_grid_index
@@ -46,6 +62,7 @@ module scale_atmos_phy_ae
        real(RP), intent(in)  :: RH  (KA,IA,JA)       ! relative humidity         [0-1]
      end subroutine er
   end interface
+
   procedure(ae), pointer :: ATMOS_PHY_AE => NULL()
   procedure(er), pointer :: ATMOS_PHY_AE_EffectiveRadius => NULL()
   public :: ATMOS_PHY_AE

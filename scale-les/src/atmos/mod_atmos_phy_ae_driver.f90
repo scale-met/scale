@@ -71,13 +71,32 @@ contains
   subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE
+    use mod_atmos_vars, only: &
+       ATMOS_vars_fillhalo, &
+       ATMOS_vars_total, &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
     implicit none
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
     if ( update_flag ) then
-       call ATMOS_PHY_AE
-    end if
+       call ATMOS_PHY_AE( &
+            DENS, &
+            MOMZ, &
+            MOMX, &
+            MOMY, &
+            RHOT, &
+            QTRC  )
+
+       call ATMOS_vars_fillhalo
+
+       call ATMOS_vars_total
+    endif
 
     return
   end subroutine ATMOS_PHY_AE_driver
