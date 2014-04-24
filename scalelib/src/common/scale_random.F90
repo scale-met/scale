@@ -111,8 +111,8 @@ contains
        call date_and_time(values=time1)
        call cpu_time(time2)
     endif
-    if( IO_L ) write(IO_FID_LOG,*) '*** time1:', time1
-    if( IO_L ) write(IO_FID_LOG,*) '*** time2:', time2
+    !if( IO_L ) write(IO_FID_LOG,*) '*** time1:', time1
+    !if( IO_L ) write(IO_FID_LOG,*) '*** time2:', time2
 
     RANDOM_seedvar(:) = &
          + ( time1(1) - 1970 ) * 32140800 &
