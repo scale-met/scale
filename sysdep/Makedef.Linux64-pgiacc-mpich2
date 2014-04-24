@@ -1,20 +1,22 @@
 #
-# ------ FOR Linux 64bit & pgi fortran&C & mpich2 -----
+# ------ FOR Linux 64bit & pgi fortran&C & mpich2 + OpenACC,CUDA -----
 #
 
 ##### for computation
 
 FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+              -Minfo=accel -acc -ta=nvidia -Mcuda \
               -Mbyteswapio                       \
-              -Mflushz -pc 80                    \
+              -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -Minfo
+              -Msmartalloc=huge
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+               -Minfo=accel -acc -ta=nvidia,time  \
                -Mbyteswapio                      \
-               -Ktrap=fp -pc 80                  \
+               -Ktrap=fp -pc 64                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -Minfo
+               -mcmodel=medium
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
