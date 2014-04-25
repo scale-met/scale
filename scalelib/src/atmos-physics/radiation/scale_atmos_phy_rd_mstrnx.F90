@@ -1586,7 +1586,9 @@ contains
 
     cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min )
 
+!OCL SERIAL
     do icloud = 1, 2
+!OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
        do k = 1, kmax
