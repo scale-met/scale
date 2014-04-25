@@ -244,14 +244,14 @@ call STOP_COLLECTION( rapname )
        PRC_MPItimestat
     implicit none
 
-    real(DP) :: avgvar(PROF_PAPI_rapnlimit)
-    real(DP) :: maxvar(PROF_PAPI_rapnlimit)
-    real(DP) :: minvar(PROF_PAPI_rapnlimit)
-    integer  :: maxidx(PROF_PAPI_rapnlimit)
-    integer  :: minidx(PROF_PAPI_rapnlimit)
+    real(DP) :: avgvar(3)
+    real(DP) :: maxvar(3)
+    real(DP) :: minvar(3)
+    integer  :: maxidx(3)
+    integer  :: minidx(3)
 
     real(DP) :: PROF_PAPI_gflop
-    real(DP) :: stats(PROF_PAPI_rapnlimit)
+    real(DP) :: stats(3)
     !---------------------------------------------------------------------------
 
     PROF_PAPI_gflop = real(PROF_PAPI_flops,kind=8) / 1024.0_DP**3

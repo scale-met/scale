@@ -28,7 +28,7 @@ VPATH = common:                     \
         atmos-les/communication:    \
         atmos-les/grid:             \
         atmos-les/dynamics:         \
-				land:												\
+        land:                       \
         land/grid:                  \
         ocean:                      \
         cpl:
