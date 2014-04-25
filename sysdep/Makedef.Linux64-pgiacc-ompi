@@ -9,14 +9,14 @@ FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
               -Mbyteswapio                       \
               -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge
+              -Msmartalloc=huge -DHEVI_BICGSTAB
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -Minfo=accel -acc -ta=nvidia,time  \
                -Mbyteswapio                      \
                -Ktrap=fp -pc 64                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium
+               -mcmodel=medium -DHEVI_BICGSTAB
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
@@ -48,7 +48,7 @@ NETCDF_INCLUDE ?= -I$(NETCDF3)/include
 NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?= -lacml
+LAPACK_LIBS    ?=
 
 ##### for frontend
 INSTALL = install

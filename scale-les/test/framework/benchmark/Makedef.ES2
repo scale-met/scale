@@ -38,13 +38,18 @@ ifneq ($(USE_NETCDF3),)
       CFLAGS += -DNETCDF3
 endif
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
+###### NetCDF library
 NETCDF_INCLUDE ?= -I/SX/usr/include
 NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
 
+###### Lapack
+LAPACK_LIBS    ?=
+
 ##### for frontend
+INSTALL = install
 AR      = sxar
 ARFLAGS = r
 RANLIB  = touch

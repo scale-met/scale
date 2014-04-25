@@ -1,20 +1,22 @@
 #
-# ------ FOR Linux 64bit & pgi fortran&C & mpich2 -----
+# ------ FOR Linux 64bit & pgi fortran&C & openmpi + OpenACC,CUDA -----
 #
 
 ##### for computation
 
 FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+              -Minfo=accel -acc -ta=tesla,cuda5.5,cc35,nofma -Mcuda \
               -Mbyteswapio                       \
-              -Mflushz -pc 80                    \
+              -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -Minfo
+              -Msmartalloc=huge -DHEVI_BICGSTAB
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+               -Minfo=accel -acc -ta=nvidia,time  \
                -Mbyteswapio                      \
-               -Ktrap=fp -pc 80                  \
+               -Ktrap=fp -pc 64                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -Minfo
+               -mcmodel=medium -DHEVI_BICGSTAB
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
@@ -42,11 +44,11 @@ LD     = $(FC)
 LFLAGS = $(FFLAGS)
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF3)/include
-NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?= -llapack
+LAPACK_LIBS    ?=
 
 ##### for frontend
 INSTALL = install

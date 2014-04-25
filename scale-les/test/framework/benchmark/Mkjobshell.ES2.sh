@@ -71,12 +71,10 @@ cat << EOF2 > ./run_S.sh
 #PBS -v F_SETBUF=102400
 
 cd ${RUNDIR}
-ln -v ${BINDIR}/${INITNAME} .
-ln -v ${BINDIR}/${BINNAME}  .
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF2

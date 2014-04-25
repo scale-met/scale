@@ -4,18 +4,18 @@
 
 ##### for computation
 
-FFLAGS_FAST = -fpp3 -O3 -xHost -ip                 \
-              -assume byterecl -convert big_endian \
-              -ftz -fp-model precise -pc 80        \
-              -mcmodel=medium -shared-intel        \
-              -heap-arrays -fno-alias
+FFLAGS_FAST  = -fpp3 -O3 -xHost -ip                 \
+               -assume byterecl -convert big_endian \
+               -ftz -fp-model source -pc 80         \
+               -mcmodel=medium -shared-intel        \
+               -heap-arrays
 
 FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -assume byterecl -convert big_endian \
-               -fp-model precise -pc 80             \
+               -fpe0 -fp-model source -pc 80        \
                -check all -warn all -g -traceback   \
                -mcmodel=medium -shared-intel        \
-               -heap-arrays -fno-alias              \
+               -heap-arrays                         \
                -DDEBUG
 
 FC     = mpiifort
@@ -45,12 +45,15 @@ ifneq ($(USE_NETCDF3),)
       CFLAGS += -DNETCDF3
 endif
 
-LD     = $(FC)
-LFLAGS = $(FFLAGS)
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### Lapack
+LAPACK_LIBS    ?= -mkl=sequential
 
 ##### for frontend
 INSTALL = install
