@@ -20,6 +20,7 @@
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
 !! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
 !! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
+!! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -28,15 +29,15 @@ module mod_mkinit
   !
   !++ used modules
   !
-  use scale_precision
-  use scale_stdio
-  use scale_prof
-  use scale_grid_index
-  use scale_tracer
+  use mod_precision
+  use mod_stdio
+  use mod_prof
+  use mod_grid_index
+  use mod_tracer
 
-  use scale_process, only: &
+  use mod_process, only: &
      PRC_MPIstop
-  use scale_const, only: &
+  use mod_const, only: &
      PI    => CONST_PI,    &
      GRAV  => CONST_GRAV,  &
      Pstd  => CONST_Pstd,  &
@@ -45,18 +46,17 @@ module mod_mkinit
      RovCP => CONST_RovCP, &
      LH0   => CONST_LH0,   &
      P00   => CONST_PRE00
-  use scale_random, only: &
+  use mod_random, only: &
      RANDOM_get
-  use scale_comm, only: &
+  use mod_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use scale_grid, only: &
+  use mod_grid, only: &
      CZ => GRID_CZ, &
      CX => GRID_CX, &
      CY => GRID_CY
-  use scale_grid_real, only: &
-     REAL_CZ, &
-     REAL_FZ
+  use mod_grid_real, only: &
+     REAL_CZ
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -80,15 +80,14 @@ module mod_mkinit
      SST,   &
      SkinT, &
      ALBW,  &
-     ALBG,  &
      Z0W
-  use scale_atmos_profile, only: &
+  use mod_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
-  use scale_atmos_hydrostatic, only: &
+  use mod_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,       &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
-  use scale_atmos_saturation, only: &
+  use mod_atmos_saturation, only: &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
   !-----------------------------------------------------------------------------
   implicit none
@@ -129,6 +128,8 @@ module mod_mkinit
   integer, public, parameter :: I_LANDCOUPLE    = 16
   integer, public, parameter :: I_OCEANCOUPLE   = 17
 
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS    = 18
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -155,6 +156,8 @@ module mod_mkinit
   private :: MKINIT_interporation
 
   private :: MKINIT_landcouple
+
+  private :: MKINIT_DYCOMS2_RF02_DNS
 
   !-----------------------------------------------------------------------------
   !
@@ -279,6 +282,8 @@ contains
        MKINIT_TYPE = I_LANDCOUPLE
     case('OCEANCOUPLE')
        MKINIT_TYPE = I_OCEANCOUPLE
+    case('DYCOMS2_RF02_DNS')
+       MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -290,7 +295,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKINIT
-    use scale_const, only: &
+    use mod_const, only: &
        CONST_UNDEF8
     use mod_atmos_vars, only: &
        ATMOS_sw_restart,    &
@@ -384,11 +389,11 @@ contains
       case(I_INTERPORATION)
          call MKINIT_INTERPORATION
       case(I_LANDCOUPLE)
-         call MKINIT_planestate
-         call MKINIT_landcouple
+         call MKINIT_LANDCOUPLE
       case(I_OCEANCOUPLE)
-         call MKINIT_planestate
-         call MKINIT_oceancouple
+         call MKINIT_OCEANCOUPLE
+      case(I_DYCOMS2_RF02_DNS)
+         call MKINIT_DYCOMS2_RF02_DNS
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -425,7 +430,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
-    use scale_const, only: &
+    use mod_const, only: &
        CONST_UNDEF8
     implicit none
 
@@ -505,7 +510,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
-    use scale_const, only: &
+    use mod_const, only: &
        PI => CONST_PI
 
     implicit none
@@ -600,7 +605,7 @@ contains
 
   !-----------------------------------------------------------------------------
   function faero( f0,r0,x,alpha,rhoa )
-    use scale_const, only: &
+    use mod_const, only: &
        pi => CONST_PI
     implicit none
 
@@ -676,80 +681,66 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_PLANESTATE)
 
+    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
+       call PROFILE_isa( pott_prof(:), & ! [OUT]
+                         SFC_THETA,    & ! [IN]
+                         SFC_PRES      ) ! [IN]
+    else
+       do k = KS, KE
+          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
+       enddo
+    endif
+
     ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = pott_prof(k)
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+
+    call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       pott_sfc(1,i,j) = SFC_THETA
-       pres_sfc(1,i,j) = SFC_PRES
-       qv_sfc  (1,i,j) = 0.0_RP
-       qc_sfc  (1,i,j) = 0.0_RP
+       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
+       qc_sfc(1,i,j) = 0.0_RP
 
        do k = KS, KE
-          qv(k,i,j) = 0.0_RP
+          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
           qc(k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
 
-    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
-
-       do j = JS, JE
-       do i = IS, IE
-          call PROFILE_isa( KA, KS, KE,      & ! [IN]
-                            pott_sfc(1,i,j), & ! [IN]
-                            pres_sfc(1,i,j), & ! [IN]
-                            REAL_CZ (:,i,j), & ! [IN]
-                            pott    (:,i,j)  ) ! [OUT]
-       enddo
-       enddo
-
-    else
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          pott(k,i,j) = ENV_THETA + ENV_TLAPS * REAL_CZ(k,i,j)
-       enddo
-       enddo
-       enddo
-
-    endif
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
-
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
-       qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
-          qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
-       enddo
-    enddo
-    enddo
-
-    call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
-       pott_sfc(1,i,j) = pott_sfc(1,i,j) + rndm(KS-1,i,j) * RANDOM_THETA
-
-       do k = KS, KE
-          pott(k,i,j) = pott(k,i,j) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = pott_prof(k) + rndm(k,i,j) * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -1707,6 +1698,10 @@ contains
        EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
     enddo
 
+!do k=1,exp_kmax+1
+!write(*,*)'chki1',k, exp_z(k), exp_pott(k), exp_qv(k), exp_u(k), exp_v(k)
+!enddo
+
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
     pott_sfc(1,1,1) = SFC_THETA
@@ -1735,6 +1730,10 @@ contains
           endif
        enddo
     enddo
+
+!do k=1,ke
+!write(*,*)'chki2',k, cz(k),pott(k,1,1), qv(k,1,1), velx(k,1,1), vely(k,1,1)
+!enddo
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
@@ -2067,9 +2066,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF01)
 
     if ( USE_LWSET ) then
-       GEOP_sw = 1.0_RP
+       GEOP_sw = 1.D0
     else
-       GEOP_sw = 0.0_RP
+       GEOP_sw = 0.D0
     endif
 
     ! calc in dry condition
@@ -2525,6 +2524,265 @@ contains
   end subroutine MKINIT_DYCOMS2_RF02
 
   !-----------------------------------------------------------------------------
+  !> Make initial state for stratocumulus
+  subroutine MKINIT_DYCOMS2_RF02_DNS
+    implicit none
+
+    real(RP) :: ZB  = 750.0_RP ! domain bottom
+!   real(RP) :: ZT  = 900.0_RP ! domain top
+    real(RP) :: CONST_U = 0.0_RP
+    real(RP) :: CONST_V = 0.0_RP
+    real(RP) :: PRES_ZB = 93060_RP
+    real(RP) :: PERTURB_AMP  = 0.0_RP
+    integer  :: RANDOM_LIMIT = 5
+    integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
+                                 ! 1 -> perturbation for PT
+                                 ! 2 -> perturbation for u,v,w
+
+    NAMELIST / PARAM_MKINIT_RF02_DNS / &
+       ZB, CONST_U, CONST_V,PRES_ZB,&
+       PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
+
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+    real(RP) :: pi2
+    real(RP) :: sint
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF02_DNS)]/Categ[MKINIT]'
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RF02_DNS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02_DNS)
+
+    ! calc in dry condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = PRES_ZB
+!      pott_sfc(1,i,j) = 288.3_RP      ! [K]
+!      qv_sfc  (1,i,j) = 9.45E-3_RP
+!      qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+
+          velx(k,i,j) = CONST_U
+          vely(k,i,j) = CONST_V
+
+!         if ( ZB+CZ(k) < 775.0_RP ) then ! below initial cloud top
+          if ( ZB+CZ(k) <= 795.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 288.3_RP ! [K]
+             qall = 9.45E-3_RP ! [kg/kg]
+! necessary?
+!         else if ( CZ(k) <= 815.0_RP ) then
+!            sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
+!            potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
+!                  ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP
+!            qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
+!                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+          else
+             potl(k,i,j) = 295.0_RP + ( zb+CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-(zb+CZ(k)))/500.0_RP ) ) ! [kg/kg]
+          endif
+
+          if( ZB+CZ(k) < 400.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif( ZB+CZ(k) <= 795.0_RP ) then
+             fact = ( (zb+CZ(k))-400.0_RP ) / ( 795.0_RP-400.0_RP )
+             qc(k,i,j) = 0.8E-3_RP * fact
+          else
+             qc(k,i,j) = 0.0_RP
+          endif
+          qv(k,i,j) = qall - qc(k,i,j)
+
+!if(i==is.and.j==js)write(*,*)'chkk',k,cz(k)+zb,qc(k,i,j),qv(k,i,j)
+       enddo
+    enddo
+    enddo
+
+!write(*,*)'chk3',ks,ke
+    ! extrapolation (temtative)
+    pott_sfc(1,:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
+    qv_sfc  (1,:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
+    qc_sfc  (1,:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+!write(*,*)'chk4.1'
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk5'
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+!write(*,*)'chk6'
+    ! fill KHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+    enddo
+    enddo
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+!write(*,*)'chk7'
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
+     else
+       MOMZ(k,i,j) = 0.0_RP
+     endif
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk8'
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     else
+       MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     endif
+    enddo
+    enddo
+    enddo
+!write(*,*)'chk9'
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     else
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     endif
+    enddo
+    enddo
+    enddo
+!write(*,*)'chk10'
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * DENS(k,i,j)
+     else
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk11'
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk12'
+    if ( flg_bin ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
+
+          !--- for aerosol
+          do iq = QQA+1, QA
+             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+    endif
+
+    return
+  end subroutine MKINIT_DYCOMS2_RF02_DNS
+
+  !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
     implicit none
@@ -2744,7 +3002,7 @@ contains
     use gtool_file, only: &
        FileGetShape, &
        FileRead
-    use scale_grid, only: &
+    use mod_grid, only: &
        FZ => GRID_FZ, &
        FX => GRID_FX, &
        FY => GRID_FY
@@ -3184,46 +3442,61 @@ contains
   end subroutine interporation_fact
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( land variables )
+  !> Make initial state ( horizontally uniform + land variables )
   subroutine MKINIT_landcouple
-    use scale_const, only: &
-      I_SW => CONST_I_SW, &
-      I_LW => CONST_I_LW
     implicit none
 
     ! Surface state
-    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =   0.0_RP ! surface relative humidity [%]
+    real(RP) :: SFC_PREC     =   0.0_RP ! surface precipitation rate [kg/m2/s]
+    real(RP) :: SFC_SWD      =   0.0_RP ! surface downwad short-wave radiation [W/m2]
+    real(RP) :: SFC_LWD      =   0.0_RP ! surface downwad long-wave radiation [W/m2]
+    ! Environment state
+    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
+    real(RP) :: ENV_TLAPS    =   0.0_RP ! Lapse rate of THETA [K/m]
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =   0.0_RP ! relative humidity of environment [%]
     ! land state
-    real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_QVEF    = 0.0_RP ! efficiency of evaporation [0-1]
-    real(RP) :: LND_ROFF    = 0.0_RP ! run-off water [kg/m2]
-    real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
+    real(RP) :: LND_TEMP                ! soil temperature [K]
+    real(RP) :: LND_QVEF     =   0.0_RP ! efficiency of evaporation [0-1]
+    real(RP) :: LND_ROFF     =   0.0_RP ! run-off water [kg/m2]
+    real(RP) :: LND_STRG     =   0.0_RP ! water storage [kg/m2]
     ! coupler state
-    real(RP) :: CPL_TEMP             ! land surface temperature [K]
-    real(RP) :: CPL_ALBG_SW = 0.0_RP ! land surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBG_LW = 0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: CPL_TEMP                ! land surface temperature [K]
 
     NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       SFC_RH,       &
        SFC_PREC,     &
        SFC_SWD,      &
        SFC_LWD,      &
+       ENV_THETA,    &
+       ENV_TLAPS,    &
+       ENV_U,        &
+       ENV_V,        &
+       ENV_RH,       &
        LND_TEMP,     &
        LND_QVEF,     &
        LND_ROFF,     &
        LND_STRG,     &
-       CPL_TEMP,     &
-       CPL_ALBG_SW,  &
-       CPL_ALBG_LW
+       CPL_TEMP
+
+    real(RP) :: pott_prof(KA)
 
     integer :: ierr
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Horiz_UNIFORM]/Categ[MKINIT]'
 
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+    ENV_THETA = THETAstd
     LND_TEMP  = THETAstd
     CPL_TEMP  = THETAstd
 
@@ -3239,22 +3512,111 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
 
+    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
+       call PROFILE_isa( pott_prof(:), & ! [OUT]
+                         SFC_THETA,    & ! [IN]
+                         SFC_PRES      ) ! [IN]
+    else
+       do k = KS, KE
+          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
+       enddo
+    endif
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = pott_prof(k)
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+       qc_sfc(1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+          qc(k,i,j) = 0.0_RP
+       enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA
+
+       do k = KS, KE
+          pott(k,i,j) = pott_prof(k)
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j)      = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j)      = ENV_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMZ(k,i,j)      = 0.0_RP
+       RHOT(k,i,j)      = pott(k,i,j) * DENS(k,i,j)
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+    enddo
+    enddo
+    enddo
+
     ! make land variables
     do j = JS, JE
     do i = IS, IE
-       PREC (i,j)      = SFC_PREC
-       SWD  (i,j)      = SFC_SWD
-       LWD  (i,j)      = SFC_LWD
+       TG  (:,i,j) = LND_TEMP
+       STRG(:,i,j) = LND_STRG
+       ROFF(i,j)   = LND_ROFF
+       QVEF(i,j)   = LND_QVEF
 
-       TG   (:,i,j)    = LND_TEMP
-       STRG (:,i,j)    = LND_STRG
-       ROFF (i,j)      = LND_ROFF
-       QVEF (i,j)      = LND_QVEF
+       PREC(i,j) = SFC_PREC
+       SWD (i,j) = SFC_SWD
+       LWD (i,j) = SFC_LWD
 
-       LST  (i,j)      = CPL_TEMP
-       SkinT(i,j)      = CPL_TEMP
-       ALBG (i,j,I_SW) = CPL_ALBG_SW
-       ALBG (i,j,I_LW) = CPL_ALBG_LW
+       LST  (i,j) = CPL_TEMP
+       SkinT(i,j) = CPL_TEMP
     enddo
     enddo
 
@@ -3262,42 +3624,59 @@ contains
   end subroutine MKINIT_landcouple
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( ocean variables )
+  !> Make initial state ( horizontally uniform + ocean variables )
   subroutine MKINIT_oceancouple
-    use scale_const, only: &
-      I_SW => CONST_I_SW, &
-      I_LW => CONST_I_LW
     implicit none
 
     ! Surface state
-    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =   0.0_RP ! surface relative humidity [%]
+    real(RP) :: SFC_PREC     =   0.0_RP ! surface precipitation rate [kg/m2/s]
+    real(RP) :: SFC_SWD      =   0.0_RP ! surface downwad short-wave radiation [W/m2]
+    real(RP) :: SFC_LWD      =   0.0_RP ! surface downwad long-wave radiation [W/m2]
+    ! Environment state
+    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
+    real(RP) :: ENV_TLAPS    =   0.0_RP ! Lapse rate of THETA [K/m]
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =   0.0_RP ! relative humidity of environment [%]
     ! ocean state
-    real(RP) :: OCN_TEMP             ! water temperature [K]
+    real(RP) :: OCN_TEMP                ! water temperature [K]
     ! coupler state
-    real(RP) :: CPL_TEMP             ! sea surface temperature [K]
-    real(RP) :: CPL_ALBW_SW = 0.0_RP ! sea surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBW_LW = 0.0_RP ! sea surface albedo for LW [0-1]
-    real(RP) :: CPL_Z0W     = 0.0_RP ! sea surface roughness length [m]
+    real(RP) :: CPL_TEMP                ! sea surface temperature [K]
+    real(RP) :: CPL_ALBW     =   0.0_RP ! sea surface albedo [0-1]
+    real(RP) :: CPL_Z0W      =   0.0_RP ! sea surface roughness length [m]
 
     NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       SFC_RH,       &
        SFC_PREC,     &
        SFC_SWD,      &
        SFC_LWD,      &
+       ENV_THETA,    &
+       ENV_TLAPS,    &
+       ENV_U,        &
+       ENV_V,        &
+       ENV_RH,       &
        OCN_TEMP,     &
        CPL_TEMP,     &
-       CPL_ALBW_SW,  &
-       CPL_ALBW_LW,  &
+       CPL_ALBW,     &
        CPL_Z0W
 
+    real(RP) :: pott_prof(KA)
+
     integer :: ierr
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OceanCouple]/Categ[MKINIT]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Horiz_UNIFORM]/Categ[MKINIT]'
 
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+    ENV_THETA = THETAstd
     OCN_TEMP  = THETAstd
     CPL_TEMP  = THETAstd
 
@@ -3313,20 +3692,110 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
 
+    if ( ENV_THETA < 0.0_RP ) then ! use isa profile
+       call PROFILE_isa( pott_prof(:), & ! [OUT]
+                         SFC_THETA,    & ! [IN]
+                         SFC_PRES      ) ! [IN]
+    else
+       do k = KS, KE
+          pott_prof(k) = ENV_THETA + ENV_TLAPS * CZ(k)
+       enddo
+    endif
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = pott_prof(k)
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+       qc_sfc(1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          qv(k,i,j) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+          qc(k,i,j) = 0.0_RP
+       enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(1,i,j) = SFC_THETA
+
+       do k = KS, KE
+          pott(k,i,j) = pott_prof(k)
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j)      = ENV_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j)      = ENV_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMZ(k,i,j)      = 0.0_RP
+       RHOT(k,i,j)      = pott(k,i,j) * DENS(k,i,j)
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+    enddo
+    enddo
+    enddo
+
     ! make ocean variables
     do j = JS, JE
     do i = IS, IE
-       PREC (i,j)      = SFC_PREC
-       SWD  (i,j)      = SFC_SWD
-       LWD  (i,j)      = SFC_LWD
+       TW  (i,j) = OCN_TEMP
 
-       TW   (i,j)      = OCN_TEMP
+       PREC(i,j) = SFC_PREC
+       SWD (i,j) = SFC_SWD
+       LWD (i,j) = SFC_LWD
 
-       SST  (i,j)      = CPL_TEMP
-       SkinT(i,j)      = CPL_TEMP
-       ALBW (i,j,I_SW) = CPL_ALBW_SW
-       ALBW (i,j,I_LW) = CPL_ALBW_LW
-       Z0W  (i,j)      = CPL_Z0W
+       SST  (i,j) = CPL_TEMP
+       SkinT(i,j) = CPL_TEMP
+       ALBW (i,j) = CPL_ALBW
+       Z0W  (i,j) = CPL_Z0W
     enddo
     enddo
 
