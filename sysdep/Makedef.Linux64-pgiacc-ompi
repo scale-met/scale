@@ -44,8 +44,8 @@ LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I$(NETCDF3)/include
-NETCDF_LIBS    ?= -L$(NETCDF3)/lib -lnetcdff -lnetcdf
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
 LAPACK_LIBS    ?=

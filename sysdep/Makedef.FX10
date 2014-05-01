@@ -43,8 +43,8 @@ FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,paral
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
-CFLAGS_DEBUG = -O0 -Qt $(PERF_MONIT)
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
 
 CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
