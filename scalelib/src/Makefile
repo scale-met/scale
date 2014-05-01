@@ -161,7 +161,7 @@ distclean: clean
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
 
-depend:
+dependency:
 	../tools/makedepend .
 
 
@@ -200,7 +200,7 @@ $(BUILD_DIR)/%.o : %.c
 
 $(BUILD_DIR)/scale_rdma.o : scale_rdma.c
 
-.PHONY : clean distclean allclean depend modules
+.PHONY : clean distclean allclean depend modules dependency
 
 
 -include depend
