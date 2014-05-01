@@ -660,8 +660,6 @@ contains
        RANDOM_V,     &
        RANDOM_RH
 
-    real(RP) :: pott_prof(KA)
-
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1641,15 +1639,15 @@ contains
     integer, parameter :: EXP_klim = 100
     integer            :: EXP_kmax
 
-    real(RP) :: SFC_THETA          ! surface potential temperature [K]
-    real(RP) :: SFC_PRES           ! surface pressure [hPa]
-    real(RP) :: SFC_QV             ! surface watervapor [g/kg]
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [hPa]
+    real(RP) :: SFC_QV               ! surface watervapor [g/kg]
 
-    real(RP) :: EXP_z   (EXP_klim) ! height      [m]
-    real(RP) :: EXP_pott(EXP_klim) ! potential temperature [K]
-    real(RP) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
-    real(RP) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
-    real(RP) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
+    real(RP) :: EXP_z   (EXP_klim+1) ! height      [m]
+    real(RP) :: EXP_pott(EXP_klim+1) ! potential temperature [K]
+    real(RP) :: EXP_qv  (EXP_klim+1) ! water vapor [g/kg]
+    real(RP) :: EXP_u   (EXP_klim+1) ! velocity u  [m/s]
+    real(RP) :: EXP_v   (EXP_klim+1) ! velocity v  [m/s]
 
     real(RP) :: fact1, fact2
 
@@ -2542,7 +2540,7 @@ contains
 !   real(RP) :: ZT  = 900.0_RP ! domain top
     real(RP) :: CONST_U = 0.0_RP
     real(RP) :: CONST_V = 0.0_RP
-    real(RP) :: PRES_ZB = 93060_RP
+    real(RP) :: PRES_ZB = 93060.0_RP
     real(RP) :: PERTURB_AMP  = 0.0_RP
     integer  :: RANDOM_LIMIT = 5
     integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
@@ -2560,7 +2558,6 @@ contains
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
     real(RP) :: pi2
-    real(RP) :: sint
 
     integer :: ierr
     integer :: k, i, j, iq
