@@ -46,7 +46,7 @@ else
   scale_rdma :=
 endif
 
-OBJS = $(mod_rdma)	\
+OBJS = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
@@ -194,9 +194,9 @@ $(BUILD_DIR)/scale_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
-$(BUILD_DIR)/scale_rdma.o : scale_rdma.c scale_rdma.h
+$(BUILD_DIR)/scale_rdma.o : scale_rdma.c
 
 .PHONY : clean distclean allclean depend modules
 

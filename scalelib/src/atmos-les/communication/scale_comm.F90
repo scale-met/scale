@@ -41,8 +41,9 @@ module scale_comm
   public :: COMM_vars8
   public :: COMM_wait
 #ifdef _USE_RDMA
-  public :: COMM_set_rdma_variable
-  public :: COMM_rdma_vars
+  public :: COMM_rdma_register_variable
+  public :: COMM_rdma_varsall
+  public :: COMM_rdma_varsall8
   public :: COMM_rdma_vars8
 #endif
   public :: COMM_horizontal_mean
@@ -75,6 +76,9 @@ module scale_comm
   !++ Private parameters & variables
   !
   integer,  private :: COMM_vsize_max                    !< # limit of communication variables at once
+#ifdef _USE_RDMA
+  integer,  private, save :: COMM_vsize_max_rdma               !< # limit of communication variables at once
+#endif
 
   logical,  private :: COMM_IsAllPeriodic                !< periodic boundary condition?
   integer,  private :: COMM_world                        !< communication world ID
@@ -196,20 +200,22 @@ contains
     COMM_world = MPI_COMM_WORLD
 
 #ifdef _USE_RDMA
-    call rdma_setup(COMM_vsize_max,  &
-                    IA,              &
-                    JA,              &
-                    KA,              &
-                    IHALO,           &
-                    JHALO,           &
-                    IS,              &
-                    IE,              &
-                    JS,              &
-                    JE,              &
-                    PRC_NEXT(PRC_W), &
-                    PRC_NEXT(PRC_N), &
-                    PRC_NEXT(PRC_E), &
-                    PRC_NEXT(PRC_S)  )
+    COMM_vsize_max_rdma = 2 * max( 5 + QA + 25, 20 )
+
+    call rdma_setup( COMM_vsize_max_rdma, &
+                     IA,                  &
+                     JA,                  &
+                     KA,                  &
+                     IHALO,               &
+                     JHALO,               &
+                     IS,                  &
+                     IE,                  &
+                     JS,                  &
+                     JE,                  &
+                     PRC_next(PRC_W),     &
+                     PRC_next(PRC_N),     &
+                     PRC_next(PRC_E),     &
+                     PRC_next(PRC_S)      )
 #endif
 
     return
@@ -1804,7 +1810,7 @@ contains
 #ifdef _USE_RDMA
   !-----------------------------------------------------------------------------
   !> Register variables on the memory for direct memory access (RDMA)
-  subroutine COMM_set_rdma_variable(var, vid)
+  subroutine COMM_rdma_register_variable(var, vid)
     implicit none
 
     real(RP), intent(in) :: var(:,:,:) !< variable for register
@@ -1813,39 +1819,217 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** set RDMA ID:', vid-1
 
-    call set_rdma_variable(var, vid-1);
+    call set_rdma_variable(var,vid-1)
 
     return
   end subroutine
 
   !-----------------------------------------------------------------------------
   !> Communicate halo value with 4 directions (RDMA)
-  subroutine COMM_rdma_vars(vid, num)
+  subroutine COMM_rdma_varsall(vid, num)
     implicit none
 
     integer, intent(in) :: vid !< variable ID
     integer, intent(in) :: num !< number of variables from vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM RDMA')
-    call rdma_put(vid-1, num)
-    call PROF_rapend  ('COMM RDMA')
+    call TIME_rapstart('COMM RDMA')
+    call rdma_put(vid-1,num)
+    call TIME_rapend  ('COMM RDMA')
 
     return
-  end subroutine COMM_rdma_vars
+  end subroutine COMM_rdma_varsall
 
   !-----------------------------------------------------------------------------
   !> Communicate halo value with 8 directions (RDMA)
-  subroutine COMM_rdma_vars8(vid, num)
+  subroutine COMM_rdma_varsall8(vid, num)
     implicit none
 
     integer, intent(in) :: vid !< variable ID
     integer, intent(in) :: num !< number of variables from vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM RDMA')
-    call rdma_put8(vid-1, num)
-    call PROF_rapend  ('COMM RDMA')
+    call TIME_rapstart('COMM RDMA')
+    call rdma_put8(vid-1,num)
+    call TIME_rapend  ('COMM RDMA')
+
+    return
+  end subroutine COMM_rdma_varsall8
+
+  !-----------------------------------------------------------------------------
+  !> Communicate halo value with 8 directions (RDMA)
+  subroutine COMM_rdma_vars8( var, vid )
+    use mod_process, only: &
+       PRC_next, &
+       PRC_W,    &
+       PRC_N,    &
+       PRC_E,    &
+       PRC_S
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:,:)
+    integer,  intent(in)    :: vid !< variable ID
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    call TIME_rapstart('COMM RDMA')
+
+    call rdma_put8(vid-1,1)
+
+    if ( .NOT. COMM_IsAllPeriodic ) then ! non-periodic condition
+
+       if ( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+          !--- copy inner data to HALO(North)
+          do j = JE+1, JE+JHALO
+          do i = IS, IE
+             var(:,i,j) = var(:,i,JE)
+          enddo
+          enddo
+       endif
+
+       if ( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+          !--- copy inner data to HALO(South)
+          do j = JS-JHALO, JS-1
+          do i = IS, IE
+             var(:,i,j) = var(:,i,JS)
+          enddo
+          enddo
+       endif
+
+       if ( PRC_next(PRC_E) == MPI_PROC_NULL ) then
+          !--- copy inner data to HALO(East)
+          do j = JS, JE
+          do i = IE+1, IE+IHALO
+             var(:,i,j) = var(:,IE,j)
+          enddo
+          enddo
+       endif
+
+       if ( PRC_next(PRC_W) == MPI_PROC_NULL ) then
+          !--- copy inner data to HALO(West)
+          do j = JS, JE
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,IS,j)
+          enddo
+          enddo
+       endif
+
+       !--- copy inner data to HALO(NorthWest)
+       if (       PRC_next(PRC_N) == MPI_PROC_NULL &
+            .AND. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+
+          do j = JE+1, JE+JHALO
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,IS,JE)
+          enddo
+          enddo
+
+       elseif( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+
+          do j = JE+1, JE+JHALO
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,i,JE)
+          enddo
+          enddo
+
+       elseif( PRC_next(PRC_W) == MPI_PROC_NULL ) then
+
+          do j = JE+1, JE+JHALO
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,IS,j)
+          enddo
+          enddo
+
+       endif
+
+       !--- copy inner data to HALO(SouthWest)
+       if (       PRC_next(PRC_S) == MPI_PROC_NULL &
+            .AND. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+
+          do j = JS-IHALO, JS-1
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,IS,JS)
+          enddo
+          enddo
+
+       elseif( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+
+          do j = JS-IHALO, JS-1
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,i,JS)
+          enddo
+          enddo
+
+       elseif( PRC_next(PRC_W) == MPI_PROC_NULL ) then
+
+          do j = JS-IHALO, JS-1
+          do i = IS-IHALO, IS-1
+             var(:,i,j) = var(:,IS,j)
+          enddo
+          enddo
+
+       endif
+
+       !--- copy inner data to HALO(NorthEast)
+       if (       PRC_next(PRC_N) == MPI_PROC_NULL &
+            .AND. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+
+           do j = JE+1, JE+JHALO
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,IE,JE)
+           enddo
+           enddo
+
+       elseif( PRC_next(PRC_N) == MPI_PROC_NULL ) then
+
+           do j = JE+1, JE+JHALO
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,i,JE)
+           enddo
+           enddo
+
+       elseif( PRC_next(PRC_E) == MPI_PROC_NULL ) then
+
+           do j = JE+1, JE+JHALO
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,IE,j)
+           enddo
+           enddo
+
+       endif
+
+       !--- copy inner data to HALO(SouthEast)
+       if (       PRC_next(PRC_S) == MPI_PROC_NULL &
+            .AND. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+
+           do j = JS-IHALO, JS-1
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,IE,JS)
+           enddo
+           enddo
+
+       elseif( PRC_next(PRC_S) == MPI_PROC_NULL ) then
+
+           do j = JS-IHALO, JS-1
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,i,JS)
+           enddo
+           enddo
+
+       elseif( PRC_next(PRC_E) == MPI_PROC_NULL ) then
+
+           do j = JS-IHALO, JS-1
+           do i = IE+1, IE+IHALO
+              var(:,i,j) = var(:,IE,j)
+           enddo
+           enddo
+
+       endif
+
+    endif
+
+    call TIME_rapend  ('COMM RDMA')
 
     return
   end subroutine COMM_rdma_vars8
