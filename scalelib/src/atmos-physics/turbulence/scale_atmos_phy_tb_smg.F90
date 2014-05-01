@@ -45,7 +45,7 @@ module scale_atmos_phy_tb_smg
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
-     UNDEF => CONST_UNDEF, &
+     UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
   !-----------------------------------------------------------------------------
@@ -86,13 +86,14 @@ module scale_atmos_phy_tb_smg
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
 
   logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .false.
+
   !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_smg_setup( &
-       TYPE_TB, &
-       CDZ, CDX, CDY,   &
-       CZ )
+       TYPE_TB,       &
+       CDZ, CDX, CDY, &
+       CZ             )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -102,7 +103,7 @@ contains
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: CZ(KA)
+    real(RP), intent(in) :: CZ (KA)
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
@@ -124,14 +125,11 @@ contains
        call PRC_MPIstop
     endif
 
-    allocate( nu_fact(KA,IA,JA) )
-
-
     ATMOS_PHY_TB_SMG_Cs = Cs
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -145,6 +143,8 @@ contains
     RPrN     = 1.0_RP / PrN
     RRiC     = 1.0_RP / RiC
     PrNovRiC = (1- PrN) * RRiC
+
+    allocate( nu_fact(KA,IA,JA) )
 
 #ifdef DEBUG
     nu_fact (:,:,:) = UNDEF
@@ -160,14 +160,16 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
+    return
   end subroutine ATMOS_PHY_TB_smg_setup
 
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_smg( &
-       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
-       tke, nu, Ri, Pr,                             & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       GSQRT, J13G, J23G, J33G                      ) ! (in)
+       qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
+       qflx_sgs_rhot, qflx_sgs_qtrc,                &
+       tke, nu, Ri, Pr,                             &
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
+       GSQRT, J13G, J23G, J33G                      )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
@@ -221,24 +223,20 @@ contains
     real(RP) :: VELX_YZ(KA,IA,JA)
     real(RP) :: VELY_C (KA,IA,JA)
     real(RP) :: VELY_ZX(KA,IA,JA)
-    real(RP) :: POTT(KA,IA,JA)
+    real(RP) :: POTT   (KA,IA,JA)
 
     ! deformation rate tensor
-    ! (cell center)
-    real(RP) :: S33_C(KA,IA,JA)
-    real(RP) :: S11_C(KA,IA,JA)
-    real(RP) :: S22_C(KA,IA,JA)
-    real(RP) :: S31_C(KA,IA,JA)
-    real(RP) :: S12_C(KA,IA,JA)
-    real(RP) :: S23_C(KA,IA,JA)
-    ! (z edge or x-y plane)
-    real(RP) :: S12_Z(KA,IA,JA)
-    ! (x edge or y-z plane)
-    real(RP) :: S23_X(KA,IA,JA)
-    ! (y edge or z-x plane)
-    real(RP) :: S31_Y(KA,IA,JA)
+    real(RP) :: S33_C (KA,IA,JA) ! (cell center)
+    real(RP) :: S11_C (KA,IA,JA)
+    real(RP) :: S22_C (KA,IA,JA)
+    real(RP) :: S31_C (KA,IA,JA)
+    real(RP) :: S12_C (KA,IA,JA)
+    real(RP) :: S23_C (KA,IA,JA)
+    real(RP) :: S12_Z (KA,IA,JA) ! (z edge or x-y plane)
+    real(RP) :: S23_X (KA,IA,JA) ! (x edge or y-z plane)
+    real(RP) :: S31_Y (KA,IA,JA) ! (y edge or z-x plane)
 
-    real(RP) :: S2(KA,IA,JA)     ! |S|^2
+    real(RP) :: S2    (KA,IA,JA) ! |S|^2
     real(RP) :: WORK_V(KA,IA,JA) ! work space (vertex)
     real(RP) :: WORK_Z(KA,IA,JA) !            (z edge or x-y plane)
     real(RP) :: WORK_X(KA,IA,JA) !            (x edge or y-z plane)
@@ -251,41 +249,40 @@ contains
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
+    qflx_sgs_momz(:,:,:,:)   = UNDEF
+    qflx_sgs_momx(:,:,:,:)   = UNDEF
+    qflx_sgs_momy(:,:,:,:)   = UNDEF
+    qflx_sgs_rhot(:,:,:,:)   = UNDEF
+    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
+
+    nu (:,:,:) = UNDEF
+    tke(:,:,:) = UNDEF
+    Pr (:,:,:) = UNDEF
+    Ri (:,:,:) = UNDEF
+
     VELZ_C (:,:,:) = UNDEF
     VELZ_XY(:,:,:) = UNDEF
     VELX_C (:,:,:) = UNDEF
     VELX_YZ(:,:,:) = UNDEF
     VELY_C (:,:,:) = UNDEF
     VELY_ZX(:,:,:) = UNDEF
-    POTT(:,:,:) = UNDEF
+    POTT   (:,:,:) = UNDEF
 
-    S33_C(:,:,:) = UNDEF
-    S11_C(:,:,:) = UNDEF
-    S22_C(:,:,:) = UNDEF
-    S31_C(:,:,:) = UNDEF
-    S12_C(:,:,:) = UNDEF
-    S23_C(:,:,:) = UNDEF
-    S12_Z(:,:,:) = UNDEF
-    S23_X(:,:,:) = UNDEF
-    S31_Y(:,:,:) = UNDEF
+    S33_C (:,:,:) = UNDEF
+    S11_C (:,:,:) = UNDEF
+    S22_C (:,:,:) = UNDEF
+    S31_C (:,:,:) = UNDEF
+    S12_C (:,:,:) = UNDEF
+    S23_C (:,:,:) = UNDEF
+    S12_Z (:,:,:) = UNDEF
+    S23_X (:,:,:) = UNDEF
+    S31_Y (:,:,:) = UNDEF
 
+    S2    (:,:,:) = UNDEF
     WORK_V(:,:,:) = UNDEF
     WORK_Z(:,:,:) = UNDEF
     WORK_X(:,:,:) = UNDEF
     WORK_Y(:,:,:) = UNDEF
-
-    S2(:,:,:) = UNDEF
-
-    nu(:,:,:) = UNDEF
-    tke (:,:,:) = UNDEF
-    Pr  (:,:,:) = UNDEF
-    Ri  (:,:,:) = UNDEF
-
-    qflx_sgs_momz(:,:,:,:) = UNDEF
-    qflx_sgs_momx(:,:,:,:) = UNDEF
-    qflx_sgs_momy(:,:,:,:) = UNDEF
-    qflx_sgs_rhot(:,:,:,:) = UNDEF
-    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
 #endif
 
 
@@ -894,7 +891,7 @@ contains
        call CHECK( __LINE__, RFDX(i) )
 #endif
           S12_Z(k,i,j) = S12_Z(k,i,j) &
-               + 0.5_RP * ( & 
+               + 0.5_RP * ( &
                      ( VELY_ZX(k,i+1,j) - VELY_ZX(k  ,i,j) ) * RFDX(i) &
                    + ( WORK_V (k,i  ,j) - WORK_V (k-1,i,j) ) * RCDZ(k) * J13G(k,i,j,I_UVZ) / GSQRT(k,i,j,I_UVZ) &
                )

@@ -20,6 +20,7 @@
 !! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
 !! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
 !! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
+!! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -129,6 +130,8 @@ module mod_mkinit
   integer, public, parameter :: I_LANDCOUPLE    = 16
   integer, public, parameter :: I_OCEANCOUPLE   = 17
 
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS    = 18
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -155,6 +158,8 @@ module mod_mkinit
   private :: MKINIT_interporation
 
   private :: MKINIT_landcouple
+
+  private :: MKINIT_DYCOMS2_RF02_DNS
 
   !-----------------------------------------------------------------------------
   !
@@ -279,6 +284,8 @@ contains
        MKINIT_TYPE = I_LANDCOUPLE
     case('OCEANCOUPLE')
        MKINIT_TYPE = I_OCEANCOUPLE
+    case('DYCOMS2_RF02_DNS')
+       MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -389,6 +396,8 @@ contains
       case(I_OCEANCOUPLE)
          call MKINIT_planestate
          call MKINIT_oceancouple
+      case(I_DYCOMS2_RF02_DNS)
+         call MKINIT_DYCOMS2_RF02_DNS
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -2523,6 +2532,265 @@ contains
 
     return
   end subroutine MKINIT_DYCOMS2_RF02
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state for stratocumulus
+  subroutine MKINIT_DYCOMS2_RF02_DNS
+    implicit none
+
+    real(RP) :: ZB  = 750.0_RP ! domain bottom
+!   real(RP) :: ZT  = 900.0_RP ! domain top
+    real(RP) :: CONST_U = 0.0_RP
+    real(RP) :: CONST_V = 0.0_RP
+    real(RP) :: PRES_ZB = 93060_RP
+    real(RP) :: PERTURB_AMP  = 0.0_RP
+    integer  :: RANDOM_LIMIT = 5
+    integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
+                                 ! 1 -> perturbation for PT
+                                 ! 2 -> perturbation for u,v,w
+
+    NAMELIST / PARAM_MKINIT_RF02_DNS / &
+       ZB, CONST_U, CONST_V,PRES_ZB,&
+       PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
+
+    real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
+
+    real(RP) :: qall ! QV+QC
+    real(RP) :: fact
+    real(RP) :: pi2
+    real(RP) :: sint
+
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DYCOMS2_RF02_DNS)]/Categ[MKINIT]'
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_RF02_DNS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_RF02_DNS)
+
+    ! calc in dry condition
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+
+       pres_sfc(1,i,j) = PRES_ZB
+!      pott_sfc(1,i,j) = 288.3_RP      ! [K]
+!      qv_sfc  (1,i,j) = 9.45E-3_RP
+!      qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+
+          velx(k,i,j) = CONST_U
+          vely(k,i,j) = CONST_V
+
+!         if ( ZB+CZ(k) < 775.0_RP ) then ! below initial cloud top
+          if ( ZB+CZ(k) <= 795.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 288.3_RP ! [K]
+             qall = 9.45E-3_RP ! [kg/kg]
+! necessary?
+!         else if ( CZ(k) <= 815.0_RP ) then
+!            sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
+!            potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
+!                  ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP
+!            qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
+!                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+          else
+             potl(k,i,j) = 295.0_RP + ( zb+CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-(zb+CZ(k)))/500.0_RP ) ) ! [kg/kg]
+          endif
+
+          if( ZB+CZ(k) < 400.0_RP ) then
+             qc(k,i,j) = 0.0_RP
+          elseif( ZB+CZ(k) <= 795.0_RP ) then
+             fact = ( (zb+CZ(k))-400.0_RP ) / ( 795.0_RP-400.0_RP )
+             qc(k,i,j) = 0.8E-3_RP * fact
+          else
+             qc(k,i,j) = 0.0_RP
+          endif
+          qv(k,i,j) = qall - qc(k,i,j)
+
+!if(i==is.and.j==js)write(*,*)'chkk',k,cz(k)+zb,qc(k,i,j),qv(k,i,j)
+       enddo
+    enddo
+    enddo
+
+!write(*,*)'chk3',ks,ke
+    ! extrapolation (temtative)
+    pott_sfc(1,:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
+    qv_sfc  (1,:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
+    qc_sfc  (1,:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               potl    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+!write(*,*)'chk4.1'
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk5'
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+!write(*,*)'chk6'
+    ! fill KHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+    enddo
+    enddo
+    ! fill IHALO & JHALO
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+!write(*,*)'chk7'
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
+     else
+       MOMZ(k,i,j) = 0.0_RP
+     endif
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk8'
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     else
+       MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+     endif
+    enddo
+    enddo
+    enddo
+!write(*,*)'chk9'
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     else
+       MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+     endif
+    enddo
+    enddo
+    enddo
+!write(*,*)'chk10'
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+     if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+                   * DENS(k,i,j)
+     else
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+     endif
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk11'
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
+    enddo
+
+!write(*,*)'chk12'
+    if ( flg_bin ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          !--- Super saturated air at initial
+          QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
+
+          !--- for aerosol
+          do iq = QQA+1, QA
+             QTRC(k,i,j,iq) = gan(iq-QQA) / DENS(k,i,j)
+          enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = qv(k,i,j)
+          QTRC(k,i,j,I_QC) = qc(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       if ( I_NC > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( qc(k,i,j) > 0.0_RP ) then
+                QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
+             endif
+          enddo
+          enddo
+          enddo
+       endif
+    endif
+
+    return
+  end subroutine MKINIT_DYCOMS2_RF02_DNS
 
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison

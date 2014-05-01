@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2013-12-05 (S.Nishizawa) [new]
+!! @li      2014-03-30 (A.Noda)      [mod] add DNS
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -84,7 +85,7 @@ module scale_atmos_phy_tb
 contains
 
   subroutine ATMOS_PHY_TB_setup( &
-       TB_TYPE, &
+       TB_TYPE,       &
        CDZ, CDX, CDY, &
        CZ             )
     use scale_process, only: &
@@ -99,6 +100,9 @@ contains
     use scale_atmos_phy_tb_smg, only: &
        ATMOS_PHY_TB_smg_setup, &
        ATMOS_PHY_TB_smg
+    use scale_atmos_phy_tb_dns, only: &
+       ATMOS_PHY_TB_dns_setup, &
+       ATMOS_PHY_TB_dns
     use scale_atmos_phy_tb_dummy, only: &
        ATMOS_PHY_TB_dummy_setup, &
        ATMOS_PHY_TB_dummy
@@ -115,12 +119,24 @@ contains
 
     select case( TB_TYPE )
     case ( 'SMAGORINSKY' )
+
        call ATMOS_PHY_tb_smg_setup( &
-            TB_TYPE, &
+            TB_TYPE,       &
             CDZ, CDX, CDY, &
-            CZ )
+            CZ             )
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
+
+    case ( 'DNS' )
+
+       call ATMOS_PHY_tb_dns_setup( &
+            TB_TYPE,       &
+            CDZ, CDX, CDY, &
+            CZ             )
+       ATMOS_PHY_TB => ATMOS_PHY_TB_dns
+
     end select
+
+    return
   end subroutine ATMOS_PHY_TB_setup
 
 end module scale_atmos_phy_tb
