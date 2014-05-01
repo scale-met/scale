@@ -1859,7 +1859,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Communicate halo value with 8 directions (RDMA)
   subroutine COMM_rdma_vars8( var, vid )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
