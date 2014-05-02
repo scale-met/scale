@@ -435,7 +435,6 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_CPL_RESTART_UNIT = TIME_DURATION_UNIT
        endif
-
     endif
 
     !--- calculate time
