@@ -225,6 +225,23 @@ contains
     allocate( time_sst_in(mstep_sst) )
     allocate( sst_in(mstep_sst) )
 
+    USER_SF_U_minM = U_minM 
+    USER_SF_U_minH = U_minH
+    USER_SF_U_minE = U_minE
+    USER_SF_CM_min = CM_min
+    USER_SF_CH_min = CH_min
+    USER_SF_CE_min = CE_min
+    USER_SF_Z00    = Z00
+    USER_SF_Z0R    = Z0R
+    USER_SF_Z0S    = Z0S
+    USER_SF_Zt0    = Zt0
+    USER_SF_ZtR    = ZtR
+    USER_SF_ZtS    = ZtS
+    USER_SF_Ze0    = Ze0
+    USER_SF_ZeR    = ZeR
+    USER_SF_ZeS    = ZeS
+    USER_SF_ThS    = ThS
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
@@ -833,6 +850,7 @@ contains
           Cm = a2 * Fm
           Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
           Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
+!write(*,*) Ch,Psih
 
           ! Gas constant
           qdry = 1.0_RP
