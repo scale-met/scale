@@ -219,9 +219,9 @@ contains
     use scale_grid_real, only: &
        REAL_LAT
     use scale_atmos_phy_rd_profile, only: &
-       RD_PROFILE_setup            => ATMOS_PHY_RD_PROFILE_setup,            &
-       RD_PROFILE_setup_zgrid      => ATMOS_PHY_RD_PROFILE_setup_zgrid,      &
-       RD_PROFILE_read_climatorogy => ATMOS_PHY_RD_PROFILE_read_climatology
+       RD_PROFILE_setup       => ATMOS_PHY_RD_PROFILE_setup,       &
+       RD_PROFILE_setup_zgrid => ATMOS_PHY_RD_PROFILE_setup_zgrid, &
+       RD_PROFILE_read        => ATMOS_PHY_RD_PROFILE_read
     implicit none
 
     character(len=H_SHORT), intent(in) :: RD_TYPE
@@ -327,24 +327,24 @@ contains
                                  RD_zh(:), RD_z(:)  ) ! [INOUT]
 
     !--- read climatological profile
-    call RD_PROFILE_read_climatorogy( RD_KMAX,                & ! [IN]
-                                      ngas,                   & ! [IN]
-                                      ncfc,                   & ! [IN]
-                                      RD_naero,               & ! [IN]
-                                      REAL_LAT       (IS,JS), & ! [IN], tentative treatment
-                                      TIME_NOWDATE   (:),     & ! [IN]
-                                      RD_zh          (:),     & ! [IN]
-                                      RD_z           (:),     & ! [IN]
-                                      RD_rhodz       (:),     & ! [INOUT]
-                                      RD_pres        (:),     & ! [INOUT]
-                                      RD_presh       (:),     & ! [INOUT]
-                                      RD_temp        (:),     & ! [INOUT]
-                                      RD_temph       (:),     & ! [INOUT]
-                                      RD_gas         (:,:),   & ! [INOUT]
-                                      RD_cfc         (:,:),   & ! [INOUT]
-                                      RD_aerosol_conc(:,:),   & ! [INOUT]
-                                      RD_aerosol_radi(:,:),   & ! [INOUT]
-                                      RD_cldfrac     (:)      ) ! [INOUT]
+    call RD_PROFILE_read( RD_KMAX,                & ! [IN]
+                          ngas,                   & ! [IN]
+                          ncfc,                   & ! [IN]
+                          RD_naero,               & ! [IN]
+                          REAL_LAT       (IS,JS), & ! [IN], tentative treatment
+                          TIME_NOWDATE   (:),     & ! [IN]
+                          RD_zh          (:),     & ! [IN]
+                          RD_z           (:),     & ! [IN]
+                          RD_rhodz       (:),     & ! [OUT]
+                          RD_pres        (:),     & ! [OUT]
+                          RD_presh       (:),     & ! [OUT]
+                          RD_temp        (:),     & ! [OUT]
+                          RD_temph       (:),     & ! [OUT]
+                          RD_gas         (:,:),   & ! [OUT]
+                          RD_cfc         (:,:),   & ! [OUT]
+                          RD_aerosol_conc(:,:),   & ! [OUT]
+                          RD_aerosol_radi(:,:),   & ! [OUT]
+                          RD_cldfrac     (:)      ) ! [OUT]
 
     return
   end subroutine ATMOS_PHY_RD_mstrnx_setup

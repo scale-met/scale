@@ -32,8 +32,8 @@ module scale_atmos_phy_rd_profile
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_PROFILE_setup
-  public :: ATMOS_PHY_RD_PROFILE_read_climatology
   public :: ATMOS_PHY_RD_PROFILE_setup_zgrid
+  public :: ATMOS_PHY_RD_PROFILE_read
 
   !-----------------------------------------------------------------------------
   !
@@ -46,18 +46,22 @@ module scale_atmos_phy_rd_profile
   private :: PROFILE_setup_CIRA86
   private :: PROFILE_setup_MIPAS2001
   private :: readfile_MIPAS2001
+  private :: PROFILE_read_climatology
   private :: PROFILE_read_CIRA86
   private :: PROFILE_read_MIPAS2001
+  private :: PROFILE_read_user
   private :: PROFILE_interp
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  real(RP),                  private, save :: PROFILE_TOA = 100.0_RP            !< top of atmosphere [km]
-  character(len=H_LONG), private, save :: PROFILE_CIRA86_fname  = "cira.nc" !< file (CIRA86,netCDF format)
-  character(len=H_LONG), private, save :: PROFILE_MIPAS2001_dir = "."       !< dir  (MIPAS2001,ASCII format)
-  logical,                   private, save :: debug = .false.                   !< debug mode?
+  real(RP),              private, save :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
+  logical,               private, save :: PROFILE_use_climatology = .true.    !< use climatology?
+  character(len=H_LONG), private, save :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
+  character(len=H_LONG), private, save :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
+  character(len=H_LONG), private, save :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
+  logical,               private, save :: debug                   = .false.   !< debug mode?
 
   integer,  private,              save :: CIRA_ntime
   integer,  private,              save :: CIRA_nplev
@@ -125,26 +129,32 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP)                  :: ATMOS_PHY_RD_PROFILE_TOA
+    real(RP)              :: ATMOS_PHY_RD_PROFILE_TOA
+    logical               :: ATMOS_PHY_RD_PROFILE_use_climatology
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
+    character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
     namelist / PARAM_ATMOS_PHY_RD_PROFILE / &
        ATMOS_PHY_RD_PROFILE_TOA,                   &
+       ATMOS_PHY_RD_PROFILE_use_climatology,       &
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
+       ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
        debug
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD PROFILE]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
 
     ATMOS_PHY_RD_PROFILE_TOA                   = PROFILE_TOA
+    ATMOS_PHY_RD_PROFILE_use_climatology       = PROFILE_use_climatology
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
+    ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = PROFILE_USER_fname
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -158,13 +168,19 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
-   PROFILE_TOA           = ATMOS_PHY_RD_PROFILE_TOA
-   PROFILE_CIRA86_fname  = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
-   PROFILE_MIPAS2001_dir = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
+    PROFILE_TOA             = ATMOS_PHY_RD_PROFILE_TOA
+    PROFILE_use_climatology = ATMOS_PHY_RD_PROFILE_use_climatology
+    PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
+    PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
+    PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
-    call PROFILE_setup_CIRA86
+    if ( PROFILE_use_climatology ) then
 
-    call PROFILE_setup_MIPAS2001
+       call PROFILE_setup_CIRA86
+
+       call PROFILE_setup_MIPAS2001
+
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_PROFILE_setup
@@ -501,8 +517,8 @@ contains
   end subroutine readfile_MIPAS2001
 
   !-----------------------------------------------------------------------------
-  !> Setup constants
-  subroutine ATMOS_PHY_RD_PROFILE_read_climatology( &
+  !> Read profile for radiation
+  subroutine ATMOS_PHY_RD_PROFILE_read( &
        kmax,         &
        ngas,         &
        ncfc,         &
@@ -547,33 +563,46 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] generate climatological profile'
+    if ( PROFILE_use_climatology ) then
 
-    call PROFILE_read_CIRA86( kmax,        & ! [IN]
-                              lat,         & ! [IN]
-                              now_date(:), & ! [IN]
-                              zh      (:), & ! [IN]
-                              z       (:), & ! [IN]
-                              presh   (:), & ! [OUT]
-                              temph   (:), & ! [OUT]
-                              pres    (:), & ! [OUT]
-                              temp    (:)  ) ! [OUT]
+       call PROFILE_read_climatology( kmax,     & ! [IN]
+                                      ngas,     & ! [IN]
+                                      ncfc,     & ! [IN]
+                                      naero,    & ! [IN]
+                                      lat,      & ! [IN], tentative treatment
+                                      now_date, & ! [IN]
+                                      zh,       & ! [IN]
+                                      z,        & ! [IN]
+                                      pres,     & ! [OUT]
+                                      presh,    & ! [OUT]
+                                      temp,     & ! [OUT]
+                                      temph,    & ! [OUT]
+                                      gas,      & ! [OUT]
+                                      cfc       ) ! [OUT]
+
+    else
+
+       call PROFILE_read_user( kmax,  & ! [IN]
+                               ngas,  & ! [IN]
+                               ncfc,  & ! [IN]
+                               naero, & ! [IN]
+                               zh,    & ! [IN]
+                               z,     & ! [IN]
+                               pres,  & ! [OUT]
+                               presh, & ! [OUT]
+                               temp,  & ! [OUT]
+                               temph, & ! [OUT]
+                               gas,   & ! [OUT]
+                               cfc    ) ! [OUT]
+
+    endif
+
 
     do k = 1, kmax
        rhodz(k) = ( presh(k+1) - presh(k) ) * 100.0_RP / GRAV
     enddo
 
-    call PROFILE_read_MIPAS2001( kmax,          & ! [IN]
-                                 ngas,          & ! [IN]
-                                 ncfc,          & ! [IN]
-                                 lat,           & ! [IN]
-                                 now_date(:),   & ! [IN]
-                                 z       (:),   & ! [IN]
-                                 gas     (:,:), & ! [OUT]
-                                 cfc     (:,:)  ) ! [OUT]
-
     ! no cloud/aerosol
-    gas(:,1)          = 0.0_RP
     aerosol_conc(:,:) = 0.0_RP
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
@@ -628,7 +657,69 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_RD_PROFILE_read_climatology
+  end subroutine ATMOS_PHY_RD_PROFILE_read
+
+  !-----------------------------------------------------------------------------
+  !> Read climatological profile from file
+  subroutine PROFILE_read_climatology( &
+       kmax,         &
+       ngas,         &
+       ncfc,         &
+       naero,        &
+       lat,          &
+       now_date,     &
+       zh,           &
+       z,            &
+       pres,         &
+       presh,        &
+       temp,         &
+       temph,        &
+       gas,          &
+       cfc           )
+    implicit none
+
+    integer,  intent(in)  :: kmax             !< Number of layer
+    integer,  intent(in)  :: ngas             !< Number of gas species
+    integer,  intent(in)  :: ncfc             !< Number of CFCs
+    integer,  intent(in)  :: naero            !< Number of aerosol(particle) categories
+    real(RP), intent(in)  :: lat              !< latitude [rad]
+    integer,  intent(in)  :: now_date(6)      !< date
+    real(RP), intent(in)  :: zh   (kmax+1)    !< altitude    at the interface [km]
+    real(RP), intent(in)  :: z    (kmax)      !< altitude    at the center    [km]
+    real(RP), intent(out) :: pres (kmax)      !< pressure    at the center    [hPa]
+    real(RP), intent(out) :: presh(kmax+1)    !< pressure    at the interface [hPa]
+    real(RP), intent(out) :: temp (kmax)      !< temperature at the center    [K]
+    real(RP), intent(out) :: temph(kmax+1)    !< temperature at the interface [K]
+    real(RP), intent(out) :: gas  (kmax,ngas) !< gas species   volume mixing ratio [ppmv]
+    real(RP), intent(out) :: cfc  (kmax,ncfc) !< CFCs          volume mixing ratio [ppmv]
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] generate climatological profile'
+
+    call PROFILE_read_CIRA86( kmax,        & ! [IN]
+                              lat,         & ! [IN]
+                              now_date(:), & ! [IN]
+                              zh      (:), & ! [IN]
+                              z       (:), & ! [IN]
+                              presh   (:), & ! [OUT]
+                              temph   (:), & ! [OUT]
+                              pres    (:), & ! [OUT]
+                              temp    (:)  ) ! [OUT]
+
+    call PROFILE_read_MIPAS2001( kmax,          & ! [IN]
+                                 ngas,          & ! [IN]
+                                 ncfc,          & ! [IN]
+                                 lat,           & ! [IN]
+                                 now_date(:),   & ! [IN]
+                                 z       (:),   & ! [IN]
+                                 gas     (:,:), & ! [OUT]
+                                 cfc     (:,:)  ) ! [OUT]
+
+    ! no vapor
+    gas(:,1) = 0.0_RP
+
+    return
+  end subroutine PROFILE_read_climatology
 
   !-----------------------------------------------------------------------------
   !> interpolate CIRA86 climatological data (temperature, pressure)
@@ -1072,6 +1163,154 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_PROFILE_setup_zgrid
+
+  !-----------------------------------------------------------------------------
+  !> Read user-defined profile from file
+  subroutine PROFILE_read_user( &
+       kmax,         &
+       ngas,         &
+       ncfc,         &
+       naero,        &
+       zh,           &
+       z,            &
+       pres,         &
+       presh,        &
+       temp,         &
+       temph,        &
+       gas,          &
+       cfc           )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       Mdry => CONST_Mdry, &
+       Mvap => CONST_Mvap, &
+       PPM  => CONST_PPM
+    implicit none
+
+    integer,  intent(in)  :: kmax             !< Number of layer
+    integer,  intent(in)  :: ngas             !< Number of gas species
+    integer,  intent(in)  :: ncfc             !< Number of CFCs
+    integer,  intent(in)  :: naero            !< Number of aerosol(particle) categories
+    real(RP), intent(in)  :: zh   (kmax+1)    !< altitude    at the interface [km]
+    real(RP), intent(in)  :: z    (kmax)      !< altitude    at the center    [km]
+    real(RP), intent(out) :: pres (kmax)      !< pressure    at the center    [hPa]
+    real(RP), intent(out) :: presh(kmax+1)    !< pressure    at the interface [hPa]
+    real(RP), intent(out) :: temp (kmax)      !< temperature at the center    [K]
+    real(RP), intent(out) :: temph(kmax+1)    !< temperature at the interface [K]
+    real(RP), intent(out) :: gas  (kmax,ngas) !< gas species   volume mixing ratio [ppmv]
+    real(RP), intent(out) :: cfc  (kmax,ncfc) !< CFCs          volume mixing ratio [ppmv]
+
+    integer, parameter :: USER_klim = 500
+    integer  :: USER_kmax
+    real(RP) :: USER_z   (USER_klim)
+    real(RP) :: USER_pres(USER_klim)
+    real(RP) :: USER_temp(USER_klim)
+    real(RP) :: USER_qv  (USER_klim)
+    real(RP) :: USER_o3  (USER_klim)
+
+    real(RP), allocatable :: work_z(:)
+    real(RP), allocatable :: work  (:)
+
+    real(RP) :: plog (kmax)
+    real(RP) :: plogh(kmax+1)
+
+    character(len=H_LONG) :: dummy
+
+    integer  :: fid, ierr
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] user-defined profile'
+
+    gas(:,:) = 0.0_RP
+    cfc(:,:) = 0.0_RP
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(PROFILE_USER_fname)
+
+    fid = IO_get_available_fid()
+    open( unit   = fid,                      &
+          file   = trim(PROFILE_USER_fname), &
+          form   = 'formatted',              &
+          status = 'old',                    &
+          iostat = ierr                      )
+
+       if ( ierr /= 0 ) then !--- missing
+          if( IO_L ) write(IO_FID_LOG,*) '*** File not found. check!'
+          call PRC_MPIstop
+       endif
+
+       read(fid,*) dummy
+
+       do k = 1, USER_klim
+          read(fid,*,iostat=ierr) USER_z(k), USER_pres(k), USER_temp(k), USER_qv(k), USER_o3(k)
+          if ( ierr /= 0 ) exit
+       enddo
+       USER_kmax = k - 1
+    close(fid)
+
+    allocate( work_z(USER_kmax) )
+    allocate( work  (USER_kmax) )
+
+    do k = 1, USER_kmax
+       work_z(k) = USER_z(k) / 1000.0_RP ! [m->km]
+       work  (k) = log( USER_pres(k)/100.0_RP ) ! log[Pa->hPA]
+    enddo
+
+    ! pressure interpolation
+    call PROFILE_interp( USER_kmax, & ! [IN]
+                         work_z(:), & ! [IN]
+                         work  (:), & ! [IN]
+                         kmax+1,    & ! [IN]
+                         zh(:),     & ! [IN]
+                         plogh(:)   ) ! [OUT]
+
+    presh(:) = exp( plogh(:) )
+
+    call PROFILE_interp( kmax+1, zh(:), plogh(:), kmax, z(:), plog(:) )
+    pres (:) = exp( plog (:) )
+
+    do k = 1, USER_kmax
+       work(k) = USER_temp(k)
+    enddo
+
+    call PROFILE_interp( USER_kmax, & ! [IN]
+                         work_z(:), & ! [IN]
+                         work  (:), & ! [IN]
+                         kmax,      & ! [IN]
+                         z(:),      & ! [IN]
+                         temp(:)    ) ! [OUT]
+
+    call PROFILE_interp( USER_kmax, & ! [IN]
+                         work_z(:), & ! [IN]
+                         work  (:), & ! [IN]
+                         kmax+1,    & ! [IN]
+                         zh(:),     & ! [IN]
+                         temph(:)   ) ! [OUT]
+
+    do k = 1, USER_kmax
+       work(k) = USER_qv(k) / Mvap * Mdry / PPM ! [kg/kg->PPM]
+    enddo
+
+    call PROFILE_interp( USER_kmax, & ! [IN]
+                         work_z(:), & ! [IN]
+                         work  (:), & ! [IN]
+                         kmax,      & ! [IN]
+                         z(:),      & ! [IN]
+                         gas(:,1)   ) ! [OUT]
+
+    do k = 1, USER_kmax
+       work(k) = USER_o3(k) / 48.0_RP * Mdry / PPM ! [kg/kg->PPM]
+    enddo
+
+    call PROFILE_interp( USER_kmax, & ! [IN]
+                         work_z(:), & ! [IN]
+                         work  (:), & ! [IN]
+                         kmax,      & ! [IN]
+                         z(:),      & ! [IN]
+                         gas(:,3)   ) ! [OUT]
+
+    return
+  end subroutine PROFILE_read_user
 
 end module scale_atmos_phy_rd_profile
 !-------------------------------------------------------------------------------
