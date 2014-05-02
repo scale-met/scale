@@ -850,7 +850,6 @@ contains
           Cm = a2 * Fm
           Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
           Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
-!write(*,*) Ch,Psih
 
           ! Gas constant
           qdry = 1.0_RP
