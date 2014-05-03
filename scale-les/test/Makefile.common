@@ -7,11 +7,15 @@
 include $(TOPDIR)/Mkinclude
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
-BUILD_DIR  := $(PWD)/.libs
-INDEX_DIR  := $(PWD)
+BUILD_DIR := $(PWD)/.libs
+INDEX_DIR := $(PWD)
 
-BINDIR = $(PWD)
-SRCDIR = $(SCALELESDIR)/src
+BINDIR     = $(PWD)
+SRCDIR     = $(SCALELESDIR)/src
+
+BINNAME    = scale-les
+INITNAME   = scale-les_init
+PPNAME     = scale-les_pp
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@

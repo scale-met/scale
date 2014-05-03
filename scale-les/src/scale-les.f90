@@ -160,7 +160,7 @@ program scaleles
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/veritical grid index
+  ! setup horisontal/vertical grid index
   call GRID_INDEX_setup
   call LAND_GRID_INDEX_setup
 

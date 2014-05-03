@@ -10,9 +10,6 @@ ifeq ($(origin MODDIR), undefined)
    MODDIR = $(TOPDIR)/include
 endif
 
-INITNAME    = scale-les_init
-BINNAME     = scale-les
-
 ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif

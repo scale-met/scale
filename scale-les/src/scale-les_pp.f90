@@ -1,18 +1,14 @@
 !-------------------------------------------------------------------------------
-!> Program SCALE-LES init
+!> Program SCALE-LES pp
 !!
 !! @par Description
-!!          This program makes initial data for ideal test cases
+!!          This program is driver of preprocess tools
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
-!! @li      2012-06-13 (Y.Sato)     [mod] add HBINW option
-!!
 !<
 !-------------------------------------------------------------------------------
-program scaleles_init
+program scaleles_pp
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -83,12 +79,9 @@ program scaleles_init
      OCEAN_vars_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
-  use mod_mktopo, only: &
-     MKTOPO_setup, &
-     MKTOPO
-  use mod_mkinit, only: &
-     MKINIT_setup, &
-     MKINIT
+  use mod_convert, only: &
+     CONVERT_setup, &
+     CONVERT
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -177,11 +170,8 @@ program scaleles_init
   ! setup variable container: coupler
   call CPL_vars_setup
 
-  ! setup mktopo
-  call MKTOPO_setup
-
-  ! setup mkinit
-  call MKINIT_setup
+  ! setup preprocess converter
+!  call CONVERT_setup
 
   call PROF_rapend('Initialize')
 
@@ -190,17 +180,9 @@ program scaleles_init
   call PROF_rapstart('Main')
 
   ! execute mktopo
-  call PROF_rapstart('MkTopo')
-  call MKTOPO
-  call PROF_rapend  ('MkTopo')
-
-  ! re-setup
-  call REAL_update_Z
-
-  ! execute mkinit
-  call PROF_rapstart('MkInit')
-  call MKINIT
-  call PROF_rapend  ('MkInit')
+  call PROF_rapstart('Convert')
+!  call CONVERT
+  call PROF_rapend  ('Convert')
 
   call PROF_rapend('Main')
 
@@ -215,4 +197,4 @@ program scaleles_init
 
   stop
   !=============================================================================
-end program scaleles_init
+end program scaleles_pp
