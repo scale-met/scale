@@ -9,6 +9,7 @@
 !! @par History
 !! @li      2013-12-05 (S.Nishizawa)  [new]
 !!          2014-04-11 (A.Noda)       [mod] add the grayzone module
+!! @li      2014-05-01 (Y.Sato)       [mod] move grayzone module to mod_user
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
@@ -96,9 +97,6 @@ contains
     use scale_atmos_phy_sf_louis, only: &
        ATMOS_PHY_SF_louis_setup, &
        ATMOS_PHY_SF_louis
-    use scale_atmos_phy_sf_grayzone, only: &
-       ATMOS_PHY_SF_grayzone_setup, &
-       ATMOS_PHY_SF_grayzone
 #endif
     implicit none
 
@@ -112,9 +110,6 @@ contains
     case ( 'LOUIS')
        call ATMOS_PHY_SF_louis_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_louis
-    case ( 'GRAYZONE')
-       call ATMOS_PHY_SF_grayzone_setup( SF_TYPE )
-       ATMOS_PHY_SF => ATMOS_PHY_SF_grayzone
     end select
 
     return

@@ -16,27 +16,24 @@ module mod_user
   !
   !++ used modules
   !
-  use mod_stdio, only: &
+  use scale_stdio, only: &
      IO_FID_LOG, &
      IO_L
-  use mod_precision
-  use mod_prof
-  use mod_tracer
-  use mod_grid_index
-  use mod_stdio, only: &
-     IO_get_available_fid
-
-! use dc_types, only: &
-!    DP
-    use mod_grid, only: &
+  use scale_precision
+  use scale_prof
+  use scale_tracer
+  use scale_grid_index
+  use scale_stdio, only: &
+       IO_get_available_fid
+  use scale_grid, only: &
        CX => GRID_CX, &
        CY => GRID_CY, &
        CZ => GRID_CZ
-    use mod_time, only: &
+  use scale_time, only: &
        TIME_NOWSTEP,&
        TIME_NOWSEC,&
        TIME_DTSEC
-    use mod_cpl_vars, only: &
+  use mod_cpl_vars, only: &
        SST
 
   !-----------------------------------------------------------------------------
@@ -53,10 +50,6 @@ module mod_user
   !
   !++ included parameters
   !
-! include "inc_precision.h"
-! include "inc_index.h"
-! include 'inc_tracer.h'
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -67,8 +60,6 @@ module mod_user
   real(DP),save,allocatable :: time_atm_in(:)
   real(DP),save,allocatable :: time_sst_in(:)
   real(DP),save,allocatable :: sst_in(:)
-! real(DP),allocatable :: u_geos_t(:)
-! real(DP),allocatable :: v_geos_t(:)
   real(RP), private, allocatable :: MOMZ_LS(:,:)
   real(RP), private, allocatable :: MOMZ_LS_DZ(:,:)
   real(RP), private, allocatable :: QV_LS(:,:)
@@ -84,6 +75,52 @@ module mod_user
   !
   !++ Private parameters & variables
   !
+  ! for surface flux
+  real(RP), private, parameter :: Cm0   = 1.0E-3_RP  ! bulk coef. for U*
+  real(RP), private, parameter :: visck = 1.5E-5_RP  ! kinematic viscosity
+
+  ! parameters
+  real(RP), private, save :: Z00 = 0.0_RP      ! base
+  real(RP), private, save :: Z0R = 0.018_RP    ! rough factor
+  real(RP), private, save :: Z0S = 0.11_RP     ! smooth factor
+  real(RP), private, save :: Zt0 = 1.4E-5_RP
+  real(RP), private, save :: ZtR = 0.0_RP
+  real(RP), private, save :: ZtS = 0.4_RP
+  real(RP), private, save :: Ze0 = 1.3E-4_RP
+  real(RP), private, save :: ZeR = 0.0_RP
+  real(RP), private, save :: ZeS = 0.62_RP
+  real(RP), private, save :: ThS = 300.0_RP
+
+  ! limiter
+  real(RP), private, parameter :: Ustar_min =  1.0E-3_RP ! minimum limit of U*
+
+  real(RP), private, parameter :: Z0_min =    1.0E-5_RP ! minimum roughness length of u,v,w
+  real(RP), private, parameter :: Zt_min =    1.0E-5_RP ! T
+  real(RP), private, parameter :: Ze_min =    1.0E-5_RP ! q
+
+  real(RP), private, save      :: Cm_min  =   1.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, save      :: Ch_min  =   1.0E-5_RP ! T
+  real(RP), private, save      :: Ce_min  =   1.0E-5_RP ! q
+  real(RP), private, parameter :: Cm_max  =   2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private, parameter :: Ch_max  =   1.0_RP    !                       T
+  real(RP), private, parameter :: Ce_max  =   1.0_RP    !                       q
+
+  real(RP), private, save      :: U_minM  =    0.0_RP   ! minimum U_abs for u,v,w
+  real(RP), private, save      :: U_minH  =    0.0_RP   !                   T
+  real(RP), private, save      :: U_minE  =    0.0_RP   !                   q
+  real(RP), private, parameter :: U_maxM  =  100.0_RP   ! maximum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxH  =  100.0_RP   !                   T
+  real(RP), private, parameter :: U_maxE  =  100.0_RP   !                   q
+
+  integer :: mstep=30
+  real(RP), save, allocatable :: time_in(:)
+  real(RP), save, allocatable :: lhf_in(:)
+  real(RP), save, allocatable :: shf_in(:)
+  logical, save :: GIVEN_HEAT_FLUX=.false.
+
+  logical,  private, save :: CNST_RAD=.false. ! add constant radiative cooling
+
+  !---
   real(DP), private, save :: TIME0
   real(RP), private, save :: pi2
   integer,  private, save :: Ktop
@@ -98,8 +135,9 @@ module mod_user
   character(100), private, save :: inbasedir = './'
   character(100), private, save :: fdata_name_atm = 'large_scale_w_force.txt'
   character(100), private, save :: fdata_name_sst = 'sst_force.txt'
-  logical, public, save :: CNST_RAD=.false. ! add constant radiative cooling
+  character(100), private, save :: fdata_name_sf = 'srf_flux_force.txt'
   integer, private, save :: fid_data
+  integer, private, save :: fid_data_sf
   logical, private, save :: first_in   =.true.
 
   integer, private, save :: mstep_atm=15
@@ -116,25 +154,63 @@ contains
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine USER_setup
-    use mod_stdio, only: &
+    use scale_stdio, only:  &
        IO_FID_CONF
-    use mod_process, only: &
-       PRC_MPIstop,&
+    use scale_process, only:&
+       PRC_MPIstop,         &
        PRC_MPIfinish
-    use mod_grid, only: &
+    use scale_grid, only:   &
        CZ => GRID_CZ
     implicit none
 
+
+!    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_PHY_SF
+
+    real(RP) :: USER_SF_U_minM ! minimum U_abs for u,v,w
+    real(RP) :: USER_SF_U_minH !                   T
+    real(RP) :: USER_SF_U_minE !                   q
+    real(RP) :: USER_SF_CM_min ! minimum bulk coef. of u,v,w
+    real(RP) :: USER_SF_CH_min !                       T
+    real(RP) :: USER_SF_CE_min !                       q
+    real(RP) :: USER_SF_Z00
+    real(RP) :: USER_SF_Z0R
+    real(RP) :: USER_SF_Z0S
+    real(RP) :: USER_SF_Zt0
+    real(RP) :: USER_SF_ZtR
+    real(RP) :: USER_SF_ZtS
+    real(RP) :: USER_SF_Ze0
+    real(RP) :: USER_SF_ZeR
+    real(RP) :: USER_SF_ZeS
+    real(RP) :: USER_SF_ThS
+
     namelist / PARAM_USER / &
-       USER_do, &
-         inbasedir,     &
-         fdata_name_atm,&
-         fdata_name_sst,&
-         mstep_atm,         &
-         mstep_sst,         &
-         CNST_RAD,&
-         CNST_SST,&
-       USER_LS_FLG
+       USER_do,             &
+       inbasedir,           &
+       fdata_name_atm,      &
+       fdata_name_sst,      &
+       fdata_name_sf,       &
+       mstep_atm,           &
+       mstep_sst,           &
+       CNST_RAD,            &
+       CNST_SST,            &
+       USER_LS_FLG,         &
+       !--- for surface flux
+       USER_SF_U_minM,      &
+       USER_SF_U_minH,      &
+       USER_SF_U_minE,      & 
+       USER_SF_CM_min,      & 
+       USER_SF_CH_min,      & 
+       USER_SF_CE_min,      & 
+       USER_SF_Z00,         &
+       USER_SF_Z0R,         &
+       USER_SF_Z0S,         &
+       USER_SF_Zt0,         &
+       USER_SF_ZtR,         &
+       USER_SF_ZtS,         &
+       USER_SF_Ze0,         &
+       USER_SF_ZeR,         &
+       USER_SF_ZeS,         &
+       USER_SF_ThS
 
     integer :: ierr, t
     !---------------------------------------------------------------------------
@@ -142,19 +218,37 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
 
-if(io_l)write(IO_FID_LOG,*)'debug stop'  ! ok
+! if(io_l)write(IO_FID_LOG,*)'debug stop'  ! ok
 !!call PRC_MPIstop
 !call PRC_MPIfinish
 
     allocate( time_sst_in(mstep_sst) )
     allocate( sst_in(mstep_sst) )
 
+    USER_SF_U_minM = U_minM 
+    USER_SF_U_minH = U_minH
+    USER_SF_U_minE = U_minE
+    USER_SF_CM_min = CM_min
+    USER_SF_CH_min = CH_min
+    USER_SF_CE_min = CE_min
+    USER_SF_Z00    = Z00
+    USER_SF_Z0R    = Z0R
+    USER_SF_Z0S    = Z0S
+    USER_SF_Zt0    = Zt0
+    USER_SF_ZtR    = ZtR
+    USER_SF_ZtS    = ZtS
+    USER_SF_Ze0    = Ze0
+    USER_SF_ZeR    = ZeR
+    USER_SF_ZeS    = ZeS
+    USER_SF_ThS    = ThS
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
 
-if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
-!call PRC_MPIfinish
+    !if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
+    !call PRC_MPIfinish
+
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -163,6 +257,26 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
     !
+    U_minM = USER_SF_U_minM
+    U_minH = USER_SF_U_minH
+    U_minE = USER_SF_U_minE
+    CM_min = USER_SF_CM_min
+    CH_min = USER_SF_CH_min
+    CE_min = USER_SF_CE_min
+    Z00    = USER_SF_Z00
+    Z0R    = USER_SF_Z0R
+    Z0S    = USER_SF_Z0S
+    Zt0    = USER_SF_Zt0
+    ZtR    = USER_SF_ZtR
+    ZtS    = USER_SF_ZtS
+    Ze0    = USER_SF_Ze0
+    ZeR    = USER_SF_ZeR
+    ZeS    = USER_SF_ZeS
+    ThS    = USER_SF_ThS
+    !
+    allocate( time_in(mstep) )
+    allocate( lhf_in(mstep) )
+    allocate( shf_in(mstep) )
     !
     fid_data = IO_get_available_fid()
     fdata_name_sst=trim(inbasedir)//'/'//trim(fdata_name_sst)
@@ -182,6 +296,24 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
       if(IO_L) write(io_fid_log,*) t,time_nowsec,time_sst_in(t),sst_in(t)
     enddo
     close(fid_data)
+    !
+    if( GIVEN_HEAT_FLUX )then
+      fid_data_sf = IO_get_available_fid()
+      fdata_name_sf=trim(inbasedir)//'/'//trim(fdata_name_sf)
+      open(fid_data_sf, file=trim(fdata_name_sf), status='old',iostat=ierr)
+      if(ierr /= 0) then
+        write(IO_FID_LOG,*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
+        write(IO_FID_LOG,*) 'Cannot open the data file for forcing.'
+        write(IO_FID_LOG,*) trim(fdata_name_sf)
+        write(IO_FID_LOG,*) 'STOP!!'
+        call PRC_MPIstop
+      endif
+      read(fid_data_sf,*)
+      do t=1, mstep
+        read(fid_data_sf,*) time_in(t), lhf_in(t), shf_in(t)
+      enddo
+      close(fid_data_sf)
+    endif
 
     do t=1, mstep_sst-1
         if( time_nowsec>=time_sst_in(t) )then
@@ -190,10 +322,6 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
           exit
         endif
     enddo
-!   SST(:,:)=CNST_SST ! initialization
-
-!dbg
-!    call PRC_MPIstop
 
     return
   end subroutine USER_setup
@@ -202,17 +330,13 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
   !> Step
   !-----------------------------------------------------------------------------
   subroutine USER_step
-    use mod_stdio, only: &
+    use scale_stdio, only: &
      IO_get_available_fid, &
      IO_FID_LOG,  &
      IO_L
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_vars, only: &
-       DENS, &
-       RHOT, &
-       QTRC
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     use mod_atmos_vars, only: &
@@ -222,16 +346,37 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
          MOMY,    &
          RHOT,    &
          QTRC,    &
+         DENS_tp, &
          MOMZ_tp, &
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
          QTRC_tp
-    use mod_grid, only: &
+    use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
-    use mod_atmos_thermodyn, only: &
+    use scale_time, only: &
+        do_phy_sf => TIME_DOATMOS_PHY_SF, &
+        dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
+        TIME_NOWSEC
+    use scale_const, only: &
+        GRAV   => CONST_GRAV,   &
+        KARMAN => CONST_KARMAN, &
+        Rdry   => CONST_Rdry,   &
+        Rvap   => CONST_Rvap,   &
+        RovCP  => CONST_RovCP,  &
+        CPovCV => CONST_CPovCV, &
+        CPdry  => CONST_CPdry,  &
+        P00    => CONST_PRE00,  &
+        T00    => CONST_TEM00,  &
+        CPd    => CONST_CPdry,  &
+        LH0    => CONST_LH0,    &
+        EPSvap => CONST_EPSvap, &
+        PSAT0  => CONST_PSAT0
+    use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_history, only: &
+         HIST_in
 
     implicit none
 
@@ -257,6 +402,42 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
 ! 18000.0,   21600.0,   25200.0,   28800.0,   32400.0,&
 ! 36000.0,   39600.0,   43200.0,   46800.0,   50400.0)
 
+    !--- for Surface flux
+    real(RP) :: FB  = 9.4_RP  ! Louis factor b (bM)
+    real(RP) :: FBS = 4.7_RP  ! Louis factor b' (bM/eM = dE/eE = 9.4/2.0)
+    real(RP) :: FDM = 7.4_RP  ! Louis factor d of u (dM)
+    real(RP) :: FDH = 5.3_RP  ! Louis factor d of T, q (dH)
+    real(RP) :: FR  = 0.74_RP ! turbulent Prandtl number (Businger et al. 1971)
+
+    ! work
+    real(RP) :: SFLX_MOMZ(IA,JA)
+    real(RP) :: SFLX_MOMX(IA,JA)
+    real(RP) :: SFLX_MOMY(IA,JA)
+    real(RP) :: SFLX_POTT(IA,JA)
+    real(RP) :: SFLX_QV  (IA,JA)
+    real(RP) :: SHFLX(IA,JA)
+    real(RP) :: LHFLX(IA,JA)
+
+    real(RP) :: THETA(IA,JA)
+
+    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Ustar ! friction velocity [m/s]
+
+    real(RP) :: Z0   ! roughness length [m] (momentum,heat,tracer)
+    real(RP) :: Zt
+    real(RP) :: Ze
+
+    real(RP) :: Cm   ! bulk coefficient (momentum,heat,tracer)
+    real(RP) :: Ch
+    real(RP) :: Ce
+
+    real(RP) :: a2
+    real(RP) :: Fm, Fh, Psih
+    real(RP) :: RiB
+    real(RP) :: qdry, Rtot, pres_1d, temp_1d
+    real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
+    real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
+    integer :: iw 
 
     !---------------------------------------------------------------------------
 
@@ -605,8 +786,271 @@ if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
     endif
     endif
 
+    if( do_phy_sf ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface paramaterization of GRAYZONE'
+!       do t=1, mstep_sst-1
+!write(*,*)'chksstuser0',t,time_nowsec,time_sst_in(t),sst_in(t)
+!        if( time_nowsec>=time_sst_in(t) )then
+!          sst_loc(:,:)=(
+!          (time_sst_in(t+1)-time_nowsec)*sst_in(t)+(time_nowsec-time_sst_in(t))*sst_in(t+1)
+!          )&
+!                   /(time_sst_in(t+1)-time_sst_in(t))
+!          exit
+!        endif
+!      enddo
+!write(*,*)'chksstuser1',maxval(sst_loc(:,:)), minval(sst_loc(:,:))
+!
+!      if( time_nowsec>time_sst_in(mstep_sst) )then
+!        write(*,*) 'Integration time exceeds the maximum forcing data
+!        length',time_nowsec,time_sst_in(mstep_sst)
+!        call PRC_MPIstop
+!      endif
+
+       ! rho*theta -> potential temperature at cell centor
+       do j = JS, JE
+       do i = IS, IE
+          THETA(i,j) = RHOT(KS,i,j) / DENS(KS,i,j)
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+
+          ! at cell center
+
+          !--- absolute velocity
+          Uabs = sqrt( &
+                 ( MOMZ(KS,i,j)                  )**2 &
+               + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
+               + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
+               ) / DENS(KS,i,j) * 0.5_RP
+
+          !--- friction velocity at u, v, and w points
+!         Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+          !--- roughness lengths at u, v, and w points
+!         Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+!         Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
+!         Ze = max( Ze0 + ZeR/GRAV * Ustar*Ustar + ZeS*visck / Ustar, Ze_min )
+          Z0 = 6.6E-4_RP
+          Zt = 3.7E-6_RP
+          Ze = 3.7E-6_RP
+
+          call get_RiB( &
+               RiB, Fm, Fh, Psih,                  & ! (out)
+               THETA(i,j), SST(i,j), Uabs**2,      & ! (in)
+!              THETA(i,j), SST_loc(i,j), Uabs**2,  & ! (in)
+               CZ(KS), Z0, Zt,                     & ! (in)
+               KARMAN, FB, FBS, FDM, FDH,          & ! (in)
+               ThS, GRAV                           ) ! (in)
+
+          !--- surface exchange coefficients
+          a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+          Cm = a2 * Fm
+          Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
+          Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
+
+          ! Gas constant
+          qdry = 1.0_RP
+          do iw = QQS, QQE
+             qdry = qdry - QTRC(KS,i,j,iw)
+          enddo
+          Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+
+          !--- saturation at surface
+          pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
+          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+!          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
+!          )
+!          qv_evap   = EPSvap * pres_evap / ( pres_1d - pres_evap )
+          qv_evap   = EPSvap * pres_evap / P00
+
+          ! flux
+          SFLX_MOMZ(i,j) = - min(max(Cm,Cm_min),Cm_max) * min(max(Uabs,U_minM),U_maxM) &
+                         * MOMZ(KS,i,j) * 0.5_RP
+          SFLX_POTT(i,j) =   min(max(Ch,Ch_min),Ch_max) * min(max(Uabs,U_minH),U_maxH) &
+                         * ( SST(i,j) * DENS(KS,i,j) - RHOT(KS,i,j) )
+!           * ( SST_loc(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+          SFLX_QV  (i,j) =   min(max(Ce,Ce_min),Ce_max) * min(max(Uabs,U_minE),U_maxE) &
+                         * DENS(KS,i,j) * ( qv_evap - QTRC(KS,i,j,I_QV) )
+
+          ! at (u, y, layer)
+          Uabs = sqrt( &
+               ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i+1,j) ) )**2 &
+               + ( 2.0_RP *   MOMX(KS,i,j) )**2 &
+               + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
+               ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+!         Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+!         Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+!         Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
+          Z0 = 6.6E-4_RP
+          Zt = 3.7E-6_RP
+
+          call get_RiB( &
+               RiB, Fm, Fh, Psih,                    & ! (out)
+               ( THETA(i,j)+THETA(i+1,j) ) * 0.5_RP, & ! (in)
+               ( SST(i,j)+SST(i+1,j) ) * 0.5_RP,     & ! (in)
+!              ( SST_loc(i,j)+SST(i+1,j) ) * 0.5_RP, & ! (in)
+               Uabs**2,                              & ! (in)
+               CZ(KS), Z0, Zt,                       & ! (in)
+               KARMAN, FB, FBS, FDM, FDH,            & ! (in)
+               ThS, GRAV                             ) ! (in)
+
+          a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+          Cm = a2 * Fm
+
+          SFLX_MOMX(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
+                         * MOMX(KS,i,j)
+
+
+          ! at (x, v, layer)
+          Uabs = sqrt( &
+                 ( 0.5_RP * ( MOMZ(KS,i,j) + MOMZ(KS,i,j+1) ) )**2 &
+               + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
+               + ( 2.0_RP *   MOMY(KS,i,j) )**2 &
+               ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+!         Ustar = max ( sqrt ( Cm0 ) * Uabs , Ustar_min )
+
+!         Z0 = max( Z00 + Z0R/GRAV * Ustar*Ustar + Z0S*visck / Ustar, Z0_min )
+!         Zt = max( Zt0 + ZtR/GRAV * Ustar*Ustar + ZtS*visck / Ustar, Zt_min )
+          Z0 = 6.6E-4_RP
+          Zt = 3.7E-6_RP
+
+          call get_RiB( &
+               RiB, Fm, Fh, Psih,                       & ! (out)
+               ( THETA(i,j)+THETA(i,j+1) ) * 0.5_RP,    & ! (in)
+               ( SST(i,j)+SST(i,j+1) ) * 0.5_RP,        & ! (in)
+!              ( SST_loc(i,j)+SST_loc(i,j+1) ) * 0.5_RP,& ! (in)
+               Uabs**2,                                 & ! (in)
+               CZ(KS), Z0, Zt,                          & ! (in)
+               KARMAN, FB, FBS, FDM, FDH,               & ! (in)
+               ThS, GRAV                                ) ! (in)
+
+          a2 = ( KARMAN / log( CZ(KS)/Z0 ) )**2
+          Cm = a2 * Fm
+
+          SFLX_MOMY(i,j) = - min(max(Cm,Cm_min),Cm_min) * min(max(Uabs,U_minM),U_maxM) &
+                         * MOMY(KS,i,j)
+
+      enddo
+      enddo
+
+      if( GIVEN_HEAT_FLUX )then
+        do t=1, mstep-1
+          if( time_nowsec>time_in(t) )then
+            SFLX_POTT(:,:)=( (time_in(t+1)-time_nowsec)*shf_in(t)+(time_nowsec-time_in(t))*shf_in(t+1) )&
+                          /( time_in(t+1)-time_in(t) ) / CPd
+            SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
+                          /( time_in(t+1)-time_in(t ))/LH0
+          endif
+        enddo
+        if( time_nowsec>time_in(mstep) )then
+          write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_in(mstep)
+          call PRC_MPIstop
+        endif
+      endif
+
+!write(*,*)'chksst',dtsf,maxval(sst(1,:,:)), minval(sst(1,:,:))
+!     call HIST_in( SST_loc(:,:), 'SST','sst','K',dtsf)
+      call HIST_in( SST(:,:), 'SST2','sst','K',dtsf)
+      call HIST_in( SFLX_POTT(:,:)*CPd, 'SHF','shf','W/m2',dtsf)
+      call HIST_in( SFLX_QV(:,:)*LH0, 'LHF','lhf','W/m2',dtsf)
+!write(*,*)'chksst2'
+
+      !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+      do j = JS, JE
+      do i = IS, IE
+
+       SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+
+       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+            + ( SFLX_POTT(i,j) &
+            + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+              ) * RCDZ(KS)
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+             + SFLX_QV(i,j) * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+             + SFLX_MOMZ(i,j) * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+             + SFLX_MOMX(i,j) * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+             + SFLX_MOMY(i,j) * RCDZ(KS)
+       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+             + SFLX_QV(i,j) * RCDZ(KS)
+      enddo
+      enddo
+
+      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+
+    endif
+
     return
   end subroutine USER_step
+  !---------------------------------------------------------------------------------
+  subroutine get_RiB( &
+       RiB, Fm, Fh, Psih,    &
+       theta, theta_sfc, u2, &
+       Z, Z0, Zt,            &
+       K, FB, FBS, FDM, FDH, &
+       ThS, G                )
+    use scale_const, only: &
+       EPS    => CONST_EPS
+    real(RP), intent(out) :: RiB
+    real(RP), intent(out) :: Fm
+    real(RP), intent(out) :: Fh
+    real(RP), intent(out) :: Psih
+    real(RP), intent(in)  :: theta
+    real(RP), intent(in)  :: theta_sfc
+    real(RP), intent(in)  :: u2
+    real(RP), intent(in)  :: Z
+    real(RP), intent(in)  :: Z0
+    real(RP), intent(in)  :: Zt
+    real(RP), intent(in)  :: K
+    real(RP), intent(in)  :: FB
+    real(RP), intent(in)  :: FBS
+    real(RP), intent(in)  :: FDM
+    real(RP), intent(in)  :: FDH
+    real(RP), intent(in)  :: ThS
+    real(RP), intent(in)  :: G
 
+    real(RP) :: tmp
+
+    ! the first guess of RiB0 (= RiBt)
+    RiB = G/ThS * z * (  theta -  theta_sfc ) / ( u2+EPS )
+
+    ! Fm, Fh, Psi_h/R
+    if ( RiB >= 0 ) then
+       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
+       Fh = Fm
+    else
+       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
+       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
+       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
+    endif
+    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
+
+    ! the final estimate of RiB0
+    tmp = log( Z0/Zt )
+    RiB = RiB - RiB * tmp / ( tmp + Psih )
+
+    ! Fm, Fh, Psih/R
+    if ( RiB >= 0.0_RP ) then
+       Fm = 1.0_RP / ( 1.0_RP + FBS * Rib )**2
+       Fh = Fm
+    else
+       tmp = ( K / log( Z/Z0 ) )**2 * FB * sqrt( Z/Z0 * abs(RiB) )
+       Fm = 1.0_RP - FB * RiB / ( 1.0_RP + FDM * tmp )
+       Fh = 1.0_RP - FB * RiB / ( 1.0_RP + FDH * tmp )
+    endif
+    Psih = log( Z/Z0 ) * sqrt( Fm ) / Fh
+
+    return
+
+  end subroutine get_RiB
   !---------------------------------------------------------------------------------
 end module mod_user
