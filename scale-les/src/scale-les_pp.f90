@@ -79,7 +79,7 @@ program scaleles_pp
      OCEAN_vars_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
-  use mod_convert, only: &
+  use mod_cnvboundary, only: &
      CONVERT_setup, &
      CONVERT
   !-----------------------------------------------------------------------------
