@@ -46,7 +46,8 @@ NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?= -lacml
+MKLPATH        ?= /opt/intel/composerxe/mkl/lib/intel64
+LAPACK_LIBS    ?= -R$(MKLPATH) -L$(MKLPATH) -lmkl_intel_lp64 -lmkl_pgi_thread -lmkl_core
 
 ##### for frontend
 INSTALL = install
