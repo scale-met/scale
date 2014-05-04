@@ -180,11 +180,14 @@ endif
 distclean: clean
 	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a
 
+ifeq ($(SDM),-D_SDM)
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
-ifeq ($(SDM),-D_SDM)
-	rm -f $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	rm -f $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_tracer_sdm.F90
+	cp -f $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
+	cp -f $(SDMDIR)/scale_tracer_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_tracer_sdm.F90
+else
+clean:
+	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
 endif
 
 dependency:
