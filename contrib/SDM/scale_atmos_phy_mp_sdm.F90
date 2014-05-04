@@ -1211,7 +1211,7 @@ contains
          sdvz_fm(n) = 0.0_RP
        enddo
        do s = 1, sdnumasl_s2c
-            do n = 1, sdnum_s2c
+            do n = 1, sdfmnum_s2c
               sdasl_fm(n,s) = 0.0_RP
             enddo
        enddo
