@@ -16,11 +16,11 @@ module mod_atmos_phy_rd_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -51,9 +51,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_phy_rd, only: &
+    use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
     implicit none
 
@@ -75,20 +75,34 @@ contains
   !-----------------------------------------------------------------------------
   !> Radiation main
   subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
-    use mod_history, only: &
-       HIST_in
-    use mod_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_RD
-    use mod_grid, only: &
-       CZ => GRID_CZ, &
-       FZ => GRID_FZ, &
-       CDZ => GRID_CDZ, &
-       RCDZ => GRID_RCDZ
-    use mod_time, only: &
+    use scale_grid_real, only: &
+       REAL_CZ,  &
+       REAL_FZ,  &
+       REAL_LON, &
+       REAL_LAT
+    use scale_landuse, only: &
+       LANDUSE_frac_ocean
+    use scale_time, only: &
+       dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
-    use mod_grid_real, only: &
-       REAL_lon, &
-       REAL_lat
+    use scale_history, only: &
+       HIST_in
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
+       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
+       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
+       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    use scale_atmos_solarins, only: &
+       SOLARINS_insolation => ATMOS_SOLARINS_insolation
+    use scale_atmos_phy_rd, only: &
+       ATMOS_PHY_RD
+    use scale_atmos_phy_rd_common, only: &
+       RD_heating => ATMOS_PHY_RD_heating, &
+       I_SW, &
+       I_LW, &
+       I_dn, &
+       I_up
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &
        ATMOS_vars_total, &
@@ -103,21 +117,9 @@ contains
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
-       SkinT
-    use mod_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
-       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use mod_atmos_phy_rd, only: &
-       ATMOS_PHY_RD
-    use mod_atmos_phy_rd_common, only: &
-       RD_heating => ATMOS_PHY_RD_heating, &
-       I_SW, &
-       I_LW, &
-       I_dn, &
-       I_up
+       SkinT,                      &
+       ALBW,                       &
+       ALBG
     implicit none
 
     logical, intent(in) :: update_flag
@@ -129,59 +131,73 @@ contains
     real(RP) :: TEMP_t  (KA,IA,JA)
     real(RP) :: QDRY    (KA,IA,JA)
     real(RP) :: CVtot   (KA,IA,JA)
-    real(RP) :: temp    (KA,IA,JA)
-    real(RP) :: pres    (KA,IA,JA)
+    real(RP) :: TEMP    (KA,IA,JA)
+    real(RP) :: PRES    (KA,IA,JA)
 
     real(RP) :: flux_rad(KA,IA,JA,2,2)
     real(RP) :: flux_net(KA,IA,JA,2)
     real(RP) :: flux_up (KA,IA,JA,2)
     real(RP) :: flux_dn (KA,IA,JA,2)
+
     real(RP) :: flux_rad_top(IA,JA,2)
     real(RP) :: flux_rad_sfc(IA,JA,2)
 
     real(RP) :: solins  (IA,JA)
     real(RP) :: cosSZA  (IA,JA)
     real(RP) :: temp_sfc(IA,JA)
-
-    real(RP) :: param_sfc(5) !< surface parameter
+    real(RP) :: albedo_land(IA,JA,2)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       if( sw_AtmLnd .or. sw_AtmOcn ) then
-          temp_sfc(:,:) = SkinT(:,:)
+       if ( sw_AtmLnd .or. sw_AtmOcn ) then ! tentative
+          temp_sfc   (:,:) = SkinT(:,:)
        else
-          call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
-                                    pres(:,:,:),  & ! [OUT]
+          call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                                    PRES(:,:,:),  & ! [OUT]
                                     DENS(:,:,:),  & ! [IN]
                                     RHOT(:,:,:),  & ! [IN]
                                     QTRC(:,:,:,:) ) ! [IN]
-          temp_sfc(:,:) = temp(KS,:,:)
-       end if
 
-       ! surface parameter
-       param_sfc(1)   = 2.D0 ! land surface only, tentative
-       param_sfc(2:5) = 0.D0
+          temp_sfc(:,:) = TEMP(KS,:,:)
+       endif
 
-       call ATMOS_PHY_RD( &
-            flux_rad, flux_rad_top, & ! [out]
-            solins, cosSZA,         & ! [out]
-            DENS, RHOT, QTRC,       & ! [in]
-            temp_sfc, param_sfc,    & ! [in]
-            CZ, FZ, CDZ, RCDZ,      & ! [in]
-            REAL_lon, REAL_lat,     & ! [in]
-            TIME_NOWDATE            ) ! [in]
+       if ( sw_AtmLnd ) then ! tentative
+          albedo_land(:,:,I_SW) = ALBG(:,:,1)
+          albedo_land(:,:,I_LW) = ALBG(:,:,2)
+       elseif ( sw_AtmOcn ) then ! tentative
+          albedo_land(:,:,I_SW) = ALBW(:,:,1)
+          albedo_land(:,:,I_LW) = ALBW(:,:,2)
+       else
+          albedo_land(:,:,:) = 0.5_RP
+       endif
+
+       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
+                                 cosSZA  (:,:),  & ! [OUT]
+                                 REAL_LON(:,:),  & ! [IN]
+                                 REAL_LAT(:,:),  & ! [IN]
+                                 TIME_NOWDATE(:) ) ! [IN]
+
+       call ATMOS_PHY_RD( DENS, RHOT, QTRC,      & ! [IN]
+                          REAL_CZ, REAL_FZ,      & ! [IN]
+                          LANDUSE_frac_ocean,    & ! [IN]
+                          temp_sfc, albedo_land, & ! [IN]
+                          solins, cosSZA,        & ! [IN]
+                          flux_rad,              & ! [OUT]
+                          flux_rad_top           ) ! [OUT]
 
        call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
                             RHOT(:,:,:),  & ! [IN]
                             QTRC(:,:,:,:) ) ! [IN]
 
        ! apply radiative flux convergence -> heating rate
-       call RD_heating( RHOE_t  (:,:,:,:),  & ! [OUT]
-                        RHOE    (:,:,:),    & ! [INOUT]
-                        flux_rad(:,:,:,:,:) ) ! [IN]
+       call RD_heating( flux_rad(:,:,:,:,:),  & ! [IN]
+                        REAL_FZ (:,:,:),      & ! [IN]
+                        dt_RD,                & ! [IN]
+                        RHOE_t  (:,:,:,:),    & ! [OUT]
+                        RHOE    (:,:,:)       ) ! [INOUT]
 
        ! update rhot
        call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
@@ -191,85 +207,74 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          RHOT_t(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt
+          RHOT_t(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt_RD
        enddo
        enddo
        enddo
 
-       if( sw_AtmLnd .or. sw_AtmOcn ) then
+       if ( sw_AtmLnd .or. sw_AtmOcn ) then
           do j = JS, JE
           do i = IS, IE
              LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
              SWD(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
           enddo
           enddo
-       end if
+       endif
 
-     if ( present(history_flag) ) then
-     if ( history_flag ) then
+       if ( present(history_flag) ) then
+       if ( history_flag ) then
 
-        do j = JS, JE
-        do i = IS, IE
-           do k = KS, KE
-              flux_net(k,i,j,I_LW) = &
-                   ( ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
-                   + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) ) * 0.5_RP
-              flux_net(k,i,j,I_SW) = &
-                   ( ( flux_rad(k-1,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
-                   + ( flux_rad(k  ,i,j,I_SW,I_up) - flux_rad(k  ,i,j,I_SW,I_dn) ) ) * 0.5_RP
+          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
+          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
 
-              flux_up (k,i,j,I_LW) = &
-                   ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) ) * 0.5_RP
-              flux_up (k,i,j,I_SW) = &
-                   ( flux_rad(k-1,i,j,I_SW,I_up) + flux_rad(k,i,j  ,I_SW,I_up) ) * 0.5_RP
-              flux_dn (k,i,j,I_LW) = &
-                   ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j  ,I_LW,I_dn) ) * 0.5_RP
-              flux_dn (k,i,j,I_SW) = &
-                   ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j  ,I_SW,I_dn) ) * 0.5_RP
-           enddo
-           flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
-           flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                                             + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) )
+             flux_net(k,i,j,I_SW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+                                             + ( flux_rad(k  ,i,j,I_SW,I_up) - flux_rad(k  ,i,j,I_SW,I_dn) ) )
 
-        enddo
-        enddo
+             flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) )
+             flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up) + flux_rad(k,i,j,I_SW,I_up) )
+             flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j,I_LW,I_dn) )
+             flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
+          enddo
+          enddo
+          enddo
+          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',  'net radiation flux(LW)', 'W/m2', dt_RD )
+          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',  'net radiation flux(SW)', 'W/m2', dt_RD )
+          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt_RD )
+          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt_RD )
+          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt_RD )
+          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt_RD )
 
-        call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                           QTRC(:,:,:,:) ) ! [IN]
-        call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                           QTRC (:,:,:,:), & ! [IN]
-                           QDRY (:,:,:)    ) ! [IN]
+          call HIST_in( flux_rad_top(:,:,I_LW), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( flux_rad_top(:,:,I_SW), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt_RD )
+          do j = JS, JE
+          do i = IS, IE
+             flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
+             flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          enddo
+          enddo
+          call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 
-        TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
-        call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt )
-        TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
-        call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt )
-        TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
-        call HIST_in( TEMP_t(:,:,:), 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt )
+          call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
+                             QTRC(:,:,:,:) ) ! [IN]
 
-        call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW', 'net radiation flux(LW)', 'W/m2', dt )
-        call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW', 'net radiation flux(SW)', 'W/m2', dt )
-        call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt )
-        call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt )
-        call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt )
-        call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt )
+          call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
+                             QTRC (:,:,:,:), & ! [IN]
+                             QDRY (:,:,:)    ) ! [IN]
 
-        call HIST_in( flux_rad_top(:,:,I_LW), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt )
-        call HIST_in( flux_rad_top(:,:,I_SW), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt )
-        call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt )
-        call HIST_in( flux_rad_sfc(:,:,I_LW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt )
-
-        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation', 'W/m2', dt )
-        call HIST_in( cosSZA(:,:), 'COSZ', 'cos(solar zenith angle)', '0-1', dt )
-      endif
-      endif
-
-      ! fill halo
-      call ATMOS_vars_fillhalo
-      call ATMOS_vars_sf_fillhalo
-
-      ! check total (optional)
-      call ATMOS_vars_total
-
+          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
+          call HIST_in( TEMP_t, 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
+          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
+          call HIST_in( TEMP_t, 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
+          TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
+          call HIST_in( TEMP_t, 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt_RD )
+       endif
+       endif
     endif
 
     do j = JS, JE

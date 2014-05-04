@@ -1,9 +1,8 @@
 !-------------------------------------------------------------------------------
-!> Program make tool for initial states for SCALE-LES
+!> Program SCALE-LES init
 !!
 !! @par Description
-!!          SCALE: Scalable Computing by Advanced Library and Environment
-!!          Numerical model for LES-scale weather
+!!          This program makes initial data for ideal test cases
 !!
 !! @author Team SCALE
 !!
@@ -22,56 +21,62 @@ program scaleles_init
      LogInit
   use gtool_file, only: &
      FileCloseAll
-  use mod_precision
-  use mod_stdio
-  use mod_prof
+  use scale_precision
+  use scale_stdio
+  use scale_prof
 
-  use mod_process, only: &
+  use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
      PRC_MPIstop,  &
      PRC_MPIfinish
-  use mod_const, only: &
+  use scale_const, only: &
      CONST_setup
-  use mod_random, only: &
+  use scale_calendar, only: &
+     CALENDAR_setup
+  use scale_random, only: &
      RANDOM_setup
-  use mod_time, only: &
+  use scale_time, only: &
      TIME_setup
-  use mod_grid_index, only: &
+  use scale_grid_index, only: &
      GRID_INDEX_setup
-  use mod_grid, only: &
+  use scale_land_grid_index, only: &
+     LAND_GRID_INDEX_setup
+  use scale_grid, only: &
      GRID_setup
-  use mod_tracer, only: &
+  use scale_land_grid, only: &
+     LAND_GRID_setup
+  use scale_tracer, only: &
      TRACER_setup
-  use mod_fileio, only: &
+  use scale_fileio, only: &
      FILEIO_setup
-  use mod_comm, only: &
+  use scale_comm, only: &
      COMM_setup
-  use mod_topography, only: &
+  use scale_topography, only: &
      TOPO_setup
-  use mod_landuse, only: &
+  use scale_landuse, only: &
      LANDUSE_setup
-  use mod_grid_real, only: &
+  use scale_grid_real, only: &
      REAL_setup,   &
      REAL_update_Z
-  use mod_gridtrans, only: &
+  use scale_gridtrans, only: &
      GTRANS_setup
-  use mod_interpolation, only: &
+  use scale_interpolation, only: &
      INTERP_setup
-  use mod_stats, only: &
+  use scale_stats, only: &
      STAT_setup
-  use mod_history, only: &
+  use scale_history, only: &
      HIST_setup
-  use mod_atmos_hydrostatic, only: &
-     ATMOS_HYDROSTATIC_setup
-  use mod_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
-  use mod_atmos_saturation, only: &
-     ATMOS_SATURATION_setup
   use mod_atmos_vars, only: &
      ATMOS_vars_setup
   use mod_atmos_vars_sf, only: &
      ATMOS_vars_sf_setup
+  use scale_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_setup
+  use scale_atmos_saturation, only: &
+     ATMOS_SATURATION_setup
   use mod_land_vars, only: &
      LAND_vars_setup
   use mod_ocean_vars, only: &
@@ -109,19 +114,24 @@ program scaleles_init
   ! setup constants
   call CONST_setup
 
+  ! setup calendar
+  call CALENDAR_setup
+
   ! setup random number
   call RANDOM_setup
 
   ! setup time
-  call TIME_setup( .true. )
+  call TIME_setup( setup_TimeIntegration = .false. )
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/veritical grid index
+  ! setup horisontal/vertical grid index
   call GRID_INDEX_setup
+  call LAND_GRID_INDEX_setup
 
   ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
+  call LAND_GRID_setup
 
   ! setup tracer index
   call TRACER_setup
@@ -136,7 +146,7 @@ program scaleles_init
   call TOPO_setup
   ! setup land use category index/fraction
   call LANDUSE_setup
-  ! setup coordinate in real world
+  ! setup grid coordinates (real world)
   call REAL_setup
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
@@ -149,22 +159,22 @@ program scaleles_init
   ! setup history I/O
   call HIST_setup
 
+
+
   ! setup atmos
   call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
+
+  ! setup variable container: atmos
   call ATMOS_vars_setup
-
-  ! setup atmos sf
+  ! setup variable container: atmos_sf
   call ATMOS_vars_sf_setup
-
-  ! setup land
+  ! setup variable container: land
   call LAND_vars_setup
-
-  ! setup ocean
+  ! setup variable container: ocean
   call OCEAN_vars_setup
-
-  ! setup coupler
+  ! setup variable container: coupler
   call CPL_vars_setup
 
   ! setup mktopo

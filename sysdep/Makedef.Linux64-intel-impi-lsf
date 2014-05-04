@@ -4,18 +4,18 @@
 
 ##### for computation
 
-FFLAGS_FAST = -fpp3 -O3 -xHost -ip                 \
-              -assume byterecl -convert big_endian \
-              -ftz -fp-model precise -pc 80        \
-              -mcmodel=medium -shared-intel        \
-              -heap-arrays -fno-alias
+FFLAGS_FAST  = -fpp3 -O3 -xHost -ip                 \
+               -assume byterecl -convert big_endian \
+               -ftz -fp-model source -pc 80         \
+               -mcmodel=medium -shared-intel        \
+               -heap-arrays
 
 FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
                -assume byterecl -convert big_endian \
-               -fp-model precise -pc 80             \
+               -fpe0 -fp-model source -pc 80        \
                -check all -warn all -g -traceback   \
                -mcmodel=medium -shared-intel        \
-               -heap-arrays -fno-alias              \
+               -heap-arrays                         \
                -DDEBUG
 
 FC     = mpiifort

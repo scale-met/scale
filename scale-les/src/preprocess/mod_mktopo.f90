@@ -16,18 +16,18 @@ module mod_mktopo
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
 
-  use mod_process, only: &
+  use scale_process, only: &
      PRC_MPIstop
-  use mod_grid, only: &
+  use scale_grid, only: &
      CX => GRID_CX, &
      CY => GRID_CY
-  use mod_topography, only: &
+  use scale_topography, only: &
      TOPO_Zsfc
   !-----------------------------------------------------------------------------
   implicit none
@@ -118,9 +118,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
-    use mod_const, only: &
+    use scale_const, only: &
        CONST_UNDEF8
-    use mod_topography, only: &
+    use scale_topography, only: &
        TOPO_write
     implicit none
 

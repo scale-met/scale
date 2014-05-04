@@ -19,10 +19,10 @@ module mod_atmos
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,6 +52,8 @@ contains
   !> Setup atmosphere
   !-----------------------------------------------------------------------------
   subroutine ATMOS_setup
+    use scale_time, only: &
+       TIME_NOWDATE
     use mod_atmos_vars, only: &
        ATMOS_DYN_TYPE, &
        ATMOS_PHY_SF_TYPE, &
@@ -78,9 +80,11 @@ contains
        sw_phy_mp => ATMOS_sw_phy_mp, &
        sw_phy_rd => ATMOS_sw_phy_rd, &
        sw_phy_ae => ATMOS_sw_phy_ae
-    use mod_atmos_refstate, only: &
+    use scale_atmos_solarins, only: &
+       ATMOS_SOLARINS_setup
+    use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
-    use mod_atmos_boundary, only: &
+    use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_setup => ATMOS_DYN_driver_setup
@@ -96,6 +100,9 @@ contains
        ATMOS_PHY_AE_setup => ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
+
+    !--- setup solar insolation
+    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 
@@ -130,7 +137,7 @@ contains
   !> advance atmospheric state
   !-----------------------------------------------------------------------------
   subroutine ATMOS_step
-    use mod_time, only: &
+    use scale_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
@@ -168,7 +175,7 @@ contains
        ATMOS_PHY_RD => ATMOS_PHY_RD_driver
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE => ATMOS_PHY_AE_driver
-    use mod_atmos_refstate, only: &
+    use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_update, &
        ATMOS_REFSTATE_UPDATE_FLAG
     use mod_cpl_vars, only: &

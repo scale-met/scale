@@ -56,7 +56,7 @@ V_{t,r}&=&36.34(\rho Q_{rain})^{0.1364} [m/s]
 Generally, characteristics of cloud particles are determined by their size, shape and chemical properties of solute in them. Representation of these characteristics needs a multi-dimensional parameter space of size, shape and chemical compositions. Since development of a cloud resolving model (CRM) coupled with an aerosol transport model is beyond the scope of this study, we consider a two-dimensional parameter space of size and shape of cloud particles. We then categorize cloud models into two major groups according to their representation of cloud particles. One is the bin method, with discretized particle size bins, predicting the population density of particles in each bin. The other is the bulk method in which the particle size distributions are approximated by several prescribed modes, predicting the total populations of partilces of each mode. The treatment of hydrometeors adopted in this study is described in the following sections.
 
 \subsubsection{Droplet Size Distribution}
-The Seiki and Nakajima (2013)\cite{sn_2013} scheme is designed to maintain the self-consistency of the assumptions regarding droplet size distribution (DSD) and the shapes of ice particles among the cloud microphysical processes. Following Seifert and Beheng (2006; hereafter, SB06), Seiki and Nakajima(2013)\cite{sn_2013} predicts the moments of the DSDs of each hydrometeor assuming the generalized gamma distribution to analytically formulate the cloud microphysics as follows:
+The Seiki and Nakajima (2014)\cite{sn_2013} scheme is designed to maintain the self-consistency of the assumptions regarding droplet size distribution (DSD) and the shapes of ice particles among the cloud microphysical processes. Following Seifert and Beheng (2006; hereafter, SB06), Seiki and Nakajima(2014)\cite{sn_2013} predicts the moments of the DSDs of each hydrometeor assuming the generalized gamma distribution to analytically formulate the cloud microphysics as follows:
 
 \begin{eqnarray}
 f_{a}(r)=\alpha_{a}x^{\nu_{a}}\exp(-\lambda x)
@@ -87,12 +87,12 @@ A&=&a_{ax}x^{b_{m}}
 \label{sn11}
 \end{eqnarray}
 
-where $a_{m}$, $b_{m}$, $a_{ax}$, and $b_{ax}$ are constant coefficients. We chose to use constant parameters in the representations of DSDs following SB06 for cloud water, cloud ice, snow, and graupel; and following Seifert (2008) for rain (assuming the collisional-breakup equilibrium condition). The shapes of ice particles are those given by Mitchell (1996) assuming cloud ice as hexagonal plates, snow as assemblages of planer polycrystals in cirrus clouds, and graupel as lump graupel. The abovementioned constant parameters for each hydrometeor are summarized in Table \ref{table_sn13-1}.
+where $a_{m}$, $b_{m}$, $a_{ax}$, and $b_{ax}$ are constant coefficients. We chose to use constant parameters in the representations of DSDs following SB06 for cloud water, cloud ice, snow, and graupel; and following Seifert (2008) for rain (assuming the collisional-breakup equilibrium condition). The shapes of ice particles are those given by Mitchell (1996) assuming cloud ice as hexagonal plates, snow as assemblages of planer polycrystals in cirrus clouds, and graupel as lump graupel. The abovementioned constant parameters for each hydrometeor are summarized in Table \ref{table_sn14-1}.
 
 \begin{table}[h]
 \begin{center}
 \caption{Constant parameters chosen for the generalized gamma distribution; power law coefficients used for maximum dimensions and the projected area; and ranges of lower- and upper limits of mean mass.}
-\label{table_sn13-1}
+\label{table_sn14-1}
 \scalebox{0.85}{
 \begin{tabular}{cccccc}
 \hline
@@ -134,12 +134,12 @@ In the case of liquid water droplets, absence of shape variability makes formula
 \begin{array}{l}
 a_{R_{s}}D(1-exp(-b_{R_{s}}D)),\;\;(D<D_{0,r}) \\
 a_{R_{l}}-b_{R_{l}}exp(-c_{R_{l}}D),\;\;(D>D_{0,r}) \\
-\label{sn13}
+\label{sn14}
 \end{array}
 \right.
 \end{eqnarray}
 
-where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn13} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
+where $a_{R_{s}} = 4000 s^{-1}$, $b_{R_{s}}=12000 m^{-1}$, $a_{R_{l}}=9.65 m s^{-1}$, $b_{R_{l}} = 10.43 m s^{-1}$, $c_{R_{l}} = 600 m^{-1}$, and $D_{0}$, $r=7.45\times10^{-4}$ m. This formulation approaches the quadratic form of Stokes’ Law in the limit for small diameter. In addition, the data of Gunn and Kinzer (1948) agrees well with the terminal velocities calculated by theoretical formulation based on the boundary layer theory (Bohm, 1992). Therefore, we applied eq.\ref{sn14} for the sedimentation of rain (Fig. \ref{figsn2-11}2 11). Here it is mentioned that the reference atmosphere of the formulation is $T = 293 K$, $p = 1000hPa$, and relative humidity is 0.5 (Gunn and Kinzer, 1948).
 
 \subsubsection{Terminal velocity of solid water particles for the reference atmosphere}
 In the case of ice particles, we derive the theoretical formulation of the terminal velocity following to Mitchell (1996). In general the aerodynamic drag force $F_{D}$ on a particle is expressed as follows,
@@ -237,12 +237,12 @@ f_{vt}=(p/p_{0})^{-0.178}(T/T_{0})^{-0.394}
 \label{sn31}
 \end{eqnarray}
 
-where $T_{0}$ = 233 K and $p_{0}$ = 300 hPa. By using these adjustment factors, we can only consider the terminal velocity for the reference atmosphere. Adjustment factors used for each hydrometeor in this study are summarized in Table \ref{table_sn13-2-8}.
+where $T_{0}$ = 233 K and $p_{0}$ = 300 hPa. By using these adjustment factors, we can only consider the terminal velocity for the reference atmosphere. Adjustment factors used for each hydrometeor in this study are summarized in Table \ref{table_sn14-2-8}.
 
 \begin{table}[h]
 \begin{center}
 \caption{Adjustment factor for the reference terminal velocity.}
-\label{table_sn13-2-8}
+\label{table_sn14-2-8}
 \scalebox{0.75}{
 \begin{tabular}{cccccc}
 \hline
@@ -262,8 +262,8 @@ In gravitational sedimentation, the mean terminal velocity weighted by the k-th 
 \label{sn32}
 \end{eqnarray}
 
-However, the formulas of the terminal velocities, eq.\ref{sn13} and eq.\ref{sn21} are too complicated to analytically integrate eq.\ref{sn32}. Seifert and Beheng (2006) and Seifert (2008) approximately used the large branch of eq.\ref{sn13} for rain droplets and simple power laws derived by observation for other hydrometeors. Here we made more accurate formulations to calculate the weighted terminal velocities.\\
-As shown above, the dependency of the terminal velocity on the diameter varies among the aerodynamical regimes. In other words, the dependency varies among the range of diameter. Therefore, firstly we prepared two branches of the terminal velocities of hydrometeors except for cloud droplets so as to integrate the DSDs analytically. For cloud droplets, we use the same power law provided by Seifert and Beheng (2006) which is based on Stokes’ law. For the rain droplets, we directly use the formulation of eq.\ref{sn13} because we can integrate each branch analytically. In contrast, we need to derive two fitting curves for ice particles. The formulation of the terminal velocity of ice particles is described as a power law of the diameter made by the least-square method as follows,
+However, the formulas of the terminal velocities, eq.\ref{sn14} and eq.\ref{sn21} are too complicated to analytically integrate eq.\ref{sn32}. Seifert and Beheng (2006) and Seifert (2008) approximately used the large branch of eq.\ref{sn14} for rain droplets and simple power laws derived by observation for other hydrometeors. Here we made more accurate formulations to calculate the weighted terminal velocities.\\
+As shown above, the dependency of the terminal velocity on the diameter varies among the aerodynamical regimes. In other words, the dependency varies among the range of diameter. Therefore, firstly we prepared two branches of the terminal velocities of hydrometeors except for cloud droplets so as to integrate the DSDs analytically. For cloud droplets, we use the same power law provided by Seifert and Beheng (2006) which is based on Stokes’ law. For the rain droplets, we directly use the formulation of eq.\ref{sn14} because we can integrate each branch analytically. In contrast, we need to derive two fitting curves for ice particles. The formulation of the terminal velocity of ice particles is described as a power law of the diameter made by the least-square method as follows,
 
 \begin{eqnarray}
 v_{t,js}&=&a_{v,js}x^{b_{v,js}},\;\;(js=i,s,g)\label{sn33}\\
@@ -275,7 +275,7 @@ v_{t,js}&=&a_{v,js}x^{b_{v,js}},\;\;(js=i,s,g)\label{sn33}\\
 \bar{v_{k,js,true}}(\bar{D_{id}})&=&\sum_{i=1}^{imax}x^{k}v_{t,js,true}f_{logD}(lnD_{i},\bar{D_{id}},L)\Delta ln D/L\nonumber
 \end{eqnarray}
 
-where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn13-2-9}.\\ 
+where $D_{1}=10\mu m$, $D_{imax}=10mm$, $i_{max}=1000$, and L is arbitrary constant. The fitting ranges of the mean volume diameter in eq.\ref{sn34} are from 20 to 400 $\mu$m for the small branch and from 200 to 2000 $\mu m$ for the large branch. The derived parameters are summarized in Table \ref{table_sn14-2-9}.\\ 
 Secondly the terminal velocity with a certain mean diameter is calculated by interpolating between the two branches in the logaritgmic scale of the diameter. Here we practically use the mean diameter weighted by the kth moments of DSD in the interpolation. The formulation of the weighted terminal velocities of the rain droplets and solid particles are as shown in the following,
 
 \begin{eqnarray}
@@ -292,20 +292,20 @@ w_{k,js}&=&max(0.0, \;min(1.0,0.5(1+ln(\bar{D_{k,js}}/D_{0,k,js}))))\;\;(js=i,s,
 N_{r}(D)&=&N_{0,r}D^{-\mu_{D,r}}exp(-\lambda_{D,r}D)
 \end{eqnarray}
 
-where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn13-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration. 
+where $D_{0,r}$ and $D_{0,js}$ are the branch points of the fitting curves (see Table \ref{table_sn14-2-10}). Here we apply the form of the modified gamma distribution for the diameter as a DSD of rain droplets. Derivation and correspondences of the coefficient $N_{0,r}$ the slope parameter $\lambda_{D}$,$r$ and shape parameter $\mu D$ appeared in the modified gamma distribution are described in Appendix B. Weighted terminl velocities of ice particles for two branches, and, are calculated by eq.\ref{sn35}. Fig.\ref{figsn2-13} shows the terminal velocity of rain droplets weighted by number and mass concentration. Our method gives better results than the results by the approximated method applied in Seifert and Beheng (2006) in the range within their upper and lower limit. Fig.\ref{figsn2-14} shows terminal velocities of ice particles weighted by the number and the mass concentration. 
 
 
 \begin{table}[h]
 \begin{center}
 \caption{Coefficients and exponents of the relationship between the mass and the terminal velocity of each hydrometeor used in the gravitational sedimentation and other processes.}
-\label{table_sn13-2-9}
+\label{table_sn14-2-9}
 \scalebox{0.5}{
 \begin{tabular}{cccccc}
 \hline
 Hydrometeors & Sedimentation of mass & Sedimentation of mass & Sedimentation of number   & Sedimentation number & other process   \\ \hline\hline
              & Small                 & Large                 & Small                     & Larg                 &                 \\ \hline
 Cloud        & $a_{v}=3.75\times10^{5},b_{v}=2/3$ & $a_{v}=3.75\times10^{5},b_{v}=2/3$ & $a_{v}=3.75\times10^{5},b_{v}=2/3$ & $a_{v}=3.75\times10^{5},b_{v}=2/3$ & $a_{v}=3.75\times10^{5},b_{v}=2/3$ \\  \hline
-Rain         & \ref{sn13}            & \ref{sn13}            & \ref{sn13}                & \ref{sn13}           & \ref{sn13}      \\ \hline
+Rain         & \ref{sn14}            & \ref{sn14}            & \ref{sn14}                & \ref{sn14}           & \ref{sn14}      \\ \hline
 Hexagonal plate & $a_{v}=5800,b_{v}=0.505$ & $a_{v}=167,b_{v}=0.325$ & $a_{v}=1.24\times10^{5},b_{v}0.549$ & $a_{v}=422,b_{v}=0.385$ & $a_{v}=5800,b_{v}=0.505$\\ \hline
 Hexagonal columns & $a_{v}=2900,b_{v}=0.466$ & $a_{v}=32.2,b_{v}=0.224$ & $a_{v}=9698,b_{v}0.531$ & $a_{v}=64.2,b_{v}=0.274$ & $a_{v}=2900,b_{v}=0.466$\\ \hline
 Aggregates of planar polycrystals & $a_{v}=1.52\times10^{5},b_{v}=0.528$ & $a_{v}=306.0,b_{v}=0.330$ & $a_{v}=2.93\times10^{5},b_{v}0.567$ & $a_{v}=818,b_{v}=0.394$ & $a_{v}=1.52\times10^{5}b_{v}=0.528$\\ \hline
@@ -318,7 +318,7 @@ Lump graupel & $a_{v}=1.55\times10^{5},b_{v}=0.535$ & $a_{v}=312.0,b_{v}=0.330$ 
 \begin{table}[h]
 \begin{center}
 \caption{Branch points of the weighted terminal velocity.}
-\label{table_sn13-2-10}
+\label{table_sn14-2-10}
 \scalebox{0.75}{
 \begin{tabular}{cc}
 \hline
@@ -336,7 +336,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \begin{figure}[]
 \begin{center}
-\includegraphics[scale=0.3]{./figure/D_vt_sn13.eps}
+\includegraphics[scale=0.3]{./figure/D_vt_sn14.eps}
 \end{center}
 \caption{Dependency of terminal velocity of liquid water droplet on diameter. Marks are from Gunn and Kinzer (1948), red line is from Rogers et al. (1993) and blue line is calculated by Stokes’ law (eq.\ref{sn12}) under the condition T=293K, p=1000hPa.}
 \label{figsn2-11}
@@ -344,7 +344,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \begin{figure}[]
 \begin{center}
-\includegraphics[scale=0.3]{./figure/D_vt_sn13-ice.eps}
+\includegraphics[scale=0.3]{./figure/D_vt_sn14-ice.eps}
 \end{center}
 \caption{Dependency of terminal velocity of liquid water droplet in maximum dimension. Each color of solid line is corresponding to different ice particle type based on Mitchell (1996). Hexagonal columns is blue, hexagonal plates is green, stellar crystal with broad arms is red, Aggregates of planar polycrystals in cirrus clouds is purple and lump graupel is light blue.}
 \label{figsn2-12}
@@ -352,7 +352,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \begin{figure}[]
 \begin{center}
-\includegraphics[scale=0.4]{./figure/D_vt_sn13-1.eps}
+\includegraphics[scale=0.4]{./figure/D_vt_sn14-1.eps}
 \end{center}
 \caption{Dependencies of number weighted terminal velocity ($v_{tN}$) (left) and mass weighted terminal velocity ($v_{tL}$) (right) of rain droplets on mean volume diameter ($D_{m}$). Abscissa is the mean volume diameter and vertical axis is the terminal velocity. Dots show exactly integrated value and solid lines show approximated value by this study (red, green and blue) and Seifert and Beheng (2006) (purple). Red and purple ones are calculated with $\mu D$ = 0, green ones are calculated with $\mu D$ = 1 and blue ones are calculated with $\mu D$ = 31.}
 \label{figsn2-13}
@@ -360,7 +360,7 @@ Lump graupel & $D_{0,0,g}=269\times10^{-6}, D_{0,1,g}=376\times10^{-6}$ \\ \hlin
 
 \begin{figure}[]
 \begin{center}
-\includegraphics[scale=0.4]{./figure/D_vt_sn13-ice-1.eps}
+\includegraphics[scale=0.4]{./figure/D_vt_sn14-ice-1.eps}
 \end{center}
 \caption{Dependencies of number weighted terminal velocity ($v_{tN}$) (left) and mass weighted terminal velocity ($v_{tL}$) (right) of ice particles on mean volume diameter ($D_{m}$). Abscissa is the mean volume diameter and vertical axis is the terminal velocity. Dots show the exact value calculated by Mitchell (1996) and solid lines show the fitting curves. Red, green, blue and purple denote lump graupels, assemblages of planar polycrystals, hexagonal columns and hexagonal plates respectively.}
 \label{figsn2-14}
@@ -488,7 +488,7 @@ Assuming air parcel with only cooling/heating by latent heat release, eq. \ref{s
 \frac{d\delta_{sw}}{dt}=\frac{dq_{v}}{dt}-\bigl(\frac{\partial q_{sw}}{\partial T}\bigr)\frac{dT}{dt}\label{sn85}
 \end{eqnarray}
 
-The tendency of temperature is caused by latent heat release with condensation/evaporation and deposition/sublimation %eq.\ref{sn58}; eq.\ref{sn59} %; and Table \ref{table_sn13-2-11}
+The tendency of temperature is caused by latent heat release with condensation/evaporation and deposition/sublimation %eq.\ref{sn58}; eq.\ref{sn59} %; and Table \ref{table_sn14-2-11}
 
 \begin{eqnarray}
 \frac{dT}{dt}&=&\frac{L_{v,00}+(c_{vv}-c_{l})T}{\bar{c}_{va}}\frac{dq_{liq}}{dt}+\frac{L_{v,00}+L_{f,00}+(c_{v}-c_{i})T}{\bar{c}_{va}}\frac{dq_{sol}}{dt}\nonumber\\
@@ -703,7 +703,7 @@ Based on the equation for a single droplet, we can derive the equation for momen
 \frac{\partial L_{c}}{\partial t}\Bigr|_{hom}&=&-Z_{c}J_{hom}=-\frac{\Gamma\bigl(\frac{\nu_{c}+3}{\mu_{c}}\bigr)\Gamma\bigl(\frac{\nu_{c}+1}{\mu_{c}}\bigr)}{\Gamma\bigl(\frac{\nu_{c}+2}{\mu_{c}}\bigr)^{2}}L_{c}\bar{x}_{c}J_{hom}\label{sn123}
 \end{eqnarray}
 
-Here, we mention that eq.\ref{sn122} and eq.\ref{sn123} are expressed via filtered $\bar{x}_{c}$ in order to avoid artificial value of the prognostic variables. The homogeneous freezing for rain is not considered because it is negligible compared with the heterogeneous freezing due to their largeness. Although Cotton and Field (2002) considered also freezing point depression in freezing due to soluble aerosols, we don’t consider the effect because Seiki and Nakajima (2013) is not yet coupled with aerosol transport models.
+Here, we mention that eq.\ref{sn122} and eq.\ref{sn123} are expressed via filtered $\bar{x}_{c}$ in order to avoid artificial value of the prognostic variables. The homogeneous freezing for rain is not considered because it is negligible compared with the heterogeneous freezing due to their largeness. Although Cotton and Field (2002) considered also freezing point depression in freezing due to soluble aerosols, we don’t consider the effect because Seiki and Nakajima (2014) is not yet coupled with aerosol transport models.
 Heterogeneous freezing is based on the empirical formulation by Biggs (1953) which is widely used in CRMs.
 
 \begin{eqnarray}
@@ -744,19 +744,19 @@ where $D_{T}$ is diffusivity of heat, and $T_{0} = 273.15 K$ is melting point. T
 \frac{\partial M_{js}^{k}}{\partial t}\Bigr|_{mlt}&=&-\int_{0}^{\infty}\frac{x^{k}f_{js}(x)}{\tau_{mlt}}dx\nonumber\\
 &=&-\frac{2\pi}{L_{f0}}\Bigl[\frac{K_{T}D_{T}}{D_{v}}(T-T_{0})+\frac{D_{v}L_{v0}}{R_{v}}\bigl(\frac{p_{v}}{T}-\frac{p_{sw}(T_{0})}{T_{0}}\bigr)\Bigr]\nonumber\\
 &\times& N_{js}D_{js}(\bar{x}_{js})x_{js}^{n-1}\bar{F}_{vf,js}
-\label{sn130}
+\label{sn140}
 \end{eqnarray}
 
 We mention that this scheme allows the existence of ice particles over the melting point ($T>273.15 K$) since the melting time scale of large particles can be longer than a simulation time step. Actually, ice particles are transitionally converted into liquid droplets and the type of hydrometeor is not changed in the transition. However, here we assume that ice water mass is converted into liquid water mass in a certain melting time scale and the part of liquid water mass is categorized as the other hydrometeors. Here, graupel and snow is converted into rain, and ice is converted into cloud. This formulation has a possibility to cause an artificial production of cloud or rain in melting. Validation experiments and impact assessment are necessary in future.
 
 \subsubsection{Collection process}
-The collection processes are the same as Seifert and Beheng (2001), Seifert and Beheng (2006a) and Seifert (2008). The collection processes among hydrometeors are summarized in Table \ref{table_sn13-16}. In this section, the formulations of the collection processes, auto-conversion, accretion, aggregation, riming, and their related processes are described.
+The collection processes are the same as Seifert and Beheng (2001), Seifert and Beheng (2006a) and Seifert (2008). The collection processes among hydrometeors are summarized in Table \ref{table_sn14-16}. In this section, the formulations of the collection processes, auto-conversion, accretion, aggregation, riming, and their related processes are described.
 
 
 \begin{table}[h]
 \begin{center}
 \caption{Hydrometeors that result from binary collision. Collecting hydrometeors are written in the 1st row and collected hydrometeors are written in the 1st column.}
-\label{table_sn13-16}
+\label{table_sn14-16}
 \scalebox{0.5}{
 \begin{tabular}{cccccc}
 \hline
@@ -1246,7 +1246,7 @@ Here, it should be noticed that we may double count the ice multiplication proce
 \label{figsn2-23}
 \end{figure}
 
-\subsubsection{Appendix of Seiki and Nakajima (2013)}
+\subsubsection{Appendix of Seiki and Nakajima (2014)}
 \subsubsection{The k-th moment of generalized Gamma distribution}
 The kth moment of the DSD frequently appear in the equations of cloud microphysics. In this section, derivation of the kth moment of the generalized Gamma distribution is described. The generalized Gamma distribution is defined as $f(x) = \alpha x \nu exp(-\lambda x \mu)$. There are four parameters in this generalized Gamma distribution but only two prognostic moments in a CRM; the number concentration N and mass concentration L. Hence $\mu$ and $\nu$ are set constant parameters so that the other coefficients $\alpha$ and $\lambda$ can be related to N and L as follows.
 

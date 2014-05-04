@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2012-07-19 (S.Nishizawa) [new] imported from SCALE mod_time
+!! @li      2012-07-19 (S.Nishizawa) [new] imported from SCALE scale_time
 !!
 !<
 !-------------------------------------------------------------------------------

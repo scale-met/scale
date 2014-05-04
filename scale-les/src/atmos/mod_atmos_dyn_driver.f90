@@ -8,7 +8,7 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-04 (S.Nishizawa) [mod] splited from mod_atmos_dyn.f90
+!! @li      2013-12-04 (S.Nishizawa) [mod] splited from scale_atmos_dyn.f90
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -18,15 +18,15 @@ module mod_atmos_dyn_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
 #ifdef DEBUG
-  use mod_debug, only: &
+  use scale_debug, only: &
      CHECK
-  use mod_const, only: &
+  use scale_const, only: &
      UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
@@ -78,20 +78,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_driver_setup( DYN_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
-    use mod_grid, only: &
+    use scale_grid, only: &
        GRID_CDZ, &
        GRID_CDX, &
        GRID_CDY, &
        GRID_FDZ, &
        GRID_FDX, &
        GRID_FDY
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        REAL_LAT
-    use mod_atmos_dyn, only: &
+    use scale_atmos_dyn, only: &
        ATMOS_DYN_setup
     implicit none
 
@@ -155,11 +155,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN, &
        TIME_NSTEP_ATMOS_DYN
-    use mod_grid, only: &
+    use scale_grid, only: &
        GRID_CDZ,  &
        GRID_CDX,  &
        GRID_CDY,  &
@@ -172,14 +172,14 @@ contains
        GRID_RFDZ, &
        GRID_RFDX, &
        GRID_RFDY
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
        REAL_PHI
-    use mod_gridtrans, only: &
+    use scale_gridtrans, only: &
        GTRANS_GSQRT, &
        GTRANS_J13G,  &
        GTRANS_J23G,  &
        GTRANS_J33G
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
@@ -202,17 +202,17 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        QTRC_tp
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        AQ_CV
-    use mod_atmos_refstate, only: &
+    use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_dens, &
        ATMOS_REFSTATE_pott, &
        ATMOS_REFSTATE_qv,   &
        ATMOS_REFSTATE_pres
-    use mod_atmos_boundary, only: &
+    use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_var,   &
        ATMOS_BOUNDARY_alpha
-    use mod_atmos_dyn, only: &
+    use scale_atmos_dyn, only: &
        ATMOS_DYN
     implicit none
     logical, intent(in) :: do_flag

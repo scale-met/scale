@@ -14,9 +14,9 @@ module mod_cpl
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
+  use scale_precision
+  use scale_stdio
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private

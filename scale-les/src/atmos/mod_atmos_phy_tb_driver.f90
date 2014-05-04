@@ -16,11 +16,11 @@ module mod_atmos_phy_tb_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,14 +52,14 @@ module mod_atmos_phy_tb_driver
 contains
 
   subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_grid, only: &
+    use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
        CZ  => GRID_CZ
-    use mod_atmos_phy_tb, only: &
+    use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     implicit none
 
@@ -86,11 +86,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_driver( update_flag, history_flag )
-    use mod_time, only: &
+    use scale_time, only: &
        dttb => TIME_DTSEC_ATMOS_PHY_TB
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
-    use mod_grid, only: &
+    use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
@@ -99,7 +99,7 @@ contains
        RFDY => GRID_RFDY, &
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
-    use mod_gridtrans, only: &
+    use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -111,7 +111,7 @@ contains
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
        J33G  => GTRANS_J33G
-    use mod_atmos_phy_tb, only: &
+    use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB
     use mod_atmos_vars, only: &
        DENS_av, &
@@ -222,9 +222,8 @@ contains
                     - GSQRT(k,i-1,j,I_UVZ)*qflx_sgs_rhot(k,i-1,j,XDIR) ) * RCDX(i) &
                   + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_rhot(k,i,j  ,YDIR) &
                     - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_rhot(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( GSQRT(k  ,i,j,I_XVW)*qflx_sgs_rhot(k  ,i,j,ZDIR) &
-                    - GSQRT(k-1,i,j,I_XVW)*qflx_sgs_rhot(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                  * ( J13G(k,i,j,I_XYZ) + J23G(k,i,j,I_XYZ) + J33G ) / GSQRT(k,i,j,I_XYZ) &
+                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*qflx_sgs_rhot(k  ,i,j,ZDIR) &
+                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*qflx_sgs_rhot(k-1,i,j,ZDIR) ) * RCDZ(k) &
                 ) / GSQRT(k,i,j,I_XYZ)
           end do
           end do
@@ -238,9 +237,8 @@ contains
                     - GSQRT(k,i-1,j,I_UYZ)*qflx_sgs_qtrc(k,i-1,j,iq,XDIR) ) * RCDX(i) &
                   + ( GSQRT(k,i,j  ,I_XVZ)*qflx_sgs_qtrc(k,i,j  ,iq,YDIR) &
                     - GSQRT(k,i,j-1,I_XVZ)*qflx_sgs_qtrc(k,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( GSQRT(k  ,i,j,I_XYW)*qflx_sgs_qtrc(k  ,i,j,iq,ZDIR) &
-                    - GSQRT(k-1,i,j,I_XYW)*qflx_sgs_qtrc(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
-                  * ( J13G(k,i,j,I_XYZ) + J23G(k,i,j,I_XYZ) + J33G ) / GSQRT(k,i,j,I_XYZ) &
+                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*qflx_sgs_qtrc(k  ,i,j,iq,ZDIR) &
+                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*qflx_sgs_qtrc(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
                 ) / GSQRT(k,i,j,I_XYZ)
           end do
           end do

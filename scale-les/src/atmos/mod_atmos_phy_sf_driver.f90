@@ -15,11 +15,11 @@ module mod_atmos_phy_sf_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -63,9 +63,9 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_SF_driver_setup( SF_TYPE )
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_atmos_phy_sf, only: &
+    use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     implicit none
 
@@ -102,19 +102,19 @@ contains
        update_flag, &
        history_flag &
        )
-    use mod_time, only: &
+    use scale_time, only: &
        dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
        NOWSEC => TIME_NOWDAYSEC
-    use mod_const, only: &
+    use scale_const, only: &
        CPdry  => CONST_CPdry,  &
        LH0    => CONST_LH0
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
-    use mod_grid, only: &
+    use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ, &
        CZ   => GRID_CZ
-    use mod_atmos_phy_sf, only: &
+    use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
        DENS, &
@@ -168,8 +168,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
-            + ( POTTFLX(i,j) &
-            + QVFLX(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+            + ( POTTFLX(i,j) * DENS(KS,i,j) &
+            + QVFLX(i,j) * RHOT(KS,i,j) &
               ) * RCDZ(KS)
        DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
             + QVFLX(i,j) * RCDZ(KS)
@@ -188,10 +188,10 @@ contains
   end subroutine ATMOS_PHY_SF_driver
 
   subroutine ATMOS_PHY_SF_driver_first
-    use mod_const, only: &
+    use scale_const, only: &
        CPdry => CONST_CPdry, &
        RovCP => CONST_RovCP
-    use mod_grid, only: &
+    use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use mod_atmos_vars, only: &
@@ -221,8 +221,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
-            + ( SHFLX(i,j)/CPdry &
-            + QVFLX(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+            + ( SHFLX(i,j)/CPdry * DENS(KS,i,j) &
+            + QVFLX(i,j) * RHOT(KS,i,j) &
               ) * RCDZ(KS)
        DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
             + QVFLX(i,j) * RCDZ(KS)
@@ -241,7 +241,7 @@ contains
   end subroutine ATMOS_PHY_SF_driver_first
 
   subroutine ATMOS_PHY_SF_driver_final
-    use mod_const, only: &
+    use scale_const, only: &
        RovCP => CONST_RovCP
     use mod_atmos_vars, only: &
        DENS,    &
@@ -254,7 +254,7 @@ contains
        PREC, &
        SWD,  &
        LWD
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_cpl_vars, only: &
        CPL_putAtm
@@ -307,9 +307,9 @@ contains
   subroutine sfcval_estimate( &
       sfc_rho, sfc_pre, & ! (out)
       rho, pre          ) ! (in)
-    use mod_const, only: &
+    use scale_const, only: &
       GRAV => CONST_GRAV
-    use mod_grid_real, only: &
+    use scale_grid_real, only: &
       CZ => REAL_CZ, &
       FZ => REAL_FZ
     implicit none

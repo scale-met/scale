@@ -19,12 +19,12 @@ module mod_atmos_vars
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_debug
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_debug
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -70,10 +70,10 @@ module mod_atmos_vars
   logical,                public, save :: ATMOS_USE_AVERAGE = .false.
 
   ! prognostic variables
-  real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density    [kg/m3]
-  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y [kg/s/m2]
+  real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
+  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z  [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x  [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y  [kg/s/m2]
   real(RP), public, target, allocatable :: RHOT(:,:,:)   ! DENS * POTT [K*kg/m3]
   real(RP), public, target, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass[kg/kg]
 
@@ -188,11 +188,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_vars_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_reg
-    use mod_monitor, only: &
+    use scale_monitor, only: &
        MONIT_reg
     implicit none
 
@@ -215,6 +215,7 @@ contains
        ATMOS_RESTART_CHECK_CRITERION,  &
        ATMOS_VARS_CHECKRANGE
 
+    logical :: zinterp ! dummy
     integer :: ierr
     integer :: ip, iq
     !---------------------------------------------------------------------------
@@ -391,46 +392,47 @@ contains
     AD_MONIT_id(:) = -1
     AD_PREP_sw (:) = -1
 
-    call HIST_reg( AP_HIST_id(I_DENS), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
-    call HIST_reg( AP_HIST_id(I_MOMZ), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3, zdim='half' )
-    call HIST_reg( AP_HIST_id(I_MOMX), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3, xdim='half' )
-    call HIST_reg( AP_HIST_id(I_MOMY), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3, ydim='half' )
-    call HIST_reg( AP_HIST_id(I_RHOT), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
+    call HIST_reg( AP_HIST_id(I_DENS), zinterp, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
+    call HIST_reg( AP_HIST_id(I_MOMZ), zinterp, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3, zdim='half' )
+    call HIST_reg( AP_HIST_id(I_MOMX), zinterp, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3, xdim='half' )
+    call HIST_reg( AP_HIST_id(I_MOMY), zinterp, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3, ydim='half' )
+    call HIST_reg( AP_HIST_id(I_RHOT), zinterp, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
-       call HIST_reg( AQ_HIST_id(iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
+       call HIST_reg( AQ_HIST_id(iq), zinterp, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
-    call HIST_reg( AD_HIST_id(I_VELZ),  'W',     'velocity w',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELX),  'U',     'velocity u',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELY),  'V',     'velocity v',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_POTT),  'PT',    'potential temp.',        'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_VELZ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_VELX) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_VELY) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTT) , zinterp, 'PT',    'potential temp.',        'K',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_QDRY),  'QDRY',  'dry air',                'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QTOT),  'QTOT',  'total water',            'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QHYD),  'QHYD',  'total hydrometeors',     'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QLIQ),  'QLIQ',  'total liquid water',     'kg/kg',  ndim=3 )
-    call HIST_reg( AD_HIST_id(I_QICE),  'QICE',  'total ice water',        'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QDRY) , zinterp, 'QDRY',  'dry air',                'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QTOT) , zinterp, 'QTOT',  'total water',            'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QHYD) , zinterp, 'QHYD',  'total hydrometeors',     'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QLIQ) , zinterp, 'QLIQ',  'total liquid water',     'kg/kg',  ndim=3 )
+    call HIST_reg( AD_HIST_id(I_QICE) , zinterp, 'QICE',  'total ice water',        'kg/kg',  ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_LWP),   'LWP',   'liquid water path',      'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_IWP),   'IWP',   'ice    water path',      'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LWP)  , zinterp, 'LWP',   'liquid water path',      'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice    water path',      'g/m2',   ndim=2 )
 
-    call HIST_reg( AD_HIST_id(I_RTOT),  'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_CPTOT), 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
-    call HIST_reg( AD_HIST_id(I_PRES),  'PRES',  'pressure',               'Pa',     ndim=3 )
-    call HIST_reg( AD_HIST_id(I_TEMP),  'T',     'temperature',            'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RTOT) , zinterp, 'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_CPTOT), zinterp, 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_PRES) , zinterp, 'PRES',  'pressure',               'Pa',     ndim=3 )
+    call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_POTL),  'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RH),    'RH',    'relative humidity',      '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHL),   'RHL',   'relative humidity(liq)', '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHI),   'RHI',   'relative humidity(ice)', '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RH)   , zinterp, 'RH',    'relative humidity',      '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RHL',   'relative humidity(liq)', '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_VOR),   'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_DIV),   'DIV',   'divergence',             '1/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_HDIV),  'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_VOR)  , zinterp, 'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
 
-    call HIST_reg( AD_HIST_id(I_ENGP),  'ENGP',  'potential energy',       'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGK),  'ENGK',  'kinetic energy',         'J/m3',   ndim=3 )
-    call HIST_reg( AD_HIST_id(I_ENGI),  'ENGI',  'internal energy',        'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGT) , zinterp, 'ENGT',  'total energy',           'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGP) , zinterp, 'ENGP',  'potential energy',       'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGK) , zinterp, 'ENGK',  'kinetic energy',         'J/m3',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_ENGI) , zinterp, 'ENGI',  'internal energy',        'J/m3',   ndim=3 )
 
     !-----< monitor output setup >-----
 
@@ -569,7 +571,7 @@ contains
   !-----------------------------------------------------------------------------
   !> fill HALO region of atmospheric variables
   subroutine ATMOS_vars_fillhalo
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -630,18 +632,18 @@ contains
   subroutine ATMOS_vars_restart_read
     use gtool_file, only: &
        FileRead
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_myrank
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ
-    use mod_monitor, only: &
+    use scale_monitor, only: &
        MONIT_put,  &
        MONIT_in,   &
        MONIT_write
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV
@@ -777,11 +779,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart of atmospheric variables
   subroutine ATMOS_vars_restart_write
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     use gtool_file_h, only: &
        File_REAL4, &
@@ -793,7 +795,7 @@ contains
        FilePutAssociatedCoordinates, &
        FileWrite, &
        FileClose
-    use mod_grid, only: &
+    use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
        GRID_CY,    &
@@ -820,13 +822,13 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
-    use mod_grid_real, only: &
-       REAL_lon, &
-       REAL_lonx, &
-       REAL_lat, &
-       REAL_laty
+    use scale_grid_real, only: &
+       REAL_LON, &
+       REAL_LONX, &
+       REAL_LAT, &
+       REAL_LATY
 #ifdef _SDM
-    use mod_atmos_phy_mp_sdm, only: &
+    use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_out
 #endif
@@ -923,15 +925,15 @@ contains
     call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
 
     call FilePutAssociatedCoordinates( fid, &
-         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_lon(IS:IE,JS:JE) )
+         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
-         dtype, REAL_lonx(IS:IE,JS:JE) )
+         dtype, REAL_LONX(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
-         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_lat(IS:IE,JS:JE) )
+         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
     call FilePutAssociatedCoordinates( fid, &
          'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
-         dtype, REAL_laty(IS:IE,JS:JE) )
+         dtype, REAL_LATY(IS:IE,JS:JE) )
 
     call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)
                           fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
@@ -986,7 +988,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
   subroutine ATMOS_vars_restart_check
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_myrank
     use gtool_file, only: &
        FileRead
@@ -1117,7 +1119,7 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for atmospheric variables
   subroutine ATMOS_vars_history
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        Rdry  => CONST_Rdry,  &
        Rvap  => CONST_Rvap,  &
@@ -1125,24 +1127,24 @@ contains
        CVdry => CONST_CVdry, &
        LH0   => CONST_LH0,   &
        P00   => CONST_PRE00
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ   => GRID_CZ,   &
        CDZ  => GRID_CDZ,  &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
-    use mod_history, only: &
-       HIST_put
-    use mod_monitor, only: &
+    use scale_history, only: &
+       HIST_in
+    use scale_monitor, only: &
        MONIT_put, &
        MONIT_in
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        CPw => AQ_CP,                       &
        CVw => AQ_CV
-    use mod_atmos_saturation, only: &
+    use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -1200,13 +1202,13 @@ contains
     endif
 
     ! history output of prognostic variables
-    call HIST_put( AP_HIST_id(I_DENS), DENS(:,:,:), TIME_DTSEC )
-    call HIST_put( AP_HIST_id(I_MOMZ), MOMZ(:,:,:), TIME_DTSEC )
-    call HIST_put( AP_HIST_id(I_MOMX), MOMX(:,:,:), TIME_DTSEC )
-    call HIST_put( AP_HIST_id(I_MOMY), MOMY(:,:,:), TIME_DTSEC )
-    call HIST_put( AP_HIST_id(I_RHOT), RHOT(:,:,:), TIME_DTSEC )
+    call HIST_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), TIME_DTSEC )
+    call HIST_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), TIME_DTSEC )
+    call HIST_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), TIME_DTSEC )
+    call HIST_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), TIME_DTSEC )
+    call HIST_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), TIME_DTSEC )
     do iq = 1, QA
-       call HIST_put( AQ_HIST_id(iq), QTRC(:,:,:,iq), TIME_DTSEC )
+       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), TIME_DTSEC )
     enddo
 
     ! monitor output of prognostic variables
@@ -1283,7 +1285,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTOT(k,i,j) = 1.D0 - QDRY(k,i,j)
+          QTOT(k,i,j) = 1.0_RP - QDRY(k,i,j)
        enddo
        enddo
        enddo
@@ -1574,38 +1576,38 @@ contains
        enddo
     endif
 
-    call HIST_put( AD_HIST_id(I_VELZ),  VELZ(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_VELX),  VELX(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_VELY),  VELY(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_POTT),  POTT(:,:,:),  TIME_DTSEC )
+    call HIST_in( VELZ (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
+    call HIST_in( VELX (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
+    call HIST_in( VELY (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
+    call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K',      TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_QDRY),  QDRY(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_QTOT),  QTOT(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_QHYD),  QHYD(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_QLIQ),  QLIQ(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_QICE),  QICE(:,:,:),  TIME_DTSEC )
+    call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg',  TIME_DTSEC )
+    call HIST_in( QTOT (:,:,:), 'QTOT',  'total water',            'kg/kg',  TIME_DTSEC )
+    call HIST_in( QHYD (:,:,:), 'QHYD',  'total hydrometeors',     'kg/kg',  TIME_DTSEC )
+    call HIST_in( QLIQ (:,:,:), 'QLIQ',  'total liquid water',     'kg/kg',  TIME_DTSEC )
+    call HIST_in( QICE (:,:,:), 'QICE',  'total ice water',        'kg/kg',  TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_LWP),   LWP (:,:),    TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_IWP),   IWP (:,:),    TIME_DTSEC )
+    call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2',   TIME_DTSEC )
+    call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2',   TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_RTOT),  RTOT(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_CPTOT), CPTOT(:,:,:), TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_PRES),  PRES(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_TEMP),  TEMP(:,:,:),  TIME_DTSEC )
+    call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K', TIME_DTSEC )
+    call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K', TIME_DTSEC )
+    call HIST_in( PRES (:,:,:), 'PRES',  'pressure',               'Pa',     TIME_DTSEC )
+    call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K',      TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_POTL),  POTL(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_RH),    RH  (:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_RHL),   RHL (:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_RHI),   RHI (:,:,:),  TIME_DTSEC )
+    call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K',      TIME_DTSEC )
+    call HIST_in( RH   (:,:,:), 'RH',    'relative humidity',      '%',      TIME_DTSEC )
+    call HIST_in( RHL  (:,:,:), 'RHL',   'relative humidity(liq)', '%',      TIME_DTSEC )
+    call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%',      TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_VOR),   VOR (:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_DIV),   DIV (:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_HDIV),  HDIV(:,:,:),  TIME_DTSEC )
+    call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s',    TIME_DTSEC )
+    call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s',    TIME_DTSEC )
+    call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s',    TIME_DTSEC )
 
-    call HIST_put( AD_HIST_id(I_ENGT),  ENGT(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_ENGP),  ENGP(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_ENGK),  ENGK(:,:,:),  TIME_DTSEC )
-    call HIST_put( AD_HIST_id(I_ENGI),  ENGI(:,:,:),  TIME_DTSEC )
+    call HIST_in( ENGT (:,:,:), 'ENGT',  'total energy',           'J/m3',   TIME_DTSEC )
+    call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3',   TIME_DTSEC )
+    call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3',   TIME_DTSEC )
+    call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3',   TIME_DTSEC )
 
     if ( AD_MONIT_id(I_QDRY) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1642,15 +1644,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for atmosphere
   subroutine ATMOS_vars_total
-    use mod_const, only: &
+    use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ   => GRID_CZ
-    use mod_stats, only: &
+    use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV

@@ -1,0 +1,56 @@
+#
+# ------ FOR Earth Simulator 2 -----
+#
+
+##### for computation
+
+FFLAGS_FAST  = -C hopt                    \
+               -Ep -f2003 -dW             \
+               -Wf"-L fmtlist transform"  \
+               -Wf"-pvctl chgpwr fullmsg" \
+               -Wf"-O extendreorder"
+
+FFLAGS_DEBUG = -C debug                   \
+               -Ep -f2003 -dW             \
+               -Wf"-L fmtlist transform"  \
+               -Wf"-pvctl fullmsg"        \
+               -Wf"-init heap=nan stack=nan"
+#               -DDEBUG
+
+# Performance monitor
+# disable
+#PERF_MONIT = -Nftrace
+# ftrace
+PERF_MONIT = -ftrace
+
+FC     = sxmpif90
+FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) -D__ES2
+#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) -D__ES2
+
+FFLAGS_DYN ?= $(FFLAGS)
+
+MODDIROPT ?= -to
+
+CC     = sxmpic++
+CFLAGS = -C vsafe
+
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I/SX/usr/include
+NETCDF_LIBS    ?= -L/SX/usr/lib0 -lnetcdf
+
+###### Lapack
+LAPACK_LIBS    ?=
+
+##### for frontend
+INSTALL = install
+AR      = sxar
+ARFLAGS = r
+RANLIB  = touch
+JOBSUB  = qsub

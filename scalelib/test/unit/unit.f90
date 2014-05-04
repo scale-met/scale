@@ -1,18 +1,18 @@
 program unit
 
-  use mod_grid_index
-  use mod_tracer
-  use mod_stdio, only: &
+  use scale_grid_index
+  use scale_tracer
+  use scale_stdio, only: &
      IO_setup
-  use mod_process, only: &
+  use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
      PRC_MPIfinish
-  use mod_const, only: &
+  use scale_const, only: &
      CONST_setup
-  use mod_comm, only: &
+  use scale_comm, only: &
      COMM_setup
-  use mod_grid, only: &
+  use scale_grid, only: &
      GRID_allocate, &
      GRID_generate
 
@@ -40,7 +40,7 @@ program unit
 
   call GRID_INDEX_setup
 
-  TRACER_TYPE = 'SN13'
+  TRACER_TYPE = 'SN14'
   call TRACER_setup
 
   ! setup horisontal/veritical grid system

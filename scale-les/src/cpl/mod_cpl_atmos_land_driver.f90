@@ -15,9 +15,9 @@ module mod_cpl_atmos_land_driver
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,7 +48,7 @@ contains
        ATMOS_PHY_SF_driver_final
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_final
-    use mod_cpl_atmos_land, only: &
+    use scale_cpl_atmos_land, only: &
        CPL_AtmLnd_setup
     use mod_cpl_vars, only: &
        CPL_TYPE_AtmLnd
@@ -65,15 +65,18 @@ contains
   end subroutine CPL_AtmLnd_driver_setup
 
   subroutine CPL_AtmLnd_driver( update_flag )
-    use mod_const, only: &
-       LH0 => CONST_LH0
-    use mod_grid_real, only: &
+    use scale_const, only: &
+       LH0  => CONST_LH0,  &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
+    use scale_grid_real, only: &
        CZ => REAL_CZ, &
        FZ => REAL_FZ
-    use mod_cpl_atmos_land, only: &
+    use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
        LST,              &
+       ALBG,             &
        DENS => CPL_DENS, &
        MOMX => CPL_MOMX, &
        MOMY => CPL_MOMY, &
@@ -87,8 +90,6 @@ contains
        LWD  => CPL_LWD , &
        TG   => CPL_TG,   &
        QVEF => CPL_QVEF, &
-       EMIT => CPL_EMIT, &
-       ALBG => CPL_ALBG, &
        TCS  => CPL_TCS,  &
        DZG  => CPL_DZG,  &
        Z0M  => CPL_Z0M,  &
@@ -135,14 +136,14 @@ contains
     DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
     call CPL_AtmLnd( &
-      LST,                                 & ! (inout)
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-      update_flag,                         & ! (in)
-      DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, EMIT, ALBG,                & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+      LST,                                      & ! (inout)
+      XMFLX, YMFLX, ZMFLX,                      & ! (out)
+      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,      & ! (out)
+      update_flag,                              & ! (in)
+      DZ, DENS, MOMX, MOMY, MOMZ,               & ! (in)
+      RHOS, PRES, ATMP, QV, SWD, LWD,           & ! (in)
+      TG, QVEF, ALBG(:,:,I_SW), ALBG(:,:,I_LW), & ! (in)
+      TCS, DZG, Z0M, Z0H, Z0E                   ) ! (in)
 
     ! interpolate momentum fluxes
     do j = JS, JE

@@ -1,0 +1,155 @@
+\chapter{Horizontally and virtically implicit}
+\label{chap:hivi}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+\section{Equations}
+The governing equation is the followings:
+\begin{align}
+  \frac{\partial G^{\frac{1}{2}}\rho'}{\partial t} &=
+  -\frac{\partial G^{\frac{1}{2}}\rho u}{\partial x^*}
+  -\frac{\partial G^{\frac{1}{2}}\rho v}{\partial y^*}
+  -\frac{\partial J_{33}G^{\frac{1}{2}}\rho w}{\partial \xi}
+  + G^{\frac{1}{2}}S_\rho, \\
+  \frac{\partial G^{\frac{1}{2}}\rho u}{\partial t}
+  &= -\frac{\partial G^{\frac{1}{2}}p'}{\partial x^*} + G^{\frac{1}{2}}S_{\rho u}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho v}{\partial t}
+  &= -\frac{\partial G^{\frac{1}{2}}p'}{\partial y^*} + G^{\frac{1}{2}}S_{\rho v}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho w}{\partial t}
+  &= -\frac{\partial J_{33}G^{\frac{1}{2}}p'}{\partial \xi} -G^{\frac{1}{2}}\rho' g + G^{\frac{1}{2}}S_{\rho w}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho\theta}{\partial t} &=
+  -\frac{\partial G^{\frac{1}{2}}u \rho \theta}{\partial x^*}
+  -\frac{\partial G^{\frac{1}{2}}v \rho \theta}{\partial y^*}
+  -\frac{\partial J_{33}G^{\frac{1}{2}}w \rho \theta}{\partial \xi}
+  + G^{\frac{1}{2}}S_{\rho\theta}, \\
+  p &= P_{00}\left(\frac{R\rho\theta}{P_{00}}\right)^{c_p/c_v},
+\end{align}
+where
+\begin{align}
+  G^{\frac{1}{2}}S_\rho &=      
+  - \frac{\partial J_{13}G^{\frac{1}{2}}\rho u + J_{23}G^{\frac{1}{2}}\rho v}{\partial \xi}, \\
+  G^{\frac{1}{2}}S_{\rho u}
+  &= - \frac{\partial G^{\frac{1}{2}}u\rho u}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}v\rho u}{\partial y^*}
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho u + J_{23}G^{\frac{1}{2}}v\rho u + J_{33}G^{\frac{1}{2}}w\rho u) \nonumber\\&
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}p'), \\
+  G^{\frac{1}{2}}S_{\rho v}
+  &= - \frac{\partial G^{\frac{1}{2}}u\rho v}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}v\rho v}{\partial y^*}
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho v + J_{23}G^{\frac{1}{2}}v\rho v + J_{33}G^{\frac{1}{2}}w\rho v), \nonumber\\&
+     - \frac{\partial}{\partial \xi}(J_{23}G^{\frac{1}{2}}p'), \\
+  G^{\frac{1}{2}}S_{\rho w}
+  &= - \frac{\partial G^{\frac{1}{2}}u\rho w}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}v\rho w}{\partial y^*}
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho w + J_{23}G^{\frac{1}{2}}v\rho w + J_{33}G^{\frac{1}{2}}w\rho w), \\
+  G^{\frac{1}{2}}S_{\rho\theta} &= 
+  - \frac{\partial J_{13}G^{\frac{1}{2}}u\rho\theta+J_{23}G^{\frac{1}{2}}v\rho\theta}{\partial \xi}.
+\end{align}
+Prime describes deviation from a reference state, and the reference state depends only $z$ and satisfies in hydrostatic barance:
+\begin{align}
+  p' &= p - \bar{p}, \\
+  \rho' &= \rho - \bar{\rho}, \\
+  \frac{d \bar{p}(z)}{d z} &= -\bar{\rho}(z) g.
+\end{align}
+
+\section{Descritization}
+
+For the temporal discritization, backward temporal integrations are employed for the terms related to acoustic wave.
+\begin{align}
+  \frac{\rho'^{n+1}-\rho'^n}{\Delta t} &=
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial x^*}\{G^{\frac{1}{2}}(\rho u)^{n+1}\}
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial y^*}\{G^{\frac{1}{2}}(\rho v)^{n+1}\} \nonumber\\ & \;\;\;
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}\}
+  + S_\rho^n, \label{eq: hivi rho} \\
+  \frac{(\rho u)^{n+1}-(\rho u)^n}{\Delta t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial x^*}(G^{\frac{1}{2}}p'^{n+1}) + S_{\rho u}^n, \\
+  \frac{(\rho v)^{n+1}-(\rho v)^n}{\Delta t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial y^*}(G^{\frac{1}{2}}p'^{n+1}) + S_{\rho v}^n, \\
+  \frac{(\rho w)^{n+1}-(\rho w)^n}{\Delta t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}(J_{33}G^{\frac{1}{2}}p'^{n+1}) -g\rho'^{n+1} + S_{\rho w}^n, \\
+  \frac{p'^{n+1} - p'^n}{\Delta t}
+  &\sim \kappa^n \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
+  \frac{\partial \rho\theta}{\partial t} &=
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial x^*}\{G^{\frac{1}{2}}\theta^n (\rho u)^{n+1}\}
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial y^*}\{G^{\frac{1}{2}}\theta^n (\rho v)^{n+1}\}  \nonumber\\ & \;\;\;
+  -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}\theta^n (\rho w)^{n+1}\}
+  + S_{\rho\theta}^n,
+\end{align}
+where $\kappa = c_p/c_v$.
+Note that the pressure equation is linealized.
+
+In order to obtain Helmholtz equation, a linearlized equation for the density is used instead of Eq. \ref{eq: hivi rho}.
+\begin{align}
+  \rho'^{n+1} &\sim
+  \rho'^n + \frac{1}{\kappa^n} \frac{\rho^n}{p^n} \left\{p'^{n+1}-p'^n\right\}.
+\end{align}
+Here we assume that the potential temperature does not change during a temporal step due to acoustic wave.
+
+Eliminating $(\rho u)^{n+1}, (\rho v)^{n+1} (\rho w)^{n+1}, $, and $\rho'^{n+1}$, the Helmholtz equation for $p'^{n+1}$ is obtained.
+\begin{align}
+  & \frac{\partial}{\partial x^*}\left(\theta^n\frac{\partial G^{\frac{1}{2}}p'^{n+1}}{\partial x^*}\right)
+  + \frac{\partial}{\partial y^*}\left(\theta^n\frac{\partial G^{\frac{1}{2}}p'^{n+1}}{\partial y^*}\right)
+  + \frac{\partial}{\partial \xi}\left(J_{33}\theta^n\frac{\partial J_{33}G^{\frac{1}{2}}p'^{n+1}}{\partial \xi}\right) \nonumber\\&
+  + g \frac{\partial}{\partial \xi} \left(\frac{J_{33}G^{\frac{1}{2}}\theta^np'^{n+1}}{C_s^{2n}}\right)
+  - \frac{G^{\frac{1}{2}}\theta^np'^{n+1}}{\Delta t^2 C_s^{2n}} \nonumber\\
+  &=
+  \frac{1}{\Delta t}\left[
+      \frac{\partial G^{\frac{1}{2}}\theta^n\left\{(\rho u)^n + \Delta t S_{\rho u}^n\right\}}{\partial x^*}
+    + \frac{\partial G^{\frac{1}{2}}\theta^n\left\{(\rho v)^n + \Delta t S_{\rho v}^n\right\}}{\partial y^*}
+    + \frac{\partial J_{33}G^{\frac{1}{2}}\theta^n\left\{(\rho w)^n + \Delta t S_{\rho w}^n\right\}}{\partial \xi}
+    \right] \nonumber\\&\;\;\;
+  + g \frac{\partial}{\partial \xi}\left\{\frac{J_{33}G^{\frac{1}{2}}\theta^np'^n}{C_s^{2n}}-J_{33}G^{\frac{1}{2}}(\rho'\theta)^n\right\}
+  + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
+  - \frac{G^{\frac{1}{2}}\theta^np'^n}{\Delta t^2 C_s^{2n}},
+\end{align}
+where
+\begin{align}
+  C_s^2 &= \kappa\frac{p}{\rho}.
+\end{align}
+
+Spatial differentials are descritized.
+\begin{align}
+  & \frac{1}{\Delta x_i}\left(
+   \hat{\theta}_{i+1/2}\frac{(G^{\frac{1}{2}}p'^{n+1})_{i+1}-G^{\frac{1}{2}}p'^{n+1}}{\Delta x_{i+1/2}}
+  -\hat{\theta}_{i-1/2}\frac{G^{\frac{1}{2}}p'^{n+1}-(G^{\frac{1}{2}}p'^{n+1})_{i-1}}{\Delta x_{i-1/2}}
+  \right) \nonumber\\&
+  + \frac{1}{\Delta y_j}\left(
+   \hat{\theta}_{j+1/2}\frac{(G^{\frac{1}{2}}p'^{n+1})_{j+1}-G^{\frac{1}{2}}p'^{n+1}}{\partial y_{j+1/2}}
+  -\hat{\theta}_{j-1/2}\frac{G^{\frac{1}{2}}p'^{n+1}-(G^{\frac{1}{2}}p'^{n+1})_{j-1}}{\partial y_{j-1/2}}
+ \right) \nonumber\\&
+  + \frac{1}{\Delta z_k}\left\{
+   (J_{33})_{k+1/2}\hat{\theta}_{k+1/2}\frac{J_{33}G^{\frac{1}{2}}p'^{n+1}_{k+1}-J_{33}G^{\frac{1}{2}}p'^{n+1}}{\Delta z_{k+1/2}}
+  -(J_{33})_{k-1/2}\hat{\theta}_{k-1/2}\frac{J_{33}G^{\frac{1}{2}}p'^{n+1}-J_{33}G^{\frac{1}{2}}p'^{n+1}_{k-1}}{\Delta z_{k-1/2}}
+  \right) \nonumber\\&
+  + g \frac{1}{\Delta_{k+1/2}+\Delta z_{k-1/2}} \left\{
+   \frac{J_{33}G^{\frac{1}{2}}\theta p'^{n+1}_{k+1}}{C^2_{s k+1}}
+  -\frac{J_{33}G^{\frac{1}{2}}\theta p'^{n+1}_{k-1}}{C^2_{s k-1}} \right\}
+  - \frac{G^{\frac{1}{2}}\theta p'^{n+1}}{\Delta t^2 C^2_s} \nonumber\\
+  &=
+  \frac{1}{\Delta t}\left[
+      \frac{
+         G^{\frac{1}{2}}_{i+1/2}\hat{\theta}_{i+1/2}\left\{(\rho u)_{i+1/2} + \Delta t (S_{\rho u})_{i+1/2}\right\}
+        -G^{\frac{1}{2}}_{i-1/2}\hat{\theta}_{i-1/2}\left\{(\rho u)_{i-1/2} + \Delta t (S_{\rho u})_{i-1/2}\right\}
+      }{\Delta x_i} \right.\nonumber\\&
+    + \frac{
+        G^{\frac{1}{2}}_{j+1/2}\hat{\theta}_{j+1/2}\left\{(\rho v)_{j+1/2} + \Delta t (S_{\rho v})_{j+1/2}\right\}
+       -G^{\frac{1}{2}}_{j-1/2}\hat{\theta}_{j-1/2}\left\{(\rho v)_{j-1/2} + \Delta t 'S_{\rho v})_{j-1/2}\right\}
+      }{\Delta y_j} \nonumber\\& \left.
+    + \frac{
+        J_{33}G^{\frac{1}{2}}\hat{\theta}_{k+1/2}\left\{(\rho w)_{k+1/2} + \Delta t (S_{\rho w})_{k+1/2}\right\}
+       -J_{33}G^{\frac{1}{2}}\hat{\theta}_{k-1/2}\left\{(\rho w)_{k-1/2} + \Delta t (S_{\rho w})_{k-1/2}\right\}
+      }{\Delta z_k}
+    \right] \nonumber\\&\;\;\;
+  + g \frac{1}{\Delta z_{k+1/2}+\Delta z_{k-1/2}}\left\{
+    \frac{J_{33}G^{\frac{1}{2}}\theta p'^n_{k+1}}{C^2_{s k+1}}
+   -\frac{J_{33}G^{\frac{1}{2}}\theta p'^n_{k-1}}{C^2_{s k-1}}
+   - J_{33}G^{\frac{1}{2}} \{(\rho'\theta)_{k+1} - (\rho'\theta)_{k-1}\}
+  \right\} \nonumber\\&
+  + \frac{G^{\frac{1}{2}} S_{\rho\theta}}{\Delta t}
+  - \frac{G^{\frac{1}{2}}\theta p'^n}{\Delta t^2 C^2_s}.
+\end{align}

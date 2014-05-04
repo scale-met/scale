@@ -11,80 +11,109 @@
 \section{Equations}
 
 \begin{align}
-  \frac{\partial \rho}{\partial t}
-  &= -\frac{\partial \rho w}{\partial z} + S_\rho, \\
-  \frac{\partial \rho w}{\partial t}
-  &= -\frac{\partial p}{\partial z} -\rho g + S_{\rho w}, \\
-  \frac{\partial \rho\theta}{\partial t}
-  &= \frac{\partial \rho w\theta}{\partial z} + S_{\rho\theta}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho}{\partial t}
+  &= -\frac{\partial J_{33}G^{\frac{1}{2}}\rho w}{\partial \xi} + G^{\frac{1}{2}}S_\rho, \\
+  \frac{\partial G^{\frac{1}{2}}\rho w}{\partial t}
+  &= -\frac{\partial J_{33}G^{\frac{1}{2}}p}{\partial \xi} -G^{\frac{1}{2}}\rho g + G^{\frac{1}{2}}S_{\rho w}, \\
+  \frac{\partial G^{\frac{1}{2}}\rho\theta}{\partial t}
+  &= -\frac{\partial J_{33}G^{\frac{1}{2}}\rho w\theta}{\partial \xi} + G^{\frac{1}{2}}S_{\rho\theta}, \\
   p &= P_{00}\left(\frac{R\rho\theta}{P_{00}}\right)^{c_p/c_v},
 \end{align}
 where
 \begin{align}
-  S_\rho &= - \frac{\partial \rho u}{\partial x}
-           - \frac{\partial \rho v}{\partial y}, \\
-  S_{\rho w} &= - \frac{\partial u\rho w}{\partial x}
-              - \frac{\partial v\rho w}{\partial y}
-              - \frac{\partial w\rho w}{\partial z}, \\
-  S_{\rho\theta} &= - \frac{\partial u\rho\theta}{\partial x}
-                 - \frac{\partial v\rho\theta}{\partial y}.
+  G^{\frac{1}{2}}S_\rho
+  &= - G^{\frac{1}{2}}\frac{\partial \rho u}{\partial x}
+     - G^{\frac{1}{2}}\frac{\partial \rho v}{\partial y} \nonumber\\
+  &= - \frac{\partial G^{\frac{1}{2}}\rho u}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}\rho v}{\partial y^*}
+     - \frac{\partial J_{13}G^{\frac{1}{2}}\rho u + J_{23}G^{\frac{1}{2}}\rho v}{\partial \xi}, \\
+  G^{\frac{1}{2}}S_{\rho w}
+  &= - G^{\frac{1}{2}}\frac{\partial u\rho w}{\partial x}
+     - G^{\frac{1}{2}}\frac{\partial v\rho w}{\partial y}
+     - G^{\frac{1}{2}}\frac{\partial w\rho w}{\partial z} \nonumber\\
+  &= - \frac{\partial G^{\frac{1}{2}}u\rho w}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}v\rho w}{\partial y^*}
+     - \frac{\partial}{\partial \xi}(J_{13}G^{\frac{1}{2}}u\rho w + J_{23}G^{\frac{1}{2}}v\rho w + J_{33}G^{\frac{1}{2}}w\rho w), \\
+  G^{\frac{1}{2}}S_{\rho\theta}
+  &= - G^{\frac{1}{2}}\frac{\partial u\rho\theta}{\partial x}
+     - G^{\frac{1}{2}}\frac{\partial v\rho\theta}{\partial y} \nonumber\\
+  &= - \frac{\partial G^{\frac{1}{2}}u\rho\theta}{\partial x^*}
+     - \frac{\partial G^{\frac{1}{2}}v\rho\theta}{\partial y^*}
+     - \frac{\partial J_{13}G^{\frac{1}{2}}u\rho\theta+J_{23}G^{\frac{1}{2}}v\rho\theta}{\partial \xi}.
 \end{align}
 
-\section{Descretization}
+\section{Descritization}
+
+For the temporal discritization, backward temporal integrations are employed for the terms related to acoustic wave in vertical direction.
 \begin{align}
-  \frac{\rho_k^{n+1}-\rho_k^n}{\Delta t}
-  &= -\frac{M_{k+1/2}^{n+1}-M_{k-1/2}^{n+1}}{\Delta z_k} + S_\rho, \\
-  \frac{(\rho w)_{k+1/2}^{n+1}-(\rho w)_{k+1/2}^n}{\Delta t}
-  &= -\frac{p_{k+1}^{n+1}-p_k^{n+1}}{\Delta z_{k+1/2}} -g\frac{\rho_{k+1}^{n+1}+\rho_k^{n+1}}{2} + S_{\rho w}, \\
-  \frac{(\rho\theta)_k^{n+1}-(\rho\theta)_k^n}{\Delta t}
-  &= -\frac{M_{k+1/2}^{n+1}\hat{\theta}_{k+1/2}^n-M_{k-1/2}^{n+1}\hat{\theta}_{k-1/2}}{\Delta z_k} + S_{\rho\theta}, \\
-  p_k^{n+1} &\sim p_k^n + \frac{c_{p k}^np_k^n}{c_{v k}^n}\frac{(\rho\theta)_k^{n+1}-(\rho\theta)_k^n}{(\rho\theta)_k^n},
+  \frac{\rho^{n+1}-\rho^n}{\Delta t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}\} + S_\rho^n, \\
+  \frac{(\rho w)^{n+1}-(\rho w)^n}{\Delta t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}(J_{33}G^{\frac{1}{2}}p^{n+1}) -g\rho^{n+1} + S_{\rho w}^n, \\
+  \frac{p^{n+1} - p^n}{\Delta t}
+  &\sim \frac{c_p^n}{c_v^n} \frac{p^n}{(\rho\theta)^n}\frac{\partial \rho\theta}{\partial t}, \\
+  \frac{\partial \rho\theta}{\partial t}
+  &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}\theta^n (\rho w)^{n+1}\} + S_{\rho\theta}^n.
+\end{align}
+Note that the pressure equation is linealized.
+
+Eliminating $p^{n+1}, (\rho\theta)^{n+1}$, and $\rho^{n+1}$, the Helmholtz equation for $(\rho w)^{n+1}$ is obtained:
+\begin{align}
+  &
+  (\rho w)^{n+1}
+  - \frac{\Delta t^2 g}{G^{\frac{1}{2}}}\frac{\partial}{\partial \xi} \{J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}\}
+  - \frac{\Delta t^2}{G^{\frac{1}{2}}}\frac{\partial}{\partial \xi}\left(J_{33}\frac{c_p^n p^n}{c_v^n (\rho\theta)^n}\frac{\partial J_{33}G^{\frac{1}{2}}\theta^n (\rho w)^{n+1}}{\partial \xi}\right) \nonumber\\
+  &= (\rho w)^n
+  - \frac{\Delta t}{G^{\frac{1}{2}}}\frac{\partial}{\partial \xi}\left\{J_{33}G^{\frac{1}{2}}p^n\left(1+\frac{\Delta t c_p^n S_{\rho\theta}^n}{c_v^n (\rho\theta)^n}\right)\right\}
+  - \Delta t g (\rho^n + \Delta t S_\rho^n)
+  + \Delta t S_{\rho w}^n.
+\end{align}
+
+Vertical differencials are discritized as follows:
+\begin{align}
+&
+  (\rho w)_{k+1/2}^{n+1}
+  -\frac{\Delta t^2 g}{(\Delta z_{k+1} + \Delta z_k) G^{\frac{1}{2}}_{k+1/2}}
+  \left\{J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}_{k+3/2}
+        -J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}_{k-1/2}\right\}
+    \nonumber\\ &
+  - \frac{\Delta t^2}{\Delta z_{k+1/2} G^{\frac{1}{2}}_{k+1/2}}
+  \left\{
+    \left(J_{33}\frac{c_pp}{c_v\rho\theta}\right)_{k+1}\frac{
+    J_{33}G^{\frac{1}{2}}(\rho w)_{k+3/2}\hat{\theta}_{k+3/2}-J_{33}G^{\frac{1}{2}}(\rho w)_{k+1/2}\hat{\theta}_{k+1/2}}{\Delta z_{k+1}} \right.\nonumber\\&\:\:\:\:\:\:\:\:\:\:\:\:\:\:\left.
+    -\left(J_{33}\frac{c_pp}{c_v\rho\theta}\right)_k\frac{
+    J_{33}G^{\frac{1}{2}}(\rho w)_{k+1/2}\hat{\theta}_{k+1/2}-J_{33}G^{\frac{1}{2}}(\rho w)_{k-1/2}\hat{\theta}_{k-1/2}}{\Delta z_k}\right\} \nonumber\\
+  &=
+  (\rho w)_{k+1/2}^n \nonumber\\&
+  -\frac{\Delta t}{\Delta z_{k+1/2} G^{\frac{1}{2}}_{k+1/2}} \left\{
+    J_{33}G^{\frac{1}{2}} p_{k+1}\left(1+\frac{\Delta tc_pS_{\rho\theta}}{c_v\rho\theta}\right)_{k+1}
+  - J_{33}G^{\frac{1}{2}} p_k   \left(1+\frac{\Delta tc_pS_{\rho\theta}}{c_v\rho\theta}\right)_k \right\}\nonumber\\ &
+  -\frac{\Delta t g}{2} \left\{ (\rho+\Delta t S_\rho)_{k+1}+(\rho+\Delta t S_\rho)_k\right\} + \Delta t S_{\rho w},
+\end{align}
+where
+\begin{equation}
+  \hat{\theta}_{k+1/2} = \frac{1}{12}\left(-\theta_{k+2}+7\theta_{k+1}+7\theta_k-\theta_{k-1}\right).
+\end{equation}
+
+Finally we obtained
+\begin{align}
+  &-\frac{1}{G^{\frac{1}{2}}_{k+1/2}}\left\{
+    \frac{\hat{\theta}_{k+3/2}}{\Delta z_{k+1/2}}A_{k+1} + B_{k+1/2}
+  \right\} (\rho w)_{k+3/2}^{n+1} \\
+  &+ \left\{ 1 + \frac{\hat{\theta}_{k+1/2}}{\Delta z_{k+1/2} G^{\frac{1}{2}}_{k+1/2}}(A_{k+1} + A_k)  \right\} (\rho w)_{k+1/2}^{n+1} \\
+  &- \frac{1}{G^{\frac{1}{2}}_{k+1/2}}\left\{
+  \frac{\hat{\theta}_{k-1/2}}{\Delta z_{k+1/2}}A_k - B_{k+1/2}
+  \right\} (\rho w)_{k-1/2}^{n+1} \\
+  &= C_{k+1/2},
 \end{align}
 where
 \begin{align}
-  M_{KS-1/2}^{n+1} &= 0, \\
-  M_{KE+1/2}^{n+1} &= 0, \\
-  \hat\theta_{KS+1/2}^n &= \frac{1}{2}(\theta_{KS+1}^n+\theta_{KS}^n), \\
-  \hat\theta_{KE-1/2}^n &= \frac{1}{2}(\theta_{KE}^n+\theta_{KE-1}^n),
-\end{align}
-and
-\begin{align}
-  M_{k+1/2}^{n+1}
-  &= \frac{1}{6}\left\{-(\rho w)_{k+3/2}^{n+1}+8(\rho w)_{k+1/2}^{n+1}-(\rho w)_{k-1/2}^{n+1}\right\}, \\
-  \hat{\theta}_{k+1/2}^n
-  &= \frac{1}{12}(-\theta_{k+2}^n+7\theta_{k+1}^n+7\theta_k^n-\theta_{k-1}^n),
-\end{align}
-for other $k$.
-
-We obtain the equation for $\rho w$:
-\begin{align}
-  & (\rho w)_{KS+1/2}^n + C_{KS} \nonumber \\
-  &= \left\{\frac{A_{KS+1}\hat\theta_{KS+3/2}^n}{\Delta z_{KS+1/2}} + \frac{B}{\Delta z_{KS+1}}\right\} (\rho w)_{KS+5/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{KS+1}(8\hat\theta_{KS+3/2}^n+\hat\theta_{KS+1/2}^n)+A_{KS}\hat\theta_{KS+1/2}^n}{\Delta z_{KS+1/2}} + B\left(\frac{9}{\Delta z_{KS+1}}-\frac{1}{\Delta z_{KS}}\right)\right\} (\rho w)_{KS+3/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_{KS+1}(\hat\theta_{KS+3/2}^2+8\hat\theta_{KS+1/2}) + 8A_{KS}\hat\theta_{KS+1/2}}{\Delta z_{KS+1/2}} + B\left(\frac{9}{\Delta z_{KS+1}}-\frac{8}{\Delta z_{KS}}\right) + 1\right\} (\rho w)_{KS+1/2}^{n+1}, \\
-  & (\rho w)_{KE-1/2}^n + C_{KE} \nonumber \\
-  &= \left\{\frac{8A_{KE}\hat\theta_{KE-1/2} + A_{KE-1}(8\hat\theta_{KE-1/2}+\hat\theta_{KE-3/2})}{\Delta z_{KE-1/2}} + B\left(\frac{8}{\Delta z_{KE}}-\frac{9}{\Delta z_{KE-1}}\right) + 1\right\} (\rho w)_{KE-1/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{KE}\hat\theta_{KE-1/2}^n+A_{KE-1}(\hat\theta_{KE-1/2}^n+8\hat\theta_{KE-3/2})}{\Delta z_{KE-1/2}} - B\left(\frac{1}{\Delta z_{KE}}-\frac{9}{\Delta z_{KE-1}}\right)\right\} (\rho w)_{KE-3/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_{KE-1}\hat\theta_{KE-3/2}}{\Delta z_{KE-1/2}} - \frac{B}{\Delta z_{KE-1}}\right\} (\rho w)_{KE-5/2}^{n+1},
-\end{align}
-and, for other $k$,
-\begin{align}
-  & (\rho w)_{k+1/2}^n + C_k \\
-  &= \left\{\frac{A_{k+1}\hat\theta_{k+3/2}^n}{\Delta z_{k+1/2}} + \frac{B}{\Delta z_{k+1}}\right\} (\rho w)_{k+5/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{k+1}(8\hat\theta_{k+3/2}^n+\hat\theta_{k+1/2}^n) + A_{k}\hat\theta_{k+1/2}^n}{\Delta z_{k+1/2}} + B\left(\frac{9}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right)\right\} (\rho w)_{k+3/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_{k+1}(\hat\theta_{k+3/2}^n+8\hat\theta_{k+1/2}^n) + A_k(8\hat\theta_{k+1/2}^n+\hat\theta_{k-1/2}^n)}{\Delta z_{k+1/2}} + 9B\left(\frac{1}{\Delta z_{k+1}}-\frac{1}{\Delta z_k}\right) + 1\right\} (\rho w)_{k+1/2}^{n+1} \nonumber \\
-  &- \left\{\frac{A_{k+1}\hat\theta_{k+1/2}^n + A_k(\hat\theta_{k+1/2}^n+8\hat\theta_{k-1/2}^n)}{\Delta z_{k+1/2}} + B\left(\frac{1}{\Delta z_{k+1}}-\frac{9}{\Delta z_k}\right)\right\} (\rho w)_{k-1/2}^{n+1} \nonumber \\
-  &+ \left\{\frac{A_k\hat\theta_{k-1/2}^n}{\Delta z_{k+1/2}} - \frac{B}{\Delta z_k}\right\} (\rho w)_{k-3/2}^{n+1},
-\end{align}
-where
-\begin{align}
-  C_k
-  &= -\frac{\Delta t}{\Delta z_{k+1/2}}\left[
-    p_{k+1}^n\left\{1+\frac{c_{p k+1}\Delta t}{c_{v k+1}}\frac{S_{\rho\theta k+1}}{(\rho\theta)_{k+1}^n}\right\}
-  - p_k^n   \left\{1+\frac{c_{p k}\Delta t}{c_{v k}}\frac{S_{\rho\theta k}  }{(\rho\theta)_k^n   }\right\}
-    \right] \nonumber \\
-  & - \frac{g\Delta t}{2}\{\rho_{k+1}^n+\rho_k^n+\Delta t(S_{\rho k+1}+S_{\rho k})\}
-  + \Delta t S_{\rho w k}, \\
-  A_k &= \frac{c_{p k}^n\Delta t^2 p_k^n   }{6c_{v k}^n\Delta z_{k} (\rho\theta)_k^n}, \\
-  B &= \frac{g\Delta t^2}{12}.
+  A_k &= \frac{\Delta t^2 J_{33}G^{\frac{1}{2}} }{\Delta z_k}\left(J_{33}\frac{c_pp}{c_v\rho\theta}\right)_k, \\
+  B_{k+1/2} &= \frac{\Delta t^2 g J_{33}G^{\frac{1}{2}}}{\Delta z_{k+1}+\Delta z_k}, \\
+  C_{k+1/2} &=
+  (\rho w)_{k+1/2}^n \nonumber \\&
+  -\Delta t\frac{
+  J_{33}G^{\frac{1}{2}}p_{k+1}\left(1+\Delta t\frac{c_pS_{\rho\theta}}{c_v\rho\theta}\right)_{k+1}
+  - J_{33}G^{\frac{1}{2}} p_k\left(1+\Delta t\frac{c_pS_{\rho\theta}}{c_v\rho\theta}\right)_k}{\Delta z_{k+1/2} G^{\frac{1}{2}}_{k+1/2}} \nonumber\\ &
+  -\Delta t g \frac{(\rho+\Delta t S_\rho)_{k+1}+(\rho+\Delta t S_\rho)_k}{2} + \Delta t S_{\rho w}.
 \end{align}

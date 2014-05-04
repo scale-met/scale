@@ -1,0 +1,63 @@
+#
+# ------ FOR Linux 64bit & intel fortran&C & intel mpi -----
+#
+
+##### for computation
+
+FFLAGS_FAST  = -fpp3 -O3 -xHost -ip                 \
+               -assume byterecl -convert big_endian \
+               -ftz -fp-model source -pc 80         \
+               -mcmodel=medium -shared-intel        \
+               -heap-arrays
+
+FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
+               -assume byterecl -convert big_endian \
+               -fpe0 -fp-model source -pc 80        \
+               -check all -warn all -g -traceback   \
+               -mcmodel=medium -shared-intel        \
+               -heap-arrays                         \
+               -DDEBUG
+
+FC     = mpiifort
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+FFLAGS_DYN ?= $(FFLAGS)
+
+ifneq ($(DISABLE_VEC),)
+      FFLAGS += -no-vec
+endif
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
+ifneq ($(ENABLE_PAPI),)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+MODDIROPT ?= -module
+
+CC     = mpiicc
+CFLAGS = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+###### Lapack
+LAPACK_LIBS    ?= -mkl=sequential
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh

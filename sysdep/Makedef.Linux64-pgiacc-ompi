@@ -1,0 +1,58 @@
+#
+# ------ FOR Linux 64bit & pgi fortran&C & openmpi + OpenACC,CUDA -----
+#
+
+##### for computation
+
+FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+              -Minfo=accel -acc -ta=tesla,cuda5.5,cc35,nofma -Mcuda \
+              -Mbyteswapio                       \
+              -Mflushz -pc 64                    \
+              -mcmodel=medium                    \
+              -Msmartalloc=huge -DHEVI_BICGSTAB
+
+FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+               -Minfo=accel -acc -ta=nvidia,time  \
+               -Mbyteswapio                      \
+               -Ktrap=fp -pc 64                  \
+               -Mbounds -Mstandard -g -traceback \
+               -mcmodel=medium -DHEVI_BICGSTAB
+
+FC     = mpif90
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
+
+ifneq ($(ENABLE_OPENMP),)
+      FFLAGS += -openmp -openmp-report
+endif
+ifneq ($(ENABLE_PAPI),)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+MODDIROPT ?= -module
+
+CC     = mpicc
+CFLAGS = -fastsse -mcmodel=medium
+
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+###### NetCDF library
+NETCDF_INCLUDE ?= -I$(NETCDF4)/include
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
+
+###### Lapack
+LAPACK_LIBS    ?=
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh

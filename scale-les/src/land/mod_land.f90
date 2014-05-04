@@ -14,10 +14,10 @@ module mod_land
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
