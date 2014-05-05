@@ -12,10 +12,10 @@ TESTDIR     = ../../..
 index      = 200x8x8
 precision  = real8
 dynamics   = heve
-tracer     = sn13
+tracer     = sdm
 sfcflx     = const
 turbulence = smg
-radiation  = dycoms2
+radiation  = dymmy
 
 # for run
 INITCONF  = init.conf
