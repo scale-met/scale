@@ -1133,7 +1133,7 @@ contains
     allocate(sdz_fm(1:sdfmnum_s2c))
     allocate(sdr_fm(1:sdfmnum_s2c))
     allocate(sdvz_fm(1:sdfmnum_s2c))
-    allocate(sdasl_fm(1:sdfmnum_s2c,1:sdnumasl_s2c))
+    allocate(sdasl_fm(1:sdnum_s2c,1:sdnumasl_s2c))
     allocate(sdrkl_s2c(IA,JA))
     allocate(sdrku_s2c(IA,JA))
 
@@ -1210,7 +1210,7 @@ contains
          sdvz_fm(n) = 0.0_RP
        enddo
        do s = 1, sdnumasl_s2c
-            do n = 1, sdfmnum_s2c
+            do n = 1, sdnum_s2c
               sdasl_fm(n,s) = 0.0_RP
             enddo
        enddo
