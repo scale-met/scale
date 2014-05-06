@@ -606,7 +606,6 @@ contains
        write(fmt1(14:14),'(I1)') 6
        write(fmt1(16:16),'(I1)') 6
        write(SD_IN_BASENAME,fmt1) trim(SD_IN_BASENAME),'pe',mype
-       sd_first = .false. 
     endif
 
     if( SD_OUT_BASENAME == '' ) then
