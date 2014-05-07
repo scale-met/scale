@@ -16,11 +16,11 @@ module mod_user
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -57,16 +57,32 @@ module mod_user
 
   real(RP), private, allocatable :: Q_rate(:,:,:,:)
   real(RP), private, save :: corioli
+
+  !--- for surface flux
+  real(RP), private, save      :: Cm_min  =    0.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private, parameter :: Cm_max  =    2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private, save      :: U_minM  =    0.0_RP  ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxM  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, save      :: U_minE  =    0.0_RP  ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxE  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, save      :: U_minH  =    0.0_RP  ! minimum U_abs for u,v,w
+  real(RP), private, parameter :: U_maxH  =  100.0_RP  ! maximum U_abs for u,v,w
+  real(RP), private, save      :: Cm_const =  0.001229_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: Ce_const =  0.001133_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: Ch_const =  0.001094_RP ! constant bulk coef. of u,v,w
+  real(RP), private, save      :: FIXED_PTSST = 298.5_RP! fixed PT of surface [K]
+  real(RP), private, save      :: FIXED_SST = 299.8_RP  ! fixed Temperature of surface [K]
+  real(RP), private, parameter :: pres_sfc = 1015.4E2_RP! fixed surface pressure
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
+    use scale_const, only: &
        PI => CONST_PI
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ, &
        FZ => GRID_FZ
     implicit none
@@ -237,35 +253,54 @@ contains
          MOMY,    &
          RHOT,    &
          QTRC,    &
+         DENS_tp, &
          MOMZ_tp, &
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
          QTRC_tp
-    use mod_grid, only: &
+    use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
-    use mod_const, only: &
+    use scale_const, only: &
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
          LH0   => CONST_LH0, &
          P00   => CONST_PRE00 
-    use mod_atmos_thermodyn, only: &
+    use scale_atmos_thermodyn, only: &
          CPw   => AQ_CP 
+    use scale_history, only: &
+         HIST_in
+    use scale_time, only: &
+         do_phy_sf => TIME_DOATMOS_PHY_SF, &
+         dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
+    use scale_atmos_saturation, only : &
+         moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq
  
     implicit none
     !---------------------------------------------------------------------------
     real(RP) :: ratesum
 
+    real(RP) :: SFLX_MOMZ(IA,JA)
+    real(RP) :: SFLX_MOMX(IA,JA)
+    real(RP) :: SFLX_MOMY(IA,JA)
+    real(RP) :: SFLX_POTT(IA,JA)
+    real(RP) :: SFLX_QV  (IA,JA)
+    real(RP) :: SHFLX(IA,JA)
+    real(RP) :: LHFLX(IA,JA)
     real(RP) :: WORK(KA,IA,JA)
     real(RP) :: VELX(KA,IA,JA), VELY(KA,IA,JA)
     real(RP) :: TEMP_t(KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
     real(RP) :: d_PT, drhot, LWPT, LWPT_a
     real(RP) :: QHYD, RovCP, PRES, CPovCV, CPtot, Rtot, Qdry, Qtot
+    real(RP) :: qv_evap, pres_evap, PT_SST
 
-    integer :: k, i, j, iq
+    integer :: k, i, j, iq, iw
     integer :: IIS, IIE, JJS, JJE
+    ! work
+    real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
+    real(RP) :: Cm, Ch, Ce    !
 
 
     do JJS = JS, JE, JBLOCK
@@ -467,6 +502,7 @@ contains
 
     ! radiative flux
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Parametarized Radiation of RICO'
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -506,6 +542,96 @@ contains
 
     enddo
     enddo
+
+    if( do_phy_sf ) then
+
+      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux of RICO'
+
+      do j = JS-1, JE
+      do i = IS-1, IE
+
+
+       ! at cell center
+
+       !--- absolute velocity
+       Uabs = sqrt( &
+              ( MOMZ(KS,i,j)                  )**2 &
+            + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
+            + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
+            ) / DENS(KS,i,j) * 0.5_RP
+
+       !--- Bulk coef. at w, theta, and qv points
+       Cm = Cm_const
+       Ch = Ch_const
+       Ce = Ce_const
+
+       !--- saturation at surface
+       qtot = 0.0_RP
+       qdry = 1.0_RP
+       CPtot = 0.0_RP
+       do iw = QQS, QQE
+          qdry = qdry - QTRC(KS,i,j,iw)
+          qtot = qtot + QTRC(KS,i,j,iw)
+          CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
+       enddo
+       Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+       CPtot = CPdry*qdry + CPtot
+       CPovCV = CPtot / ( CPtot - Rtot )
+       pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+
+       call moist_pres2qsat_liq( qv_evap, FIXED_SST, pres_sfc )
+
+       ! flux
+       SFLX_MOMZ(i,j) = 0.0_RP
+       SFLX_POTT(i,j) =   Ch * min(max(Uabs,U_minH),U_maxH) &
+            * ( FIXED_PTSST * DENS(KS,i,j) - RHOT(KS,i,j) )
+       SFLX_QV  (i,j) =   Ce * min(max(Uabs,U_minE),U_maxE) &
+            * DENS(KS,i,j) * ( qv_evap - qtot )
+
+       ! at (u, y, layer)
+       Uabs = sqrt( &
+            + ( 2.0_RP *   MOMX(KS,i,j) )**2 &
+            + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
+            ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+       SFLX_MOMX(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMX(KS,i,j)
+
+       ! at (x, v, layer)
+       Uabs = sqrt( &
+            + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
+            + ( 2.0_RP *   MOMY(KS,i,j) )**2 &
+          ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+       SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
+
+       SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
+       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+
+      enddo
+      enddo
+
+      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
+      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+
+      !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+      do j = JS, JE
+      do i = IS, IE
+       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+            + ( SFLX_POTT(i,j) &
+            + SFLX_QV(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
+              ) * RCDZ(KS)
+       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+             + SFLX_QV(i,j) * RCDZ(KS)
+       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+             + SFLX_MOMZ(i,j) * RFDZ(KS)
+       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+             + SFLX_MOMX(i,j) * RCDZ(KS)
+       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+             + SFLX_MOMY(i,j) * RCDZ(KS)
+       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+             + SFLX_QV(i,j) * RCDZ(KS)
+      enddo
+      enddo
+
+    endif
 
     return
   end subroutine USER_step
