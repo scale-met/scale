@@ -1,18 +1,15 @@
 !-------------------------------------------------------------------------------
-!> module Atmosphere / Dynamics FENT + FCT
+!> module Atmosphere / Dynamics
 !!
 !! @par Description
-!!          Dynamical core for Atmospheric process
-!!          Full explicit, no terrain + tracer FCT limiter
+!!          Dynamical step driver
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-04 (S.Nishizawa) [mod] splited from scale_atmos_dyn.f90
-!!
+!! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
@@ -23,13 +20,6 @@ module mod_atmos_dyn_driver
   use scale_prof
   use scale_grid_index
   use scale_tracer
-#ifdef DEBUG
-  use scale_debug, only: &
-     CHECK
-  use scale_const, only: &
-     UNDEF  => CONST_UNDEF, &
-     IUNDEF => CONST_UNDEF2
-#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -53,7 +43,7 @@ module mod_atmos_dyn_driver
   !++ Private parameters & variables
   !
   ! time integration scheme
-  integer,  private, parameter :: RK = 3             ! order of Runge-Kutta scheme
+  integer,  private, parameter :: RK = 3                                 ! order of Runge-Kutta scheme
 
   ! numerical filter
   integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
@@ -63,10 +53,10 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_DIFF4                                   ! for numerical filter
 
   ! Coriolis force
-  logical,  private              :: ATMOS_DYN_enable_coriolis = .false. ! enable coriolis force?
+  logical,  private :: ATMOS_DYN_enable_coriolis = .false.               ! enable coriolis force?
 
   ! divergence damping
-  real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP      ! Divergence dumping coef
+  real(RP), private :: ATMOS_DYN_divdmp_coef = 0.0_RP                    ! Divergence dumping coef
 
   ! fct
   logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
@@ -80,8 +70,6 @@ contains
   subroutine ATMOS_DYN_driver_setup( DYN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_DYN
     use scale_grid, only: &
        GRID_CDZ, &
        GRID_CDX, &
@@ -91,6 +79,8 @@ contains
        GRID_FDY
     use scale_grid_real, only: &
        REAL_LAT
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_DYN
     use scale_atmos_dyn, only: &
        ATMOS_DYN_setup
     implicit none
@@ -220,9 +210,9 @@ contains
 
     if ( do_flag ) then
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
 
-    call ATMOS_DYN( &
+       call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
@@ -253,12 +243,11 @@ contains
          TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]
          TIME_NSTEP_ATMOS_DYN                                  ) ! [IN]
 
-    call ATMOS_vars_total
+       call ATMOS_vars_total
 
-    end if
+    endif
 
     return
   end subroutine ATMOS_DYN_driver
-
 
 end module mod_atmos_dyn_driver

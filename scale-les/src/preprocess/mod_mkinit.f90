@@ -65,10 +65,10 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
-  use mod_atmos_vars_sf, only: &
-     PREC, &
-     SWD,  &
-     LWD
+  use mod_atmos_phy_sf_vars, only: &
+     PREC => ATMOS_PHY_SF_PREC, &
+     SWD  => ATMOS_PHY_SF_SWD,  &
+     LWD  => ATMOS_PHY_SF_LWD
   use mod_land_vars, only: &
      TG,   &
      STRG, &
@@ -301,23 +301,18 @@ contains
        CONST_UNDEF8
     use mod_atmos_vars, only: &
        ATMOS_sw_restart,    &
-       ATMOS_vars_fillhalo, &
        ATMOS_vars_restart_write
-    use mod_atmos_vars_sf, only: &
-       ATMOS_SF_sw_restart,    &
-       ATMOS_vars_sf_fillhalo, &
-       ATMOS_vars_sf_restart_write
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_sw_restart,        &
+       ATMOS_PHY_SF_vars_restart_write
     use mod_land_vars, only: &
        LAND_sw_restart,    &
-       LAND_vars_fillhalo, &
        LAND_vars_restart_write
     use mod_ocean_vars, only: &
        OCEAN_sw_restart,    &
-       OCEAN_vars_fillhalo, &
        OCEAN_vars_restart_write
     use mod_cpl_vars, only: &
        CPL_sw_restart,    &
-       CPL_vars_fillhalo, &
        CPL_vars_restart_write
     implicit none
 
@@ -406,26 +401,11 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
 
       ! output restart file
-      if( ATMOS_sw_restart ) then
-        call ATMOS_vars_fillhalo
-        call ATMOS_vars_restart_write
-      end if
-      if( ATMOS_SF_sw_restart ) then
-        call ATMOS_vars_sf_fillhalo
-        call ATMOS_vars_sf_restart_write
-      end if
-      if( LAND_sw_restart ) then
-        call LAND_vars_fillhalo
-        call LAND_vars_restart_write
-      end if
-      if( OCEAN_sw_restart ) then
-        call OCEAN_vars_fillhalo
-        call OCEAN_vars_restart_write
-      end if
-      if( CPL_sw_restart ) then
-        call CPL_vars_fillhalo
-        call CPL_vars_restart_write
-      end if
+      if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
+         if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
+      if( LAND_sw_restart  ) call LAND_vars_restart_write
+      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
+      if( CPL_sw_restart   ) call CPL_vars_restart_write
     endif
 
     return
@@ -700,15 +680,13 @@ contains
 
     if ( ENV_THETA < 0.0_RP ) then ! use isa profile
 
-       do j = JS, JE
-       do i = IS, IE
-          call PROFILE_isa( KA, KS, KE,      & ! [IN]
-                            pott_sfc(1,i,j), & ! [IN]
-                            pres_sfc(1,i,j), & ! [IN]
-                            REAL_CZ (:,i,j), & ! [IN]
-                            pott    (:,i,j)  ) ! [OUT]
-       enddo
-       enddo
+       call PROFILE_isa( KA, KS, KE,      & ! [IN]
+                         IA, IS, IE,      & ! [IN]
+                         JA, JS, JE,      & ! [IN]
+                         pott_sfc(1,:,:), & ! [IN]
+                         pres_sfc(1,:,:), & ! [IN]
+                         REAL_CZ (:,:,:), & ! [IN]
+                         pott    (:,:,:)  ) ! [OUT]
 
     else
 

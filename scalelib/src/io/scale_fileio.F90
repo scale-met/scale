@@ -653,7 +653,40 @@ contains
        dim2_E   = IE
        dim3_S   = JS
        dim3_E   = JE
-    else if ( axistype == 'Land' ) then
+    elseif( axistype == 'ZHXY' ) then
+       dims = (/'zh','x ','y '/)
+       dim1_max = KMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    elseif( axistype == 'ZXHY' ) then
+       dims = (/'z ','xh','y '/)
+       dim1_max = KMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    elseif( axistype == 'ZXYH' ) then
+       dims = (/'z ','x ','yh'/)
+       dim1_max = KMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    elseif( axistype == 'Land' ) then
        dims = (/'lz','x ','y '/)
        dim1_max = LKMAX
        dim2_max = IMAX
@@ -691,12 +724,32 @@ contains
        FilePutAxis,     &
        FilePutAssociatedCoordinates
     use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
+       GRID_CZ,    &
+       GRID_CX,    &
+       GRID_CY,    &
+       GRID_FZ,    &
+       GRID_FX,    &
+       GRID_FY,    &
+       GRID_CDZ,   &
+       GRID_CDX,   &
+       GRID_CDY,   &
+       GRID_FDZ,   &
+       GRID_FDX,   &
+       GRID_FDY,   &
+       GRID_CBFZ,  &
+       GRID_CBFX,  &
+       GRID_CBFY,  &
+       GRID_FBFZ,  &
+       GRID_FBFX,  &
+       GRID_FBFY,  &
+       GRID_CXG,   &
+       GRID_CYG,   &
+       GRID_FXG,   &
+       GRID_FYG,   &
+       GRID_CBFXG, &
+       GRID_CBFYG, &
+       GRID_FBFXG, &
+       GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
        GRID_LFZ
@@ -706,14 +759,14 @@ contains
     integer, intent(in) :: dtype
     !---------------------------------------------------------------------------
 
-    call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
-    call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
-    call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
+    call FilePutAxis( fid, 'z',  'Z',              'm', 'z',  dtype, GRID_CZ(KS:KE) )
+    call FilePutAxis( fid, 'x',  'X',              'm', 'x',  dtype, GRID_CX(IS:IE) )
+    call FilePutAxis( fid, 'y',  'Y',              'm', 'y',  dtype, GRID_CY(JS:JE) )
     call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
     call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
     call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
 
-    call FilePutAxis( fid, 'lz', 'LZ', 'm', 'lz', dtype, GRID_LCZ(LKS:LKE) )
+    call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
     call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
 
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
@@ -724,6 +777,37 @@ contains
                                        (/'x ','y '/), dtype, AXIS_LAT (IS:IE,JS:JE)            )
     call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' , 'degrees_north', &
                                        (/'x ','yh'/), dtype, AXIS_LATY(IS:IE,JS:JE)            )
+
+    call FilePutAxis( fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ )
+    call FilePutAxis( fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX )
+    call FilePutAxis( fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY )
+    call FilePutAxis( fid, 'FZ', 'Grid Face Position Z',   'm', 'FZ', dtype, GRID_FZ )
+    call FilePutAxis( fid, 'FX', 'Grid Face Position X',   'm', 'FX', dtype, GRID_FX )
+    call FilePutAxis( fid, 'FY', 'Grid Face Position Y',   'm', 'FY', dtype, GRID_FY )
+
+    call FilePutAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
+    call FilePutAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
+    call FilePutAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
+    call FilePutAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
+
+    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
+    call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
+    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
+    call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
+
+    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
+    call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
+    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
+    call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
+
+    call FilePutAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
+    call FilePutAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
+    call FilePutAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
+    call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
 
     return
   end subroutine set_axes

@@ -2,15 +2,15 @@
 !> module ATMOSPHERE / Physics Cloud Microphysics
 !!
 !! @par Description
-!!          Cloud Microphysics wrapper
+!!          Cloud Microphysics driver
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-06 (S.Nishizawa) [new]
-!!
+!! @li      2013-12-06 (S.Nishizawa)  [new]
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_mp_driver
   !-----------------------------------------------------------------------------
   !
@@ -43,20 +43,11 @@ module mod_atmos_phy_mp_driver
   !
   !++ Private parameters & variables
   !
-!  real(RP), private, allocatable :: DENS_t(:,:,:)
-!  real(RP), private, allocatable :: MOMZ_t(:,:,:)
-!  real(RP), private, allocatable :: MOMX_t(:,:,:)
-!  real(RP), private, allocatable :: MOMY_t(:,:,:)
-!  real(RP), private, allocatable :: RHOT_t(:,:,:)
-!  real(RP), private, allocatable :: QTRC_t(:,:,:,:)
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_MP_driver_setup( MP_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
     implicit none
@@ -65,14 +56,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-
-!    allocate( DENS_t(KA,IA,JA) )
-!    allocate( MOMZ_t(KA,IA,JA) )
-!    allocate( MOMX_t(KA,IA,JA) )
-!    allocate( MOMY_t(KA,IA,JA) )
-!    allocate( RHOT_t(KA,IA,JA) )
-!    allocate( QTRC_t(KA,IA,JA,QA) )
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-MP]/Categ[ATMOS]'
 
     call ATMOS_PHY_MP_setup( MP_TYPE )
 
@@ -82,37 +66,85 @@ contains
   end subroutine ATMOS_PHY_MP_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Driver
   subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
+    use scale_time, only: &
+       dt_MP => TIME_DTSEC_ATMOS_PHY_MP
+    use scale_history, only: &
+       HIST_in
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_vars, only: &
        ATMOS_vars_fillhalo, &
-       ATMOS_vars_total, &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
+       ATMOS_vars_total,    &
+       DENS,                &
+       MOMZ,                &
+       MOMX,                &
+       MOMY,                &
+       RHOT,                &
        QTRC
+    use mod_atmos_phy_mp_vars, only: &
+       DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
+       MOMZ_t_MP => ATMOS_PHY_MP_MOMZ_t,    &
+       MOMX_t_MP => ATMOS_PHY_MP_MOMX_t,    &
+       MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
+       RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
+       QTRC_t_MP => ATMOS_PHY_MP_QTRC_t,    &
+       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     implicit none
+
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
     if ( update_flag ) then
-       call ATMOS_PHY_MP( &
-            DENS, &
-            MOMZ, &
-            MOMX, &
-            MOMY, &
-            RHOT, &
-            QTRC )
+
+       call ATMOS_PHY_MP( DENS, & ! [INOUT]
+                          MOMZ, & ! [INOUT]
+                          MOMX, & ! [INOUT]
+                          MOMY, & ! [INOUT]
+                          RHOT, & ! [INOUT]
+                          QTRC  ) ! [INOUT]
 
        call ATMOS_vars_fillhalo
 
        call ATMOS_vars_total
-    end if
+
+       if ( history_flag ) then
+
+          call HIST_in( SFLX_rain(:,:), 'SFLX_rain', 'precipitation flux (liquid)', 'kg/m2/s', dt_MP )
+          call HIST_in( SFLX_snow(:,:), 'SFLX_snow', 'precipitation flux (solid) ', 'kg/m2/s', dt_MP )
+
+       endif
+
+    endif
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_MP(k,i,j)
+!       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_MP(k,i,j)
+!       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_MP(k,i,j)
+!       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
+!       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
+!    enddo
+!    enddo
+!    enddo
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+!    do iq = 1,  QA
+!    do j  = JS, JE
+!    do i  = IS, IE
+!    do k  = KS, KE
+!       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_MP(k,i,j,iq)
+!    enddo
+!    enddo
+!    enddo
+!    enddo
 
     return
   end subroutine ATMOS_PHY_MP_driver

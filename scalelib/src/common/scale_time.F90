@@ -29,6 +29,7 @@ module scale_time
   public :: TIME_setup
   public :: TIME_checkstate
   public :: TIME_advance
+  public :: TIME_gettimelabel
 
   !-----------------------------------------------------------------------------
   !

@@ -14,7 +14,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos
+module mod_atmos_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -30,8 +30,8 @@ module mod_atmos
   !
   !++ Public procedure
   !
-  public :: ATMOS_setup
-  public :: ATMOS_step
+  public :: ATMOS_driver_setup
+  public :: ATMOS_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -47,39 +47,40 @@ module mod_atmos
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Setup atmosphere
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_setup
+  !> Setup
+  subroutine ATMOS_driver_setup
     use scale_time, only: &
        TIME_NOWDATE
     use mod_atmos_vars, only: &
-       ATMOS_DYN_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
+       ATMOS_DYN_TYPE,    &
+       ATMOS_PHY_CP_TYPE, &
        ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_PHY_CH_TYPE, &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp, &
-       sw_dyn    => ATMOS_sw_dyn,    &
-       sw_phy_sf => ATMOS_sw_phy_sf, &
-       sw_phy_tb => ATMOS_sw_phy_tb, &
-       sw_phy_mp => ATMOS_sw_phy_mp, &
-       sw_phy_rd => ATMOS_sw_phy_rd, &
-       sw_phy_ae => ATMOS_sw_phy_ae
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       DENS,              &
+       MOMZ,              &
+       MOMX,              &
+       MOMY,              &
+       RHOT,              &
+       QTRC,              &
+       DENS_tp,           &
+       MOMZ_tp,           &
+       MOMX_tp,           &
+       MOMY_tp,           &
+       RHOT_tp,           &
+       QTRC_tp
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
@@ -87,17 +88,21 @@ contains
     use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_setup
     use mod_atmos_dyn_driver, only: &
-       ATMOS_DYN_setup => ATMOS_DYN_driver_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_setup => ATMOS_PHY_SF_driver_setup
-    use mod_atmos_phy_tb_driver, only: &
-       ATMOS_PHY_TB_setup => ATMOS_PHY_TB_driver_setup
+       ATMOS_DYN_driver_setup
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_setup => ATMOS_PHY_MP_driver_setup
+       ATMOS_PHY_MP_driver_setup
     use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_setup => ATMOS_PHY_RD_driver_setup
+       ATMOS_PHY_RD_driver_setup
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver_setup
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver_setup
     use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_setup => ATMOS_PHY_AE_driver_setup
+       ATMOS_PHY_AE_driver_setup
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_ch_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -106,21 +111,17 @@ contains
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 
-    call ATMOS_BOUNDARY_setup( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
     ! setup each components
-    if ( sw_dyn    ) call ATMOS_DYN_setup   ( ATMOS_DYN_TYPE    )
-
-    if ( sw_phy_sf ) call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
-
-    if ( sw_phy_tb ) call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE )
-
-    if ( sw_phy_mp ) call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
-
-    if ( sw_phy_rd .or. sw_phy_ae ) call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
-
-    if ( sw_phy_rd ) call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
+    if( ATMOS_sw_dyn    ) call ATMOS_DYN_driver_setup   ( ATMOS_DYN_TYPE    )
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_driver_setup( ATMOS_PHY_CP_TYPE )
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_driver_setup( ATMOS_PHY_MP_TYPE )
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_driver_setup( ATMOS_PHY_CH_TYPE )
+    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_driver_setup( ATMOS_PHY_AE_TYPE )
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_driver_setup( ATMOS_PHY_RD_TYPE )
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_driver_setup( ATMOS_PHY_SF_TYPE )
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_driver_setup( ATMOS_PHY_TB_TYPE )
 
     !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
@@ -131,12 +132,12 @@ contains
     QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
-  end subroutine ATMOS_setup
+  end subroutine ATMOS_driver_setup
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_step
+  subroutine ATMOS_driver
     use scale_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
@@ -258,6 +259,6 @@ contains
     QTRC_tp(:,:,:,:) = 0.0_RP
 
     return
-  end subroutine ATMOS_step
+  end subroutine ATMOS_driver
 
-end module mod_atmos
+end module mod_atmos_driver

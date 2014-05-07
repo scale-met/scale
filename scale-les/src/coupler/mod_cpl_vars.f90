@@ -486,8 +486,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (coupler) ***'
 
-    call PROF_rapstart('FILE I NetCDF')
-
     if ( CPL_RESTART_IN_BASENAME /= '' ) then
 
        call FILEIO_read( LST(:,:),                                        & ![OUT]
@@ -530,8 +528,6 @@ contains
        SnowT(:,:)   = UNDEF
     endif
 
-    call PROF_rapend  ('FILE I NetCDF')
-
     return
   end subroutine CPL_vars_restart_read
 
@@ -551,8 +547,6 @@ contains
 
     integer :: n
     !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE O NetCDF')
 
     if ( CPL_RESTART_OUT_BASENAME /= '' ) then
 
@@ -601,8 +595,6 @@ contains
                           'XY', CPL_RESTART_OUT_DTYPE, append=.true.                   ) ! [IN]
 
     endif
-
-    call PROF_rapend  ('FILE O NetCDF')
 
     call CPL_vars_total
 

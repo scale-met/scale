@@ -2,14 +2,13 @@
 !> module CPL driver
 !!
 !! @par Description
-!!          CPL module driver
+!!          Coupler driver
 !!
 !! @author Team SCALE
 !! @li      2013-08-31 (T.Yamaura)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-module mod_cpl
+module mod_cpl_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -24,8 +23,8 @@ module mod_cpl
   !
   !++ Public procedure
   !
-  public :: CPL_setup
-  public :: CPL_calc
+  public :: CPL_driver_setup
+  public :: CPL_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -43,7 +42,7 @@ module mod_cpl
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine CPL_setup
+  subroutine CPL_driver_setup
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
@@ -60,14 +59,15 @@ contains
     if( sw_AtmOcn ) call CPL_AtmOcn_driver_setup
 
     call CPL_vars_merge
+
     call CPL_vars_fillhalo
 
     return
-  end subroutine CPL_setup
+  end subroutine CPL_driver_setup
 
   !-----------------------------------------------------------------------------
   !> CPL calcuration
-  subroutine CPL_calc
+  subroutine CPL_driver
     use mod_cpl_vars, only: &
        sw_AtmLnd  => CPL_sw_AtmLnd,  &
        sw_AtmOcn  => CPL_sw_AtmOcn,  &
@@ -109,6 +109,6 @@ contains
     call PROF_rapend  ('CPL History')
 
     return
-  end subroutine CPL_calc
+  end subroutine CPL_driver
 
-end module mod_cpl
+end module mod_cpl_driver

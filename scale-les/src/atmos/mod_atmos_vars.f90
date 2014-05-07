@@ -51,19 +51,22 @@ module mod_atmos_vars
   !++ Public parameters & variables
   !
   character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_CP_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
 
   logical,                public, save :: ATMOS_sw_dyn
+  logical,                public, save :: ATMOS_sw_phy_cp
+  logical,                public, save :: ATMOS_sw_phy_mp
+  logical,                public, save :: ATMOS_sw_phy_ae
+  logical,                public, save :: ATMOS_sw_phy_ch
+  logical,                public, save :: ATMOS_sw_phy_rd
   logical,                public, save :: ATMOS_sw_phy_sf
   logical,                public, save :: ATMOS_sw_phy_tb
-  logical,                public, save :: ATMOS_sw_phy_mp
-  logical,                public, save :: ATMOS_sw_phy_rd
-  logical,                public, save :: ATMOS_sw_phy_ae
   logical,                public, save :: ATMOS_sw_restart
   logical,                public, save :: ATMOS_sw_check
 
@@ -71,9 +74,9 @@ module mod_atmos_vars
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
-  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z  [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x  [kg/s/m2]
-  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y  [kg/s/m2]
+  real(RP), public, target, allocatable :: MOMZ(:,:,:)   ! momentum z  [kg/m2/s]
+  real(RP), public, target, allocatable :: MOMX(:,:,:)   ! momentum x  [kg/m2/s]
+  real(RP), public, target, allocatable :: MOMY(:,:,:)   ! momentum y  [kg/m2/s]
   real(RP), public, target, allocatable :: RHOT(:,:,:)   ! DENS * POTT [K*kg/m3]
   real(RP), public, target, allocatable :: QTRC(:,:,:,:) ! ratio of mass of tracer to total mass[kg/kg]
 
@@ -127,10 +130,11 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,               private, save :: ATMOS_RESTART_OUTPUT           = .false.
-  character(len=H_LONG), private, save :: ATMOS_RESTART_IN_BASENAME      = 'restart_in'
-  character(len=H_LONG), private, save :: ATMOS_RESTART_OUT_BASENAME     = 'restart_out'
-  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES PROGNOSTIC VARS.'
+  logical,               private, save :: ATMOS_RESTART_OUTPUT           = .false.                 !< output restart file?
+  character(len=H_LONG), private, save :: ATMOS_RESTART_IN_BASENAME      = ''                      !< basename of the restart file
+  character(len=H_LONG), private, save :: ATMOS_RESTART_OUT_BASENAME     = ''                      !< basename of the output file
+  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES ATMOS VARS.' !< title    of the output file
+  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'               !< REAL4 or REAL8
   logical,               private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
   logical,               private, save :: ATMOS_RESTART_CHECK            = .false.
@@ -194,16 +198,33 @@ contains
        HIST_reg
     use scale_monitor, only: &
        MONIT_reg
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_setup
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_setup
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_setup
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_setup
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_setup
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_setup
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_setup
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS / &
        ATMOS_DYN_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_CP_TYPE, &
        ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
        ATMOS_PHY_AE_TYPE, &
-       ATMOS_PHY_CH_TYPE
+       ATMOS_PHY_CH_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
@@ -271,6 +292,41 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
 
+    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : ON'
+       ATMOS_sw_phy_cp = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : OFF'
+       ATMOS_sw_phy_cp = .false.
+    endif
+    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : ON'
+       ATMOS_sw_phy_mp = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : OFF'
+       ATMOS_sw_phy_mp = .false.
+    endif
+    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : ON'
+       ATMOS_sw_phy_ae = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : OFF'
+       ATMOS_sw_phy_ae = .false.
+    endif
+    if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : ON'
+       ATMOS_sw_phy_ch = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : OFF'
+       ATMOS_sw_phy_ch = .false.
+    endif
+    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
+       ATMOS_sw_phy_rd = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
+       ATMOS_sw_phy_rd = .false.
+    endif
     if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
        ATMOS_sw_phy_sf = .true.
@@ -284,27 +340,6 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
        ATMOS_sw_phy_tb = .false.
-    endif
-    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : ON'
-       ATMOS_sw_phy_mp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics  : OFF'
-       ATMOS_sw_phy_mp = .false.
-    endif
-    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
-       ATMOS_sw_phy_rd = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
-       ATMOS_sw_phy_rd = .false.
-    endif
-    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol  : ON'
-       ATMOS_sw_phy_ae = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol  : OFF'
-       ATMOS_sw_phy_ae = .false.
     endif
 
     !-----< prognostic variable list check >-----
@@ -336,6 +371,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
                   '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
     enddo
+
+    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_setup
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_setup
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_setup
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_setup
+    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_setup
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_setup
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_setup
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_setup
 
     !-----< restart output & consistency check >-----
 
@@ -647,6 +691,22 @@ contains
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw => AQ_CV
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_read
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_read
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_read
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_read
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_read
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_read
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_read
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_read
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -674,8 +734,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
-    call PROF_rapstart('FILE I NetCDF')
-
     basename = ATMOS_RESTART_IN_BASENAME
 
     call FileRead( restart_atmos(:,:,:), basename, 'DENS', 1, PRC_myrank )
@@ -694,13 +752,20 @@ contains
        QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
     enddo
 
-    call PROF_rapend  ('FILE I NetCDF')
-
     ! fill halo
     call ATMOS_vars_fillhalo
 
     ! check total (optional)
     call ATMOS_vars_total
+
+    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_read
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
+    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_read
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
 
     if ( ATMOS_USE_AVERAGE ) then
        DENS_av(:,:,:) = DENS(:,:,:)
@@ -779,59 +844,32 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart of atmospheric variables
   subroutine ATMOS_vars_restart_write
-    use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8
-    use gtool_file, only: &
-       FileCreate, &
-       FileAddVariable, &
-       FilePutAxis, &
-       FilePutAssociatedCoordinates, &
-       FileWrite, &
-       FileClose
-    use scale_grid, only: &
-       GRID_CZ,    &
-       GRID_CX,    &
-       GRID_CY,    &
-       GRID_FZ,    &
-       GRID_FX,    &
-       GRID_FY,    &
-       GRID_CDZ,   &
-       GRID_CDX,   &
-       GRID_CDY,   &
-       GRID_FDZ,   &
-       GRID_FDX,   &
-       GRID_FDY,   &
-       GRID_CBFZ,  &
-       GRID_CBFX,  &
-       GRID_CBFY,  &
-       GRID_FBFZ,  &
-       GRID_FBFX,  &
-       GRID_FBFY,  &
-       GRID_CXG,   &
-       GRID_CYG,   &
-       GRID_FXG,   &
-       GRID_FYG,   &
-       GRID_CBFXG, &
-       GRID_CBFYG, &
-       GRID_FBFXG, &
-       GRID_FBFYG
-    use scale_grid_real, only: &
-       REAL_LON, &
-       REAL_LONX, &
-       REAL_LAT, &
-       REAL_LATY
+       TIME_gettimelabel
+    use scale_fileio, only: &
+       FILEIO_write
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_restart_write
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_write
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_restart_write
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_restart_write
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_restart_write
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_restart_write
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_restart_write
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_restart_write
     implicit none
 
     real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
-    character(len=H_LONG) :: basename
+    character(len=15)     :: timelabel
+    character(len=H_LONG) :: bname
 
     integer :: fid, ap_vid(5), aq_vid(QA)
     logical :: fileexisted
@@ -842,133 +880,42 @@ contains
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
+    if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
-    call PROF_rapstart('FILE O NetCDF')
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
 
-    basename = ''
-    write(basename(1:15), '(F15.3)') NOWSEC
-    do n = 1, 15
-       if ( basename(n:n) == ' ' ) basename(n:n) = '0'
-    end do
-    basename = trim(ATMOS_RESTART_OUT_BASENAME) // '_' // trim(basename)
+       call ATMOS_vars_total
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+       call TIME_gettimelabel( timelabel )
+       write(bname,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
 
-    if ( RP == 8 ) then
-       dtype = File_REAL8
-    else if ( RP == 4 ) then
-       dtype = File_REAL4
+       call FILEIO_write( DENS(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,         & ! [IN]
+                          AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .false. ) ! [IN]
+       call FILEIO_write( MOMZ(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
+                          AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( MOMX(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
+                          AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( MOMY(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
+                          AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( RHOT(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
+                          AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+
+       do iq = 1, QA
+          call FILEIO_write( QTRC(:,:,:,iq), bname,                         ATMOS_RESTART_OUT_TITLE,        & ! [IN]
+                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       enddo
+
     endif
 
-    call FileCreate( fid,                     & ! (out)
-                     fileexisted,             & ! (out)
-                     basename,                & ! (in)
-                     ATMOS_RESTART_OUT_TITLE, & ! (in)
-                     H_SOURCE,                & ! (in)
-                     H_INSTITUTE,             & ! (in)
-                     PRC_master,              & ! (in)
-                     PRC_myrank,              & ! (in)
-                     rankidx                  ) ! (in)
-
-    call FilePutAxis( fid, 'z', 'Z', 'm', 'z', dtype, GRID_CZ(KS:KE) )
-    call FilePutAxis( fid, 'x', 'X', 'm', 'x', dtype, GRID_CX(IS:IE) )
-    call FilePutAxis( fid, 'y', 'Y', 'm', 'y', dtype, GRID_CY(JS:JE) )
-
-    call FilePutAxis( fid, 'zh', 'Z (half level)', 'm', 'zh', dtype, GRID_FZ(KS:KE) )
-    call FilePutAxis( fid, 'xh', 'X (half level)', 'm', 'xh', dtype, GRID_FX(IS:IE) )
-    call FilePutAxis( fid, 'yh', 'Y (half level)', 'm', 'yh', dtype, GRID_FY(JS:JE) )
-
-    call FilePutAxis( fid, 'CZ', 'Grid Center Position Z', 'm', 'CZ', dtype, GRID_CZ )
-    call FilePutAxis( fid, 'CX', 'Grid Center Position X', 'm', 'CX', dtype, GRID_CX )
-    call FilePutAxis( fid, 'CY', 'Grid Center Position Y', 'm', 'CY', dtype, GRID_CY )
-    call FilePutAxis( fid, 'FZ', 'Grid Face Position Z',   'm', 'FZ', dtype, GRID_FZ )
-    call FilePutAxis( fid, 'FX', 'Grid Face Position X',   'm', 'FX', dtype, GRID_FX )
-    call FilePutAxis( fid, 'FY', 'Grid Face Position Y',   'm', 'FY', dtype, GRID_FY )
-
-    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
-    call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
-    call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
-    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
-    call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
-    call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
-
-    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
-    call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
-    call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
-    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
-    call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
-    call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
-
-    call FilePutAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
-    call FilePutAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
-    call FilePutAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
-    call FilePutAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
-
-    call FilePutAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
-    call FilePutAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
-    call FilePutAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
-    call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
-
-    call FilePutAssociatedCoordinates( fid, &
-         'lon', 'longitude', 'degrees_east', (/'x', 'y'/), dtype, REAL_LON(IS:IE,JS:JE) )
-    call FilePutAssociatedCoordinates( fid, &
-         'lonh', 'longitude (half level)', 'degrees_east', (/'xh', 'y '/), &
-         dtype, REAL_LONX(IS:IE,JS:JE) )
-    call FilePutAssociatedCoordinates( fid, &
-         'lat', 'latitude', 'degrees_north', (/'x', 'y'/), dtype, REAL_LAT(IS:IE,JS:JE) )
-    call FilePutAssociatedCoordinates( fid, &
-         'lath', 'latitude (half level)', 'degrees_north', (/'x ', 'yh'/), &
-         dtype, REAL_LATY(IS:IE,JS:JE) )
-
-    call FileAddVariable( ap_vid(I_DENS),                                         & ! (out)
-                          fid, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), & ! (in)
-                          (/'z  ','lon','lat'/), dtype                            ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMZ),                                         & ! (out)
-                          fid, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), & ! (in)
-                          (/'zh ','lon','lat'/), dtype                            ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMX),                                         & ! (out)
-                          fid, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), & ! (in)
-                          (/'z   ','lonh','lat '/), dtype                          ) ! (in)
-    call FileAddVariable( ap_vid(I_MOMY),                                         & ! (out)
-                          fid, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), & ! (in)
-                          (/'z   ','lon ','lath'/), dtype                          ) ! (in)
-    call FileAddVariable( ap_vid(I_RHOT),                                         & ! (out)
-                          fid, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), & ! (in)
-                          (/'z  ','lon','lat'/), dtype                            ) ! (in)
-    do iq = 1, QA
-       call FileAddVariable( aq_vid(iq),                                 & ! (out)
-                             fid, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), & ! (in)
-                             (/'z  ','lon','lat'/), dtype                             ) ! (in)
-    end do
-
-    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = DENS(KS:KE,IS:IE,JS:JE)
-    call FileWrite( ap_vid(I_DENS), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-
-    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMZ(KS:KE,IS:IE,JS:JE)
-    call FileWrite( ap_vid(I_MOMZ), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-
-    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMX(KS:KE,IS:IE,JS:JE)
-    call FileWrite( ap_vid(I_MOMX), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-
-    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = MOMY(KS:KE,IS:IE,JS:JE)
-    call FileWrite( ap_vid(I_MOMY), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-
-    restart_atmos(1:KMAX,1:IMAX,1:JMAX) = RHOT(KS:KE,IS:IE,JS:JE)
-    call FileWrite( ap_vid(I_RHOT), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-
-    do iq = 1, QA
-       restart_atmos(1:KMAX,1:IMAX,1:JMAX) = QTRC(KS:KE,IS:IE,JS:JE,iq)
-       call FileWrite( aq_vid(iq), restart_atmos(:,:,:), NOWSEC, NOWSEC )
-    enddo
-
-    call FileClose( fid )
-
-    call PROF_rapend  ('FILE O NetCDF')
-
-    call ATMOS_vars_total
+    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_write
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
+    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_write
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
@@ -996,6 +943,8 @@ contains
     logical :: datacheck
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    if ( ATMOS_sw_check ) then
 
     call PROF_rapstart('Debug')
 
@@ -1100,6 +1049,8 @@ contains
     endif
 
     call PROF_rapend('Debug')
+
+    endif
 
     return
   end subroutine ATMOS_vars_restart_check

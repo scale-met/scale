@@ -2,15 +2,15 @@
 !> module ATMOSPHERE / Physics Radiation
 !!
 !! @par Description
-!!          Atmospheric radiation transfer process wrapper
+!!          Atmospheric radiation transfer process driver
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-06 (S.Nishizawa)   [new]
-!!
+!! @li      2013-12-06 (S.Nishizawa)  [new]
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_rd_driver
   !-----------------------------------------------------------------------------
   !
@@ -43,16 +43,11 @@ module mod_atmos_phy_rd_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: RHOT_t(:,:,:)
-
-  integer, private :: ktop
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
     implicit none
@@ -63,8 +58,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
 
-    allocate( RHOT_t(KA,IA,JA) )
-
     call ATMOS_PHY_RD_setup( RD_TYPE )
 
     call ATMOS_PHY_RD_driver( .true., .false. )
@@ -73,7 +66,7 @@ contains
   end subroutine ATMOS_PHY_RD_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Radiation main
+  !> Driver
   subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
     use scale_grid_real, only: &
        REAL_CZ,  &
@@ -104,26 +97,27 @@ contains
        I_dn, &
        I_up
     use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total, &
-       DENS, &
-       RHOT, &
-       QTRC, &
-       RHOT_tp
-    use mod_atmos_vars_sf, only: &
-       ATMOS_vars_sf_fillhalo, &
-       SWD,                    &
-       LWD
+       DENS,              &
+       RHOT,              &
+       QTRC,              &
+       RHOT_t => RHOT_tp
     use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd, &
-       sw_AtmOcn => CPL_sw_AtmOcn, &
-       SkinT,                      &
-       ALBW,                       &
+       CPL_sw_AtmLnd, &
+       CPL_sw_AtmOcn, &
+       SkinT,         &
+       ALBW,          &
        ALBG
+    use mod_atmos_phy_sf_vars, only: &
+       SWD  => ATMOS_PHY_SF_SWD, &
+       LWD  => ATMOS_PHY_SF_LWD
+    use mod_atmos_phy_rd_vars, only: &
+       RHOT_t_RD  => ATMOS_PHY_RD_RHOT_t,     &
+       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
+    logical, intent(in) :: history_flag
 
     real(RP) :: RHOE    (KA,IA,JA)
     real(RP) :: RHOE_t  (KA,IA,JA,2)
@@ -152,8 +146,8 @@ contains
 
     if ( update_flag ) then
 
-       if ( sw_AtmLnd .or. sw_AtmOcn ) then ! tentative
-          temp_sfc   (:,:) = SkinT(:,:)
+       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then ! tentative
+          temp_sfc(:,:) = SkinT(:,:)
        else
           call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
                                     PRES(:,:,:),  & ! [OUT]
@@ -164,10 +158,10 @@ contains
           temp_sfc(:,:) = TEMP(KS,:,:)
        endif
 
-       if ( sw_AtmLnd ) then ! tentative
+       if ( CPL_sw_AtmLnd ) then ! tentative
           albedo_land(:,:,I_SW) = ALBG(:,:,1)
           albedo_land(:,:,I_LW) = ALBG(:,:,2)
-       elseif ( sw_AtmOcn ) then ! tentative
+       elseif ( CPL_sw_AtmOcn ) then ! tentative
           albedo_land(:,:,I_SW) = ALBW(:,:,1)
           albedo_land(:,:,I_LW) = ALBW(:,:,2)
        else
@@ -207,12 +201,12 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          RHOT_t(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt_RD
+          RHOT_t_RD(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt_RD
        enddo
        enddo
        enddo
 
-       if ( sw_AtmLnd .or. sw_AtmOcn ) then
+       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then
           do j = JS, JE
           do i = IS, IE
              LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
@@ -221,7 +215,13 @@ contains
           enddo
        endif
 
-       if ( present(history_flag) ) then
+       do j = JS, JE
+       do i = IS, IE
+          SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
+          SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+       enddo
+       enddo
+
        if ( history_flag ) then
 
           call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
@@ -274,13 +274,12 @@ contains
           TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
           call HIST_in( TEMP_t, 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt_RD )
        endif
-       endif
     endif
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + RHOT_t(k,i,j)
+       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_RD(k,i,j)
     enddo
     enddo
     enddo

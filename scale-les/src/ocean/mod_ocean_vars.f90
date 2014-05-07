@@ -5,7 +5,6 @@
 !!          Container for ocean variables
 !!
 !! @author Team SCALE
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_ocean_vars
@@ -185,8 +184,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
 
-    call PROF_rapstart('FILE I NetCDF')
-
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
 
        call FILEIO_read( TW(:,:),                                      & ! [OUT]
@@ -199,8 +196,6 @@ contains
        TW(:,:) = 300.0_RP
     endif
 
-    call PROF_rapend  ('FILE I NetCDF')
-
     return
   end subroutine OCEAN_vars_restart_read
 
@@ -208,36 +203,31 @@ contains
   !> Write ocean restart
   subroutine OCEAN_vars_restart_write
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
     implicit none
 
+    character(len=15)     :: timelabel
     character(len=H_LONG) :: bname
 
     integer :: n
     !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE O NetCDF')
 
     if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ocean) ***'
 
-       bname = ''
-       write(bname(1:15), '(F15.3)') NOWSEC
-       do n = 1, 15
-          if ( bname(n:n) == ' ' ) bname(n:n) = '0'
-       end do
-       write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(bname)
+       call OCEAN_vars_total
 
-       call FILEIO_write( TW(:,:),   bname,                         OCEAN_RESTART_OUT_TITLE,        & ! [IN]
+       call TIME_gettimelabel( timelabel )
+       write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       call FILEIO_write( TW(:,:), bname,                           OCEAN_RESTART_OUT_TITLE,        & ! [IN]
                           PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
-
-    call PROF_rapend  ('FILE O NetCDF')
 
     return
   end subroutine OCEAN_vars_restart_write

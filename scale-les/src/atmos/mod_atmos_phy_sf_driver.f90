@@ -2,7 +2,7 @@
 !> module ATMOSPHERE / Physics Surface fluxes
 !!
 !! @par Description
-!!          Flux from/to bottom wall of atmosphere (surface)
+!!          Flux from/to bottom boundary of atmosphere (surface)
 !!
 !! @author Team SCALE
 !!
@@ -10,6 +10,7 @@
 !! @li      2013-12-05 (S.Nishizawa)  [new]
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_phy_sf_driver
   !-----------------------------------------------------------------------------
   !
@@ -45,26 +46,10 @@ module mod_atmos_phy_sf_driver
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-
-  ! surface flux
-  real(RP), allocatable :: ZMFLX  (:,:)
-  real(RP), allocatable :: XMFLX  (:,:)
-  real(RP), allocatable :: YMFLX  (:,:)
-  real(RP), allocatable :: POTTFLX(:,:)
-  real(RP), allocatable :: SWUFLX (:,:)
-  real(RP), allocatable :: LWUFLX (:,:)
-  real(RP), allocatable :: SHFLX  (:,:)
-  real(RP), allocatable :: LHFLX  (:,:)
-  real(RP), allocatable :: QVFLX  (:,:)
-
 contains
-
   !-----------------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_SF_driver_setup( SF_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
     implicit none
@@ -73,47 +58,33 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SURFACEFLUX]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-SF]/Categ[ATMOS]'
 
-    allocate( ZMFLX  (IA,JA) )
-    allocate( XMFLX  (IA,JA) )
-    allocate( YMFLX  (IA,JA) )
-    allocate( POTTFLX(IA,JA) )
-    allocate( SWUFLX (IA,JA) )
-    allocate( LWUFLX (IA,JA) )
-    allocate( SHFLX  (IA,JA) )
-    allocate( LHFLX  (IA,JA) )
-    allocate( QVFLX  (IA,JA) )
+    call ATMOS_PHY_SF_setup( SF_TYPE )
 
-    ! tentative process
     ! finally, surface processes will be located under the coupler.
     if( SF_TYPE /= 'COUPLE' ) then
-       call ATMOS_PHY_SF_setup( SF_TYPE )
        call ATMOS_PHY_SF_driver( .true., .false. )
-    end if
+    endif
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
 
   !-----------------------------------------------------------------------------
-  ! calculation flux
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_driver( &
-       update_flag, &
-       history_flag &
-       )
-    use scale_time, only: &
-       dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
-       NOWSEC => TIME_NOWDAYSEC
+  !> Driver
+  subroutine ATMOS_PHY_SF_driver( update_flag, history_flag )
     use scale_const, only: &
-       CPdry  => CONST_CPdry,  &
-       LH0    => CONST_LH0
-    use scale_history, only: &
-       HIST_in
+       CPdry => CONST_CPdry,  &
+       LH0   => CONST_LH0
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ, &
        CZ   => GRID_CZ
+    use scale_time, only: &
+       dt_SF  => TIME_DTSEC_ATMOS_PHY_SF, &
+       NOWSEC => TIME_NOWDAYSEC
+    use scale_history, only: &
+       HIST_in
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -123,18 +94,32 @@ contains
        MOMY, &
        RHOT, &
        QTRC, &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp
+       DENS_t => DENS_tp, &
+       MOMZ_t => MOMZ_tp, &
+       MOMX_t => MOMX_tp, &
+       MOMY_t => MOMY_tp, &
+       RHOT_t => RHOT_tp, &
+       QTRC_t => QTRC_tp
     use mod_cpl_vars, only: &
        SST
+    use mod_atmos_phy_sf_vars, only: &
+       DENS_t_SF => ATMOS_PHY_SF_DENS_t,  &
+       MOMZ_t_SF => ATMOS_PHY_SF_MOMZ_t,  &
+       MOMX_t_SF => ATMOS_PHY_SF_MOMX_t,  &
+       MOMY_t_SF => ATMOS_PHY_SF_MOMY_t,  &
+       RHOT_t_SF => ATMOS_PHY_SF_RHOT_t,  &
+       QTRC_t_SF => ATMOS_PHY_SF_QTRC_t,  &
+       ZMFLX     => ATMOS_PHY_SF_ZMFLX,   &
+       XMFLX     => ATMOS_PHY_SF_XMFLX,   &
+       YMFLX     => ATMOS_PHY_SF_YMFLX,   &
+       POTTFLX   => ATMOS_PHY_SF_POTTFLX, &
+       SHFLX     => ATMOS_PHY_SF_SHFLX,   &
+       LHFLX     => ATMOS_PHY_SF_LHFLX,   &
+       QVFLX     => ATMOS_PHY_SF_QVFLX
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in), optional :: history_flag
+    logical, intent(in) :: history_flag
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -147,39 +132,36 @@ contains
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, SST, & ! (in)
             CZ, NOWSEC                               ) ! (in)
 
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           SHFLX(i,j) = POTTFLX(i,j) * CPdry
           LHFLX(i,j) = QVFLX  (i,j) * LH0
-       end do
-       end do
+       enddo
+       enddo
 
-       if ( present(history_flag) ) then
        if ( history_flag ) then
-          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
-       end if
-       end if
+          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dt_SF )
+          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dt_SF )
+       endif
 
-    end if
+    endif
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
-       RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
+       RHOT_t(KS,i,j) = RHOT_t(KS,i,j) &
             + ( POTTFLX(i,j) * DENS(KS,i,j) &
             + QVFLX(i,j) * RHOT(KS,i,j) &
               ) * RCDZ(KS)
-       DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
+       DENS_t(KS,i,j) = DENS_t(KS,i,j) &
             + QVFLX(i,j) * RCDZ(KS)
-       MOMZ_tp(KS,i,j) = MOMZ_tp(KS,i,j) &
+       MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) &
             + ZMFLX(i,j) * RFDZ(KS)
-       MOMX_tp(KS,i,j) = MOMX_tp(KS,i,j) &
+       MOMX_t(KS,i,j) = MOMX_t(KS,i,j) &
             + XMFLX(i,j) * RCDZ(KS)
-       MOMY_tp(KS,i,j) = MOMY_tp(KS,i,j) &
+       MOMY_t(KS,i,j) = MOMY_t(KS,i,j) &
             + YMFLX(i,j) * RCDZ(KS)
-       QTRC_tp(KS,i,j,I_QV) = QTRC_tp(KS,i,j,I_QV) &
+       QTRC_t(KS,i,j,I_QV) = QTRC_t(KS,i,j,I_QV) &
             + QVFLX(i,j) * RCDZ(KS)
     enddo
     enddo
@@ -205,6 +187,21 @@ contains
        QTRC_tp
     use mod_cpl_vars, only: &
        CPL_getCPL2Atm
+    use mod_atmos_phy_sf_vars, only: &
+       DENS_t_SF => ATMOS_PHY_SF_DENS_t,  &
+       MOMZ_t_SF => ATMOS_PHY_SF_MOMZ_t,  &
+       MOMX_t_SF => ATMOS_PHY_SF_MOMX_t,  &
+       MOMY_t_SF => ATMOS_PHY_SF_MOMY_t,  &
+       RHOT_t_SF => ATMOS_PHY_SF_RHOT_t,  &
+       QTRC_t_SF => ATMOS_PHY_SF_QTRC_t,  &
+       ZMFLX     => ATMOS_PHY_SF_ZMFLX,   &
+       XMFLX     => ATMOS_PHY_SF_XMFLX,   &
+       YMFLX     => ATMOS_PHY_SF_YMFLX,   &
+       SWUFLX    => ATMOS_PHY_SF_SWUFLX,  &
+       LWUFLX    => ATMOS_PHY_SF_LWUFLX,  &
+       SHFLX     => ATMOS_PHY_SF_SHFLX,   &
+       LHFLX     => ATMOS_PHY_SF_LHFLX,   &
+       QVFLX     => ATMOS_PHY_SF_QVFLX
     implicit none
 
     ! work
@@ -243,6 +240,8 @@ contains
   subroutine ATMOS_PHY_SF_driver_final
     use scale_const, only: &
        RovCP => CONST_RovCP
+    use scale_atmos_thermodyn, only: &
+       temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_vars, only: &
        DENS,    &
        MOMX,    &
@@ -250,14 +249,12 @@ contains
        MOMZ,    &
        RHOT,    &
        QTRC
-    use mod_atmos_vars_sf, only: &
-       PREC, &
-       SWD,  &
-       LWD
-    use scale_atmos_thermodyn, only: &
-       temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_cpl_vars, only: &
        CPL_putAtm
+    use mod_atmos_phy_sf_vars, only: &
+       PREC => ATMOS_PHY_SF_PREC, &
+       SWD  => ATMOS_PHY_SF_SWD,  &
+       LWD  => ATMOS_PHY_SF_LWD
     implicit none
 
     ! work

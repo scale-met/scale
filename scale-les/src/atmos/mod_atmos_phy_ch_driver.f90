@@ -1,17 +1,17 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Aerosol Microphysics
+!> module ATMOSPHERE / Physics Chemistry
 !!
 !! @par Description
-!!          Aerosol Microphysics driver
+!!          Atmospheric chemistry driver
 !!
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2013-12-06 (S.Nishizawa)  [new]
+!! @li      2014-05-04 (H.Yashiro)    [new]
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module mod_atmos_phy_ae_driver
+module mod_atmos_phy_ch_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -28,8 +28,8 @@ module mod_atmos_phy_ae_driver
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_AE_driver_setup
-  public :: ATMOS_PHY_AE_driver
+  public :: ATMOS_PHY_CH_driver_setup
+  public :: ATMOS_PHY_CH_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -47,33 +47,33 @@ module mod_atmos_phy_ae_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_AE_driver_setup( AE_TYPE )
-    use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE_setup
+  subroutine ATMOS_PHY_CH_driver_setup( CH_TYPE )
+!    use scale_atmos_phy_ch, only: &
+!       ATMOS_PHY_CH_setup
     implicit none
 
-    character(len=H_SHORT), intent(in) :: AE_TYPE
+    character(len=H_SHORT), intent(in) :: CH_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-CH]/Categ[ATMOS]'
 
-    call ATMOS_PHY_AE_setup( AE_TYPE )
+!    call ATMOS_PHY_CH_setup( CH_TYPE )
 
-    call ATMOS_PHY_AE_driver( .true., .false. )
+    call ATMOS_PHY_CH_driver( .true., .false. )
 
     return
-  end subroutine ATMOS_PHY_AE_driver_setup
+  end subroutine ATMOS_PHY_CH_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_CH_driver( update_flag, history_flag )
     use scale_time, only: &
-       dt_AE => TIME_DTSEC_ATMOS_PHY_AE
+       dt_CH => TIME_DTSEC_ATMOS_PHY_CH
     use scale_history, only: &
        HIST_in
-    use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE
+!    use scale_atmos_phy_ch, only: &
+!       ATMOS_PHY_CH
     use mod_atmos_vars, only: &
        DENS,              &
        MOMZ,              &
@@ -82,54 +82,34 @@ contains
        RHOT,              &
        QTRC,              &
        QTRC_t => QTRC_tp
-    use mod_atmos_phy_ae_vars, only: &
-       QTRC_t_AE => ATMOS_PHY_AE_QTRC_t, &
-       CCN       => ATMOS_PHY_AE_CCN
+    use mod_atmos_phy_ch_vars, only: &
+       QTRC_t_CH => ATMOS_PHY_CH_QTRC_t, &
+       O3        => ATMOS_PHY_CH_O3
     implicit none
 
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: QTRC0(KA,IA,JA,QA)
-
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+!       call ATMOS_PHY_CH( DENS,          & ! [IN]
+!                          MOMZ,          & ! [IN]
+!                          MOMX,          & ! [IN]
+!                          MOMY,          & ! [IN]
+!                          RHOT,          & ! [IN]
+!                          QTRC,          & ! [IN]
+!                          QTRC_t_CH,     & ! [INOUT]
+!                          O3             ) ! [INOUT]
 
-       do iq = 1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC0(k,i,j,iq) = QTRC(k,i,j,iq) ! save
-       enddo
-       enddo
-       enddo
-       enddo
-
-       call ATMOS_PHY_AE( DENS, & ! [IN]
-                          MOMZ, & ! [IN]
-                          MOMX, & ! [IN]
-                          MOMY, & ! [IN]
-                          RHOT, & ! [IN]
-                          QTRC0 ) ! [INOUT]
-
-       do iq = 1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          QTRC_t_AE(k,i,j,iq) = QTRC0(k,i,j,iq) - QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-       enddo
-
-       CCN(:,:,:) = 0.0_RP ! tentative
+       ! tentative!
+       QTRC_t_CH(:,:,:,:) = 0.0_RP
+       O3       (:,:,:)   = 0.0_RP
 
        if ( history_flag ) then
-          call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '', dt_AE )
+          call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM', dt_CH )
        endif
-
     endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
@@ -137,13 +117,13 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_AE(k,i,j,iq)
+       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_CH(k,i,j,iq)
     enddo
     enddo
     enddo
     enddo
 
     return
-  end subroutine ATMOS_PHY_AE_driver
+  end subroutine ATMOS_PHY_CH_driver
 
-end module mod_atmos_phy_ae_driver
+end module mod_atmos_phy_ch_driver

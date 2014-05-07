@@ -67,16 +67,14 @@ program scaleles_init
      STAT_setup
   use scale_history, only: &
      HIST_setup
-  use mod_atmos_vars, only: &
-     ATMOS_vars_setup
-  use mod_atmos_vars_sf, only: &
-     ATMOS_vars_sf_setup
   use scale_atmos_hydrostatic, only: &
      ATMOS_HYDROSTATIC_setup
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup
+  use mod_atmos_vars, only: &
+     ATMOS_vars_setup
   use mod_land_vars, only: &
      LAND_vars_setup
   use mod_ocean_vars, only: &
@@ -168,8 +166,6 @@ program scaleles_init
 
   ! setup variable container: atmos
   call ATMOS_vars_setup
-  ! setup variable container: atmos_sf
-  call ATMOS_vars_sf_setup
   ! setup variable container: land
   call LAND_vars_setup
   ! setup variable container: ocean

@@ -6,7 +6,6 @@
 !!
 !! @author Team SCALE
 !! @li      2013-08-31 (T.Yamaura)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_land_vars
@@ -255,8 +254,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (land) ***'
 
-    call PROF_rapstart('FILE I NetCDF')
-
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
 
        call FILEIO_read( TG(:,:,:),                                       & ! [OUT]
@@ -308,8 +305,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
     endif
 
-    call PROF_rapend  ('FILE I NetCDF')
-
     return
   end subroutine LAND_vars_restart_read
 
@@ -317,44 +312,37 @@ contains
   !> Write land restart
   subroutine LAND_vars_restart_write
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
     implicit none
 
-    character(len=H_LONG) :: basename
+    character(len=15)     :: timelabel
+    character(len=H_LONG) :: bname
 
     integer :: n
     !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE O NetCDF')
 
     if ( LAND_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (land) ***'
 
-       basename = ''
-       write(basename(1:15), '(F15.3)') NOWSEC
-       do n = 1, 15
-          if ( basename(n:n) == ' ' ) basename(n:n) = '0'
-       enddo
-       basename = trim(LAND_RESTART_OUT_BASENAME) // '_' // trim(basename)
+       call LAND_vars_total
 
-       call FILEIO_write( TG(:,:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+       call TIME_gettimelabel( timelabel )
+       write(bname,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       call FILEIO_write( TG(:,:,:),   bname,                                        LAND_RESTART_OUT_TITLE,        & ! [IN]
                           PV_NAME(I_TG),   PV_DESC(I_TG),   PV_UNIT(I_TG),   'Land', LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( STRG(:,:,:), basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+       call FILEIO_write( STRG(:,:,:), bname,                                        LAND_RESTART_OUT_TITLE,        & ! [IN]
                           PV_NAME(I_STRG), PV_DESC(I_STRG), PV_UNIT(I_STRG), 'Land', LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ROFF(:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+       call FILEIO_write( ROFF(:,:),   bname,                                        LAND_RESTART_OUT_TITLE,        & ! [IN]
                           PV_NAME(I_ROFF), PV_DESC(I_ROFF), PV_UNIT(I_ROFF), 'XY',   LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( QVEF(:,:),   basename,                                     LAND_RESTART_OUT_TITLE,        & ! [IN]
+       call FILEIO_write( QVEF(:,:),   bname,                                        LAND_RESTART_OUT_TITLE,        & ! [IN]
                           PV_NAME(I_QVEF), PV_DESC(I_QVEF), PV_UNIT(I_QVEF), 'XY',   LAND_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
-
-    call PROF_rapend  ('FILE O NetCDF')
-
-    call LAND_vars_total
 
     return
   end subroutine LAND_vars_restart_write

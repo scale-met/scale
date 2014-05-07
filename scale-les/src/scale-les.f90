@@ -78,49 +78,42 @@ program scaleles
      MONIT_setup, &
      MONIT_write, &
      MONIT_finalize
-  use mod_atmos, only: &
-     ATMOS_setup, &
-     ATMOS_step
-  use mod_atmos_vars, only: &
-     ATMOS_vars_setup,         &
-     ATMOS_vars_restart_read,  &
-     ATMOS_vars_restart_write, &
-     ATMOS_vars_restart_check, &
-     ATMOS_sw_restart,         &
-     ATMOS_sw_check
-  use mod_atmos_vars_sf, only: &
-     ATMOS_vars_sf_setup,       &
-     ATMOS_vars_sf_restart_read
   use scale_atmos_hydrostatic, only: &
      ATMOS_HYDROSTATIC_setup
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup
-  use mod_land, only: &
-     LAND_setup, &
-     LAND_step
+
+  use mod_atmos_vars, only: &
+     ATMOS_vars_setup,         &
+     ATMOS_vars_restart_read,  &
+     ATMOS_vars_restart_write, &
+     ATMOS_vars_restart_check
+  use mod_atmos_driver, only: &
+     ATMOS_driver_setup, &
+     ATMOS_driver
   use mod_land_vars, only: &
      LAND_vars_setup,         &
      LAND_vars_restart_read,  &
-     LAND_vars_restart_write, &
-     LAND_sw_restart
-  use mod_ocean, only: &
-     OCEAN_setup, &
-     OCEAN_step
+     LAND_vars_restart_write
+  use mod_land_driver, only: &
+     LAND_driver_setup, &
+     LAND_driver
   use mod_ocean_vars, only: &
      OCEAN_vars_setup,         &
      OCEAN_vars_restart_read,  &
-     OCEAN_vars_restart_write, &
-     OCEAN_sw_restart
-  use mod_cpl, only: &
-     CPL_setup, &
-     CPL_calc
+     OCEAN_vars_restart_write
+  use mod_ocean_driver, only: &
+     OCEAN_driver_setup, &
+     OCEAN_driver
   use mod_cpl_vars, only: &
      CPL_vars_setup,         &
      CPL_vars_restart_read,  &
-     CPL_vars_restart_write, &
-     CPL_sw_restart
+     CPL_vars_restart_write
+  use mod_cpl_driver, only: &
+     CPL_driver_setup, &
+     CPL_driver
   use mod_user, only: &
      USER_setup, &
      USER_step
@@ -201,39 +194,23 @@ program scaleles
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
 
-  ! setup variable container: atmos
+  ! setup variable container
   call ATMOS_vars_setup
-  ! setup variable container: atmos_sf
-  call ATMOS_vars_sf_setup
-  ! setup variable container: land
   call LAND_vars_setup
-  ! setup variable container: ocean
   call OCEAN_vars_setup
-  ! setup variable container: coupler
   call CPL_vars_setup
 
-  ! setup restart data: atmos
+  ! read restart data
   call ATMOS_vars_restart_read
-  ! setup restart data: atmos_sf
-  call ATMOS_vars_sf_restart_read
-  ! setup restart data: land
   call LAND_vars_restart_read
-  ! setup restart data: ocean
   call OCEAN_vars_restart_read
-  ! setup restart data: coupler
   call CPL_vars_restart_read
 
-  ! setup atmosphere
-  call ATMOS_setup
-
-  ! setup land
-  call LAND_setup
-
-  ! setup ocean
-  call OCEAN_setup
-
-  ! setup coupler
-  call CPL_setup
+  ! setup driver
+  call ATMOS_driver_setup
+  call LAND_driver_setup
+  call OCEAN_driver_setup
+  call CPL_driver_setup
 
   ! setup user-defined procedure
   call USER_setup
@@ -262,10 +239,10 @@ program scaleles
     call USER_step
 
     ! change to next state
-    if ( TIME_DOATMOS_step ) call ATMOS_step
-    if ( TIME_DOLAND_step  ) call LAND_step
-    if ( TIME_DOOCEAN_step ) call OCEAN_step
-    if ( TIME_DOCPL_calc   ) call CPL_calc
+    if ( TIME_DOATMOS_step ) call ATMOS_driver
+    if ( TIME_DOLAND_step  ) call LAND_driver
+    if ( TIME_DOOCEAN_step ) call OCEAN_driver
+    if ( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
     call TIME_advance
@@ -275,10 +252,10 @@ program scaleles
     call MONIT_write('MAIN')
 
     ! restart output
-    if ( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if ( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
-    if ( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-    if ( CPL_sw_restart   .AND. TIME_DOCPL_restart   ) call CPL_vars_restart_write
+    if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
+    if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit
 
@@ -298,7 +275,7 @@ program scaleles
   !########## Finalize ##########
 
   ! check data
-  if ( ATMOS_sw_check ) call ATMOS_vars_restart_check
+  call ATMOS_vars_restart_check
 
   call PROF_rapreport
 #ifdef _PAPI_
