@@ -327,7 +327,6 @@ contains
        TRL_URB(:,:,:) = UNDEF
        TBL_URB(:,:,:) = UNDEF
        TGL_URB(:,:,:) = UNDEF
-
     endif
 
     call PROF_rapend  ('FILE I NetCDF')
