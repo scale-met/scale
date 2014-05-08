@@ -50,23 +50,25 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_CP_TYPE = 'NONE'
+  logical,                public, save :: ATMOS_do          = .true. ! main switch for the model
+
+  character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE' !< dynamics type
   character(len=H_SHORT), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
   character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=H_SHORT), public, save :: ATMOS_PHY_CP_TYPE = 'NONE'
 
   logical,                public, save :: ATMOS_sw_dyn
-  logical,                public, save :: ATMOS_sw_phy_cp
   logical,                public, save :: ATMOS_sw_phy_mp
   logical,                public, save :: ATMOS_sw_phy_ae
   logical,                public, save :: ATMOS_sw_phy_ch
   logical,                public, save :: ATMOS_sw_phy_rd
   logical,                public, save :: ATMOS_sw_phy_sf
   logical,                public, save :: ATMOS_sw_phy_tb
+  logical,                public, save :: ATMOS_sw_phy_cp
   logical,                public, save :: ATMOS_sw_restart
   logical,                public, save :: ATMOS_sw_check
 
@@ -87,12 +89,12 @@ module mod_atmos_vars
   real(RP), public, target, allocatable :: RHOT_avw(:,:,:)
   real(RP), public, target, allocatable :: QTRC_avw(:,:,:,:)
 
-  real(RP), public, pointer :: DENS_av(:,:,:)
-  real(RP), public, pointer :: MOMZ_av(:,:,:)
-  real(RP), public, pointer :: MOMX_av(:,:,:)
-  real(RP), public, pointer :: MOMY_av(:,:,:)
-  real(RP), public, pointer :: RHOT_av(:,:,:)
-  real(RP), public, pointer :: QTRC_av(:,:,:,:)
+  real(RP), public, pointer             :: DENS_av(:,:,:)
+  real(RP), public, pointer             :: MOMZ_av(:,:,:)
+  real(RP), public, pointer             :: MOMX_av(:,:,:)
+  real(RP), public, pointer             :: MOMY_av(:,:,:)
+  real(RP), public, pointer             :: RHOT_av(:,:,:)
+  real(RP), public, pointer             :: QTRC_av(:,:,:,:)
 
   ! tendency by physical processes
   real(RP), public, allocatable :: DENS_tp(:,:,:)
@@ -102,26 +104,6 @@ module mod_atmos_vars
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
   real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
 
-  character(len=H_SHORT), public, save :: AP_NAME(5)
-  character(len=H_MID),   public, save :: AP_DESC(5)
-  character(len=H_SHORT), public, save :: AP_UNIT(5)
-
-  data AP_NAME / 'DENS', &
-                 'MOMZ', &
-                 'MOMX', &
-                 'MOMY', &
-                 'RHOT'  /
-  data AP_DESC / 'density',    &
-                 'momentum z', &
-                 'momentum x', &
-                 'momentum y', &
-                 'rho * theta' /
-  data AP_UNIT / 'kg/m3',   &
-                 'kg/m2/s', &
-                 'kg/m2/s', &
-                 'kg/m2/s', &
-                 'kg/m3*K'  /
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -130,21 +112,43 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,               private, save :: ATMOS_RESTART_OUTPUT           = .false.                 !< output restart file?
-  character(len=H_LONG), private, save :: ATMOS_RESTART_IN_BASENAME      = ''                      !< basename of the restart file
-  character(len=H_LONG), private, save :: ATMOS_RESTART_OUT_BASENAME     = ''                      !< basename of the output file
-  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES ATMOS VARS.' !< title    of the output file
-  character(len=H_MID),  private, save :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'               !< REAL4 or REAL8
-  logical,               private, save :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+  logical,                private, save      :: ATMOS_RESTART_OUTPUT           = .false.                 !< output restart file?
+  character(len=H_LONG),  private, save      :: ATMOS_RESTART_IN_BASENAME      = ''                      !< basename of the restart file
+  character(len=H_LONG),  private, save      :: ATMOS_RESTART_OUT_BASENAME     = ''                      !< basename of the output file
+  character(len=H_MID),   private, save      :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES ATMOS VARS.' !< title    of the output file
+  character(len=H_MID),   private, save      :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'               !< REAL4 or REAL8
+  logical,                private, save      :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
-  logical,               private, save :: ATMOS_RESTART_CHECK            = .false.
-  character(len=H_LONG), private, save :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),              private, save :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+  logical,                private, save      :: ATMOS_RESTART_CHECK            = .false.
+  character(len=H_LONG),  private, save      :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
+  real(RP),               private, save      :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
 
-  logical,               private, save :: ATMOS_VARS_CHECKRANGE          = .false.
+  logical,                private, save      :: ATMOS_VARS_CHECKRANGE          = .false.
+
+  integer,                private, parameter :: VMAX   = 5       !< number of the variables
+
+  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX)
+  character(len=H_MID),   private, save      :: VAR_DESC(VMAX)
+  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX)
+
+  data VAR_NAME / 'DENS', &
+                  'MOMZ', &
+                  'MOMX', &
+                  'MOMY', &
+                  'RHOT'  /
+  data VAR_DESC / 'density',    &
+                  'momentum z', &
+                  'momentum x', &
+                  'momentum y', &
+                  'rho * theta' /
+  data VAR_UNIT / 'kg/m3',   &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'kg/m3*K'  /
 
   ! history output of prognostic variables
-  integer, private              :: AP_HIST_id(5)
+  integer, private              :: VAR_HIST_id(VMAX)
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
@@ -200,8 +204,6 @@ contains
        MONIT_reg
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_setup
-    use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_setup
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_setup
     use mod_atmos_phy_ae_vars, only: &
@@ -214,17 +216,20 @@ contains
        ATMOS_PHY_SF_vars_setup
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_setup
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS / &
-       ATMOS_DYN_TYPE, &
-       ATMOS_PHY_CP_TYPE, &
+       ATMOS_do,          &
+       ATMOS_DYN_TYPE,    &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_PHY_CH_TYPE, &
        ATMOS_PHY_RD_TYPE, &
        ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_CP_TYPE
 
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
@@ -243,28 +248,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Variables]/Categ[ATMOS]'
-
-    allocate( AQ_HIST_id(QA) )
-
-    allocate( DENS(KA,IA,JA) )
-    allocate( MOMZ(KA,IA,JA) )
-    allocate( MOMX(KA,IA,JA) )
-    allocate( MOMY(KA,IA,JA) )
-    allocate( RHOT(KA,IA,JA) )
-    allocate( QTRC(KA,IA,JA,QA) )
-
-    allocate( DENS_tp(KA,IA,JA) )
-    allocate( MOMZ_tp(KA,IA,JA) )
-    allocate( MOMX_tp(KA,IA,JA) )
-    allocate( MOMY_tp(KA,IA,JA) )
-    allocate( RHOT_tp(KA,IA,JA) )
-    allocate( QTRC_tp(KA,IA,JA,QA) )
-
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -292,13 +278,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
 
-    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : ON'
-       ATMOS_sw_phy_cp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : OFF'
-       ATMOS_sw_phy_cp = .false.
-    endif
     if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : ON'
        ATMOS_sw_phy_mp = .true.
@@ -306,6 +285,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : OFF'
        ATMOS_sw_phy_mp = .false.
     endif
+
     if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : ON'
        ATMOS_sw_phy_ae = .true.
@@ -313,6 +293,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : OFF'
        ATMOS_sw_phy_ae = .false.
     endif
+
     if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : ON'
        ATMOS_sw_phy_ch = .true.
@@ -320,6 +301,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : OFF'
        ATMOS_sw_phy_ch = .false.
     endif
+
     if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
        ATMOS_sw_phy_rd = .true.
@@ -327,6 +309,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
        ATMOS_sw_phy_rd = .false.
     endif
+
     if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
        ATMOS_sw_phy_sf = .true.
@@ -334,6 +317,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
        ATMOS_sw_phy_sf = .false.
     endif
+
     if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
        ATMOS_sw_phy_tb = .true.
@@ -342,15 +326,21 @@ contains
        ATMOS_sw_phy_tb = .false.
     endif
 
+    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : ON'
+       ATMOS_sw_phy_cp = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : OFF'
+       ATMOS_sw_phy_cp = .false.
+    endif
+
     !-----< prognostic variable list check >-----
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS VARS]/Categ[ATMOS]'
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -365,7 +355,7 @@ contains
                '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do ip = 1, 5
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(AP_NAME(ip)),'|', AP_DESC(ip),'[', AP_UNIT(ip),']'
+                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
     enddo
     do iq = 1, QA
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
@@ -373,13 +363,13 @@ contains
     enddo
 
     if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_setup
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_setup
     if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_setup
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_setup
     if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_setup
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_setup
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_setup
     if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_setup
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_setup
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_setup
 
     !-----< restart output & consistency check >-----
 
@@ -401,15 +391,31 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,*)
 
-    !-----< use average? >-----
+    !-----< array allocation >-----
+
+    allocate( AQ_HIST_id(QA) )
+
+    allocate( DENS(KA,IA,JA)    )
+    allocate( MOMZ(KA,IA,JA)    )
+    allocate( MOMX(KA,IA,JA)    )
+    allocate( MOMY(KA,IA,JA)    )
+    allocate( RHOT(KA,IA,JA)    )
+    allocate( QTRC(KA,IA,JA,QA) )
+
+    allocate( DENS_tp(KA,IA,JA)    )
+    allocate( MOMZ_tp(KA,IA,JA)    )
+    allocate( MOMX_tp(KA,IA,JA)    )
+    allocate( MOMY_tp(KA,IA,JA)    )
+    allocate( RHOT_tp(KA,IA,JA)    )
+    allocate( QTRC_tp(KA,IA,JA,QA) )
 
     if ( ATMOS_USE_AVERAGE ) then
        if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : YES'
-       allocate( DENS_avw(KA,IA,JA) )
-       allocate( MOMZ_avw(KA,IA,JA) )
-       allocate( MOMX_avw(KA,IA,JA) )
-       allocate( MOMY_avw(KA,IA,JA) )
-       allocate( RHOT_avw(KA,IA,JA) )
+       allocate( DENS_avw(KA,IA,JA)    )
+       allocate( MOMZ_avw(KA,IA,JA)    )
+       allocate( MOMX_avw(KA,IA,JA)    )
+       allocate( MOMY_avw(KA,IA,JA)    )
+       allocate( RHOT_avw(KA,IA,JA)    )
        allocate( QTRC_avw(KA,IA,JA,QA) )
 
        DENS_av => DENS_avw
@@ -430,17 +436,17 @@ contains
 
     !-----< history output setup: general set >-----
 
-    AP_HIST_id    (:) = -1
-    AQ_HIST_id    (:) = -1
+    VAR_HIST_id (:) = -1
+    AQ_HIST_id (:) = -1
     AD_HIST_id (:) = -1
     AD_MONIT_id(:) = -1
     AD_PREP_sw (:) = -1
 
-    call HIST_reg( AP_HIST_id(I_DENS), zinterp, AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
-    call HIST_reg( AP_HIST_id(I_MOMZ), zinterp, AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3, zdim='half' )
-    call HIST_reg( AP_HIST_id(I_MOMX), zinterp, AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3, xdim='half' )
-    call HIST_reg( AP_HIST_id(I_MOMY), zinterp, AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3, ydim='half' )
-    call HIST_reg( AP_HIST_id(I_RHOT), zinterp, AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
+    call HIST_reg( VAR_HIST_id(I_DENS), zinterp, VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
+    call HIST_reg( VAR_HIST_id(I_MOMZ), zinterp, VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, zdim='half' )
+    call HIST_reg( VAR_HIST_id(I_MOMX), zinterp, VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, xdim='half' )
+    call HIST_reg( VAR_HIST_id(I_MOMY), zinterp, VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, ydim='half' )
+    call HIST_reg( VAR_HIST_id(I_RHOT), zinterp, VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
        call HIST_reg( AQ_HIST_id(iq), zinterp, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
@@ -674,15 +680,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart of atmospheric variables
   subroutine ATMOS_vars_restart_read
-    use gtool_file, only: &
-       FileRead
     use scale_process, only: &
-       PRC_myrank
+       PRC_MPIstop
     use scale_const, only: &
-       GRAV  => CONST_GRAV,  &
+       GRAV  => CONST_GRAV, &
        CVdry => CONST_CVdry
     use scale_grid, only: &
        CZ => GRID_CZ
+    use scale_fileio, only: &
+       FILEIO_read
     use scale_monitor, only: &
        MONIT_put,  &
        MONIT_in,   &
@@ -690,11 +696,9 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CVw => AQ_CV
+       CVw                 => AQ_CV
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
-    use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_restart_read
     use mod_atmos_phy_ae_vars, only: &
@@ -707,11 +711,9 @@ contains
        ATMOS_PHY_SF_vars_restart_read
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_read
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_read
     implicit none
-
-    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
-    character(len=H_LONG) :: basename
 
     real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
     real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
@@ -734,63 +736,93 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
 
-    basename = ATMOS_RESTART_IN_BASENAME
+    if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
 
-    call FileRead( restart_atmos(:,:,:), basename, 'DENS', 1, PRC_myrank )
-    DENS(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMZ', 1, PRC_myrank )
-    MOMZ(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMX', 1, PRC_myrank )
-    MOMX(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), basename, 'MOMY', 1, PRC_myrank )
-    MOMY(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( restart_atmos(:,:,:), basename, 'RHOT', 1, PRC_myrank )
-    RHOT(KS:KE,IS:IE,JS:JE) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
+       call FILEIO_read( DENS(:,:,:),                                         & ! [OUT]
+                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMZ(:,:,:),                                         & ! [OUT]
+                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMX(:,:,:),                                         & ! [OUT]
+                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(3), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( MOMY(:,:,:),                                         & ! [OUT]
+                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(4), 'ZXY', step=1 ) ! [IN]
+       call FILEIO_read( RHOT(:,:,:),                                         & ! [OUT]
+                         ATMOS_RESTART_IN_BASENAME, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
 
-    do iq = 1, QA
-       call FileRead( restart_atmos(:,:,:), basename, AQ_NAME(iq), 1, PRC_myrank )
-       QTRC(KS:KE,IS:IE,JS:JE,iq) = restart_atmos(1:KMAX,1:IMAX,1:JMAX)
-    enddo
+       do iq = 1, QA
+          call FILEIO_read( QTRC(:,:,:,iq),                                       & ! [OUT]
+                            ATMOS_RESTART_IN_BASENAME, AQ_NAME(iq), 'ZXY', step=1 ) ! [IN]
+       enddo
 
-    ! fill halo
-    call ATMOS_vars_fillhalo
+       call ATMOS_vars_fillhalo
 
-    ! check total (optional)
-    call ATMOS_vars_total
+       call ATMOS_vars_total
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for atmosphere is not specified. STOP!'
+       call PRC_MPIstop
+    endif
 
     if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_read
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
     if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
     if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_read
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
     if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
 
     if ( ATMOS_USE_AVERAGE ) then
-       DENS_av(:,:,:) = DENS(:,:,:)
-       MOMZ_av(:,:,:) = MOMZ(:,:,:)
-       MOMX_av(:,:,:) = MOMX(:,:,:)
-       MOMY_av(:,:,:) = MOMY(:,:,:)
-       RHOT_av(:,:,:) = RHOT(:,:,:)
-
+       DENS_av(:,:,:)   = DENS(:,:,:)
+       MOMZ_av(:,:,:)   = MOMZ(:,:,:)
+       MOMX_av(:,:,:)   = MOMX(:,:,:)
+       MOMY_av(:,:,:)   = MOMY(:,:,:)
+       RHOT_av(:,:,:)   = RHOT(:,:,:)
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     endif
 
     ! first monitor output
-    call MONIT_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
+    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
-       RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
 
        call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
     call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
                        QTRC(:,:,:,:) ) ! [IN]
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
 
     call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
                               PRES(:,:,:),  & ! [OUT]
@@ -823,14 +855,6 @@ contains
     enddo
     enddo
 
-    RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
-
-    call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
-
-    RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) )
-
-    call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
-
     call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
@@ -850,8 +874,6 @@ contains
        FILEIO_write
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_write
-    use mod_atmos_phy_cp_vars, only: &
-       ATMOS_PHY_CP_vars_restart_write
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_restart_write
     use mod_atmos_phy_ae_vars, only: &
@@ -864,58 +886,53 @@ contains
        ATMOS_PHY_SF_vars_restart_write
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_write
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_restart_write
     implicit none
 
-    real(RP) :: restart_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-
     character(len=15)     :: timelabel
-    character(len=H_LONG) :: bname
+    character(len=H_LONG) :: basename
 
-    integer :: fid, ap_vid(5), aq_vid(QA)
-    logical :: fileexisted
-    integer :: dtype
     integer :: iq
-    integer :: n
-
-    integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (atmos) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call ATMOS_vars_total
 
-       call TIME_gettimelabel( timelabel )
-       write(bname,'(A,A,A)') trim(ATMOS_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       call FILEIO_write( DENS(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,         & ! [IN]
-                          AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .false. ) ! [IN]
-       call FILEIO_write( MOMZ(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
-                          AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( MOMX(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
-                          AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( MOMY(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
-                          AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( RHOT(:,:,:), bname,                                        ATMOS_RESTART_OUT_TITLE,        & ! [IN]
-                          AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( DENS(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( MOMZ(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), 'ZHXY', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( MOMX(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), 'ZXHY', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( MOMY(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), 'ZXYH', ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( RHOT(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_write( QTRC(:,:,:,iq), bname,                         ATMOS_RESTART_OUT_TITLE,        & ! [IN]
-                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, .true. ) ! [IN]
+          call FILEIO_write( QTRC(:,:,:,iq), basename,                         ATMOS_RESTART_OUT_TITLE, & ! [IN]
+                             AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE  ) ! [IN]
        enddo
 
     endif
 
     if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_write
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
     if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
     if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_write
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
     if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
@@ -1133,29 +1150,29 @@ contains
 
     ! value check for prognostic variables
     if ( ATMOS_VARS_CHECKRANGE ) then
-       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, AP_NAME(I_DENS), __FILE__, __LINE__ )
-       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMZ), __FILE__, __LINE__ )
-       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMX), __FILE__, __LINE__ )
-       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, AP_NAME(I_MOMY), __FILE__, __LINE__ )
-       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, AP_NAME(I_RHOT), __FILE__, __LINE__ )
+       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, VAR_NAME(I_DENS), __FILE__, __LINE__ )
+       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMZ), __FILE__, __LINE__ )
+       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMX), __FILE__, __LINE__ )
+       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, VAR_NAME(I_MOMY), __FILE__, __LINE__ )
+       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_RHOT), __FILE__, __LINE__ )
     endif
 
     ! history output of prognostic variables
-    call HIST_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), TIME_DTSEC )
-    call HIST_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), TIME_DTSEC )
-    call HIST_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), TIME_DTSEC )
-    call HIST_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), TIME_DTSEC )
-    call HIST_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), TIME_DTSEC )
+    call HIST_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), TIME_DTSEC )
+    call HIST_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), TIME_DTSEC )
+    call HIST_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), TIME_DTSEC )
+    call HIST_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), TIME_DTSEC )
+    call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), TIME_DTSEC )
     do iq = 1, QA
        call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), TIME_DTSEC )
     enddo
 
     ! monitor output of prognostic variables
-    call MONIT_in( DENS(:,:,:), AP_NAME(I_DENS), AP_DESC(I_DENS), AP_UNIT(I_DENS), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), AP_NAME(I_MOMZ), AP_DESC(I_MOMZ), AP_UNIT(I_MOMZ), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), AP_NAME(I_MOMX), AP_DESC(I_MOMX), AP_UNIT(I_MOMX), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), AP_NAME(I_MOMY), AP_DESC(I_MOMY), AP_UNIT(I_MOMY), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), AP_NAME(I_RHOT), AP_DESC(I_RHOT), AP_UNIT(I_RHOT), ndim=3 )
+    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
+    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3 )
+    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3 )
+    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3 )
+    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1618,11 +1635,11 @@ contains
 
     if ( STAT_checktotal ) then
 
-       call STAT_total( total, DENS(:,:,:), AP_NAME(I_DENS) )
-       call STAT_total( total, MOMZ(:,:,:), AP_NAME(I_MOMZ) )
-       call STAT_total( total, MOMX(:,:,:), AP_NAME(I_MOMX) )
-       call STAT_total( total, MOMY(:,:,:), AP_NAME(I_MOMY) )
-       call STAT_total( total, RHOT(:,:,:), AP_NAME(I_RHOT) )
+       call STAT_total( total, DENS(:,:,:), VAR_NAME(I_DENS) )
+       call STAT_total( total, MOMZ(:,:,:), VAR_NAME(I_MOMZ) )
+       call STAT_total( total, MOMX(:,:,:), VAR_NAME(I_MOMX) )
+       call STAT_total( total, MOMY(:,:,:), VAR_NAME(I_MOMY) )
+       call STAT_total( total, RHOT(:,:,:), VAR_NAME(I_RHOT) )
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 

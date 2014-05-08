@@ -93,13 +93,6 @@ program scaleles
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
      ATMOS_driver
-  use mod_land_vars, only: &
-     LAND_vars_setup,         &
-     LAND_vars_restart_read,  &
-     LAND_vars_restart_write
-  use mod_land_driver, only: &
-     LAND_driver_setup, &
-     LAND_driver
   use mod_ocean_vars, only: &
      OCEAN_vars_setup,         &
      OCEAN_vars_restart_read,  &
@@ -107,6 +100,13 @@ program scaleles
   use mod_ocean_driver, only: &
      OCEAN_driver_setup, &
      OCEAN_driver
+  use mod_land_vars, only: &
+     LAND_vars_setup,         &
+     LAND_vars_restart_read,  &
+     LAND_vars_restart_write
+  use mod_land_driver, only: &
+     LAND_driver_setup, &
+     LAND_driver
   use mod_cpl_vars, only: &
      CPL_vars_setup,         &
      CPL_vars_restart_read,  &
@@ -196,20 +196,20 @@ program scaleles
 
   ! setup variable container
   call ATMOS_vars_setup
-  call LAND_vars_setup
   call OCEAN_vars_setup
+  call LAND_vars_setup
   call CPL_vars_setup
 
   ! read restart data
   call ATMOS_vars_restart_read
-  call LAND_vars_restart_read
   call OCEAN_vars_restart_read
+  call LAND_vars_restart_read
   call CPL_vars_restart_read
 
   ! setup driver
   call ATMOS_driver_setup
-  call LAND_driver_setup
   call OCEAN_driver_setup
+  call LAND_driver_setup
   call CPL_driver_setup
 
   ! setup user-defined procedure
@@ -240,8 +240,8 @@ program scaleles
 
     ! change to next state
     if ( TIME_DOATMOS_step ) call ATMOS_driver
-    if ( TIME_DOLAND_step  ) call LAND_driver
     if ( TIME_DOOCEAN_step ) call OCEAN_driver
+    if ( TIME_DOLAND_step  ) call LAND_driver
     if ( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
@@ -253,8 +253,8 @@ program scaleles
 
     ! restart output
     if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
     if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
     if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit

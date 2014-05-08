@@ -585,24 +585,26 @@ contains
        NOWSEC => TIME_NOWDAYSEC
     implicit none
 
-    real(RP),         intent(in)  :: var(:,:,:) !< value of the variable
-    character(len=*), intent(in)  :: basename   !< basename of the file
-    character(len=*), intent(in)  :: title      !< title    of the file
-    character(len=*), intent(in)  :: varname    !< name        of the variable
-    character(len=*), intent(in)  :: desc       !< description of the variable
-    character(len=*), intent(in)  :: unit       !< unit        of the variable
-    character(len=*), intent(in)  :: axistype   !< axis type (Z/X/Y)
-    character(len=*), intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
-    logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
+    real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
+    character(len=*),  intent(in)  :: basename   !< basename of the file
+    character(len=*),  intent(in)  :: title      !< title    of the file
+    character(len=*),  intent(in)  :: varname    !< name        of the variable
+    character(len=*),  intent(in)  :: desc       !< description of the variable
+    character(len=*),  intent(in)  :: unit       !< unit        of the variable
+    character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
+    character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
+    logical, optional, intent(in)  :: append     !< append existing (closed) file?
 
-    integer               :: dtype
-    character(len=2)      :: dims(3)
-    integer               :: dim1_max, dim1_S, dim1_E
-    integer               :: dim2_max, dim2_S, dim2_E
-    integer               :: dim3_max, dim3_S, dim3_E
+    integer          :: dtype
+    character(len=2) :: dims(3)
+    integer          :: dim1_max, dim1_S, dim1_E
+    integer          :: dim2_max, dim2_S, dim2_E
+    integer          :: dim3_max, dim3_S, dim3_E
+
     real(RP), allocatable :: var3D(:,:,:)
 
     integer :: rankidx(2)
+    logical :: append_sw
     logical :: fileexisted
     integer :: fid, vid
     !---------------------------------------------------------------------------
@@ -627,16 +629,21 @@ contains
        endif
     endif
 
-    call FileCreate( fid,            & ! [OUT]
-                     fileexisted,    & ! [OUT]
-                     basename,       & ! [IN]
-                     title,          & ! [IN]
-                     H_SOURCE,       & ! [IN]
-                     H_INSTITUTE,    & ! [IN]
-                     PRC_master,     & ! [IN]
-                     PRC_myrank,     & ! [IN]
-                     rankidx,        & ! [IN]
-                     append = append ) ! [IN]
+    append_sw = .false.
+    if ( present(append) ) then
+       append_sw = append
+    endif
+
+    call FileCreate( fid,               & ! [OUT]
+                     fileexisted,       & ! [OUT]
+                     basename,          & ! [IN]
+                     title,             & ! [IN]
+                     H_SOURCE,          & ! [IN]
+                     H_INSTITUTE,       & ! [IN]
+                     PRC_master,        & ! [IN]
+                     PRC_myrank,        & ! [IN]
+                     rankidx,           & ! [IN]
+                     append = append_sw ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! only once
        call set_axes( fid, dtype ) ! [IN]

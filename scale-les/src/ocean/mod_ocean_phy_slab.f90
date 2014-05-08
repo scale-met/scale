@@ -56,7 +56,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_ocean_vars, only: &
-       OCEAN_TYPE_PHY
+       OCEAN_TYPE
     implicit none
 
     real(RP) :: OCEAN_SLAB_DEPTH
@@ -82,8 +82,8 @@ contains
     OCEAN_SLAB_FLG_CR = FLG_CR
     OCEAN_SLAB_CRATE  = CRATE
 
-    if ( OCEAN_TYPE_PHY /= 'SLAB' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE_PHY is not SLAB. Check!'
+    if ( OCEAN_TYPE /= 'SLAB' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not SLAB. Check!'
        call PRC_MPIstop
     endif
 

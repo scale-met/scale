@@ -193,23 +193,24 @@ contains
     implicit none
 
     character(len=15)     :: timelabel
-    character(len=H_LONG) :: bname
+    character(len=H_LONG) :: basename
 
     integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
 
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_RD) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call TIME_gettimelabel( timelabel )
-       write(bname,'(A,A,A)') trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_dn(:,:), bname,         ATMOS_PHY_RD_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_dn(:,:), bname,         ATMOS_PHY_RD_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

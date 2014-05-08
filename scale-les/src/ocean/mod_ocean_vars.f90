@@ -5,6 +5,7 @@
 !!          Container for ocean variables
 !!
 !! @author Team SCALE
+!! @li      2013-08-31 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
 module mod_ocean_vars
@@ -35,23 +36,15 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
+  logical,                public, save :: OCEAN_do          = .true. ! main switch for the model
+
+  character(len=H_SHORT), public, save :: OCEAN_TYPE        = 'NONE' !< ocean physics type
+
+  logical,                public, save :: OCEAN_sw_phy
+  logical,                public, save :: OCEAN_sw_restart
+
+  ! prognostic variables
   real(RP), public, save, allocatable :: TW(:,:) !< water temperature [K]
-
-  integer, public, parameter :: PV_NUM = 1
-
-  integer, public, parameter :: I_TW   = 1
-
-  character(len=H_SHORT), public, save :: PV_NAME(PV_NUM) !< name  of the ocean variables
-  character(len=H_MID),   public, save :: PV_DESC(PV_NUM) !< desc. of the ocean variables
-  character(len=H_SHORT), public, save :: PV_UNIT(PV_NUM) !< unit  of the ocean variables
-
-  data PV_NAME / 'TW' /
-  data PV_DESC / 'water temperature' /
-  data PV_UNIT / 'K' /
-
-  character(len=H_SHORT),  public, save :: OCEAN_TYPE_PHY = 'OFF' !< Ocean physics type
-  logical,                 public, save :: OCEAN_sw_phy           !< do ocean physics update?
-  logical,                 public, save :: OCEAN_sw_restart       !< output restart?
 
   !-----------------------------------------------------------------------------
   !
@@ -61,13 +54,24 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  logical,               private, save :: OCEAN_RESTART_OUTPUT       = .false.                   !< output restart file?
-  character(len=H_LONG), private, save :: OCEAN_RESTART_IN_BASENAME  = ''                        !< basename of the input file
-  character(len=H_LONG), private, save :: OCEAN_RESTART_OUT_BASENAME = ''                        !< basename of the output file
-  character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_TITLE    = 'SCALE-LES OCEANIC VARS.' !< title    of the output file
-  character(len=H_MID),  private, save :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'                 !< REAL4 or REAL8
+  logical,                private, save      :: OCEAN_RESTART_OUTPUT        = .false.          !< output restart file?
+  character(len=H_LONG),  private, save      :: OCEAN_RESTART_IN_BASENAME   = ''               !< basename of the input file
+  character(len=H_LONG),  private, save      :: OCEAN_RESTART_OUT_BASENAME  = ''               !< basename of the output file
+  character(len=H_MID),   private, save      :: OCEAN_RESTART_OUT_TITLE     = 'OCEAN restart'  !< title    of the output file
+  character(len=H_MID),   private, save      :: OCEAN_RESTART_OUT_DTYPE     = 'DEFAULT'        !< REAL4 or REAL8
 
-  logical,               private, save :: OCEAN_VARS_CHECKRANGE      = .false.
+  logical,                private, save      :: OCEAN_VARS_CHECKRANGE      = .false.
+
+  integer,                private, parameter :: VMAX = 1       !< number of the variables
+  integer,                private, parameter :: I_TW = 1
+
+  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+
+  data VAR_NAME / 'TW' /
+  data VAR_DESC / 'water temperature' /
+  data VAR_UNIT / 'K' /
 
   !-----------------------------------------------------------------------------
 contains
@@ -79,7 +83,8 @@ contains
     implicit none
 
     NAMELIST / PARAM_OCEAN / &
-       OCEAN_TYPE_PHY
+       OCEAN_do,   &
+       OCEAN_TYPE
 
     NAMELIST / PARAM_OCEAN_VARS /  &
        OCEAN_RESTART_IN_BASENAME,  &
@@ -94,13 +99,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OCEAN VARS]/Categ[OCEAN]'
-
-    allocate( TW(IA,JA) )
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_OCEAN,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -111,7 +112,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
 
-    if ( OCEAN_TYPE_PHY /= 'OFF' .AND. OCEAN_TYPE_PHY /= 'NONE' ) then
+    if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics : ON'
        OCEAN_sw_phy = .true.
     else
@@ -122,7 +123,6 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_OCEAN_VARS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -135,9 +135,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] prognostic variables'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
                '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, PV_NUM
+    do ip = 1, VMAX
        if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(PV_NAME(ip)),'|', PV_DESC(ip),'[', PV_UNIT(ip),']'
+                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*) 'Output...'
@@ -149,6 +149,8 @@ contains
        OCEAN_sw_restart = .false.
     endif
     if( IO_L ) write(IO_FID_LOG,*)
+
+    allocate( TW(IA,JA) )
 
     return
   end subroutine OCEAN_vars_setup
@@ -209,23 +211,22 @@ contains
     implicit none
 
     character(len=15)     :: timelabel
-    character(len=H_LONG) :: bname
-
-    integer :: n
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ocean) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
 
        call OCEAN_vars_total
 
-       call TIME_gettimelabel( timelabel )
-       write(bname,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       call FILEIO_write( TW(:,:), bname,                           OCEAN_RESTART_OUT_TITLE,        & ! [IN]
-                          PV_NAME(1), PV_DESC(1), PV_UNIT(1), 'XY', OCEAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TW(:,:), basename,                                    OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TW), VAR_DESC(I_TW), VAR_UNIT(I_TW), 'XY', OCEAN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
@@ -243,10 +244,10 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( TW(:,:), 0.0_RP, 1000.0_RP, PV_NAME(I_TW), __FILE__, __LINE__ )
+       call VALCHECK( TW(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TW), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TW(:,:), 'TW', PV_DESC(I_TW), PV_UNIT(I_TW), TIME_DTSEC_OCEAN )
+    call HIST_in( TW(:,:), 'TW', VAR_DESC(I_TW), VAR_UNIT(I_TW), TIME_DTSEC_OCEAN )
 
     return
   end subroutine OCEAN_vars_history
@@ -264,7 +265,7 @@ contains
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, TW(:,:), PV_NAME(I_TW) )
+!       call STAT_total( total, TW(:,:), VAR_NAME(I_TW) )
 
     endif
 

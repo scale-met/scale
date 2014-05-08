@@ -60,7 +60,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_land_vars, only: &
-       LAND_TYPE_PHY
+       LAND_TYPE
     implicit none
 
     logical  :: dummy
@@ -79,8 +79,8 @@ contains
     allocate( PRECFLX(IA,JA) )
     allocate( QVFLX  (IA,JA) )
 
-    if ( LAND_TYPE_PHY /= 'BUCKET' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE_PHY is not BUCKET. Check!'
+    if ( LAND_TYPE /= 'BUCKET' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE is not BUCKET. Check!'
        call PRC_MPIstop
     endif
 

@@ -241,35 +241,35 @@ contains
     if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
 
        call FILEIO_read( ATMOS_PHY_SF_PREC   (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 1), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 1), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_SWD    (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 2), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 2), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_LWD    (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 3), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 3), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_ZMFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 4), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 4), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_XMFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 5), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 5), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_YMFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 6), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 6), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_POTTFLX(:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 7), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 7), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_SWUFLX (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 8), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 8), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_LWUFLX (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT( 9), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME( 9), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_SHFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT(10), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(10), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_LHFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT(11), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(11), 'XY', step=1 ) ! [IN]
        call FILEIO_read( ATMOS_PHY_SF_QVFLX  (:,:),                                   & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_UNIT(12), 'XY', step=1 ) ! [IN]
+                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(12), 'XY', step=1 ) ! [IN]
 
        call ATMOS_PHY_SF_vars_fillhalo
 
     else
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for atmos-sf is not specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
 
        ATMOS_PHY_SF_PREC   (:,:) = CONST_UNDEF
        ATMOS_PHY_SF_SWD    (:,:) = CONST_UNDEF
@@ -300,43 +300,44 @@ contains
     implicit none
 
     character(len=15)     :: timelabel
-    character(len=H_LONG) :: bname
+    character(len=H_LONG) :: basename
 
     integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
 
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_SF) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call TIME_gettimelabel( timelabel )
-       write(bname,'(A,A,A)') trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       call FILEIO_write( ATMOS_PHY_SF_PREC   (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 1), VAR_DESC( 1), VAR_UNIT( 1), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SWD    (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 2), VAR_DESC( 2), VAR_UNIT( 2), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_LWD    (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 3), VAR_DESC( 3), VAR_UNIT( 3), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_ZMFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 4), VAR_DESC( 4), VAR_UNIT( 4), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_XMFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 5), VAR_DESC( 5), VAR_UNIT( 5), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_YMFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 6), VAR_DESC( 6), VAR_UNIT( 6), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_POTTFLX(:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 7), VAR_DESC( 7), VAR_UNIT( 7), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SWUFLX (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 8), VAR_DESC( 8), VAR_UNIT( 8), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_LWUFLX (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME( 9), VAR_DESC( 9), VAR_UNIT( 9), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SHFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_LHFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_QVFLX  (:,:), bname,               ATMOS_PHY_SF_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_PREC   (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 1), VAR_DESC( 1), VAR_UNIT( 1), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SWD    (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 2), VAR_DESC( 2), VAR_UNIT( 2), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_LWD    (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 3), VAR_DESC( 3), VAR_UNIT( 3), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_ZMFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 4), VAR_DESC( 4), VAR_UNIT( 4), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_XMFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 5), VAR_DESC( 5), VAR_UNIT( 5), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_YMFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 6), VAR_DESC( 6), VAR_UNIT( 6), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_POTTFLX(:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 7), VAR_DESC( 7), VAR_UNIT( 7), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SWUFLX (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 8), VAR_DESC( 8), VAR_UNIT( 8), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_LWUFLX (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME( 9), VAR_DESC( 9), VAR_UNIT( 9), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SHFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_LHFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_QVFLX  (:,:), basename,            ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

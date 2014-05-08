@@ -14,8 +14,8 @@ include $(TOPDIR)/Mkinclude
 VPATH = $(BUILD_DIR): \
         include:      \
         atmos:        \
-        land:         \
         ocean:        \
+        land:         \
         coupler:      \
         user:         \
         preprocess:
@@ -37,29 +37,29 @@ PRJS = $(BINDIR)/$(BINNAME) \
 
 MODS =	\
 	mod_atmos_dyn_vars.o       \
-	mod_atmos_phy_cp_vars.o    \
 	mod_atmos_phy_mp_vars.o    \
-	mod_atmos_phy_sf_vars.o    \
-	mod_atmos_phy_rd_vars.o    \
-	mod_atmos_phy_tb_vars.o    \
-	mod_atmos_phy_ch_vars.o    \
 	mod_atmos_phy_ae_vars.o    \
+	mod_atmos_phy_ch_vars.o    \
+	mod_atmos_phy_rd_vars.o    \
+	mod_atmos_phy_sf_vars.o    \
+	mod_atmos_phy_tb_vars.o    \
+	mod_atmos_phy_cp_vars.o    \
 	mod_atmos_vars.o           \
 	mod_atmos_dyn_driver.o     \
-	mod_atmos_phy_cp_driver.o  \
 	mod_atmos_phy_mp_driver.o  \
-	mod_atmos_phy_sf_driver.o  \
-	mod_atmos_phy_rd_driver.o  \
-	mod_atmos_phy_tb_driver.o  \
-	mod_atmos_phy_ch_driver.o  \
 	mod_atmos_phy_ae_driver.o  \
+	mod_atmos_phy_ch_driver.o  \
+	mod_atmos_phy_rd_driver.o  \
+	mod_atmos_phy_sf_driver.o  \
+	mod_atmos_phy_tb_driver.o  \
+	mod_atmos_phy_cp_driver.o  \
 	mod_atmos_driver.o         \
-	mod_land_vars.o	\
-	mod_land_phy_bucket.o	\
-	mod_land_driver.o	\
 	mod_ocean_vars.o	\
 	mod_ocean_phy_slab.o	\
 	mod_ocean_driver.o	\
+	mod_land_vars.o	\
+	mod_land_phy_bucket.o	\
+	mod_land_driver.o	\
 	mod_cpl_vars.o	\
 	mod_cpl_atmos_land_driver.o \
 	mod_cpl_atmos_ocean_driver.o \
@@ -111,7 +111,7 @@ $(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90
 $(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    mod_atmos_dyn_vars.o    mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_cp_driver.o    : mod_atmos_phy_cp_driver.f90 mod_atmos_phy_cp_vars.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 mod_atmos_phy_mp_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_phy_rd_vars.o mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_phy_rd_vars.o mod_atmos_vars.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_phy_sf_vars.o mod_atmos_vars.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 mod_atmos_phy_tb_vars.o mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_ch_driver.o    : mod_atmos_phy_ch_driver.f90 mod_atmos_phy_ch_vars.o mod_atmos_vars.o
@@ -126,17 +126,18 @@ $(BUILD_DIR)/mod_atmos_driver.o           : mod_atmos_driver.f90 mod_atmos_vars.
                                             mod_atmos_phy_ch_driver.o \
                                             mod_atmos_phy_ae_driver.o
 
+$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90
+
+$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90  mod_ocean_vars.o
+$(BUILD_DIR)/mod_ocean_driver.o           : mod_ocean_driver.f90 mod_ocean_vars.o mod_cpl_vars.o \
+                                            mod_ocean_phy_slab.o
+
 $(BUILD_DIR)/mod_land_vars.o              : mod_land_vars.f90
 
 $(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 mod_land_vars.o
 $(BUILD_DIR)/mod_land_driver.o            : mod_land_driver.f90 mod_land_vars.o mod_cpl_vars.o \
                                             mod_land_phy_bucket.o
 
-$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90
-
-$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90  mod_ocean_vars.o
-$(BUILD_DIR)/mod_ocean_driver.o           : mod_ocean_driver.f90 mod_ocean_vars.o mod_cpl_vars.o \
-                                            mod_ocean_phy_slab.o
 
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90
 
