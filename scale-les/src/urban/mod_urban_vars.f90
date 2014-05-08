@@ -55,7 +55,7 @@ module mod_urban_vars
   real(RP), public, save, allocatable :: UC_URB (:,:)   ! Diagnostic canopy wind [m/s]
   real(RP), public, save, allocatable :: TRL_URB(:,:,:) ! temperature in layer of roof [K]
   real(RP), public, save, allocatable :: TBL_URB(:,:,:) ! temperature in layer of building [K]
-  real(RP), public, save, allocatable :: TGL_URB(:,:,:) ! temperature in layer of ground [K]   
+  real(RP), public, save, allocatable :: TGL_URB(:,:,:) ! temperature in layer of ground [K]
 
   integer,  public, parameter :: PV_NUM = 9
 
@@ -327,6 +327,7 @@ contains
        TRL_URB(:,:,:) = UNDEF
        TBL_URB(:,:,:) = UNDEF
        TGL_URB(:,:,:) = UNDEF
+
     endif
 
     call PROF_rapend  ('FILE I NetCDF')

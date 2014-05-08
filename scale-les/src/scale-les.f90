@@ -269,7 +269,7 @@ program scaleles
     if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
     if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
     if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
-    if ( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+    if ( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
     if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit

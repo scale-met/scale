@@ -40,7 +40,7 @@ module mod_urban_phy_ucm
   private :: canopy_wind
   private :: mos
   private :: multi_layer
-  private :: urban_param_setup 
+  private :: urban_param_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -58,15 +58,15 @@ module mod_urban_phy_ucm
   real(RP), private, save :: BETB       = 0.0        !                        of building [-]
   real(RP), private, save :: BETG       = 0.0        !                        of ground [-]
   real(RP), private, save :: CAPR       = 1.2E6      ! heat capacity of roof
-  real(RP), private, save :: CAPB       = 1.2E6      !  ( units converted in code 
-  real(RP), private, save :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )  
+  real(RP), private, save :: CAPB       = 1.2E6      !  ( units converted in code
+  real(RP), private, save :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
   real(RP), private, save :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground
-  real(RP), private, save :: AKSB       = 2.28       !  ( units converted in code 
+  real(RP), private, save :: AKSB       = 2.28       !  ( units converted in code
   real(RP), private, save :: AKSG       = 2.28       !            to [ cal cm{-1} s{-1} deg{-1} ] )
   real(RP), private, save :: ALBR       = 0.2        ! surface albedo of roof
   real(RP), private, save :: ALBB       = 0.2        ! surface albedo of wall
   real(RP), private, save :: ALBG       = 0.2        ! surface albedo of ground
-  real(RP), private, save :: EPSR       = 0.90       ! Surface emissivity of roof 
+  real(RP), private, save :: EPSR       = 0.90       ! Surface emissivity of roof
   real(RP), private, save :: EPSB       = 0.90       ! Surface emissivity of wall
   real(RP), private, save :: EPSG       = 0.90       ! Surface emissivity of ground
   real(RP), private, save :: Z0R        = 0.01       ! roughness length for momentum of building roof
@@ -76,7 +76,7 @@ module mod_urban_phy_ucm
   real(RP), private, save :: TBLEND     = 293.00     ! lower boundary condition of wall temperature [K]
   real(RP), private, save :: TGLEND     = 293.00     ! lower boundary condition of ground temperature [K]
   integer , private, save :: BOUND      = 1          ! Boundary Condition for Roof, Wall, Ground Layer Temp
-                                                     !       [1: Zero-Flux, 2: T = Constant] 
+                                                     !       [1: Zero-Flux, 2: T = Constant]
   ! calculate in subroutine urban_param_set
   real(RP), private, save :: R                       ! Normalized roof wight (eq. building coverage ratio)
   real(RP), private, save :: RW                      ! (= 1 - R)
@@ -86,7 +86,7 @@ module mod_urban_phy_ucm
   real(RP), private, save :: Z0HG                    ! roughness length for heat of ground
   real(RP), private, save :: Z0C                     ! Roughness length above canyon for momentum [m]
   real(RP), private, save :: Z0HC                    ! Roughness length above canyon for heat [m]
-  real(RP), private, save :: ZDC                     ! Displacement height [m] 
+  real(RP), private, save :: ZDC                     ! Displacement height [m]
   real(RP), private, save :: SVF                     ! Sky view factor [-]
 
   real(RP), private, save :: ahdiurnal(1:24)         ! AH diurnal profile
@@ -95,7 +95,7 @@ module mod_urban_phy_ucm
   real(RP), private, save, allocatable :: DZB(:)     ! thickness of each building layer [m]
   real(RP), private, save, allocatable :: DZG(:)     ! thickness of each road layer [m]
                                                                   ! ( units converted in code to [cm] )
-  ! tentative              
+  ! tentative
   real(RP), private, save, allocatable :: SWUFLX_URB(:,:) ! upward shortwave flux at the surface [W/m2]
   real(RP), private, save, allocatable :: LWUFLX_URB(:,:) ! upward longwave flux at the surface [W/m2]
   real(RP), private, save, allocatable :: SHFLX_URB (:,:) ! sensible heat flux at the surface [W/m2]
@@ -103,6 +103,7 @@ module mod_urban_phy_ucm
   real(RP), private, save, allocatable :: GHFLX_URB (:,:) ! ground heat flux at the surface [W/m2]
   real(RP), private, save, allocatable :: TS_URB    (:,:) ! diagnostic surface temperature [K]
 
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
@@ -205,7 +206,7 @@ contains
     URBAN_UCM_Z0R          = Z0R
     URBAN_UCM_Z0B          = Z0B
     URBAN_UCM_Z0G          = Z0G
-    URBAN_UCM_TRLEND       = TRLEND 
+    URBAN_UCM_TRLEND       = TRLEND
     URBAN_UCM_TBLEND       = TBLEND
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
@@ -319,7 +320,7 @@ contains
     real(RP) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
     real(RP) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
 
-    real(RP) :: TEMP(IA,JA) ! atmospheric air temperature at 1st atmospheric level [K]  
+    real(RP) :: TEMP(IA,JA) ! atmospheric air temperature at 1st atmospheric level [K]
     real(RP) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -376,19 +377,19 @@ contains
 
     do j = JS-1, JE+1
     do i = IS-1, IE+1
-      
-       TA=TEMP(i,j)                ! temp at 1st atmospheric level         [K]         
+
+       TA=TEMP(i,j)                ! temp at 1st atmospheric level         [K]
        QA=QV(i,j)/(1-QV(i,j))      ! mixing ratio at 1st atmospheric level [kg/kg]
-                                   ! QV specific humidity                  [kg/kg]       
-       UA = sqrt(          &  
+                                   ! QV specific humidity                  [kg/kg]
+       UA = sqrt(          &
              ( MOMZ(i,j)               )**2 &
            + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
            + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
            ) / DENS(i,j) * 0.5_RP
                                    ! wind speed at 1st atmospheric level   [m/s]
-       U1 = 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) ) / DENS(i,j)   
+       U1 = 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) ) / DENS(i,j)
                                    ! u at 1st atmospheric level            [m/s]
-       V1 = 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) ) / DENS(i,j)   
+       V1 = 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) ) / DENS(i,j)
                                    ! v at 1st atmospheric level            [m/s]
        SSG=SWD(i,j)                ! downward total short wave radiation   [W/m/m]
        LLG=LWD(i,j)                ! downward long wave radiation          [W/m/m]
@@ -409,7 +410,7 @@ contains
         TRL(k)=TRL_URB(i,j,k)
         TBL(k)=TBL_URB(i,j,k)
         TGL(k)=TGL_URB(i,j,k)
-       enddo  
+       enddo
 
        call urban(LSOLAR,                             & ! (in)
                   TA, QA, UA, U1, V1, ZA,             & ! (in)
@@ -435,8 +436,8 @@ contains
 
        SHFLX_URB(i,j)=SH   ! sensible heat flux               [W/m/m]
        LHFLX_URB(i,j)=LH   ! latent heat flux                 [W/m/m]
-       GHFLX_URB(i,j)=G    ! heat flux into the ground        [W/m/m]      
-       SWUFLX_URB(i,j)=SW  ! upward short wave radiation flux [W/m/m]    
+       GHFLX_URB(i,j)=G    ! heat flux into the ground        [W/m/m]
+       SWUFLX_URB(i,j)=SW  ! upward short wave radiation flux [W/m/m]
        LWUFLX_URB(i,j)=LW  ! upward long wave radiation flux  [W/m/m]
 
     enddo ! i
@@ -471,19 +472,19 @@ contains
 
     use scale_const, only: &
       KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
-      PI     => CONST_PI,      &    ! PI : pi               [-] 
+      PI     => CONST_PI,      &    ! PI : pi               [-]
       CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
-      LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]  
+      LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]
       GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
       Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
       Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
       STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
-      TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]  
+      TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_process, only: &
        PRC_MPIstop
     use scale_time, only:       &
       TIME => TIME_NOWSEC,      &   !< absolute sec
-      DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec] 
+      DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
     use mod_urban_vars, only: &
        num_urb_layers
 
@@ -493,7 +494,7 @@ contains
    real(RP), parameter    :: CP=0.24          ! heat capacity of dry air  [cgs unit]
    real(RP), parameter    :: EL=583.          ! latent heat of vaporation [cgs unit]
    real(RP), parameter    :: SIG=8.17E-11     ! stefun bolzman constant   [cgs unit]
-     
+
    real(RP), parameter    :: SRATIO=0.75      ! ratio between direct/total solar [-]
 
    !-- configuration variables
@@ -542,14 +543,14 @@ contains
    real(RP), intent(out) :: G      ! heat flux into the ground        [W/m/m]
 
    !-- Local variables
-   logical  :: SHADOW=.false.  
+   logical  :: SHADOW=.false.
           ! [true=consider svf and shadow effects, false=consider svf effect
           ! only]
 
    integer  :: tloc     ! local time (1-24h)
    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
    real(RP) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
-   
+
    real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
    real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
 
@@ -565,7 +566,7 @@ contains
    real(RP) :: UST, TST, QST
 
    real(RP) :: PS         ! Surface Pressure [hPa]
-   real(RP) :: TAV        ! Vertial Temperature [K] 
+   real(RP) :: TAV        ! Vertial Temperature [K]
    real(RP) :: ES
 
    real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
@@ -589,11 +590,11 @@ contains
 
    real(RP) :: Z
    real(RP) :: QS0R, DQS0RDTR, DESDT
-   real(RP) :: QS0B, DQS0BDTB 
+   real(RP) :: QS0B, DQS0BDTB
    real(RP) :: QS0G, DQS0GDTG
 
-   real(RP) :: RIBR, XXXR, BHR, ALPHAR, CHR, CDR 
-   real(RP) :: RIBC, XXXC, BHC                 
+   real(RP) :: RIBR, XXXR, BHR, ALPHAR, CHR, CDR
+   real(RP) :: RIBC, XXXC, BHC
    real(RP) :: ALPHAC, ALPHAB, ALPHAG
    real(RP) :: CHC, CHB, CHG, CDC
    real(RP) :: TC1, TC2, QC1, QC2
@@ -615,8 +616,8 @@ contains
 
    real(RP) :: XXX, X, Z0, Z0H, CD, CH
    real(RP) :: PSIX, PSIT, PSIX2, PSIT2, PSIX10, PSIT10
-     
-   integer  :: iteration, K 
+
+   integer  :: iteration, K
 
    !-----------------------------------------------------------
    ! Set parameters
@@ -639,7 +640,7 @@ contains
 
    !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
      SSGD = SRATIO*SSG
-     SSGQ = SSG - SSGD  
+     SSGQ = SSG - SSGD
    !endif
 
    W=2.*1.*HGT
@@ -668,14 +669,14 @@ contains
 
    !--- calculate canopy wind
 
-   call canopy_wind(ZA, UA, UC) 
+   call canopy_wind(ZA, UA, UC)
 
 
    !-----------------------------------------------------------
    ! Radiation : Net Short Wave Radiation at roof/wall/road
    !-----------------------------------------------------------
 
-   IF (SSG > 0.0) THEN  !  SSG is downward short 
+   IF (SSG > 0.0) THEN  !  SSG is downward short
 
      ! currently we use no shadow effect model
      !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
@@ -711,7 +712,7 @@ contains
     RIBR=(GRAV*2./(TA+TRP))*(TA-TRP)*(Z+Z0R)/(UA*UA)
     call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHO)
     CHR=ALPHAR/RHO/CP/UA
-    ! IF(RAIN > 1.) BETR=0.7  
+    ! IF(RAIN > 1.) BETR=0.7
 
     TAV=TA*(1.+0.61*QA)
     PS=RHOO*Rdry*TAV/100.     ! [hPa]
@@ -721,8 +722,8 @@ contains
 
        ES=6.11*EXP( (LH0/Rvap)*(TRP-TEM00)/(TEM00*TRP) )
        DESDT=(LH0/Rvap)*ES/(TRP**2.)
-       QS0R=0.622*ES/(PS-0.378*ES) 
-       DQS0RDTR = DESDT*0.622*PS/((PS-0.378*ES)**2.) 
+       QS0R=0.622*ES/(PS-0.378*ES)
+       DQS0RDTR = DESDT*0.622*PS/((PS-0.378*ES)**2.)
 
        RR=EPSR*(RX-SIG*(TRP**4.)/60.)
        HR=RHO*CP*CHR*UA*(TRP-TA)*100.
@@ -736,7 +737,7 @@ contains
        DELERDTR = RHO*EL*CHR*UA*BETR*DQS0RDTR*100.
        DG0RDTR =  2.*AKSR/DZR(1)
 
-       DFDT = DRRDTR - DHRDTR - DELERDTR - DG0RDTR 
+       DFDT = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
        DTR = F/DFDT
 
        TR = TRP - DTR
@@ -745,16 +746,16 @@ contains
        IF( ABS(F) < 0.000001 .AND. ABS(DTR) < 0.000001 ) EXIT
 
      enddo
- 
+
      FLXTHR=HR/RHO/CP/100.
      FLXHUMR=ELER/RHO/EL/100.
 
-    !--- Wall and Road 
+    !--- Wall and Road
 
     Z=ZA-ZDC
     BHC=LOG(Z0C/Z0HC)/0.4
     RIBC=(GRAV*2./(TA+TCP))*(TA-TCP)*(Z+Z0C)/(UA*UA)
-   
+
     call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHO)
 
      ! empirical form
@@ -773,15 +774,15 @@ contains
      ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
      do iteration=1,20
 
-       ES=6.11*EXP( (LH0/Rvap)*(TBP-TEM00)/(TEM00*TBP) ) 
+       ES=6.11*EXP( (LH0/Rvap)*(TBP-TEM00)/(TEM00*TBP) )
        DESDT=(LH0/Rvap)*ES/(TBP**2.)
-       QS0B=0.622*ES/(PS-0.378*ES) 
+       QS0B=0.622*ES/(PS-0.378*ES)
        DQS0BDTB=DESDT*0.622*PS/((PS-0.378*ES)**2.)
 
-       ES=6.11*EXP( (LH0/Rvap)*(TGP-TEM00)/(TEM00*TGP) ) 
+       ES=6.11*EXP( (LH0/Rvap)*(TGP-TEM00)/(TEM00*TGP) )
        DESDT=(LH0/Rvap)*ES/(TGP**2.)
-       QS0G=0.622*ES/(PS-0.378*ES)        
-       DQS0GDTG=DESDT*0.22*PS/((PS-0.378*ES)**2.) 
+       QS0G=0.622*ES/(PS-0.378*ES)
+       DQS0GDTG=DESDT*0.22*PS/((PS-0.378*ES)**2.)
 
        RG1=EPSG*( RX*VFGS          &
        +EPSB*VFGW*SIG*TBP**4./60.  &
@@ -852,12 +853,12 @@ contains
        DG0GDTB=0.
 
        F = SB + RB - HB - ELEB - G0B
-       FX = DRBDTB - DHBDTB - DELEBDTB - DG0BDTB 
+       FX = DRBDTB - DHBDTB - DELEBDTB - DG0BDTB
        FY = DRBDTG - DHBDTG - DELEBDTG - DG0BDTG
 
        GF = SG + RG - HG - ELEG - G0G
        GX = DRGDTB - DHGDTB - DELEGDTB - DG0GDTB
-       GY = DRGDTG - DHGDTG - DELEGDTG - DG0GDTG 
+       GY = DRGDTG - DHGDTG - DELEGDTG - DG0GDTG
 
        DTB =  (GF*FY-F*GY)/(FX*GY-GX*FY)
        DTG = -(GF+GX*DTB)/GY
@@ -918,9 +919,9 @@ contains
    QST = -FLXHUM/UST              ! q* [-]
 
     !-----------------------------------------------------------
-    !  calculate temperature in building/road 
+    !  calculate temperature in building/road
     !  multi-layer heat equation model
-    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm  
+    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
     !-----------------------------------------------------------
 
    call multi_layer(num_urb_layers,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
@@ -928,10 +929,10 @@ contains
    call multi_layer(num_urb_layers,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
 
     !-----------------------------------------------------------
-    !  diagnostic GRID AVERAGED TS 
+    !  diagnostic GRID AVERAGED TS
     !-----------------------------------------------------------
 
-   Z0 = Z0C 
+   Z0 = Z0C
    Z0H = Z0HC
    Z = ZA - ZDC
 
@@ -961,18 +962,18 @@ contains
     !   QS = QA + FLXHUM/CHS   ! surface humidity
     !   TS = (LW/STB/0.88)**0.25       ! Radiative temperature [K]
 
-    return     
+    return
   end subroutine urban
 
   !-----------------------------------------------------------------------------
   subroutine canopy_wind(ZA, UA, UC)
 
     implicit none
-   
+
     real(RP),intent(in)  :: ZA   ! height at 1st atmospheric level [m]
     real(RP),intent(in)  :: UA   ! wind speed at 1st atmospheric level [m/s]
     real(RP),intent(out) :: UC   ! wind speed at 1st atmospheric level [m/s]
- 
+
     real(RP) :: UR,ZC,XLB,BB
 
     if ( ZR + 2. < ZA ) then
@@ -983,7 +984,7 @@ contains
       BB = 0.4 * ZR / ( XLB * log( ( ZR - ZDC ) / Z0C ) )
       UC=UR*EXP(-BB*(1.-ZC/ZR))
     else
-      ! PRINT *, 'Warning ZR + 2m  is larger than the 1st WRF level' 
+      ! PRINT *, 'Warning ZR + 2m  is larger than the 1st WRF level'
       ZC=ZA/2.
       UC=UA/2.
     endif
@@ -1010,7 +1011,7 @@ contains
    integer                 :: NEWT
    integer, parameter      :: NEWT_END=10
 
-   if(RIB <= -15.) RIB=-15. 
+   if(RIB <= -15.) RIB=-15.
 
    if(RIB < 0.) then
 
@@ -1074,13 +1075,13 @@ contains
    CD=US*US/UA**2.            ! CD
    ALPHA=RHO*CP*0.4*US/PSIH   ! RHO*CP*CH*U
 
-   return 
+   return
   end subroutine mos
 
   !-----------------------------------------------------------------------------
   subroutine multi_layer(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
 
-   implicit none 
+   implicit none
 
    real(RP), intent(in)    :: G0
    real(RP), intent(in)    :: CAP
@@ -1106,19 +1107,19 @@ contains
 
    do K=2,KM-1
       A(K) = -2.*AKS/(DZ(K-1)+DZ(K))
-      B(K) = CAP*DZ(K)/DELT + 2.*AKS/(DZ(K-1)+DZ(K)) + 2.*AKS/(DZ(K)+DZ(K+1)) 
+      B(K) = CAP*DZ(K)/DELT + 2.*AKS/(DZ(K-1)+DZ(K)) + 2.*AKS/(DZ(K)+DZ(K+1))
       C(K) = -2.*AKS/(DZ(K)+DZ(K+1))
       D(K) = CAP*DZ(K)/DELT*TSL(K)
    enddo
 
    if(BOUND == 1) then                 ! Flux=0
       A(KM) = -2.*AKS/(DZ(KM-1)+DZ(KM))
-      B(KM) = CAP*DZ(KM)/DELT + 2.*AKS/(DZ(KM-1)+DZ(KM))  
+      B(KM) = CAP*DZ(KM)/DELT + 2.*AKS/(DZ(KM-1)+DZ(KM))
       C(KM) = 0.0
       D(KM) = CAP*DZ(KM)/DELT*TSL(KM)
    else                                 ! T=constant
       A(KM) = -2.*AKS/(DZ(KM-1)+DZ(KM))
-      B(KM) = CAP*DZ(KM)/DELT + 2.*AKS/(DZ(KM-1)+DZ(KM)) + 2.*AKS/(DZ(KM)+DZEND) 
+      B(KM) = CAP*DZ(KM)/DELT + 2.*AKS/(DZ(KM-1)+DZ(KM)) + 2.*AKS/(DZ(KM)+DZEND)
       C(KM) = 0.0
       D(KM) = CAP*DZ(KM)/DELT*TSL(KM) + 2.*AKS*TSLEND/(DZ(KM)+DZEND)
    endif
@@ -1150,7 +1151,7 @@ contains
        num_urb_layers
 
    implicit none
-   
+
     real(RP) :: DHGT,VFWS,VFGS
     integer  :: k
 
@@ -1166,7 +1167,7 @@ contains
      ZDC=0.
      SVF=0.
 
-    ! Thickness of roof, building wall, ground layers 
+    ! Thickness of roof, building wall, ground layers
      DZR(1:num_urb_layers)=0.05   ! [m]
      DZB(1:num_urb_layers)=0.05   ! [m]
      DZG(1)=0.05   ! [m]
@@ -1185,12 +1186,12 @@ contains
       AKSB = AKSB * ( 1.0 / 4.1868 ) * 1.E-2   ! [J/m/s/K] --> [cal/cm/s/deg]
       AKSG = AKSG * ( 1.0 / 4.1868 ) * 1.E-2   ! [J/m/s/K] --> [cal/cm/s/deg]
 
-    ! set up other urban parameters 
+    ! set up other urban parameters
      Z0HR = 0.1 * Z0R
      Z0HB = 0.1 * Z0B
      Z0HG = 0.1 * Z0G
-     ZDC  = ZR * 0.3 
-     Z0C  = ZR * 0.15 
+     ZDC  = ZR * 0.3
+     Z0C  = ZR * 0.15
      Z0HC = 0.1 * Z0C
 
     ! HGT:  Normalized height
@@ -1200,7 +1201,7 @@ contains
      R    = ROOF_WIDTH / ( ROAD_WIDTH + ROOF_WIDTH )
      RW   = 1.0 - R
 
-    ! Calculate Sky View Factor:   
+    ! Calculate Sky View Factor:
      DHGT=HGT/100.
      HGT=0.
      VFWS=0.
@@ -1216,6 +1217,6 @@ contains
      SVF=VFGS
 
      return
-  end subroutine urban_param_setup 
+  end subroutine urban_param_setup
 
 end module mod_urban_phy_ucm
