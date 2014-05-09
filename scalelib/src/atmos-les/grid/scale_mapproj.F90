@@ -71,27 +71,27 @@ module scale_mapproj
                                                  ! 'PS'
                                                  ! 'MER'
 
-  real(RP), private :: MPRJ_hemisphere               ! hemisphere flag: 1=north, -1=south
+  real(RP), private :: MPRJ_hemisphere                 ! hemisphere flag: 1=north, -1=south
 
-  real(RP), private :: MPRJ_pole_x                   ! position of north/south pole in the model [m]
-  real(RP), private :: MPRJ_pole_y                   ! position of north/south pole in the model [m]
+  real(RP), private :: MPRJ_pole_x                     ! position of north/south pole in the model [m]
+  real(RP), private :: MPRJ_pole_y                     ! position of north/south pole in the model [m]
 
-  real(RP), private :: MPRJ_basepoint_lon = 135.2_RP ! position of base point in real world [deg]
-  real(RP), private :: MPRJ_basepoint_lat =  34.7_RP ! position of base point in real world [deg]
-  real(RP), private :: MPRJ_basepoint_x   =   0.0_RP ! position of base point in the model  [m]
-  real(RP), private :: MPRJ_basepoint_y   =   0.0_RP ! position of base point in the model  [m]
+  real(RP), private :: MPRJ_basepoint_lon = 135.221_RP ! position of base point in real world [deg]
+  real(RP), private :: MPRJ_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
+  real(RP), private :: MPRJ_basepoint_x   =     0.0_RP ! position of base point in the model  [m]
+  real(RP), private :: MPRJ_basepoint_y   =     0.0_RP ! position of base point in the model  [m]
 
-  real(RP), private :: MPRJ_rotation      =   0.0_RP ! rotation factor (only for 'NONE' type)
+  real(RP), private :: MPRJ_rotation      =     0.0_RP ! rotation factor (only for 'NONE' type)
 
-  real(RP), private :: MPRJ_LC_lon                   ! standard longitude for LC projection
-  real(RP), private :: MPRJ_LC_lat1 = 30.0_RP        ! standard latitude1 for LC projection
-  real(RP), private :: MPRJ_LC_lat2 = 60.0_RP        ! standard latitude2 for LC projection
-  real(RP), private :: MPRJ_LC_c                     ! conformal factor
-  real(RP), private :: MPRJ_LC_fact                  ! pre-calc factor
+  real(RP), private :: MPRJ_LC_lon                     ! standard longitude for LC projection
+  real(RP), private :: MPRJ_LC_lat1 = 30.0_RP          ! standard latitude1 for LC projection
+  real(RP), private :: MPRJ_LC_lat2 = 60.0_RP          ! standard latitude2 for LC projection
+  real(RP), private :: MPRJ_LC_c                       ! conformal factor
+  real(RP), private :: MPRJ_LC_fact                    ! pre-calc factor
 
-  real(RP), private :: MPRJ_PS_lon                   ! standard longitude for PS projection
-  real(RP), private :: MPRJ_PS_lat  =  0.0_RP        ! standard latitude1 for PS projection
-  real(RP), private :: MPRJ_PS_fact                  ! pre-calc factor
+  real(RP), private :: MPRJ_PS_lon                     ! standard longitude for PS projection
+  real(RP), private :: MPRJ_PS_lat  =  0.0_RP          ! standard latitude1 for PS projection
+  real(RP), private :: MPRJ_PS_fact                    ! pre-calc factor
 
   !-----------------------------------------------------------------------------
 contains

@@ -66,7 +66,8 @@ MODS =	\
 	mod_cpl_driver.o \
 	mod_mktopo.o	\
 	mod_mkinit.o	\
-	mod_cnvboundary.o	\
+	mod_convert.o	\
+	mod_cnvtopo.o	\
 	mod_user.o
 
 
@@ -149,7 +150,8 @@ $(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 mod_cpl_vars.o   
 
 $(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90
 $(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_cnvboundary.o            : mod_cnvboundary.f90
+$(BUILD_DIR)/mod_convert.o                : mod_convert.f90 mod_cnvtopo.o
+$(BUILD_DIR)/mod_cnvtopo.o                : mod_cnvtopo.f90
 
 $(BUILD_DIR)/mod_user.o                   : mod_user.f90
 

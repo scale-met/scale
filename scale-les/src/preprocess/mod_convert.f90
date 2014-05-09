@@ -1,17 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module CNV boundary
+!> module CONVERT driver
 !!
 !! @par Description
-!!          subroutines for preparing topography data
+!!          administrator of convert tools
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-module mod_cnvboundary
+module mod_convert
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -21,9 +17,6 @@ module mod_cnvboundary
   use scale_prof
   use scale_grid_index
   use scale_tracer
-
-  use scale_process, only: &
-     PRC_MPIstop
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -47,19 +40,24 @@ module mod_cnvboundary
   !++ Private parameters & variables
   !
   integer, public, save      :: CONVERT_TYPE = -1
-  integer, public, parameter :: I_IGNORE    =  0
+  integer, public, parameter :: I_IGNORE     =  0
+  integer, public, parameter :: I_CNVTOPO    =  1
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CONVERT_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use mod_cnvtopo, only: &
+       CNVTOPO_setup
     implicit none
 
-    character(len=H_SHORT) :: CONVERT_initname = 'OFF'
+    character(len=H_SHORT) :: CONVERT_name = 'NONE'
 
     NAMELIST / PARAM_CONVERT / &
-       CONVERT_initname
+       CONVERT_name
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -78,9 +76,17 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_CONVERT)
 
-    select case(trim(CONVERT_initname))
+    select case(CONVERT_name)
+    case('NONE')
+       CONVERT_TYPE = I_IGNORE
+
+    case('CNVTOPO')
+       CONVERT_TYPE = I_CNVTOPO
+       call CNVTOPO_setup
+
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CONVERT_initname)
+       write(*,*) ' xxx Unsupported TYPE:', trim(CONVERT_name)
+       call PRC_MPIstop
     endselect
 
     return
@@ -89,27 +95,35 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CONVERT
+    use scale_process, only: &
+       PRC_MPIstop
+    use mod_cnvtopo, only: &
+       CNVTOPO
     implicit none
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CONVERT_TYPE == I_IGNORE ) then
-      if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT BOUNDARY DATA ++++++'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT BOUNDARY DATA ++++++'
     else
-      if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT BOUNDARY DATA ++++++'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT BOUNDARY DATA ++++++'
 
-      select case(CONVERT_TYPE)
-      case default
-         write(*,*) ' xxx Unsupported TYPE:', CONVERT_TYPE
-      endselect
+       select case(CONVERT_TYPE)
+       case(I_CNVTOPO)
+          call CNVTOPO
 
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT BOUNDARY DATA ++++++'
+       case default
+          write(*,*) ' xxx Unsupported TYPE:', CONVERT_TYPE
+          call PRC_MPIstop
+       endselect
+
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT BOUNDARY DATA ++++++'
     endif
 
     return
   end subroutine CONVERT
 
-end module mod_cnvboundary
+end module mod_convert

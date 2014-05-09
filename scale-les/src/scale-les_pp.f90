@@ -78,7 +78,7 @@ program scaleles_pp
      LAND_vars_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
-  use mod_cnvboundary, only: &
+  use mod_convert, only: &
      CONVERT_setup, &
      CONVERT
   !-----------------------------------------------------------------------------
@@ -165,7 +165,7 @@ program scaleles_pp
   call CPL_vars_setup
 
   ! setup preprocess converter
-!  call CONVERT_setup
+  call CONVERT_setup
 
   call PROF_rapend('Initialize')
 
@@ -175,7 +175,7 @@ program scaleles_pp
 
   ! execute mktopo
   call PROF_rapstart('Convert')
-!  call CONVERT
+  call CONVERT
   call PROF_rapend  ('Convert')
 
   call PROF_rapend('Main')

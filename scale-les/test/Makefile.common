@@ -13,9 +13,13 @@ INDEX_DIR := $(PWD)
 BINDIR     = $(PWD)
 SRCDIR     = $(SCALELESDIR)/src
 
-BINNAME    = scale-les
-INITNAME   = scale-les_init
-PPNAME     = scale-les_pp
+ifeq ($(origin BINNAME), undefined)
+   BINNAME = scale-les
+endif
+
+ifeq ($(origin INITNAME), undefined)
+   INITNAME = scale-les_init
+endif
 
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
