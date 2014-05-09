@@ -8,7 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_urban
+module mod_urban_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -24,8 +24,8 @@ module mod_urban
   !
   !++ Public procedure
   !
-  public :: URBAN_setup
-  public :: URBAN_step
+  public :: URBAN_driver_setup
+  public :: URBAN_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -43,7 +43,7 @@ module mod_urban
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_setup
+  subroutine URBAN_driver_setup
     use mod_urban_vars, only: &
        sw_phy => URBAN_sw_phy
     use mod_urban_phy_ucm, only: &
@@ -54,11 +54,11 @@ contains
     if ( sw_phy ) call URBAN_PHY_driver_setup
 
     return
-  end subroutine URBAN_setup
+  end subroutine URBAN_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Urban step
-  subroutine URBAN_step
+  subroutine URBAN_driver
     use mod_urban_vars, only: &
        sw_phy => URBAN_sw_phy, &
        URBAN_vars_history
@@ -88,6 +88,6 @@ contains
     call PROF_rapend  ('URB History')
 
     return
-  end subroutine URBAN_step
+  end subroutine URBAN_driver
 
-end module mod_urban
+end module mod_urban_driver

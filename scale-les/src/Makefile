@@ -147,7 +147,7 @@ $(BUILD_DIR)/mod_land_driver.o            : mod_land_driver.f90 mod_land_vars.o 
 $(BUILD_DIR)/mod_urban_vars.o             : mod_urban_vars.f90
 
 $(BUILD_DIR)/mod_urban_phy_ucm.o          : mod_urban_phy_ucm.f90 mod_urban_vars.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_urban.o                  : mod_urban.f90 mod_urban_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_urban_driver.o           : mod_urban.f90 mod_urban_vars.o mod_cpl_vars.o \
                                             mod_urban_phy_ucm.o
 
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90

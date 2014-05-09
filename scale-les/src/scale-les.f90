@@ -114,9 +114,9 @@ program scaleles
      URBAN_vars_restart_read,  &
      URBAN_vars_restart_write, &
      URBAN_sw_restart
-  use mod_urban, only: &
-     URBAN_setup, &
-     URBAN_step
+  use mod_urban_driver, only: &
+     URBAN_driver_setup, &
+     URBAN_driver
   use mod_cpl_vars, only: &
      CPL_vars_setup,         &
      CPL_vars_restart_read,  &
@@ -222,7 +222,7 @@ program scaleles
   call ATMOS_driver_setup
   call OCEAN_driver_setup
   call LAND_driver_setup
-  call URBAN_setup
+  call URBAN_driver_setup
   call CPL_driver_setup
 
   ! setup user-defined procedure
@@ -255,7 +255,7 @@ program scaleles
     if ( TIME_DOATMOS_step ) call ATMOS_driver
     if ( TIME_DOOCEAN_step ) call OCEAN_driver
     if ( TIME_DOLAND_step  ) call LAND_driver
-    if ( TIME_DOURBAN_step ) call URBAN_step
+    if ( TIME_DOURBAN_step ) call URBAN_driver
     if ( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
