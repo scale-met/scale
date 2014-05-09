@@ -2,7 +2,7 @@
 !> module MKTOPO
 !!
 !! @par Description
-!!          subroutines for preparing topography data
+!!          subroutines for preparing topography data (ideal case)
 !!
 !! @author Team SCALE
 !!
@@ -45,26 +45,20 @@ module mod_mktopo
   !
   integer, public, save      :: MKTOPO_TYPE = -1
   integer, public, parameter :: I_IGNORE    =  0
-
   integer, public, parameter :: I_BELLSHAPE =  1
-  integer, public, parameter :: I_GTOPO     =  2
+  integer, public, parameter :: I_SCHAER    =  2
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: BELL_setup
   private :: MKTOPO_bellshape
-  !private :: MKTOPO_gtopo
+  private :: MKTOPO_schaer
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: z_sfc(:,:,:)
-
-  real(RP), private, allocatable :: bell (:,:,:)
-
   !-----------------------------------------------------------------------------
 contains
 
@@ -73,24 +67,19 @@ contains
   subroutine MKTOPO_setup
     implicit none
 
-    character(len=H_SHORT) :: MKTOPO_initname = 'OFF'
+    character(len=H_SHORT) :: MKTOPO_name = 'NONE'
 
     NAMELIST / PARAM_MKTOPO / &
-       MKTOPO_initname
+       MKTOPO_name
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MKTOPO]/Categ[MKTOPO]'
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKTOPO,iostat=ierr)
-
-     allocate( z_sfc(1,IA,JA) )
-     allocate( bell (1,IA,JA) )
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -99,16 +88,18 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO)
 
-    select case(trim(MKTOPO_initname))
-    case('OFF')
+    select case(MKTOPO_name)
+    case('NONE')
        MKTOPO_TYPE = I_IGNORE
+
     case('BELLSHAPE')
        MKTOPO_TYPE = I_BELLSHAPE
-       call BELL_setup
-    !case('GTOPO')
-    !   MKTOPO_TYPE = I_GTOPO
+
+    case('SCHAER')
+       MKTOPO_TYPE = I_SCHAER
+
     case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_initname)
+       write(*,*) ' xxx Unsupported TYPE:', trim(MKTOPO_name)
        call PRC_MPIstop
     endselect
 
@@ -128,29 +119,25 @@ contains
     !---------------------------------------------------------------------------
 
     if ( MKTOPO_TYPE == I_IGNORE ) then
-      if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING BOUNDARY DATA ++++++'
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING TOPOGRAPHY DATA ++++++'
     else
-      do j = 1, JA
-      do i = 1, IA
-         z_sfc(1,i,j) = CONST_UNDEF8
-      enddo
-      enddo
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING TOPOGRAPHY DATA ++++++'
 
-      if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING BOUNDARY DATA ++++++'
+       select case(MKTOPO_TYPE)
+       case(I_BELLSHAPE)
+          call MKTOPO_bellshape
 
-      select case(MKTOPO_TYPE)
-      case(I_BELLSHAPE)
-         call MKTOPO_bellshape
-      case(I_GTOPO)
-         !call MKTOPO_gtopo
-      case default
-         write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
-         call PRC_MPIstop
-      endselect
+       case(I_SCHAER)
+          call MKTOPO_schaer
 
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING BOUNDARY DATA ++++++'
+       case default
+          write(*,*) ' xxx Unsupported TYPE:', MKTOPO_TYPE
+          call PRC_MPIstop
+       endselect
+
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING TOPOGRAPHY DATA ++++++'
 
        ! output topography file
        call TOPO_write
@@ -160,48 +147,46 @@ contains
   end subroutine MKTOPO
 
   !-----------------------------------------------------------------------------
-  !> Initialize Reference state
-  !-----------------------------------------------------------------------------
-  subroutine BELL_setup
+  !> Make bell-shaped mountain
+  subroutine MKTOPO_bellshape
     implicit none
 
-    ! Bubble
-    logical  :: BELL_eachnode = .false.  ! Arrange bubble at each node? [kg/kg]
-    real(RP) :: BELL_CX       =  2.E3_RP ! center location [m]: x
-    real(RP) :: BELL_CY       =  2.E3_RP ! center location [m]: y
-    real(RP) :: BELL_RX       =  2.E3_RP ! bubble radius   [m]: x
-    real(RP) :: BELL_RY       =  2.E3_RP ! bubble radius   [m]: y
+    ! bell-shaped mountain parameter
+    logical  :: BELL_eachnode = .false.   ! Arrange mountain at each node? [kg/kg]
+    real(RP) :: BELL_CX       =   2.E3_RP ! center location [m]: x
+    real(RP) :: BELL_CY       =   2.E3_RP ! center location [m]: y
+    real(RP) :: BELL_RX       =   2.E3_RP ! bubble radius   [m]: x
+    real(RP) :: BELL_RY       =   2.E3_RP ! bubble radius   [m]: y
+    real(RP) :: BELL_HEIGHT   =  100.0_RP ! height of mountain [m]
 
-    NAMELIST / PARAM_BELL / &
+    NAMELIST / PARAM_MKTOPO_BELLSHAPE / &
        BELL_eachnode, &
        BELL_CX,       &
        BELL_CY,       &
        BELL_RX,       &
-       BELL_RY
+       BELL_RY,       &
+       BELL_HEIGHT
 
     real(RP) :: CX_offset
     real(RP) :: CY_offset
     real(RP) :: dist
 
-    integer  :: ierr
-    integer  :: i, j
+    integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BELL]/Categ[MKTOPO]'
-
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BELLSHAPE]/Categ[MKTOPO]'
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_BELL,iostat=ierr)
-
+    read(IO_FID_CONF,nml=PARAM_MKTOPO_BELLSHAPE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
-       call PRC_MPIstop
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_BELL. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_BELL)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO_BELLSHAPE)
 
     if ( BELL_eachnode ) then
        CX_offset = CX(IS)
@@ -211,60 +196,73 @@ contains
        CY_offset = 0.0_RP
     endif
 
+    ! make bell-shaped mountain
     do j = JS, JE
     do i = IS, IE
 
-       ! make tracer bubble
        dist = ( (CX(i)-CX_offset-BELL_CX)/BELL_RX )**2 &
             + ( (CY(j)-CY_offset-BELL_CY)/BELL_RY )**2
 
-       bell(1,i,j) = 1.0_RP / ( 1.0_RP + dist)
+       TOPO_Zsfc(i,j) = BELL_HEIGHT / ( 1.0_RP + dist )
 
     enddo
     enddo
 
     return
-  end subroutine BELL_setup
+  end subroutine MKTOPO_bellshape
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( horizontally uniform + random disturbance )
-  !-----------------------------------------------------------------------------
-  subroutine MKTOPO_bellshape
+  !> Make Schaer-type mountain
+  !> References: Schaer et al, 2002, MWR, Vol.130, 2459-2480
+  !>             Klemp et al, 2003,  MWR, Vol.131, 1229-1239
+  subroutine MKTOPO_schaer
+    use scale_const, only: &
+       PI => CONST_PI
     implicit none
 
-    ! bell-shaped mountain parameter
-    real(RP) :: MOUNTAIN_HEIGHT =  100.0_RP ! height of mountain [m]
+    ! Schaer-type mountain parameter
+    real(RP) :: SCHAER_CX       =  25.E3_RP ! center location [m]: x
+    real(RP) :: SCHAER_RX       =   5.E3_RP ! bubble radius   [m]: x
+    real(RP) :: SCHAER_LAMBDA   =   4.E3_RP ! wavelength of wavelike perturbation [m]: x
+    real(RP) :: SCHAER_HEIGHT   =  250.0_RP ! height of mountain [m]
 
-    NAMELIST / PARAM_MKTOPO_BELLSHAPE / &
-       MOUNTAIN_HEIGHT
+    NAMELIST / PARAM_MKTOPO_SCHEAR / &
+       SCHAER_CX,     &
+       SCHAER_RX,     &
+       SCHAER_LAMBDA, &
+       SCHAER_HEIGHT
+
+    real(RP) :: dist
 
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BELLSHAPE]/Categ[MKTOPO]'
-
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SCHEAR]/Categ[MKTOPO]'
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKTOPO_BELLSHAPE,iostat=ierr)
-
+    read(IO_FID_CONF,nml=PARAM_MKTOPO_SCHEAR,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHEAR. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO_BELLSHAPE)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHEAR)
 
     ! make bell-shaped mountain
     do j = JS, JE
     do i = IS, IE
-       TOPO_Zsfc(i,j) = MOUNTAIN_HEIGHT * bell(1,i,j)
+
+       dist = exp( -( (CX(i)-SCHAER_CX)/SCHAER_RX )**2 )
+
+       TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CX(i)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
+
     enddo
     enddo
 
     return
-  end subroutine MKTOPO_bellshape
+  end subroutine MKTOPO_schaer
 
 end module mod_mktopo

@@ -196,7 +196,7 @@ contains
   subroutine MKINIT_setup
     implicit none
 
-    character(len=H_SHORT) :: MKINIT_initname = 'OFF'
+    character(len=H_SHORT) :: MKINIT_initname = 'NONE'
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
@@ -242,7 +242,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT)
 
     select case(trim(MKINIT_initname))
-    case('OFF')
+    case('NONE')
        MKINIT_TYPE = I_IGNORE
     case('PLANESTATE')
        MKINIT_TYPE = I_PLANESTATE
@@ -496,8 +496,8 @@ contains
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
-
     implicit none
+
     real(RP) :: xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
 
@@ -1920,7 +1920,7 @@ contains
     real(RP) :: ENV_U = 0.0_RP ! velocity u of environment [m/s]
     real(RP) :: ENV_V = 0.0_RP ! velocity v of environment [m/s]
 
-    real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter [m]
+    real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
 
     NAMELIST / PARAM_MKINIT_MOUNTAINWAVE / &
        SFC_THETA, &
