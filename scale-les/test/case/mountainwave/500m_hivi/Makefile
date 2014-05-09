@@ -9,9 +9,9 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
 # for build
-index      = 500m64x100x2
+index      = 500m70x100x2
 precision  = real8
-dynamics   = hevi
+dynamics   = hivi
 tracer     = dry
 sfcflx     = const
 turbulence = dummy
@@ -20,7 +20,7 @@ radiation  = dummy
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 8
+TPROC     = 5
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
