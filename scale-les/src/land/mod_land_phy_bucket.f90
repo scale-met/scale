@@ -63,8 +63,6 @@ contains
        LAND_TYPE
     implicit none
 
-    logical  :: dummy
-
     NAMELIST / PARAM_LAND_BUCKET / &
        LAND_LKE_STRG_UPDATE, &
        LAND_LKE_TG_UPDATE

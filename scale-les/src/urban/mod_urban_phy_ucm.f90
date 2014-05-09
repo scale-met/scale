@@ -113,7 +113,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_urban_vars, only: &
-       URBAN_TYPE_PHY, &
+       URBAN_TYPE, &
        num_urb_layers
     implicit none
 
@@ -235,8 +235,8 @@ contains
     GHFLX_URB (:,:) = UNDEF
     TS_URB    (:,:) = UNDEF
 
-    if ( URBAN_TYPE_PHY /= 'UCM' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN_TYPE_PHY is not UCM. Check!'
+    if ( URBAN_TYPE /= 'UCM' ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN_TYPE is not UCM. Check!'
        call PRC_MPIstop
     endif
 

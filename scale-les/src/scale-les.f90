@@ -112,8 +112,7 @@ program scaleles
   use mod_urban_vars, only: &
      URBAN_vars_setup,         &
      URBAN_vars_restart_read,  &
-     URBAN_vars_restart_write, &
-     URBAN_sw_restart
+     URBAN_vars_restart_write
   use mod_urban_driver, only: &
      URBAN_driver_setup, &
      URBAN_driver

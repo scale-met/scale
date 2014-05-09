@@ -40,7 +40,7 @@ module mod_urban_vars
   !
   !++ Public parameters & variables
   !
-  character(len=H_SHORT), public, save :: URBAN_TYPE_PHY = 'OFF' !< urban physics type
+  character(len=H_SHORT), public, save :: URBAN_TYPE = 'OFF'     !< urban physics type
   logical,                public, save :: URBAN_sw_phy           !< do urban physics update?
   logical,                public, save :: URBAN_sw_restart       !< output restart?
 
@@ -131,7 +131,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_URBAN / &
-       URBAN_TYPE_PHY
+       URBAN_TYPE
 
     NAMELIST / PARAM_URBAN_VARS /  &
        URBAN_RESTART_IN_BASENAME,  &
@@ -186,7 +186,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN] selected components'
 
-    if ( URBAN_TYPE_PHY /= 'OFF' .AND. URBAN_TYPE_PHY /= 'NONE' ) then
+    if ( URBAN_TYPE /= 'OFF' .AND. URBAN_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Urban physics : ON'
        URBAN_sw_phy = .true.
     else
