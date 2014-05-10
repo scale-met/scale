@@ -1866,7 +1866,6 @@ contains
                 clm_dnr = rg_dnr+rs_dnr+ri_dnr
                 clm_dni = ri_dni+ii_dni+is_dni
                 clm_dns = rs_dns+ss_dns+gs_dns
-!!$             clm_dng = 0.D0
                 clm_dng = gg_dng ! [Mod] 11/08/30 T.Mitsui
              else
                 clp_dqc =  0.0_RP

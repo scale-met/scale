@@ -1140,7 +1140,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = 1, kmax
-          tauGAS(k,i,j,ich) = 0.D0
+          tauGAS(k,i,j,ich) = 0.0_RP
        enddo
        enddo
        enddo

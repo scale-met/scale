@@ -117,7 +117,7 @@ contains
 
 !    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
 !    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP
-!    Re(:,:,:,I_ae_bc     ) = 4.D-8_RP
+!    Re(:,:,:,I_ae_bc     ) = 4.E-8_RP
 !    Re(:,:,:,I_ae_oc     ) = RH(:,:,:)
 !    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
 
