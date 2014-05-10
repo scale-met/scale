@@ -175,7 +175,7 @@ contains
 
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)  :: SST (1,IA,JA)
+    real(RP), intent(in)  :: SST (IA,JA)
 
     real(RP), intent(in)  :: CZ(KA)
 

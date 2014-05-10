@@ -225,7 +225,7 @@ contains
     real(RP), intent(in)  :: MOMY(KA,IA,JA)
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)  :: SST (1,IA,JA)
+    real(RP), intent(in)  :: SST (IA,JA)
 
     real(RP), intent(in)  :: CZ(KA)
     real(DP), intent(in)  :: ctime
@@ -291,7 +291,7 @@ contains
 
        call get_RiB( &
             RiB, Fm, Fh, Psih,             & ! (out)
-            THETA(i,j), SST(1,i,j), Uabs**2, & ! (in)
+            THETA(i,j), SST(i,j), Uabs**2, & ! (in)
             CZ(KS), Z0, Zt,                & ! (in)
             KARMAN, FB, FBS, FDM, FDH,     & ! (in)
             ThS, GRAV                    ) ! (in)
@@ -312,7 +312,7 @@ contains
        !--- saturation at surface
        pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
        temp      = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres )**RovCP
-       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(1,i,j) ) )
+       pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !       qv_evap   = EPSvap * pres_evap / ( pres - pres_evap )
        qv_evap   = EPSvap * pres_evap / P00
 
@@ -320,7 +320,7 @@ contains
        SFLX_MOMZ(i,j) = - min(max(Cm,Cm_min),Cm_max) * min(max(Uabs,U_minM),U_maxM) &
             * MOMZ(KS,i,j) * 0.5_RP
        SFLX_POTT(i,j) =   min(max(Ch,Ch_min),Ch_max) * min(max(Uabs,U_minH),U_maxH) &
-            * ( SST(1,i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
+            * ( SST(i,j)*DENS(KS,i,j) - RHOT(KS,i,j) )
        SFLX_QV  (i,j) =   min(max(Ce,Ce_min),Ce_max) * min(max(Uabs,U_minE),U_maxE) &
             * DENS(KS,i,j) * ( qv_evap - QTRC(KS,i,j,I_QV) )
 
@@ -340,7 +340,7 @@ contains
        call get_RiB( &
             RiB, Fm, Fh, Psih,                    & ! (out)
             ( THETA(i,j)+THETA(i+1,j) ) * 0.5_RP, & ! (in)
-            ( SST(1,i,j)+SST(1,i+1,j) ) * 0.5_RP,     & ! (in)
+            ( SST(i,j)+SST(i+1,j) ) * 0.5_RP,     & ! (in)
             Uabs**2,                              & ! (in)
             CZ(KS), Z0, Zt,                       & ! (in)
             KARMAN, FB, FBS, FDM, FDH,            & ! (in)
@@ -368,7 +368,7 @@ contains
        call get_RiB( &
             RiB, Fm, Fh, Psih,                    & ! (out)
             ( THETA(i,j)+THETA(i,j+1) ) * 0.5_RP, & ! (in)
-            ( SST(1,i,j)+SST(1,i,j+1) ) * 0.5_RP,     & ! (in)
+            ( SST(i,j)+SST(i,j+1) ) * 0.5_RP,     & ! (in)
             Uabs**2,                              & ! (in)
             CZ(KS), Z0, Zt,                       & ! (in)
             KARMAN, FB, FBS, FDM, FDH,            & ! (in)

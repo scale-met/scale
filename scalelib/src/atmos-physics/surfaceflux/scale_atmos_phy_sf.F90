@@ -67,7 +67,7 @@ module scale_atmos_phy_sf
        real(RP), intent(in)  :: MOMY(KA,IA,JA)
        real(RP), intent(in)  :: RHOT(KA,IA,JA)
        real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-       real(RP), intent(in)  :: SST (1,IA,JA)
+       real(RP), intent(in)  :: SST (IA,JA)
 
        real(RP), intent(in)  :: CZ(KA)
        real(DP), intent(in)  :: ctime
