@@ -8,13 +8,13 @@ FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
               -Mbyteswapio                       \
               -Mflushz -pc 80                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -Minfo
+              -Msmartalloc=huge -Minfo -DHEVI_BICGSTAB -D__PGI
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -Mbyteswapio                      \
                -Ktrap=fp -pc 80                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -Minfo
+               -mcmodel=medium -Minfo -DHEVI_BICGSTAB -D__PGI
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)

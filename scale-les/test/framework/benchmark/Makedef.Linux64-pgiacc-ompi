@@ -9,14 +9,14 @@ FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
               -Mbyteswapio                       \
               -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -DHEVI_BICGSTAB
+              -Msmartalloc=huge -DHEVI_BICGSTAB -D__PGI
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -Minfo=accel -acc -ta=nvidia,time  \
                -Mbyteswapio                      \
                -Ktrap=fp -pc 64                  \
                -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -DHEVI_BICGSTAB
+               -mcmodel=medium -DHEVI_BICGSTAB -D__PGI
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
@@ -48,7 +48,8 @@ NETCDF_INCLUDE ?= -I$(NETCDF4)/include
 NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
 
 ###### Lapack
-LAPACK_LIBS    ?=
+MKLPATH        ?= /opt/intel/composerxe/mkl/lib/intel64
+LAPACK_LIBS    ?= -R$(MKLPATH) -L$(MKLPATH) -lmkl_intel_lp64 -lmkl_pgi_thread -lmkl_core
 
 ##### for frontend
 INSTALL = install
