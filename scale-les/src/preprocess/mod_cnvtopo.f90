@@ -404,7 +404,7 @@ contains
              area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
 !             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc(ii), jloc(jj), ifrac_l(ii), jfrac_b(jj), TILE_HEIGHT(ii,jj)
 
-!             TILE_HEIGHT(ii,jj) = max( TILE_HEIGHT(ii,jj), 0.0 )
+             TILE_HEIGHT(ii,jj) = max( TILE_HEIGHT(ii,jj), 0.0 )
 
              area_fraction = (       ifrac_l(ii)) * (       jfrac_b(jj)) * area
              area_sum (iloc(ii)  ,jloc(jj)  ) = area_sum (iloc(ii)  ,jloc(jj)  ) + area_fraction
