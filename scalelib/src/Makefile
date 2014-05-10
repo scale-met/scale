@@ -92,6 +92,7 @@ OBJS = $(scale_rdma)	\
 	scale_cpl_atmos_ocean_const.o	\
 	scale_cpl_sub_bulkcoef.o	\
 	scale_debug.o	\
+	scale_external_io.o	\
 	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
@@ -109,6 +110,7 @@ OBJS = $(scale_rdma)	\
 	scale_process.o	\
 	scale_prof.o	\
 	scale_random.o	\
+	scale_realinput.o	\
 	scale_specfunc.o	\
 	scale_stats.o	\
 	scale_stdio.o	\
@@ -193,6 +195,8 @@ $(BUILD_DIR)/scale_atmos_dyn_rk_hivi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/scale_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+$(BUILD_DIR)/scale_external_io.o:
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<

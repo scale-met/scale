@@ -21,6 +21,7 @@
 !! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
 !! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
 !! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
+!! @li      2014-04-28 (R.Yoshida)  [add] real case experiment
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -34,6 +35,7 @@ module mod_mkinit
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_realinput
 
   use scale_process, only: &
      PRC_MPIstop
@@ -130,7 +132,9 @@ module mod_mkinit
   integer, public, parameter :: I_LANDCOUPLE    = 16
   integer, public, parameter :: I_OCEANCOUPLE   = 17
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS    = 18
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 18
+
+  integer, public, parameter :: I_REAL          = 19
 
   !-----------------------------------------------------------------------------
   !
@@ -158,8 +162,11 @@ module mod_mkinit
   private :: MKINIT_interporation
 
   private :: MKINIT_landcouple
+  private :: MKINIT_oceancouple
 
   private :: MKINIT_DYCOMS2_RF02_DNS
+
+  private :: MKINIT_real
 
   !-----------------------------------------------------------------------------
   !
@@ -286,6 +293,8 @@ contains
        MKINIT_TYPE = I_OCEANCOUPLE
     case('DYCOMS2_RF02_DNS')
        MKINIT_TYPE = I_DYCOMS2_RF02_DNS
+    case('REAL')
+       MKINIT_TYPE = I_REAL
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -393,6 +402,8 @@ contains
          call MKINIT_oceancouple
       case(I_DYCOMS2_RF02_DNS)
          call MKINIT_DYCOMS2_RF02_DNS
+      case(I_REAL)
+         call MKINIT_real
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -3575,6 +3586,136 @@ contains
 
     return
   end subroutine MKINIT_oceancouple
+
+  !-----------------------------------------------------------------------------
+  subroutine MKINIT_real
+    use scale_realinput
+    implicit none
+
+    integer               :: INITIAL_STEP      = 1
+    integer               :: NUMBER_OF_FILES   = 1   ! assume that one file includes one time step
+    character(len=H_LONG) :: BASENAME_ORG      = ''
+    character(len=H_LONG) :: FILETYPE_ORG      = ''
+    character(len=H_LONG) :: BASENAME_BOUNDARY = 'boundary_'
+    character(len=H_LONG) :: BOUNDARY_TITLE    = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+
+    NAMELIST / PARAM_MKINIT_REAL / &
+         INITIAL_STEP,      &
+         NUMBER_OF_FILES,   &
+         BASENAME_ORG,      &
+         FILETYPE_ORG,      &
+         BASENAME_BOUNDARY, &
+         BOUNDARY_TITLE
+
+    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
+    character(len=5)      :: NUM               = ''
+
+    real(RP), allocatable :: DENS_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
+    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
+    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
+
+    integer :: mdlid
+    integer :: dims(6)  ! 1-3: normal, 4-6: staggerd
+    integer :: timelen = 1
+    integer :: ierr
+
+    integer :: k, i, j, iq, n
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Real Case]/Categ[MKINIT]'
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
+
+    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    call ParentAtomSetup( dims(:), timelen, mdlid, BASENAME_WITHNUM, FILETYPE_ORG )
+
+    if ( timelen /= 1 ) then
+       write(*,*) 'xxx Multiple Time Steps Found in Original File! Cannot Handle These.'
+       write(*,*) 'xxx System Going to Abort...Sorry'
+       call PRC_MPIstop
+    endif
+
+    allocate( dens_org(KA,IA,JA,NUMBER_OF_FILES) )
+    allocate( momz_org(KA,IA,JA,NUMBER_OF_FILES) )
+    allocate( momx_org(KA,IA,JA,NUMBER_OF_FILES) )
+    allocate( momy_org(KA,IA,JA,NUMBER_OF_FILES) )
+    allocate( rhot_org(KA,IA,JA,NUMBER_OF_FILES) )
+    allocate( qtrc_org(KA,IA,JA,QA,NUMBER_OF_FILES) )
+
+    !--- read external file
+    do n = 1, NUMBER_OF_FILES
+       write(NUM,'(I5.5)') n-1
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
+       call ParentAtomInput( DENS_ORG(:,:,:,n),   &
+                             MOMZ_ORG(:,:,:,n),   &
+                             MOMX_ORG(:,:,:,n),   &
+                             MOMY_ORG(:,:,:,n),   &
+                             RHOT_ORG(:,:,:,n),   &
+                             QTRC_ORG(:,:,:,:,n), &
+                             BASENAME_WITHNUM,    &
+                             dims(:),             &
+                             timelen,             &
+                             mdlid,               &
+                             INITIAL_STEP         )
+    enddo
+
+    !--- input initial data
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS_ORG(k,i,j,INITIAL_STEP)
+       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,INITIAL_STEP)
+       MOMX(k,i,j) = MOMX_ORG(k,i,j,INITIAL_STEP)
+       MOMY(k,i,j) = MOMY_ORG(k,i,j,INITIAL_STEP)
+       RHOT(k,i,j) = RHOT_ORG(k,i,j,INITIAL_STEP)
+    enddo
+    enddo
+    enddo
+
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,iq,INITIAL_STEP)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    !--- output boundary data
+    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
+                             MOMZ_ORG(:,:,:,:),   &
+                             MOMX_ORG(:,:,:,:),   &
+                             MOMY_ORG(:,:,:,:),   &
+                             RHOT_ORG(:,:,:,:),   &
+                             QTRC_ORG(:,:,:,:,:), &
+                             NUMBER_OF_FILES,     &
+                             INITIAL_STEP,        &
+                             BASENAME_BOUDARY,    &
+                             BOUNDARY_TITLE       )
+
+    deallocate( dens_org )
+    deallocate( momz_org )
+    deallocate( momx_org )
+    deallocate( momy_org )
+    deallocate( rhot_org )
+    deallocate( qtrc_org )
+
+    return
+  end subroutine MKINIT_real
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------
