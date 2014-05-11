@@ -179,22 +179,27 @@ contains
     real(RP),         intent(inout) :: var(:,:,:,:) !< values
     character(len=*), intent(in)    :: varname(:)   !< name of item
 
-    logical :: halomask(KA,IA,JA)
-
+    logical , allocatable :: halomask  (:,:,:)
     real(RP), allocatable :: statval   (:,:,:)
     integer,  allocatable :: statidx   (:,:,:,:)
     real(RP), allocatable :: allstatval(:,:)
     integer,  allocatable :: allstatidx(:,:,:)
-    integer               :: vsize
+    integer               :: ksize, vsize
 
     integer :: ierr
     integer :: v, p
     !---------------------------------------------------------------------------
 
+    ksize = size(var(:,:,:,:),1)
     vsize = size(var(:,:,:,:),4)
 
-    halomask(:,:,:) = .false.
-    halomask(KS:KE,IS:IE,JS:JE) = .true.
+    allocate( halomask(ksize,IA,JA) ); halomask(:,:,:) = .false.
+
+    if ( ksize == KA ) then
+       halomask(KS:KE,IS:IE,JS:JE) = .true.
+    else
+       halomask(:,IS:IE,JS:JE) = .true.
+    endif
 
     allocate( statval(  vsize,2,0:PRC_nmax-1) ); statval(:,:,:)   = CONST_UNDEF8
     allocate( statidx(3,vsize,2,0:PRC_nmax-1) ); statidx(:,:,:,:) = CONST_UNDEF2
@@ -261,6 +266,8 @@ contains
                                       statidx(2,v,2,allstatidx(1,v,2)),',', &
                                       statidx(3,v,2,allstatidx(1,v,2)),')'
     enddo
+
+    deallocate( halomask )
 
     deallocate( statval )
     deallocate( statidx )

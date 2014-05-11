@@ -122,18 +122,20 @@ contains
 
        select case(CNVTOPO_TYPE)
        case(I_GTOPO30)
-           call CNVTOPO_GTOPO30
+          call CNVTOPO_GTOPO30
 
        case(I_DEM50M)
-           call CNVTOPO_DEM50M
+          call CNVTOPO_DEM50M
 
        case(I_GMTED2010)
-           call CNVTOPO_GMTED2010
+          call CNVTOPO_GMTED2010
 
        case default
           write(*,*) ' xxx Unsupported TYPE:', CNVTOPO_TYPE
           call PRC_MPIstop
        endselect
+
+       call CNVTOPO_checkslope
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT TOPOGRAPHY DATA ++++++'
 
@@ -467,5 +469,66 @@ contains
 
     return
   end subroutine CNVTOPO_GMTED2010
+
+  !-----------------------------------------------------------------------------
+  !> check slope
+  subroutine CNVTOPO_checkslope
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_grid, only: &
+       GRID_FDX, &
+       GRID_FDY
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_stats, only: &
+       STAT_detail
+    use scale_topography, only: &
+       TOPO_Zsfc
+    implicit none
+
+    real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
+    real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
+
+    character(len=H_SHORT) :: varname(1)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    ! digital filter
+!    do j = JS, JE
+!    do i = IS, IE
+!       TOPO_Zsfc(i,j) = ( TOPO_Zsfc(i  ,j  ) &
+!                        + TOPO_Zsfc(i-1,j  ) &
+!                        + TOPO_Zsfc(i+1,j  ) &
+!                        + TOPO_Zsfc(i  ,j-1) &
+!                        + TOPO_Zsfc(i  ,j+1) ) / 5.0_RP
+!    enddo
+!    enddo
+
+    call COMM_vars8( TOPO_Zsfc(:,:), 1 )
+    call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+!       DZsfc_DX(1,i,j,1) = ( TOPO_Zsfc(i+1,j) - TOPO_Zsfc(i,j) ) / GRID_FDX(i)
+       DZsfc_DX(1,i,j,1) = atan2( ( TOPO_Zsfc(i+1,j)-TOPO_Zsfc(i,j) ), GRID_FDX(i) ) / D2R
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+!       DZsfc_DY(1,i,j,1) = ( TOPO_Zsfc(i,j+1) - TOPO_Zsfc(i,j) ) / GRID_FDY(j)
+       DZsfc_DY(1,i,j,1) = atan2( ( TOPO_Zsfc(i,j+1)-TOPO_Zsfc(i,j) ), GRID_FDY(j) ) / D2R
+    enddo
+    enddo
+
+    varname(1) = "DZsfc_DX"
+    call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
+    varname(1) = "DZsfc_DY"
+    call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
+
+    return
+  end subroutine CNVTOPO_checkslope
 
 end module mod_cnvtopo

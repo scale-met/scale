@@ -38,50 +38,44 @@ module scale_grid
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: DZ        =  500.0_RP ! length in the main region [m]: z
-  real(RP), public :: DX        =  500.0_RP ! length in the main region [m]: x
-  real(RP), public :: DY        =  500.0_RP ! length in the main region [m]: y
+  real(RP), public :: DZ  =  500.0_RP !< length in the main region [m]: z
+  real(RP), public :: DX  =  500.0_RP !< length in the main region [m]: x
+  real(RP), public :: DY  =  500.0_RP !< length in the main region [m]: y
 
-  real(RP), private :: BUFFER_DZ = 5000.0_RP ! thickness of buffer region [m]: z
-  real(RP), private :: BUFFER_DX =    0.0_RP ! thickness of buffer region [m]: x
-  real(RP), private :: BUFFER_DY =    0.0_RP ! thickness of buffer region [m]: y
-  real(RP), private :: BUFFFACT  =    1.1_RP ! strech factor for dx/dy/dz of buffer region
+  integer,  public :: ISG             !< start of the inner domain: x, global
+  integer,  public :: IEG             !< end   of the inner domain: x, global
+  integer,  public :: JSG             !< start of the inner domain: y, global
+  integer,  public :: JEG             !< end   of the inner domain: y, global
 
-  integer,  public :: ISG              !< start of the inner domain: x, global
-  integer,  public :: IEG              !< end   of the inner domain: x, global
-  integer,  public :: JSG              !< start of the inner domain: y, global
-  integer,  public :: JEG              !< end   of the inner domain: y, global
+  real(RP), public, allocatable :: GRID_CZ  (:)     !< center coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_CX  (:)     !< center coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_CY  (:)     !< center coordinate [m]: y, local
+  real(RP), public, allocatable :: GRID_CDZ (:)     !< z-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDX (:)     !< x-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDY (:)     !< y-length of control volume [m]
+  real(RP), public, allocatable :: GRID_RCDZ(:)     !< reciprocal of center-dz
+  real(RP), public, allocatable :: GRID_RCDX(:)     !< reciprocal of center-dx
+  real(RP), public, allocatable :: GRID_RCDY(:)     !< reciprocal of center-dy
 
-  real(RP), public, allocatable :: GRID_CZ  (:)    !< center coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_CX  (:)    !< center coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_CY  (:)    !< center coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_CDZ (:)    !< z-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDX (:)    !< x-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDY (:)    !< y-length of control volume [m]
-  real(RP), public, allocatable :: GRID_RCDZ(:)    !< reciprocal of center-dz
-  real(RP), public, allocatable :: GRID_RCDX(:)    !< reciprocal of center-dx
-  real(RP), public, allocatable :: GRID_RCDY(:)    !< reciprocal of center-dy
+  real(RP), public, allocatable :: GRID_FZ  (:)     !< face   coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_FX  (:)     !< face   coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_FY  (:)     !< face   coordinate [m]: y, local
+  real(RP), public, allocatable :: GRID_FDZ (:)     !< z-length of grid(k+1) to grid(k) [m]
+  real(RP), public, allocatable :: GRID_FDX (:)     !< x-length of grid(i+1) to grid(i) [m]
+  real(RP), public, allocatable :: GRID_FDY (:)     !< y-length of grid(j+1) to grid(j) [m]
+  real(RP), public, allocatable :: GRID_RFDZ(:)     !< reciprocal of face-dz
+  real(RP), public, allocatable :: GRID_RFDX(:)     !< reciprocal of face-dx
+  real(RP), public, allocatable :: GRID_RFDY(:)     !< reciprocal of face-dy
 
-  real(RP), public, allocatable :: GRID_FZ  (:)  !< face   coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_FX  (:)  !< face   coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_FY  (:)  !< face   coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_FDZ (:)  !< z-length of grid(k)-to-grid(k-1) [m]
-  real(RP), public, allocatable :: GRID_FDX (:)  !< x-length of grid(i)-to-grid(i-1) [m]
-  real(RP), public, allocatable :: GRID_FDY (:)  !< y-length of grid(j)-to-grid(j-1) [m]
-  real(RP), public, allocatable :: GRID_RFDZ(:)  !< reciprocal of face-dz
-  real(RP), public, allocatable :: GRID_RFDX(:)  !< reciprocal of face-dx
-  real(RP), public, allocatable :: GRID_RFDY(:)  !< reciprocal of face-dy
-
-  logical,  public, allocatable :: GRID_CZ_mask(:) !< main/buffer region mask: z
-  logical,  public, allocatable :: GRID_CX_mask(:) !< main/buffer region mask: x
-  logical,  public, allocatable :: GRID_CY_mask(:) !< main/buffer region mask: y
-
-  real(RP), public, allocatable :: GRID_CBFZ(:)    !< center buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_CBFX(:)    !< center buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_CBFY(:)    !< center buffer factor [0-1]: y
-  real(RP), public, allocatable :: GRID_FBFZ(:)    !< face   buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_FBFX(:)    !< face   buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_FBFY(:)    !< face   buffer factor [0-1]: y
+  real(RP), public, allocatable :: GRID_CBFZ(:)     !< center buffer factor [0-1]: z
+  real(RP), public, allocatable :: GRID_CBFX(:)     !< center buffer factor [0-1]: x
+  real(RP), public, allocatable :: GRID_CBFY(:)     !< center buffer factor [0-1]: y
+  real(RP), public, allocatable :: GRID_FBFZ(:)     !< face   buffer factor [0-1]: z
+  real(RP), public, allocatable :: GRID_FBFX(:)     !< face   buffer factor [0-1]: x
+  real(RP), public, allocatable :: GRID_FBFY(:)     !< face   buffer factor [0-1]: y
+  logical,  public, allocatable :: GRID_CZ_mask(:)  !< main/buffer region mask: z
+  logical,  public, allocatable :: GRID_CX_mask(:)  !< main/buffer region mask: x
+  logical,  public, allocatable :: GRID_CY_mask(:)  !< main/buffer region mask: y
 
   real(RP), public, allocatable :: GRID_FXG(:)      !< face   coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_FYG(:)      !< face   coordinate [m]: y, global
@@ -108,6 +102,11 @@ module scale_grid
   character(len=H_LONG), private :: GRID_OUT_BASENAME = ''
   real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
   real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
+
+  real(RP), private :: BUFFER_DZ = 5000.0_RP ! thickness of buffer region [m]: z
+  real(RP), private :: BUFFER_DX =    0.0_RP ! thickness of buffer region [m]: x
+  real(RP), private :: BUFFER_DY =    0.0_RP ! thickness of buffer region [m]: y
+  real(RP), private :: BUFFFACT  =    1.1_RP ! strech factor for dx/dy/dz of buffer region
 
   !-----------------------------------------------------------------------------
 contains
