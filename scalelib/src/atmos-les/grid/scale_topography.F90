@@ -5,10 +5,6 @@
 !!          Topography module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module scale_topography
@@ -73,13 +69,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TOPOGRAPHY]/Categ[GRID]'
 
-    allocate( TOPO_Zsfc(IA,JA) )
-    TOPO_Zsfc(:,:) = 0.0_RP
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -87,6 +79,9 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TOPO)
+
+    allocate( TOPO_Zsfc(IA,JA) )
+    TOPO_Zsfc(:,:) = 0.0_RP
 
     ! read from file
     call TOPO_read
@@ -141,7 +136,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
 
        call FILEIO_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
-                          'TOPO', 'Topography', 'm', 'XY', TOPO_OUT_DTYPE    ) ! [IN]
+                          'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE  ) ! [IN]
 
     endif
 

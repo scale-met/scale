@@ -155,12 +155,10 @@ contains
 
     character(len=H_LONG) :: TOPO_GTOPO30_IN_CATALOGUE = ''      !< metadata files for GTOPO30
     character(len=H_LONG) :: TOPO_GTOPO30_IN_DIR       = ''      !< directory contains GTOPO30 files (GrADS format)
-    logical               :: append                    = .false. !< append to existing file?
 
     NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
        TOPO_GTOPO30_IN_CATALOGUE, &
-       TOPO_GTOPO30_IN_DIR,       &
-       append
+       TOPO_GTOPO30_IN_DIR
 
     integer :: ierr
     integer :: i, j
@@ -200,12 +198,10 @@ contains
 
     character(len=H_LONG) :: DEM50M_IN_CATALOGUE = ''      !< metadata files for DEM50M
     character(len=H_LONG) :: DEM50M_IN_DIR       = ''      !< directory contains DEM50M files (GrADS format)
-    logical               :: append              = .false. !< append to existing file?
 
     NAMELIST / PARAM_CNVTOPO_DEM50M / &
        DEM50M_IN_CATALOGUE, &
-       DEM50M_IN_DIR,       &
-       append
+       DEM50M_IN_DIR
 
     ! data catalogue list
     integer, parameter    :: TILE_nlim = 1000
@@ -448,12 +444,10 @@ contains
 
     character(len=H_LONG) :: TOPO_GMTED2010_IN_CATALOGUE = ''      !< metadata files for GMTED2010
     character(len=H_LONG) :: TOPO_GMTED2010_IN_DIR       = ''      !< directory contains GMTED2010 files (GrADS format)
-    logical               :: append                      = .false. !< append to existing file?
 
     NAMELIST / PARAM_CNVTOPO_GMTED2010 / &
        TOPO_GMTED2010_IN_CATALOGUE, &
-       TOPO_GMTED2010_IN_DIR,       &
-       append
+       TOPO_GMTED2010_IN_DIR
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -474,4 +468,4 @@ contains
     return
   end subroutine CNVTOPO_GMTED2010
 
-end module mod_CNVTOPO
+end module mod_cnvtopo

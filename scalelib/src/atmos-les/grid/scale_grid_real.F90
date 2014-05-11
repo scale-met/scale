@@ -178,13 +178,13 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) ' *** Position on the earth (Local)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
-                                'NW(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')-', &
+                                'NW(',REAL_LON(IS,JE)/D2R,',',REAL_LAT(IS,JE)/D2R,')-', &
                                 'NE(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')'
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
                                 '            |                       |'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
                                 'SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')-', &
-                                'SE(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')'
+                                'SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
 
     return
   end subroutine REAL_calc_latlon
