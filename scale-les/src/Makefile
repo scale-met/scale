@@ -36,38 +36,39 @@ PRJS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME)
 
 MODS =	\
-	mod_atmos_dyn_vars.o       \
-	mod_atmos_phy_mp_vars.o    \
-	mod_atmos_phy_ae_vars.o    \
-	mod_atmos_phy_ch_vars.o    \
-	mod_atmos_phy_rd_vars.o    \
-	mod_atmos_phy_sf_vars.o    \
-	mod_atmos_phy_tb_vars.o    \
-	mod_atmos_phy_cp_vars.o    \
-	mod_atmos_vars.o           \
-	mod_atmos_dyn_driver.o     \
-	mod_atmos_phy_mp_driver.o  \
-	mod_atmos_phy_ae_driver.o  \
-	mod_atmos_phy_ch_driver.o  \
-	mod_atmos_phy_rd_driver.o  \
-	mod_atmos_phy_sf_driver.o  \
-	mod_atmos_phy_tb_driver.o  \
-	mod_atmos_phy_cp_driver.o  \
-	mod_atmos_driver.o         \
-	mod_ocean_vars.o	\
-	mod_ocean_phy_slab.o	\
-	mod_ocean_driver.o	\
-	mod_land_vars.o	\
-	mod_land_phy_bucket.o	\
-	mod_land_driver.o	\
-	mod_cpl_vars.o	\
-	mod_cpl_atmos_land_driver.o \
+	mod_atmos_dyn_vars.o         \
+	mod_atmos_phy_mp_vars.o      \
+	mod_atmos_phy_ae_vars.o      \
+	mod_atmos_phy_ch_vars.o      \
+	mod_atmos_phy_rd_vars.o      \
+	mod_atmos_phy_sf_vars.o      \
+	mod_atmos_phy_tb_vars.o      \
+	mod_atmos_phy_cp_vars.o      \
+	mod_atmos_vars.o             \
+	mod_atmos_dyn_driver.o       \
+	mod_atmos_phy_mp_driver.o    \
+	mod_atmos_phy_ae_driver.o    \
+	mod_atmos_phy_ch_driver.o    \
+	mod_atmos_phy_rd_driver.o    \
+	mod_atmos_phy_sf_driver.o    \
+	mod_atmos_phy_tb_driver.o    \
+	mod_atmos_phy_cp_driver.o    \
+	mod_atmos_driver.o           \
+	mod_ocean_vars.o             \
+	mod_ocean_phy_slab.o         \
+	mod_ocean_driver.o           \
+	mod_land_vars.o              \
+	mod_land_phy_bucket.o        \
+	mod_land_driver.o            \
+	mod_cpl_vars.o               \
+	mod_cpl_atmos_land_driver.o  \
 	mod_cpl_atmos_ocean_driver.o \
-	mod_cpl_driver.o \
-	mod_mktopo.o	\
-	mod_mkinit.o	\
-	mod_convert.o	\
-	mod_cnvtopo.o	\
+	mod_cpl_driver.o             \
+	mod_mktopo.o                 \
+	mod_mkinit.o                 \
+	mod_convert.o                \
+	mod_cnvtopo.o                \
+	mod_cnvlanduse.o             \
 	mod_user.o
 
 
@@ -150,8 +151,9 @@ $(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 mod_cpl_vars.o   
 
 $(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90
 $(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_convert.o                : mod_convert.f90 mod_cnvtopo.o
+$(BUILD_DIR)/mod_convert.o                : mod_convert.f90 mod_cnvtopo.o mod_cnvlanduse.o
 $(BUILD_DIR)/mod_cnvtopo.o                : mod_cnvtopo.f90
+$(BUILD_DIR)/mod_cnvlanduse.o             : mod_cnvlanduse.f90
 
 $(BUILD_DIR)/mod_user.o                   : mod_user.f90
 

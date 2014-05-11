@@ -42,6 +42,7 @@ module mod_convert
   integer, public, save      :: CONVERT_TYPE = -1
   integer, public, parameter :: I_IGNORE     =  0
   integer, public, parameter :: I_CNVTOPO    =  1
+  integer, public, parameter :: I_CNVLANDUSE =  2
 
   !-----------------------------------------------------------------------------
 contains
@@ -52,6 +53,8 @@ contains
        PRC_MPIstop
     use mod_cnvtopo, only: &
        CNVTOPO_setup
+    use mod_cnvlanduse, only: &
+       CNVLANDUSE_setup
     implicit none
 
     character(len=H_SHORT) :: CONVERT_name = 'NONE'
@@ -84,6 +87,10 @@ contains
        CONVERT_TYPE = I_CNVTOPO
        call CNVTOPO_setup
 
+    case('CNVLANDUSE')
+       CONVERT_TYPE = I_CNVLANDUSE
+       call CNVLANDUSE_setup
+
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(CONVERT_name)
        call PRC_MPIstop
@@ -99,6 +106,8 @@ contains
        PRC_MPIstop
     use mod_cnvtopo, only: &
        CNVTOPO
+    use mod_cnvlanduse, only: &
+       CNVLANDUSE
     implicit none
 
     integer :: i, j
@@ -114,6 +123,9 @@ contains
        select case(CONVERT_TYPE)
        case(I_CNVTOPO)
           call CNVTOPO
+
+       case(I_CNVLANDUSE)
+          call CNVLANDUSE
 
        case default
           write(*,*) ' xxx Unsupported TYPE:', CONVERT_TYPE

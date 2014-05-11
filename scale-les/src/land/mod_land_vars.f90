@@ -125,7 +125,7 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_landuse, only: &
-       LANDUSE_index_vegetation
+       LANDUSE_index_PFT
     implicit none
 
     NAMELIST / PARAM_LAND / &
@@ -208,13 +208,12 @@ contains
     call LAND_param_read
 
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
-    LAND_PROPERTY(:,:,:) = CONST_UNDEF
-    LANDUSE_index_vegetation(:,:,:) = 1 ! tentative!
 
+    ! tentative, mosaic is off
     do v = 1, LAND_PROPERTY_nmax
     do j = JS, JE
     do i = IS, IE
-       LAND_PROPERTY(i,j,v) = LAND_PROPERTY_table( LANDUSE_index_vegetation(i,j,1),v )
+       LAND_PROPERTY(i,j,v) = LAND_PROPERTY_table( LANDUSE_index_PFT(i,j,1),v )
     enddo
     enddo
     enddo

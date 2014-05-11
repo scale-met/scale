@@ -74,7 +74,7 @@ contains
        REAL_LON, &
        REAL_LAT
     use scale_landuse, only: &
-       LANDUSE_frac_ocean
+       LANDUSE_frac_land
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
@@ -176,7 +176,7 @@ contains
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,      & ! [IN]
                           REAL_CZ, REAL_FZ,      & ! [IN]
-                          LANDUSE_frac_ocean,    & ! [IN]
+                          LANDUSE_frac_land,     & ! [IN]
                           temp_sfc, albedo_land, & ! [IN]
                           solins, cosSZA,        & ! [IN]
                           flux_rad,              & ! [OUT]

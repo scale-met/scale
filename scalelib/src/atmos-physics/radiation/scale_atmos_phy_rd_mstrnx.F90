@@ -354,7 +354,7 @@ contains
   subroutine ATMOS_PHY_RD_mstrnx( &
        DENS, RHOT, QTRC,      &
        CZ, FZ,                &
-       oceanfrc,              &
+       frac_land,             &
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
        flux_rad,              &
@@ -383,7 +383,7 @@ contains
     real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
     real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
     real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
-    real(RP), intent(in)  :: oceanfrc    (IA,JA)
+    real(RP), intent(in)  :: frac_land   (IA,JA)
     real(RP), intent(in)  :: temp_sfc    (IA,JA)
     real(RP), intent(in)  :: albedo_land (IA,JA,2)
     real(RP), intent(in)  :: solins      (IA,JA)
@@ -609,7 +609,7 @@ contains
                          I_MPAE2RD         (:),        & ! [IN]
                          cldfrac_merge     (:,:,:),    & ! [IN]
                          albedo_land       (:,:,:),    & ! [IN]
-                         oceanfrc          (:,:),      & ! [IN]
+                         frac_land         (:,:),      & ! [IN]
                          flux_rad_merge    (:,:,:,:,:) ) ! [OUT]
 
     ! return to grid coordinate of LES domain
@@ -958,7 +958,7 @@ contains
        aero2ptype,   &
        cldfrac,      &
        albedo_land,  &
-       oceanfrc,     &
+       frac_land,    &
        rflux         )
     use scale_const, only: &
        GRAV => CONST_GRAV, &
@@ -990,7 +990,7 @@ contains
     integer,  intent(in)  :: aero2ptype  (naero)
     real(RP), intent(in)  :: cldfrac     (kmax,imax,jmax)
     real(RP), intent(in)  :: albedo_land (imax,jmax,2)
-    real(RP), intent(in)  :: oceanfrc    (imax,jmax)
+    real(RP), intent(in)  :: frac_land   (imax,jmax)
     real(RP), intent(out) :: rflux       (kmax+1,imax,jmax,2,2)
 
     ! for P-T fitting
@@ -1317,8 +1317,8 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             albedo_sfc(i,j,icloud) = (        oceanfrc(i,j) ) * albedo_ocean(i,j,irgn) &
-                                    + ( 1.0_RP-oceanfrc(i,j) ) * albedo_land (i,j,irgn)
+             albedo_sfc(i,j,icloud) = ( 1.0_RP-frac_land(i,j) ) * albedo_ocean(i,j,irgn) &
+                                    + (        frac_land(i,j) ) * albedo_land (i,j,irgn)
           enddo
           enddo
        enddo
