@@ -231,8 +231,8 @@ contains
        PRC_S
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:) !< 3D variable to communication
-    integer,  intent(in)    :: vid        !< request ID
+    real(RP), intent(inout) :: var(KA,IA,JA) !< atmospheric 3D variable to communication
+    integer,  intent(in)    :: vid           !< request ID
 
     integer :: ireq, tag
 
@@ -414,7 +414,7 @@ contains
        PRC_SE
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:)
+    real(RP), intent(inout) :: var(KA,IA,JA)
     integer,  intent(in)    :: vid
 
     integer :: ireq, tag, tagc
