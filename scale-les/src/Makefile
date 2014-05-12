@@ -16,6 +16,7 @@ VPATH = $(BUILD_DIR): \
         atmos:        \
         ocean:        \
         land:         \
+        urban:        \
         coupler:      \
         user:         \
         preprocess:
@@ -60,6 +61,9 @@ MODS =	\
 	mod_land_vars.o              \
 	mod_land_phy_bucket.o        \
 	mod_land_driver.o            \
+	mod_urban_vars.o             \
+	mod_urban_phy_ucm.o          \
+	mod_urban.o                  \
 	mod_cpl_vars.o               \
 	mod_cpl_atmos_land_driver.o  \
 	mod_cpl_atmos_ocean_driver.o \
@@ -140,6 +144,11 @@ $(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 mod_land_var
 $(BUILD_DIR)/mod_land_driver.o            : mod_land_driver.f90 mod_land_vars.o mod_cpl_vars.o \
                                             mod_land_phy_bucket.o
 
+$(BUILD_DIR)/mod_urban_vars.o             : mod_urban_vars.f90
+
+$(BUILD_DIR)/mod_urban_phy_ucm.o          : mod_urban_phy_ucm.f90 mod_urban_vars.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_urban_driver.o           : mod_urban_driver.f90 mod_urban_vars.o mod_cpl_vars.o \
+                                            mod_urban_phy_ucm.o
 
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90
 

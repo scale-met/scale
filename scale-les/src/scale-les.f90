@@ -38,10 +38,12 @@ program scaleles
      TIME_advance,         &
      TIME_DOATMOS_step,    &
      TIME_DOLAND_step,     &
+     TIME_DOURBAN_step,    &
      TIME_DOOCEAN_step,    &
      TIME_DOCPL_calc,      &
      TIME_DOATMOS_restart, &
      TIME_DOLAND_restart,  &
+     TIME_DOURBAN_restart, &
      TIME_DOOCEAN_restart, &
      TIME_DOCPL_restart,   &
      TIME_DOend
@@ -107,6 +109,13 @@ program scaleles
   use mod_land_driver, only: &
      LAND_driver_setup, &
      LAND_driver
+  use mod_urban_vars, only: &
+     URBAN_vars_setup,         &
+     URBAN_vars_restart_read,  &
+     URBAN_vars_restart_write
+  use mod_urban_driver, only: &
+     URBAN_driver_setup, &
+     URBAN_driver
   use mod_cpl_vars, only: &
      CPL_vars_setup,         &
      CPL_vars_restart_read,  &
@@ -198,18 +207,21 @@ program scaleles
   call ATMOS_vars_setup
   call OCEAN_vars_setup
   call LAND_vars_setup
+  call URBAN_vars_setup
   call CPL_vars_setup
 
   ! read restart data
   call ATMOS_vars_restart_read
   call OCEAN_vars_restart_read
   call LAND_vars_restart_read
+  call URBAN_vars_restart_read
   call CPL_vars_restart_read
 
   ! setup driver
   call ATMOS_driver_setup
   call OCEAN_driver_setup
   call LAND_driver_setup
+  call URBAN_driver_setup
   call CPL_driver_setup
 
   ! setup user-defined procedure
@@ -242,6 +254,7 @@ program scaleles
     if ( TIME_DOATMOS_step ) call ATMOS_driver
     if ( TIME_DOOCEAN_step ) call OCEAN_driver
     if ( TIME_DOLAND_step  ) call LAND_driver
+    if ( TIME_DOURBAN_step ) call URBAN_driver
     if ( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
@@ -255,6 +268,7 @@ program scaleles
     if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
     if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
     if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
+    if ( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
     if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if ( TIME_DOend ) exit

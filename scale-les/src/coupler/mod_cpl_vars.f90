@@ -36,9 +36,11 @@ module mod_cpl_vars
   public :: CPL_vars_merge
   public :: CPL_putAtm
   public :: CPL_putLnd
+  public :: CPL_putUrb
   public :: CPL_putOcn
   public :: CPL_getCPL2Atm
   public :: CPL_getCPL2Lnd
+  public :: CPL_getCPL2Urb
   public :: CPL_getCPL2Ocn
 
   !-----------------------------------------------------------------------------
@@ -407,23 +409,23 @@ contains
 
     allocate( CPL_TW  (IA,JA) )
 
-    allocate( AtmLnd_XMFLX      (IA,JA) )
-    allocate( AtmLnd_YMFLX      (IA,JA) )
-    allocate( AtmLnd_ZMFLX      (IA,JA) )
-    allocate( AtmLnd_SWUFLX     (IA,JA) )
-    allocate( AtmLnd_LWUFLX     (IA,JA) )
-    allocate( AtmLnd_SHFLX      (IA,JA) )
-    allocate( AtmLnd_LHFLX      (IA,JA) )
-    allocate( AtmLnd_QVFLX      (IA,JA) )
+    allocate( AtmLnd_XMFLX (IA,JA) )
+    allocate( AtmLnd_YMFLX (IA,JA) )
+    allocate( AtmLnd_ZMFLX (IA,JA) )
+    allocate( AtmLnd_SWUFLX(IA,JA) )
+    allocate( AtmLnd_LWUFLX(IA,JA) )
+    allocate( AtmLnd_SHFLX (IA,JA) )
+    allocate( AtmLnd_LHFLX (IA,JA) )
+    allocate( AtmLnd_QVFLX (IA,JA) )
 
-    allocate( AtmOcn_XMFLX      (IA,JA) )
-    allocate( AtmOcn_YMFLX      (IA,JA) )
-    allocate( AtmOcn_ZMFLX      (IA,JA) )
-    allocate( AtmOcn_SWUFLX     (IA,JA) )
-    allocate( AtmOcn_LWUFLX     (IA,JA) )
-    allocate( AtmOcn_SHFLX      (IA,JA) )
-    allocate( AtmOcn_LHFLX      (IA,JA) )
-    allocate( AtmOcn_QVFLX      (IA,JA) )
+    allocate( AtmOcn_XMFLX (IA,JA) )
+    allocate( AtmOcn_YMFLX (IA,JA) )
+    allocate( AtmOcn_ZMFLX (IA,JA) )
+    allocate( AtmOcn_SWUFLX(IA,JA) )
+    allocate( AtmOcn_LWUFLX(IA,JA) )
+    allocate( AtmOcn_SHFLX (IA,JA) )
+    allocate( AtmOcn_LHFLX (IA,JA) )
+    allocate( AtmOcn_QVFLX (IA,JA) )
 
     return
   end subroutine CPL_vars_setup
@@ -744,9 +746,17 @@ contains
   end subroutine CPL_vars_merge
 
   subroutine CPL_putAtm( &
-      pDENS, pMOMX, pMOMY, pMOMZ, & ! (in)
-      pRHOS, pPRES, pATMP, pQV,   & ! (in)
-      pPREC, pSWD, pLWD           ) ! (in)
+      pDENS, & ! (in)
+      pMOMX, & ! (in)
+      pMOMY, & ! (in)
+      pMOMZ, & ! (in)
+      pRHOS, & ! (in)
+      pPRES, & ! (in)
+      pATMP, & ! (in)
+      pQV,   & ! (in)
+      pPREC, & ! (in)
+      pSWD,  & ! (in)
+      pLWD   ) ! (in)
     implicit none
 
     real(RP), intent(in) :: pDENS(IA,JA)
@@ -778,9 +788,13 @@ contains
   end subroutine CPL_putAtm
 
   subroutine CPL_putLnd( &
-      pTG, pQVEF,        & ! (in)
-      pTCS, pDZG,        & ! (in)
-      pZ0M, pZ0H, pZ0E   ) ! (in)
+      pTG,   & ! (in)
+      pQVEF, & ! (in)
+      pTCS,  & ! (in)
+      pDZG,  & ! (in)
+      pZ0M,  & ! (in)
+      pZ0H,  & ! (in)
+      pZ0E   ) ! (in)
     implicit none
 
     real(RP), intent(in) :: pTG  (IA,JA)
@@ -803,6 +817,27 @@ contains
     return
   end subroutine CPL_putLnd
 
+  ! tentative
+  subroutine CPL_putUrb( &
+      pSWUFLX_URB, & ! (in)
+      pLWUFLX_URB, & ! (in)
+      pSHFLX_URB,  & ! (in)
+      pLHFLX_URB,  & ! (in)
+      pGHFLX_URB,  & ! (in)
+      pTS_URB      ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: pSWUFLX_URB(IA,JA)
+    real(RP), intent(in) :: pLWUFLX_URB(IA,JA)
+    real(RP), intent(in) :: pSHFLX_URB (IA,JA)
+    real(RP), intent(in) :: pLHFLX_URB (IA,JA)
+    real(RP), intent(in) :: pGHFLX_URB (IA,JA)
+    real(RP), intent(in) :: pTS_URB    (IA,JA)
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine CPL_putUrb
+
   subroutine CPL_putOcn( &
       pTW ) ! (in)
     implicit none
@@ -816,9 +851,14 @@ contains
   end subroutine CPL_putOcn
 
   subroutine CPL_getCPL2Atm( &
-      pXMFLX, pYMFLX, pZMFLX, & ! (out)
-      pSWUFLX, pLWUFLX,       & ! (out)
-      pSHFLX, pLHFLX, pQVFLX  ) ! (out)
+      pXMFLX,  & ! (out)
+      pYMFLX,  & ! (out)
+      pZMFLX,  & ! (out)
+      pSWUFLX, & ! (out)
+      pLWUFLX, & ! (out)
+      pSHFLX,  & ! (out)
+      pLHFLX,  & ! (out)
+      pQVFLX   ) ! (out)
     implicit none
 
     real(RP), intent(out) :: pXMFLX (IA,JA)
@@ -847,7 +887,9 @@ contains
   end subroutine CPL_getCPL2Atm
 
   subroutine CPL_getCPL2Lnd( &
-      pLnd_GHFLX, pLnd_PRECFLX, pLnd_QVFLX ) ! (out)
+      pLnd_GHFLX,   & ! (out)
+      pLnd_PRECFLX, & ! (out)
+      pLnd_QVFLX    ) ! (out)
     implicit none
 
     real(RP), intent(out) :: pLnd_GHFLX  (IA,JA)
@@ -863,8 +905,52 @@ contains
     return
   end subroutine CPL_getCPL2Lnd
 
+  ! tentative
+  subroutine CPL_getCPL2Urb( &
+      pDZ,   & ! (out)
+      pDENS, & ! (out)
+      pMOMX, & ! (out)
+      pMOMY, & ! (out)
+      pMOMZ, & ! (out)
+      pTEMP, & ! (out)
+      pQV,   & ! (out)
+      pSWD,  & ! (out)
+      pLWD,  & ! (out)
+      pPREC  ) ! (out)
+    use scale_grid_real, only: &
+       CZ => REAL_CZ, &
+       FZ => REAL_FZ
+    implicit none
+
+    real(RP), intent(out) :: pDZ  (IA,JA)
+    real(RP), intent(out) :: pDENS(IA,JA)
+    real(RP), intent(out) :: pMOMX(IA,JA)
+    real(RP), intent(out) :: pMOMY(IA,JA)
+    real(RP), intent(out) :: pMOMZ(IA,JA)
+    real(RP), intent(out) :: pTEMP(IA,JA)
+    real(RP), intent(out) :: pQV  (IA,JA)
+    real(RP), intent(out) :: pSWD (IA,JA)
+    real(RP), intent(out) :: pLWD (IA,JA)
+    real(RP), intent(out) :: pPREC(IA,JA)
+
+    pDZ  (:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
+    pDENS(:,:) = CPL_DENS(:,:)
+    pMOMX(:,:) = CPL_MOMX(:,:)
+    pMOMY(:,:) = CPL_MOMY(:,:)
+    pMOMZ(:,:) = CPL_MOMZ(:,:)
+    pTEMP(:,:) = CPL_ATMP(:,:) ! caution: ATMP = air temperature at the surface (estimated value)
+    pQV  (:,:) = CPL_QV  (:,:)
+    pSWD (:,:) = CPL_SWD (:,:)
+    pLWD (:,:) = CPL_LWD (:,:)
+    pPREC(:,:) = CPL_PREC(:,:)
+
+    return
+  end subroutine CPL_getCPL2Urb
+
   subroutine CPL_getCPL2Ocn( &
-      pOcn_WHFLX, pOcn_PRECFLX, pOcn_QVFLX ) ! (out)
+      pOcn_WHFLX,   & ! (out)
+      pOcn_PRECFLX, & ! (out)
+      pOcn_QVFLX    ) ! (out)
     implicit none
 
     real(RP), intent(out) :: pOcn_WHFLX  (IA,JA)
