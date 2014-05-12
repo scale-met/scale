@@ -106,6 +106,10 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DRIVER]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** setup each atmospheric components'
+
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
 
@@ -130,6 +134,8 @@ contains
     MOMY_tp(:,:,:)   = 0.0_RP
     RHOT_tp(:,:,:)   = 0.0_RP
     QTRC_tp(:,:,:,:) = 0.0_RP
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** setup finished'
 
     return
   end subroutine ATMOS_driver_setup

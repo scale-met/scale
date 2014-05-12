@@ -1064,7 +1064,7 @@ contains
       DD=-4.*RIB*7.*XKB*AL+(AL+XKB)**2.
       if(DD <= 0.) DD=0.
       XXX=(AL+XKB-2.*RIB*7.*AL-SQRT(DD))/(2.*(RIB*7.**2-7.))
-      PSIM=LOG((Z+Z0)/Z0)+7.*MIN(XXX,0.714)
+      PSIM=LOG((Z+Z0)/Z0)+7.*MIN(XXX,0.714_RP)
       PSIH=PSIM+0.4*B1
 
    endif

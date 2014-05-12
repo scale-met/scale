@@ -63,7 +63,7 @@ MODS =	\
 	mod_land_driver.o            \
 	mod_urban_vars.o             \
 	mod_urban_phy_ucm.o          \
-	mod_urban.o                  \
+	mod_urban_driver.o           \
 	mod_cpl_vars.o               \
 	mod_cpl_atmos_land_driver.o  \
 	mod_cpl_atmos_ocean_driver.o \
