@@ -74,6 +74,16 @@ module mod_mkinit
      STRG, &
      ROFF, &
      QVEF
+  use mod_urban_vars, only: &
+     TR_URB,  &
+     TB_URB,  &
+     TG_URB,  &
+     TC_URB,  &
+     QC_URB,  &
+     UC_URB,  &
+     TRL_URB, &
+     TBL_URB, &
+     TGL_URB
   use mod_ocean_vars, only: &
      TW
   use mod_cpl_vars, only: &
@@ -129,8 +139,9 @@ module mod_mkinit
 
   integer, public, parameter :: I_LANDCOUPLE    = 16
   integer, public, parameter :: I_OCEANCOUPLE   = 17
+  integer, public, parameter :: I_URBANCOUPLE   = 18
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS    = 18
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS    = 19
 
   !-----------------------------------------------------------------------------
   !
@@ -158,6 +169,8 @@ module mod_mkinit
   private :: MKINIT_interporation
 
   private :: MKINIT_landcouple
+  private :: MKINIT_oceancouple
+  private :: MKINIT_urbancouple
 
   private :: MKINIT_DYCOMS2_RF02_DNS
 
@@ -284,6 +297,8 @@ contains
        MKINIT_TYPE = I_LANDCOUPLE
     case('OCEANCOUPLE')
        MKINIT_TYPE = I_OCEANCOUPLE
+    case('URBANCOUPLE')
+       MKINIT_TYPE = I_URBANCOUPLE
     case('DYCOMS2_RF02_DNS')
        MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case default
@@ -308,6 +323,9 @@ contains
     use mod_land_vars, only: &
        LAND_sw_restart,    &
        LAND_vars_restart_write
+    use mod_urban_vars, only: &
+       URBAN_sw_restart,    &
+       URBAN_vars_restart_write
     use mod_ocean_vars, only: &
        OCEAN_sw_restart,    &
        OCEAN_vars_restart_write
@@ -391,6 +409,10 @@ contains
       case(I_OCEANCOUPLE)
          call MKINIT_planestate
          call MKINIT_oceancouple
+      case(I_URBANCOUPLE)
+         call MKINIT_planestate
+         call MKINIT_landcouple ! tentative
+         call MKINIT_urbancouple
       case(I_DYCOMS2_RF02_DNS)
          call MKINIT_DYCOMS2_RF02_DNS
       case default
@@ -404,6 +426,7 @@ contains
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
          if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
       if( LAND_sw_restart  ) call LAND_vars_restart_write
+      if( URBAN_sw_restart ) call URBAN_vars_restart_write
       if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( CPL_sw_restart   ) call CPL_vars_restart_write
     endif
@@ -3575,6 +3598,78 @@ contains
 
     return
   end subroutine MKINIT_oceancouple
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( urban variables )
+  subroutine MKINIT_urbancouple
+    implicit none
+
+    ! urban state
+    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
+    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
+    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
+    real(RP) :: URB_CNPY_TMEP          ! Diagnostic canopy air temperature 
+    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
+    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
+    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
+    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
+    real(RP) :: URB_GRND_LAYER_TEMP    ! temperature in layer of ground [K]
+
+    NAMELIST / PARAM_MKINIT_URBANCOUPLE / &
+       URB_ROOF_TEMP,       &
+       URB_BLDG_TEMP,       &
+       URB_GRND_TEMP,       &
+       URB_CNPY_TMEP,       &
+       URB_CNPY_HMDT,       &
+       URB_CNPY_WIND,       &
+       URB_ROOF_LAYER_TEMP, &
+       URB_BLDG_LAYER_TEMP, &
+       URB_GRND_LAYER_TEMP
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[UrbanCouple]/Categ[MKINIT]'
+
+    URB_ROOF_TEMP       = THETAstd
+    URB_BLDG_TEMP       = THETAstd
+    URB_GRND_TEMP       = THETAstd
+    URB_CNPY_TMEP       = THETAstd
+    URB_ROOF_LAYER_TEMP = THETAstd
+    URB_BLDG_LAYER_TEMP = THETAstd
+    URB_GRND_LAYER_TEMP = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_URBANCOUPLE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBANCOUPLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
+
+    ! make ocean variables
+    do j = JS, JE
+    do i = IS, IE
+      TR_URB (i,j)   = URB_ROOF_TEMP
+      TB_URB (i,j)   = URB_BLDG_TEMP
+      TG_URB (i,j)   = URB_GRND_TEMP
+      TC_URB (i,j)   = URB_CNPY_TMEP
+      QC_URB (i,j)   = URB_CNPY_HMDT
+      UC_URB (i,j)   = URB_CNPY_WIND
+      TRL_URB(:,i,j) = URB_ROOF_LAYER_TEMP
+      TBL_URB(:,i,j) = URB_BLDG_LAYER_TEMP
+      TGL_URB(:,i,j) = URB_GRND_LAYER_TEMP
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_urbancouple
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------

@@ -83,6 +83,8 @@ program scaleles_init
      OCEAN_vars_setup
   use mod_land_vars, only: &
      LAND_vars_setup
+  use mod_urban_vars, only: &
+     URBAN_vars_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
   use mod_mktopo, only: &
@@ -174,6 +176,7 @@ program scaleles_init
   call ATMOS_vars_setup
   call OCEAN_vars_setup
   call LAND_vars_setup
+  call URBAN_vars_setup
   call CPL_vars_setup
 
   ! setup mktopo
