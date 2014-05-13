@@ -21,6 +21,7 @@ module scale_fileio
   use scale_prof
   use scale_grid_index
   use scale_land_grid_index
+  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -299,6 +300,16 @@ contains
        dim3_max = JMAX
        dim1_S   = LKS
        dim1_E   = LKE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    else if ( axistype == 'Urban' ) then
+       dim1_max = UKMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = UKS
+       dim1_E   = UKE
        dim2_S   = IS
        dim2_E   = IE
        dim3_S   = JS
@@ -704,6 +715,17 @@ contains
        dim2_E   = IE
        dim3_S   = JS
        dim3_E   = JE
+    elseif( axistype == 'Urban' ) then
+       dims = (/'uz','x ','y '/)
+       dim1_max = UKMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = UKS
+       dim1_E   = UKE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -760,6 +782,9 @@ contains
     use scale_land_grid, only: &
        GRID_LCZ, &
        GRID_LFZ
+    use scale_urban_grid, only: &
+       GRID_UCZ, &
+       GRID_UFZ
     implicit none
 
     integer, intent(in) :: fid
@@ -775,6 +800,9 @@ contains
 
     call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
     call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+
+    call FilePutAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, GRID_UCZ(UKS:UKE) )
+    call FilePutAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, GRID_UFZ(UKS:UKE) )
 
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             , 'degrees_east' , &
                                        (/'x ','y '/), dtype, AXIS_LON (IS:IE,JS:JE)            )

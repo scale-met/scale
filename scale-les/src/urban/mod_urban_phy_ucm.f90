@@ -17,6 +17,7 @@ module mod_urban_phy_ucm
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -113,8 +114,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_urban_vars, only: &
-       URBAN_TYPE, &
-       num_urb_layers
+       URBAN_TYPE
     implicit none
 
     real(RP) :: URBAN_UCM_ZR
@@ -212,9 +212,9 @@ contains
     URBAN_UCM_BOUND        = BOUND
 
     ! allocate private arrays
-    allocate( DZR(num_urb_layers) )
-    allocate( DZB(num_urb_layers) )
-    allocate( DZG(num_urb_layers) )
+    allocate( DZR(UKS:UKE) )
+    allocate( DZB(UKS:UKE) )
+    allocate( DZG(UKS:UKE) )
 
     allocate( SWUFLX_URB(IA,JA) )
     allocate( LWUFLX_URB(IA,JA) )
@@ -300,7 +300,6 @@ contains
        REAL_lon, &
        REAL_lat
     use mod_urban_vars, only: &
-       num_urb_layers, &
        TR_URB,  &
        TG_URB,  &
        TB_URB,  &
@@ -342,9 +341,9 @@ contains
     real(RP) :: XLAT     ! latitude                               [deg]
 
     real(RP) :: TR, TB, TG, TC, QC, UC
-    real(RP) :: TRL(num_urb_layers)
-    real(RP) :: TBL(num_urb_layers)
-    real(RP) :: TGL(num_urb_layers)
+    real(RP) :: TRL(UKS:UKE)
+    real(RP) :: TBL(UKS:UKE)
+    real(RP) :: TGL(UKS:UKE)
     real(RP) :: TS                  ! surface temperature    [K]
     real(RP) :: SH                  ! sensible heat flux               [W/m/m]
     real(RP) :: LH                  ! latent heat flux                 [W/m/m]
@@ -407,7 +406,7 @@ contains
        QC=QC_URB(i,j)
        UC=UC_URB(i,j)
 
-       do k=1,num_urb_layers
+       do k=UKS,UKE
         TRL(k)=TRL_URB(i,j,k)
         TBL(k)=TBL_URB(i,j,k)
         TGL(k)=TGL_URB(i,j,k)
@@ -421,7 +420,7 @@ contains
                   TS, SH, LH, SW, LW, G               & ! (out)
                   )
 
-       do k=1,num_urb_layers
+       do k=UKS,UKE
         TRL_URB(i,j,k)=TRL(k)
         TBL_URB(i,j,k)=TBL(k)
         TGL_URB(i,j,k)=TGL(k)
@@ -486,8 +485,6 @@ contains
     use scale_time, only:       &
       TIME => TIME_NOWSEC,      &   !< absolute sec
       DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
-    use mod_urban_vars, only: &
-       num_urb_layers
 
     implicit none
 
@@ -531,9 +528,9 @@ contains
    real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
    real(RP), intent(inout) :: QC   ! urban-canopy air mixing ratio [kg/kg]
    real(RP), intent(inout) :: UC   ! diagnostic canopy wind [m/s]
-   real(RP), intent(inout) :: TRL(1:num_urb_layers)  ! layer temperature [K]
-   real(RP), intent(inout) :: TBL(1:num_urb_layers)  ! layer temperature [K]
-   real(RP), intent(inout) :: TGL(1:num_urb_layers)  ! layer temperature [K]
+   real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
+   real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
+   real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
 
    !-- Output variables from Urban to Coupler
    real(RP), intent(out) :: TS     ! surface temperature              [K]
@@ -925,9 +922,9 @@ contains
     !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
     !-----------------------------------------------------------
 
-   call multi_layer(num_urb_layers,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
-   call multi_layer(num_urb_layers,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
-   call multi_layer(num_urb_layers,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+   call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
+   call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
+   call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS
@@ -1148,8 +1145,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine urban_param_setup
-    use mod_urban_vars, only: &
-       num_urb_layers
 
    implicit none
 
@@ -1169,17 +1164,17 @@ contains
      SVF=0.
 
     ! Thickness of roof, building wall, ground layers
-     DZR(1:num_urb_layers)=0.05   ! [m]
-     DZB(1:num_urb_layers)=0.05   ! [m]
+     DZR(UKS:UKE)=0.05   ! [m]
+     DZB(UKS:UKE)=0.05   ! [m]
      DZG(1)=0.05   ! [m]
      DZG(2)=0.25   ! [m]
      DZG(3)=0.50   ! [m]
      DZG(4)=0.75   ! [m]
 
     ! convert unit
-      DZR(1:num_urb_layers)=DZR(1:num_urb_layers)*100.   ! [m]-->[cm]
-      DZB(1:num_urb_layers)=DZB(1:num_urb_layers)*100.   ! [m]-->[cm]
-      DZG(1:num_urb_layers)=DZG(1:num_urb_layers)*100.   ! [m]-->[cm]
+      DZR(UKS:UKE)=DZR(UKS:UKE)*100.   ! [m]-->[cm]
+      DZB(UKS:UKE)=DZB(UKS:UKE)*100.   ! [m]-->[cm]
+      DZG(UKS:UKE)=DZG(UKS:UKE)*100.   ! [m]-->[cm]
       CAPR = CAPR * ( 1.0 / 4.1868 ) * 1.E-6   ! [J/m^3/K] --> [cal/cm^3/deg]
       CAPB = CAPB * ( 1.0 / 4.1868 ) * 1.E-6   ! [J/m^3/K] --> [cal/cm^3/deg]
       CAPG = CAPG * ( 1.0 / 4.1868 ) * 1.E-6   ! [J/m^3/K] --> [cal/cm^3/deg]

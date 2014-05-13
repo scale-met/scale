@@ -31,7 +31,9 @@ VPATH = common:                     \
         land:                       \
         land/grid:                  \
         ocean:                      \
-        cpl:
+        urban:                      \
+        urban/grid:                 \
+        coupler:
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -99,6 +101,8 @@ OBJS = $(scale_rdma)	\
 	scale_gridtrans.o	\
 	scale_land_grid_cartesian.o	\
 	scale_land_grid_index.o	\
+	scale_urban_grid_cartesian.o	\
+	scale_urban_grid_index.o	\
 	scale_history.o	\
 	scale_intepolation.o	\
 	scale_landuse.o	\
