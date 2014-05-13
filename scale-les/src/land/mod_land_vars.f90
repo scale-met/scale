@@ -203,8 +203,6 @@ contains
     allocate( ROFF(        IA,JA) )
     allocate( QVEF(        IA,JA) )
 
-
-
     call LAND_param_read
 
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
@@ -246,8 +244,9 @@ contains
 
       call COMM_wait ( TG  (k,:,:), 1 )
       call COMM_wait ( STRG(k,:,:), 2 )
-    enddo
+    end do
 
+    ! 2D variables
     call COMM_vars8( ROFF(:,:), 1 )
     call COMM_vars8( QVEF(:,:), 2 )
 
@@ -261,7 +260,7 @@ contains
   !> Read land restart
   subroutine LAND_vars_restart_read
     use scale_const, only: &
-       CONST_UNDEF
+       UNDEF => CONST_UNDEF
     use scale_fileio, only: &
        FILEIO_read
     implicit none
@@ -287,10 +286,10 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
 
-       TG  (:,:,:) = CONST_UNDEF
-       STRG(:,:,:) = CONST_UNDEF
-       ROFF(:,:)   = CONST_UNDEF
-       QVEF(:,:)   = CONST_UNDEF
+       TG  (:,:,:) = UNDEF
+       STRG(:,:,:) = UNDEF
+       ROFF(:,:)   = UNDEF
+       QVEF(:,:)   = UNDEF
     endif
 
     return
