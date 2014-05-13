@@ -235,37 +235,36 @@ contains
     implicit none
 
     integer :: k
-    real(RP) :: tmp1(IA,JA)
-    real(RP) :: tmp2(IA,JA)
+
+    real(RP) :: tmp1(IA,JA,KA)
+    real(RP) :: tmp2(IA,JA,KA)
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     do k = LKS, LKE
-!      call COMM_vars8( TG  (k,:,:), 1 )
-!      call COMM_vars8( STRG(k,:,:), 2 )
-!
-!      call COMM_wait ( TG  (k,:,:), 1 )
-!      call COMM_wait ( STRG(k,:,:), 2 )
-
-      ! tentative
-      tmp1(:,:) = TG  (k,:,:)
-      tmp2(:,:) = STRG(k,:,:)
-
-      call COMM_vars8( tmp1(:,:), 1 )
-      call COMM_vars8( tmp2(:,:), 2 )
-      call COMM_wait ( tmp1(:,:), 1 )
-      call COMM_wait ( tmp2(:,:), 2 )
-
-      TG  (k,:,:) = tmp1(:,:)
-      STRG(k,:,:) = tmp2(:,:)
+      tmp1(:,:,k) = TG  (k,:,:)
+      tmp2(:,:,k) = STRG(k,:,:)
     end do
 
-    ! 2D variables
-    call COMM_vars8( ROFF(:,:), 1 )
-    call COMM_vars8( QVEF(:,:), 2 )
+    do k = LKS, LKE
+      call COMM_vars8( tmp1(:,:,k), k     )
+      call COMM_vars8( tmp2(:,:,k), k+LKE )
+    end do
 
-    call COMM_wait ( ROFF(:,:), 1 )
-    call COMM_wait ( QVEF(:,:), 2 )
+    call COMM_vars8( ROFF(:,:), 2*LKE+1 )
+    call COMM_vars8( QVEF(:,:), 2*LKE+2 )
+
+    do k = LKS, LKE
+      call COMM_wait ( tmp1(:,:,k), k     )
+      call COMM_wait ( tmp2(:,:,k), k+LKE )
+    end do
+
+    call COMM_wait ( ROFF(:,:), 2*LKE+1 )
+    call COMM_wait ( QVEF(:,:), 2*LKE+2 )
+
+    do k = LKS, LKE
+      TG  (k,:,:) = tmp1(:,:,k)
+      STRG(k,:,:) = tmp2(:,:,k)
+    end do
 
     return
   end subroutine LAND_vars_fillhalo
