@@ -235,15 +235,29 @@ contains
     implicit none
 
     integer :: k
+    real(RP) :: tmp1(IA,JA)
+    real(RP) :: tmp2(IA,JA)
     !---------------------------------------------------------------------------
 
     ! fill IHALO & JHALO
     do k = LKS, LKE
-      call COMM_vars8( TG  (k,:,:), 1 )
-      call COMM_vars8( STRG(k,:,:), 2 )
+!      call COMM_vars8( TG  (k,:,:), 1 )
+!      call COMM_vars8( STRG(k,:,:), 2 )
+!
+!      call COMM_wait ( TG  (k,:,:), 1 )
+!      call COMM_wait ( STRG(k,:,:), 2 )
 
-      call COMM_wait ( TG  (k,:,:), 1 )
-      call COMM_wait ( STRG(k,:,:), 2 )
+      ! tentative
+      tmp1(:,:) = TG  (k,:,:)
+      tmp2(:,:) = STRG(k,:,:)
+
+      call COMM_vars8( tmp1(:,:), 1 )
+      call COMM_vars8( tmp2(:,:), 2 )
+      call COMM_wait ( tmp1(:,:), 1 )
+      call COMM_wait ( tmp2(:,:), 2 )
+
+      TG  (k,:,:) = tmp1(:,:)
+      STRG(k,:,:) = tmp2(:,:)
     end do
 
     ! 2D variables
