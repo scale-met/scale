@@ -41,6 +41,7 @@ module gtool_file
   public :: FileWrite
   public :: FileClose
   public :: FileCloseAll
+  public :: FileMakeFname
 
   interface FilePutAxis
      module procedure FilePutAxisRealSP
@@ -1556,7 +1557,7 @@ contains
          fname, mode,    & ! (in)
          error           ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to open file :'//trim(fname))
+       call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')
     end if
 
     write(message,*) '*** [File] File registration : ',trim(rwname(mode)),' -', fid

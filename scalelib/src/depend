@@ -43,6 +43,7 @@ $(BUILD_DIR)/scale_cpl_atmos_ocean_bulk.o: coupler/scale_cpl_atmos_ocean_bulk.F9
 $(BUILD_DIR)/scale_cpl_atmos_ocean_const.o: coupler/scale_cpl_atmos_ocean_const.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o
 $(BUILD_DIR)/scale_cpl_sub_bulkcoef.o: coupler/scale_cpl_sub_bulkcoef.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_debug.o: common/scale_debug.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
+$(BUILD_DIR)/scale_external_io.o: io/scale_external_io.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_fileio.o: io/scale_fileio.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_land_grid_cartesian.o $(BUILD_DIR)/scale_land_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_urban_grid_cartesian.o $(BUILD_DIR)/scale_urban_grid_index.o
 $(BUILD_DIR)/scale_grid_cartesian.o: atmos-les/grid/scale_grid_cartesian.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_grid_index.o: atmos-les/grid/scale_grid_index.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
@@ -60,6 +61,7 @@ $(BUILD_DIR)/scale_precision.o: common/scale_precision.F90
 $(BUILD_DIR)/scale_process.o: atmos-les/communication/scale_process.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_prof.o: common/scale_prof.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_random.o: common/scale_random.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
+$(BUILD_DIR)/scale_realinput.o: io/scale_realinput.F90 $(BUILD_DIR)/scale_atmos_sub_hydrostatic.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_external_io.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_specfunc.o: common/scale_specfunc.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_stats.o: atmos-les/communication/scale_stats.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_stdio.o: io/scale_stdio.F90
@@ -120,6 +122,7 @@ MODS =	\
 	scale_cpl_atmos_ocean_const.mod	\
 	scale_cpl_bulkcoef.mod	\
 	scale_debug.mod	\
+	scale_external_io.mod	\
 	scale_fileio.mod	\
 	scale_grid.mod	\
 	scale_grid_index.mod	\
@@ -137,6 +140,7 @@ MODS =	\
 	scale_process.mod	\
 	scale_prof.mod	\
 	scale_random.mod	\
+	scale_realinput.mod	\
 	scale_specfunc.mod	\
 	scale_stats.mod	\
 	scale_stdio.mod	\
