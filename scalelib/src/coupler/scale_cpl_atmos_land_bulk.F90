@@ -143,7 +143,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
         LST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
-        RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
+        RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
         TG, QVEF, ALB_SW, ALB_LW,             & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
     use scale_process, only: &
@@ -179,7 +179,7 @@ contains
     real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
     real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
     real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -210,7 +210,7 @@ contains
         XMFLX, YMFLX, ZMFLX,                 & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
         LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
-        RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+        RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
         TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
 
@@ -272,7 +272,7 @@ contains
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
       TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
     use scale_const, only: &
@@ -309,7 +309,7 @@ contains
     real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
     real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
     real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -346,7 +346,7 @@ contains
 
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                  & ! (out)
-          ATMP(i,j), TS(i,j),          & ! (in)
+          TMPS(i,j), TS(i,j),          & ! (in)
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
@@ -357,7 +357,7 @@ contains
       ! saturation at the surface
       call qsat( SQV, TS(i,j), PRES(i,j) )
 
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
+      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - TMPS(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
       GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( TS(i,j) - TG(i,j)  ) / DZG(i,j)
       SWUFLX(i,j) = ALB_SW(i,j) * SWD(i,j)
@@ -368,14 +368,14 @@ contains
 
       call CPL_bulkcoef( &
           dCm, dCh, dCe,               & ! (out)
-          ATMP(i,j), TS(i,j)+dTS,      & ! (in)
+          TMPS(i,j), TS(i,j)+dTS,      & ! (in)
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )
 
       dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
-              * ( (dCh-Ch)/dTS * ( TS(i,j) - ATMP(i,j) ) + Ch )
+              * ( (dCh-Ch)/dTS * ( TS(i,j) - TMPS(i,j) ) + Ch )
       dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
               * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
       dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)

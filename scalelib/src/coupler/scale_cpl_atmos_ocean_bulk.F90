@@ -129,7 +129,7 @@ contains
         SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
         SST_UPDATE,                           & ! (in)
         DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
-        RHOS, PRES, ATMP, QV, SWD, LWD,       & ! (in)
+        RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
         TW, ALB_SW, ALB_LW,                   & ! (in)
         Z0M, Z0H, Z0E                         ) ! (in)
     use scale_process, only: &
@@ -165,7 +165,7 @@ contains
     real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
     real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
     real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -191,7 +191,7 @@ contains
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       SST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
       ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
 
     return
@@ -201,7 +201,7 @@ contains
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
       ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
     use scale_const, only: &
       GRAV   => CONST_GRAV,  &
@@ -233,7 +233,7 @@ contains
     real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
     real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
     real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -265,7 +265,7 @@ contains
 
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                  & ! (out)
-          ATMP(i,j), TS(i,j),          & ! (in)
+          TMPS(i,j), TS(i,j),          & ! (in)
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
@@ -276,7 +276,7 @@ contains
       YMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
       ZMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
 
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - ATMP(i,j) )
+      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - TMPS(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
       SWUFLX(i,j) = ALB_SW(i,j) * SWD(i,j)
       LWUFLX(i,j) = ALB_LW(i,j) * LWD(i,j) + ( 1.0_RP - ALB_LW(i,j) ) * STB * TS(i,j)**4

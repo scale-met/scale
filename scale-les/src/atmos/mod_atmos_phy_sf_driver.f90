@@ -264,7 +264,6 @@ contains
     real(RP) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
     real(RP) :: PRES(IA,JA) ! pressure at the surface [Pa]
     real(RP) :: TMPS(IA,JA) ! air temperature at the surface [K]
-    real(RP) :: TMPA(IA,JA) ! air temperature at the 1st layer [K]
 
     real(RP) :: tem(KA,IA,JA) ! temperature [K]
     real(RP) :: pre(KA,IA,JA) ! pressure [Pa]
@@ -283,7 +282,6 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-      TMPA(i,j) = tem(KS,i,j)
       TMPS(i,j) = tem(KS,i,j) * ( PRES(i,j) / pre(KS,i,j) )**RovCP
     end do
     end do
@@ -298,7 +296,7 @@ contains
        RHOS(:,:),         &
        PRES(:,:),         &
        TMPS(:,:),         &
-       TMPA(:,:),         &
+       tem(KS,:,:),       &
        QTRC(KS,:,:,I_QV), &
        PREC(:,:),         &
        SWD(:,:),          &
