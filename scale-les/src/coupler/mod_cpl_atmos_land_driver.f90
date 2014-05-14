@@ -83,7 +83,7 @@ contains
        MOMZ => CPL_MOMZ, &
        RHOS => CPL_RHOS, &
        PRES => CPL_PRES, &
-       ATMP => CPL_ATMP, &
+       TMPS => CPL_TMPS, &
        QV   => CPL_QV  , &
        PREC => CPL_PREC, &
        SWD  => CPL_SWD , &
@@ -141,7 +141,7 @@ contains
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,      & ! (out)
       update_flag,                              & ! (in)
       DZ, DENS, MOMX, MOMY, MOMZ,               & ! (in)
-      RHOS, PRES, ATMP, QV, SWD, LWD,           & ! (in)
+      RHOS, PRES, TMPS, QV, SWD, LWD,           & ! (in)
       TG, QVEF, ALBG(:,:,I_SW), ALBG(:,:,I_LW), & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E                   ) ! (in)
 

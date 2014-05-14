@@ -112,7 +112,8 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_MOMZ(:,:) ! momentum z [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_RHOS(:,:) ! air density at the surface [kg/m3]
   real(RP), public, save, allocatable :: CPL_PRES(:,:) ! pressure at the surface [Pa]
-  real(RP), public, save, allocatable :: CPL_ATMP(:,:) ! air temperature at the surface [K]
+  real(RP), public, save, allocatable :: CPL_TMPS(:,:) ! air temperature at the surface [K]
+  real(RP), public, save, allocatable :: CPL_TMPA(:,:) ! air temperature at the 1st atmospheric layer [K]
   real(RP), public, save, allocatable :: CPL_QV  (:,:) ! ratio of mass of tracer to total mass [kg/kg]
   real(RP), public, save, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
@@ -393,7 +394,8 @@ contains
     allocate( CPL_MOMZ(IA,JA) )
     allocate( CPL_RHOS(IA,JA) )
     allocate( CPL_PRES(IA,JA) )
-    allocate( CPL_ATMP(IA,JA) )
+    allocate( CPL_TMPS(IA,JA) )
+    allocate( CPL_TMPA(IA,JA) )
     allocate( CPL_QV  (IA,JA) )
     allocate( CPL_PREC(IA,JA) )
     allocate( CPL_SWD (IA,JA) )
@@ -752,7 +754,8 @@ contains
       pMOMZ, & ! (in)
       pRHOS, & ! (in)
       pPRES, & ! (in)
-      pATMP, & ! (in)
+      pTMPS, & ! (in)
+      pTMPA, & ! (in)
       pQV,   & ! (in)
       pPREC, & ! (in)
       pSWD,  & ! (in)
@@ -765,7 +768,8 @@ contains
     real(RP), intent(in) :: pMOMZ(IA,JA)
     real(RP), intent(in) :: pRHOS(IA,JA)
     real(RP), intent(in) :: pPRES(IA,JA)
-    real(RP), intent(in) :: pATMP(IA,JA)
+    real(RP), intent(in) :: pTMPS(IA,JA)
+    real(RP), intent(in) :: pTMPA(IA,JA)
     real(RP), intent(in) :: pQV  (IA,JA)
     real(RP), intent(in) :: pPREC(IA,JA)
     real(RP), intent(in) :: pSWD (IA,JA)
@@ -778,7 +782,8 @@ contains
     CPL_MOMZ(:,:) = pMOMZ(:,:)
     CPL_RHOS(:,:) = pRHOS(:,:)
     CPL_PRES(:,:) = pPRES(:,:)
-    CPL_ATMP(:,:) = pATMP(:,:)
+    CPL_TMPS(:,:) = pTMPS(:,:)
+    CPL_TMPA(:,:) = pTMPA(:,:)
     CPL_QV  (:,:) = pQV  (:,:)
     CPL_PREC(:,:) = pPREC(:,:)
     CPL_SWD (:,:) = pSWD (:,:)
@@ -912,7 +917,7 @@ contains
       pMOMX, & ! (out)
       pMOMY, & ! (out)
       pMOMZ, & ! (out)
-      pTEMP, & ! (out)
+      pTMPA, & ! (out)
       pQV,   & ! (out)
       pSWD,  & ! (out)
       pLWD,  & ! (out)
@@ -927,7 +932,7 @@ contains
     real(RP), intent(out) :: pMOMX(IA,JA)
     real(RP), intent(out) :: pMOMY(IA,JA)
     real(RP), intent(out) :: pMOMZ(IA,JA)
-    real(RP), intent(out) :: pTEMP(IA,JA)
+    real(RP), intent(out) :: pTMPA(IA,JA)
     real(RP), intent(out) :: pQV  (IA,JA)
     real(RP), intent(out) :: pSWD (IA,JA)
     real(RP), intent(out) :: pLWD (IA,JA)
@@ -938,7 +943,7 @@ contains
     pMOMX(:,:) = CPL_MOMX(:,:)
     pMOMY(:,:) = CPL_MOMY(:,:)
     pMOMZ(:,:) = CPL_MOMZ(:,:)
-    pTEMP(:,:) = CPL_ATMP(:,:) ! caution: ATMP = air temperature at the surface (estimated value)
+    pTMPA(:,:) = CPL_TMPA(:,:)
     pQV  (:,:) = CPL_QV  (:,:)
     pSWD (:,:) = CPL_SWD (:,:)
     pLWD (:,:) = CPL_LWD (:,:)
