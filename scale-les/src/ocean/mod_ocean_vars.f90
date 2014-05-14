@@ -164,7 +164,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     call COMM_vars8( TW(:,:), 1 )
 
     call COMM_wait ( TW(:,:), 1 )
@@ -177,6 +176,8 @@ contains
   subroutine OCEAN_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -191,11 +192,13 @@ contains
        call FILEIO_read( TW(:,:),                                      & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, 'TW', 'XY', step=1 ) ! [IN]
 
-       ! fill IHALO & JHALO
        call OCEAN_vars_fillhalo
+
+       call OCEAN_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
-       TW(:,:) = 300.0_RP
+
+       TW(:,:) = UNDEF
     endif
 
     return

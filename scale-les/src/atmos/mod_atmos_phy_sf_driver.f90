@@ -254,7 +254,8 @@ contains
     use mod_atmos_phy_sf_vars, only: &
        PREC => ATMOS_PHY_SF_PREC, &
        SWD  => ATMOS_PHY_SF_SWD,  &
-       LWD  => ATMOS_PHY_SF_LWD
+       LWD  => ATMOS_PHY_SF_LWD,  &
+       ATMOS_PHY_SF_vars_fillhalo
     implicit none
 
     ! work
@@ -284,6 +285,8 @@ contains
       ATMP(i,j) = tem(KS,i,j) * ( PRES(i,j) / pre(KS,i,j) )**RovCP
     end do
     end do
+
+    call ATMOS_PHY_SF_vars_fillhalo
 
     call CPL_putAtm( &
        DENS(KS,:,:),      &

@@ -203,8 +203,6 @@ contains
     allocate( ROFF(        IA,JA) )
     allocate( QVEF(        IA,JA) )
 
-
-
     call LAND_param_read
 
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
@@ -237,22 +235,36 @@ contains
     implicit none
 
     integer :: k
+
+    real(RP) :: tmp1(IA,JA,KA)
+    real(RP) :: tmp2(IA,JA,KA)
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     do k = LKS, LKE
-      call COMM_vars8( TG  (k,:,:), 1 )
-      call COMM_vars8( STRG(k,:,:), 2 )
+      tmp1(:,:,k) = TG  (k,:,:)
+      tmp2(:,:,k) = STRG(k,:,:)
+    end do
 
-      call COMM_wait ( TG  (k,:,:), 1 )
-      call COMM_wait ( STRG(k,:,:), 2 )
-    enddo
+    do k = LKS, LKE
+      call COMM_vars8( tmp1(:,:,k), k     )
+      call COMM_vars8( tmp2(:,:,k), k+LKE )
+    end do
 
-    call COMM_vars8( ROFF(:,:), 1 )
-    call COMM_vars8( QVEF(:,:), 2 )
+    call COMM_vars8( ROFF(:,:), 2*LKE+1 )
+    call COMM_vars8( QVEF(:,:), 2*LKE+2 )
 
-    call COMM_wait ( ROFF(:,:), 1 )
-    call COMM_wait ( QVEF(:,:), 2 )
+    do k = LKS, LKE
+      call COMM_wait ( tmp1(:,:,k), k     )
+      call COMM_wait ( tmp2(:,:,k), k+LKE )
+    end do
+
+    call COMM_wait ( ROFF(:,:), 2*LKE+1 )
+    call COMM_wait ( QVEF(:,:), 2*LKE+2 )
+
+    do k = LKS, LKE
+      TG  (k,:,:) = tmp1(:,:,k)
+      STRG(k,:,:) = tmp2(:,:,k)
+    end do
 
     return
   end subroutine LAND_vars_fillhalo
@@ -261,7 +273,7 @@ contains
   !> Read land restart
   subroutine LAND_vars_restart_read
     use scale_const, only: &
-       CONST_UNDEF
+       UNDEF => CONST_UNDEF
     use scale_fileio, only: &
        FILEIO_read
     implicit none
@@ -287,10 +299,10 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
 
-       TG  (:,:,:) = CONST_UNDEF
-       STRG(:,:,:) = CONST_UNDEF
-       ROFF(:,:)   = CONST_UNDEF
-       QVEF(:,:)   = CONST_UNDEF
+       TG  (:,:,:) = UNDEF
+       STRG(:,:,:) = UNDEF
+       ROFF(:,:)   = UNDEF
+       QVEF(:,:)   = UNDEF
     endif
 
     return

@@ -117,8 +117,7 @@ contains
        I_TCS,              &
        I_HCS,              &
        I_DFW,              &
-       P => LAND_PROPERTY, &
-       LAND_vars_fillhalo
+       P => LAND_PROPERTY
     use mod_cpl_vars, only: &
        CPL_getCPL2Lnd
     implicit none
@@ -220,8 +219,6 @@ contains
     end do
     end do
 
-    call LAND_vars_fillhalo
-
     return
   end subroutine LAND_PHY_driver_first
 
@@ -235,7 +232,8 @@ contains
        I_Z0M,              &
        I_Z0H,              &
        I_Z0E,              &
-       P => LAND_PROPERTY
+       P => LAND_PROPERTY, &
+       LAND_vars_fillhalo
     use mod_cpl_vars, only: &
        CPL_putLnd
     implicit none
@@ -244,6 +242,8 @@ contains
     !---------------------------------------------------------------------------
 
     dz_h(:,:) = dz(LKS)
+
+    call LAND_vars_fillhalo
 
     call CPL_putLnd( TG  (LKS,:,:),    & ! [IN]
                      QVEF(:,:),        & ! [IN]

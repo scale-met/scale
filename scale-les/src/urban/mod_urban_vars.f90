@@ -160,18 +160,6 @@ contains
     allocate( TBL_URB(IA,JA,num_urb_layers) )
     allocate( TGL_URB(IA,JA,num_urb_layers) )
 
-    ! initialize
-    TR_URB (:,:) = UNDEF
-    TB_URB (:,:) = UNDEF
-    TG_URB (:,:) = UNDEF
-    TC_URB (:,:) = UNDEF
-    QC_URB (:,:) = UNDEF
-    UC_URB (:,:) = UNDEF
-
-    TRL_URB(:,:,:) = UNDEF
-    TBL_URB(:,:,:) = UNDEF
-    TGL_URB(:,:,:) = UNDEF
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN,iostat=ierr)

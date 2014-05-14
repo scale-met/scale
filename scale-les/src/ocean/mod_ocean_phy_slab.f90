@@ -115,8 +115,7 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
     use mod_ocean_vars, only: &
-       TW,                  &
-       OCEAN_vars_fillhalo
+       TW
     use mod_cpl_vars, only: &
        CPL_getCPL2Ocn
     implicit none
@@ -149,18 +148,19 @@ contains
 
     end if
 
-    call OCEAN_vars_fillhalo
-
     return
   end subroutine OCEAN_PHY_driver_first
 
   subroutine OCEAN_PHY_driver_final
     use mod_ocean_vars, only: &
-       TW
+       TW,                  &
+       OCEAN_vars_fillhalo
     use mod_cpl_vars, only: &
        CPL_putOcn
     implicit none
     !---------------------------------------------------------------------------
+
+    call OCEAN_vars_fillhalo
 
     call CPL_putOcn( TW(:,:) ) ! [IN]
 
