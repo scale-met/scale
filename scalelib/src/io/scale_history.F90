@@ -23,6 +23,7 @@ module scale_history
   use scale_prof
   use scale_grid_index
   use scale_land_grid_index
+  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -157,6 +158,12 @@ contains
     endif
     if ( present(zdim) ) then
        if ( zdim=='landhalf' ) dims(3) = 'lzh'
+    endif
+    if ( present(zdim) ) then
+       if ( zdim=='urban' ) dims(3) = 'uz'
+    endif
+    if ( present(zdim) ) then
+       if ( zdim=='urbanhalf' ) dims(3) = 'uzh'
     endif
 
     call HistoryAddVariable( item,              & ! [IN]
@@ -307,6 +314,10 @@ contains
         ksize  = LKMAX
         kall   = LKE
         kstart = LKS
+      case ('urban')
+        ksize  = UKMAX
+        kall   = UKE
+        kstart = UKS
       case default
         ksize  = KMAX
         kall   = KA
@@ -652,6 +663,10 @@ contains
        GRID_LCZ,  &
        GRID_LFZ,  &
        GRID_LCDZ
+    use scale_urban_grid, only: &
+       GRID_UCZ,  &
+       GRID_UFZ,  &
+       GRID_UCDZ
     use scale_grid_real, only: &
        REAL_LON, &
        REAL_LONX, &
@@ -670,11 +685,13 @@ contains
     call HistoryPutAxis('y',     'Y',  'm', 'y',  GRID_CY(JS:JE))
     call HistoryPutAxis('z',     'Z',  'm', 'z',  GRID_CZ(KS:KE))
     call HistoryPutAxis('lz',    'LZ', 'm', 'lz', GRID_LCZ(LKS:LKE))
+    call HistoryPutAxis('uz',    'UZ', 'm', 'uz', GRID_UCZ(UKS:UKE))
 
     call HistoryPutAxis('xh',    'X (half level)',  'm', 'xh',  GRID_FX(IS:IE))
     call HistoryPutAxis('yh',    'Y (half level)',  'm', 'yh',  GRID_FY(JS:JE))
     call HistoryPutAxis('zh',    'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE))
     call HistoryPutAxis('lzh',   'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE))
+    call HistoryPutAxis('uzh',   'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE))
 
     call HistoryPutAxis('CZ',    'Grid Center Position Z', 'm', 'CZ', GRID_CZ)
     call HistoryPutAxis('CX',    'Grid Center Position X', 'm', 'CX', GRID_CX)
@@ -690,9 +707,13 @@ contains
     call HistoryPutAxis('FDX',   'Grid distance X',    'm', 'FDX', GRID_FDX)
     call HistoryPutAxis('FDY',   'Grid distance Y',    'm', 'FDY', GRID_FDY)
 
-    call HistoryPutAxis('LCZ',   'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ)
-    call HistoryPutAxis('LFZ',   'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ)
-    call HistoryPutAxis('LCDZ',  'Land Grid Cell length Z', 'm', 'LCDZ', GRID_LCDZ)
+    call HistoryPutAxis('LCZ',   'Land Grid Center Position Z', 'm', 'LCZ',  GRID_LCZ)
+    call HistoryPutAxis('LFZ',   'Land Grid Face Position Z',   'm', 'LFZ',  GRID_LFZ)
+    call HistoryPutAxis('LCDZ',  'Land Grid Cell length Z',     'm', 'LCDZ', GRID_LCDZ)
+
+    call HistoryPutAxis('UCZ',   'Urban Grid Center Position Z', 'm', 'UCZ',  GRID_UCZ)
+    call HistoryPutAxis('UFZ',   'Urban Grid Face Position Z',   'm', 'UFZ',  GRID_UFZ)
+    call HistoryPutAxis('UCDZ',  'Urban Grid Cell length Z',     'm', 'UCDZ', GRID_UCDZ)
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
     call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)

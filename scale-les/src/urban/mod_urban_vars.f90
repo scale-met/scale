@@ -18,6 +18,7 @@ module mod_urban_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -43,8 +44,6 @@ module mod_urban_vars
   character(len=H_SHORT), public, save :: URBAN_TYPE = 'OFF'     !< urban physics type
   logical,                public, save :: URBAN_sw_phy           !< do urban physics update?
   logical,                public, save :: URBAN_sw_restart       !< output restart?
-
-  integer ,               public, save :: num_urb_layers = 4     !< number of urban layers
 
   ! prognostic variables
   real(RP), public, save, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
@@ -156,9 +155,9 @@ contains
     allocate( QC_URB (IA,JA) )
     allocate( UC_URB (IA,JA) )
 
-    allocate( TRL_URB(IA,JA,num_urb_layers) )
-    allocate( TBL_URB(IA,JA,num_urb_layers) )
-    allocate( TGL_URB(IA,JA,num_urb_layers) )
+    allocate( TRL_URB(UKS:UKE,IA,JA) )
+    allocate( TBL_URB(UKS:UKE,IA,JA) )
+    allocate( TGL_URB(UKS:UKE,IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -226,33 +225,49 @@ contains
     implicit none
 
     integer :: k
+
+    real(RP) :: tmp1(IA,JA,UKS:UKE)
+    real(RP) :: tmp2(IA,JA,UKS:UKE)
+    real(RP) :: tmp3(IA,JA,UKS:UKE)
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
-    do k = 1, num_urb_layers
-      call COMM_vars8( TRL_URB(:,:,k), 1 )
-      call COMM_vars8( TBL_URB(:,:,k), 2 )
-      call COMM_vars8( TGL_URB(:,:,k), 3 )
-
-      call COMM_wait ( TRL_URB(:,:,k), 1 )
-      call COMM_wait ( TBL_URB(:,:,k), 2 )
-      call COMM_wait ( TGL_URB(:,:,k), 3 )
+    do k = UKS, UKE
+      tmp1(:,:,k) = TRL_URB(k,:,:)
+      tmp2(:,:,k) = TBL_URB(k,:,:)
+      tmp3(:,:,k) = TGL_URB(k,:,:)
     end do
 
-    ! 2D variable
-    call COMM_vars8( TR_URB(:,:), 4 )
-    call COMM_vars8( TB_URB(:,:), 5 )
-    call COMM_vars8( TG_URB(:,:), 6 )
-    call COMM_vars8( TC_URB(:,:), 7 )
-    call COMM_vars8( QC_URB(:,:), 8 )
-    call COMM_vars8( UC_URB(:,:), 9 )
+    do k = UKS, UKE
+      call COMM_vars8( tmp1(:,:,k), k       )
+      call COMM_vars8( tmp2(:,:,k), k+UKE   )
+      call COMM_vars8( tmp3(:,:,k), k+UKE*2 )
+    end do
+                                 
+    call COMM_vars8( TR_URB(:,:), 1+UKE*3 )
+    call COMM_vars8( TB_URB(:,:), 2+UKE*3 )
+    call COMM_vars8( TG_URB(:,:), 3+UKE*3 )
+    call COMM_vars8( TC_URB(:,:), 4+UKE*3 )
+    call COMM_vars8( QC_URB(:,:), 5+UKE*3 )
+    call COMM_vars8( UC_URB(:,:), 6+UKE*3 )
 
-    call COMM_wait ( TR_URB(:,:), 4 )
-    call COMM_wait ( TB_URB(:,:), 5 )
-    call COMM_wait ( TG_URB(:,:), 6 )
-    call COMM_wait ( TC_URB(:,:), 7 )
-    call COMM_wait ( QC_URB(:,:), 8 )
-    call COMM_wait ( UC_URB(:,:), 9 )
+    do k = UKS, UKE
+      call COMM_wait ( tmp1(:,:,k), k       )
+      call COMM_wait ( tmp2(:,:,k), k+UKE   )
+      call COMM_wait ( tmp3(:,:,k), k+UKE*2 )
+    end do
+
+    call COMM_wait ( TR_URB(:,:), 1+UKE*3 )
+    call COMM_wait ( TB_URB(:,:), 2+UKE*3 )
+    call COMM_wait ( TG_URB(:,:), 3+UKE*3 )
+    call COMM_wait ( TC_URB(:,:), 4+UKE*3 )
+    call COMM_wait ( QC_URB(:,:), 5+UKE*3 )
+    call COMM_wait ( UC_URB(:,:), 6+UKE*3 )
+
+    do k = UKS, UKE
+      TRL_URB(k,:,:) = tmp1(:,:,k)
+      TBL_URB(k,:,:) = tmp2(:,:,k)
+      TGL_URB(k,:,:) = tmp3(:,:,k)
+    end do
 
     return
   end subroutine URBAN_vars_fillhalo
@@ -279,25 +294,25 @@ contains
 
     if ( URBAN_RESTART_IN_BASENAME /= '' ) then
 
-!       call FILEIO_read( TR_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TR_URB', 'XY', step=1 ) ! [IN]
-!       call FILEIO_read( TB_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TB_URB', 'XY', step=1 ) ! [IN]
-!       call FILEIO_read( TG_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TG_URB', 'XY', step=1 ) ! [IN]
-!       call FILEIO_read( TC_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TC_URB', 'XY', step=1 ) ! [IN]
-!       call FILEIO_read( QC_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'QC_URB', 'XY', step=1 ) ! [IN]
-!       call FILEIO_read( UC_URB(:,:),                                     & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'UC_URB', 'XY', step=1 ) ! [IN]
-!
-!       call FILEIO_read( TRL_URB(:,:),                                      & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TRL_URB', 'XYZ', step=1 ) ! [IN]
-!       call FILEIO_read( TBL_URB(:,:),                                      & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TBL_URB', 'XYZ', step=1 ) ! [IN]
-!       call FILEIO_read( TGL_URB(:,:),                                      & ! [OUT]
-!                         LAND_RESTART_IN_BASENAME, 'TGL_URB', 'XYZ', step=1 ) ! [IN]
+       call FILEIO_read( TR_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TR_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( TB_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TB_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( TG_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TG_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( TC_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TC_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( QC_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'QC_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( UC_URB(:,:),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'UC_URB', 'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( TRL_URB(:,:,:),                                       & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TRL_URB', 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( TBL_URB(:,:,:),                                       & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TBL_URB', 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( TGL_URB(:,:,:),                                       & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TGL_URB', 'Urban', step=1 ) ! [IN]
 
        call URBAN_vars_fillhalo
 
@@ -350,25 +365,25 @@ contains
        enddo
        basename = trim(URBAN_RESTART_OUT_BASENAME) // '_' // trim(basename)
 
-!       call FILEIO_write( TR_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TR_URB), PV_DESC(I_TR_URB), PV_UNIT(I_TR_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( TB_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TB_URB), PV_DESC(I_TB_URB), PV_UNIT(I_TB_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( TG_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TG_URB), PV_DESC(I_TG_URB), PV_UNIT(I_TG_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( TC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TC_URB), PV_DESC(I_TC_URB), PV_UNIT(I_TC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( QC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_QC_URB), PV_DESC(I_QC_URB), PV_UNIT(I_QC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( UC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_UC_URB), PV_DESC(I_UC_URB), PV_UNIT(I_UC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!
-!       call FILEIO_write( TRL_URB(:,:,:), basename,                                          URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TRL_URB), PV_DESC(I_TRL_URB), PV_UNIT(I_TRL_URB), 'XYZ', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( TBL_URB(:,:,:), basename,                                          URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TBL_URB), PV_DESC(I_TBL_URB), PV_UNIT(I_TBL_URB), 'XYZ', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
-!       call FILEIO_write( TGL_URB(:,:,:), basename,                                          URBAN_RESTART_OUT_TITLE,        & ! [IN]
-!                          PV_NAME(I_TGL_URB), PV_DESC(I_TGL_URB), PV_UNIT(I_TGL_URB), 'XYZ', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TR_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TR_URB), PV_DESC(I_TR_URB), PV_UNIT(I_TR_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TB_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TB_URB), PV_DESC(I_TB_URB), PV_UNIT(I_TB_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TG_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TG_URB), PV_DESC(I_TG_URB), PV_UNIT(I_TG_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TC_URB), PV_DESC(I_TC_URB), PV_UNIT(I_TC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( QC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_QC_URB), PV_DESC(I_QC_URB), PV_UNIT(I_QC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( UC_URB(:,:),  basename,                                        URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_UC_URB), PV_DESC(I_UC_URB), PV_UNIT(I_UC_URB), 'XY', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+
+       call FILEIO_write( TRL_URB(:,:,:), basename,                                            URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TRL_URB), PV_DESC(I_TRL_URB), PV_UNIT(I_TRL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TBL_URB(:,:,:), basename,                                            URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TBL_URB), PV_DESC(I_TBL_URB), PV_UNIT(I_TBL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( TGL_URB(:,:,:), basename,                                            URBAN_RESTART_OUT_TITLE,        & ! [IN]
+                          PV_NAME(I_TGL_URB), PV_DESC(I_TGL_URB), PV_UNIT(I_TGL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE, .true. ) ! [IN]
 
     endif
 
@@ -409,9 +424,9 @@ contains
     call HIST_in( QC_URB(:,:), 'QC_URB', PV_DESC(I_QC_URB), PV_UNIT(I_QC_URB), TIME_DTSEC_URBAN )
     call HIST_in( UC_URB(:,:), 'UC_URB', PV_DESC(I_UC_URB), PV_UNIT(I_UC_URB), TIME_DTSEC_URBAN )
 
-    call HIST_in( TRL_URB(:,:,:), 'TRL_URB', PV_DESC(I_TRL_URB), PV_UNIT(I_TRL_URB), TIME_DTSEC_URBAN )
-    call HIST_in( TBL_URB(:,:,:), 'TBL_URB', PV_DESC(I_TBL_URB), PV_UNIT(I_TBL_URB), TIME_DTSEC_URBAN )
-    call HIST_in( TGL_URB(:,:,:), 'TGL_URB', PV_DESC(I_TGL_URB), PV_UNIT(I_TGL_URB), TIME_DTSEC_URBAN )
+    call HIST_in( TRL_URB(:,:,:), 'TRL_URB', PV_DESC(I_TRL_URB), PV_UNIT(I_TRL_URB), TIME_DTSEC_URBAN, zdim='urban' )
+    call HIST_in( TBL_URB(:,:,:), 'TBL_URB', PV_DESC(I_TBL_URB), PV_UNIT(I_TBL_URB), TIME_DTSEC_URBAN, zdim='urban' )
+    call HIST_in( TGL_URB(:,:,:), 'TGL_URB', PV_DESC(I_TGL_URB), PV_UNIT(I_TGL_URB), TIME_DTSEC_URBAN, zdim='urban' )
 
     return
   end subroutine URBAN_vars_history

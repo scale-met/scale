@@ -42,10 +42,14 @@ program scaleles_init
      GRID_INDEX_setup
   use scale_land_grid_index, only: &
      LAND_GRID_INDEX_setup
+  use scale_urban_grid_index, only: &
+     URBAN_GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
   use scale_land_grid, only: &
      LAND_GRID_setup
+  use scale_urban_grid, only: &
+     URBAN_GRID_setup
   use scale_tracer, only: &
      TRACER_setup
   use scale_fileio, only: &
@@ -79,6 +83,8 @@ program scaleles_init
      OCEAN_vars_setup
   use mod_land_vars, only: &
      LAND_vars_setup
+  use mod_urban_vars, only: &
+     URBAN_vars_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
   use mod_mktopo, only: &
@@ -126,10 +132,12 @@ program scaleles_init
   ! setup horisontal/vertical grid index
   call GRID_INDEX_setup
   call LAND_GRID_INDEX_setup
+  call URBAN_GRID_INDEX_setup
 
   ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
   call LAND_GRID_setup
+  call URBAN_GRID_setup
 
   ! setup tracer index
   call TRACER_setup
@@ -168,6 +176,7 @@ program scaleles_init
   call ATMOS_vars_setup
   call OCEAN_vars_setup
   call LAND_vars_setup
+  call URBAN_vars_setup
   call CPL_vars_setup
 
   ! setup mktopo
