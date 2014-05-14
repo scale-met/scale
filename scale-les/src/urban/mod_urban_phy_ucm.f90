@@ -782,7 +782,7 @@ contains
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TGP-TEM00) / (TEM00*TGP) )
       DESDT    = (LH0/Rvap) * ES / (TGP**2)
       QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      DQS0GDTG = DESDT * 0.22_RP * PS / ( ( PS - 0.378_RP * ES )**2 ) ! bug: 0.22 => 0.622 ?
+      DQS0GDTG = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
       RG1      = EPSG * ( RX * VFGS                             &
                         + EPSB * VFGW * SIG * TBP**4 / 60.0_RP  &
