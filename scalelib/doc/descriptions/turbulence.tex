@@ -32,7 +32,7 @@ Spatial filtering the continuity equation yields
   \frac{\partial \overline{\rho}}{\partial t} + \frac{\partial \overline{u_i \rho}}{\partial x_i} = 0, \label{eq: spatial filtered rho}
 \end{equation}
 where $\overline{\phi}$ means the spatial filtered quantity of an arbitrary variable $\phi$.
-The Favre filtering (Favre 1983) defined by
+The Favre filtering \citep{Favre_1983} defined by
 \begin{equation}
   \widetilde{\phi} = \frac{\overline{\rho \phi}}{\overline{\rho}}
 \end{equation}
@@ -115,7 +115,7 @@ where
    = \left(\frac{\nu_{SGS}}{C_k\lambda}\right)^2,
    \label{eq:tke}
 \end{equation}
-where $C_k$ is a SGS constant and assumed to be 0.1 by following Deardorff (1980) and Moeng and Wynggard (1988).
+where $C_k$ is a SGS constant and assumed to be 0.1 by following \citet{Deardorff_1980} and \citet{Moeng_Wynggard_1988}.
 
 
 The eddy heat flux is
@@ -132,7 +132,7 @@ For the other scalar constants such as water vaper,
 $\nu^*_{SGS}$ is also used as their diffusivity.
 
 To include buoyancy effects,
-the extension of the basic Smagorinsky developed by Brown et al. (1994)
+the extension of the basic Smagorinsky developed by \citet{Brown_etal_1994}
 is used.
 \begin{equation}
   \nu_{SGS} = (C_s\lambda)^2 |S| \sqrt{1-Rf},
@@ -183,7 +183,7 @@ the eddy viscosity and the diffusivity for scalars are 0;
 The Prandtl number is $Pr = 1$.
 
 
-Scotti (1993) suggested that the length scale should depend on the grid aspect ratio.
+\citet{Scotti_1993} suggested that the length scale should depend on the grid aspect ratio.
 In the equilibrium condition with the universal Kolmogorov spectrum, energy cascaded to the SGS turbulence, which equals to SGS dissipation, must not depend on grid aspect ratio.
 The energy flux or dissipation can be written as function of $S_{ij}$ and the length scale, $\lambda$.
 The $S_{ij}$ depends on the grid aspect ratio, so the length scale should have dependency on the aspect ratio which cancels the dependency of the $S_{ij}$.
