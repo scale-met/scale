@@ -3791,16 +3791,16 @@ contains
     enddo
 
     !--- output boundary data
-    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
-                             MOMZ_ORG(:,:,:,:),   &
-                             MOMX_ORG(:,:,:,:),   &
-                             MOMY_ORG(:,:,:,:),   &
-                             RHOT_ORG(:,:,:,:),   &
-                             QTRC_ORG(:,:,:,:,:), &
-                             NUMBER_OF_FILES,     &
-                             INITIAL_STEP,        &
-                             BASENAME_BOUDARY,    &
-                             BOUNDARY_TITLE       )
+!    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
+!                             MOMZ_ORG(:,:,:,:),   &
+!                             MOMX_ORG(:,:,:,:),   &
+!                             MOMY_ORG(:,:,:,:),   &
+!                             RHOT_ORG(:,:,:,:),   &
+!                             QTRC_ORG(:,:,:,:,:), &
+!                             NUMBER_OF_FILES,     &
+!                             INITIAL_STEP,        &
+!                             BASENAME_BOUNDARY,   &
+!                             BOUNDARY_TITLE       )
 
     deallocate( dens_org )
     deallocate( momz_org )

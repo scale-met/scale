@@ -375,50 +375,50 @@ contains
 
 
 
-       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ),                  &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-
-       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX),                  &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-
-       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY),                  &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-
-       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT),                  &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'POTT', 'Reference PT', 'K', 'ZXY',                    &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-
-       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ),                  &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!
+!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX),                  &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!
+!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY),                  &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!
+!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT),                  &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'POTT', 'Reference PT', 'K', 'ZXY',                    &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!
+!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
+!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
+!                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
+!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
 
     deallocate( w )
     deallocate( u )
