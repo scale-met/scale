@@ -94,6 +94,9 @@ contains
        PREC => CPL_PREC,  &
        SWD  => CPL_SWD ,  &
        LWD  => CPL_LWD ,  &
+       CPL_AtmLnd_XMFLX,  & ! tentative
+       CPL_AtmLnd_YMFLX,  & ! tentative
+       CPL_AtmLnd_ZMFLX,  & ! tentative
        CPL_AtmUrb_XMFLX,  &
        CPL_AtmUrb_YMFLX,  &
        CPL_AtmUrb_ZMFLX,  &
@@ -198,9 +201,9 @@ contains
     end do
 
     ! --- tentative: caution !! ---
-    XMFLX(:,:) = 0.0_RP
-    YMFLX(:,:) = 0.0_RP
-    ZMFLX(:,:) = 0.0_RP
+    XMFLX(:,:) = CPL_AtmLnd_XMFLX (:,:)
+    YMFLX(:,:) = CPL_AtmLnd_YMFLX (:,:)
+    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX (:,:)
     ! --- tentative: caution !! ---
 
     ! interpolate momentum fluxes
