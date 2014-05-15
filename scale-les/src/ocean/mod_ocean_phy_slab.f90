@@ -44,10 +44,6 @@ module mod_ocean_phy_slab
   logical,  private, save :: FLG_CR = .false.    !< is the fixed change rate used?
   real(RP), private, save :: CRATE  = 2.0E-5_RP  !< fixed change rate of water temperature [K/s]
 
-  real(RP), private, save, allocatable :: WHFLX  (:,:)
-  real(RP), private, save, allocatable :: PRECFLX(:,:)
-  real(RP), private, save, allocatable :: QVFLX  (:,:)
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -73,10 +69,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SLAB]/Categ[OCEAN]'
-
-    allocate( WHFLX  (IA,JA) )
-    allocate( PRECFLX(IA,JA) )
-    allocate( QVFLX  (IA,JA) )
 
     OCEAN_SLAB_DEPTH  = DZW
     OCEAN_SLAB_FLG_CR = FLG_CR
@@ -119,6 +111,11 @@ contains
     use mod_cpl_vars, only: &
        CPL_getCPL2Ocn
     implicit none
+
+    ! work
+    real(RP) :: WHFLX  (IA,JA)
+    real(RP) :: PRECFLX(IA,JA)
+    real(RP) :: QVFLX  (IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------

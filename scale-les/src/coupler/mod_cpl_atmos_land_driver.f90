@@ -75,38 +75,38 @@ contains
     use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
-       LST,              &
-       ALBG,             &
-       DENS => CPL_DENS, &
-       MOMX => CPL_MOMX, &
-       MOMY => CPL_MOMY, &
-       MOMZ => CPL_MOMZ, &
-       RHOS => CPL_RHOS, &
-       PRES => CPL_PRES, &
-       TMPS => CPL_TMPS, &
-       QV   => CPL_QV  , &
-       PREC => CPL_PREC, &
-       SWD  => CPL_SWD , &
-       LWD  => CPL_LWD , &
-       TG   => CPL_TG,   &
-       QVEF => CPL_QVEF, &
-       TCS  => CPL_TCS,  &
-       DZG  => CPL_DZG,  &
-       Z0M  => CPL_Z0M,  &
-       Z0H  => CPL_Z0H,  &
-       Z0E  => CPL_Z0E,  &
-       AtmLnd_XMFLX,     &
-       AtmLnd_YMFLX,     &
-       AtmLnd_ZMFLX,     &
-       AtmLnd_SWUFLX,    &
-       AtmLnd_LWUFLX,    &
-       AtmLnd_SHFLX,     &
-       AtmLnd_LHFLX,     &
-       AtmLnd_QVFLX,     &
-       Lnd_GHFLX,        &
-       Lnd_PRECFLX,      &
-       Lnd_QVFLX,        &
-       CNT_Atm_Lnd,      &
+       LST,               &
+       ALBG,              &
+       DENS => CPL_DENS,  &
+       MOMX => CPL_MOMX,  &
+       MOMY => CPL_MOMY,  &
+       MOMZ => CPL_MOMZ,  &
+       RHOS => CPL_RHOS,  &
+       PRES => CPL_PRES,  &
+       TMPS => CPL_TMPS,  &
+       QV   => CPL_QV  ,  &
+       PREC => CPL_PREC,  &
+       SWD  => CPL_SWD ,  &
+       LWD  => CPL_LWD ,  &
+       TG   => CPL_TG,    &
+       QVEF => CPL_QVEF,  &
+       TCS  => CPL_TCS,   &
+       DZG  => CPL_DZG,   &
+       Z0M  => CPL_Z0M,   &
+       Z0H  => CPL_Z0H,   &
+       Z0E  => CPL_Z0E,   &
+       CPL_AtmLnd_XMFLX,  &
+       CPL_AtmLnd_YMFLX,  &
+       CPL_AtmLnd_ZMFLX,  &
+       CPL_AtmLnd_SWUFLX, &
+       CPL_AtmLnd_LWUFLX, &
+       CPL_AtmLnd_SHFLX,  &
+       CPL_AtmLnd_LHFLX,  &
+       CPL_AtmLnd_QVFLX,  &
+       Lnd_GHFLX,         &
+       Lnd_PRECFLX,       &
+       Lnd_QVFLX,         &
+       CNT_Atm_Lnd,       &
        CNT_Lnd
     implicit none
 
@@ -162,14 +162,14 @@ contains
     enddo
 
     ! temporal average flux
-    AtmLnd_XMFLX (:,:) = ( AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_YMFLX (:,:) = ( AtmLnd_YMFLX (:,:) * CNT_Atm_Lnd + YMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_ZMFLX (:,:) = ( AtmLnd_ZMFLX (:,:) * CNT_Atm_Lnd + ZMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_SWUFLX(:,:) = ( AtmLnd_SWUFLX(:,:) * CNT_Atm_Lnd + SWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_LWUFLX(:,:) = ( AtmLnd_LWUFLX(:,:) * CNT_Atm_Lnd + LWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_SHFLX (:,:) = ( AtmLnd_SHFLX (:,:) * CNT_Atm_Lnd + SHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_LHFLX (:,:) = ( AtmLnd_LHFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    AtmLnd_QVFLX (:,:) = ( AtmLnd_QVFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_XMFLX (:,:) = ( CPL_AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_YMFLX (:,:) = ( CPL_AtmLnd_YMFLX (:,:) * CNT_Atm_Lnd + YMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_ZMFLX (:,:) = ( CPL_AtmLnd_ZMFLX (:,:) * CNT_Atm_Lnd + ZMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_SWUFLX(:,:) = ( CPL_AtmLnd_SWUFLX(:,:) * CNT_Atm_Lnd + SWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_LWUFLX(:,:) = ( CPL_AtmLnd_LWUFLX(:,:) * CNT_Atm_Lnd + LWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_SHFLX (:,:) = ( CPL_AtmLnd_SHFLX (:,:) * CNT_Atm_Lnd + SHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_LHFLX (:,:) = ( CPL_AtmLnd_LHFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_QVFLX (:,:) = ( CPL_AtmLnd_QVFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
 
     Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
     Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )

@@ -61,6 +61,7 @@ module mod_cpl_vars
   logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
   logical,                public, save :: CPL_sw_restart            !< output coupler restart?
 
+  ! prognostic variables
   real(RP), public, save, allocatable :: LST  (:,:)   ! Land Surface Temperature [K]
   real(RP), public, save, allocatable :: UST  (:,:)   ! Urban Surface Temperature [K]
   real(RP), public, save, allocatable :: SST  (:,:)   ! Sea Surface Temperature [K]
@@ -72,56 +73,60 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: SnowQ(:,:)   ! Ground Snow amount      [kg/m2]
   real(RP), public, save, allocatable :: SnowT(:,:)   ! Ground Snow Temperature [K]
 
-  real(RP), public, save, allocatable :: XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  ! surface fluxes to atmospheric model
+  real(RP), public, save, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: Atm_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Atm_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
+  ! surface fluxes to land model
   real(RP), public, save, allocatable :: Lnd_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Lnd_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Lnd_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
+  ! surface fluxes to urban model
   real(RP), public, save, allocatable :: Urb_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Urb_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Urb_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
+  ! surface fluxes to ocean model
   real(RP), public, save, allocatable :: Ocn_WHFLX  (:,:) ! water heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Ocn_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
 
   ! surface fluxes from atmosphere-ocean coupler
-  real(RP), public, save, allocatable :: AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmOcn_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! surface fluxes from atmosphere-land coupler
-  real(RP), public, save, allocatable :: AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmLnd_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! surface fluxes from atmosphere-urban coupler
-  real(RP), public, save, allocatable :: AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: AtmUrb_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmUrb_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! Atmospheric values
   real(RP), public, save, allocatable :: CPL_DENS(:,:) ! air density [kg/m3]
@@ -173,7 +178,7 @@ module mod_cpl_vars
 
   logical,                private, save      :: CPL_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX          = 29
+  integer,                private, parameter :: VMAX          = 12
   integer,                private, parameter :: I_LST         =  1
   integer,                private, parameter :: I_UST         =  2
   integer,                private, parameter :: I_SST         =  3
@@ -186,23 +191,6 @@ module mod_cpl_vars
   integer,                private, parameter :: I_SkinW       = 10
   integer,                private, parameter :: I_SnowQ       = 11
   integer,                private, parameter :: I_SnowT       = 12
-  integer,                private, parameter :: I_XMFLX       = 13
-  integer,                private, parameter :: I_YMFLX       = 14
-  integer,                private, parameter :: I_ZMFLX       = 15
-  integer,                private, parameter :: I_SWUFLX      = 16
-  integer,                private, parameter :: I_LWUFLX      = 17
-  integer,                private, parameter :: I_SHFLX       = 18
-  integer,                private, parameter :: I_LHFLX       = 19
-  integer,                private, parameter :: I_QVFLX       = 20
-  integer,                private, parameter :: I_Lnd_GHFLX   = 21
-  integer,                private, parameter :: I_Lnd_PRECFLX = 22
-  integer,                private, parameter :: I_Lnd_QVFLX   = 23
-  integer,                private, parameter :: I_Urb_GHFLX   = 24
-  integer,                private, parameter :: I_Urb_PRECFLX = 25
-  integer,                private, parameter :: I_Urb_QVFLX   = 26
-  integer,                private, parameter :: I_Ocn_WHFLX   = 27
-  integer,                private, parameter :: I_Ocn_PRECFLX = 28
-  integer,                private, parameter :: I_Ocn_QVFLX   = 29
 
   character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the coupler variables
   character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the coupler variables
@@ -219,24 +207,7 @@ module mod_cpl_vars
                   'SkinT',       &
                   'SkinW',       &
                   'SnowQ',       &
-                  'SnowT',       &
-                  'XMFLX',       &
-                  'YMFLX',       &
-                  'ZMFLX',       &
-                  'SWUFLX',      &
-                  'LWUFLX',      &
-                  'SHFLX',       &
-                  'LHFLX',       &
-                  'QVFLX',       &
-                  'Lnd_GHFLX',   &
-                  'Lnd_PRECFLX', &
-                  'Lnd_QVFLX',   &
-                  'Urb_GHFLX',   &
-                  'Urb_PRECFLX', &
-                  'Urb_QVFLX',   &
-                  'Ocn_WHFLX',   &
-                  'Ocn_PRECFLX', &
-                  'Ocn_QVFLX'    /
+                  'SnowT'        /
 
   data VAR_DESC / 'land surface temp.',               &
                   'urban surface temp.',              &
@@ -249,24 +220,7 @@ module mod_cpl_vars
                   'ground skin temp.',                &
                   'ground skin water',                &
                   'ground snow amount',               &
-                  'ground snow temp.',                &
-                  'x-momentum flux',                  &
-                  'y-momentum flux',                  &
-                  'z-momentum flux',                  &
-                  'upward short-wave radiation flux', &
-                  'upward long-wave radiation flux',  &
-                  'sensible heat flux',               &
-                  'latent heat flux',                 &
-                  'moisture flux for atmosphere',     &
-                  'ground heat flux for land',        &
-                  'precipitation flux for land',      &
-                  'moisture flux for land',           &
-                  'ground heat flux for urban',       &
-                  'precipitation flux for urban',     &
-                  'moisture flux for urban',          &
-                  'water heat flux',                  &
-                  'precipitation flux for ocean',     &
-                  'moisture flux for ocean'           /
+                  'ground snow temp.'                 /
 
   data VAR_UNIT / 'K',       &
                   'K',       &
@@ -279,24 +233,7 @@ module mod_cpl_vars
                   'K',       &
                   'kg/m2',   &
                   'kg/m2',   &
-                  'K',       &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'W/m2',    &
-                  'W/m2',    &
-                  'W/m2',    &
-                  'W/m2',    &
-                  'kg/m2/s', &
-                  'W/m2',    &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'W/m2',    &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'W/m2',    &
-                  'kg/m2/s', &
-                  'kg/m2/s'  /
+                  'K'        /
 
   !-----------------------------------------------------------------------------
 contains
@@ -421,14 +358,15 @@ contains
     allocate( SnowQ(IA,JA)      )
     allocate( SnowT(IA,JA)      )
 
-    allocate( XMFLX (IA,JA) )
-    allocate( YMFLX (IA,JA) )
-    allocate( ZMFLX (IA,JA) )
-    allocate( SWUFLX(IA,JA) )
-    allocate( LWUFLX(IA,JA) )
-    allocate( SHFLX (IA,JA) )
-    allocate( LHFLX (IA,JA) )
-    allocate( QVFLX (IA,JA) )
+    ! work variables
+    allocate( Atm_XMFLX (IA,JA) )
+    allocate( Atm_YMFLX (IA,JA) )
+    allocate( Atm_ZMFLX (IA,JA) )
+    allocate( Atm_SWUFLX(IA,JA) )
+    allocate( Atm_LWUFLX(IA,JA) )
+    allocate( Atm_SHFLX (IA,JA) )
+    allocate( Atm_LHFLX (IA,JA) )
+    allocate( Atm_QVFLX (IA,JA) )
 
     allocate( Lnd_GHFLX  (IA,JA) )
     allocate( Lnd_PRECFLX(IA,JA) )
@@ -465,32 +403,32 @@ contains
 
     allocate( CPL_TW  (IA,JA) )
 
-    allocate( AtmLnd_XMFLX (IA,JA) )
-    allocate( AtmLnd_YMFLX (IA,JA) )
-    allocate( AtmLnd_ZMFLX (IA,JA) )
-    allocate( AtmLnd_SWUFLX(IA,JA) )
-    allocate( AtmLnd_LWUFLX(IA,JA) )
-    allocate( AtmLnd_SHFLX (IA,JA) )
-    allocate( AtmLnd_LHFLX (IA,JA) )
-    allocate( AtmLnd_QVFLX (IA,JA) )
+    allocate( CPL_AtmLnd_XMFLX (IA,JA) )
+    allocate( CPL_AtmLnd_YMFLX (IA,JA) )
+    allocate( CPL_AtmLnd_ZMFLX (IA,JA) )
+    allocate( CPL_AtmLnd_SWUFLX(IA,JA) )
+    allocate( CPL_AtmLnd_LWUFLX(IA,JA) )
+    allocate( CPL_AtmLnd_SHFLX (IA,JA) )
+    allocate( CPL_AtmLnd_LHFLX (IA,JA) )
+    allocate( CPL_AtmLnd_QVFLX (IA,JA) )
 
-    allocate( AtmUrb_XMFLX (IA,JA) )
-    allocate( AtmUrb_YMFLX (IA,JA) )
-    allocate( AtmUrb_ZMFLX (IA,JA) )
-    allocate( AtmUrb_SWUFLX(IA,JA) )
-    allocate( AtmUrb_LWUFLX(IA,JA) )
-    allocate( AtmUrb_SHFLX (IA,JA) )
-    allocate( AtmUrb_LHFLX (IA,JA) )
-    allocate( AtmUrb_QVFLX (IA,JA) )
+    allocate( CPL_AtmUrb_XMFLX (IA,JA) )
+    allocate( CPL_AtmUrb_YMFLX (IA,JA) )
+    allocate( CPL_AtmUrb_ZMFLX (IA,JA) )
+    allocate( CPL_AtmUrb_SWUFLX(IA,JA) )
+    allocate( CPL_AtmUrb_LWUFLX(IA,JA) )
+    allocate( CPL_AtmUrb_SHFLX (IA,JA) )
+    allocate( CPL_AtmUrb_LHFLX (IA,JA) )
+    allocate( CPL_AtmUrb_QVFLX (IA,JA) )
 
-    allocate( AtmOcn_XMFLX (IA,JA) )
-    allocate( AtmOcn_YMFLX (IA,JA) )
-    allocate( AtmOcn_ZMFLX (IA,JA) )
-    allocate( AtmOcn_SWUFLX(IA,JA) )
-    allocate( AtmOcn_LWUFLX(IA,JA) )
-    allocate( AtmOcn_SHFLX (IA,JA) )
-    allocate( AtmOcn_LHFLX (IA,JA) )
-    allocate( AtmOcn_QVFLX (IA,JA) )
+    allocate( CPL_AtmOcn_XMFLX (IA,JA) )
+    allocate( CPL_AtmOcn_YMFLX (IA,JA) )
+    allocate( CPL_AtmOcn_ZMFLX (IA,JA) )
+    allocate( CPL_AtmOcn_SWUFLX(IA,JA) )
+    allocate( CPL_AtmOcn_LWUFLX(IA,JA) )
+    allocate( CPL_AtmOcn_SHFLX (IA,JA) )
+    allocate( CPL_AtmOcn_LHFLX (IA,JA) )
+    allocate( CPL_AtmOcn_QVFLX (IA,JA) )
 
     return
   end subroutine CPL_vars_setup
@@ -695,27 +633,6 @@ contains
        call VALCHECK( SkinW(:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SkinW)  , __FILE__, __LINE__ )
        call VALCHECK( SnowQ(:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SnowQ)  , __FILE__, __LINE__ )
        call VALCHECK( SnowT(:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SnowT)  , __FILE__, __LINE__ )
-
-       call VALCHECK( XMFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_XMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( YMFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_YMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( ZMFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_ZMFLX) , __FILE__, __LINE__ )
-       call VALCHECK( SWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_SWUFLX), __FILE__, __LINE__ )
-       call VALCHECK( LWUFLX(:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_LWUFLX), __FILE__, __LINE__ )
-       call VALCHECK( SHFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_SHFLX) , __FILE__, __LINE__ )
-       call VALCHECK( LHFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_LHFLX) , __FILE__, __LINE__ )
-       call VALCHECK( QVFLX (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_QVFLX) , __FILE__, __LINE__ )
-
-       call VALCHECK( Lnd_GHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Lnd_GHFLX)  , __FILE__, __LINE__ )
-       call VALCHECK( Lnd_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Lnd_PRECFLX), __FILE__, __LINE__ )
-       call VALCHECK( Lnd_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Lnd_QVFLX)  , __FILE__, __LINE__ )
-
-       call VALCHECK( Urb_GHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Urb_GHFLX)  , __FILE__, __LINE__ )
-       call VALCHECK( Urb_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Urb_PRECFLX), __FILE__, __LINE__ )
-       call VALCHECK( Urb_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Urb_QVFLX)  , __FILE__, __LINE__ )
-
-       call VALCHECK( Ocn_WHFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Ocn_WHFLX)  , __FILE__, __LINE__ )
-       call VALCHECK( Ocn_PRECFLX(:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Ocn_PRECFLX), __FILE__, __LINE__ )
-       call VALCHECK( Ocn_QVFLX  (:,:), -1.0E4_RP, 1.0E4_RP, VAR_NAME(I_Ocn_QVFLX)  , __FILE__, __LINE__ )
     endif
 
     call HIST_in( LST  (:,:),      'LST',      VAR_DESC(I_LST),      VAR_UNIT(I_LST),      TIME_DTSEC_CPL )
@@ -730,27 +647,6 @@ contains
     call HIST_in( SkinW(:,:),      'SkinW',    VAR_DESC(I_SkinW),    VAR_UNIT(I_SkinW),    TIME_DTSEC_CPL )
     call HIST_in( SnowQ(:,:),      'SnowQ',    VAR_DESC(I_SnowQ),    VAR_UNIT(I_SnowQ),    TIME_DTSEC_CPL )
     call HIST_in( SnowT(:,:),      'SnowT',    VAR_DESC(I_SnowT),    VAR_UNIT(I_SnowT),    TIME_DTSEC_CPL )
-
-    call HIST_in( XMFLX (:,:), 'XMFLX',  VAR_DESC(I_XMFLX),  VAR_UNIT(I_XMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( YMFLX (:,:), 'YMFLX',  VAR_DESC(I_YMFLX),  VAR_UNIT(I_YMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( ZMFLX (:,:), 'ZMFLX',  VAR_DESC(I_ZMFLX),  VAR_UNIT(I_ZMFLX),  TIME_DTSEC_CPL )
-    call HIST_in( SWUFLX(:,:), 'SWUFLX', VAR_DESC(I_SWUFLX), VAR_UNIT(I_SWUFLX), TIME_DTSEC_CPL )
-    call HIST_in( LWUFLX(:,:), 'LWUFLX', VAR_DESC(I_LWUFLX), VAR_UNIT(I_LWUFLX), TIME_DTSEC_CPL )
-!    call HIST_in( SHFLX (:,:), 'SHFLX',  VAR_DESC(I_SHFLX),  VAR_UNIT(I_SHFLX),  TIME_DTSEC_CPL )
-!    call HIST_in( LHFLX (:,:), 'LHFLX',  VAR_DESC(I_LHFLX),  VAR_UNIT(I_LHFLX),  TIME_DTSEC_CPL )
-    call HIST_in( QVFLX (:,:), 'QVFLX',  VAR_DESC(I_QVFLX),  VAR_UNIT(I_QVFLX),  TIME_DTSEC_CPL )
-
-    call HIST_in( Lnd_GHFLX  (:,:), 'Lnd_GHFLX',   VAR_DESC(I_Lnd_GHFLX),   VAR_UNIT(I_Lnd_GHFLX),   TIME_DTSEC_CPL )
-    call HIST_in( Lnd_PRECFLX(:,:), 'Lnd_PRECFLX', VAR_DESC(I_Lnd_PRECFLX), VAR_UNIT(I_Lnd_PRECFLX), TIME_DTSEC_CPL )
-    call HIST_in( Lnd_QVFLX  (:,:), 'Lnd_QVFLX',   VAR_DESC(I_Lnd_QVFLX),   VAR_UNIT(I_Lnd_QVFLX),   TIME_DTSEC_CPL )
-
-    call HIST_in( Urb_GHFLX  (:,:), 'Urb_GHFLX',   VAR_DESC(I_Urb_GHFLX),   VAR_UNIT(I_Urb_GHFLX),   TIME_DTSEC_CPL )
-    call HIST_in( Urb_PRECFLX(:,:), 'Urb_PRECFLX', VAR_DESC(I_Urb_PRECFLX), VAR_UNIT(I_Urb_PRECFLX), TIME_DTSEC_CPL )
-    call HIST_in( Urb_QVFLX  (:,:), 'Urb_QVFLX',   VAR_DESC(I_Urb_QVFLX),   VAR_UNIT(I_Urb_QVFLX),   TIME_DTSEC_CPL )
-
-    call HIST_in( Ocn_WHFLX  (:,:), 'Ocn_WHFLX',   VAR_DESC(I_Ocn_WHFLX),   VAR_UNIT(I_Ocn_WHFLX),   TIME_DTSEC_CPL )
-    call HIST_in( Ocn_PRECFLX(:,:), 'Ocn_PRECFLX', VAR_DESC(I_Ocn_PRECFLX), VAR_UNIT(I_Ocn_PRECFLX), TIME_DTSEC_CPL )
-    call HIST_in( Ocn_QVFLX  (:,:), 'Ocn_QVFLX',   VAR_DESC(I_Ocn_QVFLX),   VAR_UNIT(I_Ocn_QVFLX),   TIME_DTSEC_CPL )
 
     return
   end subroutine CPL_vars_history
@@ -798,32 +694,32 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    SkinT (:,:) = ( 1.0_RP-frac_land(:,:) ) * SST          (:,:) &
-                + (        frac_land(:,:) ) * LST          (:,:)
+    SkinT (:,:) = ( 1.0_RP-frac_land(:,:) ) * SST(:,:) &
+                + (        frac_land(:,:) ) * LST(:,:)
 
-    ZMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_ZMFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_ZMFLX (:,:)
+    Atm_ZMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_ZMFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_ZMFLX (:,:)
 
-    XMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_XMFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_XMFLX (:,:)
+    Atm_XMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_XMFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_XMFLX (:,:)
 
-    YMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_YMFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_YMFLX (:,:)
+    Atm_YMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_YMFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_YMFLX (:,:)
 
-    SHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_SHFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_SHFLX (:,:)
+    Atm_SHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_SHFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_SHFLX (:,:)
 
-    LHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_LHFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_LHFLX (:,:)
+    Atm_LHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_LHFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_LHFLX (:,:)
 
-    QVFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_QVFLX (:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_QVFLX (:,:)
+    Atm_QVFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_QVFLX (:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_QVFLX (:,:)
 
-    LWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_LWUFLX(:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_LWUFLX(:,:)
+    Atm_LWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_LWUFLX(:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_LWUFLX(:,:)
 
-    SWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * AtmOcn_SWUFLX(:,:) &
-                + (        frac_land(:,:) ) * AtmLnd_SWUFLX(:,:)
+    Atm_SWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_SWUFLX(:,:) &
+                    + (        frac_land(:,:) ) * CPL_AtmLnd_SWUFLX(:,:)
 
     return
   end subroutine CPL_vars_merge
@@ -944,14 +840,14 @@ contains
     real(RP), intent(out) :: pQVFLX (IA,JA)
     !---------------------------------------------------------------------------
 
-    pXMFLX (:,:) = XMFLX (:,:)
-    pYMFLX (:,:) = YMFLX (:,:)
-    pZMFLX (:,:) = ZMFLX (:,:)
-    pSWUFLX(:,:) = SWUFLX(:,:)
-    pLWUFLX(:,:) = LWUFLX(:,:)
-    pSHFLX (:,:) = SHFLX (:,:)
-    pLHFLX (:,:) = LHFLX (:,:)
-    pQVFLX (:,:) = QVFLX (:,:)
+    pXMFLX (:,:) = Atm_XMFLX (:,:)
+    pYMFLX (:,:) = Atm_YMFLX (:,:)
+    pZMFLX (:,:) = Atm_ZMFLX (:,:)
+    pSWUFLX(:,:) = Atm_SWUFLX(:,:)
+    pLWUFLX(:,:) = Atm_LWUFLX(:,:)
+    pSHFLX (:,:) = Atm_SHFLX (:,:)
+    pLHFLX (:,:) = Atm_LHFLX (:,:)
+    pQVFLX (:,:) = Atm_QVFLX (:,:)
 
     CNT_Atm_Lnd = 0.0_RP
     CNT_Atm_Urb = 0.0_RP

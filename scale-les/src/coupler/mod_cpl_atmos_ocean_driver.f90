@@ -82,33 +82,33 @@ contains
     use scale_cpl_atmos_ocean, only: &
        CPL_AtmOcn
     use mod_cpl_vars, only: &
-       SST,              &
-       ALBW,             &
-       Z0W,              &
-       DENS => CPL_DENS, &
-       MOMX => CPL_MOMX, &
-       MOMY => CPL_MOMY, &
-       MOMZ => CPL_MOMZ, &
-       RHOS => CPL_RHOS, &
-       PRES => CPL_PRES, &
-       TMPS => CPL_TMPS, &
-       QV   => CPL_QV  , &
-       PREC => CPL_PREC, &
-       SWD  => CPL_SWD , &
-       LWD  => CPL_LWD , &
-       TW   => CPL_TW,   &
-       AtmOcn_XMFLX,     &
-       AtmOcn_YMFLX,     &
-       AtmOcn_ZMFLX,     &
-       AtmOcn_SWUFLX,    &
-       AtmOcn_LWUFLX,    &
-       AtmOcn_SHFLX,     &
-       AtmOcn_LHFLX,     &
-       AtmOcn_QVFLX,     &
-       Ocn_WHFLX,        &
-       Ocn_PRECFLX,      &
-       Ocn_QVFLX,        &
-       CNT_Atm_Ocn,      &
+       SST,               &
+       ALBW,              &
+       Z0W,               &
+       DENS => CPL_DENS,  &
+       MOMX => CPL_MOMX,  &
+       MOMY => CPL_MOMY,  &
+       MOMZ => CPL_MOMZ,  &
+       RHOS => CPL_RHOS,  &
+       PRES => CPL_PRES,  &
+       TMPS => CPL_TMPS,  &
+       QV   => CPL_QV  ,  &
+       PREC => CPL_PREC,  &
+       SWD  => CPL_SWD ,  &
+       LWD  => CPL_LWD ,  &
+       TW   => CPL_TW,    &
+       CPL_AtmOcn_XMFLX,  &
+       CPL_AtmOcn_YMFLX,  &
+       CPL_AtmOcn_ZMFLX,  &
+       CPL_AtmOcn_SWUFLX, &
+       CPL_AtmOcn_LWUFLX, &
+       CPL_AtmOcn_SHFLX,  &
+       CPL_AtmOcn_LHFLX,  &
+       CPL_AtmOcn_QVFLX,  &
+       Ocn_WHFLX,         &
+       Ocn_PRECFLX,       &
+       Ocn_QVFLX,         &
+       CNT_Atm_Ocn,       &
        CNT_Ocn
     implicit none
 
@@ -187,14 +187,14 @@ contains
     enddo
 
     ! temporal average flux
-    AtmOcn_XMFLX (:,:) = ( AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_YMFLX (:,:) = ( AtmOcn_YMFLX (:,:) * CNT_Atm_Ocn + YMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_ZMFLX (:,:) = ( AtmOcn_ZMFLX (:,:) * CNT_Atm_Ocn + ZMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_SWUFLX(:,:) = ( AtmOcn_SWUFLX(:,:) * CNT_Atm_Ocn + SWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_LWUFLX(:,:) = ( AtmOcn_LWUFLX(:,:) * CNT_Atm_Ocn + LWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_SHFLX (:,:) = ( AtmOcn_SHFLX (:,:) * CNT_Atm_Ocn + SHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_LHFLX (:,:) = ( AtmOcn_LHFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    AtmOcn_QVFLX (:,:) = ( AtmOcn_QVFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_XMFLX (:,:) = ( CPL_AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_YMFLX (:,:) = ( CPL_AtmOcn_YMFLX (:,:) * CNT_Atm_Ocn + YMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_ZMFLX (:,:) = ( CPL_AtmOcn_ZMFLX (:,:) * CNT_Atm_Ocn + ZMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_SWUFLX(:,:) = ( CPL_AtmOcn_SWUFLX(:,:) * CNT_Atm_Ocn + SWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_LWUFLX(:,:) = ( CPL_AtmOcn_LWUFLX(:,:) * CNT_Atm_Ocn + LWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_SHFLX (:,:) = ( CPL_AtmOcn_SHFLX (:,:) * CNT_Atm_Ocn + SHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_LHFLX (:,:) = ( CPL_AtmOcn_LHFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_QVFLX (:,:) = ( CPL_AtmOcn_QVFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Ocn + 1.0_RP )
 
     Ocn_WHFLX  (:,:) = ( Ocn_WHFLX  (:,:) * CNT_Ocn + WHFLX(:,:)     ) / ( CNT_Ocn + 1.0_RP )
     Ocn_PRECFLX(:,:) = ( Ocn_PRECFLX(:,:) * CNT_Ocn + PREC (:,:)     ) / ( CNT_Ocn + 1.0_RP )
