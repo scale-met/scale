@@ -17,6 +17,7 @@ module scale_cpl_atmos_urban
   use scale_precision
   use scale_stdio
   use scale_grid_index
+  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,52 +29,69 @@ module scale_cpl_atmos_urban
 
   abstract interface
      subroutine cau( &
-         UST,                                 & ! (inout)
-         XMFLX, YMFLX, ZMFLX,                 & ! (out)
-         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-         UST_UPDATE,                          & ! (in)
-         DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-         RHOS, PRES, TMPA, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
-         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+        TR_URB,  & ! (inout)
+        TB_URB,  & ! (inout)
+        TG_URB,  & ! (inout)
+        TC_URB,  & ! (inout)
+        QC_URB,  & ! (inout)
+        UC_URB,  & ! (inout)
+        TRL_URB, & ! (inout)
+        TBL_URB, & ! (inout)
+        TGL_URB, & ! (inout)
+        UST,     & ! (out)
+        SHFLX,   & ! (out)
+        LHFLX,   & ! (out)
+        SWUFLX,  & ! (out)
+        LWUFLX,  & ! (out)
+        GHFLX,   & ! (out)
+        LSOLAR,  & ! (in)
+        TMPA,    & ! (in)
+        QA,      & ! (in)
+        UA,      & ! (in)
+        U1,      & ! (in)
+        V1,      & ! (in)
+        DZ,      & ! (in)
+        SWD,     & ! (in)
+        LWD,     & ! (in)
+        PREC,    & ! (in)
+        DENS,    & ! (in)
+        LON,     & ! (in)
+        LAT      ) ! (in)
        use scale_precision
        use scale_grid_index
+       use scale_urban_grid_index
        implicit none
 
-       real(RP), intent(inout) :: UST(IA,JA) ! urban surface temperature [K]
+       real(RP), intent(inout) :: TR_URB
+       real(RP), intent(inout) :: TB_URB
+       real(RP), intent(inout) :: TG_URB
+       real(RP), intent(inout) :: TC_URB
+       real(RP), intent(inout) :: QC_URB
+       real(RP), intent(inout) :: UC_URB
+       real(RP), intent(inout) :: TRL_URB(UKS:UKE)
+       real(RP), intent(inout) :: TBL_URB(UKS:UKE)
+       real(RP), intent(inout) :: TGL_URB(UKS:UKE)
 
-       real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-       real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-       real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-       real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-       real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+       real(RP), intent(out) :: UST
+       real(RP), intent(out) :: SHFLX
+       real(RP), intent(out) :: LHFLX
+       real(RP), intent(out) :: SWUFLX
+       real(RP), intent(out) :: LWUFLX
+       real(RP), intent(out) :: GHFLX
 
-       logical,  intent(in) :: UST_UPDATE  ! is urban surface temperature updated?
-
-       real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-       real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-       real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-       real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-       real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-       real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-       real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-       real(RP), intent(in) :: TMPA(IA,JA) ! air temperature at the 1st atmospheric layer [K]
-       real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-       real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-       real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
-
-       real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
-       real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
-       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
-       real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-       real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [W/m/K]
-       real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
-       real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
-       real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
-       real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
+       logical,  intent(in) :: LSOLAR
+       real(RP), intent(in) :: TMPA
+       real(RP), intent(in) :: QA
+       real(RP), intent(in) :: UA
+       real(RP), intent(in) :: U1
+       real(RP), intent(in) :: V1
+       real(RP), intent(in) :: DZ
+       real(RP), intent(in) :: SWD
+       real(RP), intent(in) :: LWD
+       real(RP), intent(in) :: PREC
+       real(RP), intent(in) :: DENS
+       real(RP), intent(in) :: LON
+       real(RP), intent(in) :: LAT
      end subroutine cau
   end interface
   procedure(cau), pointer :: CPL_AtmUrb => NULL()
@@ -104,9 +122,9 @@ contains
        NAME(CPL_AtmUrb_, CAU, _setup), &
        NAME(CPL_AtmUrb_, CAU,)
 #else
-    use scale_cpl_atmos_urban_ucm, only: &
-       CPL_AtmUrb_ucm_setup, &
-       CPL_AtmUrb_ucm
+    use scale_cpl_atmos_urban_bulk, only: &
+       CPL_AtmUrb_bulk_setup, &
+       CPL_AtmUrb_bulk
 #endif
     implicit none
 
@@ -114,9 +132,9 @@ contains
     !---------------------------------------------------------------------------
 
     select case( CPL_TYPE_AtmUrb )
-    case ( 'UCM' )
-       call CPL_AtmUrb_ucm_setup( CPL_TYPE_AtmUrb )
-       CPL_AtmUrb => CPL_AtmUrb_ucm
+    case ( 'BULK' )
+       call CPL_AtmUrb_bulk_setup( CPL_TYPE_AtmUrb )
+       CPL_AtmUrb => CPL_AtmUrb_bulk
     end select
 
   end subroutine CPL_AtmUrb_setup

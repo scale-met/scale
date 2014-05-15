@@ -904,21 +904,8 @@ contains
   end subroutine CPL_putLnd
 
   ! tentative
-  subroutine CPL_putUrb( &
-      pSWUFLX_URB, & ! (in)
-      pLWUFLX_URB, & ! (in)
-      pSHFLX_URB,  & ! (in)
-      pLHFLX_URB,  & ! (in)
-      pGHFLX_URB,  & ! (in)
-      pTS_URB      ) ! (in)
+  subroutine CPL_putUrb
     implicit none
-
-    real(RP), intent(in) :: pSWUFLX_URB(IA,JA)
-    real(RP), intent(in) :: pLWUFLX_URB(IA,JA)
-    real(RP), intent(in) :: pSHFLX_URB (IA,JA)
-    real(RP), intent(in) :: pLHFLX_URB (IA,JA)
-    real(RP), intent(in) :: pGHFLX_URB (IA,JA)
-    real(RP), intent(in) :: pTS_URB    (IA,JA)
     !---------------------------------------------------------------------------
 
     return
@@ -967,6 +954,7 @@ contains
     pQVFLX (:,:) = QVFLX (:,:)
 
     CNT_Atm_Lnd = 0.0_RP
+    CNT_Atm_Urb = 0.0_RP
     CNT_Atm_Ocn = 0.0_RP
 
     return
@@ -991,44 +979,21 @@ contains
     return
   end subroutine CPL_getCPL2Lnd
 
-  ! tentative
   subroutine CPL_getCPL2Urb( &
-      pDZ,   & ! (out)
-      pDENS, & ! (out)
-      pMOMX, & ! (out)
-      pMOMY, & ! (out)
-      pMOMZ, & ! (out)
-      pTMPA, & ! (out)
-      pQV,   & ! (out)
-      pSWD,  & ! (out)
-      pLWD,  & ! (out)
-      pPREC  ) ! (out)
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
+      pUrb_GHFLX,   & ! (out)
+      pUrb_PRECFLX, & ! (out)
+      pUrb_QVFLX    ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: pDZ  (IA,JA)
-    real(RP), intent(out) :: pDENS(IA,JA)
-    real(RP), intent(out) :: pMOMX(IA,JA)
-    real(RP), intent(out) :: pMOMY(IA,JA)
-    real(RP), intent(out) :: pMOMZ(IA,JA)
-    real(RP), intent(out) :: pTMPA(IA,JA)
-    real(RP), intent(out) :: pQV  (IA,JA)
-    real(RP), intent(out) :: pSWD (IA,JA)
-    real(RP), intent(out) :: pLWD (IA,JA)
-    real(RP), intent(out) :: pPREC(IA,JA)
+    real(RP), intent(out) :: pUrb_GHFLX  (IA,JA)
+    real(RP), intent(out) :: pUrb_PRECFLX(IA,JA)
+    real(RP), intent(out) :: pUrb_QVFLX  (IA,JA)
 
-    pDZ  (:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
-    pDENS(:,:) = CPL_DENS(:,:)
-    pMOMX(:,:) = CPL_MOMX(:,:)
-    pMOMY(:,:) = CPL_MOMY(:,:)
-    pMOMZ(:,:) = CPL_MOMZ(:,:)
-    pTMPA(:,:) = CPL_TMPA(:,:)
-    pQV  (:,:) = CPL_QV  (:,:)
-    pSWD (:,:) = CPL_SWD (:,:)
-    pLWD (:,:) = CPL_LWD (:,:)
-    pPREC(:,:) = CPL_PREC(:,:)
+    pUrb_GHFLX  (:,:) = Urb_GHFLX  (:,:)
+    pUrb_PRECFLX(:,:) = Urb_PRECFLX(:,:)
+    pUrb_QVFLX  (:,:) = Urb_QVFLX  (:,:)
+
+    CNT_Urb = 0.0_RP
 
     return
   end subroutine CPL_getCPL2Urb

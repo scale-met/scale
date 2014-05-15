@@ -90,7 +90,7 @@ OBJS = $(scale_rdma)	\
 	scale_cpl_atmos_land_bulk.o	\
 	scale_cpl_atmos_land_const.o	\
 	scale_cpl_atmos_urban.o	\
-	scale_cpl_atmos_urban_ucm.o	\
+	scale_cpl_atmos_urban_bulk.o	\
 	scale_cpl_atmos_ocean.o	\
 	scale_cpl_atmos_ocean_bulk.o	\
 	scale_cpl_atmos_ocean_const.o	\

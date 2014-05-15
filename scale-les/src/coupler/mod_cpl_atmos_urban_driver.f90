@@ -65,35 +65,35 @@ contains
 
   subroutine CPL_AtmUrb_driver( update_flag )
     use scale_const, only: &
-       LH0  => CONST_LH0,  &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
+       LH0  => CONST_LH0
     use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
+       CZ  => REAL_CZ,  &
+       FZ  => REAL_FZ,  &
+       LON => REAL_lon, &
+       LAT => REAL_lat
     use scale_cpl_atmos_urban, only: &
        CPL_AtmUrb
+    use mod_urban_vars, only: &
+       TR_URB,  &
+       TG_URB,  &
+       TB_URB,  &
+       TC_URB,  &
+       QC_URB,  &
+       UC_URB,  &
+       TRL_URB, &
+       TGL_URB, &
+       TBL_URB
     use mod_cpl_vars, only: &
        UST,              &
-       ALBG,             &
        DENS => CPL_DENS, &
        MOMX => CPL_MOMX, &
        MOMY => CPL_MOMY, &
        MOMZ => CPL_MOMZ, &
-       RHOS => CPL_RHOS, &
-       PRES => CPL_PRES, &
-       TMPS => CPL_TMPS, &
+       TMPA => CPL_TMPA, &
        QV   => CPL_QV  , &
        PREC => CPL_PREC, &
        SWD  => CPL_SWD , &
        LWD  => CPL_LWD , &
-       TG   => CPL_TG,   &
-       QVEF => CPL_QVEF, &
-       TCS  => CPL_TCS,  &
-       DZG  => CPL_DZG,  &
-       Z0M  => CPL_Z0M,  &
-       Z0H  => CPL_Z0H,  &
-       Z0E  => CPL_Z0E,  &
        AtmUrb_XMFLX,     &
        AtmUrb_YMFLX,     &
        AtmUrb_ZMFLX,     &
@@ -113,8 +113,6 @@ contains
     logical, intent(in) :: update_flag
 
     ! work
-    integer :: i, j
-
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
@@ -128,21 +126,82 @@ contains
     real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
 
     real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
+
+    logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
+    real(RP) :: QA       ! mixing ratio at 1st atmospheric level  [kg/kg]
+    real(RP) :: UA       ! wind speed at 1st atmospheric level    [m/s]
+    real(RP) :: U1       ! u at 1st atmospheric level             [m/s]
+    real(RP) :: V1       ! v at 1st atmospheric level             [m/s]
+
+    ! parameters for shadow model
+    !XX sinDEC, cosDEC ?
+    ! real(RP) :: DECLIN   ! solar declination                    [rad]
+    !XX  cosSZA     ?
+    ! real(RP) :: COSZ     ! sin(fai)*sin(del)+cos(fai)*cos(del)*cos(omg)
+    !XX  hourangle  ?
+    ! real(RP) :: OMG      ! solar hour angle                       [rad]
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
 
     DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
-    call CPL_AtmUrb( &
-      UST,                                      & ! (inout)
-      XMFLX, YMFLX, ZMFLX,                      & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,      & ! (out)
-      update_flag,                              & ! (in)
-      DZ, DENS, MOMX, MOMY, MOMZ,               & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,           & ! (in)
-      TG, QVEF, ALBG(:,:,I_SW), ALBG(:,:,I_LW), & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E                   ) ! (in)
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+
+      QA = QV(i,j) / (1.0_RP-QV(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
+                                      ! QV specific humidity                  [kg/kg]
+      UA = sqrt(          &
+            ( MOMZ(i,j)               )**2 &
+          + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
+          + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
+          ) / DENS(i,j) * 0.5_RP
+                                  ! wind speed at 1st atmospheric level   [m/s]
+      U1 = 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) ) / DENS(i,j)
+                                  ! u at 1st atmospheric level            [m/s]
+      V1 = 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) ) / DENS(i,j)
+                                  ! v at 1st atmospheric level            [m/s]
+
+      call CPL_AtmUrb( &
+        TR_URB (i,j),   & ! (inout)
+        TB_URB (i,j),   & ! (inout)
+        TG_URB (i,j),   & ! (inout)
+        TC_URB (i,j),   & ! (inout)
+        QC_URB (i,j),   & ! (inout)
+        UC_URB (i,j),   & ! (inout)
+        TRL_URB(:,i,j), & ! (inout)
+        TBL_URB(:,i,j), & ! (inout)
+        TGL_URB(:,i,j), & ! (inout)
+        UST    (i,j),   & ! (out)
+        SHFLX  (i,j),   & ! (out)
+        LHFLX  (i,j),   & ! (out)
+        SWUFLX (i,j),   & ! (out)
+        LWUFLX (i,j),   & ! (out)
+        GHFLX  (i,j),   & ! (out)
+        LSOLAR,         & ! (in)
+        TMPA   (i,j),   & ! (in)
+        QA,             & ! (in)
+        UA,             & ! (in)
+        U1,             & ! (in)
+        V1,             & ! (in)
+        DZ     (i,j),   & ! (in)
+        SWD    (i,j),   & ! (in)
+        LWD    (i,j),   & ! (in)
+        PREC   (i,j),   & ! (in)
+        DENS   (i,j),   & ! (in)
+        LON    (i,j),   & ! (in)
+        LAT    (i,j)    ) ! (in)
+
+    end do
+    end do
+
+    ! --- tentative: caution !! ---
+    XMFLX(:,:) = 0.0_RP
+    YMFLX(:,:) = 0.0_RP
+    ZMFLX(:,:) = 0.0_RP
+    ! --- tentative: caution !! ---
 
     ! interpolate momentum fluxes
     do j = JS, JE
