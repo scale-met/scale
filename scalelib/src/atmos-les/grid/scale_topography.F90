@@ -108,7 +108,6 @@ contains
        call FILEIO_read( TOPO_Zsfc(:,:),                        & ! [OUT]
                          TOPO_IN_BASENAME, 'TOPO', 'XY', step=1 ) ! [IN]
 
-       ! fill IHALO & JHALO
        call COMM_vars8( TOPO_Zsfc(:,:), 1 )
        call COMM_wait ( TOPO_Zsfc(:,:), 1 )
 

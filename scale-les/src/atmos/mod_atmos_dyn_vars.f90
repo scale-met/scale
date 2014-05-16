@@ -37,8 +37,6 @@ module mod_atmos_dyn_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -123,7 +121,7 @@ contains
   end subroutine ATMOS_DYN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_DYN_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -131,7 +129,13 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       ATMOS_DYN_DUM(   1:KS-1,i,j) = ATMOS_DYN_DUM(KS,i,j)
+       ATMOS_DYN_DUM(KE+1:KA,  i,j) = ATMOS_DYN_DUM(KE,i,j)
+    enddo
+    enddo
+
     call COMM_vars8( ATMOS_DYN_DUM(:,:,:), 1 )
     call COMM_wait ( ATMOS_DYN_DUM(:,:,:), 1 )
 

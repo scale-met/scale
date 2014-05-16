@@ -266,6 +266,8 @@ contains
        FileRead
     use scale_process, only: &
        PRC_myrank
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     character(len=H_LONG) :: bname
@@ -312,7 +314,7 @@ contains
     call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
 
     do k = 1, KA
-       if ( GRID_CBFZ(k) == 0.0_RP ) then
+       if ( abs(GRID_CBFZ(k)) < EPS ) then
           GRID_CZ_mask(k) = .true.
        else
           GRID_CZ_mask(k) = .false.
@@ -320,7 +322,7 @@ contains
     enddo
 
     do i = 1, IA
-       if ( GRID_CBFX(i) == 0.0_RP ) then
+       if ( abs(GRID_CBFX(i)) < EPS ) then
           GRID_CX_mask(i) = .true.
        else
           GRID_CX_mask(i) = .false.
@@ -328,7 +330,7 @@ contains
     enddo
 
     do j = 1, JA
-       if ( GRID_CBFY(j) == 0.0_RP ) then
+       if ( abs(GRID_CBFY(j)) < EPS ) then
           GRID_CY_mask(j) = .true.
        else
           GRID_CY_mask(j) = .false.

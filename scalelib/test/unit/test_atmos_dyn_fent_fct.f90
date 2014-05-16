@@ -397,7 +397,6 @@ subroutine test_conserve
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
-  ! fill IHALO & JHALO
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )

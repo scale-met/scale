@@ -37,8 +37,6 @@ module mod_atmos_phy_mp_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -142,7 +140,7 @@ contains
   end subroutine ATMOS_PHY_MP_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_PHY_MP_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -150,7 +148,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     call COMM_vars8( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )
     call COMM_vars8( ATMOS_PHY_MP_SFLX_snow(:,:), 2 )
     call COMM_wait ( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )

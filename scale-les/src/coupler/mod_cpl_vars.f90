@@ -434,7 +434,7 @@ contains
   end subroutine CPL_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of coupler variables
+  !> HALO Communication
   subroutine CPL_vars_fillhalo
     use scale_const, only: &
        I_SW => CONST_I_SW, &
@@ -445,7 +445,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     call COMM_vars8( LST  (:,:),       1 )
     call COMM_vars8( UST  (:,:),       2 )
     call COMM_vars8( SST  (:,:),       3 )

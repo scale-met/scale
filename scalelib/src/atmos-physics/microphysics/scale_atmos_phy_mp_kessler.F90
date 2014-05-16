@@ -506,8 +506,6 @@ contains
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,MP_QAD) ! mixing ratio of each cateory [kg/kg]

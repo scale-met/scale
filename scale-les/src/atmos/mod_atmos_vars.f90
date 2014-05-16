@@ -44,8 +44,6 @@ module mod_atmos_vars
   !
   !++ included parameters
   !
-# include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -619,7 +617,7 @@ contains
   end subroutine ATMOS_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of atmospheric variables
+  !> HALO Communication
   subroutine ATMOS_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -629,7 +627,6 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    ! fill KHALO
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
@@ -645,6 +642,7 @@ contains
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+
     !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
     do iq = 1, QA
     do j  = JS, JE
@@ -655,7 +653,6 @@ contains
     enddo
     enddo
 
-    ! fill IHALO & JHALO
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
     call COMM_vars8( MOMX(:,:,:), 3 )

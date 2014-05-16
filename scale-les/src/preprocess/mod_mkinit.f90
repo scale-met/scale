@@ -785,7 +785,6 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! fill IHALO & JHALO
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
@@ -1454,7 +1453,6 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! fill IHALO & JHALO
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
@@ -2193,14 +2191,13 @@ contains
                                       qv_sfc  (:,:,:), & ! [IN]
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! fill KHALO
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
-    ! fill IHALO & JHALO
+
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
@@ -2437,14 +2434,13 @@ contains
                                       qv_sfc  (:,:,:), & ! [IN]
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! fill KHALO
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
-    ! fill IHALO & JHALO
+
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
@@ -2676,15 +2672,13 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-!write(*,*)'chk6'
-    ! fill KHALO
     do j  = JS, JE
     do i  = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
-    ! fill IHALO & JHALO
+
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
@@ -2931,14 +2925,14 @@ contains
                                       qv_sfc  (:,:,:), & ! [IN]
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
-    ! fill KHALO
+
     do j = JS, JE
     do i = IS, IE
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
     enddo
     enddo
-    ! fill IHALO & JHALO
+
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 

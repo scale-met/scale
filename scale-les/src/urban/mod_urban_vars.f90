@@ -217,7 +217,7 @@ contains
   end subroutine URBAN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of urban variables
+  !> HALO Communication
   subroutine URBAN_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -242,7 +242,7 @@ contains
       call COMM_vars8( tmp2(:,:,k), k+UKE   )
       call COMM_vars8( tmp3(:,:,k), k+UKE*2 )
     end do
-                                 
+
     call COMM_vars8( TR_URB(:,:), 1+UKE*3 )
     call COMM_vars8( TB_URB(:,:), 2+UKE*3 )
     call COMM_vars8( TG_URB(:,:), 3+UKE*3 )

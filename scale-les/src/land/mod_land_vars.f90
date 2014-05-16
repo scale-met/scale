@@ -227,7 +227,7 @@ contains
   end subroutine LAND_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of land variables
+  !> HALO Communication
   subroutine LAND_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &

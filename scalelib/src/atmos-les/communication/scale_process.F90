@@ -26,8 +26,6 @@ module scale_process
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -117,7 +115,7 @@ contains
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ SCALE-LES ver. '//VERSION//' : LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+ '//trim(H_SOURCE)//' : LES-scale Numerical weather model   +'
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start MPI'
@@ -180,7 +178,7 @@ contains
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ SCALE-LES ver. '//VERSION//' : LES-scale Numerical weather model   +'
+       write(IO_FID_LOG,*) '+ '//trim(H_SOURCE)//' : LES-scale Numerical weather model   +'
        write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'

@@ -142,7 +142,6 @@ contains
        call FILEIO_read( LANDUSE_frac_urban(:,:),                        & ! [OUT]
                          LANDUSE_IN_BASENAME, 'FRAC_URBAN', 'XY', step=1 ) ! [IN]
 
-       ! fill IHALO & JHALO
        call COMM_vars8( LANDUSE_frac_land (:,:), 1 )
        call COMM_vars8( LANDUSE_frac_lake (:,:), 2 )
        call COMM_vars8( LANDUSE_frac_urban(:,:), 3 )

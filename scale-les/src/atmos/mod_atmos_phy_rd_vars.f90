@@ -37,8 +37,6 @@ module mod_atmos_phy_rd_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -69,10 +67,10 @@ module mod_atmos_phy_rd_vars
 
   data VAR_NAME / 'SFLX_LW_dn', &
                   'SFLX_SW_dn'  /
-  data VAR_DESC / 'surface downward longwave flux', &
+  data VAR_DESC / 'surface downward longwave  flux', &
                   'surface downward shortwave flux' /
   data VAR_UNIT / 'J/m2/s', &
-                  'J/m2/s' /
+                  'J/m2/s'  /
 
   !-----------------------------------------------------------------------------
 contains
@@ -104,7 +102,7 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_VARS)
 
-    allocate( ATMOS_PHY_RD_RHOT_t(KA,IA,JA)    )
+    allocate( ATMOS_PHY_RD_RHOT_t(KA,IA,JA) )
 
     allocate( ATMOS_PHY_RD_SFLX_LW_dn(IA,JA) )
     allocate( ATMOS_PHY_RD_SFLX_SW_dn(IA,JA) )
@@ -132,7 +130,7 @@ contains
   end subroutine ATMOS_PHY_RD_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_PHY_RD_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -140,7 +138,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_dn(:,:), 1 )
     call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_dn(:,:), 2 )
     call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_dn(:,:), 1 )

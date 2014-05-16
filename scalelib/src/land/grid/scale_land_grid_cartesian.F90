@@ -61,8 +61,6 @@ contains
   subroutine LAND_GRID_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     implicit none
 
     namelist / PARAM_LAND_GRID / &
