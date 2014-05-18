@@ -87,17 +87,17 @@ contains
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
-       J33G  => GTRANS_J33G
+       J33G  => GTRANS_J33G,  &
+       I_XYZ,                 &
+       I_XYW,                 &
+       I_UYW,                 &
+       I_XVW,                 &
+       I_UYZ,                 &
+       I_XVZ,                 &
+       I_UVZ
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_history, only: &
@@ -191,18 +191,17 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             MOMX_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i+1,j,I_XYZ)*QFLX_MOMX(k,i+1,j,XDIR) &
-                    - GSQRT(k,i  ,j,I_XYZ)*QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) &
-                  + ( GSQRT(k,i,j  ,I_UVZ)*QFLX_MOMX(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_UVZ)*QFLX_MOMX(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_UYW)*(QFLX_MOMX(k+1,i+1,j,XDIR)+QFLX_MOMX(k+1,i,j,XDIR)) &
-                    - J13G(k-1,i,j,I_UYW)*(QFLX_MOMX(k-1,i+1,j,XDIR)+QFLX_MOMX(k-1,i,j,XDIR)) &
-                    + J23G(k+1,i,j,I_UYW)*(QFLX_MOMX(k+1,i,j,YDIR)+QFLX_MOMX(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_UYW)*(QFLX_MOMX(k-1,i,j,YDIR)+QFLX_MOMX(k-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( QFLX_MOMX(k,i,j,ZDIR) - QFLX_MOMX(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                  ) / GSQRT(k,i,j,I_UYZ)
+             MOMX_t(k,i,j) = - ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) &
+                                 - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) &
+                               + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) &
+                                 - GSQRT(k,i,j-1,I_UVZ) * QFLX_MOMX(k,i,j-1,YDIR) ) * RCDY(j) &
+                               + ( J13G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i+1,j,XDIR) + QFLX_MOMX(k+1,i,j  ,XDIR) ) &
+                                 - J13G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i+1,j,XDIR) + QFLX_MOMX(k-1,i,j  ,XDIR) ) &
+                                 + J23G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i  ,j,YDIR) + QFLX_MOMX(k+1,i,j-1,YDIR) ) &
+                                 - J23G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i  ,j,YDIR) + QFLX_MOMX(k-1,i,j-1,YDIR) ) &
+                                 ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                               + J33G * ( QFLX_MOMX(k,i,j,ZDIR) - QFLX_MOMX(k-1,i,j,ZDIR) ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_UYZ)
           enddo
           enddo
           enddo
@@ -210,18 +209,17 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             MOMY_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UVZ)*QFLX_MOMY(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j+1,I_XYZ)*QFLX_MOMY(k,i,j+1,YDIR) &
-                    - GSQRT(k,i,j  ,I_XYZ)*QFLX_MOMY(k,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(k+1,i,j,I_XVW)*(QFLX_MOMY(k+1,i,j,XDIR)+QFLX_MOMY(k+1,i-1,j,XDIR)) &
-                    - J13G(k-1,i,j,I_XVW)*(QFLX_MOMY(k-1,i,j,XDIR)+QFLX_MOMY(k-1,i-1,j,XDIR)) &
-                    + J23G(k+1,i,j+1,I_XVW)*(QFLX_MOMY(k+1,i,j+1,YDIR)+QFLX_MOMY(k+1,i,j,YDIR)) &
-                    - J23G(k-1,i,j+1,I_XVW)*(QFLX_MOMY(k-1,i,j+1,YDIR)+QFLX_MOMY(k-1,i,j,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( QFLX_MOMY(k,i,j  ,ZDIR) - QFLX_MOMY(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XVW)
+             MOMY_t(k,i,j) = - ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) &
+                                 - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) &
+                               + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) &
+                                 - GSQRT(k,i  ,j  ,I_XYZ) * QFLX_MOMY(k,i,j  ,YDIR) ) * RFDY(j) &
+                               + ( J13G (k+1,i,j  ,I_XVW) * ( QFLX_MOMY(k+1,i,j  ,XDIR) + QFLX_MOMY(k+1,i-1,j,XDIR) ) &
+                                 - J13G (k-1,i,j  ,I_XVW) * ( QFLX_MOMY(k-1,i,j  ,XDIR) + QFLX_MOMY(k-1,i-1,j,XDIR) ) &
+                                 + J23G (k+1,i,j+1,I_XVW) * ( QFLX_MOMY(k+1,i,j+1,YDIR) + QFLX_MOMY(k+1,i  ,j,YDIR) ) &
+                                 - J23G (k-1,i,j+1,I_XVW) * ( QFLX_MOMY(k-1,i,j+1,YDIR) + QFLX_MOMY(k-1,i  ,j,YDIR) ) &
+                                 ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                               + J33G * ( QFLX_MOMY(k,i,j,ZDIR) - QFLX_MOMY(k-1,i,j,ZDIR) ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_XVW)
           enddo
           enddo
           enddo
@@ -229,14 +227,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             RHOT_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*QFLX_RHOT(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*QFLX_RHOT(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*QFLX_RHOT(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*QFLX_RHOT(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*QFLX_RHOT(k  ,i,j,ZDIR) &
-                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*QFLX_RHOT(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
+             RHOT_t(k,i,j) = - ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_RHOT(k,i  ,j,XDIR) &
+                                 - GSQRT(k,i-1,j,I_UVZ) * QFLX_RHOT(k,i-1,j,XDIR) ) * RCDX(i) &
+                               + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_RHOT(k,i,j  ,YDIR) &
+                                 - GSQRT(k,i,j-1,I_XVZ) * QFLX_RHOT(k,i,j-1,YDIR) ) * RCDY(j) &
+                               + ( ( J13G(k  ,i,j,I_XYW) + J23G(k  ,i,j,I_XYW) + J33G ) * QFLX_RHOT(k  ,i,j,ZDIR) &
+                                 - ( J13G(k-1,i,j,I_XYW) + J23G(k-1,i,j,I_XYW) + J33G ) * QFLX_RHOT(k-1,i,j,ZDIR) &
+                                 ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo
@@ -245,14 +243,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             QTRC_t(k,i,j,iq) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*QFLX_QTRC(k,i  ,j,iq,XDIR) &
-                    - GSQRT(k,i-1,j,I_UYZ)*QFLX_QTRC(k,i-1,j,iq,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*QFLX_QTRC(k,i,j  ,iq,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*QFLX_QTRC(k,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*QFLX_QTRC(k  ,i,j,iq,ZDIR) &
-                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*QFLX_QTRC(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
+             QTRC_t(k,i,j,iq) = - ( ( GSQRT(k,i  ,j  ,I_UYZ) * QFLX_QTRC(k,i  ,j  ,iq,XDIR) &
+                                    - GSQRT(k,i-1,j  ,I_UYZ) * QFLX_QTRC(k,i-1,j  ,iq,XDIR) ) * RCDX(i) &
+                                  + ( GSQRT(k,i  ,j  ,I_XVZ) * QFLX_QTRC(k,i  ,j  ,iq,YDIR) &
+                                    - GSQRT(k,i  ,j-1,I_XVZ) * QFLX_QTRC(k,i  ,j-1,iq,YDIR) ) * RCDY(j) &
+                                  + ( ( J13G(k  ,i,j,I_XYW) + J23G(k  ,i,j,I_XYW) + J33G) * QFLX_QTRC(k  ,i,j,iq,ZDIR) &
+                                    - ( J13G(k-1,i,j,I_XYW) + J23G(k-1,i,j,I_XYW) + J33G) * QFLX_QTRC(k-1,i,j,iq,ZDIR) &
+                                    ) * RCDZ(k) &
+                                  ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo

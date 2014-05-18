@@ -60,7 +60,7 @@ contains
 
     call ATMOS_PHY_MP_setup( MP_TYPE )
 
-!    call ATMOS_PHY_MP_driver( .true., .false. )
+    call ATMOS_PHY_MP_driver( .true., .false. )
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
@@ -75,13 +75,11 @@ contains
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_vars, only: &
-       ATMOS_vars_fillhalo, &
-       ATMOS_vars_total,    &
-       DENS,                &
-       MOMZ,                &
-       MOMX,                &
-       MOMY,                &
-       RHOT,                &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
        QTRC
     use mod_atmos_phy_mp_vars, only: &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -97,54 +95,102 @@ contains
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
+    real(RP) :: DENS0(KA,IA,JA)
+    real(RP) :: MOMZ0(KA,IA,JA)
+    real(RP) :: MOMX0(KA,IA,JA)
+    real(RP) :: MOMY0(KA,IA,JA)
+    real(RP) :: RHOT0(KA,IA,JA)
+    real(RP) :: QTRC0(KA,IA,JA,QA)
+
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       call ATMOS_PHY_MP( DENS, & ! [INOUT]
-                          MOMZ, & ! [INOUT]
-                          MOMX, & ! [INOUT]
-                          MOMY, & ! [INOUT]
-                          RHOT, & ! [INOUT]
-                          QTRC  ) ! [INOUT]
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          DENS0(k,i,j) = DENS(k,i,j) ! save
+          MOMZ0(k,i,j) = MOMZ(k,i,j) ! save
+          MOMX0(k,i,j) = MOMX(k,i,j) ! save
+          MOMY0(k,i,j) = MOMY(k,i,j) ! save
+          RHOT0(k,i,j) = RHOT(k,i,j) ! save
+       enddo
+       enddo
+       enddo
 
-       call ATMOS_vars_fillhalo
+       do iq = 1, QA
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTRC0(k,i,j,iq) = QTRC(k,i,j,iq) ! save
+       enddo
+       enddo
+       enddo
+       enddo
 
-       call ATMOS_vars_total
+       call ATMOS_PHY_MP( DENS0, & ! [INOUT]
+                          MOMZ0, & ! [INOUT]
+                          MOMX0, & ! [INOUT]
+                          MOMY0, & ! [INOUT]
+                          RHOT0, & ! [INOUT]
+                          QTRC0  ) ! [INOUT]
+
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          DENS_t_MP(k,i,j) = DENS0(k,i,j) - DENS(k,i,j)
+          MOMZ_t_MP(k,i,j) = MOMZ0(k,i,j) - MOMZ(k,i,j)
+          MOMX_t_MP(k,i,j) = MOMX0(k,i,j) - MOMX(k,i,j)
+          MOMY_t_MP(k,i,j) = MOMY0(k,i,j) - MOMY(k,i,j)
+          RHOT_t_MP(k,i,j) = RHOT0(k,i,j) - RHOT(k,i,j)
+       enddo
+       enddo
+       enddo
+
+       do iq = 1, QA
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          QTRC_t_MP(k,i,j,iq) = QTRC0(k,i,j,iq) - QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       SFLX_rain(:,:) = 0.0_RP ! tentative
+       SFLX_snow(:,:) = 0.0_RP ! tentative
 
        if ( history_flag ) then
-
           call HIST_in( SFLX_rain(:,:), 'SFLX_rain', 'precipitation flux (liquid)', 'kg/m2/s', dt_MP )
           call HIST_in( SFLX_snow(:,:), 'SFLX_snow', 'precipitation flux (solid) ', 'kg/m2/s', dt_MP )
-
        endif
 
     endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!    do j = JS, JE
-!    do i = IS, IE
-!    do k = KS, KE
-!       DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_MP(k,i,j)
-!       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_MP(k,i,j)
-!       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_MP(k,i,j)
-!       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
-!       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
-!    enddo
-!    enddo
-!    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_MP(k,i,j)
+       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_MP(k,i,j)
+       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_MP(k,i,j)
+       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
+       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
+    enddo
+    enddo
+    enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-!    do iq = 1,  QA
-!    do j  = JS, JE
-!    do i  = IS, IE
-!    do k  = KS, KE
-!       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_MP(k,i,j,iq)
-!    enddo
-!    enddo
-!    enddo
-!    enddo
+    do iq = 1,  QA
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_MP(k,i,j,iq)
+    enddo
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_driver
