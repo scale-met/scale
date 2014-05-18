@@ -682,8 +682,8 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        CVdry => CONST_CVdry
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
     use scale_fileio, only: &
        FILEIO_read
     use scale_monitor, only: &
@@ -835,7 +835,7 @@ contains
        VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
        VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-       ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
        ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
                                             + VELX(k,i,j)**2 &
@@ -1083,11 +1083,11 @@ contains
     use scale_time, only: &
        TIME_DTSEC
     use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       CDZ  => GRID_CDZ,  &
-       RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
     use scale_history, only: &
        HIST_in
     use scale_monitor, only: &
@@ -1269,22 +1269,30 @@ contains
     endif
 
     if ( AD_PREP_sw(I_LWP) > 0 ) then
+       do k = KS, KE
+          cdz(k) = REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j)
+       enddo
+
        do j  = JS, JE
        do i  = IS, IE
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
-             LWP(i,j) = LWP(i,j) + QLIQ(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+             LWP(i,j) = LWP(i,j) + QLIQ(k,i,j) * DENS(k,i,j) * cdz(k) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_IWP) > 0 ) then
+       do k = KS, KE
+          cdz(k) = REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j)
+       enddo
+
        do j  = JS, JE
        do i  = IS, IE
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
-             IWP(i,j) = IWP(i,j) + QICE(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+             IWP(i,j) = IWP(i,j) + QICE(k,i,j) * DENS(k,i,j) * cdz(k) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1476,7 +1484,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k)
        enddo
        enddo
        enddo
@@ -1600,8 +1608,8 @@ contains
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
-    use scale_grid, only: &
-       CZ   => GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
     use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
@@ -1668,7 +1676,7 @@ contains
           VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
           VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k)
 
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
                                                + VELX(k,i,j)**2 &

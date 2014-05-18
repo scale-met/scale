@@ -28,8 +28,8 @@ module scale_atmos_hydrostatic
      LASPdry => CONST_LASPdry, &
      P00     => CONST_PRE00
   use scale_grid, only: &
-     CZ  => GRID_CZ, &
-     FDZ => GRID_FDZ
+     GRID_CZ, &
+     GRID_FDZ
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
@@ -195,7 +195,7 @@ contains
        CPovR  = ( CVtot + Rtot ) / Rtot
        CVovCP = 1.0_RP / CPovCV
 
-       temp(KS) = pott_sfc - LASPdry * CZ(KS) ! use dry lapse rate
+       temp(KS) = pott_sfc - LASPdry * GRID_CZ(KS) ! use dry lapse rate
        pres(KS) = P00 * ( temp(KS)/pott(KS) )**CPovR
        dens(KS) = P00 / Rtot / pott(KS) * ( pres(KS)/P00 )**CVovCP
 
@@ -216,10 +216,10 @@ contains
           dens_s = dens(KS)
 
           dhyd = + ( P00 * ( dens_sfc * Rtot_sfc * pott_sfc / P00 )**CPovCV_sfc &
-                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV     ) / CZ(KS) & ! dp/dz
+                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV     ) / GRID_CZ(KS) & ! dp/dz
                  - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                     ! rho*g
 
-          dgrd = - P00 * ( Rtot * pott(KS) / P00 )**CPovCV / CZ(KS) &
+          dgrd = - P00 * ( Rtot * pott(KS) / P00 )**CPovCV / GRID_CZ(KS) &
                  * CPovCV * dens_s**RovCV                           &
                  - 0.5_RP * GRAV
 
@@ -458,10 +458,10 @@ contains
           dens_s = dens(k)
 
           dhyd = + ( P00 * ( dens(k-1) * Rtot(k-1) * pott(k-1) / P00 )**CPovCV(k-1) &
-                   - P00 * ( dens_s    * Rtot(k  ) * pott(k  ) / P00 )**CPovCV(k  ) ) / FDZ(k-1) & ! dpdz
+                   - P00 * ( dens_s    * Rtot(k  ) * pott(k  ) / P00 )**CPovCV(k  ) ) / GRID_FDZ(k-1) & ! dpdz
                  - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                          ! rho*g
 
-          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / FDZ(k-1) &
+          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / GRID_FDZ(k-1) &
                  * CPovCV(k) * dens_s**RovCV                               &
                  - 0.5_RP * GRAV
 
@@ -665,10 +665,10 @@ contains
        dens_s = dens(KS)
 
        dhyd = + ( dens_sfc * Rtot_sfc * temp_sfc &
-                - dens_s   * Rtot     * temp(KS) ) / CZ(KS) & ! dp/dz
+                - dens_s   * Rtot     * temp(KS) ) / GRID_CZ(KS) & ! dp/dz
               - GRAV * 0.5_RP * ( dens_sfc + dens_s )         ! rho*g
 
-       dgrd = - Rtot * temp(KS) / CZ(KS) &
+       dgrd = - Rtot * temp(KS) / GRID_CZ(KS) &
               - 0.5_RP * GRAV
 
        dens(KS) = dens_s - dhyd/dgrd
@@ -877,10 +877,10 @@ contains
           dens_s = dens(k)
 
           dhyd = + ( dens(k-1) * Rtot(k-1) * temp(k-1)  &
-                   - dens_s    * Rtot(k  ) * temp(k  ) ) / FDZ(k-1) & ! dp/dz
+                   - dens_s    * Rtot(k  ) * temp(k  ) ) / GRID_FDZ(k-1) & ! dp/dz
                  - GRAV * 0.5_RP * ( dens(k-1) + dens_s )             ! rho*g
 
-          dgrd = - Rtot(k) * temp(k) / FDZ(k-1) &
+          dgrd = - Rtot(k) * temp(k) / GRID_FDZ(k-1) &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
