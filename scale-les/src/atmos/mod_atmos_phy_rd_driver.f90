@@ -80,12 +80,6 @@ contains
        TIME_NOWDATE
     use scale_history, only: &
        HIST_in
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
-       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
@@ -119,14 +113,7 @@ contains
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: RHOE    (KA,IA,JA)
-    real(RP) :: RHOE_t  (KA,IA,JA,2)
-    real(RP) :: RHOT_tmp(KA,IA,JA)
-    real(RP) :: TEMP_t  (KA,IA,JA)
-    real(RP) :: QDRY    (KA,IA,JA)
-    real(RP) :: CVtot   (KA,IA,JA)
-    real(RP) :: TEMP    (KA,IA,JA)
-    real(RP) :: PRES    (KA,IA,JA)
+    real(RP) :: TEMP_t(KA,IA,JA,3)
 
     real(RP) :: flux_rad(KA,IA,JA,2,2)
     real(RP) :: flux_net(KA,IA,JA,2)
@@ -168,6 +155,7 @@ contains
           albedo_land(:,:,:) = 0.5_RP
        endif
 
+       ! calc solar insolation
        call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
                                  cosSZA  (:,:),  & ! [OUT]
                                  REAL_LON(:,:),  & ! [IN]
@@ -182,38 +170,14 @@ contains
                           flux_rad,              & ! [OUT]
                           flux_rad_top           ) ! [OUT]
 
-       call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                            RHOT(:,:,:),  & ! [IN]
-                            QTRC(:,:,:,:) ) ! [IN]
-
        ! apply radiative flux convergence -> heating rate
-       call RD_heating( flux_rad(:,:,:,:,:),  & ! [IN]
-                        REAL_FZ (:,:,:),      & ! [IN]
+       call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                        RHOT     (:,:,:),     & ! [IN]
+                        QTRC     (:,:,:),     & ! [IN]
+                        REAL_FZ  (:,:,:),     & ! [IN]
                         dt_RD,                & ! [IN]
-                        RHOE_t  (:,:,:,:),    & ! [OUT]
-                        RHOE    (:,:,:)       ) ! [INOUT]
-
-       ! update rhot
-       call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
-                            RHOE(:,:,:),    & ! [IN]
-                            QTRC(:,:,:,:)   ) ! [IN]
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOT_t_RD(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt_RD
-       enddo
-       enddo
-       enddo
-
-       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then
-          do j = JS, JE
-          do i = IS, IE
-             LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
-             SWD(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
-          enddo
-          enddo
-       endif
+                        TEMP_t   (:,:,:,:),   & ! [OUT]
+                        RHOT_t_RD(:,:,:)      ) ! [OUT]
 
        do j = JS, JE
        do i = IS, IE
@@ -260,19 +224,9 @@ contains
           call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 
-          call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                             QTRC(:,:,:,:) ) ! [IN]
-
-          call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                             QTRC (:,:,:,:), & ! [IN]
-                             QDRY (:,:,:)    ) ! [IN]
-
-          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
           call HIST_in( TEMP_t, 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
-          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
           call HIST_in( TEMP_t, 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
-          TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
-          call HIST_in( TEMP_t, 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt_RD )
+          call HIST_in( TEMP_t, 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
        endif
     endif
 
