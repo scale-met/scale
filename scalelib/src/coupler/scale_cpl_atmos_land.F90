@@ -34,7 +34,7 @@ module scale_cpl_atmos_land
          SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
          LST_UPDATE,                          & ! (in)
          DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-         RHOS, PRES, ATMP, QV, SWD, LWD,      & ! (in)
+         RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
          TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
          TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
        use scale_precision
@@ -61,7 +61,7 @@ module scale_cpl_atmos_land
        real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
        real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
        real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-       real(RP), intent(in) :: ATMP(IA,JA) ! air temperature at the surface [K]
+       real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
        real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]

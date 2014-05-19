@@ -66,6 +66,7 @@ MODS =	\
 	mod_urban_driver.o           \
 	mod_cpl_vars.o               \
 	mod_cpl_atmos_land_driver.o  \
+	mod_cpl_atmos_urban_driver.o \
 	mod_cpl_atmos_ocean_driver.o \
 	mod_cpl_driver.o             \
 	mod_mktopo.o                 \
@@ -153,6 +154,7 @@ $(BUILD_DIR)/mod_urban_driver.o           : mod_urban_driver.f90 mod_urban_vars.
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90
 
 $(BUILD_DIR)/mod_cpl_atmos_land_driver.o  : mod_cpl_atmos_land_driver.f90 mod_cpl_vars.o mod_land_phy_bucket.o
+$(BUILD_DIR)/mod_cpl_atmos_urban_driver.o : mod_cpl_atmos_urban_driver.f90 mod_cpl_vars.o mod_urban_phy_ucm.o
 $(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o : mod_cpl_atmos_ocean_driver.f90 mod_cpl_vars.o mod_ocean_phy_slab.o
 $(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 mod_cpl_vars.o   \
                                             mod_cpl_atmos_land_driver.o  \

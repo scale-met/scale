@@ -46,10 +46,6 @@ module mod_land_phy_bucket
   logical, private, save :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
   logical, private, save :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
 
-  real(RP), private, save, allocatable :: GHFLX  (:,:)
-  real(RP), private, save, allocatable :: PRECFLX(:,:)
-  real(RP), private, save, allocatable :: QVFLX  (:,:)
-
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
 
@@ -72,10 +68,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BUCKET]/Categ[LAND]'
-
-    allocate( GHFLX  (IA,JA) )
-    allocate( PRECFLX(IA,JA) )
-    allocate( QVFLX  (IA,JA) )
 
     if ( LAND_TYPE /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE is not BUCKET. Check!'
@@ -123,13 +115,17 @@ contains
     implicit none
 
     ! work
-    integer :: k, i, j
+    real(RP) :: GHFLX  (IA,JA)
+    real(RP) :: PRECFLX(IA,JA)
+    real(RP) :: QVFLX  (IA,JA)
 
     real(RP) :: ov(LKS:LKE-1)
     real(RP) :: iv(LKS:LKE-1)
     real(RP) :: ld(LKS:LKE-1)
     real(RP) :: md(LKS:LKE-1)
     real(RP) :: ud(LKS:LKE-1)
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'

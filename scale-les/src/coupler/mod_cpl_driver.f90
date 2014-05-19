@@ -45,17 +45,21 @@ contains
   subroutine CPL_driver_setup
     use mod_cpl_vars, only: &
        sw_AtmLnd => CPL_sw_AtmLnd, &
+       sw_AtmUrb => CPL_sw_AtmUrb, &
        sw_AtmOcn => CPL_sw_AtmOcn, &
        CPL_vars_merge,             &
        CPL_vars_fillhalo
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver_setup
+    use mod_cpl_atmos_urban_driver, only: &
+       CPL_AtmUrb_driver_setup
     use mod_cpl_atmos_ocean_driver, only: &
        CPL_AtmOcn_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
     if( sw_AtmLnd ) call CPL_AtmLnd_driver_setup
+    if( sw_AtmUrb ) call CPL_AtmUrb_driver_setup
     if( sw_AtmOcn ) call CPL_AtmOcn_driver_setup
 
     call CPL_vars_merge
@@ -70,14 +74,18 @@ contains
   subroutine CPL_driver
     use mod_cpl_vars, only: &
        sw_AtmLnd  => CPL_sw_AtmLnd,  &
+       sw_AtmUrb  => CPL_sw_AtmUrb,  &
        sw_AtmOcn  => CPL_sw_AtmOcn,  &
        LST_UPDATE => CPL_LST_UPDATE, &
+       UST_UPDATE => CPL_UST_UPDATE, &
        SST_UPDATE => CPL_SST_UPDATE, &
        CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
        CPL_vars_history
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver
+    use mod_cpl_atmos_urban_driver, only: &
+       CPL_AtmUrb_driver
     use mod_cpl_atmos_ocean_driver, only: &
        CPL_AtmOcn_driver
     implicit none
@@ -88,6 +96,13 @@ contains
       call PROF_rapstart('CPL Atmos-Land')
       call CPL_AtmLnd_driver( LST_UPDATE )
       call PROF_rapend  ('CPL Atmos-Land')
+    endif
+
+    !########## Coupler Atoms-Urban ##########
+    if( sw_AtmUrb ) then
+      call PROF_rapstart('CPL Atmos-Urban')
+      call CPL_AtmUrb_driver( UST_UPDATE )
+      call PROF_rapend  ('CPL Atmos-Urban')
     endif
 
     !########## Coupler Atoms-Ocean ##########
