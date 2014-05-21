@@ -111,7 +111,7 @@ contains
        I_DFW,              &
        P => LAND_PROPERTY
     use mod_cpl_vars, only: &
-       CPL_getCPL2Lnd
+       CPL_getLnd
     implicit none
 
     ! work
@@ -130,7 +130,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
 
-    call CPL_getCPL2Lnd( GHFLX  (:,:), & ! [OUT]
+    call CPL_getLnd( GHFLX  (:,:), & ! [OUT]
                          PRECFLX(:,:), & ! [OUT]
                          QVFLX  (:,:)  ) ! [OUT]
 

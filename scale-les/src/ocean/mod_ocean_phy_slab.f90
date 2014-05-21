@@ -109,7 +109,7 @@ contains
     use mod_ocean_vars, only: &
        TW
     use mod_cpl_vars, only: &
-       CPL_getCPL2Ocn
+       CPL_getOcn
     implicit none
 
     ! work
@@ -122,7 +122,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean step: Slab'
 
-    call CPL_getCPL2Ocn( WHFLX  (:,:), & ! [OUT]
+    call CPL_getOcn( WHFLX  (:,:), & ! [OUT]
                          PRECFLX(:,:), & ! [OUT]
                          QVFLX  (:,:)  ) ! [OUT]
 

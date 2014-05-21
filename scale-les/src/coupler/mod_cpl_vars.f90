@@ -39,9 +39,9 @@ module mod_cpl_vars
   public :: CPL_putUrb
   public :: CPL_putOcn
   public :: CPL_getCPL2Atm
-  public :: CPL_getCPL2Lnd
-  public :: CPL_getCPL2Urb
-  public :: CPL_getCPL2Ocn
+  public :: CPL_getLnd
+  public :: CPL_getUrb
+  public :: CPL_getOcn
 
   !-----------------------------------------------------------------------------
   !
@@ -242,8 +242,6 @@ contains
   subroutine CPL_vars_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       NRAD => CONST_NRAD
     implicit none
 
     NAMELIST / PARAM_CPL / &
@@ -350,8 +348,8 @@ contains
     allocate( LST  (IA,JA)      )
     allocate( UST  (IA,JA)      )
     allocate( SST  (IA,JA)      )
-    allocate( ALBW (IA,JA,NRAD) )
-    allocate( ALBG (IA,JA,NRAD) )
+    allocate( ALBW (IA,JA,2) )
+    allocate( ALBG (IA,JA,2) )
     allocate( Z0W  (IA,JA)      )
     allocate( SkinT(IA,JA)      )
     allocate( SkinW(IA,JA)      )
@@ -855,7 +853,7 @@ contains
     return
   end subroutine CPL_getCPL2Atm
 
-  subroutine CPL_getCPL2Lnd( &
+  subroutine CPL_getLnd( &
       pLnd_GHFLX,   & ! (out)
       pLnd_PRECFLX, & ! (out)
       pLnd_QVFLX    ) ! (out)
@@ -872,9 +870,9 @@ contains
     CNT_Lnd = 0.0_RP
 
     return
-  end subroutine CPL_getCPL2Lnd
+  end subroutine CPL_getLnd
 
-  subroutine CPL_getCPL2Urb( &
+  subroutine CPL_getUrb( &
       pUrb_GHFLX,   & ! (out)
       pUrb_PRECFLX, & ! (out)
       pUrb_QVFLX    ) ! (out)
@@ -891,9 +889,9 @@ contains
     CNT_Urb = 0.0_RP
 
     return
-  end subroutine CPL_getCPL2Urb
+  end subroutine CPL_getUrb
 
-  subroutine CPL_getCPL2Ocn( &
+  subroutine CPL_getOcn( &
       pOcn_WHFLX,   & ! (out)
       pOcn_PRECFLX, & ! (out)
       pOcn_QVFLX    ) ! (out)
@@ -910,6 +908,6 @@ contains
     CNT_Ocn = 0.0_RP
 
     return
-  end subroutine CPL_getCPL2Ocn
+  end subroutine CPL_getOcn
 
 end module mod_CPL_vars
