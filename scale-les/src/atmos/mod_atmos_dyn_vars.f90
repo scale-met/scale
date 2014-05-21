@@ -127,6 +127,8 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do j  = JS, JE

@@ -75,12 +75,18 @@ contains
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
+       DENS,              &
+       MOMZ,              &
+       MOMX,              &
+       MOMY,              &
+       RHOT,              &
+       QTRC,              &
+       DENS_t => DENS_tp, &
+       MOMZ_t => MOMZ_tp, &
+       MOMX_t => MOMX_tp, &
+       MOMY_t => MOMY_tp, &
+       RHOT_t => RHOT_tp, &
+       QTRC_t => QTRC_tp
     use mod_atmos_phy_mp_vars, only: &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
        MOMZ_t_MP => ATMOS_PHY_MP_MOMZ_t,    &

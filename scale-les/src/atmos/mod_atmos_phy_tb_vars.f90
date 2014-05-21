@@ -154,6 +154,8 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do j  = JS, JE
@@ -232,8 +234,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_TB_RESTART_OUT_BASENAME /= '' ) then
@@ -246,13 +246,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call FILEIO_write( ATMOS_PHY_TB_TKE(:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, ) ! [IN]
+                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_PHY_TB_nu (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, ) ! [IN]
+                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_PHY_TB_Ri (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, ) ! [IN]
+                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( ATMOS_PHY_TB_Pr (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, ) ! [IN]
+                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

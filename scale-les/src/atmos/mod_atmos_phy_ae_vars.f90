@@ -131,6 +131,8 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do j  = JS, JE
@@ -188,8 +190,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_AE_RESTART_OUT_BASENAME /= '' ) then

@@ -20,6 +20,7 @@ module mod_atmos_phy_sf_vars
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,8 +37,6 @@ module mod_atmos_phy_sf_vars
   !
   !++ included parameters
   !
-# include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
