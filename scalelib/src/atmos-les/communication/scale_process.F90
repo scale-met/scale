@@ -98,6 +98,12 @@ contains
        endif
     endif
 
+    if ( IO_LOG_NML_SUPPRESS ) then
+       IO_LNML = .false.
+    else
+       IO_LNML = IO_L
+    endif
+
     if ( IO_L ) then
 
        !--- Open logfile
@@ -113,20 +119,75 @@ contains
        endif
 
        write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ '//trim(H_SOURCE)//' : LES-scale Numerical weather model   +'
-       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+!       write(IO_FID_LOG,*) '                                               -+++++++++;              '
+!       write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
+!       write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
+!       write(IO_FID_LOG,*) '                                          +++++++++++++++++++++         '
+!       write(IO_FID_LOG,*) '                                        .+++++++++++++++++++++++        '
+!       write(IO_FID_LOG,*) '                                        +++++++++++++++++++++++++       '
+!       write(IO_FID_LOG,*) '                                       +++++++++++++++++++++++++++      '
+!       write(IO_FID_LOG,*) '                                      =++++++=x######+++++++++++++;     '
+!       write(IO_FID_LOG,*) '                                     .++++++X####XX####++++++++++++     '
+!       write(IO_FID_LOG,*) '         =+xxx=,               ++++  +++++=##+       .###++++++++++-    '
+!       write(IO_FID_LOG,*) '      ,xxxxxxxxxx-            +++++.+++++=##           .##++++++++++    '
+!       write(IO_FID_LOG,*) '     xxxxxxxxxxxxx           -+++x#;+++++#+              ##+++++++++.   '
+!       write(IO_FID_LOG,*) '    xxxxxxxx##xxxx,          ++++# +++++XX                #+++++++++-   '
+!       write(IO_FID_LOG,*) '   xxxxxxx####+xx+x         ++++#.++++++#                  #+++++++++   '
+!       write(IO_FID_LOG,*) '  +xxxxxX#X   #Xx#=        =+++#x=++++=#.                  x=++++++++   '
+!       write(IO_FID_LOG,*) '  xxxxxx#,    x###        .++++#,+++++#=                    x++++++++   '
+!       write(IO_FID_LOG,*) ' xxxxxx#.                 ++++# +++++x#                     #++++++++   '
+!       write(IO_FID_LOG,*) ' xxxxxx+                 ++++#-+++++=#                      #++++++++   '
+!       write(IO_FID_LOG,*) ',xxxxxX                 -+++XX-+++++#,                      +++++++++   '
+!       write(IO_FID_LOG,*) '=xxxxxX                .++++#.+++++#x                       -++++++++   '
+!       write(IO_FID_LOG,*) '+xxxxx=                ++++#.++++++#                        ++++++++#   '
+!       write(IO_FID_LOG,*) 'xxxxxx;               ++++#+=++++=#                         ++++++++#   '
+!       write(IO_FID_LOG,*) 'xxxxxxx              ,+++x#,+++++#-                        ;++++++++-   '
+!       write(IO_FID_LOG,*) '#xxxxxx              +++=# +++++xX                         ++++++++#    '
+!       write(IO_FID_LOG,*) 'xxxxxxxx            ++++#-+++++=#                         +++++++++X    '
+!       write(IO_FID_LOG,*) '-+xxxxxx+          ++++X#-++++=#.            -++;        =++++++++#     '
+!       write(IO_FID_LOG,*) ' #xxxxxxxx.      .+++++# +++++#x            =++++-      +++++++++XX     '
+!       write(IO_FID_LOG,*) ' #xxxxxxxxxx=--=++++++#.++++++#             ++++++    -+++++++++x#      '
+!       write(IO_FID_LOG,*) '  #+xxxxxxxxxx+++++++#x=++++=#              ++++++;=+++++++++++x#       '
+!       write(IO_FID_LOG,*) '  =#+xxxxxxxx+++++++##,+++++#=             =++++++++++++++++++##.       '
+!       write(IO_FID_LOG,*) '   X#xxxxxxxx++++++## +++++x#              ;x++++++++++++++++##.        '
+!       write(IO_FID_LOG,*) '    x##+xxxx+++++x## +++++=#                ##++++++++++++x##X          '
+!       write(IO_FID_LOG,*) '     ,###Xx+++x###x -++++=#,                .####x+++++X####.           '
+!       write(IO_FID_LOG,*) '       -########+   -#####x                   .X#########+.             '
+!       write(IO_FID_LOG,*) '           .,.      ......                         .,.                  '
+!       write(IO_FID_LOG,*) '                                                                        '
+!       write(IO_FID_LOG,*) '    .X#######     +###-        =###+           ###x         x########   '
+!       write(IO_FID_LOG,*) '   .#########    ######X      #######         ####        .#########x   '
+!       write(IO_FID_LOG,*) '   ####+++++=   X#######.    -#######x       .###;        ####x+++++.   '
+!       write(IO_FID_LOG,*) '   ###          ###= ####    #### x###       ####        -###.          '
+!       write(IO_FID_LOG,*) '  .###         ####   ###+  X###   ###X     =###.        ####           '
+!       write(IO_FID_LOG,*) '   ###-       ;###,        .###+   -###     ####        x##########+    '
+!       write(IO_FID_LOG,*) '   +####x     ####         ####     ####   ####         ###########.    '
+!       write(IO_FID_LOG,*) '    x######. =###          ###,     .###-  ###+        x###--------     '
+!       write(IO_FID_LOG,*) '      =##### X###         -###       #### ,###         ####             '
+!       write(IO_FID_LOG,*) '        .###=x###;        .###+       ###X ###X        ####.            '
+!       write(IO_FID_LOG,*) ' ###########; ###########+ ###########     ########### ,##########.     '
+!       write(IO_FID_LOG,*) '-###########  ,##########,  #########X      ##########  +#########      '
+!       write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
+!       write(IO_FID_LOG,*) '                                                                        '
+       write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
+       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) trim(H_LIBNAME)
+       write(IO_FID_LOG,*) trim(H_MODELNAME)
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start MPI'
        write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
        write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
        write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
        write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
+       write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
+       write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
        write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
        write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
+       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
 
     else
 
@@ -176,16 +237,21 @@ contains
        endif
 
        write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) '+ SCALE: Scalable Computing by Advanced Library and Environment +'
-       write(IO_FID_LOG,*) '+ '//trim(H_SOURCE)//' : LES-scale Numerical weather model   +'
-       write(IO_FID_LOG,*) '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
+       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+       write(IO_FID_LOG,*) trim(H_LIBNAME)
+       write(IO_FID_LOG,*) trim(H_MODELNAME)
        write(IO_FID_LOG,*)
        write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'
        write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '+++ Module[STDIO]/Categ[COMMON]'
-       write(IO_FID_LOG,*) '*** Open config file, FID =', IO_FID_CONF
-       write(IO_FID_LOG,*) '*** Open log    file, FID =', IO_FID_LOG
+       write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
+       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
+       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
 
     endif
 
@@ -278,22 +344,22 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PRC]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_PRC)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PRC)
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Process Allocation ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node :', PRC_NUM_X," x ",PRC_NUM_Y
+    if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nmax ) then
        write(*,*) 'xxx total number of node does not match that requested. Check!'
@@ -368,7 +434,7 @@ contains
 
     next(:) = max(PRC_next(:),-1) ! avoid if MPI_PROC_NULL < -1
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Node topology ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Node topology :'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
     '***  NW(',next(PRC_NW),',',PRC_2Drank(next(PRC_NW),1),',',PRC_2Drank(next(PRC_NW),2),')', &
       ' -  N(',next(PRC_N) ,',',PRC_2Drank(next(PRC_N) ,1),',',PRC_2Drank(next(PRC_N) ,2),')', &

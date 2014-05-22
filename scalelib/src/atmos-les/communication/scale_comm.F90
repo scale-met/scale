@@ -75,31 +75,31 @@ module scale_comm
   !
   !++ Private parameters & variables
   !
-  integer,  private :: COMM_vsize_max                    !< # limit of communication variables at once
+  integer,  private              :: COMM_vsize_max      !< # limit of communication variables at once
 #ifdef _USE_RDMA
-  integer,  private, save :: COMM_vsize_max_rdma               !< # limit of communication variables at once
+  integer,  private              :: COMM_vsize_max_rdma !< # limit of communication variables at once
 #endif
 
-  logical,  private :: COMM_IsAllPeriodic                !< periodic boundary condition?
-  integer,  private :: COMM_world                        !< communication world ID
+  logical,  private              :: COMM_IsAllPeriodic  !< periodic boundary condition?
+  integer,  private              :: COMM_world          !< communication world ID
 
-  integer,  private :: COMM_size3D_WE                    !< 3D data size (W/E    HALO, 4/8-direction comm.)
-  integer,  private :: COMM_size3D_NS4                   !< 3D data size (N/S    HALO,   4-direction comm.)
-  integer,  private :: COMM_size3D_NS8                   !< 3D data size (N/S    HALO,   8-direction comm.)
-  integer,  private :: COMM_size3D_4C                    !< 3D data size (corner HALO,   8-direction comm.)
+  integer,  private              :: COMM_size3D_WE      !< 3D data size (W/E    HALO, 4/8-direction comm.)
+  integer,  private              :: COMM_size3D_NS4     !< 3D data size (N/S    HALO,   4-direction comm.)
+  integer,  private              :: COMM_size3D_NS8     !< 3D data size (N/S    HALO,   8-direction comm.)
+  integer,  private              :: COMM_size3D_4C      !< 3D data size (corner HALO,   8-direction comm.)
 
-  integer,  private :: COMM_size2D_NS4                   !< 2D data size (W/E    HALO, 4/8-direction comm.)
-  integer,  private :: COMM_size2D_NS8                   !< 2D data size (N/S    HALO,   4-direction comm.)
-  integer,  private :: COMM_size2D_WE                    !< 2D data size (N/S    HALO,   8-direction comm.)
-  integer,  private :: COMM_size2D_4C                    !< 2D data size (corner HALO,   8-direction comm.)
+  integer,  private              :: COMM_size2D_NS4     !< 2D data size (W/E    HALO, 4/8-direction comm.)
+  integer,  private              :: COMM_size2D_NS8     !< 2D data size (N/S    HALO,   4-direction comm.)
+  integer,  private              :: COMM_size2D_WE      !< 2D data size (N/S    HALO,   8-direction comm.)
+  integer,  private              :: COMM_size2D_4C      !< 2D data size (corner HALO,   8-direction comm.)
 
-  real(RP), private, allocatable :: recvpack_W2P(:,:) !< packing packet (receive, from W)
-  real(RP), private, allocatable :: recvpack_E2P(:,:) !< packing packet (receive, from E)
-  real(RP), private, allocatable :: sendpack_P2W(:,:) !< packing packet (send,    to W  )
-  real(RP), private, allocatable :: sendpack_P2E(:,:) !< packing packet (send,    to E  )
+  real(RP), private, allocatable :: recvpack_W2P(:,:)   !< packing packet (receive, from W)
+  real(RP), private, allocatable :: recvpack_E2P(:,:)   !< packing packet (receive, from E)
+  real(RP), private, allocatable :: sendpack_P2W(:,:)   !< packing packet (send,    to W  )
+  real(RP), private, allocatable :: sendpack_P2E(:,:)   !< packing packet (send,    to E  )
 
-  integer,  private, allocatable :: req_cnt (:)          !< request ID of each MPI send/recv
-  integer,  private, allocatable :: req_list(:,:)        !< request ID set of each variables
+  integer,  private, allocatable :: req_cnt (:)         !< request ID of each MPI send/recv
+  integer,  private, allocatable :: req_list(:,:)       !< request ID set of each variables
 
   !-----------------------------------------------------------------------------
 contains
@@ -128,21 +128,20 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[COMM]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[COMM] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
     COMM_vsize_max = 2 * max( 5 + QA, 20 )
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_COMM,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_COMM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COMM)
 
     ! only for register
     call PROF_rapstart('COMM vars MPI')
@@ -169,12 +168,12 @@ contains
     COMM_size2D_WE  = JMAX * IHALO
     COMM_size2D_4C  =        IHALO
 
-    allocate( recvpack_W2P   (COMM_size3D_WE,COMM_vsize_max) )
-    allocate( recvpack_E2P   (COMM_size3D_WE,COMM_vsize_max) )
-    allocate( sendpack_P2W   (COMM_size3D_WE,COMM_vsize_max) )
-    allocate( sendpack_P2E   (COMM_size3D_WE,COMM_vsize_max) )
+    allocate( recvpack_W2P(COMM_size3D_WE,COMM_vsize_max) )
+    allocate( recvpack_E2P(COMM_size3D_WE,COMM_vsize_max) )
+    allocate( sendpack_P2W(COMM_size3D_WE,COMM_vsize_max) )
+    allocate( sendpack_P2E(COMM_size3D_WE,COMM_vsize_max) )
 
-    allocate( req_cnt (COMM_vsize_max) )
+    allocate( req_cnt (         COMM_vsize_max) )
     allocate( req_list(nreq_MAX,COMM_vsize_max) )
     req_cnt (:)   = 0
     req_list(:,:) = 0
@@ -217,6 +216,18 @@ contains
                      PRC_next(PRC_E),     &
                      PRC_next(PRC_S)      )
 #endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Maximum number of vars for one communication: ', &
+                                   COMM_vsize_max
+    if( IO_L ) write(IO_FID_LOG,*) '*** Data size of var (3D,including halo) [byte] : ', &
+                                   RP*KA*IA*JA
+    if( IO_L ) write(IO_FID_LOG,*) '*** Data size of halo                    [byte] : ', &
+                                   RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Ratio of halo against the whole 3D grid     : ', &
+                                   real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?: ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup

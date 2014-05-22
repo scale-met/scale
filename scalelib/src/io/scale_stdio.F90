@@ -8,7 +8,6 @@
 !!
 !! @par History
 !! @li      2011-11-11 (H.Yashiro)  [new]
-!!
 !<
 module scale_stdio
   !-----------------------------------------------------------------------------
@@ -39,21 +38,25 @@ module scale_stdio
   !
   !++ Public parameters & variables
   !
-  integer,               public, parameter :: H_SHORT         = File_HSHORT !< Character length (short=16)
-  integer,               public, parameter :: H_MID           = File_HMID   !< Character length (short=64)
-  integer,               public, parameter :: H_LONG          = File_HLONG  !< Character length (short=256)
+  integer,               public, parameter :: H_SHORT     = File_HSHORT  !< Character length (short=16)
+  integer,               public, parameter :: H_MID       = File_HMID    !< Character length (short=64)
+  integer,               public, parameter :: H_LONG      = File_HLONG   !< Character length (short=256)
 
-  character(len=H_MID),  public            :: H_SOURCE        = 'SCALE-LES ver. '//VERSION !< for header
-  character(len=H_MID),  public            :: H_INSTITUTE     = 'AICS/RIKEN'               !< for header
+  character(len=H_MID),  public            :: H_MODELNAME                !< name and version of the model
+  character(len=H_MID),  public            :: H_LIBNAME                  !< name and version of the library
 
-  integer,               public            :: IO_FID_CONF     = 7           !< Config file ID
-  integer,               public            :: IO_FID_LOG      = 8           !< Log file ID
+  character(len=H_MID),  public            :: H_SOURCE                   !< for file header
+  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN' !< for file header
 
-  character(len=H_LONG), public            :: IO_LOG_BASENAME = 'LOG'       !< basename of logfile
-  logical,               public            :: IO_L            = .false.     !< output log or not? (this process)
-  logical,               public            :: IO_LOG_SUPPRESS = .false.     !< suppress all of log output?
-  logical,               public            :: IO_LOG_ALLNODE  = .false.     !< output log for each node?
+  integer,               public            :: IO_FID_CONF = 7            !< Config file ID
+  integer,               public            :: IO_FID_LOG  = 8            !< Log file ID
 
+  character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
+  logical,               public            :: IO_L                = .false. !< output log or not? (this process)
+  logical,               public            :: IO_LNML             = .false. !< output log or not? (for namelist, this process)
+  logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
+  logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
+  logical,               public            :: IO_LOG_NML_SUPPRESS = .true.  !< suppress all of log output?
 
   !-----------------------------------------------------------------------------
   !
@@ -72,15 +75,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   !> read command argument, open config file
-  subroutine IO_setup
+  subroutine IO_setup( MODELNAME )
     implicit none
 
     namelist / PARAM_IO / &
-       H_SOURCE,        &
-       H_INSTITUTE,     &
-       IO_LOG_BASENAME, &
-       IO_LOG_SUPPRESS, &
-       IO_LOG_ALLNODE
+       H_SOURCE,            &
+       H_INSTITUTE,         &
+       IO_LOG_BASENAME,     &
+       IO_LOG_SUPPRESS,     &
+       IO_LOG_ALLNODE,      &
+       IO_LOG_NML_SUPPRESS
+
+    character(len=H_MID), intent(in) :: MODELNAME !< name of the model
 
     character(len=H_LONG) :: fname !< name of config file for each process
 
@@ -102,6 +108,10 @@ contains
           form   = 'formatted', &
           status = 'old',       &
           iostat = ierr         )
+
+    H_MODELNAME = trim(MODELNAME)
+    H_LIBNAME   = 'SCALE Library ver. '//trim(LIBVERSION)
+    H_SOURCE    = H_MODELNAME
 
     !--- read PARAM
     rewind(IO_FID_CONF)

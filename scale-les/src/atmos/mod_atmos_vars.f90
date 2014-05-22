@@ -387,7 +387,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '  Data check : NO'
        ATMOS_sw_check = .false.
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
 
     !-----< array allocation >-----
 
@@ -407,8 +406,9 @@ contains
     allocate( RHOT_tp(KA,IA,JA)    )
     allocate( QTRC_tp(KA,IA,JA,QA) )
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_USE_AVERAGE ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : YES'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average : YES'
        allocate( DENS_avw(KA,IA,JA)    )
        allocate( MOMZ_avw(KA,IA,JA)    )
        allocate( MOMX_avw(KA,IA,JA)    )
@@ -423,7 +423,7 @@ contains
        RHOT_av => RHOT_avw
        QTRC_av => QTRC_avw
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average : NO'
        DENS_av => DENS
        MOMZ_av => MOMZ
        MOMX_av => MOMX
@@ -716,16 +716,16 @@ contains
     real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
     real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
 
-    real(RP) :: QDRY  (KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
+    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
+    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
+    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
 
-    real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: RHOQ  (KA,IA,JA)
+    real(RP) :: RHOQ(KA,IA,JA)
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -901,6 +901,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call ATMOS_vars_fillhalo
 
        call ATMOS_vars_total
 
@@ -1269,30 +1271,24 @@ contains
     endif
 
     if ( AD_PREP_sw(I_LWP) > 0 ) then
-       do k = KS, KE
-          cdz(k) = REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j)
-       enddo
-
        do j  = JS, JE
        do i  = IS, IE
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
-             LWP(i,j) = LWP(i,j) + QLIQ(k,i,j) * DENS(k,i,j) * cdz(k) * 1.E3_RP ! [kg/m2->g/m2]
+             LWP(i,j) = LWP(i,j) &
+                      + QLIQ(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_IWP) > 0 ) then
-       do k = KS, KE
-          cdz(k) = REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j)
-       enddo
-
        do j  = JS, JE
        do i  = IS, IE
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
-             IWP(i,j) = IWP(i,j) + QICE(k,i,j) * DENS(k,i,j) * cdz(k) * 1.E3_RP ! [kg/m2->g/m2]
+             IWP(i,j) = IWP(i,j) &
+                      + QICE(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1471,7 +1467,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+          DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
                      + ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
                      + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
        enddo
@@ -1484,7 +1480,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
        enddo
        enddo
        enddo
@@ -1623,16 +1619,16 @@ contains
     real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
     real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
 
-    real(RP) :: QDRY  (KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
+    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
+    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
+    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
 
-    real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: RHOQ  (KA,IA,JA)
+    real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: total ! dummy
     integer :: i, j, k, iq
@@ -1676,7 +1672,7 @@ contains
           VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
           VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
                                                + VELX(k,i,j)**2 &

@@ -82,7 +82,12 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FIELIO]/Categ[IO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[IO] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** NetCDF header information ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
 
     allocate( AXIS_LON (IMAX,JMAX) )
     allocate( AXIS_LONX(IMAX,JMAX) )

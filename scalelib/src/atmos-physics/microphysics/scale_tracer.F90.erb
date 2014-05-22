@@ -38,6 +38,19 @@ module scale_tracer
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: I_DENS     = 1
+  integer, public, parameter :: I_MOMZ     = 2
+  integer, public, parameter :: I_MOMX     = 3
+  integer, public, parameter :: I_MOMY     = 4
+  integer, public, parameter :: I_RHOT     = 5
+  integer, public, parameter :: I_QTRC     = 6
+
+  integer, public, parameter :: I_BND_VELZ = 1 ! reference velocity (z) [m/s]
+  integer, public, parameter :: I_BND_VELX = 2 ! reference velocity (x) [m/s]
+  integer, public, parameter :: I_BND_VELY = 3 ! reference velocity (y) [m/s]
+  integer, public, parameter :: I_BND_POTT = 4 ! reference potential temperature [K]
+  integer, public, parameter :: I_BND_QV   = 5 ! reference water vapor [kg/kg]
+
 #ifdef TRACER
 #define EXTM(name) scale_tracer_ ## name ## .f90
 #define NAME(name) EXTM(name)

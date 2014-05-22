@@ -79,13 +79,15 @@ MODS =	\
 
 
 all: makedir makescalelib makebin
+	@echo "Complete making scale-les."; echo
 
 makedir:
+	@echo;echo "Entering scale-les..."
+	@echo "Current version is " $(VERSION)
 	mkdir -p $(BINDIR)
-	mkdir -p $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
 
 makescalelib:
-	$(MAKE) -C $(SCALELIBDIR)/src depend
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(PRJS)
@@ -187,7 +189,7 @@ clean:
 .SUFFIXES: .o .f90 .c
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(SCALELIBDIR)/include -I$(MODDIR) $(PAPI_INCLUDE) -I./include -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 

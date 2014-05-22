@@ -80,6 +80,8 @@ contains
        TIME_NOWDATE
     use scale_history, only: &
        HIST_in
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
@@ -122,6 +124,9 @@ contains
 
     real(RP) :: flux_rad_top(IA,JA,2)
     real(RP) :: flux_rad_sfc(IA,JA,2)
+
+    real(RP) :: TEMP(KA,IA,JA)
+    real(RP) :: PRES(KA,IA,JA)
 
     real(RP) :: solins  (IA,JA)
     real(RP) :: cosSZA  (IA,JA)
@@ -173,7 +178,7 @@ contains
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
                         RHOT     (:,:,:),     & ! [IN]
-                        QTRC     (:,:,:),     & ! [IN]
+                        QTRC     (:,:,:,:),   & ! [IN]
                         REAL_FZ  (:,:,:),     & ! [IN]
                         dt_RD,                & ! [IN]
                         TEMP_t   (:,:,:,:),   & ! [OUT]
@@ -224,9 +229,9 @@ contains
           call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 
-          call HIST_in( TEMP_t, 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
-          call HIST_in( TEMP_t, 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
-          call HIST_in( TEMP_t, 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,3),    'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
        endif
     endif
 
