@@ -47,20 +47,27 @@ module mod_atmos_phy_ae_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_AE_driver_setup( AE_TYPE )
+  subroutine ATMOS_PHY_AE_driver_setup
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_sw_phy_ae
     implicit none
-
-    character(len=H_SHORT), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_AE] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_AE_setup( AE_TYPE )
+    if ( ATMOS_sw_phy_ae ) then
 
-    call ATMOS_PHY_AE_driver( .true., .false. )
+       ! setup library component
+       call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_AE_driver( .true., .false. )
+
+    endif
 
     return
   end subroutine ATMOS_PHY_AE_driver_setup

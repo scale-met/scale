@@ -37,6 +37,7 @@ PRJS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME)
 
 MODS =	\
+	mod_atmos_admin.o            \
 	mod_atmos_dyn_vars.o         \
 	mod_atmos_phy_mp_vars.o      \
 	mod_atmos_phy_ae_vars.o      \
@@ -106,26 +107,27 @@ $(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS)
 $(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 
+$(BUILD_DIR)/mod_atmos_admin.o            : mod_atmos_admin.f90
 
-$(BUILD_DIR)/mod_atmos_dyn_vars.o         : mod_atmos_dyn_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_cp_vars.o      : mod_atmos_phy_cp_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_mp_vars.o      : mod_atmos_phy_mp_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_rd_vars.o      : mod_atmos_phy_rd_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_sf_vars.o      : mod_atmos_phy_sf_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_tb_vars.o      : mod_atmos_phy_tb_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_ch_vars.o      : mod_atmos_phy_ch_vars.f90
-$(BUILD_DIR)/mod_atmos_phy_ae_vars.o      : mod_atmos_phy_ae_vars.f90
-$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90
+$(BUILD_DIR)/mod_atmos_dyn_vars.o         : mod_atmos_dyn_vars.f90    mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_cp_vars.o      : mod_atmos_phy_cp_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_mp_vars.o      : mod_atmos_phy_mp_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_rd_vars.o      : mod_atmos_phy_rd_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_sf_vars.o      : mod_atmos_phy_sf_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_tb_vars.o      : mod_atmos_phy_tb_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_ch_vars.o      : mod_atmos_phy_ch_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_phy_ae_vars.o      : mod_atmos_phy_ae_vars.f90 mod_atmos_admin.o
+$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90        mod_atmos_admin.o
 
-$(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    mod_atmos_dyn_vars.o    mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_cp_driver.o    : mod_atmos_phy_cp_driver.f90 mod_atmos_phy_cp_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 mod_atmos_phy_mp_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_phy_rd_vars.o mod_atmos_vars.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_phy_sf_vars.o mod_atmos_vars.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 mod_atmos_phy_tb_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_ch_driver.o    : mod_atmos_phy_ch_driver.f90 mod_atmos_phy_ch_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_ae_driver.o    : mod_atmos_phy_ae_driver.f90 mod_atmos_phy_ae_vars.o mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_driver.o           : mod_atmos_driver.f90 mod_atmos_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    mod_atmos_admin.o mod_atmos_vars.o mod_atmos_dyn_vars.o
+$(BUILD_DIR)/mod_atmos_phy_cp_driver.o    : mod_atmos_phy_cp_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_cp_vars.o
+$(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_mp_vars.o
+$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_rd_vars.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_sf_vars.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_tb_vars.o
+$(BUILD_DIR)/mod_atmos_phy_ch_driver.o    : mod_atmos_phy_ch_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_ch_vars.o
+$(BUILD_DIR)/mod_atmos_phy_ae_driver.o    : mod_atmos_phy_ae_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_ae_vars.o
+$(BUILD_DIR)/mod_atmos_driver.o           : mod_atmos_driver.f90        mod_atmos_admin.o mod_atmos_vars.o mod_cpl_vars.o \
                                             mod_atmos_dyn_driver.o    \
                                             mod_atmos_phy_cp_driver.o \
                                             mod_atmos_phy_mp_driver.o \

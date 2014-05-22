@@ -91,11 +91,16 @@ program scaleles
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup
 
+  use mod_atmos_admin, only: &
+     ATMOS_admin_setup, &
+     ATMOS_do
   use mod_atmos_vars, only: &
      ATMOS_vars_setup,         &
      ATMOS_vars_restart_read,  &
      ATMOS_vars_restart_write, &
-     ATMOS_vars_restart_check
+     ATMOS_vars_restart_check, &
+     ATMOS_sw_restart,         &
+     ATMOS_sw_check
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
      ATMOS_driver
@@ -215,6 +220,9 @@ program scaleles
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
 
+  ! setup submodel administrator
+  call ATMOS_admin_setup
+
   ! setup variable container
   call ATMOS_vars_setup
   call OCEAN_vars_setup
@@ -263,11 +271,11 @@ program scaleles
     call USER_step
 
     ! change to next state
-    if ( TIME_DOATMOS_step ) call ATMOS_driver
-    if ( TIME_DOOCEAN_step ) call OCEAN_driver
-    if ( TIME_DOLAND_step  ) call LAND_driver
-    if ( TIME_DOURBAN_step ) call URBAN_driver
-    if ( TIME_DOCPL_calc   ) call CPL_driver
+    if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+    if( TIME_DOOCEAN_step ) call OCEAN_driver
+    if( TIME_DOLAND_step  ) call LAND_driver
+    if( TIME_DOURBAN_step ) call URBAN_driver
+    if( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
     call TIME_advance
@@ -277,13 +285,13 @@ program scaleles
     call MONIT_write('MAIN')
 
     ! restart output
-    if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-    if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
-    if ( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-    if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if( TIME_DOLAND_restart  ) call LAND_vars_restart_write
+    if( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+    if( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
-    if ( TIME_DOend ) exit
+    if( TIME_DOend ) exit
 
   enddo
 
@@ -301,7 +309,7 @@ program scaleles
   !########## Finalize ##########
 
   ! check data
-  call ATMOS_vars_restart_check
+  if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
   call PROF_rapreport
 #ifdef _PAPI_

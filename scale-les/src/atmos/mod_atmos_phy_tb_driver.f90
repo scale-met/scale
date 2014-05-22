@@ -47,9 +47,7 @@ module mod_atmos_phy_tb_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+  subroutine ATMOS_PHY_TB_driver_setup
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -57,19 +55,25 @@ contains
        CZ  => GRID_CZ
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
     implicit none
-
-    character(len=H_SHORT), intent(in) :: TB_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_TB_setup( TB_TYPE,       & ! [IN]
-                             CDZ, CDX, CDY, & ! [IN]
-                             CZ             ) ! [IN]
+    if ( ATMOS_sw_phy_tb ) then
 
-    call ATMOS_PHY_TB_driver( .true., .false. )
+       ! setup library component
+       call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
+                                CDZ, CDX, CDY, CZ  ) ! [IN]
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_TB_driver( .true., .false. )
+
+    endif
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup

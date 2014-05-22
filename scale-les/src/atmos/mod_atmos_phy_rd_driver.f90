@@ -47,20 +47,37 @@ module mod_atmos_phy_rd_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_driver_setup
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_sw_phy_rd
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
-
-    character(len=H_SHORT), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_RD] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_RD_setup( RD_TYPE )
+    if ( ATMOS_sw_phy_rd ) then
 
+       ! setup library component
+       call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
+
+       ! run once (only for the diagnostic value)
     call ATMOS_PHY_RD_driver( .true., .false. )
+
+    else
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_RD is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_LW_dn and SFLX_SW_dn is set to zero.'
+       SFLX_LW_dn(:,:) = 0.0_RP
+       SFLX_SW_dn(:,:) = 0.0_RP
+
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_driver_setup

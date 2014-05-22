@@ -37,7 +37,7 @@ VPATH = common:                     \
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
-  LIBVERSION  = $(shell cat LIBVERSION)
+  LIBVERSION  = $(shell cat VERSION)
 else
   LIBVERSION := $(LIBVERSION)
 endif

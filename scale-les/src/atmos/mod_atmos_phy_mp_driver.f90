@@ -47,20 +47,37 @@ module mod_atmos_phy_mp_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_MP_driver_setup( MP_TYPE )
+  subroutine ATMOS_PHY_MP_driver_setup
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_sw_phy_mp
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     implicit none
-
-    character(len=H_SHORT), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-MP]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_MP] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_MP_setup( MP_TYPE )
+    if ( ATMOS_sw_phy_mp ) then
 
-    call ATMOS_PHY_MP_driver( .true., .false. )
+       ! setup library component
+       call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_MP_driver( .true., .false. )
+
+    else
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_MP is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_rain and SFLX_snow is set to zero.'
+       SFLX_rain(:,:) = 0.0_RP
+       SFLX_snow(:,:) = 0.0_RP
+
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup

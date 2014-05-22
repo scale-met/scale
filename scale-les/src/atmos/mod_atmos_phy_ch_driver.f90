@@ -47,20 +47,27 @@ module mod_atmos_phy_ch_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_CH_driver_setup( CH_TYPE )
+  subroutine ATMOS_PHY_CH_driver_setup
 !    use scale_atmos_phy_ch, only: &
 !       ATMOS_PHY_CH_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CH_TYPE, &
+       ATMOS_sw_phy_ch
     implicit none
-
-    character(len=H_SHORT), intent(in) :: CH_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-CH]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_CH] / Origin[SCALE-LES]'
 
-!    call ATMOS_PHY_CH_setup( CH_TYPE )
+    if ( ATMOS_sw_phy_ch ) then
 
-    call ATMOS_PHY_CH_driver( .true., .false. )
+       ! setup library component
+       !call ATMOS_PHY_CH_setup( ATMOS_PHY_CH_TYPE )
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_CH_driver( .true., .false. )
+
+    endif
 
     return
   end subroutine ATMOS_PHY_CH_driver_setup

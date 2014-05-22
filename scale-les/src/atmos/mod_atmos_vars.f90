@@ -48,29 +48,8 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  logical,                public, save :: ATMOS_do          = .true. ! main switch for the model
-
-  character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE' !< dynamics type
-  character(len=H_SHORT), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_CP_TYPE = 'NONE'
-
-  logical,                public, save :: ATMOS_sw_dyn
-  logical,                public, save :: ATMOS_sw_phy_mp
-  logical,                public, save :: ATMOS_sw_phy_ae
-  logical,                public, save :: ATMOS_sw_phy_ch
-  logical,                public, save :: ATMOS_sw_phy_rd
-  logical,                public, save :: ATMOS_sw_phy_sf
-  logical,                public, save :: ATMOS_sw_phy_tb
-  logical,                public, save :: ATMOS_sw_phy_cp
-  logical,                public, save :: ATMOS_sw_restart
-  logical,                public, save :: ATMOS_sw_check
-
-  logical,                public, save :: ATMOS_USE_AVERAGE = .false.
+  logical, public :: ATMOS_sw_restart
+  logical, public :: ATMOS_sw_check
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -147,6 +126,7 @@ module mod_atmos_vars
 
   ! history output of prognostic variables
   integer, private              :: VAR_HIST_id(VMAX)
+
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
@@ -200,6 +180,8 @@ contains
        HIST_reg
     use scale_monitor, only: &
        MONIT_reg
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_setup
     use mod_atmos_phy_mp_vars, only: &
@@ -218,17 +200,6 @@ contains
        ATMOS_PHY_CP_vars_setup
     implicit none
 
-    NAMELIST / PARAM_ATMOS / &
-       ATMOS_do,          &
-       ATMOS_DYN_TYPE,    &
-       ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_PHY_CH_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_PHY_CP_TYPE
-
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
@@ -245,152 +216,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Variables]/Categ[ATMOS]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS)
-
-    !-----< module component check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] selected components'
-
-    if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
-
-    if ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
-       ATMOS_sw_dyn = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : OFF'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : OFF'
-       ATMOS_sw_dyn = .false.
-    endif
-
-    if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
-
-    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : ON'
-       ATMOS_sw_phy_mp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : OFF'
-       ATMOS_sw_phy_mp = .false.
-    endif
-
-    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : ON'
-       ATMOS_sw_phy_ae = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : OFF'
-       ATMOS_sw_phy_ae = .false.
-    endif
-
-    if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : ON'
-       ATMOS_sw_phy_ch = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : OFF'
-       ATMOS_sw_phy_ch = .false.
-    endif
-
-    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
-       ATMOS_sw_phy_rd = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
-       ATMOS_sw_phy_rd = .false.
-    endif
-
-    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
-       ATMOS_sw_phy_sf = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
-       ATMOS_sw_phy_sf = .false.
-    endif
-
-    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
-       ATMOS_sw_phy_tb = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
-       ATMOS_sw_phy_tb = .false.
-    endif
-
-    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : ON'
-       ATMOS_sw_phy_cp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : OFF'
-       ATMOS_sw_phy_cp = .false.
-    endif
-
-    !-----< prognostic variable list check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS VARS]/Categ[ATMOS]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 5
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
-    enddo
-    do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
-                  '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
-    enddo
-
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_setup
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_setup
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_setup
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_setup
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_setup
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_setup
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_setup
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_setup
-
-    !-----< restart output & consistency check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( ATMOS_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : YES'
-       ATMOS_sw_restart = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : NO'
-       ATMOS_sw_restart = .false.
-    endif
-    if ( ATMOS_RESTART_CHECK ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Data check : YES'
-       ATMOS_sw_check = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Data check : NO'
-       ATMOS_sw_check = .false.
-    endif
-
-    !-----< array allocation >-----
-
-    allocate( AQ_HIST_id(QA) )
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS] / Origin[SCALE-LES]'
 
     allocate( DENS(KA,IA,JA)    )
     allocate( MOMZ(KA,IA,JA)    )
@@ -399,16 +225,7 @@ contains
     allocate( RHOT(KA,IA,JA)    )
     allocate( QTRC(KA,IA,JA,QA) )
 
-    allocate( DENS_tp(KA,IA,JA)    )
-    allocate( MOMZ_tp(KA,IA,JA)    )
-    allocate( MOMX_tp(KA,IA,JA)    )
-    allocate( MOMY_tp(KA,IA,JA)    )
-    allocate( RHOT_tp(KA,IA,JA)    )
-    allocate( QTRC_tp(KA,IA,JA,QA) )
-
-    if( IO_L ) write(IO_FID_LOG,*)
     if ( ATMOS_USE_AVERAGE ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average : YES'
        allocate( DENS_avw(KA,IA,JA)    )
        allocate( MOMZ_avw(KA,IA,JA)    )
        allocate( MOMX_avw(KA,IA,JA)    )
@@ -423,18 +240,81 @@ contains
        RHOT_av => RHOT_avw
        QTRC_av => QTRC_avw
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos use average : NO'
        DENS_av => DENS
        MOMZ_av => MOMZ
        MOMX_av => MOMX
        MOMY_av => MOMY
        RHOT_av => RHOT
        QTRC_av => QTRC
-    end if
+    endif
 
-    !-----< history output setup: general set >-----
+    allocate( DENS_tp(KA,IA,JA)    )
+    allocate( MOMZ_tp(KA,IA,JA)    )
+    allocate( MOMX_tp(KA,IA,JA)    )
+    allocate( MOMY_tp(KA,IA,JA)    )
+    allocate( RHOT_tp(KA,IA,JA)    )
+    allocate( QTRC_tp(KA,IA,JA,QA) )
 
-    VAR_HIST_id (:) = -1
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
+
+    ! report
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
+               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, 5
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
+    enddo
+    do iq = 1, QA
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
+                  '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( ATMOS_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES'
+       ATMOS_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_sw_restart = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( ATMOS_RESTART_CHECK ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : YES'
+       ATMOS_sw_check = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : NO'
+       ATMOS_sw_check = .false.
+    endif
+
+    call ATMOS_DYN_vars_setup
+    call ATMOS_PHY_MP_vars_setup
+    call ATMOS_PHY_AE_vars_setup
+    call ATMOS_PHY_CH_vars_setup
+    call ATMOS_PHY_RD_vars_setup
+    call ATMOS_PHY_SF_vars_setup
+    call ATMOS_PHY_TB_vars_setup
+    call ATMOS_PHY_CP_vars_setup
+
+
+
+    !##### todo: the part below should be moved to the mod_atmos_diag #####
+
+    allocate( AQ_HIST_id (QA))
+
+    VAR_HIST_id(:) = -1
     AQ_HIST_id (:) = -1
     AD_HIST_id (:) = -1
     AD_MONIT_id(:) = -1
@@ -694,6 +574,8 @@ contains
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw                 => AQ_CV
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -759,15 +641,6 @@ contains
        call PRC_MPIstop
     endif
 
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_read
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_read
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
-
     if ( ATMOS_USE_AVERAGE ) then
        DENS_av(:,:,:)   = DENS(:,:,:)
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
@@ -776,6 +649,19 @@ contains
        RHOT_av(:,:,:)   = RHOT(:,:,:)
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     endif
+
+    call ATMOS_DYN_vars_restart_read
+    call ATMOS_PHY_MP_vars_restart_read
+    call ATMOS_PHY_AE_vars_restart_read
+    call ATMOS_PHY_CH_vars_restart_read
+    call ATMOS_PHY_RD_vars_restart_read
+    call ATMOS_PHY_SF_vars_restart_read
+    call ATMOS_PHY_TB_vars_restart_read
+    call ATMOS_PHY_CP_vars_restart_read
+
+
+
+    !##### todo: the part below should be moved to the mod_atmos_diag #####
 
     ! first monitor output
     call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
@@ -924,14 +810,14 @@ contains
 
     endif
 
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_write
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_write
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
+    call ATMOS_DYN_vars_restart_write
+    call ATMOS_PHY_MP_vars_restart_write
+    call ATMOS_PHY_AE_vars_restart_write
+    call ATMOS_PHY_CH_vars_restart_write
+    call ATMOS_PHY_RD_vars_restart_write
+    call ATMOS_PHY_SF_vars_restart_write
+    call ATMOS_PHY_TB_vars_restart_write
+    call ATMOS_PHY_CP_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
@@ -959,8 +845,6 @@ contains
     logical :: datacheck
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    if ( ATMOS_sw_check ) then
 
     call PROF_rapstart('Debug')
 
@@ -1065,8 +949,6 @@ contains
     endif
 
     call PROF_rapend('Debug')
-
-    endif
 
     return
   end subroutine ATMOS_vars_restart_check

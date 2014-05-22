@@ -49,22 +49,44 @@ module mod_atmos_phy_sf_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_SF_driver_setup( SF_TYPE )
+  subroutine ATMOS_PHY_SF_driver_setup
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_sw_phy_sf
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_beta => ATMOS_PHY_SF_SFC_beta, &
+       SFC_Z0   => ATMOS_PHY_SF_SFC_Z0
+    use mod_cpl_vars, only: &
+       CPL_sw => CPL_sw_ALL
     implicit none
-
-    character(len=H_SHORT), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-SF]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_SF] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_SF_setup( SF_TYPE )
+    if ( ATMOS_sw_phy_sf ) then
 
-    ! finally, surface processes will be located under the coupler.
-    if( SF_TYPE /= 'COUPLE' ) then
+       ! setup library component
+       call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
+
+       if ( .NOT. CPL_sw ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
+          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_beta is assumed to be 1.'
+          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0   is assumed to be 0.'
+          SFC_beta(:,:) = 1.0_RP
+          SFC_Z0  (:,:) = 0.0_RP
+       endif
+
+       ! run once (only for the diagnostic value)
        call ATMOS_PHY_SF_driver( .true., .false. )
+
+    else
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_SF is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo, SFC_albedo_land is set in ATMOS_PHY_SF_vars.'
+
     endif
 
     return
