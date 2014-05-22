@@ -48,7 +48,7 @@ module scale_land_grid
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: LDZ(:)
+  real(RP), private :: LDZ(100)
 
   character(len=H_LONG), private :: LAND_GRID_IN_BASENAME  = ''
   character(len=H_LONG), private :: LAND_GRID_OUT_BASENAME = ''
@@ -74,7 +74,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[LAND GRID] / Origin[SCALElib]'
 
-    allocate( LDZ(LKS:LKE) )
     LDZ(:) = 0.0_RP
 
     !--- read namelist

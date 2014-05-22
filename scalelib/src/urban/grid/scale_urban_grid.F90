@@ -48,7 +48,7 @@ module scale_urban_grid
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: UDZ(:)
+  real(RP), private :: UDZ(100)
 
   character(len=H_LONG), private :: URBAN_GRID_IN_BASENAME  = ''
   character(len=H_LONG), private :: URBAN_GRID_OUT_BASENAME = ''
@@ -74,7 +74,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[URBAN GRID] / Origin[SCALElib]'
 
-    allocate( UDZ(UKS:UKE) )
     UDZ(:) = 0.0_RP
 
     !--- read namelist
