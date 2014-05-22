@@ -45,7 +45,7 @@ module mod_user
   !
   public :: USER_setup
   public :: USER_step
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
@@ -163,9 +163,6 @@ contains
        CZ => GRID_CZ
     implicit none
 
-
-!    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_PHY_SF
-
     real(RP) :: USER_SF_U_minM ! minimum U_abs for u,v,w
     real(RP) :: USER_SF_U_minH !                   T
     real(RP) :: USER_SF_U_minE !                   q
@@ -197,10 +194,10 @@ contains
        !--- for surface flux
        USER_SF_U_minM,      &
        USER_SF_U_minH,      &
-       USER_SF_U_minE,      & 
-       USER_SF_CM_min,      & 
-       USER_SF_CH_min,      & 
-       USER_SF_CE_min,      & 
+       USER_SF_U_minE,      &
+       USER_SF_CM_min,      &
+       USER_SF_CH_min,      &
+       USER_SF_CE_min,      &
        USER_SF_Z00,         &
        USER_SF_Z0R,         &
        USER_SF_Z0S,         &
@@ -225,7 +222,7 @@ contains
     allocate( time_sst_in(mstep_sst) )
     allocate( sst_in(mstep_sst) )
 
-    USER_SF_U_minM = U_minM 
+    USER_SF_U_minM = U_minM
     USER_SF_U_minH = U_minH
     USER_SF_U_minE = U_minE
     USER_SF_CM_min = CM_min
@@ -437,7 +434,7 @@ contains
     real(RP) :: qdry, Rtot, pres_1d, temp_1d
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
-    integer :: iw 
+    integer :: iw
 
     !---------------------------------------------------------------------------
 
@@ -521,7 +518,7 @@ contains
        U_GEOS(:) = 0.0_RP
        corioli = 0.0_RP
 
-    elseif( USER_LS_FLG == 1 ) then 
+    elseif( USER_LS_FLG == 1 ) then
 
       do t=1, mstep_atm-1
         if( time_nowsec>time_atm_in(t) )then
@@ -551,7 +548,7 @@ contains
         endif
       enddo
 ! write(*,*)'chksstuser1',maxval(sst(:,:)), minval(sst(:,:))
- 
+
       if( time_nowsec>time_sst_in(mstep_sst) )then
         write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_sst_in(mstep_sst)
         call PRC_MPIstop
@@ -562,7 +559,7 @@ contains
        MOMZ_LS_FLG(:) = .true.
        U_GEOS(:) = 0.0
        V_GEOS(:) = -15.0-0.0024*cz(:)
-       corioli = 1e-5 ! tentative. need to ask stephan 
+       corioli = 1e-5 ! tentative. need to ask stephan
        MOMZ_LS(:,2)=0.0_RP
        MOMZ_LS_DZ(:,2)=0.0_RP
        do k=KS, KE
