@@ -269,12 +269,12 @@ contains
           DZ(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
+      XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
+      YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j) / DENS(i,j)
+      ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) / DENS(i,j)
+
       ! saturation at the surface
       call qsat( SQV, TS(i,j), PRES(i,j) )
-
-      XMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
-      YMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
-      ZMFLX (i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
 
       SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - TMPS(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )

@@ -150,8 +150,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        RHOT_t(KS,i,j) = RHOT_t(KS,i,j) &
-            + ( POTTFLX(i,j) * DENS(KS,i,j) &
-            + QVFLX(i,j) * RHOT(KS,i,j) &
+            + ( POTTFLX(i,j) &
+            + QVFLX(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
               ) * RCDZ(KS)
        DENS_t(KS,i,j) = DENS_t(KS,i,j) &
             + QVFLX(i,j) * RCDZ(KS)
@@ -218,8 +218,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
-            + ( SHFLX(i,j)/CPdry * DENS(KS,i,j) &
-            + QVFLX(i,j) * RHOT(KS,i,j) &
+            + ( SHFLX(i,j) / CPdry &
+            + QVFLX(i,j) * RHOT(KS,i,j) / DENS(KS,i,j) &
               ) * RCDZ(KS)
        DENS_tp(KS,i,j) = DENS_tp(KS,i,j) &
             + QVFLX(i,j) * RCDZ(KS)

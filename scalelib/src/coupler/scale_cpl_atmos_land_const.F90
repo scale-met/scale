@@ -235,9 +235,9 @@ contains
         Cm = Const_Cm
       endif
 
-      XMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMX(i,j)
-      YMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMY(i,j)
-      ZMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMZ(i,j)
+      XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMX(i,j) / DENS(i,j)
+      YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMY(i,j) / DENS(i,j)
+      ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMZ(i,j) / DENS(i,j)
 
       if( DIURNAL ) then
         ! include diurnal change
