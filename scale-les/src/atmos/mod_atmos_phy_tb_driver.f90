@@ -104,6 +104,9 @@ contains
        I_UVZ
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_tb, only: &
@@ -145,10 +148,16 @@ contains
     integer :: JJS, JJE
     integer :: IIS, IIE
 
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence'
+
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]
@@ -364,9 +373,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_TB(k,i,j)
        MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_TB(k,i,j)
        MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_TB(k,i,j)
-       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_TB(k,i,j)
        RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_TB(k,i,j)
     enddo
     enddo
@@ -382,6 +391,19 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
+       call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
+       call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
+       call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
+
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS_av(:,:,:) * QTRC_t_TB(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_TB' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_TB_driver

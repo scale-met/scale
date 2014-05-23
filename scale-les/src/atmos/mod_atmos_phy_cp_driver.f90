@@ -77,6 +77,9 @@ contains
   subroutine ATMOS_PHY_CP_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
 !    use scale_atmos_phy_cp, only: &
@@ -105,10 +108,16 @@ contains
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    integer :: k, i, j, iq
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cumulus'
+
 !       call ATMOS_PHY_CP( DENS,          & ! [IN]
 !                          MOMZ,          & ! [IN]
 !                          MOMX,          & ! [IN]
@@ -157,6 +166,19 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, MOMZ_t_CP(:,:,:), 'MOMZ_t_CP' )
+       call STAT_total( total, MOMX_t_CP(:,:,:), 'MOMX_t_CP' )
+       call STAT_total( total, MOMY_t_CP(:,:,:), 'MOMY_t_CP' )
+       call STAT_total( total, RHOT_t_CP(:,:,:), 'RHOT_t_CP' )
+
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_CP(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_CP' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_CP_driver

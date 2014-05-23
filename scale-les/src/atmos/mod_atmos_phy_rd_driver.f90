@@ -95,6 +95,9 @@ contains
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_solarins, only: &
@@ -140,10 +143,14 @@ contains
     real(RP) :: solins(IA,JA)
     real(RP) :: cosSZA(IA,JA)
 
+    real(RP) :: total ! dummy
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation'
 
        if ( sw_CPL ) then
           call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
@@ -233,6 +240,10 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, RHOT_t_RD(:,:,:), 'RHOT_t_RD' )
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_driver

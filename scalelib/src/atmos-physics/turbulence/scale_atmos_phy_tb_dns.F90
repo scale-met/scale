@@ -174,8 +174,6 @@ contains
     POTT(:,:,:) = UNDEF
 #endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
-
     tke(:,:,:) = 0.0_RP
     nu (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP

@@ -1548,11 +1548,11 @@ contains
 
        RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qdry    ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qdry' )
 
        RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) ) ! Qtotal
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qtotal  ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qtot' )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1579,10 +1579,10 @@ contains
        enddo
        enddo
 
-!       call STAT_total( total, ENGT(:,:,:), 'ENGT    ' )
-       call STAT_total( total, ENGP(:,:,:), 'ENGP    ' )
-       call STAT_total( total, ENGK(:,:,:), 'ENGK    ' )
-       call STAT_total( total, ENGI(:,:,:), 'ENGI    ' )
+       call STAT_total( total, ENGT(:,:,:), 'ENGT' )
+       call STAT_total( total, ENGP(:,:,:), 'ENGP' )
+       call STAT_total( total, ENGK(:,:,:), 'ENGK' )
+       call STAT_total( total, ENGI(:,:,:), 'ENGI' )
 
     endif
 

@@ -421,8 +421,6 @@ contains
     integer :: RD_k, k, i, j, v
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnx)'
-
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]
                               DENS(:,:,:),  & ! [IN]

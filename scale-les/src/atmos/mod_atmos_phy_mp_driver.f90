@@ -87,6 +87,9 @@ contains
   subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_mp, only: &
@@ -125,10 +128,15 @@ contains
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics'
 
        do j  = JS, JE
        do i  = IS, IE
@@ -196,9 +204,9 @@ contains
     do i = IS, IE
     do k = KS, KE
        DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_MP(k,i,j)
+       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
        MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_MP(k,i,j)
        MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_MP(k,i,j)
-       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
        RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
     enddo
     enddo
@@ -214,6 +222,20 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, DENS_t_MP(:,:,:), 'DENS_t_MP' )
+       call STAT_total( total, MOMZ_t_MP(:,:,:), 'MOMZ_t_MP' )
+       call STAT_total( total, MOMX_t_MP(:,:,:), 'MOMX_t_MP' )
+       call STAT_total( total, MOMY_t_MP(:,:,:), 'MOMY_t_MP' )
+       call STAT_total( total, RHOT_t_MP(:,:,:), 'RHOT_t_MP' )
+
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_MP(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_MP' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_MP_driver

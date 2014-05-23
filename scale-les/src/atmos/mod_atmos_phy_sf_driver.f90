@@ -96,6 +96,9 @@ contains
     use scale_const, only: &
        CPdry => CONST_CPdry,  &
        LH0   => CONST_LH0
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
@@ -109,6 +112,9 @@ contains
        I_XYW
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_sf, only: &
@@ -169,6 +175,9 @@ contains
     real(RP) :: T2    (IA,JA) !  2m Temp   [K]
     real(RP) :: Q2    (IA,JA) !  2m Vapor  [kg/kg]
 
+    real(RP) :: RHOQ(IA,JA)
+    real(RP) :: total ! dummy
+
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
@@ -190,6 +199,9 @@ contains
                            T2        (:,:),   & ! [OUT]
                            Q2        (:,:)    ) ! [OUT]
        else
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, surface flux'
+
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
                              PRES      (KS,:,:),   & ! [IN]
                              W         (KS,:,:),   & ! [IN]
@@ -221,6 +233,11 @@ contains
                              Q2        (:,:)       ) ! [OUT]
        endif
 
+       call COMM_vars8( SFLX_MU(:,:), 1 )
+       call COMM_vars8( SFLX_MV(:,:), 2 )
+       call COMM_wait ( SFLX_MU(:,:), 1 )
+       call COMM_wait ( SFLX_MV(:,:), 2 )
+
        do j = JS, JE
        do i = IS, IE
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
@@ -246,6 +263,7 @@ contains
        enddo
        enddo
 
+       DENS_t_SF(:,:) = 0.0_RP
        do iq = I_QV, I_QV
        do j  = JS, JE
        do i  = IS, IE
@@ -285,6 +303,20 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
+       call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
+       call STAT_total( total, MOMX_t_SF(:,:), 'MOMX_t_SF' )
+       call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
+       call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
+
+       do iq = 1, QA
+          RHOQ(:,:) = DENS(KS,:,:) * QTRC_t_SF(:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:), trim(AQ_NAME(iq))//'_t_SF' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_SF_driver

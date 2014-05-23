@@ -77,6 +77,9 @@ contains
   subroutine ATMOS_PHY_CH_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
 !    use scale_atmos_phy_ch, only: &
@@ -97,10 +100,16 @@ contains
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    integer :: k, i, j, iq
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, chemistry'
+
 !       call ATMOS_PHY_CH( DENS,          & ! [IN]
 !                          MOMZ,          & ! [IN]
 !                          MOMX,          & ! [IN]
@@ -129,6 +138,14 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_CH(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_CH' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_CH_driver
