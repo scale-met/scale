@@ -37,8 +37,6 @@ module mod_atmos_phy_tb_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -150,15 +148,29 @@ contains
   end subroutine ATMOS_PHY_TB_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_PHY_TB_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       ATMOS_PHY_TB_TKE(   1:KS-1,i,j) = ATMOS_PHY_TB_TKE(KS,i,j)
+       ATMOS_PHY_TB_nu (   1:KS-1,i,j) = ATMOS_PHY_TB_nu (KS,i,j)
+       ATMOS_PHY_TB_Ri (   1:KS-1,i,j) = ATMOS_PHY_TB_Ri (KS,i,j)
+       ATMOS_PHY_TB_Pr (   1:KS-1,i,j) = ATMOS_PHY_TB_Pr (KS,i,j)
+       ATMOS_PHY_TB_TKE(KE+1:KA,  i,j) = ATMOS_PHY_TB_TKE(KE,i,j)
+       ATMOS_PHY_TB_nu (KE+1:KA,  i,j) = ATMOS_PHY_TB_nu (KE,i,j)
+       ATMOS_PHY_TB_Ri (KE+1:KA,  i,j) = ATMOS_PHY_TB_Ri (KE,i,j)
+       ATMOS_PHY_TB_Pr (KE+1:KA,  i,j) = ATMOS_PHY_TB_Pr (KE,i,j)
+    enddo
+    enddo
+
     call COMM_vars8( ATMOS_PHY_TB_TKE(:,:,:), 1 )
     call COMM_vars8( ATMOS_PHY_TB_nu (:,:,:), 2 )
     call COMM_vars8( ATMOS_PHY_TB_Ri (:,:,:), 3 )
@@ -222,8 +234,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_TB_RESTART_OUT_BASENAME /= '' ) then
@@ -235,14 +245,14 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_TB) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_write( ATMOS_PHY_TB_TKE(:,:,:), basename,               ATMOS_PHY_TB_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_TB_nu (:,:,:), basename,               ATMOS_PHY_TB_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_TB_Ri (:,:,:), basename,               ATMOS_PHY_TB_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, .true. ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_TB_Pr (:,:,:), basename,               ATMOS_PHY_TB_RESTART_OUT_TITLE,        & ! [IN]
-                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, .true. ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_TB_TKE(:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_TB_nu (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_TB_Ri (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_TB_Pr (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

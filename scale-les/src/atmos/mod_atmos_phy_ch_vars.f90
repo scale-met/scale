@@ -37,8 +37,6 @@ module mod_atmos_phy_ch_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -127,15 +125,23 @@ contains
   end subroutine ATMOS_PHY_CH_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_PHY_CH_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
+    do j  = JS, JE
+    do i  = IS, IE
+       ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
+       ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
+    enddo
+    enddo
+
     call COMM_vars8( ATMOS_PHY_CH_O3(:,:,:), 1 )
     call COMM_wait ( ATMOS_PHY_CH_O3(:,:,:), 1 )
 
@@ -184,8 +190,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_CH_RESTART_OUT_BASENAME /= '' ) then

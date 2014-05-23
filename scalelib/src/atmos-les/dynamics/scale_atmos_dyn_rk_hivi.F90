@@ -67,7 +67,7 @@ module scale_atmos_dyn_rk_hivi
 
 contains
 
-  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_TYPE_DYN )
+  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -77,7 +77,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    character(len=H_SHORT), intent(in) :: ATMOS_DYN_TYPE
 
     integer :: ierr
 
@@ -88,8 +88,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI'
 
-    if ( ATMOS_TYPE_DYN .ne. 'HIVI' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not HIVI. Check!'
+    if ( ATMOS_DYN_TYPE .ne. 'HIVI' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
        call PRC_MPIstop
     end if
 

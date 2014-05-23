@@ -44,6 +44,8 @@ module scale_grid_real
   real(RP), public, allocatable :: REAL_DLON(:,:)      !< delta longitude
   real(RP), public, allocatable :: REAL_DLAT(:,:)      !< delta latitude
 
+  real(RP), public, allocatable :: REAL_Z1  (:,:)      !< Height of the lowermost grid from surface (cell center) [m]
+
   real(RP), public, allocatable :: REAL_PHI (:,:,:)    !< geopotential [m2/s2] (cell center)
 
   real(RP), public, allocatable :: REAL_AREA(:,:)      !< horizontal area [m2]
@@ -64,10 +66,6 @@ module scale_grid_real
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: REAL_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),  private :: REAL_OUT_TITLE    = 'SCALE-LES GEOMETRICS' !< title    of the output file
-  character(len=H_MID),  private :: REAL_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -94,9 +92,10 @@ contains
 
     allocate( REAL_CZ (  KA,IA,JA) )
     allocate( REAL_FZ (0:KA,IA,JA) )
+    allocate( REAL_Z1 (     IA,JA) )
     allocate( REAL_PHI(  KA,IA,JA) )
 
-    allocate( REAL_AREA(IA,JA)    )
+    allocate( REAL_AREA(   IA,JA) )
     allocate( REAL_VOL (KA,IA,JA) )
 
     ! setup map projection
@@ -193,10 +192,10 @@ contains
   !> Convert Xi to Z coordinate
   subroutine REAL_calc_Z
     use scale_const, only: &
-       CONST_GRAV
+       GRAV => CONST_GRAV
     use scale_grid, only: &
-       CZ => GRID_CZ, &
-       FZ => GRID_FZ
+       GRID_CZ, &
+       GRID_FZ
     use scale_topography, only: &
        Zsfc => TOPO_Zsfc
     implicit none
@@ -206,12 +205,12 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    Htop = FZ(KE) - FZ(KS-1)
+    Htop = GRID_FZ(KE) - GRID_FZ(KS-1)
 
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       REAL_CZ(k,i,j) = ( Htop - Zsfc(i,j) ) / Htop * CZ(k) + Zsfc(i,j)
+       REAL_CZ(k,i,j) = ( Htop - Zsfc(i,j) ) / Htop * GRID_CZ(k) + Zsfc(i,j)
     enddo
     enddo
     enddo
@@ -219,12 +218,14 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 0, KA
-       REAL_FZ(k,i,j) = ( Htop - Zsfc(i,j) ) / Htop * FZ(k) + Zsfc(i,j)
+       REAL_FZ(k,i,j) = ( Htop - Zsfc(i,j) ) / Htop * GRID_FZ(k) + Zsfc(i,j)
     enddo
     enddo
     enddo
 
-    REAL_PHI(:,:,:) = REAL_CZ(:,:,:) * CONST_GRAV
+    REAL_Z1(:,:) = REAL_CZ(KS,:,:) - Zsfc(:,:)
+
+    REAL_PHI(:,:,:) = GRAV * REAL_CZ(:,:,:)
 
     return
   end subroutine REAL_calc_Z

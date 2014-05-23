@@ -49,14 +49,14 @@ program scaleles
      TIME_DOend
   use scale_grid_index, only: &
      GRID_INDEX_setup
-  use scale_land_grid_index, only: &
-     LAND_GRID_INDEX_setup
-  use scale_urban_grid_index, only: &
-     URBAN_GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
+  use scale_land_grid_index, only: &
+     LAND_GRID_INDEX_setup
   use scale_land_grid, only: &
      LAND_GRID_setup
+  use scale_urban_grid_index, only: &
+     URBAN_GRID_INDEX_setup
   use scale_urban_grid, only: &
      URBAN_GRID_setup
   use scale_tracer, only: &
@@ -91,11 +91,16 @@ program scaleles
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup
 
+  use mod_atmos_admin, only: &
+     ATMOS_admin_setup, &
+     ATMOS_do
   use mod_atmos_vars, only: &
      ATMOS_vars_setup,         &
      ATMOS_vars_restart_read,  &
      ATMOS_vars_restart_write, &
-     ATMOS_vars_restart_check
+     ATMOS_vars_restart_check, &
+     ATMOS_sw_restart,         &
+     ATMOS_sw_check
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
      ATMOS_driver
@@ -134,14 +139,20 @@ program scaleles
   implicit none
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-les.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ parameters & variables
   !
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
   !=============================================================================
 
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup
+  call IO_setup( MODELNAME )
 
   ! start MPI
   call PRC_MPIstart
@@ -166,14 +177,14 @@ program scaleles
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/vertical grid index
+  ! setup horisontal/vertical grid coordinates (cartesian,idealized)
   call GRID_INDEX_setup
-  call LAND_GRID_INDEX_setup
-  call URBAN_GRID_INDEX_setup
-
-  ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
+
+  call LAND_GRID_INDEX_setup
   call LAND_GRID_setup
+
+  call URBAN_GRID_INDEX_setup
   call URBAN_GRID_setup
 
   ! setup tracer index
@@ -208,6 +219,9 @@ program scaleles
   call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
+
+  ! setup submodel administrator
+  call ATMOS_admin_setup
 
   ! setup variable container
   call ATMOS_vars_setup
@@ -257,11 +271,11 @@ program scaleles
     call USER_step
 
     ! change to next state
-    if ( TIME_DOATMOS_step ) call ATMOS_driver
-    if ( TIME_DOOCEAN_step ) call OCEAN_driver
-    if ( TIME_DOLAND_step  ) call LAND_driver
-    if ( TIME_DOURBAN_step ) call URBAN_driver
-    if ( TIME_DOCPL_calc   ) call CPL_driver
+    if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+    if( TIME_DOOCEAN_step ) call OCEAN_driver
+    if( TIME_DOLAND_step  ) call LAND_driver
+    if( TIME_DOURBAN_step ) call URBAN_driver
+    if( TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
     call TIME_advance
@@ -271,13 +285,13 @@ program scaleles
     call MONIT_write('MAIN')
 
     ! restart output
-    if ( TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if ( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-    if ( TIME_DOLAND_restart  ) call LAND_vars_restart_write
-    if ( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-    if ( TIME_DOCPL_restart   ) call CPL_vars_restart_write
+    if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+    if( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if( TIME_DOLAND_restart  ) call LAND_vars_restart_write
+    if( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+    if( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
-    if ( TIME_DOend ) exit
+    if( TIME_DOend ) exit
 
   enddo
 
@@ -295,7 +309,7 @@ program scaleles
   !########## Finalize ##########
 
   ! check data
-  call ATMOS_vars_restart_check
+  if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
   call PROF_rapreport
 #ifdef _PAPI_

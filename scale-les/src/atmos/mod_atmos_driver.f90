@@ -32,6 +32,7 @@ module mod_atmos_driver
   !
   public :: ATMOS_driver_setup
   public :: ATMOS_driver
+  public :: ATMOS_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !
@@ -53,22 +54,7 @@ contains
     use scale_time, only: &
        TIME_NOWDATE
     use mod_atmos_vars, only: &
-       ATMOS_DYN_TYPE,    &
-       ATMOS_PHY_CP_TYPE, &
-       ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_PHY_CH_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_sw_dyn,      &
-       ATMOS_sw_phy_cp,   &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
+       ATMOS_vars_diagnostics, &
        DENS,              &
        MOMZ,              &
        MOMX,              &
@@ -89,20 +75,20 @@ contains
        ATMOS_BOUNDARY_setup
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver_setup
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_setup
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_setup
-    use mod_atmos_phy_ch_driver, only: &
-       ATMOS_PHY_ch_driver_setup
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -118,14 +104,20 @@ contains
     call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
     ! setup each components
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_driver_setup   ( ATMOS_DYN_TYPE    )
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_driver_setup( ATMOS_PHY_CP_TYPE )
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_driver_setup( ATMOS_PHY_MP_TYPE )
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_driver_setup( ATMOS_PHY_CH_TYPE )
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_driver_setup( ATMOS_PHY_AE_TYPE )
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_driver_setup( ATMOS_PHY_RD_TYPE )
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_driver_setup( ATMOS_PHY_SF_TYPE )
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_driver_setup( ATMOS_PHY_TB_TYPE )
+    call ATMOS_DYN_driver_setup
+    call ATMOS_PHY_MP_driver_setup
+    call ATMOS_PHY_AE_driver_setup
+    call ATMOS_PHY_CH_driver_setup
+    call ATMOS_PHY_RD_driver_setup
+    call ATMOS_PHY_SF_driver_setup
+    call ATMOS_PHY_TB_driver_setup
+    call ATMOS_PHY_CP_driver_setup
+
+    !########## Calculate diagnostic variables ##########
+    call ATMOS_vars_diagnostics
+
+    !########## Set surface boundary & put to other model ##########
+    call ATMOS_SURFACE_SET
 
     !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
@@ -135,59 +127,66 @@ contains
     RHOT_tp(:,:,:)   = 0.0_RP
     QTRC_tp(:,:,:,:) = 0.0_RP
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** setup finished'
+    if( IO_L ) write(IO_FID_LOG,*) '*** setup ATMOS finished.'
 
     return
   end subroutine ATMOS_driver_setup
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_driver
     use scale_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
+       do_phy_mp => TIME_DOATMOS_PHY_MP, &
+       do_phy_ae => TIME_DOATMOS_PHY_AE, &
+       do_phy_ch => TIME_DOATMOS_PHY_CH, &
+       do_phy_rd => TIME_DOATMOS_PHY_RD, &
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
-       do_phy_mp => TIME_DOATMOS_PHY_MP, &
-       do_phy_rd => TIME_DOATMOS_PHY_RD, &
-       do_phy_ae => TIME_DOATMOS_PHY_AE
-    use mod_atmos_vars, only: &
-       DENS, &
-       RHOT, &
-       QTRC, &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
-       QTRC_tp, &
-       sw_dyn    => ATMOS_sw_dyn,    &
-       sw_phy_sf => ATMOS_sw_phy_sf, &
-       sw_phy_tb => ATMOS_sw_phy_tb, &
-       sw_phy_mp => ATMOS_sw_phy_mp, &
-       sw_phy_rd => ATMOS_sw_phy_rd, &
-       sw_phy_ae => ATMOS_sw_phy_ae, &
-       ATMOS_vars_history
-    use mod_atmos_dyn_driver, only: &
-       ATMOS_DYN => ATMOS_DYN_driver
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF => ATMOS_PHY_SF_driver, &
-       ATMOS_PHY_SF_driver_first,  &
-       ATMOS_PHY_SF_driver_final
-    use mod_atmos_phy_tb_driver, only: &
-       ATMOS_PHY_TB => ATMOS_PHY_TB_driver
-    use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP => ATMOS_PHY_MP_driver
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD => ATMOS_PHY_RD_driver
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE => ATMOS_PHY_AE_driver
+       do_phy_cp => TIME_DOATMOS_PHY_CP
     use scale_atmos_refstate, only: &
-       ATMOS_REFSTATE_update, &
-       ATMOS_REFSTATE_UPDATE_FLAG
-    use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd, &
-       sw_AtmOcn => CPL_sw_AtmOcn
+       ATMOS_REFSTATE_UPDATE_FLAG, &
+       ATMOS_REFSTATE_update
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,    &
+       ATMOS_sw_phy_mp, &
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_ch, &
+       ATMOS_sw_phy_rd, &
+       ATMOS_sw_phy_sf, &
+       ATMOS_sw_phy_tb, &
+       ATMOS_sw_phy_cp
+    use mod_atmos_vars, only: &
+       ATMOS_vars_diagnostics, &
+       ATMOS_vars_history,     &
+       DENS,                   &
+       MOMZ,                   &
+       MOMX,                   &
+       MOMY,                   &
+       RHOT,                   &
+       QTRC,                   &
+       DENS_tp,                &
+       MOMZ_tp,                &
+       MOMX_tp,                &
+       MOMY_tp,                &
+       RHOT_tp,                &
+       QTRC_tp
+    use mod_atmos_dyn_driver, only: &
+       ATMOS_DYN_driver
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver
     implicit none
     !---------------------------------------------------------------------------
 
@@ -196,60 +195,67 @@ contains
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
     endif
 
-    !########## Surface First ##########
-    if ( sw_phy_sf ) then
-       call PROF_rapstart('ATM SurfaceFlux')
-       if ( sw_AtmLnd .or. sw_AtmOcn ) then
-          call ATMOS_PHY_SF_driver_first
-       else
-          call ATMOS_PHY_SF( do_phy_sf, .true. )
-       endif
-       call PROF_rapend  ('ATM SurfaceFlux')
-    endif
-
-    !########## Turbulence ##########
-    if ( sw_phy_tb ) then
-       call PROF_rapstart('ATM Turbulence')
-       call ATMOS_PHY_TB( do_phy_tb, .true. )
-       call PROF_rapend  ('ATM Turbulence')
-    endif
-
     !########## Microphysics ##########
-    if ( sw_phy_mp ) then
+    if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM Microphysics')
-       call ATMOS_PHY_MP( do_phy_mp, .true. )
+       call ATMOS_PHY_MP_driver( update_flag=do_phy_mp, history_flag=.true. )
        call PROF_rapend  ('ATM Microphysics')
     endif
 
     !########## Aerosol ##########
-    if ( sw_phy_ae ) then
+    if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM Aerosol')
-       call ATMOS_PHY_AE( do_phy_ae, .true. )
+       call ATMOS_PHY_AE_driver( update_flag=do_phy_ae, history_flag=.true. )
        call PROF_rapend  ('ATM Aerosol')
     endif
 
+    !########## Chemistry ##########
+    if ( ATMOS_sw_phy_ch ) then
+       call PROF_rapstart('ATM Chemistry')
+       call ATMOS_PHY_CH_driver( update_flag=do_phy_ch, history_flag=.true. )
+       call PROF_rapend  ('ATM Chemistry')
+    endif
+
     !########## Radiation ##########
-    if ( sw_phy_rd ) then
+    if ( ATMOS_sw_phy_rd ) then
        call PROF_rapstart('ATM Radiation')
-       call ATMOS_PHY_RD( do_phy_rd, .true. )
+       call ATMOS_PHY_RD_driver( update_flag=do_phy_rd, history_flag=.true. )
        call PROF_rapend  ('ATM Radiation')
     endif
 
+    !########## Surface Flux ##########
+    if ( ATMOS_sw_phy_sf ) then
+       call PROF_rapstart('ATM SurfaceFlux')
+       call ATMOS_PHY_SF_driver( update_flag=do_phy_sf, history_flag=.true. )
+       call PROF_rapend  ('ATM SurfaceFlux')
+    endif
+
+    !########## Turbulence ##########
+    if ( ATMOS_sw_phy_tb ) then
+       call PROF_rapstart('ATM Turbulence')
+       call ATMOS_PHY_TB_driver( update_flag=do_phy_tb, history_flag=.true. )
+       call PROF_rapend  ('ATM Turbulence')
+    endif
+
+    !########## Cumulus ##########
+    if ( ATMOS_sw_phy_cp ) then
+       call PROF_rapstart('ATM Cumulus')
+       call ATMOS_PHY_CP_driver( update_flag=do_phy_cp, history_flag=.true. )
+       call PROF_rapend  ('ATM Cumulus')
+    endif
+
     !########## Dynamics ##########
-    if ( sw_dyn ) then
+    if ( ATMOS_sw_dyn ) then
        call PROF_rapstart('ATM Dynamics')
-       call ATMOS_DYN( do_dyn )
+       call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM Dynamics')
     endif
 
-    !########## Surface Final ##########
-    if ( sw_phy_sf ) then
-       call PROF_rapstart('ATM SurfaceFlux')
-       if ( sw_AtmLnd .or. sw_AtmOcn ) then
-          call ATMOS_PHY_SF_driver_final
-       endif
-       call PROF_rapend  ('ATM SurfaceFlux')
-    endif
+    !########## Calculate diagnostic variables ##########
+    call ATMOS_vars_diagnostics
+
+    !########## Set surface boundary & put to other model ##########
+    call ATMOS_SURFACE_SET
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars')
@@ -266,5 +272,69 @@ contains
 
     return
   end subroutine ATMOS_driver
+
+
+  !-----------------------------------------------------------------------------
+  !> Set surface boundary condition (ATM2CPL)
+  subroutine ATMOS_SURFACE_SET
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ, &
+       REAL_Z1
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use mod_atmos_vars, only: &
+       DENS, &
+       QTRC, &
+       TEMP, &
+       PRES, &
+       W,    &
+       U,    &
+       V
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
+       SFC_PRES => ATMOS_PHY_SF_SFC_PRES
+    use mod_cpl_vars, only: &
+       CPL_sw => CPL_sw_ALL, &
+       CPL_putATM
+    implicit none
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    ! update surface density, surface pressure
+    call BOTTOM_estimate( DENS    (:,:,:), & ! [IN]
+                          PRES    (:,:,:), & ! [IN]
+                          REAL_CZ (:,:,:), & ! [IN]
+                          REAL_FZ (:,:,:), & ! [IN]
+                          REAL_Z1 (:,:),   & ! [IN]
+                          SFC_DENS(:,:),   & ! [OUT]
+                          SFC_PRES(:,:)    ) ! [OUT]
+
+    if ( CPL_sw ) then
+       call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
+                        PRES      (KS,:,:),   & ! [IN]
+                        W         (KS,:,:),   & ! [IN]
+                        U         (KS,:,:),   & ! [IN]
+                        V         (KS,:,:),   & ! [IN]
+                        DENS      (KS,:,:),   & ! [IN]
+                        QTRC      (KS,:,:,:), & ! [IN]
+                        REAL_Z1   (:,:),      & ! [IN]
+                        SFC_DENS  (:,:),      & ! [IN]
+                        SFC_PRES  (:,:),      & ! [IN]
+                        SFLX_LW_dn(:,:),      & ! [IN]
+                        SFLX_SW_dn(:,:),      & ! [IN]
+                        SFLX_rain (:,:),      & ! [IN]
+                        SFLX_snow (:,:)       ) ! [IN]
+    endif
+
+    return
+  end subroutine ATMOS_SURFACE_SET
 
 end module mod_atmos_driver

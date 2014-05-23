@@ -45,11 +45,14 @@ module mod_cnvtopo
   private :: CNVTOPO_GTOPO30
   private :: CNVTOPO_DEM50M
   private :: CNVTOPO_GMTED2010
+  private :: CNVTOPO_smooth
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
+  real(RP), private :: CNVTOPO_smooth_maxslope
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -57,18 +60,24 @@ contains
   subroutine CNVTOPO_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     character(len=H_SHORT) :: CNVTOPO_name = 'NONE'
 
     NAMELIST / PARAM_CNVTOPO / &
-       CNVTOPO_name
+       CNVTOPO_name,            &
+       CNVTOPO_smooth_maxslope
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CNVTOPO]/Categ[CNVTOPO]'
+
+    CNVTOPO_smooth_maxslope = UNDEF
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVTOPO,iostat=ierr)
@@ -135,7 +144,7 @@ contains
           call PRC_MPIstop
        endselect
 
-       call CNVTOPO_checkslope
+       call CNVTOPO_smooth
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT TOPOGRAPHY DATA ++++++'
 
@@ -472,18 +481,16 @@ contains
 
   !-----------------------------------------------------------------------------
   !> check slope
-  subroutine CNVTOPO_checkslope
+  subroutine CNVTOPO_smooth
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_grid, only: &
        GRID_FDX, &
        GRID_FDY
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_stats, only: &
        STAT_detail
     use scale_topography, only: &
+       TOPO_fillhalo, &
        TOPO_Zsfc
     implicit none
 
@@ -496,6 +503,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! digital filter
+!    if ( CNVTOPO_smooth_maxslope > UNDEF ) then
 !    do j = JS, JE
 !    do i = IS, IE
 !       TOPO_Zsfc(i,j) = ( TOPO_Zsfc(i  ,j  ) &
@@ -505,20 +513,18 @@ contains
 !                        + TOPO_Zsfc(i  ,j+1) ) / 5.0_RP
 !    enddo
 !    enddo
+!    endif
 
-    call COMM_vars8( TOPO_Zsfc(:,:), 1 )
-    call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+    call TOPO_fillhalo
 
     do j = JS, JE
     do i = IS, IE
-!       DZsfc_DX(1,i,j,1) = ( TOPO_Zsfc(i+1,j) - TOPO_Zsfc(i,j) ) / GRID_FDX(i)
        DZsfc_DX(1,i,j,1) = atan2( ( TOPO_Zsfc(i+1,j)-TOPO_Zsfc(i,j) ), GRID_FDX(i) ) / D2R
     enddo
     enddo
 
     do j = JS, JE
     do i = IS, IE
-!       DZsfc_DY(1,i,j,1) = ( TOPO_Zsfc(i,j+1) - TOPO_Zsfc(i,j) ) / GRID_FDY(j)
        DZsfc_DY(1,i,j,1) = atan2( ( TOPO_Zsfc(i,j+1)-TOPO_Zsfc(i,j) ), GRID_FDY(j) ) / D2R
     enddo
     enddo
@@ -529,6 +535,6 @@ contains
     call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
 
     return
-  end subroutine CNVTOPO_checkslope
+  end subroutine CNVTOPO_smooth
 
 end module mod_cnvtopo

@@ -1471,8 +1471,7 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QAD => QA
     implicit none
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
@@ -1557,8 +1556,6 @@ contains
   subroutine ATMOS_PHY_MP_tomita08_Mixingratio( &
        Qe,    &
        QTRC0  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

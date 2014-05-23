@@ -37,8 +37,6 @@ module mod_atmos_phy_cp_vars
   !
   !++ included parameters
   !
-#include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -135,7 +133,7 @@ contains
   end subroutine ATMOS_PHY_CP_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> Communication
+  !> HALO Communication
   subroutine ATMOS_PHY_CP_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -143,7 +141,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! fill IHALO & JHALO
     call COMM_vars8( ATMOS_PHY_CP_MFLX_cloudbase(:,:), 1 )
     call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase(:,:), 1 )
 
@@ -192,8 +189,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_CP_RESTART_OUT_BASENAME /= '' ) then

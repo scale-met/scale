@@ -81,7 +81,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CALENDAR]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CALENDAR] / Categ[COMMON] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     return
   end subroutine CALENDAR_setup

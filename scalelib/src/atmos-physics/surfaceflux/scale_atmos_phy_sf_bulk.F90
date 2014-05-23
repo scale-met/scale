@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Flux from/to bottom wall of atmosphere (surface)
-!!          Constant flux
+!!          Bulk Method
 !!
 !! @author Team SCALE
 !!
@@ -13,11 +13,10 @@
 !! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
 !! @li      2012-04-10 (Y.Miyamoto)  [mod] introduce coefficients for interpolation
 !! @li      2012-09-11 (S.Nishizawa) [mod] bugfix based on the scale document
-!! @li      2012-09-12 (Y.Sato)    [renew] constant FLUX version
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_phy_sf_const
+module scale_atmos_phy_sf_bulk
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -34,8 +33,8 @@ module scale_atmos_phy_sf_const
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_SF_const_setup
-  public :: ATMOS_PHY_SF_const
+  public :: ATMOS_PHY_SF_bulk_setup
+  public :: ATMOS_PHY_SF_bulk
 
   !-----------------------------------------------------------------------------
   !
@@ -49,44 +48,30 @@ module scale_atmos_phy_sf_const
   !
   !++ Private parameters & variables
   !
-  integer,  private, save      :: ATMOS_PHY_SF_FLG_MOM_FLUX = 0 ! application type for momentum flux
-                                                                ! 0: Bulk coefficient  is constant
-                                                                ! 1: Friction velocity is constant
-
-  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM      =  100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
-  real(RP), private, save      :: ATMOS_PHY_SF_U_minM      =    0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
-  real(RP), private, parameter :: ATMOS_PHY_SF_Cm_max      = 2.5E-3_RP ! maximum limit of bulk coefficient for momentum [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_Cm_min      = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
-
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_Ustar =   0.25_RP ! constant friction velocity [m/s]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_Cm    = 0.0011_RP ! constant bulk coefficient for momentum [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_SH    =   15.0_RP ! constant surface sensible heat flux [W/m2]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_LH    =  115.0_RP ! constant surface latent   heat flux [W/m2]
-
-  logical,  private, save      :: ATMOS_PHY_SF_FLG_SH_DIURNAL = .false. ! diurnal modulation for sensible heat flux?
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_FREQ     = 24.0_RP ! frequency of sensible heat flux modulation [hour]
+  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM = 100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
+  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxH = 100.0_RP ! maximum limit of absolute velocity for heat     [m/s]
+  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxE = 100.0_RP ! maximum limit of absolute velocity for moisture [m/s]
+  real(RP), private, save      :: ATMOS_PHY_SF_U_minM =   0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
+  real(RP), private, save      :: ATMOS_PHY_SF_U_minH =   0.0_RP ! minimum limit of absolute velocity for heat     [m/s]
+  real(RP), private, save      :: ATMOS_PHY_SF_U_minE =   0.0_RP ! minimum limit of absolute velocity for moisture [m/s]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_SF_const_setup( ATMOS_PHY_SF_TYPE )
+  subroutine ATMOS_PHY_SF_bulk_setup( ATMOS_PHY_SF_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_phy_sf_bulkcoef, only: &
+       SF_bulkcoef_setup => ATMOS_PHY_SF_bulkcoef_setup
     implicit none
 
     character(len=H_SHORT), intent(in) :: ATMOS_PHY_SF_TYPE
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
-       ATMOS_PHY_SF_FLG_MOM_FLUX,   &
-       ATMOS_PHY_SF_U_minM,         &
-       ATMOS_PHY_SF_CM_min,         &
-       ATMOS_PHY_SF_Const_Ustar,    &
-       ATMOS_PHY_SF_Const_CM,       &
-       ATMOS_PHY_SF_Const_SH,       &
-       ATMOS_PHY_SF_Const_LH,       &
-       ATMOS_PHY_SF_FLG_SH_DIURNAL, &
-       ATMOS_PHY_SF_Const_FREQ
+    NAMELIST / PARAM_ATMOS_PHY_SF_BULK / &
+       ATMOS_PHY_SF_U_minM, &
+       ATMOS_PHY_SF_U_minH, &
+       ATMOS_PHY_SF_U_minE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -95,28 +80,30 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SF]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
 
-    if ( ATMOS_PHY_SF_TYPE /= 'CONST' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
+    if ( ATMOS_PHY_SF_TYPE /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_SF_TYPE is not BULK. Check!'
        call PRC_MPIstop
     endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_CONST,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_BULK,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_CONST)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULK)
+
+    call SF_bulkcoef_setup
 
     return
-  end subroutine ATMOS_PHY_SF_const_setup
+  end subroutine ATMOS_PHY_SF_bulk_setup
 
   !-----------------------------------------------------------------------------
-  !> Constant flux
-  subroutine ATMOS_PHY_SF_const( &
+  !> Calculate surface flux
+  subroutine ATMOS_PHY_SF_bulk( &
        ATM_TEMP, ATM_PRES, ATM_W, ATM_U, ATM_V,     &
        ATM_DENS,                                    &
        ATM_QTRC,                                    &
@@ -130,15 +117,18 @@ contains
        SFLX_LW_up, SFLX_SW_up,                      &
        Uabs10, U10, V10, T2, Q2                     )
     use scale_const, only: &
-       PI   => CONST_PI,   &
-       LH0  => CONST_LH0,  &
-       STB  => CONST_STB,  &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
-    use scale_time, only: &
-       TIME_NOWSEC
+       STB   => CONST_STB,   &
+       CPdry => CONST_CPdry, &
+       RovCP => CONST_RovCP, &
+       LH0   => CONST_LH0,   &
+       I_SW  => CONST_I_SW,  &
+       I_LW  => CONST_I_LW
+    use scale_atmos_phy_sf_bulkcoef, only: &
+       SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+    use scale_ocean_roughness, only: &
+       OCEAN_roughness
     implicit none
 
     real(RP), intent(in)    :: ATM_TEMP  (IA,JA)    ! temperature at the lowermost layer (cell center) [K]
@@ -172,12 +162,19 @@ contains
     real(RP), intent(out)   :: Q2        (IA,JA)    ! water vapor q     at  2m height
 
     real(RP) :: ATM_Uabs(IA,JA) ! absolute velocity at z1 [m/s]
+    real(RP) :: ATM_POTT(IA,JA) ! potential temperature at z1, based on the local surface pressure [K]
     real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
 
-    real(RP) :: Cm(IA,JA)       ! bulk coefficient for momentum
-    real(RP) :: R10, R2
+    real(RP) :: Z0M (IA,JA)     ! roughness length for momentum [m]
+    real(RP) :: Z0H (IA,JA)     ! roughness length for heat     [m]
+    real(RP) :: Z0E (IA,JA)     ! roughness length for moisture [m]
+    real(RP) :: Cm  (IA,JA)     ! bulk coefficient for momentum
+    real(RP) :: Ch  (IA,JA)     ! bulk coefficient for heat
+    real(RP) :: Ce  (IA,JA)     ! bulk coefficient for moisture
+    real(RP) :: R10M(IA,JA)
+    real(RP) :: R2H (IA,JA)
+    real(RP) :: R2E (IA,JA)
 
-    real(RP) :: modulation
     real(RP) :: Uabs_lim
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -190,20 +187,33 @@ contains
     enddo
     enddo
 
-    if   ( ATMOS_PHY_SF_FLG_MOM_FLUX == 0 ) then ! Bulk coefficient is constant
-       do j = JS, JE
-       do i = IS, IE
-          Cm(i,j) = ATMOS_PHY_SF_Const_Cm
-       enddo
-       enddo
-    elseif( ATMOS_PHY_SF_FLG_MOM_FLUX == 1 ) then ! Friction velocity is constant
-       do j = JS, JE
-       do i = IS, IE
-          Cm(i,j) = ( ATMOS_PHY_SF_Const_Ustar / ATM_Uabs(i,j) )**2
-          Cm(i,j) = min( max( Cm(i,j), ATMOS_PHY_SF_Cm_min ), ATMOS_PHY_SF_Cm_max )
-       enddo
-       enddo
-    endif
+    do j = JS, JE
+    do i = IS, IE
+       ! potential temperature based on the local surface pressure (not 1000hPa)
+       ATM_POTT(i,j) = ATM_TEMP(i,j) * ( SFC_PRES(i,j) / ATM_PRES(i,j) )**RovCP
+    enddo
+    enddo
+
+    call OCEAN_roughness( ATM_Uabs(:,:), & ! [IN]
+                          ATM_Z1  (:,:), & ! [IN]
+                          SFC_Z0  (:,:), & ! [INOUT]
+                          Z0M     (:,:), & ! [OUT]
+                          Z0H     (:,:), & ! [OUT]
+                          Z0E     (:,:)  ) ! [OUT]
+
+    call SF_bulkcoef( ATM_Uabs(:,:), & ! [IN]
+                      ATM_POTT(:,:), & ! [IN]
+                      ATM_Z1  (:,:), & ! [IN]
+                      SFC_TEMP(:,:), & ! [IN]
+                      Z0M     (:,:), & ! [IN]
+                      Z0H     (:,:), & ! [IN]
+                      Z0E     (:,:), & ! [IN]
+                      Cm      (:,:), & ! [OUT]
+                      Ch      (:,:), & ! [OUT]
+                      Ce      (:,:), & ! [OUT]
+                      R10M    (:,:), & ! [OUT]
+                      R2H     (:,:), & ! [OUT]
+                      R2E     (:,:)  ) ! [OUT]
 
     !-----< momentum >-----
 
@@ -219,11 +229,13 @@ contains
 
     !-----< heat flux >-----
 
-    if ( ATMOS_PHY_SF_FLG_SH_DIURNAL ) then
-       modulation = sin( 2.0_RP * PI * TIME_NOWSEC / 3600.0_RP / ATMOS_PHY_SF_Const_FREQ )
-    else
-       modulation = 1.0_RP
-    endif
+    do j = JS, JE
+    do i = IS, IE
+       Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minH ), ATMOS_PHY_SF_U_maxH )
+
+       SFLX_SH(i,j) = Ch(i,j) * Uabs_lim * SFC_DENS(i,j) * CPdry * ( SFC_TEMP(i,j) - ATM_POTT(i,j) )
+    enddo
+    enddo
 
     call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
                                    SFC_TEMP(:,:), & ! [IN]
@@ -231,8 +243,9 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       SFLX_SH(i,j) = ATMOS_PHY_SF_Const_SH * modulation
-       SFLX_LH(i,j) = ATMOS_PHY_SF_Const_LH
+       Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minE ), ATMOS_PHY_SF_U_maxE )
+
+       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LH0 * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
     enddo
     enddo
 
@@ -255,26 +268,22 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       R10 = 10.0_RP / ATM_Z1(i,j)
-
-       Uabs10(i,j) = R10 * ATM_Uabs(i,j)
-       U10   (i,j) = R10 * ATM_U   (i,j)
-       V10   (i,j) = R10 * ATM_V   (i,j)
+       Uabs10(i,j) = R10M(i,j) * ATM_Uabs(i,j)
+       U10   (i,j) = R10M(i,j) * ATM_U   (i,j)
+       V10   (i,j) = R10M(i,j) * ATM_V   (i,j)
     enddo
     enddo
 
     do j = JS, JE
     do i = IS, IE
-       R2 = 2.0_RP / ATM_Z1(i,j)
-
-       T2(i,j) = (          R2 ) * ATM_TEMP(i,j) &
-               + ( 1.0_RP - R2 ) * SFC_TEMP(i,j)
-       Q2(i,j) = (          R2 ) * ATM_QTRC(i,j,I_QV) &
-               + ( 1.0_RP - R2 ) * SFC_beta(i,j) * SFC_QSAT(i,j)
+       T2(i,j) = (          R2H(i,j) ) * ATM_TEMP(i,j) &
+               + ( 1.0_RP - R2H(i,j) ) * SFC_TEMP(i,j)
+       Q2(i,j) = (          R2E(i,j) ) * ATM_QTRC(i,j,I_QV) &
+               + ( 1.0_RP - R2E(i,j) ) * SFC_beta(i,j) * SFC_QSAT(i,j)
     enddo
     enddo
 
     return
-  end subroutine ATMOS_PHY_SF_const
+  end subroutine ATMOS_PHY_SF_bulk
 
-end module scale_atmos_phy_sf_const
+end module scale_atmos_phy_sf_bulk

@@ -57,18 +57,18 @@ module scale_atmos_dyn_rk_heve
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_rk_heve_setup( ATMOS_TYPE_DYN )
+  subroutine ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    character(len=H_SHORT), intent(in) :: ATMOS_DYN_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
 
-    if ( ATMOS_TYPE_DYN .ne. 'HEVE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is not HEVE. Check!'
+    if ( ATMOS_DYN_TYPE .ne. 'HEVE' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is not HEVE. Check!'
        call PRC_MPIstop
     endif
 

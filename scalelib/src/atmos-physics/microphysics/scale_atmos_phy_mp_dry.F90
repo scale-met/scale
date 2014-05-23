@@ -145,8 +145,6 @@ contains
   subroutine ATMOS_PHY_MP_dry_Mixingratio( &
        Qe,    &
        QTRC0  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

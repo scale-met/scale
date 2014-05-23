@@ -128,7 +128,7 @@ module scale_atmos_dyn_rk
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_rk_setup( ATMOS_TYPE_DYN )
+  subroutine ATMOS_DYN_rk_setup( ATMOS_DYN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     use scale_stdio, only: &
@@ -152,21 +152,21 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_TYPE_DYN
+    character(len=H_SHORT), intent(in) :: ATMOS_DYN_TYPE
     !---------------------------------------------------------------------------
 
-    select case ( ATMOS_TYPE_DYN )
+    select case ( ATMOS_DYN_TYPE )
     case ( 'HEVE' )
-       call ATMOS_DYN_rk_heve_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE )
        ATMOS_DYN_rk => ATMOS_DYN_rk_heve
     case ( 'HEVI' )
-       call ATMOS_DYN_rk_hevi_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
     case ( 'HIVI' )
-       call ATMOS_DYN_rk_hivi_setup( ATMOS_TYPE_DYN )
+       call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
     case default
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_DYN is invalid'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is invalid'
        call PRC_MPIstop
     end select
 

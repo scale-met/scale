@@ -40,14 +40,14 @@ program scaleles_init
      TIME_setup
   use scale_grid_index, only: &
      GRID_INDEX_setup
-  use scale_land_grid_index, only: &
-     LAND_GRID_INDEX_setup
-  use scale_urban_grid_index, only: &
-     URBAN_GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
+  use scale_land_grid_index, only: &
+     LAND_GRID_INDEX_setup
   use scale_land_grid, only: &
      LAND_GRID_setup
+  use scale_urban_grid_index, only: &
+     URBAN_GRID_INDEX_setup
   use scale_urban_grid, only: &
      URBAN_GRID_setup
   use scale_tracer, only: &
@@ -97,14 +97,20 @@ program scaleles_init
   implicit none
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-les.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ parameters & variables
   !
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
   !=============================================================================
 
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup
+  call IO_setup( MODELNAME )
 
   ! start MPI
   call PRC_MPIstart
@@ -129,14 +135,14 @@ program scaleles_init
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/vertical grid index
+  ! setup horisontal/vertical grid coordinates (cartesian,idealized)
   call GRID_INDEX_setup
-  call LAND_GRID_INDEX_setup
-  call URBAN_GRID_INDEX_setup
-
-  ! setup grid coordinates (cartesian,idealized)
   call GRID_setup
+
+  call LAND_GRID_INDEX_setup
   call LAND_GRID_setup
+
+  call URBAN_GRID_INDEX_setup
   call URBAN_GRID_setup
 
   ! setup tracer index

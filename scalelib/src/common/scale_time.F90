@@ -126,7 +126,6 @@ module scale_time
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine TIME_setup( &
@@ -134,7 +133,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF8 => CONST_UNDEF8
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
        CALENDAR_daysec2date,    &
@@ -145,48 +144,48 @@ contains
 
     logical, intent(in) :: setup_TimeIntegration
 
-    real(DP)               :: TIME_DURATION
+    real(DP)               :: TIME_DURATION              = UNDEF8
     character(len=H_SHORT) :: TIME_DURATION_UNIT         = "SEC"
-    real(DP)               :: TIME_DT
+    real(DP)               :: TIME_DT                    = UNDEF8
     character(len=H_SHORT) :: TIME_DT_UNIT               = "SEC"
 
-    real(DP)               :: TIME_DT_ATMOS_DYN
+    real(DP)               :: TIME_DT_ATMOS_DYN          = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(DP)               :: TIME_DT_ATMOS_PHY_CP
+    real(DP)               :: TIME_DT_ATMOS_PHY_CP       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_MP
+    real(DP)               :: TIME_DT_ATMOS_PHY_MP       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_RD
+    real(DP)               :: TIME_DT_ATMOS_PHY_RD       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_SF
+    real(DP)               :: TIME_DT_ATMOS_PHY_SF       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_TB
+    real(DP)               :: TIME_DT_ATMOS_PHY_TB       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_CH
+    real(DP)               :: TIME_DT_ATMOS_PHY_CH       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_AE
+    real(DP)               :: TIME_DT_ATMOS_PHY_AE       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_RESTART
+    real(DP)               :: TIME_DT_ATMOS_RESTART       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT = ""
 
-    real(DP)               :: TIME_DT_OCEAN
+    real(DP)               :: TIME_DT_OCEAN              = UNDEF8
     character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT         = ""
-    real(DP)               :: TIME_DT_OCEAN_RESTART
+    real(DP)               :: TIME_DT_OCEAN_RESTART      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT = ""
 
-    real(DP)               :: TIME_DT_LAND
+    real(DP)               :: TIME_DT_LAND               = UNDEF8
     character(len=H_SHORT) :: TIME_DT_LAND_UNIT          = ""
-    real(DP)               :: TIME_DT_LAND_RESTART
+    real(DP)               :: TIME_DT_LAND_RESTART       = UNDEF8
     character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT  = ""
 
-    real(DP)               :: TIME_DT_URBAN
+    real(DP)               :: TIME_DT_URBAN              = UNDEF8
     character(len=H_SHORT) :: TIME_DT_URBAN_UNIT         = ""
-    real(DP)               :: TIME_DT_URBAN_RESTART
+    real(DP)               :: TIME_DT_URBAN_RESTART      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT = ""
 
-    real(DP)               :: TIME_DT_CPL
+    real(DP)               :: TIME_DT_CPL                = UNDEF8
     character(len=H_SHORT) :: TIME_DT_CPL_UNIT           = ""
-    real(DP)               :: TIME_DT_CPL_RESTART
+    real(DP)               :: TIME_DT_CPL_RESTART        = UNDEF8
     character(len=H_SHORT) :: TIME_DT_CPL_RESTART_UNIT   = ""
 
     NAMELIST / PARAM_TIME / &
@@ -237,53 +236,32 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TIME]/Categ[COMMON]'
-
-    TIME_DURATION         = UNDEF
-    TIME_DT               = UNDEF
-    TIME_DT_ATMOS_DYN     = UNDEF
-    TIME_DT_ATMOS_PHY_CP  = UNDEF
-    TIME_DT_ATMOS_PHY_MP  = UNDEF
-    TIME_DT_ATMOS_PHY_RD  = UNDEF
-    TIME_DT_ATMOS_PHY_SF  = UNDEF
-    TIME_DT_ATMOS_PHY_TB  = UNDEF
-    TIME_DT_ATMOS_PHY_CH  = UNDEF
-    TIME_DT_ATMOS_PHY_AE  = UNDEF
-    TIME_DT_ATMOS_RESTART = UNDEF
-    TIME_DT_OCEAN         = UNDEF
-    TIME_DT_OCEAN_RESTART = UNDEF
-    TIME_DT_LAND          = UNDEF
-    TIME_DT_LAND_RESTART  = UNDEF
-    TIME_DT_URBAN         = UNDEF
-    TIME_DT_URBAN_RESTART = UNDEF
-    TIME_DT_CPL           = UNDEF
-    TIME_DT_CPL_RESTART   = UNDEF
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TIME] / Categ[COMMON] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TIME,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_TIME)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
 
     ! check time setting
     if ( setup_TimeIntegration ) then
-       if ( TIME_DT == UNDEF ) then
+       if ( TIME_DT == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found TIME_DT.'
           call PRC_MPIstop
        endif
-       if ( TIME_DURATION == UNDEF ) then
+       if ( TIME_DURATION == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found TIME_DURATION.'
           call PRC_MPIstop
        endif
 
        ! DYN
-       if ( TIME_DT_ATMOS_DYN == UNDEF ) then
+       if ( TIME_DT_ATMOS_DYN == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_DYN. TIME_DT is used.'
           TIME_DT_ATMOS_DYN = TIME_DT
        endif
@@ -292,7 +270,7 @@ contains
           TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CP
-       if ( TIME_DT_ATMOS_PHY_CP == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_CP == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CP. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CP = TIME_DT
        endif
@@ -301,7 +279,7 @@ contains
           TIME_DT_ATMOS_PHY_CP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_MP
-       if ( TIME_DT_ATMOS_PHY_MP == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_MP == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_MP. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_MP = TIME_DT
        endif
@@ -310,7 +288,7 @@ contains
           TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_RD
-       if ( TIME_DT_ATMOS_PHY_RD == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_RD == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_RD. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_RD = TIME_DT
        endif
@@ -319,7 +297,7 @@ contains
           TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
        endif
        ! PHY_SF
-       if ( TIME_DT_ATMOS_PHY_SF == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_SF == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_SF. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_SF = TIME_DT
        endif
@@ -328,7 +306,7 @@ contains
           TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
        endif
        ! PHY_TB
-       if ( TIME_DT_ATMOS_PHY_TB == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_TB == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_TB. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_TB = TIME_DT
        endif
@@ -337,7 +315,7 @@ contains
           TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CH
-       if ( TIME_DT_ATMOS_PHY_CH == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_CH == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_CH. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CH = TIME_DT
        endif
@@ -346,7 +324,7 @@ contains
           TIME_DT_ATMOS_PHY_CH_UNIT = TIME_DT_UNIT
        endif
        ! PHY_AE
-       if ( TIME_DT_ATMOS_PHY_AE == UNDEF ) then
+       if ( TIME_DT_ATMOS_PHY_AE == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_PHY_AE. TIME_DT is used.'
           TIME_DT_ATMOS_PHY_AE = TIME_DT
        endif
@@ -355,7 +333,7 @@ contains
           TIME_DT_ATMOS_PHY_AE_UNIT = TIME_DT_UNIT
        endif
        ! ATMOS RESTART
-       if ( TIME_DT_ATMOS_RESTART == UNDEF ) then
+       if ( TIME_DT_ATMOS_RESTART == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_ATMOS_RESTART. TIME_DURATION is used.'
           TIME_DT_ATMOS_RESTART = TIME_DURATION
        endif
@@ -364,7 +342,7 @@ contains
           TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! OCEAN
-       if ( TIME_DT_OCEAN == UNDEF ) then
+       if ( TIME_DT_OCEAN == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN. TIME_DT is used.'
           TIME_DT_OCEAN = TIME_DT
        endif
@@ -373,7 +351,7 @@ contains
           TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
        endif
        ! OCEAN RESTART
-       if ( TIME_DT_OCEAN_RESTART == UNDEF ) then
+       if ( TIME_DT_OCEAN_RESTART == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_OCEAN_RESTART. TIME_DURATION is used.'
           TIME_DT_OCEAN_RESTART = TIME_DURATION
        endif
@@ -382,7 +360,7 @@ contains
           TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! LAND
-       if ( TIME_DT_LAND == UNDEF ) then
+       if ( TIME_DT_LAND == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND. TIME_DT is used.'
           TIME_DT_LAND = TIME_DT
        endif
@@ -391,7 +369,7 @@ contains
           TIME_DT_LAND_UNIT = TIME_DT_UNIT
        endif
        ! LAND RESTART
-       if ( TIME_DT_LAND_RESTART == UNDEF ) then
+       if ( TIME_DT_LAND_RESTART == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_LAND_RESTART. TIME_DURATION is used.'
           TIME_DT_LAND_RESTART = TIME_DURATION
        endif
@@ -400,7 +378,7 @@ contains
           TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! URBAN
-       if ( TIME_DT_URBAN == UNDEF ) then
+       if ( TIME_DT_URBAN == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN. TIME_DT is used.'
           TIME_DT_URBAN = TIME_DT
        endif
@@ -409,7 +387,7 @@ contains
           TIME_DT_URBAN_UNIT = TIME_DT_UNIT
        endif
        ! URBAN RESTART
-       if ( TIME_DT_URBAN_RESTART == UNDEF ) then
+       if ( TIME_DT_URBAN_RESTART == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART. TIME_DURATION is used.'
           TIME_DT_URBAN_RESTART = TIME_DURATION
        endif
@@ -418,7 +396,7 @@ contains
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! COUPLER
-       if ( TIME_DT_CPL == UNDEF ) then
+       if ( TIME_DT_CPL == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL. TIME_DT is used.'
           TIME_DT_CPL = TIME_DT
        endif
@@ -427,7 +405,7 @@ contains
           TIME_DT_CPL_UNIT = TIME_DT_UNIT
        endif
        ! CPL RESTART
-       if ( TIME_DT_CPL_RESTART == UNDEF ) then
+       if ( TIME_DT_CPL_RESTART == UNDEF8 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_RESTART. TIME_DURATION is used.'
           TIME_DT_CPL_RESTART = TIME_DURATION
        endif
@@ -466,6 +444,17 @@ contains
                                TIME_ENDDAY,     & ! [IN]
                                TIME_ENDSEC      ) ! [IN]
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
+         TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ',  &
+         TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
+         TIME_STARTMS
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
+         TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ',  &
+         TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
+         TIME_ENDMS
+
     if ( setup_TimeIntegration ) then
 
        call CALENDAR_unit2sec( TIME_DTSEC, TIME_DT, TIME_DT_UNIT )
@@ -473,16 +462,8 @@ contains
        TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
        TIME_NOWSTEP = 1
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
-            TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ', &
-            TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
-            TIME_STARTMS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
-            TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ', &
-            TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
-            TIME_ENDMS
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
-       if( IO_L ) write(IO_FID_LOG,*) '*** No. of steps   :', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,*)              '*** No. of steps   :', TIME_NSTEP
 
        !--- calculate intervals for atmosphere
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DYN,     TIME_DT_ATMOS_DYN,     TIME_DT_ATMOS_DYN_UNIT     )

@@ -24,6 +24,7 @@ module scale_topography
   !++ Public procedure
   !
   public :: TOPO_setup
+  public :: TOPO_fillhalo
   public :: TOPO_write
 
   !-----------------------------------------------------------------------------
@@ -32,7 +33,7 @@ module scale_topography
   !
   logical, public :: TOPO_exist = .false. !< topography exists?
 
-  real(RP), public, allocatable :: TOPO_Zsfc(:,:)   !< absolute ground height [m]
+  real(RP), public, allocatable :: TOPO_Zsfc(:,:) !< absolute ground height [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -67,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TOPOGRAPHY]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -78,7 +79,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_TOPO)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TOPO)
 
     allocate( TOPO_Zsfc(IA,JA) )
     TOPO_Zsfc(:,:) = 0.0_RP
@@ -88,6 +89,21 @@ contains
 
     return
   end subroutine TOPO_setup
+
+  !-----------------------------------------------------------------------------
+  !> HALO Communication
+  subroutine TOPO_fillhalo
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+    !---------------------------------------------------------------------------
+
+    call COMM_vars8( TOPO_Zsfc(:,:), 1 )
+    call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+
+    return
+  end subroutine TOPO_fillhalo
 
   !-----------------------------------------------------------------------------
   !> Read topography
@@ -108,9 +124,7 @@ contains
        call FILEIO_read( TOPO_Zsfc(:,:),                        & ! [OUT]
                          TOPO_IN_BASENAME, 'TOPO', 'XY', step=1 ) ! [IN]
 
-       ! fill IHALO & JHALO
-       call COMM_vars8( TOPO_Zsfc(:,:), 1 )
-       call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+       call TOPO_fillhalo
 
        TOPO_exist = .true.
     else

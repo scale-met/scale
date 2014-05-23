@@ -44,8 +44,8 @@ module mod_cpl_atmos_land_driver
 contains
 
   subroutine CPL_AtmLnd_driver_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_final
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_SET
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_final
     use scale_cpl_atmos_land, only: &
@@ -55,7 +55,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_PHY_SF_driver_final
+    call ATMOS_SURFACE_SET
     call LAND_PHY_driver_final
 
     call CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )

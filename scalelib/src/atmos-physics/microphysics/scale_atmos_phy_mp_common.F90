@@ -631,20 +631,16 @@ contains
        dt         )
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       FDZ  => GRID_FDZ,  &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
     use scale_gridtrans, only: &
-       I_XYZ, &
-       GSQRT => GTRANS_GSQRT, &
-       J33G  => GTRANS_J33G
-    use scale_atmos_thermodyn, only: &
-       CVw => AQ_CV
+       J33G => GTRANS_J33G
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_thermodyn, only: &
+       CVw => AQ_CV
     implicit none
 
     real(RP), intent(out)   :: flux_rain(KA,IA,JA)
@@ -662,6 +658,8 @@ contains
     real(RP) :: rhoq(KA,QA) ! rho * q before precipitation
     real(RP) :: qflx(KA,QA)
     real(RP) :: eflx(KA)
+    real(RP) :: rcdz(KA)
+    real(RP) :: rfdz(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -693,6 +691,14 @@ contains
        eflx(KE) = 0.0_RP
 
        do iq = I_QC, QQE
+          do k = KS, KE
+             rcdz(k) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+          enddo
+
+          rfdz(KS-1) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
+          do k = KS, KE
+             rfdz(k) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+          enddo
 
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
@@ -705,16 +711,16 @@ contains
              eflx(k) = qflx(k,iq) * temp(k+1,i,j) * CVw(iq)
           enddo
           do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
           enddo
 
           !--- potential energy
           do k  = KS, KE-1
-             eflx(k) = qflx(k,iq) * GRAV * FDZ(k)
+             eflx(k) = qflx(k,iq) * GRAV / rfdz(k)
           enddo
-          eflx(KS-1) = qflx(KS-1,iq) * GRAV * CZ(KS)
+          eflx(KS-1) = qflx(KS-1,iq) * GRAV / rfdz(KS-1)
           do k  = KS, KE
-             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
           enddo
 
           !--- momentum z (half level)
@@ -724,7 +730,7 @@ contains
                                * MOMZ(k,i,j)
           enddo
           do k  = KS, KE-1
-             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * RFDZ(k) / GSQRT(k,i,j,I_XYZ)
+             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1) - eflx(k) ) * rfdz(k)
           enddo
 
           !--- momentum x
@@ -734,7 +740,7 @@ contains
                                * MOMX(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
           enddo
 
           !--- momentum y
@@ -744,7 +750,7 @@ contains
                                * MOMY(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
           enddo
 
        enddo ! mass tracer loop
@@ -774,18 +780,18 @@ contains
        !--- update total density
        do iq = I_QC, QQE
           do k  = KS, KE
-             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             DENS(k,i,j) = DENS(k,i,j) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * rcdz(k)
           enddo
        enddo ! mass tracer loop
 
-       !--- update falling tracer
+       !--- update falling tracer (use updated total density)
        do iq = I_QC, QA
        do k  = KS, KE
-          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ) ) / DENS(k,i,j)
+          QTRC(k,i,j,iq) = ( rhoq(k,iq) - dt * ( qflx(k,iq) - qflx(k-1,iq) ) * rcdz(k) ) / DENS(k,i,j)
        enddo
        enddo
 
-       !--- update no-falling tracer
+       !--- update no-falling tracer (use updated total density)
        do k = KS, KE
           QTRC(k,i,j,I_QV) = rhoq(k,I_QV) / DENS(k,i,j)
        enddo

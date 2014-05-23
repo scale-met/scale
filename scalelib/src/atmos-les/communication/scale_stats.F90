@@ -32,6 +32,11 @@ module scale_stats
   public :: STAT_total
   public :: STAT_detail
 
+  interface STAT_total
+     module procedure STAT_total_2D
+     module procedure STAT_total_3D
+  end interface STAT_total
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -84,48 +89,33 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calc volume/area-weighted global sum
-  subroutine STAT_total( allstatval, var, varname )
+  subroutine STAT_total_2D( allstatval, var, varname )
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
     use scale_grid_real, only: &
-       area => REAL_AREA, &
-       vol  => REAL_VOL
+       area => REAL_AREA
     implicit none
 
     real(RP),         intent(out) :: allstatval !< volume/area-weighted total
-    real(RP),         intent(in)  :: var(:,:,:) !< 3D value
+    real(RP),         intent(in)  :: var(IA,JA) !< 3D value
     character(len=*), intent(in)  :: varname    !< name of item
 
     real(RP) :: statval
-    integer  :: ksize
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    ksize = size(var(:,:,:),1)
-
     statval = 0.0_RP
-    if ( ksize == KA ) then ! 3D
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          statval = statval + var(k,i,j) * vol(k,i,j)
-       enddo
-       enddo
-       enddo
-    elseif( ksize == 1 ) then ! 2D
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-       do j = JS, JE
-       do i = IS, IE
-          statval = statval + var(1,i,j) * area(i,j)
-       enddo
-       enddo
-    endif
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
+    do j = JS, JE
+    do i = IS, IE
+       statval = statval + var(i,j) * area(i,j)
+    enddo
+    enddo
 
     if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
        write(*,*) 'xxx [STAT_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
@@ -147,7 +137,7 @@ contains
 
        ! statistics over the all node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A10,A,1PE24.17)') &
                      '[', varname, '] SUM(global) =', allstatval
        endif
     else
@@ -155,13 +145,81 @@ contains
 
        ! statistics on each node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A10,A,1PE24.17)') &
                      '[', varname, '] SUM(local)  =', statval
        endif
     endif
 
     return
-  end subroutine STAT_total
+  end subroutine STAT_total_2D
+
+  !-----------------------------------------------------------------------------
+  !> Calc volume/area-weighted global sum
+  subroutine STAT_total_3D( allstatval, var, varname )
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
+    use scale_comm, only: &
+       COMM_datatype
+    use scale_grid_real, only: &
+       vol  => REAL_VOL
+    implicit none
+
+    real(RP),         intent(out) :: allstatval    !< volume/area-weighted total
+    real(RP),         intent(in)  :: var(KA,IA,JA) !< 3D value
+    character(len=*), intent(in)  :: varname       !< name of item
+
+    real(RP) :: statval
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval = 0.0_RP
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       statval = statval + var(k,i,j) * vol(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
+       write(*,*) 'xxx [STAT_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+       call PRC_MPIstop
+    endif
+
+    if ( STAT_use_globalcomm ) then
+       call PROF_rapstart('COMM Allreduce MPI')
+       ! All reduce
+       call MPI_Allreduce( statval,              &
+                           allstatval,           &
+                           1,                    &
+                           COMM_datatype,        &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
+
+       call PROF_rapend  ('COMM Allreduce MPI')
+
+       ! statistics over the all node
+       if ( varname /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A9,A,1PE24.17)') &
+                     '[', trim(varname), '] SUM(global) =', allstatval
+       endif
+    else
+       allstatval = statval
+
+       ! statistics on each node
+       if ( varname /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A9,A,1PE24.17)') &
+                     '[', trim(varname), '] SUM(local)  =', statval
+       endif
+    endif
+
+    return
+  end subroutine STAT_total_3D
 
   !-----------------------------------------------------------------------------
   !> Search global maximum & minimum value
@@ -214,58 +272,61 @@ contains
        statval(  v,2,PRC_myrank) = minval(var(:,:,:,v),mask=halomask)
        statidx(:,v,1,PRC_myrank) = maxloc(var(:,:,:,v),mask=halomask)
        statidx(:,v,2,PRC_myrank) = minloc(var(:,:,:,v),mask=halomask)
-
-! statistics on each node
-!       if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-!       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MAX = ', &
-!                                             statval(  v,1,PRC_myrank),'(', &
-!                                             statidx(1,v,1,PRC_myrank),',', &
-!                                             statidx(2,v,1,PRC_myrank),',', &
-!                                             statidx(3,v,1,PRC_myrank),')'
-!       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MIN = ', &
-!                                             statval(  v,2,PRC_myrank),'(', &
-!                                             statidx(1,v,2,PRC_myrank),',', &
-!                                             statidx(2,v,2,PRC_myrank),',', &
-!                                             statidx(3,v,2,PRC_myrank),')'
     enddo
 
-    ! MPI broadcast
-    call PROF_rapstart('COMM Bcast MPI')
-    do p = 0, PRC_nmax-1
-       call MPI_Bcast( statval(1,1,p),   &
-                       vsize*2,          &
-                       COMM_datatype,    &
-                       p,                &
-                       MPI_COMM_WORLD,   &
-                       ierr              )
-       call MPI_Bcast( statidx(1,1,1,p), &
-                       3*vsize*2,        &
-                       MPI_INTEGER,      &
-                       p,                &
-                       MPI_COMM_WORLD,   &
-                       ierr              )
-    enddo
-    call PROF_rapend  ('COMM Bcast MPI')
+    if ( STAT_use_globalcomm ) then
+       call PROF_rapstart('COMM Bcast MPI')
+       do p = 0, PRC_nmax-1
+          call MPI_Bcast( statval(1,1,p),   &
+                          vsize*2,          &
+                          COMM_datatype,    &
+                          p,                &
+                          MPI_COMM_WORLD,   &
+                          ierr              )
+          call MPI_Bcast( statidx(1,1,1,p), &
+                          3*vsize*2,        &
+                          MPI_INTEGER,      &
+                          p,                &
+                          MPI_COMM_WORLD,   &
+                          ierr              )
+       enddo
+       call PROF_rapend  ('COMM Bcast MPI')
 
-    do v = 1, vsize
-       allstatval(v,1)   = maxval(statval(v,1,:))
-       allstatval(v,2)   = minval(statval(v,2,:))
-       allstatidx(:,v,1) = maxloc(statval(v,1,:))-1
-       allstatidx(:,v,2) = minloc(statval(v,2,:))-1
-       if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MAX =', &
-                                                    allstatval(  v,1), '(', &
-                                                    allstatidx(1,v,1), ',', &
-                                      statidx(1,v,1,allstatidx(1,v,1)),',', &
-                                      statidx(2,v,1,allstatidx(1,v,1)),',', &
-                                      statidx(3,v,1,allstatidx(1,v,1)),')'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MIN =', &
-                                                    allstatval(  v,2), '(', &
-                                                    allstatidx(1,v,2), ',', &
-                                      statidx(1,v,2,allstatidx(1,v,2)),',', &
-                                      statidx(2,v,2,allstatidx(1,v,2)),',', &
-                                      statidx(3,v,2,allstatidx(1,v,2)),')'
-    enddo
+       do v = 1, vsize
+          allstatval(v,1)   = maxval(statval(v,1,:))
+          allstatval(v,2)   = minval(statval(v,2,:))
+          allstatidx(:,v,1) = maxloc(statval(v,1,:))-1
+          allstatidx(:,v,2) = minloc(statval(v,2,:))-1
+          if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MAX =', &
+                                                       allstatval(  v,1), '(', &
+                                                       allstatidx(1,v,1), ',', &
+                                         statidx(1,v,1,allstatidx(1,v,1)),',', &
+                                         statidx(2,v,1,allstatidx(1,v,1)),',', &
+                                         statidx(3,v,1,allstatidx(1,v,1)),')'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MIN =', &
+                                                       allstatval(  v,2), '(', &
+                                                       allstatidx(1,v,2), ',', &
+                                         statidx(1,v,2,allstatidx(1,v,2)),',', &
+                                         statidx(2,v,2,allstatidx(1,v,2)),',', &
+                                         statidx(3,v,2,allstatidx(1,v,2)),')'
+       enddo
+    else
+       ! statistics on each node
+       do v = 1, vsize
+          if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MAX = ', &
+                                                statval(  v,1,PRC_myrank),'(', &
+                                                statidx(1,v,1,PRC_myrank),',', &
+                                                statidx(2,v,1,PRC_myrank),',', &
+                                                statidx(3,v,1,PRC_myrank),')'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MIN = ', &
+                                                statval(  v,2,PRC_myrank),'(', &
+                                                statidx(1,v,2,PRC_myrank),',', &
+                                                statidx(2,v,2,PRC_myrank),',', &
+                                                statidx(3,v,2,PRC_myrank),')'
+       enddo
+    endif
 
     deallocate( halomask )
 

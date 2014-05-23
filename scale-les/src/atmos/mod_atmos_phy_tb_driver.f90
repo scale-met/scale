@@ -47,9 +47,7 @@ module mod_atmos_phy_tb_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_TB_driver_setup( TB_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+  subroutine ATMOS_PHY_TB_driver_setup
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
@@ -57,19 +55,25 @@ contains
        CZ  => GRID_CZ
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
     implicit none
-
-    character(len=H_SHORT), intent(in) :: TB_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-TB]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_TB_setup( TB_TYPE,       & ! [IN]
-                             CDZ, CDX, CDY, & ! [IN]
-                             CZ             ) ! [IN]
+    if ( ATMOS_sw_phy_tb ) then
 
-    call ATMOS_PHY_TB_driver( .true., .false. )
+       ! setup library component
+       call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
+                                CDZ, CDX, CDY, CZ  ) ! [IN]
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_TB_driver( .true., .false. )
+
+    endif
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
@@ -87,19 +91,22 @@ contains
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &
        J23G  => GTRANS_J23G,  &
-       J33G  => GTRANS_J33G
+       J33G  => GTRANS_J33G,  &
+       I_XYZ,                 &
+       I_XYW,                 &
+       I_UYW,                 &
+       I_XVW,                 &
+       I_UYZ,                 &
+       I_XVZ,                 &
+       I_UVZ
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_tb, only: &
@@ -141,10 +148,16 @@ contains
     integer :: JJS, JJE
     integer :: IIS, IIE
 
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence'
+
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]
@@ -191,18 +204,17 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             MOMX_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i+1,j,I_XYZ)*QFLX_MOMX(k,i+1,j,XDIR) &
-                    - GSQRT(k,i  ,j,I_XYZ)*QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) &
-                  + ( GSQRT(k,i,j  ,I_UVZ)*QFLX_MOMX(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_UVZ)*QFLX_MOMX(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( J13G(k+1,i,j,I_UYW)*(QFLX_MOMX(k+1,i+1,j,XDIR)+QFLX_MOMX(k+1,i,j,XDIR)) &
-                    - J13G(k-1,i,j,I_UYW)*(QFLX_MOMX(k-1,i+1,j,XDIR)+QFLX_MOMX(k-1,i,j,XDIR)) &
-                    + J23G(k+1,i,j,I_UYW)*(QFLX_MOMX(k+1,i,j,YDIR)+QFLX_MOMX(k+1,i,j-1,YDIR)) &
-                    - J23G(k-1,i,j,I_UYW)*(QFLX_MOMX(k-1,i,j,YDIR)+QFLX_MOMX(k-1,i,j-1,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( QFLX_MOMX(k,i,j,ZDIR) - QFLX_MOMX(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                  ) / GSQRT(k,i,j,I_UYZ)
+             MOMX_t(k,i,j) = - ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) &
+                                 - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) &
+                               + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) &
+                                 - GSQRT(k,i,j-1,I_UVZ) * QFLX_MOMX(k,i,j-1,YDIR) ) * RCDY(j) &
+                               + ( J13G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i+1,j,XDIR) + QFLX_MOMX(k+1,i,j  ,XDIR) ) &
+                                 - J13G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i+1,j,XDIR) + QFLX_MOMX(k-1,i,j  ,XDIR) ) &
+                                 + J23G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i  ,j,YDIR) + QFLX_MOMX(k+1,i,j-1,YDIR) ) &
+                                 - J23G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i  ,j,YDIR) + QFLX_MOMX(k-1,i,j-1,YDIR) ) &
+                                 ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                               + J33G * ( QFLX_MOMX(k,i,j,ZDIR) - QFLX_MOMX(k-1,i,j,ZDIR) ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_UYZ)
           enddo
           enddo
           enddo
@@ -210,18 +222,17 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             MOMY_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UVZ)*QFLX_MOMY(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j+1,I_XYZ)*QFLX_MOMY(k,i,j+1,YDIR) &
-                    - GSQRT(k,i,j  ,I_XYZ)*QFLX_MOMY(k,i,j  ,YDIR) ) * RFDY(j) &
-                  + ( J13G(k+1,i,j,I_XVW)*(QFLX_MOMY(k+1,i,j,XDIR)+QFLX_MOMY(k+1,i-1,j,XDIR)) &
-                    - J13G(k-1,i,j,I_XVW)*(QFLX_MOMY(k-1,i,j,XDIR)+QFLX_MOMY(k-1,i-1,j,XDIR)) &
-                    + J23G(k+1,i,j+1,I_XVW)*(QFLX_MOMY(k+1,i,j+1,YDIR)+QFLX_MOMY(k+1,i,j,YDIR)) &
-                    - J23G(k-1,i,j+1,I_XVW)*(QFLX_MOMY(k-1,i,j+1,YDIR)+QFLX_MOMY(k-1,i,j,YDIR)) &
-                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-                  + J33G * ( QFLX_MOMY(k,i,j  ,ZDIR) - QFLX_MOMY(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XVW)
+             MOMY_t(k,i,j) = - ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) &
+                                 - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) &
+                               + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) &
+                                 - GSQRT(k,i  ,j  ,I_XYZ) * QFLX_MOMY(k,i,j  ,YDIR) ) * RFDY(j) &
+                               + ( J13G (k+1,i,j  ,I_XVW) * ( QFLX_MOMY(k+1,i,j  ,XDIR) + QFLX_MOMY(k+1,i-1,j,XDIR) ) &
+                                 - J13G (k-1,i,j  ,I_XVW) * ( QFLX_MOMY(k-1,i,j  ,XDIR) + QFLX_MOMY(k-1,i-1,j,XDIR) ) &
+                                 + J23G (k+1,i,j+1,I_XVW) * ( QFLX_MOMY(k+1,i,j+1,YDIR) + QFLX_MOMY(k+1,i  ,j,YDIR) ) &
+                                 - J23G (k-1,i,j+1,I_XVW) * ( QFLX_MOMY(k-1,i,j+1,YDIR) + QFLX_MOMY(k-1,i  ,j,YDIR) ) &
+                                 ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                               + J33G * ( QFLX_MOMY(k,i,j,ZDIR) - QFLX_MOMY(k-1,i,j,ZDIR) ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_XVW)
           enddo
           enddo
           enddo
@@ -229,14 +240,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             RHOT_t(k,i,j) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*QFLX_RHOT(k,i  ,j,XDIR) &
-                    - GSQRT(k,i-1,j,I_UVZ)*QFLX_RHOT(k,i-1,j,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*QFLX_RHOT(k,i,j  ,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*QFLX_RHOT(k,i,j-1,YDIR) ) * RCDY(j) &
-                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*QFLX_RHOT(k  ,i,j,ZDIR) &
-                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*QFLX_RHOT(k-1,i,j,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
+             RHOT_t(k,i,j) = - ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_RHOT(k,i  ,j,XDIR) &
+                                 - GSQRT(k,i-1,j,I_UVZ) * QFLX_RHOT(k,i-1,j,XDIR) ) * RCDX(i) &
+                               + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_RHOT(k,i,j  ,YDIR) &
+                                 - GSQRT(k,i,j-1,I_XVZ) * QFLX_RHOT(k,i,j-1,YDIR) ) * RCDY(j) &
+                               + ( ( J13G(k  ,i,j,I_XYW) + J23G(k  ,i,j,I_XYW) + J33G ) * QFLX_RHOT(k  ,i,j,ZDIR) &
+                                 - ( J13G(k-1,i,j,I_XYW) + J23G(k-1,i,j,I_XYW) + J33G ) * QFLX_RHOT(k-1,i,j,ZDIR) &
+                                 ) * RCDZ(k) &
+                               ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo
@@ -245,14 +256,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             QTRC_t(k,i,j,iq) = - ( &
-                  + ( GSQRT(k,i  ,j,I_UYZ)*QFLX_QTRC(k,i  ,j,iq,XDIR) &
-                    - GSQRT(k,i-1,j,I_UYZ)*QFLX_QTRC(k,i-1,j,iq,XDIR) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ)*QFLX_QTRC(k,i,j  ,iq,YDIR) &
-                    - GSQRT(k,i,j-1,I_XVZ)*QFLX_QTRC(k,i,j-1,iq,YDIR) ) * RCDY(j) &
-                  + ( (J13G(k  ,i,j,I_XYW)+J23G(k  ,i,j,I_XYW)+J33G)*QFLX_QTRC(k  ,i,j,iq,ZDIR) &
-                    - (J13G(k-1,i,j,I_XYW)+J23G(k-1,i,j,I_XYW)+J33G)*QFLX_QTRC(k-1,i,j,iq,ZDIR) ) * RCDZ(k) &
-                ) / GSQRT(k,i,j,I_XYZ)
+             QTRC_t(k,i,j,iq) = - ( ( GSQRT(k,i  ,j  ,I_UYZ) * QFLX_QTRC(k,i  ,j  ,iq,XDIR) &
+                                    - GSQRT(k,i-1,j  ,I_UYZ) * QFLX_QTRC(k,i-1,j  ,iq,XDIR) ) * RCDX(i) &
+                                  + ( GSQRT(k,i  ,j  ,I_XVZ) * QFLX_QTRC(k,i  ,j  ,iq,YDIR) &
+                                    - GSQRT(k,i  ,j-1,I_XVZ) * QFLX_QTRC(k,i  ,j-1,iq,YDIR) ) * RCDY(j) &
+                                  + ( ( J13G(k  ,i,j,I_XYW) + J23G(k  ,i,j,I_XYW) + J33G) * QFLX_QTRC(k  ,i,j,iq,ZDIR) &
+                                    - ( J13G(k-1,i,j,I_XYW) + J23G(k-1,i,j,I_XYW) + J33G) * QFLX_QTRC(k-1,i,j,iq,ZDIR) &
+                                    ) * RCDZ(k) &
+                                  ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo
@@ -362,9 +373,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_TB(k,i,j)
        MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_TB(k,i,j)
        MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_TB(k,i,j)
-       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_TB(k,i,j)
        RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_TB(k,i,j)
     enddo
     enddo
@@ -380,6 +391,19 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
+       call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
+       call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
+       call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
+
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS_av(:,:,:) * QTRC_t_TB(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_TB' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_TB_driver

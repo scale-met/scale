@@ -156,7 +156,7 @@ contains
   end subroutine OCEAN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of land variables
+  !> HALO Communication
   subroutine OCEAN_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -165,7 +165,6 @@ contains
     !---------------------------------------------------------------------------
 
     call COMM_vars8( TW(:,:), 1 )
-
     call COMM_wait ( TW(:,:), 1 )
 
     return

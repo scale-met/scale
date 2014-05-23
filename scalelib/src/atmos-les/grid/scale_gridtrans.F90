@@ -263,7 +263,6 @@ contains
 
     GTRANS_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
 
-    ! fill IHALO & JHALO
     call COMM_vars8( GTRANS_J13G(:,:,:,I_XYZ),  1 )
     call COMM_vars8( GTRANS_J13G(:,:,:,I_XYW),  2 )
     call COMM_vars8( GTRANS_J13G(:,:,:,I_UYW),  3 )

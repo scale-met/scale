@@ -39,40 +39,18 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_history
   public :: ATMOS_vars_total
+  public :: ATMOS_vars_diagnostics
 
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
   !
-# include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,                public, save :: ATMOS_do          = .true. ! main switch for the model
-
-  character(len=H_SHORT), public, save :: ATMOS_DYN_TYPE    = 'NONE' !< dynamics type
-  character(len=H_SHORT), public, save :: ATMOS_PHY_MP_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_AE_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_CH_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_RD_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_SF_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_TB_TYPE = 'NONE'
-  character(len=H_SHORT), public, save :: ATMOS_PHY_CP_TYPE = 'NONE'
-
-  logical,                public, save :: ATMOS_sw_dyn
-  logical,                public, save :: ATMOS_sw_phy_mp
-  logical,                public, save :: ATMOS_sw_phy_ae
-  logical,                public, save :: ATMOS_sw_phy_ch
-  logical,                public, save :: ATMOS_sw_phy_rd
-  logical,                public, save :: ATMOS_sw_phy_sf
-  logical,                public, save :: ATMOS_sw_phy_tb
-  logical,                public, save :: ATMOS_sw_phy_cp
-  logical,                public, save :: ATMOS_sw_restart
-  logical,                public, save :: ATMOS_sw_check
-
-  logical,                public, save :: ATMOS_USE_AVERAGE = .false.
+  logical, public :: ATMOS_sw_restart
+  logical, public :: ATMOS_sw_check
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -103,6 +81,14 @@ module mod_atmos_vars
   real(RP), public, allocatable :: MOMY_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
   real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
+
+  ! diagnostic variables
+  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature [K]
+  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure    [Pa=J/m3]
+  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w  [m/s]
+  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u  [m/s]
+  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v  [m/s]
+  real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -149,14 +135,15 @@ module mod_atmos_vars
 
   ! history output of prognostic variables
   integer, private              :: VAR_HIST_id(VMAX)
+
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
   integer, private, parameter :: AD_nmax = 26 ! number of diagnostic variables for history output
 
-  integer, private, parameter :: I_VELZ  =  1 ! velocity w at cell center
-  integer, private, parameter :: I_VELX  =  2 ! velocity u at cell center
-  integer, private, parameter :: I_VELY  =  3 ! velocity v at cell center
+  integer, private, parameter :: I_W     =  1 ! velocity w at cell center
+  integer, private, parameter :: I_U     =  2 ! velocity u at cell center
+  integer, private, parameter :: I_V     =  3 ! velocity v at cell center
   integer, private, parameter :: I_POTT  =  4 ! potential temperature
 
   integer, private, parameter :: I_QDRY  =  5 ! ratio of dry air            to total mass
@@ -202,6 +189,8 @@ contains
        HIST_reg
     use scale_monitor, only: &
        MONIT_reg
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_setup
     use mod_atmos_phy_mp_vars, only: &
@@ -220,17 +209,6 @@ contains
        ATMOS_PHY_CP_vars_setup
     implicit none
 
-    NAMELIST / PARAM_ATMOS / &
-       ATMOS_do,          &
-       ATMOS_DYN_TYPE,    &
-       ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_PHY_CH_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_PHY_CP_TYPE
-
     NAMELIST / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,      &
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
@@ -247,153 +225,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Variables]/Categ[ATMOS]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS)
-
-    !-----< module component check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] selected components'
-
-    if( IO_L ) write(IO_FID_LOG,*) 'Dynamics...'
-
-    if ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : ON'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : ON'
-       ATMOS_sw_dyn = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Dynamical core   : OFF'
-       if( IO_L ) write(IO_FID_LOG,*) '  Tracer advection : OFF'
-       ATMOS_sw_dyn = .false.
-    endif
-
-    if( IO_L ) write(IO_FID_LOG,*) 'Physics...'
-
-    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : ON'
-       ATMOS_sw_phy_mp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cloud Microphysics : OFF'
-       ATMOS_sw_phy_mp = .false.
-    endif
-
-    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : ON'
-       ATMOS_sw_phy_ae = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Aerosol : OFF'
-       ATMOS_sw_phy_ae = .false.
-    endif
-
-    if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : ON'
-       ATMOS_sw_phy_ch = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Chemistry : OFF'
-       ATMOS_sw_phy_ch = .false.
-    endif
-
-    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : ON'
-       ATMOS_sw_phy_rd = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Radiative transfer  : OFF'
-       ATMOS_sw_phy_rd = .false.
-    endif
-
-    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : ON'
-       ATMOS_sw_phy_sf = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Surface Flux : OFF'
-       ATMOS_sw_phy_sf = .false.
-    endif
-
-    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : ON'
-       ATMOS_sw_phy_tb = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Sub-grid Turbulence : OFF'
-       ATMOS_sw_phy_tb = .false.
-    endif
-
-    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : ON'
-       ATMOS_sw_phy_cp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Cumulus : OFF'
-       ATMOS_sw_phy_cp = .false.
-    endif
-
-    !-----< prognostic variable list check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS VARS]/Categ[ATMOS]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 5
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
-    enddo
-    do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
-                  '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
-    enddo
-
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_setup
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_setup
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_setup
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_setup
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_setup
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_setup
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_setup
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_setup
-
-    !-----< restart output & consistency check >-----
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( ATMOS_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : YES'
-       ATMOS_sw_restart = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos restart output : NO'
-       ATMOS_sw_restart = .false.
-    endif
-    if ( ATMOS_RESTART_CHECK ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Data check : YES'
-       ATMOS_sw_check = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Data check : NO'
-       ATMOS_sw_check = .false.
-    endif
-    if( IO_L ) write(IO_FID_LOG,*)
-
-    !-----< array allocation >-----
-
-    allocate( AQ_HIST_id(QA) )
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS] / Origin[SCALE-LES]'
 
     allocate( DENS(KA,IA,JA)    )
     allocate( MOMZ(KA,IA,JA)    )
@@ -402,15 +234,7 @@ contains
     allocate( RHOT(KA,IA,JA)    )
     allocate( QTRC(KA,IA,JA,QA) )
 
-    allocate( DENS_tp(KA,IA,JA)    )
-    allocate( MOMZ_tp(KA,IA,JA)    )
-    allocate( MOMX_tp(KA,IA,JA)    )
-    allocate( MOMY_tp(KA,IA,JA)    )
-    allocate( RHOT_tp(KA,IA,JA)    )
-    allocate( QTRC_tp(KA,IA,JA,QA) )
-
     if ( ATMOS_USE_AVERAGE ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : YES'
        allocate( DENS_avw(KA,IA,JA)    )
        allocate( MOMZ_avw(KA,IA,JA)    )
        allocate( MOMX_avw(KA,IA,JA)    )
@@ -425,18 +249,87 @@ contains
        RHOT_av => RHOT_avw
        QTRC_av => QTRC_avw
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Atmos use average : NO'
        DENS_av => DENS
        MOMZ_av => MOMZ
        MOMX_av => MOMX
        MOMY_av => MOMY
        RHOT_av => RHOT
        QTRC_av => QTRC
-    end if
+    endif
 
-    !-----< history output setup: general set >-----
+    allocate( DENS_tp(KA,IA,JA)    )
+    allocate( MOMZ_tp(KA,IA,JA)    )
+    allocate( MOMX_tp(KA,IA,JA)    )
+    allocate( MOMY_tp(KA,IA,JA)    )
+    allocate( RHOT_tp(KA,IA,JA)    )
+    allocate( QTRC_tp(KA,IA,JA,QA) )
 
-    VAR_HIST_id (:) = -1
+    allocate( TEMP(KA,IA,JA) )
+    allocate( PRES(KA,IA,JA) )
+    allocate( W   (KA,IA,JA) )
+    allocate( U   (KA,IA,JA) )
+    allocate( V   (KA,IA,JA) )
+    allocate( POTT(KA,IA,JA) )
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
+
+    ! report
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
+               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, 5
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
+    enddo
+    do iq = 1, QA
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
+                  '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( ATMOS_RESTART_OUTPUT ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES'
+       ATMOS_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_sw_restart = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( ATMOS_RESTART_CHECK ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : YES'
+       ATMOS_sw_check = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : NO'
+       ATMOS_sw_check = .false.
+    endif
+
+    call ATMOS_DYN_vars_setup
+    call ATMOS_PHY_MP_vars_setup
+    call ATMOS_PHY_AE_vars_setup
+    call ATMOS_PHY_CH_vars_setup
+    call ATMOS_PHY_RD_vars_setup
+    call ATMOS_PHY_SF_vars_setup
+    call ATMOS_PHY_TB_vars_setup
+    call ATMOS_PHY_CP_vars_setup
+
+
+
+    !##### todo: the part below should be moved to the mod_atmos_diag #####
+
+    allocate( AQ_HIST_id (QA))
+
+    VAR_HIST_id(:) = -1
     AQ_HIST_id (:) = -1
     AD_HIST_id (:) = -1
     AD_MONIT_id(:) = -1
@@ -451,9 +344,9 @@ contains
        call HIST_reg( AQ_HIST_id(iq), zinterp, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
-    call HIST_reg( AD_HIST_id(I_VELZ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELX) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELY) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W   ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_U   ) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_V   ) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_POTT) , zinterp, 'PT',    'potential temp.',        'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_QDRY) , zinterp, 'QDRY',  'dry air',                'kg/kg',  ndim=3 )
@@ -493,14 +386,14 @@ contains
     call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3 )
     call MONIT_reg( AD_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3 )
 
-    if ( AD_HIST_id(I_VELZ) > 0 ) then
-       AD_PREP_sw(I_VELZ) = 1
+    if ( AD_HIST_id(I_W) > 0 ) then
+       AD_PREP_sw(I_W) = 1
     endif
-    if ( AD_HIST_id(I_VELX) > 0 ) then
-       AD_PREP_sw(I_VELX) = 1
+    if ( AD_HIST_id(I_U) > 0 ) then
+       AD_PREP_sw(I_U) = 1
     endif
-    if ( AD_HIST_id(I_VELY) > 0 ) then
-       AD_PREP_sw(I_VELY) = 1
+    if ( AD_HIST_id(I_V) > 0 ) then
+       AD_PREP_sw(I_V) = 1
     endif
     if ( AD_HIST_id(I_POTT) > 0 ) then
        AD_PREP_sw(I_POTT) = 1
@@ -585,9 +478,9 @@ contains
     endif
     if (      AD_HIST_id (I_ENGK) > 0 &
          .OR. AD_MONIT_id(I_ENGK) > 0 ) then
-       AD_PREP_sw(I_VELZ) = 1
-       AD_PREP_sw(I_VELX) = 1
-       AD_PREP_sw(I_VELY) = 1
+       AD_PREP_sw(I_W) = 1
+       AD_PREP_sw(I_U) = 1
+       AD_PREP_sw(I_V) = 1
        AD_PREP_sw(I_ENGK) = 1
     endif
     if (      AD_HIST_id (I_ENGI) > 0 &
@@ -602,9 +495,9 @@ contains
     if (      AD_HIST_id (I_ENGT) > 0 &
          .OR. AD_MONIT_id(I_ENGT) > 0 ) then
        AD_PREP_sw(I_ENGP)  = 1
-       AD_PREP_sw(I_VELZ)  = 1
-       AD_PREP_sw(I_VELX)  = 1
-       AD_PREP_sw(I_VELY)  = 1
+       AD_PREP_sw(I_W)  = 1
+       AD_PREP_sw(I_U)  = 1
+       AD_PREP_sw(I_V)  = 1
        AD_PREP_sw(I_ENGK)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
@@ -619,7 +512,7 @@ contains
   end subroutine ATMOS_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of atmospheric variables
+  !> HALO Communication
   subroutine ATMOS_vars_fillhalo
     use scale_comm, only: &
        COMM_vars8, &
@@ -629,7 +522,6 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    ! fill KHALO
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
@@ -645,6 +537,7 @@ contains
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+
     !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
     do iq = 1, QA
     do j  = JS, JE
@@ -655,7 +548,6 @@ contains
     enddo
     enddo
 
-    ! fill IHALO & JHALO
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
     call COMM_vars8( MOMX(:,:,:), 3 )
@@ -685,8 +577,8 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        CVdry => CONST_CVdry
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
     use scale_fileio, only: &
        FILEIO_read
     use scale_monitor, only: &
@@ -697,6 +589,8 @@ contains
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw                 => AQ_CV
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -715,20 +609,20 @@ contains
        ATMOS_PHY_CP_vars_restart_read
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
+    real(RP) :: W(KA,IA,JA) ! velocity w at cell center [m/s]
+    real(RP) :: U(KA,IA,JA) ! velocity u at cell center [m/s]
+    real(RP) :: V(KA,IA,JA) ! velocity v at cell center [m/s]
 
-    real(RP) :: QDRY  (KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
+    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
+    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
+    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
 
-    real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: RHOQ  (KA,IA,JA)
+    real(RP) :: RHOQ(KA,IA,JA)
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -762,15 +656,6 @@ contains
        call PRC_MPIstop
     endif
 
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_read
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_read
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
-
     if ( ATMOS_USE_AVERAGE ) then
        DENS_av(:,:,:)   = DENS(:,:,:)
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
@@ -779,6 +664,19 @@ contains
        RHOT_av(:,:,:)   = RHOT(:,:,:)
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     endif
+
+    call ATMOS_DYN_vars_restart_read
+    call ATMOS_PHY_MP_vars_restart_read
+    call ATMOS_PHY_AE_vars_restart_read
+    call ATMOS_PHY_CH_vars_restart_read
+    call ATMOS_PHY_RD_vars_restart_read
+    call ATMOS_PHY_SF_vars_restart_read
+    call ATMOS_PHY_TB_vars_restart_read
+    call ATMOS_PHY_CP_vars_restart_read
+
+
+
+    !##### todo: the part below should be moved to the mod_atmos_diag #####
 
     ! first monitor output
     call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
@@ -834,15 +732,15 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-       VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-       VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-       ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                            + VELX(k,i,j)**2 &
-                                            + VELY(k,i,j)**2 )
+       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                            + U(k,i,j)**2 &
+                                            + V(k,i,j)**2 )
 
        ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        do iq = QQS, QQE
@@ -905,6 +803,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
+       call ATMOS_vars_fillhalo
+
        call ATMOS_vars_total
 
        call FILEIO_write( DENS(:,:,:), basename,                                        ATMOS_RESTART_OUT_TITLE, & ! [IN]
@@ -925,14 +825,14 @@ contains
 
     endif
 
-    if( ATMOS_sw_dyn    ) call ATMOS_DYN_vars_restart_write
-    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
-    if( ATMOS_sw_phy_ae .OR. ATMOS_sw_phy_rd ) call ATMOS_PHY_AE_vars_restart_write
-    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
-    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
-    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
-    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
-    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
+    call ATMOS_DYN_vars_restart_write
+    call ATMOS_PHY_MP_vars_restart_write
+    call ATMOS_PHY_AE_vars_restart_write
+    call ATMOS_PHY_CH_vars_restart_write
+    call ATMOS_PHY_RD_vars_restart_write
+    call ATMOS_PHY_SF_vars_restart_write
+    call ATMOS_PHY_TB_vars_restart_write
+    call ATMOS_PHY_CP_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
@@ -960,8 +860,6 @@ contains
     logical :: datacheck
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    if ( ATMOS_sw_check ) then
 
     call PROF_rapstart('Debug')
 
@@ -1067,8 +965,6 @@ contains
 
     call PROF_rapend('Debug')
 
-    endif
-
     return
   end subroutine ATMOS_vars_restart_check
 
@@ -1086,11 +982,11 @@ contains
     use scale_time, only: &
        TIME_DTSEC
     use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       CDZ  => GRID_CDZ,  &
-       RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
     use scale_history, only: &
        HIST_in
     use scale_monitor, only: &
@@ -1106,11 +1002,6 @@ contains
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
-    real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
-
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
     real(RP) :: QTOT  (KA,IA,JA) ! total water        [kg/kg]
     real(RP) :: QHYD  (KA,IA,JA) ! total hydrometeor  [kg/kg]
@@ -1123,8 +1014,6 @@ contains
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
 
     real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
     real(RP) :: RH    (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
@@ -1142,8 +1031,8 @@ contains
 
     real(RP) :: RHOQ  (KA,IA,JA)
     real(RP) :: QSAT  (KA,IA,JA)
-    real(RP) :: VELXH (KA,IA,JA)
-    real(RP) :: VELYH (KA,IA,JA)
+    real(RP) :: UH    (KA,IA,JA)
+    real(RP) :: VH    (KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1188,49 +1077,49 @@ contains
 
     ! prepare and history output of diagnostic variables
 
-    if ( AD_PREP_sw(I_VELZ) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_VELX) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_VELY) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_POTT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
+!    if ( AD_PREP_sw(I_W) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_U) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_V) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_POTT) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
 
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
        call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
@@ -1276,7 +1165,8 @@ contains
        do i  = IS, IE
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
-             LWP(i,j) = LWP(i,j) + QLIQ(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+             LWP(i,j) = LWP(i,j) &
+                      + QLIQ(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1287,7 +1177,8 @@ contains
        do i  = IS, IE
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
-             IWP(i,j) = IWP(i,j) + QICE(k,i,j) * DENS(k,i,j) * CDZ(k) * 1.E3_RP ! [kg/m2->g/m2]
+             IWP(i,j) = IWP(i,j) &
+                      + QICE(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1335,27 +1226,27 @@ contains
        enddo
     endif
 
-    if ( AD_PREP_sw(I_PRES) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_TEMP) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
-       enddo
-       enddo
-       enddo
-    endif
+!    if ( AD_PREP_sw(I_PRES) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_TEMP) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+!       enddo
+!       enddo
+!       enddo
+!    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1419,8 +1310,8 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELXH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
-                                / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          UH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
+                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
        enddo
@@ -1430,8 +1321,8 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELYH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
-                                / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          VH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
+                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
        enddo
@@ -1440,10 +1331,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VOR(k,i,j) = 0.5_RP * ( ( VELYH(k,i,j  ) - VELYH(k,i-1,j  ) ) * RCDX(i) &
-                                + ( VELYH(k,i,j-1) - VELYH(k,i-1,j-1) ) * RCDX(i) &
-                                - ( VELXH(k,i  ,j) - VELXH(k,i  ,j-1) ) * RCDY(j) &
-                                - ( VELXH(k,i-1,j) - VELXH(k,i-1,j-1) ) * RCDY(j) )
+          VOR(k,i,j) = 0.5_RP * ( ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                                + ( VH(k,i,j-1) - VH(k,i-1,j-1) ) * RCDX(i) &
+                                - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j) &
+                                - ( UH(k,i-1,j) - UH(k,i-1,j-1) ) * RCDY(j) )
        enddo
        enddo
        enddo
@@ -1466,7 +1357,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+          DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
                      + ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
                      + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
        enddo
@@ -1479,7 +1370,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
        enddo
        enddo
        enddo
@@ -1490,9 +1381,9 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                               + VELX(k,i,j)**2 &
-                                               + VELY(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                               + U(k,i,j)**2 &
+                                               + V(k,i,j)**2 )
        enddo
        enddo
        enddo
@@ -1532,9 +1423,9 @@ contains
        enddo
     endif
 
-    call HIST_in( VELZ (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
-    call HIST_in( VELX (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
-    call HIST_in( VELY (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
+    call HIST_in( W    (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
+    call HIST_in( U    (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
+    call HIST_in( V    (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
     call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K',      TIME_DTSEC )
 
     call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg',  TIME_DTSEC )
@@ -1603,8 +1494,8 @@ contains
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
-    use scale_grid, only: &
-       CZ   => GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
     use scale_stats, only: &
        STAT_checktotal, &
        STAT_total
@@ -1614,20 +1505,20 @@ contains
        CVw => AQ_CV
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
+    real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
+    real(RP) :: U   (KA,IA,JA) ! velocity u at cell center [m/s]
+    real(RP) :: V   (KA,IA,JA) ! velocity v at cell center [m/s]
 
-    real(RP) :: QDRY  (KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
+    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
+    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
+    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
 
-    real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: RHOQ  (KA,IA,JA)
+    real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: total ! dummy
     integer :: i, j, k, iq
@@ -1657,25 +1548,25 @@ contains
 
        RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qdry    ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qdry' )
 
        RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) ) ! Qtotal
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qtotal  ' )
+       call STAT_total( total, RHOQ(:,:,:), 'Qtot' )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
-          ENGP(k,i,j) = DENS(k,i,j) * GRAV * CZ(k)
+          ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                               + VELX(k,i,j)**2 &
-                                               + VELY(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                               + U(k,i,j)**2 &
+                                               + V(k,i,j)**2 )
 
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE
@@ -1688,14 +1579,65 @@ contains
        enddo
        enddo
 
-       call STAT_total( total, ENGT(:,:,:), 'ENGT    ' )
-       call STAT_total( total, ENGP(:,:,:), 'ENGP    ' )
-       call STAT_total( total, ENGK(:,:,:), 'ENGK    ' )
-       call STAT_total( total, ENGI(:,:,:), 'ENGI    ' )
+       call STAT_total( total, ENGT(:,:,:), 'ENGT' )
+       call STAT_total( total, ENGP(:,:,:), 'ENGP' )
+       call STAT_total( total, ENGK(:,:,:), 'ENGK' )
+       call STAT_total( total, ENGI(:,:,:), 'ENGI' )
 
     endif
 
     return
   end subroutine ATMOS_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Calc diagnostic variables
+  subroutine ATMOS_vars_diagnostics
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    implicit none
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                              PRES(:,:,:),  & ! [OUT]
+                              DENS(:,:,:),  & ! [IN]
+                              RHOT(:,:,:),  & ! [IN]
+                              QTRC(:,:,:,:) ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_vars_diagnostics
 
 end module mod_atmos_vars

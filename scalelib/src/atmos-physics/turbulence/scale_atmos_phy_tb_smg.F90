@@ -285,9 +285,6 @@ contains
     WORK_Y(:,:,:) = UNDEF
 #endif
 
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: SGS Parameterization'
-
    ! momentum -> velocity
     do j = JS-1, JE+1
     do i = IS-1, IE+1

@@ -45,8 +45,6 @@ module scale_atmos_boundary
   !
   !++ included parameters
   !
-# include "scalelib.h"
-
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -449,7 +447,6 @@ contains
     enddo
     enddo
 
-    ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV
     do j  = JS, JE
     do i  = IS, IE
@@ -459,7 +456,6 @@ contains
     enddo
     enddo
 
-    ! fill IHALO & JHALO
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
     enddo
@@ -528,26 +524,26 @@ contains
        ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
-    ! fill IHALO & JHALO
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-       call COMM_vars( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
-    enddo
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-       call COMM_wait( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
-    enddo
 
-    ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV
     do j  = 1, JA
     do i  = 1, IA
-       ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
-       ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
+       ATMOS_BOUNDARY_var  (   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var  (KS,i,j,iv)
        ATMOS_BOUNDARY_alpha(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_alpha(KS,i,j,iv)
+       ATMOS_BOUNDARY_var  (KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var  (KE,i,j,iv)
        ATMOS_BOUNDARY_alpha(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_alpha(KE,i,j,iv)
     enddo
     enddo
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( ATMOS_BOUNDARY_var  (:,:,:,iv), iv          )
+       call COMM_vars( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( ATMOS_BOUNDARY_var  (:,:,:,iv), iv          )
+       call COMM_wait( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
     enddo
 
     return
@@ -682,7 +678,6 @@ contains
 !    enddo
 !    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
 
-    ! fill KHALO
     do iv = I_BND_VELZ, I_BND_QV
     do j  = JS, JE
     do i  = IS, IE
@@ -692,7 +687,6 @@ contains
     enddo
     enddo
 
-    ! fill IHALO & JHALO
     do iv = I_BND_VELZ, I_BND_QV
        call COMM_vars8( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
     enddo

@@ -67,7 +67,7 @@ module mod_atmos_dyn_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_driver_setup( DYN_TYPE )
+  subroutine ATMOS_DYN_driver_setup
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
@@ -83,9 +83,10 @@ contains
        TIME_DTSEC_ATMOS_DYN
     use scale_atmos_dyn, only: &
        ATMOS_DYN_setup
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE, &
+       ATMOS_sw_dyn
     implicit none
-
-    character(len=H_SHORT), intent(in) :: DYN_TYPE
 
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_numerical_diff_order,        &
@@ -99,45 +100,37 @@ contains
        ATMOS_DYN_FLAG_FCT_T
 
     real(RP) :: DT
-
-    integer :: ierr
+    integer  :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Dynamics]/Categ[ATMOS]'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
+    if ( ATMOS_sw_dyn ) then
 
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
-       call PRC_MPIstop
+       !--- read namelist
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
+       if( ierr < 0 ) then !--- missing
+          if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       elseif( ierr > 0 ) then !--- fatal error
+          write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
+          call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
+
+       DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
+
+       call ATMOS_DYN_setup( ATMOS_DYN_DIFF4,                & ! [OUT]
+                             ATMOS_DYN_TYPE,                 & ! [IN]
+                             GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+                             GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+                             ATMOS_DYN_numerical_diff_order, & ! [IN]
+                             ATMOS_DYN_numerical_diff_coef,  & ! [IN]
+                             DT,                             & ! [IN]
+                             ATMOS_DYN_enable_coriolis,      & ! [IN]
+                             REAL_LAT                        ) ! [IN]
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN)
-
-    !-- Block size must be divisible
-    if    ( mod(IMAX,IBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
-       call PRC_MPIstop
-    elseif( mod(JMAX,JBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
-       call PRC_MPIstop
-    endif
-
-    DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
-
-    call ATMOS_DYN_setup( ATMOS_DYN_DIFF4,                & ! [OUT]
-                          DYN_TYPE,                       & ! [IN]
-                          GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-                          GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-                          ATMOS_DYN_numerical_diff_order, & ! [IN]
-                          ATMOS_DYN_numerical_diff_coef,  & ! [IN]
-                          DT,                             & ! [IN]
-                          ATMOS_DYN_enable_coriolis,      & ! [IN]
-                          REAL_LAT                        ) ! [IN]
 
     return
   end subroutine ATMOS_DYN_driver_setup
@@ -171,9 +164,10 @@ contains
        GTRANS_J33G
     use scale_history, only: &
        HIST_in
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
-       ATMOS_USE_AVERAGE, &
        DENS,    &
        MOMZ,    &
        MOMX,    &

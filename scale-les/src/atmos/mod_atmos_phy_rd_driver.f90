@@ -47,20 +47,37 @@ module mod_atmos_phy_rd_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_driver_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_driver_setup
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_sw_phy_rd
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
-
-    character(len=H_SHORT), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_RD] / Origin[SCALE-LES]'
 
-    call ATMOS_PHY_RD_setup( RD_TYPE )
+    if ( ATMOS_sw_phy_rd ) then
 
-    call ATMOS_PHY_RD_driver( .true., .false. )
+       ! setup library component
+       call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
+
+       ! run once (only for the diagnostic value)
+       call ATMOS_PHY_RD_driver( .true., .false. )
+
+    else
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_RD is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_LW_dn and SFLX_SW_dn is set to zero.'
+       SFLX_LW_dn(:,:) = 0.0_RP
+       SFLX_SW_dn(:,:) = 0.0_RP
+
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_driver_setup
@@ -78,14 +95,11 @@ contains
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,       &
-       THERMODYN_cv        => ATMOS_THERMODYN_cv,       &
-       THERMODYN_rhoe      => ATMOS_THERMODYN_rhoe,     &
-       THERMODYN_rhot      => ATMOS_THERMODYN_rhot,     &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
@@ -101,32 +115,22 @@ contains
        RHOT,              &
        QTRC,              &
        RHOT_t => RHOT_tp
-    use mod_cpl_vars, only: &
-       CPL_sw_AtmLnd, &
-       CPL_sw_AtmOcn, &
-       SkinT,         &
-       ALBW,          &
-       ALBG
     use mod_atmos_phy_sf_vars, only: &
-       SWD  => ATMOS_PHY_SF_SWD, &
-       LWD  => ATMOS_PHY_SF_LWD
+       SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP,  &
+       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo_land
     use mod_atmos_phy_rd_vars, only: &
        RHOT_t_RD  => ATMOS_PHY_RD_RHOT_t,     &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_cpl_vars, only: &
+       sw_CPL => CPL_sw_ALL, &
+       CPL_getATM_RD
     implicit none
 
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: RHOE    (KA,IA,JA)
-    real(RP) :: RHOE_t  (KA,IA,JA,2)
-    real(RP) :: RHOT_tmp(KA,IA,JA)
-    real(RP) :: TEMP_t  (KA,IA,JA)
-    real(RP) :: QDRY    (KA,IA,JA)
-    real(RP) :: CVtot   (KA,IA,JA)
-    real(RP) :: TEMP    (KA,IA,JA)
-    real(RP) :: PRES    (KA,IA,JA)
+    real(RP) :: TEMP_t(KA,IA,JA,3)
 
     real(RP) :: flux_rad(KA,IA,JA,2,2)
     real(RP) :: flux_net(KA,IA,JA,2)
@@ -136,84 +140,47 @@ contains
     real(RP) :: flux_rad_top(IA,JA,2)
     real(RP) :: flux_rad_sfc(IA,JA,2)
 
-    real(RP) :: solins  (IA,JA)
-    real(RP) :: cosSZA  (IA,JA)
-    real(RP) :: temp_sfc(IA,JA)
-    real(RP) :: albedo_land(IA,JA,2)
+    real(RP) :: solins(IA,JA)
+    real(RP) :: cosSZA(IA,JA)
+
+    real(RP) :: total ! dummy
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then ! tentative
-          temp_sfc(:,:) = SkinT(:,:)
-       else
-          call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                                    PRES(:,:,:),  & ! [OUT]
-                                    DENS(:,:,:),  & ! [IN]
-                                    RHOT(:,:,:),  & ! [IN]
-                                    QTRC(:,:,:,:) ) ! [IN]
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation'
 
-          temp_sfc(:,:) = TEMP(KS,:,:)
+       if ( sw_CPL ) then
+          call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
+                              SFC_albedo_land(:,:,:) ) ! [OUT]
        endif
 
-       if ( CPL_sw_AtmLnd ) then ! tentative
-          albedo_land(:,:,I_SW) = ALBG(:,:,1)
-          albedo_land(:,:,I_LW) = ALBG(:,:,2)
-       elseif ( CPL_sw_AtmOcn ) then ! tentative
-          albedo_land(:,:,I_SW) = ALBW(:,:,1)
-          albedo_land(:,:,I_LW) = ALBW(:,:,2)
-       else
-          albedo_land(:,:,:) = 0.5_RP
-       endif
-
+       ! calc solar insolation
        call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
                                  cosSZA  (:,:),  & ! [OUT]
                                  REAL_LON(:,:),  & ! [IN]
                                  REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,      & ! [IN]
-                          REAL_CZ, REAL_FZ,      & ! [IN]
-                          LANDUSE_frac_land,     & ! [IN]
-                          temp_sfc, albedo_land, & ! [IN]
-                          solins, cosSZA,        & ! [IN]
-                          flux_rad,              & ! [OUT]
-                          flux_rad_top           ) ! [OUT]
-
-       call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
-                            RHOT(:,:,:),  & ! [IN]
-                            QTRC(:,:,:,:) ) ! [IN]
+       call ATMOS_PHY_RD( DENS, RHOT, QTRC,  & ! [IN]
+                          REAL_CZ, REAL_FZ,  & ! [IN]
+                          LANDUSE_frac_land, & ! [IN]
+                          SFC_TEMP,          & ! [IN]
+                          SFC_albedo_land,   & ! [IN]
+                          solins, cosSZA,    & ! [IN]
+                          flux_rad,          & ! [OUT]
+                          flux_rad_top       ) ! [OUT]
 
        ! apply radiative flux convergence -> heating rate
-       call RD_heating( flux_rad(:,:,:,:,:),  & ! [IN]
-                        REAL_FZ (:,:,:),      & ! [IN]
+       call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                        RHOT     (:,:,:),     & ! [IN]
+                        QTRC     (:,:,:,:),   & ! [IN]
+                        REAL_FZ  (:,:,:),     & ! [IN]
                         dt_RD,                & ! [IN]
-                        RHOE_t  (:,:,:,:),    & ! [OUT]
-                        RHOE    (:,:,:)       ) ! [INOUT]
-
-       ! update rhot
-       call THERMODYN_rhot( RHOT_tmp(:,:,:),& ! [OUT]
-                            RHOE(:,:,:),    & ! [IN]
-                            QTRC(:,:,:,:)   ) ! [IN]
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOT_t_RD(k,i,j) = ( RHOT_tmp(k,i,j)-RHOT(k,i,j) ) / dt_RD
-       enddo
-       enddo
-       enddo
-
-       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then
-          do j = JS, JE
-          do i = IS, IE
-             LWD(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
-             SWD(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
-          enddo
-          enddo
-       endif
+                        TEMP_t   (:,:,:,:),   & ! [OUT]
+                        RHOT_t_RD(:,:,:)      ) ! [OUT]
 
        do j = JS, JE
        do i = IS, IE
@@ -260,19 +227,9 @@ contains
           call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 
-          call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                             QTRC(:,:,:,:) ) ! [IN]
-
-          call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                             QTRC (:,:,:,:), & ! [IN]
-                             QDRY (:,:,:)    ) ! [IN]
-
-          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_LW) / CVtot(:,:,:) * 86400.0_RP
-          call HIST_in( TEMP_t, 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
-          TEMP_t(:,:,:) = RHOE_t(:,:,:,I_SW) / CVtot(:,:,:) * 86400.0_RP
-          call HIST_in( TEMP_t, 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
-          TEMP_t(:,:,:) = ( RHOE_t(:,:,:,I_LW) + RHOE_t(:,:,:,I_SW) ) / CVtot(:,:,:) * 86400.0_RP
-          call HIST_in( TEMP_t, 'TEMP_t_rd', 'tendency of temp in rd', 'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
        endif
     endif
 
@@ -283,6 +240,10 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       call STAT_total( total, RHOT_t_RD(:,:,:), 'RHOT_t_RD' )
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_driver
