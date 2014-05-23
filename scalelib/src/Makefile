@@ -132,7 +132,7 @@ OBJS = $(scale_rdma)	\
 	scale_tracer_tomita08.o
 
 all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
-	@echo "Complete making scalelib."; echo
+	@echo "Complete making scalelib."
 
 makedir:
 	@echo;echo "Entering scalelib..."

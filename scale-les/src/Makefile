@@ -80,7 +80,7 @@ MODS =	\
 
 
 all: makedir makescalelib makebin
-	@echo "Complete making scale-les."; echo
+	@echo "Complete making scale-les."
 
 makedir:
 	@echo;echo "Entering scale-les..."
