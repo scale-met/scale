@@ -44,8 +44,8 @@ module mod_cpl_atmos_ocean_driver
 contains
 
   subroutine CPL_AtmOcn_driver_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_final
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_SET
     use scale_ocean_roughness, only: &
        OCEAN_roughness_setup
     use mod_ocean_phy_slab, only: &
@@ -57,7 +57,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_PHY_SF_driver_final
+    call ATMOS_SURFACE_SET
     call OCEAN_PHY_driver_final
 
     !--- set up roughness length of sea surface
@@ -137,7 +137,7 @@ contains
     real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
     real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
 
-    real(RP) :: Uabs       ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Uabs(IA,JA)       ! absolute velocity at the lowest atmospheric layer [m/s]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
@@ -147,18 +147,18 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
       ! at cell center
-      Uabs = sqrt( &
-             ( MOMZ(i,j)               )**2 &
-           + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-           + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-           ) / DENS(i,j) * 0.5_RP
+      Uabs(i,j) = sqrt( ( MOMZ(i,j)               )**2 &
+                      + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
+                      + ( MOMY(i,j-1) + MOMY(i,j) )**2 ) / DENS(i,j) * 0.5_RP
+    enddo
+    enddo
 
-      call OCEAN_roughness( &
-        Z0W(i,j),                     & ! (inout)
-        Z0M(i,j), Z0H(i,j), Z0E(i,j), & ! (out)
-        Uabs, DZ(i,j)                 ) ! (in)
-    end do
-    end do
+    call OCEAN_roughness( Uabs(:,:), &
+                          DZ  (:,:), &
+                          Z0W (:,:), &
+                          Z0M (:,:), &
+                          Z0H (:,:), &
+                          Z0E (:,:)  )
 
     call CPL_AtmOcn( &
       SST,                                 & ! (inout)

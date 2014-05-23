@@ -67,10 +67,14 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
-  use mod_atmos_phy_sf_vars, only: &
-     PREC => ATMOS_PHY_SF_PREC, &
-     SWD  => ATMOS_PHY_SF_SWD,  &
-     LWD  => ATMOS_PHY_SF_LWD
+  use mod_atmos_phy_mp_vars, only: &
+     SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+     SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+  use mod_atmos_phy_rd_vars, only: &
+     SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+     SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+  use mod_ocean_vars, only: &
+     TW
   use mod_land_vars, only: &
      TG,   &
      STRG, &
@@ -86,8 +90,6 @@ module mod_mkinit
      TRL_URB, &
      TBL_URB, &
      TGL_URB
-  use mod_ocean_vars, only: &
-     TW
   use mod_cpl_vars, only: &
      LST,   &
      SST,   &
@@ -3512,9 +3514,10 @@ contains
     ! make land variables
     do j = JS, JE
     do i = IS, IE
-       PREC (i,j)      = SFC_PREC
-       SWD  (i,j)      = SFC_SWD
-       LWD  (i,j)      = SFC_LWD
+       SFLX_rain (i,j) = SFC_PREC
+       SFLX_snow (i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = SFC_SWD
+       SFLX_LW_dn(i,j) = SFC_LWD
 
        TG   (:,i,j)    = LND_TEMP
        STRG (:,i,j)    = LND_STRG
@@ -3586,9 +3589,10 @@ contains
     ! make ocean variables
     do j = JS, JE
     do i = IS, IE
-       PREC (i,j)      = SFC_PREC
-       SWD  (i,j)      = SFC_SWD
-       LWD  (i,j)      = SFC_LWD
+       SFLX_rain (i,j) = SFC_PREC
+       SFLX_snow (i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = SFC_SWD
+       SFLX_LW_dn(i,j) = SFC_LWD
 
        TW   (i,j)      = OCN_TEMP
 

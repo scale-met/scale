@@ -19,6 +19,7 @@ module mod_cpl_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -38,7 +39,8 @@ module mod_cpl_vars
   public :: CPL_putLnd
   public :: CPL_putUrb
   public :: CPL_putOcn
-  public :: CPL_getCPL2Atm
+  public :: CPL_getAtm
+  public :: CPL_getAtm_RD
   public :: CPL_getLnd
   public :: CPL_getUrb
   public :: CPL_getOcn
@@ -56,9 +58,10 @@ module mod_cpl_vars
   logical,                public, save :: CPL_UST_UPDATE  = .false. !< is Urban Surface Temperature updated?
   logical,                public, save :: CPL_SST_UPDATE  = .false. !< is Sea  Surface Temperature updated?
 
+  logical,                public, save :: CPL_sw_ALL      = .false. !< do coupler calculation?
+  logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
   logical,                public, save :: CPL_sw_AtmLnd             !< do atmos-land  coupler calculation?
   logical,                public, save :: CPL_sw_AtmUrb             !< do atmos-urban coupler calculation?
-  logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
   logical,                public, save :: CPL_sw_restart            !< output coupler restart?
 
   ! prognostic variables
@@ -304,6 +307,10 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : OFF'
        CPL_sw_AtmOcn = .false.
+    endif
+
+    if ( CPL_sw_AtmLnd .OR. CPL_sw_AtmOcn ) then
+       CPL_sw_ALL = .true.
     endif
 
     !--- read namelist
@@ -722,46 +729,52 @@ contains
   end subroutine CPL_vars_merge
 
   subroutine CPL_putAtm( &
-      pDENS, & ! (in)
-      pMOMX, & ! (in)
-      pMOMY, & ! (in)
-      pMOMZ, & ! (in)
-      pRHOS, & ! (in)
-      pPRES, & ! (in)
-      pTMPS, & ! (in)
-      pTMPA, & ! (in)
-      pQV,   & ! (in)
-      pPREC, & ! (in)
-      pSWD,  & ! (in)
-      pLWD   ) ! (in)
+      pATM_TEMP,   &
+      pATM_PRES,   &
+      pATM_W,      &
+      pATM_U,      &
+      pATM_V,      &
+      pATM_DENS,   &
+      pATM_QTRC,   &
+      pATM_Z1,     &
+      pSFC_DENS,   &
+      pSFC_PRES,   &
+      pSFLX_LW_dn, &
+      pSFLX_SW_dn, &
+      pSFLX_rain,  &
+      pSFLX_snow   )
     implicit none
 
-    real(RP), intent(in) :: pDENS(IA,JA)
-    real(RP), intent(in) :: pMOMX(IA,JA)
-    real(RP), intent(in) :: pMOMY(IA,JA)
-    real(RP), intent(in) :: pMOMZ(IA,JA)
-    real(RP), intent(in) :: pRHOS(IA,JA)
-    real(RP), intent(in) :: pPRES(IA,JA)
-    real(RP), intent(in) :: pTMPS(IA,JA)
-    real(RP), intent(in) :: pTMPA(IA,JA)
-    real(RP), intent(in) :: pQV  (IA,JA)
-    real(RP), intent(in) :: pPREC(IA,JA)
-    real(RP), intent(in) :: pSWD (IA,JA)
-    real(RP), intent(in) :: pLWD (IA,JA)
+    real(RP), intent(in) :: pATM_TEMP  (IA,JA)
+    real(RP), intent(in) :: pATM_PRES  (IA,JA)
+    real(RP), intent(in) :: pATM_W     (IA,JA)
+    real(RP), intent(in) :: pATM_U     (IA,JA)
+    real(RP), intent(in) :: pATM_V     (IA,JA)
+    real(RP), intent(in) :: pATM_DENS  (IA,JA)
+    real(RP), intent(in) :: pATM_QTRC  (IA,JA,QA)
+    real(RP), intent(in) :: pATM_Z1    (IA,JA)
+    real(RP), intent(in) :: pSFC_DENS  (IA,JA)
+    real(RP), intent(in) :: pSFC_PRES  (IA,JA)
+    real(RP), intent(in) :: pSFLX_LW_dn(IA,JA)
+    real(RP), intent(in) :: pSFLX_SW_dn(IA,JA)
+    real(RP), intent(in) :: pSFLX_rain (IA,JA)
+    real(RP), intent(in) :: pSFLX_snow (IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_DENS(:,:) = pDENS(:,:)
-    CPL_MOMX(:,:) = pMOMX(:,:)
-    CPL_MOMY(:,:) = pMOMY(:,:)
-    CPL_MOMZ(:,:) = pMOMZ(:,:)
-    CPL_RHOS(:,:) = pRHOS(:,:)
-    CPL_PRES(:,:) = pPRES(:,:)
-    CPL_TMPS(:,:) = pTMPS(:,:)
-    CPL_TMPA(:,:) = pTMPA(:,:)
-    CPL_QV  (:,:) = pQV  (:,:)
-    CPL_PREC(:,:) = pPREC(:,:)
-    CPL_SWD (:,:) = pSWD (:,:)
-    CPL_LWD (:,:) = pLWD (:,:)
+    CPL_ATMP(:,:) = pATM_TEMP  (:,:)
+!                    pATM_PRES  (:,:)
+    CPL_MOMZ(:,:) = pATM_W     (:,:)
+    CPL_MOMX(:,:) = pATM_U     (:,:)
+    CPL_MOMY(:,:) = pATM_V     (:,:)
+    CPL_DENS(:,:) = pATM_DENS  (:,:)
+    CPL_QV  (:,:) = pATM_QTRC  (:,:,1)
+!                    pATM_Z1    (:,:)
+    CPL_RHOS(:,:) = pSFC_DENS  (:,:)
+    CPL_PRES(:,:) = pSFC_PRES  (:,:)
+    CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
+    CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
+    CPL_PREC(:,:) = pSFLX_rain (:,:) &
+                  + pSFLX_snow (:,:)
 
     return
   end subroutine CPL_putAtm
@@ -816,42 +829,76 @@ contains
     return
   end subroutine CPL_putOcn
 
-  subroutine CPL_getCPL2Atm( &
-      pXMFLX,  & ! (out)
-      pYMFLX,  & ! (out)
-      pZMFLX,  & ! (out)
-      pSWUFLX, & ! (out)
-      pLWUFLX, & ! (out)
-      pSHFLX,  & ! (out)
-      pLHFLX,  & ! (out)
-      pQVFLX   ) ! (out)
+  subroutine CPL_getAtm( &
+      pSFC_Z0,     &
+      pSFLX_MW,    &
+      pSFLX_MU,    &
+      pSFLX_MV,    &
+      pSFLX_SH,    &
+      pSFLX_LH,    &
+      pSFLX_QTRC,  &
+      pSFLX_LW_up, &
+      pSFLX_SW_up, &
+      pUabs10,     &
+      pU10,        &
+      pV10,        &
+      pT2,         &
+      pQ2          )
     implicit none
 
-    real(RP), intent(out) :: pXMFLX (IA,JA)
-    real(RP), intent(out) :: pYMFLX (IA,JA)
-    real(RP), intent(out) :: pZMFLX (IA,JA)
-    real(RP), intent(out) :: pSWUFLX(IA,JA)
-    real(RP), intent(out) :: pLWUFLX(IA,JA)
-    real(RP), intent(out) :: pSHFLX (IA,JA)
-    real(RP), intent(out) :: pLHFLX (IA,JA)
-    real(RP), intent(out) :: pQVFLX (IA,JA)
+    real(RP), intent(out) :: pSFC_Z0    (IA,JA)
+    real(RP), intent(out) :: pSFLX_MW   (IA,JA)
+    real(RP), intent(out) :: pSFLX_MU   (IA,JA)
+    real(RP), intent(out) :: pSFLX_MV   (IA,JA)
+    real(RP), intent(out) :: pSFLX_SH   (IA,JA)
+    real(RP), intent(out) :: pSFLX_LH   (IA,JA)
+    real(RP), intent(out) :: pSFLX_QTRC (IA,JA,QA)
+    real(RP), intent(out) :: pSFLX_LW_up(IA,JA)
+    real(RP), intent(out) :: pSFLX_SW_up(IA,JA)
+    real(RP), intent(out) :: pUabs10    (IA,JA)
+    real(RP), intent(out) :: pU10       (IA,JA)
+    real(RP), intent(out) :: pV10       (IA,JA)
+    real(RP), intent(out) :: pT2        (IA,JA)
+    real(RP), intent(out) :: pQ2        (IA,JA)
     !---------------------------------------------------------------------------
 
-    pXMFLX (:,:) = Atm_XMFLX (:,:)
-    pYMFLX (:,:) = Atm_YMFLX (:,:)
-    pZMFLX (:,:) = Atm_ZMFLX (:,:)
-    pSWUFLX(:,:) = Atm_SWUFLX(:,:)
-    pLWUFLX(:,:) = Atm_LWUFLX(:,:)
-    pSHFLX (:,:) = Atm_SHFLX (:,:)
-    pLHFLX (:,:) = Atm_LHFLX (:,:)
-    pQVFLX (:,:) = Atm_QVFLX (:,:)
+    pSFC_Z0    (:,:)   = 0.0_RP ! tentative
+    pSFLX_MW   (:,:)   = XMFLX (:,:)
+    pSFLX_MU   (:,:)   = YMFLX (:,:)
+    pSFLX_MV   (:,:)   = ZMFLX (:,:)
+    pSFLX_SH   (:,:)   = SHFLX (:,:)
+    pSFLX_LH   (:,:)   = LHFLX (:,:)
+    pSFLX_QTRC (:,:,:) = 0.0_RP ! tentative
+    pSFLX_QTRC (:,:,1) = QVFLX (:,:) ! tentative
+    pSFLX_LW_up(:,:)   = SWUFLX(:,:)
+    pSFLX_SW_up(:,:)   = LWUFLX(:,:)
+    pUabs10    (:,:)   = 0.0_RP ! tentative
+    pU10       (:,:)   = 0.0_RP ! tentative
+    pV10       (:,:)   = 0.0_RP ! tentative
+    pT2        (:,:)   = 0.0_RP ! tentative
+    pQ2        (:,:)   = 0.0_RP ! tentative
 
     CNT_Atm_Lnd = 0.0_RP
     CNT_Atm_Urb = 0.0_RP
     CNT_Atm_Ocn = 0.0_RP
 
     return
-  end subroutine CPL_getCPL2Atm
+  end subroutine CPL_getAtm
+
+  subroutine CPL_getAtm_RD( &
+      pSFC_TEMP,       &
+      pSFC_albedo_land )
+    implicit none
+
+    real(RP), intent(out) :: pSFC_TEMP       (IA,JA)
+    real(RP), intent(out) :: pSFC_albedo_land(IA,JA,2)
+    !---------------------------------------------------------------------------
+
+    pSFC_TEMP       (:,:)   = SkinT(:,:)
+    pSFC_albedo_land(:,:,:) = ALBG (:,:,:)
+
+    return
+  end subroutine CPL_getAtm_RD
 
   subroutine CPL_getLnd( &
       pLnd_GHFLX,   & ! (out)

@@ -39,6 +39,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_history
   public :: ATMOS_vars_total
+  public :: ATMOS_vars_diagnostics
 
   !-----------------------------------------------------------------------------
   !
@@ -80,6 +81,14 @@ module mod_atmos_vars
   real(RP), public, allocatable :: MOMY_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
   real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
+
+  ! diagnostic variables
+  real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature [K]
+  real(RP), public, allocatable :: PRES(:,:,:)   ! pressure    [Pa=J/m3]
+  real(RP), public, allocatable :: W   (:,:,:)   ! velocity w  [m/s]
+  real(RP), public, allocatable :: U   (:,:,:)   ! velocity u  [m/s]
+  real(RP), public, allocatable :: V   (:,:,:)   ! velocity v  [m/s]
+  real(RP), public, allocatable :: POTT(:,:,:)   ! potential temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -132,9 +141,9 @@ module mod_atmos_vars
   ! history & monitor output of diagnostic variables
   integer, private, parameter :: AD_nmax = 26 ! number of diagnostic variables for history output
 
-  integer, private, parameter :: I_VELZ  =  1 ! velocity w at cell center
-  integer, private, parameter :: I_VELX  =  2 ! velocity u at cell center
-  integer, private, parameter :: I_VELY  =  3 ! velocity v at cell center
+  integer, private, parameter :: I_W     =  1 ! velocity w at cell center
+  integer, private, parameter :: I_U     =  2 ! velocity u at cell center
+  integer, private, parameter :: I_V     =  3 ! velocity v at cell center
   integer, private, parameter :: I_POTT  =  4 ! potential temperature
 
   integer, private, parameter :: I_QDRY  =  5 ! ratio of dry air            to total mass
@@ -255,6 +264,12 @@ contains
     allocate( RHOT_tp(KA,IA,JA)    )
     allocate( QTRC_tp(KA,IA,JA,QA) )
 
+    allocate( TEMP(KA,IA,JA) )
+    allocate( PRES(KA,IA,JA) )
+    allocate( W   (KA,IA,JA) )
+    allocate( U   (KA,IA,JA) )
+    allocate( V   (KA,IA,JA) )
+    allocate( POTT(KA,IA,JA) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -329,9 +344,9 @@ contains
        call HIST_reg( AQ_HIST_id(iq), zinterp, AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
-    call HIST_reg( AD_HIST_id(I_VELZ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELX) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
-    call HIST_reg( AD_HIST_id(I_VELY) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W   ) , zinterp, 'W',     'velocity w',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_U   ) , zinterp, 'U',     'velocity u',             'm/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_V   ) , zinterp, 'V',     'velocity v',             'm/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_POTT) , zinterp, 'PT',    'potential temp.',        'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_QDRY) , zinterp, 'QDRY',  'dry air',                'kg/kg',  ndim=3 )
@@ -371,14 +386,14 @@ contains
     call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3 )
     call MONIT_reg( AD_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3 )
 
-    if ( AD_HIST_id(I_VELZ) > 0 ) then
-       AD_PREP_sw(I_VELZ) = 1
+    if ( AD_HIST_id(I_W) > 0 ) then
+       AD_PREP_sw(I_W) = 1
     endif
-    if ( AD_HIST_id(I_VELX) > 0 ) then
-       AD_PREP_sw(I_VELX) = 1
+    if ( AD_HIST_id(I_U) > 0 ) then
+       AD_PREP_sw(I_U) = 1
     endif
-    if ( AD_HIST_id(I_VELY) > 0 ) then
-       AD_PREP_sw(I_VELY) = 1
+    if ( AD_HIST_id(I_V) > 0 ) then
+       AD_PREP_sw(I_V) = 1
     endif
     if ( AD_HIST_id(I_POTT) > 0 ) then
        AD_PREP_sw(I_POTT) = 1
@@ -463,9 +478,9 @@ contains
     endif
     if (      AD_HIST_id (I_ENGK) > 0 &
          .OR. AD_MONIT_id(I_ENGK) > 0 ) then
-       AD_PREP_sw(I_VELZ) = 1
-       AD_PREP_sw(I_VELX) = 1
-       AD_PREP_sw(I_VELY) = 1
+       AD_PREP_sw(I_W) = 1
+       AD_PREP_sw(I_U) = 1
+       AD_PREP_sw(I_V) = 1
        AD_PREP_sw(I_ENGK) = 1
     endif
     if (      AD_HIST_id (I_ENGI) > 0 &
@@ -480,9 +495,9 @@ contains
     if (      AD_HIST_id (I_ENGT) > 0 &
          .OR. AD_MONIT_id(I_ENGT) > 0 ) then
        AD_PREP_sw(I_ENGP)  = 1
-       AD_PREP_sw(I_VELZ)  = 1
-       AD_PREP_sw(I_VELX)  = 1
-       AD_PREP_sw(I_VELY)  = 1
+       AD_PREP_sw(I_W)  = 1
+       AD_PREP_sw(I_U)  = 1
+       AD_PREP_sw(I_V)  = 1
        AD_PREP_sw(I_ENGK)  = 1
        AD_PREP_sw(I_QDRY)  = 1
        AD_PREP_sw(I_RTOT)  = 1
@@ -594,9 +609,9 @@ contains
        ATMOS_PHY_CP_vars_restart_read
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
+    real(RP) :: W(KA,IA,JA) ! velocity w at cell center [m/s]
+    real(RP) :: U(KA,IA,JA) ! velocity u at cell center [m/s]
+    real(RP) :: V(KA,IA,JA) ! velocity v at cell center [m/s]
 
     real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
     real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
@@ -717,15 +732,15 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-       VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-       VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
        ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                            + VELX(k,i,j)**2 &
-                                            + VELY(k,i,j)**2 )
+       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                            + U(k,i,j)**2 &
+                                            + V(k,i,j)**2 )
 
        ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        do iq = QQS, QQE
@@ -987,11 +1002,6 @@ contains
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
-    real(RP) :: POTT  (KA,IA,JA) ! potential temperature [K]
-
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
     real(RP) :: QTOT  (KA,IA,JA) ! total water        [kg/kg]
     real(RP) :: QHYD  (KA,IA,JA) ! total hydrometeor  [kg/kg]
@@ -1004,8 +1014,6 @@ contains
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
-    real(RP) :: PRES  (KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP  (KA,IA,JA) ! temperature [K]
 
     real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
     real(RP) :: RH    (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
@@ -1023,8 +1031,8 @@ contains
 
     real(RP) :: RHOQ  (KA,IA,JA)
     real(RP) :: QSAT  (KA,IA,JA)
-    real(RP) :: VELXH (KA,IA,JA)
-    real(RP) :: VELYH (KA,IA,JA)
+    real(RP) :: UH    (KA,IA,JA)
+    real(RP) :: VH    (KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1069,49 +1077,49 @@ contains
 
     ! prepare and history output of diagnostic variables
 
-    if ( AD_PREP_sw(I_VELZ) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_VELX) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_VELY) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_POTT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
+!    if ( AD_PREP_sw(I_W) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_U) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_V) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_POTT) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
 
     if ( AD_PREP_sw(I_QDRY) > 0 ) then
        call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
@@ -1218,27 +1226,27 @@ contains
        enddo
     endif
 
-    if ( AD_PREP_sw(I_PRES) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-       enddo
-       enddo
-       enddo
-    endif
-
-    if ( AD_PREP_sw(I_TEMP) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
-       enddo
-       enddo
-       enddo
-    endif
+!    if ( AD_PREP_sw(I_PRES) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          PRES(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
+!       enddo
+!       enddo
+!       enddo
+!    endif
+!
+!    if ( AD_PREP_sw(I_TEMP) > 0 ) then
+!       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * RTOT(k,i,j) )
+!       enddo
+!       enddo
+!       enddo
+!    endif
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1302,8 +1310,8 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELXH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
-                                / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          UH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
+                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
        enddo
@@ -1313,8 +1321,8 @@ contains
        do j = JS-1, JE
        do i = IS-1, IE
        do k = KS, KE
-          VELYH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
-                                / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          VH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
+                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
        enddo
        enddo
        enddo
@@ -1323,10 +1331,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VOR(k,i,j) = 0.5_RP * ( ( VELYH(k,i,j  ) - VELYH(k,i-1,j  ) ) * RCDX(i) &
-                                + ( VELYH(k,i,j-1) - VELYH(k,i-1,j-1) ) * RCDX(i) &
-                                - ( VELXH(k,i  ,j) - VELXH(k,i  ,j-1) ) * RCDY(j) &
-                                - ( VELXH(k,i-1,j) - VELXH(k,i-1,j-1) ) * RCDY(j) )
+          VOR(k,i,j) = 0.5_RP * ( ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                                + ( VH(k,i,j-1) - VH(k,i-1,j-1) ) * RCDX(i) &
+                                - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j) &
+                                - ( UH(k,i-1,j) - UH(k,i-1,j-1) ) * RCDY(j) )
        enddo
        enddo
        enddo
@@ -1373,9 +1381,9 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                               + VELX(k,i,j)**2 &
-                                               + VELY(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                               + U(k,i,j)**2 &
+                                               + V(k,i,j)**2 )
        enddo
        enddo
        enddo
@@ -1415,9 +1423,9 @@ contains
        enddo
     endif
 
-    call HIST_in( VELZ (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
-    call HIST_in( VELX (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
-    call HIST_in( VELY (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
+    call HIST_in( W    (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
+    call HIST_in( U    (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
+    call HIST_in( V    (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
     call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K',      TIME_DTSEC )
 
     call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg',  TIME_DTSEC )
@@ -1497,9 +1505,9 @@ contains
        CVw => AQ_CV
     implicit none
 
-    real(RP) :: VELZ  (KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: VELX  (KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: VELY  (KA,IA,JA) ! velocity v at cell center [m/s]
+    real(RP) :: W   (KA,IA,JA) ! velocity w at cell center [m/s]
+    real(RP) :: U   (KA,IA,JA) ! velocity u at cell center [m/s]
+    real(RP) :: V   (KA,IA,JA) ! velocity v at cell center [m/s]
 
     real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
     real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
@@ -1550,15 +1558,15 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          VELZ(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-          VELX(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-          VELY(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+          W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+          V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
 
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
 
-          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( VELZ(k,i,j)**2 &
-                                               + VELX(k,i,j)**2 &
-                                               + VELY(k,i,j)**2 )
+          ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                               + U(k,i,j)**2 &
+                                               + V(k,i,j)**2 )
 
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
           do iq = QQS, QQE
@@ -1571,7 +1579,7 @@ contains
        enddo
        enddo
 
-       call STAT_total( total, ENGT(:,:,:), 'ENGT    ' )
+!       call STAT_total( total, ENGT(:,:,:), 'ENGT    ' )
        call STAT_total( total, ENGP(:,:,:), 'ENGP    ' )
        call STAT_total( total, ENGK(:,:,:), 'ENGK    ' )
        call STAT_total( total, ENGI(:,:,:), 'ENGI    ' )
@@ -1580,5 +1588,56 @@ contains
 
     return
   end subroutine ATMOS_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Calc diagnostic variables
+  subroutine ATMOS_vars_diagnostics
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+    implicit none
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                              PRES(:,:,:),  & ! [OUT]
+                              DENS(:,:,:),  & ! [IN]
+                              RHOT(:,:,:),  & ! [IN]
+                              QTRC(:,:,:,:) ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_vars_diagnostics
 
 end module mod_atmos_vars

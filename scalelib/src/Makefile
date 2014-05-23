@@ -70,12 +70,14 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_rd_mstrnx.o	\
 	scale_atmos_phy_rd_profile.o	\
 	scale_atmos_phy_sf.o	\
+	scale_atmos_phy_sf_bulkcoef.o	\
+	scale_atmos_phy_sf_bulk.o	\
 	scale_atmos_phy_sf_const.o	\
-	scale_atmos_phy_sf_louis.o	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_dummy.o	\
 	scale_atmos_phy_tb_smg.o	\
 	scale_atmos_phy_tb_dns.o	\
+	scale_atmos_sub_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
 	scale_atmos_sub_profile.o	\

@@ -68,7 +68,7 @@ contains
        call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
        ! run once (only for the diagnostic value)
-    call ATMOS_PHY_RD_driver( .true., .false. )
+       call ATMOS_PHY_RD_driver( .true., .false. )
 
     else
 
@@ -97,8 +97,6 @@ contains
        TIME_NOWDATE
     use scale_history, only: &
        HIST_in
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
@@ -114,19 +112,16 @@ contains
        RHOT,              &
        QTRC,              &
        RHOT_t => RHOT_tp
-    use mod_cpl_vars, only: &
-       CPL_sw_AtmLnd, &
-       CPL_sw_AtmOcn, &
-       SkinT,         &
-       ALBW,          &
-       ALBG
     use mod_atmos_phy_sf_vars, only: &
-       SWD  => ATMOS_PHY_SF_SWD, &
-       LWD  => ATMOS_PHY_SF_LWD
+       SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP,  &
+       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo_land
     use mod_atmos_phy_rd_vars, only: &
        RHOT_t_RD  => ATMOS_PHY_RD_RHOT_t,     &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_cpl_vars, only: &
+       sw_CPL => CPL_sw_ALL, &
+       CPL_getATM_RD
     implicit none
 
     logical, intent(in) :: update_flag
@@ -142,39 +137,17 @@ contains
     real(RP) :: flux_rad_top(IA,JA,2)
     real(RP) :: flux_rad_sfc(IA,JA,2)
 
-    real(RP) :: TEMP(KA,IA,JA)
-    real(RP) :: PRES(KA,IA,JA)
-
-    real(RP) :: solins  (IA,JA)
-    real(RP) :: cosSZA  (IA,JA)
-    real(RP) :: temp_sfc(IA,JA)
-    real(RP) :: albedo_land(IA,JA,2)
+    real(RP) :: solins(IA,JA)
+    real(RP) :: cosSZA(IA,JA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       if ( CPL_sw_AtmLnd .or. CPL_sw_AtmOcn ) then ! tentative
-          temp_sfc(:,:) = SkinT(:,:)
-       else
-          call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                                    PRES(:,:,:),  & ! [OUT]
-                                    DENS(:,:,:),  & ! [IN]
-                                    RHOT(:,:,:),  & ! [IN]
-                                    QTRC(:,:,:,:) ) ! [IN]
-
-          temp_sfc(:,:) = TEMP(KS,:,:)
-       endif
-
-       if ( CPL_sw_AtmLnd ) then ! tentative
-          albedo_land(:,:,I_SW) = ALBG(:,:,1)
-          albedo_land(:,:,I_LW) = ALBG(:,:,2)
-       elseif ( CPL_sw_AtmOcn ) then ! tentative
-          albedo_land(:,:,I_SW) = ALBW(:,:,1)
-          albedo_land(:,:,I_LW) = ALBW(:,:,2)
-       else
-          albedo_land(:,:,:) = 0.5_RP
+       if ( sw_CPL ) then
+          call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
+                              SFC_albedo_land(:,:,:) ) ! [OUT]
        endif
 
        ! calc solar insolation
@@ -184,13 +157,14 @@ contains
                                  REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,      & ! [IN]
-                          REAL_CZ, REAL_FZ,      & ! [IN]
-                          LANDUSE_frac_land,     & ! [IN]
-                          temp_sfc, albedo_land, & ! [IN]
-                          solins, cosSZA,        & ! [IN]
-                          flux_rad,              & ! [OUT]
-                          flux_rad_top           ) ! [OUT]
+       call ATMOS_PHY_RD( DENS, RHOT, QTRC,  & ! [IN]
+                          REAL_CZ, REAL_FZ,  & ! [IN]
+                          LANDUSE_frac_land, & ! [IN]
+                          SFC_TEMP,          & ! [IN]
+                          SFC_albedo_land,   & ! [IN]
+                          solins, cosSZA,    & ! [IN]
+                          flux_rad,          & ! [OUT]
+                          flux_rad_top       ) ! [OUT]
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
@@ -248,7 +222,7 @@ contains
 
           call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
           call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
-          call HIST_in( TEMP_t(:,:,:,3),    'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
        endif
     endif
 

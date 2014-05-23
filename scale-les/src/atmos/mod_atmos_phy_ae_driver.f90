@@ -59,7 +59,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_AE] / Origin[SCALE-LES]'
 
-    if ( ATMOS_sw_phy_ae ) then
+    ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
+!    if ( ATMOS_sw_phy_ae ) then
 
        ! setup library component
        call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
@@ -67,7 +68,7 @@ contains
        ! run once (only for the diagnostic value)
        call ATMOS_PHY_AE_driver( .true., .false. )
 
-    endif
+!    endif
 
     return
   end subroutine ATMOS_PHY_AE_driver_setup
@@ -77,6 +78,9 @@ contains
   subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_AE => TIME_DTSEC_ATMOS_PHY_AE
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_ae, only: &
@@ -99,10 +103,15 @@ contains
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
-    integer :: k, i, j, iq
+    real(RP) :: RHOQ(KA,IA,JA)
+    real(RP) :: total ! dummy
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, aerosol'
 
        do iq = 1, QA
        do j  = JS, JE
@@ -149,6 +158,14 @@ contains
     enddo
     enddo
     enddo
+
+    if ( STAT_checktotal ) then
+       do iq = 1, QA
+          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_AE(:,:,:,iq)
+
+          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_AE' )
+       enddo
+    endif
 
     return
   end subroutine ATMOS_PHY_AE_driver
