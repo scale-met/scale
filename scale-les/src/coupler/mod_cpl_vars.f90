@@ -761,7 +761,7 @@ contains
     real(RP), intent(in) :: pSFLX_snow (IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_ATMP(:,:) = pATM_TEMP  (:,:)
+    CPL_TMPA(:,:) = pATM_TEMP  (:,:)
 !                    pATM_PRES  (:,:)
     CPL_MOMZ(:,:) = pATM_W     (:,:)
     CPL_MOMX(:,:) = pATM_U     (:,:)
@@ -863,15 +863,15 @@ contains
     !---------------------------------------------------------------------------
 
     pSFC_Z0    (:,:)   = 0.0_RP ! tentative
-    pSFLX_MW   (:,:)   = XMFLX (:,:)
-    pSFLX_MU   (:,:)   = YMFLX (:,:)
-    pSFLX_MV   (:,:)   = ZMFLX (:,:)
-    pSFLX_SH   (:,:)   = SHFLX (:,:)
-    pSFLX_LH   (:,:)   = LHFLX (:,:)
+    pSFLX_MW   (:,:)   = Atm_XMFLX (:,:)
+    pSFLX_MU   (:,:)   = Atm_YMFLX (:,:)
+    pSFLX_MV   (:,:)   = Atm_ZMFLX (:,:)
+    pSFLX_SH   (:,:)   = Atm_SHFLX (:,:)
+    pSFLX_LH   (:,:)   = Atm_LHFLX (:,:)
     pSFLX_QTRC (:,:,:) = 0.0_RP ! tentative
-    pSFLX_QTRC (:,:,1) = QVFLX (:,:) ! tentative
-    pSFLX_LW_up(:,:)   = SWUFLX(:,:)
-    pSFLX_SW_up(:,:)   = LWUFLX(:,:)
+    pSFLX_QTRC (:,:,1) = Atm_QVFLX (:,:) ! tentative
+    pSFLX_LW_up(:,:)   = Atm_SWUFLX(:,:)
+    pSFLX_SW_up(:,:)   = Atm_LWUFLX(:,:)
     pUabs10    (:,:)   = 0.0_RP ! tentative
     pU10       (:,:)   = 0.0_RP ! tentative
     pV10       (:,:)   = 0.0_RP ! tentative

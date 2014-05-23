@@ -43,8 +43,8 @@ module mod_cpl_atmos_urban_driver
 contains
 
   subroutine CPL_AtmUrb_driver_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_final
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_SET
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_final
     use scale_cpl_atmos_urban, only: &
@@ -54,7 +54,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_PHY_SF_driver_final
+    call ATMOS_SURFACE_SET
     call URBAN_PHY_driver_final
 
     call CPL_AtmUrb_setup( CPL_TYPE_AtmUrb )
