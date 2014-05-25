@@ -447,6 +447,7 @@ contains
     ! tloc=mod(int(OMG/PI*180./15.+12.+0.5 ),24)
     tloc = mod( (int(TIME/(60.0_RP*60.0_RP)) + int(XLON/15.0_RP)),24 )
     if(tloc==0) tloc = 24
+    !  print *,'tloc',TIME,tloc
 
     ! Calculate AH data at LST
     AH_t  = AH  * ahdiurnal(tloc)
@@ -470,6 +471,7 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
+    !print *,VFGS, VFGW, VFWG, VFWS, VFWW
 
     !--- Convert unit from MKS to cgs
 
@@ -540,6 +542,9 @@ contains
     PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
 
     ! TR  Solving Non-Linear Equation by Newton-Rapson
+
+    ! TRP = 350.0_RP
+
     do iteration = 1, 20
 
       ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
@@ -566,6 +571,11 @@ contains
       TRP      = TR
 
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
+      ! if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) then 
+      !    print *,'roof iteration',iteration
+      !    print *,'roof     ',TR,SR,RR,-1.*HR,-1.*ELER,-1.*G0R
+      !   exit
+      ! endif
 
     end do
 
@@ -590,11 +600,19 @@ contains
     CHC = ALPHAC / RHO / CP / UA
     CHB = ALPHAB / RHO / CP / UC
     CHG = ALPHAG / RHO / CP / UC
+
+    ! print *,'CH   ',CHR,CHC,CHB,CHG
+    ! print *,'ALPHA',ALPHAR,ALPHAC,ALPHAB,ALPHAG
+    ! print *,'TA,TC',TA,TC
     !   BETB=0.0
     !   IF(RAIN > 1.) BETG=0.7
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
+
+    ! TBP = 350.0_RP ! Adachi
+    ! TGP = 350.0_RP ! Adachi
+
     do iteration = 1, 20
 
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
@@ -709,6 +727,17 @@ contains
           abs(GF)  < 0.000001_RP .and. &
           abs(DTG) < 0.000001_RP .and. &
           abs(DTC) < 0.000001_RP       ) exit
+
+      ! if( abs(F)   < 0.000001_RP .and. &
+      !    abs(DTB) < 0.000001_RP .and. &
+      !    abs(GF)  < 0.000001_RP .and. &
+      !    abs(DTG) < 0.000001_RP .and. &
+      !    abs(DTC) < 0.000001_RP       ) then	 
+      !    print *,'building/ground iteration',iteration
+      !    print *,'building ',TB,SB,RB,-1.*HB,-1.*ELEB,-1.*G0B
+      !    print *,'ground   ',TG,SG,RG,-1.*HG,-1.*ELEG,-1.*G0G
+      !    exit
+      ! endif
 
     end do
 
@@ -974,7 +1003,7 @@ contains
   subroutine urban_param_setup
     implicit none
 
-    real(RP) :: DHGT,VFWS,VFGS
+    real(RP) :: DHGT,THGT,VFWS,VFGS
     integer  :: k
 
     ! initialize
@@ -1024,14 +1053,16 @@ contains
     R    = ROOF_WIDTH / ( ROAD_WIDTH + ROOF_WIDTH )
     RW   = 1.0_RP - R
 
+    !print *,'HGT, R, RW',HGT,R,RW  ! adachi
+
     ! Calculate Sky View Factor:
     DHGT = HGT / 100.0_RP
-    HGT  = 0.0_RP
+    THGT = 0.0_RP
     VFWS = 0.0_RP
-    HGT  = HGT - DHGT / 2.0_RP
+    THGT = HGT - DHGT / 2.0_RP
     do k = 1, 99
-      HGT  = HGT - DHGT
-      VFWS = VFWS + 0.25_RP * ( 1.0_RP - HGT / sqrt( HGT**2 + RW**2 ) )
+      THGT  = THGT - DHGT
+      VFWS = VFWS + 0.25_RP * ( 1.0_RP - THGT / sqrt( THGT**2 + RW**2 ) )
     end do
 
     VFWS = VFWS / 99.0_RP
