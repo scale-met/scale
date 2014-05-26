@@ -36,8 +36,6 @@ module scale_cpl_atmos_ocean_bulk
   !
   !++ Private procedure
   !
-  private :: bulkflux
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -124,37 +122,53 @@ contains
   end subroutine CPL_AtmOcn_bulk_setup
 
   subroutine CPL_AtmOcn_bulk( &
-        SST,                                  & ! (inout)
-        XMFLX, YMFLX, ZMFLX,                  & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
-        SST_UPDATE,                           & ! (in)
-        DENS, MOMX, MOMY, MOMZ,               & ! (in)
-        RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
-        TW, ALB_SW, ALB_LW,                   & ! (in)
-        Z0M, Z0H, Z0E                         ) ! (in)
+        SST,        & ! (inout)
+        XMFLX,      & ! (out)
+        YMFLX,      & ! (out)
+        ZMFLX,      & ! (out)
+        SHFLX,      & ! (out)
+        LHFLX,      & ! (out)
+        WHFLX,      & ! (out)
+        SST_UPDATE, & ! (in)
+        DENS,       & ! (in)
+        MOMX,       & ! (in)
+        MOMY,       & ! (in)
+        MOMZ,       & ! (in)
+        RHOS,       & ! (in)
+        PRES,       & ! (in)
+        TMPS,       & ! (in)
+        QV,         & ! (in)
+        SWD,        & ! (in)
+        LWD,        & ! (in)
+        TW,         & ! (in)
+        ALB_SW,     & ! (in)
+        ALB_LW,     & ! (in)
+        Z0M,        & ! (in)
+        Z0H,        & ! (in)
+        Z0E         ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+      CPdry  => CONST_CPdry, &
+      STB    => CONST_STB,   &
+      LH0    => CONST_LH0
+    use scale_grid_real, only: &
+      Z1 => REAL_Z1
+    use scale_atmos_saturation, only: &
+      qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_cpl_bulkcoef, only: &
+      CPL_bulkcoef
     implicit none
 
-    ! parameters
-    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
-    real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
-    real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
-    real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
+    ! arguments
+    real(RP), intent(inout) :: SST(IA,JA) ! sea surface temperature [K]
 
-    ! works
-    integer :: i, j, n
-
-    real(RP), intent(inout) :: SST (IA,JA) ! sea surface temperature [K]
-
-    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
+    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
 
     logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
@@ -176,6 +190,12 @@ contains
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
+    ! works
+    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
+
+    integer :: i, j, n
     !---------------------------------------------------------------------------
 
     if( SST_UPDATE ) then
@@ -186,75 +206,6 @@ contains
     end if
 
     ! calculate surface flux
-    call bulkflux( &
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
-      SST, DENS, MOMX, MOMY, MOMZ,         & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-      ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
-
-    return
-  end subroutine CPL_AtmOcn_bulk
-
-  subroutine bulkflux( &
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
-      TS, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-      ALB_SW, ALB_LW, Z0M, Z0H, Z0E        ) ! (in)
-    use scale_const, only: &
-      GRAV   => CONST_GRAV,  &
-      CPdry  => CONST_CPdry, &
-      STB    => CONST_STB,   &
-      LH0    => CONST_LH0
-    use scale_grid_real, only: &
-      Z1 => REAL_Z1
-    use scale_atmos_saturation, only: &
-      qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_cpl_bulkcoef, only: &
-      CPL_bulkcoef
-    implicit none
-
-    ! argument
-    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
-
-    real(RP), intent(in) :: TS  (IA,JA) ! skin temperature [K]
-
-    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
-    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
-
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-
-    ! work
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
-    real(RP) :: Ustar ! friction velocity [m/s]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-
-    real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    ! at cell center
     do j = JS-1, JE+1
     do i = IS-1, IE+1
       Uabs = sqrt( &
@@ -264,29 +215,35 @@ contains
            ) / DENS(i,j) * 0.5_RP
 
       call CPL_bulkcoef( &
-          Cm, Ch, Ce,                  & ! (out)
-          TMPS(i,j), TS(i,j),          & ! (in)
-          Z1(i,j), Uabs,               & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
+          Cm,        & ! (out)
+          Ch,        & ! (out)
+          Ce,        & ! (out)
+          TMPS(i,j), & ! (in)
+          SST (i,j), & ! (in)
+          Z1  (i,j), & ! (in)
+          Uabs,      & ! (in)
+          Z0M (i,j), & ! (in)
+          Z0H (i,j), & ! (in)
+          Z0E (i,j)  ) ! (in)
 
       XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
       YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j) / DENS(i,j)
       ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) / DENS(i,j)
 
       ! saturation at the surface
-      call qsat( SQV, TS(i,j), PRES(i,j) )
+      call qsat( SQV, SST(i,j), PRES(i,j) )
 
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - TMPS(i,j) )
+      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( SST(i,j) - TMPS(i,j) )
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * Ce * ( SQV - QV(i,j) )
-      SWUFLX(i,j) = ALB_SW(i,j) * SWD(i,j)
-      LWUFLX(i,j) = ALB_LW(i,j) * LWD(i,j) + ( 1.0_RP - ALB_LW(i,j) ) * STB * TS(i,j)**4
 
       ! calculation for residual
-      WHFLX(i,j) = - SWD(i,j) + SWUFLX(i,j) - LWD(i,j) + LWUFLX(i,j) + SHFLX(i,j) + LHFLX(i,j)
+      WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * -1.0_RP &
+                 - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 )&
+                 + SHFLX(i,j) + LHFLX(i,j)
     enddo
     enddo
 
     return
-  end subroutine bulkflux
+  end subroutine CPL_AtmOcn_bulk
 
 end module scale_cpl_atmos_ocean_bulk

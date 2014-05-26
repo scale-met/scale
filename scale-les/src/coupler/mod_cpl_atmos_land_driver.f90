@@ -95,8 +95,6 @@ contains
        CPL_AtmLnd_XMFLX,  &
        CPL_AtmLnd_YMFLX,  &
        CPL_AtmLnd_ZMFLX,  &
-       CPL_AtmLnd_SWUFLX, &
-       CPL_AtmLnd_LWUFLX, &
        CPL_AtmLnd_SHFLX,  &
        CPL_AtmLnd_LHFLX,  &
        CPL_AtmLnd_QVFLX,  &
@@ -116,8 +114,6 @@ contains
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
     real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
@@ -129,14 +125,33 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
 
     call CPL_AtmLnd( &
-      LST,                                      & ! (inout)
-      XMFLX, YMFLX, ZMFLX,                      & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,      & ! (out)
-      update_flag,                              & ! (in)
-      DENS, MOMX, MOMY, MOMZ,                   & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,           & ! (in)
-      TG, QVEF, ALBG(:,:,I_SW), ALBG(:,:,I_LW), & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E                   ) ! (in)
+      LST  (:,:),      & ! (inout)
+      XMFLX(:,:),      & ! (out)
+      YMFLX(:,:),      & ! (out)
+      ZMFLX(:,:),      & ! (out)
+      SHFLX(:,:),      & ! (out)
+      LHFLX(:,:),      & ! (out)
+      GHFLX(:,:),      & ! (out)
+      update_flag,     & ! (in)
+      DENS (:,:),      & ! (in)
+      MOMX (:,:),      & ! (in)
+      MOMY (:,:),      & ! (in)
+      MOMZ (:,:),      & ! (in)
+      RHOS (:,:),      & ! (in)
+      PRES (:,:),      & ! (in)
+      TMPS (:,:),      & ! (in)
+      QV   (:,:),      & ! (in)
+      SWD  (:,:),      & ! (in)
+      LWD  (:,:),      & ! (in)
+      TG   (:,:),      & ! (in)
+      QVEF (:,:),      & ! (in)
+      ALBG (:,:,I_SW), & ! (in)
+      ALBG (:,:,I_LW), & ! (in)
+      TCS  (:,:),      & ! (in)
+      DZG  (:,:),      & ! (in)
+      Z0M  (:,:),      & ! (in)
+      Z0H  (:,:),      & ! (in)
+      Z0E  (:,:)       ) ! (in)
 
     ! interpolate momentum fluxes
     do j = JS, JE
@@ -155,14 +170,12 @@ contains
     enddo
 
     ! temporal average flux
-    CPL_AtmLnd_XMFLX (:,:) = ( CPL_AtmLnd_XMFLX (:,:) * CNT_Atm_Lnd + XMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_YMFLX (:,:) = ( CPL_AtmLnd_YMFLX (:,:) * CNT_Atm_Lnd + YMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_ZMFLX (:,:) = ( CPL_AtmLnd_ZMFLX (:,:) * CNT_Atm_Lnd + ZMFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_SWUFLX(:,:) = ( CPL_AtmLnd_SWUFLX(:,:) * CNT_Atm_Lnd + SWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_LWUFLX(:,:) = ( CPL_AtmLnd_LWUFLX(:,:) * CNT_Atm_Lnd + LWUFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_SHFLX (:,:) = ( CPL_AtmLnd_SHFLX (:,:) * CNT_Atm_Lnd + SHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_LHFLX (:,:) = ( CPL_AtmLnd_LHFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_QVFLX (:,:) = ( CPL_AtmLnd_QVFLX (:,:) * CNT_Atm_Lnd + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_XMFLX(:,:) = ( CPL_AtmLnd_XMFLX(:,:) * CNT_Atm_Lnd + XMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_YMFLX(:,:) = ( CPL_AtmLnd_YMFLX(:,:) * CNT_Atm_Lnd + YMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_ZMFLX(:,:) = ( CPL_AtmLnd_ZMFLX(:,:) * CNT_Atm_Lnd + ZMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_SHFLX(:,:) = ( CPL_AtmLnd_SHFLX(:,:) * CNT_Atm_Lnd + SHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_LHFLX(:,:) = ( CPL_AtmLnd_LHFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_QVFLX(:,:) = ( CPL_AtmLnd_QVFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
 
     Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
     Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )

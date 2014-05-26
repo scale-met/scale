@@ -41,8 +41,6 @@ module scale_cpl_atmos_urban
         UST,     & ! (out)
         SHFLX,   & ! (out)
         LHFLX,   & ! (out)
-        SWUFLX,  & ! (out)
-        LWUFLX,  & ! (out)
         GHFLX,   & ! (out)
         LSOLAR,  & ! (in)
         TMPA,    & ! (in)
@@ -75,8 +73,6 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: UST
        real(RP), intent(out) :: SHFLX
        real(RP), intent(out) :: LHFLX
-       real(RP), intent(out) :: SWUFLX
-       real(RP), intent(out) :: LWUFLX
        real(RP), intent(out) :: GHFLX
 
        logical,  intent(in) :: LSOLAR

@@ -114,15 +114,12 @@ contains
        SFC_Z0,                                      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
        SFLX_QTRC,                                   &
-       SFLX_LW_up, SFLX_SW_up,                      &
        Uabs10, U10, V10, T2, Q2                     )
     use scale_const, only: &
        STB   => CONST_STB,   &
        CPdry => CONST_CPdry, &
        RovCP => CONST_RovCP, &
-       LH0   => CONST_LH0,   &
-       I_SW  => CONST_I_SW,  &
-       I_LW  => CONST_I_LW
+       LH0   => CONST_LH0
     use scale_atmos_phy_sf_bulkcoef, only: &
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
@@ -153,8 +150,6 @@ contains
     real(RP), intent(out)   :: SFLX_SH   (IA,JA)    ! surface flux for sensible heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_LH   (IA,JA)    ! surface flux for latent   heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_QTRC (IA,JA,QA) ! surface flux for tracer mass   (area center)   [kg/m2/s]
-    real(RP), intent(out)   :: SFLX_LW_up(IA,JA)    ! upward longwave  radiation flux at the surface [J/m2/s]
-    real(RP), intent(out)   :: SFLX_SW_up(IA,JA)    ! upward shortwave radiation flux at the surface [J/m2/s]
     real(RP), intent(out)   :: Uabs10    (IA,JA)    ! absolute velocity at 10m height
     real(RP), intent(out)   :: U10       (IA,JA)    ! velocity u        at 10m height
     real(RP), intent(out)   :: V10       (IA,JA)    ! velocity v        at 10m height
@@ -194,11 +189,11 @@ contains
     enddo
     enddo
 
-    call OCEAN_roughness( ATM_Uabs(:,:), & ! [IN]
-                          SFC_Z0  (:,:), & ! [INOUT]
+    call OCEAN_roughness( SFC_Z0  (:,:), & ! [INOUT]
                           Z0M     (:,:), & ! [OUT]
                           Z0H     (:,:), & ! [OUT]
-                          Z0E     (:,:)  ) ! [OUT]
+                          Z0E     (:,:), & ! [OUT]
+                          ATM_Uabs(:,:)  ) ! [IN]
 
     call SF_bulkcoef( ATM_Uabs(:,:), & ! [IN]
                       ATM_POTT(:,:), & ! [IN]
@@ -256,12 +251,6 @@ contains
        SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LH0
     enddo
     enddo
-
-    !-----< upward radiation flux >-----
-
-    SFLX_LW_up(i,j) = (          SFC_albedo(i,j,I_LW) ) * SFLX_LW_dn(i,j)        &
-                    + ( 1.0_RP - SFC_albedo(i,j,I_LW) ) * STB * SFC_TEMP(i,j)**4
-    SFLX_SW_up(i,j) = (          SFC_albedo(i,j,I_SW) ) * SFLX_SW_dn(i,j)
 
     !-----< U10, T2, q2 >-----
 

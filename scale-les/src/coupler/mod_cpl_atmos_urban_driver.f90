@@ -99,8 +99,6 @@ contains
        CPL_AtmUrb_XMFLX,  &
        CPL_AtmUrb_YMFLX,  &
        CPL_AtmUrb_ZMFLX,  &
-       CPL_AtmUrb_SWUFLX, &
-       CPL_AtmUrb_LWUFLX, &
        CPL_AtmUrb_SHFLX,  &
        CPL_AtmUrb_LHFLX,  &
        CPL_AtmUrb_QVFLX,  &
@@ -118,8 +116,6 @@ contains
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
     real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
@@ -175,8 +171,6 @@ contains
         UST    (i,j),   & ! (out)
         SHFLX  (i,j),   & ! (out)
         LHFLX  (i,j),   & ! (out)
-        SWUFLX (i,j),   & ! (out)
-        LWUFLX (i,j),   & ! (out)
         GHFLX  (i,j),   & ! (out)
         LSOLAR,         & ! (in)
         TMPA   (i,j),   & ! (in)
@@ -218,14 +212,12 @@ contains
     enddo
 
     ! temporal average flux
-    CPL_AtmUrb_XMFLX (:,:) = ( CPL_AtmUrb_XMFLX (:,:) * CNT_Atm_Urb + XMFLX (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_YMFLX (:,:) = ( CPL_AtmUrb_YMFLX (:,:) * CNT_Atm_Urb + YMFLX (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_ZMFLX (:,:) = ( CPL_AtmUrb_ZMFLX (:,:) * CNT_Atm_Urb + ZMFLX (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_SWUFLX(:,:) = ( CPL_AtmUrb_SWUFLX(:,:) * CNT_Atm_Urb + SWUFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_LWUFLX(:,:) = ( CPL_AtmUrb_LWUFLX(:,:) * CNT_Atm_Urb + LWUFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_SHFLX (:,:) = ( CPL_AtmUrb_SHFLX (:,:) * CNT_Atm_Urb + SHFLX (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_LHFLX (:,:) = ( CPL_AtmUrb_LHFLX (:,:) * CNT_Atm_Urb + LHFLX (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_QVFLX (:,:) = ( CPL_AtmUrb_QVFLX (:,:) * CNT_Atm_Urb + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_XMFLX(:,:) = ( CPL_AtmUrb_XMFLX(:,:) * CNT_Atm_Urb + XMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_YMFLX(:,:) = ( CPL_AtmUrb_YMFLX(:,:) * CNT_Atm_Urb + YMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_ZMFLX(:,:) = ( CPL_AtmUrb_ZMFLX(:,:) * CNT_Atm_Urb + ZMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_SHFLX(:,:) = ( CPL_AtmUrb_SHFLX(:,:) * CNT_Atm_Urb + SHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_LHFLX(:,:) = ( CPL_AtmUrb_LHFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_QVFLX(:,:) = ( CPL_AtmUrb_QVFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Urb + 1.0_RP )
 
     Urb_GHFLX  (:,:) = ( Urb_GHFLX  (:,:) * CNT_Urb + GHFLX(:,:)     ) / ( CNT_Urb + 1.0_RP )
     Urb_PRECFLX(:,:) = ( Urb_PRECFLX(:,:) * CNT_Urb + PREC (:,:)     ) / ( CNT_Urb + 1.0_RP )

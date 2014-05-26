@@ -325,7 +325,6 @@ contains
                         V         (KS,:,:),   & ! [IN]
                         DENS      (KS,:,:),   & ! [IN]
                         QTRC      (KS,:,:,:), & ! [IN]
-                        REAL_Z1   (:,:),      & ! [IN]
                         SFC_DENS  (:,:),      & ! [IN]
                         SFC_PRES  (:,:),      & ! [IN]
                         SFLX_LW_dn(:,:),      & ! [IN]

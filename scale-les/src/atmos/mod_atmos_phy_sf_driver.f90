@@ -158,9 +158,7 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
-       SFLX_LW_up => ATMOS_PHY_SF_SFLX_LW_up, &
-       SFLX_SW_up => ATMOS_PHY_SF_SFLX_SW_up
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
     use mod_cpl_vars, only: &
        CPL_sw => CPL_sw_ALL, &
        CPL_getATM
@@ -191,8 +189,6 @@ contains
                            SFLX_SH   (:,:),   & ! [OUT]
                            SFLX_LH   (:,:),   & ! [OUT]
                            SFLX_QTRC (:,:,:), & ! [OUT]
-                           SFLX_LW_up(:,:),   & ! [OUT]
-                           SFLX_SW_up(:,:),   & ! [OUT]
                            Uabs10    (:,:),   & ! [OUT]
                            U10       (:,:),   & ! [OUT]
                            V10       (:,:),   & ! [OUT]
@@ -224,8 +220,6 @@ contains
                              SFLX_SH   (:,:),      & ! [OUT]
                              SFLX_LH   (:,:),      & ! [OUT]
                              SFLX_QTRC (:,:,:),    & ! [OUT]
-                             SFLX_LW_up(:,:),      & ! [OUT]
-                             SFLX_SW_up(:,:),      & ! [OUT]
                              Uabs10    (:,:),      & ! [OUT]
                              U10       (:,:),      & ! [OUT]
                              V10       (:,:),      & ! [OUT]

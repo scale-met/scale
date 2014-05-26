@@ -127,14 +127,11 @@ contains
        SFC_Z0,                                      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
        SFLX_QTRC,                                   &
-       SFLX_LW_up, SFLX_SW_up,                      &
        Uabs10, U10, V10, T2, Q2                     )
     use scale_const, only: &
        PI   => CONST_PI,   &
        LH0  => CONST_LH0,  &
-       STB  => CONST_STB,  &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
+       STB  => CONST_STB
     use scale_time, only: &
        TIME_NOWSEC
     use scale_atmos_saturation, only: &
@@ -163,8 +160,6 @@ contains
     real(RP), intent(out)   :: SFLX_SH   (IA,JA)    ! surface flux for sensible heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_LH   (IA,JA)    ! surface flux for latent   heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_QTRC (IA,JA,QA) ! surface flux for tracer mass   (area center)   [kg/m2/s]
-    real(RP), intent(out)   :: SFLX_LW_up(IA,JA)    ! upward longwave  radiation flux at the surface [J/m2/s]
-    real(RP), intent(out)   :: SFLX_SW_up(IA,JA)    ! upward shortwave radiation flux at the surface [J/m2/s]
     real(RP), intent(out)   :: Uabs10    (IA,JA)    ! absolute velocity at 10m height
     real(RP), intent(out)   :: U10       (IA,JA)    ! velocity u        at 10m height
     real(RP), intent(out)   :: V10       (IA,JA)    ! velocity v        at 10m height
@@ -244,12 +239,6 @@ contains
        SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LH0
     enddo
     enddo
-
-    !-----< upward radiation flux >-----
-
-    SFLX_LW_up(i,j) = (          SFC_albedo(i,j,I_LW) ) * SFLX_LW_dn(i,j)        &
-                    + ( 1.0_RP - SFC_albedo(i,j,I_LW) ) * STB * SFC_TEMP(i,j)**4
-    SFLX_SW_up(i,j) = (          SFC_albedo(i,j,I_SW) ) * SFLX_SW_dn(i,j)
 
     !-----< U10, T2, q2 >-----
 
