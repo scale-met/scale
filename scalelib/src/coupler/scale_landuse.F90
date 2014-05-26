@@ -31,6 +31,7 @@ module scale_landuse
   !
   !++ Public parameters & variables
   !
+  real(RP), public, allocatable :: LANDUSE_frac_ocean(:,:) !< ocean fraction
   real(RP), public, allocatable :: LANDUSE_frac_land (:,:) !< land  fraction
   real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
@@ -56,6 +57,7 @@ module scale_landuse
   character(len=H_MID),  private :: LANDUSE_OUT_TITLE    = 'SCALE-LES LANDUSE' !< title    of the output file
   character(len=H_MID),  private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
   logical,               private :: LANDUSE_AllLand      = .false.
+  logical,               private :: LANDUSE_AllUrban     = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -72,7 +74,8 @@ contains
        LANDUSE_OUT_DTYPE,    &
        LANDUSE_PFT_mosaic,   &
        LANDUSE_PFT_nmax,     &
-       LANDUSE_AllLand
+       LANDUSE_AllLand,      &
+       LANDUSE_AllUrban
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -91,9 +94,11 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
 
+    allocate( LANDUSE_frac_ocean(IA,JA) )
     allocate( LANDUSE_frac_land (IA,JA) )
     allocate( LANDUSE_frac_lake (IA,JA) )
     allocate( LANDUSE_frac_urban(IA,JA) )
+    LANDUSE_frac_ocean(:,:) = 1.0_RP
     LANDUSE_frac_land (:,:) = 0.0_RP
     LANDUSE_frac_lake (:,:) = 0.0_RP
     LANDUSE_frac_urban(:,:) = 0.0_RP
@@ -108,7 +113,14 @@ contains
     call LANDUSE_read
 
     if ( LANDUSE_AllLand ) then
+       LANDUSE_frac_ocean(:,:) = 0.0_RP
        LANDUSE_frac_land (:,:) = 1.0_RP
+       LANDUSE_frac_urban(:,:) = 0.0_RP
+    endif
+    if ( LANDUSE_AllUrban ) then
+       LANDUSE_frac_ocean(:,:) = 0.0_RP
+       LANDUSE_frac_land (:,:) = 0.0_RP
+       LANDUSE_frac_urban(:,:) = 1.0_RP
     endif
 
     return

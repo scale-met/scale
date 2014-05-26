@@ -675,6 +675,7 @@ contains
 
   subroutine CPL_vars_merge
     use scale_landuse, only: &
+      frac_ocean => LANDUSE_frac_ocean, &
       frac_land  => LANDUSE_frac_land,  &
       frac_lake  => LANDUSE_frac_lake,  &
       frac_urban => LANDUSE_frac_urban, &
@@ -682,26 +683,33 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    SkinT (:,:) = ( 1.0_RP-frac_land(:,:) ) * SST(:,:) &
-                + (        frac_land(:,:) ) * LST(:,:)
+    SkinT (:,:) = frac_ocean(:,:) * SST(:,:) &
+                + frac_land (:,:) * LST(:,:) &
+                + frac_urban(:,:) * UST(:,:)
 
-    Atm_ZMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_ZMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_ZMFLX (:,:)
+    Atm_ZMFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_ZMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_ZMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_ZMFLX (:,:)
 
-    Atm_XMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_XMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_XMFLX (:,:)
+    Atm_XMFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_XMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_XMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_XMFLX (:,:)
 
-    Atm_YMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_YMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_YMFLX (:,:)
+    Atm_YMFLX (:,:) = frac_land (:,:) * CPL_AtmOcn_YMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_YMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_YMFLX (:,:)
 
-    Atm_SHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_SHFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_SHFLX (:,:)
+    Atm_SHFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_SHFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_SHFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_SHFLX (:,:)
 
-    Atm_LHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_LHFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_LHFLX (:,:)
+    Atm_LHFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_LHFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_LHFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_LHFLX (:,:)
 
-    Atm_QVFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_QVFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_QVFLX (:,:)
+    Atm_QVFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_QVFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_QVFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_QVFLX (:,:)
 
     return
   end subroutine CPL_vars_merge
