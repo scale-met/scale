@@ -306,7 +306,7 @@ contains
       L = L - res / ( dres - res ) * dL
 
       ! update bulk Richardson nubmer
-      RiB = za * Cm**1.5_RP / ( L * KARMAN * Ch )
+      !RiB = za * Cm**1.5_RP / ( L * KARMAN * Ch )
 
       if( abs( res ) < res_min ) then
         ! finish iteration
