@@ -3689,7 +3689,7 @@ contains
     integer               :: NUMBER_OF_FILES   = 1   ! assume that one file includes one time step
     character(len=H_LONG) :: BASENAME_ORG      = ''
     character(len=H_LONG) :: FILETYPE_ORG      = ''
-    character(len=H_LONG) :: BASENAME_BOUNDARY = 'boundary_'
+    character(len=H_LONG) :: BASENAME_BOUNDARY = 'boundary_real'
     character(len=H_LONG) :: BOUNDARY_TITLE    = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -3789,16 +3789,16 @@ contains
     enddo
 
     !--- output boundary data
-!    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
-!                             MOMZ_ORG(:,:,:,:),   &
-!                             MOMX_ORG(:,:,:,:),   &
-!                             MOMY_ORG(:,:,:,:),   &
-!                             RHOT_ORG(:,:,:,:),   &
-!                             QTRC_ORG(:,:,:,:,:), &
-!                             NUMBER_OF_FILES,     &
-!                             INITIAL_STEP,        &
-!                             BASENAME_BOUNDARY,   &
-!                             BOUNDARY_TITLE       )
+    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
+                             MOMZ_ORG(:,:,:,:),   &
+                             MOMX_ORG(:,:,:,:),   &
+                             MOMY_ORG(:,:,:,:),   &
+                             RHOT_ORG(:,:,:,:),   &
+                             QTRC_ORG(:,:,:,:,:), &
+                             NUMBER_OF_FILES,     &
+                             INITIAL_STEP,        &
+                             BASENAME_BOUNDARY,   &
+                             BOUNDARY_TITLE       )
 
     deallocate( dens_org )
     deallocate( momz_org )

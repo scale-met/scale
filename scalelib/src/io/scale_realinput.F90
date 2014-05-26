@@ -50,6 +50,8 @@ module scale_realinput
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos
   use scale_external_io
+  use scale_const, only: &
+     CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -59,6 +61,7 @@ module scale_realinput
   !
   public :: ParentAtomSetup
   public :: ParentAtomInput
+  public :: ParentAtomBoundary
   !public :: ParentLndOcnSetup
   !public :: ParentLndOcnInput
 
@@ -333,6 +336,11 @@ contains
       basename,      & ! (in)
       title          & ! (in)
       )
+    use scale_comm, only: &
+       COMM_vars, &
+       COMM_wait
+    use scale_fileio, only: &
+       FILEIO_write
     implicit none
 
     real(RP),         intent(out)    :: dens(:,:,:,:)
@@ -346,88 +354,97 @@ contains
     integer,          intent( in)    :: numsteps ! total time steps
     integer,          intent( in)    :: initstep ! initial step
 
-    real(RP), allocatable :: W(:,:,:)
-    real(RP), allocatable :: U(:,:,:)
-    real(RP), allocatable :: V(:,:,:)
-    real(RP), allocatable :: POTT(:,:,:)
+    character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    real(RP), allocatable :: atmos_boundary_var(:,:,:,:,:)         !> reference container (with HALO)
 
-    real(RP), allocatable :: PRES(:,:,:)
-    real(RP), allocatable :: TEMP(:,:,:)
-    real(RP), allocatable :: QV(:,:,:)
-    real(RP), allocatable :: QC(:,:,:)
-
-    integer :: k, i, j
+    integer :: k, i, j, n, iv
+    integer :: ts, te, ta
 
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    allocate( w(KA,IA,JA) )
-    allocate( u(KA,IA,JA) )
-    allocate( v(KA,IA,JA) )
-    allocate( pott(KA,IA,JA) )
-    allocate( pres(KA,IA,JA) )
-    allocate( temp(KA,IA,JA) )
-    allocate( qv(KA,IA,JA) )
-    allocate( qc(KA,IA,JA) )
+    ts = initstep
+    te = numsteps
+    ta = numsteps
+
+    allocate( atmos_boundary_var(KA,IA,JA,ta,5) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Boundary]'
 
+    ! copy from "ATMOS_BOUNDARY_setinitval/scale_atmos_boundary" //-------
+    atmos_boundary_var(:,:,:,:,I_BND_VELZ) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_VELY) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_VELX) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_POTT) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_QV  ) = CONST_UNDEF
 
+    do n = ts, te
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       atmos_boundary_var(k,i,j,n,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j,n) / ( DENS(k+1,i,j,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_VELX) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_VELY) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_POTT) = RHOT(k,i,j,n) / DENS(k,i,j,n)
+       atmos_boundary_var(k,i,j,n,I_BND_QV  ) = QTRC(k,i,j,I_QV,n)
+    enddo
+    enddo
+    enddo
+    enddo
 
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'POTT', 'Reference PT', 'K', 'ZXY',                    &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+    ! fill KHALO
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = JS, JE
+    do i  = IS, IE
+       atmos_boundary_var(   1:KS-1,i,j,n,iv) = atmos_boundary_var(KS,i,j,n,iv)
+       atmos_boundary_var(KE+1:KA,  i,j,n,iv) = atmos_boundary_var(KE,i,j,n,iv)
+    enddo
+    enddo
+    enddo
+    enddo
 
-    deallocate( w )
-    deallocate( u )
-    deallocate( v )
-    deallocate( pott )
-    deallocate( pres )
-    deallocate( temp )
-    deallocate( qv )
-    deallocate( qc )
+    ! fill IHALO & JHALO
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( atmos_boundary_var(:,:,:,n,iv), iv )
+    enddo
+    enddo
+
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( atmos_boundary_var(:,:,:,n,iv), iv )
+    enddo
+    enddo
+    !--------//
+
+    call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELZ),        &
+                       basename, title,                               &
+                       'VELZ', 'Reference Velocity w', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype                       )
+
+    call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELX),        &
+                       basename, title,                               &
+                       'VELX', 'Reference Velocity u', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype                       )
+
+    call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELY),        &
+                       basename, title,                               &
+                       'VELY', 'Reference Velocity y', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype                       )
+
+    call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_POTT),        &
+                       basename, title,                               &
+                       'POTT', 'Reference PT', 'K', 'ZXYT',           &
+                       atmos_boundary_out_dtype                       )
+
+    call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_QV),           &
+                       basename, title,                                &
+                       'QV', 'Reference water vapor', 'kg/kg', 'ZXYT', &
+                       atmos_boundary_out_dtype                        )
+
+    deallocate( atmos_boundary_var )
 
     return
   end subroutine ParentAtomBoundary
