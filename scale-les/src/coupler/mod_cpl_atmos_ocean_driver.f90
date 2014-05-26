@@ -74,9 +74,6 @@ contains
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
     use scale_ocean_roughness, only: &
        OCEAN_roughness
     use scale_cpl_atmos_ocean, only: &
@@ -100,8 +97,6 @@ contains
        CPL_AtmOcn_XMFLX,  &
        CPL_AtmOcn_YMFLX,  &
        CPL_AtmOcn_ZMFLX,  &
-       CPL_AtmOcn_SWUFLX, &
-       CPL_AtmOcn_LWUFLX, &
        CPL_AtmOcn_SHFLX,  &
        CPL_AtmOcn_LHFLX,  &
        CPL_AtmOcn_QVFLX,  &
@@ -119,13 +114,9 @@ contains
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
     real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
-
-    real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
 
     ! work
     integer :: i, j
@@ -137,12 +128,10 @@ contains
     real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
     real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
 
-    real(RP) :: Uabs(IA,JA)       ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Uabs(IA,JA) ! absolute velocity at the lowest atmospheric layer [m/s]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
-
-    DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -153,22 +142,38 @@ contains
     enddo
     enddo
 
-    call OCEAN_roughness( Uabs(:,:), &
-                          DZ  (:,:), &
-                          Z0W (:,:), &
-                          Z0M (:,:), &
-                          Z0H (:,:), &
-                          Z0E (:,:)  )
+    call OCEAN_roughness( &
+      Z0W (:,:), & ! (inout)
+      Z0M (:,:), & ! (out)
+      Z0H (:,:), & ! (out)
+      Z0E (:,:), & ! (out)
+      Uabs(:,:)  ) ! (in)
 
     call CPL_AtmOcn( &
-      SST,                                 & ! (inout)
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
-      update_flag,                         & ! (in)
-      DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-      TW, ALBW(:,:,I_SW), ALBW(:,:,I_LW),  & ! (in)
-      Z0M, Z0H, Z0E                        ) ! (in)
+      SST  (:,:),      & ! (inout)
+      XMFLX(:,:),      & ! (out)
+      YMFLX(:,:),      & ! (out)
+      ZMFLX(:,:),      & ! (out)
+      SHFLX(:,:),      & ! (out)
+      LHFLX(:,:),      & ! (out)
+      WHFLX(:,:),      & ! (out)
+      update_flag,     & ! (in)
+      DENS (:,:),      & ! (in)
+      MOMX (:,:),      & ! (in)
+      MOMY (:,:),      & ! (in)
+      MOMZ (:,:),      & ! (in)
+      RHOS (:,:),      & ! (in)
+      PRES (:,:),      & ! (in)
+      TMPS (:,:),      & ! (in)
+      QV   (:,:),      & ! (in)
+      SWD  (:,:),      & ! (in)
+      LWD  (:,:),      & ! (in)
+      TW   (:,:),      & ! (in)
+      ALBW (:,:,I_SW), & ! (in)
+      ALBW (:,:,I_LW), & ! (in)
+      Z0M  (:,:),      & ! (in)
+      Z0H  (:,:),      & ! (in)
+      Z0E  (:,:)       ) ! (in)
 
     ! interpolate momentum fluxes
     do j = JS, JE
@@ -187,14 +192,12 @@ contains
     enddo
 
     ! temporal average flux
-    CPL_AtmOcn_XMFLX (:,:) = ( CPL_AtmOcn_XMFLX (:,:) * CNT_Atm_Ocn + XMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_YMFLX (:,:) = ( CPL_AtmOcn_YMFLX (:,:) * CNT_Atm_Ocn + YMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_ZMFLX (:,:) = ( CPL_AtmOcn_ZMFLX (:,:) * CNT_Atm_Ocn + ZMFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_SWUFLX(:,:) = ( CPL_AtmOcn_SWUFLX(:,:) * CNT_Atm_Ocn + SWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_LWUFLX(:,:) = ( CPL_AtmOcn_LWUFLX(:,:) * CNT_Atm_Ocn + LWUFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_SHFLX (:,:) = ( CPL_AtmOcn_SHFLX (:,:) * CNT_Atm_Ocn + SHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_LHFLX (:,:) = ( CPL_AtmOcn_LHFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
-    CPL_AtmOcn_QVFLX (:,:) = ( CPL_AtmOcn_QVFLX (:,:) * CNT_Atm_Ocn + LHFLX (:,:)/LH0 ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_XMFLX(:,:) = ( CPL_AtmOcn_XMFLX(:,:) * CNT_Atm_Ocn + XMFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_YMFLX(:,:) = ( CPL_AtmOcn_YMFLX(:,:) * CNT_Atm_Ocn + YMFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_ZMFLX(:,:) = ( CPL_AtmOcn_ZMFLX(:,:) * CNT_Atm_Ocn + ZMFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_SHFLX(:,:) = ( CPL_AtmOcn_SHFLX(:,:) * CNT_Atm_Ocn + SHFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_LHFLX(:,:) = ( CPL_AtmOcn_LHFLX(:,:) * CNT_Atm_Ocn + LHFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
+    CPL_AtmOcn_QVFLX(:,:) = ( CPL_AtmOcn_QVFLX(:,:) * CNT_Atm_Ocn + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Ocn + 1.0_RP )
 
     Ocn_WHFLX  (:,:) = ( Ocn_WHFLX  (:,:) * CNT_Ocn + WHFLX(:,:)     ) / ( CNT_Ocn + 1.0_RP )
     Ocn_PRECFLX(:,:) = ( Ocn_PRECFLX(:,:) * CNT_Ocn + PREC (:,:)     ) / ( CNT_Ocn + 1.0_RP )

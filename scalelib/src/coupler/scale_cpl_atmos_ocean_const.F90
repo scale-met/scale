@@ -48,8 +48,6 @@ module scale_cpl_atmos_ocean_const
   real(RP), private, save   :: Cm_max = 2.5E-3_RP ! maximum bulk coef. of u,v,w
 
   real(RP), private, save   :: Const_CM    =   1.1E-3_RP ! constant bulk coef. of u,v,w
-  real(RP), private, save   :: Const_SWU   = 200.0_RP    ! constant upward short-wave radiation flux [W/m2]
-  real(RP), private, save   :: Const_LWU   = 200.0_RP    ! constant upward long-wave radiation flux [W/m2]
   real(RP), private, save   :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
   real(RP), private, save   :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
   real(RP), private, save   :: Const_WH    =   0.0_RP    ! constant water heat flux [W/m2]
@@ -78,8 +76,6 @@ contains
     real(RP) :: CPL_AtmOcn_const_CM_min
     real(RP) :: CPL_AtmOcn_const_CM_max
     real(RP) :: CPL_AtmOcn_const_CM
-    real(RP) :: CPL_AtmOcn_const_SWU
-    real(RP) :: CPL_AtmOcn_const_LWU
     real(RP) :: CPL_AtmOcn_const_SH
     real(RP) :: CPL_AtmOcn_const_LH
     real(RP) :: CPL_AtmOcn_const_WH
@@ -94,8 +90,6 @@ contains
        CPL_AtmOcn_const_CM_min, &
        CPL_AtmOcn_const_CM_max, &
        CPL_AtmOcn_const_CM,     &
-       CPL_AtmOcn_const_SWU,    &
-       CPL_AtmOcn_const_LWU,    &
        CPL_AtmOcn_const_SH,     &
        CPL_AtmOcn_const_LH,     &
        CPL_AtmOcn_const_WH,     &
@@ -112,8 +106,6 @@ contains
     CPL_AtmOcn_const_CM_min  = CM_min
     CPL_AtmOcn_const_CM_max  = CM_max
     CPL_AtmOcn_const_CM      = Const_CM
-    CPL_AtmOcn_const_SWU     = Const_SWU
-    CPL_AtmOcn_const_LWU     = Const_LWU
     CPL_AtmOcn_const_SH      = Const_SH
     CPL_AtmOcn_const_LH      = Const_LH
     CPL_AtmOcn_const_WH      = Const_WH
@@ -147,8 +139,6 @@ contains
     CM_min      = CPL_AtmOcn_const_CM_min
     CM_max      = CPL_AtmOcn_const_CM_max
     Const_Cm    = CPL_AtmOcn_const_Cm
-    Const_SWU   = CPL_AtmOcn_const_SWU
-    Const_LWU   = CPL_AtmOcn_const_LWU
     Const_SH    = CPL_AtmOcn_const_SH
     Const_LH    = CPL_AtmOcn_const_LH
     Const_WH    = CPL_AtmOcn_const_WH
@@ -161,14 +151,30 @@ contains
   end subroutine CPL_AtmOcn_const_setup
 
   subroutine CPL_AtmOcn_const( &
-        SST,                                  & ! (inout)
-        XMFLX, YMFLX, ZMFLX,                  & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX,  & ! (out)
-        SST_UPDATE,                           & ! (in)
-        DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
-        RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
-        TW, ALB_SW, ALB_LW,                   & ! (in)
-        Z0M, Z0H, Z0E                         ) ! (in)
+        SST,        & ! (inout)
+        XMFLX,      & ! (out)
+        YMFLX,      & ! (out)
+        ZMFLX,      & ! (out)
+        SHFLX,      & ! (out)
+        LHFLX,      & ! (out)
+        WHFLX,      & ! (out)
+        SST_UPDATE, & ! (in)
+        DENS,       & ! (in)
+        MOMX,       & ! (in)
+        MOMY,       & ! (in)
+        MOMZ,       & ! (in)
+        RHOS,       & ! (in)
+        PRES,       & ! (in)
+        TMPS,       & ! (in)
+        QV,         & ! (in)
+        SWD,        & ! (in)
+        LWD,        & ! (in)
+        TW,         & ! (in)
+        ALB_SW,     & ! (in)
+        ALB_LW,     & ! (in)
+        Z0M,        & ! (in)
+        Z0H,        & ! (in)
+        Z0E         ) ! (in)
     use scale_const, only: &
       PI => CONST_PI
     use scale_time, only: &
@@ -178,18 +184,15 @@ contains
     ! argument
     real(RP), intent(inout) :: SST (IA,JA) ! ocean surface temperature [K]
 
-    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
+    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
 
     logical,  intent(in) :: SST_UPDATE  ! is ocean surface temperature updated?
 
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
@@ -239,14 +242,11 @@ contains
       if( DIURNAL ) then
         ! include diurnal change
         SHFLX (i,j) = Const_SH  * sin( TIME / ( Const_FREQ*3600.0_RP )*2.0_RP*PI )
-        SWUFLX(i,j) = max( Const_SWU * sin( TIME / ( Const_FREQ*3600.0_RP )*2.0_RP*PI ), 0.0_RP )
       else
         SHFLX (i,j) = Const_SH
-        SWUFLX(i,j) = Const_SWU
       endif
 
       LHFLX (i,j) = Const_LH
-      LWUFLX(i,j) = Const_LWU
       WHFLX (i,j) = Const_WH
 
     enddo

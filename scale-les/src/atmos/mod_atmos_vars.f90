@@ -1605,33 +1605,33 @@ contains
                               RHOT(:,:,:),  & ! [IN]
                               QTRC(:,:,:,:) ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
     enddo
     enddo

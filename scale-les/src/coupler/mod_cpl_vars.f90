@@ -80,8 +80,6 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Atm_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Atm_LWUFLX(:,:) ! upward long-wave radiation flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
@@ -105,8 +103,6 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
@@ -115,8 +111,6 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
@@ -125,8 +119,6 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_SWUFLX(:,:) ! upward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_LWUFLX(:,:) ! upward long-wave  radiation flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
@@ -352,26 +344,24 @@ contains
     CNT_Urb     = 0.0_RP
     CNT_Ocn     = 0.0_RP
 
-    allocate( LST  (IA,JA)      )
-    allocate( UST  (IA,JA)      )
-    allocate( SST  (IA,JA)      )
+    allocate( LST  (IA,JA)   )
+    allocate( UST  (IA,JA)   )
+    allocate( SST  (IA,JA)   )
     allocate( ALBW (IA,JA,2) )
     allocate( ALBG (IA,JA,2) )
-    allocate( Z0W  (IA,JA)      )
-    allocate( SkinT(IA,JA)      )
-    allocate( SkinW(IA,JA)      )
-    allocate( SnowQ(IA,JA)      )
-    allocate( SnowT(IA,JA)      )
+    allocate( Z0W  (IA,JA)   )
+    allocate( SkinT(IA,JA)   )
+    allocate( SkinW(IA,JA)   )
+    allocate( SnowQ(IA,JA)   )
+    allocate( SnowT(IA,JA)   )
 
     ! work variables
-    allocate( Atm_XMFLX (IA,JA) )
-    allocate( Atm_YMFLX (IA,JA) )
-    allocate( Atm_ZMFLX (IA,JA) )
-    allocate( Atm_SWUFLX(IA,JA) )
-    allocate( Atm_LWUFLX(IA,JA) )
-    allocate( Atm_SHFLX (IA,JA) )
-    allocate( Atm_LHFLX (IA,JA) )
-    allocate( Atm_QVFLX (IA,JA) )
+    allocate( Atm_XMFLX(IA,JA) )
+    allocate( Atm_YMFLX(IA,JA) )
+    allocate( Atm_ZMFLX(IA,JA) )
+    allocate( Atm_SHFLX(IA,JA) )
+    allocate( Atm_LHFLX(IA,JA) )
+    allocate( Atm_QVFLX(IA,JA) )
 
     allocate( Lnd_GHFLX  (IA,JA) )
     allocate( Lnd_PRECFLX(IA,JA) )
@@ -408,32 +398,26 @@ contains
 
     allocate( CPL_TW  (IA,JA) )
 
-    allocate( CPL_AtmLnd_XMFLX (IA,JA) )
-    allocate( CPL_AtmLnd_YMFLX (IA,JA) )
-    allocate( CPL_AtmLnd_ZMFLX (IA,JA) )
-    allocate( CPL_AtmLnd_SWUFLX(IA,JA) )
-    allocate( CPL_AtmLnd_LWUFLX(IA,JA) )
-    allocate( CPL_AtmLnd_SHFLX (IA,JA) )
-    allocate( CPL_AtmLnd_LHFLX (IA,JA) )
-    allocate( CPL_AtmLnd_QVFLX (IA,JA) )
+    allocate( CPL_AtmLnd_XMFLX(IA,JA) )
+    allocate( CPL_AtmLnd_YMFLX(IA,JA) )
+    allocate( CPL_AtmLnd_ZMFLX(IA,JA) )
+    allocate( CPL_AtmLnd_SHFLX(IA,JA) )
+    allocate( CPL_AtmLnd_LHFLX(IA,JA) )
+    allocate( CPL_AtmLnd_QVFLX(IA,JA) )
 
-    allocate( CPL_AtmUrb_XMFLX (IA,JA) )
-    allocate( CPL_AtmUrb_YMFLX (IA,JA) )
-    allocate( CPL_AtmUrb_ZMFLX (IA,JA) )
-    allocate( CPL_AtmUrb_SWUFLX(IA,JA) )
-    allocate( CPL_AtmUrb_LWUFLX(IA,JA) )
-    allocate( CPL_AtmUrb_SHFLX (IA,JA) )
-    allocate( CPL_AtmUrb_LHFLX (IA,JA) )
-    allocate( CPL_AtmUrb_QVFLX (IA,JA) )
+    allocate( CPL_AtmUrb_XMFLX(IA,JA) )
+    allocate( CPL_AtmUrb_YMFLX(IA,JA) )
+    allocate( CPL_AtmUrb_ZMFLX(IA,JA) )
+    allocate( CPL_AtmUrb_SHFLX(IA,JA) )
+    allocate( CPL_AtmUrb_LHFLX(IA,JA) )
+    allocate( CPL_AtmUrb_QVFLX(IA,JA) )
 
-    allocate( CPL_AtmOcn_XMFLX (IA,JA) )
-    allocate( CPL_AtmOcn_YMFLX (IA,JA) )
-    allocate( CPL_AtmOcn_ZMFLX (IA,JA) )
-    allocate( CPL_AtmOcn_SWUFLX(IA,JA) )
-    allocate( CPL_AtmOcn_LWUFLX(IA,JA) )
-    allocate( CPL_AtmOcn_SHFLX (IA,JA) )
-    allocate( CPL_AtmOcn_LHFLX (IA,JA) )
-    allocate( CPL_AtmOcn_QVFLX (IA,JA) )
+    allocate( CPL_AtmOcn_XMFLX(IA,JA) )
+    allocate( CPL_AtmOcn_YMFLX(IA,JA) )
+    allocate( CPL_AtmOcn_ZMFLX(IA,JA) )
+    allocate( CPL_AtmOcn_SHFLX(IA,JA) )
+    allocate( CPL_AtmOcn_LHFLX(IA,JA) )
+    allocate( CPL_AtmOcn_QVFLX(IA,JA) )
 
     return
   end subroutine CPL_vars_setup
@@ -691,6 +675,7 @@ contains
 
   subroutine CPL_vars_merge
     use scale_landuse, only: &
+      frac_ocean => LANDUSE_frac_ocean, &
       frac_land  => LANDUSE_frac_land,  &
       frac_lake  => LANDUSE_frac_lake,  &
       frac_urban => LANDUSE_frac_urban, &
@@ -698,32 +683,33 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    SkinT (:,:) = ( 1.0_RP-frac_land(:,:) ) * SST(:,:) &
-                + (        frac_land(:,:) ) * LST(:,:)
+    SkinT (:,:) = frac_ocean(:,:) * SST(:,:) &
+                + frac_land (:,:) * LST(:,:) &
+                + frac_urban(:,:) * UST(:,:)
 
-    Atm_ZMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_ZMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_ZMFLX (:,:)
+    Atm_ZMFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_ZMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_ZMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_ZMFLX (:,:)
 
-    Atm_XMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_XMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_XMFLX (:,:)
+    Atm_XMFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_XMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_XMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_XMFLX (:,:)
 
-    Atm_YMFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_YMFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_YMFLX (:,:)
+    Atm_YMFLX (:,:) = frac_land (:,:) * CPL_AtmOcn_YMFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_YMFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_YMFLX (:,:)
 
-    Atm_SHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_SHFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_SHFLX (:,:)
+    Atm_SHFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_SHFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_SHFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_SHFLX (:,:)
 
-    Atm_LHFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_LHFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_LHFLX (:,:)
+    Atm_LHFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_LHFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_LHFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_LHFLX (:,:)
 
-    Atm_QVFLX (:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_QVFLX (:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_QVFLX (:,:)
-
-    Atm_LWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_LWUFLX(:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_LWUFLX(:,:)
-
-    Atm_SWUFLX(:,:) = ( 1.0_RP-frac_land(:,:) ) * CPL_AtmOcn_SWUFLX(:,:) &
-                    + (        frac_land(:,:) ) * CPL_AtmLnd_SWUFLX(:,:)
+    Atm_QVFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_QVFLX (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_QVFLX (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_QVFLX (:,:)
 
     return
   end subroutine CPL_vars_merge
@@ -736,9 +722,9 @@ contains
       pATM_V,      &
       pATM_DENS,   &
       pATM_QTRC,   &
-      pATM_Z1,     &
       pSFC_DENS,   &
       pSFC_PRES,   &
+      pSFC_TEMP,   &
       pSFLX_LW_dn, &
       pSFLX_SW_dn, &
       pSFLX_rain,  &
@@ -752,9 +738,9 @@ contains
     real(RP), intent(in) :: pATM_V     (IA,JA)
     real(RP), intent(in) :: pATM_DENS  (IA,JA)
     real(RP), intent(in) :: pATM_QTRC  (IA,JA,QA)
-    real(RP), intent(in) :: pATM_Z1    (IA,JA)
     real(RP), intent(in) :: pSFC_DENS  (IA,JA)
     real(RP), intent(in) :: pSFC_PRES  (IA,JA)
+    real(RP), intent(in) :: pSFC_TEMP  (IA,JA)
     real(RP), intent(in) :: pSFLX_LW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_SW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_rain (IA,JA)
@@ -768,9 +754,9 @@ contains
     CPL_MOMY(:,:) = pATM_V     (:,:)
     CPL_DENS(:,:) = pATM_DENS  (:,:)
     CPL_QV  (:,:) = pATM_QTRC  (:,:,1)
-!                    pATM_Z1    (:,:)
     CPL_RHOS(:,:) = pSFC_DENS  (:,:)
     CPL_PRES(:,:) = pSFC_PRES  (:,:)
+    CPL_TMPS(:,:) = pSFC_TEMP  (:,:)
     CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
     CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
     CPL_PREC(:,:) = pSFLX_rain (:,:) &
@@ -837,8 +823,6 @@ contains
       pSFLX_SH,    &
       pSFLX_LH,    &
       pSFLX_QTRC,  &
-      pSFLX_LW_up, &
-      pSFLX_SW_up, &
       pUabs10,     &
       pU10,        &
       pV10,        &
@@ -853,8 +837,6 @@ contains
     real(RP), intent(out) :: pSFLX_SH   (IA,JA)
     real(RP), intent(out) :: pSFLX_LH   (IA,JA)
     real(RP), intent(out) :: pSFLX_QTRC (IA,JA,QA)
-    real(RP), intent(out) :: pSFLX_LW_up(IA,JA)
-    real(RP), intent(out) :: pSFLX_SW_up(IA,JA)
     real(RP), intent(out) :: pUabs10    (IA,JA)
     real(RP), intent(out) :: pU10       (IA,JA)
     real(RP), intent(out) :: pV10       (IA,JA)
@@ -862,21 +844,19 @@ contains
     real(RP), intent(out) :: pQ2        (IA,JA)
     !---------------------------------------------------------------------------
 
-    pSFC_Z0    (:,:)   = 0.0_RP ! tentative
-    pSFLX_MW   (:,:)   = Atm_XMFLX (:,:)
-    pSFLX_MU   (:,:)   = Atm_YMFLX (:,:)
-    pSFLX_MV   (:,:)   = Atm_ZMFLX (:,:)
-    pSFLX_SH   (:,:)   = Atm_SHFLX (:,:)
-    pSFLX_LH   (:,:)   = Atm_LHFLX (:,:)
-    pSFLX_QTRC (:,:,:) = 0.0_RP ! tentative
-    pSFLX_QTRC (:,:,1) = Atm_QVFLX (:,:) ! tentative
-    pSFLX_LW_up(:,:)   = Atm_SWUFLX(:,:)
-    pSFLX_SW_up(:,:)   = Atm_LWUFLX(:,:)
-    pUabs10    (:,:)   = 0.0_RP ! tentative
-    pU10       (:,:)   = 0.0_RP ! tentative
-    pV10       (:,:)   = 0.0_RP ! tentative
-    pT2        (:,:)   = 0.0_RP ! tentative
-    pQ2        (:,:)   = 0.0_RP ! tentative
+    pSFC_Z0   (:,:)   = 0.0_RP ! tentative
+    pSFLX_MW  (:,:)   = Atm_XMFLX (:,:)
+    pSFLX_MU  (:,:)   = Atm_YMFLX (:,:)
+    pSFLX_MV  (:,:)   = Atm_ZMFLX (:,:)
+    pSFLX_SH  (:,:)   = Atm_SHFLX (:,:)
+    pSFLX_LH  (:,:)   = Atm_LHFLX (:,:)
+    pSFLX_QTRC(:,:,:) = 0.0_RP ! tentative
+    pSFLX_QTRC(:,:,1) = Atm_QVFLX (:,:) ! tentative
+    pUabs10   (:,:)   = 0.0_RP ! tentative
+    pU10      (:,:)   = 0.0_RP ! tentative
+    pV10      (:,:)   = 0.0_RP ! tentative
+    pT2       (:,:)   = 0.0_RP ! tentative
+    pQ2       (:,:)   = 0.0_RP ! tentative
 
     CNT_Atm_Lnd = 0.0_RP
     CNT_Atm_Urb = 0.0_RP

@@ -57,7 +57,6 @@ module scale_atmos_phy_sf
           SFC_Z0,                                      &
           SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
           SFLX_QTRC,                                   &
-          SFLX_LW_up, SFLX_SW_up,                      &
           Uabs10, U10, V10, T2, Q2                     )
        use scale_precision
        use scale_grid_index
@@ -86,8 +85,6 @@ module scale_atmos_phy_sf
        real(RP), intent(out)   :: SFLX_SH   (IA,JA)    ! surface flux for sensible heat (area center)   [J/m2/s]
        real(RP), intent(out)   :: SFLX_LH   (IA,JA)    ! surface flux for latent   heat (area center)   [J/m2/s]
        real(RP), intent(out)   :: SFLX_QTRC (IA,JA,QA) ! surface flux for tracer mass   (area center)   [kg/m2/s]
-       real(RP), intent(out)   :: SFLX_LW_up(IA,JA)    ! upward longwave  radiation flux at the surface [J/m2/s]
-       real(RP), intent(out)   :: SFLX_SW_up(IA,JA)    ! upward shortwave radiation flux at the surface [J/m2/s]
        real(RP), intent(out)   :: Uabs10    (IA,JA)    ! absolute velocity at 10m height
        real(RP), intent(out)   :: U10       (IA,JA)    ! velocity u        at 10m height
        real(RP), intent(out)   :: V10       (IA,JA)    ! velocity v        at 10m height

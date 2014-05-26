@@ -305,9 +305,6 @@ contains
       ! update Obukhov length
       L = L - res / ( dres - res ) * dL
 
-      ! update bulk Richardson nubmer
-      RiB = za * Cm**1.5_RP / ( L * KARMAN * Ch )
-
       if( abs( res ) < res_min ) then
         ! finish iteration
         exit
@@ -318,6 +315,9 @@ contains
     if( n > nmax ) then
       if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration in the function of CPL_bulkcoef_beljaars.'
     end if
+
+    ! update bulk Richardson nubmer
+    !RiB = za * Cm**1.5_RP / ( L * KARMAN * Ch )
 
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )

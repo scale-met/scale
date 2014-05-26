@@ -29,32 +29,48 @@ module scale_cpl_atmos_land
 
   abstract interface
      subroutine cal( &
-         LST,                                 & ! (inout)
-         XMFLX, YMFLX, ZMFLX,                 & ! (out)
-         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-         LST_UPDATE,                          & ! (in)
-         DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
-         RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-         TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
-         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+         LST,        & ! (inout)
+         XMFLX,      & ! (out)
+         YMFLX,      & ! (out)
+         ZMFLX,      & ! (out)
+         SHFLX,      & ! (out)
+         LHFLX,      & ! (out)
+         GHFLX,      & ! (out)
+         LST_UPDATE, & ! (in)
+         DENS,       & ! (in)
+         MOMX,       & ! (in)
+         MOMY,       & ! (in)
+         MOMZ,       & ! (in)
+         RHOS,       & ! (in)
+         PRES,       & ! (in)
+         TMPS,       & ! (in)
+         QV,         & ! (in)
+         SWD,        & ! (in)
+         LWD,        & ! (in)
+         TG,         & ! (in)
+         QVEF,       & ! (in)
+         ALB_SW,     & ! (in)
+         ALB_LW,     & ! (in)
+         TCS,        & ! (in)
+         DZG,        & ! (in)
+         Z0M,        & ! (in)
+         Z0H,        & ! (in)
+         Z0E         ) ! (in)
        use scale_precision
        use scale_grid_index
        implicit none
 
        real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
 
-       real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-       real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-       real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-       real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-       real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+       real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+       real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+       real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+       real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+       real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+       real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
 
        logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-       real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
        real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
        real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
        real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]

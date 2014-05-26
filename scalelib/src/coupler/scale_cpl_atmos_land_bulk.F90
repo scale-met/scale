@@ -36,8 +36,6 @@ module scale_cpl_atmos_land_bulk
   !
   !++ Private procedure
   !
-  private :: bulkflux
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -46,7 +44,7 @@ module scale_cpl_atmos_land_bulk
   integer,  private, save :: nmax = 100 ! maximum iteration number
 
   real(RP), private, save :: res_min  =   1.0_RP    ! minimum number of residual
-  real(RP), private, save :: dTS      =   1.0E-8_RP ! delta TS
+  real(RP), private, save :: dTS      =   1.0E-8_RP ! delta surface temp.
   real(RP), private, save :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
   real(RP), private, save :: U_minH   =   0.0_RP    !                   T
   real(RP), private, save :: U_minE   =   0.0_RP    !                   q
@@ -138,16 +136,45 @@ contains
   end subroutine CPL_AtmLnd_bulk_setup
 
   subroutine CPL_AtmLnd_bulk( &
-        LST,                                  & ! (inout)
-        XMFLX, YMFLX, ZMFLX,                  & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
-        LST_UPDATE,                           & ! (in)
-        DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
-        RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
-        TG, QVEF, ALB_SW, ALB_LW,             & ! (in)
-        TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
+        LST,        & ! (inout)
+        XMFLX,      & ! (out)
+        YMFLX,      & ! (out)
+        ZMFLX,      & ! (out)
+        SHFLX,      & ! (out)
+        LHFLX,      & ! (out)
+        GHFLX,      & ! (out)
+        LST_UPDATE, & ! (in)
+        DENS,       & ! (in)
+        MOMX,       & ! (in)
+        MOMY,       & ! (in)
+        MOMZ,       & ! (in)
+        RHOS,       & ! (in)
+        PRES,       & ! (in)
+        TMPS,       & ! (in)
+        QV,         & ! (in)
+        SWD,        & ! (in)
+        LWD,        & ! (in)
+        TG,         & ! (in)
+        QVEF,       & ! (in)
+        ALB_SW,     & ! (in)
+        ALB_LW,     & ! (in)
+        TCS,        & ! (in)
+        DZG,        & ! (in)
+        Z0M,        & ! (in)
+        Z0H,        & ! (in)
+        Z0E         ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+      CPdry  => CONST_CPdry, &
+      STB    => CONST_STB,   &
+      LH0    => CONST_LH0
+    use scale_grid_real, only: &
+      Z1 => REAL_Z1
+    use scale_atmos_saturation, only: &
+      qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_cpl_bulkcoef, only: &
+      CPL_bulkcoef
     implicit none
 
     ! parameters
@@ -156,23 +183,18 @@ contains
     real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
     real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
 
-    ! works
-    integer :: i, j, n
-
+    ! arguments
     real(RP), intent(inout) :: LST(IA,JA) ! land surface temperature [K]
 
-    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
@@ -194,25 +216,87 @@ contains
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
+    ! works
     real(RP) :: RES   (IA,JA)
     real(RP) :: DRES  (IA,JA)
     real(RP) :: oldRES(IA,JA) ! RES in previous step
     real(RP) :: redf  (IA,JA) ! reduced factor
+
+    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Cm, Ch, Ce, dCm, dCh, dCe ! bulk transfer coeff. [no unit]
+    real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: dSHFLX, dLHFLX, dGHFLX
+
+    integer :: i, j, n
     !---------------------------------------------------------------------------
 
     redf  (:,:) = 1.0_RP
     oldRES(:,:) = 1.0E+5_RP
 
     do n = 1, nmax
+
       ! calculate surface flux
-      call bulkflux( &
-        RES, DRES,                           & ! (out)
-        XMFLX, YMFLX, ZMFLX,                 & ! (out)
-        SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-        LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
-        RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-        TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
-        TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
+      do j = JS-1, JE+1
+      do i = IS-1, IE+1
+        Uabs = sqrt( &
+               ( MOMZ(i,j)               )**2 &
+             + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
+             + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
+             ) / DENS(i,j) * 0.5_RP
+
+        call CPL_bulkcoef( &
+            Cm,        & ! (out)
+            Ch,        & ! (out)
+            Ce,        & ! (out)
+            TMPS(i,j), & ! (in)
+            LST (i,j), & ! (in)
+            Z1  (i,j), & ! (in)
+            Uabs,      & ! (in)
+            Z0M (i,j), & ! (in)
+            Z0H (i,j), & ! (in)
+            Z0E (i,j)  ) ! (in)
+
+        XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
+        YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j) / DENS(i,j)
+        ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) / DENS(i,j)
+
+        ! saturation at the surface
+        call qsat( SQV, LST(i,j), PRES(i,j) )
+
+        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( LST(i,j) - TMPS(i,j) )
+        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
+        GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
+
+        ! calculation for residual
+        RES(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+                 + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
+                 - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+
+        call CPL_bulkcoef( &
+            dCm,             & ! (out)
+            dCh,             & ! (out)
+            dCe,             & ! (out)
+            TMPS(i,j),       & ! (in)
+            LST (i,j) + dTS, & ! (in)
+            Z1  (i,j),       & ! (in)
+            Uabs,            & ! (in)
+            Z0M (i,j),       & ! (in)
+            Z0H (i,j),       & ! (in)
+            Z0E (i,j)        ) ! (in)
+
+        call qsat( dSQV, LST(i,j)+dTS, PRES(i,j) )
+
+        dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
+                * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPS(i,j) ) + Ch )
+        dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
+                * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
+        dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
+
+        ! calculation for d(residual)/dTS
+        DRES(i,j) = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
+                  - dSHFLX - dLHFLX + dGHFLX
+      enddo
+      enddo
 
       if( LST_UPDATE ) then
 
@@ -266,127 +350,5 @@ contains
 
     return
   end subroutine CPL_AtmLnd_bulk
-
-  subroutine bulkflux( &
-      RES, DRES,                           & ! (out)
-      XMFLX, YMFLX, ZMFLX,                 & ! (out)
-      SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-      TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
-      RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
-      TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
-      TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
-    use scale_const, only: &
-      GRAV   => CONST_GRAV,  &
-      CPdry  => CONST_CPdry, &
-      Rvap   => CONST_Rvap,  &
-      STB    => CONST_STB,   &
-      LH0    => CONST_LH0,   &
-      P00    => CONST_PRE00
-    use scale_atmos_saturation, only: &
-      qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_cpl_bulkcoef, only: &
-      CPL_bulkcoef
-    implicit none
-
-    ! argument
-    real(RP), intent(out) :: RES   (IA,JA) ! residual in the equation of heat balance
-    real(RP), intent(out) :: DRES  (IA,JA) ! d(residual) / d(Ts)
-    real(RP), intent(out) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: SWUFLX(IA,JA) ! upward shortwave flux at the surface [W/m2]
-    real(RP), intent(out) :: LWUFLX(IA,JA) ! upward longwave flux at the surface [W/m2]
-    real(RP), intent(out) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP), intent(out) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
-
-    real(RP), intent(in) :: TS  (IA,JA) ! skin temperature [K]
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
-    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
-    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
-
-    real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
-    real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [W/m/K]
-    real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
-    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
-    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-
-    ! work
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: dCm, dCh, dCe
-
-    real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: dLWUFLX, dGHFLX, dSHFLX, dLHFLX
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    ! at cell center
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-      Uabs = sqrt( &
-             ( MOMZ(i,j)               )**2 &
-           + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-           + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-           ) / DENS(i,j) * 0.5_RP
-
-      call CPL_bulkcoef( &
-          Cm, Ch, Ce,                  & ! (out)
-          TMPS(i,j), TS(i,j),          & ! (in)
-          DZ(i,j), Uabs,               & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
-
-      XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
-      YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j) / DENS(i,j)
-      ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) / DENS(i,j)
-
-      ! saturation at the surface
-      call qsat( SQV, TS(i,j), PRES(i,j) )
-
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( TS(i,j) - TMPS(i,j) )
-      LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
-      GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( TS(i,j) - TG(i,j)  ) / DZG(i,j)
-      SWUFLX(i,j) = ALB_SW(i,j) * SWD(i,j)
-      LWUFLX(i,j) = ALB_LW(i,j) * LWD(i,j) + ( 1.0_RP - ALB_LW(i,j) ) * STB * TS(i,j)**4
-
-      ! calculation for residual
-      RES(i,j) = SWD(i,j) - SWUFLX(i,j) + LWD(i,j) - LWUFLX(i,j) - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
-
-      call CPL_bulkcoef( &
-          dCm, dCh, dCe,               & ! (out)
-          TMPS(i,j), TS(i,j)+dTS,      & ! (in)
-          DZ(i,j), Uabs,               & ! (in)
-          Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
-
-      call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )
-
-      dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
-              * ( (dCh-Ch)/dTS * ( TS(i,j) - TMPS(i,j) ) + Ch )
-      dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
-              * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
-      dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
-      dLWUFLX = 4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * TS(i,j)**3
-
-      ! calculation for d(residual)/dTS
-      DRES(i,j) = - dLWUFLX - dSHFLX - dLHFLX + dGHFLX
-    enddo
-    enddo
-
-    return
-  end subroutine bulkflux
 
 end module scale_cpl_atmos_land_bulk

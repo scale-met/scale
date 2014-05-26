@@ -41,8 +41,6 @@ module scale_cpl_atmos_urban
         UST,     & ! (out)
         SHFLX,   & ! (out)
         LHFLX,   & ! (out)
-        SWUFLX,  & ! (out)
-        LWUFLX,  & ! (out)
         GHFLX,   & ! (out)
         LSOLAR,  & ! (in)
         TMPA,    & ! (in)
@@ -50,7 +48,7 @@ module scale_cpl_atmos_urban
         UA,      & ! (in)
         U1,      & ! (in)
         V1,      & ! (in)
-        DZ,      & ! (in)
+        Z1,      & ! (in)
         SWD,     & ! (in)
         LWD,     & ! (in)
         PREC,    & ! (in)
@@ -75,8 +73,6 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: UST
        real(RP), intent(out) :: SHFLX
        real(RP), intent(out) :: LHFLX
-       real(RP), intent(out) :: SWUFLX
-       real(RP), intent(out) :: LWUFLX
        real(RP), intent(out) :: GHFLX
 
        logical,  intent(in) :: LSOLAR
@@ -85,7 +81,7 @@ module scale_cpl_atmos_urban
        real(RP), intent(in) :: UA
        real(RP), intent(in) :: U1
        real(RP), intent(in) :: V1
-       real(RP), intent(in) :: DZ
+       real(RP), intent(in) :: Z1
        real(RP), intent(in) :: SWD
        real(RP), intent(in) :: LWD
        real(RP), intent(in) :: PREC

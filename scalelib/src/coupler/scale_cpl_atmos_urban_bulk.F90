@@ -275,8 +275,6 @@ contains
         TS,     & ! (out)
         SH,     & ! (out)
         LH,     & ! (out)
-        SW,     & ! (out)
-        LW,     & ! (out)
         G,      & ! (out)
         LSOLAR, & ! (in)
         TA,     & ! (in)
@@ -358,8 +356,6 @@ contains
     real(RP), intent(out) :: TS     ! surface temperature              [K]
     real(RP), intent(out) :: SH     ! sensible heat flux               [W/m/m]
     real(RP), intent(out) :: LH     ! latent heat flux                 [W/m/m]
-    real(RP), intent(out) :: SW     ! upward short wave radiation flux [W/m/m]
-    real(RP), intent(out) :: LW     ! upward long wave radiation flux  [W/m/m]
     real(RP), intent(out) :: G      ! heat flux into the ground        [W/m/m]
 
     !-- Local variables
@@ -762,8 +758,8 @@ contains
 
     SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
     LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-    LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
-    SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
+    !LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
+    !SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
 
     G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
