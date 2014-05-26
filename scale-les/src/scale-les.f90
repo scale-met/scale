@@ -247,6 +247,8 @@ program scaleles
   ! setup user-defined procedure
   call USER_setup
 
+  call MONIT_write('MAIN')
+
   call PROF_rapend('Initialize')
 
   !########## main ##########

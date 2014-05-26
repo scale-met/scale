@@ -54,8 +54,14 @@ contains
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
     use mod_atmos_phy_sf_vars, only: &
-       SFC_beta => ATMOS_PHY_SF_SFC_beta, &
-       SFC_Z0   => ATMOS_PHY_SF_SFC_Z0
+       SFC_beta  => ATMOS_PHY_SF_SFC_beta,  &
+       SFC_Z0    => ATMOS_PHY_SF_SFC_Z0,    &
+       SFLX_MW   => ATMOS_PHY_SF_SFLX_MW,   &
+       SFLX_MU   => ATMOS_PHY_SF_SFLX_MU,   &
+       SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
     use mod_cpl_vars, only: &
        CPL_sw => CPL_sw_ALL
     implicit none
@@ -83,6 +89,14 @@ contains
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_SF is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** surface fluxes are set to zero.'
+       SFLX_MW  (:,:)   = 0.0_RP
+       SFLX_MU  (:,:)   = 0.0_RP
+       SFLX_MV  (:,:)   = 0.0_RP
+       SFLX_SH  (:,:)   = 0.0_RP
+       SFLX_LH  (:,:)   = 0.0_RP
+       SFLX_QTRC(:,:,:) = 0.0_RP
+
        if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo, SFC_albedo_land is set in ATMOS_PHY_SF_vars.'
 
     endif

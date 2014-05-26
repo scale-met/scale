@@ -139,7 +139,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 26 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 39 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -173,6 +173,23 @@ module mod_atmos_vars
   integer, private, parameter :: I_ENGK  = 24 ! kinetic   energy
   integer, private, parameter :: I_ENGI  = 25 ! internal  energy
   integer, private, parameter :: I_ENGT  = 26 ! total     energy
+
+  integer, private, parameter :: I_ENGSFC_SH = 27
+  integer, private, parameter :: I_ENGSFC_LH = 28
+  integer, private, parameter :: I_ENGSFC_RD = 29
+  integer, private, parameter :: I_ENGTOA_RD = 30
+
+  integer, private, parameter :: I_ENGSFC_LW_up = 31
+  integer, private, parameter :: I_ENGSFC_LW_dn = 32
+  integer, private, parameter :: I_ENGSFC_SW_up = 33
+  integer, private, parameter :: I_ENGSFC_SW_dn = 34
+
+  integer, private, parameter :: I_ENGTOA_LW_up = 35
+  integer, private, parameter :: I_ENGTOA_LW_dn = 36
+  integer, private, parameter :: I_ENGTOA_SW_up = 37
+  integer, private, parameter :: I_ENGTOA_SW_dn = 38
+
+  integer, private, parameter :: I_ENGFLXT      = 39
 
   integer, private, save      :: AD_HIST_id (AD_nmax)
   integer, private, save      :: AD_PREP_sw (AD_nmax)
@@ -379,12 +396,29 @@ contains
 
     !-----< monitor output setup >-----
 
-    call MONIT_reg( AD_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3 )
-    call MONIT_reg( AD_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3 )
-    call MONIT_reg( AD_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3 )
-    call MONIT_reg( AD_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3 )
-    call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3 )
-    call MONIT_reg( AD_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3 )
+    call MONIT_reg( AD_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_ENGI), 'ENGI', 'internal  energy', 'J',  ndim=3, isflux=.false. )
+
+    call MONIT_reg( AD_MONIT_id(I_ENGFLXT), 'ENGFLXT', 'total energy flux', 'J',  ndim=2, isflux=.true. )
+
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SH), 'ENGSFC_SH', 'total     energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LH), 'ENGSFC_LH', 'potential energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_RD), 'ENGSFC_RD', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_RD), 'ENGTOA_RD', 'internal  energy', 'J',  ndim=2, isflux=.true. )
+
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_up), 'ENGSFC_LW_up', 'total     energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'potential energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_up), 'ENGSFC_SW_up', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'internal  energy', 'J',  ndim=2, isflux=.true. )
+
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_up), 'ENGTOA_LW_up', 'total     energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'potential energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_up), 'ENGTOA_SW_up', 'kinetic   energy', 'J',  ndim=2, isflux=.true. )
+    call MONIT_reg( AD_MONIT_id(I_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'internal  energy', 'J',  ndim=2, isflux=.true. )
 
     if ( AD_HIST_id(I_W) > 0 ) then
        AD_PREP_sw(I_W) = 1
@@ -581,10 +615,6 @@ contains
        REAL_CZ
     use scale_fileio, only: &
        FILEIO_read
-    use scale_monitor, only: &
-       MONIT_put,  &
-       MONIT_in,   &
-       MONIT_write
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
@@ -673,92 +703,6 @@ contains
     call ATMOS_PHY_SF_vars_restart_read
     call ATMOS_PHY_TB_vars_restart_read
     call ATMOS_PHY_CP_vars_restart_read
-
-
-
-    !##### todo: the part below should be moved to the mod_atmos_diag #####
-
-    ! first monitor output
-    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
-    do iq = 1, QA
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-
-       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
-    enddo
-
-    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                       QTRC(:,:,:,:) ) ! [IN]
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
-    enddo
-    enddo
-    enddo
-
-    call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
-
-    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                              PRES(:,:,:),  & ! [OUT]
-                              DENS(:,:,:),  & ! [IN]
-                              RHOT(:,:,:),  & ! [IN]
-                              QTRC(:,:,:,:) ) ! [IN]
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
-       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
-
-       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
-
-       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
-                                            + U(k,i,j)**2 &
-                                            + V(k,i,j)**2 )
-
-       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-       do iq = QQS, QQE
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
-       enddo
-
-       ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGI), ENGI(:,:,:) )
-
-    call MONIT_write('MAIN')
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -989,9 +933,6 @@ contains
        REAL_FZ
     use scale_history, only: &
        HIST_in
-    use scale_monitor, only: &
-       MONIT_put, &
-       MONIT_in
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        CPw => AQ_CP,                       &
@@ -1054,25 +995,6 @@ contains
     call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), TIME_DTSEC )
     do iq = 1, QA
        call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), TIME_DTSEC )
-    enddo
-
-    ! monitor output of prognostic variables
-    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3 )
-    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3 )
-    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3 )
-    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3 )
-    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3 )
-    do iq = 1, QA
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-
-       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3 )
     enddo
 
     ! prepare and history output of diagnostic variables
@@ -1456,35 +1378,6 @@ contains
     call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3',   TIME_DTSEC )
     call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3',   TIME_DTSEC )
 
-    if ( AD_MONIT_id(I_QDRY) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
-       enddo
-       enddo
-       enddo
-       call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
-    endif
-
-    if ( AD_MONIT_id(I_QTOT) > 0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ(k,i,j) = DENS(k,i,j) * QTOT(k,i,j)
-       enddo
-       enddo
-       enddo
-       call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
-    endif
-
-    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
-    call MONIT_put( AD_MONIT_id(I_ENGI), ENGI(:,:,:) )
-
     return
   end subroutine ATMOS_vars_history
 
@@ -1548,11 +1441,11 @@ contains
 
        RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qdry' )
+       call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
 
        RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) ) ! Qtotal
 
-       call STAT_total( total, RHOQ(:,:,:), 'Qtot' )
+       call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1592,12 +1485,58 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
   subroutine ATMOS_vars_diagnostics
+    use scale_const, only: &
+       GRAV   => CONST_GRAV,   &
+       CVdry  => CONST_CVdry
+    use scale_grid_real, only: &
+       REAL_CZ
+    use scale_stats, only: &
+       STAT_checktotal, &
+       STAT_total
+    use scale_monitor, only: &
+       MONIT_put, &
+       MONIT_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       CVw => AQ_CV
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+    use mod_atmos_phy_sf_vars, only: &
+       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_LH => ATMOS_PHY_SF_SFLX_LH
     implicit none
 
-    integer :: k, i, j
+    real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
+    real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
+
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
+
+    real(RP) :: ENGFLXT      (IA,JA) ! total flux             [J/m2/s]
+    real(RP) :: SFLX_RD_net  (IA,JA) ! net SFC radiation flux [J/m2/s]
+    real(RP) :: TOAFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
+
+    real(RP) :: total ! dummy
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
+
+    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
+                       QTRC(:,:,:,:) ) ! [IN]
 
     call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
                               PRES(:,:,:),  & ! [OUT]
@@ -1636,6 +1575,116 @@ contains
     enddo
     enddo
     enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
+                        + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
+
+       TOAFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
+                          + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+
+       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                            + U(k,i,j)**2 &
+                                            + V(k,i,j)**2 )
+
+       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       do iq = QQS, QQE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+       enddo
+    enddo
+    enddo
+    enddo
+
+
+
+    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.true. )
+    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.true. )
+    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.true. )
+    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.true. )
+    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.true. )
+    do iq = 1, QA
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+
+       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3, isflux=.true. )
+    enddo
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * QDRY (k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       RHOQ(k,i,j) = DENS(k,i,j) * ( 1.0_RP - QDRY (k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       ENGFLXT(i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
+                    + SFLX_RD_net(i,j) - TOAFLX_RD_net(i,j)
+    enddo
+    enddo
+
+    call MONIT_put( AD_MONIT_id(I_ENGT), ENGT(:,:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGP), ENGP(:,:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGK), ENGK(:,:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGI), ENGI(:,:,:) )
+
+    call MONIT_put( AD_MONIT_id(I_ENGFLXT), ENGFLXT(:,:) )
+
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_SH), SFLX_SH      (:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_LH), SFLX_LH      (:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_RD), SFLX_RD_net  (:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGTOA_RD), TOAFLX_RD_net(:,:) )
+
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_LW_up), SFLX_LW_up(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_LW_dn), SFLX_LW_dn(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_SW_up), SFLX_SW_up(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGSFC_SW_dn), SFLX_SW_dn(:,:) )
+
+    call MONIT_put( AD_MONIT_id(I_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
+    call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
     return
   end subroutine ATMOS_vars_diagnostics

@@ -43,8 +43,15 @@ module mod_atmos_phy_rd_vars
   !
   real(RP), public, allocatable :: ATMOS_PHY_RD_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_dn(:,:) ! surface downward longwave  flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_SW_dn(:,:) ! surface downward shortwave flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_up  (:,:) ! surface upward   longwave  flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_dn  (:,:) ! surface downward longwave  flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_SW_up  (:,:) ! surface upward   shortwave flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_SW_dn  (:,:) ! surface downward shortwave flux [J/m2/s]
+
+  real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_LW_up(:,:) ! TOA upward   longwave  flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) ! TOA downward longwave  flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_up(:,:) ! TOA upward   shortwave flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) ! TOA downward shortwave flux [J/m2/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -60,17 +67,35 @@ module mod_atmos_phy_rd_vars
   character(len=H_MID),   private, save      :: ATMOS_PHY_RD_RESTART_OUT_TITLE     = 'ATMOS_PHY_RD restart'
   character(len=H_MID),   private, save      :: ATMOS_PHY_RD_RESTART_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
-  integer,                private, parameter :: VMAX = 2       !< number of the variables
+  integer,                private, parameter :: VMAX = 8       !< number of the variables
   character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'SFLX_LW_dn', &
-                  'SFLX_SW_dn'  /
-  data VAR_DESC / 'surface downward longwave  flux', &
-                  'surface downward shortwave flux' /
-  data VAR_UNIT / 'J/m2/s', &
-                  'J/m2/s'  /
+  data VAR_NAME / 'SFLX_LW_up',   &
+                  'SFLX_LW_dn',   &
+                  'SFLX_SW_up',   &
+                  'SFLX_SW_dn',   &
+                  'TOAFLX_LW_up', &
+                  'TOAFLX_LW_dn', &
+                  'TOAFLX_SW_up', &
+                  'TOAFLX_SW_dn'  /
+  data VAR_DESC / 'surface upward   longwave  flux', &
+                  'surface downward longwave  flux', &
+                  'surface upward   shortwave flux', &
+                  'surface downward shortwave flux', &
+                  'TOA upward   longwave  flux', &
+                  'TOA downward longwave  flux', &
+                  'TOA upward   shortwave flux', &
+                  'TOA downward shortwave flux' /
+  data VAR_UNIT / 'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
+                  'W/m2'  /
 
   !-----------------------------------------------------------------------------
 contains
@@ -104,8 +129,14 @@ contains
 
     allocate( ATMOS_PHY_RD_RHOT_t(KA,IA,JA) )
 
-    allocate( ATMOS_PHY_RD_SFLX_LW_dn(IA,JA) )
-    allocate( ATMOS_PHY_RD_SFLX_SW_dn(IA,JA) )
+    allocate( ATMOS_PHY_RD_SFLX_LW_up  (IA,JA) )
+    allocate( ATMOS_PHY_RD_SFLX_LW_dn  (IA,JA) )
+    allocate( ATMOS_PHY_RD_SFLX_SW_up  (IA,JA) )
+    allocate( ATMOS_PHY_RD_SFLX_SW_dn  (IA,JA) )
+    allocate( ATMOS_PHY_RD_TOAFLX_LW_up(IA,JA) )
+    allocate( ATMOS_PHY_RD_TOAFLX_LW_dn(IA,JA) )
+    allocate( ATMOS_PHY_RD_TOAFLX_SW_up(IA,JA) )
+    allocate( ATMOS_PHY_RD_TOAFLX_SW_dn(IA,JA) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_RD] prognostic/diagnostic variables'
@@ -138,10 +169,22 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_dn(:,:), 1 )
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_dn(:,:), 2 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_dn(:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_dn(:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_up  (:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_dn  (:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_up  (:,:), 3 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_dn  (:,:), 4 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_up(:,:), 5 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), 6 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_up(:,:), 7 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), 8 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_up  (:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_dn  (:,:), 2 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_up  (:,:), 3 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_dn  (:,:), 4 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_up(:,:), 5 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), 6 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_up(:,:), 7 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), 8 )
 
     return
   end subroutine ATMOS_PHY_RD_vars_fillhalo
@@ -161,10 +204,22 @@ contains
 
     if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
 
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),                               & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),                               & ! [OUT]
                          ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),                               & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),                               & ! [OUT]
                          ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(2), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_up(:,:),                               & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(3), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),                               & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(4), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),                             & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(5), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),                             & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(6), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),                             & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(7), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),                             & ! [OUT]
+                         ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(8), 'XY', step=1 ) ! [IN]
 
        call ATMOS_PHY_RD_vars_fillhalo
 
@@ -172,8 +227,14 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_RD is not specified.'
 
-       ATMOS_PHY_RD_SFLX_LW_dn(:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_SFLX_SW_dn(:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_SFLX_LW_up  (:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_SFLX_SW_up  (:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = CONST_UNDEF
+       ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = CONST_UNDEF
 
     endif
 
@@ -202,10 +263,22 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_RD) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_up(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_up(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_SFLX_SW_dn(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_LW_up(:,:), basename,    ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(5), VAR_DESC(5), VAR_UNIT(5), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), basename,    ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(6), VAR_DESC(6), VAR_UNIT(6), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_SW_up(:,:), basename,    ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(7), VAR_DESC(7), VAR_UNIT(7), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), basename,    ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(8), VAR_DESC(8), VAR_UNIT(8), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

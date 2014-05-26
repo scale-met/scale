@@ -137,16 +137,16 @@ contains
 
        ! statistics over the all node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A10,A,1PE24.17)') &
-                     '[', varname, '] SUM(global) =', allstatval
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
+                     '[', trim(varname), '] SUM(global) =', allstatval
        endif
     else
        allstatval = statval
 
        ! statistics on each node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A10,A,1PE24.17)') &
-                     '[', varname, '] SUM(local)  =', statval
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
+                     '[', trim(varname), '] SUM(local)  =', statval
        endif
     endif
 
@@ -205,7 +205,7 @@ contains
 
        ! statistics over the all node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A9,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
                      '[', trim(varname), '] SUM(global) =', allstatval
        endif
     else
@@ -213,7 +213,7 @@ contains
 
        ! statistics on each node
        if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A9,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
                      '[', trim(varname), '] SUM(local)  =', statval
        endif
     endif
