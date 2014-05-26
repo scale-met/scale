@@ -74,9 +74,6 @@ contains
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
     use scale_ocean_roughness, only: &
        OCEAN_roughness
     use scale_cpl_atmos_ocean, only: &
@@ -125,8 +122,6 @@ contains
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
-    real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
     ! work
     integer :: i, j
 
@@ -142,8 +137,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
 
-    DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
-
     do j = JS-1, JE+1
     do i = IS-1, IE+1
       ! at cell center
@@ -154,7 +147,6 @@ contains
     enddo
 
     call OCEAN_roughness( Uabs(:,:), &
-                          DZ  (:,:), &
                           Z0W (:,:), &
                           Z0M (:,:), &
                           Z0H (:,:), &
@@ -165,7 +157,7 @@ contains
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
       update_flag,                         & ! (in)
-      DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
+      DENS, MOMX, MOMY, MOMZ,              & ! (in)
       RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
       TW, ALBW(:,:,I_SW), ALBW(:,:,I_LW),  & ! (in)
       Z0M, Z0H, Z0E                        ) ! (in)

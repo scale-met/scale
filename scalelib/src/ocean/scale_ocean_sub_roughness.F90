@@ -31,15 +31,13 @@ module scale_ocean_roughness
 
   abstract interface
      subroutine rl( &
-          ATM_Uabs, Z1, &
-          Z0,           &
+          ATM_Uabs, Z0, &
           Z0M, Z0H, Z0E )
        use scale_precision
        use scale_grid_index
        implicit none
 
        real(RP), intent(in)    :: ATM_Uabs(IA,JA) ! absolute velocity at Z1       [m/s]
-       real(RP), intent(in)    :: Z1      (IA,JA) ! height of lowermost atmosphere grid (cell center) [m]
        real(RP), intent(inout) :: Z0      (IA,JA) ! roughness length for save     [m]
        real(RP), intent(out)   :: Z0M     (IA,JA) ! roughness length for momentum [m]
        real(RP), intent(out)   :: Z0H     (IA,JA) ! roughness length for heat     [m]
@@ -119,15 +117,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine OCEAN_roughness_miller92( &
-       ATM_Uabs, Z1, &
-       Z0,           &
+       ATM_Uabs, Z0, &
        Z0M, Z0H, Z0E )
     use scale_const, only: &
        GRAV => CONST_GRAV
     implicit none
 
     real(RP), intent(in)    :: ATM_Uabs(IA,JA) ! absolute velocity at Z1       [m/s]
-    real(RP), intent(in)    :: Z1      (IA,JA) ! height of lowermost atmosphere grid (cell center) [m]
     real(RP), intent(inout) :: Z0      (IA,JA) ! roughness length for save     [m]
     real(RP), intent(out)   :: Z0M     (IA,JA) ! roughness length for momentum [m]
     real(RP), intent(out)   :: Z0H     (IA,JA) ! roughness length for heat     [m]
@@ -168,16 +164,16 @@ contains
   !> A Physics-Based Parameterization of Air-Sea Momentum Flux at High Wind Speeds
   !> and Its Impact on Hurricane Intensity Predictions, Mon. Wea. Rev., 135, 2869-2878
   subroutine OCEAN_roughness_moon07( &
-       ATM_Uabs, Z1, &
-       Z0,           &
+       ATM_Uabs, Z0, &
        Z0M, Z0H, Z0E )
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN
+    use scale_grid_real, only: &
+       Z1 => REAL_Z1
     implicit none
 
     real(RP), intent(in)    :: ATM_Uabs(IA,JA) ! absolute velocity at Z1       [m/s]
-    real(RP), intent(in)    :: Z1      (IA,JA) ! height of lowermost atmosphere grid (cell center) [m]
     real(RP), intent(inout) :: Z0      (IA,JA) ! roughness length for save     [m]
     real(RP), intent(out)   :: Z0M     (IA,JA) ! roughness length for momentum [m]
     real(RP), intent(out)   :: Z0H     (IA,JA) ! roughness length for heat     [m]

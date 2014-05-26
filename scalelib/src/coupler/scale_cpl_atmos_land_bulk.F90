@@ -142,7 +142,7 @@ contains
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
         LST_UPDATE,                           & ! (in)
-        DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
+        DENS, MOMX, MOMY, MOMZ,               & ! (in)
         RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
         TG, QVEF, ALB_SW, ALB_LW,             & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
@@ -172,7 +172,6 @@ contains
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
@@ -209,7 +208,7 @@ contains
         RES, DRES,                           & ! (out)
         XMFLX, YMFLX, ZMFLX,                 & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-        LST, DZ, DENS, MOMX, MOMY, MOMZ,     & ! (in)
+        LST, DENS, MOMX, MOMY, MOMZ,         & ! (in)
         RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
         TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
@@ -271,7 +270,7 @@ contains
       RES, DRES,                           & ! (out)
       XMFLX, YMFLX, ZMFLX,                 & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX, & ! (out)
-      TS, DZ, DENS, MOMX, MOMY, MOMZ,      & ! (in)
+      TS, DENS, MOMX, MOMY, MOMZ,          & ! (in)
       RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
       TG, QVEF, ALB_SW, ALB_LW,            & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E              ) ! (in)
@@ -282,6 +281,8 @@ contains
       STB    => CONST_STB,   &
       LH0    => CONST_LH0,   &
       P00    => CONST_PRE00
+    use scale_grid_real, only: &
+      Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_cpl_bulkcoef, only: &
@@ -301,7 +302,6 @@ contains
     real(RP), intent(out) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
 
     real(RP), intent(in) :: TS  (IA,JA) ! skin temperature [K]
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
 
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
@@ -347,7 +347,7 @@ contains
       call CPL_bulkcoef( &
           Cm, Ch, Ce,                  & ! (out)
           TMPS(i,j), TS(i,j),          & ! (in)
-          DZ(i,j), Uabs,               & ! (in)
+          Z1(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
@@ -369,7 +369,7 @@ contains
       call CPL_bulkcoef( &
           dCm, dCh, dCe,               & ! (out)
           TMPS(i,j), TS(i,j)+dTS,      & ! (in)
-          DZ(i,j), Uabs,               & ! (in)
+          Z1(i,j), Uabs,               & ! (in)
           Z0M(i,j), Z0H(i,j), Z0E(i,j) ) ! (in)
 
       call qsat( dSQV, TS(i,j)+dTS, PRES(i,j) )

@@ -195,7 +195,6 @@ contains
     enddo
 
     call OCEAN_roughness( ATM_Uabs(:,:), & ! [IN]
-                          ATM_Z1  (:,:), & ! [IN]
                           SFC_Z0  (:,:), & ! [INOUT]
                           Z0M     (:,:), & ! [OUT]
                           Z0H     (:,:), & ! [OUT]

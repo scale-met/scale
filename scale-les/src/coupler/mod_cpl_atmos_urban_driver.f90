@@ -67,8 +67,7 @@ contains
     use scale_const, only: &
        LH0  => CONST_LH0
     use scale_grid_real, only: &
-       CZ  => REAL_CZ,  &
-       FZ  => REAL_FZ,  &
+       Z1  => REAL_Z1,  &
        LON => REAL_lon, &
        LAT => REAL_lat
     use scale_cpl_atmos_urban, only: &
@@ -128,8 +127,6 @@ contains
     real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
     real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
 
-    real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
-
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
     real(RP) :: QA       ! mixing ratio at 1st atmospheric level  [kg/kg]
     real(RP) :: UA       ! wind speed at 1st atmospheric level    [m/s]
@@ -148,8 +145,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
-
-    DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -189,7 +184,7 @@ contains
         UA,             & ! (in)
         U1,             & ! (in)
         V1,             & ! (in)
-        DZ     (i,j),   & ! (in)
+        Z1     (i,j),   & ! (in)
         SWD    (i,j),   & ! (in)
         LWD    (i,j),   & ! (in)
         PREC   (i,j),   & ! (in)

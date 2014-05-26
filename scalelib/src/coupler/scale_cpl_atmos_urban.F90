@@ -50,7 +50,7 @@ module scale_cpl_atmos_urban
         UA,      & ! (in)
         U1,      & ! (in)
         V1,      & ! (in)
-        DZ,      & ! (in)
+        Z1,      & ! (in)
         SWD,     & ! (in)
         LWD,     & ! (in)
         PREC,    & ! (in)
@@ -85,7 +85,7 @@ module scale_cpl_atmos_urban
        real(RP), intent(in) :: UA
        real(RP), intent(in) :: U1
        real(RP), intent(in) :: V1
-       real(RP), intent(in) :: DZ
+       real(RP), intent(in) :: Z1
        real(RP), intent(in) :: SWD
        real(RP), intent(in) :: LWD
        real(RP), intent(in) :: PREC

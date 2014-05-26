@@ -69,9 +69,6 @@ contains
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
     use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
@@ -127,20 +124,16 @@ contains
 
     real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
     real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
-
-    real(RP) :: DZ    (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
-
-    DZ(:,:) = CZ(KS,:,:) - FZ(KS-1,:,:)
 
     call CPL_AtmLnd( &
       LST,                                      & ! (inout)
       XMFLX, YMFLX, ZMFLX,                      & ! (out)
       SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,      & ! (out)
       update_flag,                              & ! (in)
-      DZ, DENS, MOMX, MOMY, MOMZ,               & ! (in)
+      DENS, MOMX, MOMY, MOMZ,                   & ! (in)
       RHOS, PRES, TMPS, QV, SWD, LWD,           & ! (in)
       TG, QVEF, ALBG(:,:,I_SW), ALBG(:,:,I_LW), & ! (in)
       TCS, DZG, Z0M, Z0H, Z0E                   ) ! (in)

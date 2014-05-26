@@ -33,7 +33,7 @@ module scale_cpl_atmos_ocean
          XMFLX, YMFLX, ZMFLX,                 & ! (out)
          SWUFLX, LWUFLX, SHFLX, LHFLX, WHFLX, & ! (out)
          SST_UPDATE,                          & ! (in)
-         DZ, DENS, MOMX, MOMY, MOMZ,          & ! (in)
+         DENS, MOMX, MOMY, MOMZ,              & ! (in)
          RHOS, PRES, TMPS, QV, SWD, LWD,      & ! (in)
          TW, ALB_SW, ALB_LW,                  & ! (in)
          Z0M, Z0H, Z0E                        ) ! (in)
@@ -54,7 +54,6 @@ module scale_cpl_atmos_ocean
 
        logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
-       real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
        real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
        real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
        real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]

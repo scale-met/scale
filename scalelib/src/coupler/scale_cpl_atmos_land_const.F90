@@ -165,7 +165,7 @@ contains
         XMFLX, YMFLX, ZMFLX,                  & ! (out)
         SWUFLX, LWUFLX, SHFLX, LHFLX, GHFLX,  & ! (out)
         LST_UPDATE,                           & ! (in)
-        DZ, DENS, MOMX, MOMY, MOMZ,           & ! (in)
+        DENS, MOMX, MOMY, MOMZ,               & ! (in)
         RHOS, PRES, TMPS, QV, SWD, LWD,       & ! (in)
         TG, QVEF, ALB_SW, ALB_LW,             & ! (in)
         TCS, DZG, Z0M, Z0H, Z0E               ) ! (in)
@@ -189,7 +189,6 @@ contains
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-    real(RP), intent(in) :: DZ  (IA,JA) ! height from the surface to the lowest atmospheric layer [m]
     real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
