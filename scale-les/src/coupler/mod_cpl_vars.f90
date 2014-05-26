@@ -716,6 +716,7 @@ contains
       pATM_QTRC,   &
       pSFC_DENS,   &
       pSFC_PRES,   &
+      pSFC_TEMP,   &
       pSFLX_LW_dn, &
       pSFLX_SW_dn, &
       pSFLX_rain,  &
@@ -731,6 +732,7 @@ contains
     real(RP), intent(in) :: pATM_QTRC  (IA,JA,QA)
     real(RP), intent(in) :: pSFC_DENS  (IA,JA)
     real(RP), intent(in) :: pSFC_PRES  (IA,JA)
+    real(RP), intent(in) :: pSFC_TEMP  (IA,JA)
     real(RP), intent(in) :: pSFLX_LW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_SW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_rain (IA,JA)
@@ -746,6 +748,7 @@ contains
     CPL_QV  (:,:) = pATM_QTRC  (:,:,1)
     CPL_RHOS(:,:) = pSFC_DENS  (:,:)
     CPL_PRES(:,:) = pSFC_PRES  (:,:)
+    CPL_TMPS(:,:) = pSFC_TEMP  (:,:)
     CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
     CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
     CPL_PREC(:,:) = pSFLX_rain (:,:) &

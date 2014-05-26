@@ -58,9 +58,6 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)   ! latent   heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LW_up(:,:)   ! surface upward longwave  flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SW_up(:,:)   ! surface upward shortwave flux [J/m2/s]
-
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_DENS  (:,:)   ! surface atmosphere density  [kg/m3]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_PRES  (:,:)   ! surface atmosphere pressure [Pa]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature    [K]
@@ -166,9 +163,6 @@ contains
     allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,QA) )
 
-    allocate( ATMOS_PHY_SF_SFLX_LW_up(IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_SW_up(IA,JA)    )
-
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFC_TEMP  (IA,JA)    )
@@ -216,13 +210,13 @@ contains
     call COMM_vars8( ATMOS_PHY_SF_SFLX_MW(:,:), 1 )
     call COMM_vars8( ATMOS_PHY_SF_SFLX_MU(:,:), 2 )
     call COMM_vars8( ATMOS_PHY_SF_SFLX_MV(:,:), 3 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_SH  (:,:), 4 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_LH  (:,:), 5 )
+    call COMM_vars8( ATMOS_PHY_SF_SFLX_SH(:,:), 4 )
+    call COMM_vars8( ATMOS_PHY_SF_SFLX_LH(:,:), 5 )
     call COMM_wait ( ATMOS_PHY_SF_SFLX_MW(:,:), 1 )
     call COMM_wait ( ATMOS_PHY_SF_SFLX_MU(:,:), 2 )
     call COMM_wait ( ATMOS_PHY_SF_SFLX_MV(:,:), 3 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_SH  (:,:), 4 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_LH  (:,:), 5 )
+    call COMM_wait ( ATMOS_PHY_SF_SFLX_SH(:,:), 4 )
+    call COMM_wait ( ATMOS_PHY_SF_SFLX_LH(:,:), 5 )
 
     do iq = 1, QA
        call COMM_vars8( ATMOS_PHY_SF_SFLX_QTRC(:,:,iq), iq )
@@ -283,9 +277,6 @@ contains
        ATMOS_PHY_SF_SFLX_SH   (:,:)   = CONST_UNDEF
        ATMOS_PHY_SF_SFLX_LH   (:,:)   = CONST_UNDEF
        ATMOS_PHY_SF_SFLX_QTRC (:,:,:) = CONST_UNDEF
-
-       ATMOS_PHY_SF_SFLX_LW_up(:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_SW_up(:,:)   = CONST_UNDEF
 
        ATMOS_PHY_SF_SFC_DENS  (:,:)   = CONST_UNDEF
        ATMOS_PHY_SF_SFC_PRES  (:,:)   = CONST_UNDEF
