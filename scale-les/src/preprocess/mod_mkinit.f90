@@ -35,7 +35,6 @@ module mod_mkinit
   use scale_prof
   use scale_grid_index
   use scale_tracer
-  use scale_realinput
 
   use scale_process, only: &
      PRC_MPIstop
@@ -97,6 +96,7 @@ module mod_mkinit
      ALBW,  &
      ALBG,  &
      Z0W
+  use mod_realinput
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
   use scale_atmos_hydrostatic, only: &
@@ -3682,23 +3682,29 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )
   subroutine MKINIT_real
-    use scale_realinput
+    use mod_realinput
     implicit none
 
-    integer               :: INITIAL_STEP      = 1
-    integer               :: NUMBER_OF_FILES   = 1   ! assume that one file includes one time step
-    character(len=H_LONG) :: BASENAME_ORG      = ''
-    character(len=H_LONG) :: FILETYPE_ORG      = ''
-    character(len=H_LONG) :: BASENAME_BOUNDARY = 'boundary_real'
-    character(len=H_LONG) :: BOUNDARY_TITLE    = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+    integer               :: INITIAL_STEP        = 1
+    integer               :: NUMBER_OF_FILES     = 1   ! assume that one file includes one time step
+    integer               :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
+    character(len=H_LONG) :: BASENAME_ORG       = ''
+    character(len=H_LONG) :: FILETYPE_ORG       = ''
+    character(len=H_LONG) :: BASENAME_BOUNDARY  = 'boundary_real'
+    character(len=H_LONG) :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+    real(DP)               :: BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
+    logical               :: WRF_FILE_TYPE      = .true.  ! wrf filetype: T=wrfout, F=wrfrst
 
     NAMELIST / PARAM_MKINIT_REAL / &
-         INITIAL_STEP,      &
-         NUMBER_OF_FILES,   &
-         BASENAME_ORG,      &
-         FILETYPE_ORG,      &
-         BASENAME_BOUNDARY, &
-         BOUNDARY_TITLE
+         INITIAL_STEP,        &
+         NUMBER_OF_FILES,     &
+         BASENAME_ORG,        &
+         FILETYPE_ORG,        &
+         BASENAME_BOUNDARY,   &
+         BOUNDARY_TITLE,      &
+         BOUNDARY_UPDATE_DT,  &
+         INTERP_SERC_DIV_NUM, &
+         WRF_FILE_TYPE
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
@@ -3711,7 +3717,7 @@ contains
     real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
 
     integer :: mdlid
-    integer :: dims(6)  ! 1-3: normal, 4-6: staggerd
+    integer :: dims(7)  ! 1-3: normal, 4-6: staggerd, 7: soil-layer
     integer :: timelen = 1
     integer :: ierr
 
@@ -3732,11 +3738,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
 
     BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    call ParentAtomSetup( dims(:), timelen, mdlid, BASENAME_WITHNUM, FILETYPE_ORG )
+    call ParentAtomSetup( dims(:), timelen, mdlid, BASENAME_WITHNUM,       &
+                           FILETYPE_ORG, INTERP_SERC_DIV_NUM, WRF_FILE_TYPE )
 
     if ( timelen /= 1 ) then
        write(*,*) 'xxx Multiple Time Steps Found in Original File! Cannot Handle These.'
        write(*,*) 'xxx System Going to Abort...Sorry'
+       call PRC_MPIstop
+    endif
+
+    if( BOUNDARY_UPDATE_DT <= 0 ) then
+       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
        call PRC_MPIstop
     endif
 
@@ -3797,6 +3809,7 @@ contains
                              QTRC_ORG(:,:,:,:,:), &
                              NUMBER_OF_FILES,     &
                              INITIAL_STEP,        &
+                             BOUNDARY_UPDATE_DT,  &
                              BASENAME_BOUNDARY,   &
                              BOUNDARY_TITLE       )
 
@@ -3806,6 +3819,16 @@ contains
     deallocate( momy_org )
     deallocate( rhot_org )
     deallocate( qtrc_org )
+
+    !--- read/write initial data for bottom boundary models
+    n = 1
+    write(NUM,'(I5.5)') n-1
+    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    call ParentLndOcnInput( BASENAME_WITHNUM, &
+                            dims,              &
+                            timelen,           &
+                            mdlid,             &
+                            INITIAL_STEP       )
 
     return
   end subroutine MKINIT_real

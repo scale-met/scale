@@ -43,12 +43,14 @@ module scale_fileio
      module procedure FILEIO_read_1D
      module procedure FILEIO_read_2D
      module procedure FILEIO_read_3D
+     module procedure FILEIO_read_4D
   end interface FILEIO_read
 
   interface FILEIO_write
      module procedure FILEIO_write_1D
      module procedure FILEIO_write_2D
      module procedure FILEIO_write_3D
+     module procedure FILEIO_write_4D
   end interface FILEIO_write
 
   !-----------------------------------------------------------------------------
@@ -894,7 +896,9 @@ contains
        unit,     &
        axistype, &
        datatype, &
-       append    )
+       timeintv, &
+       append,   &
+       timetarg  )
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -908,8 +912,8 @@ contains
        PRC_myrank, &
        PRC_2Drank, &
        PRC_MPIstop
-    use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+!    use scale_time, only: &
+!       NOWSEC => TIME_NOWDAYSEC
     implicit none
 
     real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable
@@ -920,21 +924,23 @@ contains
     character(len=*),  intent(in)  :: unit         !< unit        of the variable
     character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
+    real(RP),          intent(in)  :: timeintv      !< time interval [sec]
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
+    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
 
     integer          :: dtype
-    character(len=2) :: dims(4)
+    character(len=2) :: dims(3)
     integer          :: dim1_max, dim1_S, dim1_E
     integer          :: dim2_max, dim2_S, dim2_E
     integer          :: dim3_max, dim3_S, dim3_E
-    integer          :: dim4_max, dim4_S, dim4_E
 
-    real(RP), allocatable :: grid_t(:)
-    real(RP), allocatable :: var4D(:,:,:,:)
+    real(RP), allocatable :: var3D(:,:,:)
+    real(DP) :: time_interval, nowtime
 
     integer :: rankidx(2)
     logical :: append_sw
     logical :: fileexisted
+    logical :: addvar
     integer :: fid, vid
     integer :: step
     integer :: n
@@ -942,6 +948,7 @@ contains
 
     call PROF_rapstart('FILE O NetCDF')
 
+    time_interval = timeintv
     step = size(var(KS,IS,JS,:))
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
@@ -978,44 +985,43 @@ contains
                      rankidx,           & ! [IN]
                      append = append_sw ) ! [IN]
 
-    ! preparing time dimension
-    allocate( grid_t(1:step) )
-    do n=1, step
-       grid_t(n) = float(n)
-    enddo
-    call FilePutAxis( fid, 't', 'T', 'sec', 't',  dtype, grid_t(1:step) )
-
     if ( .NOT. fileexisted ) then ! only once
-       call set_axes( fid, dtype ) ! [IN]
+       call FILEIO_set_axes( fid, dtype ) ! [IN]
     endif
 
     if ( axistype == 'ZXYT' ) then
-       dims = (/'z','x','y','t'/)
+       dims = (/'z','x','y'/)
        dim1_max = KMAX
        dim2_max = IMAX
        dim3_max = JMAX
-       dim4_max = step
        dim1_S   = KS
        dim1_E   = KE
        dim2_S   = IS
        dim2_E   = IE
        dim3_S   = JS
        dim3_E   = JE
-       dim4_S   = 1
-       dim4_E   = step
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
     endif
 
-    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
-    allocate( var4D(dim1_max,dim2_max,dim3_max,dim4_max) )
+    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
+    allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
-    var4D(1:dim1_max,1:dim2_max,1:dim3_max,1:dim4_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E)
-    call FileWrite( vid, var4D(:,:,:,:), NOWSEC, NOWSEC ) ! [IN]
+    if ( present(timetarg) ) then
+       nowtime = (timetarg-1) * time_interval
+       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg)
+       call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+    else
+       nowtime = 0.0_DP
+       do n=1, step
+          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n)
+          call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+          nowtime = nowtime + time_interval
+       enddo
+    endif
 
-    deallocate( grid_t )
-    deallocate( var4D  )
+    deallocate( var3D  )
 
     call PROF_rapend  ('FILE O NetCDF')
 

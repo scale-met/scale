@@ -71,6 +71,7 @@ MODS =	\
 	mod_cpl_atmos_ocean_driver.o \
 	mod_cpl_driver.o             \
 	mod_mktopo.o                 \
+	mod_realinput.o	             \
 	mod_mkinit.o                 \
 	mod_convert.o                \
 	mod_cnvtopo.o                \
@@ -165,7 +166,8 @@ $(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 mod_cpl_vars.o   
                                             mod_cpl_atmos_ocean_driver.o
 
 $(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90
-$(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 mod_atmos_vars.o
+$(BUILD_DIR)/mod_realinput.o              : mod_realinput.f90 mod_cpl_vars.o mod_land_vars.o mod_ocean_vars.o
+$(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 mod_atmos_vars.o mod_realinput.o
 $(BUILD_DIR)/mod_convert.o                : mod_convert.f90 mod_cnvtopo.o mod_cnvlanduse.o
 $(BUILD_DIR)/mod_cnvtopo.o                : mod_cnvtopo.f90
 $(BUILD_DIR)/mod_cnvlanduse.o             : mod_cnvlanduse.f90

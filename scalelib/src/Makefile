@@ -118,7 +118,6 @@ OBJS = $(scale_rdma)	\
 	scale_process.o	\
 	scale_prof.o	\
 	scale_random.o	\
-	scale_realinput.o	\
 	scale_specfunc.o	\
 	scale_stats.o	\
 	scale_stdio.o	\

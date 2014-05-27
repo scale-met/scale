@@ -65,7 +65,6 @@ $(BUILD_DIR)/scale_precision.o: common/scale_precision.F90
 $(BUILD_DIR)/scale_process.o: atmos-les/communication/scale_process.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_prof.o: common/scale_prof.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_random.o: common/scale_random.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
-$(BUILD_DIR)/scale_realinput.o: io/scale_realinput.F90 $(BUILD_DIR)/scale_atmos_sub_hydrostatic.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_external_io.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_specfunc.o: common/scale_specfunc.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_stats.o: atmos-les/communication/scale_stats.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_stdio.o: io/scale_stdio.F90
@@ -148,7 +147,6 @@ MODS =	\
 	scale_process.mod	\
 	scale_prof.mod	\
 	scale_random.mod	\
-	scale_realinput.mod	\
 	scale_specfunc.mod	\
 	scale_stats.mod	\
 	scale_stdio.mod	\

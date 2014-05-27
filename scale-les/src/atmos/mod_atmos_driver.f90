@@ -147,6 +147,9 @@ contains
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_UPDATE_FLAG, &
+       ATMOS_BOUNDARY_update
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
@@ -193,6 +196,11 @@ contains
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
+    endif
+
+    !########## Boundary Condition ###########
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       call ATMOS_BOUNDARY_update()
     endif
 
     !########## Microphysics ##########

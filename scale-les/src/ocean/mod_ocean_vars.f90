@@ -31,6 +31,7 @@ module mod_ocean_vars
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
   public :: OCEAN_vars_total
+  public :: OCEAN_vars_external_in
 
   !-----------------------------------------------------------------------------
   !
@@ -273,5 +274,26 @@ contains
 
     return
   end subroutine OCEAN_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  subroutine OCEAN_vars_external_in( &
+      tw_in      ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: tw_in(:,:)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input file (ocean) ***'
+
+    TW(:,:)   = tw_in(:,:)
+
+    call OCEAN_vars_fillhalo
+
+    call OCEAN_vars_total
+
+    return
+  end subroutine OCEAN_vars_external_in
 
 end module mod_ocean_vars
