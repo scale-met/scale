@@ -55,8 +55,6 @@ contains
   subroutine CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_ocean_roughness, only: &
-       OCEAN_roughness_setup
     use scale_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     implicit none
@@ -130,13 +128,13 @@ contains
         LHFLX,      & ! (out)
         WHFLX,      & ! (out)
         SST_UPDATE, & ! (in)
-        DENS,       & ! (in)
-        MOMX,       & ! (in)
-        MOMY,       & ! (in)
-        MOMZ,       & ! (in)
+        RHOA,       & ! (in)
+        UA,         & ! (in)
+        VA,         & ! (in)
+        WA,         & ! (in)
         TMPA,       & ! (in)
         PRSA,       & ! (in)
-        QV,         & ! (in)
+        QVA,        & ! (in)
         PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
@@ -172,13 +170,13 @@ contains
 
     logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
-    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
+    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
@@ -206,13 +204,9 @@ contains
     end if
 
     ! calculate surface flux
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-      Uabs = sqrt( &
-             ( MOMZ(i,j)               )**2 &
-           + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-           + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-           ) / DENS(i,j) * 0.5_RP
+    do j = JS, JE
+    do i = IS, IE
+      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       call CPL_bulkcoef( &
           Cm,        & ! (out)
@@ -228,15 +222,15 @@ contains
           Z0H (i,j), & ! (in)
           Z0E (i,j)  ) ! (in)
 
-      XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j)
-      YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j)
-      ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j)
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
 
       ! saturation at the surface
       call qsat( SQV, SST(i,j), PRSS(i,j) )
 
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * DENS(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
-      LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * DENS(i,j) * Ce * ( SQV - QV(i,j) )
+      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
+      LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
 
       ! calculation for residual
       WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * -1.0_RP &

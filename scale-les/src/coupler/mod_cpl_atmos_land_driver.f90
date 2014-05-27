@@ -74,17 +74,17 @@ contains
     use mod_cpl_vars, only: &
        LST,               &
        ALBG,              &
-       DENS => CPL_DENS,  &
-       MOMX => CPL_MOMX,  &
-       MOMY => CPL_MOMY,  &
-       MOMZ => CPL_MOMZ,  &
+       RHOA => CPL_RHOA,  &
+       UA   => CPL_UA,    &
+       VA   => CPL_VA,    &
+       WA   => CPL_WA,    &
        TMPA => CPL_TMPA,  &
        PRSA => CPL_PRSA,  &
-       QV   => CPL_QV  ,  &
+       QVA  => CPL_QVA,   &
        PRSS => CPL_PRSS,  &
        PREC => CPL_PREC,  &
-       SWD  => CPL_SWD ,  &
-       LWD  => CPL_LWD ,  &
+       SWD  => CPL_SWD,   &
+       LWD  => CPL_LWD,   &
        TG   => CPL_TG,    &
        QVEF => CPL_QVEF,  &
        TCS  => CPL_TCS,   &
@@ -128,13 +128,13 @@ contains
       LHFLX(:,:),      & ! (out)
       GHFLX(:,:),      & ! (out)
       update_flag,     & ! (in)
-      DENS (:,:),      & ! (in)
-      MOMX (:,:),      & ! (in)
-      MOMY (:,:),      & ! (in)
-      MOMZ (:,:),      & ! (in)
+      RHOA (:,:),      & ! (in)
+      UA   (:,:),      & ! (in)
+      VA   (:,:),      & ! (in)
+      WA   (:,:),      & ! (in)
       TMPA (:,:),      & ! (in)
       PRSA (:,:),      & ! (in)
-      QV   (:,:),      & ! (in)
+      QVA  (:,:),      & ! (in)
       PRSS (:,:),      & ! (in)
       SWD  (:,:),      & ! (in)
       LWD  (:,:),      & ! (in)

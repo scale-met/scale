@@ -37,13 +37,13 @@ module scale_cpl_atmos_ocean
          LHFLX,      & ! (out)
          WHFLX,      & ! (out)
          SST_UPDATE, & ! (in)
-         DENS,       & ! (in)
-         MOMX,       & ! (in)
-         MOMY,       & ! (in)
-         MOMZ,       & ! (in)
+         RHOA,       & ! (in)
+         UA,         & ! (in)
+         VA,         & ! (in)
+         WA,         & ! (in)
          TMPA,       & ! (in)
          PRSA,       & ! (in)
-         QV,         & ! (in)
+         QVA,        & ! (in)
          PRSS,       & ! (in)
          SWD,        & ! (in)
          LWD,        & ! (in)
@@ -68,13 +68,13 @@ module scale_cpl_atmos_ocean
 
        logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
-       real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-       real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-       real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-       real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
+       real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
+       real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
-       real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+       real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
        real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]

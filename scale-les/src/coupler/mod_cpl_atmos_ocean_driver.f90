@@ -82,17 +82,17 @@ contains
        SST,               &
        ALBW,              &
        Z0W,               &
-       DENS => CPL_DENS,  &
-       MOMX => CPL_MOMX,  &
-       MOMY => CPL_MOMY,  &
-       MOMZ => CPL_MOMZ,  &
+       RHOA => CPL_RHOA,  &
+       UA   => CPL_UA,    &
+       VA   => CPL_VA,    &
+       WA   => CPL_WA,    &
        TMPA => CPL_TMPA,  &
        PRSA => CPL_PRSA,  &
-       QV   => CPL_QV  ,  &
+       QVA  => CPL_QVA,   &
        PRSS => CPL_PRSS,  &
        PREC => CPL_PREC,  &
-       SWD  => CPL_SWD ,  &
-       LWD  => CPL_LWD ,  &
+       SWD  => CPL_SWD,   &
+       LWD  => CPL_LWD,   &
        TW   => CPL_TW,    &
        CPL_AtmOcn_XMFLX,  &
        CPL_AtmOcn_YMFLX,  &
@@ -121,29 +121,18 @@ contains
     real(RP) :: Z0M(IA,JA) ! roughness length of momentum [m]
     real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
     real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
-
-    real(RP) :: Uabs(IA,JA) ! absolute velocity at the lowest atmospheric layer [m/s]
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-      ! at cell center
-      Uabs(i,j) = sqrt( ( MOMZ(i,j)               )**2 &
-                      + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-                      + ( MOMY(i,j-1) + MOMY(i,j) )**2 ) / DENS(i,j) * 0.5_RP
-    enddo
-    enddo
-
     call OCEAN_roughness( &
-      Z0W (:,:), & ! (inout)
-      Z0M (:,:), & ! (out)
-      Z0H (:,:), & ! (out)
-      Z0E (:,:), & ! (out)
-      Uabs(:,:)  ) ! (in)
+      Z0W(:,:), & ! (inout)
+      Z0M(:,:), & ! (out)
+      Z0H(:,:), & ! (out)
+      Z0E(:,:), & ! (out)
+      UA (:,:), & ! (in)
+      VA (:,:), & ! (in)
+      WA (:,:)  ) ! (in)
 
     call CPL_AtmOcn( &
       SST  (:,:),      & ! (inout)
@@ -154,13 +143,13 @@ contains
       LHFLX(:,:),      & ! (out)
       WHFLX(:,:),      & ! (out)
       update_flag,     & ! (in)
-      DENS (:,:),      & ! (in)
-      MOMX (:,:),      & ! (in)
-      MOMY (:,:),      & ! (in)
-      MOMZ (:,:),      & ! (in)
+      RHOA (:,:),      & ! (in)
+      UA   (:,:),      & ! (in)
+      VA   (:,:),      & ! (in)
+      WA   (:,:),      & ! (in)
       TMPA (:,:),      & ! (in)
       PRSA (:,:),      & ! (in)
-      QV   (:,:),      & ! (in)
+      QVA  (:,:),      & ! (in)
       PRSS (:,:),      & ! (in)
       SWD  (:,:),      & ! (in)
       LWD  (:,:),      & ! (in)

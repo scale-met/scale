@@ -84,15 +84,15 @@ contains
        TBL_URB
     use mod_cpl_vars, only: &
        UST,               &
-       DENS => CPL_DENS,  &
-       MOMX => CPL_MOMX,  &
-       MOMY => CPL_MOMY,  &
-       MOMZ => CPL_MOMZ,  &
+       RHOA => CPL_RHOA,  &
+       UA   => CPL_UA,    &
+       VA   => CPL_VA,    &
+       WA   => CPL_WA,    &
        TMPA => CPL_TMPA,  &
-       QV   => CPL_QV  ,  &
+       QVA  => CPL_QVA,   &
        PREC => CPL_PREC,  &
-       SWD  => CPL_SWD ,  &
-       LWD  => CPL_LWD ,  &
+       SWD  => CPL_SWD,   &
+       LWD  => CPL_LWD,   &
        CPL_AtmLnd_XMFLX,  & ! tentative
        CPL_AtmLnd_YMFLX,  & ! tentative
        CPL_AtmLnd_ZMFLX,  & ! tentative
@@ -121,10 +121,8 @@ contains
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
 
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
-    real(RP) :: QA       ! mixing ratio at 1st atmospheric level  [kg/kg]
-    real(RP) :: UA       ! wind speed at 1st atmospheric level    [m/s]
-    real(RP) :: U1       ! u at 1st atmospheric level             [m/s]
-    real(RP) :: V1       ! v at 1st atmospheric level             [m/s]
+    real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
+    real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
 
     ! parameters for shadow model
     !XX sinDEC, cosDEC ?
@@ -139,21 +137,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = JS, JE
+    do i = IS, IE
 
-      QA = QV(i,j) / (1.0_RP-QV(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
-                                      ! QV specific humidity                  [kg/kg]
-      UA = sqrt(          &
-            ( MOMZ(i,j)               )**2 &
-          + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-          + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-          ) / DENS(i,j) * 0.5_RP
-                                  ! wind speed at 1st atmospheric level   [m/s]
-      U1 = 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) ) / DENS(i,j)
-                                  ! u at 1st atmospheric level            [m/s]
-      V1 = 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) ) / DENS(i,j)
-                                  ! v at 1st atmospheric level            [m/s]
+      QMA = QVA(i,j) / (1.0_RP-QVA(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
+                                         ! QV specific humidity                  [kg/kg]
+      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       call CPL_AtmUrb( &
         TR_URB (i,j),   & ! (inout)
@@ -171,15 +160,15 @@ contains
         GHFLX  (i,j),   & ! (out)
         LSOLAR,         & ! (in)
         TMPA   (i,j),   & ! (in)
-        QA,             & ! (in)
-        UA,             & ! (in)
-        U1,             & ! (in)
-        V1,             & ! (in)
+        QMA,            & ! (in)
+        Uabs,           & ! (in)
+        UA     (i,j),   & ! (in)
+        VA     (i,j),   & ! (in)
         Z1     (i,j),   & ! (in)
         SWD    (i,j),   & ! (in)
         LWD    (i,j),   & ! (in)
         PREC   (i,j),   & ! (in)
-        DENS   (i,j),   & ! (in)
+        RHOA   (i,j),   & ! (in)
         LON    (i,j),   & ! (in)
         LAT    (i,j)    ) ! (in)
 

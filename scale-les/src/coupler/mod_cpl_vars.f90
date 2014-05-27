@@ -124,13 +124,13 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
 
   ! Atmospheric values
-  real(RP), public, save, allocatable :: CPL_DENS(:,:) ! air density [kg/m3]
-  real(RP), public, save, allocatable :: CPL_MOMX(:,:) ! momentum x [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_MOMY(:,:) ! momentum y [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_MOMZ(:,:) ! momentum z [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_RHOA(:,:) ! density at the lowest atmospheric layer [kg/m3]
+  real(RP), public, save, allocatable :: CPL_UA  (:,:) ! velocity u at the lowest atmospheric layer [m/s]
+  real(RP), public, save, allocatable :: CPL_VA  (:,:) ! velocity v at the lowest atmospheric layer [m/s]
+  real(RP), public, save, allocatable :: CPL_WA  (:,:) ! velocity w at the lowest atmospheric layer [m/s]
   real(RP), public, save, allocatable :: CPL_TMPA(:,:) ! temperature at the lowest atmospheric layer [K]
   real(RP), public, save, allocatable :: CPL_PRSA(:,:) ! pressure at the lowest atmospheric layer [Pa]
-  real(RP), public, save, allocatable :: CPL_QV  (:,:) ! ratio of mass of tracer to total mass [kg/kg]
+  real(RP), public, save, allocatable :: CPL_QVA (:,:) ! ratio of mass of tracer to total mass at the lowest atmospheric layer [kg/kg]
   real(RP), public, save, allocatable :: CPL_PRSS(:,:) ! pressure at the surface [Pa]
   real(RP), public, save, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
@@ -374,13 +374,13 @@ contains
     allocate( Ocn_PRECFLX(IA,JA) )
     allocate( Ocn_QVFLX  (IA,JA) )
 
-    allocate( CPL_DENS(IA,JA) )
-    allocate( CPL_MOMX(IA,JA) )
-    allocate( CPL_MOMY(IA,JA) )
-    allocate( CPL_MOMZ(IA,JA) )
+    allocate( CPL_RHOA(IA,JA) )
+    allocate( CPL_UA  (IA,JA) )
+    allocate( CPL_VA  (IA,JA) )
+    allocate( CPL_WA  (IA,JA) )
     allocate( CPL_TMPA(IA,JA) )
     allocate( CPL_PRSA(IA,JA) )
-    allocate( CPL_QV  (IA,JA) )
+    allocate( CPL_QVA (IA,JA) )
     allocate( CPL_PRSS(IA,JA) )
     allocate( CPL_PREC(IA,JA) )
     allocate( CPL_SWD (IA,JA) )
@@ -760,11 +760,11 @@ contains
 
     CPL_TMPA(:,:) = pATM_TEMP  (:,:)
     CPL_PRSA(:,:) = pATM_PRES  (:,:)
-    CPL_MOMZ(:,:) = pATM_W     (:,:)
-    CPL_MOMX(:,:) = pATM_U     (:,:)
-    CPL_MOMY(:,:) = pATM_V     (:,:)
-    CPL_DENS(:,:) = pATM_DENS  (:,:)
-    CPL_QV  (:,:) = pATM_QTRC  (:,:,1)
+    CPL_WA  (:,:) = pATM_W     (:,:)
+    CPL_UA  (:,:) = pATM_U     (:,:)
+    CPL_VA  (:,:) = pATM_V     (:,:)
+    CPL_RHOA(:,:) = pATM_DENS  (:,:)
+    CPL_QVA (:,:) = pATM_QTRC  (:,:,1)
     CPL_PRSS(:,:) = pSFC_PRES  (:,:)
     CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
     CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
