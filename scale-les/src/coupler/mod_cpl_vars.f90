@@ -128,11 +128,10 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: CPL_MOMX(:,:) ! momentum x [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_MOMY(:,:) ! momentum y [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_MOMZ(:,:) ! momentum z [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_RHOS(:,:) ! air density at the surface [kg/m3]
-  real(RP), public, save, allocatable :: CPL_PRES(:,:) ! pressure at the surface [Pa]
-  real(RP), public, save, allocatable :: CPL_TMPS(:,:) ! air temperature at the surface [K]
-  real(RP), public, save, allocatable :: CPL_TMPA(:,:) ! air temperature at the 1st atmospheric layer [K]
+  real(RP), public, save, allocatable :: CPL_TMPA(:,:) ! temperature at the lowest atmospheric layer [K]
+  real(RP), public, save, allocatable :: CPL_PRSA(:,:) ! pressure at the lowest atmospheric layer [Pa]
   real(RP), public, save, allocatable :: CPL_QV  (:,:) ! ratio of mass of tracer to total mass [kg/kg]
+  real(RP), public, save, allocatable :: CPL_PRSS(:,:) ! pressure at the surface [Pa]
   real(RP), public, save, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
@@ -379,11 +378,10 @@ contains
     allocate( CPL_MOMX(IA,JA) )
     allocate( CPL_MOMY(IA,JA) )
     allocate( CPL_MOMZ(IA,JA) )
-    allocate( CPL_RHOS(IA,JA) )
-    allocate( CPL_PRES(IA,JA) )
-    allocate( CPL_TMPS(IA,JA) )
     allocate( CPL_TMPA(IA,JA) )
+    allocate( CPL_PRSA(IA,JA) )
     allocate( CPL_QV  (IA,JA) )
+    allocate( CPL_PRSS(IA,JA) )
     allocate( CPL_PREC(IA,JA) )
     allocate( CPL_SWD (IA,JA) )
     allocate( CPL_LWD (IA,JA) )
@@ -722,9 +720,7 @@ contains
       pATM_V,      &
       pATM_DENS,   &
       pATM_QTRC,   &
-      pSFC_DENS,   &
       pSFC_PRES,   &
-      pSFC_TEMP,   &
       pSFLX_LW_dn, &
       pSFLX_SW_dn, &
       pSFLX_rain,  &
@@ -738,9 +734,7 @@ contains
     real(RP), intent(in) :: pATM_V     (IA,JA)
     real(RP), intent(in) :: pATM_DENS  (IA,JA)
     real(RP), intent(in) :: pATM_QTRC  (IA,JA,QA)
-    real(RP), intent(in) :: pSFC_DENS  (IA,JA)
     real(RP), intent(in) :: pSFC_PRES  (IA,JA)
-    real(RP), intent(in) :: pSFC_TEMP  (IA,JA)
     real(RP), intent(in) :: pSFLX_LW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_SW_dn(IA,JA)
     real(RP), intent(in) :: pSFLX_rain (IA,JA)
@@ -748,15 +742,13 @@ contains
     !---------------------------------------------------------------------------
 
     CPL_TMPA(:,:) = pATM_TEMP  (:,:)
-!                    pATM_PRES  (:,:)
+    CPL_PRSA(:,:) = pATM_PRES  (:,:)
     CPL_MOMZ(:,:) = pATM_W     (:,:)
     CPL_MOMX(:,:) = pATM_U     (:,:)
     CPL_MOMY(:,:) = pATM_V     (:,:)
     CPL_DENS(:,:) = pATM_DENS  (:,:)
     CPL_QV  (:,:) = pATM_QTRC  (:,:,1)
-    CPL_RHOS(:,:) = pSFC_DENS  (:,:)
-    CPL_PRES(:,:) = pSFC_PRES  (:,:)
-    CPL_TMPS(:,:) = pSFC_TEMP  (:,:)
+    CPL_PRSS(:,:) = pSFC_PRES  (:,:)
     CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
     CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
     CPL_PREC(:,:) = pSFLX_rain (:,:) &
@@ -845,9 +837,9 @@ contains
     !---------------------------------------------------------------------------
 
     pSFC_Z0   (:,:)   = 0.0_RP ! tentative
-    pSFLX_MW  (:,:)   = Atm_XMFLX (:,:)
-    pSFLX_MU  (:,:)   = Atm_YMFLX (:,:)
-    pSFLX_MV  (:,:)   = Atm_ZMFLX (:,:)
+    pSFLX_MW  (:,:)   = Atm_ZMFLX (:,:)
+    pSFLX_MU  (:,:)   = Atm_XMFLX (:,:)
+    pSFLX_MV  (:,:)   = Atm_YMFLX (:,:)
     pSFLX_SH  (:,:)   = Atm_SHFLX (:,:)
     pSFLX_LH  (:,:)   = Atm_LHFLX (:,:)
     pSFLX_QTRC(:,:,:) = 0.0_RP ! tentative

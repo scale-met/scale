@@ -109,19 +109,16 @@ contains
        CNT_Urb
     implicit none
 
-    ! argument
+    ! arguments
     logical, intent(in) :: update_flag
 
-    ! work
+    ! works
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
     real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
-
-    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
-    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
 
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
     real(RP) :: QA       ! mixing ratio at 1st atmospheric level  [kg/kg]
@@ -137,7 +134,7 @@ contains
     !XX  hourangle  ?
     ! real(RP) :: OMG      ! solar hour angle                       [rad]
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
@@ -194,22 +191,6 @@ contains
     YMFLX(:,:) = CPL_AtmLnd_YMFLX (:,:)
     ZMFLX(:,:) = CPL_AtmLnd_ZMFLX (:,:)
     ! --- tentative: caution !! ---
-
-    ! interpolate momentum fluxes
-    do j = JS, JE
-    do i = IS, IE
-      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
-      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-      XMFLX(i,j) = tmpX(i,j)
-      YMFLX(i,j) = tmpY(i,j)
-      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
-    enddo
-    enddo
 
     ! temporal average flux
     CPL_AtmUrb_XMFLX(:,:) = ( CPL_AtmUrb_XMFLX(:,:) * CNT_Atm_Urb + XMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )

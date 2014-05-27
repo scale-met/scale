@@ -320,9 +320,6 @@ contains
                           SFC_DENS(:,:),   & ! [OUT]
                           SFC_PRES(:,:)    ) ! [OUT]
 
-    ! estimate air temperature at the surface
-    SFC_TEMP(:,:) = TEMP(KS,:,:) * ( SFC_PRES(:,:) / PRES(KS,:,:) )**RovCP
-
     if ( CPL_sw ) then
        call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
                         PRES      (KS,:,:),   & ! [IN]
@@ -331,9 +328,7 @@ contains
                         V         (KS,:,:),   & ! [IN]
                         DENS      (KS,:,:),   & ! [IN]
                         QTRC      (KS,:,:,:), & ! [IN]
-                        SFC_DENS  (:,:),      & ! [IN]
                         SFC_PRES  (:,:),      & ! [IN]
-                        SFC_TEMP  (:,:),      & ! [IN]
                         SFLX_LW_dn(:,:),      & ! [IN]
                         SFLX_SW_dn(:,:),      & ! [IN]
                         SFLX_rain (:,:),      & ! [IN]

@@ -163,10 +163,10 @@ contains
         MOMX,       & ! (in)
         MOMY,       & ! (in)
         MOMZ,       & ! (in)
-        RHOS,       & ! (in)
-        PRES,       & ! (in)
-        TMPS,       & ! (in)
+        TMPA,       & ! (in)
+        PRSA,       & ! (in)
         QV,         & ! (in)
+        PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
         TW,         & ! (in)
@@ -197,10 +197,10 @@ contains
     real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
     real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
+    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
     real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
@@ -235,9 +235,9 @@ contains
         Cm = Const_Cm
       endif
 
-      XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMX(i,j) / DENS(i,j)
-      YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMY(i,j) / DENS(i,j)
-      ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMZ(i,j) / DENS(i,j)
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMX(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMY(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * MOMZ(i,j)
 
       if( DIURNAL ) then
         ! include diurnal change

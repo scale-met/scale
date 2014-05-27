@@ -86,10 +86,10 @@ contains
        MOMX => CPL_MOMX,  &
        MOMY => CPL_MOMY,  &
        MOMZ => CPL_MOMZ,  &
-       RHOS => CPL_RHOS,  &
-       PRES => CPL_PRES,  &
-       TMPS => CPL_TMPS,  &
+       TMPA => CPL_TMPA,  &
+       PRSA => CPL_PRSA,  &
        QV   => CPL_QV  ,  &
+       PRSS => CPL_PRSS,  &
        PREC => CPL_PREC,  &
        SWD  => CPL_SWD ,  &
        LWD  => CPL_LWD ,  &
@@ -107,10 +107,10 @@ contains
        CNT_Ocn
     implicit none
 
-    ! argument
+    ! arguments
     logical, intent(in) :: update_flag
 
-    ! work
+    ! works
     real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
     real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
     real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
@@ -118,17 +118,13 @@ contains
     real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP) :: WHFLX (IA,JA) ! water heat flux at the surface [W/m2]
 
-    ! work
-    integer :: i, j
-
-    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
-    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
-
     real(RP) :: Z0M(IA,JA) ! roughness length of momentum [m]
     real(RP) :: Z0H(IA,JA) ! roughness length of heat [m]
     real(RP) :: Z0E(IA,JA) ! roughness length of vapor [m]
 
     real(RP) :: Uabs(IA,JA) ! absolute velocity at the lowest atmospheric layer [m/s]
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
@@ -162,10 +158,10 @@ contains
       MOMX (:,:),      & ! (in)
       MOMY (:,:),      & ! (in)
       MOMZ (:,:),      & ! (in)
-      RHOS (:,:),      & ! (in)
-      PRES (:,:),      & ! (in)
-      TMPS (:,:),      & ! (in)
+      TMPA (:,:),      & ! (in)
+      PRSA (:,:),      & ! (in)
       QV   (:,:),      & ! (in)
+      PRSS (:,:),      & ! (in)
       SWD  (:,:),      & ! (in)
       LWD  (:,:),      & ! (in)
       TW   (:,:),      & ! (in)
@@ -174,22 +170,6 @@ contains
       Z0M  (:,:),      & ! (in)
       Z0H  (:,:),      & ! (in)
       Z0E  (:,:)       ) ! (in)
-
-    ! interpolate momentum fluxes
-    do j = JS, JE
-    do i = IS, IE
-      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
-      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-      XMFLX(i,j) = tmpX(i,j)
-      YMFLX(i,j) = tmpY(i,j)
-      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
-    enddo
-    enddo
 
     ! temporal average flux
     CPL_AtmOcn_XMFLX(:,:) = ( CPL_AtmOcn_XMFLX(:,:) * CNT_Atm_Ocn + XMFLX(:,:)     ) / ( CNT_Atm_Ocn + 1.0_RP )
