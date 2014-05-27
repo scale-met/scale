@@ -672,6 +672,9 @@ contains
   end subroutine CPL_vars_total
 
   subroutine CPL_vars_merge
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use scale_landuse, only: &
       frac_ocean => LANDUSE_frac_ocean, &
       frac_land  => LANDUSE_frac_land,  &
@@ -708,6 +711,20 @@ contains
     Atm_QVFLX (:,:) = frac_ocean(:,:) * CPL_AtmOcn_QVFLX (:,:) &
                     + frac_land (:,:) * CPL_AtmLnd_QVFLX (:,:) &
                     + frac_urban(:,:) * CPL_AtmUrb_QVFLX (:,:)
+
+    call COMM_vars8( Atm_ZMFLX(:,:), 1 )
+    call COMM_vars8( Atm_XMFLX(:,:), 2 )
+    call COMM_vars8( Atm_YMFLX(:,:), 3 )
+    call COMM_vars8( Atm_SHFLX(:,:), 4 )
+    call COMM_vars8( Atm_LHFLX(:,:), 5 )
+    call COMM_vars8( Atm_QVFLX(:,:), 6 )
+
+    call COMM_wait ( Atm_ZMFLX(:,:), 1 )
+    call COMM_wait ( Atm_XMFLX(:,:), 2 )
+    call COMM_wait ( Atm_YMFLX(:,:), 3 )
+    call COMM_wait ( Atm_SHFLX(:,:), 4 )
+    call COMM_wait ( Atm_LHFLX(:,:), 5 )
+    call COMM_wait ( Atm_QVFLX(:,:), 6 )
 
     return
   end subroutine CPL_vars_merge
