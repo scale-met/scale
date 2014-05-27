@@ -27,24 +27,30 @@ module scale_cpl_bulkcoef
 
   abstract interface
      subroutine bc( &
-          Cm,  & ! (out)
-          Ch,  & ! (out)
-          Ce,  & ! (out)
-          Ta,  & ! (in)
-          Ts,  & ! (in)
-          Pa,  & ! (in)
-          Ps,  & ! (in)
-          Ua,  & ! (in)
-          Za,  & ! (in)
-          Z0M, & ! (in)
-          Z0H, & ! (in)
-          Z0E  ) ! (in)
+          Cm,   & ! (out)
+          Ch,   & ! (out)
+          Ce,   & ! (out)
+          R10m, & ! (out)
+          R02h, & ! (out)
+          R02e, & ! (out)
+          Ta,   & ! (in)
+          Ts,   & ! (in)
+          Pa,   & ! (in)
+          Ps,   & ! (in)
+          Ua,   & ! (in)
+          Za,   & ! (in)
+          Z0M,  & ! (in)
+          Z0H,  & ! (in)
+          Z0E   ) ! (in)
        use scale_precision
        implicit none
 
-       real(RP), intent(out) :: Cm ! momentum bulk coefficient [no unit]
-       real(RP), intent(out) :: Ch ! heat bulk coefficient [no unit]
-       real(RP), intent(out) :: Ce ! moisture bulk coefficient [no unit]
+       real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
+       real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
+       real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+       real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+       real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+       real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
        real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -166,18 +172,21 @@ contains
   end subroutine CPL_bulkcoef_setup
 
   subroutine CPL_bulkcoef_uno( &
-      Cm,  & ! (out)
-      Ch,  & ! (out)
-      Ce,  & ! (out)
-      Ta,  & ! (in)
-      Ts,  & ! (in)
-      Pa,  & ! (in)
-      Ps,  & ! (in)
-      Ua,  & ! (in)
-      Za,  & ! (in)
-      Z0M, & ! (in)
-      Z0H, & ! (in)
-      Z0E  ) ! (in)
+      Cm,   & ! (out)
+      Ch,   & ! (out)
+      Ce,   & ! (out)
+      R10m, & ! (out)
+      R02h, & ! (out)
+      R02e, & ! (out)
+      Ta,   & ! (in)
+      Ts,   & ! (in)
+      Pa,   & ! (in)
+      Ps,   & ! (in)
+      Ua,   & ! (in)
+      Za,   & ! (in)
+      Z0M,  & ! (in)
+      Z0H,  & ! (in)
+      Z0E   ) ! (in)
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
@@ -188,6 +197,9 @@ contains
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
     real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -208,10 +220,14 @@ contains
 
     ! work
     real(RP) :: RiB, RiBT ! bulk Richardson number [no unit]
-    real(RP) :: C0 ! initial drag coefficient [no unit]
+    real(RP) :: C0, C0_10, C0_02 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
+    real(RP) :: fm10, fm02, fh02
 
-    C0    = ( KARMAN / log( Za/Z0M ) )**2
+    C0    = ( KARMAN / log(      Za/Z0M ) )**2
+    C0_10 = ( KARMAN / log( 10.0_RP/Z0M ) )**2
+    C0_02 = ( KARMAN / log(  2.0_RP/Z0M ) )**2
+
     RiBT  = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
     RiB   = RiBT
 
@@ -231,12 +247,18 @@ contains
 
     if( RiBT >= 0.0_RP ) then
       ! stable condition
-      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh = fm
+      fm   = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh   = fm
+      fm10 = fm
+      fm02 = fm
+      fh02 = fm
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fm   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fh   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_10 * sqrt( 10.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
+      fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
+      fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
     t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
@@ -246,26 +268,39 @@ contains
     Ch = C0 * fh * t0th / tPrn
     Ce = C0 * fh * q0qe / tPrn
 
+    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
+    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
+
+    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
+    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
+    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
 
     return
   end subroutine CPL_bulkcoef_uno
 
   subroutine CPL_bulkcoef_beljaars( &
-      Cm,  & ! (out)
-      Ch,  & ! (out)
-      Ce,  & ! (out)
-      Ta,  & ! (in)
-      Ts,  & ! (in)
-      Pa,  & ! (in)
-      Ps,  & ! (in)
-      Ua,  & ! (in)
-      Za,  & ! (in)
-      Z0M, & ! (in)
-      Z0H, & ! (in)
-      Z0E  ) ! (in)
+      Cm,   & ! (out)
+      Ch,   & ! (out)
+      Ce,   & ! (out)
+      R10m, & ! (out)
+      R02h, & ! (out)
+      R02e, & ! (out)
+      Ta,   & ! (in)
+      Ts,   & ! (in)
+      Pa,   & ! (in)
+      Ps,   & ! (in)
+      Ua,   & ! (in)
+      Za,   & ! (in)
+      Z0M,  & ! (in)
+      Z0H,  & ! (in)
+      Z0E   ) ! (in)
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
@@ -276,6 +311,9 @@ contains
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
     real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -301,6 +339,8 @@ contains
     real(RP) :: res, dres
     real(RP) :: dCm, dCh, dCe
     real(RP) :: tmp
+    real(RP) :: fm, fh
+    real(RP) :: fm10, fm02, fh02
 
     RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
     if( abs( RiB0 ) < RiB_min ) then
@@ -364,9 +404,35 @@ contains
     ! update bulk Richardson nubmer
     !RiB = Za * Cm**1.5_RP / ( L * KARMAN * Ch )
 
+    if( L < 0.0_RP ) then
+      ! unstable condition
+      fm   = fmUS(      Za/L )
+      fh   = fhUS(      Za/L )
+      fm10 = fmUS( 10.0_RP/L )
+      fm02 = fmUS(  2.0_RP/L )
+      fh02 = fhUS(  2.0_RP/L )
+    else
+      ! stable condition
+      fm   = fmS(      Za/L )
+      fh   = fhS(      Za/L )
+      fm10 = fmS( 10.0_RP/L )
+      fm02 = fmS(  2.0_RP/L )
+      fh02 = fhS(  2.0_RP/L )
+    end if
+
+    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
+    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
+
+    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
+    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
+    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
 
     return
   end subroutine CPL_bulkcoef_beljaars

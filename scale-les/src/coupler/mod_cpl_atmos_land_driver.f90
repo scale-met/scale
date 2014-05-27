@@ -98,6 +98,10 @@ contains
        CPL_AtmLnd_SHFLX,  &
        CPL_AtmLnd_LHFLX,  &
        CPL_AtmLnd_QVFLX,  &
+       CPL_AtmLnd_U10,    &
+       CPL_AtmLnd_V10,    &
+       CPL_AtmLnd_T2,     &
+       CPL_AtmLnd_Q2,     &
        Lnd_GHFLX,         &
        Lnd_PRECFLX,       &
        Lnd_QVFLX,         &
@@ -109,12 +113,16 @@ contains
     logical, intent(in) :: update_flag
 
     ! works
-    real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
@@ -127,6 +135,10 @@ contains
       SHFLX(:,:),      & ! (out)
       LHFLX(:,:),      & ! (out)
       GHFLX(:,:),      & ! (out)
+      U10  (:,:),      & ! (out)
+      V10  (:,:),      & ! (out)
+      T2   (:,:),      & ! (out)
+      Q2   (:,:),      & ! (out)
       update_flag,     & ! (in)
       RHOA (:,:),      & ! (in)
       UA   (:,:),      & ! (in)
@@ -155,6 +167,10 @@ contains
     CPL_AtmLnd_SHFLX(:,:) = ( CPL_AtmLnd_SHFLX(:,:) * CNT_Atm_Lnd + SHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     CPL_AtmLnd_LHFLX(:,:) = ( CPL_AtmLnd_LHFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     CPL_AtmLnd_QVFLX(:,:) = ( CPL_AtmLnd_QVFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_U10  (:,:) = ( CPL_AtmLnd_U10  (:,:) * CNT_Atm_Lnd + U10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_V10  (:,:) = ( CPL_AtmLnd_V10  (:,:) * CNT_Atm_Lnd + V10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_T2   (:,:) = ( CPL_AtmLnd_T2   (:,:) * CNT_Atm_Lnd + T2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_Q2   (:,:) = ( CPL_AtmLnd_Q2   (:,:) * CNT_Atm_Lnd + Q2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
 
     Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
     Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )

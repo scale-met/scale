@@ -76,52 +76,68 @@ module mod_cpl_vars
   real(RP), public, save, allocatable :: SnowQ(:,:)   ! Ground Snow amount      [kg/m2]
   real(RP), public, save, allocatable :: SnowT(:,:)   ! Ground Snow Temperature [K]
 
-  ! surface fluxes to atmospheric model
+  ! surface variables to atmospheric model
   real(RP), public, save, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: Atm_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, save, allocatable :: Atm_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, save, allocatable :: Atm_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, save, allocatable :: Atm_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
-  ! surface fluxes to land model
+  ! surface variables to land model
   real(RP), public, save, allocatable :: Lnd_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Lnd_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Lnd_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
-  ! surface fluxes to urban model
+  ! surface variables to urban model
   real(RP), public, save, allocatable :: Urb_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Urb_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Urb_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
-  ! surface fluxes to ocean model
+  ! surface variables to ocean model
   real(RP), public, save, allocatable :: Ocn_WHFLX  (:,:) ! water heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: Ocn_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
   real(RP), public, save, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
 
-  ! surface fluxes from atmosphere-ocean coupler
+  ! surface variables from atmosphere-ocean coupler
   real(RP), public, save, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, save, allocatable :: CPL_AtmOcn_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
-  ! surface fluxes from atmosphere-land coupler
+  ! surface variables from atmosphere-land coupler
   real(RP), public, save, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, save, allocatable :: CPL_AtmLnd_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
-  ! surface fluxes from atmosphere-urban coupler
+  ! surface variables from atmosphere-urban coupler
   real(RP), public, save, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
   real(RP), public, save, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
   real(RP), public, save, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, save, allocatable :: CPL_AtmUrb_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
   ! Atmospheric values
   real(RP), public, save, allocatable :: CPL_RHOA(:,:) ! density at the lowest atmospheric layer [kg/m3]
@@ -361,6 +377,10 @@ contains
     allocate( Atm_SHFLX(IA,JA) )
     allocate( Atm_LHFLX(IA,JA) )
     allocate( Atm_QVFLX(IA,JA) )
+    allocate( Atm_U10  (IA,JA) )
+    allocate( Atm_V10  (IA,JA) )
+    allocate( Atm_T2   (IA,JA) )
+    allocate( Atm_Q2   (IA,JA) )
 
     allocate( Lnd_GHFLX  (IA,JA) )
     allocate( Lnd_PRECFLX(IA,JA) )
@@ -402,6 +422,10 @@ contains
     allocate( CPL_AtmLnd_SHFLX(IA,JA) )
     allocate( CPL_AtmLnd_LHFLX(IA,JA) )
     allocate( CPL_AtmLnd_QVFLX(IA,JA) )
+    allocate( CPL_AtmLnd_U10  (IA,JA) )
+    allocate( CPL_AtmLnd_V10  (IA,JA) )
+    allocate( CPL_AtmLnd_T2   (IA,JA) )
+    allocate( CPL_AtmLnd_Q2   (IA,JA) )
 
     allocate( CPL_AtmUrb_XMFLX(IA,JA) )
     allocate( CPL_AtmUrb_YMFLX(IA,JA) )
@@ -409,6 +433,10 @@ contains
     allocate( CPL_AtmUrb_SHFLX(IA,JA) )
     allocate( CPL_AtmUrb_LHFLX(IA,JA) )
     allocate( CPL_AtmUrb_QVFLX(IA,JA) )
+    allocate( CPL_AtmUrb_U10  (IA,JA) )
+    allocate( CPL_AtmUrb_V10  (IA,JA) )
+    allocate( CPL_AtmUrb_T2   (IA,JA) )
+    allocate( CPL_AtmUrb_Q2   (IA,JA) )
 
     allocate( CPL_AtmOcn_XMFLX(IA,JA) )
     allocate( CPL_AtmOcn_YMFLX(IA,JA) )
@@ -416,6 +444,10 @@ contains
     allocate( CPL_AtmOcn_SHFLX(IA,JA) )
     allocate( CPL_AtmOcn_LHFLX(IA,JA) )
     allocate( CPL_AtmOcn_QVFLX(IA,JA) )
+    allocate( CPL_AtmOcn_U10  (IA,JA) )
+    allocate( CPL_AtmOcn_V10  (IA,JA) )
+    allocate( CPL_AtmOcn_T2   (IA,JA) )
+    allocate( CPL_AtmOcn_Q2   (IA,JA) )
 
     return
   end subroutine CPL_vars_setup
@@ -712,19 +744,43 @@ contains
                     + frac_land (:,:) * CPL_AtmLnd_QVFLX (:,:) &
                     + frac_urban(:,:) * CPL_AtmUrb_QVFLX (:,:)
 
-    call COMM_vars8( Atm_ZMFLX(:,:), 1 )
-    call COMM_vars8( Atm_XMFLX(:,:), 2 )
-    call COMM_vars8( Atm_YMFLX(:,:), 3 )
-    call COMM_vars8( Atm_SHFLX(:,:), 4 )
-    call COMM_vars8( Atm_LHFLX(:,:), 5 )
-    call COMM_vars8( Atm_QVFLX(:,:), 6 )
+    Atm_U10   (:,:) = frac_ocean(:,:) * CPL_AtmOcn_U10   (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_U10   (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_U10   (:,:)
 
-    call COMM_wait ( Atm_ZMFLX(:,:), 1 )
-    call COMM_wait ( Atm_XMFLX(:,:), 2 )
-    call COMM_wait ( Atm_YMFLX(:,:), 3 )
-    call COMM_wait ( Atm_SHFLX(:,:), 4 )
-    call COMM_wait ( Atm_LHFLX(:,:), 5 )
-    call COMM_wait ( Atm_QVFLX(:,:), 6 )
+    Atm_V10   (:,:) = frac_ocean(:,:) * CPL_AtmOcn_V10   (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_V10   (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_V10   (:,:)
+
+    Atm_T2    (:,:) = frac_ocean(:,:) * CPL_AtmOcn_T2    (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_T2    (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_T2    (:,:)
+
+    Atm_Q2    (:,:) = frac_ocean(:,:) * CPL_AtmOcn_Q2    (:,:) &
+                    + frac_land (:,:) * CPL_AtmLnd_Q2    (:,:) &
+                    + frac_urban(:,:) * CPL_AtmUrb_Q2    (:,:)
+
+    call COMM_vars8( Atm_ZMFLX(:,:),  1 )
+    call COMM_vars8( Atm_XMFLX(:,:),  2 )
+    call COMM_vars8( Atm_YMFLX(:,:),  3 )
+    call COMM_vars8( Atm_SHFLX(:,:),  4 )
+    call COMM_vars8( Atm_LHFLX(:,:),  5 )
+    call COMM_vars8( Atm_QVFLX(:,:),  6 )
+    call COMM_vars8( Atm_U10  (:,:),  7 )
+    call COMM_vars8( Atm_V10  (:,:),  8 )
+    call COMM_vars8( Atm_T2   (:,:),  9 )
+    call COMM_vars8( Atm_Q2   (:,:), 10 )
+
+    call COMM_wait ( Atm_ZMFLX(:,:),  1 )
+    call COMM_wait ( Atm_XMFLX(:,:),  2 )
+    call COMM_wait ( Atm_YMFLX(:,:),  3 )
+    call COMM_wait ( Atm_SHFLX(:,:),  4 )
+    call COMM_wait ( Atm_LHFLX(:,:),  5 )
+    call COMM_wait ( Atm_QVFLX(:,:),  6 )
+    call COMM_wait ( Atm_U10  (:,:),  7 )
+    call COMM_wait ( Atm_V10  (:,:),  8 )
+    call COMM_wait ( Atm_T2   (:,:),  9 )
+    call COMM_wait ( Atm_Q2   (:,:), 10 )
 
     return
   end subroutine CPL_vars_merge
@@ -861,11 +917,11 @@ contains
     pSFLX_LH  (:,:)   = Atm_LHFLX (:,:)
     pSFLX_QTRC(:,:,:) = 0.0_RP ! tentative
     pSFLX_QTRC(:,:,1) = Atm_QVFLX (:,:) ! tentative
-    pUabs10   (:,:)   = 0.0_RP ! tentative
-    pU10      (:,:)   = 0.0_RP ! tentative
-    pV10      (:,:)   = 0.0_RP ! tentative
-    pT2       (:,:)   = 0.0_RP ! tentative
-    pQ2       (:,:)   = 0.0_RP ! tentative
+    pUabs10   (:,:)   = sqrt( Atm_U10(:,:)**2 + Atm_V10(:,:)**2 )
+    pU10      (:,:)   = Atm_U10   (:,:)
+    pV10      (:,:)   = Atm_V10   (:,:)
+    pT2       (:,:)   = Atm_T2    (:,:)
+    pQ2       (:,:)   = Atm_Q2    (:,:)
 
     CNT_Atm_Lnd = 0.0_RP
     CNT_Atm_Urb = 0.0_RP

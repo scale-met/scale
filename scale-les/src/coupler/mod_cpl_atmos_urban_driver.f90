@@ -96,12 +96,20 @@ contains
        CPL_AtmLnd_XMFLX,  & ! tentative
        CPL_AtmLnd_YMFLX,  & ! tentative
        CPL_AtmLnd_ZMFLX,  & ! tentative
+       CPL_AtmLnd_U10,    & ! tentative
+       CPL_AtmLnd_V10,    & ! tentative
+       CPL_AtmLnd_T2,     & ! tentative
+       CPL_AtmLnd_Q2,     & ! tentative
        CPL_AtmUrb_XMFLX,  &
        CPL_AtmUrb_YMFLX,  &
        CPL_AtmUrb_ZMFLX,  &
        CPL_AtmUrb_SHFLX,  &
        CPL_AtmUrb_LHFLX,  &
        CPL_AtmUrb_QVFLX,  &
+       CPL_AtmUrb_U10,    &
+       CPL_AtmUrb_V10,    &
+       CPL_AtmUrb_T2,     &
+       CPL_AtmUrb_Q2,     &
        Urb_GHFLX,         &
        Urb_PRECFLX,       &
        Urb_QVFLX,         &
@@ -113,12 +121,16 @@ contains
     logical, intent(in) :: update_flag
 
     ! works
-    real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
     real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
@@ -176,9 +188,13 @@ contains
     end do
 
     ! --- tentative: caution !! ---
-    XMFLX(:,:) = CPL_AtmLnd_XMFLX (:,:)
-    YMFLX(:,:) = CPL_AtmLnd_YMFLX (:,:)
-    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX (:,:)
+    XMFLX(:,:) = CPL_AtmLnd_XMFLX(:,:)
+    YMFLX(:,:) = CPL_AtmLnd_YMFLX(:,:)
+    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX(:,:)
+    U10  (:,:) = CPL_AtmLnd_U10  (:,:)
+    V10  (:,:) = CPL_AtmLnd_V10  (:,:)
+    T2   (:,:) = CPL_AtmLnd_T2   (:,:)
+    Q2   (:,:) = CPL_AtmLnd_Q2   (:,:)
     ! --- tentative: caution !! ---
 
     ! temporal average flux
@@ -188,6 +204,10 @@ contains
     CPL_AtmUrb_SHFLX(:,:) = ( CPL_AtmUrb_SHFLX(:,:) * CNT_Atm_Urb + SHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
     CPL_AtmUrb_LHFLX(:,:) = ( CPL_AtmUrb_LHFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
     CPL_AtmUrb_QVFLX(:,:) = ( CPL_AtmUrb_QVFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_U10  (:,:) = ( CPL_AtmUrb_U10  (:,:) * CNT_Atm_Urb + U10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_V10  (:,:) = ( CPL_AtmUrb_V10  (:,:) * CNT_Atm_Urb + V10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_T2   (:,:) = ( CPL_AtmUrb_T2   (:,:) * CNT_Atm_Urb + T2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_Q2   (:,:) = ( CPL_AtmUrb_Q2   (:,:) * CNT_Atm_Urb + Q2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
 
     Urb_GHFLX  (:,:) = ( Urb_GHFLX  (:,:) * CNT_Urb + GHFLX(:,:)     ) / ( CNT_Urb + 1.0_RP )
     Urb_PRECFLX(:,:) = ( Urb_PRECFLX(:,:) * CNT_Urb + PREC (:,:)     ) / ( CNT_Urb + 1.0_RP )

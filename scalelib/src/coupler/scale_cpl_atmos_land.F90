@@ -36,6 +36,10 @@ module scale_cpl_atmos_land
          SHFLX,      & ! (out)
          LHFLX,      & ! (out)
          GHFLX,      & ! (out)
+         U10,        & ! (out)
+         V10,        & ! (out)
+         T2,         & ! (out)
+         Q2,         & ! (out)
          LST_UPDATE, & ! (in)
          RHOA,       & ! (in)
          UA,         & ! (in)
@@ -68,6 +72,10 @@ module scale_cpl_atmos_land
        real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
        real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
        real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+       real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+       real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+       real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
+       real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
        logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 

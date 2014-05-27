@@ -143,6 +143,10 @@ contains
         SHFLX,      & ! (out)
         LHFLX,      & ! (out)
         GHFLX,      & ! (out)
+        U10,        & ! (out)
+        V10,        & ! (out)
+        T2,         & ! (out)
+        Q2,         & ! (out)
         LST_UPDATE, & ! (in)
         RHOA,       & ! (in)
         UA,         & ! (in)
@@ -192,6 +196,10 @@ contains
     real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
@@ -224,6 +232,7 @@ contains
 
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce, dCm, dCh, dCe ! bulk transfer coeff. [no unit]
+    real(RP) :: R10m, R02h, R02e, dR10m, dR02h, dR02e ! lapse rate [0-1]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
@@ -244,6 +253,9 @@ contains
             Cm,        & ! (out)
             Ch,        & ! (out)
             Ce,        & ! (out)
+            R10m,      & ! (out)
+            R02h,      & ! (out)
+            R02e,      & ! (out)
             TMPA(i,j), & ! (in)
             LST (i,j), & ! (in)
             PRSA(i,j), & ! (in)
@@ -274,6 +286,9 @@ contains
             dCm,             & ! (out)
             dCh,             & ! (out)
             dCe,             & ! (out)
+            dR10m,           & ! (out)
+            dR02h,           & ! (out)
+            dR02e,           & ! (out)
             TMPA(i,j),       & ! (in)
             LST (i,j) + dTS, & ! (in)
             PRSA(i,j),       & ! (in)
@@ -295,6 +310,16 @@ contains
         ! calculation for d(residual)/dTS
         DRES(i,j) = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
                   - dSHFLX - dLHFLX + dGHFLX
+
+        ! diagnositc variables
+        U10(i,j) = R10m * UA(i,j)
+        V10(i,j) = R10m * VA(i,j)
+
+        T2(i,j) = (          R02h ) * TMPA(i,j) &
+                + ( 1.0_RP - R02h ) * LST (i,j)
+        Q2(i,j) = (          R02e ) * QVA (i,j) &
+                + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
+
       enddo
       enddo
 

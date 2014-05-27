@@ -127,6 +127,10 @@ contains
         SHFLX,      & ! (out)
         LHFLX,      & ! (out)
         WHFLX,      & ! (out)
+        U10,        & ! (out)
+        V10,        & ! (out)
+        T2,         & ! (out)
+        Q2,         & ! (out)
         SST_UPDATE, & ! (in)
         RHOA,       & ! (in)
         UA,         & ! (in)
@@ -167,6 +171,10 @@ contains
     real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
+    real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
 
@@ -191,6 +199,7 @@ contains
     ! works
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: R10m, R02h, R02e ! lapse rate [0-1]
     real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j, n
@@ -210,8 +219,11 @@ contains
 
       call CPL_bulkcoef( &
           Cm,        & ! (out)
+          Cm,        & ! (out)
           Ch,        & ! (out)
-          Ce,        & ! (out)
+          R10m,      & ! (out)
+          R02h,      & ! (out)
+          R02e,      & ! (out)
           TMPA(i,j), & ! (in)
           SST (i,j), & ! (in)
           PRSA(i,j), & ! (in)
@@ -236,6 +248,16 @@ contains
       WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * -1.0_RP &
                  - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 )&
                  + SHFLX(i,j) + LHFLX(i,j)
+
+      ! diagnositc variables
+      U10(i,j) = R10m * UA(i,j)
+      V10(i,j) = R10m * VA(i,j)
+
+      T2(i,j) = (          R02h ) * TMPA(i,j) &
+              + ( 1.0_RP - R02h ) * SST (i,j)
+      Q2(i,j) = (          R02e ) * QVA (i,j) &
+              + ( 1.0_RP - R02e ) * SQV
+
     enddo
     enddo
 
