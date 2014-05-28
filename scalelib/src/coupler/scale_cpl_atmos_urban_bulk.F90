@@ -54,7 +54,7 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: road_width = 11.0       ! roof level ( building height) [m]
   real(RP), private :: SIGMA_ZED  =  1.0       ! Standard deviation of roof height [m]
   real(RP), private :: AH         = 17.5       ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: ALH        = 0.         ! Latent Anthropogenic heat [W/m^2]
+  real(RP), private :: ALH        = 0.0         ! Latent Anthropogenic heat [W/m^2]
   real(RP), private :: BETR       = 0.0        ! Evaporation efficiency of roof [-]
   real(RP), private :: BETB       = 0.0        !                        of building [-]
   real(RP), private :: BETG       = 0.0        !                        of ground [-]
@@ -330,8 +330,8 @@ contains
     real(RP), intent(in)    :: RAIN ! precipitation                          [mm/h]
                                     !   (if you use RAIN, check unit!)
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
-    real(RP), intent(in)    :: XLAT ! latitude                               [deg]
-    real(RP), intent(in)    :: XLON ! longitude                              [deg]
+    real(RP), intent(in)    :: XLAT !< latitude  [rad,-pi,pi]
+    real(RP), intent(in)    :: XLON !< longitude [rad,0-2pi]
 
     !! for shadow effect model
     !!   real(RP), intent(in)    :: DECLIN ! solar declination
@@ -359,11 +359,16 @@ contains
     real(RP), intent(out) :: G      ! heat flux into the ground        [W/m/m]
 
     !-- Local variables
+    real(RP) :: RTS    ! radiative surface temperature    [K]
+
     logical  :: SHADOW = .false.
            ! [true=consider svf and shadow effects, false=consider svf effect
            ! only]
 
+    real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
     integer  :: tloc     ! local time (1-24h)
+    real(RP) :: dsec     ! second [s]
+    real(RP) :: tahdiurnal ! temporal AH diurnal profile
     real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
     real(RP) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
 
@@ -379,6 +384,7 @@ contains
     real(RP) :: TGP = 350.0_RP   ! TGP: at previous time step [K]
     real(RP) :: TCP = 350.0_RP   ! TCP: at previous time step [K]
     real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
+    real(RP) :: TSP = 300.0_RP   ! TSP: at previous time step [K]
     real(RP) :: UST, TST, QST
 
     real(RP) :: PS         ! Surface Pressure [hPa]
@@ -386,7 +392,9 @@ contains
     real(RP) :: ES
 
     real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
-    real(RP) :: RN     ! net radition                     [W/m/m]
+    real(RP) :: RN     ! net radition                [W/m/m]
+    real(RP) :: SW     ! shortwave radition           [W/m/m]
+    real(RP) :: LW     ! longwave radition           [W/m/m]
     real(RP) :: PSIM   ! similality stability shear function for momentum
     real(RP) :: PSIH   ! similality stability shear function for heat
 
@@ -430,7 +438,7 @@ contains
     real(RP) :: DG0BDTB,  DG0BDTG,  DG0GDTG,  DG0GDTB
     real(RP) :: DTB, DTG, DTC
 
-    real(RP) :: XXX, X, Z0, Z0H, CD, CH
+    real(RP) :: XXX, X, Z0, Z0H, CD, CH, CHU
     real(RP) :: PSIX, PSIT, PSIX2, PSIT2, PSIX10, PSIT10
 
     integer  :: iteration, K
@@ -441,13 +449,25 @@ contains
 
     ! local time
     ! tloc=mod(int(OMG/PI*180./15.+12.+0.5 ),24)
-    tloc = mod( (int(TIME/(60.0_RP*60.0_RP)) + int(XLON/15.0_RP)),24 )
+    LAT=XLAT/PI*180.0_RP
+    LON=XLON/PI*180.0_RP
+
+    tloc = mod( (int(TIME/(60.0_RP*60.0_RP)) + int(LON/15.0_RP)),24 )
+    dsec = mod(TIME,3600.0_RP)
     if(tloc==0) tloc = 24
-    !  print *,'tloc',TIME,tloc
+    ! print *,'tloc',TIME,tloc,XLON,XLAT,LON,LAT
 
     ! Calculate AH data at LST
-    AH_t  = AH  * ahdiurnal(tloc)
-    ALH_t = ALH * ahdiurnal(tloc)
+     if(tloc==24)then
+       tahdiurnal = (ahdiurnal(tloc)*(3600.0_RP-dsec)+ahdiurnal(1)*dsec)/3600.0_RP
+     else
+       tahdiurnal = (ahdiurnal(tloc)*(3600.0_RP-dsec)+ahdiurnal(tloc+1)*dsec)/3600.0_RP
+     endif
+     AH_t  = AH  * tahdiurnal
+     ALH_t = ALH * tahdiurnal
+    ! AH_t  = AH  * ahdiurnal(tloc)
+    ! ALH_t = ALH * ahdiurnal(tloc)
+
 
     if( ZDC+Z0C+2.0_RP >= ZA) then
       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
@@ -467,8 +487,6 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    !print *,VFGS, VFGW, VFWG, VFWS, VFWW
-
     !--- Convert unit from MKS to cgs
 
     SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
@@ -484,6 +502,7 @@ contains
     TGP = TG
     TCP = TC
     QCP = QC
+    TSP = TS
 
     !--- calculate canopy wind
 
@@ -567,11 +586,6 @@ contains
       TRP      = TR
 
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
-      ! if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) then
-      !    print *,'roof iteration',iteration
-      !    print *,'roof     ',TR,SR,RR,-1.*HR,-1.*ELER,-1.*G0R
-      !   exit
-      ! endif
 
     end do
 
@@ -597,17 +611,13 @@ contains
     CHB = ALPHAB / RHO / CP / UC
     CHG = ALPHAG / RHO / CP / UC
 
-    ! print *,'CH   ',CHR,CHC,CHB,CHG
-    ! print *,'ALPHA',ALPHAR,ALPHAC,ALPHAB,ALPHAG
-    ! print *,'TA,TC',TA,TC
     !   BETB=0.0
     !   IF(RAIN > 1.) BETG=0.7
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
-
-    ! TBP = 350.0_RP ! Adachi
-    ! TGP = 350.0_RP ! Adachi
+    ! TBP = 350.0_RP
+    ! TGP = 350.0_RP
 
     do iteration = 1, 20
 
@@ -724,17 +734,6 @@ contains
           abs(DTG) < 0.000001_RP .and. &
           abs(DTC) < 0.000001_RP       ) exit
 
-      ! if( abs(F)   < 0.000001_RP .and. &
-      !    abs(DTB) < 0.000001_RP .and. &
-      !    abs(GF)  < 0.000001_RP .and. &
-      !    abs(DTG) < 0.000001_RP .and. &
-      !    abs(DTC) < 0.000001_RP       ) then
-      !    print *,'building/ground iteration',iteration
-      !    print *,'building ',TB,SB,RB,-1.*HB,-1.*ELEB,-1.*G0B
-      !    print *,'ground   ',TG,SG,RG,-1.*HG,-1.*ELEG,-1.*G0G
-      !    exit
-      ! endif
-
     end do
 
     FLXTHB  = HB / RHO / CP / 100.0_RP
@@ -747,8 +746,10 @@ contains
     !-----------------------------------------------------------
 
     FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
-    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH_t/RHOO/CPdry
-    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG ) + ALH_t/RHOO/LH0
+!    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH_t/RHOO/CPdry
+!    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG ) + ALH_t/RHOO/LH0
+    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG )
+    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
     FLXG   = ( R*G0R + W*G0B + RW*G0G )
     LNET   = R*RR + W*RB + RW*RG
 
@@ -758,8 +759,8 @@ contains
 
     SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
     LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-    !LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
-    !SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
+    LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
+    SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
 
     G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
@@ -767,6 +768,39 @@ contains
     UST = sqrt( FLXUV )                      ! u* [m/s]
     TST = -FLXTH / UST                       ! T* [K]
     QST = -FLXHUM / UST                      ! q* [-]
+
+    !-----------------------------------------------------------
+    !  diagnostic GRID AVERAGED TS from heat flux
+    !-----------------------------------------------------------
+
+    Z    = ZA - ZDC
+    BHC  = LOG(Z0C/Z0HC) / 0.4_RP
+    RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
+
+    call mos(XXX,ALPHAC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHO)
+    CHU = (ALPHAC / CP / RHO) * (CPdry * RHOO)  ! [cgs -> MKS]
+    TS = TA + SH / CHU    ! surface potential temp (flux temp)
+
+!    CH = ALPHAC / RHO / CP / UA
+!    print *,'total    ',TS, CH,SH/CPdry/RHOO*CP*RHO*100.,(SH/CPdry/RHOO*CP*RHO*100.)/RHO/CP/CH/UA/100.0_RP,TA
+!    print *,'roof     ',TR,CHR,HR,HR/RHO/CP/CHR/UA/100.0_RP,TA
+!    print *,'building ',TB,CHB,HB,HB/RHO/CP/CHB/UC/100.0_RP,TC
+!    print *,'ground   ',TG,CHG,HG,HG/RHO/CP/CHG/UC/100.0_RP,TC
+
+    !-----------------------------------------------------------
+    !  diagnostic GRID AVERAGED TS from upward logwave
+    !-----------------------------------------------------------
+
+    RTS = ( LW / STB / 0.90_RP )**0.25
+
+    !-----------------------------------------------------------
+    ! add anthropogenic heat fluxes
+    !-----------------------------------------------------------
+
+    FLXTH  = FLXTH + AH_t/RHOO/CPdry
+    FLXHUM = FLXHUM + ALH_t/RHOO/LH0
+    SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
+    LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
 
     !-----------------------------------------------------------
     !  calculate temperature in building/road
@@ -778,36 +812,30 @@ contains
     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
 
-    !-----------------------------------------------------------
-    !  diagnostic GRID AVERAGED TS
-    !-----------------------------------------------------------
-
-    Z0  = Z0C
-    Z0H = Z0HC
-    Z   = ZA - ZDC
-
-    XXX = KARMAN * GRAV * Z * TST / TA / UST / UST ! M-O theory (z/L)
-
-    if( XXX >=  1.0_RP ) XXX =  1.0_RP
-    if( XXX <= -5.0_RP ) XXX = -5.0_RP
-
-    if( XXX > 0.0_RP ) then
-      PSIM = -5.0_RP * XXX
-      PSIH = -5.0_RP * XXX
-    else
-      X    = ( 1.0_RP - 16.0_RP * XXX )**0.25_RP
-      PSIM = 2.0_RP * log((1.0_RP+X)/2.0_RP) + log((1.0_RP+X*X)/2.0_RP) - 2.0_RP*atan(X) + PI/2.0_RP
-      PSIH = 2.0_RP * log((1.0_RP+X*X)/2.0_RP)
-    end if
-
-    CD = KARMAN**2.0_RP / ( LOG(Z/Z0) - PSIM )**2
-
-    CH = 0.4_RP**2 / ( LOG(Z/Z0) - PSIM ) / ( LOG(Z/Z0H) - PSIH )
-    TS = TA + FLXTH / CH / UA ! surface potential temp (flux temp)
-
-    !m   CHS = 0.4*UST/(LOG(Z/Z0H)-PSIH)
-    !m   QS = QA + FLXHUM/CH/UA   ! surface humidity
-    !
+!-----
+!    Z0  = Z0C
+!    Z0H = Z0HC
+!    Z   = ZA - ZDC
+!
+!    XXX = KARMAN * GRAV * Z * TST / TA / UST / UST ! M-O theory (z/L)
+!
+!    if( XXX >=  1.0_RP ) XXX =  1.0_RP
+!    if( XXX <= -5.0_RP ) XXX = -5.0_RP
+!
+!    if( XXX > 0.0_RP ) then
+!      PSIM = -5.0_RP * XXX
+!      PSIH = -5.0_RP * XXX
+!    else
+!      X    = ( 1.0_RP - 16.0_RP * XXX )**0.25_RP
+!      PSIM = 2.0_RP * log((1.0_RP+X)/2.0_RP) + log((1.0_RP+X*X)/2.0_RP) - 2.0_RP*atan(X) + PI/2.0_RP
+!      PSIH = 2.0_RP * log((1.0_RP+X*X)/2.0_RP)
+!    end if
+!
+!    CD = KARMAN**2.0_RP / ( LOG(Z/Z0) - PSIM )**2
+!
+!    CH = 0.4_RP**2 / ( LOG(Z/Z0) - PSIM ) / ( LOG(Z/Z0H) - PSIH )
+!    TS = TA + FLXTH / CH / UA   ! surface potential temp (flux temp)
+!
     !   TS = TA + FLXTH/CHS    ! surface potential temp (flux temp)
     !   QS = QA + FLXHUM/CHS   ! surface humidity
     !   TS = (LW/STB/0.88)**0.25       ! Radiative temperature [K]
@@ -1048,8 +1076,6 @@ contains
     ! R:  Normalized Roof Width (a.k.a. "building coverage ratio")
     R    = ROOF_WIDTH / ( ROAD_WIDTH + ROOF_WIDTH )
     RW   = 1.0_RP - R
-
-    !print *,'HGT, R, RW',HGT,R,RW  ! adachi
 
     ! Calculate Sky View Factor:
     DHGT = HGT / 100.0_RP
