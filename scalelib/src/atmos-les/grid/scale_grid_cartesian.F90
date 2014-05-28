@@ -31,6 +31,7 @@ module scale_grid
   !++ Public procedure
   !
   public :: GRID_setup
+  public :: GRID_allocate
   public :: GRID_generate
 
   !-----------------------------------------------------------------------------
