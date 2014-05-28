@@ -56,33 +56,33 @@ module scale_atmos_phy_rd_profile
   !
   !++ Private parameters & variables
   !
-  real(RP),              private, save :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
-  logical,               private, save :: PROFILE_use_climatology = .true.    !< use climatology?
-  character(len=H_LONG), private, save :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
-  character(len=H_LONG), private, save :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
-  character(len=H_LONG), private, save :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
-  logical,               private, save :: debug                   = .false.   !< debug mode?
+  real(RP),              private :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
+  logical,               private :: PROFILE_use_climatology = .true.    !< use climatology?
+  character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
+  character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
+  character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
+  logical,               private :: debug                   = .false.   !< debug mode?
 
-  integer,  private,              save :: CIRA_ntime
-  integer,  private,              save :: CIRA_nplev
-  integer,  private,              save :: CIRA_nlat
-  real(RP), private, allocatable, save :: CIRA_nd  (:)     ! [day]
-  real(RP), private, allocatable, save :: CIRA_plog(:)     ! log([hPa])
-  real(RP), private, allocatable, save :: CIRA_lat (:)     ! [rad]
-  real(RP), private, allocatable, save :: CIRA_temp(:,:,:) ! [K]
-  real(RP), private, allocatable, save :: CIRA_z   (:,:,:) ! [km]
+  integer,  private              :: CIRA_ntime
+  integer,  private              :: CIRA_nplev
+  integer,  private              :: CIRA_nlat
+  real(RP), private, allocatable :: CIRA_nd  (:)     ! [day]
+  real(RP), private, allocatable :: CIRA_plog(:)     ! log([hPa])
+  real(RP), private, allocatable :: CIRA_lat (:)     ! [rad]
+  real(RP), private, allocatable :: CIRA_temp(:,:,:) ! [K]
+  real(RP), private, allocatable :: CIRA_z   (:,:,:) ! [km]
 
-  real(RP), private, allocatable, save :: interp_temp(:)   ! [K]
-  real(RP), private, allocatable, save :: interp_z   (:)   ! [km]
+  real(RP), private, allocatable :: interp_temp(:)   ! [K]
+  real(RP), private, allocatable :: interp_z   (:)   ! [km]
 
   integer,  private, parameter :: MIPAS_kmax  = 121
   integer,  private, parameter :: MIPAS_ntime = 2
-  real(RP), private, save      :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
-  real(RP), private, save      :: MIPAS_lat (5)               ! [rad]
-  real(RP), private, save      :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
-  real(RP), private, save      :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
-  real(RP), private, save      :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
-  real(RP), private, save      :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
+  real(RP), private            :: MIPAS_nd  (0:MIPAS_ntime+1) ! [day]
+  real(RP), private            :: MIPAS_lat (5)               ! [rad]
+  real(RP), private            :: MIPAS_z   (MIPAS_kmax,4)    ! [km]
+  real(RP), private            :: MIPAS_pres(MIPAS_kmax,4)    ! (not used) [hPa]
+  real(RP), private            :: MIPAS_temp(MIPAS_kmax,4)    ! (not used) [K]
+  real(RP), private            :: MIPAS_gas (MIPAS_kmax,30,4) ! [ppmv]
 
   integer,  private, parameter :: I_tropic   =  1
   integer,  private, parameter :: I_midlat   =  2

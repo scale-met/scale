@@ -51,9 +51,9 @@ module scale_atmos_phy_tb_dns
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: ATMOS_PHY_TB_DNS_NU = 1.512E-5_RP ! [m2/s] kinematic viscosity coefficient for air at 20degC
-! real(RP), private, save :: mu = 1.8E-5_RP   ! [m2/s] molecular diffusive coefficient for air at 20degC
-  real(RP), private, save :: ATMOS_PHY_TB_DNS_MU = 1.512E-5_RP ! same as NU (needed based on hyposes. see Mellado 2010)
+  real(RP), private :: ATMOS_PHY_TB_DNS_NU = 1.512E-5_RP ! [m2/s] kinematic viscosity coefficient for air at 20degC
+! real(RP), private :: mu = 1.8E-5_RP   ! [m2/s] molecular diffusive coefficient for air at 20degC
+  real(RP), private :: ATMOS_PHY_TB_DNS_MU = 1.512E-5_RP ! same as NU (needed based on hyposes. see Mellado 2010)
 
   !-----------------------------------------------------------------------------
 contains
@@ -66,7 +66,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TYPE_TB
+    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

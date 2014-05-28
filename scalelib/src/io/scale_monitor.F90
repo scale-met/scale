@@ -34,6 +34,16 @@ module scale_monitor
   public :: MONIT_write
   public :: MONIT_finalize
 
+  interface MONIT_in
+     module procedure MONIT_in_2D
+     module procedure MONIT_in_3D
+  end interface MONIT_in
+
+  interface MONIT_put
+     module procedure MONIT_put_2D
+     module procedure MONIT_put_3D
+  end interface MONIT_put
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -65,8 +75,9 @@ module scale_monitor
   character(len=H_SHORT), allocatable :: MONIT_ktype(:)     !< vertical layer type of the item
   integer,                allocatable :: MONIT_kmax (:)     !< # of vertical grid  of the item
   real(RP),               allocatable :: MONIT_var  (:)     !< value               of the item
-  logical,                allocatable :: MONIT_first(:)     !< first time?         of the item
   real(RP),               allocatable :: MONIT_var0 (:)     !< value at first time of the item
+  logical,                allocatable :: MONIT_first(:)     !< first time?         of the item
+  logical,                allocatable :: MONIT_flux (:)     !< integrate value?    of the item
 
   real(RP), parameter :: eps = 1.E-10_RP !< epsilon for timesec
 
@@ -124,6 +135,7 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item: ', MONIT_req_nmax
        if( IO_L ) write(IO_FID_LOG,*) '*** Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use deviation from first step?  : ', MONITOR_USEDEVATION
     endif
 
     allocate( MONIT_item (MONIT_req_nmax) )
@@ -134,6 +146,7 @@ contains
     allocate( MONIT_var  (MONIT_req_nmax) )
     allocate( MONIT_var0 (MONIT_req_nmax) )
     allocate( MONIT_first(MONIT_req_nmax) )
+    allocate( MONIT_flux (MONIT_req_nmax) )
 
     rewind(IO_FID_CONF)
     do n = 1, MONIT_req_nmax
@@ -156,7 +169,8 @@ contains
       item,   &
       desc,   &
       unit,   &
-      ndim    )
+      ndim,   &
+      isflux  )
     implicit none
 
     integer,          intent(out) :: itemid !< index number of the item
@@ -164,6 +178,7 @@ contains
     character(len=*), intent(in)  :: desc   !< description  of the item
     character(len=*), intent(in)  :: unit   !< unit         of the item
     integer,          intent(in)  :: ndim   !< dimension    of the item
+    logical,          intent(in)  :: isflux !< need to integrate value?
 
     character(len=8) :: lname
 
@@ -202,13 +217,15 @@ contains
              MONIT_var  (itemid) = 0.0_RP
              MONIT_var0 (itemid) = 0.0_RP
              MONIT_first(itemid) = .true.
+             MONIT_flux (itemid) = isflux
 
              if( IO_L ) write(IO_FID_LOG,*) ' *** [MONIT] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Name           : ', trim(MONIT_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Description    : ', trim(MONIT_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Unit           : ', trim(MONIT_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Vert. type     : ', trim(MONIT_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] # of layer     : ', MONIT_kmax(itemid)
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Name            : ', trim(MONIT_item (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Description     : ', trim(MONIT_desc (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Unit            : ', trim(MONIT_unit (itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Vert. type      : ', trim(MONIT_ktype(itemid))
+             if( IO_L ) write(IO_FID_LOG,*) ' ] # of layer      : ', MONIT_kmax      (itemid)
+             if( IO_L ) write(IO_FID_LOG,*) ' ] Integ. with dt? : ', MONIT_flux      (itemid)
           endif
        enddo
     endif
@@ -218,9 +235,56 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put total value to the monitor buffer
-  subroutine MONIT_put( &
+  subroutine MONIT_put_2D( &
       itemid, &
       var     )
+    use scale_time, only: &
+       dt => TIME_DTSEC
+    use scale_stats, only: &
+       STAT_total
+    implicit none
+
+    integer,  intent(in) :: itemid     !< index number of the item
+    real(RP), intent(in) :: var(:,:)   !< value
+
+    real(RP) :: total
+    !---------------------------------------------------------------------------
+
+    if( itemid <= 0 ) return
+
+    call STAT_total( total, var(:,:), MONIT_item(itemid) )
+
+    if ( MONIT_flux(itemid) ) then
+       if ( MONIT_first(itemid) ) then
+          MONIT_var  (itemid) = total * dt ! first put
+          MONIT_first(itemid) = .false.
+       else
+          MONIT_var  (itemid) = MONIT_var(itemid) + total * dt ! integrate by last put
+       endif
+    else
+       if ( MONITOR_USEDEVATION ) then
+          if ( MONIT_first(itemid) ) then
+             MONIT_var  (itemid) = 0.0_RP
+             MONIT_var0 (itemid) = total
+             MONIT_first(itemid) = .false.
+          else
+             MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+          endif
+       else
+          MONIT_var(itemid) = total ! overwrite by last put
+       endif
+    endif
+
+    return
+  end subroutine MONIT_put_2D
+
+  !-----------------------------------------------------------------------------
+  !> Put total value to the monitor buffer
+  subroutine MONIT_put_3D( &
+      itemid, &
+      var     )
+    use scale_time, only: &
+       dt => TIME_DTSEC
     use scale_stats, only: &
        STAT_total
     implicit none
@@ -235,31 +299,66 @@ contains
 
     call STAT_total( total, var(:,:,:), MONIT_item(itemid) )
 
-    MONIT_var(itemid) = total ! overwrite by last put
-
-    if ( MONITOR_USEDEVATION ) then
+    if ( MONIT_flux(itemid) ) then
        if ( MONIT_first(itemid) ) then
-          MONIT_var  (itemid) = 0.0_RP
-          MONIT_var0 (itemid) = total
+          MONIT_var  (itemid) = total * dt ! first put
           MONIT_first(itemid) = .false.
        else
-          MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+          MONIT_var  (itemid) = MONIT_var(itemid) + total * dt ! integrate by last put
        endif
     else
-       MONIT_var(itemid) = total ! overwrite by last put
+       if ( MONITOR_USEDEVATION ) then
+          if ( MONIT_first(itemid) ) then
+             MONIT_var  (itemid) = 0.0_RP
+             MONIT_var0 (itemid) = total
+             MONIT_first(itemid) = .false.
+          else
+             MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+          endif
+       else
+          MONIT_var(itemid) = total ! overwrite by last put
+       endif
     endif
 
     return
-  end subroutine MONIT_put
+  end subroutine MONIT_put_3D
 
   !-----------------------------------------------------------------------------
   !> Wrapper routine of MONIT_reg+MONIT_put
-  subroutine MONIT_in( &
-      var,  &
-      item, &
-      desc, &
-      unit, &
-      ndim  )
+  subroutine MONIT_in_2D( &
+      var,   &
+      item,  &
+      desc,  &
+      unit,  &
+      ndim,  &
+      isflux )
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:)   !< value
+    character(len=*), intent(in) :: item       !< name        of the item
+    character(len=*), intent(in) :: desc       !< description of the item
+    character(len=*), intent(in) :: unit       !< unit        of the item
+    integer,          intent(in) :: ndim       !< dimension   of the item
+    logical,          intent(in) :: isflux     !< need to integrate values?
+
+    integer :: itemid
+    !---------------------------------------------------------------------------
+
+    call MONIT_reg( itemid, item, desc, unit, ndim, isflux )
+    call MONIT_put( itemid, var(:,:) )
+
+    return
+  end subroutine MONIT_in_2D
+
+  !-----------------------------------------------------------------------------
+  !> Wrapper routine of MONIT_reg+MONIT_put
+  subroutine MONIT_in_3D( &
+      var,   &
+      item,  &
+      desc,  &
+      unit,  &
+      ndim,  &
+      isflux )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value
@@ -267,15 +366,16 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
     integer,          intent(in) :: ndim       !< dimension   of the item
+    logical,          intent(in) :: isflux     !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONIT_reg( itemid, item, desc, unit, ndim )
+    call MONIT_reg( itemid, item, desc, unit, ndim, isflux )
     call MONIT_put( itemid, var(:,:,:) )
 
     return
-  end subroutine MONIT_in
+  end subroutine MONIT_in_3D
 
   !-----------------------------------------------------------------------------
   !> Flush monitor buffer to formatted file

@@ -1,13 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module URBAN / Physics Urban Canopy Model (UCM)
+!> module Land admin
 !!
 !! @par Description
-!!          Urban physics module
+!!          Land submodel administrator
 !!
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-module mod_urban_phy_ucm
+module mod_land_admin
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -15,8 +15,6 @@ module mod_urban_phy_ucm
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,14 +22,19 @@ module mod_urban_phy_ucm
   !
   !++ Public procedure
   !
-  public :: URBAN_PHY_driver_setup
-  public :: URBAN_PHY_driver_first
-  public :: URBAN_PHY_driver_final
+  public :: LAND_ADMIN_setup
+  public :: LAND_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  logical,                public :: LAND_do   = .true. ! main switch for the model
+
+  character(len=H_SHORT), public :: LAND_TYPE = 'NONE'
+
+  logical,                public :: LAND_sw
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -44,60 +47,67 @@ module mod_urban_phy_ucm
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_PHY_driver_setup( URBAN_TYPE )
+  subroutine LAND_ADMIN_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=*), intent(in) :: URBAN_TYPE
-
-    logical :: dummy
-
-    NAMELIST / PARAM_URBAN_UCM / &
-       dummy
-
+    NAMELIST / PARAM_LAND / &
+       LAND_do,  &
+       LAND_TYPE
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[UCM]/Categ[URBAN]'
-
-    if ( URBAN_TYPE /= 'UCM' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN_TYPE is not UCM. Check!'
-       call PRC_MPIstop
-    endif
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[LAND] / Origin[SCALE-LES]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_URBAN_UCM,iostat=ierr)
-
+    read(IO_FID_CONF,nml=PARAM_LAND,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_UCM. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_URBAN_UCM)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND)
+
+    !-----< module component check >-----
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land model components ***'
+
+    if ( LAND_do ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model : ON'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model : OFF'
+    endif
+
+    if ( LAND_TYPE /= 'OFF' .AND. LAND_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Land  physics : ON, ', trim(LAND_TYPE)
+       LAND_sw = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Land  physics : OFF'
+       LAND_sw = .false.
+    endif
 
     return
-  end subroutine URBAN_PHY_driver_setup
+  end subroutine LAND_ADMIN_setup
 
   !-----------------------------------------------------------------------------
-  !> Physical processes for urban submodel
-  subroutine URBAN_PHY_driver_first
+  !> Get name of scheme for each component
+  subroutine LAND_ADMIN_getscheme( &
+       scheme_name     )
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
+
+    character(len=H_SHORT), intent(out) :: scheme_name
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban step: UCM'
+    scheme_name = LAND_TYPE
 
     return
-  end subroutine URBAN_PHY_driver_first
+  end subroutine LAND_ADMIN_getscheme
 
-  subroutine URBAN_PHY_driver_final
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine URBAN_PHY_driver_final
-
-end module mod_urban_phy_ucm
+end module mod_land_admin

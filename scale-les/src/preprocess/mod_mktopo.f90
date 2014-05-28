@@ -43,7 +43,7 @@ module mod_mktopo
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: MKTOPO_TYPE = -1
+  integer, public            :: MKTOPO_TYPE = -1
   integer, public, parameter :: I_IGNORE    =  0
   integer, public, parameter :: I_BELLSHAPE =  1
   integer, public, parameter :: I_SCHAER    =  2

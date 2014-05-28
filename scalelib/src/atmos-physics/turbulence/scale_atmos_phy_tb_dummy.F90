@@ -55,7 +55,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TYPE_TB
+    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

@@ -36,8 +36,8 @@ module scale_landuse
   real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
 
-  integer,  public, save        :: LANDUSE_PFT_mosaic = 2   !< number of PFT mosaic
-  integer,  public, save        :: LANDUSE_PFT_nmax   = 4   !< number of plant functional type(PFT)
+  integer,  public              :: LANDUSE_PFT_mosaic = 2   !< number of PFT mosaic
+  integer,  public              :: LANDUSE_PFT_nmax   = 4   !< number of plant functional type(PFT)
 
   real(RP), public, allocatable :: LANDUSE_frac_PFT (:,:,:) !< fraction of PFT for each mosaic
   integer,  public, allocatable :: LANDUSE_index_PFT(:,:,:) !< index    of PFT for each mosaic
@@ -81,7 +81,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LANDUSE]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[LANDUSE] / Categ[COUPLER] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -92,7 +92,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LANDUSE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LANDUSE)
 
     allocate( LANDUSE_frac_ocean(IA,JA) )
     allocate( LANDUSE_frac_land (IA,JA) )

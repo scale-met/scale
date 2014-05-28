@@ -44,14 +44,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine URBAN_driver_setup
-    use mod_urban_vars, only: &
-       sw_phy => URBAN_sw_phy
+    use mod_urban_admin, only: &
+       URBAN_TYPE, &
+       URBAN_sw
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( sw_phy ) call URBAN_PHY_driver_setup
+    if( URBAN_sw ) call URBAN_PHY_driver_setup( URBAN_TYPE )
 
     return
   end subroutine URBAN_driver_setup
@@ -59,8 +60,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Urban step
   subroutine URBAN_driver
+    use mod_urban_admin, only: &
+       URBAN_sw
     use mod_urban_vars, only: &
-       sw_phy => URBAN_sw_phy, &
        URBAN_vars_history
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_first, &
@@ -69,14 +71,14 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Physics First ##########
-    if ( sw_phy ) then
+    if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics')
       call URBAN_PHY_driver_first
       call PROF_rapend  ('URB Physics')
     endif
 
     !########## Physics Final ##########
-    if ( sw_phy ) then
+    if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics')
       call URBAN_PHY_driver_final
       call PROF_rapend  ('URB Physics')

@@ -41,7 +41,7 @@ module scale_atmos_solarins
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: ATMOS_SOLARINS_constant = 1360.250117_RP ! Solar constant [W/m2]
+  real(RP), public :: ATMOS_SOLARINS_constant = 1360.250117_RP ! Solar constant [W/m2]
 
   !-----------------------------------------------------------------------------
   !
@@ -51,13 +51,13 @@ module scale_atmos_solarins
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: obliquity ! obliquity [rad]
-  real(RP), private, save :: E         ! eccentricity
-  real(RP), private, save :: omega     ! longitude of perigee [rad]
-  real(RP), private, save :: lambda_m0 ! longitude at the vernal equinox [rad]
+  real(RP), private :: obliquity ! obliquity [rad]
+  real(RP), private :: E         ! eccentricity
+  real(RP), private :: omega     ! longitude of perigee [rad]
+  real(RP), private :: lambda_m0 ! longitude at the vernal equinox [rad]
 
   integer,  private, parameter :: year_ref = 1950              ! reference year [year]
-  integer,  private, save      :: ve_date(6)                   ! reference date of vernal equinox
+  integer,  private            :: ve_date(6)                   ! reference date of vernal equinox
   data ve_date / 1950, 3, 21, 0, 0, 0 /
 
   real(RP), private, parameter :: obliquity_ref = 23.320556_RP ! initial condition of obliquity (epsilon_star)
@@ -66,9 +66,9 @@ module scale_atmos_solarins
 
   !-----< Parameter tables from Berger(1978b) >-----
   integer,  private, parameter :: nObliq = 47         ! # of terms of the series expansion of epsilon
-  real(RP), private, save      :: Obliq_amp  (nObliq) ! amplitude [second of arc]
-  real(RP), private, save      :: Obliq_rate (nObliq) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Obliq_phase(nObliq) ! phase     [degree of arc]
+  real(RP), private            :: Obliq_amp  (nObliq) ! amplitude [second of arc]
+  real(RP), private            :: Obliq_rate (nObliq) ! mean rate [second of arc/year]
+  real(RP), private            :: Obliq_phase(nObliq) ! phase     [degree of arc]
 
   data Obliq_amp / &
         -2462.2214466_RP, & !  1
@@ -218,9 +218,9 @@ module scale_atmos_solarins
          82.6496_RP  / ! 47
 
   integer,  private, parameter :: nEclip = 19         ! # of terms of the series expansion of ecliptic
-  real(RP), private, save      :: Eclip_amp  (nEclip) ! amplitude
-  real(RP), private, save      :: Eclip_rate (nEclip) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Eclip_phase(nEclip) ! phase     [degree of arc]
+  real(RP), private            :: Eclip_amp  (nEclip) ! amplitude
+  real(RP), private            :: Eclip_rate (nEclip) ! mean rate [second of arc/year]
+  real(RP), private            :: Eclip_phase(nEclip) ! phase     [degree of arc]
 
   data Eclip_amp / &
          0.01860798_RP, & !  1
@@ -286,9 +286,9 @@ module scale_atmos_solarins
          72.108838_RP  / ! 19
 
   integer,  private, parameter :: nPrece = 78         ! # of terms of the series expansion of general precession
-  real(RP), private, save      :: Prece_amp  (nPrece) ! amplitude
-  real(RP), private, save      :: Prece_rate (nPrece) ! mean rate [second of arc/year]
-  real(RP), private, save      :: Prece_phase(nPrece) ! phase     [degree of arc]
+  real(RP), private            :: Prece_amp  (nPrece) ! amplitude
+  real(RP), private            :: Prece_rate (nPrece) ! mean rate [second of arc/year]
+  real(RP), private            :: Prece_phase(nPrece) ! phase     [degree of arc]
 
   data Prece_amp / &
          7391.0225890_RP, & !  1
@@ -530,7 +530,7 @@ module scale_atmos_solarins
         332.3345_RP, & ! 77
          27.3039_RP  / ! 78
 
-  real(RP), private, save :: arcsec2d, arcsec2r ! unit converter
+  real(RP), private :: arcsec2d, arcsec2r ! unit converter
 
   !-----------------------------------------------------------------------------
 contains

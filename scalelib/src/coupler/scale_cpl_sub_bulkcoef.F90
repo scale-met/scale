@@ -86,15 +86,15 @@ module scale_cpl_bulkcoef
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private, save :: bulkcoef_TYPE = 'BH91'
+  character(len=H_SHORT), private :: bulkcoef_TYPE = 'BH91'
 
   ! limiter
-  real(RP), private, save :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
-  real(RP), private, save :: Ch_min = 1.0E-8_RP !                       T
-  real(RP), private, save :: Ce_min = 1.0E-8_RP !                       q
-  real(RP), private, save :: Cm_max = 1.0_RP    ! maximum bulk coef. of u,v,w
-  real(RP), private, save :: Ch_max = 1.0_RP    !                       T
-  real(RP), private, save :: Ce_max = 1.0_RP    !                       q
+  real(RP), private :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
+  real(RP), private :: Ch_min = 1.0E-8_RP !                       T
+  real(RP), private :: Ce_min = 1.0E-8_RP !                       q
+  real(RP), private :: Cm_max = 1.0_RP    ! maximum bulk coef. of u,v,w
+  real(RP), private :: Ch_max = 1.0_RP    !                       T
+  real(RP), private :: Ce_max = 1.0_RP    !                       q
 
 contains
 
@@ -448,7 +448,7 @@ contains
 
     ! function
     real(RP) :: fmUS
-    
+
     ! Paulson (1974); Dyer (1974)
     fmUS = log( ( 1.0_RP + ( 1.0_RP - 16.0_RP * R )**0.25_RP )**2 * ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.125_RP ) &
          - 2.0_RP * atan( ( 1.0_RP - 16.0_RP * R )**0.25_RP ) + PI * 0.5_RP
@@ -465,7 +465,7 @@ contains
 
     ! function
     real(RP) :: fhUS
-    
+
     ! Paulson (1974); Dyer (1974)
     fhUS = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
 
@@ -481,7 +481,7 @@ contains
 
     ! function
     real(RP) :: fmS
-    
+
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(RP), parameter :: a = 1.0_RP
     real(RP), parameter :: b = 0.667_RP
@@ -503,7 +503,7 @@ contains
 
     ! function
     real(RP) :: fhS
-    
+
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(RP), parameter :: a = 1.0_RP
     real(RP), parameter :: b = 0.667_RP
@@ -511,7 +511,7 @@ contains
     real(RP), parameter :: d = 0.35_RP
 
     ! Beljaars and Holtslag (1991)
-    fhS = 1.0_RP - ( 1.0_RP + 2.0_RP/3.0_RP * a*R )**1.5_RP - b*( R - c/d )*exp( -d*R ) - b*c/d 
+    fhS = 1.0_RP - ( 1.0_RP + 2.0_RP/3.0_RP * a*R )**1.5_RP - b*( R - c/d )*exp( -d*R ) - b*c/d
 
     return
   end function fhS

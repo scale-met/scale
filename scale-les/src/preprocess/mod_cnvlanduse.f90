@@ -31,7 +31,7 @@ module mod_cnvlanduse
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: CNVLANDUSE_TYPE = -1
+  integer, public            :: CNVLANDUSE_TYPE = -1
 
   integer, public, parameter :: I_IGNORE     =  0
   integer, public, parameter :: I_USGS       =  1

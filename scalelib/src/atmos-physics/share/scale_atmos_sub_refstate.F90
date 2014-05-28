@@ -39,7 +39,7 @@ module scale_atmos_refstate
   !
   !++ Public parameters & variables
   !
-  logical,  public, save :: ATMOS_REFSTATE_UPDATE_FLAG = .false.
+  logical,  public :: ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
   real(RP), public, allocatable :: ATMOS_REFSTATE_pres(:,:,:) !< refernce pressure [Pa]
   real(RP), public, allocatable :: ATMOS_REFSTATE_temp(:,:,:) !< refernce temperature [K]
@@ -59,24 +59,24 @@ module scale_atmos_refstate
   !
   !++ Private parameters & variables
   !
+  character(len=H_LONG),  private :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
+  character(len=H_LONG),  private :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
+  character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-LES Refstate' !< title    of the output file
+  character(len=H_MID) ,  private :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
+
+  character(len=H_SHORT), private :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type
+  real(RP),               private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
+  real(RP),               private :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
+  real(RP),               private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
+  real(DP),               private :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
+
+  real(DP),               private :: last_updated
+
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_pres(:) !< 1D refernce pressure [Pa]
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_temp(:) !< 1D refernce temperature [K]
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_dens(:) !< 1D refernce density [kg/m3]
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_pott(:) !< 1D refernce potential temperature [K]
   real(RP), private, allocatable :: ATMOS_REFSTATE1D_qv  (:) !< 1D refernce vapor [kg/kg]
-
-  character(len=H_LONG),  private, save :: ATMOS_REFSTATE_IN_BASENAME  = ''                   !< basename of the input  file
-  character(len=H_LONG),  private, save :: ATMOS_REFSTATE_OUT_BASENAME = ''                   !< basename of the output file
-  character(len=H_MID) ,  private, save :: ATMOS_REFSTATE_OUT_TITLE    = 'SCALE-LES Refstate' !< title    of the output file
-  character(len=H_MID) ,  private, save :: ATMOS_REFSTATE_OUT_DTYPE    = 'DEFAULT'            !< REAL4 or REAL8
-
-  character(len=H_SHORT), private, save :: ATMOS_REFSTATE_TYPE         = 'UNIFORM'            !< profile type
-  real(RP),               private, save :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
-  real(RP),               private, save :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
-  real(RP),               private, save :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
-  real(DP),               private, save :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
-
-  real(DP),               private, save :: last_updated
 
   !-----------------------------------------------------------------------------
 contains

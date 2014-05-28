@@ -382,7 +382,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
 
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+    character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        doautoconversion, &

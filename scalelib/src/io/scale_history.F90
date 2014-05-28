@@ -116,18 +116,40 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
+       GRID_CZ,    &
+       GRID_CX,    &
+       GRID_CY,    &
+       GRID_FZ,    &
+       GRID_FX,    &
+       GRID_FY,    &
+       GRID_CDZ,   &
+       GRID_CDX,   &
+       GRID_CDY,   &
+       GRID_FDZ,   &
+       GRID_FDX,   &
+       GRID_FDY,   &
+       GRID_CBFZ,  &
+       GRID_CBFX,  &
+       GRID_CBFY,  &
+       GRID_FBFZ,  &
+       GRID_FBFX,  &
+       GRID_FBFY,  &
+       GRID_CXG,   &
+       GRID_CYG,   &
+       GRID_FXG,   &
+       GRID_FYG,   &
+       GRID_CBFXG, &
+       GRID_CBFYG, &
+       GRID_FBFXG, &
+       GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
-       GRID_LFZ
+       GRID_LFZ, &
+       GRID_LCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
-       GRID_UFZ
+       GRID_UFZ, &
+       GRID_UCDZ
     use scale_grid_real, only: &
        REAL_LON,  &
        REAL_LONX, &
@@ -159,11 +181,20 @@ contains
     call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX )
     call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY )
 
-    call HistoryPutAxis( 'LCZ', 'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ )
-    call HistoryPutAxis( 'LFZ', 'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ )
+    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ )
+    call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDX )
+    call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDY )
+    call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ )
+    call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDX )
+    call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDY )
 
-    call HistoryPutAxis( 'UCZ', 'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ )
-    call HistoryPutAxis( 'UFZ', 'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ )
+    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ  )
+    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ  )
+    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',     'm', 'LCZ', GRID_LCDZ )
+
+    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ  )
+    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ  )
+    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ )
 
     AXIS(1:IMAX,1:JMAX) = REAL_LON (IS:IE,JS:JE) / D2R
     AXIS_name = (/'x ','y '/)
@@ -188,6 +219,23 @@ contains
 
     call HistoryPutAssociatedCoordinates( 'lath', 'latitude (half level)' ,     &
                                           'degrees_north', AXIS_name, AXIS(:,:) )
+
+    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
+    call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
+    call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
+    call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
+    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
+
+    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
+    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
+    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
+    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
+
+    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
+    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
 
     return
   end subroutine HIST_put_axes

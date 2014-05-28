@@ -54,8 +54,14 @@ contains
        ATMOS_PHY_RD_TYPE, &
        ATMOS_sw_phy_rd
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
     implicit none
     !---------------------------------------------------------------------------
 
@@ -73,9 +79,15 @@ contains
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_RD is disabled.'
-       if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_LW_dn and SFLX_SW_dn is set to zero.'
-       SFLX_LW_dn(:,:) = 0.0_RP
-       SFLX_SW_dn(:,:) = 0.0_RP
+       if( IO_L ) write(IO_FID_LOG,*) '*** radiation fluxes are set to zero.'
+       SFLX_LW_up  (:,:) = 0.0_RP
+       SFLX_LW_dn  (:,:) = 0.0_RP
+       SFLX_SW_up  (:,:) = 0.0_RP
+       SFLX_SW_dn  (:,:) = 0.0_RP
+       TOAFLX_LW_up(:,:) = 0.0_RP
+       TOAFLX_LW_dn(:,:) = 0.0_RP
+       TOAFLX_SW_up(:,:) = 0.0_RP
+       TOAFLX_SW_dn(:,:) = 0.0_RP
 
     endif
 
@@ -117,11 +129,17 @@ contains
        RHOT_t => RHOT_tp
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP,  &
-       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo_land
+       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo
     use mod_atmos_phy_rd_vars, only: &
-       RHOT_t_RD  => ATMOS_PHY_RD_RHOT_t,     &
-       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+       RHOT_t_RD    => ATMOS_PHY_RD_RHOT_t,       &
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_cpl_vars, only: &
        sw_CPL => CPL_sw_ALL, &
        CPL_getATM_RD
@@ -184,8 +202,15 @@ contains
 
        do j = JS, JE
        do i = IS, IE
+          SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)
           SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
+          SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
           SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+
+          TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)
+          TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)
+          TOAFLX_SW_up(i,j) = flux_rad(KE,i,j,I_SW,I_up)
+          TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
        enddo
        enddo
 

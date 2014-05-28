@@ -124,7 +124,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmUrb
+    character(len=*), intent(in) :: CPL_TYPE_AtmUrb
     !---------------------------------------------------------------------------
 
     select case( CPL_TYPE_AtmUrb )

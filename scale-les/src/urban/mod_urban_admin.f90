@@ -1,17 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module USER
+!> module Urban admin
 !!
 !! @par Description
-!!          User defined module
+!!          Urban submodel administrator
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-module mod_user
+module mod_urban_admin
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -19,8 +15,6 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,13 +22,19 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup
-  public :: USER_step
+  public :: URBAN_ADMIN_setup
+  public :: URBAN_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  logical,                public :: URBAN_do   = .true. ! main switch for the model
+
+  character(len=H_SHORT), public :: URBAN_TYPE = 'NONE'
+
+  logical,                public :: URBAN_sw
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -43,56 +43,71 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private :: USER_do = .false. !< do user step?
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine USER_setup
+  subroutine URBAN_ADMIN_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    namelist / PARAM_USER / &
-       USER_do
-
+    NAMELIST / PARAM_URBAN / &
+       URBAN_do,  &
+       URBAN_TYPE
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[URBAN] / Origin[SCALE-LES]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
+    read(IO_FID_CONF,nml=PARAM_URBAN,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN)
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
+    !-----< module component check >-----
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Urban model components ***'
+
+    if ( URBAN_do ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model : ON'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model : OFF'
+    endif
+
+    if ( URBAN_TYPE /= 'OFF' .AND. URBAN_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Urban physics : ON, ', trim(URBAN_TYPE)
+       URBAN_sw = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Urban physics : OFF'
+       URBAN_sw = .false.
+    endif
 
     return
-  end subroutine USER_setup
+  end subroutine URBAN_ADMIN_setup
 
   !-----------------------------------------------------------------------------
-  !> User step
-  subroutine USER_step
+  !> Get name of scheme for each component
+  subroutine URBAN_ADMIN_getscheme( &
+       scheme_name     )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
+    character(len=H_SHORT), intent(out) :: scheme_name
     !---------------------------------------------------------------------------
 
-    if ( USER_do ) then
-       call PRC_MPIstop
-    endif
+    scheme_name = URBAN_TYPE
 
     return
-  end subroutine USER_step
+  end subroutine URBAN_ADMIN_getscheme
 
-end module mod_user
+end module mod_urban_admin

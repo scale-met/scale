@@ -39,7 +39,7 @@ module mod_convert
   !
   !++ Private parameters & variables
   !
-  integer, public, save      :: CONVERT_TYPE = -1
+  integer, public            :: CONVERT_TYPE = -1
   integer, public, parameter :: I_IGNORE     =  0
   integer, public, parameter :: I_CNVTOPO    =  1
   integer, public, parameter :: I_CNVLANDUSE =  2

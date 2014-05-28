@@ -40,20 +40,20 @@ module mod_ocean_phy_slab
   !
   !++ Private parameters & variables
   !
-  real(RP), private, save :: DZW    = 50.0_RP    !< water depth of slab ocean [m]
-  logical,  private, save :: FLG_CR = .false.    !< is the fixed change rate used?
-  real(RP), private, save :: CRATE  = 2.0E-5_RP  !< fixed change rate of water temperature [K/s]
+  real(RP), private :: DZW    = 50.0_RP    !< water depth of slab ocean [m]
+  logical,  private :: FLG_CR = .false.    !< is the fixed change rate used?
+  real(RP), private :: CRATE  = 2.0E-5_RP  !< fixed change rate of water temperature [K/s]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_PHY_driver_setup
+  subroutine OCEAN_PHY_driver_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use mod_ocean_vars, only: &
-       OCEAN_TYPE
     implicit none
+
+    character(len=*), intent(in) :: OCEAN_TYPE
 
     real(RP) :: OCEAN_SLAB_DEPTH
     logical  :: OCEAN_SLAB_FLG_CR

@@ -43,8 +43,8 @@ module mod_land_phy_bucket
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  logical, private, save :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
-  logical, private, save :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
+  logical, private :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
+  logical, private :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
 
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
@@ -52,12 +52,12 @@ module mod_land_phy_bucket
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_PHY_driver_setup
+  subroutine LAND_PHY_driver_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use mod_land_vars, only: &
-       LAND_TYPE
     implicit none
+
+    character(len=*), intent(in) :: LAND_TYPE
 
     NAMELIST / PARAM_LAND_BUCKET / &
        LAND_LKE_STRG_UPDATE, &

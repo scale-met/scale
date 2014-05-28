@@ -53,16 +53,18 @@ module mod_atmos_phy_ch_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: ATMOS_PHY_CH_RESTART_OUTPUT        = .false.
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_CH_RESTART_IN_BASENAME   = ''
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_CH_RESTART_OUT_BASENAME  = ''
-  character(len=H_MID),   private, save      :: ATMOS_PHY_CH_RESTART_OUT_TITLE     = 'ATMOS_PHY_CH restart'
-  character(len=H_MID),   private, save      :: ATMOS_PHY_CH_RESTART_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  logical,                private :: ATMOS_PHY_CH_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=H_LONG),  private :: ATMOS_PHY_CH_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG),  private :: ATMOS_PHY_CH_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_CH_RESTART_OUT_TITLE    = 'ATMOS_PHY_CH restart' !< title    of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_CH_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   integer,                private, parameter :: VMAX = 1       !< number of the variables
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private, parameter :: I_O3 = 1
+
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
   data VAR_NAME / 'O3' /
   data VAR_DESC / 'Ozone' /
@@ -75,18 +77,29 @@ contains
   subroutine ATMOS_PHY_CH_vars_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CH_VARS / &
-       ATMOS_PHY_CH_RESTART_IN_BASENAME, &
-       ATMOS_PHY_CH_RESTART_OUTPUT,      &
-       ATMOS_PHY_CH_RESTART_OUT_BASENAME
+       ATMOS_PHY_CH_RESTART_IN_BASENAME,  &
+       ATMOS_PHY_CH_RESTART_OUTPUT,       &
+       ATMOS_PHY_CH_RESTART_OUT_BASENAME, &
+       ATMOS_PHY_CH_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_CH_RESTART_OUT_DTYPE
 
     integer :: v, ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS_PHY_CH VARS]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS_PHY_CH] / Origin[SCALE-LES]'
+
+    allocate( ATMOS_PHY_CH_QTRC_t(KA,IA,JA,QA) )
+    ATMOS_PHY_CH_QTRC_t(:,:,:,:) = UNDEF
+
+    allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
+    ATMOS_PHY_CH_O3(:,:,:) = UNDEF
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_CH_VARS,iostat=ierr)
@@ -96,30 +109,30 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CH_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CH_VARS)
-
-    allocate( ATMOS_PHY_CH_QTRC_t(KA,IA,JA,QA) )
-
-    allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_CH_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_CH] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
     enddo
 
-    ! restart switch
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( ATMOS_PHY_CH_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_CH) : YES'
+    if ( ATMOS_PHY_CH_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_CH) : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
+    if (       ATMOS_PHY_CH_RESTART_OUTPUT             &
+         .AND. ATMOS_PHY_CH_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_CH_RESTART_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_PHY_CH_RESTART_OUTPUT = .false.
+    endif
 
     return
   end subroutine ATMOS_PHY_CH_vars_setup
@@ -153,27 +166,27 @@ contains
   subroutine ATMOS_PHY_CH_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
-    use scale_const, only: &
-       CONST_UNDEF
+    use scale_stats, only: &
+       STAT_total
     implicit none
+
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_CH) ***'
 
     if ( ATMOS_PHY_CH_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_CH_RESTART_IN_BASENAME)
 
        call FILEIO_read( ATMOS_PHY_CH_O3(:,:,:),                                      & ! [OUT]
                          ATMOS_PHY_CH_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
 
        call ATMOS_PHY_CH_vars_fillhalo
 
+       call STAT_total( total, ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1) )
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CH is not specified.'
-
-       ATMOS_PHY_CH_O3(:,:,:) = CONST_UNDEF
-
     endif
 
     return

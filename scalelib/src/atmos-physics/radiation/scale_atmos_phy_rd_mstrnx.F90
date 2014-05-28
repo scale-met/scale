@@ -61,37 +61,37 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private, parameter :: RD_cosSZA_min = 0.017_RP ! minimum SZA (>89.0)
   real(RP), private, parameter :: RD_EPS        = 1.E-4_RP ! minimum SZA (>89.0)
 
-  integer,  private, save :: RD_KADD = 0 !< RD_KMAX = KMAX + RD_KADD
+  integer,  private :: RD_KADD = 0 !< RD_KMAX = KMAX + RD_KADD
 
-  integer,  private, save :: RD_KMAX      ! # of computational cells: z for radiation scheme
-  integer,  private, save :: RD_naero     ! # of cloud/aerosol species
-  integer,  private, save :: RD_hydro_str ! start index for cloud
-  integer,  private, save :: RD_hydro_end ! end   index for cloud
-  integer,  private, save :: RD_aero_str  ! start index for aerosol
-  integer,  private, save :: RD_aero_end  ! end   index for aerosol
+  integer,  private :: RD_KMAX      ! # of computational cells: z for radiation scheme
+  integer,  private :: RD_naero     ! # of cloud/aerosol species
+  integer,  private :: RD_hydro_str ! start index for cloud
+  integer,  private :: RD_hydro_end ! end   index for cloud
+  integer,  private :: RD_aero_str  ! start index for aerosol
+  integer,  private :: RD_aero_end  ! end   index for aerosol
 
-  real(RP), private, allocatable, save :: RD_zh          (:)   ! altitude    at the interface [km]
-  real(RP), private, allocatable, save :: RD_z           (:)   ! altitude    at the center    [km]
-  real(RP), private, allocatable, save :: RD_rhodz       (:)   ! density * delta z            [kg/m2]
-  real(RP), private, allocatable, save :: RD_pres        (:)   ! pressure    at the center    [hPa]
-  real(RP), private, allocatable, save :: RD_presh       (:)   ! pressure    at the interface [hPa]
-  real(RP), private, allocatable, save :: RD_temp        (:)   ! temperature at the center    [K]
-  real(RP), private, allocatable, save :: RD_temph       (:)   ! temperature at the interface [K]
-  real(RP), private, allocatable, save :: RD_gas         (:,:) ! gas species   volume mixing ratio [ppmv]
-  real(RP), private, allocatable, save :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
-  real(RP), private, allocatable, save :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
-  real(RP), private, allocatable, save :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
-  real(RP), private, allocatable, save :: RD_cldfrac     (:)   ! cloud fraction    [0-1]
+  real(RP), private, allocatable :: RD_zh          (:)   ! altitude    at the interface [km]
+  real(RP), private, allocatable :: RD_z           (:)   ! altitude    at the center    [km]
+  real(RP), private, allocatable :: RD_rhodz       (:)   ! density * delta z            [kg/m2]
+  real(RP), private, allocatable :: RD_pres        (:)   ! pressure    at the center    [hPa]
+  real(RP), private, allocatable :: RD_presh       (:)   ! pressure    at the interface [hPa]
+  real(RP), private, allocatable :: RD_temp        (:)   ! temperature at the center    [K]
+  real(RP), private, allocatable :: RD_temph       (:)   ! temperature at the interface [K]
+  real(RP), private, allocatable :: RD_gas         (:,:) ! gas species   volume mixing ratio [ppmv]
+  real(RP), private, allocatable :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
+  real(RP), private, allocatable :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
+  real(RP), private, allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
+  real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    [0-1]
 
-  integer,  private, allocatable, save :: I_MPAE2RD      (:)   ! look-up table between input aerosol category and MSTRN particle type
+  integer,  private, allocatable :: I_MPAE2RD      (:)   ! look-up table between input aerosol category and MSTRN particle type
 
   character(len=H_LONG), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
   character(len=H_LONG), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
   character(len=H_LONG), private :: MSTRN_HYGROPARA_INPUTFILE = 'VARDATA.RM29' !< input file (hygroscopic parameter)
 
-  integer,  private, save      :: MSTRN_nband    = 29 !< # of wave bands
+  integer,  private            :: MSTRN_nband    = 29 !< # of wave bands
 
-  logical,  private, save      :: MSTRN_single   = .false. !< # single radiation
+  logical,  private            :: MSTRN_single   = .false. !< # single radiation
 
   integer,  private, parameter :: MSTRN_nstream  =  1 !< # of streams
   integer,  private, parameter :: MSTRN_ch_limit = 10 !< max # of subintervals
@@ -163,31 +163,31 @@ module scale_atmos_phy_rd_mstrnx
 
 
 
-  real(RP), private, allocatable, save :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
+  real(RP), private, allocatable :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
 
-  real(RP), private, allocatable, save :: logfitP (:)         ! fitting point for log10(pressure)
-  real(RP), private, allocatable, save :: fitT    (:)         ! fitting point for temperature
-  real(RP), private, allocatable, save :: logfitT (:)         ! fitting point for log10(temperature)
-  integer,  private, allocatable, save :: iflgb   (:,:)       ! optical properties flag   in each band
-  integer,  private, allocatable, save :: nch     (:)         ! number  of subintervals   in each band
-  real(RP), private, allocatable, save :: wgtch   (:,:)       ! weights of subintervals   in each band
-  integer,  private, allocatable, save :: ngasabs (:)         ! number  of absorbers(gas) in each band
-  integer,  private, allocatable, save :: igasabs (:,:)       ! index   of absorbers(gas) in each band
+  real(RP), private, allocatable :: logfitP (:)         ! fitting point for log10(pressure)
+  real(RP), private, allocatable :: fitT    (:)         ! fitting point for temperature
+  real(RP), private, allocatable :: logfitT (:)         ! fitting point for log10(temperature)
+  integer,  private, allocatable :: iflgb   (:,:)       ! optical properties flag   in each band
+  integer,  private, allocatable :: nch     (:)         ! number  of subintervals   in each band
+  real(RP), private, allocatable :: wgtch   (:,:)       ! weights of subintervals   in each band
+  integer,  private, allocatable :: ngasabs (:)         ! number  of absorbers(gas) in each band
+  integer,  private, allocatable :: igasabs (:,:)       ! index   of absorbers(gas) in each band
 
-  real(RP), private, allocatable, save :: akd     (:,:,:,:,:) ! absorption coefficient table
-  real(RP), private, allocatable, save :: skd     (:,:,:,:)   ! absorption coefficient table for H2O self broadening
-  real(RP), private, allocatable, save :: acfc    (:,:)       ! absorption coefficient table for CFC
+  real(RP), private, allocatable :: akd     (:,:,:,:,:) ! absorption coefficient table
+  real(RP), private, allocatable :: skd     (:,:,:,:)   ! absorption coefficient table for H2O self broadening
+  real(RP), private, allocatable :: acfc    (:,:)       ! absorption coefficient table for CFC
 
-  real(RP), private, allocatable, save :: fitPLK  (:,:)       ! fitting point for planck function
-  real(RP), private, allocatable, save :: fsol    (:)         ! solar insolation    in each band
-  real(RP), private,              save :: fsol_tot            ! total solar insolation
-  real(RP), private, allocatable, save :: sfc     (:,:)       ! surface condition   in each band
-  real(RP), private, allocatable, save :: rayleigh(:)         ! rayleigh scattering in each band
-  real(RP), private, allocatable, save :: qmol    (:,:)       ! moments for rayleigh scattering phase function
-  real(RP), private, allocatable, save :: q       (:,:,:,:)   ! moments for aerosol  scattering phase function
+  real(RP), private, allocatable :: fitPLK  (:,:)       ! fitting point for planck function
+  real(RP), private, allocatable :: fsol    (:)         ! solar insolation    in each band
+  real(RP), private              :: fsol_tot            ! total solar insolation
+  real(RP), private, allocatable :: sfc     (:,:)       ! surface condition   in each band
+  real(RP), private, allocatable :: rayleigh(:)         ! rayleigh scattering in each band
+  real(RP), private, allocatable :: qmol    (:,:)       ! moments for rayleigh scattering phase function
+  real(RP), private, allocatable :: q       (:,:,:,:)   ! moments for aerosol  scattering phase function
 
-  integer,  private, allocatable, save :: hygro_flag(:)       ! flag for hygroscopic enlargement
-  real(RP), private, allocatable, save :: radmode   (:,:)     ! radius mode for hygroscopic parameter
+  integer,  private, allocatable :: hygro_flag(:)       ! flag for hygroscopic enlargement
+  real(RP), private, allocatable :: radmode   (:,:)     ! radius mode for hygroscopic parameter
 
 
 
@@ -200,12 +200,12 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: I_Cloud    = 2
 
   ! pre-calc
-  real(RP), private, save :: RRHO_std         ! 1 / rho(0C,1atm) * 100 [cm*m2/kg]
+  real(RP), private :: RRHO_std         ! 1 / rho(0C,1atm) * 100 [cm*m2/kg]
 
-  real(RP), private, save :: M(2)             ! discrete quadrature mu for two-stream approximation
-  real(RP), private, save :: W(2)             ! discrete quadrature w  for two-stream approximation
-  real(RP), private, save :: Wmns(2), Wpls(2) ! W-, W+
-  real(RP), private, save :: Wbar(2), Wscale(2)
+  real(RP), private :: M(2)             ! discrete quadrature mu for two-stream approximation
+  real(RP), private :: W(2)             ! discrete quadrature w  for two-stream approximation
+  real(RP), private :: Wmns(2), Wpls(2) ! W-, W+
+  real(RP), private :: Wbar(2), Wscale(2)
 
   !-----------------------------------------------------------------------------
 contains
@@ -224,7 +224,7 @@ contains
        RD_PROFILE_read        => ATMOS_PHY_RD_PROFILE_read
     implicit none
 
-    character(len=H_SHORT), intent(in) :: RD_TYPE
+    character(len=*), intent(in) :: RD_TYPE
 
     integer               :: ATMOS_PHY_RD_MSTRN_KADD
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME

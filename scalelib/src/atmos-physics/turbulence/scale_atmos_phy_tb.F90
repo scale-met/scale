@@ -109,7 +109,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TB_TYPE
+    character(len=*), intent(in) :: TB_TYPE
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

@@ -91,7 +91,7 @@ module test_atmos_dyn_fent_fct
 
   real(RP), allocatable :: ZERO(:,:,:)
 
-  integer, save :: KME ! end of main region
+  integer :: KME ! end of main region
 
   character(len=H_SHORT) :: DYN_TYPE
 

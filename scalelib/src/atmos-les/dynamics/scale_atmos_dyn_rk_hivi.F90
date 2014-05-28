@@ -77,7 +77,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_DYN_TYPE
+    character(len=*), intent(in) :: ATMOS_DYN_TYPE
 
     integer :: ierr
 

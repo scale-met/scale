@@ -142,9 +142,9 @@ module scale_atmos_phy_mp_suzuki10
 
   real(RP), allocatable :: marate( : )               ! mass rate of each aerosol bin to total aerosol mass
   integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
-  real(RP), private, save      :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
-  real(RP), private, save      :: R10H1, R10H2        ! scaling factor for 10m value (heat)
-  real(RP), private, save      :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
+  real(RP), private            :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
+  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
+  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
 
   character(11),parameter :: fname_micpara="micpara.dat"
   integer(4) :: fid_micpara
@@ -212,7 +212,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
 
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+    character(len=*), intent(in) :: MP_TYPE
 
     real(RP) :: ATMOS_PHY_MP_RHOA  !--- density of aerosol
     real(RP) :: ATMOS_PHY_MP_EMAER !--- moleculer weight of aerosol

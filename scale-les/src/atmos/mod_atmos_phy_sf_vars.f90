@@ -41,7 +41,7 @@ module mod_atmos_phy_sf_vars
   !
   !++ Public parameters & variables
   !
-  logical, public, save ::  ATMOS_PHY_SF_sw_restart = .false.
+  logical, public ::  ATMOS_PHY_SF_sw_restart = .false.
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
@@ -60,12 +60,10 @@ module mod_atmos_phy_sf_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_DENS  (:,:)   ! surface atmosphere density  [kg/m3]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_PRES  (:,:)   ! surface atmosphere pressure [Pa]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature    [K]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo              [0-1]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_beta  (:,:)   ! evaporation efficiency      [0-1]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0    (:,:)   ! surface roughness length    [m]
 
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo_land(:,:,:) ! surface albedo, land only [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature             [K]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo, land only            [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0    (:,:)   ! surface roughness length, ocean only [m]
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:) ! tracer emission   flux [kg/m2/s]
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QDEP (:,:,:) ! tracer deposition flux [kg/m2/s]
@@ -79,34 +77,36 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: ATMOS_PHY_SF_RESTART_OUTPUT        = .false.
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_SF_RESTART_IN_BASENAME   = ''
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_SF_RESTART_OUT_BASENAME  = ''
-  character(len=H_MID),   private, save      :: ATMOS_PHY_SF_RESTART_OUT_TITLE     = 'ATMOS_PHY_SF restart'
-  character(len=H_MID),   private, save      :: ATMOS_PHY_SF_RESTART_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  logical,                private :: ATMOS_PHY_SF_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  integer,                private, parameter :: VMAX = 5       !< number of the variables
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private, parameter :: VMAX = 4       !< number of the variables
+  integer,                private, parameter :: I_SFC_TEMP      = 1
+  integer,                private, parameter :: I_SFC_albedo_LW = 2
+  integer,                private, parameter :: I_SFC_albedo_SW = 3
+  integer,                private, parameter :: I_SFC_Z0        = 4
 
-  data VAR_NAME / 'ZMFLX', &
-                  'XMFLX', &
-                  'YMFLX', &
-                  'SHFLX', &
-                  'LHFLX'  /
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_DESC / 'z-momentum flux',    &
-                  'x-momentum flux',    &
-                  'y-momentum flux',    &
-                  'sensible heat flux', &
-                  'latent   heat flux'  /
+  data VAR_NAME / 'SFC_TEMP     ', &
+                  'SFC_albedo_LW', &
+                  'SFC_albedo_SW', &
+                  'SFC_Z0       '  /
 
-  data VAR_UNIT / 'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'J/m2/s',  &
-                  'J/m2/s'   /
+  data VAR_DESC / 'surface skin temperature',     &
+                  'surface albedo for longwave',  &
+                  'surface albedo for shortwave', &
+                  'surface roughness length'      /
+
+  data VAR_UNIT / 'K',   &
+                  '0-1', &
+                  '0-1', &
+                  'm'    /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo
@@ -126,6 +126,8 @@ contains
        ATMOS_PHY_SF_RESTART_IN_BASENAME,  &
        ATMOS_PHY_SF_RESTART_OUTPUT,       &
        ATMOS_PHY_SF_RESTART_OUT_BASENAME, &
+       ATMOS_PHY_SF_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_SF_RESTART_OUT_DTYPE,    &
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,     &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo
 
@@ -133,7 +135,44 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS_PHY_SF VARS]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS_PHY_SF] / Origin[SCALE-LES]'
+
+    allocate( ATMOS_PHY_SF_DENS_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_MOMZ_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_MOMX_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_MOMY_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_RHOT_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_QTRC_t(IA,JA,QA) )
+    ATMOS_PHY_SF_DENS_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_MOMZ_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_MOMX_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_MOMY_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_RHOT_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_QTRC_t(:,:,:) = UNDEF
+
+    allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFLX_MV   (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFLX_SH   (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,QA) )
+    ATMOS_PHY_SF_SFLX_MW  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_MU  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_MV  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_SH  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_LH  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_QTRC(:,:,:) = UNDEF
+
+    allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFC_TEMP  (IA,JA)    )
+    allocate( ATMOS_PHY_SF_SFC_albedo(IA,JA,2)  )
+    allocate( ATMOS_PHY_SF_SFC_Z0    (IA,JA)    )
+    ATMOS_PHY_SF_SFC_DENS  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFC_PRES  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFC_TEMP  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFC_albedo(:,:,:) = UNDEF
+    ATMOS_PHY_SF_SFC_Z0    (:,:)   = UNDEF
 
     ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = UNDEF
     ATMOS_PHY_SF_DEFAULT_SFC_albedo = UNDEF
@@ -147,51 +186,30 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_VARS)
-
-    allocate( ATMOS_PHY_SF_DENS_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_MOMZ_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_MOMX_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_MOMY_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_RHOT_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_QTRC_t(IA,JA,QA) )
-
-    allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_MV   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_SH   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,QA) )
-
-    allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFC_TEMP  (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFC_albedo(IA,JA,2)  )
-    allocate( ATMOS_PHY_SF_SFC_beta  (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFC_Z0    (IA,JA)    )
-
-    allocate( ATMOS_PHY_SF_SFC_albedo_land(IA,JA,2) )
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_SF] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
     enddo
 
-    ! restart switch
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( ATMOS_PHY_SF_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_SF) : YES'
-       ATMOS_PHY_SF_sw_restart = .true.
+    if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_SF) : NO'
-       ATMOS_PHY_SF_sw_restart = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
+    if (       ATMOS_PHY_SF_RESTART_OUTPUT             &
+         .AND. ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_PHY_SF_RESTART_OUTPUT = .false.
+    endif
 
     return
   end subroutine ATMOS_PHY_SF_vars_setup
@@ -199,31 +217,23 @@ contains
   !-----------------------------------------------------------------------------
   !> HALO Communication
   subroutine ATMOS_PHY_SF_vars_fillhalo
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
-
-    integer :: iq
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_MW(:,:), 1 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_MU(:,:), 2 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_MV(:,:), 3 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_SH(:,:), 4 )
-    call COMM_vars8( ATMOS_PHY_SF_SFLX_LH(:,:), 5 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_MW(:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_MU(:,:), 2 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_MV(:,:), 3 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_SH(:,:), 4 )
-    call COMM_wait ( ATMOS_PHY_SF_SFLX_LH(:,:), 5 )
-
-    do iq = 1, QA
-       call COMM_vars8( ATMOS_PHY_SF_SFLX_QTRC(:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait ( ATMOS_PHY_SF_SFLX_QTRC(:,:,iq), iq )
-    enddo
+    call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP  (:,:),      1 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), 2 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), 3 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0    (:,:),      4 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_TEMP  (:,:),      1 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), 2 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), 3 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0    (:,:),      4 )
 
     return
   end subroutine ATMOS_PHY_SF_vars_fillhalo
@@ -231,62 +241,45 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_SF_vars_restart_read
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_fileio, only: &
        FILEIO_read
-    use scale_const, only: &
-       CONST_UNDEF
+    use scale_stats, only: &
+       STAT_total
     implicit none
 
     character(len=H_SHORT) :: TRC_NAME
 
-    integer :: iq
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_SF) ***'
 
     if ( ATMOS_PHY_SF_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_SF_RESTART_IN_BASENAME)
 
-       call FILEIO_read( ATMOS_PHY_SF_SFLX_MW(:,:),                                & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_TEMP  (:,:),                               & ! [OUT]
                          ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFLX_MU(:,:),                                & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW),                          & ! [OUT]
                          ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(2), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFLX_MV(:,:),                                & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW),                          & ! [OUT]
                          ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(3), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFLX_SH  (:,:),                                & ! [OUT]
+       call FILEIO_read( ATMOS_PHY_SF_SFC_Z0    (:,:),                               & ! [OUT]
                          ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(4), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_SF_SFLX_LH  (:,:),                                & ! [OUT]
-                         ATMOS_PHY_SF_RESTART_IN_BASENAME, VAR_NAME(5), 'XY', step=1 ) ! [IN]
-
-       do iq = 1, QA
-          TRC_NAME = 'SFLX_'//trim(AQ_NAME(iq))
-
-          call FILEIO_read( ATMOS_PHY_SF_SFLX_QTRC(:,:,iq),                          & ! [OUT]
-                            ATMOS_PHY_SF_RESTART_IN_BASENAME, TRC_NAME, 'XY', step=1 ) ! [IN]
-       enddo
 
        call ATMOS_PHY_SF_vars_fillhalo
 
+       call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
+       call STAT_total( total, ATMOS_PHY_SF_SFC_Z0    (:,:),      VAR_NAME(4) )
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
-
-       ATMOS_PHY_SF_SFLX_MW   (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_MU   (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_MV   (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_SH   (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_LH   (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFLX_QTRC (:,:,:) = CONST_UNDEF
-
-       ATMOS_PHY_SF_SFC_DENS  (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFC_PRES  (:,:)   = CONST_UNDEF
        ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
        ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
-       ATMOS_PHY_SF_SFC_beta  (:,:)   = CONST_UNDEF
-       ATMOS_PHY_SF_SFC_Z0    (:,:)   = CONST_UNDEF
-
-       ATMOS_PHY_SF_SFC_albedo_land(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
-
     endif
 
     return
@@ -296,6 +289,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_SF_vars_restart_write
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
     use scale_fileio, only: &
@@ -304,12 +300,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    character(len=H_SHORT) :: TRC_NAME
-    character(len=H_MID)   :: TRC_DESC
-    character(len=H_SHORT) :: TRC_UNIT
-
-    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
@@ -321,26 +311,14 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_SF) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_write( ATMOS_PHY_SF_SFLX_MW(:,:), basename,       ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SFC_TEMP  (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFLX_MU(:,:), basename,       ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFLX_MV(:,:), basename,       ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFLX_SH  (:,:), basename,       ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
+       call FILEIO_write( ATMOS_PHY_SF_SFC_Z0    (:,:),      basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(4), VAR_DESC(4), VAR_UNIT(4), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_SF_SFLX_LH  (:,:), basename,       ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(5), VAR_DESC(5), VAR_UNIT(5), 'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-
-       do iq = 1, QA
-          TRC_NAME = 'SFLX_'//trim(AQ_NAME(iq))
-          TRC_DESC = 'surface flux of '//trim(AQ_NAME(iq))
-          TRC_UNIT = 'kg/m2/s'
-
-          call FILEIO_write( ATMOS_PHY_SF_SFLX_QTRC(:,:,iq), basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, & ! [IN]
-                             TRC_NAME, TRC_DESC, TRC_UNIT, 'XY',       ATMOS_PHY_SF_RESTART_OUT_DTYPE  ) ! [IN]
-       enddo
-
     endif
 
     return

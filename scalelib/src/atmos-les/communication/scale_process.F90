@@ -49,7 +49,7 @@ module scale_process
   integer, public            :: PRC_NUM_X  = 1   !< x length of 2D processor topology
   integer, public            :: PRC_NUM_Y  = 1   !< y length of 2D processor topology
 
-  integer, public, allocatable, save :: PRC_2Drank(:,:)  !< node index in 2D topology
+  integer, public, allocatable :: PRC_2Drank(:,:)  !< node index in 2D topology
 
   integer, public            :: PRC_next(8) = -1 !< node ID of 8 neighbour process
 

@@ -49,52 +49,52 @@ module scale_cpl_atmos_urban_bulk
   !-----------------------------------------------------------------------------
   !
   ! from namelist
-  real(RP), private, save :: ZR         = 10.0       ! roof level ( building height) [m]
-  real(RP), private, save :: roof_width =  9.0       ! roof level ( building height) [m]
-  real(RP), private, save :: road_width = 11.0       ! roof level ( building height) [m]
-  real(RP), private, save :: SIGMA_ZED  =  1.0       ! Standard deviation of roof height [m]
-  real(RP), private, save :: AH         = 17.5       ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private, save :: ALH        = 0.         ! Latent Anthropogenic heat [W/m^2]
-  real(RP), private, save :: BETR       = 0.0        ! Evaporation efficiency of roof [-]
-  real(RP), private, save :: BETB       = 0.0        !                        of building [-]
-  real(RP), private, save :: BETG       = 0.0        !                        of ground [-]
-  real(RP), private, save :: CAPR       = 1.2E6      ! heat capacity of roof
-  real(RP), private, save :: CAPB       = 1.2E6      !  ( units converted in code
-  real(RP), private, save :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
-  real(RP), private, save :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground
-  real(RP), private, save :: AKSB       = 2.28       !  ( units converted in code
-  real(RP), private, save :: AKSG       = 2.28       !            to [ cal cm{-1} s{-1} deg{-1} ] )
-  real(RP), private, save :: ALBR       = 0.2        ! surface albedo of roof
-  real(RP), private, save :: ALBB       = 0.2        ! surface albedo of wall
-  real(RP), private, save :: ALBG       = 0.2        ! surface albedo of ground
-  real(RP), private, save :: EPSR       = 0.90       ! Surface emissivity of roof
-  real(RP), private, save :: EPSB       = 0.90       ! Surface emissivity of wall
-  real(RP), private, save :: EPSG       = 0.90       ! Surface emissivity of ground
-  real(RP), private, save :: Z0R        = 0.01       ! roughness length for momentum of building roof
-  real(RP), private, save :: Z0B        = 0.0001     ! roughness length for momentum of building wall
-  real(RP), private, save :: Z0G        = 0.01       ! roughness length for momentum of ground
-  real(RP), private, save :: TRLEND     = 293.00     ! lower boundary condition of roof temperature [K]
-  real(RP), private, save :: TBLEND     = 293.00     ! lower boundary condition of wall temperature [K]
-  real(RP), private, save :: TGLEND     = 293.00     ! lower boundary condition of ground temperature [K]
-  integer , private, save :: BOUND      = 1          ! Boundary Condition for Roof, Wall, Ground Layer Temp
+  real(RP), private :: ZR         = 10.0       ! roof level ( building height) [m]
+  real(RP), private :: roof_width =  9.0       ! roof level ( building height) [m]
+  real(RP), private :: road_width = 11.0       ! roof level ( building height) [m]
+  real(RP), private :: SIGMA_ZED  =  1.0       ! Standard deviation of roof height [m]
+  real(RP), private :: AH         = 17.5       ! Sensible Anthropogenic heat [W/m^2]
+  real(RP), private :: ALH        = 0.         ! Latent Anthropogenic heat [W/m^2]
+  real(RP), private :: BETR       = 0.0        ! Evaporation efficiency of roof [-]
+  real(RP), private :: BETB       = 0.0        !                        of building [-]
+  real(RP), private :: BETG       = 0.0        !                        of ground [-]
+  real(RP), private :: CAPR       = 1.2E6      ! heat capacity of roof
+  real(RP), private :: CAPB       = 1.2E6      !  ( units converted in code
+  real(RP), private :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
+  real(RP), private :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground
+  real(RP), private :: AKSB       = 2.28       !  ( units converted in code
+  real(RP), private :: AKSG       = 2.28       !            to [ cal cm{-1} s{-1} deg{-1} ] )
+  real(RP), private :: ALBR       = 0.2        ! surface albedo of roof
+  real(RP), private :: ALBB       = 0.2        ! surface albedo of wall
+  real(RP), private :: ALBG       = 0.2        ! surface albedo of ground
+  real(RP), private :: EPSR       = 0.90       ! Surface emissivity of roof
+  real(RP), private :: EPSB       = 0.90       ! Surface emissivity of wall
+  real(RP), private :: EPSG       = 0.90       ! Surface emissivity of ground
+  real(RP), private :: Z0R        = 0.01       ! roughness length for momentum of building roof
+  real(RP), private :: Z0B        = 0.0001     ! roughness length for momentum of building wall
+  real(RP), private :: Z0G        = 0.01       ! roughness length for momentum of ground
+  real(RP), private :: TRLEND     = 293.00     ! lower boundary condition of roof temperature [K]
+  real(RP), private :: TBLEND     = 293.00     ! lower boundary condition of wall temperature [K]
+  real(RP), private :: TGLEND     = 293.00     ! lower boundary condition of ground temperature [K]
+  integer , private :: BOUND      = 1          ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                                      !       [1: Zero-Flux, 2: T = Constant]
   ! calculate in subroutine urban_param_set
-  real(RP), private, save :: R                       ! Normalized roof wight (eq. building coverage ratio)
-  real(RP), private, save :: RW                      ! (= 1 - R)
-  real(RP), private, save :: HGT                     ! Normalized building height
-  real(RP), private, save :: Z0HR                    ! roughness length for heat of roof
-  real(RP), private, save :: Z0HB                    ! roughness length for heat of building wall
-  real(RP), private, save :: Z0HG                    ! roughness length for heat of ground
-  real(RP), private, save :: Z0C                     ! Roughness length above canyon for momentum [m]
-  real(RP), private, save :: Z0HC                    ! Roughness length above canyon for heat [m]
-  real(RP), private, save :: ZDC                     ! Displacement height [m]
-  real(RP), private, save :: SVF                     ! Sky view factor [-]
+  real(RP), private :: R                       ! Normalized roof wight (eq. building coverage ratio)
+  real(RP), private :: RW                      ! (= 1 - R)
+  real(RP), private :: HGT                     ! Normalized building height
+  real(RP), private :: Z0HR                    ! roughness length for heat of roof
+  real(RP), private :: Z0HB                    ! roughness length for heat of building wall
+  real(RP), private :: Z0HG                    ! roughness length for heat of ground
+  real(RP), private :: Z0C                     ! Roughness length above canyon for momentum [m]
+  real(RP), private :: Z0HC                    ! Roughness length above canyon for heat [m]
+  real(RP), private :: ZDC                     ! Displacement height [m]
+  real(RP), private :: SVF                     ! Sky view factor [-]
 
-  real(RP), private, save :: ahdiurnal(1:24)         ! AH diurnal profile
+  real(RP), private :: ahdiurnal(1:24)         ! AH diurnal profile
 
-  real(RP), private, save, allocatable :: DZR(:)     ! thickness of each roof layer [m]
-  real(RP), private, save, allocatable :: DZB(:)     ! thickness of each building layer [m]
-  real(RP), private, save, allocatable :: DZG(:)     ! thickness of each road layer [m]
+  real(RP), private, allocatable :: DZR(:)     ! thickness of each roof layer [m]
+  real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
+  real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
                                                      ! ( units converted in code to [cm] )
 
 contains
@@ -106,7 +106,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmUrb
+    character(len=*), intent(in) :: CPL_TYPE_AtmUrb
 
     real(RP) :: URBAN_UCM_ZR
     real(RP) :: URBAN_UCM_roof_width
@@ -567,7 +567,7 @@ contains
       TRP      = TR
 
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
-      ! if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) then 
+      ! if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) then
       !    print *,'roof iteration',iteration
       !    print *,'roof     ',TR,SR,RR,-1.*HR,-1.*ELER,-1.*G0R
       !   exit
@@ -728,7 +728,7 @@ contains
       !    abs(DTB) < 0.000001_RP .and. &
       !    abs(GF)  < 0.000001_RP .and. &
       !    abs(DTG) < 0.000001_RP .and. &
-      !    abs(DTC) < 0.000001_RP       ) then	 
+      !    abs(DTC) < 0.000001_RP       ) then
       !    print *,'building/ground iteration',iteration
       !    print *,'building ',TB,SB,RB,-1.*HB,-1.*ELEB,-1.*G0B
       !    print *,'ground   ',TG,SG,RG,-1.*HG,-1.*ELEG,-1.*G0G

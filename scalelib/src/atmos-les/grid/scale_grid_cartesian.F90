@@ -130,6 +130,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
+    call GRID_allocate
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_GRID,iostat=ierr)
@@ -140,6 +142,43 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GRID)
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*)                '*** Atmosphere grid information ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,3(F7.1))') '*** delta Z, X, Y [m]        :', DZ, DX, DY
+
+    if ( GRID_IN_BASENAME /= '' ) then
+       call GRID_read
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Grid position is calculated.'
+
+       call GRID_generate
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (local) :'
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  X:',                                                          &
+                                                  GRID_FX(0) *1.E-3_RP, ' -HALO- ', GRID_FX(IS-1)*1.E-3_RP, ' | ', &
+                                                  GRID_CX(IS)*1.E-3_RP, ' - ',      GRID_CX(IE)  *1.E-3_RP, ' | ', &
+                                                  GRID_FX(IE)*1.E-3_RP, ' -HALO- ', GRID_FX(IA)  *1.E-3_RP
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  Y:',                    &
+                                                  GRID_FY(0) *1.E-3_RP, ' -HALO- ', GRID_FY(JS-1)*1.E-3_RP, ' | ', &
+                                                  GRID_CY(JS)*1.E-3_RP, ' - ',      GRID_CY(JE)  *1.E-3_RP, ' | ', &
+                                                  GRID_FY(JE)*1.E-3_RP, ' -HALO- ', GRID_FY(JA)  *1.E-3_RP
+
+    return
+  end subroutine GRID_setup
+
+  !-----------------------------------------------------------------------------
+  !> Allocate arrays
+  subroutine GRID_allocate
+    use scale_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    implicit none
+
+    integer :: IAG, JAG
+    !---------------------------------------------------------------------------
 
     ! local domain
     allocate( GRID_CZ  (KA) )
@@ -173,31 +212,24 @@ contains
     allocate( GRID_FBFX(IA) )
     allocate( GRID_FBFY(JA) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Atmosphere grid information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,3(F7.1))') '*** delta Z, X, Y [m]        :', DZ, DX, DY
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
-    if ( GRID_IN_BASENAME /= '' ) then
-       call GRID_read
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Grid position is calculated.'
-
-       call GRID_generate
-    endif
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (local) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  X:',                                                          &
-                                                  GRID_FX(0) *1.E-3_RP, ' -HALO- ', GRID_FX(IS-1)*1.E-3_RP, ' | ', &
-                                                  GRID_CX(IS)*1.E-3_RP, ' - ',      GRID_CX(IE)  *1.E-3_RP, ' | ', &
-                                                  GRID_FX(IE)*1.E-3_RP, ' -HALO- ', GRID_FX(IA)  *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  Y:',                    &
-                                                  GRID_FY(0) *1.E-3_RP, ' -HALO- ', GRID_FY(JS-1)*1.E-3_RP, ' | ', &
-                                                  GRID_CY(JS)*1.E-3_RP, ' - ',      GRID_CY(JE)  *1.E-3_RP, ' | ', &
-                                                  GRID_FY(JE)*1.E-3_RP, ' -HALO- ', GRID_FY(JA)  *1.E-3_RP
+    ! global domain
+    allocate( GRID_FXG     (0:IAG) )
+    allocate( GRID_FYG     (0:JAG) )
+    allocate( GRID_CXG     (  IAG) )
+    allocate( GRID_CYG     (  JAG) )
+    allocate( GRID_CBFXG   (  IAG) )
+    allocate( GRID_CBFYG   (  JAG) )
+    allocate( GRID_FBFXG   (  IAG) )
+    allocate( GRID_FBFYG   (  JAG) )
+    allocate( GRID_CXG_mask(  IAG) )
+    allocate( GRID_CYG_mask(  JAG) )
 
     return
-  end subroutine GRID_setup
+  end subroutine GRID_allocate
 
   !-----------------------------------------------------------------------------
   !> Read horizontal&vertical grid
@@ -308,17 +340,6 @@ contains
     ! array size (global domain)
     IAG = IHALO + IMAX*PRC_NUM_X + IHALO
     JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
-
-    allocate( GRID_FXG     (0:IAG) )
-    allocate( GRID_FYG     (0:JAG) )
-    allocate( GRID_CXG     (  IAG) )
-    allocate( GRID_CYG     (  JAG) )
-    allocate( GRID_CBFXG   (  IAG) )
-    allocate( GRID_CBFYG   (  JAG) )
-    allocate( GRID_FBFXG   (  IAG) )
-    allocate( GRID_FBFYG   (  JAG) )
-    allocate( GRID_CXG_mask(  IAG) )
-    allocate( GRID_CYG_mask(  JAG) )
 
     allocate( buffx(0:IAG) )
     allocate( buffy(0:JAG) )
