@@ -64,8 +64,8 @@ contains
 
     namelist / PARAM_URBAN_GRID / &
        URBAN_GRID_IN_BASENAME,  &
-       URBAN_GRID_OUT_BASENAME  !, &
-!       UDZ
+       URBAN_GRID_OUT_BASENAME, &
+       UDZ
 
     integer :: ierr
     integer :: k
