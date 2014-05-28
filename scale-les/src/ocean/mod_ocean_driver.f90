@@ -42,14 +42,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_driver_setup
-    use mod_ocean_vars, only: &
-       sw_phy => OCEAN_sw_phy
+    use mod_ocean_admin, only: &
+       OCEAN_TYPE, &
+       OCEAN_sw
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    if( sw_phy ) call OCEAN_PHY_driver_setup
+    if( OCEAN_sw ) call OCEAN_PHY_driver_setup( OCEAN_TYPE )
 
     return
   end subroutine OCEAN_driver_setup
@@ -57,8 +58,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Ocean step
   subroutine OCEAN_driver
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     use mod_ocean_vars, only: &
-       sw_phy => OCEAN_sw_phy, &
        OCEAN_vars_history
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_first, &
@@ -67,14 +69,14 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Physics First ##########
-    if ( sw_phy ) then
+    if ( OCEAN_sw ) then
       call PROF_rapstart('OCN Physics')
       call OCEAN_PHY_driver_first
       call PROF_rapend  ('OCN Physics')
     endif
 
     !########## Physics Final ##########
-    if ( sw_phy ) then
+    if ( OCEAN_sw ) then
       call PROF_rapstart('OCN Physics')
       call OCEAN_PHY_driver_final
       call PROF_rapend  ('OCN Physics')

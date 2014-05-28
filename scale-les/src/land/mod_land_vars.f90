@@ -42,30 +42,25 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical,                public, save :: LAND_do          = .true. ! main switch for the model
-
-  character(len=H_SHORT), public, save :: LAND_TYPE        = 'OFF' !< Land physics type
-
-  logical,                public, save :: LAND_sw_phy
-  logical,                public, save :: LAND_sw_restart
+  logical,  public :: LAND_sw_restart
 
   ! prognostic variables
-  real(RP), public, save, allocatable :: TG  (:,:,:) ! soil temperature [K]
-  real(RP), public, save, allocatable :: STRG(:,:,:) ! water storage [kg/m2]
-  real(RP), public, save, allocatable :: ROFF(:,:)   ! run-off water [kg/m2]
-  real(RP), public, save, allocatable :: QVEF(:,:)   ! efficiency of evaporation [0-1]
+  real(RP), public, allocatable :: TG  (:,:,:) ! soil temperature [K]
+  real(RP), public, allocatable :: STRG(:,:,:) ! water storage [kg/m2]
+  real(RP), public, allocatable :: ROFF(:,:)   ! run-off water [kg/m2]
+  real(RP), public, allocatable :: QVEF(:,:)   ! efficiency of evaporation [0-1]
 
-  integer,  public, parameter :: LAND_PROPERTY_nmax = 8
-  integer,  public, parameter :: I_STRGMAX          = 1 ! maximum  water storage [kg/m2]
-  integer,  public, parameter :: I_STRGCRT          = 2 ! critical water storage [kg/m2]
-  integer,  public, parameter :: I_TCS              = 3 ! thermal conductivity for soil [W/m/K]
-  integer,  public, parameter :: I_HCS              = 4 ! heat capacity        for soil [J/K]
-  integer,  public, parameter :: I_DFW              = 5 ! diffusive coefficient of soil water [m2/s]
-  integer,  public, parameter :: I_Z0M              = 6 ! roughness length for momemtum [m]
-  integer,  public, parameter :: I_Z0H              = 7 ! roughness length for heat     [m]
-  integer,  public, parameter :: I_Z0E              = 8 ! roughness length for moisture [m]
+  real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
 
-  real(RP), public, save, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
+  integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
+  integer,  public, parameter   :: I_STRGMAX          = 1 ! maximum  water storage [kg/m2]
+  integer,  public, parameter   :: I_STRGCRT          = 2 ! critical water storage [kg/m2]
+  integer,  public, parameter   :: I_TCS              = 3 ! thermal conductivity for soil [W/m/K]
+  integer,  public, parameter   :: I_HCS              = 4 ! heat capacity        for soil [J/K]
+  integer,  public, parameter   :: I_DFW              = 5 ! diffusive coefficient of soil water [m2/s]
+  integer,  public, parameter   :: I_Z0M              = 6 ! roughness length for momemtum [m]
+  integer,  public, parameter   :: I_Z0H              = 7 ! roughness length for heat     [m]
+  integer,  public, parameter   :: I_Z0E              = 8 ! roughness length for moisture [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -77,13 +72,13 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  logical,               private, save :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
-  character(len=H_LONG), private, save :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
-  character(len=H_LONG), private, save :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
-  character(len=H_MID),  private, save :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
-  character(len=H_MID),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
+  logical,                private :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
+  character(len=H_LONG),  private :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
+  character(len=H_LONG),  private :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
+  character(len=H_MID),   private :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
+  character(len=H_MID),   private :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
 
-  logical,               private, save :: LAND_VARS_CHECKRANGE      = .false.
+  logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX   = 4     !< number of the variables
   integer,                private, parameter :: I_TG   = 1
@@ -91,19 +86,19 @@ module mod_land_vars
   integer,                private, parameter :: I_ROFF = 3
   integer,                private, parameter :: I_QVEF = 4
 
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
  !< unit  of the land variables
 
   data VAR_NAME / 'TG',   &
                   'STRG', &
                   'ROFF', &
                   'QVEF'  /
-  data VAR_DESC / 'soil temperature',          &
-                  'water storage',             &
-                  'run-off water',             &
-                  'efficiency of evaporation'  /
+  data VAR_DESC / 'soil temperature',        &
+                  'water storage',           &
+                  'run-off water',           &
+                  'efficiency of evaporation'/
   data VAR_UNIT / 'K',     &
                   'kg/m2', &
                   'kg/m2', &
@@ -111,7 +106,7 @@ module mod_land_vars
 
   integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
 
-  real(RP), private, save      :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
+  real(RP), private            :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
 
   !-----------------------------------------------------------------------------
 contains
@@ -121,17 +116,13 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       CONST_UNDEF
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     use scale_landuse, only: &
        LANDUSE_index_PFT
     implicit none
-
-    NAMELIST / PARAM_LAND / &
-       LAND_do,  &
-       LAND_TYPE
 
     NAMELIST / PARAM_LAND_VARS /  &
        LAND_RESTART_IN_BASENAME,  &
@@ -146,27 +137,16 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[LAND] / Origin[SCALE-LES]'
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND] selected components'
-
-    if ( LAND_TYPE /= 'OFF' .AND. LAND_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land physics : ON'
-       LAND_sw_phy = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land physics : OFF'
-       LAND_sw_phy = .false.
-    endif
+    allocate( TG  (LKS:LKE,IA,JA) )
+    allocate( STRG(LKS:LKE,IA,JA) )
+    allocate( ROFF(        IA,JA) )
+    allocate( QVEF(        IA,JA) )
+    TG  (:,:,:) = UNDEF
+    STRG(:,:,:) = UNDEF
+    ROFF(:,:)   = UNDEF
+    QVEF(:,:)   = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -177,32 +157,34 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (LAND) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do ip = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
     enddo
 
-    ! restart switch
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( LAND_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Land restart output : YES'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( LAND_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(LAND_RESTART_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+    endif
+    if (       LAND_RESTART_OUTPUT             &
+         .AND. LAND_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(LAND_RESTART_OUT_BASENAME)
        LAND_sw_restart = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Land restart output : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       LAND_RESTART_OUTPUT = .false.
        LAND_sw_restart = .false.
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
 
-    allocate( TG  (LKS:LKE,IA,JA) )
-    allocate( STRG(LKS:LKE,IA,JA) )
-    allocate( ROFF(        IA,JA) )
-    allocate( QVEF(        IA,JA) )
+
 
     call LAND_param_read
 
@@ -273,17 +255,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Read land restart
   subroutine LAND_vars_restart_read
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_fileio, only: &
        FILEIO_read
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (land) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
 
     if ( LAND_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)
 
        call FILEIO_read( TG(:,:,:),                                       & ! [OUT]
                          LAND_RESTART_IN_BASENAME, 'TG',   'Land', step=1 ) ! [IN]
@@ -299,11 +280,6 @@ contains
        call LAND_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
-
-       TG  (:,:,:) = UNDEF
-       STRG(:,:,:) = UNDEF
-       ROFF(:,:)   = UNDEF
-       QVEF(:,:)   = UNDEF
     endif
 
     return
@@ -328,8 +304,8 @@ contains
        write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (land) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call LAND_vars_total
 
@@ -380,15 +356,19 @@ contains
        STAT_total
     implicit none
 
-    !real(RP) :: total
+    real(RP) :: total
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, TG  (:,:,:), VAR_NAME(I_TG)   )
-!       call STAT_total( total, STRG(:,:,:), VAR_NAME(I_STRG) )
-!       call STAT_total( total, ROFF(:,:),   VAR_NAME(I_ROFF) )
-!       call STAT_total( total, QVEF(:,:),   VAR_NAME(I_QVEF) )
+       do k = LKS, LKE
+          call STAT_total( total, TG  (k,:,:), VAR_NAME(I_TG)   )
+          call STAT_total( total, STRG(k,:,:), VAR_NAME(I_STRG) )
+       enddo
+
+       call STAT_total( total, ROFF(:,:), VAR_NAME(I_ROFF) )
+       call STAT_total( total, QVEF(:,:), VAR_NAME(I_QVEF) )
 
     endif
 

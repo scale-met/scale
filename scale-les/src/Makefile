@@ -56,12 +56,15 @@ MODS =	\
 	mod_atmos_phy_tb_driver.o    \
 	mod_atmos_phy_cp_driver.o    \
 	mod_atmos_driver.o           \
+	mod_ocean_admin.o            \
 	mod_ocean_vars.o             \
 	mod_ocean_phy_slab.o         \
 	mod_ocean_driver.o           \
+	mod_land_admin.o             \
 	mod_land_vars.o              \
 	mod_land_phy_bucket.o        \
 	mod_land_driver.o            \
+	mod_urban_admin.o            \
 	mod_urban_vars.o             \
 	mod_urban_phy_ucm.o          \
 	mod_urban_driver.o           \
@@ -138,22 +141,22 @@ $(BUILD_DIR)/mod_atmos_driver.o           : mod_atmos_driver.f90        mod_atmo
                                             mod_atmos_phy_ch_driver.o \
                                             mod_atmos_phy_ae_driver.o
 
-$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90
-
-$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90  mod_ocean_vars.o
-$(BUILD_DIR)/mod_ocean_driver.o           : mod_ocean_driver.f90 mod_ocean_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_ocean_admin.o            : mod_ocean_admin.f90
+$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90     mod_ocean_admin.o
+$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90 mod_ocean_admin.o mod_ocean_vars.o
+$(BUILD_DIR)/mod_ocean_driver.o           : mod_ocean_driver.f90   mod_ocean_admin.o mod_ocean_vars.o mod_cpl_vars.o \
                                             mod_ocean_phy_slab.o
 
-$(BUILD_DIR)/mod_land_vars.o              : mod_land_vars.f90
-
-$(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 mod_land_vars.o
-$(BUILD_DIR)/mod_land_driver.o            : mod_land_driver.f90 mod_land_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_land_admin.o             : mod_land_admin.f90
+$(BUILD_DIR)/mod_land_vars.o              : mod_land_vars.f90       mod_land_admin.o
+$(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 mod_land_admin.o mod_land_vars.o
+$(BUILD_DIR)/mod_land_driver.o            : mod_land_driver.f90     mod_land_admin.o mod_land_vars.o mod_cpl_vars.o \
                                             mod_land_phy_bucket.o
 
-$(BUILD_DIR)/mod_urban_vars.o             : mod_urban_vars.f90
-
-$(BUILD_DIR)/mod_urban_phy_ucm.o          : mod_urban_phy_ucm.f90 mod_urban_vars.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_urban_driver.o           : mod_urban_driver.f90 mod_urban_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_urban_admin.o            : mod_urban_admin.f90
+$(BUILD_DIR)/mod_urban_vars.o             : mod_urban_vars.f90    mod_urban_admin.o
+$(BUILD_DIR)/mod_urban_phy_ucm.o          : mod_urban_phy_ucm.f90 mod_urban_admin.o mod_urban_vars.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_urban_driver.o           : mod_urban_driver.f90  mod_urban_admin.o mod_urban_vars.o mod_cpl_vars.o \
                                             mod_urban_phy_ucm.o
 
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90

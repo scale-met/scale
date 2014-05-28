@@ -37,15 +37,10 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  logical,                public, save :: OCEAN_do          = .true. ! main switch for the model
-
-  character(len=H_SHORT), public, save :: OCEAN_TYPE        = 'NONE' !< ocean physics type
-
-  logical,                public, save :: OCEAN_sw_phy
-  logical,                public, save :: OCEAN_sw_restart
+  logical, public :: OCEAN_sw_restart
 
   ! prognostic variables
-  real(RP), public, save, allocatable :: TW(:,:) !< water temperature [K]
+  real(RP), public, allocatable :: TW(:,:) !< water temperature [K]
 
   !-----------------------------------------------------------------------------
   !
@@ -55,20 +50,20 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: OCEAN_RESTART_OUTPUT        = .false.          !< output restart file?
-  character(len=H_LONG),  private, save      :: OCEAN_RESTART_IN_BASENAME   = ''               !< basename of the input file
-  character(len=H_LONG),  private, save      :: OCEAN_RESTART_OUT_BASENAME  = ''               !< basename of the output file
-  character(len=H_MID),   private, save      :: OCEAN_RESTART_OUT_TITLE     = 'OCEAN restart'  !< title    of the output file
-  character(len=H_MID),   private, save      :: OCEAN_RESTART_OUT_DTYPE     = 'DEFAULT'        !< REAL4 or REAL8
+  logical,                private :: OCEAN_RESTART_OUTPUT       = .false.         !< output restart file?
+  character(len=H_LONG),  private :: OCEAN_RESTART_IN_BASENAME  = ''              !< basename of the input file
+  character(len=H_LONG),  private :: OCEAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
+  character(len=H_MID),   private :: OCEAN_RESTART_OUT_TITLE    = 'OCEAN restart' !< title    of the output file
+  character(len=H_MID),   private :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
 
-  logical,                private, save      :: OCEAN_VARS_CHECKRANGE      = .false.
+  logical,                private :: OCEAN_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX = 1       !< number of the variables
   integer,                private, parameter :: I_TW = 1
 
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
   data VAR_NAME / 'TW' /
   data VAR_DESC / 'water temperature' /
@@ -81,11 +76,9 @@ contains
   subroutine OCEAN_vars_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
-
-    NAMELIST / PARAM_OCEAN / &
-       OCEAN_do,   &
-       OCEAN_TYPE
 
     NAMELIST / PARAM_OCEAN_VARS /  &
        OCEAN_RESTART_IN_BASENAME,  &
@@ -99,27 +92,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OCEAN VARS]/Categ[OCEAN]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_OCEAN,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[OCEAN] / Origin[SCALE-LES]'
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] selected components'
-
-    if ( OCEAN_TYPE /= 'OFF' .AND. OCEAN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics : ON'
-       OCEAN_sw_phy = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics : OFF'
-       OCEAN_sw_phy = .false.
-    endif
+    allocate( TW(IA,JA) )
+    TW(:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -130,28 +106,32 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN_VARS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [OCEAN] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (OCEAN) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do ip = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( OCEAN_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Ocean restart output : YES'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(OCEAN_RESTART_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+    endif
+    if (       OCEAN_RESTART_OUTPUT             &
+         .AND. OCEAN_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(OCEAN_RESTART_OUT_BASENAME)
        OCEAN_sw_restart = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Ocean restart output : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       OCEAN_RESTART_OUTPUT = .false.
        OCEAN_sw_restart = .false.
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
-
-    allocate( TW(IA,JA) )
 
     return
   end subroutine OCEAN_vars_setup
@@ -176,18 +156,14 @@ contains
   subroutine OCEAN_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ocean) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
 
     if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
 
        call FILEIO_read( TW(:,:),                                      & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, 'TW', 'XY', step=1 ) ! [IN]
@@ -197,8 +173,6 @@ contains
        call OCEAN_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ocean is not specified.'
-
-       TW(:,:) = UNDEF
     endif
 
     return
@@ -223,8 +197,8 @@ contains
        write(basename,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ocean) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (OCEAN) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call OCEAN_vars_total
 
@@ -268,7 +242,7 @@ contains
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, TW(:,:), VAR_NAME(I_TW) )
+       call STAT_total( total, TW(:,:), VAR_NAME(I_TW) )
 
     endif
 

@@ -48,12 +48,12 @@ module mod_ocean_phy_slab
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_PHY_driver_setup
+  subroutine OCEAN_PHY_driver_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use mod_ocean_vars, only: &
-       OCEAN_TYPE
     implicit none
+
+    character(len=*), intent(in) :: OCEAN_TYPE
 
     real(RP) :: OCEAN_SLAB_DEPTH
     logical  :: OCEAN_SLAB_FLG_CR

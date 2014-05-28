@@ -44,14 +44,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_driver_setup
-    use mod_land_vars, only: &
-       sw_phy => LAND_sw_phy
+    use mod_land_admin, only: &
+       LAND_TYPE, &
+       LAND_sw
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    if( sw_phy ) call LAND_PHY_driver_setup
+    if( LAND_sw ) call LAND_PHY_driver_setup( LAND_TYPE )
 
     return
   end subroutine LAND_driver_setup
@@ -59,8 +60,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Land step
   subroutine LAND_driver
+    use mod_land_admin, only: &
+       LAND_sw
     use mod_land_vars, only: &
-       sw_phy => LAND_sw_phy, &
        LAND_vars_history
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_first, &
@@ -69,14 +71,14 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Physics First ##########
-    if ( sw_phy ) then
+    if ( LAND_sw ) then
       call PROF_rapstart('LND Physics')
       call LAND_PHY_driver_first
       call PROF_rapend  ('LND Physics')
     endif
 
     !########## Physics Final ##########
-    if ( sw_phy ) then
+    if ( LAND_sw ) then
       call PROF_rapstart('LND Physics')
       call LAND_PHY_driver_final
       call PROF_rapend  ('LND Physics')

@@ -52,12 +52,12 @@ module mod_land_phy_bucket
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_PHY_driver_setup
+  subroutine LAND_PHY_driver_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use mod_land_vars, only: &
-       LAND_TYPE
     implicit none
+
+    character(len=*), intent(in) :: LAND_TYPE
 
     NAMELIST / PARAM_LAND_BUCKET / &
        LAND_LKE_STRG_UPDATE, &
