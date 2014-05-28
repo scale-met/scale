@@ -189,11 +189,13 @@ contains
     enddo
     enddo
 
-    call OCEAN_roughness( SFC_Z0  (:,:), & ! [INOUT]
-                          Z0M     (:,:), & ! [OUT]
-                          Z0H     (:,:), & ! [OUT]
-                          Z0E     (:,:), & ! [OUT]
-                          ATM_Uabs(:,:)  ) ! [IN]
+    call OCEAN_roughness( SFC_Z0(:,:), & ! [INOUT]
+                          Z0M   (:,:), & ! [OUT]
+                          Z0H   (:,:), & ! [OUT]
+                          Z0E   (:,:), & ! [OUT]
+                          ATM_U (:,:), & ! [IN]
+                          ATM_V (:,:), & ! [IN]
+                          ATM_W (:,:)  ) ! [IN]
 
     call SF_bulkcoef( ATM_Uabs(:,:), & ! [IN]
                       ATM_POTT(:,:), & ! [IN]

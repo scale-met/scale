@@ -74,17 +74,17 @@ contains
     use mod_cpl_vars, only: &
        LST,               &
        ALBG,              &
-       DENS => CPL_DENS,  &
-       MOMX => CPL_MOMX,  &
-       MOMY => CPL_MOMY,  &
-       MOMZ => CPL_MOMZ,  &
-       RHOS => CPL_RHOS,  &
-       PRES => CPL_PRES,  &
-       TMPS => CPL_TMPS,  &
-       QV   => CPL_QV  ,  &
+       RHOA => CPL_RHOA,  &
+       UA   => CPL_UA,    &
+       VA   => CPL_VA,    &
+       WA   => CPL_WA,    &
+       TMPA => CPL_TMPA,  &
+       PRSA => CPL_PRSA,  &
+       QVA  => CPL_QVA,   &
+       PRSS => CPL_PRSS,  &
        PREC => CPL_PREC,  &
-       SWD  => CPL_SWD ,  &
-       LWD  => CPL_LWD ,  &
+       SWD  => CPL_SWD,   &
+       LWD  => CPL_LWD,   &
        TG   => CPL_TG,    &
        QVEF => CPL_QVEF,  &
        TCS  => CPL_TCS,   &
@@ -98,6 +98,10 @@ contains
        CPL_AtmLnd_SHFLX,  &
        CPL_AtmLnd_LHFLX,  &
        CPL_AtmLnd_QVFLX,  &
+       CPL_AtmLnd_U10,    &
+       CPL_AtmLnd_V10,    &
+       CPL_AtmLnd_T2,     &
+       CPL_AtmLnd_Q2,     &
        Lnd_GHFLX,         &
        Lnd_PRECFLX,       &
        Lnd_QVFLX,         &
@@ -105,21 +109,20 @@ contains
        CNT_Lnd
     implicit none
 
-    ! argument
+    ! arguments
     logical, intent(in) :: update_flag
 
-    ! work
-    integer :: i, j
-
-    real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
-
-    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
-    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
+    ! works
+    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
@@ -132,15 +135,19 @@ contains
       SHFLX(:,:),      & ! (out)
       LHFLX(:,:),      & ! (out)
       GHFLX(:,:),      & ! (out)
+      U10  (:,:),      & ! (out)
+      V10  (:,:),      & ! (out)
+      T2   (:,:),      & ! (out)
+      Q2   (:,:),      & ! (out)
       update_flag,     & ! (in)
-      DENS (:,:),      & ! (in)
-      MOMX (:,:),      & ! (in)
-      MOMY (:,:),      & ! (in)
-      MOMZ (:,:),      & ! (in)
-      RHOS (:,:),      & ! (in)
-      PRES (:,:),      & ! (in)
-      TMPS (:,:),      & ! (in)
-      QV   (:,:),      & ! (in)
+      RHOA (:,:),      & ! (in)
+      UA   (:,:),      & ! (in)
+      VA   (:,:),      & ! (in)
+      WA   (:,:),      & ! (in)
+      TMPA (:,:),      & ! (in)
+      PRSA (:,:),      & ! (in)
+      QVA  (:,:),      & ! (in)
+      PRSS (:,:),      & ! (in)
       SWD  (:,:),      & ! (in)
       LWD  (:,:),      & ! (in)
       TG   (:,:),      & ! (in)
@@ -153,22 +160,6 @@ contains
       Z0H  (:,:),      & ! (in)
       Z0E  (:,:)       ) ! (in)
 
-    ! interpolate momentum fluxes
-    do j = JS, JE
-    do i = IS, IE
-      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
-      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-      XMFLX(i,j) = tmpX(i,j)
-      YMFLX(i,j) = tmpY(i,j)
-      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
-    enddo
-    enddo
-
     ! temporal average flux
     CPL_AtmLnd_XMFLX(:,:) = ( CPL_AtmLnd_XMFLX(:,:) * CNT_Atm_Lnd + XMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     CPL_AtmLnd_YMFLX(:,:) = ( CPL_AtmLnd_YMFLX(:,:) * CNT_Atm_Lnd + YMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
@@ -176,6 +167,10 @@ contains
     CPL_AtmLnd_SHFLX(:,:) = ( CPL_AtmLnd_SHFLX(:,:) * CNT_Atm_Lnd + SHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     CPL_AtmLnd_LHFLX(:,:) = ( CPL_AtmLnd_LHFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
     CPL_AtmLnd_QVFLX(:,:) = ( CPL_AtmLnd_QVFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_U10  (:,:) = ( CPL_AtmLnd_U10  (:,:) * CNT_Atm_Lnd + U10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_V10  (:,:) = ( CPL_AtmLnd_V10  (:,:) * CNT_Atm_Lnd + V10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_T2   (:,:) = ( CPL_AtmLnd_T2   (:,:) * CNT_Atm_Lnd + T2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_Q2   (:,:) = ( CPL_AtmLnd_Q2   (:,:) * CNT_Atm_Lnd + Q2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
 
     Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
     Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )

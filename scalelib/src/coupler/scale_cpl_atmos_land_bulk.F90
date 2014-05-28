@@ -143,15 +143,19 @@ contains
         SHFLX,      & ! (out)
         LHFLX,      & ! (out)
         GHFLX,      & ! (out)
+        U10,        & ! (out)
+        V10,        & ! (out)
+        T2,         & ! (out)
+        Q2,         & ! (out)
         LST_UPDATE, & ! (in)
-        DENS,       & ! (in)
-        MOMX,       & ! (in)
-        MOMY,       & ! (in)
-        MOMZ,       & ! (in)
-        RHOS,       & ! (in)
-        PRES,       & ! (in)
-        TMPS,       & ! (in)
-        QV,         & ! (in)
+        RHOA,       & ! (in)
+        UA,         & ! (in)
+        VA,         & ! (in)
+        WA,         & ! (in)
+        TMPA,       & ! (in)
+        PRSA,       & ! (in)
+        QVA,        & ! (in)
+        PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
         TG,         & ! (in)
@@ -192,17 +196,21 @@ contains
     real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
-    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
@@ -224,6 +232,7 @@ contains
 
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce, dCm, dCh, dCe ! bulk transfer coeff. [no unit]
+    real(RP) :: R10m, R02h, R02e, dR10m, dR02h, dR02e ! lapse rate [0-1]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
@@ -236,35 +245,36 @@ contains
     do n = 1, nmax
 
       ! calculate surface flux
-      do j = JS-1, JE+1
-      do i = IS-1, IE+1
-        Uabs = sqrt( &
-               ( MOMZ(i,j)               )**2 &
-             + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-             + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-             ) / DENS(i,j) * 0.5_RP
+      do j = JS, JE
+      do i = IS, IE
+        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
         call CPL_bulkcoef( &
             Cm,        & ! (out)
             Ch,        & ! (out)
             Ce,        & ! (out)
-            TMPS(i,j), & ! (in)
+            R10m,      & ! (out)
+            R02h,      & ! (out)
+            R02e,      & ! (out)
+            TMPA(i,j), & ! (in)
             LST (i,j), & ! (in)
-            Z1  (i,j), & ! (in)
+            PRSA(i,j), & ! (in)
+            PRSS(i,j), & ! (in)
             Uabs,      & ! (in)
+            Z1  (i,j), & ! (in)
             Z0M (i,j), & ! (in)
             Z0H (i,j), & ! (in)
             Z0E (i,j)  ) ! (in)
 
-        XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMX(i,j) / DENS(i,j)
-        YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMY(i,j) / DENS(i,j)
-        ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_minM),U_maxM) * MOMZ(i,j) / DENS(i,j)
+        XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
+        YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
+        ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
 
         ! saturation at the surface
-        call qsat( SQV, LST(i,j), PRES(i,j) )
+        call qsat( SQV, LST(i,j), PRSS(i,j) )
 
-        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) * Ch * ( LST(i,j) - TMPS(i,j) )
-        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) * Ce * ( SQV - QV(i,j) )
+        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
+        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) * Ce * ( SQV - QVA(i,j) )
         GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
         ! calculation for residual
@@ -276,32 +286,47 @@ contains
             dCm,             & ! (out)
             dCh,             & ! (out)
             dCe,             & ! (out)
-            TMPS(i,j),       & ! (in)
+            dR10m,           & ! (out)
+            dR02h,           & ! (out)
+            dR02e,           & ! (out)
+            TMPA(i,j),       & ! (in)
             LST (i,j) + dTS, & ! (in)
-            Z1  (i,j),       & ! (in)
+            PRSA(i,j),       & ! (in)
+            PRSS(i,j),       & ! (in)
             Uabs,            & ! (in)
+            Z1  (i,j),       & ! (in)
             Z0M (i,j),       & ! (in)
             Z0H (i,j),       & ! (in)
             Z0E (i,j)        ) ! (in)
 
-        call qsat( dSQV, LST(i,j)+dTS, PRES(i,j) )
+        call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
 
-        dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOS(i,j) &
-                * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPS(i,j) ) + Ch )
-        dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOS(i,j) * QVEF(i,j) &
-                * ( (dCe-Ce)/dTS * ( SQV - QV(i,j) ) + Ce * (dSQV-SQV)/dTS )
+        dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) &
+                * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
+        dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) &
+                * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS )
         dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
 
         ! calculation for d(residual)/dTS
         DRES(i,j) = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
                   - dSHFLX - dLHFLX + dGHFLX
+
+        ! diagnositc variables
+        U10(i,j) = R10m * UA(i,j)
+        V10(i,j) = R10m * VA(i,j)
+
+        T2(i,j) = (          R02h ) * TMPA(i,j) &
+                + ( 1.0_RP - R02h ) * LST (i,j)
+        Q2(i,j) = (          R02e ) * QVA (i,j) &
+                + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
+
       enddo
       enddo
 
       if( LST_UPDATE ) then
 
-        do j = JS-1, JE+1
-        do i = IS-1, IE+1
+        do j = JS, JE
+        do i = IS, IE
 
           if( redf(i,j) < 0.0_RP ) then
             redf(i,j) = 1.0_RP
@@ -329,7 +354,7 @@ contains
         end do
         end do
 
-        if( maxval(abs(RES(IS-1:IE+1,JS-1:JE+1))) < res_min ) then
+        if( maxval(abs(RES(IS:IE,JS:JE))) < res_min ) then
           ! iteration converged
           exit
         end if

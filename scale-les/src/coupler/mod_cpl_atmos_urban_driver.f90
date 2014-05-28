@@ -84,24 +84,32 @@ contains
        TBL_URB
     use mod_cpl_vars, only: &
        UST,               &
-       DENS => CPL_DENS,  &
-       MOMX => CPL_MOMX,  &
-       MOMY => CPL_MOMY,  &
-       MOMZ => CPL_MOMZ,  &
+       RHOA => CPL_RHOA,  &
+       UA   => CPL_UA,    &
+       VA   => CPL_VA,    &
+       WA   => CPL_WA,    &
        TMPA => CPL_TMPA,  &
-       QV   => CPL_QV  ,  &
+       QVA  => CPL_QVA,   &
        PREC => CPL_PREC,  &
-       SWD  => CPL_SWD ,  &
-       LWD  => CPL_LWD ,  &
+       SWD  => CPL_SWD,   &
+       LWD  => CPL_LWD,   &
        CPL_AtmLnd_XMFLX,  & ! tentative
        CPL_AtmLnd_YMFLX,  & ! tentative
        CPL_AtmLnd_ZMFLX,  & ! tentative
+       CPL_AtmLnd_U10,    & ! tentative
+       CPL_AtmLnd_V10,    & ! tentative
+       CPL_AtmLnd_T2,     & ! tentative
+       CPL_AtmLnd_Q2,     & ! tentative
        CPL_AtmUrb_XMFLX,  &
        CPL_AtmUrb_YMFLX,  &
        CPL_AtmUrb_ZMFLX,  &
        CPL_AtmUrb_SHFLX,  &
        CPL_AtmUrb_LHFLX,  &
        CPL_AtmUrb_QVFLX,  &
+       CPL_AtmUrb_U10,    &
+       CPL_AtmUrb_V10,    &
+       CPL_AtmUrb_T2,     &
+       CPL_AtmUrb_Q2,     &
        Urb_GHFLX,         &
        Urb_PRECFLX,       &
        Urb_QVFLX,         &
@@ -109,25 +117,24 @@ contains
        CNT_Urb
     implicit none
 
-    ! argument
+    ! arguments
     logical, intent(in) :: update_flag
 
-    ! work
-    real(RP) :: XMFLX (IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX (IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX (IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX (IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX (IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX (IA,JA) ! ground heat flux at the surface [W/m2]
-
-    real(RP) :: tmpX(IA,JA) ! temporary XMFLX [kg/m2/s]
-    real(RP) :: tmpY(IA,JA) ! temporary YMFLX [kg/m2/s]
+    ! works
+    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
+    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
+    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
+    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
+    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
+    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
-    real(RP) :: QA       ! mixing ratio at 1st atmospheric level  [kg/kg]
-    real(RP) :: UA       ! wind speed at 1st atmospheric level    [m/s]
-    real(RP) :: U1       ! u at 1st atmospheric level             [m/s]
-    real(RP) :: V1       ! v at 1st atmospheric level             [m/s]
+    real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
+    real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
 
     ! parameters for shadow model
     !XX sinDEC, cosDEC ?
@@ -137,26 +144,17 @@ contains
     !XX  hourangle  ?
     ! real(RP) :: OMG      ! solar hour angle                       [rad]
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = JS, JE
+    do i = IS, IE
 
-      QA = QV(i,j) / (1.0_RP-QV(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
-                                      ! QV specific humidity                  [kg/kg]
-      UA = sqrt(          &
-            ( MOMZ(i,j)               )**2 &
-          + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-          + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-          ) / DENS(i,j) * 0.5_RP
-                                  ! wind speed at 1st atmospheric level   [m/s]
-      U1 = 0.5_RP * ( MOMX(i-1,j) + MOMX(i,j) ) / DENS(i,j)
-                                  ! u at 1st atmospheric level            [m/s]
-      V1 = 0.5_RP * ( MOMY(i,j-1) + MOMY(i,j) ) / DENS(i,j)
-                                  ! v at 1st atmospheric level            [m/s]
+      QMA = QVA(i,j) / (1.0_RP-QVA(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
+                                         ! QV specific humidity                  [kg/kg]
+      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       call CPL_AtmUrb( &
         TR_URB (i,j),   & ! (inout)
@@ -174,15 +172,15 @@ contains
         GHFLX  (i,j),   & ! (out)
         LSOLAR,         & ! (in)
         TMPA   (i,j),   & ! (in)
-        QA,             & ! (in)
-        UA,             & ! (in)
-        U1,             & ! (in)
-        V1,             & ! (in)
+        QMA,            & ! (in)
+        Uabs,           & ! (in)
+        UA     (i,j),   & ! (in)
+        VA     (i,j),   & ! (in)
         Z1     (i,j),   & ! (in)
         SWD    (i,j),   & ! (in)
         LWD    (i,j),   & ! (in)
         PREC   (i,j),   & ! (in)
-        DENS   (i,j),   & ! (in)
+        RHOA   (i,j),   & ! (in)
         LON    (i,j),   & ! (in)
         LAT    (i,j)    ) ! (in)
 
@@ -190,26 +188,14 @@ contains
     end do
 
     ! --- tentative: caution !! ---
-    XMFLX(:,:) = CPL_AtmLnd_XMFLX (:,:)
-    YMFLX(:,:) = CPL_AtmLnd_YMFLX (:,:)
-    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX (:,:)
+    XMFLX(:,:) = CPL_AtmLnd_XMFLX(:,:)
+    YMFLX(:,:) = CPL_AtmLnd_YMFLX(:,:)
+    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX(:,:)
+    U10  (:,:) = CPL_AtmLnd_U10  (:,:)
+    V10  (:,:) = CPL_AtmLnd_V10  (:,:)
+    T2   (:,:) = CPL_AtmLnd_T2   (:,:)
+    Q2   (:,:) = CPL_AtmLnd_Q2   (:,:)
     ! --- tentative: caution !! ---
-
-    ! interpolate momentum fluxes
-    do j = JS, JE
-    do i = IS, IE
-      tmpX(i,j) = ( XMFLX(i,j) + XMFLX(i+1,j  ) ) * 0.5_RP ! at u/y-layer
-      tmpY(i,j) = ( YMFLX(i,j) + YMFLX(i,  j+1) ) * 0.5_RP ! at x/v-layer
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-      XMFLX(i,j) = tmpX(i,j)
-      YMFLX(i,j) = tmpY(i,j)
-      ZMFLX(i,j) = ZMFLX(i,j) * 0.5_RP ! at w-layer
-    enddo
-    enddo
 
     ! temporal average flux
     CPL_AtmUrb_XMFLX(:,:) = ( CPL_AtmUrb_XMFLX(:,:) * CNT_Atm_Urb + XMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
@@ -218,6 +204,10 @@ contains
     CPL_AtmUrb_SHFLX(:,:) = ( CPL_AtmUrb_SHFLX(:,:) * CNT_Atm_Urb + SHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
     CPL_AtmUrb_LHFLX(:,:) = ( CPL_AtmUrb_LHFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
     CPL_AtmUrb_QVFLX(:,:) = ( CPL_AtmUrb_QVFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_U10  (:,:) = ( CPL_AtmUrb_U10  (:,:) * CNT_Atm_Urb + U10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_V10  (:,:) = ( CPL_AtmUrb_V10  (:,:) * CNT_Atm_Urb + V10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_T2   (:,:) = ( CPL_AtmUrb_T2   (:,:) * CNT_Atm_Urb + T2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_Q2   (:,:) = ( CPL_AtmUrb_Q2   (:,:) * CNT_Atm_Urb + Q2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
 
     Urb_GHFLX  (:,:) = ( Urb_GHFLX  (:,:) * CNT_Urb + GHFLX(:,:)     ) / ( CNT_Urb + 1.0_RP )
     Urb_PRECFLX(:,:) = ( Urb_PRECFLX(:,:) * CNT_Urb + PREC (:,:)     ) / ( CNT_Urb + 1.0_RP )

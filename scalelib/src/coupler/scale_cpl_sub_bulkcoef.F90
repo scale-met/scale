@@ -7,7 +7,6 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2014-02-18 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
 module scale_cpl_bulkcoef
@@ -28,22 +27,40 @@ module scale_cpl_bulkcoef
 
   abstract interface
      subroutine bc( &
-          Cm, Ch, Ce,                    & ! (out)
-          pta, pts, za, uabs, z0, zt, ze ) ! (in)
+          Cm,   & ! (out)
+          Ch,   & ! (out)
+          Ce,   & ! (out)
+          R10m, & ! (out)
+          R02h, & ! (out)
+          R02e, & ! (out)
+          Ta,   & ! (in)
+          Ts,   & ! (in)
+          Pa,   & ! (in)
+          Ps,   & ! (in)
+          Ua,   & ! (in)
+          Za,   & ! (in)
+          Z0M,  & ! (in)
+          Z0H,  & ! (in)
+          Z0E   ) ! (in)
        use scale_precision
        implicit none
 
-       real(RP), intent(out) :: Cm ! momentum bulk coefficient [no unit]
-       real(RP), intent(out) :: Ch ! heat bulk coefficient [no unit]
-       real(RP), intent(out) :: Ce ! moisture bulk coefficient [no unit]
+       real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
+       real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
+       real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+       real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+       real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+       real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
-       real(RP), intent(in) :: pta  ! potential tempearature at 1st atm. layer [K]
-       real(RP), intent(in) :: pts  ! skin potential temperature [K]
-       real(RP), intent(in) :: za   ! height at 1st atm. layer [m]
-       real(RP), intent(in) :: uabs ! wind speed at 1st atm. layer [m/s]
-       real(RP), intent(in) :: z0   ! roughness length of momentum [m]
-       real(RP), intent(in) :: zt   ! roughness length of heat [m]
-       real(RP), intent(in) :: ze   ! roughness length of moisture [m]
+       real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
+       real(RP), intent(in) :: Ts  ! skin temperature [K]
+       real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
+       real(RP), intent(in) :: Ps  ! surface pressure [Pa]
+       real(RP), intent(in) :: Ua  ! wind speed at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+       real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
+       real(RP), intent(in) :: Z0H ! roughness length of heat [m]
+       real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
      end subroutine bc
   end interface
 
@@ -155,25 +172,44 @@ contains
   end subroutine CPL_bulkcoef_setup
 
   subroutine CPL_bulkcoef_uno( &
-      Cm, Ch, Ce,                    & ! (out)
-      pta, pts, za, uabs, z0, zt, ze ) ! (in)
+      Cm,   & ! (out)
+      Ch,   & ! (out)
+      Ce,   & ! (out)
+      R10m, & ! (out)
+      R02h, & ! (out)
+      R02e, & ! (out)
+      Ta,   & ! (in)
+      Ts,   & ! (in)
+      Pa,   & ! (in)
+      Ps,   & ! (in)
+      Ua,   & ! (in)
+      Za,   & ! (in)
+      Z0M,  & ! (in)
+      Z0H,  & ! (in)
+      Z0E   ) ! (in)
     use scale_const, only: &
-      GRAV   => CONST_GRAV,  &
-      KARMAN => CONST_KARMAN
+      GRAV   => CONST_GRAV,   &
+      KARMAN => CONST_KARMAN, &
+      RovCP  => CONST_RovCP
     implicit none
 
     ! argument
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
-    real(RP), intent(in) :: pta  ! potential tempearature at 1st atm. layer [K]
-    real(RP), intent(in) :: pts  ! skin potential temperature [K]
-    real(RP), intent(in) :: za   ! height at 1st atm. layer [m]
-    real(RP), intent(in) :: uabs ! wind speed at 1st atm. layer [m/s]
-    real(RP), intent(in) :: z0   ! roughness length of momentum [m]
-    real(RP), intent(in) :: zt   ! roughness length of heat [m]
-    real(RP), intent(in) :: ze   ! roughness length of moisture [m]
+    real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: Ts  ! skin temperature [K]
+    real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: Ps  ! surface pressure [Pa]
+    real(RP), intent(in) :: Ua  ! wind speed at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
+    real(RP), intent(in) :: Z0H ! roughness length of heat [m]
+    real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
 
     ! constant
     real(RP), parameter :: tPrn = 0.74_RP    ! turbulent Prandtl number (Businger et al. 1971)
@@ -184,11 +220,15 @@ contains
 
     ! work
     real(RP) :: RiB, RiBT ! bulk Richardson number [no unit]
-    real(RP) :: C0 ! initial drag coefficient [no unit]
+    real(RP) :: C0, C0_10, C0_02 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
+    real(RP) :: fm10, fm02, fh02
 
-    C0    = ( KARMAN / log( za/z0 ) )**2
-    RiBT  = GRAV * za * ( pta - pts ) / ( pta * uabs**2 )
+    C0    = ( KARMAN / log(      Za/Z0M ) )**2
+    C0_10 = ( KARMAN / log( 10.0_RP/Z0M ) )**2
+    C0_02 = ( KARMAN / log(  2.0_RP/Z0M ) )**2
+
+    RiBT  = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
     RiB   = RiBT
 
     if( RiBT >= 0.0_RP ) then
@@ -197,58 +237,93 @@ contains
       fh = fm
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( z0/zt ) / log( za/z0 ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( z0/ze ) / log( za/z0 ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Za/Z0M ) / sqrt( fm ) * fh )
     RiB  = RiB * t0th
 
     if( RiBT >= 0.0_RP ) then
       ! stable condition
-      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh = fm
+      fm   = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh   = fm
+      fm10 = fm
+      fm02 = fm
+      fh02 = fm
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( za/z0 ) * sqrt( abs( RiB ) ) )
+      fm   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fh   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_10 * sqrt( 10.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
+      fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
+      fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( z0/zt ) / log( za/z0 ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( z0/ze ) / log( za/z0 ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Za/Z0M ) / sqrt( fm ) * fh )
 
     Cm = C0 * fm
     Ch = C0 * fh * t0th / tPrn
     Ce = C0 * fh * q0qe / tPrn
 
+    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
+    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
+
+    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
+    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
+    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
 
     return
   end subroutine CPL_bulkcoef_uno
 
   subroutine CPL_bulkcoef_beljaars( &
-      Cm, Ch, Ce,                    & ! (out)
-      pta, pts, za, uabs, z0, zt, ze ) ! (in)
+      Cm,   & ! (out)
+      Ch,   & ! (out)
+      Ce,   & ! (out)
+      R10m, & ! (out)
+      R02h, & ! (out)
+      R02e, & ! (out)
+      Ta,   & ! (in)
+      Ts,   & ! (in)
+      Pa,   & ! (in)
+      Ps,   & ! (in)
+      Ua,   & ! (in)
+      Za,   & ! (in)
+      Z0M,  & ! (in)
+      Z0H,  & ! (in)
+      Z0E   ) ! (in)
     use scale_const, only: &
-      GRAV   => CONST_GRAV, &
-      KARMAN => CONST_KARMAN
+      GRAV   => CONST_GRAV,   &
+      KARMAN => CONST_KARMAN, &
+      RovCP  => CONST_RovCP
     implicit none
 
     ! argument
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
+    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
+    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
+    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
-    real(RP), intent(in) :: pta  ! potential tempearature at 1st atm. layer [K]
-    real(RP), intent(in) :: pts  ! skin potential temperature [K]
-    real(RP), intent(in) :: za   ! height at 1st atm. layer [m]
-    real(RP), intent(in) :: uabs ! wind speed at 1st atm. layer [m/s]
-    real(RP), intent(in) :: z0   ! roughness length of momentum [m]
-    real(RP), intent(in) :: zt   ! roughness length of heat [m]
-    real(RP), intent(in) :: ze   ! roughness length of moisture [m]
+    real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: Ts  ! skin temperature [K]
+    real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: Ps  ! surface pressure [Pa]
+    real(RP), intent(in) :: Ua  ! wind speed at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
+    real(RP), intent(in) :: Z0H ! roughness length of heat [m]
+    real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
 
     ! constant
     integer,  parameter :: nmax    = 100        ! maximum iteration number
@@ -264,43 +339,53 @@ contains
     real(RP) :: res, dres
     real(RP) :: dCm, dCh, dCe
     real(RP) :: tmp
+    real(RP) :: fm, fh
+    real(RP) :: fm10, fm02, fh02
 
-    RiB0 = GRAV * za * ( pta - pts ) / ( pta * uabs**2 )
+    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
     if( abs( RiB0 ) < RiB_min ) then
       RiB0 = RiB_min
     end if
 
     ! The initial Obukhov length is assumed by bulk Richardson number.
-    L = za / RiB0
+    L = Za / RiB0
 
     do n = 1, nmax
       if( L < 0.0_RP ) then
         ! unstable condition
-        Cm = KARMAN**2 / ( log(za/z0) - fmUS(za/L) + fmUS(z0/L) )**2
-        Ch = KARMAN**2 / ( log(za/z0) - fmUS(za/L) + fmUS(z0/L) ) / ( log(za/zt) - fhUS(za/L) + fhUS(zt/L) )
-        Ce = KARMAN**2 / ( log(za/z0) - fmUS(za/L) + fmUS(z0/L) ) / ( log(za/ze) - fhUS(za/L) + fhUS(ze/L) )
+        Cm = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) )**2
+        Ch = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) ) &
+                       / ( log(Za/Z0H) - fhUS(Za/L) + fhUS(Z0H/L) )
+        Ce = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) ) &
+                       / ( log(Za/Z0E) - fhUS(Za/L) + fhUS(Z0E/L) )
       else
         ! stable condition
-        Cm = KARMAN**2 / ( log(za/z0) - fmS(za/L) + fmS(z0/L) )**2
-        Ch = KARMAN**2 / ( log(za/z0) - fmS(za/L) + fmS(z0/L) ) / ( log(za/zt) - fhS(za/L) + fhS(zt/L) )
-        Ce = KARMAN**2 / ( log(za/z0) - fmS(za/L) + fmS(z0/L) ) / ( log(za/ze) - fhS(za/L) + fhS(ze/L) )
+        Cm = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) )**2
+        Ch = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) ) &
+                       / ( log(Za/Z0H) - fhS(Za/L) + fhS(Z0H/L) )
+        Ce = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) ) &
+                       / ( log(Za/Z0E) - fhS(Za/L) + fhS(Z0E/L) )
       end if
       ! calculate residual
-      res = L - za * Cm**1.5_RP / ( KARMAN * Ch * RiB0 )
+      res = L - Za * Cm**1.5_RP / ( KARMAN * Ch * RiB0 )
 
       if( L+dL < 0.0_RP ) then
         ! unstable condition
-        dCm = KARMAN**2 / ( log(za/z0) - fmUS(za/(L+dL)) + fmUS(z0/(L+dL)) )**2
-        dCh = KARMAN**2 / ( log(za/z0) - fmUS(za/(L+dL)) + fmUS(z0/(L+dL)) ) / ( log(za/zt) - fhUS(za/(L+dL)) + fhUS(zt/(L+dL)) )
-        dCe = KARMAN**2 / ( log(za/z0) - fmUS(za/(L+dL)) + fmUS(z0/(L+dL)) ) / ( log(za/ze) - fhUS(za/(L+dL)) + fhUS(ze/(L+dL)) )
+        dCm = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) )**2
+        dCh = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) ) &
+                        / ( log(Za/Z0H) - fhUS(Za/(L+dL)) + fhUS(Z0H/(L+dL)) )
+        dCe = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) ) &
+                        / ( log(Za/Z0E) - fhUS(Za/(L+dL)) + fhUS(Z0E/(L+dL)) )
       else
         ! stable condition
-        dCm = KARMAN**2 / ( log(za/z0) - fmS(za/(L+dL)) + fmS(z0/(L+dL)) )**2
-        dCh = KARMAN**2 / ( log(za/z0) - fmS(za/(L+dL)) + fmS(z0/(L+dL)) ) / ( log(za/zt) - fhS(za/(L+dL)) + fhS(zt/(L+dL)) )
-        dCe = KARMAN**2 / ( log(za/z0) - fmS(za/(L+dL)) + fmS(z0/(L+dL)) ) / ( log(za/ze) - fhS(za/(L+dL)) + fhS(ze/(L+dL)) )
+        dCm = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) )**2
+        dCh = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) ) &
+                        / ( log(Za/Z0H) - fhS(Za/(L+dL)) + fhS(Z0H/(L+dL)) )
+        dCe = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) ) &
+                        / ( log(Za/Z0E) - fhS(Za/(L+dL)) + fhS(Z0E/(L+dL)) )
       end if
       ! calculate d(residual)
-      dres = (L+dL) - za * dCm**1.5_RP / ( KARMAN * dCh * RiB0 )
+      dres = (L+dL) - Za * dCm**1.5_RP / ( KARMAN * dCh * RiB0 )
 
       ! update Obukhov length
       L = L - res / ( dres - res ) * dL
@@ -317,11 +402,37 @@ contains
     end if
 
     ! update bulk Richardson nubmer
-    !RiB = za * Cm**1.5_RP / ( L * KARMAN * Ch )
+    !RiB = Za * Cm**1.5_RP / ( L * KARMAN * Ch )
+
+    if( L < 0.0_RP ) then
+      ! unstable condition
+      fm   = fmUS(      Za/L )
+      fh   = fhUS(      Za/L )
+      fm10 = fmUS( 10.0_RP/L )
+      fm02 = fmUS(  2.0_RP/L )
+      fh02 = fhUS(  2.0_RP/L )
+    else
+      ! stable condition
+      fm   = fmS(      Za/L )
+      fh   = fhS(      Za/L )
+      fm10 = fmS( 10.0_RP/L )
+      fm02 = fmS(  2.0_RP/L )
+      fh02 = fhS(  2.0_RP/L )
+    end if
+
+    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
+    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
+    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
+         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
 
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
+
+    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
+    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
+    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
 
     return
   end subroutine CPL_bulkcoef_beljaars

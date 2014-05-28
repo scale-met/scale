@@ -158,15 +158,19 @@ contains
         SHFLX,      & ! (out)
         LHFLX,      & ! (out)
         GHFLX,      & ! (out)
+        U10,        & ! (out)
+        V10,        & ! (out)
+        T2,         & ! (out)
+        Q2,         & ! (out)
         LST_UPDATE, & ! (in)
-        DENS,       & ! (in)
-        MOMX,       & ! (in)
-        MOMY,       & ! (in)
-        MOMZ,       & ! (in)
-        RHOS,       & ! (in)
-        PRES,       & ! (in)
-        TMPS,       & ! (in)
-        QV,         & ! (in)
+        RHOA,       & ! (in)
+        UA,         & ! (in)
+        VA,         & ! (in)
+        WA,         & ! (in)
+        TMPA,       & ! (in)
+        PRSA,       & ! (in)
+        QVA,        & ! (in)
+        PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
         TG,         & ! (in)
@@ -179,7 +183,8 @@ contains
         Z0H,        & ! (in)
         Z0E         ) ! (in)
     use scale_const, only: &
-      PI => CONST_PI
+      PI    => CONST_PI,    &
+      UNDEF => CONST_UNDEF
     use scale_time, only: &
       TIME => TIME_NOWDAYSEC
     implicit none
@@ -193,17 +198,21 @@ contains
     real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
     real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
     real(RP), intent(out) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
+    real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
     logical,  intent(in) :: LST_UPDATE  ! is land surface temperature updated?
 
-    real(RP), intent(in) :: DENS(IA,JA) ! air density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: MOMX(IA,JA) ! momentum x at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMY(IA,JA) ! momentum y at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: MOMZ(IA,JA) ! momentum z at the lowest atmospheric layer [kg/m2/s]
-    real(RP), intent(in) :: RHOS(IA,JA) ! air density at the sruface [kg/m3]
-    real(RP), intent(in) :: PRES(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: TMPS(IA,JA) ! air temperature at the surface [K]
-    real(RP), intent(in) :: QV  (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
 
@@ -226,12 +235,7 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-      ! at cell center
-      Uabs = sqrt( &
-             ( MOMZ(i,j)               )**2 &
-           + ( MOMX(i-1,j) + MOMX(i,j) )**2 &
-           + ( MOMY(i,j-1) + MOMY(i,j) )**2 &
-           ) / DENS(i,j) * 0.5_RP
+      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       if( CMTYPE == 1 ) then
         ! friction velocity is constant
@@ -241,9 +245,9 @@ contains
         Cm = Const_Cm
       endif
 
-      XMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMX(i,j) / DENS(i,j)
-      YMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMY(i,j) / DENS(i,j)
-      ZMFLX(i,j) = -Cm * RHOS(i,j) * min(max(Uabs,U_min),U_max) * MOMZ(i,j) / DENS(i,j)
+      XMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * RHOA(i,j) * UA(i,j)
+      YMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * RHOA(i,j) * VA(i,j)
+      ZMFLX(i,j) = -Cm * min(max(Uabs,U_min),U_max) * RHOA(i,j) * WA(i,j)
 
       if( DIURNAL ) then
         ! include diurnal change
@@ -254,6 +258,12 @@ contains
 
       LHFLX (i,j) = Const_LH
       GHFLX (i,j) = Const_GH
+
+      ! diagnostic variables
+      U10(i,j) = UNDEF
+      V10(i,j) = UNDEF
+      T2 (i,j) = UNDEF
+      Q2 (i,j) = UNDEF
 
     enddo
     enddo
