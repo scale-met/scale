@@ -1,9 +1,8 @@
 program unit
-
+  use scale_stdio
   use scale_grid_index
   use scale_tracer
-  use scale_stdio, only: &
-     IO_setup
+
   use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
@@ -20,8 +19,10 @@ program unit
 
   use test_atmos_dyn_fent_fct
 
+  character(len=H_MID), parameter :: MODELNAME = "Unit test"
+
   ! setup standard I/O
-  call IO_setup
+  call IO_setup( MODELNAME )
 
   ! start MPI
   call PRC_MPIstart
