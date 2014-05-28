@@ -68,6 +68,7 @@ MODS =	\
 	mod_urban_vars.o             \
 	mod_urban_phy_ucm.o          \
 	mod_urban_driver.o           \
+	mod_cpl_admin.o              \
 	mod_cpl_vars.o               \
 	mod_cpl_atmos_land_driver.o  \
 	mod_cpl_atmos_urban_driver.o \
@@ -126,8 +127,8 @@ $(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90        mod_atmos_
 $(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    mod_atmos_admin.o mod_atmos_vars.o mod_atmos_dyn_vars.o
 $(BUILD_DIR)/mod_atmos_phy_cp_driver.o    : mod_atmos_phy_cp_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_cp_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_mp_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_rd_vars.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_sf_vars.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_rd_vars.o mod_cpl_admin.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_sf_vars.o mod_cpl_admin.o mod_cpl_vars.o
 $(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_tb_vars.o
 $(BUILD_DIR)/mod_atmos_phy_ch_driver.o    : mod_atmos_phy_ch_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_ch_vars.o
 $(BUILD_DIR)/mod_atmos_phy_ae_driver.o    : mod_atmos_phy_ae_driver.f90 mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_ae_vars.o
@@ -159,14 +160,15 @@ $(BUILD_DIR)/mod_urban_phy_ucm.o          : mod_urban_phy_ucm.f90 mod_urban_admi
 $(BUILD_DIR)/mod_urban_driver.o           : mod_urban_driver.f90  mod_urban_admin.o mod_urban_vars.o mod_cpl_vars.o \
                                             mod_urban_phy_ucm.o
 
+$(BUILD_DIR)/mod_cpl_admin.o              : mod_cpl_admin.f90
 $(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90
-
-$(BUILD_DIR)/mod_cpl_atmos_land_driver.o  : mod_cpl_atmos_land_driver.f90 mod_cpl_vars.o mod_land_phy_bucket.o
-$(BUILD_DIR)/mod_cpl_atmos_urban_driver.o : mod_cpl_atmos_urban_driver.f90 mod_cpl_vars.o mod_urban_phy_ucm.o
-$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o : mod_cpl_atmos_ocean_driver.f90 mod_cpl_vars.o mod_ocean_phy_slab.o
-$(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 mod_cpl_vars.o   \
+$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o : mod_cpl_atmos_ocean_driver.f90 mod_cpl_admin.o mod_cpl_vars.o mod_ocean_phy_slab.o
+$(BUILD_DIR)/mod_cpl_atmos_land_driver.o  : mod_cpl_atmos_land_driver.f90  mod_cpl_admin.o mod_cpl_vars.o mod_land_phy_bucket.o
+$(BUILD_DIR)/mod_cpl_atmos_urban_driver.o : mod_cpl_atmos_urban_driver.f90 mod_cpl_admin.o mod_cpl_vars.o mod_urban_phy_ucm.o
+$(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90             mod_cpl_admin.o mod_cpl_vars.o   \
+                                            mod_cpl_atmos_ocean_driver.o \
                                             mod_cpl_atmos_land_driver.o  \
-                                            mod_cpl_atmos_ocean_driver.o
+                                            mod_cpl_atmos_urban_driver.o
 
 $(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90
 $(BUILD_DIR)/mod_realinput.o              : mod_realinput.f90 mod_cpl_vars.o mod_land_vars.o mod_ocean_vars.o

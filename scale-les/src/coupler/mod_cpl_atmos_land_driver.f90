@@ -42,28 +42,31 @@ module mod_cpl_atmos_land_driver
   !
   !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_driver_setup
-    use mod_atmos_driver, only: &
-       ATMOS_SURFACE_SET
-    use mod_land_phy_bucket, only: &
-       LAND_PHY_driver_final
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmLnd,   &
+       CPL_TYPE_AtmLnd
     use scale_cpl_atmos_land, only: &
        CPL_AtmLnd_setup
-    use mod_cpl_vars, only: &
-       CPL_TYPE_AtmLnd
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_SURFACE_SET
-    call LAND_PHY_driver_final
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN AtmLnd] / Origin[SCALE-LES]'
 
-    call CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )
-    call CPL_AtmLnd_driver( .false. )
+    if ( CPL_sw_AtmLnd ) then
+
+       call CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )
+
+       call CPL_AtmLnd_driver( .false. )
+
+    endif
 
     return
   end subroutine CPL_AtmLnd_driver_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_driver( update_flag )
     use scale_const, only: &
        LH0  => CONST_LH0,  &

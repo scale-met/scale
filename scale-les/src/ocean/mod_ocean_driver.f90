@@ -47,10 +47,17 @@ contains
        OCEAN_sw
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver_setup
+    use mod_ocean_phy_slab, only: &
+       OCEAN_PHY_driver_final
     implicit none
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-LES]'
+
     if( OCEAN_sw ) call OCEAN_PHY_driver_setup( OCEAN_TYPE )
+
+    if( OCEAN_sw ) call OCEAN_PHY_driver_final
 
     return
   end subroutine OCEAN_driver_setup

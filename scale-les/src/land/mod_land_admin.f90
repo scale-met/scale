@@ -55,6 +55,7 @@ contains
     NAMELIST / PARAM_LAND / &
        LAND_do,  &
        LAND_TYPE
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -76,6 +77,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Land model components ***'
+
+    if ( LAND_TYPE == 'OFF' .OR. LAND_TYPE == 'NONE' ) then
+       LAND_do = .false. ! force off
+    endif
 
     if ( LAND_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Land  model : ON'

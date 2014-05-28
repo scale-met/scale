@@ -44,10 +44,7 @@ contains
   !> Setup
   subroutine CPL_driver_setup
     use mod_cpl_vars, only: &
-       sw_AtmLnd => CPL_sw_AtmLnd, &
-       sw_AtmUrb => CPL_sw_AtmUrb, &
-       sw_AtmOcn => CPL_sw_AtmOcn, &
-       CPL_vars_merge,             &
+       CPL_vars_merge,   &
        CPL_vars_fillhalo
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver_setup
@@ -58,9 +55,12 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( sw_AtmLnd ) call CPL_AtmLnd_driver_setup
-    if( sw_AtmUrb ) call CPL_AtmUrb_driver_setup
-    if( sw_AtmOcn ) call CPL_AtmOcn_driver_setup
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
+
+    call CPL_AtmOcn_driver_setup
+    call CPL_AtmLnd_driver_setup
+    call CPL_AtmUrb_driver_setup
 
     call CPL_vars_merge
 
@@ -72,13 +72,14 @@ contains
   !-----------------------------------------------------------------------------
   !> CPL calcuration
   subroutine CPL_driver
-    use mod_cpl_vars, only: &
-       sw_AtmLnd  => CPL_sw_AtmLnd,  &
-       sw_AtmUrb  => CPL_sw_AtmUrb,  &
-       sw_AtmOcn  => CPL_sw_AtmOcn,  &
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmLnd,                &
+       CPL_sw_AtmUrb,                &
+       CPL_sw_AtmOcn,                &
        LST_UPDATE => CPL_LST_UPDATE, &
        UST_UPDATE => CPL_UST_UPDATE, &
-       SST_UPDATE => CPL_SST_UPDATE, &
+       SST_UPDATE => CPL_SST_UPDATE
+    use mod_cpl_vars, only: &
        CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
        CPL_vars_history
@@ -92,21 +93,21 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Coupler Atoms-Land ##########
-    if( sw_AtmLnd ) then
+    if( CPL_sw_AtmLnd ) then
       call PROF_rapstart('CPL Atmos-Land')
       call CPL_AtmLnd_driver( LST_UPDATE )
       call PROF_rapend  ('CPL Atmos-Land')
     endif
 
     !########## Coupler Atoms-Urban ##########
-    if( sw_AtmUrb ) then
+    if( CPL_sw_AtmUrb ) then
       call PROF_rapstart('CPL Atmos-Urban')
       call CPL_AtmUrb_driver( UST_UPDATE )
       call PROF_rapend  ('CPL Atmos-Urban')
     endif
 
     !########## Coupler Atoms-Ocean ##########
-    if( sw_AtmOcn ) then
+    if( CPL_sw_AtmOcn ) then
       call PROF_rapstart('CPL Atmos-Ocean')
       call CPL_AtmOcn_driver( SST_UPDATE )
       call PROF_rapend  ('CPL Atmos-Ocean')

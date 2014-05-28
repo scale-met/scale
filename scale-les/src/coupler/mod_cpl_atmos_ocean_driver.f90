@@ -42,33 +42,36 @@ module mod_cpl_atmos_ocean_driver
   !
   !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmOcn_driver_setup
-    use mod_atmos_driver, only: &
-       ATMOS_SURFACE_SET
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmOcn,  &
+       CPL_TYPE_AtmOcn
     use scale_ocean_roughness, only: &
        OCEAN_roughness_setup
-    use mod_ocean_phy_slab, only: &
-       OCEAN_PHY_driver_final
-    use mod_cpl_vars, only: &
-       CPL_TYPE_AtmOcn
     use scale_cpl_atmos_ocean, only: &
        CPL_AtmOcn_setup
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_SURFACE_SET
-    call OCEAN_PHY_driver_final
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN AtmOcn] / Origin[SCALE-LES]'
 
-    !--- set up roughness length of sea surface
-    call OCEAN_roughness_setup
+    if ( CPL_sw_AtmOcn ) then
 
-    call CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
-    call CPL_AtmOcn_driver( .false. )
+       !--- set up roughness length of sea surface
+       call OCEAN_roughness_setup
+
+       call CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
+
+       call CPL_AtmOcn_driver( .false. )
+
+    endif
 
     return
   end subroutine CPL_AtmOcn_driver_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmOcn_driver( update_flag )
     use scale_const, only: &
        LH0  => CONST_LH0,  &

@@ -140,8 +140,9 @@ contains
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+    use mod_cpl_admin, only: &
+       CPL_sw
     use mod_cpl_vars, only: &
-       sw_CPL => CPL_sw_ALL, &
        CPL_getATM_RD
     implicit none
 
@@ -170,7 +171,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation'
 
-       if ( sw_CPL ) then
+       if ( CPL_sw ) then
           call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
                               SFC_albedo_land(:,:,:) ) ! [OUT]
        endif

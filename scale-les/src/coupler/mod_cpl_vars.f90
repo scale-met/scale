@@ -50,128 +50,115 @@ module mod_cpl_vars
   !
   !++ Public parameters & variables
   !
-  logical,                public, save :: CPL_do          = .true.  ! main switch for the model
-
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmLnd = 'OFF'   !< atmos-land coupler type
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmUrb = 'OFF'   !< atmos-urban coupler type
-  character(len=H_SHORT), public, save :: CPL_TYPE_AtmOcn = 'OFF'   !< atmos-ocean coupler type
-  logical,                public, save :: CPL_LST_UPDATE  = .false. !< is Land Surface Temperature updated?
-  logical,                public, save :: CPL_UST_UPDATE  = .false. !< is Urban Surface Temperature updated?
-  logical,                public, save :: CPL_SST_UPDATE  = .false. !< is Sea  Surface Temperature updated?
-
-  logical,                public, save :: CPL_sw_ALL      = .false. !< do coupler calculation?
-  logical,                public, save :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
-  logical,                public, save :: CPL_sw_AtmLnd             !< do atmos-land  coupler calculation?
-  logical,                public, save :: CPL_sw_AtmUrb             !< do atmos-urban coupler calculation?
-  logical,                public, save :: CPL_sw_restart            !< output coupler restart?
+  logical, public :: CPL_sw_restart            !< output coupler restart?
 
   ! prognostic variables
-  real(RP), public, save, allocatable :: LST  (:,:)   ! Land Surface Temperature [K]
-  real(RP), public, save, allocatable :: UST  (:,:)   ! Urban Surface Temperature [K]
-  real(RP), public, save, allocatable :: SST  (:,:)   ! Sea Surface Temperature [K]
-  real(RP), public, save, allocatable :: ALBG (:,:,:) ! Land Surface albedo [0-1]
-  real(RP), public, save, allocatable :: ALBW (:,:,:) ! Sea Surface albedo [0-1]
-  real(RP), public, save, allocatable :: Z0W  (:,:)   ! Sea Surface roughness length [m]
-  real(RP), public, save, allocatable :: SkinT(:,:)   ! Ground Skin Temperature [K]
-  real(RP), public, save, allocatable :: SkinW(:,:)   ! Ground Skin Water       [kg/m2]
-  real(RP), public, save, allocatable :: SnowQ(:,:)   ! Ground Snow amount      [kg/m2]
-  real(RP), public, save, allocatable :: SnowT(:,:)   ! Ground Snow Temperature [K]
+  real(RP), public, allocatable :: LST  (:,:)   ! Land Surface Temperature [K]
+  real(RP), public, allocatable :: UST  (:,:)   ! Urban Surface Temperature [K]
+  real(RP), public, allocatable :: SST  (:,:)   ! Sea Surface Temperature [K]
+  real(RP), public, allocatable :: ALBG (:,:,:) ! Land Surface albedo [0-1]
+  real(RP), public, allocatable :: ALBW (:,:,:) ! Sea Surface albedo [0-1]
+  real(RP), public, allocatable :: Z0W  (:,:)   ! Sea Surface roughness length [m]
+  real(RP), public, allocatable :: SkinT(:,:)   ! Ground Skin Temperature [K]
+  real(RP), public, allocatable :: SkinW(:,:)   ! Ground Skin Water       [kg/m2]
+  real(RP), public, allocatable :: SnowQ(:,:)   ! Ground Snow amount      [kg/m2]
+  real(RP), public, allocatable :: SnowT(:,:)   ! Ground Snow Temperature [K]
 
   ! surface variables to atmospheric model
-  real(RP), public, save, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
-  real(RP), public, save, allocatable :: Atm_U10   (:,:) ! velocity u at 10m [m/s]
-  real(RP), public, save, allocatable :: Atm_V10   (:,:) ! velocity v at 10m [m/s]
-  real(RP), public, save, allocatable :: Atm_T2    (:,:) ! temperature at 2m [K]
-  real(RP), public, save, allocatable :: Atm_Q2    (:,:) ! water vapor at 2m [kg/kg]
+  real(RP), public, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, allocatable :: Atm_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, allocatable :: Atm_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, allocatable :: Atm_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, allocatable :: Atm_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
   ! surface variables to land model
-  real(RP), public, save, allocatable :: Lnd_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Lnd_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Lnd_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
+  real(RP), public, allocatable :: Lnd_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Lnd_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, allocatable :: Lnd_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
   ! surface variables to urban model
-  real(RP), public, save, allocatable :: Urb_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Urb_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Urb_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
+  real(RP), public, allocatable :: Urb_GHFLX  (:,:) ! ground heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Urb_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, allocatable :: Urb_QVFLX  (:,:) ! moisture flux for land [kg/m2/s]
 
   ! surface variables to ocean model
-  real(RP), public, save, allocatable :: Ocn_WHFLX  (:,:) ! water heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: Ocn_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
-  real(RP), public, save, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
+  real(RP), public, allocatable :: Ocn_WHFLX  (:,:) ! water heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Ocn_PRECFLX(:,:) ! precipitation flux [kg/m2/s]
+  real(RP), public, allocatable :: Ocn_QVFLX  (:,:) ! moisture flux for ocean [kg/m2/s]
 
   ! surface variables from atmosphere-ocean coupler
-  real(RP), public, save, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_U10   (:,:) ! velocity u at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_V10   (:,:) ! velocity v at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_T2    (:,:) ! temperature at 2m [K]
-  real(RP), public, save, allocatable :: CPL_AtmOcn_Q2    (:,:) ! water vapor at 2m [kg/kg]
+  real(RP), public, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmOcn_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, allocatable :: CPL_AtmOcn_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
   ! surface variables from atmosphere-land coupler
-  real(RP), public, save, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_U10   (:,:) ! velocity u at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_V10   (:,:) ! velocity v at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_T2    (:,:) ! temperature at 2m [K]
-  real(RP), public, save, allocatable :: CPL_AtmLnd_Q2    (:,:) ! water vapor at 2m [kg/kg]
+  real(RP), public, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmLnd_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, allocatable :: CPL_AtmLnd_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
   ! surface variables from atmosphere-urban coupler
-  real(RP), public, save, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_U10   (:,:) ! velocity u at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_V10   (:,:) ! velocity v at 10m [m/s]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_T2    (:,:) ! temperature at 2m [K]
-  real(RP), public, save, allocatable :: CPL_AtmUrb_Q2    (:,:) ! water vapor at 2m [kg/kg]
+  real(RP), public, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_U10   (:,:) ! velocity u at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_V10   (:,:) ! velocity v at 10m [m/s]
+  real(RP), public, allocatable :: CPL_AtmUrb_T2    (:,:) ! temperature at 2m [K]
+  real(RP), public, allocatable :: CPL_AtmUrb_Q2    (:,:) ! water vapor at 2m [kg/kg]
 
   ! Atmospheric values
-  real(RP), public, save, allocatable :: CPL_RHOA(:,:) ! density at the lowest atmospheric layer [kg/m3]
-  real(RP), public, save, allocatable :: CPL_UA  (:,:) ! velocity u at the lowest atmospheric layer [m/s]
-  real(RP), public, save, allocatable :: CPL_VA  (:,:) ! velocity v at the lowest atmospheric layer [m/s]
-  real(RP), public, save, allocatable :: CPL_WA  (:,:) ! velocity w at the lowest atmospheric layer [m/s]
-  real(RP), public, save, allocatable :: CPL_TMPA(:,:) ! temperature at the lowest atmospheric layer [K]
-  real(RP), public, save, allocatable :: CPL_PRSA(:,:) ! pressure at the lowest atmospheric layer [Pa]
-  real(RP), public, save, allocatable :: CPL_QVA (:,:) ! ratio of mass of tracer to total mass at the lowest atmospheric layer [kg/kg]
-  real(RP), public, save, allocatable :: CPL_PRSS(:,:) ! pressure at the surface [Pa]
-  real(RP), public, save, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
-  real(RP), public, save, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, save, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_RHOA(:,:) ! density at the lowest atmospheric layer [kg/m3]
+  real(RP), public, allocatable :: CPL_UA  (:,:) ! velocity u at the lowest atmospheric layer [m/s]
+  real(RP), public, allocatable :: CPL_VA  (:,:) ! velocity v at the lowest atmospheric layer [m/s]
+  real(RP), public, allocatable :: CPL_WA  (:,:) ! velocity w at the lowest atmospheric layer [m/s]
+  real(RP), public, allocatable :: CPL_TMPA(:,:) ! temperature at the lowest atmospheric layer [K]
+  real(RP), public, allocatable :: CPL_PRSA(:,:) ! pressure at the lowest atmospheric layer [Pa]
+  real(RP), public, allocatable :: CPL_QVA (:,:) ! ratio of mass of tracer to total mass at the lowest atmospheric layer [kg/kg]
+  real(RP), public, allocatable :: CPL_PRSS(:,:) ! pressure at the surface [Pa]
+  real(RP), public, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
+  real(RP), public, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
 
   ! Ocean values
-  real(RP), public, save, allocatable :: CPL_TW  (:,:) ! water temperature [K]
+  real(RP), public, allocatable :: CPL_TW  (:,:) ! water temperature [K]
 
   ! Land values
-  real(RP), public, save, allocatable :: CPL_TG  (:,:) ! soil temperature [K]
-  real(RP), public, save, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [0-1]
-  real(RP), public, save, allocatable :: CPL_TCS (:,:) ! thermal conductivity for soil [W/m/K]
-  real(RP), public, save, allocatable :: CPL_DZG (:,:) ! soil depth [m]
-  real(RP), public, save, allocatable :: CPL_Z0M (:,:) ! roughness length for momemtum [m]
-  real(RP), public, save, allocatable :: CPL_Z0H (:,:) ! roughness length for heat [m]
-  real(RP), public, save, allocatable :: CPL_Z0E (:,:) ! roughness length for vapor [m]
+  real(RP), public, allocatable :: CPL_TG  (:,:) ! soil temperature [K]
+  real(RP), public, allocatable :: CPL_QVEF(:,:) ! efficiency of evaporation [0-1]
+  real(RP), public, allocatable :: CPL_TCS (:,:) ! thermal conductivity for soil [W/m/K]
+  real(RP), public, allocatable :: CPL_DZG (:,:) ! soil depth [m]
+  real(RP), public, allocatable :: CPL_Z0M (:,:) ! roughness length for momemtum [m]
+  real(RP), public, allocatable :: CPL_Z0H (:,:) ! roughness length for heat [m]
+  real(RP), public, allocatable :: CPL_Z0E (:,:) ! roughness length for vapor [m]
 
   ! counter
-  real(RP), public, save :: CNT_Atm_Lnd ! counter for atmos flux by land
-  real(RP), public, save :: CNT_Atm_Urb ! counter for atmos flux by urban
-  real(RP), public, save :: CNT_Atm_Ocn ! counter for atmos flux by ocean
-  real(RP), public, save :: CNT_Lnd     ! counter for land flux
-  real(RP), public, save :: CNT_Urb     ! counter for urban flux
-  real(RP), public, save :: CNT_Ocn     ! counter for ocean flux
+  real(RP), public :: CNT_Atm_Lnd ! counter for atmos flux by land
+  real(RP), public :: CNT_Atm_Urb ! counter for atmos flux by urban
+  real(RP), public :: CNT_Atm_Ocn ! counter for atmos flux by ocean
+  real(RP), public :: CNT_Lnd     ! counter for land flux
+  real(RP), public :: CNT_Urb     ! counter for urban flux
+  real(RP), public :: CNT_Ocn     ! counter for ocean flux
 
   !-----------------------------------------------------------------------------
   !
@@ -181,39 +168,39 @@ module mod_cpl_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: CPL_RESTART_OUTPUT       = .false.       !< output restart file?
-  character(len=H_LONG),  private, save      :: CPL_RESTART_IN_BASENAME  = ''            !< basename of the input file
-  character(len=H_LONG),  private, save      :: CPL_RESTART_OUT_BASENAME = ''            !< basename of the output file
-  character(len=H_MID),   private, save      :: CPL_RESTART_OUT_TITLE    = 'CPL restart' !< title    of the output file
-  character(len=H_MID),   private, save      :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'     !< REAL4 or REAL8
+  logical,                private :: CPL_RESTART_OUTPUT       = .false.       !< output restart file?
+  character(len=H_LONG),  private :: CPL_RESTART_IN_BASENAME  = ''            !< basename of the input file
+  character(len=H_LONG),  private :: CPL_RESTART_OUT_BASENAME = ''            !< basename of the output file
+  character(len=H_MID),   private :: CPL_RESTART_OUT_TITLE    = 'CPL restart' !< title    of the output file
+  character(len=H_MID),   private :: CPL_RESTART_OUT_DTYPE    = 'DEFAULT'     !< REAL4 or REAL8
 
-  logical,                private, save      :: CPL_VARS_CHECKRANGE      = .false.
+  logical,                private :: CPL_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX          = 12
   integer,                private, parameter :: I_LST         =  1
   integer,                private, parameter :: I_UST         =  2
   integer,                private, parameter :: I_SST         =  3
-  integer,                private, parameter :: I_ALBW_SW     =  4
-  integer,                private, parameter :: I_ALBW_LW     =  5
-  integer,                private, parameter :: I_ALBG_SW     =  6
-  integer,                private, parameter :: I_ALBG_LW     =  7
+  integer,                private, parameter :: I_ALBW_LW     =  4
+  integer,                private, parameter :: I_ALBW_SW     =  5
+  integer,                private, parameter :: I_ALBG_LW     =  6
+  integer,                private, parameter :: I_ALBG_SW     =  7
   integer,                private, parameter :: I_Z0W         =  8
   integer,                private, parameter :: I_SkinT       =  9
   integer,                private, parameter :: I_SkinW       = 10
   integer,                private, parameter :: I_SnowQ       = 11
   integer,                private, parameter :: I_SnowT       = 12
 
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the coupler variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the coupler variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the coupler variables
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the coupler variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the coupler variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the coupler variables
 
   data VAR_NAME / 'LST',         &
                   'UST',         &
                   'SST',         &
-                  'ALBW_SW',     &
                   'ALBW_LW',     &
-                  'ALBG_SW',     &
+                  'ALBW_SW',     &
                   'ALBG_LW',     &
+                  'ALBG_SW',     &
                   'Z0W',         &
                   'SkinT',       &
                   'SkinW',       &
@@ -223,10 +210,10 @@ module mod_cpl_vars
   data VAR_DESC / 'land surface temp.',               &
                   'urban surface temp.',              &
                   'sea surface temp.',                &
-                  'sea surface albedo for SW',        &
                   'sea surface albedo for LW',        &
-                  'land surface albedo for SW',       &
+                  'sea surface albedo for SW',        &
                   'land surface albedo for LW',       &
+                  'land surface albedo for SW',       &
                   'sea surface roughness length',     &
                   'ground skin temp.',                &
                   'ground skin water',                &
@@ -253,16 +240,9 @@ contains
   subroutine CPL_vars_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
-
-    NAMELIST / PARAM_CPL / &
-       CPL_do,          &
-       CPL_TYPE_AtmLnd, &
-       CPL_TYPE_AtmUrb, &
-       CPL_TYPE_AtmOcn, &
-       CPL_LST_UPDATE,  &
-       CPL_UST_UPDATE,  &
-       CPL_SST_UPDATE
 
     NAMELIST / PARAM_CPL_VARS /  &
        CPL_RESTART_IN_BASENAME,  &
@@ -272,93 +252,12 @@ contains
        CPL_RESTART_OUT_DTYPE,    &
        CPL_VARS_CHECKRANGE
 
-    integer :: ip, ierr
+    integer :: ierr
+    integer :: ip
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CPL VARS]/Categ[CPL]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL)
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] selected components'
-
-    ! Atoms-Land Switch
-    if ( CPL_TYPE_AtmLnd /= 'OFF' .AND. CPL_TYPE_AtmLnd /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : ON'
-       CPL_sw_AtmLnd = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : OFF'
-       CPL_sw_AtmLnd = .false.
-    endif
-
-    ! Atoms-Urban Switch
-    if ( CPL_TYPE_AtmUrb /= 'OFF' .AND. CPL_TYPE_AtmUrb /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban Coupler : ON'
-       CPL_sw_AtmUrb = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban Coupler : OFF'
-       CPL_sw_AtmUrb = .false.
-    endif
-
-    ! Atoms-Ocean Switch
-    if ( CPL_TYPE_AtmOcn /= 'OFF' .AND. CPL_TYPE_AtmOcn /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : ON'
-       CPL_sw_AtmOcn = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : OFF'
-       CPL_sw_AtmOcn = .false.
-    endif
-
-    if ( CPL_sw_AtmLnd .OR. CPL_sw_AtmOcn ) then
-       CPL_sw_ALL = .true.
-    endif
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [CPL] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
-    enddo
-
-    ! restart switch
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( CPL_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : YES'
-       CPL_sw_restart = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Coupler restart output : NO'
-       CPL_sw_restart = .false.
-    endif
-    if( IO_L ) write(IO_FID_LOG,*)
-
-    CNT_Atm_Lnd = 0.0_RP
-    CNT_Atm_Urb = 0.0_RP
-    CNT_Atm_Ocn = 0.0_RP
-    CNT_Lnd     = 0.0_RP
-    CNT_Urb     = 0.0_RP
-    CNT_Ocn     = 0.0_RP
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-LES]'
 
     allocate( LST  (IA,JA)   )
     allocate( UST  (IA,JA)   )
@@ -370,6 +269,16 @@ contains
     allocate( SkinW(IA,JA)   )
     allocate( SnowQ(IA,JA)   )
     allocate( SnowT(IA,JA)   )
+    LST  (:,:)   = UNDEF
+    UST  (:,:)   = UNDEF
+    SST  (:,:)   = UNDEF
+    ALBW (:,:,:) = UNDEF
+    ALBG (:,:,:) = UNDEF
+    Z0W  (:,:)   = UNDEF
+    SkinT(:,:)   = UNDEF
+    SkinW(:,:)   = UNDEF
+    SnowQ(:,:)   = UNDEF
+    SnowT(:,:)   = UNDEF
 
     ! work variables
     allocate( Atm_XMFLX(IA,JA) )
@@ -450,6 +359,49 @@ contains
     allocate( CPL_AtmOcn_T2   (IA,JA) )
     allocate( CPL_AtmOcn_Q2   (IA,JA) )
 
+    CNT_Atm_Lnd = 0.0_RP
+    CNT_Atm_Urb = 0.0_RP
+    CNT_Atm_Ocn = 0.0_RP
+    CNT_Lnd     = 0.0_RP
+    CNT_Urb     = 0.0_RP
+    CNT_Ocn     = 0.0_RP
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CPL_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_VARS)
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (CPL) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
+                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( CPL_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(CPL_RESTART_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+    endif
+    if (       CPL_RESTART_OUTPUT             &
+         .AND. CPL_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(CPL_RESTART_OUT_BASENAME)
+       CPL_sw_restart = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       CPL_RESTART_OUTPUT = .false.
+       CPL_sw_restart = .false.
+    endif
+
     return
   end subroutine CPL_vars_setup
 
@@ -468,10 +420,10 @@ contains
     call COMM_vars8( LST  (:,:),       1 )
     call COMM_vars8( UST  (:,:),       2 )
     call COMM_vars8( SST  (:,:),       3 )
-    call COMM_vars8( ALBW (:,:,I_SW),  4 )
-    call COMM_vars8( ALBW (:,:,I_LW),  5 )
-    call COMM_vars8( ALBG (:,:,I_SW),  6 )
-    call COMM_vars8( ALBG (:,:,I_LW),  7 )
+    call COMM_vars8( ALBW (:,:,I_LW),  4 )
+    call COMM_vars8( ALBW (:,:,I_SW),  5 )
+    call COMM_vars8( ALBG (:,:,I_LW),  6 )
+    call COMM_vars8( ALBG (:,:,I_SW),  7 )
     call COMM_vars8( Z0W  (:,:),       8 )
     call COMM_vars8( SkinT(:,:),       9 )
     call COMM_vars8( SkinW(:,:),      10 )
@@ -481,10 +433,10 @@ contains
     call COMM_wait ( LST  (:,:),       1 )
     call COMM_wait ( UST  (:,:),       2 )
     call COMM_wait ( SST  (:,:),       3 )
-    call COMM_wait ( ALBW (:,:,I_SW),  4 )
-    call COMM_wait ( ALBW (:,:,I_LW),  5 )
-    call COMM_wait ( ALBG (:,:,I_SW),  6 )
-    call COMM_wait ( ALBG (:,:,I_LW),  7 )
+    call COMM_wait ( ALBW (:,:,I_LW),  4 )
+    call COMM_wait ( ALBW (:,:,I_SW),  5 )
+    call COMM_wait ( ALBG (:,:,I_LW),  6 )
+    call COMM_wait ( ALBG (:,:,I_SW),  7 )
     call COMM_wait ( Z0W  (:,:),       8 )
     call COMM_wait ( SkinT(:,:),       9 )
     call COMM_wait ( SkinW(:,:),      10 )
@@ -498,7 +450,6 @@ contains
   !> Read coupler restart
   subroutine CPL_vars_restart_read
     use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
        I_SW  => CONST_I_SW,  &
        I_LW  => CONST_I_LW
     use scale_fileio, only: &
@@ -507,9 +458,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (coupler) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (CPL) ***'
 
     if ( CPL_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(CPL_RESTART_IN_BASENAME)
 
        call FILEIO_read( LST(:,:),                                        & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'LST',     'XY', step=1 ) ![IN]
@@ -517,14 +469,14 @@ contains
                          CPL_RESTART_IN_BASENAME, 'UST',     'XY', step=1 ) ![IN]
        call FILEIO_read( SST(:,:),                                        & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'SST',     'XY', step=1 ) ![IN]
-       call FILEIO_read( ALBW(:,:,I_SW),                                  & ![OUT]
-                         CPL_RESTART_IN_BASENAME, 'ALBW_SW', 'XY', step=1 ) ![IN]
        call FILEIO_read( ALBW(:,:,I_LW),                                  & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'ALBW_LW', 'XY', step=1 ) ![IN]
-       call FILEIO_read( ALBG(:,:,I_SW),                                  & ![OUT]
-                         CPL_RESTART_IN_BASENAME, 'ALBG_SW', 'XY', step=1 ) ![IN]
+       call FILEIO_read( ALBW(:,:,I_SW),                                  & ![OUT]
+                         CPL_RESTART_IN_BASENAME, 'ALBW_SW', 'XY', step=1 ) ![IN]
        call FILEIO_read( ALBG(:,:,I_LW),                                  & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'ALBG_LW', 'XY', step=1 ) ![IN]
+       call FILEIO_read( ALBG(:,:,I_SW),                                  & ![OUT]
+                         CPL_RESTART_IN_BASENAME, 'ALBG_SW', 'XY', step=1 ) ![IN]
        call FILEIO_read( Z0W(:,:),                                        & ![OUT]
                          CPL_RESTART_IN_BASENAME, 'Z0W',     'XY', step=1 ) ![IN]
        call FILEIO_read( SkinT(:,:),                                      & ![OUT]
@@ -541,17 +493,6 @@ contains
        call CPL_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for coupler is not specified.'
-
-       LST  (:,:)   = UNDEF
-       UST  (:,:)   = UNDEF
-       SST  (:,:)   = UNDEF
-       ALBW (:,:,:) = UNDEF
-       ALBG (:,:,:) = UNDEF
-       Z0W  (:,:)   = UNDEF
-       SkinT(:,:)   = UNDEF
-       SkinW(:,:)   = UNDEF
-       SnowQ(:,:)   = UNDEF
-       SnowT(:,:)   = UNDEF
     endif
 
     return
@@ -581,8 +522,8 @@ contains
        write(basename,'(A,A,A)') trim(CPL_RESTART_OUT_BASENAME), '_', trim(timelabel)
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (coupler) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename: ', trim(basename)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (CPL) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
        call CPL_vars_total
 
@@ -593,17 +534,17 @@ contains
        call FILEIO_write( SST(:,:), basename,                                      CPL_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(I_SST), VAR_DESC(I_SST), VAR_UNIT(I_SST), 'XY', CPL_RESTART_OUT_DTYPE  ) ! [IN]
 
-       call FILEIO_write( ALBW(:,:,I_SW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_ALBW_SW), VAR_DESC(I_ALBW_SW), VAR_UNIT(I_ALBW_SW),  & ! [IN]
-                          'XY', CPL_RESTART_OUT_DTYPE, append=.true.                      ) ! [IN]
        call FILEIO_write( ALBW(:,:,I_LW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
                           VAR_NAME(I_ALBW_LW), VAR_DESC(I_ALBW_LW), VAR_UNIT(I_ALBW_LW),  & ! [IN]
                           'XY', CPL_RESTART_OUT_DTYPE, append=.true.                      ) ! [IN]
-       call FILEIO_write( ALBG(:,:,I_SW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
-                          VAR_NAME(I_ALBG_SW), VAR_DESC(I_ALBG_SW), VAR_UNIT(I_ALBG_SW),  & ! [IN]
+       call FILEIO_write( ALBW(:,:,I_SW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_ALBW_SW), VAR_DESC(I_ALBW_SW), VAR_UNIT(I_ALBW_SW),  & ! [IN]
                           'XY', CPL_RESTART_OUT_DTYPE, append=.true.                      ) ! [IN]
        call FILEIO_write( ALBG(:,:,I_LW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
                           VAR_NAME(I_ALBG_LW), VAR_DESC(I_ALBG_LW), VAR_UNIT(I_ALBG_LW),  & ! [IN]
+                          'XY', CPL_RESTART_OUT_DTYPE, append=.true.                      ) ! [IN]
+       call FILEIO_write( ALBG(:,:,I_SW),  basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_ALBG_SW), VAR_DESC(I_ALBG_SW), VAR_UNIT(I_ALBG_SW),  & ! [IN]
                           'XY', CPL_RESTART_OUT_DTYPE, append=.true.                      ) ! [IN]
        call FILEIO_write( Z0W(:,:),        basename, CPL_RESTART_OUT_TITLE,               & ! [IN]
                           VAR_NAME(I_Z0W),     VAR_DESC(I_Z0W),     VAR_UNIT(I_Z0W),      & ! [IN]
@@ -643,10 +584,10 @@ contains
        call VALCHECK( LST  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_LST)    , __FILE__, __LINE__ )
        call VALCHECK( UST  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_UST)    , __FILE__, __LINE__ )
        call VALCHECK( SST  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SST)    , __FILE__, __LINE__ )
-       call VALCHECK( ALBW (:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBW_SW), __FILE__, __LINE__ )
        call VALCHECK( ALBW (:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBW_LW), __FILE__, __LINE__ )
-       call VALCHECK( ALBG (:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBG_SW), __FILE__, __LINE__ )
+       call VALCHECK( ALBW (:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBW_SW), __FILE__, __LINE__ )
        call VALCHECK( ALBG (:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBG_LW), __FILE__, __LINE__ )
+       call VALCHECK( ALBG (:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALBG_SW), __FILE__, __LINE__ )
        call VALCHECK( Z0W  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_Z0W)    , __FILE__, __LINE__ )
        call VALCHECK( SkinT(:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SkinT)  , __FILE__, __LINE__ )
        call VALCHECK( SkinW(:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SkinW)  , __FILE__, __LINE__ )
@@ -657,10 +598,10 @@ contains
     call HIST_in( LST  (:,:),      'LST',      VAR_DESC(I_LST),      VAR_UNIT(I_LST),      TIME_DTSEC_CPL )
     call HIST_in( UST  (:,:),      'UST',      VAR_DESC(I_UST),      VAR_UNIT(I_UST),      TIME_DTSEC_CPL )
     call HIST_in( SST  (:,:),      'SST',      VAR_DESC(I_SST),      VAR_UNIT(I_SST),      TIME_DTSEC_CPL )
-    call HIST_in( ALBW (:,:,I_SW), 'ALBW_SW',  VAR_DESC(I_ALBW_SW),  VAR_UNIT(I_ALBW_SW),  TIME_DTSEC_CPL )
     call HIST_in( ALBW (:,:,I_LW), 'ALBW_LW',  VAR_DESC(I_ALBW_LW),  VAR_UNIT(I_ALBW_LW),  TIME_DTSEC_CPL )
-    call HIST_in( ALBG (:,:,I_SW), 'ALBG_SW',  VAR_DESC(I_ALBG_SW),  VAR_UNIT(I_ALBG_SW),  TIME_DTSEC_CPL )
+    call HIST_in( ALBW (:,:,I_SW), 'ALBW_SW',  VAR_DESC(I_ALBW_SW),  VAR_UNIT(I_ALBW_SW),  TIME_DTSEC_CPL )
     call HIST_in( ALBG (:,:,I_LW), 'ALBG_LW',  VAR_DESC(I_ALBG_LW),  VAR_UNIT(I_ALBG_LW),  TIME_DTSEC_CPL )
+    call HIST_in( ALBG (:,:,I_SW), 'ALBG_SW',  VAR_DESC(I_ALBG_SW),  VAR_UNIT(I_ALBG_SW),  TIME_DTSEC_CPL )
     call HIST_in( Z0W  (:,:),      'Z0W',      VAR_DESC(I_Z0W),      VAR_UNIT(I_Z0W),      TIME_DTSEC_CPL )
     call HIST_in( SkinT(:,:),      'SkinT',    VAR_DESC(I_SkinT),    VAR_UNIT(I_SkinT),    TIME_DTSEC_CPL )
     call HIST_in( SkinW(:,:),      'SkinW',    VAR_DESC(I_SkinW),    VAR_UNIT(I_SkinW),    TIME_DTSEC_CPL )
@@ -686,18 +627,18 @@ contains
 
     if ( STAT_checktotal ) then
 
-!       call STAT_total( total, LST(:,:),        VAR_NAME(I_LST)     )
-!       call STAT_total( total, UST(:,:),        VAR_NAME(I_UST)     )
-!       call STAT_total( total, SST(:,:),        VAR_NAME(I_SST)     )
-!       call STAT_total( total, ALBW(:,:,I_SW),  VAR_NAME(I_ALBW_SW) )
-!       call STAT_total( total, ALBW(:,:,I_LW),  VAR_NAME(I_ALBW_LW) )
-!       call STAT_total( total, ALBG(:,:,I_SW),  VAR_NAME(I_ALBG_SW) )
-!       call STAT_total( total, ALBG(:,:,I_LW),  VAR_NAME(I_ALBG_LW) )
-!       call STAT_total( total, Z0W(:,:),        VAR_NAME(I_Z0W)     )
-!       call STAT_total( total, SkinT(:,:),      VAR_NAME(I_SkinT)   )
-!       call STAT_total( total, SkinW(:,:),      VAR_NAME(I_SkinW)   )
-!       call STAT_total( total, SnowQ(:,:),      VAR_NAME(I_SnowQ)   )
-!       call STAT_total( total, SnowT(:,:),      VAR_NAME(I_SnowT)   )
+       call STAT_total( total, LST(:,:),       VAR_NAME(I_LST)     )
+       call STAT_total( total, UST(:,:),       VAR_NAME(I_UST)     )
+       call STAT_total( total, SST(:,:),       VAR_NAME(I_SST)     )
+       call STAT_total( total, ALBW(:,:,I_LW), VAR_NAME(I_ALBW_LW) )
+       call STAT_total( total, ALBW(:,:,I_SW), VAR_NAME(I_ALBW_SW) )
+       call STAT_total( total, ALBG(:,:,I_LW), VAR_NAME(I_ALBG_LW) )
+       call STAT_total( total, ALBG(:,:,I_SW), VAR_NAME(I_ALBG_SW) )
+       call STAT_total( total, Z0W(:,:),       VAR_NAME(I_Z0W)     )
+       call STAT_total( total, SkinT(:,:),     VAR_NAME(I_SkinT)   )
+       call STAT_total( total, SkinW(:,:),     VAR_NAME(I_SkinW)   )
+       call STAT_total( total, SnowQ(:,:),     VAR_NAME(I_SnowQ)   )
+       call STAT_total( total, SnowT(:,:),     VAR_NAME(I_SnowT)   )
 
     endif
 
@@ -740,10 +681,10 @@ contains
     LST(:,:)       = lst_in(:,:)
     UST(:,:)       = ust_in(:,:)
     SST(:,:)       = sst_in(:,:)
-    ALBW(:,:,I_SW) = albw_in(:,:,I_SW)
     ALBW(:,:,I_LW) = albw_in(:,:,I_LW)
-    ALBG(:,:,I_SW) = albg_in(:,:,I_SW)
+    ALBW(:,:,I_SW) = albw_in(:,:,I_SW)
     ALBG(:,:,I_LW) = albg_in(:,:,I_LW)
+    ALBG(:,:,I_SW) = albg_in(:,:,I_SW)
     Z0W(:,:)       = z0w_in(:,:)
     SkinT(:,:)     = skint_in(:,:)
     SkinW(:,:)     = skinw_in(:,:)

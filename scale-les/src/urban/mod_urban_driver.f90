@@ -49,10 +49,17 @@ contains
        URBAN_sw
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_setup
+    use mod_urban_phy_ucm, only: &
+       URBAN_PHY_driver_final
     implicit none
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
+
     if( URBAN_sw ) call URBAN_PHY_driver_setup( URBAN_TYPE )
+
+    if( URBAN_sw ) call URBAN_PHY_driver_final
 
     return
   end subroutine URBAN_driver_setup

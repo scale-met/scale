@@ -49,10 +49,17 @@ contains
        LAND_sw
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_setup
+    use mod_land_phy_bucket, only: &
+       LAND_PHY_driver_final
     implicit none
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
+
     if( LAND_sw ) call LAND_PHY_driver_setup( LAND_TYPE )
+
+    if( LAND_sw ) call LAND_PHY_driver_final
 
     return
   end subroutine LAND_driver_setup

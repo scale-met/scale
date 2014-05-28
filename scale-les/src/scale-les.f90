@@ -104,6 +104,9 @@ program scaleles
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
      ATMOS_driver
+  use mod_ocean_admin, only: &
+     OCEAN_admin_setup, &
+     OCEAN_do
   use mod_ocean_vars, only: &
      OCEAN_vars_setup,         &
      OCEAN_vars_restart_read,  &
@@ -111,6 +114,9 @@ program scaleles
   use mod_ocean_driver, only: &
      OCEAN_driver_setup, &
      OCEAN_driver
+  use mod_land_admin, only: &
+     LAND_admin_setup, &
+     LAND_do
   use mod_land_vars, only: &
      LAND_vars_setup,         &
      LAND_vars_restart_read,  &
@@ -118,6 +124,9 @@ program scaleles
   use mod_land_driver, only: &
      LAND_driver_setup, &
      LAND_driver
+  use mod_urban_admin, only: &
+     URBAN_admin_setup, &
+     URBAN_do
   use mod_urban_vars, only: &
      URBAN_vars_setup,         &
      URBAN_vars_restart_read,  &
@@ -125,6 +134,9 @@ program scaleles
   use mod_urban_driver, only: &
      URBAN_driver_setup, &
      URBAN_driver
+  use mod_cpl_admin, only: &
+     CPL_admin_setup, &
+     CPL_do
   use mod_cpl_vars, only: &
      CPL_vars_setup,         &
      CPL_vars_restart_read,  &
@@ -222,6 +234,10 @@ program scaleles
 
   ! setup submodel administrator
   call ATMOS_admin_setup
+  call OCEAN_admin_setup
+  call LAND_admin_setup
+  call URBAN_admin_setup
+  call CPL_admin_setup
 
   ! setup variable container
   call ATMOS_vars_setup
@@ -274,10 +290,10 @@ program scaleles
 
     ! change to next state
     if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
-    if( TIME_DOOCEAN_step ) call OCEAN_driver
-    if( TIME_DOLAND_step  ) call LAND_driver
-    if( TIME_DOURBAN_step ) call URBAN_driver
-    if( TIME_DOCPL_calc   ) call CPL_driver
+    if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
+    if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
+    if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
+    if( CPL_do   .AND. TIME_DOCPL_calc   ) call CPL_driver
 
     ! time advance
     call TIME_advance

@@ -309,8 +309,9 @@ contains
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
        SFC_PRES => ATMOS_PHY_SF_SFC_PRES
+    use mod_cpl_admin, only: &
+       CPL_sw
     use mod_cpl_vars, only: &
-       CPL_sw => CPL_sw_ALL, &
        CPL_putATM
     implicit none
 

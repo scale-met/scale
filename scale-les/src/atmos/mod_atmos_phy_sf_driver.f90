@@ -61,8 +61,8 @@ contains
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
-    use mod_cpl_vars, only: &
-       CPL_sw => CPL_sw_ALL
+    use mod_cpl_admin, only: &
+       CPL_sw
     implicit none
     !---------------------------------------------------------------------------
 
@@ -76,8 +76,8 @@ contains
 
        if ( .NOT. CPL_sw ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
-          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0   is assumed to be 0.'
-          SFC_Z0  (:,:) = 0.0_RP
+          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0 is assumed to be 0.'
+          SFC_Z0(:,:) = 0.0_RP
        endif
 
        ! run once (only for the diagnostic value)
@@ -169,8 +169,9 @@ contains
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
+    use mod_cpl_admin, only: &
+       CPL_sw
     use mod_cpl_vars, only: &
-       CPL_sw => CPL_sw_ALL, &
        CPL_getATM
     implicit none
 

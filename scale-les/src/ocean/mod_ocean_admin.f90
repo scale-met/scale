@@ -55,6 +55,7 @@ contains
     NAMELIST / PARAM_OCEAN / &
        OCEAN_do,  &
        OCEAN_TYPE
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -76,6 +77,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model components ***'
+
+    if ( OCEAN_TYPE == 'OFF' .OR. OCEAN_TYPE == 'NONE' ) then
+       OCEAN_do = .false. ! force off
+    endif
 
     if ( OCEAN_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Ocean model : ON'

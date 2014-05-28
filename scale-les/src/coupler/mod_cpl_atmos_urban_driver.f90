@@ -41,28 +41,31 @@ module mod_cpl_atmos_urban_driver
   !
   !-----------------------------------------------------------------------------
 contains
-
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver_setup
-    use mod_atmos_driver, only: &
-       ATMOS_SURFACE_SET
-    use mod_urban_phy_ucm, only: &
-       URBAN_PHY_driver_final
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmUrb,  &
+       CPL_TYPE_AtmUrb
     use scale_cpl_atmos_urban, only: &
        CPL_AtmUrb_setup
-    use mod_cpl_vars, only: &
-       CPL_TYPE_AtmUrb
     implicit none
     !---------------------------------------------------------------------------
 
-    call ATMOS_SURFACE_SET
-    call URBAN_PHY_driver_final
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN AtmUrb] / Origin[SCALE-LES]'
 
-    call CPL_AtmUrb_setup( CPL_TYPE_AtmUrb )
-    call CPL_AtmUrb_driver( .false. )
+    if ( CPL_sw_AtmUrb ) then
+
+       call CPL_AtmUrb_setup( CPL_TYPE_AtmUrb )
+
+       call CPL_AtmUrb_driver( .false. )
+
+    endif
 
     return
   end subroutine CPL_AtmUrb_driver_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver( update_flag )
     use scale_const, only: &
        LH0  => CONST_LH0

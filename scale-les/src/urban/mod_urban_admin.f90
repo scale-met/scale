@@ -77,6 +77,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban model components ***'
 
+    if ( URBAN_TYPE == 'OFF' .OR. URBAN_TYPE == 'NONE' ) then
+       URBAN_do = .false. ! force off
+    endif
+
     if ( URBAN_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Urban model : ON'
     else
