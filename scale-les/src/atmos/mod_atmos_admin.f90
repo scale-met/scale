@@ -147,7 +147,7 @@ contains
     endif
 
     if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Radiative transfer   : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Radiative transfer   : ON, ', trim(ATMOS_PHY_RD_TYPE)
        ATMOS_sw_phy_rd = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** +Radiative transfer   : OFF'
@@ -155,7 +155,7 @@ contains
     endif
 
     if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Surface Flux         : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Surface Flux         : ON, ', trim(ATMOS_PHY_SF_TYPE)
        ATMOS_sw_phy_sf = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** +Surface Flux         : OFF'
@@ -163,7 +163,7 @@ contains
     endif
 
     if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Sub-grid Turbulence  : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Sub-grid Turbulence  : ON, ', trim(ATMOS_PHY_TB_TYPE)
        ATMOS_sw_phy_tb = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** +Sub-grid Turbulence  : OFF'

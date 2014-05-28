@@ -98,24 +98,24 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: ATMOS_RESTART_OUTPUT           = .false.                 !< output restart file?
-  character(len=H_LONG),  private, save      :: ATMOS_RESTART_IN_BASENAME      = ''                      !< basename of the restart file
-  character(len=H_LONG),  private, save      :: ATMOS_RESTART_OUT_BASENAME     = ''                      !< basename of the output file
-  character(len=H_MID),   private, save      :: ATMOS_RESTART_OUT_TITLE        = 'SCALE-LES ATMOS VARS.' !< title    of the output file
-  character(len=H_MID),   private, save      :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'               !< REAL4 or REAL8
-  logical,                private, save      :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+  logical,                private :: ATMOS_RESTART_OUTPUT           = .false.         !< output restart file?
+  character(len=H_LONG),  private :: ATMOS_RESTART_IN_BASENAME      = ''              !< basename of the restart file
+  character(len=H_LONG),  private :: ATMOS_RESTART_OUT_BASENAME     = ''              !< basename of the output file
+  character(len=H_MID),   private :: ATMOS_RESTART_OUT_TITLE        = 'ATMOS restart' !< title    of the output file
+  character(len=H_MID),   private :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'       !< REAL4 or REAL8
+  logical,                private :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
 
-  logical,                private, save      :: ATMOS_RESTART_CHECK            = .false.
-  character(len=H_LONG),  private, save      :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),               private, save      :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
+  logical,                private :: ATMOS_RESTART_CHECK            = .false.
+  character(len=H_LONG),  private :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
+  real(RP),               private :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
 
-  logical,                private, save      :: ATMOS_VARS_CHECKRANGE          = .false.
+  logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
 
   integer,                private, parameter :: VMAX   = 5       !< number of the variables
 
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX)
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX)
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX)
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX)
+  character(len=H_MID),   private            :: VAR_DESC(VMAX)
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX)
 
   data VAR_NAME / 'DENS', &
                   'MOMZ', &
@@ -191,9 +191,9 @@ module mod_atmos_vars
 
   integer, private, parameter :: I_ENGFLXT      = 39
 
-  integer, private, save      :: AD_HIST_id (AD_nmax)
-  integer, private, save      :: AD_PREP_sw (AD_nmax)
-  integer, private, save      :: AD_MONIT_id(AD_nmax)
+  integer, private            :: AD_HIST_id (AD_nmax)
+  integer, private            :: AD_PREP_sw (AD_nmax)
+  integer, private            :: AD_MONIT_id(AD_nmax)
 
   !-----------------------------------------------------------------------------
 contains
@@ -231,6 +231,8 @@ contains
        ATMOS_RESTART_IN_ALLOWMISSINGQ, &
        ATMOS_RESTART_OUTPUT,           &
        ATMOS_RESTART_OUT_BASENAME,     &
+       ATMOS_RESTART_OUT_TITLE,        &
+       ATMOS_RESTART_OUT_DTYPE,        &
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION,  &
@@ -299,26 +301,32 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_VARS)
 
-    ! report
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (ATMOS) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 5
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do ip = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
     enddo
     do iq = 1, QA
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))')  &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',5+iq,'|',trim(AQ_NAME(iq)),'|', AQ_DESC(iq),'[', AQ_UNIT(iq),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if ( ATMOS_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : YES'
+    if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_RESTART_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+    endif
+    if (       ATMOS_RESTART_OUTPUT             &
+         .AND. ATMOS_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_RESTART_OUT_BASENAME)
        ATMOS_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_RESTART_OUTPUT = .false.
        ATMOS_sw_restart = .false.
     endif
 
@@ -658,9 +666,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (atmos) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS) ***'
 
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_RESTART_IN_BASENAME)
 
        call FILEIO_read( DENS(:,:,:),                                         & ! [OUT]
                          ATMOS_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]

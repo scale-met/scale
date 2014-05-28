@@ -61,16 +61,25 @@ module mod_atmos_phy_rd_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private, save      :: ATMOS_PHY_RD_RESTART_OUTPUT        = .false.
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_RD_RESTART_IN_BASENAME   = ''
-  character(len=H_LONG),  private, save      :: ATMOS_PHY_RD_RESTART_OUT_BASENAME  = ''
-  character(len=H_MID),   private, save      :: ATMOS_PHY_RD_RESTART_OUT_TITLE     = 'ATMOS_PHY_RD restart'
-  character(len=H_MID),   private, save      :: ATMOS_PHY_RD_RESTART_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  logical,                private :: ATMOS_PHY_RD_RESTART_OUTPUT       = .false.                !< output restart file?
+  character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_RD_RESTART_OUT_TITLE    = 'ATMOS_PHY_RD restart' !< title    of the output file
+  character(len=H_MID),   private :: ATMOS_PHY_RD_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   integer,                private, parameter :: VMAX = 8       !< number of the variables
-  character(len=H_SHORT), private, save      :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private, save      :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private, save      :: VAR_UNIT(VMAX) !< unit  of the variables
+  integer,                private, parameter :: I_SFLX_LW_up   = 1
+  integer,                private, parameter :: I_SFLX_LW_dn   = 2
+  integer,                private, parameter :: I_SFLX_SW_up   = 3
+  integer,                private, parameter :: I_SFLX_SW_dn   = 4
+  integer,                private, parameter :: I_TOAFLX_LW_up = 5
+  integer,                private, parameter :: I_TOAFLX_LW_dn = 6
+  integer,                private, parameter :: I_TOAFLX_SW_up = 7
+  integer,                private, parameter :: I_TOAFLX_SW_dn = 8
+
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
   data VAR_NAME / 'SFLX_LW_up',   &
                   'SFLX_LW_dn',   &
@@ -104,30 +113,25 @@ contains
   subroutine ATMOS_PHY_RD_vars_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_RD_VARS / &
-       ATMOS_PHY_RD_RESTART_IN_BASENAME, &
-       ATMOS_PHY_RD_RESTART_OUTPUT,      &
-       ATMOS_PHY_RD_RESTART_OUT_BASENAME
+       ATMOS_PHY_RD_RESTART_IN_BASENAME,  &
+       ATMOS_PHY_RD_RESTART_OUTPUT,       &
+       ATMOS_PHY_RD_RESTART_OUT_BASENAME, &
+       ATMOS_PHY_RD_RESTART_OUT_TITLE,    &
+       ATMOS_PHY_RD_RESTART_OUT_DTYPE
 
     integer :: v, ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ATMOS_PHY_RD VARS]/Categ[ATMOS]'
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_VARS. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_VARS)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS_PHY_RD] / Origin[SCALE-LES]'
 
     allocate( ATMOS_PHY_RD_RHOT_t(KA,IA,JA) )
+    ATMOS_PHY_RD_RHOT_t(:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_RD_SFLX_LW_up  (IA,JA) )
     allocate( ATMOS_PHY_RD_SFLX_LW_dn  (IA,JA) )
@@ -137,25 +141,48 @@ contains
     allocate( ATMOS_PHY_RD_TOAFLX_LW_dn(IA,JA) )
     allocate( ATMOS_PHY_RD_TOAFLX_SW_up(IA,JA) )
     allocate( ATMOS_PHY_RD_TOAFLX_SW_dn(IA,JA) )
+    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = UNDEF
+    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = UNDEF
+    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = UNDEF
+    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = UNDEF
+    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = UNDEF
+    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = UNDEF
+    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = UNDEF
+    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = UNDEF
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_VARS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_RD] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
+               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
     do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
                   '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
     enddo
 
-    ! restart switch
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( ATMOS_PHY_RD_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_RD) : YES'
+    if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '  Restart output (ATMOS_PHY_RD) : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
     endif
-    if( IO_L ) write(IO_FID_LOG,*)
+    if (       ATMOS_PHY_RD_RESTART_OUTPUT             &
+         .AND. ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       ATMOS_PHY_RD_RESTART_OUTPUT = .false.
+    endif
 
     return
   end subroutine ATMOS_PHY_RD_vars_setup
@@ -194,15 +221,18 @@ contains
   subroutine ATMOS_PHY_RD_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
-    use scale_const, only: &
-       CONST_UNDEF
+    use scale_stats, only: &
+       STAT_total
     implicit none
+
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_RD) ***'
 
     if ( ATMOS_PHY_RD_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_RD_RESTART_IN_BASENAME)
 
        call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),                               & ! [OUT]
                          ATMOS_PHY_RD_RESTART_IN_BASENAME, VAR_NAME(1), 'XY', step=1 ) ! [IN]
@@ -223,19 +253,16 @@ contains
 
        call ATMOS_PHY_RD_vars_fillhalo
 
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:), VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:), VAR_NAME(3) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:), VAR_NAME(4) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:), VAR_NAME(5) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), VAR_NAME(6) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:), VAR_NAME(7) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), VAR_NAME(8) )
     else
-
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_RD is not specified.'
-
-       ATMOS_PHY_RD_SFLX_LW_up  (:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_SFLX_SW_up  (:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = CONST_UNDEF
-       ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = CONST_UNDEF
-
     endif
 
     return

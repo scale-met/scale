@@ -54,7 +54,6 @@ contains
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
     use mod_atmos_phy_sf_vars, only: &
-       SFC_beta  => ATMOS_PHY_SF_SFC_beta,  &
        SFC_Z0    => ATMOS_PHY_SF_SFC_Z0,    &
        SFLX_MW   => ATMOS_PHY_SF_SFLX_MW,   &
        SFLX_MU   => ATMOS_PHY_SF_SFLX_MU,   &
@@ -77,9 +76,7 @@ contains
 
        if ( .NOT. CPL_sw ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
-          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_beta is assumed to be 1.'
           if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0   is assumed to be 0.'
-          SFC_beta(:,:) = 1.0_RP
           SFC_Z0  (:,:) = 0.0_RP
        endif
 
@@ -165,7 +162,6 @@ contains
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
-       SFC_beta   => ATMOS_PHY_SF_SFC_beta,   &
        SFC_Z0     => ATMOS_PHY_SF_SFC_Z0,     &
        SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
        SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
@@ -187,6 +183,7 @@ contains
     real(RP) :: T2    (IA,JA) !  2m Temp   [K]
     real(RP) :: Q2    (IA,JA) !  2m Vapor  [kg/kg]
 
+    real(RP) :: beta(IA,JA)
     real(RP) :: RHOQ(IA,JA)
     real(RP) :: total ! dummy
 
@@ -196,21 +193,22 @@ contains
     if ( update_flag ) then
 
        if ( CPL_sw ) then
-          call CPL_getATM( SFC_Z0    (:,:),   & ! [OUT]
-                           SFLX_MW   (:,:),   & ! [OUT]
-                           SFLX_MU   (:,:),   & ! [OUT]
-                           SFLX_MV   (:,:),   & ! [OUT]
-                           SFLX_SH   (:,:),   & ! [OUT]
-                           SFLX_LH   (:,:),   & ! [OUT]
-                           SFLX_QTRC (:,:,:), & ! [OUT]
-                           Uabs10    (:,:),   & ! [OUT]
-                           U10       (:,:),   & ! [OUT]
-                           V10       (:,:),   & ! [OUT]
-                           T2        (:,:),   & ! [OUT]
-                           Q2        (:,:)    ) ! [OUT]
+          call CPL_getATM( SFC_Z0   (:,:),   & ! [OUT]
+                           SFLX_MW  (:,:),   & ! [OUT]
+                           SFLX_MU  (:,:),   & ! [OUT]
+                           SFLX_MV  (:,:),   & ! [OUT]
+                           SFLX_SH  (:,:),   & ! [OUT]
+                           SFLX_LH  (:,:),   & ! [OUT]
+                           SFLX_QTRC(:,:,:), & ! [OUT]
+                           Uabs10   (:,:),   & ! [OUT]
+                           U10      (:,:),   & ! [OUT]
+                           V10      (:,:),   & ! [OUT]
+                           T2       (:,:),   & ! [OUT]
+                           Q2       (:,:)    ) ! [OUT]
        else
-
           if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, surface flux'
+
+          beta(:,:) = 1.0_RP
 
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
                              PRES      (KS,:,:),   & ! [IN]
@@ -226,7 +224,7 @@ contains
                              SFLX_SW_dn(:,:),      & ! [IN]
                              SFC_TEMP  (:,:),      & ! [IN]
                              SFC_albedo(:,:,:),    & ! [IN]
-                             SFC_beta  (:,:),      & ! [IN]
+                             beta      (:,:),      & ! [IN]
                              SFC_Z0    (:,:),      & ! [INOUT]
                              SFLX_MW   (:,:),      & ! [OUT]
                              SFLX_MU   (:,:),      & ! [OUT]

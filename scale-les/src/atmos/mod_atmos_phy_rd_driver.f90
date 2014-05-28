@@ -129,7 +129,7 @@ contains
        RHOT_t => RHOT_tp
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP,  &
-       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo_land
+       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo
     use mod_atmos_phy_rd_vars, only: &
        RHOT_t_RD    => ATMOS_PHY_RD_RHOT_t,       &
        SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
