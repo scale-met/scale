@@ -1553,29 +1553,48 @@ contains
                               RHOT(:,:,:),  & ! [IN]
                               QTRC(:,:,:,:) ) ! [IN]
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
+
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j  = JS, JE
+    do i  = IS, IE
+       W(   1:KS-1,i,j) = W(KS,i,j)
+       U(   1:KS-1,i,j) = U(KS,i,j)
+       V(   1:KS-1,i,j) = V(KS,i,j)
+       W(KE+1:KA,  i,j) = W(KE,i,j)
+       U(KE+1:KA,  i,j) = U(KE,i,j)
+       V(KE+1:KA,  i,j) = V(KE,i,j)
+    enddo
+    enddo
+
+    call COMM_vars8( W(:,:,:), 1 )
+    call COMM_vars8( U(:,:,:), 2 )
+    call COMM_vars8( V(:,:,:), 3 )
+    call COMM_wait ( W(:,:,:), 1 )
+    call COMM_wait ( U(:,:,:), 2 )
+    call COMM_wait ( V(:,:,:), 3 )
 
     do j = 1, JA
     do i = 1, IA

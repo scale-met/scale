@@ -159,20 +159,6 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence'
 
-       call STAT_total( total, QFLX_MOMZ(:,:,:,XDIR), 'QFLX_MOMZ' )
-       call STAT_total( total, QFLX_MOMX(:,:,:,XDIR), 'QFLX_MOMX' )
-       call STAT_total( total, QFLX_MOMY(:,:,:,XDIR), 'QFLX_MOMY' )
-       call STAT_total( total, MOMZ_av(:,:,:), 'MOMZ_av' )
-       call STAT_total( total, MOMX_av(:,:,:), 'MOMX_av' )
-       call STAT_total( total, MOMY_av(:,:,:), 'MOMY_av' )
-       call STAT_total( total, RHOT_av(:,:,:), 'RHOT_av' )
-       call STAT_total( total, DENS_av(:,:,:), 'DENS_av' )
-       call STAT_total( total, TKE(:,:,:), 'TKE' )
-       call STAT_total( total, NU (:,:,:), 'NU ' )
-       call STAT_total( total, Ri (:,:,:), 'Ri ' )
-       call STAT_total( total, Pr (:,:,:), 'Pr ' )
-
-
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]

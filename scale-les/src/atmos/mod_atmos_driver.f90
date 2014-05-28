@@ -281,7 +281,6 @@ contains
     return
   end subroutine ATMOS_driver
 
-
   !-----------------------------------------------------------------------------
   !> Set surface boundary condition (ATM2CPL)
   subroutine ATMOS_SURFACE_SET
