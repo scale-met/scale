@@ -1849,7 +1849,8 @@ contains
   subroutine ATMOS_DYN_fct(      &
        qflx_anti,                &
        phi_in, qflx_hi, qflx_lo, &
-       rdz, rdx, rdy, dtrk       )
+       rdz, rdx, rdy,            &
+       GSQRT, dtrk               )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        IUNDEF => CONST_UNDEF2, &
@@ -1857,6 +1858,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_gridtrans, only: &
+       I_XYZ
     implicit none
 
     real(RP), intent(out) :: qflx_anti(KA,IA,JA,3)
@@ -1868,6 +1871,9 @@ contains
     real(RP), intent(in) :: RDZ(:)
     real(RP), intent(in) :: RDX(:)
     real(RP), intent(in) :: RDY(:)
+
+    real(RP), intent(in) :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
+
     real(RP), intent(in) :: dtrk
 
     ! work for FCT
@@ -1974,7 +1980,8 @@ contains
           phi_lo(k,i,j) = phi_in(k,i,j) &
                + dtrk * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                             + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                            + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) )
+                            + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) &
+                        ) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -1997,7 +2004,8 @@ contains
 #endif
           pjpls(k,i,j) = dtrk * ( ( max(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) - min(0.0_RP,qflx_anti(k,i,j,ZDIR)) ) * RDZ(k) &
                                 + ( max(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) - min(0.0_RP,qflx_anti(k,i,j,XDIR)) ) * RDX(i) &
-                                + ( max(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,i,j,YDIR)) ) * RDY(j) )
+                                + ( max(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,i,j,YDIR)) ) * RDY(j) &
+                                ) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -2020,7 +2028,8 @@ contains
 #endif
           pjmns(k,i,j) = dtrk * ( ( max(0.0_RP,qflx_anti(k,i,j,ZDIR)) - min(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) ) * RDZ(k) &
                                 + ( max(0.0_RP,qflx_anti(k,i,j,XDIR)) - min(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) ) * RDX(i) &
-                                + ( max(0.0_RP,qflx_anti(k,i,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) ) * RDY(j) )
+                                + ( max(0.0_RP,qflx_anti(k,i,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) ) * RDY(j) &
+                                ) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo

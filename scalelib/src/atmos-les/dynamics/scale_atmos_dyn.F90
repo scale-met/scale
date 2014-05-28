@@ -175,6 +175,11 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYZ, &
+       I_XVZ
     use scale_atmos_dyn_common, only: &
        FACT_N,                     &
        FACT_F,                     &
@@ -641,7 +646,7 @@ contains
 
              qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                                          + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                 + num_diff_q(k,i,j,ZDIR)
+                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
           enddo
           enddo
           enddo
@@ -655,7 +660,7 @@ contains
 
              qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                    + num_diff_q(KS,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
           enddo
           enddo
 
@@ -667,7 +672,7 @@ contains
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
 
              qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                    + num_diff_q(KE-1,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
              qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -688,7 +693,7 @@ contains
           do k = KS, KE
              qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                                          + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                 + num_diff_q(k,i,j,XDIR)
+                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
           enddo
           enddo
           enddo
@@ -709,7 +714,7 @@ contains
           do k = KS, KE
              qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                                          + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                 + num_diff_q(k,i,j,YDIR)
+                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
           enddo
           enddo
           enddo
@@ -728,7 +733,8 @@ contains
 
        call ATMOS_DYN_fct( qflx_anti,              & ! (out)
                            RHOQ, qflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RCDY, dt    ) ! (in)
+                           RCDZ, RCDX, RCDY,       & ! (in)
+                           GSQRT, dt               ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -740,13 +746,14 @@ contains
           do i = IIS, IIE
           do k = KS, KE
              QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
-                              + DTSEC * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                              - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                            + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
-                                              - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                            + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
-                                              - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                                          + RHOQ_t(k,i,j)                                                           ) &
+                              + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
+                                           - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                         + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
+                                           - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                         + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
+                                           - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                                     ) / GSQRT(k,i,j,I_XYZ) &
+                              + dt * RHOQ_t(k,i,j) &
                               ) / DENS(k,i,j)
           enddo
           enddo

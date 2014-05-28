@@ -550,7 +550,8 @@ contains
     if ( FLAG_FCT_RHO ) then
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            DENS0, mflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RCDY, dtrk   ) ! (in)
+                           RCDZ, RCDX, RCDY,        & ! (in)
+                           GSQRT, dtrk              ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1026,7 +1027,8 @@ contains
 
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            MOMZ0, qflx_hi, qflx_lo, & ! (in)
-                           RFDZ, RCDX, RCDY, dtrk   ) ! (in)
+                           RFDZ, RCDX, RCDY,        & ! (in)
+                           GSQRT, dtrk              ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1401,7 +1403,8 @@ contains
 
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            MOMX0, qflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RFDX, RCDY, dtrk   ) ! (in)
+                           RCDZ, RFDX, RCDY,        & ! (in)
+                           GSQRT, dtrk              ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1809,7 +1812,8 @@ contains
 
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            MOMY0, qflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RFDY, dtrk   ) ! (in)
+                           RCDZ, RCDX, RFDY,        & ! (in)
+                           GSQRT, dtrk              ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -2082,7 +2086,8 @@ contains
     if ( FLAG_FCT_T ) then
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            RHOT0, qflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RCDY, dtrk   ) ! (in)
+                           RCDZ, RCDX, RCDY,        & ! (in)
+                           GSQRT, dtrk              ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
