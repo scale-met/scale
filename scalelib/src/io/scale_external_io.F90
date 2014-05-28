@@ -35,6 +35,8 @@ module scale_external_io
   public :: ExternalFileRead
 
   interface ExternalFileRead
+     module procedure ExternalFileRead2DRealSP
+     module procedure ExternalFileRead2DRealDP
      module procedure ExternalFileRead3DRealSP
      module procedure ExternalFileRead3DRealDP
      module procedure ExternalFileRead4DRealSP
@@ -55,6 +57,8 @@ module scale_external_io
   private :: handle_err
 
   interface ConvertArrayOrder
+     module procedure ConvertArrayOrderWRF2DSP
+     module procedure ConvertArrayOrderWRF2DDP
      module procedure ConvertArrayOrderWRF3DSP
      module procedure ConvertArrayOrderWRF3DDP
      module procedure ConvertArrayOrderWRF4DSP
@@ -95,7 +99,7 @@ contains
 
     integer :: status
     integer :: ncid, unlimid
-    integer :: dims_org(6)
+    integer :: dims_org(7)
     character(len=NF90_MAX_NAME) :: tname
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
@@ -138,6 +142,7 @@ contains
        dims(4) = dims_org(6)
        dims(5) = dims_org(4)
        dims(6) = dims_org(5)
+       dims(7) = dims_org(7)
     else
        dims(:) = dims_org(:)
     endif
@@ -151,6 +156,150 @@ contains
   !-----------------------------------------------------------------------------
   !> File Read
   !-----------------------------------------------------------------------------
+  subroutine ExternalFileRead2DRealSP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      tcount,        & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      nx,            & ! (in)
+      single         & ! (in) optional
+      )
+    implicit none
+
+    real(SP),         intent(out)            :: var(:,:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)            :: step
+    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    integer,          intent( in)            :: nx
+    logical,          intent( in), optional :: single
+
+    real(SP), allocatable :: var_org(:,:)
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! based on specified dimension size
+    allocate( var_org(nx,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_FLOAT) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileRead2DSP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,step /), &
+                            count = (/ nx,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nx )
+
+    deallocate( var_org )
+
+    return
+  end subroutine ExternalFileRead2DRealSP
+  subroutine ExternalFileRead2DRealDP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      step,          & ! (in)
+      tcount,        & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      nx,            & ! (in)
+      single         & ! (in) optional
+      )
+    implicit none
+
+    real(DP),         intent(out)            :: var(:,:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)            :: step
+    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    integer,          intent( in)            :: nx
+    logical,          intent( in), optional :: single
+
+    real(DP), allocatable :: var_org(:,:)
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! based on specified dimension size
+    allocate( var_org(nx,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_DOUBLE) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileRead2DDP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,step /), &
+                            count = (/ nx,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nx )
+
+    deallocate( var_org )
+
+    return
+  end subroutine ExternalFileRead2DRealDP
   subroutine ExternalFileRead3DRealSP( &
       var,           & ! (out)
       basename,      & ! (in)
@@ -181,7 +330,7 @@ contains
     integer :: status
     integer :: precis
     integer :: nx, ny
-    integer :: dims(6)
+    integer :: dims(7)
 
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
@@ -266,7 +415,7 @@ contains
     integer :: status
     integer :: precis
     integer :: nx, ny
-    integer :: dims(6)
+    integer :: dims(7)
 
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
@@ -332,7 +481,8 @@ contains
       single,        & ! (in) optional
       xstag,         & ! (in) optional
       ystag,         & ! (in) optional
-      zstag          & ! (in) optional
+      zstag,         & ! (in) optional
+      landgrid       & ! (in) optional
       )
     implicit none
 
@@ -347,13 +497,14 @@ contains
     logical,          intent( in), optional :: xstag
     logical,          intent( in), optional :: ystag
     logical,          intent( in), optional :: zstag
+    logical,          intent( in), optional :: landgrid
 
     real(SP), allocatable :: var_org(:,:,:,:)
     integer :: ncid, varid
     integer :: status
     integer :: precis
     integer :: nx, ny, nz
-    integer :: dims(6)
+    integer :: dims(7)
 
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
@@ -386,6 +537,9 @@ contains
     nz = dims(3)
     if ( present(zstag) .and. zstag ) then
        nz = dims(6)
+    endif
+    if ( present(landgrid) .and. landgrid ) then
+       nz = dims(7)
     endif
     allocate( var_org(nx,ny,nz,tcount) )
 
@@ -423,7 +577,8 @@ contains
       single,        & ! (in) optional
       xstag,         & ! (in) optional
       ystag,         & ! (in) optional
-      zstag          & ! (in) optional
+      zstag,         & ! (in) optional
+      landgrid       & ! (in) optional
       )
     implicit none
 
@@ -438,13 +593,14 @@ contains
     logical,          intent( in), optional :: xstag
     logical,          intent( in), optional :: ystag
     logical,          intent( in), optional :: zstag
+    logical,          intent( in), optional :: landgrid
 
     real(DP), allocatable :: var_org(:,:,:,:)
     integer :: ncid, varid
     integer :: status
     integer :: precis
     integer :: nx, ny, nz
-    integer :: dims(6)
+    integer :: dims(7)
 
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
@@ -476,6 +632,9 @@ contains
     nz = dims(3)
     if ( present(zstag) .and. zstag ) then
        nz = dims(6)
+    endif
+    if ( present(landgrid) .and. landgrid ) then
+       nz = dims(7)
     endif
     allocate( var_org(nx,ny,nz,tcount) )
 
@@ -579,6 +738,8 @@ contains
        status = nf90_inquire_dimension( ncid, dimid,len=dims(5) )
        status = nf90_inq_dimid( ncid, "bottom_top_stag", dimid )
        status = nf90_inquire_dimension( ncid, dimid,len=dims(6) )
+       status = nf90_inq_dimid( ncid, "soil_layers_stag", dimid )
+       status = nf90_inquire_dimension( ncid, dimid,len=dims(7) )
     else
        write(*,*) 'xxx This external file format is not supported, Sorry.'
        call PRC_MPIstop
@@ -588,6 +749,52 @@ contains
   end subroutine ExternalTakeDimension
 
   !-----------------------------------------------------------------------------
+  subroutine ConvertArrayOrderWRF2DSP( &
+      var,           & ! (out)
+      var_org,       & ! (in)
+      tcount,        & ! (in)
+      nx             & ! (in)
+      )
+    implicit none
+
+    real(SP),         intent(out)  :: var(:,:)
+    real(SP),         intent( in)  :: var_org(:,:)
+    integer,          intent( in)  :: tcount
+    integer,          intent( in)  :: nx
+    integer :: n, i
+    intrinsic shape
+
+    do n = 1, tcount
+    do i = 1, nx
+       var(i,n) = var_org(i,n)
+    end do
+    end do
+
+    return
+  end subroutine ConvertArrayOrderWRF2DSP
+  subroutine ConvertArrayOrderWRF2DDP( &
+      var,           & ! (out)
+      var_org,       & ! (in)
+      tcount,        & ! (in)
+      nx             & ! (in)
+      )
+    implicit none
+
+    real(DP),         intent(out)  :: var(:,:)
+    real(DP),         intent( in)  :: var_org(:,:)
+    integer,          intent( in)  :: tcount
+    integer,          intent( in)  :: nx
+    integer :: n, i
+    intrinsic shape
+
+    do n = 1, tcount
+    do i = 1, nx
+       var(i,n) = var_org(i,n)
+    end do
+    end do
+
+    return
+  end subroutine ConvertArrayOrderWRF2DDP
   subroutine ConvertArrayOrderWRF3DSP( &
       var,           & ! (out)
       var_org,       & ! (in)

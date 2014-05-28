@@ -11,6 +11,7 @@
 !! @li      2011-12-07 (Y.Miyamoto) [new]
 !! @li      2011-12-11 (H.Yashiro)  [mod] integrate to SCALE-LES ver.3
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
+!! @li      2014-05-18 (R.Yoshida)  [add] boudary read/update for real case
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -40,6 +41,7 @@ module scale_atmos_boundary
   public :: ATMOS_BOUNDARY_write
   public :: ATMOS_BOUNDARY_generate
   public :: ATMOS_BOUNDARY_setalpha
+  public :: ATMOS_BOUNDARY_update
 
   !-----------------------------------------------------------------------------
   !
@@ -49,12 +51,16 @@ module scale_atmos_boundary
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:) !> reference container (with HALO)
-  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha(:,:,:,:) !> damping coefficient [0-1]
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:)         !> reference container (with HALO)
+  real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha(:,:,:,:)         !> damping coefficient [0-1]
+  logical, public                :: ATMOS_BOUNDARY_UPDATE_FLAG = .false. !> switch for real case
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
+  !
+  private :: ATMOS_BOUNDARY_initialize
+  private :: ATMOS_BOUNDARY_updatefile
   !
   !-----------------------------------------------------------------------------
   !
@@ -84,6 +90,13 @@ module scale_atmos_boundary
   real(RP),                  private :: ATMOS_BOUNDARY_tauz          = 75.0_RP ! maximum value for damping tau (z) [s]
   real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.0_RP ! maximum value for damping tau (x) [s]
   real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.0_RP ! maximum value for damping tau (y) [s]
+
+  real(RP),                  private, allocatable :: ATMOS_BOUNDARY_var_ref(:,:,:,:,:)    !> reference container (with HALO)
+  real(RP),                  private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)    !> damping coefficient [0-1]
+
+  real(DP),                  private, save :: ATMOS_BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
+  real(DP),                  private, save :: last_updated
+  integer,                   private, save :: boundary_timestep     = 0
 
   character(len=H_SHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
@@ -132,7 +145,8 @@ contains
        ATMOS_BOUNDARY_FRACY,         &
        ATMOS_BOUNDARY_tauz,          &
        ATMOS_BOUNDARY_taux,          &
-       ATMOS_BOUNDARY_tauy
+       ATMOS_BOUNDARY_tauy,          &
+       ATMOS_BOUNDARY_UPDATE_DT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -168,11 +182,13 @@ contains
           call ATMOS_BOUNDARY_generate
           call ATMOS_BOUNDARY_setalpha
        endif
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
        call ATMOS_BOUNDARY_setinitval( &
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
        call ATMOS_BOUNDARY_setalpha
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
     elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
           call ATMOS_BOUNDARY_read
@@ -180,8 +196,28 @@ contains
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
           call PRC_MPIstop
        endif
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
        call ATMOS_BOUNDARY_generate
+       call ATMOS_BOUNDARY_setalpha
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+    elseif ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
+       boundary_timestep = 1  ! to call as an initialize
+       last_updated = -999    ! to call as an initialize
+       allocate( ATMOS_BOUNDARY_var_ref(KA,IA,JA,5,2) )
+       allocate( ATMOS_BOUNDARY_increment(KA,IA,JA,5) )
+
+       if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
+          write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
+          call PRC_MPIstop
+       endif
+       if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
+          call ATMOS_BOUNDARY_initialize
+       else
+          write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
+          call PRC_MPIstop
+       endif
+       ATMOS_BOUNDARY_UPDATE_FLAG = .true.
        call ATMOS_BOUNDARY_setalpha
     else
        write(*,*) 'xxx ATMOS_BOUNDARY_TYPE is invalid'
@@ -697,5 +733,207 @@ contains
 
     return
   end subroutine ATMOS_BOUNDARY_generate
+
+  !-----------------------------------------------------------------------------
+  !> Initialize boundary value for real case experiment
+  subroutine ATMOS_BOUNDARY_initialize( &
+       )
+    use scale_time, only: &
+       TIME_DTSEC,        &
+       TIME_NOWSEC
+    use gtool_file, only: &
+       FileRead
+    use scale_comm, only: &
+       COMM_vars, &
+       COMM_wait
+    use scale_process, only: &
+         PRC_myrank
+    implicit none
+
+    real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    integer :: step
+    integer :: i, j, k, iv
+    character(len=H_LONG) :: bname
+    !---------------------------------------------------------------------------
+
+    bname = ATMOS_BOUNDARY_IN_BASENAME
+
+    ! read boundary data from input file
+    step  = 1
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+
+    step  = 2
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+       ATMOS_BOUNDARY_var_ref(   1:KS-1,i,j,iv,1) = ATMOS_BOUNDARY_var_ref(KS,i,j,iv,1)
+       ATMOS_BOUNDARY_var_ref(KE+1:KA,  i,j,iv,1) = ATMOS_BOUNDARY_var_ref(KE,i,j,iv,1)
+       ATMOS_BOUNDARY_var_ref(   1:KS-1,i,j,iv,2) = ATMOS_BOUNDARY_var_ref(KS,i,j,iv,2)
+       ATMOS_BOUNDARY_var_ref(KE+1:KA,  i,j,iv,2) = ATMOS_BOUNDARY_var_ref(KE,i,j,iv,2)
+    enddo
+    enddo
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,1), iv )
+       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( ATMOS_BOUNDARY_var_ref(:,:,:,iv,1), iv )
+       call COMM_wait( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+    enddo
+
+    ! set boundary data and time increment
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+       ATMOS_BOUNDARY_increment(k,i,j,iv) = (   ATMOS_BOUNDARY_var_ref(k,i,j,iv,2)     &
+                                              - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) )   &
+                                            / (ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    boundary_timestep = boundary_timestep + 1
+    last_updated = TIME_NOWSEC
+
+    return
+  end subroutine ATMOS_BOUNDARY_initialize
+
+  !-----------------------------------------------------------------------------
+  !> Update boundary value with a constant time increment
+  subroutine ATMOS_BOUNDARY_update( &
+       )
+    use scale_time, only: &
+       TIME_DTSEC,        &
+       TIME_NOWSEC
+    implicit none
+
+    real(DP) :: integrated_sec
+    integer :: i, j, k, iv
+    !---------------------------------------------------------------------------
+    integrated_sec = TIME_NOWSEC - last_updated
+
+    if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT ) then
+       call ATMOS_BOUNDARY_updatefile()
+
+       do iv = I_BND_VELZ, I_BND_QV
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
+          ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+          ATMOS_BOUNDARY_increment(k,i,j,iv) = (   ATMOS_BOUNDARY_var_ref(k,i,j,iv,2)     &
+                                                 - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) )   &
+                                               / (ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       boundary_timestep = boundary_timestep + 1
+       last_updated = TIME_NOWSEC
+    else
+       do iv = I_BND_VELZ, I_BND_QV
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
+          ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var(k,i,j,iv) + ATMOS_BOUNDARY_increment(k,i,j,iv)
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
+
+    return
+  end subroutine ATMOS_BOUNDARY_update
+
+  !-----------------------------------------------------------------------------
+  !> Update reference boundary file
+  subroutine ATMOS_BOUNDARY_updatefile( &
+       )
+    use scale_time, only: &
+       TIME_NOWSEC
+    use gtool_file, only: &
+       FileRead
+    use scale_comm, only: &
+       COMM_vars, &
+       COMM_wait
+    use scale_process, only: &
+         PRC_myrank
+    implicit none
+
+    real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+    integer :: step
+    integer :: i, j, k, iv
+    character(len=H_LONG) :: bname
+    !---------------------------------------------------------------------------
+
+    step  = boundary_timestep + 1
+    bname = ATMOS_BOUNDARY_IN_BASENAME
+
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,2)
+    enddo
+    enddo
+    enddo
+    enddo
+
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+       ATMOS_BOUNDARY_var_ref(   1:KS-1,i,j,iv,2) = ATMOS_BOUNDARY_var_ref(KS,i,j,iv,2)
+       ATMOS_BOUNDARY_var_ref(KE+1:KA,  i,j,iv,2) = ATMOS_BOUNDARY_var_ref(KE,i,j,iv,2)
+    enddo
+    enddo
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+    enddo
+
+    return
+  end subroutine ATMOS_BOUNDARY_updatefile
 
 end module scale_atmos_boundary

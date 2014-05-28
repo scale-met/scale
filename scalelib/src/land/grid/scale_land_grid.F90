@@ -64,8 +64,8 @@ contains
 
     namelist / PARAM_LAND_GRID / &
        LAND_GRID_IN_BASENAME,  &
-       LAND_GRID_OUT_BASENAME, &
-       LDZ
+       LAND_GRID_OUT_BASENAME !, &
+!       LDZ
 
     integer :: ierr
     integer :: k

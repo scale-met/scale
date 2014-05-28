@@ -33,6 +33,7 @@ module mod_cpl_vars
   public :: CPL_vars_restart_write
   public :: CPL_vars_history
   public :: CPL_vars_total
+  public :: CPL_vars_external_in
 
   public :: CPL_vars_merge
   public :: CPL_putAtm
@@ -672,6 +673,59 @@ contains
 
     return
   end subroutine CPL_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  subroutine CPL_vars_external_in( &
+      lst_in,    &  ! (in)
+      ust_in,    &  ! (in)
+      sst_in,    &  ! (in)
+      albw_in,   &  ! (in)
+      albg_in,   &  ! (in)
+      z0w_in,    &  ! (in)
+      skint_in,  &  ! (in)
+      skinw_in,  &  ! (in)
+      snowq_in,  &  ! (in)
+      snowt_in   )  ! (in)
+    use scale_const, only: &
+       I_SW  => CONST_I_SW,  &
+       I_LW  => CONST_I_LW
+    implicit none
+
+    real(RP), intent(in) :: lst_in(:,:)
+    real(RP), intent(in) :: ust_in(:,:)
+    real(RP), intent(in) :: sst_in(:,:)
+    real(RP), intent(in) :: albw_in(:,:,:)
+    real(RP), intent(in) :: albg_in(:,:,:)
+    real(RP), intent(in) :: z0w_in(:,:)
+    real(RP), intent(in) :: skint_in(:,:)
+    real(RP), intent(in) :: skinw_in(:,:)
+    real(RP), intent(in) :: snowq_in(:,:)
+    real(RP), intent(in) :: snowt_in(:,:)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
+
+    LST(:,:)       = lst_in(:,:)
+    UST(:,:)       = ust_in(:,:)
+    SST(:,:)       = sst_in(:,:)
+    ALBW(:,:,I_SW) = albw_in(:,:,I_SW)
+    ALBW(:,:,I_LW) = albw_in(:,:,I_LW)
+    ALBG(:,:,I_SW) = albg_in(:,:,I_SW)
+    ALBG(:,:,I_LW) = albg_in(:,:,I_LW)
+    Z0W(:,:)       = z0w_in(:,:)
+    SkinT(:,:)     = skint_in(:,:)
+    SkinW(:,:)     = skinw_in(:,:)
+    SnowQ(:,:)     = snowq_in(:,:)
+    SnowT(:,:)     = snowt_in(:,:)
+
+    call CPL_vars_fillhalo
+
+    call CPL_vars_total
+
+    return
+  end subroutine CPL_vars_external_in
 
   subroutine CPL_vars_merge
     use scale_landuse, only: &

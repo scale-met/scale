@@ -11,7 +11,7 @@
 !! @li      2014-04-28 (R.Yoshida)   [new]
 !!
 !<
-module scale_realinput
+module mod_realinput
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -34,22 +34,30 @@ module scale_realinput
   use scale_process, only: &
      myrank => PRC_myrank,  &
      PRC_MPIstop
-  use scale_const, only: &
-     pi     => CONST_PI,    &
-     Rdry   => CONST_Rdry,  &
-     CPdry  => CONST_CPdry, &
-     CVdry  => CONST_CVdry, &
-     Rvap   => CONST_Rvap,  &
-     CPvap  => CONST_CPvap, &
-     CVvap  => CONST_CVvap, &
-     CL     => CONST_CL,    &
-     CI     => CONST_CI,    &
-     PRE00  => CONST_PRE00, &
-     grav   => CONST_GRAV,  &
-     r_in_m => CONST_RADIUS
+  use scale_const, only:    &
+     pi     => CONST_PI,     &
+     Rdry   => CONST_Rdry,   &
+     CPdry  => CONST_CPdry,  &
+     CVdry  => CONST_CVdry,  &
+     Rvap   => CONST_Rvap,   &
+     CPvap  => CONST_CPvap,  &
+     CVvap  => CONST_CVvap,  &
+     CL     => CONST_CL,     &
+     CI     => CONST_CI,     &
+     PRE00  => CONST_PRE00,  &
+     TEM00  => CONST_TEM00,  &
+     grav   => CONST_GRAV,   &
+     r_in_m => CONST_RADIUS, &
+     dwatr  => CONST_DWATR,  &
+     I_SW   => CONST_I_SW,   &
+     I_LW   => CONST_I_LW,   &
+     CONST_UNDEF
   use scale_atmos_hydrostatic, only: &
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos
   use scale_external_io
+  use scale_land_grid_index
+  use scale_land_grid, only: &
+     LCZ  => GRID_LCZ
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -59,8 +67,8 @@ module scale_realinput
   !
   public :: ParentAtomSetup
   public :: ParentAtomInput
-  !public :: ParentLndOcnSetup
-  !public :: ParentLndOcnInput
+  public :: ParentAtomBoundary
+  public :: ParentLndOcnInput
 
   !-----------------------------------------------------------------------------
   !
@@ -93,6 +101,9 @@ module scale_realinput
   integer, parameter :: itp_nh = 3
   integer, parameter :: itp_nv = 2
 
+  integer, private :: interp_search_divnum = 10
+  logical, private :: wrfout = .false.  ! file type switch (wrfout or wrfrst)
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -100,11 +111,13 @@ contains
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine ParentAtomSetup( &
-      dims,          & ! (out)
-      timelen,       & ! (out)
-      mdlid,         & ! (out)
-      basename_org,  & ! (in)
-      filetype       & ! (in)
+      dims,             & ! (out)
+      timelen,          & ! (out)
+      mdlid,            & ! (out)
+      basename_org,     & ! (in)
+      filetype,         & ! (in)
+      search_divnum_in, & ! (in)
+      wrf_file_type_in  & ! (in)
       )
     implicit none
     integer,          intent(out)   :: dims(:)
@@ -112,6 +125,8 @@ contains
     integer,          intent(out)   :: mdlid
     character(LEN=*), intent( in)  :: basename_org
     character(LEN=*), intent( in)  :: filetype
+    integer,          intent( in)   :: search_divnum_in
+    logical,          intent( in)   :: wrf_file_type_in
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -132,6 +147,13 @@ contains
        mdlid = iWRFARW
        call ExternalFileGetShape( dims(:), timelen, mdlid,        &
                                    BASENAME_ORG, myrank, single=.true. )
+       if ( wrf_file_type_in ) then
+          wrfout = .true.
+          if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
+       else
+          wrfout = .false.
+          if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF Restart'
+       endif
 
     !case('JMA-MSM')
 
@@ -144,11 +166,15 @@ contains
        call PRC_MPIstop
     endselect
 
+    interp_search_divnum = search_divnum_in
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Interpolation Search Block Dividing Num:', &
+                                    interp_search_divnum
+
     return
   end subroutine ParentAtomSetup
 
   !-----------------------------------------------------------------------------
-  !> Data Input
+  !> Atmosphere Data Read
   !-----------------------------------------------------------------------------
   subroutine ParentAtomInput( &
       dens,          & ! (out)
@@ -319,7 +345,7 @@ contains
   end subroutine ParentAtomInput
 
   !-----------------------------------------------------------------------------
-  !> Boundary Data Output
+  !> Boundary Data Write
   !-----------------------------------------------------------------------------
   subroutine ParentAtomBoundary( &
       dens,          & ! (out)
@@ -330,9 +356,15 @@ contains
       qtrc,          & ! (out)
       numsteps,      & ! (in)
       initstep,      & ! (in)
+      update_dt,     & ! (in)
       basename,      & ! (in)
       title          & ! (in)
       )
+    use scale_comm, only: &
+       COMM_vars, &
+       COMM_wait
+    use scale_fileio, only: &
+       FILEIO_write
     implicit none
 
     real(RP),         intent(out)    :: dens(:,:,:,:)
@@ -341,96 +373,241 @@ contains
     real(RP),         intent(out)    :: momy(:,:,:,:)
     real(RP),         intent(out)    :: rhot(:,:,:,:)
     real(RP),         intent(out)    :: qtrc(:,:,:,:,:)
+    real(RP),         intent(in)     :: update_dt
     character(LEN=*), intent( in)   :: basename
     character(LEN=*), intent( in)   :: title
     integer,          intent( in)    :: numsteps ! total time steps
     integer,          intent( in)    :: initstep ! initial step
 
-    real(RP), allocatable :: W(:,:,:)
-    real(RP), allocatable :: U(:,:,:)
-    real(RP), allocatable :: V(:,:,:)
-    real(RP), allocatable :: POTT(:,:,:)
+    character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    real(RP), allocatable :: atmos_boundary_var(:,:,:,:,:)         !> reference container (with HALO)
 
-    real(RP), allocatable :: PRES(:,:,:)
-    real(RP), allocatable :: TEMP(:,:,:)
-    real(RP), allocatable :: QV(:,:,:)
-    real(RP), allocatable :: QC(:,:,:)
-
-    integer :: k, i, j
+    integer :: k, i, j, n, iv
+    integer :: ts, te, ta
+    integer :: timetarg
 
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    allocate( w(KA,IA,JA) )
-    allocate( u(KA,IA,JA) )
-    allocate( v(KA,IA,JA) )
-    allocate( pott(KA,IA,JA) )
-    allocate( pres(KA,IA,JA) )
-    allocate( temp(KA,IA,JA) )
-    allocate( qv(KA,IA,JA) )
-    allocate( qc(KA,IA,JA) )
+    ts = initstep
+    te = numsteps
+    ta = numsteps
+
+    allocate( atmos_boundary_var(KA,IA,JA,ta,5) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Boundary]'
 
+    ! copy from "ATMOS_BOUNDARY_setinitval/scale_atmos_boundary" //-------
+    atmos_boundary_var(:,:,:,:,I_BND_VELZ) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_VELY) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_VELX) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_POTT) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_QV  ) = CONST_UNDEF
 
+    do n = ts, te
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       atmos_boundary_var(k,i,j,n,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j,n) / ( DENS(k+1,i,j,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_VELX) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_VELY) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
+       atmos_boundary_var(k,i,j,n,I_BND_POTT) = RHOT(k,i,j,n) / DENS(k,i,j,n)
+       atmos_boundary_var(k,i,j,n,I_BND_QV  ) = QTRC(k,i,j,I_QV,n)
+    enddo
+    enddo
+    enddo
+    enddo
 
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT),                  &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'POTT', 'Reference PT', 'K', 'ZXY',                    &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!
-!       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-!       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
-!                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-!                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
-!                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+    ! fill KHALO
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = JS, JE
+    do i  = IS, IE
+       atmos_boundary_var(   1:KS-1,i,j,n,iv) = atmos_boundary_var(KS,i,j,n,iv)
+       atmos_boundary_var(KE+1:KA,  i,j,n,iv) = atmos_boundary_var(KE,i,j,n,iv)
+    enddo
+    enddo
+    enddo
+    enddo
 
-    deallocate( w )
-    deallocate( u )
-    deallocate( v )
-    deallocate( pott )
-    deallocate( pres )
-    deallocate( temp )
-    deallocate( qv )
-    deallocate( qc )
+    ! fill IHALO & JHALO
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars( atmos_boundary_var(:,:,:,n,iv), iv )
+    enddo
+    enddo
+
+    do n = ts, te
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait( atmos_boundary_var(:,:,:,n,iv), iv )
+    enddo
+    enddo
+    !--------//
+
+    do n = ts, te
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELZ),        &
+                          basename, title,                               &
+                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELX),        &
+                          basename, title,                               &
+                          'VELX', 'Reference Velocity u', 'm/s', 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELY),        &
+                          basename, title,                               &
+                          'VELY', 'Reference Velocity y', 'm/s', 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_POTT),        &
+                          basename, title,                               &
+                          'POTT', 'Reference PT', 'K', 'ZXYT',           &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_QV),           &
+                          basename, title,                                &
+                          'QV', 'Reference water vapor', 'kg/kg', 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+    enddo
+
+    deallocate( atmos_boundary_var )
 
     return
   end subroutine ParentAtomBoundary
+
+  !-----------------------------------------------------------------------------
+  !> Land&Ocean Data Read/Write
+  !-----------------------------------------------------------------------------
+  subroutine ParentLndOcnInput( &
+      basename_org,  & ! (in)
+      dims,          & ! (in)
+      timelen,       & ! (in)
+      mdlid,         & ! (in)
+      step           & ! (in)
+      )
+    use mod_land_vars, only:   &
+       LAND_vars_restart_write, &
+       LAND_vars_external_in
+    use mod_ocean_vars, only:   &
+       OCEAN_vars_restart_write, &
+       OCEAN_vars_external_in
+    use mod_cpl_vars, only:   &
+       CPL_vars_restart_write, &
+       CPL_vars_external_in
+    implicit none
+
+    character(LEN=*), intent( in)          :: basename_org
+    integer,          intent( in)           :: dims(:)
+    integer,          intent( in)           :: timelen  ! time steps in one file
+    integer,          intent( in)           :: mdlid    ! model type id
+    integer,          intent( in)           :: step     ! initial file number
+
+    real(RP), allocatable :: tg(:,:,:)
+    real(RP), allocatable :: strg(:,:,:)
+    real(RP), allocatable :: roff(:,:)
+    real(RP), allocatable :: qvef(:,:)
+    real(RP), allocatable :: tw(:,:)
+    real(RP), allocatable :: lst(:,:)
+    real(RP), allocatable :: ust(:,:)
+    real(RP), allocatable :: sst(:,:)
+    real(RP), allocatable :: albw(:,:,:)
+    real(RP), allocatable :: albg(:,:,:)
+    real(RP), allocatable :: z0w(:,:)
+    real(RP), allocatable :: skint(:,:)
+    real(RP), allocatable :: skinw(:,:)
+    real(RP), allocatable :: snowq(:,:)
+    real(RP), allocatable :: snowt(:,:)
+
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    allocate( tg(LKMAX,IA,JA)   )
+    allocate( strg(LKMAX,IA,JA) )
+    allocate( roff(IA,JA)       )
+    allocate( qvef(IA,JA)       )
+    allocate( tw(IA,JA)         )
+    allocate( lst(IA,JA)        )
+    allocate( ust(IA,JA)        )
+    allocate( sst(IA,JA)        )
+    allocate( albw(IA,JA,2)     )
+    allocate( albg(IA,JA,2)     )
+    allocate( z0w(IA,JA)        )
+    allocate( skint(IA,JA)      )
+    allocate( skinw(IA,JA)      )
+    allocate( snowq(IA,JA)      )
+    allocate( snowt(IA,JA)      )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input-LndOcn]'
+
+    if( LKMAX < 4 )then
+       write(*,*) 'xxx LKMAX less than 4: ', LKMAX
+       write(*,*) 'xxx in Real Case, LKMAX should be set more than 4'
+       call PRC_MPIstop
+    endif
+
+    ! Read Data
+    if( mdlid == iSCALE )then      !TYPE: SCALE-LES
+       !
+       ! under construction
+       !
+       write(*,*) 'xxx NOT WORK YET: InputLndOcnSCALE'
+       call PRC_MPIstop
+    elseif( mdlid == iWRFARW )then !TYPE: WRF-ARW
+       call InputLndOcnWRF( tg(:,:,:),        &
+                             strg(:,:,:),      &
+                             roff(:,:),        &
+                             qvef(:,:),        &
+                             tw(:,:),          &
+                             lst(:,:),         &
+                             ust(:,:),         &
+                             sst(:,:),         &
+                             albw(:,:,:),      &
+                             albg(:,:,:),      &
+                             z0w(:,:),         &
+                             skint(:,:),       &
+                             skinw(:,:),       &
+                             snowq(:,:),       &
+                             snowt(:,:),       &
+                             basename_org,     &
+                             dims(:),          &
+                             mdlid,            &
+                             step              )
+    endif
+
+    ! Write out: Land
+    call LAND_vars_external_in( tg, strg, roff, qvef )
+    call LAND_vars_restart_write
+
+    ! Write out: Ocean
+    call OCEAN_vars_external_in( tw )
+    call OCEAN_vars_restart_write
+
+    ! Write out: Coupler
+    call CPL_vars_external_in( lst, ust, sst, albw, albg, &
+                                z0w, skint, skinw, snowq, snowt )
+    call CPL_vars_restart_write
+
+    deallocate( tg    )
+    deallocate( strg  )
+    deallocate( roff  )
+    deallocate( qvef  )
+    deallocate( tw    )
+    deallocate( lst   )
+    deallocate( ust   )
+    deallocate( sst   )
+    deallocate( albw  )
+    deallocate( albg  )
+    deallocate( z0w   )
+    deallocate( skint )
+    deallocate( skinw )
+    deallocate( snowq )
+    deallocate( snowt )
+
+    return
+  end subroutine ParentLndOcnInput
 
   !-----------------------------------------------------------------------------
   !> Individual Procedures
@@ -662,6 +839,8 @@ contains
     integer :: n, k, i, j, iq, iqw
     integer :: tcount = 1
 
+    character(len=H_MID)  :: varname_wrf
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
@@ -707,23 +886,43 @@ contains
     call ExternalFileRead( dummy_4D(:,:,:,:),                         &
                    BASENAME, "PB", step, tcount, myrank, mdlid, single=.true. )
     pbase_org(:,:,:,:) = dummy_4D(:,:,:,:)
+    if ( wrfout ) then
+       varname_wrf = "T"
+    else
+       varname_wrf = "T_1"
+    endif
     call ExternalFileRead( dummy_4D(:,:,:,:),                          &
-                   BASENAME, "T_1",  step, tcount, myrank, mdlid, single=.true. )
+                   BASENAME, varname_wrf,  step, tcount, myrank, mdlid, single=.true. )
     pott_org(:,:,:,:) = dummy_4D(:,:,:,:)
     deallocate( dummy_4D )
     allocate( dummy_4D(dims(4),dims(2),dims(3),tcount) )
+    if ( wrfout ) then
+       varname_wrf = "W"
+    else
+       varname_wrf = "W_1"
+    endif
     call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                   BASENAME, "W_1",  step, tcount, myrank, mdlid, single=.true., zstag=.true. )
+                   BASENAME, varname_wrf,  step, tcount, myrank, mdlid, single=.true., zstag=.true. )
     w_org(:,:,:,:) = dummy_4D(:,:,:,:)
     deallocate( dummy_4D )
     allocate( dummy_4D(dims(1),dims(5),dims(3),tcount) )
+    if ( wrfout ) then
+       varname_wrf = "U"
+    else
+       varname_wrf = "U_1"
+    endif
     call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                   BASENAME, "U_1",  step, tcount, myrank, mdlid, single=.true., xstag=.true. )
+                   BASENAME, varname_wrf,  step, tcount, myrank, mdlid, single=.true., xstag=.true. )
     u_org(:,:,:,:) = dummy_4D(:,:,:,:)
     deallocate( dummy_4D )
     allocate( dummy_4D(dims(1),dims(2),dims(6),tcount) )
+    if ( wrfout ) then
+       varname_wrf = "V"
+    else
+       varname_wrf = "V_1"
+    endif
     call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                   BASENAME, "V_1",  step, tcount, myrank, mdlid, single=.true., ystag=.true. )
+                   BASENAME, varname_wrf,  step, tcount, myrank, mdlid, single=.true., ystag=.true. )
     v_org(:,:,:,:) = dummy_4D(:,:,:,:)
     deallocate( dummy_4D )
 
@@ -754,13 +953,6 @@ contains
                       BASENAME, "QSNOW",  step, tcount, myrank, mdlid, single=.true. )
        call ExternalFileRead( dummy_5D(:,:,:,:,I_QG),                     &
                       BASENAME, "QGRAUP", step, tcount, myrank, mdlid, single=.true. )
-    else
-       !qtrc_org(:,:,:,:,I_QV) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_QC) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_QR) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_QI) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_QS) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_QG) = 0.0_RP
     endif
 
     if( trim(mptype_org)=='wdm6' )then
@@ -774,12 +966,6 @@ contains
                       BASENAME, "NS", step, tcount, myrank, mdlid, single=.true. )
        call ExternalFileRead( dummy_5D(:,:,:,:,I_NG),                     &
                       BASENAME, "NG", step, tcount, myrank, mdlid, single=.true. )
-    else
-       !qtrc_org(:,:,:,:,I_NC) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_NR) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_NI) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_NS) = 0.0_RP
-       !qtrc_org(:,:,:,:,I_NG) = 0.0_RP
     endif
 
     qtrc_org(:,:,:,:,:) = dummy_5D(:,:,:,:,:)
@@ -887,6 +1073,364 @@ contains
   end subroutine InputAtomWRF
 
   !-----------------------------------------------------------------------------
+  subroutine InputLndOcnWRF( &
+      tg,          & ! (out)
+      strg,        & ! (out)
+      roff,        & ! (out)
+      qvef,        & ! (out)
+      tw,          & ! (out)
+      lst,         & ! (out)
+      ust,         & ! (out)
+      sst,         & ! (out)
+      albw,        & ! (out)
+      albg,        & ! (out)
+      z0w,         & ! (out)
+      skint,       & ! (out)
+      skinw,       & ! (out)
+      snowq,       & ! (out)
+      snowt,       & ! (out)
+      basename,    & ! (in)
+      dims,        & ! (in)
+      mdlid,       & ! (in)
+      step         & ! (in)
+      )
+    implicit none
+
+    real(RP),         intent(out)  :: tg(:,:,:)
+    real(RP),         intent(out)  :: strg(:,:,:)
+    real(RP),         intent(out)  :: roff(:,:)
+    real(RP),         intent(out)  :: qvef(:,:)
+    real(RP),         intent(out)  :: tw(:,:)
+    real(RP),         intent(out)  :: lst(:,:)
+    real(RP),         intent(out)  :: ust(:,:)
+    real(RP),         intent(out)  :: sst(:,:)
+    real(RP),         intent(out)  :: albw(:,:,:)
+    real(RP),         intent(out)  :: albg(:,:,:)
+    real(RP),         intent(out)  :: z0w(:,:)
+    real(RP),         intent(out)  :: skint(:,:)
+    real(RP),         intent(out)  :: skinw(:,:)
+    real(RP),         intent(out)  :: snowq(:,:)
+    real(RP),         intent(out)  :: snowt(:,:)
+    character(LEN=*), intent( in) :: basename
+    integer,          intent( in)  :: mdlid
+    integer,          intent( in)  :: dims(:)
+    integer,          intent( in)  :: step
+
+    real(RP), allocatable :: org_3D(:,:,:)
+    real(RP), allocatable :: org_4D(:,:,:,:)
+    real(RP), allocatable :: lat_ORG(:,:,:)
+    real(RP), allocatable :: lon_ORG(:,:,:)
+    real(RP), allocatable :: zs_org(:,:,:,:)
+    real(RP), allocatable :: dzs_org(:,:)
+
+    real(SP), allocatable :: dummy_2D(:,:)       ! for WRF restart file
+    real(SP), allocatable :: dummy_3D(:,:,:)     ! for WRF restart file
+    real(SP), allocatable :: dummy_4D(:,:,:,:)   ! for WRF restart file
+
+    real(RP), allocatable :: lcz_3D(:,:,:)
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer, allocatable :: igrd(:,:,:)
+    integer, allocatable :: jgrd(:,:,:)
+    integer, allocatable :: kgrd(:,:,:,:,:)
+
+    real(RP) :: d2r
+    integer :: n, k, i, j, iq, iqw
+    integer :: tcount = 1
+
+    intrinsic shape
+    !---------------------------------------------------------------------------
+    d2r = pi / 180.0_RP
+
+    allocate( lcz_3D(LKMAX,IA,JA) )
+    allocate( hfact(IA,JA,itp_nh) )
+    allocate( vfact(LKMAX,IA,JA,itp_nh,itp_nv) )
+    allocate( igrd(IA,JA,itp_nh) )
+    allocate( jgrd(IA,JA,itp_nh) )
+    allocate( kgrd(LKMAX,IA,JA,itp_nh,itp_nv) )
+
+    allocate( org_3D(dims(2),dims(3),tcount) )
+    allocate( org_4D(dims(7),dims(2),dims(3),tcount) )
+    allocate( lat_org(dims(2),dims(3),tcount) )
+    allocate( lon_org(dims(2),dims(3),tcount) )
+    allocate( zs_org(dims(7),dims(2),dims(3),tcount) )
+    allocate( dzs_org(dims(7),tcount) )
+    allocate( dummy_2D(dims(7),tcount) )
+    allocate( dummy_3D(dims(2),dims(3),tcount) )
+    allocate( dummy_4D(dims(7),dims(2),dims(3),tcount) )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-LndOcn]'
+
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "XLAT",    step, tcount, myrank, mdlid, single=.true. )
+    lat_org(:,:,:) = dummy_3D(:,:,:) * d2r
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "XLONG",   step, tcount, myrank, mdlid, single=.true. )
+    lon_org(:,:,:) = dummy_3D(:,:,:) * d2r
+    call ExternalFileRead( dummy_2D(:,:),                               &
+                   BASENAME, "ZS",      step, tcount, myrank, mdlid, dims(7), single=.true. )
+    do n = 1, tcount
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       zs_org(:,i,j,n) = dummy_2D(:,n)
+    enddo
+    enddo
+    enddo
+    call ExternalFileRead( dummy_2D(:,:),                               &
+                   BASENAME, "DZS",      step, tcount, myrank, mdlid, dims(7), single=.true. )
+    dzs_org(:,:) = dummy_2D(:,:)
+
+    ! preparing for interpolation
+    do j = 1, JA
+    do i = 1, IA
+       lcz_3D(:,i,j) = lcz(:)
+    enddo
+    enddo
+    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
+                                      zs_org,lat_org,lon_org,dims(7),dims(2),dims(3),step,landgrid=.true. )
+
+    ! soil temperature [K]
+    call ExternalFileRead( dummy_4D(:,:,:,:),                             &
+                   BASENAME, "TSLB",  step, tcount, myrank, mdlid, single=.true., landgrid=.true. )
+    org_4D(:,:,:,:) = dummy_4D(:,:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = 1, LKMAX-1  ! interpolation
+       tg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                  + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                  + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                  + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                  + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                  + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    enddo
+    tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
+    enddo
+    enddo
+
+    ! soil liquid water m3 m-3] (no wrfout-default)
+    ! --- not available; appropriate convert method is not found
+    strg(:,:,:) = 0.0_DP
+    ! ---
+    !call ExternalFileRead( dummy_4D(:,:,:,:),                             &
+    !               BASENAME, "SH2O",  step, tcount, myrank, mdlid, single=.true., landgrid=.true. )
+    !do n = 1, tcount 
+    !do j = 1, dims(3)
+    !do i = 1, dims(2)
+    !do k = 1, dims(7)
+    !   org_4D(k,i,j,n) = dummy_4D(k,i,j,n) * dwatr * dzs_org(k,n)
+    !enddo
+    !enddo
+    !enddo
+    !enddo
+    !n = step
+    !do j = JS-1, JE+1
+    !do i = IS-1, IE+1
+    !do k = 1, LKMAX-1  ! interpolation
+    !   strg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+    !                + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+    !                + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+    !                + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+    !                + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+    !                + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    !enddo
+    !strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+    !enddo
+    !enddo
+
+    ! surface runoff [mm]
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "SFROFF",  step, tcount, myrank, mdlid, single=.true. )
+    do n = 1, tcount 
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       org_3D(i,j,n) = dummy_3D(i,j,n) * 1000.0_DP * dwatr
+    enddo
+    enddo
+    enddo
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       roff(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                  + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                  + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    ! accumulated surface evaporation [kg m-2]
+    ! --- not available; convert method is not found
+    !call ExternalFileRead( dummy_3D(:,:,:),                             &
+    !               BASENAME, "SFCEVP",  step, tcount, myrank, mdlid, single=.true. )
+    !org_3D(:,:,:) = dummy_3D(:,:,:)
+    !n = step
+    qvef(:,:) = 0.0_DP
+
+    ! sea surface temperature [K]
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "SST",  step, tcount, myrank, mdlid, single=.true. )
+    org_3D(:,:,:) = dummy_3D(:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       tw(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    ! surface skin temperature [K]
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "TSK",  step, tcount, myrank, mdlid, single=.true. )
+    org_3D(:,:,:) = dummy_3D(:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       lst(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                 + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                 + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    ! urban skin temperature [K] (no wrfout-default)
+    ! --- tentative approach;
+    !     coz, appropriate value does not retrieve from default wrfout file
+    ust(:,:) = lst(:,:)
+    ! ---
+    !call ExternalFileRead( dummy_3D(:,:,:),                             &
+    !               BASENAME, "TS_URB",  step, tcount, myrank, mdlid, single=.true. )
+    !org_3D(:,:,:) = dummy_3D(:,:,:)
+    !n = step
+    !do j = JS-1, JE+1
+    !do i = IS-1, IE+1
+    !   ust(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+    !             + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+    !             + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    !enddo
+    !enddo
+
+    ! skin sea surface temperature [K] (no wrfout-default)
+    ! --- tentative approach;
+    !     coz, appropriate value does not retrieve from default wrfout file
+    sst(:,:) = lst(:,:)
+    ! ---
+    !call ExternalFileRead( dummy_3D(:,:,:),                             &
+    !               BASENAME, "SSTSK",  step, tcount, myrank, mdlid, single=.true. )
+    !org_3D(:,:,:) = dummy_3D(:,:,:)
+    !n = step
+    !do j = JS-1, JE+1
+    !do i = IS-1, IE+1
+    !   sst(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+    !             + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+    !             + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    !enddo
+    !enddo
+
+    ! ALBEDO [-]
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "ALBEDO",  step, tcount, myrank, mdlid, single=.true. )
+    org_3D(:,:,:) = dummy_3D(:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       albw(i,j,I_SW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                       + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+    albg(:,:,I_SW) = albw(:,:,I_SW)
+
+    ! SURFACE EMISSIVITY [-] (no wrfout-default)
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "EMISS",  step, tcount, myrank, mdlid, single=.true. )
+    do n = 1, tcount 
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       org_3D(i,j,n) = 1.0_DP - dummy_3D(i,j,n)
+    enddo
+    enddo
+    enddo
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       albw(i,j,I_LW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                       + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+    albg(:,:,I_LW) = albw(:,:,I_LW)
+
+    ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "ZNT",  step, tcount, myrank, mdlid, single=.true. )
+    org_3D(:,:,:) = dummy_3D(:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       z0w(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                 + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                 + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    !tentative approach for skin
+    skint(:,:) = lst(:,:)
+    skinw(:,:) = 0.0_DP
+
+    ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "SNOW",  step, tcount, myrank, mdlid, single=.true. )
+    org_3D(:,:,:) = dummy_3D(:,:,:)
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       snowq(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    ! AVERAGE SNOW TEMPERATURE [C] (no wrfout-default)
+    call ExternalFileRead( dummy_3D(:,:,:),                             &
+                   BASENAME, "TSNAV",  step, tcount, myrank, mdlid, single=.true. )
+    do n = 1, tcount 
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       org_3D(i,j,n) = dummy_3D(i,j,n) + TEM00
+    enddo
+    enddo
+    enddo
+    n = step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       snowt(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+
+    deallocate( dummy_2D )
+    deallocate( dummy_3D )
+    deallocate( dummy_4D )
+    deallocate( org_3D )
+    deallocate( org_4D )
+
+    deallocate( lat_org )
+    deallocate( lon_org )
+    deallocate( zs_org )
+    deallocate( dzs_org )
+
+    deallocate( lcz_3D )
+    deallocate( hfact )
+    deallocate( vfact )
+    deallocate( igrd )
+    deallocate( jgrd )
+    deallocate( kgrd )
+
+    return
+  end subroutine InputLndOcnWRF
+
+  !-----------------------------------------------------------------------------
   subroutine LatLonZ_Interpolation_Linear( &
       dens,          & ! (out)
       w,             & ! (out)
@@ -960,9 +1504,9 @@ contains
     call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,lat,lon, &
                                       geoh_org,lat_org,lon_org,dims(1),dims(2),dims(3),n )
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
        dens(k,i,j) =  dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                     + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                     + dens_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -994,9 +1538,9 @@ contains
     call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,lat,lon_u, &
                                       geoh_org,latu_org,lonu_org,dims(1),dims(2),dims(3),n )
     !                                 dims(5) wasn't used to keep consistency with geoh_org
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
        u(k,i,j) =  u_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                  + u_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                  + u_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -1012,9 +1556,9 @@ contains
     call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,lat_v,lon, &
                                       geoh_org,latv_org,lonv_org,dims(1),dims(2),dims(3),n )
     !                                 dims(6) wasn't used to keep consistency with geoh_org
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
        v(k,i,j) =  v_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                  + v_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                  + v_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -1029,9 +1573,9 @@ contains
     n = step
     call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,fz,lat,lon, &
                                       geof_org,lat_org,lon_org,dims(4),dims(2),dims(3),n )
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
        w(k,i,j) =  w_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                  + w_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                  + w_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -1067,42 +1611,83 @@ contains
       nz,         & ! (in)
       nx,         & ! (in)
       ny,         & ! (in)
-      step        & ! (in)
+      step,       & ! (in)
+      landgrid    & ! (in)
       )
     implicit none
 
-    real(RP),         intent(out)  :: hfact(:,:,:)
-    real(RP),         intent(out)  :: vfact(:,:,:,:,:)
-    integer,         intent(out)  :: kgrd(:,:,:,:,:)
-    integer,         intent(out)  :: igrd(:,:,:)
-    integer,         intent(out)  :: jgrd(:,:,:)
-    real(RP),         intent( in)  :: myhgt(:,:,:)
-    real(RP),         intent( in)  :: mylat(:,:)
-    real(RP),         intent( in)  :: mylon(:,:)
-    real(RP),         intent( in)  :: inhgt(:,:,:,:)
-    real(RP),         intent( in)  :: inlat(:,:,:)
-    real(RP),         intent( in)  :: inlon(:,:,:)
-    integer,          intent( in)  :: nz
-    integer,          intent( in)  :: nx
-    integer,          intent( in)  :: ny
-    integer,          intent( in)  :: step
+    real(RP),           intent(out)  :: hfact(:,:,:)
+    real(RP),           intent(out)  :: vfact(:,:,:,:,:)
+    integer,           intent(out)  :: kgrd(:,:,:,:,:)
+    integer,           intent(out)  :: igrd(:,:,:)
+    integer,           intent(out)  :: jgrd(:,:,:)
+    real(RP),           intent( in)  :: myhgt(:,:,:)
+    real(RP),           intent( in)  :: mylat(:,:)
+    real(RP),           intent( in)  :: mylon(:,:)
+    real(RP),           intent( in)  :: inhgt(:,:,:,:)
+    real(RP),           intent( in)  :: inlat(:,:,:)
+    real(RP),           intent( in)  :: inlon(:,:,:)
+    integer,            intent( in)  :: nz
+    integer,            intent( in)  :: nx
+    integer,            intent( in)  :: ny
+    integer,            intent( in)  :: step
+    logical, optional, intent( in)  :: landgrid
 
     real(RP) :: distance
     real(RP) :: denom
     real(RP) :: dist(itp_nh)
     integer :: i, j, k, ii, jj, kk
     integer :: idx
+    integer :: istart, iend, iinc, blk_i
+    integer :: jstart, jend, jinc, blk_j
+    integer :: kstart, kend
+    logical :: lndgrd
+    !---------------------------------------------------------------------------
+
+    lndgrd = .false.
+    if ( present(landgrid) .and. landgrid ) then
+       lndgrd = .true.
+    endif
 
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       ! nearest block search
+       iinc = (nx + 1) / interp_search_divnum
+       jinc = (ny + 1) / interp_search_divnum
+       dist(1) = large_number_one
+       jj = 1 + (jinc/2)
+       do while (jj <= ny)
+          ii = 1 + (iinc/2)
+          do while (ii <= nx)
+             distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj,step),inlon(ii,jj,step) )
+
+             if( distance < dist(1) )then
+                dist(1) = distance
+                blk_i = ii
+                blk_j = jj
+             endif
+             ii = ii + iinc
+          enddo
+          jj = jj + jinc
+       enddo
+       istart = blk_i - (iinc/2) - 1
+       if( istart < 1 ) istart = 1
+       iend   = blk_i + (iinc/2) + 1
+       if( iend  > nx ) iend   = nx
+       jstart = blk_j - (jinc/2) - 1
+       if( jstart < 1 ) jstart = 1
+       jend   = blk_j + (jinc/2) + 1
+       if( jend  > ny ) jend   = ny
+
+       ! main search
        dist(1) = large_number_three
        dist(2) = large_number_two
        dist(3) = large_number_one
-       do jj = 1, ny
-       do ii = 1, nx
+       do jj = jstart, jend
+       do ii = istart, iend
           distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj,step),inlon(ii,jj,step) )
           if ( distance <= dist(1) ) then
              dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
@@ -1127,10 +1712,15 @@ contains
           hfact(i,j,3) = ( 1.0_RP/dist(3) ) * denom
        endif
 
+       if ( lndgrd ) then
+          kstart = 1;     kend = LKMAX
+       else
+          kstart = KS-1;  kend = KE+1
+       endif
        do idx = 1, itp_nh
           ii = igrd(i,j,idx)
           jj = jgrd(i,j,idx)
-          do k = KS, KE
+          do k = kstart, kend
              dist(1) = large_number_two
              dist(2) = large_number_one
              do kk = 1, nz
@@ -1170,6 +1760,7 @@ contains
     implicit none
     real(RP), intent(in) :: la0, lo0, la, lo   ! la,la0: Lat, lo,lo0: Lon; [rad]
     real(RP) :: d, dlon, dlat, work1, work2
+    !---------------------------------------------------------------------------
 
     ! output unit : [m]
     dlon = lo0 - lo
@@ -1182,5 +1773,5 @@ contains
   end function haversine
 
 
-end module scale_realinput
+end module mod_realinput
 !-------------------------------------------------------------------------------

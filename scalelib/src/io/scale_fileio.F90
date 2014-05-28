@@ -43,12 +43,14 @@ module scale_fileio
      module procedure FILEIO_read_1D
      module procedure FILEIO_read_2D
      module procedure FILEIO_read_3D
+     module procedure FILEIO_read_4D
   end interface FILEIO_read
 
   interface FILEIO_write
      module procedure FILEIO_write_1D
      module procedure FILEIO_write_2D
      module procedure FILEIO_write_3D
+     module procedure FILEIO_write_4D
   end interface FILEIO_write
 
   !-----------------------------------------------------------------------------
@@ -408,6 +410,66 @@ contains
 
     return
   end subroutine FILEIO_read_3D
+
+  !-----------------------------------------------------------------------------
+  !> Read 4D data from file
+  subroutine FILEIO_read_4D( &
+       var,      &
+       basename, &
+       varname,  &
+       axistype, &
+       step      )
+    use gtool_file, only: &
+       FileRead
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_MPIstop
+    implicit none
+
+    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
+    character(len=*), intent(in)  :: basename     !< basename of the file
+    character(len=*), intent(in)  :: varname      !< name of the variable
+    character(len=*), intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
+
+    integer               :: dim1_max, dim1_S, dim1_E
+    integer               :: dim2_max, dim2_S, dim2_E
+    integer               :: dim3_max, dim3_S, dim3_E
+    integer               :: dim4_max, dim4_S, dim4_E
+    real(RP), allocatable :: var4D(:,:,:,:)
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE I NetCDF')
+
+    if ( axistype == 'ZXYT' ) then
+       dim1_max = KMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim4_max = step
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+       dim4_S   = 1
+       dim4_E   = step
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    allocate( var4D(dim1_max,dim2_max,dim3_max,dim4_max) )
+
+    call FileRead( var4D(:,:,:,:), basename, varname, step, PRC_myrank )
+    var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) = var4D(1:dim1_max,1:dim2_max,1:dim3_max,1:dim4_max)
+
+    deallocate( var4D )
+
+    call PROF_rapend  ('FILE I NetCDF')
+
+    return
+  end subroutine FILEIO_read_4D
 
   !-----------------------------------------------------------------------------
   !> Write 1D data to file
@@ -822,6 +884,149 @@ contains
 
     return
   end subroutine FILEIO_write_3D
+
+  !-----------------------------------------------------------------------------
+  !> Write 4D data to file
+  subroutine FILEIO_write_4D( &
+       var,      &
+       basename, &
+       title,    &
+       varname,  &
+       desc,     &
+       unit,     &
+       axistype, &
+       datatype, &
+       timeintv, &
+       append,   &
+       timetarg  )
+    use gtool_file_h, only: &
+       File_REAL8, &
+       File_REAL4
+    use gtool_file, only: &
+       FileCreate,      &
+       FilePutAxis,     &
+       FileAddVariable, &
+       FileWrite
+    use scale_process, only: &
+       PRC_master, &
+       PRC_myrank, &
+       PRC_2Drank, &
+       PRC_MPIstop
+!    use scale_time, only: &
+!       NOWSEC => TIME_NOWDAYSEC
+    implicit none
+
+    real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable
+    character(len=*),  intent(in)  :: basename     !< basename of the file
+    character(len=*),  intent(in)  :: title        !< title    of the file
+    character(len=*),  intent(in)  :: varname      !< name        of the variable
+    character(len=*),  intent(in)  :: desc         !< description of the variable
+    character(len=*),  intent(in)  :: unit         !< unit        of the variable
+    character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
+    character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
+    real(RP),          intent(in)  :: timeintv      !< time interval [sec]
+    logical, optional, intent(in)  :: append       !< append existing (closed) file?
+    integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
+
+    integer          :: dtype
+    character(len=2) :: dims(3)
+    integer          :: dim1_max, dim1_S, dim1_E
+    integer          :: dim2_max, dim2_S, dim2_E
+    integer          :: dim3_max, dim3_S, dim3_E
+
+    real(RP), allocatable :: var3D(:,:,:)
+    real(DP) :: time_interval, nowtime
+
+    integer :: rankidx(2)
+    logical :: append_sw
+    logical :: fileexisted
+    logical :: addvar
+    integer :: fid, vid
+    integer :: step
+    integer :: n
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE O NetCDF')
+
+    time_interval = timeintv
+    step = size(var(KS,IS,JS,:))
+
+    rankidx(1) = PRC_2Drank(PRC_myrank,1)
+    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+
+    if ( datatype == 'REAL8' ) then
+       dtype = File_REAL8
+    elseif( datatype == 'REAL4' ) then
+       dtype = File_REAL4
+    else
+       if ( RP == 8 ) then
+          dtype = File_REAL8
+       elseif( RP == 4 ) then
+          dtype = File_REAL4
+       else
+          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
+          call PRC_MPIstop
+       endif
+    endif
+
+    append_sw = .false.
+    if ( present(append) ) then
+       append_sw = append
+    endif
+
+    call FileCreate( fid,               & ! [OUT]
+                     fileexisted,       & ! [OUT]
+                     basename,          & ! [IN]
+                     title,             & ! [IN]
+                     H_SOURCE,          & ! [IN]
+                     H_INSTITUTE,       & ! [IN]
+                     PRC_master,        & ! [IN]
+                     PRC_myrank,        & ! [IN]
+                     rankidx,           & ! [IN]
+                     append = append_sw ) ! [IN]
+
+    if ( .NOT. fileexisted ) then ! only once
+       call FILEIO_set_axes( fid, dtype ) ! [IN]
+    endif
+
+    if ( axistype == 'ZXYT' ) then
+       dims = (/'z','x','y'/)
+       dim1_max = KMAX
+       dim2_max = IMAX
+       dim3_max = JMAX
+       dim1_S   = KS
+       dim1_E   = KE
+       dim2_S   = IS
+       dim2_E   = IE
+       dim3_S   = JS
+       dim3_E   = JE
+    else
+       write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
+       call PRC_MPIstop
+    endif
+
+    call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype, time_interval ) ! [IN]
+    allocate( var3D(dim1_max,dim2_max,dim3_max) )
+
+    if ( present(timetarg) ) then
+       nowtime = (timetarg-1) * time_interval
+       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg)
+       call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+    else
+       nowtime = 0.0_DP
+       do n=1, step
+          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n)
+          call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
+          nowtime = nowtime + time_interval
+       enddo
+    endif
+
+    deallocate( var3D  )
+
+    call PROF_rapend  ('FILE O NetCDF')
+
+    return
+  end subroutine FILEIO_write_4D
 
 end module scale_fileio
 !-------------------------------------------------------------------------------

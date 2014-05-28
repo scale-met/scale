@@ -36,6 +36,7 @@ module mod_land_vars
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
   public :: LAND_vars_total
+  public :: LAND_vars_external_in
 
   !-----------------------------------------------------------------------------
   !
@@ -393,6 +394,36 @@ contains
 
     return
   end subroutine LAND_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  subroutine LAND_vars_external_in( &
+      tg_in,     & ! (in)
+      strg_in,   & ! (in)
+      roff_in,   & ! (in)
+      qvef_in    ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: tg_in(:,:,:)
+    real(RP), intent(in) :: strg_in(:,:,:)
+    real(RP), intent(in) :: roff_in(:,:)
+    real(RP), intent(in) :: qvef_in(:,:)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (land) ***'
+
+    TG(:,:,:)   = tg_in(:,:,:)
+    STRG(:,:,:) = strg_in(:,:,:)
+    ROFF(:,:)   = roff_in(:,:)
+    QVEF(:,:)   = qvef_in(:,:)
+
+    call LAND_vars_fillhalo
+
+    call LAND_vars_total
+
+    return
+  end subroutine LAND_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
