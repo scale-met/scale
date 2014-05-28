@@ -119,7 +119,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: SF_TYPE
+    character(len=*), intent(in) :: SF_TYPE
     !---------------------------------------------------------------------------
 
     select case( SF_TYPE )

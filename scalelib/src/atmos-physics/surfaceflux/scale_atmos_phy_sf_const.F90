@@ -49,22 +49,22 @@ module scale_atmos_phy_sf_const
   !
   !++ Private parameters & variables
   !
-  integer,  private, save      :: ATMOS_PHY_SF_FLG_MOM_FLUX = 0 ! application type for momentum flux
+  integer,  private            :: ATMOS_PHY_SF_FLG_MOM_FLUX = 0 ! application type for momentum flux
                                                                 ! 0: Bulk coefficient  is constant
                                                                 ! 1: Friction velocity is constant
 
   real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM      =  100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
-  real(RP), private, save      :: ATMOS_PHY_SF_U_minM      =    0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
+  real(RP), private            :: ATMOS_PHY_SF_U_minM      =    0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
   real(RP), private, parameter :: ATMOS_PHY_SF_Cm_max      = 2.5E-3_RP ! maximum limit of bulk coefficient for momentum [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_Cm_min      = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
+  real(RP), private            :: ATMOS_PHY_SF_Cm_min      = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
 
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_Ustar =   0.25_RP ! constant friction velocity [m/s]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_Cm    = 0.0011_RP ! constant bulk coefficient for momentum [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_SH    =   15.0_RP ! constant surface sensible heat flux [W/m2]
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_LH    =  115.0_RP ! constant surface latent   heat flux [W/m2]
+  real(RP), private            :: ATMOS_PHY_SF_Const_Ustar =   0.25_RP ! constant friction velocity [m/s]
+  real(RP), private            :: ATMOS_PHY_SF_Const_Cm    = 0.0011_RP ! constant bulk coefficient for momentum [NIL]
+  real(RP), private            :: ATMOS_PHY_SF_Const_SH    =   15.0_RP ! constant surface sensible heat flux [W/m2]
+  real(RP), private            :: ATMOS_PHY_SF_Const_LH    =  115.0_RP ! constant surface latent   heat flux [W/m2]
 
-  logical,  private, save      :: ATMOS_PHY_SF_FLG_SH_DIURNAL = .false. ! diurnal modulation for sensible heat flux?
-  real(RP), private, save      :: ATMOS_PHY_SF_Const_FREQ     = 24.0_RP ! frequency of sensible heat flux modulation [hour]
+  logical,  private            :: ATMOS_PHY_SF_FLG_SH_DIURNAL = .false. ! diurnal modulation for sensible heat flux?
+  real(RP), private            :: ATMOS_PHY_SF_Const_FREQ     = 24.0_RP ! frequency of sensible heat flux modulation [hour]
 
   !-----------------------------------------------------------------------------
 contains
@@ -75,7 +75,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: ATMOS_PHY_SF_TYPE
+    character(len=*), intent(in) :: ATMOS_PHY_SF_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
        ATMOS_PHY_SF_FLG_MOM_FLUX,   &

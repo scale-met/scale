@@ -43,7 +43,7 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private, save :: USER_do = .false. !< do user step?
+  logical, private :: USER_do = .false. !< do user step?
 
   !-----------------------------------------------------------------------------
 contains

@@ -31,7 +31,7 @@ module mod_cnvtopo
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: CNVTOPO_TYPE = -1
+  integer, public            :: CNVTOPO_TYPE = -1
 
   integer, public, parameter :: I_IGNORE     =  0
   integer, public, parameter :: I_GTOPO30    =  1

@@ -41,16 +41,16 @@ module scale_cpl_atmos_land_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer,  private, save :: nmax = 100 ! maximum iteration number
+  integer,  private :: nmax = 100 ! maximum iteration number
 
-  real(RP), private, save :: res_min  =   1.0_RP    ! minimum number of residual
-  real(RP), private, save :: dTS      =   1.0E-8_RP ! delta surface temp.
-  real(RP), private, save :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
-  real(RP), private, save :: U_minH   =   0.0_RP    !                   T
-  real(RP), private, save :: U_minE   =   0.0_RP    !                   q
-  real(RP), private, save :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
-  real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
-  real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
+  real(RP), private :: res_min  =   1.0_RP    ! minimum number of residual
+  real(RP), private :: dTS      =   1.0E-8_RP ! delta surface temp.
+  real(RP), private :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
+  real(RP), private :: U_minH   =   0.0_RP    !                   T
+  real(RP), private :: U_minE   =   0.0_RP    !                   q
+  real(RP), private :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
+  real(RP), private :: U_maxH   = 100.0_RP    !                   T
+  real(RP), private :: U_maxE   = 100.0_RP    !                   q
 
 contains
   !-----------------------------------------------------------------------------
@@ -63,7 +63,7 @@ contains
        CPL_bulkcoef_setup
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmLnd
+    character(len=*), intent(in) :: CPL_TYPE_AtmLnd
 
     integer  :: CPL_AtmLnd_bulk_nmax
     real(RP) :: CPL_AtmLnd_bulk_res_min

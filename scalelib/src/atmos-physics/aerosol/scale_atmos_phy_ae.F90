@@ -100,7 +100,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: AE_TYPE
+    character(len=*), intent(in) :: AE_TYPE
     !---------------------------------------------------------------------------
 
     select case( AE_TYPE )

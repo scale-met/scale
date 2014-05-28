@@ -41,23 +41,23 @@ module scale_cpl_atmos_land_const
   !++ Private parameters & variables
   !
   ! limiter
-  real(RP), private, save   :: Cm_min = 1.0E-5_RP ! minimum bulk coef. of u,v,w
-  real(RP), private, save   :: Cm_max = 2.5E-3_RP ! maximum bulk coef. of u,v,w
+  real(RP), private :: Cm_min = 1.0E-5_RP ! minimum bulk coef. of u,v,w
+  real(RP), private :: Cm_max = 2.5E-3_RP ! maximum bulk coef. of u,v,w
 
-  real(RP), private, save   :: U_min =   0.0_RP ! minimum U_abs for u,v,w
-  real(RP), private, save   :: U_max = 100.0_RP ! maximum U_abs for u,v,w
+  real(RP), private :: U_min =   0.0_RP ! minimum U_abs for u,v,w
+  real(RP), private :: U_max = 100.0_RP ! maximum U_abs for u,v,w
 
-  real(RP), private, save   :: Const_CM    =   1.1E-3_RP ! constant bulk coef. of u,v,w
-  real(RP), private, save   :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
-  real(RP), private, save   :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
-  real(RP), private, save   :: Const_GH    =   0.0_RP    ! constant ground heat flux [W/m2]
-  real(RP), private, save   :: Const_Ustar =   0.25_RP   ! constant friction velocity [m/s]
-  real(RP), private, save   :: Const_FREQ  =  24.0_RP    ! frequency of sensible heat flux [hour]
+  real(RP), private :: Const_CM    =   1.1E-3_RP ! constant bulk coef. of u,v,w
+  real(RP), private :: Const_SH    =  15.0_RP    ! constant sensible heat flux [W/m2]
+  real(RP), private :: Const_LH    = 115.0_RP    ! constant latent heat flux [W/m2]
+  real(RP), private :: Const_GH    =   0.0_RP    ! constant ground heat flux [W/m2]
+  real(RP), private :: Const_Ustar =   0.25_RP   ! constant friction velocity [m/s]
+  real(RP), private :: Const_FREQ  =  24.0_RP    ! frequency of sensible heat flux [hour]
 
-  integer(4), private, save :: CMTYPE = 0 ! 0->Bulk coef. is constant
-                                          ! 1->Friction velocity is constant
+  integer,  private :: CMTYPE = 0 ! 0->Bulk coef. is constant
+                                  ! 1->Friction velocity is constant
 
-  logical, private, save    :: DIURNAL = .false.
+  logical,  private :: DIURNAL = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -69,7 +69,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmLnd
+    character(len=*), intent(in) :: CPL_TYPE_AtmLnd
 
     real(RP) :: CPL_AtmLnd_const_U_min
     real(RP) :: CPL_AtmLnd_const_U_max

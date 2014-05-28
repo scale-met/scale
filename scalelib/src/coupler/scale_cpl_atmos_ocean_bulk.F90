@@ -41,12 +41,12 @@ module scale_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private, save :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
-  real(RP), private, save :: U_minH   =   0.0_RP    !                   T
-  real(RP), private, save :: U_minE   =   0.0_RP    !                   q
-  real(RP), private, save :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
-  real(RP), private, save :: U_maxH   = 100.0_RP    !                   T
-  real(RP), private, save :: U_maxE   = 100.0_RP    !                   q
+  real(RP), private :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
+  real(RP), private :: U_minH   =   0.0_RP    !                   T
+  real(RP), private :: U_minE   =   0.0_RP    !                   q
+  real(RP), private :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
+  real(RP), private :: U_maxH   = 100.0_RP    !                   T
+  real(RP), private :: U_maxE   = 100.0_RP    !                   q
 
 contains
   !-----------------------------------------------------------------------------
@@ -59,7 +59,7 @@ contains
        CPL_bulkcoef_setup
     implicit none
 
-    character(len=H_SHORT), intent(in) :: CPL_TYPE_AtmOcn
+    character(len=*), intent(in) :: CPL_TYPE_AtmOcn
 
     real(RP) :: CPL_AtmOcn_bulk_U_minM
     real(RP) :: CPL_AtmOcn_bulk_U_minH
@@ -245,7 +245,7 @@ contains
       LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
 
       ! calculation for residual
-      WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * -1.0_RP &
+      WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
                  - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 )&
                  + SHFLX(i,j) + LHFLX(i,j)
 

@@ -135,12 +135,12 @@ module scale_atmos_saturation
   !
   !++ Public parameters & variables
   !
-  real(RP), public, save :: CPovR_liq
-  real(RP), public, save :: CPovR_ice
-  real(RP), public, save :: CVovR_liq
-  real(RP), public, save :: CVovR_ice
-  real(RP), public, save :: LovR_liq
-  real(RP), public, save :: LovR_ice
+  real(RP), public :: CPovR_liq
+  real(RP), public :: CPovR_ice
+  real(RP), public :: CVovR_liq
+  real(RP), public :: CVovR_ice
+  real(RP), public :: LovR_liq
+  real(RP), public :: LovR_ice
 
   !-----------------------------------------------------------------------------
   !

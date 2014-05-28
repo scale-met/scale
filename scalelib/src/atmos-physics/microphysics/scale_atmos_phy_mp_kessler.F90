@@ -77,7 +77,7 @@ contains
        CONST_DWATR
     implicit none
 
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+    character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &

@@ -43,8 +43,8 @@ module mod_land_phy_bucket
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  logical, private, save :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
-  logical, private, save :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
+  logical, private :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
+  logical, private :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
 
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP

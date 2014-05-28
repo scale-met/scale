@@ -70,12 +70,12 @@ module scale_ocean_roughness
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private, save :: OCEAN_roughness_TYPE = 'MILLER92' ! sea roughness length scheme
+  character(len=H_SHORT), private :: OCEAN_roughness_TYPE = 'MILLER92' ! sea roughness length scheme
 
-  real(RP), private, save :: OCEAN_roughness_Ustar_min = 1.E-3_RP ! minimum fiction velocity
-  real(RP), private, save :: OCEAN_roughness_Z0M_min   = 1.E-5_RP ! minimum roughness length for momentum [m]
-  real(RP), private, save :: OCEAN_roughness_Z0H_min   = 1.E-5_RP ! minimum roughness length for heat     [m]
-  real(RP), private, save :: OCEAN_roughness_Z0E_min   = 1.E-5_RP ! minimum roughness length for moisture [m]
+  real(RP), private :: OCEAN_roughness_Ustar_min = 1.E-3_RP ! minimum fiction velocity
+  real(RP), private :: OCEAN_roughness_Z0M_min   = 1.E-5_RP ! minimum roughness length for momentum [m]
+  real(RP), private :: OCEAN_roughness_Z0H_min   = 1.E-5_RP ! minimum roughness length for heat     [m]
+  real(RP), private :: OCEAN_roughness_Z0E_min   = 1.E-5_RP ! minimum roughness length for moisture [m]
 
   !-----------------------------------------------------------------------------
 contains

@@ -71,12 +71,12 @@ module scale_tracer_suzuki10
   integer, public, parameter :: I_NS =  11
   integer, public, parameter :: I_NG =  12
 
-  character(len=H_SHORT), public, save, allocatable :: AQ_NAME(:)
-  character(len=H_MID)  , public, save, allocatable :: AQ_DESC(:)
-  character(len=H_SHORT), public, save, allocatable :: AQ_UNIT(:)
-!  character(len=16), public, save :: AQ_NAME(QA)
-!  character(len=64), public, save :: AQ_DESC(QA)
-!  character(len=16), public, save :: AQ_UNIT(QA)
+  character(len=H_SHORT), public, allocatable :: AQ_NAME(:)
+  character(len=H_MID)  , public, allocatable :: AQ_DESC(:)
+  character(len=H_SHORT), public, allocatable :: AQ_UNIT(:)
+!  character(len=16), public :: AQ_NAME(QA)
+!  character(len=64), public :: AQ_DESC(QA)
+!  character(len=16), public :: AQ_UNIT(QA)
 
   character(len=3)  :: namspc(8) =(/'Qcl','Qic','Qip','Qid','Qis','Qig','Qih','Qae'/)
   character(len=27) :: lnamspc(8) = &
@@ -103,7 +103,7 @@ module scale_tracer_suzuki10
   integer, public, parameter :: I_mp_QG = 6
   integer, public, parameter :: I_mp_QH = 7
 
-  integer, public, save :: I_MP2ALL(MP_QA)  !--- dummy for Bin model
+  integer, public :: I_MP2ALL(MP_QA)  !--- dummy for Bin model
   data I_MP2ALL / I_mp_QC,   & ! start of Cloud bin
                   I_mp_QP,   & ! start of plate bin
                   I_mp_QCL,  & ! start of columner bin
@@ -112,7 +112,7 @@ module scale_tracer_suzuki10
                   I_mp_QG,   & ! start of graupel bin
                   I_mp_QH    / ! start of hail bin
 
-  integer, public, save :: I_MP2RD(MP_QA)
+  integer, public :: I_MP2RD(MP_QA)
   data I_MP2RD  / 1,    & ! I_mp_QC => MSTRN_nptype=1: water cloud
                   2,    & ! I_mp_QP => MSTRN_nptype=2: ice cloud (plate)
                   2,    & ! I_mp_QCL=> MSTRN_nptype=2: ice cloud (columner)
@@ -124,10 +124,10 @@ module scale_tracer_suzuki10
   integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
   integer, public, parameter :: I_ae_dummy = 1
 
-  integer, public, save :: I_AE2ALL(AE_QA)
+  integer, public :: I_AE2ALL(AE_QA)
   data I_AE2ALL / -999 / ! dummy
 
-  integer, public, save :: I_AE2RD(AE_QA)
+  integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
   integer :: m, n, ierr
 

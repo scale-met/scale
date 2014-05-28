@@ -93,7 +93,7 @@ contains
 #endif
     implicit none
 
-    character(len=H_SHORT), intent(in) :: RD_TYPE
+    character(len=*), intent(in) :: RD_TYPE
     !---------------------------------------------------------------------------
 
     select case ( RD_TYPE )

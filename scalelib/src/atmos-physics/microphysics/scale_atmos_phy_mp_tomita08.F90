@@ -56,71 +56,71 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Private parameters & variables
   !
-  logical, private, save  :: MP_doreport_tendency = .false. ! report tendency of each process?
-  logical, private, save  :: MP_donegative_fixer  = .true. ! apply negative fixer?
+  logical,  private  :: MP_doreport_tendency = .false. ! report tendency of each process?
+  logical,  private  :: MP_donegative_fixer  = .true. ! apply negative fixer?
 
-  real(RP), private, save      :: dens00 = 1.28_RP !< standard density [kg/m3]
+  real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
   real(RP), private, parameter :: N0r = 8.E6_RP !< intercept parameter for rain    [1/m4]
   real(RP), private, parameter :: N0s = 3.E6_RP !< intercept parameter for snow    [1/m4]
   real(RP), private, parameter :: N0g = 4.E6_RP !< intercept parameter for graupel [1/m4]
 
-  real(RP), private, save      :: dens_s = 100.0_RP !< density of snow    [kg/m3]
-  real(RP), private, save      :: dens_g = 400.0_RP !< density of graupel [kg/m3]
+  real(RP), private            :: dens_s = 100.0_RP !< density of snow    [kg/m3]
+  real(RP), private            :: dens_g = 400.0_RP !< density of graupel [kg/m3]
                                                     !   graupel : 400
                                                     !   hail    : 917
-  real(RP), private, save      :: drag_g = 0.6_RP   !< drag coefficient for graupel
+  real(RP), private            :: drag_g = 0.6_RP   !< drag coefficient for graupel
 
   ! Empirical parameter
-  real(RP), private, save      :: Ar, As, Ag
-  real(RP), private, save      :: Br, Bs, Bg
-  real(RP), private, save      :: Cr, Cs, Cg
-  real(RP), private, save      :: Dr, Ds, Dg
+  real(RP), private            :: Ar, As, Ag
+  real(RP), private            :: Br, Bs, Bg
+  real(RP), private            :: Cr, Cs, Cg
+  real(RP), private            :: Dr, Ds, Dg
 
   ! GAMMA function
-  real(RP), private, save      :: GAM, GAM_2, GAM_3
+  real(RP), private            :: GAM, GAM_2, GAM_3
 
-  real(RP), private, save      :: GAM_1br, GAM_2br, GAM_3br
-  real(RP), private, save      :: GAM_3dr
-  real(RP), private, save      :: GAM_6dr
-  real(RP), private, save      :: GAM_1brdr
-  real(RP), private, save      :: GAM_5dr_h
+  real(RP), private            :: GAM_1br, GAM_2br, GAM_3br
+  real(RP), private            :: GAM_3dr
+  real(RP), private            :: GAM_6dr
+  real(RP), private            :: GAM_1brdr
+  real(RP), private            :: GAM_5dr_h
 
-  real(RP), private, save      :: GAM_1bs, GAM_2bs, GAM_3bs
-  real(RP), private, save      :: GAM_3ds
-  real(RP), private, save      :: GAM_1bsds
-  real(RP), private, save      :: GAM_5ds_h
+  real(RP), private            :: GAM_1bs, GAM_2bs, GAM_3bs
+  real(RP), private            :: GAM_3ds
+  real(RP), private            :: GAM_1bsds
+  real(RP), private            :: GAM_5ds_h
 
-  real(RP), private, save      :: GAM_1bg, GAM_3dg
-  real(RP), private, save      :: GAM_1bgdg
-  real(RP), private, save      :: GAM_5dg_h
+  real(RP), private            :: GAM_1bg, GAM_3dg
+  real(RP), private            :: GAM_1bgdg
+  real(RP), private            :: GAM_5dg_h
 
   ! Accretion parameter
-  real(RP), private, save      :: Eiw = 1.0_RP  !< collection efficiency of cloud ice for cloud water
-  real(RP), private, save      :: Erw = 1.0_RP  !< collection efficiency of rain    for cloud water
-  real(RP), private, save      :: Esw = 1.0_RP  !< collection efficiency of snow    for cloud water
-  real(RP), private, save      :: Egw = 1.0_RP  !< collection efficiency of graupel for cloud water
-  real(RP), private, save      :: Eri = 1.0_RP  !< collection efficiency of rain    for cloud ice
-  real(RP), private, save      :: Esi = 1.0_RP  !< collection efficiency of snow    for cloud ice
-  real(RP), private, save      :: Egi = 0.1_RP  !< collection efficiency of graupel for cloud ice
-  real(RP), private, save      :: Esr = 1.0_RP  !< collection efficiency of snow    for rain
-  real(RP), private, save      :: Egr = 1.0_RP  !< collection efficiency of graupel for rain
-  real(RP), private, save      :: Egs = 1.0_RP  !< collection efficiency of graupel for snow
-  real(RP), private, save      :: gamma_sacr = 25.E-3_RP !< effect of low temperature for Esi
-  real(RP), private, save      :: gamma_gacs = 90.E-3_RP !< effect of low temperature for Egs
+  real(RP), private            :: Eiw = 1.0_RP  !< collection efficiency of cloud ice for cloud water
+  real(RP), private            :: Erw = 1.0_RP  !< collection efficiency of rain    for cloud water
+  real(RP), private            :: Esw = 1.0_RP  !< collection efficiency of snow    for cloud water
+  real(RP), private            :: Egw = 1.0_RP  !< collection efficiency of graupel for cloud water
+  real(RP), private            :: Eri = 1.0_RP  !< collection efficiency of rain    for cloud ice
+  real(RP), private            :: Esi = 1.0_RP  !< collection efficiency of snow    for cloud ice
+  real(RP), private            :: Egi = 0.1_RP  !< collection efficiency of graupel for cloud ice
+  real(RP), private            :: Esr = 1.0_RP  !< collection efficiency of snow    for rain
+  real(RP), private            :: Egr = 1.0_RP  !< collection efficiency of graupel for rain
+  real(RP), private            :: Egs = 1.0_RP  !< collection efficiency of graupel for snow
+  real(RP), private            :: gamma_sacr = 25.E-3_RP !< effect of low temperature for Esi
+  real(RP), private            :: gamma_gacs = 90.E-3_RP !< effect of low temperature for Egs
 
   ! Auto-conversion parameter
-  real(RP), private, save      :: Nc_lnd     = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
-  real(RP), private, save      :: Nc_ocn     =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
+  real(RP), private            :: Nc_lnd     = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
+  real(RP), private            :: Nc_ocn     =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
   real(RP), private, allocatable :: Nc_def(:,:)          !< number concentration of cloud water         [1/cc]
 
-  real(RP), private, save      :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
-  real(RP), private, save      :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
-  real(RP), private, save      :: beta_gaut  =  1.E-3_RP  !< auto-conversion factor beta  for snow
-  real(RP), private, save      :: gamma_gaut = 90.E-3_RP  !< auto-conversion factor gamma for snow
-  real(RP), private, save      :: qicrt_saut =  0.0_RP    !< mixing ratio threshold for Psaut [kg/kg]
-  real(RP), private, save      :: qscrt_gaut =  6.E-4_RP  !< mixing ratio threshold for Pgaut [kg/kg]
+  real(RP), private            :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
+  real(RP), private            :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
+  real(RP), private            :: beta_gaut  =  1.E-3_RP  !< auto-conversion factor beta  for snow
+  real(RP), private            :: gamma_gaut = 90.E-3_RP  !< auto-conversion factor gamma for snow
+  real(RP), private            :: qicrt_saut =  0.0_RP    !< mixing ratio threshold for Psaut [kg/kg]
+  real(RP), private            :: qscrt_gaut =  6.E-4_RP  !< mixing ratio threshold for Pgaut [kg/kg]
 
   ! Evaporation, Sublimation parameter
   real(RP), private, parameter :: Da0    = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K]
@@ -130,76 +130,75 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter :: mu0    = 1.718E-5_RP !< kinematic viscosity of air at 0C,1atm      [m2/s*kg/m3]
   real(RP), private, parameter :: dmu_dT =  5.28E-8_RP !< Coefficient of mu depending on temperature [m2/s/K*kg/m3]
 
-  real(RP), private, save      :: f1r = 0.78_RP  !< ventilation factor 1 for rain
-  real(RP), private, save      :: f2r = 0.27_RP  !< ventilation factor 2 for rain
-  real(RP), private, save      :: f1s = 0.65_RP  !< ventilation factor 1 for snow
-  real(RP), private, save      :: f2s = 0.39_RP  !< ventilation factor 2 for snow
-  real(RP), private, save      :: f1g = 0.78_RP  !< ventilation factor 1 for graupel
-  real(RP), private, save      :: f2g = 0.27_RP  !< ventilation factor 2 for graupel
+  real(RP), private            :: f1r = 0.78_RP  !< ventilation factor 1 for rain
+  real(RP), private            :: f2r = 0.27_RP  !< ventilation factor 2 for rain
+  real(RP), private            :: f1s = 0.65_RP  !< ventilation factor 1 for snow
+  real(RP), private            :: f2s = 0.39_RP  !< ventilation factor 2 for snow
+  real(RP), private            :: f1g = 0.78_RP  !< ventilation factor 1 for graupel
+  real(RP), private            :: f2g = 0.27_RP  !< ventilation factor 2 for graupel
 
-  real(RP), private, save      :: qscrt_sdep =  1.E-12_RP !< mixing ratio threshold for Psdep [kg/kg]
-  real(RP), private, save      :: qgcrt_gdep =  1.E-12_RP !< mixing ratio threshold for Pgdep [kg/kg]
+  real(RP), private            :: qscrt_sdep =  1.E-12_RP !< mixing ratio threshold for Psdep [kg/kg]
+  real(RP), private            :: qgcrt_gdep =  1.E-12_RP !< mixing ratio threshold for Pgdep [kg/kg]
 
   ! Freezing parameter
-  real(RP), private, save      :: A_gfrz = 0.66_RP  !< freezing factor [/K]
-  real(RP), private, save      :: B_gfrz = 100.0_RP !< freezing factor [/m3/s]
+  real(RP), private            :: A_gfrz = 0.66_RP  !< freezing factor [/K]
+  real(RP), private            :: B_gfrz = 100.0_RP !< freezing factor [/m3/s]
 
   ! Bergeron process parameter
-  real(RP), private, save      :: mi40  = 2.46E-10_RP !< mass              of a 40 micron ice crystal [kg]
-  real(RP), private, save      :: mi50  = 4.80E-10_RP !< mass              of a 50 micron ice crystal [kg]
-  real(RP), private, save      :: vti50 = 1.0_RP      !< terminal velocity of a 50 micron ice crystal [m/s]
-  real(RP), private, save      :: Ri50  = 5.E-5_RP    !< radius            of a 50 micron ice crystal [m]
+  real(RP), private            :: mi40  = 2.46E-10_RP !< mass              of a 40 micron ice crystal [kg]
+  real(RP), private            :: mi50  = 4.80E-10_RP !< mass              of a 50 micron ice crystal [kg]
+  real(RP), private            :: vti50 = 1.0_RP      !< terminal velocity of a 50 micron ice crystal [m/s]
+  real(RP), private            :: Ri50  = 5.E-5_RP    !< radius            of a 50 micron ice crystal [m]
 
-  integer, private, parameter :: w_nmax = 42
-  integer, private, parameter :: I_dqv_dt  =  1 !
-  integer, private, parameter :: I_dqc_dt  =  2 !
-  integer, private, parameter :: I_dqr_dt  =  3 !
-  integer, private, parameter :: I_dqi_dt  =  4 !
-  integer, private, parameter :: I_dqs_dt  =  5 !
-  integer, private, parameter :: I_dqg_dt  =  6 !
-  integer, private, parameter :: I_delta1  =  7 ! separation switch for r->s,g
-  integer, private, parameter :: I_delta2  =  8 ! separation switch for s->g
-  integer, private, parameter :: I_delta3  =  9 ! separation switch for ice sublimation
-  integer, private, parameter :: I_RLMDr   = 10
-  integer, private, parameter :: I_RLMDs   = 11
-  integer, private, parameter :: I_RLMDg   = 12
-  integer, private, parameter :: I_Piacr   = 13 ! r->s,g
-  integer, private, parameter :: I_Psacr   = 14 ! r->s,g
-  integer, private, parameter :: I_Praci   = 15 ! i->s,g
-  integer, private, parameter :: I_Psmlt   = 16 ! s->r
-  integer, private, parameter :: I_Pgmlt   = 17 ! g->r
-  integer, private, parameter :: I_Praut   = 18 ! c->r
-  integer, private, parameter :: I_Pracw   = 19 ! c->r
-  integer, private, parameter :: I_Psacw   = 20 ! c->s
-  integer, private, parameter :: I_Psfw    = 21 ! c->s
-  integer, private, parameter :: I_Pgacw   = 22 ! c->g
-  integer, private, parameter :: I_Prevp   = 23 ! r->v
-  integer, private, parameter :: I_Piacr_s = 24 ! r->s
-  integer, private, parameter :: I_Psacr_s = 25 ! r->s
-  integer, private, parameter :: I_Piacr_g = 26 ! r->g
-  integer, private, parameter :: I_Psacr_g = 27 ! r->g
-  integer, private, parameter :: I_Pgacr   = 28 ! r->g
-  integer, private, parameter :: I_Pgfrz   = 29 ! r->g
-  integer, private, parameter :: I_Psaut   = 30 ! i->s
-  integer, private, parameter :: I_Praci_s = 31 ! i->s
-  integer, private, parameter :: I_Psaci   = 32 ! i->s
-  integer, private, parameter :: I_Psfi    = 33 ! i->s
-  integer, private, parameter :: I_Praci_g = 34 ! i->g
-  integer, private, parameter :: I_Pgaci   = 35 ! i->g
-  integer, private, parameter :: I_Psdep   = 36 ! v->s
-  integer, private, parameter :: I_Pssub   = 37 ! s->v
-  integer, private, parameter :: I_Pgaut   = 38 ! s->g
-  integer, private, parameter :: I_Pracs   = 39 ! s->g
-  integer, private, parameter :: I_Pgacs   = 40 ! s->g
-  integer, private, parameter :: I_Pgdep   = 41 ! v->g
-  integer, private, parameter :: I_Pgsub   = 42 ! g->v
+  integer,  private, parameter :: w_nmax = 42
+  integer,  private, parameter :: I_dqv_dt  =  1 !
+  integer,  private, parameter :: I_dqc_dt  =  2 !
+  integer,  private, parameter :: I_dqr_dt  =  3 !
+  integer,  private, parameter :: I_dqi_dt  =  4 !
+  integer,  private, parameter :: I_dqs_dt  =  5 !
+  integer,  private, parameter :: I_dqg_dt  =  6 !
+  integer,  private, parameter :: I_delta1  =  7 ! separation switch for r->s,g
+  integer,  private, parameter :: I_delta2  =  8 ! separation switch for s->g
+  integer,  private, parameter :: I_delta3  =  9 ! separation switch for ice sublimation
+  integer,  private, parameter :: I_RLMDr   = 10
+  integer,  private, parameter :: I_RLMDs   = 11
+  integer,  private, parameter :: I_RLMDg   = 12
+  integer,  private, parameter :: I_Piacr   = 13 ! r->s,g
+  integer,  private, parameter :: I_Psacr   = 14 ! r->s,g
+  integer,  private, parameter :: I_Praci   = 15 ! i->s,g
+  integer,  private, parameter :: I_Psmlt   = 16 ! s->r
+  integer,  private, parameter :: I_Pgmlt   = 17 ! g->r
+  integer,  private, parameter :: I_Praut   = 18 ! c->r
+  integer,  private, parameter :: I_Pracw   = 19 ! c->r
+  integer,  private, parameter :: I_Psacw   = 20 ! c->s
+  integer,  private, parameter :: I_Psfw    = 21 ! c->s
+  integer,  private, parameter :: I_Pgacw   = 22 ! c->g
+  integer,  private, parameter :: I_Prevp   = 23 ! r->v
+  integer,  private, parameter :: I_Piacr_s = 24 ! r->s
+  integer,  private, parameter :: I_Psacr_s = 25 ! r->s
+  integer,  private, parameter :: I_Piacr_g = 26 ! r->g
+  integer,  private, parameter :: I_Psacr_g = 27 ! r->g
+  integer,  private, parameter :: I_Pgacr   = 28 ! r->g
+  integer,  private, parameter :: I_Pgfrz   = 29 ! r->g
+  integer,  private, parameter :: I_Psaut   = 30 ! i->s
+  integer,  private, parameter :: I_Praci_s = 31 ! i->s
+  integer,  private, parameter :: I_Psaci   = 32 ! i->s
+  integer,  private, parameter :: I_Psfi    = 33 ! i->s
+  integer,  private, parameter :: I_Praci_g = 34 ! i->g
+  integer,  private, parameter :: I_Pgaci   = 35 ! i->g
+  integer,  private, parameter :: I_Psdep   = 36 ! v->s
+  integer,  private, parameter :: I_Pssub   = 37 ! s->v
+  integer,  private, parameter :: I_Pgaut   = 38 ! s->g
+  integer,  private, parameter :: I_Pracs   = 39 ! s->g
+  integer,  private, parameter :: I_Pgacs   = 40 ! s->g
+  integer,  private, parameter :: I_Pgdep   = 41 ! v->g
+  integer,  private, parameter :: I_Pgsub   = 42 ! g->v
 
-  real(RP),        private, allocatable :: w(:,:) ! working array
-  integer,                private, save :: w_histid (w_nmax) = -999
-  logical,                private, save :: w_zinterp(w_nmax) = .false.
-  character(len=H_SHORT), private, save :: w_name   (w_nmax)
-  character(len=H_MID),   private, save :: w_desc   (w_nmax) = ''
-  character(len=H_SHORT), private, save :: w_unit   (w_nmax) = 'kg/kg/s'
+  integer,                private :: w_histid (w_nmax) = -999
+  logical,                private :: w_zinterp(w_nmax) = .false.
+  character(len=H_SHORT), private :: w_name   (w_nmax)
+  character(len=H_MID),   private :: w_desc   (w_nmax) = ''
+  character(len=H_SHORT), private :: w_unit   (w_nmax) = 'kg/kg/s'
 
   data w_name / 'dqv_dt ', &
                 'dqc_dt ', &
@@ -244,6 +243,7 @@ module scale_atmos_phy_mp_tomita08
                 'Pgdep  ', &
                 'Pgsub  '  /
 
+  real(RP), private, allocatable :: w(:,:)        ! working array
   real(RP), private, allocatable :: work3D(:,:,:) !< for history output
 
   logical, private :: debug
@@ -266,7 +266,7 @@ contains
     use scale_history, only: &
        HIST_reg
     implicit none
-    character(len=H_SHORT), intent(in) :: MP_TYPE
+    character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doreport_tendency, &

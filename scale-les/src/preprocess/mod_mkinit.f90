@@ -119,7 +119,7 @@ module mod_mkinit
   !
   !++ Public parameters & variables
   !
-  integer, public, save      :: MKINIT_TYPE     = -1
+  integer, public            :: MKINIT_TYPE     = -1
   integer, public, parameter :: I_IGNORE        =  0
 
   integer, public, parameter :: I_PLANESTATE    =  1

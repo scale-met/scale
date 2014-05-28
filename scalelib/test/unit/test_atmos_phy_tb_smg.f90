@@ -41,9 +41,9 @@ module test_atmos_phy_tb_smg
 
 
 
-  real(RP), allocatable, save :: ZERO(:,:,:,:)
+  real(RP), allocatable :: ZERO(:,:,:,:)
 
-  integer, save :: KME ! end of main region
+  integer :: KME ! end of main region
 
   integer :: k, i, j, iq
   character(len=7) :: message

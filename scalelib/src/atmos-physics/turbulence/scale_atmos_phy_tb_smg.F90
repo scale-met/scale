@@ -72,7 +72,7 @@ module scale_atmos_phy_tb_smg
   !
   real(RP), private, allocatable :: nu_fact (:,:,:) ! (Cs*Delta)^2
 
-  real(RP), private, save      :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
+  real(RP), private            :: Cs  = 0.13_RP ! Smagorinsky constant (Scotti et al. 1993)
   real(RP), private, parameter :: Ck  = 0.1_RP  ! SGS constant (Moeng and Wyngaard 1988)
   real(RP), private, parameter :: PrN = 0.7_RP  ! Prandtl number in neutral conditions
   real(RP), private, parameter :: RiC = 0.25_RP ! critical Richardson number
@@ -85,7 +85,7 @@ module scale_atmos_phy_tb_smg
   real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
 
-  logical, private, save  :: ATMOS_PHY_TB_SMG_bottom = .false.
+  logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -98,7 +98,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT), intent(in) :: TYPE_TB
+    character(len=*), intent(in) :: TYPE_TB
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)

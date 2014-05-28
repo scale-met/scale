@@ -82,14 +82,14 @@ module scale_atmos_phy_sf_bulkcoef
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private, save :: ATMOS_PHY_SF_BULKCOEF_TYPE = 'BH91'
+  character(len=H_SHORT), private :: ATMOS_PHY_SF_BULKCOEF_TYPE = 'BH91'
 
   real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Cm_max = 2.5E-3_RP ! maximum limit of bulk coefficient for momentum [NIL]
   real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Ch_max = 1.0E+0_RP ! maximum limit of bulk coefficient for heat     [NIL]
   real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Ce_max = 1.0E+0_RP ! maximum limit of bulk coefficient for moisture [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_BULKCOEF_Cm_min = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_BULKCOEF_Ch_min = 1.0E-5_RP ! minimum limit of bulk coefficient for heat     [NIL]
-  real(RP), private, save      :: ATMOS_PHY_SF_BULKCOEF_Ce_min = 1.0E-5_RP ! minimum limit of bulk coefficient for moisture [NIL]
+  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Cm_min = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
+  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Ch_min = 1.0E-5_RP ! minimum limit of bulk coefficient for heat     [NIL]
+  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Ce_min = 1.0E-5_RP ! minimum limit of bulk coefficient for moisture [NIL]
 
   !-----------------------------------------------------------------------------
 contains

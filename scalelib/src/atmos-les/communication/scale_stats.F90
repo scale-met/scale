@@ -41,7 +41,7 @@ module scale_stats
   !
   !++ Public parameters & variables
   !
-  logical, public, save :: STAT_checktotal = .false. !< calc&report variable totals to logfile?
+  logical, public :: STAT_checktotal = .false. !< calc&report variable totals to logfile?
 
   !-----------------------------------------------------------------------------
   !
@@ -51,7 +51,7 @@ module scale_stats
   !
   !++ Private parameters & variables
   !
-  logical, private, save :: STAT_use_globalcomm = .false. !< calculate total with global communication?
+  logical, private :: STAT_use_globalcomm = .false. !< calculate total with global communication?
 
   !-----------------------------------------------------------------------------
 contains
