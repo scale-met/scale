@@ -155,18 +155,40 @@ contains
        FilePutAxis,     &
        FilePutAssociatedCoordinates
     use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
+       GRID_CZ,    &
+       GRID_CX,    &
+       GRID_CY,    &
+       GRID_FZ,    &
+       GRID_FX,    &
+       GRID_FY,    &
+       GRID_CDZ,   &
+       GRID_CDX,   &
+       GRID_CDY,   &
+       GRID_FDZ,   &
+       GRID_FDX,   &
+       GRID_FDY,   &
+       GRID_CBFZ,  &
+       GRID_CBFX,  &
+       GRID_CBFY,  &
+       GRID_FBFZ,  &
+       GRID_FBFX,  &
+       GRID_FBFY,  &
+       GRID_CXG,   &
+       GRID_CYG,   &
+       GRID_FXG,   &
+       GRID_FYG,   &
+       GRID_CBFXG, &
+       GRID_CBFYG, &
+       GRID_FBFXG, &
+       GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
-       GRID_LFZ
+       GRID_LFZ, &
+       GRID_LCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
-       GRID_UFZ
+       GRID_UFZ, &
+       GRID_UCDZ
     implicit none
 
     integer, intent(in) :: fid
@@ -195,11 +217,20 @@ contains
     call FilePutAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, GRID_FX )
     call FilePutAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, GRID_FY )
 
-    call FilePutAxis( fid, 'LCZ', 'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
-    call FilePutAxis( fid, 'LFZ', 'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
+    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
+    call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
+    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
+    call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
 
-    call FilePutAxis( fid, 'UCZ', 'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
-    call FilePutAxis( fid, 'UFZ', 'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
+    call FilePutAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
+    call FilePutAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
+    call FilePutAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, GRID_LCZ )
+
+    call FilePutAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
+    call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
+    call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
 
     AXIS_name = (/'x ','y '/)
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             ,            &
@@ -216,6 +247,23 @@ contains
     AXIS_name = (/'x ','yh'/)
     call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' ,            &
                                        'degrees_north', AXIS_name, dtype, AXIS_LATY(:,:) )
+
+    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
+    call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
+    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
+    call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
+
+    call FilePutAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, GRID_CXG )
+    call FilePutAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, GRID_CYG )
+    call FilePutAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, GRID_FXG )
+    call FilePutAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, GRID_FYG )
+
+    call FilePutAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, GRID_CBFXG )
+    call FilePutAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
+    call FilePutAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
+    call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
 
     return
   end subroutine FILEIO_set_axes
