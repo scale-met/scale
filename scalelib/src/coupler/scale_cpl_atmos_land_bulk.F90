@@ -245,8 +245,8 @@ contains
     do n = 1, nmax
 
       ! calculate surface flux
-      do j = JS, JE
-      do i = IS, IE
+      do j = 1, JA
+      do i = 1, IA
         Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
         call CPL_bulkcoef( &
@@ -325,8 +325,8 @@ contains
 
       if( LST_UPDATE ) then
 
-        do j = JS, JE
-        do i = IS, IE
+        do j = 1, JA
+        do i = 1, IA
 
           if( redf(i,j) < 0.0_RP ) then
             redf(i,j) = 1.0_RP
@@ -354,7 +354,7 @@ contains
         end do
         end do
 
-        if( maxval(abs(RES(IS:IE,JS:JE))) < res_min ) then
+        if( maxval(abs(RES(:,:))) < res_min ) then
           ! iteration converged
           exit
         end if

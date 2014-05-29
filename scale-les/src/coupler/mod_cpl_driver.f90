@@ -44,8 +44,7 @@ contains
   !> Setup
   subroutine CPL_driver_setup
     use mod_cpl_vars, only: &
-       CPL_vars_merge,   &
-       CPL_vars_fillhalo
+       CPL_vars_merge
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver_setup
     use mod_cpl_atmos_urban_driver, only: &
@@ -56,15 +55,13 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[CPL] / Origin[SCALE-LES]'
 
     call CPL_AtmOcn_driver_setup
     call CPL_AtmLnd_driver_setup
     call CPL_AtmUrb_driver_setup
 
     call CPL_vars_merge
-
-    call CPL_vars_fillhalo
 
     return
   end subroutine CPL_driver_setup
@@ -80,7 +77,6 @@ contains
        UST_UPDATE => CPL_UST_UPDATE, &
        SST_UPDATE => CPL_SST_UPDATE
     use mod_cpl_vars, only: &
-       CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
        CPL_vars_history
     use mod_cpl_atmos_land_driver, only: &
@@ -115,9 +111,6 @@ contains
 
     !########## merge Land-Ocean ##########
     call CPL_vars_merge
-
-    !########## Fill HALO ##########
-    call CPL_vars_fillhalo
 
     !########## History & Monitor ##########
     call PROF_rapstart('CPL History')

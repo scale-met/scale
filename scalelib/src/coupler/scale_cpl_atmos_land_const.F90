@@ -233,8 +233,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
       Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       if( CMTYPE == 1 ) then

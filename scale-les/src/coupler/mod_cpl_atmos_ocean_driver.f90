@@ -55,7 +55,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN AtmOcn] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[CPL AtmOcn] / Origin[SCALE-LES]'
 
     if ( CPL_sw_AtmOcn ) then
 

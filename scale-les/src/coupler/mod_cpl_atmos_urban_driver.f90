@@ -52,7 +52,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN AtmUrb] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[CPL AtmUrb] / Origin[SCALE-LES]'
 
     if ( CPL_sw_AtmUrb ) then
 
@@ -165,8 +165,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
       QMA = QVA(i,j) / (1.0_RP-QVA(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
                                          ! QV specific humidity                  [kg/kg]
