@@ -219,6 +219,11 @@ contains
 
           call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
           call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
+          call HIST_in( SFC_TEMP  (:,:), 'SFC_TEMP',   'surface skin temperature (merged)',    'K',    dt_RD )
+          call HIST_in( SFLX_LW_up(:,:), 'SFLX_LW_up', 'upward   surface longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_SW_dn(:,:), 'SFLX_SW_dn', 'downward surface shortwave radiation', 'W/m2', dt_RD )
 
           do j = JS, JE
           do i = IS, IE
