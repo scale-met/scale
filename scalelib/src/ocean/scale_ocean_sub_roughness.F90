@@ -242,6 +242,15 @@ contains
     do i = 1, IA
        Z0H(i,j) = min( 5.5E-5_RP * ( Z0M(i,j) * Ustar(i,j) / visck )**(-0.6_RP), 1.1E-4_RP )
        Z0E(i,j) = Z0H(i,j)
+    enddo
+    enddo
+
+    ! limiter
+    do j = 1, JA
+    do i = 1, IA
+       Z0M(i,j) = max( Z0M(i,j), OCEAN_roughness_Z0M_min )
+       Z0H(i,j) = max( Z0H(i,j), OCEAN_roughness_Z0H_min )
+       Z0E(i,j) = max( Z0E(i,j), OCEAN_roughness_Z0E_min )
        ! update and save Z0
        Z0 (i,j) = Z0M(i,j)
     enddo
