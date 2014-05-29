@@ -640,6 +640,10 @@ contains
        call CHECK( __LINE__, VELX_YZ(k,i,j+1) )
        call CHECK( __LINE__, VELX_YZ(k+1,i,j) )
        call CHECK( __LINE__, VELX_YZ(k+1,i,j+1) )
+       call CHECK( __LINE__, J23G(k  ,i,j  ,I_UVZ) )
+       call CHECK( __LINE__, J23G(k+1,i,j  ,I_UVZ) )
+       call CHECK( __LINE__, J23G(k  ,i,j+1,I_UVZ) )
+       call CHECK( __LINE__, J23G(k+1,i,j+1,I_UVZ) )
 #endif
           WORK_V(k,i,j) = 0.25_RP &
                * ( J23G(k  ,i,j  ,I_UYZ)*VELX_YZ(k  ,i,j  ) &
@@ -771,10 +775,12 @@ contains
        ! (z edge; u,v,z)
        do j = JJS-1, JJE
        do i = IIS-1, IIE
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELX_YZ(k,i,j+1) )
        call CHECK( __LINE__, VELX_YZ(k,i,j) )
+       call CHECK( __LINE__, WORK_V(k,i,j) )
+       call CHECK( __LINE__, WORK_V(k-1,i,j) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
           S12_Z(k,i,j) = 0.5_RP * ( &
@@ -782,6 +788,37 @@ contains
                + ( WORK_V(k,i,j) - WORK_V(k-1,i,j) ) * RCDZ(k) &
                )
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE
+       do i = IIS-1, IIE
+#ifdef DEBUG
+       call CHECK( __LINE__, VELX_YZ(KS,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KS,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KS+1,i,j+1) )
+       call CHECK( __LINE__, J23G(KS+1,i,j,I_UVZ) )
+       call CHECK( __LINE__, J23G(KS  ,i,j,I_UVZ) )
+       call CHECK( __LINE__, VELX_YZ(KE,i,j+1) )
+       call CHECK( __LINE__, VELX_YZ(KE,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KE-1,i,j+1) )
+       call CHECK( __LINE__, J23G(KE  ,i,j,I_UVZ) )
+       call CHECK( __LINE__, J23G(KE-1,i,j,I_UVZ) )
+#endif
+          S12_Z(KS,i,j) = 0.25_RP * ( &
+                 ( GSQRT(KS,i,j+1,I_UYZ)*VELX_YZ(KS,i,j+1) - GSQRT(KS,i,j,I_UYZ)*VELX_YZ(KS,i,j) ) * RFDY(j) &
+               + ( J23G(KS+1,i,j,I_UVZ) * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i,j+1) ) &
+                 - J23G(KS  ,i,j,I_UVZ) * ( VELX_YZ(KS  ,i,j) + VELX_YZ(KS  ,i,j+1) ) ) * RFDZ(KS) &
+               )
+          S12_Z(KE,i,j) = 0.25_RP * ( &
+                 ( GSQRT(KE,i,j+1,I_UYZ)*VELX_YZ(KE,i,j+1) - GSQRT(KE,i,j,I_UYZ)*VELX_YZ(KE,i,j) ) * RFDY(j) &
+               + ( J23G(KE  ,i,j,I_UVZ) * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i,j+1) ) &
+                 - J23G(KE-1,i,j,I_UVZ) * ( VELX_YZ(KE-1,i,j) + VELX_YZ(KE-1,i,j+1) ) ) * RFDZ(KE-1) &
+               )
        enddo
        enddo
 #ifdef DEBUG
@@ -892,11 +929,13 @@ contains
        ! (z edge; u,v,z)
        do j = JJS-1, JJE
        do i = IIS-1, IIE
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, S12_Z(k,i,j) )
        call CHECK( __LINE__, VELY_ZX(k,i+1,j) )
        call CHECK( __LINE__, VELY_ZX(k,i,j) )
+       call CHECK( __LINE__, WORK_V(k,i,j) )
+       call CHECK( __LINE__, WORK_V(k-1,i,j) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
           S12_Z(k,i,j) = ( S12_Z(k,i,j) &
@@ -905,6 +944,38 @@ contains
                    + ( WORK_V(k,i,j) - WORK_V(k-1,i,j) ) * RCDZ(k) ) &
                ) / GSQRT(k,i,j,I_UVZ)
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE
+       do i = IIS-1, IIE
+#ifdef DEBUG
+       call CHECK( __LINE__, S12_Z(KS,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KS,i+1,j) )
+       call CHECK( __LINE__, VELY_ZX(KS,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KS+1,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KS+1,i+1,j) )
+       call CHECK( __LINE__, S12_Z(KE,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KE,i+1,j) )
+       call CHECK( __LINE__, VELY_ZX(KE,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KE-1,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KE-1,i+1,j) )
+       call CHECK( __LINE__, RFDX(i) )
+#endif
+          S12_Z(KS,i,j) = ( S12_Z(KS,i,j) &
+               + 0.5_RP * ( &
+                     ( GSQRT(KS,i+1,j,I_XVZ)*VELY_ZX(KS,i+1,j) - GSQRT(KS,i,j,I_XVZ)*VELY_ZX(KS,i,j) ) * RFDX(i) &
+                   + ( J13G(KS+1,i,j,I_UVZ) * ( VELY_ZX(KS+1,i,j) + VELY_ZX(KS+1,i+1,j) ) &
+                     - J13G(KS  ,i,j,I_UVZ) * ( VELY_ZX(KS  ,i,j) + VELY_ZX(KS  ,i+1,j) ) ) * RFDZ(KS) ) &
+               ) / GSQRT(KS,i,j,I_UVZ)
+          S12_Z(KE,i,j) = ( S12_Z(KE,i,j) &
+               + 0.5_RP * ( &
+                     ( GSQRT(KE,i+1,j,I_XVZ)*VELY_ZX(KE,i+1,j) - GSQRT(KE,i,j,I_XVZ)*VELY_ZX(KE,i,j) ) * RFDX(i) &
+                   + ( J13G(KE  ,i,j,I_UVZ) * ( VELY_ZX(KE  ,i,j) + VELY_ZX(KE  ,i+1,j) ) &
+                     - J13G(KE-1,i,j,I_UVZ) * ( VELY_ZX(KE-1,i,j) + VELY_ZX(KE-1,i+1,j) ) ) * RFDZ(KE-1) ) &
+               ) / GSQRT(KE,i,j,I_UVZ)
        enddo
        enddo
 #ifdef DEBUG
