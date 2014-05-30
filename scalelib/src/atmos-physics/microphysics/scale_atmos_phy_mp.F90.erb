@@ -144,11 +144,11 @@ contains
 % types.each do |type|
     case ( '<%=type.upcase%>' )
        call ATMOS_PHY_MP_<%=type%>_setup( MP_TYPE )
-       ATMOS_PHY_MP => ATMOS_PHY_MP_<%=type%>
-       ATMOS_PHY_MP_CloudFraction => ATMOS_PHY_MP_<%=type%>_CloudFraction
+       ATMOS_PHY_MP                 => ATMOS_PHY_MP_<%=type%>
+       ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_<%=type%>_CloudFraction
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_<%=type%>_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio => ATMOS_PHY_MP_<%=type%>_MixingRatio
-       ATMOS_PHY_MP_DENS => ATMOS_PHY_MP_<%=type%>_DENS
+       ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_<%=type%>_MixingRatio
+       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_<%=type%>_DENS
 % end
     end select
 

@@ -44,8 +44,6 @@ module scale_atmos_phy_mp_kessler
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
-
   real(RP), public, target :: ATMOS_PHY_MP_DENS(MP_QA) ! hydrometeor density [kg/m3]=[g/L]
 
   !-----------------------------------------------------------------------------
@@ -59,12 +57,12 @@ module scale_atmos_phy_mp_kessler
   !
   !++ Private parameters & variables
   !
-  logical :: MP_doreport_tendency = .false. ! report tendency of each process?
-  logical :: MP_donegative_fixer  = .true. ! apply negative fixer?
+  logical,  private :: MP_donegative_fixer = .true. ! apply negative fixer?
+  logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
 
-  real(RP), allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
+  real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
 
-  logical :: first = .true.
+  logical,  private :: first = .true.
 
   !-----------------------------------------------------------------------------
 contains
@@ -80,7 +78,7 @@ contains
     character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       MP_doreport_tendency, &
+       MP_doprecipitation, &
        MP_donegative_fixer
 
     integer :: ierr
@@ -89,8 +87,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
-
-    allocate( vterm(KA,IA,JA,QA) )
 
     if ( MP_TYPE /= 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
@@ -117,9 +113,9 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
-    vterm(:,:,:,:) = 0.0_RP
     if ( IO_L ) write(IO_FID_LOG,*)
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)? : ', MP_doprecipitation
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
     ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
@@ -167,13 +163,13 @@ contains
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: flux_tot (KA,IA,JA)
-    real(RP) :: flux_rain(KA,IA,JA)
-    real(RP) :: flux_snow(KA,IA,JA)
+    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+    real(RP) :: FLX_rain(KA,IA,JA)
+    real(RP) :: FLX_snow(KA,IA,JA)
+    real(RP) :: FLX_tot (KA,IA,JA)
 
     real(RP) :: rho_prof(KA) ! averaged profile of rho
-
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(kessler)'
@@ -187,7 +183,7 @@ contains
           factor_vterm(k) = sqrt( rho_prof(KS)/rho_prof(k) )
        enddo
        first = .false.
-    end if
+    endif
 
 
 
@@ -211,27 +207,34 @@ contains
                      QTRC  (:,:,:,:), & ! [INOUT]
                      DENS  (:,:,:)    ) ! [IN]
 
-    call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
-                           DENS (:,:,:),   & ! [IN]
-                           QTRC (:,:,:,:)  ) ! [IN]
+    if ( MP_doprecipitation ) then
+       call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
+                              DENS (:,:,:),   & ! [IN]
+                              QTRC (:,:,:,:)  ) ! [IN]
 
-    call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
-                                pres(:,:,:),  & ! [OUT]
-                                DENS(:,:,:),  & ! [IN]
-                                RHOE(:,:,:),  & ! [IN]
-                                QTRC(:,:,:,:) ) ! [IN]
+       call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
+                                   pres(:,:,:),  & ! [OUT]
+                                   DENS(:,:,:),  & ! [IN]
+                                   RHOE(:,:,:),  & ! [IN]
+                                   QTRC(:,:,:,:) ) ! [IN]
 
-    call MP_precipitation( flux_rain(:,:,:), & ! [OUT]
-                           flux_snow(:,:,:), & ! [OUT]
-                           DENS (:,:,:),     & ! [INOUT]
-                           MOMZ (:,:,:),     & ! [INOUT]
-                           MOMX (:,:,:),     & ! [INOUT]
-                           MOMY (:,:,:),     & ! [INOUT]
-                           RHOE (:,:,:),     & ! [INOUT]
-                           QTRC (:,:,:,:),   & ! [INOUT]
-                           vterm(:,:,:,:),   & ! [IN]
-                           temp (:,:,:),     & ! [IN]
-                           dt                )
+       call MP_precipitation( FLX_rain(:,:,:),   & ! [OUT]
+                              FLX_snow(:,:,:),   & ! [OUT]
+                              DENS    (:,:,:),   & ! [INOUT]
+                              MOMZ    (:,:,:),   & ! [INOUT]
+                              MOMX    (:,:,:),   & ! [INOUT]
+                              MOMY    (:,:,:),   & ! [INOUT]
+                              RHOE    (:,:,:),   & ! [INOUT]
+                              QTRC    (:,:,:,:), & ! [INOUT]
+                              vterm   (:,:,:,:), & ! [IN]
+                              temp    (:,:,:),   & ! [IN]
+                              dt                 ) ! [IN]
+    else
+       vterm(:,:,:,:) = 0.0_RP
+
+       FLX_rain(:,:,:) = 0.0_RP
+       FLX_snow(:,:,:) = 0.0_RP
+    endif
 
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
@@ -239,15 +242,9 @@ contains
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
 
-    if ( MP_doreport_tendency ) then
-       call HIST_in( QTRC_t(:,:,:,I_QV), 'QV_t_mp', 'tendency of QV in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QC), 'QC_t_mp', 'tendency of QC in mp', 'kg/kg/s', dt )
-       call HIST_in( QTRC_t(:,:,:,I_QR), 'QR_t_mp', 'tendency of QR in mp', 'kg/kg/s', dt )
+    call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
 
-       call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
-
-       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
-    endif
+    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
 
     !##### END MP Main #####
 
@@ -261,10 +258,10 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    flux_tot(:,:,:) = flux_rain(:,:,:) + flux_snow(:,:,:)
-    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-    call HIST_in( flux_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
+    FLX_tot(:,:,:) = FLX_rain(:,:,:) + FLX_snow(:,:,:)
+    call HIST_in( FLX_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( FLX_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( FLX_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
     return
   end subroutine ATMOS_PHY_MP_kessler

@@ -128,6 +128,7 @@ contains
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
+    real(RP) :: precip(IA,JA)
     real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: total ! dummy
 
@@ -189,10 +190,12 @@ contains
 
        SFLX_rain(:,:) = 0.0_RP ! tentative
        SFLX_snow(:,:) = 0.0_RP ! tentative
+       precip(:,:) = SFLX_rain(:,:) + SFLX_snow(:,:)
 
        if ( history_flag ) then
-          call HIST_in( SFLX_rain(:,:), 'SFLX_rain', 'precipitation flux (liquid)', 'kg/m2/s', dt_MP )
-          call HIST_in( SFLX_snow(:,:), 'SFLX_snow', 'precipitation flux (solid) ', 'kg/m2/s', dt_MP )
+          call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', dt_MP )
+          call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', dt_MP )
+          call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt_MP )
        endif
 
     endif
