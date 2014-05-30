@@ -286,9 +286,10 @@ contains
   subroutine ATMOS_SURFACE_SET
     use scale_const, only: &
        RovCP => CONST_RovCP
+    use scale_topography, only: &
+       TOPO_Zsfc
     use scale_grid_real, only: &
        REAL_CZ, &
-       REAL_FZ, &
        REAL_Z1
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
@@ -320,13 +321,13 @@ contains
     !---------------------------------------------------------------------------
 
     ! update surface density, surface pressure
-    call BOTTOM_estimate( DENS    (:,:,:), & ! [IN]
-                          PRES    (:,:,:), & ! [IN]
-                          REAL_CZ (:,:,:), & ! [IN]
-                          REAL_FZ (:,:,:), & ! [IN]
-                          REAL_Z1 (:,:),   & ! [IN]
-                          SFC_DENS(:,:),   & ! [OUT]
-                          SFC_PRES(:,:)    ) ! [OUT]
+    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                          PRES     (:,:,:), & ! [IN]
+                          REAL_CZ  (:,:,:), & ! [IN]
+                          TOPO_Zsfc(:,:),   & ! [IN]
+                          REAL_Z1  (:,:),   & ! [IN]
+                          SFC_DENS (:,:),   & ! [OUT]
+                          SFC_PRES (:,:)    ) ! [OUT]
 
     if ( CPL_sw ) then
        call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]

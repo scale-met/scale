@@ -47,7 +47,7 @@ contains
        DENS,     &
        PRES,     &
        CZ,       &
-       FZ,       &
+       Zsfc,     &
        Z1,       &
        SFC_DENS, &
        SFC_PRES  )
@@ -58,7 +58,7 @@ contains
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: PRES    (KA,IA,JA)
     real(RP), intent(in)  :: CZ      (KA,IA,JA)
-    real(RP), intent(in)  :: FZ      (KA,IA,JA)
+    real(RP), intent(in)  :: Zsfc    (IA,JA)
     real(RP), intent(in)  :: Z1      (IA,JA)
     real(RP), intent(out) :: SFC_DENS(IA,JA)
     real(RP), intent(out) :: SFC_PRES(IA,JA)
@@ -69,7 +69,7 @@ contains
     ! estimate surface density (extrapolation)
     do j = 1, JA
     do i = 1, IA
-       SFC_DENS(i,j) = lagrange_interp( FZ  (KS-1   ,i,j), & ! [IN]
+       SFC_DENS(i,j) = lagrange_interp( Zsfc(i,j),         & ! [IN]
                                         CZ  (KS:KS+2,i,j), & ! [IN]
                                         DENS(KS:KS+2,i,j)  ) ! [IN]
     enddo
