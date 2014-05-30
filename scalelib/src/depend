@@ -15,7 +15,6 @@ $(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.o: atmos-physics/microphysics/scale_atm
 $(BUILD_DIR)/scale_atmos_phy_mp_tomita08.o: atmos-physics/microphysics/scale_atmos_phy_mp_tomita08.F90 $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_history.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_specfunc.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o $(BUILD_DIR)/scale_tracer_tomita08.o
 $(BUILD_DIR)/scale_atmos_phy_rd.o: atmos-physics/radiation/scale_atmos_phy_rd.F90 $(BUILD_DIR)/scale_atmos_phy_rd_mstrnx.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_rd_common.o: atmos-physics/radiation/scale_atmos_phy_rd_common.F90 $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
-$(BUILD_DIR)/scale_atmos_phy_rd_dummy.o: atmos-physics/radiation/scale_atmos_phy_rd_dummy.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_rd_mstrnx.o: atmos-physics/radiation/scale_atmos_phy_rd_mstrnx.F90 $(BUILD_DIR)/scale_atmos_phy_ae.o $(BUILD_DIR)/scale_atmos_phy_mp.o $(BUILD_DIR)/scale_atmos_phy_rd_common.o $(BUILD_DIR)/scale_atmos_phy_rd_profile.o $(BUILD_DIR)/scale_atmos_sub_saturation.o $(BUILD_DIR)/scale_atmos_sub_thermodyn.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_rd_profile.o: atmos-physics/radiation/scale_atmos_phy_rd_profile.F90 $(BUILD_DIR)/scale_calendar.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_cartesian.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_atmos_phy_sf.o: atmos-physics/surfaceflux/scale_atmos_phy_sf.F90 $(BUILD_DIR)/scale_atmos_phy_sf_bulk.o $(BUILD_DIR)/scale_atmos_phy_sf_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_tracer.o
@@ -100,7 +99,6 @@ MODS =	\
 	scale_atmos_phy_mp_tomita08.mod	\
 	scale_atmos_phy_rd.mod	\
 	scale_atmos_phy_rd_common.mod	\
-	scale_atmos_phy_rd_dummy.mod	\
 	scale_atmos_phy_rd_mstrnx.mod	\
 	scale_atmos_phy_rd_profile.mod	\
 	scale_atmos_phy_sf.mod	\

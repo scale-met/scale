@@ -66,7 +66,6 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_mp_tomita08.o	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
-	scale_atmos_phy_rd_dummy.o	\
 	scale_atmos_phy_rd_mstrnx.o	\
 	scale_atmos_phy_rd_profile.o	\
 	scale_atmos_phy_sf.o	\
