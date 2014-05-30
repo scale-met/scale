@@ -38,6 +38,18 @@ module scale_cpl_atmos_urban
         TRL_URB, & ! (inout)
         TBL_URB, & ! (inout)
         TGL_URB, & ! (inout)
+        SHR_URB, & ! (out)
+        SHB_URB, & ! (out)
+        SHG_URB, & ! (out)
+        LHR_URB, & ! (out)
+        LHB_URB, & ! (out)
+        LHG_URB, & ! (out)
+        GHR_URB, & ! (out)
+        GHB_URB, & ! (out)
+        GHG_URB, & ! (out)
+        RnR_URB, & ! (out)
+        RnB_URB, & ! (out)
+        RnG_URB, & ! (out)
         UST,     & ! (out)
         SHFLX,   & ! (out)
         LHFLX,   & ! (out)
@@ -70,6 +82,18 @@ module scale_cpl_atmos_urban
        real(RP), intent(inout) :: TBL_URB(UKS:UKE)
        real(RP), intent(inout) :: TGL_URB(UKS:UKE)
 
+       real(RP), intent(out) :: SHR_URB
+       real(RP), intent(out) :: SHB_URB
+       real(RP), intent(out) :: SHG_URB
+       real(RP), intent(out) :: LHR_URB
+       real(RP), intent(out) :: LHB_URB
+       real(RP), intent(out) :: LHG_URB
+       real(RP), intent(out) :: GHR_URB
+       real(RP), intent(out) :: GHB_URB
+       real(RP), intent(out) :: GHG_URB
+       real(RP), intent(out) :: RnR_URB
+       real(RP), intent(out) :: RnB_URB
+       real(RP), intent(out) :: RnG_URB
        real(RP), intent(out) :: UST
        real(RP), intent(out) :: SHFLX
        real(RP), intent(out) :: LHFLX
