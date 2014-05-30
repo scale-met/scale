@@ -632,6 +632,18 @@ contains
     enddo
     enddo
 
+    ! uniform radiation
+    if ( MSTRN_single ) then
+       do j = JS, JE
+       do i = IS, IE
+          flux_rad(:,i,j,I_LW,I_up) = flux_rad(:,IS,JS,I_LW,I_up)
+          flux_rad(:,i,j,I_LW,I_dn) = flux_rad(:,IS,JS,I_LW,I_dn)
+          flux_rad(:,i,j,I_SW,I_up) = flux_rad(:,IS,JS,I_SW,I_up)
+          flux_rad(:,i,j,I_SW,I_dn) = flux_rad(:,IS,JS,I_SW,I_dn)
+       enddo
+       enddo
+    end if
+
     do j = JS, JE
     do i = IS, IE
        flux_rad_top(i,j,I_LW) = flux_rad_merge(1,i,j,I_LW,I_up)-flux_rad_merge(1,i,j,I_LW,I_dn)
