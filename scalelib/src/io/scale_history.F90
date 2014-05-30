@@ -86,6 +86,9 @@ contains
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[IO] / Origin[SCALElib]'
+
     call PROF_rapstart('FILE O NetCDF')
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)

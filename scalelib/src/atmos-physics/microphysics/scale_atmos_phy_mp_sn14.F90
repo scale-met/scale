@@ -1,66 +1,59 @@
 !-------------------------------------------------------------------------------
-!
-!+  Double moment Water 6 scheme
-!
+!> module ATMOSPHERE / Physics Cloud Microphysics
+!!
+!! @par Description
+!!          Cloud Microphysics by 6 water category, double moment bulk scheme
+!!          Seiki and Nakajima(2014) J. Atmos. Sci., 71, 833–853
+!!
+!!          Reference:  -- Journals
+!!                       Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66
+!!                       Seifert and Beheng(2001)  : Atmos.Res.,vol.59-60,pp.265-281
+!!                       Seifert(2008)             : J.Atmos.Sci.,vol.65,pp.3608-3619
+!!                       Lin et al.(1983)          : J.Appl.Meteor.,vol.22,pp.1065-1092
+!!                       Ruttledge and Hobbs(1983) : J.Atmos.Sci.,vol.40,pp.1185-1206
+!!                       Ruttledge and Hobbs(1984) : J.Atmos.Sci.,vol.40,pp.2949-2977
+!!                       Cotton etal.(1986)        : J.C.Appl.Meteor.,25,pp.1658-1680
+!!                       Cotton and Field (2002)   : QJRMS.,vol.128,pp2417-pp2437
+!!                       Beard(1980)               : J.Atmos.Sci.,vol.37,pp.1363-1374 [Add] 10/08/03
+!!                       Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824
+!!                       Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831
+!!                       Fu(1996)                  : J.Climate, vol.9, pp.2058-2082   [Add] 10/08/03
+!!                       Fu etal(1998)             : J.Climate, vol.11, pp.2223-2237  [Add] 10/08/03
+!!                       Ghan etal.(1997)          : J.Geophys.Res.,vol.102,pp.21777-21794, [Add] 09/08/18
+!!                       Hong et al.(2004)         : Mon.Wea.Rev.,pp.103-120
+!!                       Heymsfeild and Iaquinta(2000): J.Atmos.Sci., vol.57, pp.916-938 [Add] 10/08/03
+!!                       Heymsfield and Kajikawa(1987): J.Atmos.Sci., vol.44, pp.1088-1099
+!!                       Johnson(1981)             : J.Atmos.Sci., vol.38, pp.215-218 [Add] 09/08/18
+!!                       McFarquhar and Heymsfield(1996): J.Atmos.Sci.,vol.53,pp.2401-2423
+!!                       Mitchell(1996)            : J.Atmos.Sci., vol.53, pp.1710-1723. [Add] 10/08/03
+!!                       Morrison etal.(2005)      : Mon.Wea.Rev.,vol.62,pp.1665-1677, [Add] 09/08/18
+!!                       Locatelli and Hobbs (1974): J.Geophys.Res., vol.70, pp.2185-2197
+!!                       Lohmann(2002)             : J.Atmos.Sci.,vol.59,pp.647-656
+!!                       Takano and Liou(1989)     : J.Atmos.Sci.,vol.46,pp.3-19
+!!                       Takano and Liou(1994)     : J.Atmos.Sci.,vol.52,pp.818-837
+!!                       Auer and Veal(1970)       : J.Atmos.Sci.,vol.27,pp.919-926
+!!                       Ikawa et al.(1991)        : J.M.S.J.,vol.69,pp.641-667
+!!                       Murakami(1990)            : J.M.S.J.,vol.68,pp.107-128
+!!                      -- Books
+!!                       Pruppacher and Klett(1997): Kluwer Academic Publishers
+!!                          Microphysics of Clouds and Precipitation, 2nd.edit.
+!!                       Seinfeld and Pandis(1998) : Wiley Interscience
+!!                          Atmospheric Chemistry and Physics.
+!!                       Jacobson(2005)            : Cambridge press
+!!                          Fundamentals of Atmospheric Modeling, 2nd.edit.
+!!
+!! @author Team SCALE
+!!
+!! @par History
+!! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
+!!
+!<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !
-  !++ Description:
-  !       This module contains subroutines for the sn14 parametrization.
-  !
-  !
-  !++ Current Corresponding Author : T.Seiki
-  !
-  !++ History: SN14
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !        0.00   11/10/24 T.Seiki, import from NICAM(11/08/30 ver.)
-  !
-  !      -----------------------------------------------------------------------
-  !      Reference:  -- Journals
-  !                   Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66
-  !                   Seifert and Beheng(2001)  : Atmos.Res.,vol.59-60,pp.265-281
-  !                   Seifert(2008)             : J.Atmos.Sci.,vol.65,pp.3608-3619
-  !                   Lin et al.(1983)          : J.Appl.Meteor.,vol.22,pp.1065-1092
-  !                   Ruttledge and Hobbs(1983) : J.Atmos.Sci.,vol.40,pp.1185-1206
-  !                   Ruttledge and Hobbs(1984) : J.Atmos.Sci.,vol.40,pp.2949-2977
-  !                   Cotton etal.(1986)        : J.C.Appl.Meteor.,25,pp.1658-1680
-  !                   Cotton and Field (2002)   : QJRMS.,vol.128,pp2417-pp2437
-  !                   Beard(1980)               : J.Atmos.Sci.,vol.37,pp.1363-1374 [Add] 10/08/03
-  !                   Berry and Reinhardt(1974a): J.Atmos.Sci.,vol.31,pp.1814-1824
-  !                   Berry and Reinhardt(1974b): J.Atmos.Sci.,vol.31,pp.1825-1831
-  !                   Fu(1996)                  : J.Climate, vol.9, pp.2058-2082   [Add] 10/08/03
-  !                   Fu etal(1998)             : J.Climate, vol.11, pp.2223-2237  [Add] 10/08/03
-  !                   Ghan etal.(1997)          : J.Geophys.Res.,vol.102,pp.21777-21794, [Add] 09/08/18
-  !                   Hong et al.(2004)         : Mon.Wea.Rev.,pp.103-120
-  !                   Heymsfeild and Iaquinta(2000): J.Atmos.Sci., vol.57, pp.916-938 [Add] 10/08/03
-  !                   Heymsfield and Kajikawa(1987): J.Atmos.Sci., vol.44, pp.1088-1099
-  !                   Johnson(1981)             : J.Atmos.Sci., vol.38, pp.215-218 [Add] 09/08/18
-  !                   McFarquhar and Heymsfield(1996): J.Atmos.Sci.,vol.53,pp.2401-2423
-  !                   Mitchell(1996)            : J.Atmos.Sci., vol.53, pp.1710-1723. [Add] 10/08/03
-  !                   Morrison etal.(2005)      : Mon.Wea.Rev.,vol.62,pp.1665-1677, [Add] 09/08/18
-  !                   Locatelli and Hobbs (1974): J.Geophys.Res., vol.70, pp.2185-2197
-  !                   Lohmann(2002)             : J.Atmos.Sci.,vol.59,pp.647-656
-  !                   Takano and Liou(1989)     : J.Atmos.Sci.,vol.46,pp.3-19
-  !                   Takano and Liou(1994)     : J.Atmos.Sci.,vol.52,pp.818-837
-  !                   Auer and Veal(1970)       : J.Atmos.Sci.,vol.27,pp.919-926
-  !                   Ikawa et al.(1991)        : J.M.S.J.,vol.69,pp.641-667
-  !                   Murakami(1990)            : J.M.S.J.,vol.68,pp.107-128
-  !                  -- Books
-  !                   Pruppacher and Klett(1997): Kluwer Academic Publishers
-  !                      Microphysics of Clouds and Precipitation, 2nd.edit.
-  !                   Seinfeld and Pandis(1998) : Wiley Interscience
-  !                      Atmospheric Chemistry and Physics.
-  !                   Jacobson(2005)            : Cambridge press
-  !                      Fundamentals of Atmospheric Modeling, 2nd.edit.
-  !                  -- Source code
-  !                   scale_mp_nsw6.f90 in NICAM
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Used modules
+  !++ used modules
   !
   use scale_precision
   use scale_stdio
@@ -368,10 +361,8 @@ module scale_atmos_phy_mp_sn14
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sn14_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
@@ -401,17 +392,31 @@ contains
        call PRC_MPIstop
     end if
 
+    if (      I_QV <= 0 &
+         .OR. I_QC <= 0 &
+         .OR. I_QR <= 0 &
+         .OR. I_QI <= 0 &
+         .OR. I_QS <= 0 &
+         .OR. I_QG <= 0 &
+         .OR. I_NC <= 0 &
+         .OR. I_NR <= 0 &
+         .OR. I_NI <= 0 &
+         .OR. I_NS <= 0 &
+         .OR. I_NG <= 0 ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx SN14 needs QV/C/R/I/S/G and NC/R/I/S/G tracer. Check!'
+       call PRC_MPIstop
+    endif
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
     ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
@@ -479,7 +484,7 @@ contains
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SN14)'
 
     call PROF_rapstart('MP0 Setup')
     call MP_negativefilter( DENS, QTRC )

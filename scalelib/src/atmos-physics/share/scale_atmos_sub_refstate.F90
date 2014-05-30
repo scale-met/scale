@@ -100,9 +100,9 @@ contains
        ATMOS_REFSTATE_OUT_TITLE,    &
        ATMOS_REFSTATE_OUT_DTYPE,    &
        ATMOS_REFSTATE_TYPE,         &
-       ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_TEMP_SFC,     &
        ATMOS_REFSTATE_RH,           &
+       ATMOS_REFSTATE_POTT_UNIFORM, &
        ATMOS_REFSTATE_UPDATE_FLAG,  &
        ATMOS_REFSTATE_UPDATE_DT
 
@@ -111,7 +111,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REFSTATE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[REFSTATE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
     allocate( ATMOS_REFSTATE_pres(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_temp(KA,IA,JA) )
@@ -128,33 +128,47 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_REFSTATE,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_REFSTATE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_REFSTATE)
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state input?  : ', trim(ATMOS_REFSTATE_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state input?  : NO, internal generation'
+    endif
 
     ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
        call ATMOS_REFSTATE_read
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found reference state file. Generate!'
-
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
+
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ISA'
+          if( IO_L ) write(IO_FID_LOG,*) '*** surface temperature      [K]', ATMOS_REFSTATE_TEMP_SFC
+          if( IO_L ) write(IO_FID_LOG,*) '*** surface & environment RH [%]', ATMOS_REFSTATE_RH
           call ATMOS_REFSTATE_generate_isa
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
+
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
+          if( IO_L ) write(IO_FID_LOG,*) '*** potential temperature : ', ATMOS_REFSTATE_POTT_UNIFORM
           call ATMOS_REFSTATE_generate_uniform
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
+
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
           call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
+
        else
           write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
           call PRC_MPIstop
@@ -172,6 +186,12 @@ contains
                                                     ATMOS_REFSTATE1D_qv  (k)
        enddo
        if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+    endif
+
+    if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : NO'
     endif
 
     ! output reference profile

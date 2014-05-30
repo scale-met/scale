@@ -101,23 +101,24 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[HYDROSTATIC]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDROSTATIC] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_HYDROSTATIC,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
 
     criteria = CONST_EPS * 5
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria:', criteria
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
+    if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria : ', criteria
 
     return
   end subroutine ATMOS_HYDROSTATIC_setup

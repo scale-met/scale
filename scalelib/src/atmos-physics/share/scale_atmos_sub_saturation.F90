@@ -175,19 +175,18 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SATURATION]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_SATURATION,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_SATURATION)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_SATURATION)
 
     RTEM00 = 1.0_RP / TEM00
 
@@ -199,6 +198,11 @@ contains
     LovR_ice  = LHS00 / Rvap
 
     dalphadT_const = 1.0_RP / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Temperature range for ice : ', &
+                                   ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
+                                   ATMOS_SATURATION_ULIMIT_TEMP
 
     return
   end subroutine ATMOS_SATURATION_setup

@@ -169,8 +169,6 @@ contains
 
     if ( update_flag ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation'
-
        if ( CPL_sw ) then
           call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
                               SFC_albedo_land(:,:,:) ) ! [OUT]

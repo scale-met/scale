@@ -119,7 +119,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[THERMODYN]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     allocate( AQ_CP(QQA) )
     allocate( AQ_CV(QQA) )

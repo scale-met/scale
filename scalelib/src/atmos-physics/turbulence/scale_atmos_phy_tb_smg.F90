@@ -118,6 +118,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
@@ -247,6 +249,8 @@ contains
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence(smagorinsky)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

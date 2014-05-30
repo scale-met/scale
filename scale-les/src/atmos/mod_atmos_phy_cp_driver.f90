@@ -116,8 +116,6 @@ contains
 
     if ( update_flag ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cumulus'
-
 !       call ATMOS_PHY_CP( DENS,          & ! [IN]
 !                          MOMZ,          & ! [IN]
 !                          MOMX,          & ! [IN]

@@ -53,8 +53,7 @@ module scale_atmos_phy_mp_dry
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_MP_dry_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
@@ -64,22 +63,21 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Dry Atmosphere'
-
-    ATMOS_PHY_MP_DENS(:) = 0.0_RP
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
 
     if ( MP_TYPE /= 'DRY' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
        call PRC_MPIstop
     endif
 
+    ATMOS_PHY_MP_DENS(:) = 0.0_RP
+
     return
   end subroutine ATMOS_PHY_MP_dry_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_dry( &
           DENS, &
           MOMZ, &
@@ -90,14 +88,16 @@ contains
     use scale_tracer, only: &
        QAD => QA
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(dummy)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(dummy)'
 
     return
   end subroutine ATMOS_PHY_MP_dry

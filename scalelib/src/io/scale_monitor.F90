@@ -105,19 +105,18 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MONITOR]/Categ[IO]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MONITOR] / Categ[IO] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MONITOR,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MONITOR. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MONITOR)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MONITOR)
 
     ! listup monitor request
     rewind(IO_FID_CONF)
@@ -127,6 +126,7 @@ contains
     enddo
     MONIT_req_nmax = n - 1
 
+    if( IO_L ) write(IO_FID_LOG,*)
     if    ( MONIT_req_nmax > MONIT_req_limit ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONIT_req_limit
     elseif( MONIT_req_nmax == 0 ) then
@@ -219,7 +219,8 @@ contains
              MONIT_first(itemid) = .true.
              MONIT_flux (itemid) = isflux
 
-             if( IO_L ) write(IO_FID_LOG,*) ' *** [MONIT] Item registration No.= ', itemid
+             if( IO_L ) write(IO_FID_LOG,*)
+             if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') ' *** [MONIT] Item registration No.= ', itemid
              if( IO_L ) write(IO_FID_LOG,*) ' ] Name            : ', trim(MONIT_item (itemid))
              if( IO_L ) write(IO_FID_LOG,*) ' ] Description     : ', trim(MONIT_desc (itemid))
              if( IO_L ) write(IO_FID_LOG,*) ' ] Unit            : ', trim(MONIT_unit (itemid))
@@ -408,8 +409,6 @@ contains
              write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
-
-          if( IO_L ) write(IO_FID_LOG,*) '*** Write monitor'
        endif
 
     endif
@@ -438,6 +437,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] Output item list '
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONIT_req_nmax
+    if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') 'NAME           :description                                     ', &
                                             '               :UNIT           :Layername'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
@@ -467,6 +467,9 @@ contains
           write(*,*) 'xxx File open error! :', trim(fname)
           call PRC_MPIstop
        endif
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Write monitor. filename : ', fname
 
        write(MONIT_FID,'(A)',advance='no') '                   '
        do n = 1, MONIT_id_count

@@ -157,8 +157,6 @@ contains
 
     if ( update_flag ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence'
-
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]

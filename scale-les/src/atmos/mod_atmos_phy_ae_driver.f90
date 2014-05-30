@@ -111,8 +111,6 @@ contains
 
     if ( update_flag ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, aerosol'
-
        do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE

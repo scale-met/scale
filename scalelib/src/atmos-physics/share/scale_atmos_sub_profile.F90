@@ -190,6 +190,9 @@ contains
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROFILE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+
     gmr = GRAV / Rdry
 
     !--- ISA profile

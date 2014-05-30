@@ -92,8 +92,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[PHY_SF]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux parameter'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SURFACE FLUX] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Constant flux'
 
     if ( ATMOS_PHY_SF_TYPE /= 'CONST' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
@@ -176,6 +176,8 @@ contains
     real(RP) :: Uabs_lim
     integer  :: i, j
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, surface flux(const)'
 
     do j = JS, JE
     do i = IS, IE

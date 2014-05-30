@@ -69,7 +69,7 @@ module scale_atmos_phy_mp_kessler
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
+  !> Setup
   subroutine ATMOS_PHY_MP_kessler_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
@@ -87,12 +87,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
 
     allocate( vterm(KA,IA,JA,QA) )
-    allocate( factor_vterm(KA) )
-
 
     if ( MP_TYPE /= 'KESSLER' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
@@ -106,19 +104,22 @@ contains
        call PRC_MPIstop
     endif
 
+    allocate( factor_vterm(KA) )
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     vterm(:,:,:,:) = 0.0_RP
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
     ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
@@ -128,7 +129,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_kessler( &
        DENS, &
        MOMZ, &
@@ -136,22 +136,22 @@ contains
        MOMY, &
        RHOT, &
        QTRC  )
+    use scale_comm, only: &
+       COMM_horizontal_mean
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_in
-    use scale_comm, only: &
-       COMM_horizontal_mean
-    use scale_atmos_phy_mp_common, only: &
-       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
-       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
-       MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
+    use scale_tracer, only: &
+       QAD => QA
     use scale_atmos_thermodyn, only: &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_tracer, only: &
-       QAD => QA
+    use scale_atmos_phy_mp_common, only: &
+       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
+       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
+       MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -176,7 +176,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(kessler)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(kessler)'
 
     if ( first ) then
        ! Calculate collection factor for terminal velocity of QR
@@ -271,7 +271,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Kessler-type warm rain microphysics
-  !-----------------------------------------------------------------------------
   subroutine MP_kessler( &
        RHOE_t, &
        QTRC_t, &
@@ -413,7 +412,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Kessler-type warm rain microphysics (terminal velocity)
-  !-----------------------------------------------------------------------------
   subroutine MP_kessler_vterm( &
        vterm, &
        DENS0, &
@@ -498,6 +496,7 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_kessler_EffectiveRadius
+
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_kessler_Mixingratio( &
@@ -517,5 +516,5 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_kessler_Mixingratio
-  !-----------------------------------------------------------------------------
+
 end module scale_atmos_phy_mp_kessler

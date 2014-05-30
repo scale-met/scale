@@ -70,19 +70,26 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[STAT]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STAT] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_STATS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_STATS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_STATS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_STATS)
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Report '
+    if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STAT_use_globalcomm
+    if ( STAT_use_globalcomm ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Global total with MPI_ALLreduce is used.'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Local total is used.'
+    endif
 
     return
   end subroutine STAT_setup

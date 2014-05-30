@@ -60,8 +60,9 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-AE]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AEROSOL] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ dummy aerosol process'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     if ( AE_TYPE /= 'DUMMY' .and. AE_TYPE /= 'NONE' ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_AE_TYPE is not DUMMY. Check!'

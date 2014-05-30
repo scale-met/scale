@@ -207,8 +207,6 @@ contains
                            T2       (:,:),   & ! [OUT]
                            Q2       (:,:)    ) ! [OUT]
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, surface flux'
-
           beta(:,:) = 1.0_RP
 
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
@@ -318,7 +316,7 @@ contains
        call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
        call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
 
-       do iq = 1, QA
+       do iq = I_QV, I_QV
           RHOQ(:,:) = DENS(KS,:,:) * QTRC_t_SF(:,:,iq)
 
           call STAT_total( total, RHOQ(:,:), trim(AQ_NAME(iq))//'_t_SF' )

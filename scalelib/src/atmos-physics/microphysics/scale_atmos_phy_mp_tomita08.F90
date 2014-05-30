@@ -251,8 +251,7 @@ module scale_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_MP_tomita08_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
@@ -266,6 +265,7 @@ contains
     use scale_history, only: &
        HIST_reg
     implicit none
+
     character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -282,7 +282,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
     if ( MP_TYPE /= 'TOMITA08' ) then
@@ -291,10 +291,6 @@ contains
     endif
 
     allocate( vterm(KA,IA,JA,QA) )
-    allocate( Nc_def(IA,JA) )
-    allocate( w(w_nmax,KMAX*IMAX*JMAX) )
-    allocate( work3D(KA,IA,JA) )
-
 
     if (      I_QV <= 0 &
          .OR. I_QC <= 0 &
@@ -305,6 +301,49 @@ contains
        if ( IO_L ) write(IO_FID_LOG,*) 'xxx TOMITA08 needs QV/C/R/I/S/G tracer. Check!'
        call PRC_MPIstop
     endif
+
+    allocate( work3D(KA,IA,JA) )
+    work3D(:,:,:) = 0.0_RP
+
+    allocate( Nc_def(IA,JA) )
+
+    allocate( w(w_nmax,KMAX*IMAX*JMAX) )
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+
+    vterm(:,:,:,:) = 0.0_RP
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_TOMITA08,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
+
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3]: ', dens_s
+    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3]: ', dens_g
+
+    ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
+    ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
+    ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
+    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
+    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
 
     !--- empirical coefficients A, B, C, D
     Ar = PI * dens_w / 6.0_RP
@@ -322,32 +361,6 @@ contains
     Dr = 0.50_RP
     Ds = 0.25_RP
     Dg = 0.50_RP
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
-
-    vterm(:,:,:,:) = 0.0_RP
-
-    ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
-    ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
-    ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
-    ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
-    ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
-
-    do j = JS, JE
-    do i = IS, IE
-       Nc_def(i,j) = Nc_ocn
-    enddo
-    enddo
 
     GAM       = 1.0_RP ! =0!
     GAM_2     = 1.0_RP ! =1!
@@ -373,20 +386,24 @@ contains
     GAM_1bgdg = SF_gamma( 1.0_RP + Bg + Dg)
     GAM_5dg_h = SF_gamma( 0.5_RP * (5.0_RP+Dg) )
 
-    do ip = 1, w_nmax
-       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
+    do j = JS, JE
+    do i = IS, IE
+       Nc_def(i,j) = Nc_ocn
+    enddo
     enddo
 
     w_desc(:) = w_name(:)
 
-    work3D(:,:,:) = 0.0_RP
+    ! detailed tendency monitor
+    do ip = 1, w_nmax
+       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_tomita08( &
        DENS, &
        MOMZ, &
@@ -398,17 +415,16 @@ contains
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_in
-    use scale_atmos_phy_mp_common, only: &
-       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
-       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
-       MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
+    use scale_tracer, only: &
+       QAD => QA
     use scale_atmos_thermodyn, only: &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
-    use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+    use scale_atmos_phy_mp_common, only: &
+       MP_negative_fixer        => ATMOS_PHY_MP_negative_fixer,       &
+       MP_precipitation         => ATMOS_PHY_MP_precipitation,        &
+       MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -517,7 +533,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Lin-type cold rain microphysics
-  !-----------------------------------------------------------------------------
   subroutine MP_tomita08( &
        RHOE_t, &
        QTRC_t, &
@@ -1338,7 +1353,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Lin-type cold rain microphysics (terminal velocity)
-  !-----------------------------------------------------------------------------
   subroutine MP_tomita08_vterm( &
        vterm, &
        DENS0,  &
@@ -1551,6 +1565,7 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_EffectiveRadius
+
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_tomita08_Mixingratio( &
@@ -1572,8 +1587,7 @@ contains
     enddo
 
     return
-
   end subroutine ATMOS_PHY_MP_tomita08_Mixingratio
-  !-----------------------------------------------------------------------------
+
 end module scale_atmos_phy_mp_tomita08
 !-------------------------------------------------------------------------------

@@ -247,7 +247,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Physics-RD]/Categ[ATMOS]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
 
     if ( RD_TYPE /= 'MSTRNX' ) then
@@ -271,7 +271,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_MSTRN. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_MSTRN)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_MSTRN)
 
     RD_KADD                   = ATMOS_PHY_RD_MSTRN_KADD
     MSTRN_GASPARA_INPUTFILE   = ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME
@@ -420,6 +420,8 @@ contains
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j, v
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation(mstrnX)'
 
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]

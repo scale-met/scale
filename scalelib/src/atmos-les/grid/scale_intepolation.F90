@@ -68,10 +68,12 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[INTERPOLATION]/Categ[COMMON]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     INTERP_available = TOPO_exist
-    if( IO_L ) write(IO_FID_LOG,*) '*** Interpolation is available? : ', INTERP_available
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Vertical interpolation is available? : ', INTERP_available
 
     allocate( INTERP_xi2z_idx (KA,IA,JA,2) )
     allocate( INTERP_xi2z_coef(KA,IA,JA,3) )

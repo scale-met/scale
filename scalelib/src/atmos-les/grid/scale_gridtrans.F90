@@ -69,7 +69,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GRIDTRANS]/Categ[GRID]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRIDTRANS] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
     allocate( GTRANS_MAPF (IA,JA,4) )
 

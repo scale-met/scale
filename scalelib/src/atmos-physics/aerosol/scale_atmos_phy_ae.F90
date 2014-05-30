@@ -106,7 +106,7 @@ contains
     select case( AE_TYPE )
     case ( 'DUMMY', 'NONE' )
        call ATMOS_PHY_AE_dummy_setup( AE_TYPE )
-       ATMOS_PHY_AE => ATMOS_PHY_AE_dummy
+       ATMOS_PHY_AE                 => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'

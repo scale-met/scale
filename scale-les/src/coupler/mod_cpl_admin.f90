@@ -93,7 +93,7 @@ contains
 
     ! Atoms-Ocean Switch
     if ( CPL_TYPE_AtmOcn /= 'OFF' .AND. CPL_TYPE_AtmOcn /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : ON', trim(CPL_TYPE_AtmOcn)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : ON, ', trim(CPL_TYPE_AtmOcn)
        CPL_sw_AtmOcn = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean Coupler : OFF'
@@ -102,16 +102,16 @@ contains
 
     ! Atoms-Land Switch
     if ( CPL_TYPE_AtmLnd /= 'OFF' .AND. CPL_TYPE_AtmLnd /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : ON', trim(CPL_TYPE_AtmLnd)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land  Coupler : ON, ', trim(CPL_TYPE_AtmLnd)
        CPL_sw_AtmLnd = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land Coupler : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land  Coupler : OFF'
        CPL_sw_AtmLnd = .false.
     endif
 
     ! Atoms-Urban Switch
     if ( CPL_TYPE_AtmUrb /= 'OFF' .AND. CPL_TYPE_AtmUrb /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban Coupler : ON', trim(CPL_TYPE_AtmUrb)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban Coupler : ON, ', trim(CPL_TYPE_AtmUrb)
        CPL_sw_AtmUrb = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban Coupler : OFF'
