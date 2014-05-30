@@ -9,7 +9,7 @@ RUNCONF=${5}
 TPROC=${6}
 
 # System specific
-MPIEXEC="mpiexec -np ${TPROC}"
+MPIEXEC="mpirun -np ${TPROC}"
 
 # Generate run.sh
 
