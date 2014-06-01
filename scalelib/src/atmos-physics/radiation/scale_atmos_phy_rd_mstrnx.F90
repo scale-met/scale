@@ -1179,6 +1179,8 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = 1, kmax
+             ip = indexP(k,i,j)
+
              qv = gas(k,i,j,1) * PPM * dz_std(k,i,j)
 
              A1 = SKD(ich,ip-1,1,iw) * ( 1.0_RP-factP(k,i,j) )&

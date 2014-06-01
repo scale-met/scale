@@ -4,17 +4,37 @@
 
 ##### for computation
 
-FFLAGS_FAST = -Mpreprocess -fastsse -Mipa=fast,inline -m64 \
+FFLAGS_FAST = -Mpreprocess -O2 -fastsse -Mipa=fast,inline -m64 \
               -Mbyteswapio                       \
-              -Mflushz -pc 80                    \
+              -Mflushz -pc 64                    \
               -mcmodel=medium                    \
-              -Msmartalloc=huge -Minfo -DHEVI_BICGSTAB -D__PGI
+              -Msmartalloc=huge -DHEVI_BICGSTAB
 
-FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
-               -Mbyteswapio                      \
-               -Ktrap=fp -pc 80                  \
-               -Mbounds -Mstandard -g -traceback \
-               -mcmodel=medium -Minfo -DHEVI_BICGSTAB -D__PGI
+FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
+               -pg \
+               -Mbyteswapio                       \
+               -Mflushz -pc 80                    \
+               -mcmodel=medium                    \
+               -Msmartalloc=huge
+
+#FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+#               -Mbyteswapio                      \
+#               -Mflushz -pc 80                  \
+#               -Mbounds -Mstandard -g -traceback \
+#               -mcmodel=medium -Minfo
+
+#FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
+#               -Mbyteswapio                      \
+#               -Ktrap=fp -pc 80                  \
+#               -Mbounds -Mstandard -g -traceback \
+#               -mcmodel=medium -Minfo
+
+#FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
+#	      -Mprof=func \
+#              -Mbyteswapio                       \
+#              -Mflushz -pc 80                    \
+#              -mcmodel=medium                    \
+#              -Msmartalloc=huge
 
 FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
@@ -43,11 +63,10 @@ LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
 NETCDF_INCLUDE ?= -I$(NETCDF4)/include
-NETCDF_LIBS    ?= -L$(NETCDF4)/lib -lnetcdff -lnetcdf
+NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib -lnetcdff -lnetcdf -lcurl -lhdf5_hl -lhdf5 -lm -lz
 
 ###### Lapack
-MKLPATH        ?= /opt/intel/composerxe/mkl/lib/intel64
-LAPACK_LIBS    ?= -R$(MKLPATH) -L$(MKLPATH) -lmkl_intel_lp64 -lmkl_pgi_thread -lmkl_core
+LAPACK_LIBS    ?= -lacml
 
 ##### for frontend
 INSTALL = install
