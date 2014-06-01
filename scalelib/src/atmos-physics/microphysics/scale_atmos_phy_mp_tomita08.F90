@@ -401,12 +401,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   subroutine ATMOS_PHY_MP_tomita08( &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
@@ -429,6 +431,8 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
@@ -522,6 +526,8 @@ contains
     call HIST_in( FLX_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( FLX_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
     call HIST_in( FLX_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
+    SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
+    SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
 
     return
   end subroutine ATMOS_PHY_MP_tomita08

@@ -79,12 +79,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   subroutine ATMOS_PHY_MP_dry( &
-          DENS, &
-          MOMZ, &
-          MOMX, &
-          MOMY, &
-          RHOT, &
-          QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_tracer, only: &
        QAD => QA
     implicit none
@@ -95,6 +97,8 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(dummy)'

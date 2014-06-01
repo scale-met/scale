@@ -466,22 +466,27 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sn14( &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SN14)'
@@ -490,8 +495,14 @@ contains
     call MP_negativefilter( DENS, QTRC )
     call PROF_rapend  ('MP0 Setup')
 
-    call mp_sn14( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
-
+    call mp_sn14( DENS,      & ! [INOUT]
+                  MOMZ,      & ! [INOUT]
+                  MOMX,      & ! [INOUT]
+                  MOMY,      & ! [INOUT]
+                  RHOT,      & ! [INOUT]
+                  QTRC,      & ! [INOUT]
+                  SFLX_rain, & ! [OUT]
+                  SFLX_snow  ) ! [OUT]
 
     call PROF_rapstart('MP6 Filter')
     call MP_negativefilter( DENS, QTRC )
@@ -1127,7 +1138,14 @@ contains
   end subroutine mp_sn14_init
   !-----------------------------------------------------------------------------
   subroutine mp_sn14 ( &
-    DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_grid, only: &
@@ -1144,12 +1162,15 @@ contains
     use scale_history, only: &
        HIST_in
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     !
     ! primary variables
@@ -1324,9 +1345,9 @@ contains
     real(RP) :: cpa
 
     real(RP) :: velw(KA,IA,JA,QA)
-    real(RP) :: flux_rain (KA,IA,JA)
-    real(RP) :: flux_snow (KA,IA,JA)
-    real(RP) :: flux_prec (IA,JA)
+    real(RP) :: FLX_rain (KA,IA,JA)
+    real(RP) :: FLX_snow (KA,IA,JA)
+    real(RP) :: FLX_tot  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
     integer :: step
@@ -2038,53 +2059,51 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS-1, KE
-       flux_rain(k,i,j) = 0.0_RP
-       flux_snow(k,i,j) = 0.0_RP
+       FLX_rain(k,i,j) = 0.0_RP
+       FLX_snow(k,i,j) = 0.0_RP
     enddo
     enddo
     enddo
 
     do step = 1, MP_NSTEP_SEDIMENTATION
 
-       call MP_terminal_velocity( velw(:,:,:,:),    &
-                                  rhogq_d(:,:,:,:), &
-                                  DENS(:,:,:),      &
-                                  tem_d(:,:,:),     &
-                                  pre_d(:,:,:)      )
+       call MP_terminal_velocity( velw   (:,:,:,:), & ! [OUT]
+                                  rhogq_d(:,:,:,:), & ! [IN]
+                                  DENS   (:,:,:),   & ! [IN]
+                                  tem_d  (:,:,:),   & ! [IN]
+                                  pre_d  (:,:,:)    ) ! [IN]
 
-!       call precipitation( wflux_rain(:,:,:),     &
-!                           wflux_snow(:,:,:),     &
-!                           velw(:,:,:,:),         &
-!                           rhogq_d(:,:,:,:),      &
-!                           rhoge_d(:,:,:),        &
-!                           tem_d(:,:,:),          &
-!                           MP_DTSEC_SEDIMENTATION )
-       call MP_precipitation( &
-            wflux_rain, wflux_snow, &
-            DENS, MOMZ, MOMX, MOMY, &
-            rhoge_d, QTRC, &
-            velw, tem_d, &
-            MP_DTSEC_SEDIMENTATION )
+       call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
+                              wflux_snow(:,:,:),     & ! [OUT]
+                              DENS      (:,:,:),     & ! [INOUT]
+                              MOMZ      (:,:,:),     & ! [INOUT]
+                              MOMX      (:,:,:),     & ! [INOUT]
+                              MOMY      (:,:,:),     & ! [INOUT]
+                              rhoge_d   (:,:,:),     & ! [INOUT]
+                              QTRC      (:,:,:,:),   & ! [INOUT]
+                              velw      (:,:,:,:),   & ! [IN]
+                              tem_d     (:,:,:),     & ! [IN]
+                              MP_DTSEC_SEDIMENTATION ) ! [IN]
 
        do j = JS, JE
        do i = IS, IE
-          do k = KS-1, KE
-             flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-             flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
-          enddo
-          flux_prec(i,j) = flux_rain(KS-1,i,j) + flux_snow(KS-1,i,j)
+       do k = KS-1, KE
+          FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
        enddo
        enddo
-
-!       if( opt_debug ) call debugreport_sedimentation
+       enddo
 
     enddo
 
     endif
 
-    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-    call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
+    FLX_tot(:,:,:) = FLX_rain(:,:,:) + FLX_snow(:,:,:)
+    call HIST_in( FLX_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
+    call HIST_in( FLX_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
+    call HIST_in( FLX_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
+    SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
+    SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
 
     call PROF_rapend  ('MP5 Sedimentation')
 

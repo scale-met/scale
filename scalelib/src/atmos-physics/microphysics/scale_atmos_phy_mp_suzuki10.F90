@@ -455,7 +455,7 @@ contains
         enddo
 
         close ( fid_micpara )
-     
+
       endif
 
     endif
@@ -548,12 +548,14 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10( &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC  )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
@@ -579,12 +581,15 @@ contains
        QAD => QA, &
        MP_QAD => MP_QA
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(out)   :: SFLX_rain(IA,JA)
+    real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: dz (KA)
     real(RP) :: dzh(KA)
@@ -625,7 +630,6 @@ contains
     real(RP) :: wflux_snow(KA,IA,JA)
     real(RP) :: flux_rain (KA,IA,JA)
     real(RP) :: flux_snow (KA,IA,JA)
-    real(RP) :: flux_prec (IA,JA)
     integer  :: step
     !---------------------------------------------------------------------------
 
@@ -974,7 +978,6 @@ call START_COLLECTION("MICROPHYSICS")
              flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
              flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
           enddo
-          flux_prec(i,j) = flux_rain(KS-1,i,j) + flux_snow(KS-1,i,j)
        enddo
        enddo
 
@@ -989,9 +992,8 @@ call START_COLLECTION("MICROPHYSICS")
        QTRC(:,:,:,QQE+1:QA) = max( QTRC(:,:,:,QQE+1:QA),0.0_RP )
     endif
 
-    call HIST_in( flux_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( flux_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-    call HIST_in( flux_prec(:,:),      'PREC', 'surface precipitaion rate', 'kg/m2/s', dt)
+    SFLX_rain(:,:) = flux_rain(KS-1,:,:)
+    SFLX_snow(:,:) = flux_snow(KS-1,:,:)
 
     call PROF_rapend  ('MPX ijkconvert')
 
@@ -1473,7 +1475,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   iice = 0
   do m = 2, nspc
     iice = iice + iflg( m )
-  enddo 
+  enddo
 
   if ( iliq == 1 .and. iice == 0 ) then
       call  liqphase            &

@@ -159,12 +159,14 @@ contains
        enddo
        enddo
 
-       call ATMOS_PHY_MP( DENS0, & ! [INOUT]
-                          MOMZ0, & ! [INOUT]
-                          MOMX0, & ! [INOUT]
-                          MOMY0, & ! [INOUT]
-                          RHOT0, & ! [INOUT]
-                          QTRC0  ) ! [INOUT]
+       call ATMOS_PHY_MP( DENS0    (:,:,:),   & ! [INOUT]
+                          MOMZ0    (:,:,:),   & ! [INOUT]
+                          MOMX0    (:,:,:),   & ! [INOUT]
+                          MOMY0    (:,:,:),   & ! [INOUT]
+                          RHOT0    (:,:,:),   & ! [INOUT]
+                          QTRC0    (:,:,:,:), & ! [INOUT]
+                          SFLX_rain(:,:),     & ! [OUT]
+                          SFLX_snow(:,:)      ) ! [OUT]
 
        do j  = JS, JE
        do i  = IS, IE
@@ -188,8 +190,6 @@ contains
        enddo
        enddo
 
-       SFLX_rain(:,:) = 0.0_RP ! tentative
-       SFLX_snow(:,:) = 0.0_RP ! tentative
        precip(:,:) = SFLX_rain(:,:) + SFLX_snow(:,:)
 
        if ( history_flag ) then
