@@ -263,32 +263,44 @@ contains
   end subroutine CPL_AtmUrb_bulk_setup
 
   subroutine CPL_AtmUrb_bulk( &
-        TR,     & ! (inout)
-        TB,     & ! (inout)
-        TG,     & ! (inout)
-        TC,     & ! (inout)
-        QC,     & ! (inout)
-        UC,     & ! (inout)
-        TRL,    & ! (inout)
-        TBL,    & ! (inout)
-        TGL,    & ! (inout)
-        TS,     & ! (out)
-        SH,     & ! (out)
-        LH,     & ! (out)
-        G,      & ! (out)
-        LSOLAR, & ! (in)
-        TA,     & ! (in)
-        QA,     & ! (in)
-        UA,     & ! (in)
-        U1,     & ! (in)
-        V1,     & ! (in)
-        ZA,     & ! (in)
-        SSG,    & ! (in)
-        LLG,    & ! (in)
-        RAIN,   & ! (in)
-        RHOO,   & ! (in)
-        XLON,   & ! (in)
-        XLAT    ) ! (in)
+        TR,      & ! (inout)
+        TB,      & ! (inout)
+        TG,      & ! (inout)
+        TC,      & ! (inout)
+        QC,      & ! (inout)
+        UC,      & ! (inout)
+        TRL,     & ! (inout)
+        TBL,     & ! (inout)
+        TGL,     & ! (inout)
+        SHR,     & ! (out)
+        SHB,     & ! (out)
+        SHG,     & ! (out)
+        LHR,     & ! (out)
+        LHB,     & ! (out)
+        LHG,     & ! (out)
+        GHR,     & ! (out)
+        GHB,     & ! (out)
+        GHG,     & ! (out)
+        RNR,     & ! (out)
+        RNB,     & ! (out)
+        RNG,     & ! (out)     
+        TS,      & ! (out)
+        SH,      & ! (out)
+        LH,      & ! (out)
+        G,       & ! (out)
+        LSOLAR,  & ! (in)
+        TA,      & ! (in)
+        QA,      & ! (in)
+        UA,      & ! (in)
+        U1,      & ! (in)
+        V1,      & ! (in)
+        ZA,      & ! (in)
+        SSG,     & ! (in)
+        LLG,     & ! (in)
+        RAIN,    & ! (in)
+        RHOO,    & ! (in)
+        XLON,    & ! (in)
+        XLAT     ) ! (in)
 
     use scale_const, only: &
       KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
@@ -411,6 +423,10 @@ contains
     real(RP) :: HR, ELER, G0R, FLXTHR, FLXHUMR
     real(RP) :: HB, ELEB, G0B, FLXTHB, FLXHUMB
     real(RP) :: HG, ELEG, G0G, FLXTHG, FLXHUMG
+    real(RP) :: RNR, RNB, RNG
+    real(RP) :: SHR, SHB, SHG
+    real(RP) :: LHR, LHB, LHG
+    real(RP) :: GHR, GHB, GHG
 
     real(RP) :: Z
     real(RP) :: QS0R, DQS0RDTR, DESDT
@@ -764,6 +780,19 @@ contains
 
     G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
+
+    SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
+    SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
+    SHG = FLXTHG * RHOO * CPdry           ! Sensible heat flux on road [W/m/m]
+    LHR = FLXHUMR * RHOO * LH0           ! Latent heat flux on road [W/m/m]
+    LHB = FLXHUMB * RHOO * LH0           ! Latent heat flux on wall [W/m/m]
+    LHG = FLXHUMG * RHOO * LH0           ! Latent heat flux on road [W/m/m]
+    GHR = -1.0_RP * G0R * 697.7_RP * 60.0_RP          ! Ground heat flux on roof [W/m/m]
+    GHB = -1.0_RP * G0B * 697.7_RP * 60.0_RP          ! Ground heat flux on wall [W/m/m]
+    GHG = -1.0_RP * G0G * 697.7_RP * 60.0_RP          ! Ground heat flux on road [W/m/m]
+    RNR = (SR + RR) * 697.7_RP * 60.0_RP     ! Net radiation on roof [W/m/m]
+    RNB = (SB + RB) * 697.7_RP * 60.0_RP     ! Net radiation on building [W/m/m]
+    RNG = (SG + RG) * 697.7_RP * 60.0_RP     ! Net radiation on ground [W/m/m]
 
     UST = sqrt( FLXUV )                      ! u* [m/s]
     TST = -FLXTH / UST                       ! T* [K]

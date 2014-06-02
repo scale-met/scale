@@ -84,7 +84,19 @@ contains
        UC_URB,  &
        TRL_URB, &
        TGL_URB, &
-       TBL_URB
+       TBL_URB, &
+       SHR_URB, &
+       SHB_URB, &
+       SHG_URB, &
+       LHR_URB, &
+       LHB_URB, &
+       LHG_URB, &
+       GHR_URB, &
+       GHB_URB, &
+       GHG_URB, &
+       RnR_URB, &
+       RnB_URB, &
+       RnG_URB
     use mod_cpl_vars, only: &
        UST,               &
        RHOA => CPL_RHOA,  &
@@ -169,6 +181,18 @@ contains
         TRL_URB(:,i,j), & ! (inout)
         TBL_URB(:,i,j), & ! (inout)
         TGL_URB(:,i,j), & ! (inout)
+        SHR_URB (i,j),  & ! (out)
+        SHB_URB (i,j),  & ! (out)
+        SHG_URB (i,j),  & ! (out)
+        LHR_URB (i,j),  & ! (out)
+        LHB_URB (i,j),  & ! (out)
+        LHG_URB (i,j),  & ! (out)
+        GHR_URB (i,j),  & ! (out)
+        GHB_URB (i,j),  & ! (out)
+        GHG_URB (i,j),  & ! (out)
+        RnR_URB (i,j),  & ! (out)
+        RnB_URB (i,j),  & ! (out)
+        RnG_URB (i,j),  & ! (out)
         UST    (i,j),   & ! (out)
         SHFLX  (i,j),   & ! (out)
         LHFLX  (i,j),   & ! (out)
