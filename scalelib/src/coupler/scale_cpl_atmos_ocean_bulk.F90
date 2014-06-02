@@ -219,8 +219,8 @@ contains
 
       call CPL_bulkcoef( &
           Cm,        & ! (out)
-          Cm,        & ! (out)
           Ch,        & ! (out)
+          Ce,        & ! (out)
           R10m,      & ! (out)
           R02h,      & ! (out)
           R02e,      & ! (out)

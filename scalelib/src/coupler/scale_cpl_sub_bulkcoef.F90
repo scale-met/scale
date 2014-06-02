@@ -229,7 +229,7 @@ contains
     C0_10 = ( KARMAN / log( 10.0_RP/Z0M ) )**2
     C0_02 = ( KARMAN / log(  2.0_RP/Z0M ) )**2
 
-    RiBT  = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * max(Ua,U_min)**2 )
+    RiBT  = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     RiB   = RiBT
 
     if( RiBT >= 0.0_RP ) then
@@ -343,7 +343,7 @@ contains
     real(RP) :: fm, fh
     real(RP) :: fm10, fm02, fh02
 
-    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * max(Ua,U_min)**2 )
+    RiB0 = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     if( abs( RiB0 ) < RiB_min ) then
       RiB0 = RiB_min
     end if
