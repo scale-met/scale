@@ -283,7 +283,7 @@ contains
         GHG,     & ! (out)
         RNR,     & ! (out)
         RNB,     & ! (out)
-        RNG,     & ! (out)     
+        RNG,     & ! (out)
         TS,      & ! (out)
         SH,      & ! (out)
         LH,      & ! (out)
@@ -364,6 +364,11 @@ contains
     real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
 
+    real(RP), intent(out)   :: RNR, RNB, RNG
+    real(RP), intent(out)   :: SHR, SHB, SHG
+    real(RP), intent(out)   :: LHR, LHB, LHG
+    real(RP), intent(out)   :: GHR, GHB, GHG
+
     !-- Output variables from Urban to Coupler
     real(RP), intent(out) :: TS     ! surface temperature              [K]
     real(RP), intent(out) :: SH     ! sensible heat flux               [W/m/m]
@@ -423,10 +428,6 @@ contains
     real(RP) :: HR, ELER, G0R, FLXTHR, FLXHUMR
     real(RP) :: HB, ELEB, G0B, FLXTHB, FLXHUMB
     real(RP) :: HG, ELEG, G0G, FLXTHG, FLXHUMG
-    real(RP) :: RNR, RNB, RNG
-    real(RP) :: SHR, SHB, SHG
-    real(RP) :: LHR, LHB, LHG
-    real(RP) :: GHR, GHB, GHG
 
     real(RP) :: Z
     real(RP) :: QS0R, DQS0RDTR, DESDT
