@@ -207,6 +207,12 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private :: Wmns(2), Wpls(2) ! W-, W+
   real(RP), private :: Wbar(2), Wscale(2)
 
+  ! for ocean albedo
+  real(RP), private :: c_ocean_albedo(5,3)
+  data c_ocean_albedo / -2.8108_RP   , -1.3651_RP,  2.9210E1_RP, -4.3907E1_RP,  1.8125E1_RP, &
+                         6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
+                        -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -1568,11 +1574,12 @@ contains
     real(RP) :: Ep_SW(kmax,imax,jmax,MSTRN_ncloud) ! solar   source (TOA->sfc)            (clear-sky/cloud)
 
     ! Averaged factors, considering cloud overwrap
-    real(RP) :: tau_bar(imax,jmax)   ! accumulated optical thickness at each layer
-    real(RP) :: R (kmax+1,imax,jmax) ! reflection   factor
-    real(RP) :: T (kmax+1,imax,jmax) ! transmission factor
-    real(RP) :: Em(kmax+1,imax,jmax) ! source (sfc->TOA)
-    real(RP) :: Ep(kmax+1,imax,jmax) ! source (TOA->sfc)
+    real(RP) :: tau_bar_sol(kmax+1,imax,jmax) ! solar insolation through accumulated optical thickness at each layer
+    real(RP) :: Tdir       (kmax+1,imax,jmax) ! transmission factor for solar direct
+    real(RP) :: R          (kmax+1,imax,jmax) ! reflection   factor
+    real(RP) :: T          (kmax+1,imax,jmax) ! transmission factor
+    real(RP) :: Em         (kmax+1,imax,jmax) ! source (sfc->TOA)
+    real(RP) :: Ep         (kmax+1,imax,jmax) ! source (TOA->sfc)
 
     ! Doubling-Adding
     real(RP) :: R12mns(kmax+1,imax,jmax), R12pls(kmax+1,imax,jmax) ! reflection factor in doubling method
@@ -1685,32 +1692,43 @@ contains
     !---< consider partial cloud layer: semi-random over-wrapping >---
     do j = JS, JE
     do i = IS, IE
-       tau_bar(i,j) = 1.0_RP ! k-recurrence
+    do k = 1, kmax
+       Tdir(k,i,j) = (        cldfrac(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
+                   + ( 1.0_RP-cldfrac(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
 
-       do k = 1, kmax
+       R   (k,i,j) = (        cldfrac(k,i,j) ) * R0   (k,i,j,I_Cloud   ) &
+                   + ( 1.0_RP-cldfrac(k,i,j) ) * R0   (k,i,j,I_ClearSky)
 
-          R (k,i,j) = (        cldfrac(k,i,j) ) * R0(k,i,j,I_Cloud   ) &
-                    + ( 1.0_RP-cldfrac(k,i,j) ) * R0(k,i,j,I_ClearSky)
+       T   (k,i,j) = (        cldfrac(k,i,j) ) * T0   (k,i,j,I_Cloud   ) &
+                   + ( 1.0_RP-cldfrac(k,i,j) ) * T0   (k,i,j,I_ClearSky)
+    enddo ! k loop
+    enddo ! i loop
+    enddo ! j loop
 
-          T (k,i,j) = (        cldfrac(k,i,j) ) * T0(k,i,j,I_Cloud   ) &
-                    + ( 1.0_RP-cldfrac(k,i,j) ) * T0(k,i,j,I_ClearSky)
-
-          Em(k,i,j) = (        cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_Cloud   ) &
-                                                  + Em_SW(k,i,j,I_Cloud   ) * tau_bar(i,j) * fsol(i,j) ) &
-                    + ( 1.0_RP-cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_ClearSky) &
-                                                  + Em_SW(k,i,j,I_ClearSky) * tau_bar(i,j) * fsol(i,j) )
-
-          Ep(k,i,j) = (        cldfrac(k,i,j) ) * ( Ep_LW(k,i,j,I_Cloud   ) &
-                                                  + Ep_SW(k,i,j,I_Cloud   ) * tau_bar(i,j) * fsol(i,j) ) &
-                    + ( 1.0_RP-cldfrac(k,i,j) ) * ( Ep_LW(k,i,j,I_ClearSky) &
-                                                  + Ep_SW(k,i,j,I_ClearSky) * tau_bar(i,j) * fsol(i,j) )
-
-          flux_direct(k,i,j) = cosSZA(i,j) * tau_bar(i,j) * fsol(i,j)
-
-          ! update tau_bar
-          tau_bar(i,j) = tau_bar(i,j) * ( (        cldfrac(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
-                                        + ( 1.0_RP-cldfrac(k,i,j) ) * Tdir0(k,i,j,I_ClearSky) )
+    do j = JS, JE
+    do i = IS, IE
+       tau_bar_sol(1,i,j) = fsol(i,j) ! k-recurrence
+       do k = 2, kmax+1
+          tau_bar_sol(k,i,j) = tau_bar_sol(k-1,i,j) * Tdir(k-1,i,j)
        enddo ! k loop
+    enddo ! i loop
+    enddo ! j loop
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = 1, kmax
+       Em(k,i,j) = (        cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_Cloud   ) &
+                                               + Em_SW(k,i,j,I_Cloud   ) * tau_bar_sol(k,i,j) ) &
+                 + ( 1.0_RP-cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_ClearSky) &
+                                               + Em_SW(k,i,j,I_ClearSky) * tau_bar_sol(k,i,j) )
+
+       Ep(k,i,j) = (        cldfrac(k,i,j) ) * ( Ep_LW(k,i,j,I_Cloud   ) &
+                                               + Ep_SW(k,i,j,I_Cloud   ) * tau_bar_sol(k,i,j) ) &
+                 + ( 1.0_RP-cldfrac(k,i,j) ) * ( Ep_LW(k,i,j,I_ClearSky) &
+                                               + Ep_SW(k,i,j,I_ClearSky) * tau_bar_sol(k,i,j) )
+
+       flux_direct(k,i,j) = cosSZA(i,j) * tau_bar_sol(k,i,j)
+    enddo ! k loop
     enddo ! i loop
     enddo ! j loop
 
@@ -1722,7 +1740,7 @@ contains
 
        T (kmax+1,i,j) = 0.0_RP
 
-       flux_direct(kmax+1,i,j) = cosSZA(i,j) * tau_bar(i,j) * fsol(i,j)
+       flux_direct(kmax+1,i,j) = cosSZA(i,j) * tau_bar_sol(k,i,j)
 
        Em0(i,j,I_Cloud   ) = Wpls(irgn) * ( flux_direct(kmax+1,i,j) * albedo_sfc(i,j,I_Cloud   ) / (W(irgn)*M(irgn)) &
                            + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_Cloud   ) ) * b_sfc(i,j) )
@@ -1819,11 +1837,6 @@ contains
     real(RP), intent(in)  :: tau         (imax,jmax)
     real(RP), intent(out) :: albedo_ocean(imax,jmax,2)
 
-    real(RP) :: c(5,3)
-    data c / -2.8108_RP   , -1.3651_RP,  2.9210E1_RP, -4.3907E1_RP,  1.8125E1_RP, &
-              6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
-             -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
-
     real(RP) :: am1, tr1, s
     real(RP) :: sw
 
@@ -1847,9 +1860,9 @@ contains
 
        s = 0.0_RP
        do n = 1, 5
-          s = s + c(n,1) * tr1**(n-1)           &
-                + c(n,2) * tr1**(n-1) * am1     &
-                + c(n,3) * tr1**(n-1) * am1*am1
+          s = s + c_ocean_albedo(n,1) * tr1**(n-1)           &
+                + c_ocean_albedo(n,2) * tr1**(n-1) * am1     &
+                + c_ocean_albedo(n,3) * tr1**(n-1) * am1*am1
        enddo
 
        albedo_ocean(i,j,I_LW) = ( 1.0_RP-sw ) * 0.05_RP &
