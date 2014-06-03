@@ -189,6 +189,9 @@ contains
       mdlid,         & ! (in)
       step           & ! (in)
       )
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP),         intent(out)           :: dens(:,:,:)
@@ -299,6 +302,9 @@ contains
                                      pott(:,:,:), & ! [IN]
                                      qv  (:,:,:), & ! [IN]
                                      qc  (:,:,:)  ) ! [IN]
+
+    call COMM_vars8( dens(:,:,:), 1 )
+    call COMM_wait ( dens(:,:,:), 1 )
 
     do j = JS, JE
     do i = IS, IE
