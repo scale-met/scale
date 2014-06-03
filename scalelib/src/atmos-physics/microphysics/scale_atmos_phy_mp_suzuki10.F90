@@ -923,7 +923,7 @@ call START_COLLECTION("MICROPHYSICS")
      enddo
     enddo
 
-    call HIST_in( AMR(:,:,:),  'aerosol', 'aerosol mass', 'kg/m^3', dt)
+    !call HIST_in( AMR(:,:,:),  'aerosol', 'aerosol mass', 'kg/m^3', dt)
 
     deallocate(gdga)
 

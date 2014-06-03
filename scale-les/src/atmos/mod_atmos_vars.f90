@@ -139,7 +139,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 48 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 50 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -200,6 +200,9 @@ module mod_atmos_vars
   integer, private, parameter :: I_ENGTOA_SW_dn = 47
 
   integer, private, parameter :: I_ENGFLXT      = 48
+
+  integer, private, parameter :: I_EVAP         = 49
+  integer, private, parameter :: I_PRCP         = 50
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -426,6 +429,9 @@ contains
 
     call MONIT_reg( AD_MONIT_id(I_QDRY), 'QDRY', 'dry air mass',     'kg', ndim=3, isflux=.false. )
     call MONIT_reg( AD_MONIT_id(I_QTOT), 'QTOT', 'water mass',       'kg', ndim=3, isflux=.false. )
+    call MONIT_reg( AD_MONIT_id(I_EVAP), 'EVAP', 'evaporation',      'kg', ndim=2, isflux=.true.  )
+    call MONIT_reg( AD_MONIT_id(I_PRCP), 'PRCP', 'precipitation',    'kg', ndim=2, isflux=.true.  )
+
     call MONIT_reg( AD_MONIT_id(I_ENGT), 'ENGT', 'total     energy', 'J',  ndim=3, isflux=.false. )
     call MONIT_reg( AD_MONIT_id(I_ENGP), 'ENGP', 'potential energy', 'J',  ndim=3, isflux=.false. )
     call MONIT_reg( AD_MONIT_id(I_ENGK), 'ENGK', 'kinetic   energy', 'J',  ndim=3, isflux=.false. )
@@ -1721,12 +1727,14 @@ contains
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_atmos_phy_sf_vars, only: &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_LH => ATMOS_PHY_SF_SFLX_LH
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH, &
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
     real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
     real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
+    real(RP) :: PRCP(IA,JA)    ! rain + snow     [kg/m2/s]
 
     real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
@@ -1834,11 +1842,13 @@ contains
 
 
 
-    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.true. )
-    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.true. )
-    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.true. )
-    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.true. )
-    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.true. )
+    call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
+    call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
+    call MONIT_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), ndim=3, isflux=.false. )
+    call MONIT_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), ndim=3, isflux=.false. )
+    call MONIT_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), ndim=3, isflux=.false. )
+
+    !##### Mass Budget #####
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1849,9 +1859,10 @@ contains
        enddo
        enddo
 
-       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3, isflux=.true. )
+       call MONIT_in( RHOQ(:,:,:), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), ndim=3, isflux=.false. )
     enddo
 
+    ! total dry airmass
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -1860,9 +1871,9 @@ contains
     enddo
     enddo
     enddo
-
     call MONIT_put( AD_MONIT_id(I_QDRY), RHOQ(:,:,:) )
 
+    ! total vapor,liquid,solid tracers
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -1871,8 +1882,20 @@ contains
     enddo
     enddo
     enddo
-
     call MONIT_put( AD_MONIT_id(I_QTOT), RHOQ(:,:,:) )
+
+    ! total evapolation
+    call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
+
+    ! total precipitation
+    do j = JS, JE
+    do i = IS, IE
+       PRCP(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+    enddo
+    enddo
+    call MONIT_put( AD_MONIT_id(I_PRCP), PRCP(:,:) )
+
+    !##### Energy Budget #####
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE

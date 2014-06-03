@@ -1159,8 +1159,6 @@ contains
     use scale_atmos_saturation, only: &
        moist_psat_liq      => ATMOS_SATURATION_psat_liq,   &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice
-    use scale_history, only: &
-       HIST_in
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -2098,10 +2096,6 @@ contains
 
     endif
 
-    FLX_tot(:,:,:) = FLX_rain(:,:,:) + FLX_snow(:,:,:)
-    call HIST_in( FLX_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( FLX_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-    call HIST_in( FLX_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
     SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
 
