@@ -502,12 +502,10 @@ contains
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
 
-    call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
-
-    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
-    call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s', dt )
-    call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s', dt )
-    call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s', dt )
+    !call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
+    !call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s', dt )
+    !call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s', dt )
+    !call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s', dt )
 
     !##### END MP Main #####
 
