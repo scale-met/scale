@@ -68,7 +68,7 @@ contains
        call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_MP_driver( .true., .false. )
+       !call ATMOS_PHY_MP_driver( .true., .false. )
 
     else
 

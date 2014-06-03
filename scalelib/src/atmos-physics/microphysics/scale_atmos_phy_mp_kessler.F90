@@ -245,9 +245,7 @@ contains
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
 
-    !call HIST_in( RHOE_t(:,:,:), 'RHOE_t_mp', 'tendency of rhoe in mp', 'J/m3/s', dt )
-
-    !call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
+    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
 
     !##### END MP Main #####
 
