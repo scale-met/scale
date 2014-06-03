@@ -98,10 +98,12 @@ contains
   !> Driver
   subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
     use scale_grid_real, only: &
-       REAL_CZ,  &
-       REAL_FZ,  &
-       REAL_LON, &
-       REAL_LAT
+       REAL_CZ,            &
+       REAL_FZ,            &
+       REAL_LON,           &
+       REAL_LAT,           &
+       REAL_BASEPOINT_LON, &
+       REAL_BASEPOINT_LAT
     use scale_landuse, only: &
        LANDUSE_frac_land
     use scale_time, only: &
@@ -113,7 +115,8 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_solarins, only: &
-       SOLARINS_insolation => ATMOS_SOLARINS_insolation
+       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
+       SOLARINS_insolation  => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
     use scale_atmos_phy_rd_common, only: &
@@ -161,6 +164,8 @@ contains
 
     real(RP) :: solins(IA,JA)
     real(RP) :: cosSZA(IA,JA)
+    real(RP) :: LON   (IA,JA)
+    real(RP) :: LAT   (IA,JA)
 
     real(RP) :: total ! dummy
 
@@ -175,10 +180,18 @@ contains
        endif
 
        ! calc solar insolation
-       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
-                                 cosSZA  (:,:),  & ! [OUT]
-                                 REAL_LON(:,:),  & ! [IN]
-                                 REAL_LAT(:,:),  & ! [IN]
+       if ( SOLARINS_fixedlatlon ) then
+          LON(:,:) = REAL_BASEPOINT_LON
+          LAT(:,:) = REAL_BASEPOINT_LAT
+       else
+          LON(:,:) = REAL_LON(:,:)
+          LAT(:,:) = REAL_LAT(:,:)
+       endif
+
+       call SOLARINS_insolation( solins(:,:),    & ! [OUT]
+                                 cosSZA(:,:),    & ! [OUT]
+                                 LON   (:,:),    & ! [IN]
+                                 LAT   (:,:),    & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,  & ! [IN]

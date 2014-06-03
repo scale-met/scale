@@ -41,7 +41,8 @@ module scale_atmos_solarins
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: ATMOS_SOLARINS_constant = 1360.250117_RP ! Solar constant [W/m2]
+  real(RP), public :: ATMOS_SOLARINS_constant    = 1360.250117_RP ! Solar constant [W/m2]
+  logical,  public :: ATMOS_SOLARINS_fixedlatlon = .false.        ! Latitude/Longitude is fixed?
 
   !-----------------------------------------------------------------------------
   !
@@ -549,7 +550,8 @@ contains
     integer, intent(in) :: iyear ! year at setup
 
     namelist / PARAM_ATMOS_SOLARINS / &
-       ATMOS_SOLARINS_constant
+       ATMOS_SOLARINS_constant,   &
+       ATMOS_SOLARINS_fixedlatlon
 
     real(RP) :: dyear ! delta t [year]
 
@@ -589,6 +591,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** eccentricity                         : ', E
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude of perihelion         [deg]: ', omega     / CONST_D2R
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude at the vernal equinox [deg]: ', lambda_m0 / CONST_D2R
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** Latitude/Longitude is fixed? : ', ATMOS_SOLARINS_fixedlatlon
 
     return
   end subroutine ATMOS_SOLARINS_setup

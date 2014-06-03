@@ -39,6 +39,9 @@ module scale_grid_real
   real(RP), public, allocatable :: REAL_CZ (:,:,:)     !< geopotential height [m] (cell center)
   real(RP), public, allocatable :: REAL_FZ (:,:,:)     !< geopotential height [m] (cell face  )
 
+  real(RP), public              :: REAL_BASEPOINT_LON  !< position of base point in real world [rad,0-2pi]
+  real(RP), public              :: REAL_BASEPOINT_LAT  !< position of base point in real world [rad,-pi,pi]
+
   real(RP), public, allocatable :: REAL_LONX(:,:)      !< longitude at staggered point (u) [rad,0-2pi]
   real(RP), public, allocatable :: REAL_LATY(:,:)      !< latitude  at staggered point (v) [rad,-pi,pi]
   real(RP), public, allocatable :: REAL_DLON(:,:)      !< delta longitude
@@ -153,11 +156,20 @@ contains
        FX => GRID_FX, &
        FY => GRID_FY
     use scale_mapproj, only: &
+       MPRJ_basepoint_lon, &
+       MPRJ_basepoint_lat, &
        MPRJ_xy2lonlat
     implicit none
 
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    REAL_BASEPOINT_LON = MPRJ_basepoint_lon * D2R
+    REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain'
+    if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_BASEPOINT_LON/D2R,',',REAL_BASEPOINT_LAT/D2R,')'
 
     do j = 1, JA
     do i = 1, IA
@@ -175,7 +187,8 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) ' *** Position on the earth (Local)'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Position on the earth (Local)'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
                                 'NW(',REAL_LON(IS,JE)/D2R,',',REAL_LAT(IS,JE)/D2R,')-', &
                                 'NE(',REAL_LON(IE,JE)/D2R,',',REAL_LAT(IE,JE)/D2R,')'

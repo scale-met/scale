@@ -41,6 +41,8 @@ module scale_mapproj
   !
   !++ Public parameters & variables
   !
+  real(RP), public :: MPRJ_basepoint_lon = 135.221_RP ! position of base point in real world [deg]
+  real(RP), public :: MPRJ_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
 
   !-----------------------------------------------------------------------------
   !
@@ -76,8 +78,6 @@ module scale_mapproj
   real(RP), private :: MPRJ_pole_x                     ! position of north/south pole in the model [m]
   real(RP), private :: MPRJ_pole_y                     ! position of north/south pole in the model [m]
 
-  real(RP), private :: MPRJ_basepoint_lon = 135.221_RP ! position of base point in real world [deg]
-  real(RP), private :: MPRJ_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
   real(RP), private :: MPRJ_basepoint_x   =     0.0_RP ! position of base point in the model  [m]
   real(RP), private :: MPRJ_basepoint_y   =     0.0_RP ! position of base point in the model  [m]
 
