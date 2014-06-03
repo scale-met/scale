@@ -50,6 +50,7 @@ module mod_urban_vars
   real(RP), public, allocatable :: TC_URB (:,:)   ! Diagnostic canopy air temperature [K]
   real(RP), public, allocatable :: QC_URB (:,:)   ! Diagnostic canopy humidity [-]
   real(RP), public, allocatable :: UC_URB (:,:)   ! Diagnostic canopy wind [m/s]
+  real(RP), public, allocatable :: TS_URB (:,:)   ! Diagnostic surface temperature [K]
   real(RP), public, allocatable :: SHR_URB (:,:)  ! Sensible heat flux from roof [W/m2]
   real(RP), public, allocatable :: SHB_URB (:,:)  ! Sensible heat flux from wall [W/m2]
   real(RP), public, allocatable :: SHG_URB (:,:)  ! Sensible heat flux from road [W/m2]
@@ -82,28 +83,29 @@ module mod_urban_vars
 
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX = 21
+  integer,                private, parameter :: VMAX = 22
   integer,                private, parameter :: I_TR_URB  = 1
   integer,                private, parameter :: I_TB_URB  = 2
   integer,                private, parameter :: I_TG_URB  = 3
   integer,                private, parameter :: I_TC_URB  = 4
   integer,                private, parameter :: I_QC_URB  = 5
   integer,                private, parameter :: I_UC_URB  = 6
-  integer,                private, parameter :: I_SHR_URB = 7
-  integer,                private, parameter :: I_SHB_URB = 8
-  integer,                private, parameter :: I_SHG_URB = 9
-  integer,                private, parameter :: I_LHR_URB = 10
-  integer,                private, parameter :: I_LHB_URB = 11
-  integer,                private, parameter :: I_LHG_URB = 12
-  integer,                private, parameter :: I_GHR_URB = 13
-  integer,                private, parameter :: I_GHB_URB = 14
-  integer,                private, parameter :: I_GHG_URB = 15
-  integer,                private, parameter :: I_RnR_URB = 16
-  integer,                private, parameter :: I_RnB_URB = 17
-  integer,                private, parameter :: I_RnG_URB = 18
-  integer,                private, parameter :: I_TRL_URB = 19
-  integer,                private, parameter :: I_TBL_URB = 20
-  integer,                private, parameter :: I_TGL_URB = 21
+  integer,                private, parameter :: I_TS_URB  = 7
+  integer,                private, parameter :: I_SHR_URB = 8
+  integer,                private, parameter :: I_SHB_URB = 9
+  integer,                private, parameter :: I_SHG_URB = 10
+  integer,                private, parameter :: I_LHR_URB = 11
+  integer,                private, parameter :: I_LHB_URB = 12
+  integer,                private, parameter :: I_LHG_URB = 13
+  integer,                private, parameter :: I_GHR_URB = 14
+  integer,                private, parameter :: I_GHB_URB = 15
+  integer,                private, parameter :: I_GHG_URB = 16
+  integer,                private, parameter :: I_RnR_URB = 17
+  integer,                private, parameter :: I_RnB_URB = 18
+  integer,                private, parameter :: I_RnG_URB = 19
+  integer,                private, parameter :: I_TRL_URB = 20
+  integer,                private, parameter :: I_TBL_URB = 21
+  integer,                private, parameter :: I_TGL_URB = 22
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -115,6 +117,7 @@ module mod_urban_vars
                   'TC_URB' ,  &
                   'QC_URB' ,  &
                   'UC_URB' ,  &
+                  'TS_URB' ,  &
                   'SHR_URB' , &
                   'SHB_URB' , &
                   'SHG_URB' , &
@@ -137,6 +140,7 @@ module mod_urban_vars
                   'Diagnostic canopy air temperature', &
                   'Diagnostic canopy humidity',        &
                   'Diagnostic canopy wind',            &
+                  'Diagnostic surface temperature',    &
                   'Sensible heat flux from roof',      &
                   'Sensible heat flux from wall',      &
                   'Sensible heat flux from road',      &
@@ -159,6 +163,7 @@ module mod_urban_vars
                   'K',    &
                   '-',    &
                   'm/s',  &
+                  'K',    &
                   'W/m2', &
                   'W/m2', &
                   'W/m2', &
@@ -208,12 +213,14 @@ contains
     allocate( TC_URB(IA,JA) )
     allocate( QC_URB(IA,JA) )
     allocate( UC_URB(IA,JA) )
+    allocate( TS_URB(IA,JA) )
     TR_URB (:,:) = UNDEF
     TB_URB (:,:) = UNDEF
     TG_URB (:,:) = UNDEF
     TC_URB (:,:) = UNDEF
     QC_URB (:,:) = UNDEF
     UC_URB (:,:) = UNDEF
+    TS_URB (:,:) = UNDEF
 
     allocate( SHR_URB(IA,JA) )
     allocate( SHB_URB(IA,JA) )
@@ -319,18 +326,19 @@ contains
     call COMM_vars8( TC_URB(:,:),  4+UKE*3 )
     call COMM_vars8( QC_URB(:,:),  5+UKE*3 )
     call COMM_vars8( UC_URB(:,:),  6+UKE*3 )
-    call COMM_vars8( SHR_URB(:,:), 7+UKE*3 )
-    call COMM_vars8( SHB_URB(:,:), 8+UKE*3 )
-    call COMM_vars8( SHG_URB(:,:), 9+UKE*3 )
-    call COMM_vars8( LHR_URB(:,:), 10+UKE*3 )
-    call COMM_vars8( LHB_URB(:,:), 11+UKE*3 )
-    call COMM_vars8( LHG_URB(:,:), 12+UKE*3 )
-    call COMM_vars8( GHR_URB(:,:), 13+UKE*3 )
-    call COMM_vars8( GHB_URB(:,:), 14+UKE*3 )
-    call COMM_vars8( GHG_URB(:,:), 15+UKE*3 )
-    call COMM_vars8( RnR_URB(:,:), 16+UKE*3 )
-    call COMM_vars8( RnB_URB(:,:), 17+UKE*3 )
-    call COMM_vars8( RnG_URB(:,:), 18+UKE*3 )
+    call COMM_vars8( TS_URB(:,:),  7+UKE*3 )
+    call COMM_vars8( SHR_URB(:,:), 8+UKE*3 )
+    call COMM_vars8( SHB_URB(:,:), 9+UKE*3 )
+    call COMM_vars8( SHG_URB(:,:), 10+UKE*3 )
+    call COMM_vars8( LHR_URB(:,:), 11+UKE*3 )
+    call COMM_vars8( LHB_URB(:,:), 12+UKE*3 )
+    call COMM_vars8( LHG_URB(:,:), 13+UKE*3 )
+    call COMM_vars8( GHR_URB(:,:), 14+UKE*3 )
+    call COMM_vars8( GHB_URB(:,:), 15+UKE*3 )
+    call COMM_vars8( GHG_URB(:,:), 16+UKE*3 )
+    call COMM_vars8( RnR_URB(:,:), 17+UKE*3 )
+    call COMM_vars8( RnB_URB(:,:), 18+UKE*3 )
+    call COMM_vars8( RnG_URB(:,:), 19+UKE*3 )
 
     do k = UKS, UKE
       call COMM_wait ( tmp1(:,:,k), k       )
@@ -344,18 +352,19 @@ contains
     call COMM_wait ( TC_URB(:,:),  4+UKE*3 )
     call COMM_wait ( QC_URB(:,:),  5+UKE*3 )
     call COMM_wait ( UC_URB(:,:),  6+UKE*3 )
-    call COMM_wait ( SHR_URB(:,:), 7+UKE*3 )
-    call COMM_wait ( SHB_URB(:,:), 8+UKE*3 )
-    call COMM_wait ( SHG_URB(:,:), 9+UKE*3 )
-    call COMM_wait ( LHR_URB(:,:), 10+UKE*3 )
-    call COMM_wait ( LHB_URB(:,:), 11+UKE*3 )
-    call COMM_wait ( LHG_URB(:,:), 12+UKE*3 )
-    call COMM_wait ( GHR_URB(:,:), 13+UKE*3 )
-    call COMM_wait ( GHB_URB(:,:), 14+UKE*3 )
-    call COMM_wait ( GHG_URB(:,:), 15+UKE*3 )
-    call COMM_wait ( RnR_URB(:,:), 16+UKE*3 )
-    call COMM_wait ( RnB_URB(:,:), 17+UKE*3 )
-    call COMM_wait ( RnG_URB(:,:), 18+UKE*3 )
+    call COMM_wait ( TS_URB(:,:),  7+UKE*3 )
+    call COMM_wait ( SHR_URB(:,:), 8+UKE*3 )
+    call COMM_wait ( SHB_URB(:,:), 9+UKE*3 )
+    call COMM_wait ( SHG_URB(:,:), 10+UKE*3 )
+    call COMM_wait ( LHR_URB(:,:), 11+UKE*3 )
+    call COMM_wait ( LHB_URB(:,:), 12+UKE*3 )
+    call COMM_wait ( LHG_URB(:,:), 13+UKE*3 )
+    call COMM_wait ( GHR_URB(:,:), 14+UKE*3 )
+    call COMM_wait ( GHB_URB(:,:), 15+UKE*3 )
+    call COMM_wait ( GHG_URB(:,:), 16+UKE*3 )
+    call COMM_wait ( RnR_URB(:,:), 17+UKE*3 )
+    call COMM_wait ( RnB_URB(:,:), 18+UKE*3 )
+    call COMM_wait ( RnG_URB(:,:), 19+UKE*3 )
 
     do k = UKS, UKE
       TRL_URB(k,:,:) = tmp1(:,:,k)
@@ -394,6 +403,8 @@ contains
                          URBAN_RESTART_IN_BASENAME, 'QC_URB', 'XY', step=1 ) ! [IN]
        call FILEIO_read( UC_URB(:,:),                                      & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, 'UC_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( TS_URB(:,:),                                      & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'TS_URB', 'XY', step=1 ) ! [IN]
 
        call FILEIO_read( TRL_URB(:,:,:),                                       & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, 'TRL_URB', 'Urban', step=1 ) ! [IN]
@@ -448,6 +459,8 @@ contains
                           VAR_NAME(I_QC_URB), VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( UC_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(I_UC_URB), VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TS_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TS_URB), VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
 
        call FILEIO_write( TRL_URB(:,:,:), basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(I_TRL_URB), VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
@@ -489,6 +502,7 @@ contains
     call HIST_in( TC_URB(:,:), 'TC_URB', VAR_DESC(I_TC_URB), VAR_UNIT(I_TC_URB), TIME_DTSEC_URBAN )
     call HIST_in( QC_URB(:,:), 'QC_URB', VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB), TIME_DTSEC_URBAN )
     call HIST_in( UC_URB(:,:), 'UC_URB', VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB), TIME_DTSEC_URBAN )
+    call HIST_in( TS_URB(:,:), 'TS_URB', VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB), TIME_DTSEC_URBAN )
 
     call HIST_in( SHR_URB(:,:), 'SHR_URB', VAR_DESC(I_SHR_URB), VAR_UNIT(I_SHR_URB), TIME_DTSEC_URBAN )
     call HIST_in( SHB_URB(:,:), 'SHB_URB', VAR_DESC(I_SHB_URB), VAR_UNIT(I_SHB_URB), TIME_DTSEC_URBAN )
@@ -529,6 +543,7 @@ contains
        call STAT_total( total, TC_URB(:,:), VAR_NAME(I_TC_URB) )
        call STAT_total( total, QC_URB(:,:), VAR_NAME(I_QC_URB) )
        call STAT_total( total, UC_URB(:,:), VAR_NAME(I_UC_URB) )
+       call STAT_total( total, TS_URB(:,:), VAR_NAME(I_TS_URB) )
        call STAT_total( total, SHR_URB(:,:), VAR_NAME(I_SHR_URB) )
        call STAT_total( total, SHB_URB(:,:), VAR_NAME(I_SHB_URB) )
        call STAT_total( total, SHG_URB(:,:), VAR_NAME(I_SHG_URB) )
@@ -551,5 +566,26 @@ contains
 
     return
   end subroutine URBAN_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  !subroutine URBAN_vars_external_in( &
+  !    ts_urb_in   )  ! (in)
+  !
+  !  implicit none
+  !
+  !  real(RP), intent(in) :: ust_in(:,:)
+  !
+  !  if( IO_L ) write(IO_FID_LOG,*)
+  !  if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
+  !
+  !  TS_URB(:,:) = ts_urb_in(:,:)
+  !
+  !  call URBAN_vars_fillhalo
+  !  
+  !  call URBAN_vars_total
+  !
+  !  return
+  !end subroutine URBAN_vars_external_in
 
 end module mod_urban_vars

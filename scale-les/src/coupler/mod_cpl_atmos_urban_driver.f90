@@ -82,6 +82,7 @@ contains
        TC_URB,  &
        QC_URB,  &
        UC_URB,  &
+       TS_URB,  &
        TRL_URB, &
        TGL_URB, &
        TBL_URB, &
@@ -181,6 +182,7 @@ contains
         TRL_URB(:,i,j), & ! (inout)
         TBL_URB(:,i,j), & ! (inout)
         TGL_URB(:,i,j), & ! (inout)
+        TS_URB  (i,j),  & ! (out)
         SHR_URB (i,j),  & ! (out)
         SHB_URB (i,j),  & ! (out)
         SHG_URB (i,j),  & ! (out)
