@@ -86,6 +86,7 @@ module mod_mkinit
      TC_URB,  &
      QC_URB,  &
      UC_URB,  &
+     TS_URB,  &
      TRL_URB, &
      TBL_URB, &
      TGL_URB
@@ -3616,7 +3617,7 @@ contains
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
     real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
-    real(RP) :: URB_CNPY_TMEP          ! Diagnostic canopy air temperature
+    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
     real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
     real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
     real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
@@ -3627,7 +3628,7 @@ contains
        URB_ROOF_TEMP,       &
        URB_BLDG_TEMP,       &
        URB_GRND_TEMP,       &
-       URB_CNPY_TMEP,       &
+       URB_CNPY_TEMP,       &
        URB_CNPY_HMDT,       &
        URB_CNPY_WIND,       &
        URB_ROOF_LAYER_TEMP, &
@@ -3644,7 +3645,7 @@ contains
     URB_ROOF_TEMP       = THETAstd
     URB_BLDG_TEMP       = THETAstd
     URB_GRND_TEMP       = THETAstd
-    URB_CNPY_TMEP       = THETAstd
+    URB_CNPY_TEMP       = THETAstd
     URB_ROOF_LAYER_TEMP = THETAstd
     URB_BLDG_LAYER_TEMP = THETAstd
     URB_GRND_LAYER_TEMP = THETAstd
@@ -3661,15 +3662,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
 
-    ! make ocean variables
+    ! make urban variables
     do j = JS, JE
     do i = IS, IE
       TR_URB (i,j)   = URB_ROOF_TEMP
       TB_URB (i,j)   = URB_BLDG_TEMP
       TG_URB (i,j)   = URB_GRND_TEMP
-      TC_URB (i,j)   = URB_CNPY_TMEP
+      TC_URB (i,j)   = URB_CNPY_TEMP
       QC_URB (i,j)   = URB_CNPY_HMDT
       UC_URB (i,j)   = URB_CNPY_WIND
+      TS_URB (i,j)   = URB_CNPY_TEMP
       TRL_URB(:,i,j) = URB_ROOF_LAYER_TEMP
       TBL_URB(:,i,j) = URB_BLDG_LAYER_TEMP
       TGL_URB(:,i,j) = URB_GRND_LAYER_TEMP

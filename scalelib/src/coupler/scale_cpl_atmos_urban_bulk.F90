@@ -96,7 +96,6 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
   real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
                                                      ! ( units converted in code to [cm] )
-
 contains
   !-----------------------------------------------------------------------------
   !
@@ -272,6 +271,7 @@ contains
         TRL,     & ! (inout)
         TBL,     & ! (inout)
         TGL,     & ! (inout)
+        TS,      & ! (out)
         SHR,     & ! (out)
         SHB,     & ! (out)
         SHG,     & ! (out)
@@ -284,7 +284,7 @@ contains
         RNR,     & ! (out)
         RNB,     & ! (out)
         RNG,     & ! (out)
-        TS,      & ! (out)
+        RTS,     & ! (out)
         SH,      & ! (out)
         LH,      & ! (out)
         G,       & ! (out)
@@ -364,19 +364,21 @@ contains
     real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
 
+    !-- Output variables from Urban to Coupler
+    real(RP), intent(out)   :: TS     ! Diagnostic surface temperature   [K]
+    real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
+    real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
+    real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
+    real(RP), intent(out)   :: G      ! heat flux into the ground        [W/m/m]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
 
-    !-- Output variables from Urban to Coupler
-    real(RP), intent(out) :: TS     ! surface temperature              [K]
-    real(RP), intent(out) :: SH     ! sensible heat flux               [W/m/m]
-    real(RP), intent(out) :: LH     ! latent heat flux                 [W/m/m]
-    real(RP), intent(out) :: G      ! heat flux into the ground        [W/m/m]
 
     !-- Local variables
-    real(RP) :: RTS    ! radiative surface temperature    [K]
+    real(RP) :: LUP, LDN, RUP, EMIS_grid
+
 
     logical  :: SHADOW = .false.
            ! [true=consider svf and shadow effects, false=consider svf effect
@@ -504,6 +506,8 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
+!    print *,SVF,VFGW,VFWG,VFWS,VFWW
+
     !--- Convert unit from MKS to cgs
 
     SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
@@ -520,11 +524,10 @@ contains
     TCP = TC
     QCP = QC
     TSP = TS
-
+ 
     !--- calculate canopy wind
 
     call canopy_wind(ZA, UA, UC)
-
 
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
@@ -657,29 +660,36 @@ contains
                         + EPSB * VFWW * SIG * TBP**4 / 60.0_RP &
                         - SIG * TBP**4 / 60.0_RP               )
 
-      RG2      = EPSG * ( (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWS * RX                                            &
-                        + (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWG * EPSG * SIG * TGP**4 /60.0_RP                  &
-                        + EPSB * (1.0_RP-EPSB) * (1.0_RP-SVF) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
+      RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
+                        + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TGP**4 /60.0_RP                  &
+                        + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TBP**4 / 60.0_RP )
+
+!      RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
+!                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
+!                        + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
+!!                       + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
+!                        + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
 
       RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
                         + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
-                        + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
-                        + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
-                        + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
+                        + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                            &
+                        + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TGP**4 / 60.0_RP                                 &
+                        + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
 
       RG       = RG1 + RG2
       RB       = RB1 + RB2
 
-      DRBDTB1  = EPSB * ( 4.0_RP * EPSB * SIG * TB**3 * VFWW - 4.0_RP * SIG * TB**3 ) / 60.0_RP
-      DRBDTG1  = EPSB * ( 4.0_RP * EPSG * SIG * TG**3 * VFWG ) / 60.0_RP
-      DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * SIG * TB**3 * VFGW * VFWG &
-                        + 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TB**3 * VFWW * VFWW ) / 60.0_RP
-      DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TG**3 * VFWG * VFWW ) / 60.0_RP
 
-      DRGDTB1  = EPSG * ( 4.0_RP * EPSB * SIG * TB**3 * VFGW ) / 60.0_RP
-      DRGDTG1  = EPSG * ( -4.0_RP * SIG * TG**3 ) / 60.0_RP
-      DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TB**3 * VFWW * VFGW ) / 60.0_RP
-      DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TG**3 * VFWG * VFGW ) / 60.0_RP
+      DRBDTB1  = EPSB * ( 4.0_RP * EPSB * SIG * TBP**3 * VFWW - 4.0_RP * SIG * TBP**3 ) / 60.0_RP
+      DRBDTG1  = EPSB * ( 4.0_RP * EPSG * SIG * TGP**3 * VFWG ) / 60.0_RP
+      DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * SIG * TBP**3 * VFGW * VFWG &
+                        + 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TBP**3 * VFWW * VFWW ) / 60.0_RP
+      DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TGP**3 * VFWG * VFWW ) / 60.0_RP
+
+      DRGDTB1  = EPSG * ( 4.0_RP * EPSB * SIG * TBP**3 * VFGW ) / 60.0_RP
+      DRGDTG1  = EPSG * ( -4.0_RP * SIG * TGP**3 ) / 60.0_RP
+      DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TBP**3 * VFWW * VFGW ) / 60.0_RP
+      DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TGP**3 * VFWG * VFGW ) / 60.0_RP
 
       DRBDTB   = DRBDTB1 + DRBDTB2
       DRBDTG   = DRBDTG1 + DRBDTG2
@@ -770,6 +780,40 @@ contains
     FLXG   = ( R*G0R + W*G0B + RW*G0G )
     LNET   = R*RR + W*RB + RW*RG
 
+!    print *,'SNET  ',SNET
+!    print *,'LNET  ',LNET
+!    print *,'FLXTH ',FLXTH*RHO*CP*100.0_RP
+!    print *,'FLXHUM',FLXHUM*RHO*EL*100.0
+!    print *,'FLXG  ',FLXG
+!    print *, SNET+LNET-FLXTH*RHO*CP*100.0_RP-FLXHUM*RHO*EL*100.0_RP-FLXG
+
+    !-----------------------------------------------------------    
+    ! Grid average
+    !-----------------------------------------------------------
+
+    LDN = R + W*VFWS + RW*VFGS
+
+    LUP =  R * (1.0_RP-EPSR) &
+         + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
+         + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
+
+    EMIS_grid = 1.0_RP - LUP / LDN
+
+!    print *,'LDN, LUP, EMISS',LDN,LUP,EMIS_grid
+
+
+    RUP = (LDN - LUP) * RX - LNET
+
+!
+!    RUP =  R * (EPSR * SIG * (TR**4) / 60.0_RP) &
+!          + W * (EPSB*SIG*(TB**4)/60.0_RP - EPSB*EPSG*VFWG*SIG*(TG**4)/60.0_RP - EPSB*EPSB*VFWW*SIG*(TB**4)/60.0_RP   &
+!                 - EPSB *(1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                                 &
+!                 - EPSB *(1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * (TG**4) / 60.0_RP                                 &
+!                 - EPSB * EPSB * (1.0_RP-EPSB) * VFWW * VFWW * SIG * (TB**4) / 60.0_RP )                              &
+!          + RW * (EPSG*SIG*(TG**4)/60.0_RP - EPSG * EPSB * VFGW * SIG * (TB**4) / 60.0_RP                             &
+!                 - EPSG * (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWG * EPSG * SIG * TG**4 /60.0_RP                           &
+!                 - EPSG * EPSB * (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWW * SIG * TB**4 / 60.0_RP )
+!
     !-----------------------------------------------------------
     ! Convert Unit: FLUXES and u* T* q*  [cgs] --> [MKS]
     !-----------------------------------------------------------
@@ -781,6 +825,8 @@ contains
 
     G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
+
+    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]  
 
     SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
     SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
@@ -821,7 +867,7 @@ contains
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( LW / STB / 0.90_RP )**0.25
+    RTS = ( RUP / STB / EMIS_grid )**0.25
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
