@@ -359,7 +359,7 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING INITIAL DATA ++++++'
     else
       if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
 
       !--- Initialize variables
       do iq = 2,  QA
@@ -446,9 +446,9 @@ contains
       ! output restart file
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
          if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
+      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart ) call URBAN_vars_restart_write
-      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( CPL_sw_restart   ) call CPL_vars_restart_write
     endif
 
@@ -3700,15 +3700,13 @@ contains
     ! surface state
     real(RP) :: SFC_THETA              ! surface potential temperature [K]
     real(RP) :: SFC_PRES               ! surface pressure [Pa]
-    real(RP) :: SFC_QV      =   0.0_RP ! surface specific humidity [kg/kg]
+    real(RP) :: SFC_RH      =   0.0_RP ! surface relative humidity [%]
     real(RP) :: SFC_PREC    =   0.0_RP ! surface precipitation rate [kg/m2/s]
     real(RP) :: SFC_SWD     =   0.0_RP ! surface downwad short-wave radiation [W/m2]
     real(RP) :: SFC_LWD     =   0.0_RP ! surface downwad long-wave radiation [W/m2]
     ! atmospheric state
     real(RP) :: ATM_THLAPS  =   0.0_RP ! Lapse rate of THETA [K/m]
-    real(RP) :: ATM_QVLAPS  =   0.0_RP ! Lapse rate of QV [kg/kg/m]
-    real(RP) :: ATM_QVMAX   =   0.0_RP ! maximum QV [kg/kg]
-    real(RP) :: ATM_QVMIN   =   0.0_RP ! minimum QV [kg/kg]
+    real(RP) :: ATM_RH      =   0.0_RP ! relative humidity [%]
     real(RP) :: ATM_U       =   0.0_RP ! velocity u [m/s]
     real(RP) :: ATM_V       =   0.0_RP ! velocity v [m/s]
     ! ocean state
@@ -3729,14 +3727,12 @@ contains
     NAMELIST / PARAM_MKINIT_SEABREEZE / &
        SFC_THETA,    &
        SFC_PRES,     &
-       SFC_QV,       &
+       SFC_RH,       &
        SFC_PREC,     &
        SFC_SWD,      &
        SFC_LWD,      &
        ATM_THLAPS,   &
-       ATM_QVLAPS,   &
-       ATM_QVMAX,    &
-       ATM_QVMIN,    &
+       ATM_RH,       &
        ATM_U,        &
        ATM_V,        &
        OCN_TEMP,     &
@@ -3782,21 +3778,41 @@ contains
     do i = IS, IE
        pott_sfc(1,i,j) = SFC_THETA
        pres_sfc(1,i,j) = SFC_PRES
-       qv_sfc  (1,i,j) = SFC_QV
+       qv_sfc  (1,i,j) = 0.0_RP
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
-          qv(k,i,j) = max( min( SFC_QV + ATM_QVLAPS * REAL_CZ(k,i,j), ATM_QVMAX ), ATM_QVMIN )
-          qc(k,i,j) = 0.0_RP
+          pott(k,i,j) = SFC_THETA + ATM_THLAPS * REAL_CZ(k,i,j)
+          qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
        enddo
     enddo
     enddo
 
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       pott(k,i,j) = SFC_THETA + ATM_THLAPS * REAL_CZ(k,i,j)
-    enddo
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
+
+       do k = KS, KE
+          qv(k,i,j) = ATM_RH * 1.E-2_RP * qsat(k,i,j)
+       enddo
     enddo
     enddo
 
