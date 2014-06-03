@@ -592,7 +592,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude of perihelion         [deg]: ', omega     / CONST_D2R
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** longitude at the vernal equinox [deg]: ', lambda_m0 / CONST_D2R
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** Latitude/Longitude is fixed? : ', ATMOS_SOLARINS_fixedlatlon
+    if( IO_L ) write(IO_FID_LOG,*)              '*** Latitude/Longitude is fixed? : ', ATMOS_SOLARINS_fixedlatlon
 
     return
   end subroutine ATMOS_SOLARINS_setup

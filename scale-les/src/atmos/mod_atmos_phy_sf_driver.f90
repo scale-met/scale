@@ -94,7 +94,7 @@ contains
        SFLX_LH  (:,:)   = 0.0_RP
        SFLX_QTRC(:,:,:) = 0.0_RP
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo, SFC_albedo_land is set in ATMOS_PHY_SF_vars.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
 

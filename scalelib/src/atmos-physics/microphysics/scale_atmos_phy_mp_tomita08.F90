@@ -443,7 +443,6 @@ contains
     real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
-    real(RP) :: FLX_tot (KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(tomita08)'
@@ -522,10 +521,6 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    FLX_tot(:,:,:) = FLX_rain(:,:,:) + FLX_snow(:,:,:)
-    call HIST_in( FLX_rain(KS-1,:,:), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
-    call HIST_in( FLX_snow(KS-1,:,:), 'SNOW', 'surface snow rate', 'kg/m2/s', dt)
-    call HIST_in( FLX_tot (KS-1,:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
     SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
 
