@@ -139,7 +139,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 39 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 48 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -169,27 +169,37 @@ module mod_atmos_vars
   integer, private, parameter :: I_DIV   = 21 ! divergence
   integer, private, parameter :: I_HDIV  = 22 ! horizontal divergence
 
-  integer, private, parameter :: I_ENGP  = 23 ! potential energy
-  integer, private, parameter :: I_ENGK  = 24 ! kinetic   energy
-  integer, private, parameter :: I_ENGI  = 25 ! internal  energy
-  integer, private, parameter :: I_ENGT  = 26 ! total     energy
+  integer, private, parameter :: I_DENS_PRIM = 23 ! prime term of density
+  integer, private, parameter :: I_W_PRIM    = 24 ! prime term of w
+  integer, private, parameter :: I_U_PRIM    = 25 ! prime term of u
+  integer, private, parameter :: I_V_PRIM    = 26 ! prime term of v
+  integer, private, parameter :: I_POTT_PRIM = 27 ! prime term of potential temperature
+  integer, private, parameter :: I_W_PRIM2   = 28 ! variance of w
+  integer, private, parameter :: I_PT_W_PRIM = 29 ! resolved scale heat flux
+  integer, private, parameter :: I_W_PRIM3   = 30 ! skewness of w
+  integer, private, parameter :: I_TKE_RS    = 31 ! resolved scale TKE
 
-  integer, private, parameter :: I_ENGSFC_SH = 27
-  integer, private, parameter :: I_ENGSFC_LH = 28
-  integer, private, parameter :: I_ENGSFC_RD = 29
-  integer, private, parameter :: I_ENGTOA_RD = 30
+  integer, private, parameter :: I_ENGP  = 32 ! potential energy
+  integer, private, parameter :: I_ENGK  = 33 ! kinetic   energy
+  integer, private, parameter :: I_ENGI  = 34 ! internal  energy
+  integer, private, parameter :: I_ENGT  = 35 ! total     energy
 
-  integer, private, parameter :: I_ENGSFC_LW_up = 31
-  integer, private, parameter :: I_ENGSFC_LW_dn = 32
-  integer, private, parameter :: I_ENGSFC_SW_up = 33
-  integer, private, parameter :: I_ENGSFC_SW_dn = 34
+  integer, private, parameter :: I_ENGSFC_SH = 36
+  integer, private, parameter :: I_ENGSFC_LH = 37
+  integer, private, parameter :: I_ENGSFC_RD = 38
+  integer, private, parameter :: I_ENGTOA_RD = 39
 
-  integer, private, parameter :: I_ENGTOA_LW_up = 35
-  integer, private, parameter :: I_ENGTOA_LW_dn = 36
-  integer, private, parameter :: I_ENGTOA_SW_up = 37
-  integer, private, parameter :: I_ENGTOA_SW_dn = 38
+  integer, private, parameter :: I_ENGSFC_LW_up = 40
+  integer, private, parameter :: I_ENGSFC_LW_dn = 41
+  integer, private, parameter :: I_ENGSFC_SW_up = 42
+  integer, private, parameter :: I_ENGSFC_SW_dn = 43
 
-  integer, private, parameter :: I_ENGFLXT      = 39
+  integer, private, parameter :: I_ENGTOA_LW_up = 44
+  integer, private, parameter :: I_ENGTOA_LW_dn = 45
+  integer, private, parameter :: I_ENGTOA_SW_up = 46
+  integer, private, parameter :: I_ENGTOA_SW_dn = 47
+
+  integer, private, parameter :: I_ENGFLXT      = 48
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -397,6 +407,16 @@ contains
     call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
 
+    call HIST_reg( AD_HIST_id(I_DENS_PRIM), zinterp, 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM   ), zinterp, 'W_PRIM',    'horiz. deviation of w',          'm/s',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_U_PRIM   ), zinterp, 'U_PRIM',    'horiz. deviation of u',          'm/s',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_V_PRIM   ), zinterp, 'V_PRIM',    'horiz. deviation of v',          'm/s',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_POTT_PRIM), zinterp, 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',     ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM2  ), zinterp, 'W_PRIM2',   'variance of w',                  'm2/s2', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_PT_W_PRIM), zinterp, 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',   ndim=3 )
+    call HIST_reg( AD_HIST_id(I_W_PRIM3  ), zinterp, 'W_PRIM3',   'skewness of w',                  'm3/s3', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_TKE_RS   ), zinterp, 'TKE_RS',    'resolved scale TKE',             'm2/s2', ndim=3 )
+
     call HIST_reg( AD_HIST_id(I_ENGT) , zinterp, 'ENGT',  'total energy',           'J/m3',   ndim=3 )
     call HIST_reg( AD_HIST_id(I_ENGP) , zinterp, 'ENGP',  'potential energy',       'J/m3',   ndim=3 )
     call HIST_reg( AD_HIST_id(I_ENGK) , zinterp, 'ENGK',  'kinetic energy',         'J/m3',   ndim=3 )
@@ -512,6 +532,61 @@ contains
 
     if ( AD_HIST_id (I_VOR) > 0 ) then
        AD_PREP_sw(I_VOR) = 1
+    endif
+
+    if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
+       AD_PREP_sw(I_DENS)      = 1
+       AD_PREP_sw(I_DENS_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_W_PRIM) > 0 ) then
+       AD_PREP_sw(I_W)      = 1
+       AD_PREP_sw(I_W_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_U_PRIM) > 0 ) then
+       AD_PREP_sw(I_U)      = 1
+       AD_PREP_sw(I_U_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_V_PRIM) > 0 ) then
+       AD_PREP_sw(I_V)      = 1
+       AD_PREP_sw(I_V_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
+       AD_PREP_sw(I_POTT)      = 1
+       AD_PREP_sw(I_POTT_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
+       AD_PREP_sw(I_W)       = 1
+       AD_PREP_sw(I_W_PRIM)  = 1
+       AD_PREP_sw(I_W_PRIM2) = 1
+    endif
+
+    if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
+       AD_PREP_sw(I_W)         = 1
+       AD_PREP_sw(I_W_PRIM)    = 1
+       AD_PREP_sw(I_POTT)      = 1
+       AD_PREP_sw(I_POTT_PRIM) = 1
+       AD_PREP_sw(I_PT_W_PRIM) = 1
+    endif
+
+    if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
+       AD_PREP_sw(I_W)       = 1
+       AD_PREP_sw(I_W_PRIM)  = 1
+       AD_PREP_sw(I_W_PRIM3) = 1
+    endif
+
+    if ( AD_HIST_id(I_TKE_RS) > 0 ) then
+       AD_PREP_sw(I_W)      = 1
+       AD_PREP_sw(I_U)      = 1
+       AD_PREP_sw(I_V)      = 1
+       AD_PREP_sw(I_W_PRIM) = 1
+       AD_PREP_sw(I_U_PRIM) = 1
+       AD_PREP_sw(I_V_PRIM) = 1
+       AD_PREP_sw(I_TKE_RS) = 1
     endif
 
     if (      AD_HIST_id (I_ENGP) > 0 &
@@ -940,6 +1015,8 @@ contains
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_FZ
+    use scale_comm, only: &
+       COMM_horizontal_mean
     use scale_history, only: &
        HIST_in
     use scale_atmos_thermodyn, only: &
@@ -974,6 +1051,16 @@ contains
     real(RP) :: DIV   (KA,IA,JA) ! divergence            [1/s]
     real(RP) :: HDIV  (KA,IA,JA) ! horizontal divergence [1/s]
 
+    real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
+    real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
+    real(RP) :: U_PRIM   (KA,IA,JA) ! horiz. deviation of u          [m/s]
+    real(RP) :: V_PRIM   (KA,IA,JA) ! horiz. deviation of v          [m/s]
+    real(RP) :: POTT_PRIM(KA,IA,JA) ! horiz. deviation of pot. temp. [K]
+    real(RP) :: W_PRIM2  (KA,IA,JA) ! variance of w                  [m2/s2]
+    real(RP) :: PT_W_PRIM(KA,IA,JA) ! resolved scale heat flux       [W/s]
+    real(RP) :: W_PRIM3  (KA,IA,JA) ! skewness of w                  [m3/s3]
+    real(RP) :: TKE_RS   (KA,IA,JA) ! resolved scale TKE             [m2/s2]
+
     real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
     real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
@@ -983,6 +1070,8 @@ contains
     real(RP) :: QSAT  (KA,IA,JA)
     real(RP) :: UH    (KA,IA,JA)
     real(RP) :: VH    (KA,IA,JA)
+
+    real(RP) :: mean1d(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1296,6 +1385,103 @@ contains
        enddo
     endif
 
+    if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
+       call COMM_horizontal_mean( mean1d(:), DENS(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          DENS_PRIM(k,i,j) = DENS(k,i,j) - mean1d(k)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
+       call COMM_horizontal_mean( mean1d(:), W(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          W_PRIM(k,i,j) = W(k,i,j) - mean1d(k)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
+       call COMM_horizontal_mean( mean1d(:), U(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          U_PRIM(k,i,j) = U(k,i,j) - mean1d(k)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
+       call COMM_horizontal_mean( mean1d(:), V(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          V_PRIM(k,i,j) = V(k,i,j) - mean1d(k)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
+       call COMM_horizontal_mean( mean1d(:), POTT(:,:,:) )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTT_PRIM(k,i,j) = POTT(k,i,j) - mean1d(k)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          W_PRIM2(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_PT_W_PRIM) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * POTT_PRIM(k,i,j) * DENS(k,i,j) * CPdry
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_W_PRIM3) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          W_PRIM3(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j) * W_PRIM(k,i,j)
+       enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_TKE_RS) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TKE_RS(k,i,j) = 0.5_RP * ( W_PRIM(k,i,j) * W_PRIM(k,i,j) &
+                                   + U_PRIM(k,i,j) * U_PRIM(k,i,j) &
+                                   + V_PRIM(k,i,j) * V_PRIM(k,i,j) )
+       enddo
+       enddo
+       enddo
+    endif
+
     if ( AD_PREP_sw(I_ENGP) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -1381,6 +1567,16 @@ contains
     call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s',    TIME_DTSEC )
     call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s',    TIME_DTSEC )
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s',    TIME_DTSEC )
+
+    call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', TIME_DTSEC )
+    call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s',   TIME_DTSEC )
+    call HIST_in( U_PRIM   (:,:,:), 'U_PRIM',    'horiz. deviation of u',          'm/s',   TIME_DTSEC )
+    call HIST_in( V_PRIM   (:,:,:), 'V_PRIM',    'horiz. deviation of v',          'm/s',   TIME_DTSEC )
+    call HIST_in( POTT_PRIM(:,:,:), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',     TIME_DTSEC )
+    call HIST_in( W_PRIM2  (:,:,:), 'W_PRIM2',   'variance of w',                  'm2/s2', TIME_DTSEC )
+    call HIST_in( PT_W_PRIM(:,:,:), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',   TIME_DTSEC )
+    call HIST_in( W_PRIM3  (:,:,:), 'W_PRIM3',   'skewness of w',                  'm3/s3', TIME_DTSEC )
+    call HIST_in( TKE_RS   (:,:,:), 'TKE_RS',    'resolved scale TKE',             'm2/s2', TIME_DTSEC )
 
     call HIST_in( ENGT (:,:,:), 'ENGT',  'total energy',           'J/m3',   TIME_DTSEC )
     call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3',   TIME_DTSEC )
