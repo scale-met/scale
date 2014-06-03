@@ -53,12 +53,17 @@ module mod_mkinit
      COMM_vars8, &
      COMM_wait
   use scale_grid, only: &
-     CZ => GRID_CZ, &
-     CX => GRID_CX, &
-     CY => GRID_CY
+     CZ  => GRID_CZ,  &
+     CX  => GRID_CX,  &
+     CY  => GRID_CY,  &
+     CXG => GRID_CXG, &
+     CYG => GRID_CYG
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
+  use scale_landuse, only: &
+     LANDUSE_frac_land,  &
+     LANDUSE_frac_urban
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -331,6 +336,8 @@ contains
   subroutine MKINIT
     use scale_const, only: &
        CONST_UNDEF8
+    use scale_landuse, only: &
+       LANDUSE_write
     use mod_atmos_vars, only: &
        ATMOS_sw_restart,    &
        ATMOS_vars_restart_write
@@ -442,6 +449,9 @@ contains
       endselect
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      ! output boundary file
+      call LANDUSE_write
 
       ! output restart file
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
@@ -3695,6 +3705,9 @@ contains
     use scale_const, only: &
       I_SW => CONST_I_SW, &
       I_LW => CONST_I_LW
+    use scale_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
     implicit none
 
     ! surface state
@@ -3747,6 +3760,9 @@ contains
        CPL_ALBG_LW,  &
        CPL_Z0W
 
+    real(RP) :: dist
+
+    integer :: IAG
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -3868,6 +3884,24 @@ contains
        ALBG (i,j,I_LW) = CPL_ALBG_LW
        Z0W  (i,j)      = CPL_Z0W
        SkinT(i,j)      = CPL_TEMP
+    enddo
+    enddo
+
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+
+    ! quartor size of domain
+    dist = ( CXG(IAG-IHALO) - CXG(1+IHALO) ) / 8.0_RP
+
+    ! make landuse conditions
+    do j = JS, JE
+    do i = IS, IE
+       if( CX(i) >= dist*3.0_RP .and.  &
+           CX(i) <= dist*5.0_RP ) then
+          LANDUSE_frac_land(i,j) = 1.0_RP
+       else
+          LANDUSE_frac_land(i,j) = 0.0_RP
+       end if
     enddo
     enddo
 
