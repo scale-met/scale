@@ -46,13 +46,13 @@ module mod_land_vars
 
   ! prognostic variables
   real(RP), public, allocatable :: TG  (:,:,:) ! soil temperature [K]
-  real(RP), public, allocatable :: STRG(:,:,:) ! soil water [kg/m2]
+  real(RP), public, allocatable :: STRG(:,:,:) ! soil water [m3/m3]
 
   real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
 
   integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
-  integer,  public, parameter   :: I_STRGMAX          = 1 ! maximum  water storage [kg/m2]
-  integer,  public, parameter   :: I_STRGCRT          = 2 ! critical water storage [kg/m2]
+  integer,  public, parameter   :: I_STRGMAX          = 1 ! maximum  soil water [m3/m3]
+  integer,  public, parameter   :: I_STRGCRT          = 2 ! critical soil water [m3/m3]
   integer,  public, parameter   :: I_TCS              = 3 ! thermal conductivity for soil [W/m/K]
   integer,  public, parameter   :: I_HCS              = 4 ! heat capacity        for soil [J/K]
   integer,  public, parameter   :: I_DFW              = 5 ! diffusive coefficient of soil water [m2/s]
@@ -78,21 +78,20 @@ module mod_land_vars
 
   logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX   = 4     !< number of the variables
+  integer,                private, parameter :: VMAX   = 2     !< number of the variables
   integer,                private, parameter :: I_TG   = 1
   integer,                private, parameter :: I_STRG = 2
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
- !< unit  of the land variables
 
   data VAR_NAME / 'TG',   &
                   'STRG'  /
   data VAR_DESC / 'soil temperature', &
                   'soil water'        /
   data VAR_UNIT / 'K',     &
-                  'kg/m2'  /
+                  'm3/m3'  /
 
   integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
 

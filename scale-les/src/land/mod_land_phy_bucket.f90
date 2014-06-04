@@ -159,7 +159,7 @@ contains
       end do
 
       iv(:)     = STRG(LKS:LKE-1,i,j)
-      iv(LKS)   = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt
+      iv(LKS)   = STRG(LKS,i,j) + ( PRECFLX(i,j) + QVFLX(i,j) ) * dt / dz(LKS) / DWATR
       iv(LKE-1) = STRG(LKE-1,i,j) - ud(LKE-1) * STRG(LKE,i,j)
 
       call solve_tridiagonal_matrix( &
@@ -178,7 +178,7 @@ contains
       do k = LKS, LKE
         if( STRG(k,i,j) > P(i,j,I_STRGMAX) ) then
           ! update vertically integral run-off water
-          ROFF(i,j)   = ROFF(i,j) + STRG(k,i,j) - P(i,j,I_STRGMAX)
+          ROFF(i,j)   = ROFF(i,j) + ( STRG(k,i,j) - P(i,j,I_STRGMAX) ) * dz(k) * DWATR
           STRG(k,i,j) = P(i,j,I_STRGMAX)
         end if
       end do
@@ -190,20 +190,17 @@ contains
 
       do k = LKS+1, LKE-1
         ld(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
-                + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(k,i,j) * DWATR * CL )
       end do
       do k = LKS, LKE-1
         ud(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
-              / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(k) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
-                + STRG(k,i,j) / dz(k) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
+              / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(k,i,j) * DWATR * CL )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
       iv(:)     = TG(LKS:LKE-1,i,j)
       iv(LKS)   = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
-                / ( ( 1.0_RP - P(i,j,I_STRGMAX) / dz(LKS) * 1.0E-3_RP ) * P(i,j,I_HCS) & ! heat capacity for soil
-                  + STRG(LKS,i,j) / dz(LKS) * 1.0E-3_RP * DWATR * CL ) ! heat capacity for water
+                / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(LKS,i,j) * DWATR * CL ) 
       iv(LKE-1) = TG(LKE-1,i,j) - ud(LKE-1) * TG(LKE,i,j)
 
       call solve_tridiagonal_matrix( &
@@ -244,11 +241,11 @@ contains
     real(RP) :: dz_h(IA,JA)
     !---------------------------------------------------------------------------
 
+    call LAND_vars_fillhalo
+
     ! update moisture efficiency
     QVEF(:,:) = min( STRG(LKS,:,:)/P(:,:,I_STRGCRT), BETA_MAX )
     dz_h(:,:) = dz(LKS)
-
-    call LAND_vars_fillhalo
 
     call CPL_putLnd( TG  (LKS,:,:),    & ! [IN]
                      QVEF(:,:),        & ! [IN]
