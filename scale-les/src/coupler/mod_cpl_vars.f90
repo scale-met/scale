@@ -68,8 +68,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: Atm_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: Atm_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: Atm_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: Atm_LHFLX (:,:) ! latent heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: Atm_SHFLX (:,:) ! sensible heat flux [W/m2]
+  real(RP), public, allocatable :: Atm_LHFLX (:,:) ! latent heat flux [W/m2]
   real(RP), public, allocatable :: Atm_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
   real(RP), public, allocatable :: Atm_U10   (:,:) ! velocity u at 10m [m/s]
   real(RP), public, allocatable :: Atm_V10   (:,:) ! velocity v at 10m [m/s]
@@ -95,8 +95,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_AtmOcn_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmOcn_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmOcn_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmOcn_SHFLX (:,:) ! sensible heat flux [W/m2]
+  real(RP), public, allocatable :: CPL_AtmOcn_LHFLX (:,:) ! latent   heat flux [W/m2]
   real(RP), public, allocatable :: CPL_AtmOcn_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmOcn_U10   (:,:) ! velocity u at 10m [m/s]
   real(RP), public, allocatable :: CPL_AtmOcn_V10   (:,:) ! velocity v at 10m [m/s]
@@ -107,8 +107,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_AtmLnd_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmLnd_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmLnd_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmLnd_SHFLX (:,:) ! sensible heat flux [W/m2]
+  real(RP), public, allocatable :: CPL_AtmLnd_LHFLX (:,:) ! latent   heat flux [W/m2]
   real(RP), public, allocatable :: CPL_AtmLnd_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmLnd_U10   (:,:) ! velocity u at 10m [m/s]
   real(RP), public, allocatable :: CPL_AtmLnd_V10   (:,:) ! velocity v at 10m [m/s]
@@ -119,8 +119,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_AtmUrb_XMFLX (:,:) ! x-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmUrb_YMFLX (:,:) ! y-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmUrb_ZMFLX (:,:) ! z-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_AtmUrb_SHFLX (:,:) ! sensible heat flux [W/m2]
+  real(RP), public, allocatable :: CPL_AtmUrb_LHFLX (:,:) ! latent   heat flux [W/m2]
   real(RP), public, allocatable :: CPL_AtmUrb_QVFLX (:,:) ! moisture flux for atmosphere [kg/m2/s]
   real(RP), public, allocatable :: CPL_AtmUrb_U10   (:,:) ! velocity u at 10m [m/s]
   real(RP), public, allocatable :: CPL_AtmUrb_V10   (:,:) ! velocity v at 10m [m/s]
@@ -137,8 +137,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_QVA (:,:) ! ratio of mass of tracer to total mass at the lowest atmospheric layer [kg/kg]
   real(RP), public, allocatable :: CPL_PRSS(:,:) ! pressure at the surface [Pa]
   real(RP), public, allocatable :: CPL_PREC(:,:) ! surface precipitation rate [kg/m2/s]
-  real(RP), public, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux (upward positive) [W/m2]
-  real(RP), public, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux (upward positive) [W/m2]
+  real(RP), public, allocatable :: CPL_SWD (:,:) ! downward short-wave radiation flux [W/m2]
+  real(RP), public, allocatable :: CPL_LWD (:,:) ! downward long-wave radiation flux [W/m2]
 
   ! Ocean values
   real(RP), public, allocatable :: CPL_TW  (:,:) ! water temperature [K]
@@ -821,8 +821,9 @@ contains
     CPL_PRSS(:,:) = pSFC_PRES  (:,:)
     CPL_LWD (:,:) = pSFLX_LW_dn(:,:)
     CPL_SWD (:,:) = pSFLX_SW_dn(:,:)
-    CPL_PREC(:,:) = pSFLX_rain (:,:) &
-                  + pSFLX_snow (:,:)
+!    CPL_PREC(:,:) = pSFLX_rain (:,:) &
+!                  + pSFLX_snow (:,:)
+    CPL_PREC(:,:) = 0.0_RP ! tentative
 
     return
   end subroutine CPL_putAtm
