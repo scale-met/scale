@@ -118,7 +118,7 @@ OBJS = $(scale_rdma)	\
 	scale_prof.o	\
 	scale_random.o	\
 	scale_specfunc.o	\
-	scale_statistics.o	\
+	scale_stats.o	\
 	scale_stdio.o	\
 	scale_time.o	\
 	scale_topography.o	\
