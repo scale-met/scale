@@ -509,6 +509,7 @@ contains
        do i = IIS-1, IIE+1
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_XY(KS,i,j) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
        call CHECK( __LINE__, RCDZ(KS) )
 #endif
           S33_C(KS,i,j) = VELZ_XY(KS,i,j) * RCDZ(KS) & ! VELZ_XY(KS-1,i,j) == 0
@@ -523,21 +524,62 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_C(k,i+1,j) )
        call CHECK( __LINE__, VELZ_C(k,i-1,j) )
+       call CHECK( __LINE__, GSQRT(k,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(k,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(k,i,j) )
+       call CHECK( __LINE__, VELZ_XY(k-1,i,j) )
+       call CHECK( __LINE__, J13G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J13G(k-1,i,j,I_XYW) )
        call CHECK( __LINE__, FDX(i) )
        call CHECK( __LINE__, FDX(i-1) )
 #endif
           S31_C(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i+1,j,I_XYZ)*VELZ_C(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*VELZ_C(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
-               - ( J13G(k,i,j,I_XYW)*VELZ_XY(k,i,j) - J13G(k-1,i,j,I_XYW)*VELZ_XY(k-1,i,j) ) * RCDZ(k) &
+               + ( J13G(k,i,j,I_XYW)*VELZ_XY(k,i,j) - J13G(k-1,i,j,I_XYW)*VELZ_XY(k-1,i,j) ) * RCDZ(k) &
                )
 
        enddo
        enddo
        enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, VELZ_C(KS,i+1,j) )
+       call CHECK( __LINE__, VELZ_C(KS,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KS,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(KS,i,j) )
+       call CHECK( __LINE__, J13G(KS,i,j,I_XYW) )
+       call CHECK( __LINE__, VELZ_C(KE,i+1,j) )
+       call CHECK( __LINE__, VELZ_C(KE,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KE,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(KE,i,j) )
+       call CHECK( __LINE__, J13G(KE,i,j,I_XYW) )
+       call CHECK( __LINE__, FDX(i) )
+       call CHECK( __LINE__, FDX(i-1) )
+#endif
+          S31_C(KS,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KS,i+1,j,I_XYZ)*VELZ_C(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ)*VELZ_C(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
+               + ( J13G(KS,i,j,I_XYW)*VELZ_XY(KS,i,j) ) * RCDZ(KS) &
+               )
+          S31_C(KE,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KE,i+1,j,I_XYZ)*VELZ_C(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ)*VELZ_C(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
+               - ( J13G(KE-1,i,j,I_XYW)*VELZ_XY(KE-1,i,j) ) * RCDZ(KE) &
+               )
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+
        ! (y edge, u,y,w)
        do j = JJS  , JJE
        do i = IIS-1, IIE
@@ -562,10 +604,16 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELZ_C(k,i,j+1) )
        call CHECK( __LINE__, VELZ_C(k,i,j-1) )
+       call CHECK( __LINE__, GSQRT(k,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(k,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(k,i,j) )
+       call CHECK( __LINE__, VELZ_XY(k-1,i,j) )
+       call CHECK( __LINE__, J23G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J23G(k-1,i,j,I_XYW) )
        call CHECK( __LINE__, FDY(j) )
        call CHECK( __LINE__, FDY(j-1) )
 #endif
@@ -579,6 +627,38 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, VELZ_C(KS,i,j+1) )
+       call CHECK( __LINE__, VELZ_C(KS,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KS,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(KS,i,j) )
+       call CHECK( __LINE__, J23G(KS,i,j,I_XYW) )
+       call CHECK( __LINE__, VELZ_C(KE,i,j+1) )
+       call CHECK( __LINE__, VELZ_C(KE,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KE,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, VELZ_XY(KE,i,j) )
+       call CHECK( __LINE__, J23G(KE,i,j,I_XYW) )
+       call CHECK( __LINE__, FDY(j) )
+       call CHECK( __LINE__, FDY(j-1) )
+#endif
+          S23_C(KS,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KS,i,j+1,I_XYZ)*VELZ_C(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ)*VELZ_C(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
+               + ( J23G(KS,i,j,I_XYW)*VELZ_XY(KS,i,j) ) * RCDZ(KS) &
+               )
+          S23_C(KE,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KE,i,j+1,I_XYZ)*VELZ_C(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ)*VELZ_C(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
+               - ( J23G(KE-1,i,j,I_XYW)*VELZ_XY(KE-1,i,j) ) * RCDZ(KE) &
+               )
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+
        ! (x edge; x,v,w)
        do j = JJS-1, JJE
        do i = IIS  , IIE
@@ -665,17 +745,60 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELX_YZ(k,i,j) )
        call CHECK( __LINE__, VELX_YZ(k,i-1,j) )
+       call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
+       call CHECK( __LINE__, GSQRT(k,i-1,j,I_UYZ) )
+       call CHECK( __LINE__, WORK_Z(k,i,j) )
+       call CHECK( __LINE__, WORK_Z(k-1,i,j) )
+       call CHECK( __LINE__, J13G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J13G(k-1,i,j,I_XYW) )
+       call CHECK( __LINE__, GSQRT(k,i,j,I_XYZ) )
        call CHECK( __LINE__, RCDX(i) )
 #endif
           S11_C(k,i,j) = ( &
                  ( GSQRT(k,i,j,I_UYZ)*VELX_YZ(k,i,j) - GSQRT(k,i-1,j,I_UYZ)*VELX_YZ(k,i-1,j) ) * RCDX(i) &
-               + ( J13G(k+1,i,j,I_XYW)*WORK_Z(k+1,i,j) - J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) ) * RFDZ(k) &
+               + ( J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J13G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
                ) / GSQRT(k,i,j,I_XYZ)
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, VELX_YZ(KS,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KS,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_UYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i-1,j,I_UYZ) )
+       call CHECK( __LINE__, VELX_C(KS+1,i,j) )
+       call CHECK( __LINE__, VELX_C(KS,i,j) )
+       call CHECK( __LINE__, J13G(KS+1,i,j,I_XYZ) )
+       call CHECK( __LINE__, J13G(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, VELX_YZ(KE,i,j) )
+       call CHECK( __LINE__, VELX_YZ(KE,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KE,i,j,I_UYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i-1,j,I_UYZ) )
+       call CHECK( __LINE__, VELX_C(KE,i,j) )
+       call CHECK( __LINE__, VELX_C(KE-1,i,j) )
+       call CHECK( __LINE__, J13G(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, J13G(KE-1,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, RCDX(i) )
+#endif
+          S11_C(KS,i,j) = ( &
+                 ( GSQRT(KS,i,j,I_UYZ)*VELX_YZ(KS,i,j) - GSQRT(KS,i-1,j,I_UYZ)*VELX_YZ(KS,i-1,j) ) * RCDX(i) &
+               + ( J13G(KS+1,i,j,I_XYZ)*VELX_C(KS+1,i,j) - J13G(KS,i,j,I_XYZ)*VELX_C(KS,i,j) ) * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XYZ)
+          S11_C(KE,i,j) = ( &
+                 ( GSQRT(KE,i,j,I_UYZ)*VELX_YZ(KE,i,j) - GSQRT(KE,i-1,j,I_UYZ)*VELX_YZ(KE,i-1,j) ) * RCDX(i) &
+               + ( J13G(KE,i,j,I_XYZ)*VELX_C(KE,i,j) - J13G(KE-1,i,j,I_XYZ)*VELX_C(KE-1,i,j) ) * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -710,23 +833,14 @@ contains
        call CHECK( __LINE__, VELX_C(KS+1,i,j) )
        call CHECK( __LINE__, VELX_C(KS,i,j) )
        call CHECK( __LINE__, RFDZ(KS) )
-#endif
-          S31_C(KS,i,j) = ( S31_C(KS,i,j) &
-               + 0.5_RP * ( VELX_C(KS+1,i,j) - VELX_C(KS,i,j) ) * J33G * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XYZ)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
        call CHECK( __LINE__, S31_C(KE,i,j) )
        call CHECK( __LINE__, VELX_C(KE,i,j) )
        call CHECK( __LINE__, VELX_C(KE-1,i,j) )
        call CHECK( __LINE__, RFDZ(KE-1) )
 #endif
+          S31_C(KS,i,j) = ( S31_C(KS,i,j) &
+               + 0.5_RP * ( VELX_C(KS+1,i,j) - VELX_C(KS,i,j) ) * J33G * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XYZ)
           S31_C(KE,i,j) = ( S31_C(KE,i,j) &
                + 0.5_RP * ( VELX_C(KE,i,j) - VELX_C(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
                ) / GSQRT(KE,i,j,I_XYZ)
@@ -759,16 +873,20 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELX_C(k,i,j+1) )
        call CHECK( __LINE__, VELX_C(k,i,j-1) )
-       call CHECK( __LINE__, FDY(j) )
-       call CHECK( __LINE__, FDY(j-1) )
+       call CHECK( __LINE__, GSQRT(k,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(k,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, WORK_Z(k,i,j) )
+       call CHECK( __LINE__, WORK_Z(k-1,i,j) )
+       call CHECK( __LINE__, J23G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J23G(k-1,i,j,I_XYW) )
 #endif
           S12_C(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i,j+1,I_XYZ)*VELX_C(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ)*VELX_C(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
-               + ( J23G(k+1,i,j,I_XYW)*WORK_Z(k+1,i,j) - J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) ) * RCDZ(k) &
+               + ( J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J23G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
                ) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
@@ -776,6 +894,44 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, VELX_C(KS,i,j+1) )
+       call CHECK( __LINE__, VELX_C(KS,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KS,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, VELX_C(KS+1,i,j) )
+       call CHECK( __LINE__, VELX_C(KS,i,j) )
+       call CHECK( __LINE__, J23G(KS+1,i,j,I_XYZ) )
+       call CHECK( __LINE__, J23G(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, VELX_C(KE,i,j+1) )
+       call CHECK( __LINE__, VELX_C(KE,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KE,i,j+1,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j-1,I_XYZ) )
+       call CHECK( __LINE__, VELX_C(KE,i,j) )
+       call CHECK( __LINE__, VELX_C(KE-1,i,j) )
+       call CHECK( __LINE__, J23G(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, J23G(KE-1,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, FDY(j) )
+       call CHECK( __LINE__, FDY(j-1) )
+#endif
+          S12_C(KS,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KS,i,j+1,I_XYZ)*VELX_C(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ)*VELX_C(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
+               + ( J23G(KS+1,i,j,I_XYZ)*VELX_C(KS+1,i,j) - J23G(KS,i,j,I_XYZ)*VELX_C(KS,i,j) ) * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XYZ)
+          S12_C(KE,i,j) = 0.5_RP * ( &
+                 ( GSQRT(KE,i,j+1,I_XYZ)*VELX_C(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ)*VELX_C(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
+               + ( J23G(KE,i,j,I_XYZ)*VELX_C(KE,i,j) - J23G(KE-1,i,j,I_XYZ)*VELX_C(KE-1,i,j) ) * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_XYZ)
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+
        ! (z edge; u,v,z)
        do j = JJS-1, JJE
        do i = IIS-1, IIE
@@ -891,17 +1047,57 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, VELY_ZX(k,i,j) )
        call CHECK( __LINE__, VELY_ZX(k,i,j-1) )
+       call CHECK( __LINE__, GSQRT(k,i,j,I_XVZ) )
+       call CHECK( __LINE__, GSQRT(k,i,j-1,I_XVZ) )
+       call CHECK( __LINE__, WORK_Z(k,i,j) )
+       call CHECK( __LINE__, WORK_Z(k-1,i,j) )
+       call CHECK( __LINE__, J23G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J23G(k-1,i,j,I_XYW) )
        call CHECK( __LINE__, RCDY(j) )
 #endif
           S22_C(k,i,j) = ( &
                  ( GSQRT(k,i,j,I_XVZ)*VELY_ZX(k,i,j) - GSQRT(k,i,j-1,I_XVZ)*VELY_ZX(k,i,j-1) ) * RCDY(j) &
-               + ( J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J23G(k,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
+               + ( J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J23G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
                ) / GSQRT(k,i,j,I_XYZ)
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, VELY_ZX(KS,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KS,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_XVZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j-1,I_XVZ) )
+       call CHECK( __LINE__, VELY_C(KS+1,i,j) )
+       call CHECK( __LINE__, VELY_C(KS,i,j) )
+       call CHECK( __LINE__, J23G(KS+1,i,j,I_XYZ) )
+       call CHECK( __LINE__, J23G(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, RCDY(j) )
+       call CHECK( __LINE__, VELY_ZX(KE,i,j) )
+       call CHECK( __LINE__, VELY_ZX(KE,i,j-1) )
+       call CHECK( __LINE__, GSQRT(KE,i,j,I_XVZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j-1,I_XVZ) )
+       call CHECK( __LINE__, VELY_C(KE,i,j) )
+       call CHECK( __LINE__, VELY_C(KE-1,i,j) )
+       call CHECK( __LINE__, J23G(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, J23G(KE-1,i,j,I_XYZ) )
+#endif
+          S22_C(KS,i,j) = ( &
+                 ( GSQRT(KS,i,j,I_XVZ)*VELY_ZX(KS,i,j) - GSQRT(KS,i,j-1,I_XVZ)*VELY_ZX(KS,i,j-1) ) * RCDY(j) &
+               + ( J23G(KS+1,i,j,I_XYZ)*VELY_C(KS+1,i,j) - J23G(KS,i,j,I_XYZ)*VELY_C(KS,i,j) ) * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XYZ)
+          S22_C(KE,i,j) = ( &
+                 ( GSQRT(KE,i,j,I_XVZ)*VELY_ZX(KE,i,j) - GSQRT(KE,i,j-1,I_XVZ)*VELY_ZX(KE,i,j-1) ) * RCDY(j) &
+               + ( J23G(KE,i,j,I_XYZ)*VELY_C(KE,i,j) - J23G(KE-1,i,j,I_XYZ)*VELY_C(KE-1,i,j) ) * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -912,10 +1108,18 @@ contains
        ! (cell center; x,y,z)
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
-       do k = KS, KE
+       do k = KS+1, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, S12_C(k,i,j) )
+       call CHECK( __LINE__, VELY_C(k,i+1,j) )
        call CHECK( __LINE__, VELY_C(k,i-1,j) )
+       call CHECK( __LINE__, GSQRT(k,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(k,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, WORK_Z(k,i,j) )
+       call CHECK( __LINE__, WORK_Z(k-1,i,j) )
+       call CHECK( __LINE__, J13G(k,i,j,I_XYW) )
+       call CHECK( __LINE__, J13G(k-1,i,j,I_XYW) )
+       call CHECK( __LINE__, GSQRT(k,i,j,I_XYZ) )
        call CHECK( __LINE__, FDX(i) )
        call CHECK( __LINE__, FDX(i-1) )
 #endif
@@ -925,6 +1129,47 @@ contains
                    + ( J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J13G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) ) &
                ) / GSQRT(k,i,j,I_XYZ)
        enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
+#ifdef DEBUG
+       call CHECK( __LINE__, S12_C(KS,i,j) )
+       call CHECK( __LINE__, VELY_C(KS,i+1,j) )
+       call CHECK( __LINE__, VELY_C(KS,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KS,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, VELY_C(KS+1,i,j) )
+       call CHECK( __LINE__, VELY_C(KS,i,j) )
+       call CHECK( __LINE__, J13G(KS+1,i,j,I_XYZ) )
+       call CHECK( __LINE__, J13G(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
+       call CHECK( __LINE__, S12_C(KE,i,j) )
+       call CHECK( __LINE__, VELY_C(KE,i+1,j) )
+       call CHECK( __LINE__, VELY_C(KE,i-1,j) )
+       call CHECK( __LINE__, GSQRT(KE,i+1,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i-1,j,I_XYZ) )
+       call CHECK( __LINE__, VELY_C(KE,i,j) )
+       call CHECK( __LINE__, VELY_C(KE-1,i,j) )
+       call CHECK( __LINE__, J13G(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, J13G(KE-1,i,j,I_XYZ) )
+       call CHECK( __LINE__, GSQRT(KE,i,j,I_XYZ) )
+       call CHECK( __LINE__, FDX(i) )
+       call CHECK( __LINE__, FDX(i-1) )
+#endif
+          S12_C(KS,i,j) = ( S12_C(KS,i,j) & ! du/dy
+               + 0.5_RP * ( &
+                     ( GSQRT(KS,i+1,j,I_XYZ)*VELY_C(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ)*VELY_C(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
+                   + ( J13G(KS+1,i,j,I_XYZ)*VELY_C(KS+1,i,j) - J13G(KS,i,j,I_XYZ)*VELY_C(KS,i,j) ) * RFDZ(KS) ) &
+               ) / GSQRT(KS,i,j,I_XYZ)
+          S12_C(KE,i,j) = ( S12_C(KE,i,j) & ! du/dy
+               + 0.5_RP * ( &
+                     ( GSQRT(KE,i+1,j,I_XYZ)*VELY_C(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ)*VELY_C(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
+                   + ( J13G(KE,i,j,I_XYZ)*VELY_C(KE,i,j) - J13G(KE-1,i,j,I_XYZ)*VELY_C(KE-1,i,j) ) * RFDZ(KE-1) ) &
+               ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1014,23 +1259,14 @@ contains
        call CHECK( __LINE__, VELY_C(KS+1,i,j) )
        call CHECK( __LINE__, VELY_C(KS,i,j) )
        call CHECK( __LINE__, RFDZ(KS) )
-#endif
-          S23_C(KS,i,j) = ( S23_C(KS,i,j) &
-               + 0.5_RP * ( VELY_C(KS+1,i,j) - VELY_C(KS,i,j) ) * J33G * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XYZ)
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-#ifdef DEBUG
        call CHECK( __LINE__, S23_C(KE,i,j) )
        call CHECK( __LINE__, VELY_C(KE,i,j) )
        call CHECK( __LINE__, VELY_C(KE-1,i,j) )
        call CHECK( __LINE__, RFDZ(KE-1) )
 #endif
+          S23_C(KS,i,j) = ( S23_C(KS,i,j) &
+               + 0.5_RP * ( VELY_C(KS+1,i,j) - VELY_C(KS,i,j) ) * J33G * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XYZ)
           S23_C(KE,i,j) = ( S23_C(KE,i,j) &
                + 0.5_RP * ( VELY_C(KE,i,j) - VELY_C(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
                ) / GSQRT(KE,i,j,I_XYZ)
@@ -1229,8 +1465,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
-          qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! top boundary
+          qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
+          qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
        enddo
        enddo
 #ifdef DEBUG
