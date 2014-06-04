@@ -58,14 +58,14 @@ $(BUILD_DIR)/scale_land_grid.o: land/grid/scale_land_grid.F90 $(BUILD_DIR)/scale
 $(BUILD_DIR)/scale_land_grid_index.o: land/grid/scale_land_grid_index.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_landuse.o: coupler/scale_landuse.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_fileio.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_mapproj.o: atmos-les/grid/scale_mapproj.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
-$(BUILD_DIR)/scale_monitor.o: io/scale_monitor.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stats.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o
+$(BUILD_DIR)/scale_monitor.o: io/scale_monitor.F90 $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_statistics.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_time.o
 $(BUILD_DIR)/scale_ocean_sub_roughness.o: ocean/scale_ocean_sub_roughness.F90 $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_precision.o: common/scale_precision.F90
 $(BUILD_DIR)/scale_process.o: atmos-les/communication/scale_process.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_prof.o: common/scale_prof.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_random.o: common/scale_random.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_specfunc.o: common/scale_specfunc.F90 $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o
-$(BUILD_DIR)/scale_stats.o: atmos-les/communication/scale_stats.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
+$(BUILD_DIR)/scale_statistics.o: atmos-les/communication/scale_statistics.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_grid_real.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_stdio.o: io/scale_stdio.F90
 $(BUILD_DIR)/scale_time.o: common/scale_time.F90 $(BUILD_DIR)/scale_calendar.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
 $(BUILD_DIR)/scale_topography.o: atmos-les/grid/scale_topography.F90 $(BUILD_DIR)/scale_comm.o $(BUILD_DIR)/scale_fileio.o $(BUILD_DIR)/scale_grid_index.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_process.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_stdio.o
