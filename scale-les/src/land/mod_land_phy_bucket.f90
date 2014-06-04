@@ -33,18 +33,22 @@ module mod_land_phy_bucket
   !
   !++ Public parameters & variables
   !
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: solve_tridiagonal_matrix
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  logical, private :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
+  real(RP), private, allocatable :: ROFF(:,:)   ! run-off water [kg/m2]
+  real(RP), private, allocatable :: QVEF(:,:)   ! efficiency of evaporation [0-1]
+
   logical, private :: LAND_LKE_TG_UPDATE   = .false. ! is TG updated in the lowest level?
+  logical, private :: LAND_LKE_STRG_UPDATE = .false. ! is STRG updated in the lowest level?
 
   ! limiter
   real(RP), private, parameter :: BETA_MAX = 1.0_RP
@@ -53,6 +57,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_PHY_driver_setup( LAND_TYPE )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -60,14 +66,20 @@ contains
     character(len=*), intent(in) :: LAND_TYPE
 
     NAMELIST / PARAM_LAND_BUCKET / &
-       LAND_LKE_STRG_UPDATE, &
-       LAND_LKE_TG_UPDATE
+       LAND_LKE_TG_UPDATE,   &
+       LAND_LKE_STRG_UPDATE
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BUCKET]/Categ[LAND]'
+
+    allocate( ROFF(IA,JA) )
+    allocate( QVEF(IA,JA) )
+
+    ROFF(:,:) = UNDEF
+    QVEF(:,:) = UNDEF
 
     if ( LAND_TYPE /= 'BUCKET' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE is not BUCKET. Check!'
@@ -102,10 +114,7 @@ contains
     use mod_land_vars, only: &
        TG,                 &
        STRG,               &
-       ROFF,               &
-       QVEF,               &
        I_STRGMAX,          &
-       I_STRGCRT,          &
        I_TCS,              &
        I_HCS,              &
        I_DFW,              &
@@ -131,8 +140,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
 
     call CPL_getLnd( GHFLX  (:,:), & ! [OUT]
-                         PRECFLX(:,:), & ! [OUT]
-                         QVFLX  (:,:)  ) ! [OUT]
+                     PRECFLX(:,:), & ! [OUT]
+                     QVFLX  (:,:)  ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
@@ -173,9 +182,6 @@ contains
           STRG(k,i,j) = P(i,j,I_STRGMAX)
         end if
       end do
-
-      ! update moisture efficiency
-      QVEF(i,j) = min( STRG(LKS,i,j)/P(i,j,I_STRGCRT), BETA_MAX )
 
       ! prepare to solve tridiagonal matrix for TG
       ld(:) = 0.0_RP
@@ -223,7 +229,8 @@ contains
        dz => GRID_LCDZ
     use mod_land_vars, only: &
        TG,                 &
-       QVEF,               &
+       STRG,               &
+       I_STRGCRT,          &
        I_TCS,              &
        I_Z0M,              &
        I_Z0H,              &
@@ -237,6 +244,8 @@ contains
     real(RP) :: dz_h(IA,JA)
     !---------------------------------------------------------------------------
 
+    ! update moisture efficiency
+    QVEF(:,:) = min( STRG(LKS,:,:)/P(:,:,I_STRGCRT), BETA_MAX )
     dz_h(:,:) = dz(LKS)
 
     call LAND_vars_fillhalo

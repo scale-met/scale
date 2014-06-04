@@ -81,9 +81,7 @@ module mod_mkinit
      TW
   use mod_land_vars, only: &
      TG,   &
-     STRG, &
-     ROFF, &
-     QVEF
+     STRG
   use mod_urban_vars, only: &
      TR_URB,  &
      TB_URB,  &
@@ -3488,8 +3486,6 @@ contains
     real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
     ! land state
     real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_QVEF    = 0.0_RP ! efficiency of evaporation [0-1]
-    real(RP) :: LND_ROFF    = 0.0_RP ! run-off water [kg/m2]
     real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
     ! coupler state
     real(RP) :: CPL_TEMP             ! land surface temperature [K]
@@ -3501,8 +3497,6 @@ contains
        SFC_SWD,      &
        SFC_LWD,      &
        LND_TEMP,     &
-       LND_QVEF,     &
-       LND_ROFF,     &
        LND_STRG,     &
        CPL_TEMP,     &
        CPL_ALBG_SW,  &
@@ -3540,8 +3534,6 @@ contains
 
        TG   (:,i,j)    = LND_TEMP
        STRG (:,i,j)    = LND_STRG
-       ROFF (i,j)      = LND_ROFF
-       QVEF (i,j)      = LND_QVEF
 
        LST  (i,j)      = CPL_TEMP
        SkinT(i,j)      = CPL_TEMP
@@ -3726,8 +3718,6 @@ contains
     real(RP) :: OCN_TEMP             ! water temperature [K]
     ! land state
     real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_QVEF    = 0.0_RP ! efficiency of evaporation [0-1]
-    real(RP) :: LND_ROFF    = 0.0_RP ! run-off water [kg/m2]
     real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
     ! coupler state
     real(RP) :: CPL_TEMP             ! sea surface temperature [K]
@@ -3750,8 +3740,6 @@ contains
        ATM_V,        &
        OCN_TEMP,     &
        LND_TEMP,     &
-       LND_QVEF,     &
-       LND_ROFF,     &
        LND_STRG,     &
        CPL_TEMP,     &
        CPL_ALBW_SW,  &
@@ -3873,8 +3861,6 @@ contains
 
        TG   (:,i,j)    = LND_TEMP
        STRG (:,i,j)    = LND_STRG
-       ROFF (i,j)      = LND_ROFF
-       QVEF (i,j)      = LND_QVEF
 
        SST  (i,j)      = CPL_TEMP
        LST  (i,j)      = CPL_TEMP
