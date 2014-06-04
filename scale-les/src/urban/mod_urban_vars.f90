@@ -527,8 +527,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for urban
   subroutine URBAN_vars_total
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     implicit none
 
@@ -536,7 +536,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, TR_URB(:,:), VAR_NAME(I_TR_URB) )
        call STAT_total( total, TB_URB(:,:), VAR_NAME(I_TB_URB) )
        call STAT_total( total, TG_URB(:,:), VAR_NAME(I_TG_URB) )

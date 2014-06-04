@@ -67,7 +67,7 @@ program scaleles_init
      GTRANS_setup
   use scale_interpolation, only: &
      INTERP_setup
-  use scale_stats, only: &
+  use scale_statistics, only: &
      STAT_setup
   use scale_history, only: &
      HIST_setup

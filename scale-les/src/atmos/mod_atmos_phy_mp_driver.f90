@@ -87,8 +87,8 @@ contains
   subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -224,7 +224,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, DENS_t_MP(:,:,:), 'DENS_t_MP' )
        call STAT_total( total, MOMZ_t_MP(:,:,:), 'MOMZ_t_MP' )
        call STAT_total( total, MOMX_t_MP(:,:,:), 'MOMX_t_MP' )

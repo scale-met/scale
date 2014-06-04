@@ -251,7 +251,7 @@ call STOP_COLLECTION( rapname )
     integer  :: minidx(3)
 
     real(DP) :: PROF_PAPI_gflop
-    real(DP) :: stats(3)
+    real(DP) :: statistics(3)
     !---------------------------------------------------------------------------
 
     PROF_PAPI_gflop = real(PROF_PAPI_flops,kind=8) / 1024.0_DP**3
@@ -267,16 +267,16 @@ call STOP_COLLECTION( rapname )
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** FLOP / CPU Time [GFLOPS] : ', PROF_PAPI_gflop/PROF_PAPI_proc_time
 
     else
-       stats(1) = real(PROF_PAPI_real_time,kind=8)
-       stats(2) = real(PROF_PAPI_proc_time,kind=8)
-       stats(3) = PROF_PAPI_gflop
+       statistics(1) = real(PROF_PAPI_real_time,kind=8)
+       statistics(2) = real(PROF_PAPI_proc_time,kind=8)
+       statistics(3) = PROF_PAPI_gflop
 
        call PRC_MPItimestat( avgvar(1:3), &
                              maxvar(1:3), &
                              minvar(1:3), &
                              maxidx(1:3), &
                              minidx(1:3), &
-                             stats (1:3)  )
+                             statistics (1:3)  )
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** PAPI Report'

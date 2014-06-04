@@ -104,8 +104,8 @@ contains
        I_UVZ
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -327,7 +327,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
        call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
        call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )

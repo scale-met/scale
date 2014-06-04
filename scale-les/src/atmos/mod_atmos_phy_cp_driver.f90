@@ -77,8 +77,8 @@ contains
   subroutine ATMOS_PHY_CP_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -165,7 +165,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, MOMZ_t_CP(:,:,:), 'MOMZ_t_CP' )
        call STAT_total( total, MOMX_t_CP(:,:,:), 'MOMX_t_CP' )
        call STAT_total( total, MOMY_t_CP(:,:,:), 'MOMY_t_CP' )

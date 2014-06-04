@@ -487,7 +487,7 @@ contains
     use scale_grid, only: &
        GRID_FDX, &
        GRID_FDY
-    use scale_stats, only: &
+    use scale_statistics, only: &
        STAT_detail
     use scale_topography, only: &
        TOPO_fillhalo, &

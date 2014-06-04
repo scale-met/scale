@@ -1600,8 +1600,8 @@ contains
        CVdry  => CONST_CVdry
     use scale_grid_real, only: &
        REAL_CZ
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
@@ -1628,7 +1628,7 @@ contains
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
 
        call STAT_total( total, DENS(:,:,:), VAR_NAME(I_DENS) )
        call STAT_total( total, MOMZ(:,:,:), VAR_NAME(I_MOMZ) )
@@ -1704,8 +1704,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_monitor, only: &
        MONIT_put, &

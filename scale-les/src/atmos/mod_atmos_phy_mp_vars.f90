@@ -181,7 +181,7 @@ contains
   subroutine ATMOS_PHY_MP_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
-    use scale_stats, only: &
+    use scale_statistics, only: &
        STAT_total
     implicit none
 

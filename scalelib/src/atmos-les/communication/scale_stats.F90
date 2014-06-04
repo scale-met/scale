@@ -11,7 +11,7 @@
 !!
 !<
 #include "inc_openmp.h"
-module scale_stats
+module scale_statistics
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -41,7 +41,7 @@ module scale_stats
   !
   !++ Public parameters & variables
   !
-  logical, public :: STAT_checktotal = .false. !< calc&report variable totals to logfile?
+  logical, public :: STATISTICS_checktotal = .false. !< calc&report variable totals to logfile?
 
   !-----------------------------------------------------------------------------
   !
@@ -51,7 +51,7 @@ module scale_stats
   !
   !++ Private parameters & variables
   !
-  logical, private :: STAT_use_globalcomm = .false. !< calculate total with global communication?
+  logical, private :: STATISTICS_use_globalcomm = .false. !< calculate total with global communication?
 
   !-----------------------------------------------------------------------------
 contains
@@ -62,9 +62,9 @@ contains
        PRC_MPIstop
     implicit none
 
-    NAMELIST / PARAM_STATS / &
-       STAT_checktotal, &
-       STAT_use_globalcomm
+    NAMELIST / PARAM_STATISTICS / &
+       STATISTICS_checktotal, &
+       STATISTICS_use_globalcomm
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -74,18 +74,18 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_STATS,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_STATISTICS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_STATS. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_STATISTICS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_STATS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_STATISTICS)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Report '
-    if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STAT_use_globalcomm
-    if ( STAT_use_globalcomm ) then
+    if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STATISTICS_use_globalcomm
+    if ( STATISTICS_use_globalcomm ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Global total with MPI_ALLreduce is used.'
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Local total is used.'
@@ -129,7 +129,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( STAT_use_globalcomm ) then
+    if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM Allreduce MPI')
        ! All reduce
        call MPI_Allreduce( statval,              &
@@ -197,7 +197,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if ( STAT_use_globalcomm ) then
+    if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM Allreduce MPI')
        ! All reduce
        call MPI_Allreduce( statval,              &
@@ -281,7 +281,7 @@ contains
        statidx(:,v,2,PRC_myrank) = minloc(var(:,:,:,v),mask=halomask)
     enddo
 
-    if ( STAT_use_globalcomm ) then
+    if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM Bcast MPI')
        do p = 0, PRC_nmax-1
           call MPI_Bcast( statval(1,1,p),   &
@@ -346,5 +346,5 @@ contains
     return
   end subroutine STAT_detail
 
-end module scale_stats
+end module scale_statistics
 !-------------------------------------------------------------------------------

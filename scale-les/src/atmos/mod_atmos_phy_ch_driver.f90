@@ -77,8 +77,8 @@ contains
   subroutine ATMOS_PHY_CH_driver( update_flag, history_flag )
     use scale_time, only: &
        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -137,7 +137,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_CH(:,:,:,iq)
 

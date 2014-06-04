@@ -614,8 +614,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for coupler
   subroutine CPL_vars_total
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_const, only: &
        I_SW => CONST_I_SW, &
@@ -625,7 +625,7 @@ contains
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
 
        call STAT_total( total, LST(:,:),       VAR_NAME(I_LST)     )
        call STAT_total( total, UST(:,:),       VAR_NAME(I_UST)     )

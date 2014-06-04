@@ -246,7 +246,7 @@ contains
        I_LW => CONST_I_LW
     use scale_fileio, only: &
        FILEIO_read
-    use scale_stats, only: &
+    use scale_statistics, only: &
        STAT_total
     implicit none
 

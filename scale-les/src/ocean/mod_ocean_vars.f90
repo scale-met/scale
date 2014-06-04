@@ -232,15 +232,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
   subroutine OCEAN_vars_total
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     implicit none
 
     real(RP) :: total
     !---------------------------------------------------------------------------
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
 
        call STAT_total( total, TW(:,:), VAR_NAME(I_TW) )
 

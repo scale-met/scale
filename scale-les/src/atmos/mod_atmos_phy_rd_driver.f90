@@ -109,8 +109,8 @@ contains
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -283,7 +283,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, RHOT_t_RD(:,:,:), 'RHOT_t_RD' )
     endif
 

@@ -123,8 +123,8 @@ contains
        I_XYW
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
        HIST_in
@@ -309,7 +309,7 @@ contains
     enddo
     enddo
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
        call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
        call STAT_total( total, MOMX_t_SF(:,:), 'MOMX_t_SF' )

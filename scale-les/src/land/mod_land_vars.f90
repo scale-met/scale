@@ -351,8 +351,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-    use scale_stats, only: &
-       STAT_checktotal, &
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
        STAT_total
     implicit none
 
@@ -360,7 +360,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( STAT_checktotal ) then
+    if ( STATISTICS_checktotal ) then
 
        do k = LKS, LKE
           call STAT_total( total, TG  (k,:,:), VAR_NAME(I_TG)   )
