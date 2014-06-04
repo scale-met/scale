@@ -354,12 +354,12 @@ contains
   !> Boundary Data Write
   !-----------------------------------------------------------------------------
   subroutine ParentAtomBoundary( &
-      dens,          & ! (out)
-      momz,          & ! (out)
-      momx,          & ! (out)
-      momy,          & ! (out)
-      rhot,          & ! (out)
-      qtrc,          & ! (out)
+      dens,          & ! (in)
+      momz,          & ! (in)
+      momx,          & ! (in)
+      momy,          & ! (in)
+      rhot,          & ! (in)
+      qtrc,          & ! (in)
       numsteps,      & ! (in)
       initstep,      & ! (in)
       update_dt,     & ! (in)
@@ -373,17 +373,17 @@ contains
        FILEIO_write
     implicit none
 
-    real(RP),         intent(out)    :: dens(:,:,:,:)
-    real(RP),         intent(out)    :: momz(:,:,:,:)
-    real(RP),         intent(out)    :: momx(:,:,:,:)
-    real(RP),         intent(out)    :: momy(:,:,:,:)
-    real(RP),         intent(out)    :: rhot(:,:,:,:)
-    real(RP),         intent(out)    :: qtrc(:,:,:,:,:)
-    real(RP),         intent(in)     :: update_dt
-    character(LEN=*), intent( in)   :: basename
-    character(LEN=*), intent( in)   :: title
-    integer,          intent( in)    :: numsteps ! total time steps
-    integer,          intent( in)    :: initstep ! initial step
+    real(RP),         intent(in)   :: dens(:,:,:,:)
+    real(RP),         intent(in)   :: momz(:,:,:,:)
+    real(RP),         intent(in)   :: momx(:,:,:,:)
+    real(RP),         intent(in)   :: momy(:,:,:,:)
+    real(RP),         intent(in)   :: rhot(:,:,:,:)
+    real(RP),         intent(in)   :: qtrc(:,:,:,:,:)
+    real(RP),         intent(in)   :: update_dt
+    character(LEN=*), intent(in)   :: basename
+    character(LEN=*), intent(in)   :: title
+    integer,          intent(in)   :: numsteps ! total time steps
+    integer,          intent(in)   :: initstep ! initial step
 
     character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     real(RP), allocatable :: atmos_boundary_var(:,:,:,:,:)         !> reference container (with HALO)

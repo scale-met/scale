@@ -16,7 +16,6 @@ module scale_external_io
   !
   !++ used modules
   !
-  use netcdf       ! [external]
   use gtool_file, only: &
      FileMakeFname
   use scale_precision
@@ -88,6 +87,7 @@ contains
       myrank,        & ! (in)
       single         & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     integer,          intent(out)           :: dims(:)
@@ -167,6 +167,7 @@ contains
       nx,            & ! (in)
       single         & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(SP),         intent(out)            :: var(:,:)
@@ -239,6 +240,7 @@ contains
       nx,            & ! (in)
       single         & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(DP),         intent(out)            :: var(:,:)
@@ -312,6 +314,7 @@ contains
       xstag,         & ! (in) optional
       ystag          & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:)
@@ -397,6 +400,7 @@ contains
       xstag,         & ! (in) optional
       ystag          & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:)
@@ -484,6 +488,7 @@ contains
       zstag,         & ! (in) optional
       landgrid       & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:,:)
@@ -580,6 +585,7 @@ contains
       zstag,         & ! (in) optional
       landgrid       & ! (in) optional
       )
+    use netcdf  ![external lib]
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:,:)
@@ -621,6 +627,7 @@ contains
     if (status .ne. nf90_noerr) call handle_err(status)
 
     ! retrieve dimension size in data original order
+    call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
     if ( present(xstag) .and. xstag ) then
        nx = dims(4)
@@ -712,6 +719,7 @@ contains
       ncid,          & ! (in)
       mdlid          & ! (in)
       )
+    use netcdf  ![external lib]
     implicit none
 
     integer,          intent(out)  :: dims(:)
@@ -914,6 +922,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine handle_err(status)
+    use netcdf  ![external lib]
     implicit none
     integer, intent(in) :: status
 
