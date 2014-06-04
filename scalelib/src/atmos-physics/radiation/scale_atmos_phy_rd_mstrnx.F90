@@ -91,8 +91,6 @@ module scale_atmos_phy_rd_mstrnx
 
   integer,  private            :: MSTRN_nband    = 29 !< # of wave bands
 
-  logical,  private            :: MSTRN_single   = .false. !< # single radiation
-
   integer,  private, parameter :: MSTRN_nstream  =  1 !< # of streams
   integer,  private, parameter :: MSTRN_ch_limit = 10 !< max # of subintervals
   integer,  private, parameter :: MSTRN_nflag    =  7 ! # of optical properties flag
@@ -237,15 +235,13 @@ contains
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     integer               :: ATMOS_PHY_RD_MSTRN_nband
-    logical               :: ATMOS_PHY_RD_MSTRN_single
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband                , &
-       ATMOS_PHY_RD_MSTRN_single
+       ATMOS_PHY_RD_MSTRN_nband
 
     integer :: ngas, ncfc
     integer :: ihydro, iaero
@@ -267,7 +263,6 @@ contains
     ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = MSTRN_AEROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = MSTRN_HYGROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_nband                 = MSTRN_nband
-    ATMOS_PHY_RD_MSTRN_single                = MSTRN_single
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
@@ -284,7 +279,6 @@ contains
     MSTRN_AEROPARA_INPUTFILE  = ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     MSTRN_HYGROPARA_INPUTFILE = ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
-    MSTRN_single              = ATMOS_PHY_RD_MSTRN_single
 
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]

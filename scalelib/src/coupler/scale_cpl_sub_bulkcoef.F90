@@ -89,6 +89,7 @@ module scale_cpl_bulkcoef
   character(len=H_SHORT), private :: bulkcoef_TYPE = 'BH91'
 
   ! limiter
+  real(RP), private :: U_min  = 1.0E-8_RP ! minimum absolute velocity
   real(RP), private :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
   real(RP), private :: Ch_min = 1.0E-8_RP !                       T
   real(RP), private :: Ce_min = 1.0E-8_RP !                       q
@@ -228,7 +229,7 @@ contains
     C0_10 = ( KARMAN / log( 10.0_RP/Z0M ) )**2
     C0_02 = ( KARMAN / log(  2.0_RP/Z0M ) )**2
 
-    RiBT  = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
+    RiBT  = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     RiB   = RiBT
 
     if( RiBT >= 0.0_RP ) then
@@ -330,7 +331,7 @@ contains
 
     real(RP), parameter :: RiB_min = 1.0E-4_RP
     real(RP), parameter :: res_min = 1.0E-6_RP
-    real(RP), parameter :: dL      = 1.0E-10_RP ! delta Obukhov length [m]
+    real(RP), parameter :: dL      = 1.0E-8_RP  ! delta Obukhov length [m]
 
     ! variables
     integer :: n
@@ -342,7 +343,7 @@ contains
     real(RP) :: fm, fh
     real(RP) :: fm10, fm02, fh02
 
-    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Ua**2 )
+    RiB0 = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     if( abs( RiB0 ) < RiB_min ) then
       RiB0 = RiB_min
     end if

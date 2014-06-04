@@ -288,6 +288,9 @@ contains
        RovCP => CONST_RovCP
     use scale_topography, only: &
        TOPO_Zsfc
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_Z1
@@ -330,6 +333,17 @@ contains
                           SFC_PRES (:,:)    ) ! [OUT]
 
     if ( CPL_sw ) then
+       call COMM_vars8( SFC_PRES  (:,:), 1 )
+       call COMM_vars8( SFLX_LW_dn(:,:), 2 )
+       call COMM_vars8( SFLX_SW_dn(:,:), 3 )
+       call COMM_vars8( SFLX_rain (:,:), 4 )
+       call COMM_vars8( SFLX_snow (:,:), 5 )
+       call COMM_wait ( SFC_PRES  (:,:), 1 )
+       call COMM_wait ( SFLX_LW_dn(:,:), 2 )
+       call COMM_wait ( SFLX_SW_dn(:,:), 3 )
+       call COMM_wait ( SFLX_rain (:,:), 4 )
+       call COMM_wait ( SFLX_snow (:,:), 5 )
+
        call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
                         PRES      (KS,:,:),   & ! [IN]
                         W         (KS,:,:),   & ! [IN]

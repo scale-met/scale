@@ -584,7 +584,7 @@ contains
     endif
 
     ! Write out: Land
-    call LAND_vars_external_in( tg, strg, roff, qvef )
+    call LAND_vars_external_in( tg, strg )
     call LAND_vars_restart_write
 
     ! Write out: Ocean

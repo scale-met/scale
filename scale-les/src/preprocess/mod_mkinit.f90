@@ -53,12 +53,17 @@ module mod_mkinit
      COMM_vars8, &
      COMM_wait
   use scale_grid, only: &
-     CZ => GRID_CZ, &
-     CX => GRID_CX, &
-     CY => GRID_CY
+     CZ  => GRID_CZ,  &
+     CX  => GRID_CX,  &
+     CY  => GRID_CY,  &
+     CXG => GRID_CXG, &
+     CYG => GRID_CYG
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
+  use scale_landuse, only: &
+     LANDUSE_frac_land,  &
+     LANDUSE_frac_urban
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -76,9 +81,7 @@ module mod_mkinit
      TW
   use mod_land_vars, only: &
      TG,   &
-     STRG, &
-     ROFF, &
-     QVEF
+     STRG
   use mod_urban_vars, only: &
      TR_URB,  &
      TB_URB,  &
@@ -146,9 +149,11 @@ module mod_mkinit
   integer, public, parameter :: I_OCEANCOUPLE   = 17
   integer, public, parameter :: I_URBANCOUPLE   = 18
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 19
+  integer, public, parameter :: I_SEABREEZE     = 19
 
-  integer, public, parameter :: I_REAL          = 20
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 20
+
+  integer, public, parameter :: I_REAL          = 21
 
   !-----------------------------------------------------------------------------
   !
@@ -178,6 +183,8 @@ module mod_mkinit
   private :: MKINIT_landcouple
   private :: MKINIT_oceancouple
   private :: MKINIT_urbancouple
+
+  private :: MKINIT_seabreeze
 
   private :: MKINIT_DYCOMS2_RF02_DNS
 
@@ -308,6 +315,8 @@ contains
        MKINIT_TYPE = I_OCEANCOUPLE
     case('URBANCOUPLE')
        MKINIT_TYPE = I_URBANCOUPLE
+    case('SEABREEZE')
+       MKINIT_TYPE = I_SEABREEZE
     case('DYCOMS2_RF02_DNS')
        MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case('REAL')
@@ -325,6 +334,8 @@ contains
   subroutine MKINIT
     use scale_const, only: &
        CONST_UNDEF8
+    use scale_landuse, only: &
+       LANDUSE_write
     use mod_atmos_vars, only: &
        ATMOS_sw_restart,    &
        ATMOS_vars_restart_write
@@ -353,7 +364,7 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING INITIAL DATA ++++++'
     else
       if( IO_L ) write(IO_FID_LOG,*)
-      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL  DATA ++++++'
+      if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
 
       !--- Initialize variables
       do iq = 2,  QA
@@ -424,6 +435,8 @@ contains
          call MKINIT_planestate
          call MKINIT_landcouple ! tentative
          call MKINIT_urbancouple
+      case(I_SEABREEZE)
+         call MKINIT_seabreeze
       case(I_DYCOMS2_RF02_DNS)
          call MKINIT_DYCOMS2_RF02_DNS
       case(I_REAL)
@@ -435,12 +448,15 @@ contains
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
 
+      ! output boundary file
+      call LANDUSE_write
+
       ! output restart file
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
          if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
+      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart ) call URBAN_vars_restart_write
-      if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( CPL_sw_restart   ) call CPL_vars_restart_write
     endif
 
@@ -3470,8 +3486,6 @@ contains
     real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
     ! land state
     real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_QVEF    = 0.0_RP ! efficiency of evaporation [0-1]
-    real(RP) :: LND_ROFF    = 0.0_RP ! run-off water [kg/m2]
     real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
     ! coupler state
     real(RP) :: CPL_TEMP             ! land surface temperature [K]
@@ -3483,8 +3497,6 @@ contains
        SFC_SWD,      &
        SFC_LWD,      &
        LND_TEMP,     &
-       LND_QVEF,     &
-       LND_ROFF,     &
        LND_STRG,     &
        CPL_TEMP,     &
        CPL_ALBG_SW,  &
@@ -3522,8 +3534,6 @@ contains
 
        TG   (:,i,j)    = LND_TEMP
        STRG (:,i,j)    = LND_STRG
-       ROFF (i,j)      = LND_ROFF
-       QVEF (i,j)      = LND_QVEF
 
        LST  (i,j)      = CPL_TEMP
        SkinT(i,j)      = CPL_TEMP
@@ -3680,6 +3690,209 @@ contains
 
     return
   end subroutine MKINIT_urbancouple
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( sea breeze )
+  subroutine MKINIT_seabreeze
+    use scale_const, only: &
+      I_SW => CONST_I_SW, &
+      I_LW => CONST_I_LW
+    use scale_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    implicit none
+
+    ! surface state
+    real(RP) :: SFC_THETA              ! surface potential temperature [K]
+    real(RP) :: SFC_PRES               ! surface pressure [Pa]
+    real(RP) :: SFC_RH      =   0.0_RP ! surface relative humidity [%]
+    real(RP) :: SFC_PREC    =   0.0_RP ! surface precipitation rate [kg/m2/s]
+    real(RP) :: SFC_SWD     =   0.0_RP ! surface downwad short-wave radiation [W/m2]
+    real(RP) :: SFC_LWD     =   0.0_RP ! surface downwad long-wave radiation [W/m2]
+    ! atmospheric state
+    real(RP) :: ATM_THLAPS  =   0.0_RP ! Lapse rate of THETA [K/m]
+    real(RP) :: ATM_RH      =   0.0_RP ! relative humidity [%]
+    real(RP) :: ATM_U       =   0.0_RP ! velocity u [m/s]
+    real(RP) :: ATM_V       =   0.0_RP ! velocity v [m/s]
+    ! ocean state
+    real(RP) :: OCN_TEMP             ! water temperature [K]
+    ! land state
+    real(RP) :: LND_TEMP             ! soil temperature [K]
+    real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
+    ! coupler state
+    real(RP) :: CPL_TEMP             ! sea surface temperature [K]
+    real(RP) :: CPL_ALBW_SW = 0.0_RP ! sea surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBW_LW = 0.0_RP ! sea surface albedo for LW [0-1]
+    real(RP) :: CPL_ALBG_SW = 0.0_RP ! land surface albedo for SW [0-1]
+    real(RP) :: CPL_ALBG_LW = 0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: CPL_Z0W     = 0.0_RP ! sea surface roughness length [m]
+
+    NAMELIST / PARAM_MKINIT_SEABREEZE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       SFC_RH,       &
+       SFC_PREC,     &
+       SFC_SWD,      &
+       SFC_LWD,      &
+       ATM_THLAPS,   &
+       ATM_RH,       &
+       ATM_U,        &
+       ATM_V,        &
+       OCN_TEMP,     &
+       LND_TEMP,     &
+       LND_STRG,     &
+       CPL_TEMP,     &
+       CPL_ALBW_SW,  &
+       CPL_ALBW_LW,  &
+       CPL_ALBG_SW,  &
+       CPL_ALBG_LW,  &
+       CPL_Z0W
+
+    real(RP) :: dist
+
+    integer :: IAG
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Sea Breeze]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    OCN_TEMP  = THETAstd
+    LND_TEMP  = THETAstd
+    CPL_TEMP  = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_SEABREEZE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
+
+    ! calc in dry condition
+    do j = JS, JE
+    do i = IS, IE
+       pott_sfc(1,i,j) = SFC_THETA
+       pres_sfc(1,i,j) = SFC_PRES
+       qv_sfc  (1,i,j) = 0.0_RP
+       qc_sfc  (1,i,j) = 0.0_RP
+
+       do k = KS, KE
+          pott(k,i,j) = SFC_THETA + ATM_THLAPS * REAL_CZ(k,i,j)
+          qv  (k,i,j) = 0.0_RP
+          qc  (k,i,j) = 0.0_RP
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
+    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+
+    do j = JS, JE
+    do i = IS, IE
+       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
+
+       do k = KS, KE
+          qv(k,i,j) = ATM_RH * 1.E-2_RP * qsat(k,i,j)
+       enddo
+    enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
+                               temp    (:,:,:), & ! [OUT]
+                               pres    (:,:,:), & ! [OUT]
+                               pott    (:,:,:), & ! [IN]
+                               qv      (:,:,:), & ! [IN]
+                               qc      (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
+
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       MOMX(k,i,j) = ATM_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       MOMY(k,i,j) = ATM_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       MOMZ(k,i,j) = 0.0_RP
+       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    ! make surface, land, and ocean conditions
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain (i,j) = SFC_PREC
+       SFLX_snow (i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = SFC_SWD
+       SFLX_LW_dn(i,j) = SFC_LWD
+
+       TW   (i,j)      = OCN_TEMP
+
+       TG   (:,i,j)    = LND_TEMP
+       STRG (:,i,j)    = LND_STRG
+
+       SST  (i,j)      = CPL_TEMP
+       LST  (i,j)      = CPL_TEMP
+       ALBW (i,j,I_SW) = CPL_ALBW_SW
+       ALBW (i,j,I_LW) = CPL_ALBW_LW
+       ALBG (i,j,I_SW) = CPL_ALBG_SW
+       ALBG (i,j,I_LW) = CPL_ALBG_LW
+       Z0W  (i,j)      = CPL_Z0W
+       SkinT(i,j)      = CPL_TEMP
+    enddo
+    enddo
+
+    ! array size (global domain)
+    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+
+    ! quartor size of domain
+    dist = ( CXG(IAG-IHALO) - CXG(1+IHALO) ) / 8.0_RP
+
+    ! make landuse conditions
+    do j = JS, JE
+    do i = IS, IE
+       if( CX(i) >= dist*3.0_RP .and.  &
+           CX(i) <= dist*5.0_RP ) then
+          LANDUSE_frac_land(i,j) = 1.0_RP
+       else
+          LANDUSE_frac_land(i,j) = 0.0_RP
+       end if
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_seabreeze
 
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )

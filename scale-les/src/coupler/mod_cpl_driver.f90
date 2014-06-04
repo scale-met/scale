@@ -44,27 +44,24 @@ contains
   !> Setup
   subroutine CPL_driver_setup
     use mod_cpl_vars, only: &
-       CPL_vars_merge,   &
-       CPL_vars_fillhalo
+       CPL_vars_merge
+    use mod_cpl_atmos_ocean_driver, only: &
+       CPL_AtmOcn_driver_setup
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver_setup
     use mod_cpl_atmos_urban_driver, only: &
        CPL_AtmUrb_driver_setup
-    use mod_cpl_atmos_ocean_driver, only: &
-       CPL_AtmOcn_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[CPL] / Origin[SCALE-LES]'
 
     call CPL_AtmOcn_driver_setup
     call CPL_AtmLnd_driver_setup
     call CPL_AtmUrb_driver_setup
 
     call CPL_vars_merge
-
-    call CPL_vars_fillhalo
 
     return
   end subroutine CPL_driver_setup
@@ -73,24 +70,30 @@ contains
   !> CPL calcuration
   subroutine CPL_driver
     use mod_cpl_admin, only: &
+       CPL_sw_AtmOcn,                &
        CPL_sw_AtmLnd,                &
        CPL_sw_AtmUrb,                &
-       CPL_sw_AtmOcn,                &
+       SST_UPDATE => CPL_SST_UPDATE, &
        LST_UPDATE => CPL_LST_UPDATE, &
-       UST_UPDATE => CPL_UST_UPDATE, &
-       SST_UPDATE => CPL_SST_UPDATE
+       UST_UPDATE => CPL_UST_UPDATE
     use mod_cpl_vars, only: &
-       CPL_vars_fillhalo,            &
        CPL_vars_merge,               &
        CPL_vars_history
+    use mod_cpl_atmos_ocean_driver, only: &
+       CPL_AtmOcn_driver
     use mod_cpl_atmos_land_driver, only: &
        CPL_AtmLnd_driver
     use mod_cpl_atmos_urban_driver, only: &
        CPL_AtmUrb_driver
-    use mod_cpl_atmos_ocean_driver, only: &
-       CPL_AtmOcn_driver
     implicit none
     !---------------------------------------------------------------------------
+
+    !########## Coupler Atoms-Ocean ##########
+    if( CPL_sw_AtmOcn ) then
+      call PROF_rapstart('CPL Atmos-Ocean')
+      call CPL_AtmOcn_driver( SST_UPDATE )
+      call PROF_rapend  ('CPL Atmos-Ocean')
+    endif
 
     !########## Coupler Atoms-Land ##########
     if( CPL_sw_AtmLnd ) then
@@ -106,18 +109,8 @@ contains
       call PROF_rapend  ('CPL Atmos-Urban')
     endif
 
-    !########## Coupler Atoms-Ocean ##########
-    if( CPL_sw_AtmOcn ) then
-      call PROF_rapstart('CPL Atmos-Ocean')
-      call CPL_AtmOcn_driver( SST_UPDATE )
-      call PROF_rapend  ('CPL Atmos-Ocean')
-    endif
-
     !########## merge Land-Ocean ##########
     call CPL_vars_merge
-
-    !########## Fill HALO ##########
-    call CPL_vars_fillhalo
 
     !########## History & Monitor ##########
     call PROF_rapstart('CPL History')

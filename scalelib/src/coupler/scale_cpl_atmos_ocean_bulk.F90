@@ -186,8 +186,8 @@ contains
     real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
+    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [W/m2]
+    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [W/m2]
 
     real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
     real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
@@ -213,14 +213,14 @@ contains
     end if
 
     ! calculate surface flux
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
       Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
       call CPL_bulkcoef( &
           Cm,        & ! (out)
-          Cm,        & ! (out)
           Ch,        & ! (out)
+          Ce,        & ! (out)
           R10m,      & ! (out)
           R02h,      & ! (out)
           R02e,      & ! (out)

@@ -211,8 +211,8 @@ contains
     real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
+    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [W/m2]
+    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [W/m2]
 
     real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation [0-1]
@@ -245,8 +245,8 @@ contains
     do n = 1, nmax
 
       ! calculate surface flux
-      do j = JS, JE
-      do i = IS, IE
+      do j = 1, JA
+      do i = 1, IA
         Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
         call CPL_bulkcoef( &
@@ -325,8 +325,8 @@ contains
 
       if( LST_UPDATE ) then
 
-        do j = JS, JE
-        do i = IS, IE
+        do j = 1, JA
+        do i = 1, IA
 
           if( redf(i,j) < 0.0_RP ) then
             redf(i,j) = 1.0_RP
@@ -354,7 +354,7 @@ contains
         end do
         end do
 
-        if( maxval(abs(RES(IS:IE,JS:JE))) < res_min ) then
+        if( maxval(abs(RES(:,:))) < res_min ) then
           ! iteration converged
           exit
         end if
