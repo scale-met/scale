@@ -1354,13 +1354,13 @@ contains
        do iaero = aero_str, aero_end
           iptype = aero2ptype(iaero)
 
-       !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
-       !$acc loop gang
-       do j = JS, JE
-       !$acc loop gang vector(8)
-       do i = IS, IE
-       !$acc loop gang vector(32)
-       do k = 1, kmax
+          !$acc kernels pcopy(optparam) pcopyin(indexR, aero2ptype, q, factR, dz_std, aerosol_conc) async(0)
+          !$acc loop gang
+          do j = JS, JE
+          !$acc loop gang vector(8)
+          do i = IS, IE
+          !$acc loop gang vector(32)
+          do k = 1, kmax
              ir = indexR(k,i,j,iaero)
 
              length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k,i,j)
@@ -1374,10 +1374,10 @@ contains
                 optparam(k,i,j,im,I_ClearSky) = optparam(k,i,j,im,I_ClearSky) + q_fit * length
              enddo
           enddo
+          enddo
+          enddo
+          !$acc end kernels
        enddo
-       enddo
-       enddo
-       !$acc end kernels
 
        do icloud = 1, MSTRN_ncloud
           !$acc kernels pcopy(tauPR, omgPR, g) pcopyin(optparam) async(0)
@@ -1550,16 +1550,16 @@ contains
                    zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud)-RD_EPS ) ! if tau < EPS, zerosw = 1
 
                    b(k,i,j,0,icloud) = bbarh(k,i,j)
-                   b(k,i,j,1,icloud) = ( 1.0_RP-zerosw ) &
-                        * ( -          bbarh(k+1,i,j) &
-                        + 4.0_RP * bbar (k  ,i,j) &
-                        - 3.0_RP * bbarh(k  ,i,j) &
-                        ) / ( tau(k,i,j,icloud)-zerosw )
-                   b(k,i,j,2,icloud) = ( 1.0_RP-zerosw ) &
-                        * ( +          bbarh(k+1,i,j) &
-                        - 2.0_RP * bbar (k  ,i,j) &
-                        +          bbarh(k  ,i,j) &
-                        ) / ( tau(k,i,j,icloud)*tau(k,i,j,icloud)-zerosw ) * 2.0_RP
+                   b(k,i,j,1,icloud) = ( 1.0_RP-zerosw )           &
+                                     * ( -          bbarh(k+1,i,j) &
+                                         + 4.0_RP * bbar (k  ,i,j) &
+                                         - 3.0_RP * bbarh(k  ,i,j) &
+                                       ) / ( tau(k,i,j,icloud)-zerosw )
+                   b(k,i,j,2,icloud) = ( 1.0_RP-zerosw )           &
+                                     * ( +          bbarh(k+1,i,j) &
+                                         - 2.0_RP * bbar (k  ,i,j) &
+                                         +          bbarh(k  ,i,j) &
+                                       ) / ( tau(k,i,j,icloud)*tau(k,i,j,icloud)-zerosw ) * 2.0_RP
                 enddo
                 enddo
                 enddo
@@ -1739,9 +1739,11 @@ contains
     real(RP) :: Ep         (kmax+1,imax,jmax) ! source (TOA->sfc)
 
     ! Doubling-Adding
-    real(RP) :: R12mns(kmax+1,imax,jmax), R12pls(kmax+1,imax,jmax) ! reflection factor in doubling method
-    real(RP) :: E12mns(kmax+1,imax,jmax), E12pls(kmax+1,imax,jmax) ! source function   in doubling method
-    real(RP) :: Umns, Upls                                         ! flux intensity
+    real(RP) :: R12mns(kmax+1,imax,jmax) ! reflection factor in doubling method
+    real(RP) :: R12pls(kmax+1,imax,jmax) ! reflection factor in doubling method
+    real(RP) :: E12mns(kmax+1,imax,jmax) ! source function   in doubling method
+    real(RP) :: E12pls(kmax+1,imax,jmax) ! source function   in doubling method
+    real(RP) :: Umns, Upls               ! flux intensity
 
     real(RP) :: Em0(MSTRN_ncloud)
     real(RP) :: factor
@@ -1753,6 +1755,7 @@ contains
 
     real(RP) :: sw
     integer  :: k, i, j, icloud
+    integer  :: kij
     !---------------------------------------------------------------------------
 
     M_irgn      = M(irgn)
@@ -1773,10 +1776,18 @@ contains
 
 !OCL SERIAL
     do icloud = 1, 2
+
+       !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
+       !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
-       do j = JS, JE
-       do i = IS, IE
-       do k = 1, kmax
+       !do j = JS, JE
+       !do i = IS, IE
+       !do k = 1, kmax
+       !$acc loop independent gang vector(128)
+       do kij = 1, kmax*(IE-IS+1)*(JE-JS+1)
+          k = 1  + mod(kij-1, kmax)
+          i = IS + mod((kij-1)/kmax, (IE-IS+1))
+          j = JS + (kij-1)/(kmax*(IE-IS+1))
 
           !---< two-stream truncation >---
           tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
@@ -1861,10 +1872,11 @@ contains
           Ep_SW(k,i,j,icloud) = (        sw ) * ( V1pls - T0(k,i,j,icloud) * V0pls - R0(k,i,j,icloud) * V1mns ) &
                               + ( 1.0_RP-sw ) * Wmns_irgn * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud) )
 
-
        enddo
-       enddo
-       enddo
+       !$acc end kernels
+       !enddo
+       !enddo
+       !enddo
     enddo ! cloud loop
 
     !---< consider partial cloud layer: semi-random over-wrapping >---
@@ -1933,12 +1945,12 @@ contains
 
        T (kmax+1,i,j) = 0.0_RP
 
-       flux_direct(kmax+1,i,j) = cosSZA(i,j) * tau_bar_sol(k,i,j)
+       flux_direct(kmax+1,i,j) = cosSZA(i,j) * tau_bar_sol(kmax+1,i,j)
 
        Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(kmax+1,i,j) * albedo_sfc(i,j,I_Cloud   ) / (W_irgn*M_irgn) &
-            + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_Cloud   ) ) * b_sfc(i,j) )
+                       + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_Cloud   ) ) * b_sfc(i,j) )
        Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(kmax+1,i,j) * albedo_sfc(i,j,I_ClearSky) / (W_irgn*M_irgn) &
-            + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_ClearSky) ) * b_sfc(i,j) )
+                       + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_ClearSky) ) * b_sfc(i,j) )
 
        Em(kmax+1,i,j) = (        cldfrac(kmax,i,j) ) * Em0(I_Cloud   ) &
                       + ( 1.0_RP-cldfrac(kmax,i,j) ) * Em0(I_ClearSky)
@@ -1946,23 +1958,31 @@ contains
        Ep(kmax+1,i,j) = 0.0_RP
     enddo
     enddo
+
     !$acc end kernels
 
     !---< Adding-Doubling method >---
     ! [note] TOA->Surface is positive direction. "pls" means upper to lower altitude.
+    !$acc kernels pcopy(R12mns, R12pls, E12mns, E12pls) pcopyin(R, T, Em, Ep) async(0)
+    !$acc loop gang independent
     do direction = I_SFC2TOA, I_TOA2SFC
 
        if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
+          !$acc loop gang vector(4)
           do j = JS, JE
+          !$acc loop gang vector(32)
           do i = IS, IE
              R12pls(kmax+1,i,j) = R (kmax+1,i,j)
              E12mns(kmax+1,i,j) = Em(kmax+1,i,j)
           enddo
           enddo
 
+          !$acc loop gang vector(4)
           do j = JS, JE
+          !$acc loop gang vector(32)
           do i = IS, IE
+             !$acc loop seq
              do k = kmax, 1, -1
                 R12pls(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
                                                      * ( R12pls(k+1,i,j) * T (k,i,j)                   )
@@ -1974,33 +1994,43 @@ contains
 
        else ! adding: TOA to surface
 
+          !$acc loop gang vector(4)
           do j = JS, JE
+          !$acc loop gang vector(32)
           do i = IS, IE
              R12mns(1,i,j) = R (1,i,j)
              E12pls(1,i,j) = Ep(1,i,j)
           enddo
           enddo
 
+          !$acc loop gang vector(4)
           do j = JS, JE
+          !$acc loop gang vector(32)
           do i = IS, IE
+             !$acc loop seq
              do k = 2, kmax+1
                 R12mns(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
                                                      * ( R12mns(k-1,i,j) *T (k,i,j)                  )
                 E12pls(k,i,j) = Ep(k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
                                                      * ( R12mns(k-1,i,j)*Em(k,i,j) + E12pls(k-1,i,j) )
-          enddo
+             enddo
           enddo
           enddo
 
        endif
 
     enddo
+    !$acc end kernels
 
     !--- radiative flux at cell wall:
     ! [note] "d" means upper to lower altitude.
 
+    !$acc kernels pcopy(flux) pcopyin(E12mns, E12pls, R12mns, R12pls, flux_direct, wscale) async(0)
+    !$acc loop gang
     do j = JS, JE
+    !$acc loop gang vector(8)
     do i = IS, IE
+    !$acc loop gang vector(32)
     do k = 1, kmax+1
        if ( k == 1 ) then ! TOA boundary
           Upls = 0.0_RP
@@ -2014,6 +2044,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$acc end data
 
