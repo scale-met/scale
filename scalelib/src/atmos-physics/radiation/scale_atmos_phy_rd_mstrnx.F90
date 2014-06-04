@@ -1753,6 +1753,10 @@ contains
     real(RP) :: factor
     real(RP) :: Wmns_irgn, M_irgn, W_irgn, Wpls_irgn, Wscale_irgn
 
+    integer, parameter :: I_SFC2TOA = 1
+    integer, parameter :: I_TOA2SFC = 2
+    integer            :: direction
+
     real(RP) :: sw
     integer  :: k, i, j, icloud
     !---------------------------------------------------------------------------
@@ -1952,61 +1956,64 @@ contains
 
     !---< Adding-Doubling method >---
     ! [note] TOA->Surface is positive direction. "pls" means upper to lower altitude.
+    do direction = I_SFC2TOA, I_TOA2SFC
 
-    ! adding: surface to TOA
-    do j = JS, JE
-    do i = IS, IE
-       R12pls(kmax+1,i,j) = R (kmax+1,i,j)
-       E12mns(kmax+1,i,j) = Em(kmax+1,i,j)
-    enddo
-    enddo
+       if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = kmax, 1, -1
-       R12pls(k,i,j) = R (k,i,j) &
-                     + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j) ) * ( R12pls(k+1,i,j) * T (k,i,j)                   )
-       E12mns(k,i,j) = Em(k,i,j) &
-                     + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j) ) * ( R12pls(k+1,i,j) * Ep(k,i,j) + E12mns(k+1,i,j) )
-    enddo
-    enddo
-    enddo
+          do j = JS, JE
+          do i = IS, IE
+             R12pls(kmax+1,i,j) = R (kmax+1,i,j)
+             E12mns(kmax+1,i,j) = Em(kmax+1,i,j)
+          enddo
+          enddo
 
-    ! adding: TOA to surface
-    do j = JS, JE
-    do i = IS, IE
-       R12mns(1,i,j) = R (1,i,j)
-       E12pls(1,i,j) = Ep(1,i,j)
-    enddo
-    enddo
+          do j = JS, JE
+          do i = IS, IE
+             do k = kmax, 1, -1
+                R12pls(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
+                                                     * ( R12pls(k+1,i,j) * T (k,i,j)                   )
+                E12mns(k,i,j) = Em(k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
+                                                     * ( R12pls(k+1,i,j) * Ep(k,i,j) + E12mns(k+1,i,j) )
+             enddo
+          enddo
+          enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = 2, kmax+1
-       R12mns(k,i,j) = R (k,i,j) &
-                     + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j) ) * ( R12mns(k-1,i,j) *T (k,i,j) )
-       E12pls(k,i,j) = Ep(k,i,j) &
-                     + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j) ) * ( R12mns(k-1,i,j)*Em(k,i,j) + E12pls(k-1,i,j) )
-    enddo
-    enddo
+       else ! adding: TOA to surface
+
+          do j = JS, JE
+          do i = IS, IE
+             R12mns(1,i,j) = R (1,i,j)
+             E12pls(1,i,j) = Ep(1,i,j)
+          enddo
+          enddo
+
+          do j = JS, JE
+          do i = IS, IE
+             do k = 2, kmax+1
+                R12mns(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
+                                                     * ( R12mns(k-1,i,j) *T (k,i,j)                  )
+                E12pls(k,i,j) = Ep(k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
+                                                     * ( R12mns(k-1,i,j)*Em(k,i,j) + E12pls(k-1,i,j) )
+          enddo
+          enddo
+          enddo
+
+       endif
+
     enddo
 
     !--- radiative flux at cell wall:
     ! [note] "d" means upper to lower altitude.
 
-    ! TOA boundary
     do j = JS, JE
     do i = IS, IE
-       flux(1,i,j,I_up) = Wscale_irgn * E12mns(1,i,j)
-       flux(1,i,j,I_dn) = flux_direct(1,i,j)
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = 2, kmax+1
-       Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
-       Umns =  E12mns(k,i,j) + R12pls(k,i,j) * Upls
+    do k = 1, kmax+1
+       if ( k == 1 ) then ! TOA boundary
+          Upls = 0.0_RP
+       else
+          Upls = ( E12pls(k-1,i,j) + R12mns(k-1,i,j)*E12mns(k,i,j) ) / ( 1.0_RP - R12mns(k-1,i,j)*R12pls(k,i,j) )
+       endif
+       Umns = E12mns(k,i,j) + R12pls(k,i,j) * Upls
 
        flux(k,i,j,I_up) = Wscale_irgn * Umns
        flux(k,i,j,I_dn) = Wscale_irgn * Upls + flux_direct(k,i,j)
