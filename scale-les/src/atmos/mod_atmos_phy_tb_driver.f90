@@ -341,7 +341,7 @@ contains
                                      - J13G(KS  ,i,j,I_XYW) * ( QFLX_RHOT(KS  ,i,j,XDIR) + QFLX_RHOT(KS  ,i-1,j,XDIR) ) &
                                      + J23G(KS+1,i,j,I_XYW) * ( QFLX_RHOT(KS+1,i,j,YDIR) + QFLX_RHOT(KS+1,i,j-1,YDIR) ) &
                                      - J23G(KS  ,i,j,I_XYW) * ( QFLX_RHOT(KS  ,i,j,YDIR) + QFLX_RHOT(KS  ,i,j-1,YDIR) ) &
-                                    ) * 0.5_RP * FDZ(KS) &
+                                    ) * 0.5_RP * RFDZ(KS) &
                                    + J33G * ( QFLX_RHOT(KS,i,j,ZDIR) ) * RCDZ(KS) &
                                    ) / GSQRT(KS,i,j,I_XYZ)
              RHOT_t_TB(KE,i,j) = - ( ( GSQRT(KE,i  ,j,I_UYZ) * QFLX_RHOT(KE,i  ,j,XDIR) &
@@ -352,7 +352,7 @@ contains
                                      - J13G(KE-1,i,j,I_XYW) * ( QFLX_RHOT(KE-1,i,j,XDIR) + QFLX_RHOT(KE-1,i-1,j,XDIR) ) &
                                      + J23G(KE  ,i,j,I_XYW) * ( QFLX_RHOT(KE  ,i,j,YDIR) + QFLX_RHOT(KE  ,i,j-1,YDIR) ) &
                                      - J23G(KE-1,i,j,I_XYW) * ( QFLX_RHOT(KE-1,i,j,YDIR) + QFLX_RHOT(KE-1,i,j-1,YDIR) ) &
-                                    ) * 0.5_RP * FDZ(KE-1) &
+                                    ) * 0.5_RP * RFDZ(KE-1) &
                                    - J33G * ( QFLX_RHOT(KE-1,i,j,ZDIR) ) * RCDZ(KE) &
                                    ) / GSQRT(KE,i,j,I_XYZ)
           enddo
