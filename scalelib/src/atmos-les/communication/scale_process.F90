@@ -107,15 +107,19 @@ contains
     if ( IO_L ) then
 
        !--- Open logfile
-       IO_FID_LOG = IO_get_available_fid()
-       call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
-       open( unit   = IO_FID_LOG,  &
-             file   = trim(fname), &
-             form   = 'formatted', &
-             iostat = ierr         )
-       if ( ierr /= 0 ) then
-          write(*,*) 'xxx File open error! :', trim(fname)
-          call PRC_MPIstop
+       if ( IO_LOG_BASENAME == IO_STDOUT ) then
+          IO_FID_LOG = IO_FID_STDOUT
+       else
+          IO_FID_LOG = IO_get_available_fid()
+          call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
+          open( unit   = IO_FID_LOG,  &
+                file   = trim(fname), &
+                form   = 'formatted', &
+                iostat = ierr         )
+          if ( ierr /= 0 ) then
+             write(*,*) 'xxx File open error! :', trim(fname)
+             call PRC_MPIstop
+          endif
        endif
 
        write(IO_FID_LOG,*)
@@ -225,15 +229,19 @@ contains
     if ( IO_L ) then
 
        !--- Open logfile
-       IO_FID_LOG = IO_get_available_fid()
-       call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
-       open( unit   = IO_FID_LOG,  &
-             file   = trim(fname), &
-             form   = 'formatted', &
-             iostat = ierr         )
-       if ( ierr /= 0 ) then
-          write(*,*) 'xxx File open error! :', trim(fname)
-          call PRC_MPIstop
+       if ( IO_LOG_BASENAME == IO_STDOUT ) then
+          IO_FID_LOG = IO_FID_STDOUT
+       else
+          IO_FID_LOG = IO_get_available_fid()
+          call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
+          open( unit   = IO_FID_LOG,  &
+                file   = trim(fname), &
+                form   = 'formatted', &
+                iostat = ierr         )
+          if ( ierr /= 0 ) then
+             write(*,*) 'xxx File open error! :', trim(fname)
+             call PRC_MPIstop
+          endif
        endif
 
        write(IO_FID_LOG,*)
@@ -270,9 +278,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(32A32)') '                                '
 
     if ( PRC_mpi_alive ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '++++++ Abort MPI'
-       if( IO_L ) close(IO_FID_LOG)
+       if ( IO_L ) then
+          write(IO_FID_LOG,*)
+          write(IO_FID_LOG,*) '++++++ Abort MPI'
+          if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+       endif
        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
     endif
 
@@ -291,9 +301,11 @@ contains
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '++++++ Stop MPI'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Broadcast STOP signal'
+       if ( IO_L ) then
+          write(IO_FID_LOG,*)
+          write(IO_FID_LOG,*) '++++++ Stop MPI'
+          write(IO_FID_LOG,*) '*** Broadcast STOP signal'
+       endif
        call MPI_BCAST( request,        &
                        H_SHORT,      &
                        MPI_CHARACTER,  & !--- type
@@ -307,7 +319,7 @@ contains
 
     ! Close logfile, configfile
     if ( IO_L ) then
-       close(IO_FID_LOG)
+       if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
     endif
     close(IO_FID_CONF)
 

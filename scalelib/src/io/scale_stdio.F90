@@ -48,6 +48,9 @@ module scale_stdio
   character(len=H_MID),  public            :: H_SOURCE                   !< for file header
   character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN' !< for file header
 
+  character(len=6),      public, parameter :: IO_STDOUT = "STDOUT"
+  integer,               public, parameter :: IO_FID_STDOUT = 6
+
   integer,               public            :: IO_FID_CONF = 7            !< Config file ID
   integer,               public            :: IO_FID_LOG  = 8            !< Log file ID
 
@@ -108,6 +111,12 @@ contains
           form   = 'formatted', &
           status = 'old',       &
           iostat = ierr         )
+    if ( ierr /= 0 ) then
+       write(*,*)
+       write(*,*) 'WARNING: Failed to open config file! :', trim(fname)
+       write(*,*) '         Default values are used.'
+       write(*,*)
+    end if
 
     H_MODELNAME = trim(MODELNAME)
     H_LIBNAME   = 'SCALE Library ver. '//trim(LIBVERSION)
