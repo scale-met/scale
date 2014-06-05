@@ -1708,7 +1708,7 @@ contains
 #endif
           qflx_sgs_rhot(k,i,j,ZDIR) = - 0.25_RP & ! 2/2/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
                * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW)
        enddo
        enddo
@@ -1737,16 +1737,22 @@ contains
        call CHECK( __LINE__, nu(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
+       call CHECK( __LINE__, POTT(k+1,i+1,j) )
+       call CHECK( __LINE__, POTT(k+1,i,j) )
+       call CHECK( __LINE__, POTT(k-1,i+1,j) )
+       call CHECK( __LINE__, POTT(k-1,i,j) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_rhot(k,i,j,XDIR) = - 0.25_RP & ! 2/2/2/2
-               * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-               * ( nu  (k,i,j)+nu  (k,i+1,j) ) &
+          qflx_sgs_rhot(k,i,j,XDIR) = - 0.25_RP & ! 1/2/2
+               * ( DENS(k,i,j) + DENS(k,i+1,j) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i+1,j)/Pr(k,i+1,j) ) &
                * ( &
-                     ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i) &
-                   + ( POTT(k+1,i+1,j)+POTT(k+1,i,j)-POTT(k-1,i+1,j)-POTT(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
-                   * 0.5_RP * J13G(k,i,j,I_UYZ) / GSQRT(k,i,j,I_UYZ) &
-                 )
+                     ( GSQRT(k,i+1,j,I_XYZ) * POTT(k,i+1,j) &
+                     - GSQRT(k,i  ,j,I_XYZ) * POTT(k,i  ,j) ) * RFDX(i) &
+                   + ( J13G(k+1,i,j,I_UYZ) * ( POTT(k+1,i+1,j)+POTT(k+1,i,j) ) &
+                     - J13G(k-1,i,j,I_UYZ) * ( POTT(k-1,i+1,j)+POTT(k-1,i,j) ) &
+                     ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
+                 )  / GSQRT(k,i,j,I_UYZ)
        enddo
        enddo
        enddo
@@ -1766,36 +1772,24 @@ contains
 #endif
           qflx_sgs_rhot(KS,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
-               * ( nu  (KS,i,j)+nu  (KS,i+1,j) ) &
+               * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i+1,j)/Pr(KS,i+1,j) ) &
                * ( &
-                     ( POTT(KS,i+1,j)-POTT(KS,i,j) ) * RFDX(i) &
-                   + ( POTT(KS+1,i+1,j)+POTT(KS+1,i,j)-POTT(KS,i+1,j)-POTT(KS,i,j) ) * RFDZ(KS) &
-                   * 0.5_RP * J13G(KS,i,j,I_UYZ) / GSQRT(KS,i,j,I_UYZ) &
-                 )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, DENS(KE,i,j) )
-       call CHECK( __LINE__, DENS(KE,i+1,j) )
-       call CHECK( __LINE__, nu(KE,i,j) )
-       call CHECK( __LINE__, nu(KE,i+1,j) )
-       call CHECK( __LINE__, POTT(KE,i+1,j) )
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, RFDX(i) )
-#endif
+                     ( GSQRT(KS,i+1,j,I_XYZ) * POTT(KS,i+1,j) &
+                     - GSQRT(KS,i  ,j,I_XYZ) * POTT(KS,i  ,j) ) * RFDX(i) &
+                   + ( J13G(KS+1,i,j,I_UYZ) * ( POTT(KS+1,i+1,j)+POTT(KS+1,i,j) ) &
+                     - J13G(KS  ,i,j,I_UYZ) * ( POTT(KS  ,i+1,j)+POTT(KS  ,i,j) ) &
+                     ) * 0.5_RP * RFDZ(KS) &
+                 )  / GSQRT(KS,i,j,I_UYZ)
           qflx_sgs_rhot(KE,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-               * ( nu  (KE,i,j)+nu  (KE,i+1,j) ) &
+               * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
                * ( &
-                     ( POTT(KE,i+1,j)-POTT(KE,i,j) ) * RFDX(i) &
-                   + ( POTT(KE,i+1,j)+POTT(KE,i,j)-POTT(KE-1,i+1,j)-POTT(KE-1,i,j) ) * RFDZ(KE-1) &
-                   * 0.5_RP * J13G(KE,i,j,I_UYZ) / GSQRT(KE,i,j,I_UYZ) &
-                 )
+                     ( GSQRT(KE,i+1,j,I_XYZ) * POTT(KE,i+1,j) &
+                     - GSQRT(KE,i  ,j,I_XYZ) * POTT(KE,i  ,j) ) * RFDX(i) &
+                   + ( J13G(KE  ,i,j,I_UYZ) * ( POTT(KE  ,i+1,j)+POTT(KE  ,i,j) ) &
+                     - J13G(KE-1,i,j,I_UYZ) * ( POTT(KE-1,i+1,j)+POTT(KE-1,i,j) ) &
+                     ) * 0.5_RP * RFDZ(KE-1) &
+                 )  / GSQRT(KE,i,j,I_UYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1812,16 +1806,22 @@ contains
        call CHECK( __LINE__, nu(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j) )
+       call CHEKC( __LINE__, POT(k+1,i,j+1) )
+       call CHEKC( __LINE__, POT(k+1,i,j) )
+       call CHEKC( __LINE__, POT(k-1,i,j+1) )
+       call CHEKC( __LINE__, POT(k-1,i,j) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
           qflx_sgs_rhot(k,i,j,YDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-               * ( nu  (k,i,j)+nu  (k,i,j+1) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i,j+1)/Pr(k,i,j+1) ) &
                * ( &
-                   ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j) &
-                 + ( POTT(k+1,i,j+1)+POTT(k+1,i,j)-POTT(k-1,i,j+1)-POTT(k-1,i,j) ) / ( FDZ(k)+FDZ(k-1) ) &
-                   * 0.5_RP * J23G(k,i,j,I_XVZ) / GSQRT(k,i,j,I_XVZ) &
-               )
+                   ( GSQRT(k,i,j+1,I_XYZ) * POTT(k,i,j+1) &
+                   - GSQRT(k,i,j  ,I_XYZ) * POTT(k,i,j  ) ) * RFDY(j) &
+                 + ( J23G(k+1,i,j  ,I_XVZ) * ( POTT(k+1,i,j+1)+POTT(k+1,i,j) ) &
+                   - J23G(k-1,i,j+1,I_XVZ) * ( POTT(k-1,i,j+1)+POTT(k-1,i,j) ) &
+                   ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+               ) / GSQRT(k,i,j,I_XVZ)
        enddo
        enddo
        enddo
@@ -1841,36 +1841,24 @@ contains
 #endif
           qflx_sgs_rhot(KS,i,j,YDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
-               * ( nu  (KS,i,j)+nu  (KS,i,j+1) ) &
+               * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i,j+1)/Pr(KS,i,j+1) ) &
                * ( &
-                   ( POTT(KS,i,j+1)-POTT(KS,i,j) ) * RFDY(j) &
-                 + ( POTT(KS+1,i,j+1)+POTT(KS+1,i,j)-POTT(KS,i,j+1)-POTT(KS,i,j) ) * RFDZ(KS) &
-                   * 0.5_RP * J23G(KS,i,j,I_XVZ) / GSQRT(KS,i,j,I_XVZ) &
-               )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, DENS(KE,i,j) )
-       call CHECK( __LINE__, DENS(KE,i,j+1) )
-       call CHECK( __LINE__, nu(KE,i,j) )
-       call CHECK( __LINE__, nu(KE,i,j+1) )
-       call CHECK( __LINE__, POTT(KE,i,j+1) )
-       call CHECK( __LINE__, POTT(KE,i,j) )
-       call CHECK( __LINE__, RFDY(j) )
-#endif
+                   ( GSQRT(KS,i,j+1,I_XYZ) * POTT(KS,i,j+1) &
+                   - GSQRT(KS,i,j  ,I_XYZ) * POTT(KS,i,j  ) ) * RFDY(j) &
+                 + ( J23G(KS+1,i,j  ,I_XVZ) * ( POTT(KS+1,i,j+1)+POTT(KS+1,i,j) ) &
+                   - J23G(KS  ,i,j+1,I_XVZ) * ( POTT(KS  ,i,j+1)+POTT(KS  ,i,j) ) &
+                   ) * 0.5_RP * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XVZ)
           qflx_sgs_rhot(KE,i,j,YDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-               * ( nu  (KE,i,j)+nu  (KE,i,j+1) ) &
+               * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
                * ( &
-                   ( POTT(KE,i,j+1)-POTT(KE,i,j) ) * RFDY(j) &
-                 + ( POTT(KE,i,j+1)+POTT(KE,i,j)-POTT(KE-1,i,j+1)-POTT(KE-1,i,j) ) * RFDZ(KE-1) &
-                   * 0.5_RP * J23G(KE,i,j,I_XVZ) / GSQRT(KE,i,j,I_XVZ) &
-               )
+                   ( GSQRT(KE,i,j+1,I_XYZ) * POTT(KE,i,j+1) &
+                   - GSQRT(KE,i,j  ,I_XYZ) * POTT(KE,i,j  ) ) * RFDY(j) &
+                 + ( J23G(KE  ,i,j  ,I_XVZ) * ( POTT(KE  ,i,j+1)+POTT(KE  ,i,j) ) &
+                   - J23G(KE-1,i,j+1,I_XVZ) * ( POTT(KE-1,i,j+1)+POTT(KE-1,i,j) ) &
+                   ) * 0.5_RP * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_XVZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1904,7 +1892,7 @@ contains
 #endif
           qflx_sgs_qtrc(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-               * ( nu  (k,i,j)+nu  (k+1,i,j) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW)
        enddo
        enddo
@@ -1937,12 +1925,14 @@ contains
 #endif
           qflx_sgs_qtrc(k,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-               * ( nu  (k,i,j)+nu  (k,i+1,j) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i+1,j)/Pr(k,i+1,j) ) &
                * ( &
-                   ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i) &
-                 + ( QTRC(k+1,i+1,j,iq)+QTRC(k+1,i,j,iq)-QTRC(k-1,i+1,j,iq)-QTRC(k-1,i,j,iq) ) / ( FDZ(k)+FDZ(k-1) ) &
-                 * 0.5_RP * J13G(k,i,j,I_UYZ) / GSQRT(k,i,j,I_UYZ) &
-               )
+                   ( GSQRT(k,i+1,j,I_XYZ) * QTRC(k,i+1,j,iq) &
+                   - GSQRT(k,i  ,j,I_XYZ) * QTRC(k,i  ,j,iq) ) * RFDX(i) &
+                 + ( J13G(k+1,i,j,I_UYZ) * ( QTRC(k+1,i+1,j,iq)+QTRC(k+1,i,j,iq) ) &
+                   - J13G(k-1,i,j,I_UYZ) * ( QTRC(k-1,i+1,j,iq)+QTRC(k-1,i,j,iq) ) &
+                   ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+               ) / GSQRT(k,i,j,I_UYZ)
        enddo
        enddo
        enddo
@@ -1962,36 +1952,24 @@ contains
 #endif
           qflx_sgs_qtrc(KS,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
-               * ( nu  (KS,i,j)+nu  (KS,i+1,j) ) &
+               * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i+1,j)/Pr(KS,i+1,j) ) &
                * ( &
-                   ( QTRC(KS,i+1,j,iq)-QTRC(KS,i,j,iq) ) * RFDX(i) &
-                 + ( QTRC(KS+1,i+1,j,iq)+QTRC(KS+1,i,j,iq)-QTRC(KS,i+1,j,iq)-QTRC(KS,i,j,iq) ) * RFDZ(KS) &
-                 * 0.5_RP * J13G(KS,i,j,I_UYZ) / GSQRT(KS,i,j,I_UYZ) &
-               )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, DENS(KE,i,j) )
-       call CHECK( __LINE__, DENS(KE,i+1,j) )
-       call CHECK( __LINE__, nu(KE,i,j) )
-       call CHECK( __LINE__, nu(KE,i+1,j) )
-       call CHECK( __LINE__, QTRC(KE,i+1,j,iq) )
-       call CHECK( __LINE__, QTRC(KE,i,j,iq) )
-       call CHECK( __LINE__, RFDX(i) )
-#endif
+                   ( GSQRT(KS,i+1,j,I_XYZ) * QTRC(KS,i+1,j,iq) &
+                   - GSQRT(KS,i  ,j,I_XYZ) * QTRC(KS,i  ,j,iq) ) * RFDX(i) &
+                 + ( J13G(KS+1,i,j,I_UYZ) * ( QTRC(KS+1,i+1,j,iq)+QTRC(KS+1,i,j,iq) ) &
+                   - J13G(KS  ,i,j,I_UYZ) * ( QTRC(KS  ,i+1,j,iq)+QTRC(KS  ,i,j,iq) ) &
+                   ) * 0.5_RP * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_UYZ)
           qflx_sgs_qtrc(KE,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-               * ( nu  (KE,i,j)+nu  (KE,i+1,j) ) &
+               * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
                * ( &
-                   ( QTRC(KE,i+1,j,iq)-QTRC(KE,i,j,iq) ) * RFDX(i) &
-                 + ( QTRC(KE,i+1,j,iq)+QTRC(KE,i,j,iq)-QTRC(KE-1,i+1,j,iq)-QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) &
-                 * 0.5_RP * J13G(KE,i,j,I_UYZ) / GSQRT(KE,i,j,I_UYZ) &
-               )
+                   ( GSQRT(KE,i+1,j,I_XYZ) * QTRC(KE,i+1,j,iq) &
+                   - GSQRT(KE,i  ,j,I_XYZ) * QTRC(KE,i  ,j,iq) ) * RFDX(i) &
+                 + ( J13G(KE  ,i,j,I_UYZ) * ( QTRC(KE  ,i+1,j,iq)+QTRC(KE  ,i,j,iq) ) &
+                   - J13G(KE-1,i,j,I_UYZ) * ( QTRC(KE-1,i+1,j,iq)+QTRC(KE-1,i,j,iq) ) &
+                   ) * 0.5_RP * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_UYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -2012,12 +1990,14 @@ contains
 #endif
           qflx_sgs_qtrc(k,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-               * ( nu  (k,i,j)+nu  (k,i,j+1) ) &
+               * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i,j+1)/Pr(k,i,j+1) ) &
                * ( &
-                     ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j) &
-                   + ( QTRC(k+1,i,j+1,iq)+QTRC(k+1,i,j,iq)-QTRC(k-1,i,j+1,iq)-QTRC(k-1,i,j,iq) ) / ( FDZ(k)+FDZ(k-1) ) &
-                   * 0.5_RP * J23G(k,i,j,I_XVZ) / GSQRT(k,i,j,I_XVZ) &
-               )
+                     ( GSQRT(k,i,j+1,I_XYZ) * QTRC(k,i,j+1,iq) &
+                     - GSQRT(k,i,j  ,I_XYZ) * QTRC(k,i,j  ,iq) ) * RFDY(j) &
+                   + ( J23G(k+1,i,j,I_XVZ) * ( QTRC(k+1,i,j+1,iq)+QTRC(k+1,i,j,iq) ) &
+                     - J23G(k-1,i,j,I_XVZ) * ( QTRC(k-1,i,j+1,iq)+QTRC(k-1,i,j,iq) ) &
+                     ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+               ) / GSQRT(k,i,j,I_XVZ)
        enddo
        enddo
        enddo
@@ -2037,36 +2017,24 @@ contains
 #endif
           qflx_sgs_qtrc(KS,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
-               * ( nu  (KS,i,j)+nu  (KS,i,j+1) ) &
+               * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i,j+1)/Pr(KS,i,j+1) ) &
                * ( &
-                     ( QTRC(KS,i,j+1,iq)-QTRC(KS,i,j,iq) ) * RFDY(j) &
-                   + ( QTRC(KS+1,i,j+1,iq)+QTRC(KS+1,i,j,iq)-QTRC(KS,i,j+1,iq)-QTRC(KS,i,j,iq) ) * RFDZ(KS) &
-                   * 0.5_RP * J23G(KS,i,j,I_XVZ) / GSQRT(KS,i,j,I_XVZ) &
-               )
-       enddo
-       enddo
-#ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
-#endif
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, DENS(KE,i,j) )
-       call CHECK( __LINE__, DENS(KE,i,j+1) )
-       call CHECK( __LINE__, nu(KE,i,j) )
-       call CHECK( __LINE__, nu(KE,i,j+1) )
-       call CHECK( __LINE__, QTRC(KE,i,j+1,iq) )
-       call CHECK( __LINE__, QTRC(KE,i,j,iq) )
-       call CHECK( __LINE__, RFDY(j) )
-#endif
+                     ( GSQRT(KS,i,j+1,I_XYZ) * QTRC(KS,i,j+1,iq) &
+                     - GSQRT(KS,i,j  ,I_XYZ) * QTRC(KS,i,j  ,iq) ) * RFDY(j) &
+                   + ( J23G(KS+1,i,j,I_XVZ) * ( QTRC(KS+1,i,j+1,iq)+QTRC(KS+1,i,j,iq) ) &
+                     - J23G(KS  ,i,j,I_XVZ) * ( QTRC(KS  ,i,j+1,iq)+QTRC(KS  ,i,j,iq) ) &
+                     ) * 0.5_RP * RFDZ(KS) &
+               ) / GSQRT(KS,i,j,I_XVZ)
           qflx_sgs_qtrc(KE,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-               * ( nu  (KE,i,j)+nu  (KE,i,j+1) ) &
+               * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
                * ( &
-                     ( QTRC(KE,i,j+1,iq)-QTRC(KE,i,j,iq) ) * RFDY(j) &
-                   + ( QTRC(KE,i,j+1,iq)+QTRC(KE,i,j,iq)-QTRC(KE-1,i,j+1,iq)-QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) &
-                   * 0.5_RP * J23G(KE,i,j,I_XVZ) / GSQRT(KE,i,j,I_XVZ) &
-               )
+                     ( GSQRT(KE,i,j+1,I_XYZ) * QTRC(KE,i,j+1,iq) &
+                     - GSQRT(KE,i,j  ,I_XYZ) * QTRC(KE,i,j  ,iq) ) * RFDY(j) &
+                   + ( J23G(KE  ,i,j,I_XVZ) * ( QTRC(KE  ,i,j+1,iq)+QTRC(KE  ,i,j,iq) ) &
+                     - J23G(KE-1,i,j,I_XVZ) * ( QTRC(KE-1,i,j+1,iq)+QTRC(KE-1,i,j,iq) ) &
+                     ) * 0.5_RP * RFDZ(KE-1) &
+               ) / GSQRT(KE,i,j,I_XVZ)
        enddo
        enddo
 #ifdef DEBUG
