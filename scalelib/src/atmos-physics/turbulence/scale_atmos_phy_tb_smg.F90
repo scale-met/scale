@@ -1414,8 +1414,8 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! Pr = nu_m / nu_h = fm / fh
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JJS-1, JJE+1
+       do i = IIS-1, IIE+1
        do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, Ri(k,i,j) )
@@ -1735,6 +1735,8 @@ contains
        call CHECK( __LINE__, DENS(k,i+1,j) )
        call CHECK( __LINE__, nu(k,i,j) )
        call CHECK( __LINE__, nu(k,i+1,j) )
+       call CHECK( __LINE__, Pr(k,i,j) )
+       call CHECK( __LINE__, Pr(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i+1,j) )
        call CHECK( __LINE__, POTT(k,i,j) )
        call CHECK( __LINE__, POTT(k+1,i+1,j) )
@@ -1752,7 +1754,7 @@ contains
                    + ( J13G(k+1,i,j,I_UYZ) * ( POTT(k+1,i+1,j)+POTT(k+1,i,j) ) &
                      - J13G(k-1,i,j,I_UYZ) * ( POTT(k-1,i+1,j)+POTT(k-1,i,j) ) &
                      ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
-                 )  / GSQRT(k,i,j,I_UYZ)
+                 ) / GSQRT(k,i,j,I_UYZ)
        enddo
        enddo
        enddo
@@ -1779,7 +1781,7 @@ contains
                    + ( J13G(KS+1,i,j,I_UYZ) * ( POTT(KS+1,i+1,j)+POTT(KS+1,i,j) ) &
                      - J13G(KS  ,i,j,I_UYZ) * ( POTT(KS  ,i+1,j)+POTT(KS  ,i,j) ) &
                      ) * 0.5_RP * RFDZ(KS) &
-                 )  / GSQRT(KS,i,j,I_UYZ)
+                 ) / GSQRT(KS,i,j,I_UYZ)
           qflx_sgs_rhot(KE,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
@@ -1789,7 +1791,7 @@ contains
                    + ( J13G(KE  ,i,j,I_UYZ) * ( POTT(KE  ,i+1,j)+POTT(KE  ,i,j) ) &
                      - J13G(KE-1,i,j,I_UYZ) * ( POTT(KE-1,i+1,j)+POTT(KE-1,i,j) ) &
                      ) * 0.5_RP * RFDZ(KE-1) &
-                 )  / GSQRT(KE,i,j,I_UYZ)
+                 ) / GSQRT(KE,i,j,I_UYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1806,10 +1808,10 @@ contains
        call CHECK( __LINE__, nu(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j+1) )
        call CHECK( __LINE__, POTT(k,i,j) )
-       call CHEKC( __LINE__, POT(k+1,i,j+1) )
-       call CHEKC( __LINE__, POT(k+1,i,j) )
-       call CHEKC( __LINE__, POT(k-1,i,j+1) )
-       call CHEKC( __LINE__, POT(k-1,i,j) )
+       call CHECK( __LINE__, POTT(k+1,i,j+1) )
+       call CHECK( __LINE__, POTT(k+1,i,j) )
+       call CHECK( __LINE__, POTT(k-1,i,j+1) )
+       call CHECK( __LINE__, POTT(k-1,i,j) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
           qflx_sgs_rhot(k,i,j,YDIR) = - 0.25_RP & ! 1/2/2
@@ -1818,8 +1820,8 @@ contains
                * ( &
                    ( GSQRT(k,i,j+1,I_XYZ) * POTT(k,i,j+1) &
                    - GSQRT(k,i,j  ,I_XYZ) * POTT(k,i,j  ) ) * RFDY(j) &
-                 + ( J23G(k+1,i,j  ,I_XVZ) * ( POTT(k+1,i,j+1)+POTT(k+1,i,j) ) &
-                   - J23G(k-1,i,j+1,I_XVZ) * ( POTT(k-1,i,j+1)+POTT(k-1,i,j) ) &
+                 + ( J23G(k+1,i,j,I_XVZ) * ( POTT(k+1,i,j+1)+POTT(k+1,i,j) ) &
+                   - J23G(k-1,i,j,I_XVZ) * ( POTT(k-1,i,j+1)+POTT(k-1,i,j) ) &
                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
                ) / GSQRT(k,i,j,I_XVZ)
        enddo
@@ -1845,8 +1847,8 @@ contains
                * ( &
                    ( GSQRT(KS,i,j+1,I_XYZ) * POTT(KS,i,j+1) &
                    - GSQRT(KS,i,j  ,I_XYZ) * POTT(KS,i,j  ) ) * RFDY(j) &
-                 + ( J23G(KS+1,i,j  ,I_XVZ) * ( POTT(KS+1,i,j+1)+POTT(KS+1,i,j) ) &
-                   - J23G(KS  ,i,j+1,I_XVZ) * ( POTT(KS  ,i,j+1)+POTT(KS  ,i,j) ) &
+                 + ( J23G(KS+1,i,j,I_XVZ) * ( POTT(KS+1,i,j+1)+POTT(KS+1,i,j) ) &
+                   - J23G(KS  ,i,j,I_XVZ) * ( POTT(KS  ,i,j+1)+POTT(KS  ,i,j) ) &
                    ) * 0.5_RP * RFDZ(KS) &
                ) / GSQRT(KS,i,j,I_XVZ)
           qflx_sgs_rhot(KE,i,j,YDIR) = - 0.25_RP & ! 1/2/2
@@ -1855,8 +1857,8 @@ contains
                * ( &
                    ( GSQRT(KE,i,j+1,I_XYZ) * POTT(KE,i,j+1) &
                    - GSQRT(KE,i,j  ,I_XYZ) * POTT(KE,i,j  ) ) * RFDY(j) &
-                 + ( J23G(KE  ,i,j  ,I_XVZ) * ( POTT(KE  ,i,j+1)+POTT(KE  ,i,j) ) &
-                   - J23G(KE-1,i,j+1,I_XVZ) * ( POTT(KE-1,i,j+1)+POTT(KE-1,i,j) ) &
+                 + ( J23G(KE  ,i,j,I_XVZ) * ( POTT(KE  ,i,j+1)+POTT(KE  ,i,j) ) &
+                   - J23G(KE-1,i,j,I_XVZ) * ( POTT(KE-1,i,j+1)+POTT(KE-1,i,j) ) &
                    ) * 0.5_RP * RFDZ(KE-1) &
                ) / GSQRT(KE,i,j,I_XVZ)
        enddo
