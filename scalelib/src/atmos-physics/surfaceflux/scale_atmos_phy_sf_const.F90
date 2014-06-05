@@ -134,8 +134,6 @@ contains
        STB  => CONST_STB
     use scale_time, only: &
        TIME_NOWSEC
-    use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     real(RP), intent(in)    :: ATM_TEMP  (IA,JA)    ! temperature at the lowermost layer (cell center) [K]
@@ -222,10 +220,6 @@ contains
        modulation = 1.0_RP
     endif
 
-    call SATURATION_pres2qsat_all( SFC_QSAT(:,:), & ! [OUT]
-                                   SFC_TEMP(:,:), & ! [IN]
-                                   SFC_PRES(:,:)  ) ! [IN]
-
     do j = JS, JE
     do i = IS, IE
        SFLX_SH(i,j) = ATMOS_PHY_SF_Const_SH * modulation
@@ -256,12 +250,8 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       R2 = 2.0_RP / ATM_Z1(i,j)
-
-       T2(i,j) = (          R2 ) * ATM_TEMP(i,j) &
-               + ( 1.0_RP - R2 ) * SFC_TEMP(i,j)
-       Q2(i,j) = (          R2 ) * ATM_QTRC(i,j,I_QV) &
-               + ( 1.0_RP - R2 ) * SFC_beta(i,j) * SFC_QSAT(i,j)
+       T2(i,j) = ATM_TEMP(i,j)
+       Q2(i,j) = ATM_QTRC(i,j,I_QV)
     enddo
     enddo
 

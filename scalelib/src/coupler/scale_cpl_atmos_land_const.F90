@@ -187,6 +187,8 @@ contains
       UNDEF => CONST_UNDEF
     use scale_time, only: &
       TIME => TIME_NOWDAYSEC
+    use scale_grid_real, only: &
+      Z1 => REAL_Z1
     implicit none
 
     ! argument
@@ -260,10 +262,10 @@ contains
       GHFLX (i,j) = Const_GH
 
       ! diagnostic variables
-      U10(i,j) = UNDEF
-      V10(i,j) = UNDEF
-      T2 (i,j) = UNDEF
-      Q2 (i,j) = UNDEF
+      U10(i,j) = UA  (i,j) * 10.0_RP / Z1(i,j)
+      V10(i,j) = VA  (i,j) * 10.0_RP / Z1(i,j)
+      T2 (i,j) = TMPA(i,j)
+      Q2 (i,j) = QVA (i,j)
 
     enddo
     enddo
