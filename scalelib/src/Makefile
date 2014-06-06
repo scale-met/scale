@@ -139,8 +139,8 @@ makegtool:
 
 ifeq ($(SDM),-D_SDM)
 makesdm:
-	cp -f $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	cp -f $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	cp -pf $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	$(MAKE) -C $(GAGETRYDIR)
 	$(MAKE) -C $(MTDIR)
 else
@@ -183,8 +183,8 @@ distclean: clean
 ifeq ($(SDM),-D_SDM)
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
-	cp -f $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	cp -f $(SDMDIR)/scale_tracer_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_tracer_sdm.F90
+	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
+	cp -pf $(SDMDIR)/scale_tracer_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_tracer_sdm.F90
 else
 clean:
 	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst

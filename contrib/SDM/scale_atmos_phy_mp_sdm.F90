@@ -41,11 +41,11 @@ module scale_atmos_phy_mp_sdm
      ONE_PI => CONST_PI, &
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
      mass_air => CONST_Mdry, &  ! Molecular mass of air [g/mol]
-     GasV_C => CONST_Rvap, &    ! Gas Constant of vapor [J/K/kg]
-     GasD_C => CONST_Rdry, &    ! Gas Constant of dry air [J/K/kg]
-     p0_C => CONST_PRE00, &     ! Reference Pressure [Pa]
-     cp_C => CONST_CPdry, &     ! Specific heat of dry air [J/kg/K]
-     grav => CONST_GRAV
+     GasV_C => CONST_Rvap !, &    ! Gas Constant of vapor [J/K/kg]
+!     GasD_C => CONST_Rdry, &    ! Gas Constant of dry air [J/K/kg]      ! not used <Shima>
+!     p0_C => CONST_PRE00, &     ! Reference Pressure [Pa]               ! not used <Shima>
+!     cp_C => CONST_CPdry, &     ! Specific heat of dry air [J/kg/K]     ! not used <Shima>
+!     grav => CONST_GRAV         ! gravitational constant [m/s2] <Shima >! not used <Shima>
   use gadg_algorithm, only: &
      gadg_count_sort
   use rng_uniform_mt, only: &
@@ -316,7 +316,7 @@ module scale_atmos_phy_mp_sdm
   logical,  private :: sdm_calvar(3)              ! flag for calculation of condensation, coalecscence, and droplet motion
   real(RP), private :: sdm_rdnc     = 1000.0_RP   ! Number of real droplet
   real(RP), private :: sdm_sdnmlvol = 1000.0_RP   ! Normal volume for number concentration of S.D. [m3]
-  real(RP), private :: sdm_inisdnc  = 1000.0_RP   ! Number of s.d. per sdnmlvol (inisdnc = rdnc/sdnmlvol )
+  real(RP), private :: sdm_inisdnc  = 1000.0_RP   ! Number of s.d. per sdnmlvol (inisdnc = rdnc/sdnmlvol ) !<- wrong comment <Shima>
   real(RP), private :: sdm_zlower   = 5.0_RP      ! Lowest limitation of super droplet [m]
   real(RP), private :: sdm_zupper   = 2.E+3_RP    ! Hightest limitation of super droplet [m]
   integer,  private :: sdm_extbuf   = 30          ! Rate to buffer size of super droplets for extra [%]
@@ -325,7 +325,7 @@ module scale_atmos_phy_mp_sdm
   integer,  private :: sdm_colbrwn  = 0           ! Flag of Brownian Coagulation and Scavenge process
   integer,  private :: sdm_mvexchg  = 0           ! flag of exchange momentum betweeen super-droplets and fluid 0:No, 1:Yes
   integer,  private :: sdm_aslset   = 1.0_RP      ! Conrol flag to set the species and way of chemical material as water-soluble aerosol
-  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol
+  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol ! nucleation <Shima>
   real(RP), private :: sdm_aslfmsdnc = 1000.0_RP  ! Number of S.D. per sdnmvol as aeroosl(s)
   real(RP), private :: sdm_aslfmrate = 0.0_RP ! Formation rate of super droplets as aerosol [1/(m^3 s)]
   real(RP), private :: sdm_aslmw(1:20)      ! User specified molecular mass of chemical material contained as water-soluble aerosol in S.D.
@@ -334,7 +334,7 @@ module scale_atmos_phy_mp_sdm
   real(RP), private :: sdm_nadjdt = 0.1_RP  ! Time interval of adjust S.D. number [s]
   integer,  private :: sdm_nadjvar = 3      ! Control flag of adjustment super-droplet number in each grid
                                             ! 0:adjust number of droplet by adding and removal, 1:adjust number of droplet by adding
-                                            ! 2:adjust number of droplet by removal 3:No adjust number of droplet
+                                            ! 2:adjust number of droplet by removal 3:No adjust number of droplet ! 0 to turn off the function? <Shima>
   data sdm_dtcmph / 0.1_RP,0.1_RP,0.1_RP /
   data sdm_calvar / .false.,.false.,.false. /
   data sdm_aslmw  / 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
@@ -651,30 +651,87 @@ contains
     sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
     sdm_dtadv = real( sdm_dtcmph(3),kind=RP )  !! motion of super-droplets
 
-    if( dt >= sdm_dtcmph(1) ) then
-     nclstp(1)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
+! check whether sdm_dtcmph(1:3) > 0
+    if( ( (sdm_dtcmph(1) <= 0.0_RP) .and. docondensation )     .or. &
+         ( (sdm_dtcmph(2) <= 0.0_RP) .and. doautoconversion )   .or. &
+         ( (sdm_dtcmph(3) <= 0.0_RP) .and. domovement )                ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph(1:3) have to be positive'
+       call PRC_MPIstop
+    end if
+
+! check whether dt (dt of mp) is divisible by sdm_dtcmph(i).
+! dmod() should not be used like this. It does not work as you expected.
+!!     if( ( dmod( dt, sdm_dtcmph(1) ) /= 0.0_RP .and. docondensation )     .or. &
+!!         ( dmod( dt, sdm_dtcmph(2) ) /= 0.0_RP .and. doautoconversion )   .or. &
+!!         ( dmod( dt, sdm_dtcmph(3) ) /= 0.0_RP .and. domovement )         .or. &
+    if( (dt < sdm_dtcmph(1)) .or. (dt < sdm_dtcmph(2)) .or. (dt < sdm_dtcmph(3)) ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: For now, sdm_dtcmph should be smaller than TIME_DTSEC_ATMOS_PHY_MP'
+       call PRC_MPIstop
+    end if
+
+! aerosol nucleation and sd number adjustment functions are not supported yet
+    if ( (abs(sdm_aslset) >= 10) .or. (sdm_nadjvar /= 3)) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: aerosol nucleation and sd number adjustment functions are not supported yet'
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: set sdm_aslset < 10 and sdm_nadjvar =3'
+       call PRC_MPIstop
+    end if
+
+! rigorous momentum exchange function is not supported yet
+    if ( sdm_mvexchg /= 0) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: Momentum exchange not yet supported. set sdm_mvexchg = 0'
+       call PRC_MPIstop
+    end if
+
+!    if( dt >= sdm_dtcmph(1) ) then
+    if( docondensation ) then
+       nclstp(1)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))
+       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))) /= 0) then 
+          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          call PRC_MPIstop
+       end if
     else
-     nclstp(1) = 1
-     sdm_dtcmph(1) = dt
-     sdm_dtevl = dt
-    endif
-    if( dt >= sdm_dtcmph(2) ) then
-     nclstp(2)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
+       nclstp(1) = 1
+    end if
+!    else
+!     nclstp(1) = 1
+!     sdm_dtcmph(1) = dt
+!     sdm_dtevl = dt
+!    endif
+
+!    if( dt >= sdm_dtcmph(2) ) then
+    if( doautoconversion ) then
+       nclstp(2)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))
+       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))) /= 0) then 
+          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          call PRC_MPIstop
+       end if
     else
-     nclstp(2) = 1
-     sdm_dtcmph(2) = dt
-     sdm_dtcol = dt
-    endif
-    if( dt >= sdm_dtcmph(3) ) then
-     nclstp(3)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
+       nclstp(2) = 1
+    end if
+!    else
+!     nclstp(2) = 1
+!     sdm_dtcmph(2) = dt
+!     sdm_dtcol = dt
+!    endif
+
+!    if( dt >= sdm_dtcmph(3) ) then
+    if( domovement ) then
+       nclstp(3)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))
+       if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))) /= 0) then 
+          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          call PRC_MPIstop
+       end if
     else
-     nclstp(3) = 1
-     sdm_dtcmph(3) = dt
-     sdm_dtadv = dt
-    endif
+       nclstp(3) = 1
+    end if
+!    else
+!     nclstp(3) = 1
+!     sdm_dtcmph(3) = dt
+!     sdm_dtadv = dt
+!    endif
     nclstp(0)=min(nclstp(1),nclstp(2),nclstp(3))
 
     ilcm=0
@@ -689,6 +746,10 @@ contains
           nclstp(0)=nclstp(0)/ilcm
        end if
     end do iterate_2
+
+! for checking the results. S.Shima
+!    if ( IO_L ) write(IO_FID_LOG,*) nclstp(0:3)
+!    call PRC_MPIstop
 
     dx_sdm(1:IA) = CDX(1:IA)
     dy_sdm(1:JA) = CDY(1:JA)
@@ -935,47 +996,48 @@ contains
                       !--- Y.Sato add ---
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
 
+! not supported yet. S.Shima
+!!$     ! Aerosol formation process of super-droplets
+!!$
+!!$     if( dtcl(4)>0.0_RP ) then
+!!$
+!!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
+!!$                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
+!!$                         sdm_zupper,sdm_zlower,dtcl,                 &
+!!$                         jcb,pbr_crs,ptbr_crs,ppf_crs,               &
+!!$                         ptpf_crs,qvf_crs,zph_crs,rhod_crs,          &
+!!$                         sdnum_s2c,sdnumasl_s2c,sdn_s2c,sdx_s2c,     &
+!!$                         sdy_s2c,sdz_s2c,sdrk_s2c,sdu_s2c,           &
+!!$                         sdv_s2c,sdvz_s2c,sdr_s2c,sdasl_s2c,         &
+!!$                         sdfmnum_s2c,sdn_fm,sdx_fm,sdy_fm,sdz_fm,    &
+!!$                         sdrk_fm,sdvz_fm,sdr_fm,sdasl_fm,            &
+!!$                         ni_s2c,nj_s2c,nk_s2c,                       &
+!!$                         sortid_s2c,sortkey_s2c,sortfreq_s2c,        &
+!!$                         sorttag_s2c,rng_s2c,                        &
+!!$!                         sorttag_s2c,                                &
+!!$                         sdm_itmp1,sd_itmp1,sd_itmp2,sd_itmp3)
+!!$
+!!$     end if
 
-     ! Aerosol formation process of super-droplets
-
-     if( dtcl(4)>0.0_RP ) then
-
-        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
-                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
-                         sdm_zupper,sdm_zlower,dtcl,                 &
-                         jcb,pbr_crs,ptbr_crs,ppf_crs,               &
-                         ptpf_crs,qvf_crs,zph_crs,rhod_crs,          &
-                         sdnum_s2c,sdnumasl_s2c,sdn_s2c,sdx_s2c,     &
-                         sdy_s2c,sdz_s2c,sdrk_s2c,sdu_s2c,           &
-                         sdv_s2c,sdvz_s2c,sdr_s2c,sdasl_s2c,         &
-                         sdfmnum_s2c,sdn_fm,sdx_fm,sdy_fm,sdz_fm,    &
-                         sdrk_fm,sdvz_fm,sdr_fm,sdasl_fm,            &
-                         ni_s2c,nj_s2c,nk_s2c,                       &
-                         sortid_s2c,sortkey_s2c,sortfreq_s2c,        &
-                         sorttag_s2c,rng_s2c,                        &
-!                         sorttag_s2c,                                &
-                         sdm_itmp1,sd_itmp1,sd_itmp2,sd_itmp3)
-
-     end if
-
-     ! Adjust number of super-droplets
-
-     if( dtcl(5)>0.e0 ) then
-
-       !== averaged number concentration in a grid ==!
-
-       sd_nc = sdininum_s2c/real(ni_s2c*nj_s2c*knum_sdm,kind=RP)
-
-       call sdm_adjsdnum(sdm_nadjvar,ni_s2c,nj_s2c,nk_s2c,          &
-                         sdnum_s2c,sdnumasl_s2c,sd_nc,              &
-                         sdn_s2c,sdx_s2c,sdy_s2c,sdr_s2c,           &
-                         sdasl_s2c,sdvz_s2c,sdrk_s2c,               &
-                         sortid_s2c,sortkey_s2c,sortfreq_s2c,       &
-                         sorttag_s2c,rng_s2c,rand_s2c,                &
-!                         sorttag_s2c,rand_s2c,                      &
-                         sdm_itmp1,sdm_itmp2,sd_itmp1)
-
-      end if
+! not supported yet. S.Shima
+!!$     ! Adjust number of super-droplets
+!!$
+!!$     if( dtcl(5)>0.e0 ) then
+!!$
+!!$       !== averaged number concentration in a grid ==!
+!!$
+!!$       sd_nc = sdininum_s2c/real(ni_s2c*nj_s2c*knum_sdm,kind=RP)
+!!$
+!!$       call sdm_adjsdnum(sdm_nadjvar,ni_s2c,nj_s2c,nk_s2c,          &
+!!$                         sdnum_s2c,sdnumasl_s2c,sd_nc,              &
+!!$                         sdn_s2c,sdx_s2c,sdy_s2c,sdr_s2c,           &
+!!$                         sdasl_s2c,sdvz_s2c,sdrk_s2c,               &
+!!$                         sortid_s2c,sortkey_s2c,sortfreq_s2c,       &
+!!$                         sorttag_s2c,rng_s2c,rand_s2c,                &
+!!$!                         sorttag_s2c,rand_s2c,                      &
+!!$                         sdm_itmp1,sdm_itmp2,sd_itmp1)
+!!$
+!!$      end if
 
     !--- update MOMENTUM, RHOT, and QV
     do k = 1, KA
