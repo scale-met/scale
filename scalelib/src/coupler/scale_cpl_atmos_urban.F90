@@ -38,6 +38,10 @@ module scale_cpl_atmos_urban
         TRL_URB, & ! (inout)
         TBL_URB, & ! (inout)
         TGL_URB, & ! (inout)
+        RAINR_URB, & ! (inout)
+        RAINB_URB, & ! (inout)
+        RAING_URB, & ! (inout)
+        ROFF_URB,  & ! (inout)
         TS_URB,  & ! (out)
         SHR_URB, & ! (out)
         SHB_URB, & ! (out)
@@ -82,6 +86,10 @@ module scale_cpl_atmos_urban
        real(RP), intent(inout) :: TRL_URB(UKS:UKE)
        real(RP), intent(inout) :: TBL_URB(UKS:UKE)
        real(RP), intent(inout) :: TGL_URB(UKS:UKE)
+       real(RP), intent(inout) :: RAINR_URB
+       real(RP), intent(inout) :: RAINB_URB
+       real(RP), intent(inout) :: RAING_URB
+       real(RP), intent(inout) :: ROFF_URB
 
        real(RP), intent(out) :: TS_URB
        real(RP), intent(out) :: SHR_URB

@@ -66,6 +66,11 @@ module mod_urban_vars
   real(RP), public, allocatable :: TRL_URB(:,:,:) ! temperature in layer of roof [K]
   real(RP), public, allocatable :: TBL_URB(:,:,:) ! temperature in layer of wall [K]
   real(RP), public, allocatable :: TGL_URB(:,:,:) ! temperature in layer of road [K]
+  real(RP), public, allocatable :: RAINR_URB(:,:) ! Rain storage on roof [mm=kg/m2]
+  real(RP), public, allocatable :: RAINB_URB(:,:) ! Rain storage on roof [mm=kg/m2]
+  real(RP), public, allocatable :: RAING_URB(:,:) ! Rain storage on roof [mm=kg/m2]
+  real(RP), public, allocatable :: ROFF_URB(:,:)  ! Runoff from urban [mm=kg/m2]
+
 
   !-----------------------------------------------------------------------------
   !
@@ -83,7 +88,7 @@ module mod_urban_vars
 
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX = 22
+  integer,                private, parameter :: VMAX = 26
   integer,                private, parameter :: I_TR_URB  = 1
   integer,                private, parameter :: I_TB_URB  = 2
   integer,                private, parameter :: I_TG_URB  = 3
@@ -106,6 +111,10 @@ module mod_urban_vars
   integer,                private, parameter :: I_TRL_URB = 20
   integer,                private, parameter :: I_TBL_URB = 21
   integer,                private, parameter :: I_TGL_URB = 22
+  integer,                private, parameter :: I_RAINR_URB = 23
+  integer,                private, parameter :: I_RAINB_URB = 24
+  integer,                private, parameter :: I_RAING_URB = 25
+  integer,                private, parameter :: I_ROFF_URB  = 26
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -132,7 +141,11 @@ module mod_urban_vars
                   'RnG_URB' , &
                   'TRL_URB' , &
                   'TBL_URB' , &
-                  'TGL_URB'  /
+                  'TGL_URB' , &
+                  'RAINR_URB' , &
+                  'RAINB_URB' , &
+                  'RAING_URB' , &
+                  'ROFF_URB'    /
 
   data VAR_DESC / 'Surface temperature of roof',       &
                   'Surface temperature of wall',       &
@@ -155,30 +168,38 @@ module mod_urban_vars
                   'Net radiation on road',             &
                   'temperature in layer of roof',      &
                   'temperature in layer of wall',      &
-                  'temperature in layer of road'       /
+                  'temperature in layer of road',      &
+                  'rain strage on roof',               &
+                  'rain strage on building',           &
+                  'rain strage on road',               &
+                  'runoff from urban'                  /
 
-  data VAR_UNIT / 'K',    &
-                  'K',    &
-                  'K',    &
-                  'K',    &
-                  '-',    &
-                  'm/s',  &
-                  'K',    &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'W/m2', &
-                  'K',    &
-                  'K',    &
-                  'K'    /
+  data VAR_UNIT / 'K',     &
+                  'K',     &
+                  'K',     &
+                  'K',     &
+                  '-',     &
+                  'm/s',   &
+                  'K',     &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  & 
+                  'W/m2',  &
+                  'W/m2',  &
+                  'W/m2',  &
+                  'K',     &
+                  'K',     &
+                  'K',     &
+                  'kg/m2', &
+                  'kg/m2', &
+                  'kg/m2', &
+                  'kg/m2'  /
 
   !-----------------------------------------------------------------------------
 contains
@@ -254,6 +275,15 @@ contains
     TBL_URB(:,:,:) = UNDEF
     TGL_URB(:,:,:) = UNDEF
 
+    allocate( RAINR_URB(IA,JA) )
+    allocate( RAINB_URB(IA,JA) )
+    allocate( RAING_URB(IA,JA) )
+    allocate( ROFF_URB(IA,JA) )
+    RAINR_URB (:,:) = 0.0_RP
+    RAINB_URB (:,:) = 0.0_RP
+    RAING_URB (:,:) = 0.0_RP
+    ROFF_URB (:,:)  = 0.0_RP
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_VARS,iostat=ierr)
@@ -320,25 +350,29 @@ contains
       call COMM_vars8( tmp3(:,:,k), k+UKE*2 )
     end do
 
-    call COMM_vars8( TR_URB(:,:),  1+UKE*3 )
-    call COMM_vars8( TB_URB(:,:),  2+UKE*3 )
-    call COMM_vars8( TG_URB(:,:),  3+UKE*3 )
-    call COMM_vars8( TC_URB(:,:),  4+UKE*3 )
-    call COMM_vars8( QC_URB(:,:),  5+UKE*3 )
-    call COMM_vars8( UC_URB(:,:),  6+UKE*3 )
-    call COMM_vars8( TS_URB(:,:),  7+UKE*3 )
-    call COMM_vars8( SHR_URB(:,:), 8+UKE*3 )
-    call COMM_vars8( SHB_URB(:,:), 9+UKE*3 )
-    call COMM_vars8( SHG_URB(:,:), 10+UKE*3 )
-    call COMM_vars8( LHR_URB(:,:), 11+UKE*3 )
-    call COMM_vars8( LHB_URB(:,:), 12+UKE*3 )
-    call COMM_vars8( LHG_URB(:,:), 13+UKE*3 )
-    call COMM_vars8( GHR_URB(:,:), 14+UKE*3 )
-    call COMM_vars8( GHB_URB(:,:), 15+UKE*3 )
-    call COMM_vars8( GHG_URB(:,:), 16+UKE*3 )
-    call COMM_vars8( RnR_URB(:,:), 17+UKE*3 )
-    call COMM_vars8( RnB_URB(:,:), 18+UKE*3 )
-    call COMM_vars8( RnG_URB(:,:), 19+UKE*3 )
+    call COMM_vars8( TR_URB(:,:),    1+UKE*3 )
+    call COMM_vars8( TB_URB(:,:),    2+UKE*3 )
+    call COMM_vars8( TG_URB(:,:),    3+UKE*3 )
+    call COMM_vars8( TC_URB(:,:),    4+UKE*3 )
+    call COMM_vars8( QC_URB(:,:),    5+UKE*3 )
+    call COMM_vars8( UC_URB(:,:),    6+UKE*3 )
+    call COMM_vars8( TS_URB(:,:),    7+UKE*3 )
+    call COMM_vars8( SHR_URB(:,:),   8+UKE*3 )
+    call COMM_vars8( SHB_URB(:,:),   9+UKE*3 )
+    call COMM_vars8( SHG_URB(:,:),   10+UKE*3 )
+    call COMM_vars8( LHR_URB(:,:),   11+UKE*3 )
+    call COMM_vars8( LHB_URB(:,:),   12+UKE*3 )
+    call COMM_vars8( LHG_URB(:,:),   13+UKE*3 )
+    call COMM_vars8( GHR_URB(:,:),   14+UKE*3 )
+    call COMM_vars8( GHB_URB(:,:),   15+UKE*3 )
+    call COMM_vars8( GHG_URB(:,:),   16+UKE*3 )
+    call COMM_vars8( RnR_URB(:,:),   17+UKE*3 )
+    call COMM_vars8( RnB_URB(:,:),   18+UKE*3 )
+    call COMM_vars8( RnG_URB(:,:),   19+UKE*3 )
+    call COMM_vars8( RAINR_URB(:,:), 20+UKE*3 )
+    call COMM_vars8( RAINB_URB(:,:), 21+UKE*3 )
+    call COMM_vars8( RAING_URB(:,:), 22+UKE*3 )
+    call COMM_vars8( ROFF_URB(:,:),  23+UKE*3 )
 
     do k = UKS, UKE
       call COMM_wait ( tmp1(:,:,k), k       )
@@ -346,25 +380,29 @@ contains
       call COMM_wait ( tmp3(:,:,k), k+UKE*2 )
     end do
 
-    call COMM_wait ( TR_URB(:,:),  1+UKE*3 )
-    call COMM_wait ( TB_URB(:,:),  2+UKE*3 )
-    call COMM_wait ( TG_URB(:,:),  3+UKE*3 )
-    call COMM_wait ( TC_URB(:,:),  4+UKE*3 )
-    call COMM_wait ( QC_URB(:,:),  5+UKE*3 )
-    call COMM_wait ( UC_URB(:,:),  6+UKE*3 )
-    call COMM_wait ( TS_URB(:,:),  7+UKE*3 )
-    call COMM_wait ( SHR_URB(:,:), 8+UKE*3 )
-    call COMM_wait ( SHB_URB(:,:), 9+UKE*3 )
-    call COMM_wait ( SHG_URB(:,:), 10+UKE*3 )
-    call COMM_wait ( LHR_URB(:,:), 11+UKE*3 )
-    call COMM_wait ( LHB_URB(:,:), 12+UKE*3 )
-    call COMM_wait ( LHG_URB(:,:), 13+UKE*3 )
-    call COMM_wait ( GHR_URB(:,:), 14+UKE*3 )
-    call COMM_wait ( GHB_URB(:,:), 15+UKE*3 )
-    call COMM_wait ( GHG_URB(:,:), 16+UKE*3 )
-    call COMM_wait ( RnR_URB(:,:), 17+UKE*3 )
-    call COMM_wait ( RnB_URB(:,:), 18+UKE*3 )
-    call COMM_wait ( RnG_URB(:,:), 19+UKE*3 )
+    call COMM_wait ( TR_URB(:,:),    1+UKE*3 )
+    call COMM_wait ( TB_URB(:,:),    2+UKE*3 )
+    call COMM_wait ( TG_URB(:,:),    3+UKE*3 )
+    call COMM_wait ( TC_URB(:,:),    4+UKE*3 )
+    call COMM_wait ( QC_URB(:,:),    5+UKE*3 )
+    call COMM_wait ( UC_URB(:,:),    6+UKE*3 )
+    call COMM_wait ( TS_URB(:,:),    7+UKE*3 )
+    call COMM_wait ( SHR_URB(:,:),   8+UKE*3 )
+    call COMM_wait ( SHB_URB(:,:),   9+UKE*3 )
+    call COMM_wait ( SHG_URB(:,:),   10+UKE*3 )
+    call COMM_wait ( LHR_URB(:,:),   11+UKE*3 )
+    call COMM_wait ( LHB_URB(:,:),   12+UKE*3 )
+    call COMM_wait ( LHG_URB(:,:),   13+UKE*3 )
+    call COMM_wait ( GHR_URB(:,:),   14+UKE*3 )
+    call COMM_wait ( GHB_URB(:,:),   15+UKE*3 )
+    call COMM_wait ( GHG_URB(:,:),   16+UKE*3 )
+    call COMM_wait ( RnR_URB(:,:),   17+UKE*3 )
+    call COMM_wait ( RnB_URB(:,:),   18+UKE*3 )
+    call COMM_wait ( RnG_URB(:,:),   19+UKE*3 )
+    call COMM_wait ( RAINR_URB(:,:), 20+UKE*3 )
+    call COMM_wait ( RAINB_URB(:,:), 21+UKE*3 )
+    call COMM_wait ( RAING_URB(:,:), 22+UKE*3 )
+    call COMM_wait ( ROFF_URB(:,:),  23+UKE*3 )
 
     do k = UKS, UKE
       TRL_URB(k,:,:) = tmp1(:,:,k)
@@ -412,6 +450,15 @@ contains
                          URBAN_RESTART_IN_BASENAME, 'TBL_URB', 'Urban', step=1 ) ! [IN]
        call FILEIO_read( TGL_URB(:,:,:),                                       & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, 'TGL_URB', 'Urban', step=1 ) ! [IN]
+
+       call FILEIO_read( RAINR_URB(:,:),                                      & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'RAINR_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( RAINB_URB(:,:),                                      & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'RAINB_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( RAING_URB(:,:),                                      & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'RAING_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( ROFF_URB(:,:),                                       & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, 'ROFF_URB', 'XY', step=1 )  ! [IN]
 
        call URBAN_vars_fillhalo
 
@@ -469,6 +516,15 @@ contains
        call FILEIO_write( TGL_URB(:,:,:), basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(I_TGL_URB), VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
 
+       call FILEIO_write( RAINR_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_RAINR_URB), VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( RAINB_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_RAINB_URB), VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( RAING_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_RAING_URB), VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( ROFF_URB(:,:),  basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_ROFF_URB), VAR_DESC(I_ROFF_URB), VAR_UNIT(I_ROFF_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+
     endif
 
     return
@@ -494,6 +550,10 @@ contains
        call VALCHECK( TRL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB), __FILE__, __LINE__ )
        call VALCHECK( TBL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB), __FILE__, __LINE__ )
        call VALCHECK( TGL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB), __FILE__, __LINE__ )
+       call VALCHECK( RAINR_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), __FILE__, __LINE__ )
+       call VALCHECK( RAINB_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), __FILE__, __LINE__ )
+       call VALCHECK( RAING_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), __FILE__, __LINE__ )
+       call VALCHECK( ROFF_URB(:,:),  -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB), __FILE__, __LINE__ )
     endif
 
     call HIST_in( TR_URB(:,:), 'TR_URB', VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB), TIME_DTSEC_URBAN )
@@ -520,6 +580,11 @@ contains
     call HIST_in( TRL_URB(:,:,:), 'TRL_URB', VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), TIME_DTSEC_URBAN, zdim='urban' )
     call HIST_in( TBL_URB(:,:,:), 'TBL_URB', VAR_DESC(I_TBL_URB), VAR_UNIT(I_TBL_URB), TIME_DTSEC_URBAN, zdim='urban' )
     call HIST_in( TGL_URB(:,:,:), 'TGL_URB', VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), TIME_DTSEC_URBAN, zdim='urban' )
+
+    call HIST_in( RAINR_URB(:,:), 'RAINR_URB', VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB), TIME_DTSEC_URBAN )
+    call HIST_in( RAINB_URB(:,:), 'RAINB_URB', VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB), TIME_DTSEC_URBAN )
+    call HIST_in( RAING_URB(:,:), 'RAING_URB', VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), TIME_DTSEC_URBAN )
+    call HIST_in( ROFF_URB(:,:),  'ROFF_URB',  VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB),  TIME_DTSEC_URBAN )
 
     return
   end subroutine URBAN_vars_history
@@ -562,6 +627,11 @@ contains
           call STAT_total( total, TBL_URB(k,:,:), VAR_NAME(I_TBL_URB) )
           call STAT_total( total, TGL_URB(k,:,:), VAR_NAME(I_TGL_URB) )
        enddo
+
+       call STAT_total( total, RAINR_URB(:,:), VAR_NAME(I_RAINR_URB) )
+       call STAT_total( total, RAINB_URB(:,:), VAR_NAME(I_RAINB_URB) )
+       call STAT_total( total, RAING_URB(:,:), VAR_NAME(I_RAING_URB) )
+       call STAT_total( total, ROFF_URB(:,:),  VAR_NAME(I_ROFF_URB) )
     endif
 
     return

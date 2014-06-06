@@ -54,10 +54,13 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: road_width = 11.0       ! roof level ( building height) [m]
   real(RP), private :: SIGMA_ZED  =  1.0       ! Standard deviation of roof height [m]
   real(RP), private :: AH         = 17.5       ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: ALH        = 0.0         ! Latent Anthropogenic heat [W/m^2]
+  real(RP), private :: ALH        = 0.0        ! Latent Anthropogenic heat [W/m^2]
   real(RP), private :: BETR       = 0.0        ! Evaporation efficiency of roof [-]
   real(RP), private :: BETB       = 0.0        !                        of building [-]
   real(RP), private :: BETG       = 0.0        !                        of ground [-]
+  real(RP), private :: STRGR      = 0.0        ! rain strage on roof [-]
+  real(RP), private :: STRGB      = 0.0        !             on building [-]
+  real(RP), private :: STRGG      = 0.0        !             on ground [-]
   real(RP), private :: CAPR       = 1.2E6      ! heat capacity of roof
   real(RP), private :: CAPB       = 1.2E6      !  ( units converted in code
   real(RP), private :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
@@ -116,6 +119,9 @@ contains
     real(RP) :: URBAN_UCM_BETR
     real(RP) :: URBAN_UCM_BETB
     real(RP) :: URBAN_UCM_BETG
+    real(RP) :: URBAN_UCM_STRGR
+    real(RP) :: URBAN_UCM_STRGB
+    real(RP) :: URBAN_UCM_STRGG
     real(RP) :: URBAN_UCM_CAPR
     real(RP) :: URBAN_UCM_CAPB
     real(RP) :: URBAN_UCM_CAPG
@@ -146,6 +152,9 @@ contains
        URBAN_UCM_BETR,       &
        URBAN_UCM_BETB,       &
        URBAN_UCM_BETG,       &
+       URBAN_UCM_STRGR,      &
+       URBAN_UCM_STRGB,      &
+       URBAN_UCM_STRGG,      &
        URBAN_UCM_CAPR,       &
        URBAN_UCM_CAPB,       &
        URBAN_UCM_CAPG,       &
@@ -181,6 +190,9 @@ contains
     URBAN_UCM_BETR         = BETR
     URBAN_UCM_BETB         = BETB
     URBAN_UCM_BETG         = BETG
+    URBAN_UCM_STRGR        = STRGR
+    URBAN_UCM_STRGB        = STRGB
+    URBAN_UCM_STRGG        = STRGG
     URBAN_UCM_CAPR         = CAPR
     URBAN_UCM_CAPB         = CAPB
     URBAN_UCM_CAPG         = CAPG
@@ -227,6 +239,9 @@ contains
     BETR         = URBAN_UCM_BETR
     BETB         = URBAN_UCM_BETB
     BETG         = URBAN_UCM_BETG
+    STRGR        = URBAN_UCM_STRGR
+    STRGB        = URBAN_UCM_STRGB
+    STRGG        = URBAN_UCM_STRGG
     CAPR         = URBAN_UCM_CAPR
     CAPB         = URBAN_UCM_CAPB
     CAPG         = URBAN_UCM_CAPG
@@ -271,6 +286,10 @@ contains
         TRL,     & ! (inout)
         TBL,     & ! (inout)
         TGL,     & ! (inout)
+        RAINR,   & ! (inout)
+        RAINB,   & ! (inout)
+        RAING,   & ! (inout)
+        ROFF,    & ! (inout)
         TS,      & ! (out)
         SHR,     & ! (out)
         SHB,     & ! (out)
@@ -339,7 +358,7 @@ contains
     real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
     real(RP), intent(in)    :: SSG  ! downward total short wave radiation    [W/m/m]
     real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
-    real(RP), intent(in)    :: RAIN ! precipitation                          [mm/h]
+    real(RP), intent(in)    :: RAIN ! precipitation                          [kg/m2/s]
                                     !   (if you use RAIN, check unit!)
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: XLAT !< latitude  [rad,-pi,pi]
@@ -359,10 +378,14 @@ contains
     real(RP), intent(inout) :: TG   ! road temperature              [K]
     real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
     real(RP), intent(inout) :: QC   ! urban-canopy air mixing ratio [kg/kg]
-    real(RP), intent(inout) :: UC   ! diagnostic canopy wind [m/s]
+    real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
     real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
+    real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
+    real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
+    real(RP), intent(inout) :: ROFF  ! runoff from urban        [kg/m2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: TS     ! Diagnostic surface temperature   [K]
@@ -376,10 +399,7 @@ contains
     real(RP), intent(out)   :: GHR, GHB, GHG
 
 
-    !-- Local variables
-    real(RP) :: LUP, LDN, RUP, EMIS_grid
-
-
+    !-- Local variables   
     logical  :: SHADOW = .false.
            ! [true=consider svf and shadow effects, false=consider svf effect
            ! only]
@@ -406,9 +426,15 @@ contains
     real(RP) :: TSP = 300.0_RP   ! TSP: at previous time step [K]
     real(RP) :: UST, TST, QST
 
+    real(RP) :: RAINT
+    real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
+
     real(RP) :: PS         ! Surface Pressure [hPa]
     real(RP) :: TAV        ! Vertial Temperature [K]
     real(RP) :: ES
+
+    real(RP) :: LUP, LDN, RUP, EMIS_grid
+    real(RP) :: SUP, SDN, ALB_grid
 
     real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
     real(RP) :: RN     ! net radition                [W/m/m]
@@ -506,8 +532,6 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-!    print *,SVF,VFGW,VFWG,VFWS,VFWW
-
     !--- Convert unit from MKS to cgs
 
     SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
@@ -558,6 +582,28 @@ contains
 
     end if
 
+
+
+    !-----------------------------------------------------------
+    ! Set evaporation efficiency on roof/wall/road
+    !-----------------------------------------------------------
+     
+    RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
+!    RAINT = TIME/300./2.
+!    if (RAINT > 10. ) then
+!      RAINT = 0.
+!    endif
+
+    call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
+    call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
+    call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
+
+    ROFF = ROFF + (R-0.05_RP)*ROFFR     &
+                + 0.1_RP*ROFFB          &
+                + (RW-0.05_RP)*ROFFG
+
+    print *, TIME, BETR, BETB, BETG, ROFF
+
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
     !-----------------------------------------------------------
@@ -571,7 +617,6 @@ contains
     call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHO)
 
     CHR = ALPHAR / RHO / CP / UA
-    ! IF(RAIN > 1.) BETR=0.7
 
     TAV = TA * ( 1.0_RP + 0.61_RP * QA )
     PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
@@ -612,6 +657,9 @@ contains
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
 
+    !!--- calculate the rain amount remaining on the surface 
+    RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]    
+
     !--- Wall and Road
 
     Z    = ZA - ZDC
@@ -630,9 +678,6 @@ contains
     CHC = ALPHAC / RHO / CP / UA
     CHB = ALPHAB / RHO / CP / UC
     CHG = ALPHAG / RHO / CP / UC
-
-    !   BETB=0.0
-    !   IF(RAIN > 1.) BETG=0.7
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
@@ -768,6 +813,13 @@ contains
     FLXTHG  = HG / RHO / CP / 100.0_RP
     FLXHUMG = ELEG / RHO / EL / 100.0_RP
 
+    !!--- calculate the rain amount remaining on the surface 
+    RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+
+    !!--- calculate the rain amount remaining on the surface 
+    RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+
+
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
     !-----------------------------------------------------------
@@ -790,19 +842,22 @@ contains
     !-----------------------------------------------------------    
     ! Grid average
     !-----------------------------------------------------------
+    !--- shortwave radiation
+    SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
+    SUP =  R * ALBR  &
+         + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
+         + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
+ 
+    ALB_grid = SUP / SDN
 
+    !--- longwave radiation
     LDN = R + W*VFWS + RW*VFGS
-
     LUP =  R * (1.0_RP-EPSR) &
          + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
          + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
 
-    EMIS_grid = 1.0_RP - LUP / LDN
-
-!    print *,'LDN, LUP, EMISS',LDN,LUP,EMIS_grid
-
-
     RUP = (LDN - LUP) * RX - LNET
+    EMIS_grid = 1.0_RP - LUP / LDN
 
 !
 !    RUP =  R * (EPSR * SIG * (TR**4) / 60.0_RP) &
@@ -944,6 +999,31 @@ contains
 
     return
   end subroutine canopy_wind
+
+  !-----------------------------------------------------------------------------
+  subroutine cal_beta(BET, RAIN, WATER, STRG, ROFF)
+    implicit none
+
+    real(RP), intent(out)   :: BET    ! evapolation efficiency [-]
+    real(RP), intent(in)    :: RAIN   ! precipitation [mm*dt]
+    real(RP), intent(inout) :: WATER  ! rain amount in strage [kg/m2]
+    real(RP), intent(inout) :: STRG   ! rain strage [kg/m2]
+    real(RP), intent(inout) :: ROFF   ! runoff [kg/m2]
+
+    if ( STRG == 0.0_RP ) then
+       BET=0.0_RP
+       ROFF  = RAIN
+    else
+       WATER = WATER + RAIN
+       ROFF  = max(0.0_RP, WATER-STRG)
+       WATER = WATER - max(0.0_RP, WATER-STRG)
+       BET   = WATER / STRG
+    endif 
+
+    print *,BET, RAIN, WATER, STRG, ROFF
+
+    return
+  end subroutine cal_beta
 
   !-----------------------------------------------------------------------------
   subroutine mos(XXX,ALPHA,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)

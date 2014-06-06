@@ -97,7 +97,11 @@ contains
        GHG_URB, &
        RnR_URB, &
        RnB_URB, &
-       RnG_URB
+       RnG_URB, &
+       RAINR_URB, &
+       RAINB_URB, &
+       RAING_URB, &
+       ROFF_URB
     use mod_cpl_vars, only: &
        UST,               &
        RHOA => CPL_RHOA,  &
@@ -182,6 +186,10 @@ contains
         TRL_URB(:,i,j), & ! (inout)
         TBL_URB(:,i,j), & ! (inout)
         TGL_URB(:,i,j), & ! (inout)
+        RAINR_URB(i,j), & ! (inout)
+        RAINB_URB(i,j), & ! (inout)
+        RAING_URB(i,j), & ! (inout)
+        ROFF_URB(i,j),  & ! (inout)
         TS_URB  (i,j),  & ! (out)
         SHR_URB (i,j),  & ! (out)
         SHB_URB (i,j),  & ! (out)
