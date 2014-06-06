@@ -506,6 +506,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
       acdimids = (int*) malloc((sizeof(int)*m));
       CHECK_ERROR( nc_inq_vardimid(ncid, acid, acdimids) );
       for (j=0; j<m; j++) dimids[ndims-i-j-1] = acdimids[j];
+      free(acdimids);
       has_assoc = 1;
       i += m;
     }
