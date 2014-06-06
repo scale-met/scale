@@ -16,6 +16,7 @@
 !! @li      2013-09-30 (Y.Sato)  [new] Implement from Original version of SDM
 !! @li      2014-01-22 (Y.Sato)  [rev] Update for scale-0.0.0
 !! @li      2014-05-04 (Y.Sato)  [rev] Update for scale-0.0.1
+!! @li      2014-06-06 (S.Shima) [rev] Modify several bug 
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -41,11 +42,7 @@ module scale_atmos_phy_mp_sdm
      ONE_PI => CONST_PI, &
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
      mass_air => CONST_Mdry, &  ! Molecular mass of air [g/mol]
-     GasV_C => CONST_Rvap !, &    ! Gas Constant of vapor [J/K/kg]
-!     GasD_C => CONST_Rdry, &    ! Gas Constant of dry air [J/K/kg]      ! not used <Shima>
-!     p0_C => CONST_PRE00, &     ! Reference Pressure [Pa]               ! not used <Shima>
-!     cp_C => CONST_CPdry, &     ! Specific heat of dry air [J/kg/K]     ! not used <Shima>
-!     grav => CONST_GRAV         ! gravitational constant [m/s2] <Shima >! not used <Shima>
+     GasV_C => CONST_Rvap       ! Gas Constant of vapor [J/K/kg]
   use gadg_algorithm, only: &
      gadg_count_sort
   use rng_uniform_mt, only: &
@@ -316,7 +313,7 @@ module scale_atmos_phy_mp_sdm
   logical,  private :: sdm_calvar(3)              ! flag for calculation of condensation, coalecscence, and droplet motion
   real(RP), private :: sdm_rdnc     = 1000.0_RP   ! Number of real droplet
   real(RP), private :: sdm_sdnmlvol = 1000.0_RP   ! Normal volume for number concentration of S.D. [m3]
-  real(RP), private :: sdm_inisdnc  = 1000.0_RP   ! Number of s.d. per sdnmlvol (inisdnc = rdnc/sdnmlvol ) !<- wrong comment <Shima>
+  real(RP), private :: sdm_inisdnc  = 1000.0_RP   ! Number of super droplets per sdm_nmlvol at initial [1/m^3]
   real(RP), private :: sdm_zlower   = 5.0_RP      ! Lowest limitation of super droplet [m]
   real(RP), private :: sdm_zupper   = 2.E+3_RP    ! Hightest limitation of super droplet [m]
   integer,  private :: sdm_extbuf   = 30          ! Rate to buffer size of super droplets for extra [%]
@@ -325,16 +322,18 @@ module scale_atmos_phy_mp_sdm
   integer,  private :: sdm_colbrwn  = 0           ! Flag of Brownian Coagulation and Scavenge process
   integer,  private :: sdm_mvexchg  = 0           ! flag of exchange momentum betweeen super-droplets and fluid 0:No, 1:Yes
   integer,  private :: sdm_aslset   = 1.0_RP      ! Conrol flag to set the species and way of chemical material as water-soluble aerosol
-  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol ! nucleation <Shima>
+  real(RP), private :: sdm_aslfmdt  = 0.1_RP      ! time interval [sec] of aerosol nucleation
   real(RP), private :: sdm_aslfmsdnc = 1000.0_RP  ! Number of S.D. per sdnmvol as aeroosl(s)
   real(RP), private :: sdm_aslfmrate = 0.0_RP ! Formation rate of super droplets as aerosol [1/(m^3 s)]
   real(RP), private :: sdm_aslmw(1:20)      ! User specified molecular mass of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_aslion(1:20)     ! User specified ion of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_aslrho(1:20)     ! User specified density of chemical material contained as water-soluble aerosol in S.D.
   real(RP), private :: sdm_nadjdt = 0.1_RP  ! Time interval of adjust S.D. number [s]
-  integer,  private :: sdm_nadjvar = 3      ! Control flag of adjustment super-droplet number in each grid
-                                            ! 0:adjust number of droplet by adding and removal, 1:adjust number of droplet by adding
-                                            ! 2:adjust number of droplet by removal 3:No adjust number of droplet ! 0 to turn off the function? <Shima>
+  integer,  private :: sdm_nadjvar = 0      ! Control flag of adjustment super-droplet number in each grid
+                                            ! 0:No adjust number of droplet
+                                            ! 1:adjust number of droplet by adding
+                                            ! 2:adjust number of droplet by removal 
+                                            ! 3:adjust number of droplet by adding and removal
   data sdm_dtcmph / 0.1_RP,0.1_RP,0.1_RP /
   data sdm_calvar / .false.,.false.,.false. /
   data sdm_aslmw  / 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
@@ -627,62 +626,43 @@ contains
       sdm_zupper = CZ(KE)
      endif
 
-!     if( ( dmod( dt, sdm_dtcmph(1) ) /= 0.0_RP .and. docondensation )     .or. &
-!         ( dmod( dt, sdm_dtcmph(2) ) /= 0.0_RP .and. doautoconversion )   .or. &
-!         ( dmod( dt, sdm_dtcmph(3) ) /= 0.0_RP .and. domovement )         .or. &
-!         ( sdm_aslfmdt > 0.0_RP .and. dmod( dt, sdm_aslfmdt ) /= 0.0_RP ) .or. &
-!         ( sdm_nadjdt > 0.0_RP .and. dmod( dt, sdm_nadjdt ) /= 0.0_RP )   .or. &
-!         dt < sdm_dtcmph(1) .or. dt < sdm_dtcmph(2) .or. dt < sdm_dtcmph(3) ) then
-!
-!       if ( IO_L ) write(IO_FID_LOG,*) 'sdm_dtcmph, sdm_aslfmdt, and sdm_nadjdt'
-!       if ( IO_L ) write(IO_FID_LOG,*) 'should be multiple number of TIME_DTSEC_ATMOS_PHY_MP'
-!       if ( IO_L ) write(IO_FID_LOG,*) 'and shorter than TIME_DTSEC_ATMOS_PHY_MP'
-!
-!     write(*,*) dmod( dt, sdm_dtcmph(1) ), docondensation, &
-!               dmod( dt, sdm_dtcmph(2) ), doautoconversion, &
-!               dmod( dt, sdm_dtcmph(3) ), domovement,   &
-!               sdm_aslfmdt ,  &
-!               sdm_nadjdt ,  sdm_dtcmph(1:3)
-!
-!        call PRC_MPIstop
-!     endif
+     if( dt /= max( sdm_dtcmph(1), sdm_dtcmph(2), sdm_dtcmph(3) ) ) then
+       write(*,*) 'xxx DT_PHY_MP should be equal to max(sdm_dtcmph(1:3)) Check!'
+       write(*,*) dt, sdm_dtcmph(1:3)
+       call PRC_MPIstop
+     endif
 
-    sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
-    sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
-    sdm_dtadv = real( sdm_dtcmph(3),kind=RP )  !! motion of super-droplets
+     sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
+     sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
+     sdm_dtadv = real( sdm_dtcmph(3),kind=RP )  !! motion of super-droplets
 
-! check whether sdm_dtcmph(1:3) > 0
-    if( ( (sdm_dtcmph(1) <= 0.0_RP) .and. docondensation )     .or. &
+    ! check whether sdm_dtcmph(1:3) > 0
+     if(  ( (sdm_dtcmph(1) <= 0.0_RP) .and. docondensation   )   .or. &
          ( (sdm_dtcmph(2) <= 0.0_RP) .and. doautoconversion )   .or. &
-         ( (sdm_dtcmph(3) <= 0.0_RP) .and. domovement )                ) then
+         ( (sdm_dtcmph(3) <= 0.0_RP) .and. domovement       )        ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph(1:3) have to be positive'
        call PRC_MPIstop
-    end if
+     end if
 
-! check whether dt (dt of mp) is divisible by sdm_dtcmph(i).
-! dmod() should not be used like this. It does not work as you expected.
-!!     if( ( dmod( dt, sdm_dtcmph(1) ) /= 0.0_RP .and. docondensation )     .or. &
-!!         ( dmod( dt, sdm_dtcmph(2) ) /= 0.0_RP .and. doautoconversion )   .or. &
-!!         ( dmod( dt, sdm_dtcmph(3) ) /= 0.0_RP .and. domovement )         .or. &
+    ! check whether dt (dt of mp) is divisible by sdm_dtcmph(i).
     if( (dt < sdm_dtcmph(1)) .or. (dt < sdm_dtcmph(2)) .or. (dt < sdm_dtcmph(3)) ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: For now, sdm_dtcmph should be smaller than TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
     end if
 
-! aerosol nucleation and sd number adjustment functions are not supported yet
-    if ( (abs(sdm_aslset) >= 10) .or. (sdm_nadjvar /= 3)) then
+    ! aerosol nucleation and sd number adjustment functions are not supported yet
+    if ( (abs(sdm_aslset) >= 10) .or. (sdm_nadjvar /= 0)) then
        if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: aerosol nucleation and sd number adjustment functions are not supported yet'
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: set sdm_aslset < 10 and sdm_nadjvar =3'
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: set sdm_aslset < 10 and sdm_nadjvar =0'
        call PRC_MPIstop
     end if
 
-! rigorous momentum exchange function is not supported yet
+    ! rigorous momentum exchange function is not supported yet
     if ( sdm_mvexchg /= 0) then
        if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: Momentum exchange not yet supported. set sdm_mvexchg = 0'
        call PRC_MPIstop
     end if
 
-!    if( dt >= sdm_dtcmph(1) ) then
     if( docondensation ) then
        nclstp(1)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))
@@ -693,13 +673,7 @@ contains
     else
        nclstp(1) = 1
     end if
-!    else
-!     nclstp(1) = 1
-!     sdm_dtcmph(1) = dt
-!     sdm_dtevl = dt
-!    endif
 
-!    if( dt >= sdm_dtcmph(2) ) then
     if( doautoconversion ) then
        nclstp(2)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))
@@ -710,13 +684,7 @@ contains
     else
        nclstp(2) = 1
     end if
-!    else
-!     nclstp(2) = 1
-!     sdm_dtcmph(2) = dt
-!     sdm_dtcol = dt
-!    endif
 
-!    if( dt >= sdm_dtcmph(3) ) then
     if( domovement ) then
        nclstp(3)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))
@@ -727,11 +695,6 @@ contains
     else
        nclstp(3) = 1
     end if
-!    else
-!     nclstp(3) = 1
-!     sdm_dtcmph(3) = dt
-!     sdm_dtadv = dt
-!    endif
     nclstp(0)=min(nclstp(1),nclstp(2),nclstp(3))
 
     ilcm=0
@@ -746,10 +709,6 @@ contains
           nclstp(0)=nclstp(0)/ilcm
        end if
     end do iterate_2
-
-! for checking the results. S.Shima
-!    if ( IO_L ) write(IO_FID_LOG,*) nclstp(0:3)
-!    call PRC_MPIstop
 
     dx_sdm(1:IA) = CDX(1:IA)
     dy_sdm(1:JA) = CDY(1:JA)
@@ -7860,11 +7819,11 @@ contains
       integer :: sdnum_lwr ! lower limit number of super-droplets in a grid for adding
       !------------------------------------------------------------------7--
 
-      if( sdm_nadjvar==3 ) return
+      if( sdm_nadjvar==0 ) return
 
       ! Remove super-droplets from grids with large number of super-droplets
 
-      if( sdm_nadjvar==0 .or. sdm_nadjvar==2 ) then
+      if( sdm_nadjvar==3 .or. sdm_nadjvar==2 ) then
 
          sdnum_upr = floor( RATE4REMOVE * sd_nc )
          call sdm_sdremove(ni_sdm,nj_sdm,nk_sdm,                        &
@@ -7878,7 +7837,7 @@ contains
 
       ! Add super-droplets to grids with small number of super-droplets
 
-      if( sdm_nadjvar==0 .or. sdm_nadjvar==1 ) then
+      if( sdm_nadjvar==3 .or. sdm_nadjvar==1 ) then
 
          sdnum_lwr = floor( RATE4ADD * sd_nc )
 
@@ -7894,7 +7853,7 @@ contains
 
      ! Message for adjustment
 
-      if( mype==0 .and. sdm_nadjvar==0 ) then
+      if( mype==0 .and. sdm_nadjvar==3 ) then
         if( IO_L ) then
          write(IO_FID_LOG,'(a,a,i4,a,i4,a)')                           &
                  "  ### [SDM] : adjust number of super-droplet ",      &
