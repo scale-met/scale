@@ -7,7 +7,8 @@
 #define CHECK_ERROR(status)					\
   {								\
     if (status != NC_NOERR) {					\
-      fprintf(stderr, "Error: %s\n", nc_strerror(status));	\
+      fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);	\
+      fprintf(stderr, "       %s\n", nc_strerror(status));	\
       return ERROR_CODE;					\
     }								\
   }
@@ -371,7 +372,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
 
   dimids = malloc(sizeof(int)*ndims);
   for (i=0; i<ndims; i++)
-    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+i) );
+    CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+ndims-i-1) );
 
   TYPE2NCTYPE(dtype, xtype);
 
@@ -411,16 +412,18 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 			   int32_t  tavg)    // (in)
 {
   int ncid, varid, acid, *acdimids;
-  int dimids[NC_MAX_DIMS];
+  int dimids[NC_MAX_DIMS], dimid;
   char tname[File_HSHORT+1];
   int tdimid, tvarid;
   nc_type xtype = -1;
   char buf[File_HMID+1];
-  int i, j, n, m;
+  int i, j, k, n, m;
+  int nndims;
   size_t size;
   double rmiss = RMISS;
   char coord[File_HMID+1];
   int has_assoc;
+  int new;
 
   if ( nvar >= VAR_MAX ) {
     fprintf(stderr, "exceed max number of variable limit\n");
@@ -491,26 +494,53 @@ int32_t file_add_variable( int32_t *vid,     // (out)
     dimids[0] = vars[nvar]->t->dimid;
     ndims++;
   }
+  for (i=ndims-n; i<ndims; i++) dimids[i] = -1;
 
   has_assoc = 0;
-  for (i=0; i<n; ) {
-    if ( nc_inq_dimid(ncid, dims[i], &(dimids[ndims-i-1])) == NC_NOERR ) {
-      i += 1;
+  nndims = 0;
+  for (i=0; i<n; i++) {
+    if ( nc_inq_dimid(ncid, dims[i], &dimid) == NC_NOERR ) {
+      new = 1;
+      for (k=0; k<nndims; k++) {
+	if (dimid == dimids[k]) {
+	  new = 0;
+	  break;
+	}
+      }
+      if (new) {
+	dimids[ndims-(++nndims)] = dimid;
+      }
     } else {
       CHECK_ERROR( nc_inq_varid(ncid, dims[i], &acid) );
       CHECK_ERROR( nc_inq_varndims(ncid, acid, &m) );
-      if ( i+m > ndims ) {
-	fprintf(stderr, "Error: invalid associated coordinates\n");
-	return ERROR_CODE;
-      }
       acdimids = (int*) malloc((sizeof(int)*m));
       CHECK_ERROR( nc_inq_vardimid(ncid, acid, acdimids) );
-      for (j=0; j<m; j++) dimids[ndims-i-j-1] = acdimids[j];
+      for (j=m-1; j>=0; j--) {
+	new = 1;
+	for (k=0; k<ndims; k++) {
+	  if (acdimids[j] == dimids[k]) {
+	    new = 0;
+	    break;
+	  }
+	}
+	if (new) {
+	  if ( nndims >= ndims ) {
+	    fprintf(stderr, "Error: invalid associated coordinates\n");
+	    return ERROR_CODE;
+	  }
+          dimids[ndims-(++nndims)] = acdimids[j];
+	  nc_inq_dimname(ncid, acdimids[j], tname);
+	}
+      }
       free(acdimids);
       has_assoc = 1;
-      i += m;
     }
   }
+  if (nndims != n) {
+    fprintf(stderr, "Error: invalid associated coordinates: %d %d\n", ndims, nndims);
+    return ERROR_CODE;
+  }
+
   TYPE2NCTYPE(dtype, xtype);
   CHECK_ERROR( nc_def_var(ncid, varname, xtype, ndims, dimids, &varid) );
 

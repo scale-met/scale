@@ -237,7 +237,7 @@ contains
                                        'degrees_east' , AXIS_name, dtype, AXIS_LON (:,:) )
 
     AXIS_name = (/'xh','y '/)
-    call FilePutAssociatedCoordinates( fid, 'lonh', 'longitude (half level)',            &
+    call FilePutAssociatedCoordinates( fid, 'lon_u', 'longitude (half level)',            &
                                        'degrees_east' , AXIS_name, dtype, AXIS_LONX(:,:) )
 
     AXIS_name = (/'x ','y '/)
@@ -245,7 +245,7 @@ contains
                                        'degrees_north', AXIS_name, dtype, AXIS_LAT (:,:) )
 
     AXIS_name = (/'x ','yh'/)
-    call FilePutAssociatedCoordinates( fid, 'lath', 'latitude (half level)' ,            &
+    call FilePutAssociatedCoordinates( fid, 'lat_v', 'latitude (half level)' ,            &
                                        'degrees_north', AXIS_name, dtype, AXIS_LATY(:,:) )
 
     call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
