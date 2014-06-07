@@ -17,6 +17,7 @@
 !! @li      2014-01-22 (Y.Sato)  [rev] Update for scale-0.0.0
 !! @li      2014-05-04 (Y.Sato)  [rev] Update for scale-0.0.1
 !! @li      2014-06-06 (S.Shima) [rev] Modify several bug 
+!! @li      2014-06-07 (S.Shima) [rev] Remove dt=max(dt_sdm) and some other changes
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -37,7 +38,8 @@ module scale_atmos_phy_mp_sdm
      mype => PRC_myrank, &
      PRC_MPIstop
   use scale_time, only: &
-     TIME_DOATMOS_restart
+     TIME_DOATMOS_restart, &
+     TIME_DTSEC
   use scale_const, only: &
      ONE_PI => CONST_PI, &
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
@@ -626,12 +628,6 @@ contains
       sdm_zupper = CZ(KE)
      endif
 
-     if( dt /= max( sdm_dtcmph(1), sdm_dtcmph(2), sdm_dtcmph(3) ) ) then
-       write(*,*) 'xxx DT_PHY_MP should be equal to max(sdm_dtcmph(1:3)) Check!'
-       write(*,*) dt, sdm_dtcmph(1:3)
-       call PRC_MPIstop
-     endif
-
      sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
      sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
      sdm_dtadv = real( sdm_dtcmph(3),kind=RP )  !! motion of super-droplets
@@ -644,7 +640,7 @@ contains
        call PRC_MPIstop
      end if
 
-    ! check whether dt (dt of mp) is divisible by sdm_dtcmph(i).
+    ! check whether dt (dt of mp) is larger than sdm_dtcmph(i).
     if( (dt < sdm_dtcmph(1)) .or. (dt < sdm_dtcmph(2)) .or. (dt < sdm_dtcmph(3)) ) then
        if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: For now, sdm_dtcmph should be smaller than TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
@@ -958,7 +954,9 @@ contains
 ! not supported yet. S.Shima
 !!$     ! Aerosol formation process of super-droplets
 !!$
-!!$     if( dtcl(4)>0.0_RP ) then
+!!$     if( dtcl(4)>0.0_RP .and. &
+!!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
+!!$             int(1.E+3_RP*(dtcl(4),0.00010_RP))) /= 0 ) then
 !!$
 !!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
 !!$                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
@@ -981,7 +979,9 @@ contains
 ! not supported yet. S.Shima
 !!$     ! Adjust number of super-droplets
 !!$
-!!$     if( dtcl(5)>0.e0 ) then
+!!$     if( dtcl(5)>0.0_RP .and. &
+!!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
+!!$             int(1.E+3_RP*(dtcl(5),0.00010_RP))) /= 0 ) then
 !!$
 !!$       !== averaged number concentration in a grid ==!
 !!$
