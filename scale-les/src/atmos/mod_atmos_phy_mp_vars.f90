@@ -110,12 +110,13 @@ contains
     allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_QTRC_t(KA,IA,JA,QA) )
-    ATMOS_PHY_MP_DENS_t(:,:,:)   = UNDEF
-    ATMOS_PHY_MP_MOMZ_t(:,:,:)   = UNDEF
-    ATMOS_PHY_MP_MOMX_t(:,:,:)   = UNDEF
-    ATMOS_PHY_MP_MOMY_t(:,:,:)   = UNDEF
-    ATMOS_PHY_MP_RHOT_t(:,:,:)   = UNDEF
-    ATMOS_PHY_MP_QTRC_t(:,:,:,:) = UNDEF
+    ! tentative approach
+    ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMZ_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMX_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMY_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOT_t(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_QTRC_t(:,:,:,:) = 0.0_RP
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
