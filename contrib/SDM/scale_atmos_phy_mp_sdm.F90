@@ -40,7 +40,7 @@ module scale_atmos_phy_mp_sdm
      PRC_MPIstop
   use scale_time, only: &
      TIME_DOATMOS_restart, &
-     TIME_DTSEC
+     TIME_NOWSEC
   use scale_const, only: &
      ONE_PI => CONST_PI, &
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
@@ -767,7 +767,8 @@ contains
        QAD => QA, &
        MP_QAD => MP_QA
     use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
+       dt => TIME_DTSEC_ATMOS_PHY_MP !,&
+!       TIME_NOWSEC
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_mp_common, only: &
@@ -978,7 +979,7 @@ contains
 !!$     ! Aerosol formation process of super-droplets
 !!$
 !!$     if( dtcl(4)>0.0_RP .and. &
-!!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
+!!$         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
 !!$             int(1.E+3_RP*(dtcl(4),0.00010_RP))) == 0 ) then
 !!$
 !!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
@@ -1003,7 +1004,7 @@ contains
 !!$     ! Adjust number of super-droplets
 !!$
 !!$     if( dtcl(5)>0.0_RP .and. &
-!!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
+!!$         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
 !!$             int(1.E+3_RP*(dtcl(5),0.00010_RP))) == 0 ) then
 !!$
 !!$       !== averaged number concentration in a grid ==!
