@@ -151,10 +151,10 @@ contains
       ud(:) = 0.0_RP
 
       do k = LKS+1, LKE-1
-        ld(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k-1) ) )
+        ld(k) = - dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k-1) ) )
       end do
       do k = LKS, LKE-1
-        ud(k) = -2.0_RP * dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k+1) ) )
+        ud(k) = - dt * P(i,j,I_DFW) / ( dz(k) * ( dz(k) + dz(k+1) ) )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
@@ -189,17 +189,17 @@ contains
       ud(:) = 0.0_RP
 
       do k = LKS+1, LKE-1
-        ld(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
+        ld(k) = - dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k-1) ) ) &
               / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(k,i,j) * DWATR * CL )
       end do
       do k = LKS, LKE-1
-        ud(k) = -2.0_RP * dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
+        ud(k) = - dt * P(i,j,I_TCS) / ( dz(k) * ( dz(k) + dz(k+1) ) ) &
               / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(k,i,j) * DWATR * CL )
         md(k) = 1.0_RP - ld(k) - ud(k)
       end do
 
       iv(:)     = TG(LKS:LKE-1,i,j)
-      iv(LKS)   = TG(LKS,i,j) - dt * 2.0_RP * GHFLX(i,j) / dz(k) &
+      iv(LKS)   = TG(LKS,i,j) - dt * GHFLX(i,j) / dz(k) &
                 / ( ( 1.0_RP - P(i,j,I_STRGMAX) ) * P(i,j,I_HCS) + STRG(LKS,i,j) * DWATR * CL ) 
       iv(LKE-1) = TG(LKE-1,i,j) - ud(LKE-1) * TG(LKE,i,j)
 
