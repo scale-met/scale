@@ -433,8 +433,8 @@ contains
     real(RP) :: TAV        ! Vertial Temperature [K]
     real(RP) :: ES
 
-    real(RP) :: LUP, LDN, RUP, EMIS_grid
-    real(RP) :: SUP, SDN, ALB_grid
+    real(RP) :: LUP, LDN, RUP, ALBD_LW_grid
+    real(RP) :: SUP, SDN, ALBD_SW_grid
 
     real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
     real(RP) :: RN     ! net radition                [W/m/m]
@@ -602,7 +602,7 @@ contains
                 + 0.1_RP*ROFFB          &
                 + (RW-0.05_RP)*ROFFG
 
-    print *, TIME, BETR, BETB, BETG, ROFF
+!    print *, TIME, BETR, BETB, BETG, ROFF
 
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
@@ -848,7 +848,7 @@ contains
          + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
  
-    ALB_grid = SUP / SDN
+    ALBD_SW_grid = SUP / SDN
 
     !--- longwave radiation
     LDN = R + W*VFWS + RW*VFGS
@@ -857,7 +857,7 @@ contains
          + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
 
     RUP = (LDN - LUP) * RX - LNET
-    EMIS_grid = 1.0_RP - LUP / LDN
+    ALBD_LW_grid = LUP / LDN
 
 !
 !    RUP =  R * (EPSR * SIG * (TR**4) / 60.0_RP) &
@@ -922,7 +922,7 @@ contains
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( RUP / STB / EMIS_grid )**0.25
+    RTS = ( RUP / STB / ALBD_LW_grid )**0.25
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
