@@ -922,7 +922,7 @@ contains
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( RUP / STB / EMIS_grid )**0.25
+    RTS = ( RUP / STB / ALBD_LW_grid )**0.25
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
