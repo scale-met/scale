@@ -17,7 +17,8 @@
 !! @li      2014-01-22 (Y.Sato)  [rev] Update for scale-0.0.0
 !! @li      2014-05-04 (Y.Sato)  [rev] Update for scale-0.0.1
 !! @li      2014-06-06 (S.Shima) [rev] Modify several bug 
-!! @li      2014-06-07 (S.Shima) [rev] Remove dt=max(dt_sdm) and some other changes
+!! @li      2014-06-07 (Y.Sato)  [rev] Remove dt=max(dt_sdm) and some other changes
+!! @li      2014-06-09 (S.Shima) [rev] Check whether dt is the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt. Fixed a hidden bug: "/=" to "==".
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -468,7 +469,7 @@ contains
     integer :: ierr
     integer :: i, j, ip, k, n, s
     integer :: bndsdmdim, bufsiz
-    integer :: tmppe, ilcm
+    integer :: tmppe, ilcm, igcd
     character(len=17) :: fmt1="(A, '.', A, I*.*)"
     !---------------------------------------------------------------------------
 
@@ -705,6 +706,28 @@ contains
           nclstp(0)=nclstp(0)/ilcm
        end if
     end do iterate_2
+
+    ! check whether dt is the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt 
+    !! find the smallest nclstp(1:3) that satisfies sdm_dtcmph(i)<= dt 
+    igcd=maxval(nclstp(1:3))
+    if((sdm_dtcmph(1)<= dt).and.docondensation)   igcd=min(nclstp(1),igcd)
+    if((sdm_dtcmph(2)<= dt).and.doautoconversion) igcd=min(nclstp(2),igcd)
+    if((sdm_dtcmph(3)<= dt).and.domovement)       igcd=min(nclstp(3),igcd)
+    !! find the greatest common divisor of nclstp(1:3) that satisfies sdm_dtcmph(i)<= dt 
+    do 
+       if( igcd == 1) exit
+       if( mod(nclstp(1),igcd) == 0 .and.           &
+           mod(nclstp(2),igcd) == 0 .and.           &
+           mod(nclstp(3),igcd) == 0   ) then
+           exit
+       end if
+       igcd = igcd - 1
+    end do
+    !! if igcd>1, it meanst dt is not the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt
+    if( igcd > 1)then
+       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least comon multiple of sdm_dtcmph(1:3) that are smaller than TIME_DTSEC_ATMOS_PHY_MP'
+       call PRC_MPIstop
+    end if
 
     dx_sdm(1:IA) = CDX(1:IA)
     dy_sdm(1:JA) = CDY(1:JA)
@@ -956,7 +979,7 @@ contains
 !!$
 !!$     if( dtcl(4)>0.0_RP .and. &
 !!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
-!!$             int(1.E+3_RP*(dtcl(4),0.00010_RP))) /= 0 ) then
+!!$             int(1.E+3_RP*(dtcl(4),0.00010_RP))) == 0 ) then
 !!$
 !!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
 !!$                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
@@ -981,7 +1004,7 @@ contains
 !!$
 !!$     if( dtcl(5)>0.0_RP .and. &
 !!$         mod(10*int(1.E+2_RP*(TIME_DTSEC+0.0010_RP)), &
-!!$             int(1.E+3_RP*(dtcl(5),0.00010_RP))) /= 0 ) then
+!!$             int(1.E+3_RP*(dtcl(5),0.00010_RP))) == 0 ) then
 !!$
 !!$       !== averaged number concentration in a grid ==!
 !!$
