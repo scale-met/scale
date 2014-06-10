@@ -206,9 +206,11 @@ contains
     if (       ATMOS_PHY_SF_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
+       ATMOS_PHY_SF_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_SF_RESTART_OUTPUT = .false.
+       ATMOS_PHY_SF_sw_restart = .false.
     endif
 
     return

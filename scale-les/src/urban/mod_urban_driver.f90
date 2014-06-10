@@ -50,7 +50,7 @@ contains
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_setup
     use mod_urban_phy_ucm, only: &
-       URBAN_PHY_driver_final
+       URBAN_SURFACE_SET
     implicit none
     !---------------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ contains
 
     if( URBAN_sw ) call URBAN_PHY_driver_setup( URBAN_TYPE )
 
-    if( URBAN_sw ) call URBAN_PHY_driver_final
+    if( URBAN_sw ) call URBAN_SURFACE_SET
 
     return
   end subroutine URBAN_driver_setup
@@ -72,22 +72,22 @@ contains
     use mod_urban_vars, only: &
        URBAN_vars_history
     use mod_urban_phy_ucm, only: &
-       URBAN_PHY_driver_first, &
-       URBAN_PHY_driver_final
+       URBAN_PHY_driver, &
+       URBAN_SURFACE_SET
     implicit none
     !---------------------------------------------------------------------------
 
     !########## Physics First ##########
     if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics')
-      call URBAN_PHY_driver_first
+      call URBAN_PHY_driver
       call PROF_rapend  ('URB Physics')
     endif
 
     !########## Physics Final ##########
     if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics')
-      call URBAN_PHY_driver_final
+      call URBAN_SURFACE_SET
       call PROF_rapend  ('URB Physics')
     endif
 

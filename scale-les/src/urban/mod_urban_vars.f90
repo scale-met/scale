@@ -36,6 +36,7 @@ module mod_urban_vars
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
   public :: URBAN_vars_total
+  public :: URBAN_vars_external_in
 
   !-----------------------------------------------------------------------------
   !
@@ -189,7 +190,7 @@ module mod_urban_vars
                   'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
-                  'W/m2',  & 
+                  'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
@@ -639,23 +640,23 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Input from External I/O
-  !subroutine URBAN_vars_external_in( &
-  !    ts_urb_in   )  ! (in)
-  !
-  !  implicit none
-  !
-  !  real(RP), intent(in) :: ust_in(:,:)
-  !
-  !  if( IO_L ) write(IO_FID_LOG,*)
-  !  if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
-  !
-  !  TS_URB(:,:) = ts_urb_in(:,:)
-  !
-  !  call URBAN_vars_fillhalo
-  !  
-  !  call URBAN_vars_total
-  !
-  !  return
-  !end subroutine URBAN_vars_external_in
+  subroutine URBAN_vars_external_in( &
+       ts_urb_in )
+    implicit none
+
+    real(RP), intent(in) :: ts_urb_in(IA,JA)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
+
+    TS_URB(:,:) = ts_urb_in(:,:)
+
+    call URBAN_vars_fillhalo
+
+    call URBAN_vars_total
+
+    return
+  end subroutine URBAN_vars_external_in
 
 end module mod_urban_vars

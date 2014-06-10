@@ -68,7 +68,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver( update_flag )
     use scale_const, only: &
-       LH0  => CONST_LH0
+       UNDEF => CONST_UNDEF, &
+       LH0   => CONST_LH0
     use scale_grid_real, only: &
        Z1  => REAL_Z1,  &
        LON => REAL_lon, &
@@ -103,66 +104,50 @@ contains
        RAING_URB, &
        ROFF_URB
     use mod_cpl_vars, only: &
-       UST,               &
-       RHOA => CPL_RHOA,  &
-       UA   => CPL_UA,    &
-       VA   => CPL_VA,    &
-       WA   => CPL_WA,    &
-       TMPA => CPL_TMPA,  &
-       QVA  => CPL_QVA,   &
-       PREC => CPL_PREC,  &
-       SWD  => CPL_SWD,   &
-       LWD  => CPL_LWD,   &
-       CPL_AtmLnd_XMFLX,  & ! tentative
-       CPL_AtmLnd_YMFLX,  & ! tentative
-       CPL_AtmLnd_ZMFLX,  & ! tentative
-       CPL_AtmLnd_U10,    & ! tentative
-       CPL_AtmLnd_V10,    & ! tentative
-       CPL_AtmLnd_T2,     & ! tentative
-       CPL_AtmLnd_Q2,     & ! tentative
-       CPL_AtmUrb_XMFLX,  &
-       CPL_AtmUrb_YMFLX,  &
-       CPL_AtmUrb_ZMFLX,  &
-       CPL_AtmUrb_SHFLX,  &
-       CPL_AtmUrb_LHFLX,  &
-       CPL_AtmUrb_QVFLX,  &
-       CPL_AtmUrb_U10,    &
-       CPL_AtmUrb_V10,    &
-       CPL_AtmUrb_T2,     &
-       CPL_AtmUrb_Q2,     &
-       Urb_GHFLX,         &
-       Urb_PRECFLX,       &
-       Urb_QVFLX,         &
-       CNT_Atm_Urb,       &
+       ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
+       ATM_U      => CPL_fromAtm_ATM_U,      &
+       ATM_V      => CPL_fromAtm_ATM_V,      &
+       ATM_W      => CPL_fromAtm_ATM_W,      &
+       ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
+       ATM_QV     => CPL_fromAtm_ATM_QV,     &
+       FLX_precip => CPL_fromAtm_FLX_precip, &
+       FLX_LW_dn  => CPL_fromAtm_FLX_LW_dn,  &
+       FLX_SW_dn  => CPL_fromAtm_FLX_SW_dn,  &
+       SFC_TEMP   => CPL_fromUrb_SFC_TEMP,   &
+       SFC_albedo => CPL_fromUrb_SFC_albedo, &
+       CPL_AtmUrb_ATM_FLX_MW,                &
+       CPL_AtmUrb_ATM_FLX_MU,                &
+       CPL_AtmUrb_ATM_FLX_MV,                &
+       CPL_AtmUrb_ATM_FLX_SH,                &
+       CPL_AtmUrb_ATM_FLX_LH,                &
+       CPL_AtmUrb_ATM_FLX_evap,              &
+       CPL_AtmUrb_ATM_U10,                   &
+       CPL_AtmUrb_ATM_V10,                   &
+       CPL_AtmUrb_ATM_T2,                    &
+       CPL_AtmUrb_ATM_Q2,                    &
+       CPL_AtmUrb_URB_FLX_heat,              &
+       CPL_AtmUrb_URB_FLX_precip,            &
+       CPL_AtmUrb_URB_FLX_evap,              &
+       CNT_AtmUrb,                           &
        CNT_Urb
     implicit none
 
-    ! arguments
     logical, intent(in) :: update_flag
 
-    ! works
-    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
-    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
-    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
-    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
-    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
+    real(RP) :: ATM_FLX_MW  (IA,JA)
+    real(RP) :: ATM_FLX_MU  (IA,JA)
+    real(RP) :: ATM_FLX_MV  (IA,JA)
+    real(RP) :: ATM_FLX_SH  (IA,JA)
+    real(RP) :: ATM_FLX_LH  (IA,JA)
+    real(RP) :: URB_FLX_heat(IA,JA)
+    real(RP) :: ATM_U10     (IA,JA)
+    real(RP) :: ATM_V10     (IA,JA)
+    real(RP) :: ATM_T2      (IA,JA)
+    real(RP) :: ATM_Q2      (IA,JA)
 
-    logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
-    real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
-    real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
-
-    ! parameters for shadow model
-    !XX sinDEC, cosDEC ?
-    ! real(RP) :: DECLIN   ! solar declination                    [rad]
-    !XX  cosSZA     ?
-    ! real(RP) :: COSZ     ! sin(fai)*sin(del)+cos(fai)*cos(del)*cos(omg)
-    !XX  hourangle  ?
-    ! real(RP) :: OMG      ! solar hour angle                       [rad]
+    logical  :: LSOLAR = .false. ! logical [true=both, false=SSG only]
+    real(RP) :: QMA              ! mixing ratio at the lowest atmospheric level  [kg/kg]
+    real(RP) :: Uabs             ! wind speed at the lowest atmospheric level    [m/s]
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -172,86 +157,83 @@ contains
     do j = 1, JA
     do i = 1, IA
 
-      QMA = QVA(i,j) / (1.0_RP-QVA(i,j)) ! mixing ratio at 1st atmospheric level [kg/kg]
-                                         ! QV specific humidity                  [kg/kg]
-      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+      QMA = ATM_QV(i,j) / (1.0_RP-ATM_QV(i,j)) ! specific humidity [kg/kg]
 
-      call CPL_AtmUrb( &
-        TR_URB (i,j),   & ! (inout)
-        TB_URB (i,j),   & ! (inout)
-        TG_URB (i,j),   & ! (inout)
-        TC_URB (i,j),   & ! (inout)
-        QC_URB (i,j),   & ! (inout)
-        UC_URB (i,j),   & ! (inout)
-        TRL_URB(:,i,j), & ! (inout)
-        TBL_URB(:,i,j), & ! (inout)
-        TGL_URB(:,i,j), & ! (inout)
-        RAINR_URB(i,j), & ! (inout)
-        RAINB_URB(i,j), & ! (inout)
-        RAING_URB(i,j), & ! (inout)
-        ROFF_URB(i,j),  & ! (inout)
-        TS_URB  (i,j),  & ! (out)
-        SHR_URB (i,j),  & ! (out)
-        SHB_URB (i,j),  & ! (out)
-        SHG_URB (i,j),  & ! (out)
-        LHR_URB (i,j),  & ! (out)
-        LHB_URB (i,j),  & ! (out)
-        LHG_URB (i,j),  & ! (out)
-        GHR_URB (i,j),  & ! (out)
-        GHB_URB (i,j),  & ! (out)
-        GHG_URB (i,j),  & ! (out)
-        RnR_URB (i,j),  & ! (out)
-        RnB_URB (i,j),  & ! (out)
-        RnG_URB (i,j),  & ! (out)
-        UST    (i,j),   & ! (out)
-        SHFLX  (i,j),   & ! (out)
-        LHFLX  (i,j),   & ! (out)
-        GHFLX  (i,j),   & ! (out)
-        LSOLAR,         & ! (in)
-        TMPA   (i,j),   & ! (in)
-        QMA,            & ! (in)
-        Uabs,           & ! (in)
-        UA     (i,j),   & ! (in)
-        VA     (i,j),   & ! (in)
-        Z1     (i,j),   & ! (in)
-        SWD    (i,j),   & ! (in)
-        LWD    (i,j),   & ! (in)
-        PREC   (i,j),   & ! (in)
-        RHOA   (i,j),   & ! (in)
-        LON    (i,j),   & ! (in)
-        LAT    (i,j)    ) ! (in)
+      Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
 
-    end do
-    end do
+      call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
+                       TB_URB      (i,j),   & ! [INOUT]
+                       TG_URB      (i,j),   & ! [INOUT]
+                       TC_URB      (i,j),   & ! [INOUT]
+                       QC_URB      (i,j),   & ! [INOUT]
+                       UC_URB      (i,j),   & ! [INOUT]
+                       TRL_URB     (:,i,j), & ! [INOUT]
+                       TBL_URB     (:,i,j), & ! [INOUT]
+                       TGL_URB     (:,i,j), & ! [INOUT]
+                       RAINR_URB   (i,j),   & ! [INOUT]
+                       RAINB_URB   (i,j),   & ! [INOUT]
+                       RAING_URB   (i,j),   & ! [INOUT]
+                       ROFF_URB    (i,j),   & ! [INOUT]
+                       TS_URB      (i,j),   & ! [OUT]
+                       SHR_URB     (i,j),   & ! [OUT]
+                       SHB_URB     (i,j),   & ! [OUT]
+                       SHG_URB     (i,j),   & ! [OUT]
+                       LHR_URB     (i,j),   & ! [OUT]
+                       LHB_URB     (i,j),   & ! [OUT]
+                       LHG_URB     (i,j),   & ! [OUT]
+                       GHR_URB     (i,j),   & ! [OUT]
+                       GHB_URB     (i,j),   & ! [OUT]
+                       GHG_URB     (i,j),   & ! [OUT]
+                       RnR_URB     (i,j),   & ! [OUT]
+                       RnB_URB     (i,j),   & ! [OUT]
+                       RnG_URB     (i,j),   & ! [OUT]
+                       SFC_TEMP    (i,j),   & ! [OUT]
+                       ATM_FLX_SH  (i,j),   & ! [OUT]
+                       ATM_FLX_LH  (i,j),   & ! [OUT]
+                       URB_FLX_heat(i,j),   & ! [OUT]
+                       LSOLAR,              & ! [IN]
+                       ATM_TEMP    (i,j),   & ! [IN]
+                       QMA,                 & ! [IN]
+                       Uabs,                & ! [IN]
+                       ATM_U       (i,j),   & ! [IN]
+                       ATM_V       (i,j),   & ! [IN]
+                       Z1          (i,j),   & ! [IN]
+                       FLX_SW_dn   (i,j),   & ! [IN]
+                       FLX_LW_dn   (i,j),   & ! [IN]
+                       FLX_precip  (i,j),   & ! [IN]
+                       ATM_DENS    (i,j),   & ! [IN]
+                       LON         (i,j),   & ! [IN]
+                       LAT         (i,j)    ) ! [IN]
 
-    ! --- tentative: caution !! ---
-    XMFLX(:,:) = CPL_AtmLnd_XMFLX(:,:)
-    YMFLX(:,:) = CPL_AtmLnd_YMFLX(:,:)
-    ZMFLX(:,:) = CPL_AtmLnd_ZMFLX(:,:)
-    U10  (:,:) = CPL_AtmLnd_U10  (:,:)
-    V10  (:,:) = CPL_AtmLnd_V10  (:,:)
-    T2   (:,:) = CPL_AtmLnd_T2   (:,:)
-    Q2   (:,:) = CPL_AtmLnd_Q2   (:,:)
-    ! --- tentative: caution !! ---
+        ! tentative treatment
+        ATM_FLX_MW(i,j) = 0.0_RP
+        ATM_FLX_MU(i,j) = 0.0_RP
+        ATM_FLX_MV(i,j) = 0.0_RP
+        ATM_U10   (i,j) = UNDEF
+        ATM_V10   (i,j) = UNDEF
+        ATM_T2    (i,j) = UNDEF
+        ATM_Q2    (i,j) = UNDEF
+    enddo
+    enddo
 
     ! temporal average flux
-    CPL_AtmUrb_XMFLX(:,:) = ( CPL_AtmUrb_XMFLX(:,:) * CNT_Atm_Urb + XMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_YMFLX(:,:) = ( CPL_AtmUrb_YMFLX(:,:) * CNT_Atm_Urb + YMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_ZMFLX(:,:) = ( CPL_AtmUrb_ZMFLX(:,:) * CNT_Atm_Urb + ZMFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_SHFLX(:,:) = ( CPL_AtmUrb_SHFLX(:,:) * CNT_Atm_Urb + SHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_LHFLX(:,:) = ( CPL_AtmUrb_LHFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_QVFLX(:,:) = ( CPL_AtmUrb_QVFLX(:,:) * CNT_Atm_Urb + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_U10  (:,:) = ( CPL_AtmUrb_U10  (:,:) * CNT_Atm_Urb + U10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_V10  (:,:) = ( CPL_AtmUrb_V10  (:,:) * CNT_Atm_Urb + V10  (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_T2   (:,:) = ( CPL_AtmUrb_T2   (:,:) * CNT_Atm_Urb + T2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
-    CPL_AtmUrb_Q2   (:,:) = ( CPL_AtmUrb_Q2   (:,:) * CNT_Atm_Urb + Q2   (:,:)     ) / ( CNT_Atm_Urb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MW  (:,:) = ( CPL_AtmUrb_ATM_FLX_MW  (:,:) * CNT_AtmUrb + ATM_FLX_MW(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MU  (:,:) = ( CPL_AtmUrb_ATM_FLX_MU  (:,:) * CNT_AtmUrb + ATM_FLX_MU(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MV  (:,:) = ( CPL_AtmUrb_ATM_FLX_MV  (:,:) * CNT_AtmUrb + ATM_FLX_MV(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_SH  (:,:) = ( CPL_AtmUrb_ATM_FLX_SH  (:,:) * CNT_AtmUrb + ATM_FLX_SH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_LH  (:,:) = ( CPL_AtmUrb_ATM_FLX_LH  (:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_evap(:,:) = ( CPL_AtmUrb_ATM_FLX_evap(:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)/LH0 ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_U10     (:,:) = ( CPL_AtmUrb_ATM_U10     (:,:) * CNT_AtmUrb + ATM_U10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_V10     (:,:) = ( CPL_AtmUrb_ATM_V10     (:,:) * CNT_AtmUrb + ATM_V10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_T2      (:,:) = ( CPL_AtmUrb_ATM_T2      (:,:) * CNT_AtmUrb + ATM_T2    (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_Q2      (:,:) = ( CPL_AtmUrb_ATM_Q2      (:,:) * CNT_AtmUrb + ATM_Q2    (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
 
-    Urb_GHFLX  (:,:) = ( Urb_GHFLX  (:,:) * CNT_Urb + GHFLX(:,:)     ) / ( CNT_Urb + 1.0_RP )
-    Urb_PRECFLX(:,:) = ( Urb_PRECFLX(:,:) * CNT_Urb + PREC (:,:)     ) / ( CNT_Urb + 1.0_RP )
-    Urb_QVFLX  (:,:) = ( Urb_QVFLX  (:,:) * CNT_Urb - LHFLX(:,:)/LH0 ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_heat  (:,:) = ( CPL_AtmUrb_URB_FLX_heat  (:,:) * CNT_Urb + URB_FLX_heat(:,:)     ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_precip(:,:) = ( CPL_AtmUrb_URB_FLX_precip(:,:) * CNT_Urb + FLX_precip  (:,:)     ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_evap  (:,:) = ( CPL_AtmUrb_URB_FLX_evap  (:,:) * CNT_Urb - ATM_FLX_LH  (:,:)/LH0 ) / ( CNT_Urb + 1.0_RP )
 
-    CNT_Atm_Urb = CNT_Atm_Urb + 1.0_RP
-    CNT_Urb     = CNT_Urb     + 1.0_RP
+    CNT_AtmUrb = CNT_AtmUrb + 1.0_RP
+    CNT_Urb    = CNT_Urb    + 1.0_RP
 
     return
   end subroutine CPL_AtmUrb_driver

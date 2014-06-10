@@ -138,9 +138,7 @@ program scaleles
      CPL_admin_setup, &
      CPL_do
   use mod_cpl_vars, only: &
-     CPL_vars_setup,         &
-     CPL_vars_restart_read,  &
-     CPL_vars_restart_write
+     CPL_vars_setup
   use mod_cpl_driver, only: &
      CPL_driver_setup, &
      CPL_driver
@@ -251,7 +249,6 @@ program scaleles
   call OCEAN_vars_restart_read
   call LAND_vars_restart_read
   call URBAN_vars_restart_read
-  call CPL_vars_restart_read
 
   ! setup driver
   call ATMOS_driver_setup
@@ -307,7 +304,6 @@ program scaleles
     if( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
     if( TIME_DOLAND_restart  ) call LAND_vars_restart_write
     if( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-    if( TIME_DOCPL_restart   ) call CPL_vars_restart_write
 
     if( TIME_DOend ) exit
 

@@ -41,6 +41,8 @@ module mod_atmos_phy_rd_vars
   !
   !++ Public parameters & variables
   !
+  logical, public ::  ATMOS_PHY_RD_sw_restart = .false.
+
   real(RP), public, allocatable :: ATMOS_PHY_RD_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_up  (:,:) ! surface upward   longwave  flux [J/m2/s]
@@ -179,9 +181,11 @@ contains
     if (       ATMOS_PHY_RD_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_RD_RESTART_OUT_BASENAME)
+       ATMOS_PHY_RD_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_RD_RESTART_OUTPUT = .false.
+       ATMOS_PHY_RD_sw_restart = .false.
     endif
 
     return

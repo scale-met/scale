@@ -75,112 +75,109 @@ contains
     use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
-       LST,               &
-       ALBG,              &
-       RHOA => CPL_RHOA,  &
-       UA   => CPL_UA,    &
-       VA   => CPL_VA,    &
-       WA   => CPL_WA,    &
-       TMPA => CPL_TMPA,  &
-       PRSA => CPL_PRSA,  &
-       QVA  => CPL_QVA,   &
-       PRSS => CPL_PRSS,  &
-       PREC => CPL_PREC,  &
-       SWD  => CPL_SWD,   &
-       LWD  => CPL_LWD,   &
-       TG   => CPL_TG,    &
-       QVEF => CPL_QVEF,  &
-       TCS  => CPL_TCS,   &
-       DZG  => CPL_DZG,   &
-       Z0M  => CPL_Z0M,   &
-       Z0H  => CPL_Z0H,   &
-       Z0E  => CPL_Z0E,   &
-       CPL_AtmLnd_XMFLX,  &
-       CPL_AtmLnd_YMFLX,  &
-       CPL_AtmLnd_ZMFLX,  &
-       CPL_AtmLnd_SHFLX,  &
-       CPL_AtmLnd_LHFLX,  &
-       CPL_AtmLnd_QVFLX,  &
-       CPL_AtmLnd_U10,    &
-       CPL_AtmLnd_V10,    &
-       CPL_AtmLnd_T2,     &
-       CPL_AtmLnd_Q2,     &
-       Lnd_GHFLX,         &
-       Lnd_PRECFLX,       &
-       Lnd_QVFLX,         &
-       CNT_Atm_Lnd,       &
+       ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
+       ATM_U      => CPL_fromAtm_ATM_U,      &
+       ATM_V      => CPL_fromAtm_ATM_V,      &
+       ATM_W      => CPL_fromAtm_ATM_W,      &
+       ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
+       ATM_PRES   => CPL_fromAtm_ATM_PRES,   &
+       ATM_QV     => CPL_fromAtm_ATM_QV,     &
+       SFC_PRES   => CPL_fromAtm_SFC_PRES,   &
+       FLX_precip => CPL_fromAtm_FLX_precip, &
+       FLX_LW_dn  => CPL_fromAtm_FLX_LW_dn,  &
+       FLX_SW_dn  => CPL_fromAtm_FLX_SW_dn,  &
+       SFC_TEMP   => CPL_fromLnd_SFC_TEMP,   &
+       SFC_albedo => CPL_fromLnd_SFC_albedo, &
+       LND_TCS    => CPL_fromLnd_LND_TCS,    &
+       LND_DZ     => CPL_fromLnd_LND_DZ,     &
+       SFC_Z0M    => CPL_fromLnd_SFC_Z0M,    &
+       SFC_Z0H    => CPL_fromLnd_SFC_Z0H,    &
+       SFC_Z0E    => CPL_fromLnd_SFC_Z0E,    &
+       LND_TEMP   => CPL_fromLnd_LND_TEMP,   &
+       LND_BETA   => CPL_fromLnd_LND_BETA,   &
+       CPL_AtmLnd_ATM_FLX_MW,                &
+       CPL_AtmLnd_ATM_FLX_MU,                &
+       CPL_AtmLnd_ATM_FLX_MV,                &
+       CPL_AtmLnd_ATM_FLX_SH,                &
+       CPL_AtmLnd_ATM_FLX_LH,                &
+       CPL_AtmLnd_ATM_FLX_evap,              &
+       CPL_AtmLnd_ATM_U10,                   &
+       CPL_AtmLnd_ATM_V10,                   &
+       CPL_AtmLnd_ATM_T2,                    &
+       CPL_AtmLnd_ATM_Q2,                    &
+       CPL_AtmLnd_LND_FLX_heat,              &
+       CPL_AtmLnd_LND_FLX_precip,            &
+       CPL_AtmLnd_LND_FLX_evap,              &
+       CNT_AtmLnd,                           &
        CNT_Lnd
     implicit none
 
-    ! arguments
     logical, intent(in) :: update_flag
 
-    ! works
-    real(RP) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
-    real(RP) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-    real(RP) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
-    real(RP) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
-    real(RP) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
-    real(RP) :: GHFLX(IA,JA) ! ground heat flux at the surface [W/m2]
-    real(RP) :: U10  (IA,JA) ! velocity u at 10m [m/s]
-    real(RP) :: V10  (IA,JA) ! velocity v at 10m [m/s]
-    real(RP) :: T2   (IA,JA) ! temperature at 2m [K]
-    real(RP) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
+    real(RP) :: ATM_FLX_MW  (IA,JA)
+    real(RP) :: ATM_FLX_MU  (IA,JA)
+    real(RP) :: ATM_FLX_MV  (IA,JA)
+    real(RP) :: ATM_FLX_SH  (IA,JA)
+    real(RP) :: ATM_FLX_LH  (IA,JA)
+    real(RP) :: LND_FLX_heat(IA,JA)
+    real(RP) :: ATM_U10     (IA,JA)
+    real(RP) :: ATM_V10     (IA,JA)
+    real(RP) :: ATM_T2      (IA,JA)
+    real(RP) :: ATM_Q2      (IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
 
-    call CPL_AtmLnd( &
-      LST  (:,:),      & ! (inout)
-      XMFLX(:,:),      & ! (out)
-      YMFLX(:,:),      & ! (out)
-      ZMFLX(:,:),      & ! (out)
-      SHFLX(:,:),      & ! (out)
-      LHFLX(:,:),      & ! (out)
-      GHFLX(:,:),      & ! (out)
-      U10  (:,:),      & ! (out)
-      V10  (:,:),      & ! (out)
-      T2   (:,:),      & ! (out)
-      Q2   (:,:),      & ! (out)
-      update_flag,     & ! (in)
-      RHOA (:,:),      & ! (in)
-      UA   (:,:),      & ! (in)
-      VA   (:,:),      & ! (in)
-      WA   (:,:),      & ! (in)
-      TMPA (:,:),      & ! (in)
-      PRSA (:,:),      & ! (in)
-      QVA  (:,:),      & ! (in)
-      PRSS (:,:),      & ! (in)
-      SWD  (:,:),      & ! (in)
-      LWD  (:,:),      & ! (in)
-      TG   (:,:),      & ! (in)
-      QVEF (:,:),      & ! (in)
-      ALBG (:,:,I_SW), & ! (in)
-      ALBG (:,:,I_LW), & ! (in)
-      TCS  (:,:),      & ! (in)
-      DZG  (:,:),      & ! (in)
-      Z0M  (:,:),      & ! (in)
-      Z0H  (:,:),      & ! (in)
-      Z0E  (:,:)       ) ! (in)
+    call CPL_AtmLnd( SFC_TEMP    (:,:),      & ! [INOUT]
+                     ATM_FLX_MU  (:,:),      & ! [OUT]
+                     ATM_FLX_MV  (:,:),      & ! [OUT]
+                     ATM_FLX_MW  (:,:),      & ! [OUT]
+                     ATM_FLX_SH  (:,:),      & ! [OUT]
+                     ATM_FLX_LH  (:,:),      & ! [OUT]
+                     LND_FLX_heat(:,:),      & ! [OUT]
+                     ATM_U10     (:,:),      & ! [OUT]
+                     ATM_V10     (:,:),      & ! [OUT]
+                     ATM_T2      (:,:),      & ! [OUT]
+                     ATM_Q2      (:,:),      & ! [OUT]
+                     update_flag,            & ! [IN]
+                     ATM_DENS    (:,:),      & ! [IN]
+                     ATM_U       (:,:),      & ! [IN]
+                     ATM_V       (:,:),      & ! [IN]
+                     ATM_W       (:,:),      & ! [IN]
+                     ATM_TEMP    (:,:),      & ! [IN]
+                     ATM_PRES    (:,:),      & ! [IN]
+                     ATM_QV      (:,:),      & ! [IN]
+                     SFC_PRES    (:,:),      & ! [IN]
+                     FLX_SW_dn   (:,:),      & ! [IN]
+                     FLX_LW_dn   (:,:),      & ! [IN]
+                     LND_TEMP    (:,:),      & ! [IN]
+                     LND_BETA    (:,:),      & ! [IN]
+                     SFC_albedo  (:,:,I_SW), & ! [IN]
+                     SFC_albedo  (:,:,I_LW), & ! [IN]
+                     LND_TCS     (:,:),      & ! [IN]
+                     LND_DZ      (:,:),      & ! [IN]
+                     SFC_Z0M     (:,:),      & ! [IN]
+                     SFC_Z0H     (:,:),      & ! [IN]
+                     SFC_Z0E     (:,:)       ) ! [IN]
 
     ! temporal average flux
-    CPL_AtmLnd_XMFLX(:,:) = ( CPL_AtmLnd_XMFLX(:,:) * CNT_Atm_Lnd + XMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_YMFLX(:,:) = ( CPL_AtmLnd_YMFLX(:,:) * CNT_Atm_Lnd + YMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_ZMFLX(:,:) = ( CPL_AtmLnd_ZMFLX(:,:) * CNT_Atm_Lnd + ZMFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_SHFLX(:,:) = ( CPL_AtmLnd_SHFLX(:,:) * CNT_Atm_Lnd + SHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_LHFLX(:,:) = ( CPL_AtmLnd_LHFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_QVFLX(:,:) = ( CPL_AtmLnd_QVFLX(:,:) * CNT_Atm_Lnd + LHFLX(:,:)/LH0 ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_U10  (:,:) = ( CPL_AtmLnd_U10  (:,:) * CNT_Atm_Lnd + U10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_V10  (:,:) = ( CPL_AtmLnd_V10  (:,:) * CNT_Atm_Lnd + V10  (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_T2   (:,:) = ( CPL_AtmLnd_T2   (:,:) * CNT_Atm_Lnd + T2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
-    CPL_AtmLnd_Q2   (:,:) = ( CPL_AtmLnd_Q2   (:,:) * CNT_Atm_Lnd + Q2   (:,:)     ) / ( CNT_Atm_Lnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_MW  (:,:) = ( CPL_AtmLnd_ATM_FLX_MW  (:,:) * CNT_AtmLnd + ATM_FLX_MW(:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_MU  (:,:) = ( CPL_AtmLnd_ATM_FLX_MU  (:,:) * CNT_AtmLnd + ATM_FLX_MU(:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_MV  (:,:) = ( CPL_AtmLnd_ATM_FLX_MV  (:,:) * CNT_AtmLnd + ATM_FLX_MV(:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_SH  (:,:) = ( CPL_AtmLnd_ATM_FLX_SH  (:,:) * CNT_AtmLnd + ATM_FLX_SH(:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_LH  (:,:) = ( CPL_AtmLnd_ATM_FLX_LH  (:,:) * CNT_AtmLnd + ATM_FLX_LH(:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_FLX_evap(:,:) = ( CPL_AtmLnd_ATM_FLX_evap(:,:) * CNT_AtmLnd + ATM_FLX_LH(:,:)/LH0 ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_U10     (:,:) = ( CPL_AtmLnd_ATM_U10     (:,:) * CNT_AtmLnd + ATM_U10   (:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_V10     (:,:) = ( CPL_AtmLnd_ATM_V10     (:,:) * CNT_AtmLnd + ATM_V10   (:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_T2      (:,:) = ( CPL_AtmLnd_ATM_T2      (:,:) * CNT_AtmLnd + ATM_T2    (:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
+    CPL_AtmLnd_ATM_Q2      (:,:) = ( CPL_AtmLnd_ATM_Q2      (:,:) * CNT_AtmLnd + ATM_Q2    (:,:)     ) / ( CNT_AtmLnd + 1.0_RP )
 
-    Lnd_GHFLX  (:,:) = ( Lnd_GHFLX  (:,:) * CNT_Lnd + GHFLX(:,:)     ) / ( CNT_Lnd + 1.0_RP )
-    Lnd_PRECFLX(:,:) = ( Lnd_PRECFLX(:,:) * CNT_Lnd + PREC (:,:)     ) / ( CNT_Lnd + 1.0_RP )
-    Lnd_QVFLX  (:,:) = ( Lnd_QVFLX  (:,:) * CNT_Lnd - LHFLX(:,:)/LH0 ) / ( CNT_Lnd + 1.0_RP )
+    CPL_AtmLnd_LND_FLX_heat  (:,:) = ( CPL_AtmLnd_LND_FLX_heat  (:,:) * CNT_Lnd + LND_FLX_heat(:,:)     ) / ( CNT_Lnd + 1.0_RP )
+    CPL_AtmLnd_LND_FLX_precip(:,:) = ( CPL_AtmLnd_LND_FLX_precip(:,:) * CNT_Lnd + FLX_precip  (:,:)     ) / ( CNT_Lnd + 1.0_RP )
+    CPL_AtmLnd_LND_FLX_evap  (:,:) = ( CPL_AtmLnd_LND_FLX_evap  (:,:) * CNT_Lnd - ATM_FLX_LH  (:,:)/LH0 ) / ( CNT_Lnd + 1.0_RP )
 
-    CNT_Atm_Lnd = CNT_Atm_Lnd + 1.0_RP
-    CNT_Lnd     = CNT_Lnd     + 1.0_RP
+    CNT_AtmLnd = CNT_AtmLnd + 1.0_RP
+    CNT_Lnd    = CNT_Lnd    + 1.0_RP
 
     return
   end subroutine CPL_AtmLnd_driver

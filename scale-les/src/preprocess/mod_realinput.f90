@@ -106,20 +106,18 @@ module mod_realinput
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup
-  !-----------------------------------------------------------------------------
   subroutine ParentAtomSetup( &
-      dims,             & ! (out)
-      timelen,          & ! (out)
-      mdlid,            & ! (out)
-      basename_org,     & ! (in)
-      filetype,         & ! (in)
-      search_divnum_in, & ! (in)
-      wrf_file_type_in  & ! (in)
-      )
+      dims,             &
+      timelen,          &
+      mdlid,            &
+      basename_org,     &
+      filetype,         &
+      search_divnum_in, &
+      wrf_file_type_in  )
     implicit none
+
     integer,          intent(out)   :: dims(:)
     integer,          intent(out)   :: timelen
     integer,          intent(out)   :: mdlid
@@ -175,36 +173,34 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Atmosphere Data Read
-  !-----------------------------------------------------------------------------
   subroutine ParentAtomInput( &
-      dens,          & ! (out)
-      momz,          & ! (out)
-      momx,          & ! (out)
-      momy,          & ! (out)
-      rhot,          & ! (out)
-      qtrc,          & ! (out)
-      basename_org,  & ! (in)
-      dims,          & ! (in)
-      timelen,       & ! (in)
-      mdlid,         & ! (in)
-      step           & ! (in)
-      )
+      dens,         &
+      momz,         &
+      momx,         &
+      momy,         &
+      rhot,         &
+      qtrc,         &
+      basename_org, &
+      dims,         &
+      timelen,      &
+      mdlid,        &
+      step          )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
 
-    real(RP),         intent(out)           :: dens(:,:,:)
-    real(RP),         intent(out)           :: momz(:,:,:)
-    real(RP),         intent(out)           :: momx(:,:,:)
-    real(RP),         intent(out)           :: momy(:,:,:)
-    real(RP),         intent(out)           :: rhot(:,:,:)
-    real(RP),         intent(out)           :: qtrc(:,:,:,:)
-    character(LEN=*), intent( in)          :: basename_org
-    integer,          intent( in)           :: dims(:)
-    integer,          intent( in)           :: timelen  ! time steps in one file
-    integer,          intent( in)           :: mdlid    ! model type id
-    integer,          intent( in)           :: step     ! initial file number
+    real(RP),         intent(out) :: dens(:,:,:)
+    real(RP),         intent(out) :: momz(:,:,:)
+    real(RP),         intent(out) :: momx(:,:,:)
+    real(RP),         intent(out) :: momy(:,:,:)
+    real(RP),         intent(out) :: rhot(:,:,:)
+    real(RP),         intent(out) :: qtrc(:,:,:,:)
+    character(LEN=*), intent(in)  :: basename_org
+    integer,          intent(in)  :: dims(:)
+    integer,          intent(in)  :: timelen  ! time steps in one file
+    integer,          intent(in)  :: mdlid    ! model type id
+    integer,          intent(in)  :: step     ! initial file number
 
     real(RP), allocatable :: W(:,:,:)
     real(RP), allocatable :: U(:,:,:)
@@ -352,20 +348,18 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Boundary Data Write
-  !-----------------------------------------------------------------------------
   subroutine ParentAtomBoundary( &
-      dens,          & ! (in)
-      momz,          & ! (in)
-      momx,          & ! (in)
-      momy,          & ! (in)
-      rhot,          & ! (in)
-      qtrc,          & ! (in)
-      numsteps,      & ! (in)
-      initstep,      & ! (in)
-      update_dt,     & ! (in)
-      basename,      & ! (in)
-      title          & ! (in)
-      )
+      dens,      &
+      momz,      &
+      momx,      &
+      momy,      &
+      rhot,      &
+      qtrc,      &
+      numsteps,  &
+      initstep,  &
+      update_dt, &
+      basename,  &
+      title      )
     use scale_comm, only: &
        COMM_vars, &
        COMM_wait
@@ -487,28 +481,27 @@ contains
   !> Land&Ocean Data Read/Write
   !-----------------------------------------------------------------------------
   subroutine ParentLndOcnInput( &
-      basename_org,  & ! (in)
-      dims,          & ! (in)
-      timelen,       & ! (in)
-      mdlid,         & ! (in)
-      step           & ! (in)
-      )
-    use mod_land_vars, only:   &
-       LAND_vars_restart_write, &
-       LAND_vars_external_in
-    use mod_ocean_vars, only:   &
+      basename_org, &
+      dims,         &
+      timelen,      &
+      mdlid,        &
+      step          )
+    use mod_ocean_vars, only: &
        OCEAN_vars_restart_write, &
        OCEAN_vars_external_in
-    use mod_cpl_vars, only:   &
-       CPL_vars_restart_write, &
-       CPL_vars_external_in
+    use mod_land_vars, only: &
+       LAND_vars_restart_write, &
+       LAND_vars_external_in
+    use mod_urban_vars, only: &
+       URBAN_vars_restart_write, &
+       URBAN_vars_external_in
     implicit none
 
-    character(LEN=*), intent( in)          :: basename_org
-    integer,          intent( in)           :: dims(:)
-    integer,          intent( in)           :: timelen  ! time steps in one file
-    integer,          intent( in)           :: mdlid    ! model type id
-    integer,          intent( in)           :: step     ! initial file number
+    character(LEN=*), intent(in) :: basename_org
+    integer,          intent(in) :: dims(:)
+    integer,          intent(in) :: timelen  ! time steps in one file
+    integer,          intent(in) :: mdlid    ! model type id
+    integer,          intent(in) :: step     ! initial file number
 
     real(RP), allocatable :: tg(:,:,:)
     real(RP), allocatable :: strg(:,:,:)
@@ -583,18 +576,17 @@ contains
                              step              )
     endif
 
-    ! Write out: Land
-    call LAND_vars_external_in( tg, strg )
-    call LAND_vars_restart_write
-
     ! Write out: Ocean
-    call OCEAN_vars_external_in( tw )
+    call OCEAN_vars_external_in( tw, sst, albw, z0w )
     call OCEAN_vars_restart_write
 
-    ! Write out: Coupler
-    call CPL_vars_external_in( lst, ust, sst, albw, albg, &
-                                z0w, skint, skinw, snowq, snowt )
-    call CPL_vars_restart_write
+    ! Write out: Land
+    call LAND_vars_external_in( tg, strg, lst, albg )
+    call LAND_vars_restart_write
+
+    ! Write out: Urban
+    call URBAN_vars_external_in( ust )
+    call URBAN_vars_restart_write
 
     deallocate( tg    )
     deallocate( strg  )
@@ -1221,7 +1213,7 @@ contains
     ! ---
     !call ExternalFileRead( dummy_4D(:,:,:,:),                             &
     !               BASENAME, "SH2O",  step, tcount, myrank, mdlid, single=.true., landgrid=.true. )
-    !do n = 1, tcount 
+    !do n = 1, tcount
     !do j = 1, dims(3)
     !do i = 1, dims(2)
     !do k = 1, dims(7)
@@ -1248,7 +1240,7 @@ contains
     ! surface runoff [mm]
     call ExternalFileRead( dummy_3D(:,:,:),                             &
                    BASENAME, "SFROFF",  step, tcount, myrank, mdlid, single=.true. )
-    do n = 1, tcount 
+    do n = 1, tcount
     do j = 1, dims(3)
     do i = 1, dims(2)
        org_3D(i,j,n) = dummy_3D(i,j,n) * 1000.0_DP * dwatr
@@ -1349,7 +1341,7 @@ contains
     ! SURFACE EMISSIVITY [-] (no wrfout-default)
     call ExternalFileRead( dummy_3D(:,:,:),                             &
                    BASENAME, "EMISS",  step, tcount, myrank, mdlid, single=.true. )
-    do n = 1, tcount 
+    do n = 1, tcount
     do j = 1, dims(3)
     do i = 1, dims(2)
        org_3D(i,j,n) = 1.0_DP - dummy_3D(i,j,n)
@@ -1399,7 +1391,7 @@ contains
     ! AVERAGE SNOW TEMPERATURE [C] (no wrfout-default)
     call ExternalFileRead( dummy_3D(:,:,:),                             &
                    BASENAME, "TSNAV",  step, tcount, myrank, mdlid, single=.true. )
-    do n = 1, tcount 
+    do n = 1, tcount
     do j = 1, dims(3)
     do i = 1, dims(2)
        org_3D(i,j,n) = dummy_3D(i,j,n) + TEM00

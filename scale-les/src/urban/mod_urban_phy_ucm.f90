@@ -25,8 +25,8 @@ module mod_urban_phy_ucm
   !++ Public procedure
   !
   public :: URBAN_PHY_driver_setup
-  public :: URBAN_PHY_driver_first
-  public :: URBAN_PHY_driver_final
+  public :: URBAN_PHY_driver
+  public :: URBAN_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !
@@ -84,20 +84,20 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Physical processes for urban submodel
-  subroutine URBAN_PHY_driver_first
+  subroutine URBAN_PHY_driver
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban step: UCM'
 
     return
-  end subroutine URBAN_PHY_driver_first
+  end subroutine URBAN_PHY_driver
 
-  subroutine URBAN_PHY_driver_final
+  subroutine URBAN_SURFACE_SET
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine URBAN_PHY_driver_final
+  end subroutine URBAN_SURFACE_SET
 
 end module mod_urban_phy_ucm

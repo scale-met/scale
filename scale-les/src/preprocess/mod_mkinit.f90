@@ -46,7 +46,9 @@ module mod_mkinit
      CPdry => CONST_CPdry, &
      RovCP => CONST_RovCP, &
      LH0   => CONST_LH0,   &
-     P00   => CONST_PRE00
+     P00   => CONST_PRE00, &
+     I_SW  => CONST_I_SW,  &
+     I_LW  => CONST_I_LW
   use scale_random, only: &
      RANDOM_get
   use scale_comm, only: &
@@ -61,46 +63,6 @@ module mod_mkinit
   use scale_grid_real, only: &
      REAL_CZ, &
      REAL_FZ
-  use scale_landuse, only: &
-     LANDUSE_frac_land,  &
-     LANDUSE_frac_urban
-  use mod_atmos_vars, only: &
-     DENS, &
-     MOMX, &
-     MOMY, &
-     MOMZ, &
-     RHOT, &
-     QTRC
-  use mod_atmos_phy_mp_vars, only: &
-     SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-     SFLX_snow => ATMOS_PHY_MP_SFLX_snow
-  use mod_atmos_phy_rd_vars, only: &
-     SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-     SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
-  use mod_ocean_vars, only: &
-     TW
-  use mod_land_vars, only: &
-     TG,   &
-     STRG
-  use mod_urban_vars, only: &
-     TR_URB,  &
-     TB_URB,  &
-     TG_URB,  &
-     TC_URB,  &
-     QC_URB,  &
-     UC_URB,  &
-     TS_URB,  &
-     TRL_URB, &
-     TBL_URB, &
-     TGL_URB
-  use mod_cpl_vars, only: &
-     LST,   &
-     SST,   &
-     SkinT, &
-     ALBW,  &
-     ALBG,  &
-     Z0W
-  use mod_realinput
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
   use scale_atmos_hydrostatic, only: &
@@ -109,6 +71,15 @@ module mod_mkinit
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
   use scale_atmos_saturation, only: &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+
+  use mod_atmos_vars, only: &
+     DENS, &
+     MOMX, &
+     MOMY, &
+     MOMZ, &
+     RHOT, &
+     QTRC
+  use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -337,23 +308,23 @@ contains
     use scale_landuse, only: &
        LANDUSE_write
     use mod_atmos_vars, only: &
-       ATMOS_sw_restart,    &
+       ATMOS_sw_restart,        &
        ATMOS_vars_restart_write
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_sw_restart,        &
        ATMOS_PHY_SF_vars_restart_write
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_sw_restart,        &
+       ATMOS_PHY_RD_vars_restart_write
+    use mod_ocean_vars, only: &
+       OCEAN_sw_restart,        &
+       OCEAN_vars_restart_write
     use mod_land_vars, only: &
-       LAND_sw_restart,    &
+       LAND_sw_restart,        &
        LAND_vars_restart_write
     use mod_urban_vars, only: &
-       URBAN_sw_restart,    &
+       URBAN_sw_restart,        &
        URBAN_vars_restart_write
-    use mod_ocean_vars, only: &
-       OCEAN_sw_restart,    &
-       OCEAN_vars_restart_write
-    use mod_cpl_vars, only: &
-       CPL_sw_restart,    &
-       CPL_vars_restart_write
     implicit none
 
     integer :: iq
@@ -454,10 +425,10 @@ contains
       ! output restart file
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
          if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
+         if( ATMOS_PHY_RD_sw_restart ) call ATMOS_PHY_RD_vars_restart_write
       if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart ) call URBAN_vars_restart_write
-      if( CPL_sw_restart   ) call CPL_vars_restart_write
     endif
 
     return
@@ -3471,124 +3442,57 @@ contains
 
     return
   end subroutine interporation_fact
-
-  !-----------------------------------------------------------------------------
-  !> Make initial state ( land variables )
-  subroutine MKINIT_landcouple
-    use scale_const, only: &
-      I_SW => CONST_I_SW, &
-      I_LW => CONST_I_LW
-    implicit none
-
-    ! Surface state
-    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
-    ! land state
-    real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
-    ! coupler state
-    real(RP) :: CPL_TEMP             ! land surface temperature [K]
-    real(RP) :: CPL_ALBG_SW = 0.0_RP ! land surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBG_LW = 0.0_RP ! land surface albedo for LW [0-1]
-
-    NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
-       SFC_PREC,     &
-       SFC_SWD,      &
-       SFC_LWD,      &
-       LND_TEMP,     &
-       LND_STRG,     &
-       CPL_TEMP,     &
-       CPL_ALBG_SW,  &
-       CPL_ALBG_LW
-
-    integer :: ierr
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
-
-    LND_TEMP  = THETAstd
-    CPL_TEMP  = THETAstd
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_LANDCOUPLE,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LANDCOUPLE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
-
-    ! make land variables
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain (i,j) = SFC_PREC
-       SFLX_snow (i,j) = 0.0_RP
-       SFLX_SW_dn(i,j) = SFC_SWD
-       SFLX_LW_dn(i,j) = SFC_LWD
-
-       TG   (:,i,j)    = LND_TEMP
-       STRG (:,i,j)    = LND_STRG
-
-       LST  (i,j)      = CPL_TEMP
-       SkinT(i,j)      = CPL_TEMP
-       ALBG (i,j,I_SW) = CPL_ALBG_SW
-       ALBG (i,j,I_LW) = CPL_ALBG_LW
-    enddo
-    enddo
-
-    return
-  end subroutine MKINIT_landcouple
-
   !-----------------------------------------------------------------------------
   !> Make initial state ( ocean variables )
   subroutine MKINIT_oceancouple
-    use scale_const, only: &
-      I_SW => CONST_I_SW, &
-      I_LW => CONST_I_LW
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_SFLX_rain, &
+       ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_SFLX_LW_dn, &
+       ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,       &
+       OCEAN_SFC_TEMP,   &
+       OCEAN_SFC_albedo, &
+       OCEAN_SFC_Z0
     implicit none
 
-    ! Surface state
-    real(RP) :: SFC_PREC    = 0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD     = 0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD     = 0.0_RP ! surface downwad long-wave radiation [W/m2]
-    ! ocean state
-    real(RP) :: OCN_TEMP             ! water temperature [K]
-    ! coupler state
-    real(RP) :: CPL_TEMP             ! sea surface temperature [K]
-    real(RP) :: CPL_ALBW_SW = 0.0_RP ! sea surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBW_LW = 0.0_RP ! sea surface albedo for LW [0-1]
-    real(RP) :: CPL_Z0W     = 0.0_RP ! sea surface roughness length [m]
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+    ! Ocean state
+    real(RP) :: OCN_TEMP               ! soil temperature           [K]
+    real(RP) :: SFC_TEMP               ! ocean skin temperature      [K]
+    real(RP) :: SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
+    real(RP) :: SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
+    real(RP) :: SFC_Z0        = 0.0_RP ! ocean surface roughness length [m]
 
     NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
-       SFC_PREC,     &
-       SFC_SWD,      &
-       SFC_LWD,      &
-       OCN_TEMP,     &
-       CPL_TEMP,     &
-       CPL_ALBW_SW,  &
-       CPL_ALBW_LW,  &
-       CPL_Z0W
+       FLX_rain,      &
+       FLX_snow,      &
+       FLX_LW_dn,     &
+       FLX_SW_dn,     &
+       OCN_TEMP,      &
+       SFC_TEMP,      &
+       SFC_albedo_LW, &
+       SFC_albedo_SW, &
+       SFC_Z0
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OceanCouple]/Categ[MKINIT]'
 
-    OCN_TEMP  = THETAstd
-    CPL_TEMP  = THETAstd
+    OCN_TEMP = THETAstd
+    SFC_TEMP = THETAstd
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_OCEANCOUPLE,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -3597,30 +3501,107 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
 
-    ! make ocean variables
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain (i,j) = SFC_PREC
-       SFLX_snow (i,j) = 0.0_RP
-       SFLX_SW_dn(i,j) = SFC_SWD
-       SFLX_LW_dn(i,j) = SFC_LWD
+    ATMOS_PHY_MP_SFLX_rain (:,:) = FLX_rain
+    ATMOS_PHY_MP_SFLX_snow (:,:) = FLX_snow
+    ATMOS_PHY_RD_SFLX_LW_dn(:,:) = FLX_LW_dn
+    ATMOS_PHY_RD_SFLX_SW_dn(:,:) = FLX_SW_dn
 
-       TW   (i,j)      = OCN_TEMP
-
-       SST  (i,j)      = CPL_TEMP
-       SkinT(i,j)      = CPL_TEMP
-       ALBW (i,j,I_SW) = CPL_ALBW_SW
-       ALBW (i,j,I_LW) = CPL_ALBW_LW
-       Z0W  (i,j)      = CPL_Z0W
-    enddo
-    enddo
+    OCEAN_TEMP      (:,:)      = OCN_TEMP
+    OCEAN_SFC_TEMP  (:,:)      = SFC_TEMP
+    OCEAN_SFC_albedo(:,:,I_LW) = SFC_albedo_LW
+    OCEAN_SFC_albedo(:,:,I_SW) = SFC_albedo_SW
+    OCEAN_SFC_Z0    (:,:)      = SFC_Z0
 
     return
   end subroutine MKINIT_oceancouple
 
   !-----------------------------------------------------------------------------
+  !> Make initial state ( land variables )
+  subroutine MKINIT_landcouple
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_SFLX_rain, &
+       ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_SFLX_LW_dn, &
+       ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_land_vars, only: &
+       LAND_TEMP,       &
+       LAND_WATER,      &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo
+    implicit none
+
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+    ! Land state
+    real(RP) :: LND_TEMP               ! soil temperature           [K]
+    real(RP) :: LND_WATER     = 0.0_RP ! soil moisture              [m3/m3]
+    real(RP) :: SFC_TEMP               ! land skin temperature      [K]
+    real(RP) :: SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
+
+    NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
+       FLX_rain,      &
+       FLX_snow,      &
+       FLX_LW_dn,     &
+       FLX_SW_dn,     &
+       LND_TEMP,      &
+       LND_WATER,     &
+       SFC_TEMP,      &
+       SFC_albedo_LW, &
+       SFC_albedo_SW
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
+
+    LND_TEMP = THETAstd
+    SFC_TEMP = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_LANDCOUPLE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LANDCOUPLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
+
+    ATMOS_PHY_MP_SFLX_rain (:,:) = FLX_rain
+    ATMOS_PHY_MP_SFLX_snow (:,:) = FLX_snow
+    ATMOS_PHY_RD_SFLX_LW_dn(:,:) = FLX_LW_dn
+    ATMOS_PHY_RD_SFLX_SW_dn(:,:) = FLX_SW_dn
+
+    LAND_TEMP      (:,:,:)    = LND_TEMP
+    LAND_WATER     (:,:,:)    = LND_WATER
+    LAND_SFC_TEMP  (:,:)      = SFC_TEMP
+    LAND_SFC_albedo(:,:,I_LW) = SFC_albedo_LW
+    LAND_SFC_albedo(:,:,I_SW) = SFC_albedo_SW
+
+    return
+  end subroutine MKINIT_landcouple
+
+  !-----------------------------------------------------------------------------
   !> Make initial state ( urban variables )
   subroutine MKINIT_urbancouple
+    use mod_urban_vars, only: &
+       TR_URB,  &
+       TB_URB,  &
+       TG_URB,  &
+       TC_URB,  &
+       QC_URB,  &
+       UC_URB,  &
+       TS_URB,  &
+       TRL_URB, &
+       TBL_URB, &
+       TGL_URB
     implicit none
 
     ! urban state
@@ -3672,21 +3653,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
 
-    ! make urban variables
-    do j = JS, JE
-    do i = IS, IE
-      TR_URB (i,j)   = URB_ROOF_TEMP
-      TB_URB (i,j)   = URB_BLDG_TEMP
-      TG_URB (i,j)   = URB_GRND_TEMP
-      TC_URB (i,j)   = URB_CNPY_TEMP
-      QC_URB (i,j)   = URB_CNPY_HMDT
-      UC_URB (i,j)   = URB_CNPY_WIND
-      TS_URB (i,j)   = URB_CNPY_TEMP
-      TRL_URB(:,i,j) = URB_ROOF_LAYER_TEMP
-      TBL_URB(:,i,j) = URB_BLDG_LAYER_TEMP
-      TGL_URB(:,i,j) = URB_GRND_LAYER_TEMP
-    enddo
-    enddo
+    TR_URB (:,:)   = URB_ROOF_TEMP
+    TB_URB (:,:)   = URB_BLDG_TEMP
+    TG_URB (:,:)   = URB_GRND_TEMP
+    TC_URB (:,:)   = URB_CNPY_TEMP
+    QC_URB (:,:)   = URB_CNPY_HMDT
+    UC_URB (:,:)   = URB_CNPY_WIND
+    TS_URB (:,:)   = URB_CNPY_TEMP
+    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
+    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
+    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
 
     return
   end subroutine MKINIT_urbancouple
@@ -3694,65 +3670,83 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( sea breeze )
   subroutine MKINIT_seabreeze
-    use scale_const, only: &
-      I_SW => CONST_I_SW, &
-      I_LW => CONST_I_LW
     use scale_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_X
+    use scale_landuse, only: &
+       LANDUSE_frac_land
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_SFLX_rain, &
+       ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_SFLX_LW_dn, &
+       ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,       &
+       OCEAN_SFC_TEMP,   &
+       OCEAN_SFC_albedo, &
+       OCEAN_SFC_Z0
+    use mod_land_vars, only: &
+       LAND_TEMP,       &
+       LAND_WATER,      &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo
     implicit none
 
     ! surface state
-    real(RP) :: SFC_THETA              ! surface potential temperature [K]
-    real(RP) :: SFC_PRES               ! surface pressure [Pa]
-    real(RP) :: SFC_RH      =   0.0_RP ! surface relative humidity [%]
-    real(RP) :: SFC_PREC    =   0.0_RP ! surface precipitation rate [kg/m2/s]
-    real(RP) :: SFC_SWD     =   0.0_RP ! surface downwad short-wave radiation [W/m2]
-    real(RP) :: SFC_LWD     =   0.0_RP ! surface downwad long-wave radiation [W/m2]
+    real(RP) :: SFC_THETA           ! surface potential temperature [K]
+    real(RP) :: SFC_PRES            ! surface pressure [Pa]
+    real(RP) :: SFC_RH     = 0.0_RP ! surface relative humidity [%]
     ! atmospheric state
-    real(RP) :: ATM_THLAPS  =   0.0_RP ! Lapse rate of THETA [K/m]
-    real(RP) :: ATM_RH      =   0.0_RP ! relative humidity [%]
-    real(RP) :: ATM_U       =   0.0_RP ! velocity u [m/s]
-    real(RP) :: ATM_V       =   0.0_RP ! velocity v [m/s]
-    ! ocean state
-    real(RP) :: OCN_TEMP             ! water temperature [K]
-    ! land state
-    real(RP) :: LND_TEMP             ! soil temperature [K]
-    real(RP) :: LND_STRG    = 0.0_RP ! water storage [kg/m2]
-    ! coupler state
-    real(RP) :: CPL_TEMP             ! sea surface temperature [K]
-    real(RP) :: CPL_ALBW_SW = 0.0_RP ! sea surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBW_LW = 0.0_RP ! sea surface albedo for LW [0-1]
-    real(RP) :: CPL_ALBG_SW = 0.0_RP ! land surface albedo for SW [0-1]
-    real(RP) :: CPL_ALBG_LW = 0.0_RP ! land surface albedo for LW [0-1]
-    real(RP) :: CPL_Z0W     = 0.0_RP ! sea surface roughness length [m]
+    real(RP) :: ATM_THLAPS = 0.0_RP ! Lapse rate of THETA [K/m]
+    real(RP) :: ATM_RH     = 0.0_RP ! relative humidity [%]
+    real(RP) :: ATM_U      = 0.0_RP ! velocity u [m/s]
+    real(RP) :: ATM_V      = 0.0_RP ! velocity v [m/s]
+
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain          = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow          = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn         = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn         = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+    ! Ocean state
+    real(RP) :: OCN_TEMP                   ! soil temperature           [K]
+    real(RP) :: OCN_SFC_TEMP               ! ocean skin temperature      [K]
+    real(RP) :: OCN_SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
+    real(RP) :: OCN_SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
+    real(RP) :: OCN_SFC_Z0        = 0.0_RP ! ocean surface roughness length [m]
+    ! Land state
+    real(RP) :: LND_TEMP                   ! soil temperature           [K]
+    real(RP) :: LND_WATER         = 0.0_RP ! soil moisture              [m3/m3]
+    real(RP) :: LND_SFC_TEMP               ! land skin temperature      [K]
+    real(RP) :: LND_SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: LND_SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
 
     NAMELIST / PARAM_MKINIT_SEABREEZE / &
-       SFC_THETA,    &
-       SFC_PRES,     &
-       SFC_RH,       &
-       SFC_PREC,     &
-       SFC_SWD,      &
-       SFC_LWD,      &
-       ATM_THLAPS,   &
-       ATM_RH,       &
-       ATM_U,        &
-       ATM_V,        &
-       OCN_TEMP,     &
-       LND_TEMP,     &
-       LND_STRG,     &
-       CPL_TEMP,     &
-       CPL_ALBW_SW,  &
-       CPL_ALBW_LW,  &
-       CPL_ALBG_SW,  &
-       CPL_ALBG_LW,  &
-       CPL_Z0W
+       SFC_THETA,         &
+       SFC_PRES,          &
+       SFC_RH,            &
+       ATM_THLAPS,        &
+       ATM_RH,            &
+       ATM_U,             &
+       ATM_V,             &
+       FLX_rain,          &
+       FLX_snow,          &
+       FLX_LW_dn,         &
+       FLX_SW_dn,         &
+       OCN_TEMP,          &
+       OCN_SFC_TEMP,      &
+       OCN_SFC_albedo_LW, &
+       OCN_SFC_albedo_SW, &
+       OCN_SFC_Z0,        &
+       LND_TEMP,          &
+       LND_WATER,         &
+       LND_SFC_TEMP,      &
+       LND_SFC_albedo_LW, &
+       LND_SFC_albedo_SW
 
     real(RP) :: dist
 
-    integer :: IAG
-    integer :: ierr
-    integer :: k, i, j
+    integer  :: ierr
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -3763,12 +3757,10 @@ contains
 
     OCN_TEMP  = THETAstd
     LND_TEMP  = THETAstd
-    CPL_TEMP  = THETAstd
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_SEABREEZE,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -3850,44 +3842,35 @@ contains
     enddo
 
     ! make surface, land, and ocean conditions
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain (i,j) = SFC_PREC
-       SFLX_snow (i,j) = 0.0_RP
-       SFLX_SW_dn(i,j) = SFC_SWD
-       SFLX_LW_dn(i,j) = SFC_LWD
+    ATMOS_PHY_MP_SFLX_rain (:,:) = FLX_rain
+    ATMOS_PHY_MP_SFLX_snow (:,:) = FLX_snow
+    ATMOS_PHY_RD_SFLX_LW_dn(:,:) = FLX_LW_dn
+    ATMOS_PHY_RD_SFLX_SW_dn(:,:) = FLX_SW_dn
 
-       TW   (i,j)      = OCN_TEMP
+    OCEAN_TEMP      (:,:)      = OCN_TEMP
+    OCEAN_SFC_TEMP  (:,:)      = OCN_SFC_TEMP
+    OCEAN_SFC_albedo(:,:,I_LW) = OCN_SFC_albedo_LW
+    OCEAN_SFC_albedo(:,:,I_SW) = OCN_SFC_albedo_SW
+    OCEAN_SFC_Z0    (:,:)      = OCN_SFC_Z0
 
-       TG   (:,i,j)    = LND_TEMP
-       STRG (:,i,j)    = LND_STRG
-
-       SST  (i,j)      = CPL_TEMP
-       LST  (i,j)      = CPL_TEMP
-       ALBW (i,j,I_SW) = CPL_ALBW_SW
-       ALBW (i,j,I_LW) = CPL_ALBW_LW
-       ALBG (i,j,I_SW) = CPL_ALBG_SW
-       ALBG (i,j,I_LW) = CPL_ALBG_LW
-       Z0W  (i,j)      = CPL_Z0W
-       SkinT(i,j)      = CPL_TEMP
-    enddo
-    enddo
-
-    ! array size (global domain)
-    IAG = IHALO + IMAX*PRC_NUM_X + IHALO
+    LAND_TEMP       (:,:,:)    = LND_TEMP
+    LAND_WATER      (:,:,:)    = LND_WATER
+    LAND_SFC_TEMP   (:,:)      = LND_SFC_TEMP
+    LAND_SFC_albedo (:,:,I_LW) = LND_SFC_albedo_LW
+    LAND_SFC_albedo (:,:,I_SW) = LND_SFC_albedo_SW
 
     ! quartor size of domain
-    dist = ( CXG(IAG-IHALO) - CXG(1+IHALO) ) / 8.0_RP
+    dist = ( CXG(IMAX*PRC_NUM_X) - CXG(1) ) / 8.0_RP
 
     ! make landuse conditions
     do j = JS, JE
     do i = IS, IE
-       if( CX(i) >= dist*3.0_RP .and.  &
-           CX(i) <= dist*5.0_RP ) then
+       if (       CX(i) >= dist * 3.0_RP &
+            .AND. CX(i) <= dist * 5.0_RP ) then
           LANDUSE_frac_land(i,j) = 1.0_RP
        else
           LANDUSE_frac_land(i,j) = 0.0_RP
-       end if
+       endif
     enddo
     enddo
 
