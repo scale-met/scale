@@ -139,7 +139,7 @@ contains
 
       do j = JS, JE
       do i = IS, IE
-        TW(i,j) = TW(i,j) - 2.0_RP * WHFLX(i,j) / ( DWATR * CL * DZW ) * dt
+        TW(i,j) = TW(i,j) - WHFLX(i,j) / ( DWATR * CL * DZW ) * dt
       end do
       end do
 
