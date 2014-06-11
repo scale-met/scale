@@ -77,14 +77,46 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver( sfc_temp_update )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
        LH0   => CONST_LH0
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
+    use scale_cpl_atmos_urban, only: &
+       CPL_AtmUrb
+    use mod_cpl_vars, only: &
+       ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
+       ATM_U      => CPL_fromAtm_ATM_U,      &
+       ATM_V      => CPL_fromAtm_ATM_V,      &
+       ATM_W      => CPL_fromAtm_ATM_W,      &
+       ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
+       ATM_PRES   => CPL_fromAtm_ATM_PRES,   &
+       ATM_QV     => CPL_fromAtm_ATM_QV,     &
+       SFC_PRES   => CPL_fromAtm_SFC_PRES,   &
+       FLX_precip => CPL_fromAtm_FLX_precip, &
+       FLX_LW_dn  => CPL_fromAtm_FLX_LW_dn,  &
+       FLX_SW_dn  => CPL_fromAtm_FLX_SW_dn,  &
+       SFC_TEMP   => CPL_fromUrb_SFC_TEMP,   &
+       SFC_albedo => CPL_fromUrb_SFC_albedo, &
+       CPL_AtmUrb_ATM_FLX_MW,                &
+       CPL_AtmUrb_ATM_FLX_MU,                &
+       CPL_AtmUrb_ATM_FLX_MV,                &
+       CPL_AtmUrb_ATM_FLX_SH,                &
+       CPL_AtmUrb_ATM_FLX_LH,                &
+       CPL_AtmUrb_ATM_FLX_evap,              &
+       CPL_AtmUrb_ATM_U10,                   &
+       CPL_AtmUrb_ATM_V10,                   &
+       CPL_AtmUrb_ATM_T2,                    &
+       CPL_AtmUrb_ATM_Q2,                    &
+       CPL_AtmUrb_URB_FLX_heat,              &
+       CPL_AtmUrb_URB_FLX_precip,            &
+       CPL_AtmUrb_URB_FLX_evap,              &
+       CNT_AtmUrb,                           &
+       CNT_Urb
+
     use scale_grid_real, only: &
        Z1  => REAL_Z1,  &
        LON => REAL_lon, &
        LAT => REAL_lat
-    use scale_cpl_atmos_urban, only: &
-       CPL_AtmUrb
     use mod_urban_vars, only: &
        TR_URB,  &
        TG_URB,  &
@@ -112,33 +144,6 @@ contains
        RAINB_URB, &
        RAING_URB, &
        ROFF_URB
-    use mod_cpl_vars, only: &
-       ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
-       ATM_U      => CPL_fromAtm_ATM_U,      &
-       ATM_V      => CPL_fromAtm_ATM_V,      &
-       ATM_W      => CPL_fromAtm_ATM_W,      &
-       ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
-       ATM_QV     => CPL_fromAtm_ATM_QV,     &
-       FLX_precip => CPL_fromAtm_FLX_precip, &
-       FLX_LW_dn  => CPL_fromAtm_FLX_LW_dn,  &
-       FLX_SW_dn  => CPL_fromAtm_FLX_SW_dn,  &
-       SFC_TEMP   => CPL_fromUrb_SFC_TEMP,   &
-       SFC_albedo => CPL_fromUrb_SFC_albedo, &
-       CPL_AtmUrb_ATM_FLX_MW,                &
-       CPL_AtmUrb_ATM_FLX_MU,                &
-       CPL_AtmUrb_ATM_FLX_MV,                &
-       CPL_AtmUrb_ATM_FLX_SH,                &
-       CPL_AtmUrb_ATM_FLX_LH,                &
-       CPL_AtmUrb_ATM_FLX_evap,              &
-       CPL_AtmUrb_ATM_U10,                   &
-       CPL_AtmUrb_ATM_V10,                   &
-       CPL_AtmUrb_ATM_T2,                    &
-       CPL_AtmUrb_ATM_Q2,                    &
-       CPL_AtmUrb_URB_FLX_heat,              &
-       CPL_AtmUrb_URB_FLX_precip,            &
-       CPL_AtmUrb_URB_FLX_evap,              &
-       CNT_AtmUrb,                           &
-       CNT_Urb
     implicit none
 
     logical, intent(in) :: sfc_temp_update
@@ -157,8 +162,9 @@ contains
     logical  :: LSOLAR = .false. ! logical [true=both, false=SSG only]
     real(RP) :: QMA              ! mixing ratio at the lowest atmospheric level  [kg/kg]
     real(RP) :: Uabs             ! wind speed at the lowest atmospheric level    [m/s]
+    integer  :: i, j
 
-    integer :: i, j
+    real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
@@ -166,7 +172,7 @@ contains
     do j = 1, JA
     do i = 1, IA
 
-      QMA = ATM_QV(i,j) / (1.0_RP-ATM_QV(i,j)) ! specific humidity [kg/kg]
+      QMA = ATM_QV(i,j) / ( 1.0_RP - ATM_QV(i,j) ) ! specific humidity [kg/kg]
 
       Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
 
@@ -218,10 +224,10 @@ contains
         ATM_FLX_MW(i,j) = 0.0_RP
         ATM_FLX_MU(i,j) = 0.0_RP
         ATM_FLX_MV(i,j) = 0.0_RP
-        ATM_U10   (i,j) = UNDEF
-        ATM_V10   (i,j) = UNDEF
-        ATM_T2    (i,j) = UNDEF
-        ATM_Q2    (i,j) = UNDEF
+        ATM_U10   (i,j) = 0.0_RP
+        ATM_V10   (i,j) = 0.0_RP
+        ATM_T2    (i,j) = 0.0_RP
+        ATM_Q2    (i,j) = 0.0_RP
     enddo
     enddo
 
@@ -243,6 +249,23 @@ contains
 
     CNT_AtmUrb = CNT_AtmUrb + 1.0_RP
     CNT_Urb    = CNT_Urb    + 1.0_RP
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, SFC_TEMP                 (:,:), 'URB_SFC_TEMP  ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_MW    (:,:), 'ATM_FLX_MW    ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_MU    (:,:), 'ATM_FLX_MU    ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_MV    (:,:), 'ATM_FLX_MV    ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_SH    (:,:), 'ATM_FLX_SH    ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_LH    (:,:), 'ATM_FLX_LH    ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_FLX_evap  (:,:), 'ATM_FLX_evap  ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_U10       (:,:), 'ATM_U10       ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_V10       (:,:), 'ATM_V10       ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_T2        (:,:), 'ATM_T2        ' )
+       call STAT_total( total, CPL_AtmUrb_ATM_Q2        (:,:), 'ATM_Q2        ' )
+       call STAT_total( total, CPL_AtmUrb_URB_FLX_heat  (:,:), 'URB_FLX_heat  ' )
+       call STAT_total( total, CPL_AtmUrb_URB_FLX_precip(:,:), 'URB_FLX_precip' )
+       call STAT_total( total, CPL_AtmUrb_URB_FLX_evap  (:,:), 'URB_FLX_evap  ' )
+    endif
 
     return
   end subroutine CPL_AtmUrb_driver

@@ -45,13 +45,24 @@ module mod_urban_vars
   logical, public :: URBAN_RESTART_OUTPUT = .false. !< output restart file?
 
   ! prognostic variables
-  real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
-  real(RP), public, allocatable :: TB_URB (:,:)   ! Surface temperature of wall [K]
-  real(RP), public, allocatable :: TG_URB (:,:)   ! Surface temperature of road [K]
+  real(RP), public, allocatable :: URBAN_TEMP      (:,:)   !< temperature at uppermost urban canopy [K]
+
+  ! tendency variables
+  real(RP), public, allocatable :: URBAN_TEMP_t    (:,:)   !< tendency of URBAN_TEMP
+
+  ! for restart
+  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   !< urban canopy temperature [K]
+  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) !< urban canopy albedo      [0-1]
+
+  ! prognostic variables
   real(RP), public, allocatable :: TC_URB (:,:)   ! Diagnostic canopy air temperature [K]
   real(RP), public, allocatable :: QC_URB (:,:)   ! Diagnostic canopy humidity [-]
   real(RP), public, allocatable :: UC_URB (:,:)   ! Diagnostic canopy wind [m/s]
   real(RP), public, allocatable :: TS_URB (:,:)   ! Diagnostic surface temperature [K]
+
+  real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
+  real(RP), public, allocatable :: TB_URB (:,:)   ! Surface temperature of wall [K]
+  real(RP), public, allocatable :: TG_URB (:,:)   ! Surface temperature of road [K]
   real(RP), public, allocatable :: SHR_URB (:,:)  ! Sensible heat flux from roof [W/m2]
   real(RP), public, allocatable :: SHB_URB (:,:)  ! Sensible heat flux from wall [W/m2]
   real(RP), public, allocatable :: SHG_URB (:,:)  ! Sensible heat flux from road [W/m2]
@@ -227,7 +238,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[URBAN] / Origin[SCALE-LES]'
 
-    ! allocate arrays
+    allocate( URBAN_TEMP  (IA,JA) )
+    URBAN_TEMP   (:,:) = UNDEF
+
+    allocate( URBAN_TEMP_t(IA,JA) )
+    URBAN_TEMP_t (:,:) = UNDEF
+
+    allocate( URBAN_SFC_TEMP  (IA,JA)   )
+    allocate( URBAN_SFC_albedo(IA,JA,2) )
+    URBAN_SFC_TEMP  (:,:)   = UNDEF
+    URBAN_SFC_albedo(:,:,:) = UNDEF
+
     allocate( TR_URB(IA,JA) )
     allocate( TB_URB(IA,JA) )
     allocate( TG_URB(IA,JA) )

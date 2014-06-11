@@ -401,11 +401,11 @@ contains
 
     CPL_Merged_SFC_albedo(:,:,I_LW) = factOcn(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_LW) &
                                     + factLnd(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW) &
-                                    + factUrb(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_LW)
+                                    + factUrb(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW)  ! tentative
 
     CPL_Merged_SFC_albedo(:,:,I_SW) = factOcn(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_SW) &
                                     + factLnd(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW) &
-                                    + factUrb(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_SW)
+                                    + factUrb(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW)  ! tentative
 
     CPL_Merged_FLX_MW(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
                            + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &

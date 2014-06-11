@@ -918,7 +918,7 @@ contains
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( RUP / STB / ALBD_LW_grid )**0.25
+    RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
@@ -1014,9 +1014,9 @@ contains
        ROFF  = max(0.0_RP, WATER-STRG)
        WATER = WATER - max(0.0_RP, WATER-STRG)
        BET   = WATER / STRG
-    endif 
+    endif
 
-    print *,BET, RAIN, WATER, STRG, ROFF
+!    print *,BET, RAIN, WATER, STRG, ROFF
 
     return
   end subroutine cal_beta
