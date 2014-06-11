@@ -3441,8 +3441,14 @@ contains
        ATMOS_PHY_MP_SFLX_rain, &
        ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_SFLX_LW_dn, &
-       ATMOS_PHY_RD_SFLX_SW_dn
+       ATMOS_PHY_RD_SFLX_LW_up,   &
+       ATMOS_PHY_RD_SFLX_LW_dn,   &
+       ATMOS_PHY_RD_SFLX_SW_up,   &
+       ATMOS_PHY_RD_SFLX_SW_dn,   &
+       ATMOS_PHY_RD_TOAFLX_LW_up, &
+       ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       ATMOS_PHY_RD_TOAFLX_SW_up, &
+       ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_ocean_vars, only: &
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
@@ -3493,10 +3499,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
 
-    ATMOS_PHY_MP_SFLX_rain (:,:) = FLX_rain
-    ATMOS_PHY_MP_SFLX_snow (:,:) = FLX_snow
-    ATMOS_PHY_RD_SFLX_LW_dn(:,:) = FLX_LW_dn
-    ATMOS_PHY_RD_SFLX_SW_dn(:,:) = FLX_SW_dn
+    ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
+    ATMOS_PHY_MP_SFLX_snow   (:,:) = FLX_snow
+    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = 0.0_RP
+    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = FLX_LW_dn
+    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = 0.0_RP
+    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = FLX_SW_dn
+    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = 0.0_RP
 
     OCEAN_TEMP      (:,:)      = OCN_TEMP
     OCEAN_SFC_TEMP  (:,:)      = SFC_TEMP
