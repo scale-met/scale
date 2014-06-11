@@ -110,8 +110,10 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+    do k = LKS, LKE
        LAND_TEMP_t (k,i,j) = 0.0_RP
        LAND_WATER_t(k,i,j) = 0.0_RP
+    enddo
     enddo
     enddo
 
