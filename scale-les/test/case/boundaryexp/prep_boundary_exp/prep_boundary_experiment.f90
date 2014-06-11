@@ -21,8 +21,6 @@ program init_boundary_experiment
   !
   !-----------------------------------------------------------------------------
   implicit none
-!  include '/usr/local/intel/netcdf-4.1.3/include/netcdf.inc'
-!  private
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -35,16 +33,6 @@ program init_boundary_experiment
   !
   !++ Private procedure
   !
-!  private :: namelist_check
-!  private :: grid_preparation
-!  private :: steady_case
-!  private :: steadystate
-!  private :: netcdf_writeout
-!  private :: put_attributes
-!  private :: data_writeout
-!  private :: handle_err
-!  private :: vid_err
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -56,7 +44,7 @@ program init_boundary_experiment
   integer, parameter :: CHA      = 128
   integer, parameter :: CHA_NCIO = 20
   integer, parameter :: FID_NML  = 20
-  integer, parameter :: nidmax = 37
+  integer, parameter :: nidmax = 38
 
   real(DP), parameter :: CONST_PI     = 3.14159265358979_DP
   real(DP), parameter :: CONST_RADIUS = 6.37122E+6_DP       !< radius of the planet [m]
@@ -66,7 +54,7 @@ program init_boundary_experiment
   real(DP), parameter :: CONST_CPdry  = 1004.64_DP          !< specific heat (dry air,constant pressure) [J/kg/K]
 
   real(DP), parameter :: P0           = 1000.00E+2_DP       !< standard surface pressure [Pa]
-  real(DP), parameter :: U0           = 5.00_DP             !< standard zonal wind speed [m]
+  real(DP)             :: U0           = 5.00_DP            !< standard zonal wind speed [m]
   real(DP), parameter :: V0           = 0.00_DP             !< standard meridional wind speed [m]
   real(DP), parameter :: W0           = 0.00_DP             !< standard vertical wind speed [m]
   real(DP), parameter :: T0           = 300.00_DP           !< standard surface temperature [K]
@@ -111,8 +99,8 @@ program init_boundary_experiment
   real(SP), allocatable :: FZ(:)
   real(SP), allocatable :: FS(:)
 
-  real(SP) :: lat0          = 0.00_SP        !< [degree]
-  real(SP) :: lon0          = 0.00_SP        !< [degree]
+  real(SP) :: lat0          = 1.00_SP        !< [degree]
+  real(SP) :: lon0          = 1.00_SP        !< [degree]
   real(SP) :: dx            = 500.0_SP       !< [m]
   real(SP) :: dy            = 500.0_SP       !< [m]
   real(SP) :: height_bottom = 0.00_SP        !< [m]
@@ -122,7 +110,7 @@ program init_boundary_experiment
   character(len=CHA) :: testcase  = "STEADY"
   character(len=CHA) :: basename  = "boundary_exp"
   character(len=CHA) :: foutput   = "boundary_exp_00000"
-  character(len=CHA) :: fnamelist = "init_boundary_exp.conf"
+  character(len=CHA) :: fnamelist = "prep_boundary_exp.conf"
 
   character(len=CHA_NCIO) ::  nc_att_title    = "boundary experiment"
   character(len=CHA_NCIO) ::  nc_att_grid     = "lat-lon grid"
@@ -163,7 +151,8 @@ program init_boundary_experiment
      height_top,     &
      testcase,       &
      basename,       &
-     dt
+     dt,             &
+     U0
   !-----------------------------------------------------------------------------
   call cpu_time(cpu_t1)  ! timer
 
@@ -216,10 +205,14 @@ program init_boundary_experiment
      call steady_case
 
   case('ZONALWIND')
-     write(*,*) ' xxx ZONALWIND: Preparing...'; stop
+     write(*,*) '';
+     write(*,*) '+++ ZONALWIND TEST CASE';
+     call zonalwind_case
 
   case('ADVECTION')
-     write(*,*) ' xxx ADVECTION: Preparing...'; stop
+     write(*,*) '';
+     write(*,*) '+++ ADVECTION TEST CASE';
+     call advection_case
 
   case default
      write(*,*) ' xxx Unsupported Test Case:', trim(testcase)
@@ -328,18 +321,22 @@ contains
 
     real(DP), allocatable :: pre(:)  !< pressure at steady state
     real(DP), allocatable :: tem(:)  !< potential temperature at steady state
+    real(DP) :: KAPPA
     integer :: i, j, k, l
     !---------------------------------------------------------------------------
+    KAPPA = CONST_Rdry / CONST_CPdry
 
     allocate ( pre(KA-1) )
     allocate ( tem(KA-1) )
 
-    call steadystate( pre,tem )
+    call steadystate( pre, tem, P0 )
 
+    do k=1, KA-1
     do j=1, JA-1
     do i=1, IA-1
-       PB(i,j,:) = pre(:)
-       T(i,j,:) = tem(:)
+       PB(i,j,k) = pre(k)
+       T(i,j,k) = tem(k) * ( P0/pre(k) )**KAPPA  !< convert to potential temperature
+    enddo
     enddo
     enddo
 
@@ -386,14 +383,204 @@ contains
   end subroutine steady_case
 
   !-----------------------------------------------------------------------------
+  !> Initialize ZONALWIND CASE
+  subroutine zonalwind_case
+    implicit none
+
+    real(DP), allocatable :: pre(:,:,:)      !< pressure at steady state
+    real(DP), allocatable :: tem(:,:,:)      !< potential temperature at steady state
+    real(DP), allocatable :: u_ptb(:,:,:)    !< zonal wind of perturbation
+    real(DP), allocatable :: v_ptb(:,:,:)    !< meridional wind of perturbation
+    real(DP) :: KAPPA
+    real(DP) :: ave
+    integer :: i, j, k, l
+    !---------------------------------------------------------------------------
+    KAPPA = CONST_Rdry / CONST_CPdry
+
+    allocate ( pre(IA+1,   JA+1, KA  ) )
+    allocate ( tem(IA+1,   JA+1, KA  ) )
+    allocate ( u_ptb(IA,   JA-1, KA-1) )
+    allocate ( v_ptb(IA-1, JA,   KA-1) )
+
+    do k=1, KA
+    do j=1, JA-1
+    do i=1, IA-1
+       PHB(i,j,k) = FZ(k) * CONST_GRAV
+    enddo
+    enddo
+    enddo
+
+    P(:,:,:)         = 0.0_SP
+    U(:,:,:)         = U0
+    V(:,:,:)         = V0
+    W(:,:,:)         = W0
+    QVAPOR(:,:,:)    = 0.0_SP
+
+    TSLB(:,:,:)      = T0
+    SKINTMP(:,:)     = T0
+    ALBEDO(:,:)      = 0.2_SP
+    EMISS(:,:)       = 1.0_SP - ALBEDO(:,:)
+
+    DUMMY_2D(:,:)    = 0.0_SP
+    DUMMY_3D(:,:,:)  = 0.0_SP
+
+    !ZS(0) = 0.0_SP
+       DZS(1) = 0.5_SP
+    ZS(1) = 0.5_SP
+       DZS(2) = 0.5_SP
+    ZS(2) = 1.0_SP
+       DZS(3) = 0.5_SP
+    ZS(3) = 1.5_SP
+       DZS(4) = 0.5_SP
+    ZS(4) = 2.0_SP
+
+    do l=1, NSTEP
+       call ps_distribution( pre, l )
+       pre(:,:,1) = pre(:,:,1) + P0
+
+       do j=1, JA+1
+       do i=1, IA+1
+          call steadystate( pre(i,j,:),tem(i,j,:),pre(i,j,1) )
+       enddo
+       enddo
+       ! upper boundary condition:
+       pre(:,:,KA) = pre(:,:,KA-1)
+       tem(:,:,KA) = tem(:,:,KA-1)
+
+       call geostrophic_wind( u_ptb, v_ptb, pre, tem )
+
+       do k=1, KA-1
+       do j=1, JA-1
+       do i=1, IA
+          U(i,j,k) = U(i,j,k) + u_ptb(i,j,k)
+       enddo
+       enddo
+       enddo
+
+       do k=1, KA-1
+       do j=1, JA
+       do i=1, IA-1
+          V(i,j,k) = V(i,j,k) + v_ptb(i,j,k)
+       enddo
+       enddo
+       enddo
+
+       do k=1, KA-1
+       do j=1, JA-1
+       do i=1, IA-1
+          T(i,j,k) = tem(i,j,k) * ( P0/pre(i,j,k) )**KAPPA  !< convert to potential temperature
+       enddo
+       enddo
+       enddo
+
+       do k=1, KA-1
+          ave = 0.0_SP
+          do j=1, JA-1
+          do i=1, IA-1
+             ave = ave + pre(i,j,k)
+          enddo
+          enddo
+          ave = ave / float((IA-1) * (JA-1))
+
+          do j=1, JA-1
+          do i=1, IA-1
+             P(i,j,k)  = pre(i,j,k) - ave
+             PB(i,j,k) = ave
+          enddo
+          enddo
+       enddo
+
+       call netcdf_writeout( l )
+    enddo
+
+    deallocate( pre   )
+    deallocate( tem   )
+    deallocate( u_ptb )
+    deallocate( v_ptb )
+
+    return
+  end subroutine zonalwind_case
+
+  !-----------------------------------------------------------------------------
+  !> Initialize ADVECTION CASE
+  subroutine advection_case
+    implicit none
+
+    real(DP), allocatable :: pre(:)  !< pressure at steady state
+    real(DP), allocatable :: tem(:)  !< potential temperature at steady state
+    real(DP) :: KAPPA
+    integer :: i, j, k, l
+    !---------------------------------------------------------------------------
+    KAPPA = CONST_Rdry / CONST_CPdry
+
+    allocate ( pre(KA-1) )
+    allocate ( tem(KA-1) )
+
+    call steadystate( pre, tem, P0 )
+
+    do k=1, KA-1
+    do j=1, JA-1
+    do i=1, IA-1
+       PB(i,j,k) = pre(k)
+       T(i,j,k) = tem(k) * ( P0/pre(k) )**KAPPA  !< convert to potential temperature
+    enddo
+    enddo
+    enddo
+
+    do k=1, KA
+    do j=1, JA-1
+    do i=1, IA-1
+       PHB(i,j,k) = FZ(k) * CONST_GRAV
+    enddo
+    enddo
+    enddo
+
+    P(:,:,:)         = 0.0_SP
+    U(:,:,:)         = U0
+    V(:,:,:)         = V0
+    W(:,:,:)         = W0
+    QVAPOR(:,:,:)    = 0.0_SP
+
+    TSLB(:,:,:)      = T0
+    SKINTMP(:,:)     = T0
+    ALBEDO(:,:)      = 0.2_SP
+    EMISS(:,:)       = 1.0_SP - ALBEDO(:,:)
+
+    DUMMY_2D(:,:)    = 0.0_SP
+    DUMMY_3D(:,:,:)  = 0.0_SP
+
+    !ZS(0) = 0.0_SP
+       DZS(1) = 0.5_SP
+    ZS(1) = 0.5_SP
+       DZS(2) = 0.5_SP
+    ZS(2) = 1.0_SP
+       DZS(3) = 0.5_SP
+    ZS(3) = 1.5_SP
+       DZS(4) = 0.5_SP
+    ZS(4) = 2.0_SP
+
+    do l=1, NSTEP
+       call tracer_distribution( QVAPOR, l )
+       call netcdf_writeout( l )
+    enddo
+
+    deallocate( pre )
+    deallocate( tem )
+
+    return
+  end subroutine advection_case
+
+  !-----------------------------------------------------------------------------
   !> Calculation Steady State
   subroutine steadystate( &
        pre,  &
-       tem   )
+       tem,  &
+       ps   )
     implicit none
 
     real(DP), intent(out) :: pre(:)  !< pressure at steady state
-    real(DP), intent(out) :: tem(:)  !< potential temperature at steady state
+    real(DP), intent(out) :: tem(:)  !< temperature at steady state
+    real(DP), intent(in ) :: ps      !< surface pressure
 
     real(DP) :: KAPPA, G, R
     real(DP) :: pre_save, f, df, dz
@@ -405,40 +592,203 @@ contains
     KAPPA = CONST_Rdry / CONST_CPdry
     G = CONST_GRAV
     R = CONST_Rdry
-    pre(1) = P0
+    pre(1) = ps
     tem(1) = T0
 
     do k=2, KA-1
+       dz = FZ(k+1) - FZ(k)
 
-       ! first guess
-       pre(k) = pre(k-1)
-       tem(k) = 300.D0 * ( pre(k)/P0 )**KAPPA
+       ! first guess temperature
+       tem(k) = T0 * ( pre(k-1)/P0 )**KAPPA
        tem(k) = max( 200.D0, tem(k) )
+       ! first guess (upward: trapezoid)
+       pre(k) = pre(k-1) * ( 1.D0 - dz * G / (2.D0*R*tem(k-1)) ) &
+                         / ( 1.D0 + dz * G / (2.D0*R*tem(k  )) )
+
+       ! second guess temperature
+       tem(k) = T0 * ( ((pre(k)+pre(k-1))/2.0) /P0 )**KAPPA
+       tem(k) = max( 200.D0, tem(k) )
+       ! second guess (upward: trapezoid)
+       pre(k) = pre(k-1) * ( 1.D0 - dz * G / (2.D0*R*tem(k-1)) ) &
+                         / ( 1.D0 + dz * G / (2.D0*R*tem(k  )) )
 
        ! Newton-Lapson
        do itr = 1, itrmax
           pre_save = pre(k) ! save
-
-          dz = FZ(k+1) - FZ(k)
           f  = log(pre(k)/pre(k-1)) / dz + G / ( R * 0.5D0 * (tem(k)+tem(k-1)) )
           df = 1.D0 / (pre(k)*dz)
 
           pre(k) = pre(k) - f / df
-          tem(k) = 300.D0 * ( pre(k)/P0 )**KAPPA
+          tem(k) = T0 * ( pre(k)/P0 )**KAPPA
           tem(k) = max( 200.D0, tem(k) )
 
-          if( abs(pre_save-pre(k)) <= eps ) exit
+          if( abs(pre_save - pre(k)) <= eps ) exit
        enddo
 
        if ( itr > itrmax ) then
           write(*,*) 'xxx iteration not converged!', &
-                      k, pre_save-pre(k), pre(k), pre(k-1), tem(k), tem(k-1)
+          k, pre_save, pre(k), pre(k-1), tem(k), tem(k-1)
           stop
        endif
     enddo
 
     return
   end subroutine steadystate
+
+  !-----------------------------------------------------------------------------
+  !> Calculation Surface Pressure
+  subroutine ps_distribution( &
+       pre_ptb,  &
+       step      )
+    implicit none
+
+    real(DP), intent(out) :: pre_ptb(:,:,:)  !< pressure of perturbation
+    integer,  intent(in ) :: step    !< # of time step 
+
+    real(DP), parameter :: p00 = 10.0_SP       !< initial pressure factor
+    integer, parameter :: scale_factor_x = 2  !< perturbation scale factor
+    integer, parameter :: scale_factor_y = 1  !< perturbation scale factor
+
+    real(DP) :: ddx, ddy, dx_time, offset
+    integer :: dx_add, dx_inc
+    integer :: dy_add, dy_inc
+    integer :: ii, jj
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    pre_ptb(:,:,:) = 0.0
+
+    offset = -( CONST_PI )
+    ddx = ( CONST_PI ) / float(IA * scale_factor_x)
+    ddy = ( CONST_PI ) / float(JA * scale_factor_y)
+
+    dx_time = U0 * dt * float(step-1)
+    dx_add  = -1 * int(dx_time/dx)
+    dx_inc  = scale_factor_x
+    dy_add  = 0
+    dy_inc  = scale_factor_y
+
+    k = 1
+    jj = dy_add
+    do j=1, JA+1
+       ii = dx_add
+       do i=1, IA+1
+          pre_ptb(i,j,k) = p00 * sin(ddx*float(ii) + offset) * cos(ddy*float(j))
+          ii = ii + 1
+       enddo
+       jj = jj + 1
+    enddo
+
+    return
+  end subroutine ps_distribution
+
+  !-----------------------------------------------------------------------------
+  !> Calculation Passive Tracer
+  subroutine tracer_distribution( &
+       trc,   &
+       step   )
+    implicit none
+
+    real(SP), intent(out) :: trc(:,:,:)        !< pressure of perturbation
+    integer,  intent(in ) :: step              !< # of time step 
+
+    real(DP), parameter :: trc00 = 1.0E-5_SP    !< initial tracer size
+    integer, parameter :: scale_factor_x = 30  !< perturbation scale factor
+    integer, parameter :: scale_factor_y = 30  !< perturbation scale factor
+    integer, parameter :: offset = 3           !< initial position factor from center of domain
+    logical, parameter :: no_const = .true.   !< tracer shape
+
+    real(DP) :: ddx, ddy, dx_time
+    real(DP) :: height_fact
+    real(DP) :: drx, dry, drz, rx, ry
+    integer :: ci, cj
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    trc(:,:,:) = 0.0
+
+    dx_time = U0 * dt * float(step-1)
+    ddx = dx * float( scale_factor_x )
+    ddy = dy * float( scale_factor_y )
+    drx = CONST_PI / ddx
+    dry = CONST_PI / ddy
+    drz = (CONST_PI / 2.0_DP) / float((KA-1)/2)
+
+    ci = IA/2 - scale_factor_x*offset + int(dx_time/dx)
+    cj = JA/2
+
+    do k=1, KA-1
+    do j=1, JA-1
+    do i=1, IA-1
+       rx = ddx - (dx*float(abs(ci-i)))
+       ry = ddy - (dy*float(abs(cj-j)))
+       height_fact = cos(drz*float(k))
+       if(height_fact < 0.0_DP) height_fact = 0.0_DP
+       if(rx > 0.0_DP .and. ry > 0.0_DP)then
+          if( no_const )then
+             trc(i,j,k) = (1.0_DP - cos(rx*drx)) * (1.0_DP - cos(ry*dry)) &
+                          * height_fact * trc00/2.0_DP
+          else
+             trc(i,j,k) = trc00
+          endif
+       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine tracer_distribution
+
+  !-----------------------------------------------------------------------------
+  !> Calculation Surface Pressure
+  subroutine geostrophic_wind( &
+       u,       &
+       v,       &
+       pre,     &
+       tem      )
+    implicit none
+
+    real(DP), intent(out) :: u(:,:,:)    !< geostrophic wind in x-direction
+    real(DP), intent(out) :: v(:,:,:)    !< geostrophic wind in y-direction
+    real(DP), intent(in ) :: pre(:,:,:)  !< pressure of perturbation
+    real(DP), intent(in ) :: tem(:,:,:)  !< pressure of perturbation
+
+    real(DP) :: G, R, OM, D2R
+    real(DP) :: F                          !< corioris force
+    real(DP) :: dpdy, dpdx, rho
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    G  = CONST_GRAV
+    R  = CONST_Rdry
+    OM = CONST_OHM
+    D2R = CONST_PI / 180.0_DP
+    F   = 2.545258954813425E-006     !< corioris force @ 1.0 deg north
+
+    do k=1, KA-1
+    do j=1, JA-1
+    do i=1, IA
+       !F = 2.0_DP * OM * sin(XLAT_U(i,j)*D2R)
+       rho = pre(i,j,k) / (R*tem(i,j,k))
+       dpdy = (pre(i,j+1,k) - pre(i,j,k)) / dy
+       u(i,j,k) = -1.0_DP * (1.0/F) * (1.0/rho) * dpdy
+    enddo
+    enddo
+    enddo
+
+    do k=1, KA-1
+    do j=1, JA
+    do i=1, IA-1
+       !F = 2.0_DP * OM * sin(XLAT_V(i,j)*D2R)
+       rho = pre(i,j,k) / (R*tem(i,j,k))
+       dpdx = (pre(i+1,j,k) - pre(i,j,k)) / dx
+       v(i,j,k) = 1.0_DP * (1.0/F) * (1.0/rho) * dpdx
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine geostrophic_wind
 
   !-----------------------------------------------------------------------------
   !> Output Parameters as a Namelist Check
@@ -1217,6 +1567,7 @@ contains
     write(*,*) "    testcase = ", trim(testcase)
     write(*,*) "    basename = ", trim(basename)
     write(*,*) "    file time interval [sec] = ", dt
+    write(*,*) "    standard zonal wind speed [m] = ", U0
 
     return
   end subroutine namelist_check
