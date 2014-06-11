@@ -74,6 +74,8 @@ module scale_atmos_hydrostatic
   !
   !++ Private procedure
   !
+  private :: ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -266,6 +268,8 @@ contains
        qc_sfc    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_comm, only: &
+       COMM_horizontal_mean
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -282,6 +286,7 @@ contains
     real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface liquid water          [kg/kg]
 
     real(RP) :: dens_sfc  (1,IA,JA)
+    real(RP) :: dens_1D   (KA)
 
     real(RP) :: Rtot_sfc  (IA,JA)
     real(RP) :: CVtot_sfc (IA,JA)
@@ -398,6 +403,22 @@ contains
                                               pott(:,:,:), & ! [IN]
                                               qv  (:,:,:), & ! [IN]
                                               qc  (:,:,:)  ) ! [IN]
+
+    ! density at TOA
+    call COMM_horizontal_mean( dens_1D(:), dens(:,:,:) )
+    do j = JS, JE
+    do i = IS, IE
+       dens(:,i,j) = dens_1D(:)
+    enddo
+    enddo
+
+    !--- from top of atmosphere to lowermost atmosphere
+    call ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D( dens(:,:,:), & ! [INOUT]
+                                                  temp(:,:,:), & ! [OUT]
+                                                  pres(:,:,:), & ! [OUT]
+                                                  pott(:,:,:), & ! [IN]
+                                                  qv  (:,:,:), & ! [IN]
+                                                  qc  (:,:,:)  ) ! [IN]
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_3D
@@ -588,6 +609,107 @@ contains
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_3D
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from lowermost atmosphere (3D)
+  subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D( &
+       dens, &
+       temp, &
+       pres, &
+       pott, &
+       qv,   &
+       qc    )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)    :: pott(KA,IA,JA) !< potential temperature [K]
+    real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
+
+    real(RP) :: Rtot  (KA,IA,JA)
+    real(RP) :: CVtot (KA,IA,JA)
+    real(RP) :: CPovCV(KA,IA,JA)
+
+    real(RP) :: RovCV
+    real(RP) :: DZ
+    real(RP) :: dens_s, dhyd, dgrd
+    integer  :: ite
+    logical  :: converged
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                     + Rvap  * qv(k,i,j)
+       CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+                     + CVvap * qv(k,i,j)                          &
+                     + CL    * qc(k,i,j)
+       CPovCV(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KE-1, KS, -1
+       RovCV = Rtot(k,i,j) / CVtot(k,i,j)
+
+       DZ = REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j)
+
+       dens_s      = 0.0_RP
+       dens(k,i,j) = dens(k+1,i,j) ! first guess
+
+       converged = .false.
+       do ite = 1, itelim
+          if ( abs(dens(k,i,j)-dens_s) <= criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          dens_s = dens(k,i,j)
+
+          dhyd = + ( P00 * ( dens_s        * Rtot(k  ,i,j) * pott(k  ,i,j) / P00 )**CPovCV(k  ,i,j) &
+                   - P00 * ( dens(k+1,i,j) * Rtot(k+1,i,j) * pott(k+1,i,j) / P00 )**CPovCV(k+1,i,j) ) / DZ & ! dpdz
+                 - GRAV * 0.5_RP * ( dens_s + dens(k+1,i,j) )                                                ! rho*g
+
+          dgrd = + P00 * ( Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j) / DZ &
+                 * CPovCV(k,i,j) * dens_s**RovCV                                 &
+                 - 0.5_RP * GRAV
+
+          dens(k,i,j) = dens_s - dhyd/dgrd
+
+          if( dens(k,i,j)*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx [buildrho 3D atmos] iteration not converged!', &
+                                         k,i,j,dens(k,i,j),ite,dens_s,dhyd,dgrd
+          if( IO_L ) write(*         ,*) 'xxx [buildrho 3D atmos] iteration not converged!', &
+                                         k,i,j,dens(k,i,j),ite,dens_s,dhyd,dgrd
+          call PRC_MPIstop
+       endif
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       pres(k,i,j) = P00 * ( dens(k,i,j) * Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j)
+       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
 
   !-----------------------------------------------------------------------------
   !> Build up density from surface (1D)
