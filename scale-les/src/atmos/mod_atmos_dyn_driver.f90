@@ -204,8 +204,6 @@ contains
 
     if ( do_flag ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step'
-
        call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]

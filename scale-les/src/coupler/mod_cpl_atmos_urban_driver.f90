@@ -58,15 +58,17 @@ contains
 
        call CPL_AtmUrb_setup( CPL_TYPE_AtmUrb )
 
-       call CPL_AtmUrb_driver( .false. )
+       call CPL_AtmUrb_driver( sfc_temp_update=.false. )
 
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
     return
   end subroutine CPL_AtmUrb_driver_setup
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_AtmUrb_driver( update_flag )
+  subroutine CPL_AtmUrb_driver( sfc_temp_update )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        LH0   => CONST_LH0
@@ -132,7 +134,7 @@ contains
        CNT_Urb
     implicit none
 
-    logical, intent(in) :: update_flag
+    logical, intent(in) :: sfc_temp_update
 
     real(RP) :: ATM_FLX_MW  (IA,JA)
     real(RP) :: ATM_FLX_MU  (IA,JA)

@@ -303,6 +303,8 @@ contains
     integer  :: i, j, k, iq, step
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
+
 #ifdef DEBUG
     DENS00  (:,:,:) = UNDEF
     DENS0   (:,:,:) = UNDEF

@@ -295,6 +295,8 @@ contains
 
     call PROF_rapstart('FILE I NetCDF')
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
+
     if ( axistype == 'Z' ) then
        dim1_max = KMAX
        dim1_S   = KS
@@ -351,6 +353,8 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE I NetCDF')
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
     if ( axistype == 'XY' ) then
        dim1_max = IMAX
@@ -411,6 +415,8 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE I NetCDF')
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
     if ( axistype == 'ZXY' ) then
        dim1_max = KMAX
@@ -488,6 +494,8 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE I NetCDF')
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
 
     if ( axistype == 'ZXYT' ) then
        dim1_max = KMAX

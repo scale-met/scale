@@ -63,7 +63,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[LAND_GRID_INDEX] / Categ[LAND GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[LAND GRID] / Origin[SCALElib]'
 
 #ifdef FIXED_INDEX
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'

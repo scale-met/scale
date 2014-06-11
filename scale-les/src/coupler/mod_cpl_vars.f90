@@ -32,7 +32,6 @@ module mod_cpl_vars
   !++ Public procedure
   !
   public :: CPL_vars_setup
-  public :: CPL_vars_external_in
   public :: CPL_vars_merge
 
   public :: CPL_putAtm_setup
@@ -289,43 +288,6 @@ contains
 
     return
   end subroutine CPL_vars_setup
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine CPL_vars_external_in( &
-       Ocn_SFC_TEMP,  &
-       Lnd_SFC_TEMP,  &
-       Urb_SFC_TEMP,  &
-       OCN_SFC_albedo,&
-       LND_SFC_albedo,&
-       OCN_SFC_Z0,    &
-       SFC_TEMP       )
-    implicit none
-
-    real(RP), intent(in) :: Ocn_SFC_TEMP  (:,:)
-    real(RP), intent(in) :: Lnd_SFC_TEMP  (:,:)
-    real(RP), intent(in) :: Urb_SFC_TEMP  (:,:)
-    real(RP), intent(in) :: OCN_SFC_albedo(:,:,:)
-    real(RP), intent(in) :: LND_SFC_albedo(:,:,:)
-    real(RP), intent(in) :: OCN_SFC_Z0    (:,:)
-    real(RP), intent(in) :: SFC_TEMP      (:,:)
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
-
-    CPL_fromOcn_SFC_TEMP  (:,:)      = Ocn_SFC_TEMP  (:,:)
-    CPL_fromLnd_SFC_TEMP  (:,:)      = Lnd_SFC_TEMP  (:,:)
-    CPL_fromUrb_SFC_TEMP  (:,:)      = Urb_SFC_TEMP  (:,:)
-    CPL_fromOcn_SFC_albedo(:,:,I_LW) = OCN_SFC_albedo(:,:,I_LW)
-    CPL_fromOcn_SFC_albedo(:,:,I_SW) = OCN_SFC_albedo(:,:,I_SW)
-    CPL_fromLnd_SFC_albedo(:,:,I_LW) = LND_SFC_albedo(:,:,I_LW)
-    CPL_fromLnd_SFC_albedo(:,:,I_SW) = LND_SFC_albedo(:,:,I_SW)
-    CPL_fromOcn_SFC_Z0    (:,:)      = OCN_SFC_Z0    (:,:)
-    CPL_Merged_SFC_TEMP   (:,:)      = SFC_TEMP      (:,:)
-
-    return
-  end subroutine CPL_vars_external_in
 
   !-----------------------------------------------------------------------------
   subroutine CPL_vars_merge

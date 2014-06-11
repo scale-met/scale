@@ -59,15 +59,17 @@ contains
 
        call CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )
 
-       call CPL_AtmLnd_driver( .false. )
+       call CPL_AtmLnd_driver( sfc_temp_update=.false. )
 
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
     return
   end subroutine CPL_AtmLnd_driver_setup
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_AtmLnd_driver( update_flag )
+  subroutine CPL_AtmLnd_driver( sfc_temp_update )
     use scale_const, only: &
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
@@ -112,7 +114,7 @@ contains
        CNT_Lnd
     implicit none
 
-    logical, intent(in) :: update_flag
+    logical, intent(in) :: sfc_temp_update
 
     real(RP) :: ATM_FLX_MW  (IA,JA)
     real(RP) :: ATM_FLX_MU  (IA,JA)
@@ -139,7 +141,7 @@ contains
                      ATM_V10     (:,:),      & ! [OUT]
                      ATM_T2      (:,:),      & ! [OUT]
                      ATM_Q2      (:,:),      & ! [OUT]
-                     update_flag,            & ! [IN]
+                     sfc_temp_update,            & ! [IN]
                      ATM_DENS    (:,:),      & ! [IN]
                      ATM_U       (:,:),      & ! [IN]
                      ATM_V       (:,:),      & ! [IN]

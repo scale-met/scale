@@ -78,7 +78,7 @@ contains
 
     else
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_RD is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** radiation fluxes are set to zero.'
        SFLX_LW_up  (:,:) = 0.0_RP
        SFLX_LW_dn  (:,:) = 0.0_RP

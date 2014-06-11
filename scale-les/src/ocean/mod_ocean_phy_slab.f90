@@ -140,7 +140,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN PHY] / Origin[SCALE-LES]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN PHYSICS] / Origin[SCALE-LES]'
 
     if ( OCEAN_TYPE /= 'SLAB' ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx OCEAN_TYPE is not SLAB. Check!'

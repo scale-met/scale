@@ -85,7 +85,7 @@ contains
 
     else
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_SF is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** surface fluxes are set to zero.'
        SFLX_MW  (:,:)   = 0.0_RP
        SFLX_MU  (:,:)   = 0.0_RP

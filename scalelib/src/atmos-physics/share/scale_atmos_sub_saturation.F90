@@ -200,9 +200,9 @@ contains
     dalphadT_const = 1.0_RP / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Temperature range for ice : ', &
-                                   ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
-                                   ATMOS_SATURATION_ULIMIT_TEMP
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F7.2,A,F7.2)') '*** Temperature range for ice : ', &
+                                                      ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
+                                                      ATMOS_SATURATION_ULIMIT_TEMP
 
     return
   end subroutine ATMOS_SATURATION_setup
