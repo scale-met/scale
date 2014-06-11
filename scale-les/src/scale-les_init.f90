@@ -135,7 +135,7 @@ program scaleles_init
 
   call PROF_rapstart('Initialize')
 
-  ! setup horisontal/vertical grid coordinates (cartesian,idealized)
+  ! setup horizontal/vertical grid coordinates (cartesian,idealized)
   call GRID_INDEX_setup
   call GRID_setup
 

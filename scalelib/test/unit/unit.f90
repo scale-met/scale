@@ -44,7 +44,7 @@ program unit
   TRACER_TYPE = 'SN14'
   call TRACER_setup
 
-  ! setup horisontal/veritical grid system
+  ! setup horizontal/veritical grid system
   call GRID_allocate
   call GRID_generate
 
