@@ -9,7 +9,7 @@ TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
 # for build
-index      = 500m40x4x4
+index      = 500m40x2x2
 precision  = real8
 dynamics   = heve
 tracer     = sn14
