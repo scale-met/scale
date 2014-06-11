@@ -208,6 +208,7 @@ contains
     CNT_Ocn    = CNT_Ocn    + 1.0_RP
 
     if ( STATISTICS_checktotal ) then
+       call STAT_total( total, SFC_TEMP                 (:,:), 'OCN_SFC_TEMP  ' )
        call STAT_total( total, CPL_AtmOcn_ATM_FLX_MW    (:,:), 'ATM_FLX_MW    ' )
        call STAT_total( total, CPL_AtmOcn_ATM_FLX_MU    (:,:), 'ATM_FLX_MU    ' )
        call STAT_total( total, CPL_AtmOcn_ATM_FLX_MV    (:,:), 'ATM_FLX_MV    ' )
