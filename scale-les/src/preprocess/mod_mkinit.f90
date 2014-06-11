@@ -390,12 +390,12 @@ contains
          call MKINIT_RICO
       case(I_INTERPORATION)
          call MKINIT_INTERPORATION
-      case(I_LANDCOUPLE)
-         call MKINIT_planestate
-         call MKINIT_landcouple
       case(I_OCEANCOUPLE)
          call MKINIT_planestate
          call MKINIT_oceancouple
+      case(I_LANDCOUPLE)
+         call MKINIT_planestate
+         call MKINIT_landcouple
       case(I_URBANCOUPLE)
          call MKINIT_planestate
          call MKINIT_landcouple ! tentative
@@ -3526,8 +3526,14 @@ contains
        ATMOS_PHY_MP_SFLX_rain, &
        ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_SFLX_LW_dn, &
-       ATMOS_PHY_RD_SFLX_SW_dn
+       ATMOS_PHY_RD_SFLX_LW_up,   &
+       ATMOS_PHY_RD_SFLX_LW_dn,   &
+       ATMOS_PHY_RD_SFLX_SW_up,   &
+       ATMOS_PHY_RD_SFLX_SW_dn,   &
+       ATMOS_PHY_RD_TOAFLX_LW_up, &
+       ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       ATMOS_PHY_RD_TOAFLX_SW_up, &
+       ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
@@ -3578,10 +3584,16 @@ contains
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
 
-    ATMOS_PHY_MP_SFLX_rain (:,:) = FLX_rain
-    ATMOS_PHY_MP_SFLX_snow (:,:) = FLX_snow
-    ATMOS_PHY_RD_SFLX_LW_dn(:,:) = FLX_LW_dn
-    ATMOS_PHY_RD_SFLX_SW_dn(:,:) = FLX_SW_dn
+    ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
+    ATMOS_PHY_MP_SFLX_snow   (:,:) = FLX_snow
+    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = 0.0_RP
+    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = FLX_LW_dn
+    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = 0.0_RP
+    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = FLX_SW_dn
+    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = 0.0_RP
+    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = 0.0_RP
 
     LAND_TEMP      (:,:,:)    = LND_TEMP
     LAND_WATER     (:,:,:)    = LND_WATER

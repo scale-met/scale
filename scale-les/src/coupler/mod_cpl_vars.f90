@@ -205,11 +205,26 @@ contains
     allocate( CPL_fromAtm_FLX_precip(IA,JA) )
     allocate( CPL_fromAtm_FLX_SW_dn (IA,JA) )
     allocate( CPL_fromAtm_FLX_LW_dn (IA,JA) )
+    CPL_fromAtm_ATM_DENS  (:,:) = UNDEF
+    CPL_fromAtm_ATM_U     (:,:) = UNDEF
+    CPL_fromAtm_ATM_V     (:,:) = UNDEF
+    CPL_fromAtm_ATM_W     (:,:) = UNDEF
+    CPL_fromAtm_ATM_TEMP  (:,:) = UNDEF
+    CPL_fromAtm_ATM_PRES  (:,:) = UNDEF
+    CPL_fromAtm_ATM_QV    (:,:) = UNDEF
+    CPL_fromAtm_SFC_PRES  (:,:) = UNDEF
+    CPL_fromAtm_FLX_precip(:,:) = UNDEF
+    CPL_fromAtm_FLX_SW_dn (:,:) = UNDEF
+    CPL_fromAtm_FLX_LW_dn (:,:) = UNDEF
 
     allocate( CPL_fromOcn_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromOcn_SFC_albedo(IA,JA,2) )
     allocate( CPL_fromOcn_SFC_Z0M   (IA,JA) )
     allocate( CPL_fromOcn_OCN_TEMP  (IA,JA) )
+    CPL_fromOcn_SFC_TEMP  (:,:) = UNDEF
+    CPL_fromOcn_SFC_albedo(:,:,2) = UNDEF
+    CPL_fromOcn_SFC_Z0M   (:,:) = UNDEF
+    CPL_fromOcn_OCN_TEMP  (:,:) = UNDEF
 
     allocate( CPL_fromLnd_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromLnd_SFC_albedo(IA,JA,2) )
@@ -220,9 +235,20 @@ contains
     allocate( CPL_fromLnd_SFC_Z0E   (IA,JA) )
     allocate( CPL_fromLnd_LND_TEMP  (IA,JA) )
     allocate( CPL_fromLnd_LND_BETA  (IA,JA) )
+    CPL_fromLnd_SFC_TEMP  (:,:) = UNDEF
+    CPL_fromLnd_SFC_albedo(:,:,2) = UNDEF
+    CPL_fromLnd_LND_TCS   (:,:) = UNDEF
+    CPL_fromLnd_LND_DZ    (:,:) = UNDEF
+    CPL_fromLnd_SFC_Z0M   (:,:) = UNDEF
+    CPL_fromLnd_SFC_Z0H   (:,:) = UNDEF
+    CPL_fromLnd_SFC_Z0E   (:,:) = UNDEF
+    CPL_fromLnd_LND_TEMP  (:,:) = UNDEF
+    CPL_fromLnd_LND_BETA  (:,:) = UNDEF
 
     allocate( CPL_fromUrb_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
+    CPL_fromUrb_SFC_TEMP  (:,:) = UNDEF
+    CPL_fromUrb_SFC_albedo(:,:,2) = UNDEF
 
     allocate( CPL_Merged_SFC_TEMP  (IA,JA) )
     allocate( CPL_Merged_SFC_albedo(IA,JA,2) )
@@ -238,6 +264,20 @@ contains
     allocate( CPL_Merged_T2        (IA,JA) )
     allocate( CPL_Merged_Q2        (IA,JA) )
     allocate( CPL_Merged_FLX_heat  (IA,JA) )
+    CPL_Merged_SFC_TEMP  (:,:) = UNDEF
+    CPL_Merged_SFC_albedo(:,:,2) = UNDEF
+    CPL_Merged_FLX_MU    (:,:) = UNDEF
+    CPL_Merged_FLX_MV    (:,:) = UNDEF
+    CPL_Merged_FLX_MW    (:,:) = UNDEF
+    CPL_Merged_FLX_SH    (:,:) = UNDEF
+    CPL_Merged_FLX_LH    (:,:) = UNDEF
+    CPL_Merged_FLX_QV    (:,:) = UNDEF
+    CPL_Merged_Z0M       (:,:) = UNDEF
+    CPL_Merged_U10       (:,:) = UNDEF
+    CPL_Merged_V10       (:,:) = UNDEF
+    CPL_Merged_T2        (:,:) = UNDEF
+    CPL_Merged_Q2        (:,:) = UNDEF
+    CPL_Merged_FLX_heat  (:,:) = UNDEF
 
     allocate( CPL_AtmOcn_ATM_FLX_MU    (IA,JA) )
     allocate( CPL_AtmOcn_ATM_FLX_MV    (IA,JA) )
@@ -252,6 +292,19 @@ contains
     allocate( CPL_AtmOcn_OCN_FLX_heat  (IA,JA) )
     allocate( CPL_AtmOcn_OCN_FLX_precip(IA,JA) )
     allocate( CPL_AtmOcn_OCN_FLX_evap  (IA,JA) )
+    CPL_AtmOcn_ATM_FLX_MU    (:,:) = UNDEF
+    CPL_AtmOcn_ATM_FLX_MV    (:,:) = UNDEF
+    CPL_AtmOcn_ATM_FLX_MW    (:,:) = UNDEF
+    CPL_AtmOcn_ATM_FLX_SH    (:,:) = UNDEF
+    CPL_AtmOcn_ATM_FLX_LH    (:,:) = UNDEF
+    CPL_AtmOcn_ATM_FLX_evap  (:,:) = UNDEF
+    CPL_AtmOcn_ATM_U10       (:,:) = UNDEF
+    CPL_AtmOcn_ATM_V10       (:,:) = UNDEF
+    CPL_AtmOcn_ATM_T2        (:,:) = UNDEF
+    CPL_AtmOcn_ATM_Q2        (:,:) = UNDEF
+    CPL_AtmOcn_OCN_FLX_heat  (:,:) = UNDEF
+    CPL_AtmOcn_OCN_FLX_precip(:,:) = UNDEF
+    CPL_AtmOcn_OCN_FLX_evap  (:,:) = UNDEF
 
     allocate( CPL_AtmLnd_ATM_FLX_MU    (IA,JA) )
     allocate( CPL_AtmLnd_ATM_FLX_MV    (IA,JA) )
@@ -266,6 +319,19 @@ contains
     allocate( CPL_AtmLnd_LND_FLX_heat  (IA,JA) )
     allocate( CPL_AtmLnd_LND_FLX_precip(IA,JA) )
     allocate( CPL_AtmLnd_LND_FLX_evap  (IA,JA) )
+    CPL_AtmLnd_ATM_FLX_MU    (:,:) = UNDEF
+    CPL_AtmLnd_ATM_FLX_MV    (:,:) = UNDEF
+    CPL_AtmLnd_ATM_FLX_MW    (:,:) = UNDEF
+    CPL_AtmLnd_ATM_FLX_SH    (:,:) = UNDEF
+    CPL_AtmLnd_ATM_FLX_LH    (:,:) = UNDEF
+    CPL_AtmLnd_ATM_FLX_evap  (:,:) = UNDEF
+    CPL_AtmLnd_ATM_U10       (:,:) = UNDEF
+    CPL_AtmLnd_ATM_V10       (:,:) = UNDEF
+    CPL_AtmLnd_ATM_T2        (:,:) = UNDEF
+    CPL_AtmLnd_ATM_Q2        (:,:) = UNDEF
+    CPL_AtmLnd_LND_FLX_heat  (:,:) = UNDEF
+    CPL_AtmLnd_LND_FLX_precip(:,:) = UNDEF
+    CPL_AtmLnd_LND_FLX_evap  (:,:) = UNDEF
 
     allocate( CPL_AtmUrb_ATM_FLX_MU    (IA,JA) )
     allocate( CPL_AtmUrb_ATM_FLX_MV    (IA,JA) )
@@ -280,6 +346,19 @@ contains
     allocate( CPL_AtmUrb_URB_FLX_heat  (IA,JA) )
     allocate( CPL_AtmUrb_URB_FLX_precip(IA,JA) )
     allocate( CPL_AtmUrb_URB_FLX_evap  (IA,JA) )
+    CPL_AtmUrb_ATM_FLX_MU    (:,:) = UNDEF
+    CPL_AtmUrb_ATM_FLX_MV    (:,:) = UNDEF
+    CPL_AtmUrb_ATM_FLX_MW    (:,:) = UNDEF
+    CPL_AtmUrb_ATM_FLX_SH    (:,:) = UNDEF
+    CPL_AtmUrb_ATM_FLX_LH    (:,:) = UNDEF
+    CPL_AtmUrb_ATM_FLX_evap  (:,:) = UNDEF
+    CPL_AtmUrb_ATM_U10       (:,:) = UNDEF
+    CPL_AtmUrb_ATM_V10       (:,:) = UNDEF
+    CPL_AtmUrb_ATM_T2        (:,:) = UNDEF
+    CPL_AtmUrb_ATM_Q2        (:,:) = UNDEF
+    CPL_AtmUrb_URB_FLX_heat  (:,:) = UNDEF
+    CPL_AtmUrb_URB_FLX_precip(:,:) = UNDEF
+    CPL_AtmUrb_URB_FLX_evap  (:,:) = UNDEF
 
     CNT_AtmOcn = 0.0_RP
     CNT_AtmLnd = 0.0_RP
