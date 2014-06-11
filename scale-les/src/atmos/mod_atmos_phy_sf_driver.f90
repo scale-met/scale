@@ -85,7 +85,7 @@ contains
 
     else
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_SF is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** surface fluxes are set to zero.'
        SFLX_MW  (:,:)   = 0.0_RP
        SFLX_MU  (:,:)   = 0.0_RP
@@ -172,7 +172,7 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
-       CPL_getATM
+       CPL_getATM_SF
     implicit none
 
     logical, intent(in) :: update_flag
@@ -194,18 +194,12 @@ contains
     if ( update_flag ) then
 
        if ( CPL_sw ) then
-          call CPL_getATM( SFC_Z0   (:,:),   & ! [OUT]
-                           SFLX_MW  (:,:),   & ! [OUT]
-                           SFLX_MU  (:,:),   & ! [OUT]
-                           SFLX_MV  (:,:),   & ! [OUT]
-                           SFLX_SH  (:,:),   & ! [OUT]
-                           SFLX_LH  (:,:),   & ! [OUT]
-                           SFLX_QTRC(:,:,:), & ! [OUT]
-                           Uabs10   (:,:),   & ! [OUT]
-                           U10      (:,:),   & ! [OUT]
-                           V10      (:,:),   & ! [OUT]
-                           T2       (:,:),   & ! [OUT]
-                           Q2       (:,:)    ) ! [OUT]
+          call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
+                              SFLX_MU  (:,:),  & ! [OUT]
+                              SFLX_MV  (:,:),  & ! [OUT]
+                              SFLX_SH  (:,:),  & ! [OUT]
+                              SFLX_LH  (:,:),  & ! [OUT]
+                              SFLX_QTRC(:,:,:) ) ! [OUT]
        else
           beta(:,:) = 1.0_RP
 
@@ -236,6 +230,16 @@ contains
                              V10       (:,:),      & ! [OUT]
                              T2        (:,:),      & ! [OUT]
                              Q2        (:,:)       ) ! [OUT]
+
+          if ( history_flag ) then
+             call HIST_in( SFC_Z0(:,:), 'SFC_Z0', 'roughness length',  'm',     dt_SF )
+
+             call HIST_in( Uabs10(:,:), 'Uabs10', '10m absolute wind', 'm/s',   dt_SF )
+             call HIST_in( U10   (:,:), 'U10'  ,  '10m x-wind',        'm/s',   dt_SF )
+             call HIST_in( V10   (:,:), 'V10'  ,  '10m y-wind',        'm/s',   dt_SF )
+             call HIST_in( T2    (:,:), 'T2 '  ,  '2m temperature',    'K',     dt_SF )
+             call HIST_in( Q2    (:,:), 'Q2 '  ,  '2m water vapor',    'kg/kg', dt_SF )
+          endif
        endif
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
@@ -282,11 +286,6 @@ contains
        if ( history_flag ) then
           call HIST_in( SFLX_LH(:,:), 'LHFLX',  'latent heat flux',   'W/m2',  dt_SF )
           call HIST_in( SFLX_SH(:,:), 'SHFLX',  'sensible heat flux', 'W/m2',  dt_SF )
-          call HIST_in( Uabs10 (:,:), 'Uabs10', '10m absolute wind',  'm/s',   dt_SF )
-          call HIST_in( U10    (:,:), 'U10'  ,  '10m x-wind',         'm/s',   dt_SF )
-          call HIST_in( V10    (:,:), 'V10'  ,  '10m y-wind',         'm/s',   dt_SF )
-          call HIST_in( T2     (:,:), 'T2 '  ,  '2m temperature',     'K',     dt_SF )
-          call HIST_in( Q2     (:,:), 'Q2 '  ,  '2m water vapor',     'kg/kg', dt_SF )
        endif
 
     endif

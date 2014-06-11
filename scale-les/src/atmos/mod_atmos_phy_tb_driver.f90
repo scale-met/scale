@@ -73,6 +73,8 @@ contains
        ! run once (only for the diagnostic value)
        call ATMOS_PHY_TB_driver( .true., .false. )
 
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
     return

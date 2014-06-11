@@ -35,10 +35,6 @@ module mod_atmos_phy_ch_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_PHY_CH_QTRC_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
@@ -88,7 +84,8 @@ contains
        ATMOS_PHY_CH_RESTART_OUT_TITLE,    &
        ATMOS_PHY_CH_RESTART_OUT_DTYPE
 
-    integer :: v, ierr
+    integer :: ierr
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -113,11 +110,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_CH] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
-               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
-                  '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)

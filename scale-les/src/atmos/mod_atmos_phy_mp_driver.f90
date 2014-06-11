@@ -71,8 +71,7 @@ contains
        !call ATMOS_PHY_MP_driver( .true., .false. )
 
     else
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** ATMOS_PHY_MP is disabled.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_rain and SFLX_snow is set to zero.'
        SFLX_rain(:,:) = 0.0_RP
        SFLX_snow(:,:) = 0.0_RP

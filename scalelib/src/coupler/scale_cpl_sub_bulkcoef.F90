@@ -149,7 +149,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_BULKCOEF. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_BULKCOEF)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_BULKCOEF)
 
     bulkcoef_TYPE = CPL_bulkcoef_TYPE
     Cm_min        = CPL_bulkcoef_Cm_min

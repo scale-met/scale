@@ -70,7 +70,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STAT] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STATISTICS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -83,12 +83,13 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_STATISTICS)
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Report '
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Caluculate statistics?                     : ', STATISTICS_checktotal
     if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STATISTICS_use_globalcomm
     if ( STATISTICS_use_globalcomm ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Global total with MPI_ALLreduce is used.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Global total is calculated using MPI_ALLreduce.'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Local total is used.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Local total is calculated in each process.'
     endif
 
     return
@@ -110,11 +111,14 @@ contains
     real(RP),         intent(in)  :: var(IA,JA) !< 3D value
     character(len=*), intent(in)  :: varname    !< name of item
 
+    character(len=H_SHORT) :: varname_trim
     real(RP) :: statval
 
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    varname_trim = trim(varname)
 
     statval = 0.0_RP
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
@@ -124,8 +128,8 @@ contains
     enddo
     enddo
 
-    if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx [STAT_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+    if ( .not. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+       write(*,*) 'xxx [STAT_total] NaN is detected for ', varname_trim, ' in rank ', PRC_myrank
        call PRC_MPIstop
     endif
 
@@ -143,17 +147,17 @@ contains
        call PROF_rapend  ('COMM Allreduce MPI')
 
        ! statistics over the all node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
-                     '[', trim(varname), '] SUM(global) =', allstatval
+       if ( varname_trim /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+                     '[', varname_trim, '] SUM(global) =', allstatval
        endif
     else
        allstatval = statval
 
        ! statistics on each node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
-                     '[', trim(varname), '] SUM(local)  =', statval
+       if ( varname_trim /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+                     '[', varname_trim, '] SUM(local)  =', statval
        endif
     endif
 
@@ -176,11 +180,14 @@ contains
     real(RP),         intent(in)  :: var(KA,IA,JA) !< 3D value
     character(len=*), intent(in)  :: varname       !< name of item
 
+    character(len=H_SHORT) :: varname_trim
     real(RP) :: statval
 
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    varname_trim = trim(varname)
 
     statval = 0.0_RP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
@@ -192,8 +199,8 @@ contains
     enddo
     enddo
 
-    if ( .not. ( statval > -1.0_RP .or. statval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx [STAT_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+    if ( .not. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+       write(*,*) 'xxx [STAT_total] NaN is detected for ', varname_trim, ' in rank ', PRC_myrank
        call PRC_MPIstop
     endif
 
@@ -211,17 +218,17 @@ contains
        call PROF_rapend  ('COMM Allreduce MPI')
 
        ! statistics over the all node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
-                     '[', trim(varname), '] SUM(global) =', allstatval
+       if ( varname_trim /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+                     '[', varname_trim, '] SUM(global) =', allstatval
        endif
     else
        allstatval = statval
 
        ! statistics on each node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A12,A,1PE24.17)') &
-                     '[', trim(varname), '] SUM(local)  =', statval
+       if ( varname_trim /= "" ) then ! if varname is empty, suppress output
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+                     '[', varname_trim, '] SUM(local)  =', statval
        endif
     endif
 

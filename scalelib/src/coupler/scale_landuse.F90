@@ -109,12 +109,16 @@ contains
     ! read from file
     call LANDUSE_read
 
-    if ( LANDUSE_AllLand ) then
+    if    ( LANDUSE_AllLand ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
-    endif
-    if ( LANDUSE_AllUrban ) then
+    elseif( LANDUSE_AllUrban ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
 
     return
@@ -177,7 +181,6 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** landuse file is not specified.'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
 
     return

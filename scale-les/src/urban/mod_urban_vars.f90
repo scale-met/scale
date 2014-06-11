@@ -19,13 +19,13 @@ module mod_urban_vars
   use scale_debug
   use scale_grid_index
   use scale_urban_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -36,21 +36,33 @@ module mod_urban_vars
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
   public :: URBAN_vars_total
+  public :: URBAN_vars_external_in
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical, public :: URBAN_sw_restart
+  logical, public :: URBAN_RESTART_OUTPUT = .false. !< output restart file?
 
   ! prognostic variables
-  real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
-  real(RP), public, allocatable :: TB_URB (:,:)   ! Surface temperature of wall [K]
-  real(RP), public, allocatable :: TG_URB (:,:)   ! Surface temperature of road [K]
+  real(RP), public, allocatable :: URBAN_TEMP      (:,:)   !< temperature at uppermost urban canopy [K]
+
+  ! tendency variables
+  real(RP), public, allocatable :: URBAN_TEMP_t    (:,:)   !< tendency of URBAN_TEMP
+
+  ! for restart
+  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   !< urban canopy temperature [K]
+  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) !< urban canopy albedo      [0-1]
+
+  ! prognostic variables
   real(RP), public, allocatable :: TC_URB (:,:)   ! Diagnostic canopy air temperature [K]
   real(RP), public, allocatable :: QC_URB (:,:)   ! Diagnostic canopy humidity [-]
   real(RP), public, allocatable :: UC_URB (:,:)   ! Diagnostic canopy wind [m/s]
   real(RP), public, allocatable :: TS_URB (:,:)   ! Diagnostic surface temperature [K]
+
+  real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
+  real(RP), public, allocatable :: TB_URB (:,:)   ! Surface temperature of wall [K]
+  real(RP), public, allocatable :: TG_URB (:,:)   ! Surface temperature of road [K]
   real(RP), public, allocatable :: SHR_URB (:,:)  ! Sensible heat flux from roof [W/m2]
   real(RP), public, allocatable :: SHB_URB (:,:)  ! Sensible heat flux from wall [W/m2]
   real(RP), public, allocatable :: SHG_URB (:,:)  ! Sensible heat flux from road [W/m2]
@@ -80,7 +92,6 @@ module mod_urban_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: URBAN_RESTART_OUTPUT       = .false.         !< output restart file?
   character(len=H_LONG),  private :: URBAN_RESTART_IN_BASENAME  = ''              !< basename of the restart file
   character(len=H_LONG),  private :: URBAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
   character(len=H_MID),   private :: URBAN_RESTART_OUT_TITLE    = 'URBAN restart' !< title    of the output file
@@ -189,7 +200,7 @@ module mod_urban_vars
                   'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
-                  'W/m2',  & 
+                  'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
                   'W/m2',  &
@@ -221,13 +232,23 @@ contains
        URBAN_VARS_CHECKRANGE
 
     integer :: ierr
-    integer :: ip
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[URBAN] / Origin[SCALE-LES]'
 
-    ! allocate arrays
+    allocate( URBAN_TEMP  (IA,JA) )
+    URBAN_TEMP   (:,:) = UNDEF
+
+    allocate( URBAN_TEMP_t(IA,JA) )
+    URBAN_TEMP_t (:,:) = UNDEF
+
+    allocate( URBAN_SFC_TEMP  (IA,JA)   )
+    allocate( URBAN_SFC_albedo(IA,JA,2) )
+    URBAN_SFC_TEMP  (:,:)   = UNDEF
+    URBAN_SFC_albedo(:,:,:) = UNDEF
+
     allocate( TR_URB(IA,JA) )
     allocate( TB_URB(IA,JA) )
     allocate( TG_URB(IA,JA) )
@@ -297,11 +318,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (URBAN) ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
-               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(VAR_NAME(ip)),'|', VAR_DESC(ip),'[', VAR_UNIT(ip),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -313,11 +334,9 @@ contains
     if (       URBAN_RESTART_OUTPUT             &
          .AND. URBAN_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(URBAN_RESTART_OUT_BASENAME)
-       URBAN_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        URBAN_RESTART_OUTPUT = .false.
-       URBAN_sw_restart = .false.
     endif
 
     return
@@ -639,23 +658,23 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Input from External I/O
-  !subroutine URBAN_vars_external_in( &
-  !    ts_urb_in   )  ! (in)
-  !
-  !  implicit none
-  !
-  !  real(RP), intent(in) :: ust_in(:,:)
-  !
-  !  if( IO_L ) write(IO_FID_LOG,*)
-  !  if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
-  !
-  !  TS_URB(:,:) = ts_urb_in(:,:)
-  !
-  !  call URBAN_vars_fillhalo
-  !  
-  !  call URBAN_vars_total
-  !
-  !  return
-  !end subroutine URBAN_vars_external_in
+  subroutine URBAN_vars_external_in( &
+       ts_urb_in )
+    implicit none
+
+    real(RP), intent(in) :: ts_urb_in(IA,JA)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
+
+    TS_URB(:,:) = ts_urb_in(:,:)
+
+    call URBAN_vars_fillhalo
+
+    call URBAN_vars_total
+
+    return
+  end subroutine URBAN_vars_external_in
 
 end module mod_urban_vars

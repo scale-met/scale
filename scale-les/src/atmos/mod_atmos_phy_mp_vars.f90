@@ -35,10 +35,6 @@ module mod_atmos_phy_mp_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)   ! tendency DENS [kg/m3/s]
@@ -98,7 +94,8 @@ contains
        ATMOS_PHY_MP_RESTART_OUT_TITLE,    &
        ATMOS_PHY_MP_RESTART_OUT_DTYPE
 
-    integer :: v, ierr
+    integer :: ierr
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -136,11 +133,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_MP] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
-               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
-                  '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -218,10 +215,14 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use scale_statistics, only: &
+       STAT_total
     implicit none
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
+
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
@@ -232,6 +233,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_MP) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call ATMOS_PHY_MP_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(1) )
 
        call FILEIO_write( ATMOS_PHY_MP_SFLX_rain(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]

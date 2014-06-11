@@ -63,7 +63,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[URBAN_GRID_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
 
 #ifdef FIXED_INDEX
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'

@@ -107,7 +107,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_ROUGHNESS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_OCEAN_ROUGHNESS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_ROUGHNESS)
 
     select case( OCEAN_roughness_TYPE )
     case ('MILLER92')

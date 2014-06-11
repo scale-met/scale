@@ -35,13 +35,9 @@ module mod_atmos_phy_sf_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
-  logical, public ::  ATMOS_PHY_SF_sw_restart = .false.
+  logical,  public :: ATMOS_PHY_SF_RESTART_OUTPUT = .false. !< output restart file?
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
@@ -77,7 +73,6 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_PHY_SF_RESTART_OUTPUT       = .false.                !< output restart file?
   character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
   character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
@@ -93,10 +88,10 @@ module mod_atmos_phy_sf_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'SFC_TEMP     ', &
-                  'SFC_albedo_LW', &
-                  'SFC_albedo_SW', &
-                  'SFC_Z0       '  /
+  data VAR_NAME / 'SFC_TEMP', &
+                  'ALB_LW',   &
+                  'ALB_SW',   &
+                  'SFC_Z0'    /
 
   data VAR_DESC / 'surface skin temperature',     &
                   'surface albedo for longwave',  &
@@ -131,7 +126,8 @@ contains
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,     &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo
 
-    integer :: v, ierr
+    integer :: ierr
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -190,11 +186,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_SF] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
-               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
-                  '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)

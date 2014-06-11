@@ -421,7 +421,7 @@ contains
     integer :: RD_k, k, i, j, v
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, radiation(mstrnX)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
 
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]
@@ -910,8 +910,7 @@ contains
 
     !----- report data -----
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** insolation parameters (mstrn)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** total solar insolation : ', fsol_tot
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Baseline of total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
     RRHO_std = Rdry * TEM00 / Pstd * 100.0_RP ! [cm*m2/kg]

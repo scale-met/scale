@@ -35,12 +35,10 @@ module mod_atmos_phy_rd_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
+  logical,  public :: ATMOS_PHY_RD_RESTART_OUTPUT = .false. !< output restart file?
+
   real(RP), public, allocatable :: ATMOS_PHY_RD_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_up  (:,:) ! surface upward   longwave  flux [J/m2/s]
@@ -61,7 +59,6 @@ module mod_atmos_phy_rd_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_PHY_RD_RESTART_OUTPUT       = .false.                !< output restart file?
   character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
   character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),   private :: ATMOS_PHY_RD_RESTART_OUT_TITLE    = 'ATMOS_PHY_RD restart' !< title    of the output file
@@ -124,7 +121,8 @@ contains
        ATMOS_PHY_RD_RESTART_OUT_TITLE,    &
        ATMOS_PHY_RD_RESTART_OUT_DTYPE
 
-    integer :: v, ierr
+    integer :: ierr
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -163,11 +161,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_RD] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,A,A32,3(A))') &
-               '***       |','         VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do v = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A16,A,A32,3(A))') &
-                  '*** NO.',v,'|',trim(VAR_NAME(v)),'|',VAR_DESC(v),'[',VAR_UNIT(v),']'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -275,10 +273,14 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use scale_statistics, only: &
+       STAT_total
     implicit none
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
+
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_RD_RESTART_OUT_BASENAME /= '' ) then
@@ -289,6 +291,17 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_RD) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call ATMOS_PHY_RD_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:), VAR_NAME(2) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:), VAR_NAME(3) )
+       call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:), VAR_NAME(4) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:), VAR_NAME(5) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), VAR_NAME(6) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:), VAR_NAME(7) )
+       call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), VAR_NAME(8) )
 
        call FILEIO_write( ATMOS_PHY_RD_SFLX_LW_up(:,:), basename,      ATMOS_PHY_RD_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]

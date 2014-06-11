@@ -31,12 +31,12 @@ module mod_cpl_admin
   !
   logical,                public :: CPL_do   = .true. ! main switch for the model
 
-  character(len=H_SHORT), public :: CPL_TYPE_AtmLnd = 'NONE'  !< atmos-land coupler type
-  character(len=H_SHORT), public :: CPL_TYPE_AtmUrb = 'NONE'  !< atmos-urban coupler type
-  character(len=H_SHORT), public :: CPL_TYPE_AtmOcn = 'NONE'  !< atmos-ocean coupler type
-  logical,                public :: CPL_LST_UPDATE  = .false. !< update Land  Surface Temperature?
-  logical,                public :: CPL_UST_UPDATE  = .false. !< update Urban Surface Temperature?
-  logical,                public :: CPL_SST_UPDATE  = .false. !< update Sea   Surface Temperature?
+  character(len=H_SHORT), public :: CPL_TYPE_AtmOcn = 'NONE'         !< atmos-ocean coupler type
+  character(len=H_SHORT), public :: CPL_TYPE_AtmLnd = 'NONE'         !< atmos-land coupler type
+  character(len=H_SHORT), public :: CPL_TYPE_AtmUrb = 'NONE'         !< atmos-urban coupler type
+  logical,                public :: CPL_OCN_SFC_TEMP_UPDATE = .true. !< update Ocean Surface Temperature?
+  logical,                public :: CPL_LND_SFC_TEMP_UPDATE = .true. !< update Land  Surface Temperature?
+  logical,                public :: CPL_URB_SFC_TEMP_UPDATE = .true. !< update Urban Surface Temperature?
 
   logical,                public :: CPL_sw                    !< do coupler calculation?
   logical,                public :: CPL_sw_AtmOcn             !< do atmos-ocean coupler calculation?
@@ -61,13 +61,13 @@ contains
     implicit none
 
     NAMELIST / PARAM_CPL / &
-       CPL_do,          &
-       CPL_TYPE_AtmLnd, &
-       CPL_TYPE_AtmUrb, &
-       CPL_TYPE_AtmOcn, &
-       CPL_LST_UPDATE,  &
-       CPL_UST_UPDATE,  &
-       CPL_SST_UPDATE
+       CPL_do,                  &
+       CPL_TYPE_AtmOcn,         &
+       CPL_TYPE_AtmLnd,         &
+       CPL_TYPE_AtmUrb,         &
+       CPL_OCN_SFC_TEMP_UPDATE, &
+       CPL_LND_SFC_TEMP_UPDATE, &
+       CPL_URB_SFC_TEMP_UPDATE
 
     integer :: ierr
     !---------------------------------------------------------------------------

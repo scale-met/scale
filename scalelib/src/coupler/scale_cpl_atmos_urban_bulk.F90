@@ -99,10 +99,10 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
   real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
                                                      ! ( units converted in code to [cm] )
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine CPL_AtmUrb_bulk_setup( CPL_TYPE_AtmUrb )
     use scale_process, only: &
        PRC_MPIstop
@@ -179,7 +179,12 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Urban: bulk flux parameter'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmUrb bulk] / Categ[COUPLER] / Origin[SCALElib]'
+
+    if ( CPL_TYPE_AtmUrb /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmUrb is not BULK. Check!'
+       call PRC_MPIstop
+    endif
 
     URBAN_UCM_ZR           = ZR
     URBAN_UCM_roof_width   = roof_width
@@ -213,22 +218,16 @@ contains
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
 
-    if ( CPL_TYPE_AtmUrb /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmUrb is not BULK. Check!'
-       call PRC_MPIstop
-    endif
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL_ATMURB_BULK,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMURB_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMURB_BULK)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMURB_BULK)
 
     ZR           = URBAN_UCM_ZR
     roof_width   = URBAN_UCM_roof_width
@@ -276,6 +275,7 @@ contains
     return
   end subroutine CPL_AtmUrb_bulk_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_bulk( &
         TR,      & ! (inout)
         TB,      & ! (inout)
@@ -320,31 +320,22 @@ contains
         RHOO,    & ! (in)
         XLON,    & ! (in)
         XLAT     ) ! (in)
-
-    use scale_const, only: &
-      KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
-      PI     => CONST_PI,      &    ! PI : pi               [-]
-      CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
-      LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]
-      GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
-      Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
-      Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
-      STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
-      TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
+       PI     => CONST_PI,      &    ! PI : pi               [-]
+       CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
+       LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]
+       GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
+       Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
+       Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
+       STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
+       TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_time, only:       &
-      TIME => TIME_NOWSEC,      &   !< absolute sec
-      DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
-
+       TIME => TIME_NOWSEC,      &   !< absolute sec
+       DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
     implicit none
-
-    !-- parameters
-    real(RP), parameter    :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
-    real(RP), parameter    :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
-    real(RP), parameter    :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
-
-    real(RP), parameter    :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
 
     !-- configuration variables
     logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
@@ -398,8 +389,13 @@ contains
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
 
+    !-- parameters
+    real(RP), parameter    :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
+    real(RP), parameter    :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
+    real(RP), parameter    :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
+    real(RP), parameter    :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
 
-    !-- Local variables   
+    !-- Local variables
     logical  :: SHADOW = .false.
            ! [true=consider svf and shadow effects, false=consider svf effect
            ! only]
@@ -548,7 +544,7 @@ contains
     TCP = TC
     QCP = QC
     TSP = TS
- 
+
     !--- calculate canopy wind
 
     call canopy_wind(ZA, UA, UC)
@@ -587,7 +583,7 @@ contains
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
-     
+
     RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
 !    RAINT = TIME/300./2.
 !    if (RAINT > 10. ) then
@@ -657,8 +653,8 @@ contains
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
 
-    !!--- calculate the rain amount remaining on the surface 
-    RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]    
+    !!--- calculate the rain amount remaining on the surface
+    RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
     !--- Wall and Road
 
@@ -813,10 +809,10 @@ contains
     FLXTHG  = HG / RHO / CP / 100.0_RP
     FLXHUMG = ELEG / RHO / EL / 100.0_RP
 
-    !!--- calculate the rain amount remaining on the surface 
+    !!--- calculate the rain amount remaining on the surface
     RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
-    !!--- calculate the rain amount remaining on the surface 
+    !!--- calculate the rain amount remaining on the surface
     RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
 
@@ -839,7 +835,7 @@ contains
 !    print *,'FLXG  ',FLXG
 !    print *, SNET+LNET-FLXTH*RHO*CP*100.0_RP-FLXHUM*RHO*EL*100.0_RP-FLXG
 
-    !-----------------------------------------------------------    
+    !-----------------------------------------------------------
     ! Grid average
     !-----------------------------------------------------------
     !--- shortwave radiation
@@ -847,7 +843,7 @@ contains
     SUP =  R * ALBR  &
          + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
- 
+
     ALBD_SW_grid = SUP / SDN
 
     !--- longwave radiation
@@ -881,7 +877,7 @@ contains
     G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
 
-    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]  
+    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]
 
     SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
     SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
@@ -922,7 +918,7 @@ contains
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( RUP / STB / ALBD_LW_grid )**0.25
+    RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
@@ -1018,9 +1014,9 @@ contains
        ROFF  = max(0.0_RP, WATER-STRG)
        WATER = WATER - max(0.0_RP, WATER-STRG)
        BET   = WATER / STRG
-    endif 
+    endif
 
-    print *,BET, RAIN, WATER, STRG, ROFF
+!    print *,BET, RAIN, WATER, STRG, ROFF
 
     return
   end subroutine cal_beta

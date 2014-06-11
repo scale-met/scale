@@ -95,52 +95,60 @@ program scaleles
      ATMOS_admin_setup, &
      ATMOS_do
   use mod_atmos_vars, only: &
-     ATMOS_vars_setup,         &
-     ATMOS_vars_restart_read,  &
-     ATMOS_vars_restart_write, &
-     ATMOS_vars_restart_check, &
-     ATMOS_sw_restart,         &
-     ATMOS_sw_check
+     ATMOS_vars_setup,                         &
+     ATMOS_vars_diagnostics,                   &
+     ATMOS_vars_monitor,                       &
+     ATMOS_vars_restart_read,                  &
+     ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
+     ATMOS_vars_restart_write,                 &
+     ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
+     ATMOS_vars_restart_check
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
-     ATMOS_driver
+     ATMOS_driver,       &
+     ATMOS_SURFACE_GET,  &
+     ATMOS_SURFACE_SET
   use mod_ocean_admin, only: &
      OCEAN_admin_setup, &
      OCEAN_do
   use mod_ocean_vars, only: &
-     OCEAN_vars_setup,         &
-     OCEAN_vars_restart_read,  &
+     OCEAN_vars_setup,                         &
+     OCEAN_vars_restart_read,                  &
+     OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
      OCEAN_vars_restart_write
   use mod_ocean_driver, only: &
      OCEAN_driver_setup, &
-     OCEAN_driver
+     OCEAN_driver,       &
+     OCEAN_SURFACE_set
   use mod_land_admin, only: &
      LAND_admin_setup, &
      LAND_do
   use mod_land_vars, only: &
-     LAND_vars_setup,         &
-     LAND_vars_restart_read,  &
+     LAND_vars_setup,                        &
+     LAND_vars_restart_read,                 &
+     LAND_sw_restart => LAND_RESTART_OUTPUT, &
      LAND_vars_restart_write
   use mod_land_driver, only: &
      LAND_driver_setup, &
-     LAND_driver
+     LAND_driver,       &
+     LAND_SURFACE_set
   use mod_urban_admin, only: &
      URBAN_admin_setup, &
      URBAN_do
   use mod_urban_vars, only: &
-     URBAN_vars_setup,         &
-     URBAN_vars_restart_read,  &
+     URBAN_vars_setup,                         &
+     URBAN_vars_restart_read,                  &
+     URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
      URBAN_vars_restart_write
   use mod_urban_driver, only: &
      URBAN_driver_setup, &
-     URBAN_driver
+     URBAN_driver,       &
+     URBAN_SURFACE_set
   use mod_cpl_admin, only: &
      CPL_admin_setup, &
      CPL_do
   use mod_cpl_vars, only: &
-     CPL_vars_setup,         &
-     CPL_vars_restart_read,  &
-     CPL_vars_restart_write
+     CPL_vars_setup
   use mod_cpl_driver, only: &
      CPL_driver_setup, &
      CPL_driver
@@ -251,14 +259,26 @@ program scaleles
   call OCEAN_vars_restart_read
   call LAND_vars_restart_read
   call URBAN_vars_restart_read
-  call CPL_vars_restart_read
 
-  ! setup driver
+  ! calc diagnostics
+  call ATMOS_vars_diagnostics
+
+  ! first surface coupling
+  call ATMOS_SURFACE_SET( setup=.true. )
+  call OCEAN_SURFACE_SET( setup=.true. )
+  call LAND_SURFACE_SET ( setup=.true. )
+  call URBAN_SURFACE_SET( setup=.true. )
+  call CPL_driver_setup
+  call ATMOS_SURFACE_GET( setup=.true. )
+
+  ! first monitor
+  call ATMOS_vars_monitor
+
+  ! setup submodel driver
   call ATMOS_driver_setup
   call OCEAN_driver_setup
   call LAND_driver_setup
   call URBAN_driver_setup
-  call CPL_driver_setup
 
   ! setup user-defined procedure
   call USER_setup
@@ -304,10 +324,9 @@ program scaleles
 
     ! restart output
     if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-    if( TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-    if( TIME_DOLAND_restart  ) call LAND_vars_restart_write
-    if( TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-    if( TIME_DOCPL_restart   ) call CPL_vars_restart_write
+    if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
+    if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
 
     if( TIME_DOend ) exit
 
