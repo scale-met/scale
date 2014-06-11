@@ -94,7 +94,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULK)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_BULK)
 
     call SF_bulkcoef_setup
 

@@ -100,7 +100,7 @@ contains
 
     call LAND_vars_total
 
-    !########## Put surface boundary to other model ##########
+    !########## Put Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########

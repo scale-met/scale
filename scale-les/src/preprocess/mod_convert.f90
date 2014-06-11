@@ -77,7 +77,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CONVERT. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CONVERT)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CONVERT)
 
     select case(CONVERT_name)
     case('NONE')

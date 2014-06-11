@@ -17,7 +17,14 @@ module mod_cpl_atmos_land_driver
   !
   use scale_precision
   use scale_stdio
+  use scale_prof
+  use scale_debug
   use scale_grid_index
+  use scale_tracer
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -71,9 +78,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_driver( sfc_temp_update )
     use scale_const, only: &
-       LH0  => CONST_LH0,  &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
+       LH0  => CONST_LH0
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total

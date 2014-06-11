@@ -35,10 +35,6 @@ module mod_atmos_phy_tb_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_PHY_TB_MOMZ_t(:,:,:)   ! tendency MOMZ [kg/m2/s2]

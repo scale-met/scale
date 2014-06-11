@@ -35,10 +35,6 @@ module mod_atmos_dyn_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_DYN_DUM(:,:,:) ! dummy array

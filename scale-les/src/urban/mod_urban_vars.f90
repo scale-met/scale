@@ -19,13 +19,13 @@ module mod_urban_vars
   use scale_debug
   use scale_grid_index
   use scale_urban_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure

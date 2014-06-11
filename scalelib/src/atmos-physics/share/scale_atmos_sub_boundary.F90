@@ -45,10 +45,6 @@ module scale_atmos_boundary
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:)         !> reference container (with HALO)

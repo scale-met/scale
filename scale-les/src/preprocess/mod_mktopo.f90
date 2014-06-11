@@ -86,7 +86,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO)
 
     select case(MKTOPO_name)
     case('NONE')
@@ -186,7 +186,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO_BELLSHAPE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_BELLSHAPE)
 
     if ( BELL_eachnode ) then
        CX_offset = CX(IS)
@@ -249,7 +249,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHEAR. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHEAR)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHEAR)
 
     ! make bell-shaped mountain
     do j = JS, JE

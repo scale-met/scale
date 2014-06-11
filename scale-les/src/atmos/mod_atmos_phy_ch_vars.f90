@@ -35,10 +35,6 @@ module mod_atmos_phy_ch_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_PHY_CH_QTRC_t(:,:,:,:) ! tendency QTRC [kg/kg/s]

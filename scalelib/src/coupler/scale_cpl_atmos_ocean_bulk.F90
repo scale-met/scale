@@ -50,8 +50,7 @@ module scale_cpl_atmos_ocean_bulk
 
 contains
   !-----------------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
     use scale_process, only: &
        PRC_MPIstop
@@ -79,6 +78,14 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmOcn bulk] / Categ[COUPLER] / Origin[SCALElib]'
+
+    if ( CPL_TYPE_AtmOcn /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not BULK. Check!'
+       call PRC_MPIstop
+    endif
+
     CPL_AtmOcn_bulk_U_minM  = U_minM
     CPL_AtmOcn_bulk_U_minH  = U_minH
     CPL_AtmOcn_bulk_U_minE  = U_minE
@@ -86,25 +93,16 @@ contains
     CPL_AtmOcn_bulk_U_maxH  = U_maxH
     CPL_AtmOcn_bulk_U_maxE  = U_maxE
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: bulk flux parameter'
-
-    if ( CPL_TYPE_AtmOcn /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not BULK. Check!'
-       call PRC_MPIstop
-    endif
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL_ATMOCN_BULK,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMOCN_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
 
     U_minM    = CPL_AtmOcn_bulk_U_minM
     U_minH    = CPL_AtmOcn_bulk_U_minH
@@ -119,6 +117,7 @@ contains
     return
   end subroutine CPL_AtmOcn_bulk_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmOcn_bulk( &
         SST,        & ! (inout)
         XMFLX,      & ! (out)

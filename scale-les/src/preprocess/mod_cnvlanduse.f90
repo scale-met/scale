@@ -76,7 +76,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE)
 
     select case(CNVLANDUSE_name)
     case('NONE')
@@ -173,7 +173,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE_USGS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_USGS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_USGS)
 
     return
   end subroutine CNVLANDUSE_USGS
@@ -281,7 +281,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE_LU100M. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_LU100M)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_LU100M)
 
     do p = -2, LANDUSE_PFT_nmax
     do j = JS, JE

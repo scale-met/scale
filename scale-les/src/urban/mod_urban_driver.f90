@@ -5,7 +5,6 @@
 !!          Urban module driver
 !!
 !! @author Team SCALE
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_urban_driver
@@ -16,6 +15,7 @@ module mod_urban_driver
   use scale_precision
   use scale_stdio
   use scale_prof
+  use scale_debug
   use scale_grid_index
   !-----------------------------------------------------------------------------
   implicit none

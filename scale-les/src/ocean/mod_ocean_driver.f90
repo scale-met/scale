@@ -106,7 +106,7 @@ contains
 
     call OCEAN_vars_total
 
-    !########## Put surface boundary to other model ##########
+    !########## Put Surface Boundary to coupler ##########
     call OCEAN_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########

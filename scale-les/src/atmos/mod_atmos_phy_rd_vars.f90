@@ -35,10 +35,6 @@ module mod_atmos_phy_rd_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   logical,  public :: ATMOS_PHY_RD_RESTART_OUTPUT = .false. !< output restart file?

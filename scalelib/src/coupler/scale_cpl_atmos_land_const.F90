@@ -132,7 +132,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMLND_CONST. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_CONST)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_CONST)
 
     U_min       = CPL_AtmLnd_const_U_min
     U_max       = CPL_AtmLnd_const_U_max

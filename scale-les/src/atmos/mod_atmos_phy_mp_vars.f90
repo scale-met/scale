@@ -35,10 +35,6 @@ module mod_atmos_phy_mp_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)   ! tendency DENS [kg/m3/s]

@@ -54,8 +54,7 @@ module scale_cpl_atmos_land_bulk
 
 contains
   !-----------------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
     use scale_process, only: &
        PRC_MPIstop
@@ -89,6 +88,14 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmLnd bulk] / Categ[COUPLER] / Origin[SCALElib]'
+
+    if ( CPL_TYPE_AtmLnd /= 'BULK' ) then
+       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
+       call PRC_MPIstop
+    endif
+
     CPL_AtmLnd_bulk_nmax    = nmax
     CPL_AtmLnd_bulk_res_min = res_min
     CPL_AtmLnd_bulk_dTS     = dTS
@@ -99,25 +106,16 @@ contains
     CPL_AtmLnd_bulk_U_maxH  = U_maxH
     CPL_AtmLnd_bulk_U_maxE  = U_maxE
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land: bulk flux parameter'
-
-    if ( CPL_TYPE_AtmLnd /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
-       call PRC_MPIstop
-    endif
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL_ATMLND_BULK,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMLND_BULK. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_BULK)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_BULK)
 
     nmax    = CPL_AtmLnd_bulk_nmax
     res_min = CPL_AtmLnd_bulk_res_min
@@ -135,6 +133,7 @@ contains
     return
   end subroutine CPL_AtmLnd_bulk_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_bulk( &
         LST,        & ! (inout)
         XMFLX,      & ! (out)

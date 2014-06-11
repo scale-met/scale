@@ -44,10 +44,6 @@ module mod_atmos_vars
 
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public parameters & variables
   !
   logical, public :: ATMOS_RESTART_OUTPUT = .false. !< output restart file?
