@@ -80,11 +80,11 @@ module mod_ocean_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'OCEAN_TEMP',       &
-                  'OCEAN_SFC_TEMP',   &
-                  'OCEAN_SFC_ALB_LW', &
-                  'OCEAN_SFC_ALB_SW', &
-                  'OCEAN_SFC_Z0'      /
+  data VAR_NAME / 'OCEAN_TEMP',     &
+                  'OCEAN_SFC_TEMP', &
+                  'OCEAN_ALB_LW',   &
+                  'OCEAN_ALB_SW',   &
+                  'OCEAN_SFC_Z0'    /
   data VAR_DESC / 'temperature at uppermost ocean layer (SST)', &
                   'ocean surface skin temperature',             &
                   'ocean surface albedo (longwave)',            &

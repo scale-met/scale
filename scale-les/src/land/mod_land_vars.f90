@@ -100,11 +100,11 @@ module mod_land_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'LAND_TEMP',       &
-                  'LAND_WATER',      &
-                  'LAND_SFC_TEMP',   &
-                  'LAND_SFC_ALB_LW', &
-                  'LAND_SFC_ALB_SW'  /
+  data VAR_NAME / 'LAND_TEMP',     &
+                  'LAND_WATER',    &
+                  'LAND_SFC_TEMP', &
+                  'LAND_ALB_LW',   &
+                  'LAND_ALB_SW'    /
   data VAR_DESC / 'temperature at each soil layer',  &
                   'moisture    at each soil layer',  &
                   'land surface skin temperature',   &

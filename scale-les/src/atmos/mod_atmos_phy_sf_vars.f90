@@ -92,10 +92,10 @@ module mod_atmos_phy_sf_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'SFC_TEMP     ', &
-                  'SFC_albedo_LW', &
-                  'SFC_albedo_SW', &
-                  'SFC_Z0       '  /
+  data VAR_NAME / 'SFC_TEMP', &
+                  'ALB_LW',   &
+                  'ALB_SW',   &
+                  'SFC_Z0'    /
 
   data VAR_DESC / 'surface skin temperature',     &
                   'surface albedo for longwave',  &
